@@ -462,4 +462,57 @@ function consolidation() {
 
     });
 
+    document.addEventListener("DOMContentLoaded", function() {
+        const miniUpdateAppearance = document.getElementById('small_update_appearance');
+        miniUpdateAppearance.addEventListener('click', async function(e){
+            
+            e.preventDefault();
+            try {
+            const doc = document;
+            const nameEl = doc ? doc.getElementById('npc_name') : null;
+            const npcName = nameEl ? String(nameEl.value||'').trim() : '';
+            
+            showProcessing()
+            const res = await fetch('../cmd/action_ai_update_appearance.php?name='+encodeURIComponent(npcName));
+            let j = {}; try { 
+                j = await res.json(); 
+                if (j.done) {
+                     doc.getElementById('appearance').value = j.appearance
+                     hideProcessing()
+                }
+            } catch(_e) {
+                 j = {ok:false};
+                 }
+            
+            
+            
+
+            } catch(_e){console.log(_e)}
+        });
+    });
+
+    function showProcessing() {
+        
+        processingMessage = document.createElement('div');
+        processingMessage.textContent = 'Processing...';
+        processingMessage.style.position = 'fixed';
+        processingMessage.style.top = '50%';
+        processingMessage.style.left = '50%';
+        processingMessage.style.transform = 'translate(-50%, -50%)';
+        processingMessage.style.backgroundColor = '#000';
+        processingMessage.style.color = '#fff';
+        processingMessage.style.padding = '10px 20px';
+        processingMessage.style.borderRadius = '8px';
+        processingMessage.style.zIndex = '10001';
+        processingMessage.id="processing_wheel"
+        document.body.appendChild(processingMessage);
+      }
+    function hideProcessing() {
+        processingMessage.innerHTML=''
+        processingMessage.style.zIndex = '-10001';
+
+    }
+    var processingMessage;
+
+
 </script>

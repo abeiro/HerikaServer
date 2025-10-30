@@ -1029,6 +1029,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <div class="form-item span-2">
             <label for="appearance">Appearance</label>
             <textarea id="appearance" name="appearance" placeholder="Physical appearance."><?= htmlspecialchars($editItem["appearance"] ?? "") ?></textarea>
+            <button id="small_update_appearance"  type="button" title="Will call AI using profile pic to describe NPC. Will use ITT service.">Update from pic</button>
             <small class="hint">Physical appearance. Keep it limited to character cosmetics, not equipment.</small>
         </div>
 
@@ -1591,6 +1592,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <button id="npc_modal_save_header" class="btn-save">Save</button>
         <button id="npc_modal_reset" class="btn-cancel" title="Reimport bio template fields">Reset NPC</button>
         <button id="npc_modal_history" class="btn-cancel">View History</button>
+        <button id="npc_modal_regen" class="btn-cancel" title="Will call AI to regenerate this profile. Intended for custom NPCs without description">AI generate</button>
         <button id="npc_modal_close" class="btn-cancel">Close</button>
       </div>
     </div>
@@ -1703,6 +1705,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         if (tabs) tabs.style.display = 'flex';
       }
     } catch(_e){}
+
+     
   }
   function closeModal(){ modal.style.display = 'none'; document.body.style.overflow = 'auto'; try { iframe.src='about:blank'; } catch(_){} }
   const headerSave = document.getElementById('npc_modal_save_header');
@@ -1781,6 +1785,31 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       } catch(_e){}
     });
   })();
+
+   // Regenerate profile using AI
+  (function(){
+    const regenBtn = document.getElementById('npc_modal_regen');
+    if (!regenBtn) return;
+    regenBtn.addEventListener('click', async function(e){
+      e.preventDefault();
+      try {
+        const doc = iframe && iframe.contentDocument;
+        const nameEl = doc ? doc.getElementById('npc_name') : null;
+        const npcName = nameEl ? String(nameEl.value||'').trim() : '';
+        
+        document.getElementById("npc_modal").style.cursor="wait"
+        showProcessing()
+        const res = await fetch('../cmd/action_ai_regen_profile.php?name='+encodeURIComponent(npcName));
+        let j={}; try { j = await res.json(); } catch(_e) { j={ok:false}; }
+        
+        document.location.reload()
+        
+
+      } catch(_e){}
+    });
+  })();
+
+  
   // View History button wiring
   (function(){
     const btn = document.getElementById('npc_modal_history');
@@ -1874,6 +1903,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           }
         });
       }
+
+     
+    
+
     }
     function openHistory(){
       try {
@@ -2424,6 +2457,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     }
   });
 })();
+
+
+
 </script>
 
 <?php
