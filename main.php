@@ -930,8 +930,40 @@ if (in_array($gameRequest[0],["bored"])) {
     }
 }
 
-// Combat bark event - log as infoaction
+// Combat bark event - log as infoaction and apply cooldown
 if (in_array($gameRequest[0],["combatbark"])) {
+    // Add configurable cooldown for combat barks to prevent spam (global across all NPCs)
+    $combatBarkCooldownPeriod = isset($GLOBALS["COMBAT_BARK_COOLDOWN"]) ? intval($GLOBALS["COMBAT_BARK_COOLDOWN"]) : 90;
+    
+    // Use a global cooldown key (shared across all NPCs)
+    $cooldownKey = "COMBAT_BARK_LAST_TIMESTAMP";
+    
+    // Fetch the last combat bark trigger timestamp
+    $combatBarkRecord = $GLOBALS["db"]->fetchAll("SELECT value FROM conf_opts WHERE id='" . $GLOBALS["db"]->escape($cooldownKey) . "'");
+    
+    // Check if the timestamp exists in the database
+    if (!empty($combatBarkRecord)) {
+        $lastTrigger = (int) $combatBarkRecord[0]['value'];
+        $timeElapsed = time() - $lastTrigger;
+
+        if ($timeElapsed < $combatBarkCooldownPeriod) {
+            // Cooldown is still active, exit
+            Logger::info("COMBAT_BARK is on cooldown. Try again in " . ($combatBarkCooldownPeriod - $timeElapsed) . " seconds.");
+            terminate();
+        }
+    }
+    
+    // Update the timestamp in the database to the current time
+    $currentTimestamp = time();
+    $GLOBALS["db"]->upsertRowOnConflict(
+        "conf_opts",
+        array(
+            "id"    => $cooldownKey,
+            "value" => $currentTimestamp
+        ),
+        'id'
+    );
+    
     $localGameRequest=$gameRequest;
     $localGameRequest[0]="infoaction";
     $localGameRequest[3].=" ({$GLOBALS["HERIKA_NAME"]} shouts during combat)";
