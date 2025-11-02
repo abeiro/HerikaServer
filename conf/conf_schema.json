@@ -215,7 +215,7 @@
       "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro! Will connect automatically so do not change the URL. Does not currently support Chat Assist/Creation.","helpurl":"https://dwemerdynamics.hostwiki.io/en/Online-LLMs#player2"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","piper-tts","mimic3","deepgram"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","piper-tts","mimic3","deepgram","cartesia"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
 
   "TTS": {
     "_title":"Text-to-Speech Service",
@@ -336,9 +336,19 @@
       "_title": "KoboldCPP TTS",
       "endpoint":{"type":"url","description":"Endpoint URL"},
       "voice": {"type":"string","description":"Voice to use"}
+    },
+    "CARTESIA": {
+      "_title": "Cartesia TTS",
+      "voiceid": {"type":"string","description":"Voice file name. Works the same as CHIM-XTTS voiceid. Will only work with voices in your Voice Cache. Voice will be automatically cloned to Cartesia when first used.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
+      "language": {"type":"select","values":["en","fr","de","es","pt","zh","ja","hi","it","ko","nl","pl","ru","sv","tr"],"description":"Language to use for TTS generation"},
+      "model_id": {"type":"select","values":["sonic-english","sonic-multilingual"],"description":"Cartesia model to use. sonic-english is faster, sonic-multilingual supports more languages.","helpurl":"https://docs.cartesia.ai/"},
+      "speed": {"type":"select","values":["slowest","slow","normal","fast","fastest"],"description":"Speaking speed for the voice"},
+      "clone_mode": {"type":"select","values":["similarity","stability"],"description":"Voice cloning mode. Similarity mode clones are more similar to the source but may reproduce background noise (use 5s clips). Stability mode is more stable but may sound less similar (use 10-20s clips).","helpurl":"https://docs.cartesia.ai/"},
+      "enhance": {"type":"boolean","description":"Apply AI enhancements to reduce background noise during voice cloning. Leads to cleaner speech but reduced similarity."},
+      "use_emotions": {"type":"boolean","description":"Enable experimental emotion controls. Will attempt to apply emotions based on the mood parameter."}
     }
 },
-  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","piper-tts","azure","11labs","openai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
+  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","piper-tts","azure","11labs","openai","kokoro","zonos_gradio","cartesia"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
   "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
   "TTSFUNCTION_PLAYER_VOICE_ID": {"type":"integer","userlvl":"pro","scope":"global","description":"Speaker ID to select a voice from multi-voice model."},
   "TTSFUNCTION_PLAYER_LANGUAGE": {"type":"string","userlvl":"basic","scope":"global","description":"Overrides the TTS language for the player character."},

@@ -607,6 +607,11 @@ function returnLines($lines,$writeOutput=true)
                 require_once(__DIR__."/../tts/tts-zonos_gradio.php");
                 $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
+            } else if ($GLOBALS["TTSFUNCTION"] == "cartesia") {
+
+                require_once(__DIR__."/../tts/tts-cartesia.php");
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
+
             } 
             else {
                 if (file_exists(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php")) {
