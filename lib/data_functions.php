@@ -291,7 +291,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         $notes=[];
         foreach ($rolemasterNotes as $note)
             $notes[]= $note["data"];
-        $lastDialog[] = array('role' => 'user', 'content' => "<scene_notes>\n# SCENE NOTES \n## ".implode(".",$notes))."</scene_notes>";
+        $lastDialog[] = array('role' => 'user', 'content' => "<scene_notes>\n# SCENE NOTES \n## ".implode(".",$notes)."</scene_notes>");
     }
         
 

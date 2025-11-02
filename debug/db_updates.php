@@ -259,7 +259,6 @@ $query = "
     WHERE table_name = 'memory' AND column_name = 'ts'
 ";
 
-
 $existsColumn=$db->fetchAll($query);
 if (!$existsColumn[0]["column_name"]) {
         $db->execQuery('ALTER TABLE "memory" ADD COLUMN "ts" bigint');
@@ -302,6 +301,160 @@ if (!$existsColumn[0]["column_name"]) {
         echo '<script>alert("A patch (0.1.6p1) has been applied to Database")</script>';
     
 }
+
+// Ensure memory_v exists
+// Memory ts
+$query = "
+    SELECT view_definition 
+    FROM information_schema.views 
+    WHERE table_name = 'memory_v'
+";
+
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["view_definition"]) {
+        $db->execQuery("CREATE OR REPLACE VIEW public.memory_v AS
+ SELECT message,
+    uid,
+    gamets,
+    speaker,
+    listener,
+    ts
+   FROM ( SELECT memory.message,
+            CAST(memory.uid AS integer),
+            memory.gamets,
+            '-'::text AS speaker,
+            '-'::text AS listener,
+           ts
+           FROM public.memory
+          WHERE ((memory.message !~~ 'Dear Diary%'::text) AND (memory.message <> ''::text))
+        UNION
+         SELECT ((((('(Context Location:'::text || speech.location) || ') '::text) || speech.speaker) || ': '::text) || speech.speech),
+            CAST(speech.rowid AS integer),
+            speech.gamets,
+            speech.speaker,
+            speech.listener,
+            speech.ts
+           FROM public.speech
+          WHERE (speech.speech <> ''::text)
+        UNION
+         SELECT eventlog.data,
+            CAST(eventlog.rowid AS integer),
+            eventlog.gamets,
+            '-'::text AS text,
+            '-'::text AS listener,
+            eventlog.ts
+           FROM public.eventlog
+          WHERE ((eventlog.type)::text = ANY (ARRAY[('death'::character varying)::text, ('location'::character varying)::text]))) subquery
+  ORDER BY gamets, ts;
+");
+    
+}
+
+// Recreate vectors summary
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'memory_summary' AND column_name = 'embedding'
+";
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["column_name"]) {
+    $db->execQuery('ALTER TABLE memory_summary add embedding VECTOR(384)');
+    
+}
+
+// Recreate vectors summary
+$query = "
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'memory_summary' AND column_name = 'embedding768'
+";
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["column_name"]) {
+    $db->execQuery('ALTER TABLE memory_summary add embedding768 VECTOR(768)');
+    
+}
+
+
+// Ensure combined_animations exists
+$query = "
+    SELECT view_definition 
+    FROM information_schema.views 
+    WHERE table_name = 'combined_animations'
+";
+
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["view_definition"]) {
+        $db->execQuery("CREATE OR REPLACE VIEW public.combined_animations AS
+ SELECT c.mood,
+    c.animations,
+    c.npc
+   FROM public.animations_custom c
+UNION ALL
+ SELECT t.mood,
+    t.animations,
+    t.npc
+   FROM (public.animations t
+     LEFT JOIN public.animations_custom c ON (((t.mood)::text = (c.mood)::text)))
+  WHERE (c.mood IS NULL);
+");
+
+}
+
+
+// Ensure combined_animations exists
+$query = "
+    SELECT view_definition 
+    FROM information_schema.views 
+    WHERE table_name = 'combined_npc_templates'
+";
+
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["view_definition"]) {
+        $db->execQuery("CREATE OR REPLACE VIEW public.combined_npc_templates  AS
+ SELECT c.npc_name,
+    c.npc_pers,
+    c.npc_dynamic,
+    c.npc_misc,
+    c.melotts_voiceid,
+    c.xtts_voiceid,
+    c.xvasynth_voiceid,
+    c.npc_background,
+    c.npc_personality,
+    c.npc_appearance,
+    c.npc_relationships,
+    c.npc_occupation,
+    c.npc_skills,
+    c.npc_speechstyle,
+    c.npc_goals
+   FROM public.npc_templates_custom c
+UNION ALL
+ SELECT t.npc_name,
+    t.npc_pers,
+    t.npc_dynamic,
+    t.npc_misc,
+    t.melotts_voiceid,
+    t.xtts_voiceid,
+    t.xvasynth_voiceid,
+    t.npc_background,
+    t.npc_personality,
+    t.npc_appearance,
+    t.npc_relationships,
+    t.npc_occupation,
+    t.npc_skills,
+    t.npc_speechstyle,
+    t.npc_goals
+   FROM (public.npc_templates t
+     LEFT JOIN public.npc_templates_custom c ON (((t.npc_name)::text = (c.npc_name)::text)))
+  WHERE (c.npc_name IS NULL);
+");
+
+}
+
 
 // Npc profile backup
 
@@ -1057,6 +1210,71 @@ if ($checkVersion("sql_gamets_convert_functions")<20250226001) {
     Logger::debug("Applied patch: sql_gamets_convert_functions 2 20250226001");
 }
 
+
+
+// Views dependant on sql_gamets_convert_functions
+// Ensure speech_view exists
+$query = "
+    SELECT view_definition 
+    FROM information_schema.views 
+    WHERE table_name = 'speech_view'
+";
+
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["view_definition"]) {
+        $db->execQuery("CREATE OR REPLACE VIEW public.speech_view  AS
+  SELECT s.sess,
+    s.speaker,
+    s.speech,
+    s.location,
+    s.listener,
+    s.topic,
+    s.localts,
+    s.gamets,
+    s.ts,
+    s.rowid,
+    s.companions,
+    s.audios,
+    public.convert_gamets2skyrim_date(s.gamets) AS sk_date,
+    public.convert_gamets2skyrim_long_date(s.gamets) AS sk_long_date,
+    public.convert_gamets2days(s.gamets) AS sk_days,
+    public.convert_gamets2gregorian_date(s.gamets) AS gregorian_date
+   FROM public.speech s;
+");
+
+}
+
+
+// Ensure eventlog_view exists
+$query = "
+    SELECT view_definition 
+    FROM information_schema.views 
+    WHERE table_name = 'eventlog_view'
+";
+
+
+$existsColumn=$db->fetchAll($query);
+if (!$existsColumn[0]["view_definition"]) {
+        $db->execQuery("CREATE OR REPLACE VIEW public.eventlog_view  AS
+ SELECT e.type,
+    e.data,
+    e.sess,
+    e.gamets,
+    e.localts,
+    e.ts,
+    e.rowid,
+    e.people,
+    e.location,
+    e.party,
+    public.convert_gamets2skyrim_date(e.gamets) AS sk_date,
+    public.convert_gamets2skyrim_long_date(e.gamets) AS sk_long_date,
+    public.convert_gamets2days(e.gamets) AS sk_days,
+    public.convert_gamets2gregorian_date(e.gamets) AS gregorian_date
+   FROM public.eventlog e;
+");
+
+}
 
 //----------------------------------------------------
 // npc_template and oghma table. 1.1.0 update

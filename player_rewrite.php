@@ -66,7 +66,7 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
 
 } else {
     
-    error_log("Using {$GLOBALS["CURRENT_CONNECTOR"]}");
+    error_log("Using {$GLOBALS["CURRENT_CONNECTOR"]} <{$argv[1]}>");
     
 
     $contextDataHistoric = DataLastDataExpandedFor("", -15);    // Full context

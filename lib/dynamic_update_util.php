@@ -755,7 +755,7 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     }
 }
 
-function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
+function saveDynamicProfileUpdates($npcName, $updatedFields, $db,$updateTimeStamp=true) {
     $newConfFile = md5($npcName);
     $path = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
     $configFile = $path . "conf" . DIRECTORY_SEPARATOR . "conf_$newConfFile.php";
@@ -783,7 +783,9 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
             // Backup NPC.
             $npcMaster->backupNpcById($currentNpcData["id"]);
 
-            $currentNpcData["gamets_last_updated"]=DataLastKnownGameTS();
+            if ($updateTimeStamp)
+                $currentNpcData["gamets_last_updated"]=DataLastKnownGameTS();
+            
             $npcMaster->updateByArray($currentNpcData);
             
         }

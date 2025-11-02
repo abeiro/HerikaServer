@@ -19,7 +19,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     require_once $enginePath . "lib/core/llm_connector.class.php";
 
 
-    $allEnabledMtNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->'middle_term_enabled' = '1'");
+    $allEnabledMtNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->'middle_term_enabled' = '1' ");
 
     foreach ($allEnabledMtNpc as $npc) {
         $mwdata=json_decode($npc["extended_data"]);
@@ -39,7 +39,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     $pfi = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] ?? 10) * 100000;
     
     if (($maxRow-$lastMemory)>($pfi)) {
-        error_log("[SUMMARY] memory creation maxRow-lastMemory > pfi  ($maxRow-$lastMemory)>($pfi) ");
+        echo "[SUMMARY] memory creation maxRow-lastMemory > pfi  ($maxRow-$lastMemory)>($pfi) ";
 
         $shellResult = shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 1 &");
         if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
