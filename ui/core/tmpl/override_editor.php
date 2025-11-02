@@ -99,6 +99,11 @@ $fullSchema = [
         'description' => 'Cooldown in seconds between diary entries to prevent spam.',
         'category' => 'Diary'
     ],
+    'COMBAT_BARK_COOLDOWN' => [
+        'type' => 'integer',
+        'description' => 'Cooldown in seconds between combat barks. Global across all NPCs in the party.',
+        'category' => 'Combat'
+    ],
     'AUTO_DIARY_WAIT' => [
         'type' => 'boolean',
         'description' => 'When AUTO_DIARY is enabled, controls whether diary entries are created during wait events.',

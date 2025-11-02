@@ -889,8 +889,6 @@ function getTimeColor($time) {
                 
                 $processedResults[] = $processedRow;
             }
-
-            echo "<h4>(Enable AUTO_CREATE_SUMMARYS in the default profile)</h4>";
             
             // Add Memory Management buttons
             echo "<div class='memory-management-actions' style='margin: 15px 0;'>";
