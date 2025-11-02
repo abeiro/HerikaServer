@@ -808,6 +808,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'GiveGoldTo',
         'GiveItemTo',
         'GoToSleep',
+        'UseSoulGaze'
 
     ];
 } else {

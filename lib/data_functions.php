@@ -928,6 +928,9 @@ A MAJOR TIME JUMP HAS OCCURRED.
 Elapsed time since last interaction: ~$timeGapInDays days
 New setting: $currentLocation
 !!! END CONTEXT !!! ");
+                } else if ($timeGapInHours>5) {
+                    $timeGapInDays=round($timeGapInHours/24,1);
+                    $lastDialogFull[] = array('role' => "narratorci", 'content' => "(minor timelapse of about $timeGapInHours hours)");
                 }
                 $lastGameTs=$row["gamets"];
             }
@@ -2819,6 +2822,7 @@ function call_llm() {
 
 
         $buffer=$connectionHandler->fast_request($contextData,$overrideParameters,'standard');
+        $buffer = preg_replace('/\*([^*]*\s+[^*]*)\*/', '', $buffer);
 
         error_log("[STEP 1] Elapsed time: " . (microtime(true) - $startTime) . " seconds");
 

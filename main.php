@@ -1445,17 +1445,22 @@ if (isset($extended_data["middle_term_memory"])&&is_array($extended_data["middle
 }
 
 // Rumors and breaking news
-$currentHold=trim(DataLastKnownLocationHuman(true,true));
+$currentHold=trim(DataLastKnownLocationHuman(true,false));
 if ($currentHold) {
     error_log("[RUMORS] Current hold {$currentHold}");
-    error_log("SELECT * FROM rumors WHERE hold='{$currentHold}' and gamets>".($gameRequest[2]- ( (3600 * 7 ) / 0.00864 )));
-    $rumors = $db->fetchOne("SELECT * FROM rumors WHERE hold='{$currentHold}' and gamets>".($gameRequest[2]- ( (3600 * 7 ) / 0.00864 )));
+    $currentHoldEsc=$db->escape($currentHold);
+    $query="SELECT * FROM rumors WHERE hold like '%{$currentHoldEsc}%' and gamets>".round($gameRequest[2]- ( (3600 * 7 ) / 0.00864 ),0);
+    error_log($query);
+    $rumors = $db->fetchOne($query);
+
     if (isset($rumors["content"])) {
         $tag=strtolower(str_replace(" ","_",$rumors["type"]));
         $rumors="\n<$tag>\n{$rumors["content"]}\n</$tag>";
     }
-} else
+} else {
+    error_log("[RUMORS] Current hold {$currentHold} empty");
     $rumors="";
+}
 
 if (!empty($GLOBALS["OGHMA_HINT"])) {
 
@@ -1468,7 +1473,7 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
     $GLOBALS["COMMAND_PROMPT"] = "";
 } else {
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n<character>".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>\n$rumors\n",
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>\n$rumors\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
     );
     //avoid reinjecting command prompt that we have already appended
