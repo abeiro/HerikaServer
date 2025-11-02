@@ -2,6 +2,36 @@
 
 require_once("dialogue_prompt.php");
 
+// Helper function to check if RPG comment should trigger based on type and probability
+function shouldTriggerRPGComment($eventType) {
+    // Check if this event type is enabled
+    if (empty($GLOBALS["RPG_COMMENTS"]) || !in_array($eventType, $GLOBALS["RPG_COMMENTS"])) {
+        return false;
+    }
+    
+    // Get the trigger chance percentage (default 100%)
+    $chance = 100;
+    if (isset($GLOBALS["RPG_COMMENTS_CHANCE"])) {
+        $chance = intval($GLOBALS["RPG_COMMENTS_CHANCE"]);
+    }
+    
+    // Clamp chance to 0-100
+    $chance = max(0, min(100, $chance));
+    
+    // If chance is 100, always trigger
+    if ($chance >= 100) {
+        return true;
+    }
+    
+    // If chance is 0, never trigger
+    if ($chance <= 0) {
+        return false;
+    }
+    
+    // Roll the dice: random number 1-100, trigger if <= chance
+    return (rand(1, 100) <= $chance);
+}
+
 $PROMPTS=array(
     "location"=>[
             "cue"=>["(Chat as {$GLOBALS["HERIKA_NAME"]})"], // give way to
@@ -24,11 +54,7 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about the type of enemies that was defeated) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} notes something peculiar about last enemy defeated) {$GLOBALS["TEMPLATE_DIALOG"]}"
         ],
-        "extra" => [
-            "dontuse" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("combat_end", $GLOBALS["RPG_COMMENTS"]))
-                ? (time() % 10 != 0)
-                : true
-        ],
+        "extra" => shouldTriggerRPGComment("combat_end") ? [] : ["dontuse" => true]
     ],
     // Database Prompt (Combat End Mighty)
     "combatendmighty"=>[
@@ -41,7 +67,7 @@ $PROMPTS=array(
             "({$GLOBALS["HERIKA_NAME"]} makes a comment about the type of enemies that was defeated) {$GLOBALS["TEMPLATE_DIALOG"]}",
             "({$GLOBALS["HERIKA_NAME"]} notes something peculiar about last enemy defeated) {$GLOBALS["TEMPLATE_DIALOG"]}"
         ],
-        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("combat_end", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
+        "extra" => shouldTriggerRPGComment("combat_end") ? [] : ["dontuse" => true]
     ],
     // Database Prompt (Quest)
     "quest"=>[
@@ -52,7 +78,7 @@ $PROMPTS=array(
 
     "bleedout"=>[
         "cue"=>["{$GLOBALS["HERIKA_NAME"]} complain about almost being defeated in battle, {$GLOBALS["TEMPLATE_DIALOG"]}"],
-        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("bleedout", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
+        "extra" => shouldTriggerRPGComment("bleedout") ? [] : ["dontuse" => true]
     ],
     // Database Prompt (Bored)
     "bored"=>[
@@ -115,7 +141,7 @@ $PROMPTS=array(
     "goodmorning"=>[
         "cue"=>["({$GLOBALS["HERIKA_NAME"]} comment about {$GLOBALS["PLAYER_NAME"]}s time asleep. {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "player_request"=>["{$GLOBALS["PLAYER_NAME"]} wakes up from sleeping. ahhhh"],
-        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("sleep", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
+        "extra" => shouldTriggerRPGComment("sleep") ? [] : ["dontuse" => true]
     ],
 
     "inputtext"=>[
@@ -163,7 +189,7 @@ $PROMPTS=array(
             //"({$GLOBALS["HERIKA_NAME"]} asks {$GLOBALS["PLAYER_NAME"]} to share what they found) {$GLOBALS["TEMPLATE_DIALOG"]}"
         ],
         "player_request"=>["({$GLOBALS["PLAYER_NAME"]} has picked a lock: {$gameRequest[3]})"],
-        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("lockpick", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
+        "extra" => shouldTriggerRPGComment("lockpick") ? [] : ["dontuse" => true]
     ],
     // Database Prompt (After Attack)
     "afterattack"=>[
@@ -244,22 +270,22 @@ $PROMPTS=array(
     // Database Prompt (RPG Level Up)
     "rpg_lvlup"=> [
         "cue"   => ["Comment about the experience gained by {$GLOBALS["PLAYER_NAME"]} in an immersive way. {$GLOBALS["TEMPLATE_DIALOG"]}"],
-        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("levelup", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
+        "extra" => shouldTriggerRPGComment("levelup") ? [] : ["dontuse" => true]
     ],
     // Database Prompt (RPG Shout)
     "rpg_shout"=>[ 
         "cue"=>["Comment/ask about the the new shout learned by {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
-        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("learn_shout", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
+        "extra" => shouldTriggerRPGComment("learn_shout") ? [] : ["dontuse" => true]
     ],
     // Database Prompt (RPG Soul)
     "rpg_soul"=>[ 
         "cue"=>["Comment/ask about the soul absorbed by {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
-        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("absorb_soul", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
+        "extra" => shouldTriggerRPGComment("absorb_soul") ? [] : ["dontuse" => true]
     ],
     // Database Prompt (RPG Word)
     "rpg_word"=>[ 
         "cue"=>["Comment/ask about the new word learned by {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
-        "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("learn_word", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
+        "extra" => shouldTriggerRPGComment("learn_word") ? [] : ["dontuse" => true]
     ],
     // Database Prompt (Instruction)
     "instruction"=>[ 

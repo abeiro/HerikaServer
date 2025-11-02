@@ -911,6 +911,28 @@ $ittById = $byId($ittRows);
                     <?php endforeach; ?>
                 </div>
                 <?php if (!empty($__rpgHelp)): ?><div class="help" style="grid-column:1/-1;"><?= htmlspecialchars($__rpgHelp) ?></div><?php endif; ?>
+                <?php
+                    // Get current RPG_Comments_Chance value from metadata
+                    $rpgChance = 100; // Default to 100%
+                    try {
+                        if (!empty($editItem["metadata"])) {
+                            $tmpMeta = json_decode($editItem["metadata"], true);
+                            if (is_array($tmpMeta) && isset($tmpMeta['RPG_COMMENTS_CHANCE'])) {
+                                $rpgChance = intval($tmpMeta['RPG_COMMENTS_CHANCE']);
+                            }
+                        }
+                    } catch (Throwable $_e) { $rpgChance = 100; }
+                ?>
+                <div style="grid-column: 1 / -1; margin-top: 12px; padding-top: 12px; border-top: 1px solid #33485f;">
+                    <div style="color: #e9efff;">
+                        <div style="font-weight: 600; margin-bottom: 6px;">🔁 Trigger Chance</div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="range" id="rpg_chance_range" min="0" max="100" step="1" value="<?= htmlspecialchars($rpgChance) ?>" oninput="document.getElementById('rpg_chance_num').value=this.value" style="flex: 1;">
+                            <input type="number" id="rpg_chance_num" name="meta_vis[RPG_COMMENTS_CHANCE]" min="0" max="100" step="1" value="<?= htmlspecialchars($rpgChance) ?>" style="width:80px;" oninput="metaClamp('rpg_chance_range','rpg_chance_num',0,100)">
+                        </div>
+                        <div style="color: #9fb1c9; font-size: 12px; margin-top: 6px;">Probability that enabled RPG comments will trigger when their conditions are met. 0 = Never | 50 = 50% | 100 = Always</div>
+                    </div>
+                </div>
             </div>
         </div>
         <?php endif; ?>
