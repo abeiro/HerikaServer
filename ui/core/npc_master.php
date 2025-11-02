@@ -1052,7 +1052,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <div class="form-item span-2">
             <label for="appearance">Appearance</label>
             <textarea id="appearance" name="appearance" placeholder="Physical appearance."><?= htmlspecialchars($editItem["appearance"] ?? "") ?></textarea>
-            <button id="small_update_appearance"  type="button" title="Will call AI using profile pic to describe NPC. Will use ITT service.">Update from pic</button>
+            <button id="small_update_appearance" type="button" class="btn-base" style="margin-top:6px; padding:6px 12px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; cursor:pointer; font-weight:500;" title="Will use AI to describe NPC's appearance using their profile picture. Will use ITT service.">Update From Profile Picture</button>
             <small class="hint">Physical appearance. Keep it limited to character cosmetics, not equipment.</small>
         </div>
 
@@ -1637,7 +1637,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <button id="npc_modal_reset" class="btn-cancel" title="Reimport bio template fields">Reset NPC</button>
         <button id="npc_modal_diary" class="btn-cancel">View Diary</button>
         <button id="npc_modal_history" class="btn-cancel">View History</button>
-        <button id="npc_modal_regen" class="btn-cancel" title="Will call AI to regenerate this profile. Intended for custom NPCs without description">AI generate</button>
+        <button id="npc_modal_regen" class="btn-cancel" title="Will use AI to regenerate this profile. Intended for custom NPCs without biography descriptions.">AI Generate Profile</button>
         <button id="npc_modal_close" class="btn-cancel">Close</button>
       </div>
     </div>
