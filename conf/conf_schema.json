@@ -342,8 +342,7 @@
       "voiceid": {"type":"string","description":"Voice file name. Works the same as CHIM-XTTS voiceid. Will only work with voices in your Voice Cache. Voice will be automatically cloned to Cartesia when first used.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "language": {"type":"select","values":["en","fr","de","es","pt","zh","ja","hi","it","ko","nl","pl","ru","sv","tr"],"description":"Language to use for TTS generation"},
       "model_id": {"type":"select","values":["sonic-english","sonic-multilingual"],"description":"Cartesia model to use. sonic-english is faster, sonic-multilingual supports more languages.","helpurl":"https://docs.cartesia.ai/"},
-      "speed": {"type":"select","values":["slowest","slow","normal","fast","fastest"],"description":"Speaking speed for the voice"},
-      "use_emotions": {"type":"boolean","description":"Enable emotion controls. Will attempt to apply emotions based on the mood parameter."}
+      "speed": {"type":"select","values":["slowest","slow","normal","fast","fastest"],"description":"Speaking speed for the voice"}
     }
 },
   "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","piper-tts","azure","11labs","openai","kokoro","zonos_gradio","cartesia"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},

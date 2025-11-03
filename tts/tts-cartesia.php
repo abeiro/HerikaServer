@@ -262,29 +262,30 @@ function generateCartesiaTTS($text, $voiceId, $mood = 'normal') {
         'id' => $voiceId
     );
     
+    // Emotion support disabled for now - needs testing with cloned voices
     // Add emotion SSML tag if enabled and mood is provided
-    $useEmotionsEnabled = $GLOBALS["TTS"]["CARTESIA"]["use_emotions"] ?? false;
-    
-    Logger::info("Cartesia TTS called - use_emotions: " . ($useEmotionsEnabled ? 'true' : 'false') . ", mood: '{$mood}'");
-    
-    if ($useEmotionsEnabled && !empty($mood) && $mood !== 'default') {
-        $emotion = mapMoodToCartesiaEmotion($mood);
-        if (!empty($emotion)) {
-            // Prepend SSML emotion tag to text
-            $text = '<emotion value="' . $emotion . '" /> ' . $text;
-            Logger::info("Using Cartesia emotion: {$emotion} (from mood: {$mood})");
-        } else {
-            Logger::info("Mood '{$mood}' did not map to any Cartesia emotion");
-        }
-    } else {
-        if (!$useEmotionsEnabled) {
-            Logger::info("Cartesia emotions disabled in config");
-        } else if (empty($mood)) {
-            Logger::info("No mood provided to Cartesia TTS");
-        } else if ($mood === 'default') {
-            Logger::info("Mood is 'default', skipping emotion");
-        }
-    }
+    // $useEmotionsEnabled = $GLOBALS["TTS"]["CARTESIA"]["use_emotions"] ?? false;
+    // 
+    // Logger::info("Cartesia TTS called - use_emotions: " . ($useEmotionsEnabled ? 'true' : 'false') . ", mood: '{$mood}'");
+    // 
+    // if ($useEmotionsEnabled && !empty($mood) && $mood !== 'default') {
+    //     $emotion = mapMoodToCartesiaEmotion($mood);
+    //     if (!empty($emotion)) {
+    //         // Prepend SSML emotion tag to text
+    //         $text = '<emotion value="' . $emotion . '" /> ' . $text;
+    //         Logger::info("Using Cartesia emotion: {$emotion} (from mood: {$mood})");
+    //     } else {
+    //         Logger::info("Mood '{$mood}' did not map to any Cartesia emotion");
+    //     }
+    // } else {
+    //     if (!$useEmotionsEnabled) {
+    //         Logger::info("Cartesia emotions disabled in config");
+    //     } else if (empty($mood)) {
+    //         Logger::info("No mood provided to Cartesia TTS");
+    //     } else if ($mood === 'default') {
+    //         Logger::info("Mood is 'default', skipping emotion");
+    //     }
+    // }
     
     // Prepare output format
     $outputFormat = array(
