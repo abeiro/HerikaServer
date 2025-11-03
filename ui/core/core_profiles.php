@@ -643,7 +643,7 @@ $ittById = $byId($ittRows);
         <small class="hint">Optional quick-access slot (1–4). Can be quickchanged ingame.</small>
 
         <div style="height:8px;"></div>
-        <label class="label-with-toggle">Default NPC
+        <label class="label-with-toggle">👤Default NPC
             <input type="hidden" name="default_npc" value="0">
             <input type="checkbox" name="default_npc" value="1" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 1 ? "checked" : "" ?>>
             <span class="toggle-text">On</span>
@@ -651,12 +651,69 @@ $ittById = $byId($ittRows);
         <small class="hint">When enabled, new NPCs will default to using this profile. Only 1 profile can be default.</small>
 
         <div style="height:6px;"></div>
-        <label class="label-with-toggle">Default Narrator
+        <label class="label-with-toggle">🗣️Default Narrator
             <input type="hidden" name="default_narrator" value="0">
             <input type="checkbox" name="default_narrator" value="1" <?= isset($editItem["default_narrator"]) && $editItem["default_narrator"] == 1 ? "checked" : "" ?>>
             <span class="toggle-text">On</span>
         </label>
         <small class="hint">When enabled, this profile is used for the narrator. Only 1 profile can be default narrator.</small>
+
+        <div style="height:8px;"></div>
+        <?php
+            $dynamicProfileEnabled = false;
+            try {
+                if (!empty($editItem["metadata"])) {
+                    $metaData = json_decode($editItem["metadata"], true);
+                    if (is_array($metaData)) {
+                        $dynamicProfileEnabled = !empty($metaData['DYNAMIC_PROFILE_ENABLED']);
+                    }
+                }
+            } catch (Throwable $e) {}
+        ?>
+        <label class="label-with-toggle">♻️ Dynamic Profile
+            <input type="hidden" name="meta_vis[DYNAMIC_PROFILE_ENABLED]" value="">
+            <input type="checkbox" name="meta_vis[DYNAMIC_PROFILE_ENABLED]" value="1" <?= $dynamicProfileEnabled ? "checked" : "" ?>>
+            <span class="toggle-text">Off</span>
+        </label>
+        <small class="hint">Allow systems to evolve NPC profiles based on gameplay events. NPCs using this profile will have dynamic profile enabled by default.</small>
+
+        <div style="height:6px;"></div>
+        <?php
+            $mtmEnabled = false;
+            try {
+                if (!empty($editItem["metadata"])) {
+                    $metaData = json_decode($editItem["metadata"], true);
+                    if (is_array($metaData)) {
+                        $mtmEnabled = !empty($metaData['MIDDLE_TERM_MEMORY_ENABLED']);
+                    }
+                }
+            } catch (Throwable $e) {}
+        ?>
+        <label class="label-with-toggle">📃 Middle Term Memory
+            <input type="hidden" name="meta_vis[MIDDLE_TERM_MEMORY_ENABLED]" value="">
+            <input type="checkbox" name="meta_vis[MIDDLE_TERM_MEMORY_ENABLED]" value="1" <?= $mtmEnabled ? "checked" : "" ?>>
+            <span class="toggle-text">Off</span>
+        </label>
+        <small class="hint">Saves a list of recent events after every 10 memory summaries. NPCs using this profile will have MTM enabled by default.</small>
+
+        <div style="height:6px;"></div>
+        <?php
+            $autoDiaryEnabled = false;
+            try {
+                if (!empty($editItem["metadata"])) {
+                    $metaData = json_decode($editItem["metadata"], true);
+                    if (is_array($metaData)) {
+                        $autoDiaryEnabled = !empty($metaData['AUTO_DIARY_ENABLED']);
+                    }
+                }
+            } catch (Throwable $e) {}
+        ?>
+        <label class="label-with-toggle">📙 Auto Diary
+            <input type="hidden" name="meta_vis[AUTO_DIARY_ENABLED]" value="">
+            <input type="checkbox" name="meta_vis[AUTO_DIARY_ENABLED]" value="1" <?= $autoDiaryEnabled ? "checked" : "" ?>>
+            <span class="toggle-text">Off</span>
+        </label>
+        <small class="hint">Automatically generate diary entries when NPCs are nearby during sleep/wait events. NPCs using this profile will have auto diary enabled by default.</small>
 
         <div style="height:8px;"></div>
         <label for="prompt">Profile Prompt</label>
@@ -689,7 +746,7 @@ $ittById = $byId($ittRows);
 
     <script>
     document.addEventListener('DOMContentLoaded', function(){
-        const names = ['default_npc','default_narrator','meta_vis[LLM_RANDOMIZER_ENABLED]'];
+        const names = ['default_npc','default_narrator','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
@@ -911,6 +968,28 @@ $ittById = $byId($ittRows);
                     <?php endforeach; ?>
                 </div>
                 <?php if (!empty($__rpgHelp)): ?><div class="help" style="grid-column:1/-1;"><?= htmlspecialchars($__rpgHelp) ?></div><?php endif; ?>
+                <?php
+                    // Get current RPG_Comments_Chance value from metadata
+                    $rpgChance = 100; // Default to 100%
+                    try {
+                        if (!empty($editItem["metadata"])) {
+                            $tmpMeta = json_decode($editItem["metadata"], true);
+                            if (is_array($tmpMeta) && isset($tmpMeta['RPG_COMMENTS_CHANCE'])) {
+                                $rpgChance = intval($tmpMeta['RPG_COMMENTS_CHANCE']);
+                            }
+                        }
+                    } catch (Throwable $_e) { $rpgChance = 100; }
+                ?>
+                <div style="grid-column: 1 / -1; margin-top: 12px; padding-top: 12px; border-top: 1px solid #33485f;">
+                    <div style="color: #e9efff;">
+                        <div style="font-weight: 600; margin-bottom: 6px;">🔁 Trigger Chance</div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="range" id="rpg_chance_range" min="0" max="100" step="1" value="<?= htmlspecialchars($rpgChance) ?>" oninput="document.getElementById('rpg_chance_num').value=this.value" style="flex: 1;">
+                            <input type="number" id="rpg_chance_num" name="meta_vis[RPG_COMMENTS_CHANCE]" min="0" max="100" step="1" value="<?= htmlspecialchars($rpgChance) ?>" style="width:80px;" oninput="metaClamp('rpg_chance_range','rpg_chance_num',0,100)">
+                        </div>
+                        <div style="color: #9fb1c9; font-size: 12px; margin-top: 6px;">Probability that enabled RPG comments will trigger when their conditions are met. 0 = Never | 50 = 50% | 100 = Always</div>
+                    </div>
+                </div>
             </div>
         </div>
         <?php endif; ?>
@@ -955,7 +1034,7 @@ $ittById = $byId($ittRows);
                 'mode' => 'profile',
                 'fieldName' => 'metadata',
                 'allowedSettings' => ['TTSFUNCTION'],
-                'reservedKeys' => [],
+                'reservedKeys' => ['DYNAMIC_PROFILE_ENABLED', 'MIDDLE_TERM_MEMORY_ENABLED', 'AUTO_DIARY_ENABLED', 'LLM_RANDOMIZER_ENABLED', 'RPG_COMMENTS', 'RPG_COMMENTS_CHANCE', 'DYNAMIC_PROFILE_FIELDS'],
                 'currentData' => $currentProfileOverrides,
                 'systemFields' => [],
             ];

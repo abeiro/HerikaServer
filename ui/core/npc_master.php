@@ -402,19 +402,42 @@ $dynOnly = (isset($_GET['dyn']) && $_GET['dyn'] === '1');
 $mtmOnly = (isset($_GET['mtm']) && $_GET['mtm'] === '1');
 
 // Preload profiles for filter dropdown
-$profileRows = $GLOBALS["db"]->fetchAll("SELECT id, label FROM core_profiles ORDER BY label ASC");
+$profileRows = $GLOBALS["db"]->fetchAll("SELECT id, label, metadata FROM core_profiles ORDER BY label ASC");
 // Default to first profile id for new NPCs
 $firstProfileId = '';
 if (is_array($profileRows) && count($profileRows) > 0) {
     $firstProfileId = (string)($profileRows[0]['id'] ?? '');
 }
 // Preload profile connector mappings and LLM connector labels for modal summary
-$profileConnRows = $GLOBALS["db"]->fetchAll("SELECT id, llm_primary_id, llm_secondary_id, llm_tertiary_id, llm_quaternary_id, llm_formatter_id, diary_connector_id FROM core_profiles ORDER BY id ASC");
+$profileConnRows = $GLOBALS["db"]->fetchAll("SELECT id, llm_primary_id, llm_secondary_id, llm_tertiary_id, llm_quaternary_id, llm_formatter_id, diary_connector_id, metadata FROM core_profiles ORDER BY id ASC");
 $llmRows = $GLOBALS["db"]->fetchAll("SELECT id, COALESCE(NULLIF(label,''), model) AS label FROM core_llm_connector ORDER BY id ASC");
 $profilesById = [];
 foreach (($profileRows ?? []) as $pr) {
     $pid = (string)($pr['id'] ?? '');
     if ($pid !== '') $profilesById[$pid] = $pr['label'] ?? ('Profile #'.$pid);
+}
+// Build profile metadata lookup for inherited settings
+$profileMetaById = [];
+foreach (($profileConnRows ?? []) as $prow) {
+    $pid = (string)($prow['id'] ?? '');
+    if ($pid === '') continue;
+    $pmeta = [];
+    try {
+        if (!empty($prow['metadata'])) {
+            $tmp = json_decode((string)$prow['metadata'], true);
+            if (is_array($tmp)) $pmeta = $tmp;
+        }
+    } catch (Throwable $e) {}
+    // Check for both string "1" and boolean true
+    $dynVal = isset($pmeta['DYNAMIC_PROFILE_ENABLED']) ? $pmeta['DYNAMIC_PROFILE_ENABLED'] : null;
+    $mtmVal = isset($pmeta['MIDDLE_TERM_MEMORY_ENABLED']) ? $pmeta['MIDDLE_TERM_MEMORY_ENABLED'] : null;
+    $adVal = isset($pmeta['AUTO_DIARY_ENABLED']) ? $pmeta['AUTO_DIARY_ENABLED'] : null;
+    
+    $profileMetaById[$pid] = [
+        'dyn' => ($dynVal === '1' || $dynVal === 1 || $dynVal === true),
+        'mtm' => ($mtmVal === '1' || $mtmVal === 1 || $mtmVal === true),
+        'ad' => ($adVal === '1' || $adVal === 1 || $adVal === true)
+    ];
 }
 $profilesConnById = [];
 foreach (($profileConnRows ?? []) as $prc) {
@@ -504,7 +527,37 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
     </div>
     <div class="npc-grid">
     <?php foreach ($data as $row): ?>
-        <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $metaTmp = []; if (!empty($row['metadata'])) { $tmp = json_decode((string)$row['metadata'], true); if (is_array($tmp)) { $metaTmp = $tmp; } } $portraitRel = (string)($metaTmp['portrait'] ?? ''); $extTmp = []; if (!empty($row['extended_data'])) { $tmp2 = json_decode((string)$row['extended_data'], true); if (is_array($tmp2)) { $extTmp = $tmp2; } } $mtmEnabled = !empty($extTmp['middle_term_enabled']); $adEnabled = !empty($extTmp['auto_diary_enabled']); $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot,$row["refid"] ?? '', $row['md5'] ?? '', $row['npc_name'] ?? '', $portraitRel); $tagsVal = trim((string)($row['tags'] ?? '')); $tagsDisp = ($tagsVal === '') ? '' : $tagsVal; ?>
+        <?php 
+        $pid = (string)($row['profile_id'] ?? ''); 
+        $profLabel = $profilesById[$pid] ?? ''; 
+        $metaTmp = []; 
+        if (!empty($row['metadata'])) { 
+            $tmp = json_decode((string)$row['metadata'], true); 
+            if (is_array($tmp)) { $metaTmp = $tmp; } 
+        } 
+        $portraitRel = (string)($metaTmp['portrait'] ?? ''); 
+        $extTmp = []; 
+        if (!empty($row['extended_data'])) { 
+            $tmp2 = json_decode((string)$row['extended_data'], true); 
+            if (is_array($tmp2)) { $extTmp = $tmp2; } 
+        }
+        
+        // Check for inherited profile settings
+        $profileMeta = isset($profileMetaById[$pid]) ? $profileMetaById[$pid] : ['dyn'=>false,'mtm'=>false,'ad'=>false];
+        
+        // Dynamic Profile: always inherit from profile (NPC override removed for now to ensure profile settings apply)
+        $dynEnabled = $profileMeta['dyn'];
+        
+        // MTM: always inherit from profile
+        $mtmEnabled = $profileMeta['mtm'];
+        
+        // Auto Diary: always inherit from profile
+        $adEnabled = $profileMeta['ad'];
+        
+        $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot,$row["refid"] ?? '', $row['md5'] ?? '', $row['npc_name'] ?? '', $portraitRel); 
+        $tagsVal = trim((string)($row['tags'] ?? '')); 
+        $tagsDisp = ($tagsVal === '') ? '' : $tagsVal; 
+        ?>
         <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
             <div class="npc-title">
                 <div class="npc-title-left"><?php 
@@ -513,7 +566,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                     if (isset($metaTmp['stats']) && is_array($metaTmp['stats']) && isset($metaTmp['stats']['level'])) {
                         $levelDisp = ' ('.intval($metaTmp['stats']['level']).')';
                     }
-                ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?></div>
+                ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($dynEnabled)): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?></div>
             <div class="npc-title-actions">
                     <?php if ($tagsDisp !== ''): ?>
                     <span class="npc-tags-top" title="<?= htmlspecialchars($tagsDisp) ?>"><?= htmlspecialchars($tagsDisp) ?></span>
@@ -912,8 +965,75 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         }
         document.addEventListener('DOMContentLoaded', function(){
             const sel = document.getElementById('profile_id');
-            if (sel){ sel.addEventListener('change', function(){ renderProfileSummary(this.value||''); }); renderProfileSummary(sel.value||''); }
+            if (sel){ 
+                sel.addEventListener('change', function(){ 
+                    renderProfileSummary(this.value||''); 
+                    updateInheritedSettings(this.value||'');
+                }); 
+                renderProfileSummary(sel.value||''); 
+            }
         });
+        
+        // Profile metadata for inherited settings
+        const PROFILE_META = <?= json_encode(array_map(function($pr){
+            $meta = [];
+            try {
+                if (!empty($pr['metadata'])) {
+                    $tmp = json_decode((string)$pr['metadata'], true);
+                    if (is_array($tmp)) $meta = $tmp;
+                }
+            } catch (Throwable $e) {}
+            $dynVal = isset($meta['DYNAMIC_PROFILE_ENABLED']) ? $meta['DYNAMIC_PROFILE_ENABLED'] : null;
+            $mtmVal = isset($meta['MIDDLE_TERM_MEMORY_ENABLED']) ? $meta['MIDDLE_TERM_MEMORY_ENABLED'] : null;
+            $adVal = isset($meta['AUTO_DIARY_ENABLED']) ? $meta['AUTO_DIARY_ENABLED'] : null;
+            return [
+                'id' => (string)($pr['id'] ?? ''),
+                'dyn' => ($dynVal === '1' || $dynVal === 1 || $dynVal === true),
+                'mtm' => ($mtmVal === '1' || $mtmVal === 1 || $mtmVal === true),
+                'ad' => ($adVal === '1' || $adVal === 1 || $adVal === true)
+            ];
+        }, $profileConnRows ?? []), JSON_UNESCAPED_SLASHES) ?>;
+        
+        function updateInheritedSettings(profileId) {
+            const profile = PROFILE_META.find(p => p.id === profileId);
+            if (!profile) return;
+            
+            // Update dynamic_profile
+            const dynCb = document.getElementById('dynamic_profile');
+            if (dynCb) {
+                dynCb.checked = profile.dyn;
+                dynCb.setAttribute('data-profile-default', profile.dyn ? '1' : '0');
+                const hint = dynCb.closest('.form-item').querySelector('.hint');
+                if (hint) {
+                    const base = 'Allow systems to evolve the profile based on gameplay events.';
+                    hint.innerHTML = base + (profile.dyn ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '');
+                }
+            }
+            
+            // Update middle_term_enabled
+            const mtmCb = document.getElementById('middle_term_enabled');
+            if (mtmCb) {
+                mtmCb.checked = profile.mtm;
+                mtmCb.setAttribute('data-profile-default', profile.mtm ? '1' : '0');
+                const hint = mtmCb.closest('.form-item').querySelector('.hint');
+                if (hint) {
+                    const base = 'Saves a list of recent events after every 10 memory summaries. Will be used for NPC context.';
+                    hint.innerHTML = base + (profile.mtm ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '');
+                }
+            }
+            
+            // Update auto_diary_enabled
+            const adCb = document.getElementById('auto_diary_enabled');
+            if (adCb) {
+                adCb.checked = profile.ad;
+                adCb.setAttribute('data-profile-default', profile.ad ? '1' : '0');
+                const hint = adCb.closest('.form-item').querySelector('.hint');
+                if (hint) {
+                    const base = 'Automatically generate diary entries for this NPC when they are nearby during sleep/wait events.';
+                    hint.innerHTML = base + (profile.ad ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '');
+                }
+            }
+        }
     })();
     </script>
     <?php endif; ?>
@@ -986,49 +1106,61 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Voice ID for TTS.</small>
         </div>
 
+        <?php
+        // Check profile-level settings for these features
+        $profileDynEnabled = false;
+        $profileMtmEnabled = false;
+        $profileAutoDiaryEnabled = false;
+        $currentProfileId = (string)(is_array($editItem) ? ($editItem['profile_id'] ?? '') : '');
+        if ($currentProfileId !== '') {
+            foreach (($profileConnRows ?? []) as $prow) {
+                if ((string)($prow['id'] ?? '') === $currentProfileId) {
+                    $pmeta = [];
+                    try {
+                        if (!empty($prow['metadata'])) {
+                            $tmp = json_decode((string)$prow['metadata'], true);
+                            if (is_array($tmp)) $pmeta = $tmp;
+                        }
+                    } catch (Throwable $e) {}
+                    $dynVal = isset($pmeta['DYNAMIC_PROFILE_ENABLED']) ? $pmeta['DYNAMIC_PROFILE_ENABLED'] : null;
+                    $mtmVal = isset($pmeta['MIDDLE_TERM_MEMORY_ENABLED']) ? $pmeta['MIDDLE_TERM_MEMORY_ENABLED'] : null;
+                    $adVal = isset($pmeta['AUTO_DIARY_ENABLED']) ? $pmeta['AUTO_DIARY_ENABLED'] : null;
+                    $profileDynEnabled = ($dynVal === '1' || $dynVal === 1 || $dynVal === true);
+                    $profileMtmEnabled = ($mtmVal === '1' || $mtmVal === 1 || $mtmVal === true);
+                    $profileAutoDiaryEnabled = ($adVal === '1' || $adVal === 1 || $adVal === true);
+                    break;
+                }
+            }
+        }
+        
+        // Always inherit from profile (simplified logic for now)
+        $dynChecked = $profileDynEnabled;
+        $dynFromProfile = $profileDynEnabled;
+        $mtmChecked = $profileMtmEnabled;
+        $mtmFromProfile = $profileMtmEnabled;
+        $adChecked = $profileAutoDiaryEnabled;
+        $adFromProfile = $profileAutoDiaryEnabled;
+        ?>
         <div class="form-item">
             <label for="dynamic_profile" class="label-with-toggle">♻️Dynamic Profile
                 <input type="hidden" name="dynamic_profile" value="0">
-                <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?= !empty($editItem["dynamic_profile"]) ? "checked" : "" ?>>
+                <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?= $dynChecked ? "checked" : "" ?> data-profile-default="<?= $profileDynEnabled ? '1' : '0' ?>">
             </label>
-            <small class="hint">Allow systems to evolve the profile based on gameplay events.</small>
-        </div>
-        <?php
-        // Initialize middle-term memory checkbox state from extended_data JSON
-        $mtmEnabledInit = false;
-        try {
-            if (!empty($editItem['extended_data'])){
-                $tmpEd = json_decode((string)$editItem['extended_data'], true);
-                if (is_array($tmpEd) && array_key_exists('middle_term_enabled', $tmpEd)){
-                    $mtmEnabledInit = (intval($tmpEd['middle_term_enabled']) === 1);
-                }
-            }
-        } catch (Throwable $e) { $mtmEnabledInit = false; }
-        ?>
-        <div class="form-item">
-            <label for="middle_term_enabled" class="label-with-toggle">📃Middle Term Memory
-                <input type="checkbox" id="middle_term_enabled" name="middle_term_enabled" value="1" <?= !empty($mtmEnabledInit) ? "checked" : "" ?>>
-            </label>
-            <small class="hint">Saves a list of recent events after every 10 memory summaries. Will be used for NPC context.</small>
+            <small class="hint">Allow systems to evolve the profile based on gameplay events.<?= $dynFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
         </div>
 
-        <?php
-        // Initialize auto-diary checkbox state from extended_data JSON
-        $autoDiaryEnabledInit = false;
-        try {
-            if (!empty($editItem['extended_data'])){
-                $tmpEd = json_decode((string)$editItem['extended_data'], true);
-                if (is_array($tmpEd) && array_key_exists('auto_diary_enabled', $tmpEd)){
-                    $autoDiaryEnabledInit = (intval($tmpEd['auto_diary_enabled']) === 1);
-                }
-            }
-        } catch (Throwable $e) { $autoDiaryEnabledInit = false; }
-        ?>
+        <div class="form-item">
+            <label for="middle_term_enabled" class="label-with-toggle">📃Middle Term Memory
+                <input type="checkbox" id="middle_term_enabled" name="middle_term_enabled" value="1" <?= $mtmChecked ? "checked" : "" ?> data-profile-default="<?= $profileMtmEnabled ? '1' : '0' ?>">
+            </label>
+            <small class="hint">Saves a list of recent events after every 10 memory summaries. Will be used for NPC context.<?= $mtmFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
+        </div>
+
         <div class="form-item">
             <label for="auto_diary_enabled" class="label-with-toggle">📙Auto Diary
-                <input type="checkbox" id="auto_diary_enabled" name="auto_diary_enabled" value="1" <?= !empty($autoDiaryEnabledInit) ? "checked" : "" ?>>
+                <input type="checkbox" id="auto_diary_enabled" name="auto_diary_enabled" value="1" <?= $adChecked ? "checked" : "" ?> data-profile-default="<?= $profileAutoDiaryEnabled ? '1' : '0' ?>">
             </label>
-            <small class="hint">Automatically generate diary entries for this NPC when they are nearby during sleep/wait events.</small>
+            <small class="hint">Automatically generate diary entries for this NPC when they are nearby during sleep/wait events.<?= $adFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
         </div>
 
         <div class="form-item span-2">
@@ -1319,7 +1451,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Override global and profile settings for this specific NPC. Changes here take precedence over all other configurations.</small>
             <?php
             // Configure override editor for NPC mode
-            $reservedKeys = ['middle_term_memory', 'middle_term_enabled', 'chim_core_migrated'];
+            $reservedKeys = ['middle_term_memory', 'middle_term_enabled', 'auto_diary_enabled', 'chim_core_migrated'];
             $extendedDataRaw = isset($editItem["extended_data"]) ? $editItem["extended_data"] : '{}';
             $extendedDataObj = json_decode($extendedDataRaw, true) ?: [];
             $currentOverrides = [];
@@ -2581,3 +2713,4 @@ $title = $TITLE;
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 ?>
+
