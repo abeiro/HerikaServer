@@ -2012,6 +2012,8 @@ if ($checkTableExists("rumors") == -1) {
 } else
     Logger::info(__FILE__." import_rules exists");
 
+$db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS region text");
+$db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS hold text");
 
 //----------------------------------------------------
 
