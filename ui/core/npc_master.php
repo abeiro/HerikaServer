@@ -193,21 +193,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
     header('Content-Type: application/json');
     try {
         $id = intval($_POST['id'] ?? 0);
-        // Server-side safeguard: ensure middle_term_enabled and auto_diary_enabled are reflected in extended_data
+        // Server-side: extended_data already has feature toggles synced by JS, just ensure it's valid JSON
+        // The client-side JS only includes values that differ from profile defaults
         try {
             $postedExt = isset($_POST['extended_data']) ? (string)$_POST['extended_data'] : '';
-            $obj = [];
-            if ($postedExt !== '') { $tmp = json_decode($postedExt, true); if (is_array($tmp)) { $obj = $tmp; } }
-            $mtm = isset($_POST['middle_term_enabled']) ? 1 : 0;
-            $ad = isset($_POST['auto_diary_enabled']) ? 1 : 0;
-            if (!array_key_exists('middle_term_enabled', $obj) || !in_array(intval($obj['middle_term_enabled']), [0,1], true)) {
-                $obj['middle_term_enabled'] = $mtm;
+            if ($postedExt !== '') {
+                $tmp = json_decode($postedExt, true);
+                if (!is_array($tmp)) {
+                    $_POST['extended_data'] = '{}'; // Ensure valid JSON
+                }
+            } else {
+                $_POST['extended_data'] = '{}';
             }
-            if (!array_key_exists('auto_diary_enabled', $obj) || !in_array(intval($obj['auto_diary_enabled']), [0,1], true)) {
-                $obj['auto_diary_enabled'] = $ad;
+        } catch (Throwable $e) {
+            $_POST['extended_data'] = '{}';
+        }
+        
+        // Handle dynamic_profile: if empty string sent, set to NULL (inherit from profile)
+        if (array_key_exists('dynamic_profile', $_POST)) {
+            $dynVal = $_POST['dynamic_profile'];
+            if ($dynVal === '' || $dynVal === null) {
+                $_POST['dynamic_profile'] = null; // NULL means inherit from profile
+            } else {
+                $_POST['dynamic_profile'] = ($dynVal === '1' || $dynVal === 1 || $dynVal === true) ? 1 : 0;
             }
-            $_POST['extended_data'] = json_encode($obj);
-        } catch (Throwable $e) { /* best-effort only */ }
+        }
         if ($id <= 0) {
             // Create new NPC and return ID
             $allowed = [
@@ -545,14 +555,23 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
         // Check for inherited profile settings
         $profileMeta = isset($profileMetaById[$pid]) ? $profileMetaById[$pid] : ['dyn'=>false,'mtm'=>false,'ad'=>false];
         
-        // Dynamic Profile: always inherit from profile (NPC override removed for now to ensure profile settings apply)
-        $dynEnabled = $profileMeta['dyn'];
+        // Dynamic Profile: check NPC override, otherwise inherit from profile
+        $dynEnabled = $profileMeta['dyn']; // default to profile
+        if (isset($row['dynamic_profile']) && $row['dynamic_profile'] !== null && $row['dynamic_profile'] !== '') {
+            $dynEnabled = !empty($row['dynamic_profile']);
+        }
         
-        // MTM: always inherit from profile
-        $mtmEnabled = $profileMeta['mtm'];
+        // MTM: check extended_data override, otherwise inherit from profile
+        $mtmEnabled = $profileMeta['mtm']; // default to profile
+        if (array_key_exists('middle_term_enabled', $extTmp) && $extTmp['middle_term_enabled'] !== null && $extTmp['middle_term_enabled'] !== '') {
+            $mtmEnabled = !empty($extTmp['middle_term_enabled']);
+        }
         
-        // Auto Diary: always inherit from profile
-        $adEnabled = $profileMeta['ad'];
+        // Auto Diary: check extended_data override, otherwise inherit from profile
+        $adEnabled = $profileMeta['ad']; // default to profile
+        if (array_key_exists('auto_diary_enabled', $extTmp) && $extTmp['auto_diary_enabled'] !== null && $extTmp['auto_diary_enabled'] !== '') {
+            $adEnabled = !empty($extTmp['auto_diary_enabled']);
+        }
         
         $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot,$row["refid"] ?? '', $row['md5'] ?? '', $row['npc_name'] ?? '', $portraitRel); 
         $tagsVal = trim((string)($row['tags'] ?? '')); 
@@ -1133,13 +1152,50 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             }
         }
         
-        // Always inherit from profile (simplified logic for now)
+        // Dynamic Profile: check NPC override or fall back to profile default
         $dynChecked = $profileDynEnabled;
-        $dynFromProfile = $profileDynEnabled;
+        $dynFromProfile = false;
+        if (is_array($editItem) && isset($editItem['dynamic_profile']) && $editItem['dynamic_profile'] !== null && $editItem['dynamic_profile'] !== '') {
+            // NPC has explicit value (override)
+            $dynChecked = !empty($editItem['dynamic_profile']);
+        } else {
+            // No NPC override, inherit from profile
+            $dynFromProfile = true;
+        }
+        
+        // Middle Term Memory: check extended_data override or fall back to profile default
         $mtmChecked = $profileMtmEnabled;
-        $mtmFromProfile = $profileMtmEnabled;
+        $mtmFromProfile = false;
+        try {
+            $hasNpcOverride = false;
+            if (is_array($editItem) && !empty($editItem['extended_data'])) {
+                $tmpEd = json_decode((string)$editItem['extended_data'], true);
+                if (is_array($tmpEd) && array_key_exists('middle_term_enabled', $tmpEd) && $tmpEd['middle_term_enabled'] !== null && $tmpEd['middle_term_enabled'] !== '') {
+                    $mtmChecked = !empty($tmpEd['middle_term_enabled']);
+                    $hasNpcOverride = true;
+                }
+            }
+            if (!$hasNpcOverride) {
+                $mtmFromProfile = true;
+            }
+        } catch (Throwable $e) { }
+        
+        // Auto Diary: check extended_data override or fall back to profile default
         $adChecked = $profileAutoDiaryEnabled;
-        $adFromProfile = $profileAutoDiaryEnabled;
+        $adFromProfile = false;
+        try {
+            $hasNpcOverride = false;
+            if (is_array($editItem) && !empty($editItem['extended_data'])) {
+                $tmpEd = json_decode((string)$editItem['extended_data'], true);
+                if (is_array($tmpEd) && array_key_exists('auto_diary_enabled', $tmpEd) && $tmpEd['auto_diary_enabled'] !== null && $tmpEd['auto_diary_enabled'] !== '') {
+                    $adChecked = !empty($tmpEd['auto_diary_enabled']);
+                    $hasNpcOverride = true;
+                }
+            }
+            if (!$hasNpcOverride) {
+                $adFromProfile = true;
+            }
+        } catch (Throwable $e) { }
         ?>
         <div class="form-item">
             <label for="dynamic_profile" class="label-with-toggle">♻️Dynamic Profile
@@ -1493,16 +1549,53 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                   }
                 } catch(_e) { console.error('Failed to sync extended data overrides:', _e); }
                 
-                // Sync middle_term_enabled checkbox into extended JSON
+                // Sync feature checkboxes into extended_data (only save if differs from profile default)
                 try {
                   const mtm = form.querySelector('#middle_term_enabled');
-                  if (mtm && form.extended_data){
+                  const ad = form.querySelector('#auto_diary_enabled');
+                  const dyn = form.querySelector('#dynamic_profile');
+                  if (form.extended_data){
                     let obj = {};
                     try { obj = JSON.parse(String(form.extended_data.value||'')||'{}')||{}; } catch(_e){ obj = {}; }
-                    obj.middle_term_enabled = mtm.checked ? 1 : 0;
+                    
+                    // MTM: only save if differs from profile default
+                    if (mtm) {
+                      const profileDefault = mtm.getAttribute('data-profile-default') === '1';
+                      if (mtm.checked !== profileDefault) {
+                        obj.middle_term_enabled = mtm.checked ? 1 : 0;
+                      } else {
+                        delete obj.middle_term_enabled; // Remove to inherit from profile
+                      }
+                    }
+                    
+                    // Auto Diary: only save if differs from profile default
+                    if (ad) {
+                      const profileDefault = ad.getAttribute('data-profile-default') === '1';
+                      if (ad.checked !== profileDefault) {
+                        obj.auto_diary_enabled = ad.checked ? 1 : 0;
+                      } else {
+                        delete obj.auto_diary_enabled; // Remove to inherit from profile
+                      }
+                    }
+                    
                     form.extended_data.value = JSON.stringify(obj);
                   }
-                } catch(_e){ console.error('Failed to sync extended data overrides:', _e); }
+                  
+                  // Dynamic Profile: handled separately in form POST
+                  if (dyn) {
+                    const profileDefault = dyn.getAttribute('data-profile-default') === '1';
+                    const dynHidden = form.querySelector('input[type="hidden"][name="dynamic_profile"]');
+                    if (dyn.checked !== profileDefault) {
+                      // Override: set explicit value
+                      if (dynHidden) dynHidden.value = dyn.checked ? '1' : '0';
+                      dyn.value = dyn.checked ? '1' : '0';
+                    } else {
+                      // Inherit: send empty/null to clear override
+                      if (dynHidden) dynHidden.value = '';
+                      dyn.value = '';
+                    }
+                  }
+                } catch(_e){ console.error('Failed to sync feature toggles:', _e); }
 
                 // Sync edited middle_term_latest back into extended_data JSON
                 try {
