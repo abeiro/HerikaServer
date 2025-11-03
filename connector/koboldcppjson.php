@@ -354,6 +354,9 @@ class koboldcppjson
                     $GLOBALS["SCRIPTLINE_EXPRESSION"]=GetExpression($partialResult[0]["mood"]);
                 }
                 
+                // Store the entire response for TTS systems that need additional data like emotions
+                $GLOBALS["LAST_LLM_RESPONSE"] = $partialResult[0];
+                
             }
             
             $totalBuffer.=$data["token"];

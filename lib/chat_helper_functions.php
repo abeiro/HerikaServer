@@ -470,7 +470,11 @@ function returnLines($lines,$writeOutput=true)
 
         if (isset($forceMood)) {
             $mood = $forceMood;
+        } elseif (isset($GLOBALS["LAST_LLM_RESPONSE"]["mood"]) && !empty($GLOBALS["LAST_LLM_RESPONSE"]["mood"])) {
+            // Use mood from JSON response (set by connector)
+            $mood = trim($GLOBALS["LAST_LLM_RESPONSE"]["mood"]);
         } elseif (!empty($matches) && !empty($matches[1]) && isset($matches[1][0])) {
+            // Fallback to SSML-style mood extraction for backward compatibility
             $mood = $matches[1][0];
         } else {
             $mood = "default";

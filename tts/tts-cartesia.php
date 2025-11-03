@@ -118,11 +118,8 @@ function cloneVoiceToCartesia($voiceName, $voiceSamplePath) {
         $language = $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"];
     }
     
-    // Get clone mode (similarity or stability)
-    $mode = $GLOBALS["TTS"]["CARTESIA"]["clone_mode"] ?? 'stability';
-    
-    // Get enhance setting
-    $enhance = $GLOBALS["TTS"]["CARTESIA"]["enhance"] ?? false;
+    // Use similarity mode for best voice cloning results
+    $mode = 'similarity';
     
     // Prepare multipart form data
     $boundary = '----WebKitFormBoundary' . uniqid();
@@ -161,13 +158,6 @@ function cloneVoiceToCartesia($voiceName, $voiceSamplePath) {
     $data .= '--' . $boundary . $eol;
     $data .= 'Content-Disposition: form-data; name="mode"' . $eol . $eol;
     $data .= $mode . $eol;
-    
-    // Add enhance
-    if ($enhance) {
-        $data .= '--' . $boundary . $eol;
-        $data .= 'Content-Disposition: form-data; name="enhance"' . $eol . $eol;
-        $data .= 'true' . $eol;
-    }
     
     $data .= '--' . $boundary . '--' . $eol;
     
@@ -272,16 +262,30 @@ function generateCartesiaTTS($text, $voiceId, $mood = 'normal') {
         'id' => $voiceId
     );
     
-    // Add experimental controls if enabled and mood is provided
-    if (($GLOBALS["TTS"]["CARTESIA"]["use_emotions"] ?? false) && !empty($mood) && $mood !== 'default') {
-        $emotions = mapMoodToCartesiaEmotions($mood);
-        if (!empty($emotions)) {
-            $voiceSpec['__experimental_controls'] = array(
-                'speed' => mapSpeedToCartesia($speed),
-                'emotion' => $emotions
-            );
-        }
-    }
+    // Emotion support disabled for now - needs testing with cloned voices
+    // Add emotion SSML tag if enabled and mood is provided
+    // $useEmotionsEnabled = $GLOBALS["TTS"]["CARTESIA"]["use_emotions"] ?? false;
+    // 
+    // Logger::info("Cartesia TTS called - use_emotions: " . ($useEmotionsEnabled ? 'true' : 'false') . ", mood: '{$mood}'");
+    // 
+    // if ($useEmotionsEnabled && !empty($mood) && $mood !== 'default') {
+    //     $emotion = mapMoodToCartesiaEmotion($mood);
+    //     if (!empty($emotion)) {
+    //         // Prepend SSML emotion tag to text
+    //         $text = '<emotion value="' . $emotion . '" /> ' . $text;
+    //         Logger::info("Using Cartesia emotion: {$emotion} (from mood: {$mood})");
+    //     } else {
+    //         Logger::info("Mood '{$mood}' did not map to any Cartesia emotion");
+    //     }
+    // } else {
+    //     if (!$useEmotionsEnabled) {
+    //         Logger::info("Cartesia emotions disabled in config");
+    //     } else if (empty($mood)) {
+    //         Logger::info("No mood provided to Cartesia TTS");
+    //     } else if ($mood === 'default') {
+    //         Logger::info("Mood is 'default', skipping emotion");
+    //     }
+    // }
     
     // Prepare output format
     $outputFormat = array(
@@ -318,6 +322,26 @@ function generateCartesiaTTS($text, $voiceId, $mood = 'normal') {
     if ($response === false) {
         $error = error_get_last();
         Logger::error("Failed to generate TTS from Cartesia: " . ($error['message'] ?? 'Unknown error'));
+        
+        // Log request details for debugging
+        Logger::error("Request data: " . json_encode($data));
+        
+        // Check HTTP response headers for error details
+        if (isset($http_response_header)) {
+            foreach ($http_response_header as $header) {
+                if (stripos($header, 'HTTP/') === 0 || stripos($header, 'content-type') === 0) {
+                    Logger::error("Response header: " . $header);
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    // Check if response is JSON error
+    $jsonCheck = json_decode($response, true);
+    if (is_array($jsonCheck) && isset($jsonCheck['error'])) {
+        Logger::error("Cartesia API error: " . json_encode($jsonCheck));
         return false;
     }
     
@@ -325,72 +349,192 @@ function generateCartesiaTTS($text, $voiceId, $mood = 'normal') {
 }
 
 /**
- * Map mood to Cartesia emotion tags
+ * Map mood to Cartesia emotion string
+ * Based on Cartesia's emotion list: https://docs.cartesia.ai/api-reference/tts/bytes
+ * Primary emotions (best results): neutral, angry, excited, content, sad, scared
  * 
  * @param string $mood The mood string
- * @return array Array of emotion tags
+ * @return string|null The Cartesia emotion string or null if no mapping
  */
-function mapMoodToCartesiaEmotions($mood) {
-    $emotions = array();
-    
-    // Handle multiple moods separated by pipe
+function mapMoodToCartesiaEmotion($mood) {
+    // Handle multiple moods separated by pipe - use first one
     $moodArray = explode('|', $mood);
     $primaryMood = strtolower(trim($moodArray[0]));
     
+    // Map common moods to Cartesia emotions
     switch ($primaryMood) {
+        // Anger/Frustration emotions
         case 'angry':
         case 'furious':
+        case 'enraged':
+        case 'mad':
+            return 'angry';
+        case 'outraged':
+            return 'outraged';
         case 'irritated':
         case 'annoyed':
-        case 'enraged':
-            $emotions[] = 'anger:high';
-            break;
+        case 'frustrated':
+            return 'frustrated';
+        case 'agitated':
+            return 'agitated';
+        case 'threatened':
+            return 'threatened';
+        case 'disgusted':
+            return 'disgusted';
+        case 'contempt':
+            return 'contempt';
+        case 'envious':
+            return 'envious';
             
+        // Happy/Positive emotions
         case 'happy':
         case 'cheerful':
         case 'joyful':
+            return 'happy';
         case 'excited':
+        case 'enthusiastic':
+            return 'excited';
+        case 'elated':
+            return 'elated';
+        case 'euphoric':
+            return 'euphoric';
+        case 'triumphant':
+            return 'triumphant';
         case 'playful':
         case 'amused':
-            $emotions[] = 'positivity:high';
-            break;
+        case 'joking':
+        case 'comedic':
+            return 'joking/comedic';
+        case 'flirtatious':
+            return 'flirtatious';
+        case 'content':
+        case 'peaceful':
+            return 'content';
+        case 'serene':
+            return 'serene';
+        case 'grateful':
+            return 'grateful';
+        case 'affectionate':
+            return 'affectionate';
+        case 'proud':
+            return 'proud';
+        case 'confident':
+            return 'confident';
             
+        // Sad/Negative emotions
         case 'sad':
         case 'melancholy':
-        case 'depressed':
         case 'gloomy':
+            return 'sad';
+        case 'dejected':
+            return 'dejected';
+        case 'melancholic':
+            return 'melancholic';
+        case 'depressed':
+        case 'disappointed':
+            return 'disappointed';
         case 'sorrowful':
-            $emotions[] = 'sadness:high';
-            break;
+        case 'hurt':
+            return 'hurt';
+        case 'guilty':
+            return 'guilty';
+        case 'rejected':
+            return 'rejected';
+        case 'nostalgic':
+            return 'nostalgic';
+        case 'wistful':
+            return 'wistful';
+        case 'bored':
+            return 'bored';
+        case 'tired':
+            return 'tired';
+        case 'resigned':
+            return 'resigned';
             
+        // Surprise/Curiosity emotions
         case 'surprised':
         case 'shocked':
         case 'astonished':
+            return 'surprised';
         case 'amazed':
-            $emotions[] = 'surprise:high';
-            break;
-            
+            return 'amazed';
         case 'curious':
         case 'inquisitive':
         case 'interested':
-            $emotions[] = 'curiosity:high';
-            break;
+            return 'curious';
+        case 'anticipation':
+            return 'anticipation';
+        case 'mysterious':
+            return 'mysterious';
             
+        // Fear/Anxiety emotions
+        case 'scared':
+        case 'afraid':
+        case 'fearful':
+            return 'scared';
+        case 'anxious':
+        case 'worried':
+            return 'anxious';
+        case 'panicked':
+            return 'panicked';
+        case 'alarmed':
+            return 'alarmed';
+        case 'hesitant':
+            return 'hesitant';
+        case 'insecure':
+            return 'insecure';
+        case 'confused':
+            return 'confused';
+            
+        // Other emotions
+        case 'sarcastic':
+            return 'sarcastic';
+        case 'ironic':
+            return 'ironic';
+        case 'apologetic':
+            return 'apologetic';
+        case 'sympathetic':
+            return 'sympathetic';
+        case 'trust':
+            return 'trust';
+        case 'distant':
+            return 'distant';
+        case 'skeptical':
+            return 'skeptical';
+        case 'contemplative':
+            return 'contemplative';
+        case 'determined':
+            return 'determined';
+            
+        // Neutral/Calm
         case 'neutral':
         case 'default':
         case 'calm':
-            // No emotion tags for neutral
-            break;
+            return 'neutral';
             
         default:
-            // Try to extract emotion if it matches Cartesia format
-            if (in_array($primaryMood, ['anger', 'positivity', 'surprise', 'sadness', 'curiosity'])) {
-                $emotions[] = $primaryMood;
+            // Check if the mood directly matches a Cartesia emotion
+            $cartesiaEmotions = [
+                'happy', 'excited', 'enthusiastic', 'elated', 'euphoric', 'triumphant',
+                'amazed', 'surprised', 'flirtatious', 'joking/comedic', 'curious',
+                'content', 'peaceful', 'serene', 'calm', 'grateful', 'affectionate',
+                'trust', 'sympathetic', 'anticipation', 'mysterious', 'angry', 'mad',
+                'outraged', 'frustrated', 'agitated', 'threatened', 'disgusted',
+                'contempt', 'envious', 'sarcastic', 'ironic', 'sad', 'dejected',
+                'melancholic', 'disappointed', 'hurt', 'guilty', 'bored', 'tired',
+                'rejected', 'nostalgic', 'wistful', 'apologetic', 'hesitant',
+                'insecure', 'confused', 'resigned', 'anxious', 'panicked', 'alarmed',
+                'scared', 'neutral', 'proud', 'confident', 'distant', 'skeptical',
+                'contemplative', 'determined'
+            ];
+            
+            if (in_array($primaryMood, $cartesiaEmotions)) {
+                return $primaryMood;
             }
-            break;
+            
+            // Default to neutral if no match
+            return 'neutral';
     }
-    
-    return $emotions;
 }
 
 /**
