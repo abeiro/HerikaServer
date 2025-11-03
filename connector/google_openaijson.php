@@ -431,6 +431,9 @@ class google_openaijson
                             $GLOBALS["SCRIPTLINE_EXPRESSION"]=GetExpression($finalData["mood"]);
                         }
                         
+                        // Store the entire response for TTS systems that need additional data like emotions
+                        $GLOBALS["LAST_LLM_RESPONSE"] = $finalData;
+                        
                     }
                 }
                 

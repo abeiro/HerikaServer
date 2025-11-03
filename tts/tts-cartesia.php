@@ -262,10 +262,28 @@ function generateCartesiaTTS($text, $voiceId, $mood = 'normal') {
         'id' => $voiceId
     );
     
-    // Add emotion if enabled and mood is provided
-    $emotion = null;
-    if (($GLOBALS["TTS"]["CARTESIA"]["use_emotions"] ?? false) && !empty($mood) && $mood !== 'default') {
+    // Add emotion SSML tag if enabled and mood is provided
+    $useEmotionsEnabled = $GLOBALS["TTS"]["CARTESIA"]["use_emotions"] ?? false;
+    
+    Logger::info("Cartesia TTS called - use_emotions: " . ($useEmotionsEnabled ? 'true' : 'false') . ", mood: '{$mood}'");
+    
+    if ($useEmotionsEnabled && !empty($mood) && $mood !== 'default') {
         $emotion = mapMoodToCartesiaEmotion($mood);
+        if (!empty($emotion)) {
+            // Prepend SSML emotion tag to text
+            $text = '<emotion value="' . $emotion . '" /> ' . $text;
+            Logger::info("Using Cartesia emotion: {$emotion} (from mood: {$mood})");
+        } else {
+            Logger::info("Mood '{$mood}' did not map to any Cartesia emotion");
+        }
+    } else {
+        if (!$useEmotionsEnabled) {
+            Logger::info("Cartesia emotions disabled in config");
+        } else if (empty($mood)) {
+            Logger::info("No mood provided to Cartesia TTS");
+        } else if ($mood === 'default') {
+            Logger::info("Mood is 'default', skipping emotion");
+        }
     }
     
     // Prepare output format
@@ -285,11 +303,6 @@ function generateCartesiaTTS($text, $voiceId, $mood = 'normal') {
         'speed' => $speed
     );
     
-    // Add emotion to generation config if set
-    if (!empty($emotion)) {
-        $data['emotion'] = $emotion;
-    }
-    
     // Prepare request
     $options = array(
         'http' => array(
@@ -308,6 +321,26 @@ function generateCartesiaTTS($text, $voiceId, $mood = 'normal') {
     if ($response === false) {
         $error = error_get_last();
         Logger::error("Failed to generate TTS from Cartesia: " . ($error['message'] ?? 'Unknown error'));
+        
+        // Log request details for debugging
+        Logger::error("Request data: " . json_encode($data));
+        
+        // Check HTTP response headers for error details
+        if (isset($http_response_header)) {
+            foreach ($http_response_header as $header) {
+                if (stripos($header, 'HTTP/') === 0 || stripos($header, 'content-type') === 0) {
+                    Logger::error("Response header: " . $header);
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    // Check if response is JSON error
+    $jsonCheck = json_decode($response, true);
+    if (is_array($jsonCheck) && isset($jsonCheck['error'])) {
+        Logger::error("Cartesia API error: " . json_encode($jsonCheck));
         return false;
     }
     
