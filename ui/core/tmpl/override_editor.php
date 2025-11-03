@@ -49,7 +49,7 @@ function ovr_icon_for(string $key): string {
 $fullSchema = [
     'TTSFUNCTION' => [
         'type' => 'select',
-        'values' => ['none','melotts','xtts-fastapi','xvasynth','azure','11labs','openai','kokoro','koboldcpp','zonos_gradio','piper-tts','mimic3','deepgram'],
+        'values' => ['none','melotts','xtts-fastapi','xvasynth','azure','11labs','openai','kokoro','koboldcpp','zonos_gradio','piper-tts','mimic3','deepgram','cartesia'],
         'description' => 'Text-to-Speech service. Overrides global TTS selection.',
         'category' => 'Core Settings'
     ],
