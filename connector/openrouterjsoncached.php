@@ -257,6 +257,11 @@ class openrouterjsoncached
         $this->_provider_caching = isset($GLOBALS["CONNECTOR"][$this->name]["provider_caching"]) ? $GLOBALS["CONNECTOR"][$this->name]["provider_caching"] : "Anthropic";
         logMessage("provider caching: {$this->_provider_caching}");
 
+        // Load verbose logging setting from config
+        $this->_verboseLogging = isset($GLOBALS["CONNECTOR"][$this->name]["verbose_logging"])
+            ? (bool)$GLOBALS["CONNECTOR"][$this->name]["verbose_logging"]
+            : true; // Default enabled for testing
+
         $CONTEXTHISTORY = isset($GLOBALS['CONTEXT_HISTORY']) ? $GLOBALS['CONTEXT_HISTORY'] : 50;
         logMessage("CONTEXT HISTORY: $CONTEXTHISTORY");
 
@@ -292,6 +297,37 @@ class openrouterjsoncached
         }
 
         logMessage("Response Format Config: format={$this->_responseFormat}, actions={$this->_includeActions}, mood={$this->_includeMood}, target={$this->_includeTarget}, listener={$this->_includeListener}, uncached={$dialogue_cache_uncached_count}");
+
+        // VERBOSE_LOGGING_START - open() Part 1: Configuration loaded
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ===== OPEN() PART 1: CONFIGURATION =====");
+            logMessage("[CACHE-VERBOSE] URL: {$this->_url}");
+            logMessage("[CACHE-VERBOSE] Model: {$this->_model}");
+            logMessage("[CACHE-VERBOSE] Max Tokens: {$MAX_TOKENS}");
+            logMessage("[CACHE-VERBOSE] Provider Caching: {$this->_provider_caching}");
+            logMessage("[CACHE-VERBOSE] Response Format: {$this->_responseFormat}");
+            logMessage("[CACHE-VERBOSE] Include Actions: " . ($this->_includeActions ? 'YES' : 'NO'));
+            logMessage("[CACHE-VERBOSE] Include Mood: " . ($this->_includeMood ? 'YES' : 'NO'));
+            logMessage("[CACHE-VERBOSE] Include Target: " . ($this->_includeTarget ? 'YES' : 'NO'));
+            logMessage("[CACHE-VERBOSE] Include Listener: " . ($this->_includeListener ? 'YES' : 'NO'));
+            logMessage("[CACHE-VERBOSE] Max Dialogue Cache Size: {$max_dialogue_cache_size}");
+            logMessage("[CACHE-VERBOSE] Dialogue Uncached Count: {$dialogue_cache_uncached_count}");
+            logMessage("[CACHE-VERBOSE] Context History Size: {$CONTEXTHISTORY}");
+            logMessage("[CACHE-VERBOSE] Toggle Thinking: " . ($toggleThinking ? 'YES' : 'NO'));
+            if ($toggleThinking) {
+                logMessage("[CACHE-VERBOSE] Thinking Tokens: {$thinkingTokens}");
+                logMessage("[CACHE-VERBOSE] Effort Level: {$effort_level}");
+            }
+            if (!empty($customInstruction)) {
+                logMessage("[CACHE-VERBOSE] Custom Instruction: " . substr($customInstruction, 0, 100) . "...");
+            }
+            if (!empty($lastCustomInstruction)) {
+                logMessage("[CACHE-VERBOSE] Last Custom Instruction: " . substr($lastCustomInstruction, 0, 100) . "...");
+            }
+            logMessage("[CACHE-VERBOSE] Context Data Elements: {$n_ctxsize}");
+            logMessage("[CACHE-VERBOSE] Verbose Logging: ENABLED");
+        }
+        // VERBOSE_LOGGING_END
 
         // Continue to Part 2...
         return $this->_openPart2($contextData, $customParms, $herikaName, $MAX_TOKENS, $max_dialogue_cache_size,
