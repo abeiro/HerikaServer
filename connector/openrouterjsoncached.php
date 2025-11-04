@@ -57,6 +57,8 @@ class openrouterjsoncached
     private $_simpleFormatParsed;
     private $_usedPrefill;
     private $_prefillContent;
+    private $_simpleFormatMessageStart;
+    private $_lastReturnedLength;
     public $_jsonResponsesEncoded = array();
 
     public function __construct()
@@ -100,6 +102,8 @@ class openrouterjsoncached
         $this->_simpleFormatParsed = false;
         $this->_usedPrefill = false;
         $this->_prefillContent = '';
+        $this->_simpleFormatMessageStart = 0;
+        $this->_lastReturnedLength = 0;
         $this->_jsonResponsesEncoded = array();
 
         require_once(__DIR__."/__jpd.php");
@@ -510,7 +514,9 @@ class openrouterjsoncached
             $text = preg_replace('/[.]{2,}/', '.', $text);
             $dynamicEnvironment = trim("ASSISTANT: Environmental Context: $text");
 
-            array_splice($completeEventList, count($completeEventList) - 2, 0, [array('type' => 'text', 'text' => $dynamicEnvironment)]);
+            // Insert before last 2 elements, or at the end if list is too short
+            $insertPosition = max(0, count($completeEventList) - 2);
+            array_splice($completeEventList, $insertPosition, 0, [array('type' => 'text', 'text' => $dynamicEnvironment)]);
         }
 
         $completeEventList = removeDuplicateMemories($completeEventList);
@@ -641,9 +647,13 @@ class openrouterjsoncached
             'Content-Type: application/json',
             "Authorization: Bearer {$apiKey}",
             "HTTP-Referer:  https://dwemerdynamics.com/",
-            "X-Title: Dwemer Dynamics",
-            "anthropic-beta: extended-cache-ttl-2025-04-11"
+            "X-Title: Dwemer Dynamics"
         );
+
+        // Only send Anthropic-specific headers when using Anthropic provider
+        if ($this->_provider_caching === "Anthropic") {
+            $headers[] = "anthropic-beta: extended-cache-ttl-2025-04-11";
+        }
 
         $timeout = isset($GLOBALS["HTTP_TIMEOUT"]) ? (int) $GLOBALS["HTTP_TIMEOUT"] : 60;
         $options = array(
@@ -872,6 +882,13 @@ class openrouterjsoncached
                 if ($parsed['found']) {
                     $this->_simpleFormatParsed = true;
 
+                    // Calculate where the message starts in the buffer (after format markers)
+                    $messagePos = strpos($this->_buffer, $parsed['message']);
+                    if ($messagePos !== false) {
+                        $this->_simpleFormatMessageStart = $messagePos;
+                        $this->_lastReturnedLength = strlen($parsed['message']);
+                    }
+
                     if ($this->_includeMood && !empty($parsed['mood'])) {
                         $GLOBALS["SCRIPTLINE_ANIMATION"] = function_exists('GetAnimationHex') ? GetAnimationHex($parsed["mood"]) : '';
                         $GLOBALS["SCRIPTLINE_EXPRESSION"] = function_exists('GetExpression') ? GetExpression($parsed["mood"]) : '';
@@ -884,8 +901,14 @@ class openrouterjsoncached
                     return $parsed['message'];
                 }
             } else {
-                // Simple format already parsed, just return accumulated message
-                return $this->_buffer;
+                // Simple format already parsed, return only new content since last call
+                if ($this->_simpleFormatMessageStart > 0) {
+                    $currentMessage = substr($this->_buffer, $this->_simpleFormatMessageStart);
+                    $newContent = substr($currentMessage, $this->_lastReturnedLength);
+                    $this->_lastReturnedLength = strlen($currentMessage);
+                    return $newContent;
+                }
+                return "";
             }
         }
 

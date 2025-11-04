@@ -109,11 +109,29 @@ function removeNeighboringDuplicates($array, &$duplicatesRemoved)
 }
 
 /**
- * Compare two arrays for equality
+ * Compare two arrays for equality with improved reliability
+ * Uses sorted JSON encoding to handle key order differences
  */
 function arraysEqual($array1, $array2)
 {
-    return json_encode($array1) === json_encode($array2);
+    // Recursive function to sort arrays by keys
+    $sortArray = function($arr) use (&$sortArray) {
+        if (!is_array($arr)) {
+            return $arr;
+        }
+        ksort($arr);
+        foreach ($arr as $key => $value) {
+            if (is_array($value)) {
+                $arr[$key] = $sortArray($value);
+            }
+        }
+        return $arr;
+    };
+
+    $sorted1 = $sortArray($array1);
+    $sorted2 = $sortArray($array2);
+
+    return json_encode($sorted1, JSON_PRESERVE_ZERO_FRACTION) === json_encode($sorted2, JSON_PRESERVE_ZERO_FRACTION);
 }
 
 /**
@@ -149,33 +167,64 @@ function writeArrayToFileWithCache($array, $filename, $cacheHours = 1)
 
     if (!is_dir($directory)) {
         if (!mkdir($directory, 0755, true)) {
-            throw new Exception("Failed to create directory: " . $directory);
+            logMessage("ERROR: Failed to create cache directory: " . $directory, null, 'ERROR');
+            logMessage("Returning uncached data due to directory creation failure.");
+            return $array;
         }
     }
 
-    if (file_exists($filename)) {
-        $fileModTime = filemtime($filename);
-        $currentTime = time();
-        $cacheExpiry = $cacheHours * 3600;
+    // Check if directory is writable
+    if (!is_writable($directory)) {
+        logMessage("ERROR: Cache directory not writable: " . $directory, null, 'ERROR');
+        logMessage("Returning uncached data due to permission issue.");
+        return $array;
+    }
 
-        if (($currentTime - $fileModTime) < $cacheExpiry) {
-            $fileContents = file_get_contents($filename);
-            if ($fileContents !== false) {
-                $cachedArray = unserialize($fileContents);
-                if ($cachedArray !== false) {
-                    touch($filename);
-                    logMessage("Return cached System entry.");
-                    return $cachedArray;
+    if (file_exists($filename)) {
+        if (!is_readable($filename)) {
+            logMessage("WARNING: Cache file exists but not readable: " . $filename, null, 'WARN');
+            // Continue to create new cache
+        } else {
+            $fileModTime = @filemtime($filename);
+            if ($fileModTime === false) {
+                logMessage("WARNING: Could not get modification time for: " . $filename, null, 'WARN');
+            } else {
+                $currentTime = time();
+                $cacheExpiry = $cacheHours * 3600;
+
+                if (($currentTime - $fileModTime) < $cacheExpiry) {
+                    $fileContents = @file_get_contents($filename);
+                    if ($fileContents === false) {
+                        logMessage("WARNING: Failed to read cache file: " . $filename, null, 'WARN');
+                    } else {
+                        // TODO: SECURITY - Consider switching from unserialize() to json_decode()
+                        // to eliminate potential code injection risk if temp files are compromised.
+                        // Low priority for single-user local installations, but good practice.
+                        // Change serialize() to json_encode() on line ~176 if implementing this.
+                        $cachedArray = @unserialize($fileContents);
+                        if ($cachedArray !== false) {
+                            @touch($filename);
+                            logMessage("Return cached System entry.");
+                            return $cachedArray;
+                        } else {
+                            logMessage("WARNING: Failed to unserialize cache file, rebuilding cache.", null, 'WARN');
+                        }
+                    }
                 }
             }
         }
     }
 
+    // TODO: SECURITY - See unserialize() comment above
     $serializedArray = serialize($array);
-    $result = file_put_contents($filename, $serializedArray);
+    $result = @file_put_contents($filename, $serializedArray);
 
     if ($result === false) {
-        throw new Exception("Failed to write array to file: " . $filename);
+        $error = error_get_last();
+        $errMsg = isset($error['message']) ? $error['message'] : 'Unknown error';
+        logMessage("ERROR: Failed to write cache file: " . $filename . " - " . $errMsg, null, 'ERROR');
+        logMessage("Continuing with uncached data.");
+        return $array;
     }
 
     logMessage("Return un-cached System entry.");
@@ -193,26 +242,57 @@ function manageCharacterEventList($newList, $filename = 'conversation_list.json'
 
     if (!is_dir($directory)) {
         if (!mkdir($directory, 0755, true)) {
-            throw new Exception("Failed to create directory: " . $directory);
+            logMessage("ERROR: Failed to create cache directory: " . $directory, null, 'ERROR');
+            logMessage("Continuing without cache.");
+            return [
+                'updated_list' => $newList,
+                'existing_list' => [],
+                'new_elements' => $newList,
+                'duplicatesRemoved' => 0,
+                'new_count' => count($newList)
+            ];
         }
+    }
+
+    // Check if directory is writable
+    if (!is_writable($directory)) {
+        logMessage("ERROR: Cache directory not writable: " . $directory, null, 'ERROR');
+        logMessage("Continuing without cache.");
+        return [
+            'updated_list' => $newList,
+            'existing_list' => [],
+            'new_elements' => $newList,
+            'duplicatesRemoved' => 0,
+            'new_count' => count($newList)
+        ];
     }
 
     $existingList = [];
     if (file_exists($filename)) {
-        $fileContent = file_get_contents($filename);
-        if ($fileContent !== false) {
-            $decoded = json_decode($fileContent, true);
-            if ($decoded !== null) {
-                $existingList = $decoded;
+        if (!is_readable($filename)) {
+            logMessage("WARNING: Cache file exists but not readable: " . $filename, null, 'WARN');
+        } else {
+            $fileContent = @file_get_contents($filename);
+            if ($fileContent === false) {
+                logMessage("WARNING: Failed to read cache file: " . $filename, null, 'WARN');
+            } else {
+                $decoded = json_decode($fileContent, true);
+                if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+                    logMessage("WARNING: Failed to decode cache JSON: " . json_last_error_msg(), null, 'WARN');
+                } elseif ($decoded !== null) {
+                    $existingList = $decoded;
+                }
             }
-        }
 
-        $fileModTime = filemtime($filename);
-        $currentTime = time();
-        $fileAge = $currentTime - $fileModTime;
-        if ($fileAge >= $maxAge) {
-            logMessage("cleared cache because it is older than one hour");
-            $existingList = [];
+            $fileModTime = @filemtime($filename);
+            if ($fileModTime !== false) {
+                $currentTime = time();
+                $fileAge = $currentTime - $fileModTime;
+                if ($fileAge >= $maxAge) {
+                    logMessage("cleared cache because it is older than one hour");
+                    $existingList = [];
+                }
+            }
         }
     }
 
@@ -224,17 +304,19 @@ function manageCharacterEventList($newList, $filename = 'conversation_list.json'
         $existingList = [];
     }
 
+    // Use hash-based deduplication for O(n) performance instead of O(n²)
+    $existingHashes = [];
+    foreach ($existingList as $existingItem) {
+        $hash = md5(json_encode($existingItem));
+        $existingHashes[$hash] = true;
+    }
+
     $newElements = [];
     foreach ($newList as $newItem) {
-        $found = false;
-        foreach ($existingList as $existingItem) {
-            if (arraysEqual($newItem, $existingItem)) {
-                $found = true;
-                break;
-            }
-        }
-        if (!$found) {
+        $hash = md5(json_encode($newItem));
+        if (!isset($existingHashes[$hash])) {
             $newElements[] = $newItem;
+            $existingHashes[$hash] = true; // Prevent duplicates within newList itself
         }
     }
 
@@ -246,7 +328,12 @@ function manageCharacterEventList($newList, $filename = 'conversation_list.json'
 
     $updatedListCount = count($updatedList);
 
-    file_put_contents($filename, json_encode($updatedList, JSON_PRETTY_PRINT));
+    $result = @file_put_contents($filename, json_encode($updatedList, JSON_PRETTY_PRINT));
+    if ($result === false) {
+        $error = error_get_last();
+        $errMsg = isset($error['message']) ? $error['message'] : 'Unknown error';
+        logMessage("ERROR: Failed to write dialogue cache: " . $filename . " - " . $errMsg, null, 'ERROR');
+    }
     logMessage("Current length of cached event history: $updatedListCount");
 
     return [
