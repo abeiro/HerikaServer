@@ -398,6 +398,298 @@ class openrouterjsoncached
                                   $finalMessagesToSend, $cacheCombinedDialogueFile, $cacheControlType, $dynamicEnvironment);
     }
 
+    // Part 3: Dialogue History Caching and Cache Control Placement
+    private function _openPart3($contextData, $customParms, $herikaName, $MAX_TOKENS, $max_dialogue_cache_size,
+                                 $lastCustomInstruction, $toggleThinking, $thinkingTokens, $effort_level,
+                                 $CONTEXTHISTORY, $dialogue_cache_uncached_count, $start_time,
+                                 $finalMessagesToSend, $cacheCombinedDialogueFile, $cacheControlType, $dynamicEnvironment) {
+
+        // Process dialogue history
+        $contentTextToSend = [];
+        foreach ($contextData as $n => $element) {
+            if (!isset($element))
+                continue;
+
+            if (isset($element["role"]) && $element["role"] != "system") {
+                $contentString = '';
+                if (is_string($element['content'])) {
+                    $contentString = $element['content'];
+                } elseif (is_array($element['content']) && isset($element['content'][0]['type']) &&
+                          $element['content'][0]['type'] === 'text' && isset($element['content'][0]['text'])) {
+                    $contentString = $element['content'][0]['text'];
+                }
+
+                if (containsOnlySymbols($contentString)) {
+                    continue;
+                }
+
+                if (!empty(trim($contentString))) {
+                    $contentTextToSend[] = array('type' => 'text', 'text' => "$contentString");
+                }
+            }
+        }
+
+        // Remove first few items if list is large (optimization)
+        if (count($contentTextToSend) > 4) {
+            $contentTextToSend = array_slice($contentTextToSend, 4);
+        }
+
+        // Remove instruction to add back later
+        $instruction = array_pop($contentTextToSend);
+
+        // Manage cached event list
+        $completeEventList = manageCharacterEventList($contentTextToSend, $cacheCombinedDialogueFile, $max_dialogue_cache_size);
+        logMessage("New elements added to cache: {$completeEventList['new_count']}");
+        $completeEventList = $completeEventList['updated_list'];
+
+        // Add custom instructions if present
+        $addToIndex = 0;
+        if (!empty($lastCustomInstruction)) {
+            $addToIndex = 1;
+            $completeEventList[] = ['type' => 'text', 'text' => $lastCustomInstruction];
+        }
+
+        $completeEventList[] = $instruction;
+
+        // Store default target for simple format
+        $this->_defaultTarget = getLastUserMessageSpeaker($contextData);
+
+        // Add prefill for simple format with Anthropic
+        if ($this->_responseFormat === 'simple' && $this->_provider_caching === "Anthropic") {
+            $finalMessagesToSend[] = array('role' => 'user', 'content' => $completeEventList);
+            $prefillText = '(';
+            $finalMessagesToSend[] = array('role' => 'assistant', 'content' => array(
+                array('type' => 'text', 'text' => $prefillText)
+            ));
+            $this->_usedPrefill = true;
+            $this->_prefillContent = $prefillText;
+        } else {
+            $finalMessagesToSend[] = array('role' => 'user', 'content' => $completeEventList);
+            $this->_usedPrefill = false;
+            $this->_prefillContent = '';
+        }
+
+        // Calculate cache control index
+        $totalElements = count($completeEventList);
+        $lastIndex = $totalElements - $dialogue_cache_uncached_count - 1 - $addToIndex;
+
+        logMessage("Cache control calculation: totalElements=$totalElements, uncached=$dialogue_cache_uncached_count, addToIndex=$addToIndex, calculatedIndex=$lastIndex");
+
+        // Place cache control marker
+        if ($lastIndex >= 0) {
+            if ($this->_provider_caching == "Gemini") {
+                logMessage("Using gemini caching (ignores dialogue_cache_uncached_count)");
+                $offset = 10;
+                $elements = count($completeEventList);
+                $batchSize = $CONTEXTHISTORY - $offset;
+                $batchNumber = floor($elements / $batchSize);
+
+                logMessage("elements: $elements, batchsize: $batchSize, batchnumber: $batchNumber");
+
+                $indexToCache = max(0, ($batchNumber * $CONTEXTHISTORY) - $offset);
+
+                if ($indexToCache >= $elements) {
+                    logMessage("index bigger or equal then elements size.");
+                    $indexToCache = $elements - 1;
+                }
+
+                if ($indexToCache == 0) {
+                    $indexToCache = 33;
+                }
+
+                logMessage("Index to Cache: $indexToCache");
+
+                if (isset($completeEventList[$indexToCache]) && $this->_provider_caching != "OpenAI") {
+                    $completeEventList[$indexToCache]["cache_control"] = $cacheControlType;
+                } else {
+                    logMessage("Warning: Index $indexToCache not found in array");
+                }
+            } else {
+                logMessage("Using standard caching with dialogue_cache_uncached_count=$dialogue_cache_uncached_count");
+                if (isset($completeEventList[$lastIndex]) && $this->_provider_caching != "OpenAI") {
+                    $completeEventList[$lastIndex]["cache_control"] = $cacheControlType;
+                    logMessage("Cache control placed at index $lastIndex");
+                } else {
+                    logMessage("Warning: Index $lastIndex not found in array for non gemini");
+                }
+            }
+        } else {
+            logMessage("Warning: Calculated cache index is negative ($lastIndex), skipping cache control");
+        }
+
+        // Add dynamic environment context if available
+        if (!containsOnlySymbols($dynamicEnvironment)) {
+            $text = preg_replace('/^\s*#+.*$/m', '', $dynamicEnvironment);
+            $text = preg_replace('/^\s*[-•]\s*/', '', $text);
+            $text = preg_replace('/\s+/', ' ', $text);
+            $text = preg_replace('/[.]{2,}/', '.', $text);
+            $dynamicEnvironment = trim("ASSISTANT: Environmental Context: $text");
+
+            array_splice($completeEventList, count($completeEventList) - 2, 0, [array('type' => 'text', 'text' => $dynamicEnvironment)]);
+        }
+
+        $completeEventList = removeDuplicateMemories($completeEventList);
+
+        $tokenCount = countTokensByWords($completeEventList);
+        logMessage("Estimated token count: $tokenCount");
+
+        // Continue to Part 4 for final payload construction...
+        return $this->_openPart4($customParms, $herikaName, $MAX_TOKENS, $toggleThinking, $thinkingTokens,
+                                  $effort_level, $start_time, $finalMessagesToSend);
+    }
+
+    // Part 4: Final Payload Construction and API Request
+    private function _openPart4($customParms, $herikaName, $MAX_TOKENS, $toggleThinking, $thinkingTokens,
+                                 $effort_level, $start_time, $finalMessagesToSend) {
+
+        // Build reasoning configuration
+        $reasoning = [
+            "enabled" => $toggleThinking,
+        ];
+
+        if ($this->_provider_caching === "OpenAI") {
+            $reasoning["effort"] = $effort_level;
+        } else {
+            $reasoning["max_tokens"] = intval($thinkingTokens);
+        }
+
+        // Construct payload
+        $data = array(
+            'model' => $this->_model,
+            'messages' => $finalMessagesToSend,
+            'stream' => true,
+            'temperature' => floatval((isset($GLOBALS["CONNECTOR"][$this->name]["temperature"])) ? $GLOBALS["CONNECTOR"][$this->name]["temperature"] : 1),
+            'top_k' => floatval((isset($GLOBALS["CONNECTOR"][$this->name]["top_k"])) ? $GLOBALS["CONNECTOR"][$this->name]["top_k"] : 0),
+            'top_p' => floatval((isset($GLOBALS["CONNECTOR"][$this->name]["top_p"])) ? $GLOBALS["CONNECTOR"][$this->name]["top_p"] : 1),
+            'frequency_penalty' => floatval((isset($GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"])) ? $GLOBALS["CONNECTOR"][$this->name]["frequency_penalty"] : 0),
+            'presence_penalty' => floatval((isset($GLOBALS["CONNECTOR"][$this->name]["presence_penalty"])) ? $GLOBALS["CONNECTOR"][$this->name]["presence_penalty"] : 0),
+            'repetition_penalty' => floatval((isset($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"])) ? $GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"] : 1),
+            'min_p' => floatval((isset($GLOBALS["CONNECTOR"][$this->name]["min_p"])) ? $GLOBALS["CONNECTOR"][$this->name]["min_p"] : 0),
+            'top_a' => floatval((isset($GLOBALS["CONNECTOR"][$this->name]["top_a"])) ? $GLOBALS["CONNECTOR"][$this->name]["top_a"] : 0),
+            'reasoning' => $reasoning,
+            "cache_control" => [
+                "enabled" => true,
+                "ttl" => "1h"
+            ]
+        );
+
+        // Handle max tokens
+        $effectiveMaxTokens = null;
+        if (isset($customParms["MAX_TOKENS"])) {
+            $maxTokensValue = $customParms["MAX_TOKENS"] + 0;
+            if ($maxTokensValue >= 0) {
+                $effectiveMaxTokens = $maxTokensValue;
+            }
+        } else {
+            if (isset($MAX_TOKENS))
+                $effectiveMaxTokens = $MAX_TOKENS;
+        }
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            $forceMaxTokensValue = $GLOBALS["FORCE_MAX_TOKENS"] + 0;
+            if ($forceMaxTokensValue >= 0) {
+                $effectiveMaxTokens = $forceMaxTokensValue;
+            }
+        }
+        if ($effectiveMaxTokens !== null) {
+            if ($effectiveMaxTokens > 0) {
+                $data["max_tokens"] = (int) $effectiveMaxTokens;
+            } else {
+                unset($data["max_tokens"]);
+            }
+        } else {
+            if (isset($data["max_tokens"]))
+                unset($data["max_tokens"]);
+        }
+
+        // Add provider information
+        if (!empty($GLOBALS["CONNECTOR"][$this->name]["PROVIDER"])) {
+            $providers = explode(",", $GLOBALS["CONNECTOR"][$this->name]["PROVIDER"]);
+            $data["provider"] = array("order" => $providers);
+        } else {
+            $data["provider"] = array("order" => array("Anthropic"));
+        }
+
+        $data["transforms"] = array();
+
+        // Log request
+        $GLOBALS["DEBUG_DATA"]["full"] = ($data);
+        $this->_dataSent = json_encode($data, JSON_PRETTY_PRINT);
+
+        try {
+            $finalMsgCount = isset($finalMessagesToSend) ? count($finalMessagesToSend) : 0;
+            $logEntry = sprintf(
+                "[%s] [%s:%s]\nPayload (%d msgs):\n%s\n---\n",
+                date(DATE_ATOM),
+                $this->name,
+                $herikaName,
+                $finalMsgCount,
+                var_export($data, true)
+            );
+            @file_put_contents(__DIR__ . "/../log/context_sent_to_llm.log", $logEntry, FILE_APPEND | LOCK_EX);
+        } catch (Exception $e) {
+            logMessage("Context Log Err: " . $e->getMessage());
+        }
+
+        // Prepare API request
+        $apiKey = isset($GLOBALS["CONNECTOR"][$this->name]["API_KEY"]) ? $GLOBALS["CONNECTOR"][$this->name]["API_KEY"] : '';
+        if (empty($apiKey)) {
+            logMessage("API Key missing!");
+            return null;
+        }
+
+        $headers = array(
+            'Content-Type: application/json',
+            "Authorization: Bearer {$apiKey}",
+            "HTTP-Referer:  https://dwemerdynamics.com/",
+            "X-Title: Dwemer Dynamics",
+            "anthropic-beta: extended-cache-ttl-2025-04-11"
+        );
+
+        $timeout = isset($GLOBALS["HTTP_TIMEOUT"]) ? (int) $GLOBALS["HTTP_TIMEOUT"] : 60;
+        $options = array(
+            'http' => array(
+                'method' => 'POST',
+                'header' => implode("\r\n", $headers),
+                'content' => json_encode($data),
+                'timeout' => $timeout,
+                'ignore_errors' => true
+            )
+        );
+
+        $context = stream_context_create($options);
+
+        // Initialize stream state
+        $this->primary_handler = null;
+        $this->_rawbuffer = "";
+        $this->_buffer = "";
+        $this->_forcedClose = false;
+        $this->_jsonResponsesEncoded = array();
+
+        $end_time = microtime(true);
+        $execution_time = $end_time - $start_time;
+        logMessage("Time for preparing cached request: $execution_time seconds");
+
+        // Open stream
+        try {
+            $this->primary_handler = $this->send($this->_url, $context);
+        } catch (Exception $e) {
+            logMessage("fopen Exception [{$this->name}:{$herikaName}]: " . $e->getMessage());
+            return null;
+        }
+
+        if (!$this->primary_handler) {
+            $error = error_get_last();
+            $errMsg = isset($error['message']) ? $error['message'] : 'fopen returned false';
+            logMessage("Stream Open Fail [{$this->name}:{$herikaName}]: {$errMsg}");
+            if (isset($http_response_header) && is_array($http_response_header)) {
+                logMessage("HTTP Headers on fail: " . implode("\n", $http_response_header));
+            }
+            return null;
+        }
+
+        return true;
+    }
+
     public function process() {
         // TODO: Implement
         return "";
