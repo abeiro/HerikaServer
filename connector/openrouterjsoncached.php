@@ -691,18 +691,326 @@ class openrouterjsoncached
     }
 
     public function process() {
-        // TODO: Implement
+        global $alreadysent;
+        $herikaName = isset($GLOBALS["HERIKA_NAME"]) ? $GLOBALS["HERIKA_NAME"] : 'default_herika';
+
+        if ($this->isDone())
+            return "";
+
+        $line = @fgets($this->primary_handler);
+        if ($line === false) {
+            if (feof($this->primary_handler)) {
+                return "";
+            } else {
+                $error = error_get_last();
+                $errMsg = isset($error['message']) ? $error['message'] : 'fgets error';
+                logMessage("Read Err [{$this->name}:{$herikaName}]: {$errMsg}");
+                $this->_rawbuffer .= "\nRead Err: {$errMsg}\n";
+                $this->_forcedClose = true;
+                return $errMsg;
+            }
+        }
+
+        try {
+            @file_put_contents(__DIR__ . "/../log/debugStream.log", $line, FILE_APPEND | LOCK_EX);
+        } catch (Exception $e) {
+        }
+
+        $this->_rawbuffer .= $line;
+        $buffer = "";
+
+        if (strpos($line, 'data: ') === 0) {
+            $jsonData = trim(substr($line, 6));
+            if ($jsonData === '[DONE]') {
+                return "";
+            }
+
+            if (!empty($jsonData)) {
+                $data = json_decode($jsonData, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($data)) {
+                    // Handle Anthropic format
+                    if (isset($data['type'])) {
+                        switch ($data['type']) {
+                            case 'content_block_delta':
+                                if (isset($data['delta']['type']) && $data['delta']['type'] === 'text_delta' &&
+                                    isset($data['delta']['text'])) {
+                                    $buffer = $data['delta']['text'];
+                                    $this->_buffer .= $buffer;
+                                }
+                                break;
+
+                            case 'content_block_start':
+                                if (isset($data['content_block']['type']) && $data['content_block']['type'] === 'tool_use') {
+                                    $this->_jsonResponsesEncoded[] = json_encode($data);
+                                }
+                                break;
+
+                            case 'message_delta':
+                                if (isset($data['delta']['stop_reason']) && $data['delta']['stop_reason'] !== null) {
+                                    logMessage("[{$this->name}:{$herikaName}] Stop (delta): " . $data['delta']['stop_reason']);
+                                    $this->_forcedClose = true;
+                                }
+                                break;
+
+                            case 'message_stop':
+                                logMessage("[{$this->name}:{$herikaName}] Stop (message_stop). Usage:" .
+                                    (isset($data['message']['usage']) ? json_encode($data['message']['usage']) : 'N/A'));
+
+                                // Log cache efficiency
+                                if (isset($data['message']['usage'])) {
+                                    $usage = $data['message']['usage'];
+                                    $cacheRead = isset($usage['cache_read_input_tokens']) ? $usage['cache_read_input_tokens'] : 0;
+                                    $cacheCreate = isset($usage['cache_creation_input_tokens']) ? $usage['cache_creation_input_tokens'] : 0;
+                                    $normalInput = isset($usage['input_tokens']) ? $usage['input_tokens'] : 0;
+                                    $totalConsideredInput = $cacheRead + $cacheCreate + $normalInput;
+                                    $efficiency = ($totalConsideredInput > 0) ? round(($cacheRead / $totalConsideredInput * 100), 1) : 0;
+                                    $logPerfEntry = sprintf(
+                                        "[%s] CACHE_PERF %s: Read:%d Create:%d New:%d Total:%d Efficiency:%.1f%%\n",
+                                        date(DATE_ATOM),
+                                        $herikaName,
+                                        $cacheRead,
+                                        $cacheCreate,
+                                        $normalInput,
+                                        $totalConsideredInput,
+                                        $efficiency
+                                    );
+                                    @file_put_contents(__DIR__ . DIRECTORY_SEPARATOR . "_cached_perf.log", $logPerfEntry, FILE_APPEND);
+                                }
+
+                                $this->_forcedClose = true;
+                                break;
+
+                            case 'error':
+                                $eM = print_r((isset($data['error']) ? $data['error'] : $data), true);
+                                logMessage("Stream Err (Anthropic): {$eM}");
+                                $this->_rawbuffer .= "\nErr (Anthropic):{$eM}\n";
+                                $this->_forcedClose = true;
+                                return $eM;
+
+                            case 'ping':
+                                break;
+
+                            default:
+                                logMessage("[{$this->name}:{$herikaName}] Unhandled Anthropic Type: " . $data['type']);
+                                break;
+                        }
+                    }
+                    // Handle OpenAI format
+                    elseif (isset($data["choices"][0]["delta"])) {
+                        if (isset($data["choices"][0]["delta"]["content"])) {
+                            $buffer = $data["choices"][0]["delta"]["content"];
+                            $this->_buffer .= $buffer;
+                        }
+
+                        if (isset($data["choices"][0]["delta"]["tool_calls"])) {
+                            $this->_jsonResponsesEncoded[] = json_encode($data);
+                        }
+
+                        if (isset($data["choices"][0]["finish_reason"]) && $data["choices"][0]["finish_reason"] !== null) {
+                            logMessage("[{$this->name}:{$herikaName}] Stop (choice): " . $data["choices"][0]["finish_reason"]);
+                            $this->_forcedClose = true;
+                        }
+                    }
+                    // Generic error
+                    elseif (isset($data['error'])) {
+                        $eM = print_r($data['error'], true);
+                        logMessage("Stream Err (Generic): {$eM}");
+                        $this->_rawbuffer .= "\nErr (Generic):{$eM}\n";
+                        $this->_forcedClose = true;
+                        return $eM;
+                    }
+                } else {
+                    logMessage("JSON Decode Err [{$this->name}:{$herikaName}]: " . json_last_error_msg());
+                }
+            }
+        } elseif (trim($line) === "event: message_stop") {
+            logMessage("[{$this->name}:{$herikaName}] Explicit stream end event received.");
+            $this->_forcedClose = true;
+        }
+
+        // Parse and return content based on format
+        if (!empty($buffer)) {
+            return $this->_parseAndReturnContent();
+        }
+
+        return "";
+    }
+
+    // Helper method to parse and return content based on format
+    private function _parseAndReturnContent() {
+        if ($this->_responseFormat === 'json') {
+            // JSON format parsing
+            $extracted_json_or_text = extractJson($this->_buffer);
+            $tempJson = json_decode($extracted_json_or_text, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && isset($tempJson['message']) && !empty($tempJson['message'])) {
+                if (isset($tempJson["mood"])) {
+                    $GLOBALS["SCRIPTLINE_ANIMATION"] = function_exists('GetAnimationHex') ? GetAnimationHex($tempJson["mood"]) : '';
+                    $GLOBALS["SCRIPTLINE_EXPRESSION"] = function_exists('GetExpression') ? GetExpression($tempJson["mood"]) : '';
+                }
+                if (isset($tempJson["listener"])) {
+                    if (isset($tempJson["action"]) && ($tempJson["action"] == "Talk") &&
+                        lazyEmpty($tempJson["listener"]) && !lazyEmpty($tempJson["target"])) {
+                        $GLOBALS["SCRIPTLINE_LISTENER"] = $tempJson["target"];
+                    } else {
+                        $GLOBALS["SCRIPTLINE_LISTENER"] = $tempJson["listener"];
+                    }
+                }
+                return $tempJson['message'];
+            }
+        } else {
+            // Simple format parsing
+            if (!$this->_simpleFormatParsed) {
+                $parsed = extractSimpleFormatFromBuffer(
+                    $this->_buffer,
+                    $this->_includeMood,
+                    $this->_includeListener,
+                    $this->_includeActions,
+                    $this->_includeTarget
+                );
+
+                if ($parsed['found']) {
+                    $this->_simpleFormatParsed = true;
+
+                    if ($this->_includeMood && !empty($parsed['mood'])) {
+                        $GLOBALS["SCRIPTLINE_ANIMATION"] = function_exists('GetAnimationHex') ? GetAnimationHex($parsed["mood"]) : '';
+                        $GLOBALS["SCRIPTLINE_EXPRESSION"] = function_exists('GetExpression') ? GetExpression($parsed["mood"]) : '';
+                    }
+
+                    if ($this->_includeListener && !empty($parsed['listener'])) {
+                        $GLOBALS["SCRIPTLINE_LISTENER"] = $parsed['listener'];
+                    }
+
+                    return $parsed['message'];
+                }
+            } else {
+                // Simple format already parsed, just return accumulated message
+                return $this->_buffer;
+            }
+        }
+
         return "";
     }
 
     public function close() {
-        // TODO: Implement
+        if ($this->primary_handler) {
+            @fclose($this->primary_handler);
+            $this->primary_handler = null;
+        }
+
+        $herikaName = isset($GLOBALS["HERIKA_NAME"]) ? $GLOBALS["HERIKA_NAME"] : 'default_herika';
+
+        try {
+            $proc = isset($this->_buffer) ? $this->_buffer : '<empty>';
+            $jsonResponses = isset($this->_jsonResponsesEncoded) && is_array($this->_jsonResponsesEncoded) ?
+                implode("\n", $this->_jsonResponsesEncoded) : "<no JSON responses>";
+
+            $logContent = sprintf(
+                "Processed Text:\n%s\n\nJSON Responses:\n%s\n\n[%s] [%s:%s] END STREAM\n==\n",
+                $proc,
+                $jsonResponses,
+                date(DATE_ATOM),
+                $this->name,
+                $herikaName
+            );
+
+            @file_put_contents(__DIR__ . "/../log/output_from_llm.log", $logContent, FILE_APPEND | LOCK_EX);
+        } catch (Exception $e) {
+            logMessage("[{$this->name}:{$herikaName}] Close Log Err: " . $e->getMessage());
+        }
+
+        $this->_rawbuffer = "";
+        $this->_forcedClose = false;
+
         return "";
     }
 
     public function processActions() {
-        // TODO: Implement
-        return array();
+        global $alreadysent;
+        $this->_commandBuffer = array();
+        $herikaName = isset($GLOBALS["HERIKA_NAME"]) ? $GLOBALS["HERIKA_NAME"] : 'default_herika';
+
+        logMessage("start process actions");
+
+        if ($this->_responseFormat === 'json') {
+            // JSON format action processing
+            if (!empty($this->_buffer)) {
+                $jsonStart = strpos($this->_buffer, '{');
+                $jsonEnd = strrpos($this->_buffer, '}');
+
+                if ($jsonStart !== false && $jsonEnd !== false && $jsonEnd > $jsonStart) {
+                    $possibleJson = substr($this->_buffer, $jsonStart, $jsonEnd - $jsonStart + 1);
+                    $parsedResponse = json_decode($possibleJson, true);
+
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($parsedResponse)) {
+                        logMessage("[{$this->name}:{$herikaName}] Parsed JSON from buffer: " . json_encode($parsedResponse));
+
+                        if (isset($parsedResponse['action']) && !empty($parsedResponse['action'])) {
+                            $target = isset($parsedResponse['target']) ? $parsedResponse['target'] : '';
+                            $character = isset($parsedResponse['character']) ? $parsedResponse['character'] : $herikaName;
+                            $commandKey = md5("{$character}|command|{$parsedResponse['action']}@{$target}\r\n");
+
+                            if (!isset($alreadysent[$commandKey]) || empty($alreadysent[$commandKey])) {
+                                $functionCodeName = function_exists('getFunctionCodeName') ? getFunctionCodeName($parsedResponse['action']) : $parsedResponse['action'];
+                                $functionCodeName = empty($functionCodeName) ? $parsedResponse['action'] : $functionCodeName;
+
+                                $commandString = "{$character}|command|{$functionCodeName}@{$target}\r\n";
+                                $this->_commandBuffer[] = $commandString;
+                                $alreadysent[$commandKey] = $commandString;
+
+                                logMessage("[{$this->name}:{$herikaName}] Generated command: {$commandString}");
+                            }
+                        }
+                    } else {
+                        logMessage("[{$this->name}:{$herikaName}] Failed to parse JSON: " . json_last_error_msg());
+                    }
+                }
+            }
+        } else {
+            // Simple format action processing
+            $parsed = extractSimpleFormatFromBuffer(
+                $this->_buffer,
+                $this->_includeMood,
+                $this->_includeListener,
+                $this->_includeActions,
+                $this->_includeTarget
+            );
+
+            if ($parsed['found'] && $this->_includeActions && !empty($parsed['action'])) {
+                $action = validateActionName($parsed['action']);
+                $target = $this->_includeTarget && !empty($parsed['target']) ? $parsed['target'] : $this->_defaultTarget;
+                $character = $herikaName;
+
+                $commandKey = md5("{$character}|command|{$action}@{$target}\r\n");
+
+                if (!isset($alreadysent[$commandKey]) || empty($alreadysent[$commandKey])) {
+                    $functionCodeName = function_exists('getFunctionCodeName') ? getFunctionCodeName($action) : $action;
+                    $functionCodeName = empty($functionCodeName) ? $action : $functionCodeName;
+
+                    $commandString = "{$character}|command|{$functionCodeName}@{$target}\r\n";
+                    $this->_commandBuffer[] = $commandString;
+                    $alreadysent[$commandKey] = $commandString;
+
+                    logMessage("[{$this->name}:{$herikaName}] Generated command from simple format: {$commandString}");
+                }
+            }
+        }
+
+        // Also process tool calls if any (JSON mode fallback)
+        if (!empty($this->_jsonResponsesEncoded)) {
+            // Note: Tool call processing would go here if needed
+            // For now, focusing on JSON response format and simple format
+        }
+
+        $this->_jsonResponsesEncoded = array();
+
+        if (!empty($this->_commandBuffer)) {
+            logMessage("[{$this->name}:{$herikaName}] Final Command Buffer: " . implode(", ", $this->_commandBuffer));
+        } else {
+            logMessage("[{$this->name}:{$herikaName}] No commands generated.");
+        }
+
+        return empty($this->_commandBuffer) ? array() : $this->_commandBuffer;
     }
 
     public function isDone() {
