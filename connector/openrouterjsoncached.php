@@ -57,6 +57,9 @@ class openrouterjsoncached
     private $_simpleFormatParsed;
     private $_usedPrefill;
     private $_prefillContent;
+    private $_simpleFormatMessageStart;
+    private $_lastReturnedLength;
+    private $_verboseLogging;
     public $_jsonResponsesEncoded = array();
 
     public function __construct()
@@ -100,10 +103,22 @@ class openrouterjsoncached
         $this->_simpleFormatParsed = false;
         $this->_usedPrefill = false;
         $this->_prefillContent = '';
+        $this->_simpleFormatMessageStart = 0;
+        $this->_lastReturnedLength = 0;
+        $this->_verboseLogging = true; // Default enabled for testing phase
         $this->_jsonResponsesEncoded = array();
 
         require_once(__DIR__."/__jpd.php");
         require_once(__DIR__."/openrouterjsoncached_helpers.php");
+
+        // VERBOSE_LOGGING_START - Constructor initialization
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Connector constructor initialized");
+            logMessage("[CACHE-VERBOSE] Default provider_caching: {$this->_provider_caching}");
+            logMessage("[CACHE-VERBOSE] Default response_format: {$this->_responseFormat}");
+            logMessage("[CACHE-VERBOSE] Helper files loaded");
+        }
+        // VERBOSE_LOGGING_END
     }
 
     // Utility methods
