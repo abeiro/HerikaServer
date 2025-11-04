@@ -454,22 +454,7 @@ class openrouterjsoncached
         // Store default target for simple format
         $this->_defaultTarget = getLastUserMessageSpeaker($contextData);
 
-        // Add prefill for simple format with Anthropic
-        if ($this->_responseFormat === 'simple' && $this->_provider_caching === "Anthropic") {
-            $finalMessagesToSend[] = array('role' => 'user', 'content' => $completeEventList);
-            $prefillText = '(';
-            $finalMessagesToSend[] = array('role' => 'assistant', 'content' => array(
-                array('type' => 'text', 'text' => $prefillText)
-            ));
-            $this->_usedPrefill = true;
-            $this->_prefillContent = $prefillText;
-        } else {
-            $finalMessagesToSend[] = array('role' => 'user', 'content' => $completeEventList);
-            $this->_usedPrefill = false;
-            $this->_prefillContent = '';
-        }
-
-        // Calculate cache control index
+        // Calculate cache control index BEFORE adding to finalMessagesToSend
         $totalElements = count($completeEventList);
         $lastIndex = $totalElements - $dialogue_cache_uncached_count - 1 - $addToIndex;
 
@@ -494,7 +479,7 @@ class openrouterjsoncached
                 }
 
                 if ($indexToCache == 0) {
-                    $indexToCache = 33;
+                    $indexToCache = 33; // Gemini requires minimum 32 tokens for caching, use 33 to be safe
                 }
 
                 logMessage("Index to Cache: $indexToCache");
@@ -532,6 +517,21 @@ class openrouterjsoncached
 
         $tokenCount = countTokensByWords($completeEventList);
         logMessage("Estimated token count: $tokenCount");
+
+        // NOW add to finalMessagesToSend after all modifications are complete
+        if ($this->_responseFormat === 'simple' && $this->_provider_caching === "Anthropic") {
+            $finalMessagesToSend[] = array('role' => 'user', 'content' => $completeEventList);
+            $prefillText = '(';
+            $finalMessagesToSend[] = array('role' => 'assistant', 'content' => array(
+                array('type' => 'text', 'text' => $prefillText)
+            ));
+            $this->_usedPrefill = true;
+            $this->_prefillContent = $prefillText;
+        } else {
+            $finalMessagesToSend[] = array('role' => 'user', 'content' => $completeEventList);
+            $this->_usedPrefill = false;
+            $this->_prefillContent = '';
+        }
 
         // Continue to Part 4 for final payload construction...
         return $this->_openPart4($customParms, $herikaName, $MAX_TOKENS, $toggleThinking, $thinkingTokens,
