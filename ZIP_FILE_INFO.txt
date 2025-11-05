@@ -1,0 +1,42 @@
+CACHED CONNECTOR TESTING PACKAGE
+=================================
+
+FILE: CHIM_Cached_Connector_Testing.zip
+SIZE: 49 KB (compressed from 257 KB)
+LOCATION: /home/user/HerikaServer/CHIM_Cached_Connector_Testing.zip
+
+CONTENTS:
+---------
+✓ INSTALLATION_INSTRUCTIONS.txt          (Setup guide)
+✓ connector/openrouterjsoncached.php     (Base connector)
+✓ connector/openrouterjsoncached_helpers.php   (Helper functions)
+✓ connector/openrouterjsoncached_verbose.php   (Verbose logging version - RECOMMENDED)
+✓ conf/conf_schema.json                  (Configuration schema)
+✓ lib/core/llm_connector.class.php       (Integration code)
+
+QUICK START:
+------------
+1. Backup existing conf/conf_schema.json and lib/core/llm_connector.class.php
+2. Extract zip to HerikaServer root directory
+3. Refresh browser (NO SERVER RESTART NEEDED!)
+4. Select "openrouterjsoncached_verbose" in WebUI
+5. Configure and test
+
+RECOMMENDED FOR TESTERS:
+------------------------
+Use openrouterjsoncached_verbose.php first!
+- Has verbose_logging enabled by default
+- Shows [CACHE-VERBOSE] logs for debugging
+- Helps track cache performance
+
+WHAT THIS PROVIDES:
+-------------------
+✓ Multi-provider caching (Anthropic, OpenAI, Gemini)
+✓ JSON and Simple response formats
+✓ Comprehensive verbose logging
+✓ Cache performance metrics
+✓ Compatible with CHIM 2.0.3
+
+SUPPORT:
+--------
+GitHub: https://github.com/Unknwn-Prson/HerikaServer/tree/aiagent
