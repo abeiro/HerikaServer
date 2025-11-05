@@ -5,8 +5,9 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_function
 
 // Cached version of openrouterjson connector with Anthropic/OpenAI/Gemini cache support
 // Based on CHIM 2.0 architecture with additional caching and response format features
+// VERBOSE LOGGING VERSION - includes comprehensive debugging logs for testing phase
 
-class openrouterjsoncached
+class openrouterjsoncached_verbose
 {
     public $primary_handler;
     public $name;
@@ -57,6 +58,9 @@ class openrouterjsoncached
     private $_simpleFormatParsed;
     private $_usedPrefill;
     private $_prefillContent;
+    private $_simpleFormatMessageStart;
+    private $_lastReturnedLength;
+    private $_verboseLogging;
     public $_jsonResponsesEncoded = array();
 
     public function __construct()
@@ -100,10 +104,22 @@ class openrouterjsoncached
         $this->_simpleFormatParsed = false;
         $this->_usedPrefill = false;
         $this->_prefillContent = '';
+        $this->_simpleFormatMessageStart = 0;
+        $this->_lastReturnedLength = 0;
+        $this->_verboseLogging = true; // Default enabled for testing phase
         $this->_jsonResponsesEncoded = array();
 
         require_once(__DIR__."/__jpd.php");
         require_once(__DIR__."/openrouterjsoncached_helpers.php");
+
+        // VERBOSE_LOGGING_START - Constructor initialization
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Connector constructor initialized");
+            logMessage("[CACHE-VERBOSE] Default provider_caching: {$this->_provider_caching}");
+            logMessage("[CACHE-VERBOSE] Default response_format: {$this->_responseFormat}");
+            logMessage("[CACHE-VERBOSE] Helper files loaded");
+        }
+        // VERBOSE_LOGGING_END
     }
 
     // Utility methods
@@ -242,6 +258,11 @@ class openrouterjsoncached
         $this->_provider_caching = isset($GLOBALS["CONNECTOR"][$this->name]["provider_caching"]) ? $GLOBALS["CONNECTOR"][$this->name]["provider_caching"] : "Anthropic";
         logMessage("provider caching: {$this->_provider_caching}");
 
+        // Load verbose logging setting from config
+        $this->_verboseLogging = isset($GLOBALS["CONNECTOR"][$this->name]["verbose_logging"])
+            ? (bool)$GLOBALS["CONNECTOR"][$this->name]["verbose_logging"]
+            : true; // Default enabled for testing
+
         $CONTEXTHISTORY = isset($GLOBALS['CONTEXT_HISTORY']) ? $GLOBALS['CONTEXT_HISTORY'] : 50;
         logMessage("CONTEXT HISTORY: $CONTEXTHISTORY");
 
@@ -278,6 +299,37 @@ class openrouterjsoncached
 
         logMessage("Response Format Config: format={$this->_responseFormat}, actions={$this->_includeActions}, mood={$this->_includeMood}, target={$this->_includeTarget}, listener={$this->_includeListener}, uncached={$dialogue_cache_uncached_count}");
 
+        // VERBOSE_LOGGING_START - open() Part 1: Configuration loaded
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ===== OPEN() PART 1: CONFIGURATION =====");
+            logMessage("[CACHE-VERBOSE] URL: {$this->_url}");
+            logMessage("[CACHE-VERBOSE] Model: {$this->_model}");
+            logMessage("[CACHE-VERBOSE] Max Tokens: {$MAX_TOKENS}");
+            logMessage("[CACHE-VERBOSE] Provider Caching: {$this->_provider_caching}");
+            logMessage("[CACHE-VERBOSE] Response Format: {$this->_responseFormat}");
+            logMessage("[CACHE-VERBOSE] Include Actions: " . ($this->_includeActions ? 'YES' : 'NO'));
+            logMessage("[CACHE-VERBOSE] Include Mood: " . ($this->_includeMood ? 'YES' : 'NO'));
+            logMessage("[CACHE-VERBOSE] Include Target: " . ($this->_includeTarget ? 'YES' : 'NO'));
+            logMessage("[CACHE-VERBOSE] Include Listener: " . ($this->_includeListener ? 'YES' : 'NO'));
+            logMessage("[CACHE-VERBOSE] Max Dialogue Cache Size: {$max_dialogue_cache_size}");
+            logMessage("[CACHE-VERBOSE] Dialogue Uncached Count: {$dialogue_cache_uncached_count}");
+            logMessage("[CACHE-VERBOSE] Context History Size: {$CONTEXTHISTORY}");
+            logMessage("[CACHE-VERBOSE] Toggle Thinking: " . ($toggleThinking ? 'YES' : 'NO'));
+            if ($toggleThinking) {
+                logMessage("[CACHE-VERBOSE] Thinking Tokens: {$thinkingTokens}");
+                logMessage("[CACHE-VERBOSE] Effort Level: {$effort_level}");
+            }
+            if (!empty($customInstruction)) {
+                logMessage("[CACHE-VERBOSE] Custom Instruction: " . substr($customInstruction, 0, 100) . "...");
+            }
+            if (!empty($lastCustomInstruction)) {
+                logMessage("[CACHE-VERBOSE] Last Custom Instruction: " . substr($lastCustomInstruction, 0, 100) . "...");
+            }
+            logMessage("[CACHE-VERBOSE] Context Data Elements: {$n_ctxsize}");
+            logMessage("[CACHE-VERBOSE] Verbose Logging: ENABLED");
+        }
+        // VERBOSE_LOGGING_END
+
         // Continue to Part 2...
         return $this->_openPart2($contextData, $customParms, $herikaName, $MAX_TOKENS, $max_dialogue_cache_size,
                                   $customInstruction, $lastCustomInstruction, $toggleThinking, $thinkingTokens,
@@ -289,9 +341,24 @@ class openrouterjsoncached
                                  $customInstruction, $lastCustomInstruction, $toggleThinking, $thinkingTokens,
                                  $effort_level, $CONTEXTHISTORY, $dialogue_cache_uncached_count, $start_time) {
 
+        // VERBOSE_LOGGING_START - _openPart2: Entry
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ===== _OPENPART2: SYSTEM PROMPT PROCESSING =====");
+            logMessage("[CACHE-VERBOSE] Herika Name: {$herikaName}");
+        }
+        // VERBOSE_LOGGING_END
+
         $cacheSystemFile = "system_cache_json_{$herikaName}.tmp";
         $cacheCombinedDialogueFile = "combined_dialogue_cache_json_{$herikaName}.tmp";
         $cacheControlType = ["type" => "ephemeral", "ttl" => "1h"];
+
+        // VERBOSE_LOGGING_START - Cache files
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] System cache file: {$cacheSystemFile}");
+            logMessage("[CACHE-VERBOSE] Dialogue cache file: {$cacheCombinedDialogueFile}");
+            logMessage("[CACHE-VERBOSE] Cache control type: ephemeral, TTL: 1h");
+        }
+        // VERBOSE_LOGGING_END
 
         // Build actions and response format instruction
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
@@ -333,6 +400,14 @@ class openrouterjsoncached
             }
 
             $formatInstruction = "{$prefix} $speechReinforcement $customInstruction Use ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure$zonosTones: " . json_encode($template);
+
+            // VERBOSE_LOGGING_START - JSON format
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Response format: JSON");
+                logMessage("[CACHE-VERBOSE] JSON template fields: " . implode(', ', array_keys($template)));
+                logMessage("[CACHE-VERBOSE] Format instruction length: " . strlen($formatInstruction));
+            }
+            // VERBOSE_LOGGING_END
         } else {
             $formatInstruction = buildSimpleFormatInstruction(
                 $this->_includeMood,
@@ -341,6 +416,14 @@ class openrouterjsoncached
                 $this->_includeTarget,
                 "{$prefix} $speechReinforcement $customInstruction"
             );
+
+            // VERBOSE_LOGGING_START - Simple format
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Response format: SIMPLE");
+                logMessage("[CACHE-VERBOSE] Simple format instruction length: " . strlen($formatInstruction));
+                logMessage("[CACHE-VERBOSE] Simple format preview: " . substr($formatInstruction, 0, 150) . "...");
+            }
+            // VERBOSE_LOGGING_END
         }
 
         $actionsText = "";
@@ -348,6 +431,13 @@ class openrouterjsoncached
             $actionsText .= "\n" . $availableActions . "\n";
         }
         $actionsText .= $formatInstruction;
+
+        // VERBOSE_LOGGING_START - Actions text
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Actions included: " . (!empty($availableActions) ? 'YES' : 'NO'));
+            logMessage("[CACHE-VERBOSE] Total actions+format length: " . strlen($actionsText));
+        }
+        // VERBOSE_LOGGING_END
 
         $dynamicEnvironment = "";
         $systemEntries = [];
@@ -379,6 +469,18 @@ class openrouterjsoncached
                                      $combatStatus . "\n\n" . $arousal . "\n\n" . $equipment . "\n\n" .
                                      $appearance . "\n\n" . $cleanliness;
 
+                // VERBOSE_LOGGING_START - Dynamic content extraction
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Dynamic content extracted:");
+                    logMessage("[CACHE-VERBOSE]   Environmental: " . (strlen($environmental) > 0 ? strlen($environmental) . " chars" : "NONE"));
+                    logMessage("[CACHE-VERBOSE]   Additional Info: " . (strlen($additional) > 0 ? strlen($additional) . " chars" : "NONE"));
+                    logMessage("[CACHE-VERBOSE]   Equipment: " . (strlen($equipment) > 0 ? strlen($equipment) . " chars" : "NONE"));
+                    logMessage("[CACHE-VERBOSE]   Appearance: " . (strlen($appearance) > 0 ? strlen($appearance) . " chars" : "NONE"));
+                    logMessage("[CACHE-VERBOSE]   Combat Status: " . (strlen($combatStatus) > 0 ? strlen($combatStatus) . " chars" : "NONE"));
+                    logMessage("[CACHE-VERBOSE]   Total dynamic environment length: " . strlen($dynamicEnvironment) . " chars");
+                }
+                // VERBOSE_LOGGING_END
+
                 $finalSend = $systemContentCurrent . "\n" . $actionsText;
 
                 $content = ['type' => 'text', 'text' => $finalSend];
@@ -386,10 +488,31 @@ class openrouterjsoncached
                     $content['cache_control'] = $cacheControlType;
                 }
                 $systemEntries[] = array("role" => "system", "content" => array($content));
+
+                // VERBOSE_LOGGING_START - System entry
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] System entry created:");
+                    logMessage("[CACHE-VERBOSE]   Static system content length: " . strlen($systemContentCurrent) . " chars");
+                    logMessage("[CACHE-VERBOSE]   Total with actions: " . strlen($finalSend) . " chars");
+                    logMessage("[CACHE-VERBOSE]   Cache control applied: " . ($this->_provider_caching !== "OpenAI" ? 'YES' : 'NO (OpenAI native)'));
+                }
+                // VERBOSE_LOGGING_END
             }
         }
 
+        // VERBOSE_LOGGING_START - System cache write
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Writing " . count($systemEntries) . " system entries to cache file: {$cacheSystemFile}");
+        }
+        // VERBOSE_LOGGING_END
+
         $finalMessagesToSend = writeArrayToFileWithCache($systemEntries, $cacheSystemFile);
+
+        // VERBOSE_LOGGING_START - System cache result
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] System cache write complete. Messages to send: " . count($finalMessagesToSend));
+        }
+        // VERBOSE_LOGGING_END
 
         // Continue to Part 3...
         return $this->_openPart3($contextData, $customParms, $herikaName, $MAX_TOKENS, $max_dialogue_cache_size,
@@ -403,6 +526,16 @@ class openrouterjsoncached
                                  $lastCustomInstruction, $toggleThinking, $thinkingTokens, $effort_level,
                                  $CONTEXTHISTORY, $dialogue_cache_uncached_count, $start_time,
                                  $finalMessagesToSend, $cacheCombinedDialogueFile, $cacheControlType, $dynamicEnvironment) {
+
+        // VERBOSE_LOGGING_START - _openPart3: Entry
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ===== _OPENPART3: DIALOGUE HISTORY & CACHE CONTROL =====");
+            logMessage("[CACHE-VERBOSE] Input context messages: " . count($contextData));
+            logMessage("[CACHE-VERBOSE] Max dialogue cache size: {$max_dialogue_cache_size}");
+            logMessage("[CACHE-VERBOSE] Dialogue uncached count: {$dialogue_cache_uncached_count}");
+            logMessage("[CACHE-VERBOSE] Has custom instruction: " . (!empty($lastCustomInstruction) ? 'YES' : 'NO'));
+        }
+        // VERBOSE_LOGGING_END
 
         // Process dialogue history
         $contentTextToSend = [];
@@ -429,17 +562,47 @@ class openrouterjsoncached
             }
         }
 
+        // VERBOSE_LOGGING_START - _openPart3: Dialogue processing complete
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Extracted dialogue entries: " . count($contentTextToSend));
+        }
+        // VERBOSE_LOGGING_END
+
         // Remove first few items if list is large (optimization)
         if (count($contentTextToSend) > 4) {
             $contentTextToSend = array_slice($contentTextToSend, 4);
+
+            // VERBOSE_LOGGING_START - _openPart3: List optimization
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] List optimized by removing first 4 items, new count: " . count($contentTextToSend));
+            }
+            // VERBOSE_LOGGING_END
         }
 
         // Remove instruction to add back later
         $instruction = array_pop($contentTextToSend);
 
+        // VERBOSE_LOGGING_START - _openPart3: Instruction extraction
+        if ($this->_verboseLogging) {
+            $instrPreview = is_array($instruction) && isset($instruction['text'])
+                ? substr($instruction['text'], 0, 80)
+                : 'N/A';
+            logMessage("[CACHE-VERBOSE] Extracted instruction for later re-insertion (preview): " . $instrPreview . "...");
+        }
+        // VERBOSE_LOGGING_END
+
         // Manage cached event list
         $completeEventList = manageCharacterEventList($contentTextToSend, $cacheCombinedDialogueFile, $max_dialogue_cache_size);
         logMessage("New elements added to cache: {$completeEventList['new_count']}");
+
+        // VERBOSE_LOGGING_START - _openPart3: Cache management result
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Cache file: {$cacheCombinedDialogueFile}");
+            logMessage("[CACHE-VERBOSE] New elements added to cache: {$completeEventList['new_count']}");
+            logMessage("[CACHE-VERBOSE] Total cached event list size: " . count($completeEventList['updated_list']));
+        }
+        // VERBOSE_LOGGING_END
+
         $completeEventList = $completeEventList['updated_list'];
 
         // Add custom instructions if present
@@ -447,12 +610,32 @@ class openrouterjsoncached
         if (!empty($lastCustomInstruction)) {
             $addToIndex = 1;
             $completeEventList[] = ['type' => 'text', 'text' => $lastCustomInstruction];
+
+            // VERBOSE_LOGGING_START - _openPart3: Custom instruction added
+            if ($this->_verboseLogging) {
+                $customPreview = substr($lastCustomInstruction, 0, 80);
+                logMessage("[CACHE-VERBOSE] Custom instruction added (length: " . strlen($lastCustomInstruction) . " chars, preview): " . $customPreview . "...");
+            }
+            // VERBOSE_LOGGING_END
         }
 
         $completeEventList[] = $instruction;
 
+        // VERBOSE_LOGGING_START - _openPart3: Instruction re-added
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Instruction re-added to end of list");
+            logMessage("[CACHE-VERBOSE] Complete event list size after all additions: " . count($completeEventList));
+        }
+        // VERBOSE_LOGGING_END
+
         // Store default target for simple format
         $this->_defaultTarget = getLastUserMessageSpeaker($contextData);
+
+        // VERBOSE_LOGGING_START - _openPart3: Default target
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Default target (for simple format): " . ($this->_defaultTarget ?: 'NONE'));
+        }
+        // VERBOSE_LOGGING_END
 
         // Calculate cache control index BEFORE adding to finalMessagesToSend
         $totalElements = count($completeEventList);
@@ -460,10 +643,28 @@ class openrouterjsoncached
 
         logMessage("Cache control calculation: totalElements=$totalElements, uncached=$dialogue_cache_uncached_count, addToIndex=$addToIndex, calculatedIndex=$lastIndex");
 
+        // VERBOSE_LOGGING_START - _openPart3: Cache control calculation
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ----- CACHE CONTROL CALCULATION -----");
+            logMessage("[CACHE-VERBOSE] Total elements in list: {$totalElements}");
+            logMessage("[CACHE-VERBOSE] Uncached count setting: {$dialogue_cache_uncached_count}");
+            logMessage("[CACHE-VERBOSE] Custom instruction offset: {$addToIndex}");
+            logMessage("[CACHE-VERBOSE] Calculated standard cache index: {$lastIndex}");
+            logMessage("[CACHE-VERBOSE] Provider caching mode: {$this->_provider_caching}");
+        }
+        // VERBOSE_LOGGING_END
+
         // Place cache control marker
         if ($lastIndex >= 0) {
             if ($this->_provider_caching == "Gemini") {
                 logMessage("Using gemini caching (ignores dialogue_cache_uncached_count)");
+
+                // VERBOSE_LOGGING_START - _openPart3: Gemini cache logic
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Using GEMINI batch-based caching (ignores dialogue_cache_uncached_count)");
+                }
+                // VERBOSE_LOGGING_END
+
                 $offset = 10;
                 $elements = count($completeEventList);
                 $batchSize = $CONTEXTHISTORY - $offset;
@@ -471,35 +672,102 @@ class openrouterjsoncached
 
                 logMessage("elements: $elements, batchsize: $batchSize, batchnumber: $batchNumber");
 
+                // VERBOSE_LOGGING_START - _openPart3: Gemini batch calculation
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Gemini batch calculation:");
+                    logMessage("[CACHE-VERBOSE]   Context history: {$CONTEXTHISTORY}");
+                    logMessage("[CACHE-VERBOSE]   Offset: {$offset}");
+                    logMessage("[CACHE-VERBOSE]   Batch size: {$batchSize}");
+                    logMessage("[CACHE-VERBOSE]   Batch number: {$batchNumber}");
+                }
+                // VERBOSE_LOGGING_END
+
                 $indexToCache = max(0, ($batchNumber * $CONTEXTHISTORY) - $offset);
 
                 if ($indexToCache >= $elements) {
                     logMessage("index bigger or equal then elements size.");
                     $indexToCache = $elements - 1;
+
+                    // VERBOSE_LOGGING_START - _openPart3: Gemini index adjustment
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] Index adjusted to last element: {$indexToCache}");
+                    }
+                    // VERBOSE_LOGGING_END
                 }
 
                 if ($indexToCache == 0) {
                     $indexToCache = 33; // Gemini requires minimum 32 tokens for caching, use 33 to be safe
+
+                    // VERBOSE_LOGGING_START - _openPart3: Gemini minimum tokens
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] Index was 0, adjusted to 33 (Gemini minimum 32 tokens requirement)");
+                    }
+                    // VERBOSE_LOGGING_END
                 }
 
                 logMessage("Index to Cache: $indexToCache");
 
+                // VERBOSE_LOGGING_START - _openPart3: Gemini final index
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Final Gemini cache index: {$indexToCache}");
+                }
+                // VERBOSE_LOGGING_END
+
                 if (isset($completeEventList[$indexToCache]) && $this->_provider_caching != "OpenAI") {
                     $completeEventList[$indexToCache]["cache_control"] = $cacheControlType;
+
+                    // VERBOSE_LOGGING_START - _openPart3: Gemini cache marker placed
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] ✓ Cache control marker placed at index {$indexToCache}");
+                    }
+                    // VERBOSE_LOGGING_END
                 } else {
                     logMessage("Warning: Index $indexToCache not found in array");
+
+                    // VERBOSE_LOGGING_START - _openPart3: Gemini cache marker failed
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] ✗ FAILED to place cache marker at index {$indexToCache} (index not found)");
+                    }
+                    // VERBOSE_LOGGING_END
                 }
             } else {
                 logMessage("Using standard caching with dialogue_cache_uncached_count=$dialogue_cache_uncached_count");
+
+                // VERBOSE_LOGGING_START - _openPart3: Standard cache logic
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Using STANDARD caching (respects dialogue_cache_uncached_count)");
+                    logMessage("[CACHE-VERBOSE] Target cache index: {$lastIndex}");
+                }
+                // VERBOSE_LOGGING_END
+
                 if (isset($completeEventList[$lastIndex]) && $this->_provider_caching != "OpenAI") {
                     $completeEventList[$lastIndex]["cache_control"] = $cacheControlType;
                     logMessage("Cache control placed at index $lastIndex");
+
+                    // VERBOSE_LOGGING_START - _openPart3: Standard cache marker placed
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] ✓ Cache control marker placed at index {$lastIndex}");
+                    }
+                    // VERBOSE_LOGGING_END
                 } else {
                     logMessage("Warning: Index $lastIndex not found in array for non gemini");
+
+                    // VERBOSE_LOGGING_START - _openPart3: Standard cache marker failed
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] ✗ FAILED to place cache marker at index {$lastIndex} (index not found)");
+                    }
+                    // VERBOSE_LOGGING_END
                 }
             }
         } else {
             logMessage("Warning: Calculated cache index is negative ($lastIndex), skipping cache control");
+
+            // VERBOSE_LOGGING_START - _openPart3: Negative cache index
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] ✗ Cache index is negative ({$lastIndex}), skipping cache control placement");
+                logMessage("[CACHE-VERBOSE] This may indicate insufficient dialogue history");
+            }
+            // VERBOSE_LOGGING_END
         }
 
         // Add dynamic environment context if available
@@ -511,12 +779,37 @@ class openrouterjsoncached
             $dynamicEnvironment = trim("ASSISTANT: Environmental Context: $text");
 
             array_splice($completeEventList, count($completeEventList) - 2, 0, [array('type' => 'text', 'text' => $dynamicEnvironment)]);
+
+            // VERBOSE_LOGGING_START - _openPart3: Dynamic environment inserted
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Dynamic environment inserted at position " . (count($completeEventList) - 3));
+                logMessage("[CACHE-VERBOSE] Dynamic environment length: " . strlen($dynamicEnvironment) . " chars");
+            }
+            // VERBOSE_LOGGING_END
+        } else {
+            // VERBOSE_LOGGING_START - _openPart3: No dynamic environment
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] No dynamic environment to insert (empty or only symbols)");
+            }
+            // VERBOSE_LOGGING_END
         }
 
         $completeEventList = removeDuplicateMemories($completeEventList);
 
+        // VERBOSE_LOGGING_START - _openPart3: Duplicate removal
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Duplicate memories removed, final list size: " . count($completeEventList));
+        }
+        // VERBOSE_LOGGING_END
+
         $tokenCount = countTokensByWords($completeEventList);
         logMessage("Estimated token count: $tokenCount");
+
+        // VERBOSE_LOGGING_START - _openPart3: Token count
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Estimated token count (by words): {$tokenCount}");
+        }
+        // VERBOSE_LOGGING_END
 
         // NOW add to finalMessagesToSend after all modifications are complete
         if ($this->_responseFormat === 'simple' && $this->_provider_caching === "Anthropic") {
@@ -527,11 +820,40 @@ class openrouterjsoncached
             ));
             $this->_usedPrefill = true;
             $this->_prefillContent = $prefillText;
+
+            // VERBOSE_LOGGING_START - _openPart3: Prefill added
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] ----- FINAL MESSAGE CONSTRUCTION -----");
+                logMessage("[CACHE-VERBOSE] Using PREFILL mode (simple format + Anthropic)");
+                logMessage("[CACHE-VERBOSE] Prefill text: '{$prefillText}'");
+                logMessage("[CACHE-VERBOSE] Added user message with " . count($completeEventList) . " content elements");
+                logMessage("[CACHE-VERBOSE] Added assistant prefill message");
+                logMessage("[CACHE-VERBOSE] Total messages in payload: " . count($finalMessagesToSend));
+            }
+            // VERBOSE_LOGGING_END
         } else {
             $finalMessagesToSend[] = array('role' => 'user', 'content' => $completeEventList);
             $this->_usedPrefill = false;
             $this->_prefillContent = '';
+
+            // VERBOSE_LOGGING_START - _openPart3: No prefill
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] ----- FINAL MESSAGE CONSTRUCTION -----");
+                logMessage("[CACHE-VERBOSE] Standard mode (no prefill)");
+                logMessage("[CACHE-VERBOSE] Response format: {$this->_responseFormat}");
+                logMessage("[CACHE-VERBOSE] Provider: {$this->_provider_caching}");
+                logMessage("[CACHE-VERBOSE] Added user message with " . count($completeEventList) . " content elements");
+                logMessage("[CACHE-VERBOSE] Total messages in payload: " . count($finalMessagesToSend));
+            }
+            // VERBOSE_LOGGING_END
         }
+
+        // VERBOSE_LOGGING_START - _openPart3: Completion
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ===== _OPENPART3 COMPLETE =====");
+            logMessage("[CACHE-VERBOSE] Proceeding to Part 4 (final payload construction and API request)...");
+        }
+        // VERBOSE_LOGGING_END
 
         // Continue to Part 4 for final payload construction...
         return $this->_openPart4($customParms, $herikaName, $MAX_TOKENS, $toggleThinking, $thinkingTokens,
@@ -542,6 +864,14 @@ class openrouterjsoncached
     private function _openPart4($customParms, $herikaName, $MAX_TOKENS, $toggleThinking, $thinkingTokens,
                                  $effort_level, $start_time, $finalMessagesToSend) {
 
+        // VERBOSE_LOGGING_START - _openPart4: Entry
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ===== _OPENPART4: FINAL PAYLOAD & API REQUEST =====");
+            logMessage("[CACHE-VERBOSE] Messages to send: " . count($finalMessagesToSend));
+            logMessage("[CACHE-VERBOSE] Toggle thinking: " . ($toggleThinking ? 'YES' : 'NO'));
+        }
+        // VERBOSE_LOGGING_END
+
         // Build reasoning configuration
         $reasoning = [
             "enabled" => $toggleThinking,
@@ -549,8 +879,20 @@ class openrouterjsoncached
 
         if ($this->_provider_caching === "OpenAI") {
             $reasoning["effort"] = $effort_level;
+
+            // VERBOSE_LOGGING_START - _openPart4: OpenAI reasoning
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Reasoning config (OpenAI): enabled={$toggleThinking}, effort={$effort_level}");
+            }
+            // VERBOSE_LOGGING_END
         } else {
             $reasoning["max_tokens"] = intval($thinkingTokens);
+
+            // VERBOSE_LOGGING_START - _openPart4: Standard reasoning
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Reasoning config (Standard): enabled={$toggleThinking}, max_tokens={$thinkingTokens}");
+            }
+            // VERBOSE_LOGGING_END
         }
 
         // Construct payload
@@ -573,6 +915,21 @@ class openrouterjsoncached
             ]
         );
 
+        // VERBOSE_LOGGING_START - _openPart4: Payload constructed
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ----- PAYLOAD BASE PARAMETERS -----");
+            logMessage("[CACHE-VERBOSE] Model: {$this->_model}");
+            logMessage("[CACHE-VERBOSE] Stream: true");
+            logMessage("[CACHE-VERBOSE] Temperature: {$data['temperature']}");
+            logMessage("[CACHE-VERBOSE] Top K: {$data['top_k']}");
+            logMessage("[CACHE-VERBOSE] Top P: {$data['top_p']}");
+            logMessage("[CACHE-VERBOSE] Frequency penalty: {$data['frequency_penalty']}");
+            logMessage("[CACHE-VERBOSE] Presence penalty: {$data['presence_penalty']}");
+            logMessage("[CACHE-VERBOSE] Repetition penalty: {$data['repetition_penalty']}");
+            logMessage("[CACHE-VERBOSE] Cache control: enabled=true, ttl=1h");
+        }
+        // VERBOSE_LOGGING_END
+
         // Handle max tokens
         $effectiveMaxTokens = null;
         if (isset($customParms["MAX_TOKENS"])) {
@@ -593,20 +950,50 @@ class openrouterjsoncached
         if ($effectiveMaxTokens !== null) {
             if ($effectiveMaxTokens > 0) {
                 $data["max_tokens"] = (int) $effectiveMaxTokens;
+
+                // VERBOSE_LOGGING_START - _openPart4: Max tokens set
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Max tokens: {$effectiveMaxTokens}");
+                }
+                // VERBOSE_LOGGING_END
             } else {
                 unset($data["max_tokens"]);
+
+                // VERBOSE_LOGGING_START - _openPart4: Max tokens unset (zero)
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Max tokens: unset (value was 0)");
+                }
+                // VERBOSE_LOGGING_END
             }
         } else {
             if (isset($data["max_tokens"]))
                 unset($data["max_tokens"]);
+
+            // VERBOSE_LOGGING_START - _openPart4: Max tokens unset (null)
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Max tokens: unset (not specified)");
+            }
+            // VERBOSE_LOGGING_END
         }
 
         // Add provider information
         if (!empty($GLOBALS["CONNECTOR"][$this->name]["PROVIDER"])) {
             $providers = explode(",", $GLOBALS["CONNECTOR"][$this->name]["PROVIDER"]);
             $data["provider"] = array("order" => $providers);
+
+            // VERBOSE_LOGGING_START - _openPart4: Custom providers
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Provider order (custom): " . implode(", ", $providers));
+            }
+            // VERBOSE_LOGGING_END
         } else {
             $data["provider"] = array("order" => array("Anthropic"));
+
+            // VERBOSE_LOGGING_START - _openPart4: Default provider
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Provider order (default): Anthropic");
+            }
+            // VERBOSE_LOGGING_END
         }
 
         $data["transforms"] = array();
@@ -614,6 +1001,15 @@ class openrouterjsoncached
         // Log request
         $GLOBALS["DEBUG_DATA"]["full"] = ($data);
         $this->_dataSent = json_encode($data, JSON_PRETTY_PRINT);
+
+        // VERBOSE_LOGGING_START - _openPart4: Payload finalized
+        if ($this->_verboseLogging) {
+            $payloadSize = strlen($this->_dataSent);
+            logMessage("[CACHE-VERBOSE] ----- PAYLOAD FINALIZED -----");
+            logMessage("[CACHE-VERBOSE] Payload JSON size: {$payloadSize} bytes");
+            logMessage("[CACHE-VERBOSE] Total messages in payload: " . count($finalMessagesToSend));
+        }
+        // VERBOSE_LOGGING_END
 
         try {
             $finalMsgCount = isset($finalMessagesToSend) ? count($finalMessagesToSend) : 0;
@@ -634,6 +1030,13 @@ class openrouterjsoncached
         $apiKey = isset($GLOBALS["CONNECTOR"][$this->name]["API_KEY"]) ? $GLOBALS["CONNECTOR"][$this->name]["API_KEY"] : '';
         if (empty($apiKey)) {
             logMessage("API Key missing!");
+
+            // VERBOSE_LOGGING_START - _openPart4: API key missing
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] ✗ API KEY MISSING - cannot proceed with request");
+            }
+            // VERBOSE_LOGGING_END
+
             return null;
         }
 
@@ -645,7 +1048,23 @@ class openrouterjsoncached
             "anthropic-beta: extended-cache-ttl-2025-04-11"
         );
 
+        // VERBOSE_LOGGING_START - _openPart4: Headers
+        if ($this->_verboseLogging) {
+            $maskedApiKey = substr($apiKey, 0, 8) . '...' . substr($apiKey, -4);
+            logMessage("[CACHE-VERBOSE] ----- API REQUEST HEADERS -----");
+            logMessage("[CACHE-VERBOSE] Authorization: Bearer {$maskedApiKey}");
+            logMessage("[CACHE-VERBOSE] Anthropic beta: extended-cache-ttl-2025-04-11");
+        }
+        // VERBOSE_LOGGING_END
+
         $timeout = isset($GLOBALS["HTTP_TIMEOUT"]) ? (int) $GLOBALS["HTTP_TIMEOUT"] : 60;
+
+        // VERBOSE_LOGGING_START - _openPart4: Timeout
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] HTTP timeout: {$timeout} seconds");
+        }
+        // VERBOSE_LOGGING_END
+
         $options = array(
             'http' => array(
                 'method' => 'POST',
@@ -665,15 +1084,43 @@ class openrouterjsoncached
         $this->_forcedClose = false;
         $this->_jsonResponsesEncoded = array();
 
+        // VERBOSE_LOGGING_START - _openPart4: Stream state initialized
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Stream state initialized (buffers cleared)");
+        }
+        // VERBOSE_LOGGING_END
+
         $end_time = microtime(true);
         $execution_time = $end_time - $start_time;
         logMessage("Time for preparing cached request: $execution_time seconds");
 
+        // VERBOSE_LOGGING_START - _openPart4: Preparation time
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Request preparation time: {$execution_time} seconds");
+        }
+        // VERBOSE_LOGGING_END
+
         // Open stream
+        // VERBOSE_LOGGING_START - _openPart4: Opening stream
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ----- OPENING STREAM -----");
+            logMessage("[CACHE-VERBOSE] Target URL: {$this->_url}");
+            logMessage("[CACHE-VERBOSE] Attempting to establish streaming connection...");
+        }
+        // VERBOSE_LOGGING_END
+
         try {
             $this->primary_handler = $this->send($this->_url, $context);
         } catch (Exception $e) {
             logMessage("fopen Exception [{$this->name}:{$herikaName}]: " . $e->getMessage());
+
+            // VERBOSE_LOGGING_START - _openPart4: Stream exception
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] ✗ STREAM EXCEPTION: " . $e->getMessage());
+                logMessage("[CACHE-VERBOSE] Request failed - returning null");
+            }
+            // VERBOSE_LOGGING_END
+
             return null;
         }
 
@@ -684,8 +1131,24 @@ class openrouterjsoncached
             if (isset($http_response_header) && is_array($http_response_header)) {
                 logMessage("HTTP Headers on fail: " . implode("\n", $http_response_header));
             }
+
+            // VERBOSE_LOGGING_START - _openPart4: Stream open failed
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] ✗ STREAM OPEN FAILED: {$errMsg}");
+                logMessage("[CACHE-VERBOSE] Request failed - returning null");
+            }
+            // VERBOSE_LOGGING_END
+
             return null;
         }
+
+        // VERBOSE_LOGGING_START - _openPart4: Stream opened successfully
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ✓ Stream opened successfully");
+            logMessage("[CACHE-VERBOSE] Ready to receive streaming response");
+            logMessage("[CACHE-VERBOSE] ===== _OPENPART4 COMPLETE =====");
+        }
+        // VERBOSE_LOGGING_END
 
         return true;
     }
@@ -694,12 +1157,27 @@ class openrouterjsoncached
         global $alreadysent;
         $herikaName = isset($GLOBALS["HERIKA_NAME"]) ? $GLOBALS["HERIKA_NAME"] : 'default_herika';
 
+        // VERBOSE_LOGGING_START - process: First call
+        static $firstProcessCall = true;
+        if ($this->_verboseLogging && $firstProcessCall) {
+            logMessage("[CACHE-VERBOSE] ===== PROCESS(): STREAMING RESPONSE =====");
+            logMessage("[CACHE-VERBOSE] Beginning to process streaming response chunks");
+            logMessage("[CACHE-VERBOSE] Response format: {$this->_responseFormat}");
+            $firstProcessCall = false;
+        }
+        // VERBOSE_LOGGING_END
+
         if ($this->isDone())
             return "";
 
         $line = @fgets($this->primary_handler);
         if ($line === false) {
             if (feof($this->primary_handler)) {
+                // VERBOSE_LOGGING_START - process: EOF reached
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Stream EOF reached (end of response)");
+                }
+                // VERBOSE_LOGGING_END
                 return "";
             } else {
                 $error = error_get_last();
@@ -707,6 +1185,13 @@ class openrouterjsoncached
                 logMessage("Read Err [{$this->name}:{$herikaName}]: {$errMsg}");
                 $this->_rawbuffer .= "\nRead Err: {$errMsg}\n";
                 $this->_forcedClose = true;
+
+                // VERBOSE_LOGGING_START - process: Read error
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] ✗ Stream read error: {$errMsg}");
+                }
+                // VERBOSE_LOGGING_END
+
                 return $errMsg;
             }
         }
@@ -722,6 +1207,11 @@ class openrouterjsoncached
         if (strpos($line, 'data: ') === 0) {
             $jsonData = trim(substr($line, 6));
             if ($jsonData === '[DONE]') {
+                // VERBOSE_LOGGING_START - process: DONE marker
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] [DONE] marker received - stream complete");
+                }
+                // VERBOSE_LOGGING_END
                 return "";
             }
 
@@ -730,6 +1220,17 @@ class openrouterjsoncached
                 if (json_last_error() === JSON_ERROR_NONE && is_array($data)) {
                     // Handle Anthropic format
                     if (isset($data['type'])) {
+                        // VERBOSE_LOGGING_START - process: Anthropic event type
+                        static $eventTypeCounts = [];
+                        if ($this->_verboseLogging) {
+                            $eventType = $data['type'];
+                            if (!isset($eventTypeCounts[$eventType])) {
+                                logMessage("[CACHE-VERBOSE] First Anthropic event type '{$eventType}' received");
+                                $eventTypeCounts[$eventType] = 1;
+                            }
+                        }
+                        // VERBOSE_LOGGING_END
+
                         switch ($data['type']) {
                             case 'content_block_delta':
                                 if (isset($data['delta']['type']) && $data['delta']['type'] === 'text_delta' &&
@@ -742,12 +1243,25 @@ class openrouterjsoncached
                             case 'content_block_start':
                                 if (isset($data['content_block']['type']) && $data['content_block']['type'] === 'tool_use') {
                                     $this->_jsonResponsesEncoded[] = json_encode($data);
+
+                                    // VERBOSE_LOGGING_START - process: Tool use detected
+                                    if ($this->_verboseLogging) {
+                                        logMessage("[CACHE-VERBOSE] Tool use content block detected");
+                                    }
+                                    // VERBOSE_LOGGING_END
                                 }
                                 break;
 
                             case 'message_delta':
                                 if (isset($data['delta']['stop_reason']) && $data['delta']['stop_reason'] !== null) {
                                     logMessage("[{$this->name}:{$herikaName}] Stop (delta): " . $data['delta']['stop_reason']);
+
+                                    // VERBOSE_LOGGING_START - process: Stop reason
+                                    if ($this->_verboseLogging) {
+                                        logMessage("[CACHE-VERBOSE] Stop reason (delta): " . $data['delta']['stop_reason']);
+                                    }
+                                    // VERBOSE_LOGGING_END
+
                                     $this->_forcedClose = true;
                                 }
                                 break;
@@ -775,6 +1289,20 @@ class openrouterjsoncached
                                         $efficiency
                                     );
                                     @file_put_contents(__DIR__ . DIRECTORY_SEPARATOR . "_cached_perf.log", $logPerfEntry, FILE_APPEND);
+
+                                    // VERBOSE_LOGGING_START - process: Cache performance
+                                    if ($this->_verboseLogging) {
+                                        logMessage("[CACHE-VERBOSE] ----- CACHE PERFORMANCE METRICS -----");
+                                        logMessage("[CACHE-VERBOSE] Cache read tokens: {$cacheRead}");
+                                        logMessage("[CACHE-VERBOSE] Cache creation tokens: {$cacheCreate}");
+                                        logMessage("[CACHE-VERBOSE] New input tokens: {$normalInput}");
+                                        logMessage("[CACHE-VERBOSE] Total input tokens: {$totalConsideredInput}");
+                                        logMessage("[CACHE-VERBOSE] Cache efficiency: {$efficiency}%");
+                                        if (isset($usage['output_tokens'])) {
+                                            logMessage("[CACHE-VERBOSE] Output tokens: {$usage['output_tokens']}");
+                                        }
+                                    }
+                                    // VERBOSE_LOGGING_END
                                 }
 
                                 $this->_forcedClose = true;
@@ -785,6 +1313,13 @@ class openrouterjsoncached
                                 logMessage("Stream Err (Anthropic): {$eM}");
                                 $this->_rawbuffer .= "\nErr (Anthropic):{$eM}\n";
                                 $this->_forcedClose = true;
+
+                                // VERBOSE_LOGGING_START - process: Anthropic error
+                                if ($this->_verboseLogging) {
+                                    logMessage("[CACHE-VERBOSE] ✗ Anthropic error received: {$eM}");
+                                }
+                                // VERBOSE_LOGGING_END
+
                                 return $eM;
 
                             case 'ping':
@@ -797,6 +1332,14 @@ class openrouterjsoncached
                     }
                     // Handle OpenAI format
                     elseif (isset($data["choices"][0]["delta"])) {
+                        // VERBOSE_LOGGING_START - process: OpenAI format detected
+                        static $openaiFormatLogged = false;
+                        if ($this->_verboseLogging && !$openaiFormatLogged) {
+                            logMessage("[CACHE-VERBOSE] OpenAI format detected");
+                            $openaiFormatLogged = true;
+                        }
+                        // VERBOSE_LOGGING_END
+
                         if (isset($data["choices"][0]["delta"]["content"])) {
                             $buffer = $data["choices"][0]["delta"]["content"];
                             $this->_buffer .= $buffer;
@@ -804,10 +1347,23 @@ class openrouterjsoncached
 
                         if (isset($data["choices"][0]["delta"]["tool_calls"])) {
                             $this->_jsonResponsesEncoded[] = json_encode($data);
+
+                            // VERBOSE_LOGGING_START - process: OpenAI tool calls
+                            if ($this->_verboseLogging) {
+                                logMessage("[CACHE-VERBOSE] OpenAI tool calls detected");
+                            }
+                            // VERBOSE_LOGGING_END
                         }
 
                         if (isset($data["choices"][0]["finish_reason"]) && $data["choices"][0]["finish_reason"] !== null) {
                             logMessage("[{$this->name}:{$herikaName}] Stop (choice): " . $data["choices"][0]["finish_reason"]);
+
+                            // VERBOSE_LOGGING_START - process: OpenAI finish reason
+                            if ($this->_verboseLogging) {
+                                logMessage("[CACHE-VERBOSE] Finish reason: " . $data["choices"][0]["finish_reason"]);
+                            }
+                            // VERBOSE_LOGGING_END
+
                             $this->_forcedClose = true;
                         }
                     }
@@ -817,15 +1373,34 @@ class openrouterjsoncached
                         logMessage("Stream Err (Generic): {$eM}");
                         $this->_rawbuffer .= "\nErr (Generic):{$eM}\n";
                         $this->_forcedClose = true;
+
+                        // VERBOSE_LOGGING_START - process: Generic error
+                        if ($this->_verboseLogging) {
+                            logMessage("[CACHE-VERBOSE] ✗ Generic error received: {$eM}");
+                        }
+                        // VERBOSE_LOGGING_END
+
                         return $eM;
                     }
                 } else {
                     logMessage("JSON Decode Err [{$this->name}:{$herikaName}]: " . json_last_error_msg());
+
+                    // VERBOSE_LOGGING_START - process: JSON decode error
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] ✗ JSON decode error: " . json_last_error_msg());
+                    }
+                    // VERBOSE_LOGGING_END
                 }
             }
         } elseif (trim($line) === "event: message_stop") {
             logMessage("[{$this->name}:{$herikaName}] Explicit stream end event received.");
             $this->_forcedClose = true;
+
+            // VERBOSE_LOGGING_START - process: Explicit stream end
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Explicit 'event: message_stop' received");
+            }
+            // VERBOSE_LOGGING_END
         }
 
         // Parse and return content based on format
@@ -838,15 +1413,45 @@ class openrouterjsoncached
 
     // Helper method to parse and return content based on format
     private function _parseAndReturnContent() {
+        // VERBOSE_LOGGING_START - _parseAndReturnContent: Entry
+        static $parseCallCount = 0;
+        if ($this->_verboseLogging) {
+            $parseCallCount++;
+            if ($parseCallCount === 1) {
+                logMessage("[CACHE-VERBOSE] ----- PARSING RESPONSE CONTENT -----");
+                logMessage("[CACHE-VERBOSE] Response format: {$this->_responseFormat}");
+                logMessage("[CACHE-VERBOSE] Buffer length: " . strlen($this->_buffer));
+            }
+        }
+        // VERBOSE_LOGGING_END
+
         if ($this->_responseFormat === 'json') {
             // JSON format parsing
             $extracted_json_or_text = extractJson($this->_buffer);
             $tempJson = json_decode($extracted_json_or_text, true);
 
+            // VERBOSE_LOGGING_START - _parseAndReturnContent: JSON extraction
+            if ($this->_verboseLogging && $parseCallCount === 1) {
+                logMessage("[CACHE-VERBOSE] Extracted JSON length: " . strlen($extracted_json_or_text));
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    logMessage("[CACHE-VERBOSE] JSON decoded successfully");
+                    logMessage("[CACHE-VERBOSE] JSON keys: " . (is_array($tempJson) ? implode(', ', array_keys($tempJson)) : 'N/A'));
+                } else {
+                    logMessage("[CACHE-VERBOSE] ✗ JSON decode failed: " . json_last_error_msg());
+                }
+            }
+            // VERBOSE_LOGGING_END
+
             if (json_last_error() === JSON_ERROR_NONE && isset($tempJson['message']) && !empty($tempJson['message'])) {
                 if (isset($tempJson["mood"])) {
                     $GLOBALS["SCRIPTLINE_ANIMATION"] = function_exists('GetAnimationHex') ? GetAnimationHex($tempJson["mood"]) : '';
                     $GLOBALS["SCRIPTLINE_EXPRESSION"] = function_exists('GetExpression') ? GetExpression($tempJson["mood"]) : '';
+
+                    // VERBOSE_LOGGING_START - _parseAndReturnContent: Mood set
+                    if ($this->_verboseLogging && $parseCallCount === 1) {
+                        logMessage("[CACHE-VERBOSE] Mood extracted: {$tempJson['mood']}");
+                    }
+                    // VERBOSE_LOGGING_END
                 }
                 if (isset($tempJson["listener"])) {
                     if (isset($tempJson["action"]) && ($tempJson["action"] == "Talk") &&
@@ -855,7 +1460,21 @@ class openrouterjsoncached
                     } else {
                         $GLOBALS["SCRIPTLINE_LISTENER"] = $tempJson["listener"];
                     }
+
+                    // VERBOSE_LOGGING_START - _parseAndReturnContent: Listener set
+                    if ($this->_verboseLogging && $parseCallCount === 1) {
+                        logMessage("[CACHE-VERBOSE] Listener extracted: " . $GLOBALS["SCRIPTLINE_LISTENER"]);
+                    }
+                    // VERBOSE_LOGGING_END
                 }
+
+                // VERBOSE_LOGGING_START - _parseAndReturnContent: Message extracted
+                if ($this->_verboseLogging && $parseCallCount === 1) {
+                    $msgPreview = substr($tempJson['message'], 0, 100);
+                    logMessage("[CACHE-VERBOSE] Message extracted (length: " . strlen($tempJson['message']) . ", preview): {$msgPreview}...");
+                }
+                // VERBOSE_LOGGING_END
+
                 return $tempJson['message'];
             }
         } else {
@@ -869,22 +1488,54 @@ class openrouterjsoncached
                     $this->_includeTarget
                 );
 
+                // VERBOSE_LOGGING_START - _parseAndReturnContent: Simple format extraction
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Simple format extraction attempt, found: " . ($parsed['found'] ? 'YES' : 'NO'));
+                }
+                // VERBOSE_LOGGING_END
+
                 if ($parsed['found']) {
                     $this->_simpleFormatParsed = true;
 
                     if ($this->_includeMood && !empty($parsed['mood'])) {
                         $GLOBALS["SCRIPTLINE_ANIMATION"] = function_exists('GetAnimationHex') ? GetAnimationHex($parsed["mood"]) : '';
                         $GLOBALS["SCRIPTLINE_EXPRESSION"] = function_exists('GetExpression') ? GetExpression($parsed["mood"]) : '';
+
+                        // VERBOSE_LOGGING_START - _parseAndReturnContent: Simple mood
+                        if ($this->_verboseLogging) {
+                            logMessage("[CACHE-VERBOSE] Simple format mood: {$parsed['mood']}");
+                        }
+                        // VERBOSE_LOGGING_END
                     }
 
                     if ($this->_includeListener && !empty($parsed['listener'])) {
                         $GLOBALS["SCRIPTLINE_LISTENER"] = $parsed['listener'];
+
+                        // VERBOSE_LOGGING_START - _parseAndReturnContent: Simple listener
+                        if ($this->_verboseLogging) {
+                            logMessage("[CACHE-VERBOSE] Simple format listener: {$parsed['listener']}");
+                        }
+                        // VERBOSE_LOGGING_END
                     }
+
+                    // VERBOSE_LOGGING_START - _parseAndReturnContent: Simple message
+                    if ($this->_verboseLogging) {
+                        $msgPreview = substr($parsed['message'], 0, 100);
+                        logMessage("[CACHE-VERBOSE] Simple format message (length: " . strlen($parsed['message']) . ", preview): {$msgPreview}...");
+                    }
+                    // VERBOSE_LOGGING_END
 
                     return $parsed['message'];
                 }
             } else {
                 // Simple format already parsed, just return accumulated message
+                // VERBOSE_LOGGING_START - _parseAndReturnContent: Accumulating
+                if ($this->_verboseLogging && strlen($this->_buffer) > ($this->_lastReturnedLength ?? 0)) {
+                    logMessage("[CACHE-VERBOSE] Accumulating more content, buffer now: " . strlen($this->_buffer) . " chars");
+                    $this->_lastReturnedLength = strlen($this->_buffer);
+                }
+                // VERBOSE_LOGGING_END
+
                 return $this->_buffer;
             }
         }
@@ -932,6 +1583,15 @@ class openrouterjsoncached
 
         logMessage("start process actions");
 
+        // VERBOSE_LOGGING_START - processActions: Entry
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ----- PROCESSING ACTIONS -----");
+            logMessage("[CACHE-VERBOSE] Response format: {$this->_responseFormat}");
+            logMessage("[CACHE-VERBOSE] Buffer length: " . strlen($this->_buffer));
+            logMessage("[CACHE-VERBOSE] Include actions: " . ($this->_includeActions ? 'YES' : 'NO'));
+        }
+        // VERBOSE_LOGGING_END
+
         if ($this->_responseFormat === 'json') {
             // JSON format action processing
             if (!empty($this->_buffer)) {
@@ -944,6 +1604,16 @@ class openrouterjsoncached
 
                     if (json_last_error() === JSON_ERROR_NONE && is_array($parsedResponse)) {
                         logMessage("[{$this->name}:{$herikaName}] Parsed JSON from buffer: " . json_encode($parsedResponse));
+
+                        // VERBOSE_LOGGING_START - processActions: JSON parsed for actions
+                        if ($this->_verboseLogging) {
+                            logMessage("[CACHE-VERBOSE] JSON parsed for action processing");
+                            logMessage("[CACHE-VERBOSE] Has 'action' field: " . (isset($parsedResponse['action']) ? 'YES' : 'NO'));
+                            if (isset($parsedResponse['action'])) {
+                                logMessage("[CACHE-VERBOSE] Action value: {$parsedResponse['action']}");
+                            }
+                        }
+                        // VERBOSE_LOGGING_END
 
                         if (isset($parsedResponse['action']) && !empty($parsedResponse['action'])) {
                             $target = isset($parsedResponse['target']) ? $parsedResponse['target'] : '';
@@ -959,11 +1629,37 @@ class openrouterjsoncached
                                 $alreadysent[$commandKey] = $commandString;
 
                                 logMessage("[{$this->name}:{$herikaName}] Generated command: {$commandString}");
+
+                                // VERBOSE_LOGGING_START - processActions: Command generated (JSON)
+                                if ($this->_verboseLogging) {
+                                    logMessage("[CACHE-VERBOSE] Command generated (JSON): {$commandString}");
+                                    logMessage("[CACHE-VERBOSE] Target: " . ($target ?: 'NONE'));
+                                    logMessage("[CACHE-VERBOSE] Character: {$character}");
+                                }
+                                // VERBOSE_LOGGING_END
+                            } else {
+                                // VERBOSE_LOGGING_START - processActions: Duplicate command skipped
+                                if ($this->_verboseLogging) {
+                                    logMessage("[CACHE-VERBOSE] Command skipped (duplicate): {$parsedResponse['action']}@{$target}");
+                                }
+                                // VERBOSE_LOGGING_END
                             }
                         }
                     } else {
                         logMessage("[{$this->name}:{$herikaName}] Failed to parse JSON: " . json_last_error_msg());
+
+                        // VERBOSE_LOGGING_START - processActions: JSON parse failed
+                        if ($this->_verboseLogging) {
+                            logMessage("[CACHE-VERBOSE] ✗ Failed to parse JSON for actions: " . json_last_error_msg());
+                        }
+                        // VERBOSE_LOGGING_END
                     }
+                } else {
+                    // VERBOSE_LOGGING_START - processActions: No valid JSON found
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] No valid JSON boundaries found in buffer");
+                    }
+                    // VERBOSE_LOGGING_END
                 }
             }
         } else {
@@ -975,6 +1671,15 @@ class openrouterjsoncached
                 $this->_includeActions,
                 $this->_includeTarget
             );
+
+            // VERBOSE_LOGGING_START - processActions: Simple format parsed
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Simple format parsed for actions, found: " . ($parsed['found'] ? 'YES' : 'NO'));
+                if ($parsed['found'] && $this->_includeActions) {
+                    logMessage("[CACHE-VERBOSE] Action in simple format: " . (isset($parsed['action']) && !empty($parsed['action']) ? $parsed['action'] : 'NONE'));
+                }
+            }
+            // VERBOSE_LOGGING_END
 
             if ($parsed['found'] && $this->_includeActions && !empty($parsed['action'])) {
                 $action = validateActionName($parsed['action']);
@@ -992,6 +1697,20 @@ class openrouterjsoncached
                     $alreadysent[$commandKey] = $commandString;
 
                     logMessage("[{$this->name}:{$herikaName}] Generated command from simple format: {$commandString}");
+
+                    // VERBOSE_LOGGING_START - processActions: Command generated (simple)
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] Command generated (simple format): {$commandString}");
+                        logMessage("[CACHE-VERBOSE] Validated action: {$action}");
+                        logMessage("[CACHE-VERBOSE] Target: " . ($target ?: 'NONE'));
+                    }
+                    // VERBOSE_LOGGING_END
+                } else {
+                    // VERBOSE_LOGGING_START - processActions: Duplicate command skipped (simple)
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] Command skipped (duplicate, simple format): {$action}@{$target}");
+                    }
+                    // VERBOSE_LOGGING_END
                 }
             }
         }
@@ -1006,9 +1725,28 @@ class openrouterjsoncached
 
         if (!empty($this->_commandBuffer)) {
             logMessage("[{$this->name}:{$herikaName}] Final Command Buffer: " . implode(", ", $this->_commandBuffer));
+
+            // VERBOSE_LOGGING_START - processActions: Commands finalized
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Total commands generated: " . count($this->_commandBuffer));
+                logMessage("[CACHE-VERBOSE] Commands: " . implode(", ", $this->_commandBuffer));
+            }
+            // VERBOSE_LOGGING_END
         } else {
             logMessage("[{$this->name}:{$herikaName}] No commands generated.");
+
+            // VERBOSE_LOGGING_START - processActions: No commands
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] No commands generated from response");
+            }
+            // VERBOSE_LOGGING_END
         }
+
+        // VERBOSE_LOGGING_START - processActions: Complete
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ===== ACTION PROCESSING COMPLETE =====");
+        }
+        // VERBOSE_LOGGING_END
 
         return empty($this->_commandBuffer) ? array() : $this->_commandBuffer;
     }
