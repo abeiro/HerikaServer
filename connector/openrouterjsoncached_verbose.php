@@ -6,9 +6,12 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_function
 // Cached version of openrouterjson connector with Anthropic/OpenAI/Gemini cache support
 // Based on CHIM 2.0 architecture with additional caching and response format features
 // VERBOSE LOGGING VERSION - includes comprehensive debugging logs for testing phase
+// Version: 1.0.0 (2025-11-05)
 
 class openrouterjsoncached_verbose
 {
+    const VERSION = '1.0.0';
+
     public $primary_handler;
     public $name;
 
@@ -114,7 +117,7 @@ class openrouterjsoncached_verbose
 
         // VERBOSE_LOGGING_START - Constructor initialization
         if ($this->_verboseLogging) {
-            logMessage("[CACHE-VERBOSE] Connector constructor initialized");
+            logMessage("[CACHE-VERBOSE] OpenRouter Cached Connector v" . self::VERSION . " (VERBOSE) initialized");
             logMessage("[CACHE-VERBOSE] Default provider_caching: {$this->_provider_caching}");
             logMessage("[CACHE-VERBOSE] Default response_format: {$this->_responseFormat}");
             logMessage("[CACHE-VERBOSE] Helper files loaded");
@@ -240,7 +243,7 @@ class openrouterjsoncached_verbose
             return null;
         }
 
-        $MAX_TOKENS = ((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 4096) + 0);
+        $MAX_TOKENS = intval(isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 4096);
         $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'anthropic/claude-3-haiku-20240307';
 
         // Model can be overridden by custom params

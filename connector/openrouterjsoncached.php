@@ -5,9 +5,12 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_function
 
 // Cached version of openrouterjson connector with Anthropic/OpenAI/Gemini cache support
 // Based on CHIM 2.0 architecture with additional caching and response format features
+// Version: 1.0.0 (2025-11-05)
 
 class openrouterjsoncached
 {
+    const VERSION = '1.0.0';
+
     public $primary_handler;
     public $name;
 
@@ -108,6 +111,8 @@ class openrouterjsoncached
 
         require_once(__DIR__."/__jpd.php");
         require_once(__DIR__."/openrouterjsoncached_helpers.php");
+
+        logMessage("[{$this->name}] OpenRouter Cached Connector v" . self::VERSION . " initialized");
     }
 
     // Utility methods
@@ -228,7 +233,7 @@ class openrouterjsoncached
             return null;
         }
 
-        $MAX_TOKENS = ((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 4096) + 0);
+        $MAX_TOKENS = intval(isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 4096);
         $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'anthropic/claude-3-haiku-20240307';
 
         // Model can be overridden by custom params

@@ -402,26 +402,26 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                         <div style="font-size:13px; font-weight:600; margin-bottom:8px;">Simple Format Content Options:</div>
                         <label class="label-with-toggle"><span>Include Mood</span>
                             <input type="hidden" name="metadata[include_mood_requirement]" value="0">
-                            <input type="checkbox" name="metadata[include_mood_requirement]" value="1" <?= isset($metadata['include_mood_requirement']) && $metadata['include_mood_requirement'] ? 'checked' : '' ?>>
+                            <input type="checkbox" name="metadata[include_mood_requirement]" value="1" <?= (!isset($metadata['include_mood_requirement']) || $metadata['include_mood_requirement']) ? 'checked' : '' ?>>
                         </label><br>
                         <label class="label-with-toggle"><span>Include Listener</span>
                             <input type="hidden" name="metadata[include_listener_requirement]" value="0">
-                            <input type="checkbox" name="metadata[include_listener_requirement]" value="1" <?= isset($metadata['include_listener_requirement']) && $metadata['include_listener_requirement'] ? 'checked' : '' ?>>
+                            <input type="checkbox" name="metadata[include_listener_requirement]" value="1" <?= (!isset($metadata['include_listener_requirement']) || $metadata['include_listener_requirement']) ? 'checked' : '' ?>>
                         </label><br>
                         <label class="label-with-toggle"><span>Include Actions</span>
                             <input type="hidden" name="metadata[include_actions_list]" value="0">
-                            <input type="checkbox" name="metadata[include_actions_list]" value="1" <?= isset($metadata['include_actions_list']) && $metadata['include_actions_list'] ? 'checked' : '' ?>>
+                            <input type="checkbox" name="metadata[include_actions_list]" value="1" <?= (!isset($metadata['include_actions_list']) || $metadata['include_actions_list']) ? 'checked' : '' ?>>
                         </label><br>
                         <label class="label-with-toggle"><span>Include Target</span>
                             <input type="hidden" name="metadata[include_target_requirement]" value="0">
-                            <input type="checkbox" name="metadata[include_target_requirement]" value="1" <?= isset($metadata['include_target_requirement']) && $metadata['include_target_requirement'] ? 'checked' : '' ?>>
+                            <input type="checkbox" name="metadata[include_target_requirement]" value="1" <?= (!isset($metadata['include_target_requirement']) || $metadata['include_target_requirement']) ? 'checked' : '' ?>>
                         </label>
                     </div>
 
                     <div id="verbose_logging_option" style="display:none; margin-top:12px;">
                         <label class="label-with-toggle"><span class='tip-label' data-tip='Enable detailed logging for testing (verbose connector only)'>Verbose Logging</span>
                             <input type="hidden" name="metadata[verbose_logging]" value="0">
-                            <input type="checkbox" name="metadata[verbose_logging]" value="1" <?= isset($metadata['verbose_logging']) && $metadata['verbose_logging'] ? 'checked' : 'checked' ?>>
+                            <input type="checkbox" name="metadata[verbose_logging]" value="1" <?= (!isset($metadata['verbose_logging']) || $metadata['verbose_logging']) ? 'checked' : '' ?>>
                             <span class="toggle-text">On</span>
                         </label>
                     </div>

@@ -1,0 +1,69 @@
+===============================================================================
+CHIM CACHED CONNECTOR - VERSION HISTORY
+===============================================================================
+
+Version 1.0.0 (2025-11-05)
+--------------------------
+
+INITIAL RELEASE
+
+Features:
+---------
+✓ Multi-provider caching support (Anthropic, OpenAI, Gemini)
+✓ Dual response formats (JSON structured / Simple natural language)
+✓ Configurable dialogue cache with uncached recent messages
+✓ Dynamic content extraction to minimize cache invalidation
+✓ Simple format content control (mood, listener, actions, target)
+✓ Incremental cache building across conversations
+✓ Cache performance metrics logging
+✓ Verbose logging version for debugging
+
+Files Included:
+---------------
+• connector/openrouterjsoncached.php - Production connector
+• connector/openrouterjsoncached_helpers.php - Helper functions
+• connector/openrouterjsoncached_verbose.php - Testing connector with verbose logs
+• conf/conf_schema.json - Configuration schema
+• lib/core/llm_connector.class.php - Database integration
+• ui/core/llm_connectors.php - WebUI editor with caching settings
+
+Bug Fixes (Pre-Release):
+------------------------
+✓ Fixed function redeclaration error (lazyEmpty)
+✓ Fixed type error in max_dialogue_cache_size calculation
+✓ Fixed type error in MAX_TOKENS calculation
+✓ Fixed checkbox defaults in WebUI to match connector defaults
+✓ Added metadata JSON encoding for database operations
+
+Compatibility:
+--------------
+• TESTED: CHIM 2.0.3
+• LIKELY COMPATIBLE: CHIM 2.0.1, 2.0.2
+• POSSIBLY COMPATIBLE: CHIM 2.0.0
+
+Configuration Options:
+----------------------
+• provider_caching: Anthropic | OpenAI | Gemini (default: Anthropic)
+• response_format: json | simple (default: json)
+• dialogue_cache_uncached_count: 0-10 (default: 4)
+• verbose_logging: boolean (default: true for verbose version)
+
+Simple Format Options (when response_format = simple):
+------------------------------------------------------
+• include_mood_requirement: boolean (default: true)
+• include_listener_requirement: boolean (default: true)
+• include_actions_list: boolean (default: true)
+• include_target_requirement: boolean (default: true)
+
+Logging:
+--------
+• log/cache.log - Main verbose logging output
+• connector/_cached_perf.log - Cache performance metrics
+• log/context_sent_to_llm.log - Full API payloads
+• log/debugStream.log - Raw streaming data
+
+Known Issues:
+-------------
+• None reported yet - this is the initial testing release
+
+===============================================================================
