@@ -111,10 +111,12 @@ $DYNAMIC_PROMPT_SPEECHSTYLE = "Based on recent interactions, update how #HERIKA_
     . "Start directly with the speech style content.";
 
 $DYNAMIC_PROMPT_GOALS = "Based on story developments and achievements, update the #HERIKA_NAME# goals and aspirations. "
-    . "Maintain existing relevant goals and add new ones. Only remove goals that have been clearly completed or are no longer applicable. "
-    . "Focus on new aspirations that emerged, modified existing goals due to circumstances, and updated long-term objectives. "
-    . "Return ONLY a bulleted list using * Goal description as actionable aspiration format. Do not include any introductory text, meta-commentary, or phrases like 'Here are the updated goals' or 'The character's goals are'. "
-    . "Start directly with the first bullet point.";
+    . "Maintain existing relevant goals, compressing related goals, and add new ones. Remove goals that have been clearly "
+    . "completed or are no longer applicable. Focus on new aspirations that emerged, modified existing goals due to "
+    . "circumstances, and updated long-term objectives. Return ONLY a bulleted list using * Goal description as actionable "
+    . "aspiration format. Do not include any introductory text, meta-commentary, or phrases like 'Here are the updated goals' "
+    . "or 'The character's goals are'. Start directly with the first bullet point (maintain a maximum of 20 goals with "
+    . "reduction priority when required: 1- compress related goals, 2-eliminate 'study' related goals, 3- eliminate older goals).";
 $DIARY_PROMPT = "Please write a short summary of #PLAYER_NAME# and #HERIKA_NAME#s last dialogues and events written above into #HERIKA_NAME#s diary . WRITE AS IF YOU WERE #HERIKA_NAME#. Start the diary entry with the current date and time.";
 
 // Dynamic profile utility button
