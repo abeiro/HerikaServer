@@ -2,6 +2,27 @@
 CHIM CACHED CONNECTOR - VERSION HISTORY
 ===============================================================================
 
+Version 1.0.2 (2025-11-05)
+--------------------------
+
+Bug Fixes:
+----------
+✓ Fixed events-memories.php crash when displaying array content format
+  - UI expected string content but connectors use array format [{type:'text', text:'...'}]
+  - Added proper handling for both string and array content formats
+
+Potential Cache Efficiency Issues Identified (not yet fixed - awaiting logs):
+------------------------------------------------------------------------------
+⚠️ Lines 450-451: First 4 dialogue entries removed before caching
+⚠️ Line 530-532: Dynamic environment inserted near end could be in cached portion
+
+Version 1.0.1 (2025-11-05)
+--------------------------
+
+Bug Fixes:
+----------
+✓ All fixes from 1.0.0 pre-release
+
 Version 1.0.0 (2025-11-05)
 --------------------------
 
