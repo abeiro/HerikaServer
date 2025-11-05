@@ -38,6 +38,7 @@ Bug Fixes (Pre-Release):
 ✓ Fixed stream_get_meta_data null pointer error in getHttpStatusCode
 ✓ Fixed caching settings not appearing in main LLM Connectors page (only showed in Profiles)
 ✓ Fixed unsafe GLOBALS access (COMMAND_PROMPT_ENFORCE_ACTIONS, DEBUG_DATA initialization)
+✓ **CRITICAL: Fixed verbose connector completely non-functional** (missing configuration in llm_connector.class.php)
 
 Compatibility:
 --------------
