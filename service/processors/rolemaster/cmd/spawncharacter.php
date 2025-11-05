@@ -16,6 +16,8 @@ $GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will t
 $CONF_SAMPLE_VARS=extract_assignments("{$GLOBALS["ENGINE_ROOT"]}/conf/conf.php");
 
 $connector=new LLMConnector();
+$npcMaster=new NpcMaster();
+
 $currentConnectorData = $connector->getById($CONF_SAMPLE_VARS["CORE_CONNECTOR_DIRECTOR"]);
 $connectionHandler = $connector->getConnector($currentConnectorData);
 
@@ -174,6 +176,17 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
             // Create profile
             createProfile($response["name"],$PARMS,true);
             
+            $currentData = $npcMaster->GetByName($response["name"]);
+
+            $currentData["npc_static_bio"]=$response["background"];
+            $currentData["goals"]=$response["goal"];
+            $currentData["personality"]=$response["traits"];
+            $currentData["appearance"]=$response["appearance"];
+            $currentData["core"]="{$response["name"]} ({$response["race"]} {$response["gender"]}";
+            $currentData["speechstyle"]=$response["speechStyle"];
+        
+            $npcMaster->updateByArray($currentData);
+
             // This should be on new npc profile table
             $codename = npcNameToCodename($response["name"]);
            

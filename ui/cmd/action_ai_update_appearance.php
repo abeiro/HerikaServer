@@ -65,7 +65,7 @@ $image="";
 if (isset($metadata["portrait"])) {
     $image=$enginePath."/data/pictures/{$metadata["portrait"]}";
 } else if (file_exists($enginePath."/data/pictures/{$metadata["portrait"]}")) {
-    $image=$enginePath."/data/pictures/{$currentNpcData["refid"]}.jpg";
+    $image=$enginePath."/data/pictures/profile/{$currentNpcData["refid"]}.jpg";
 }
 
 if (!$image) {

@@ -2091,14 +2091,28 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         const npcName = nameEl ? String(nameEl.value||'').trim() : '';
         
         document.getElementById("npc_modal").style.cursor="wait"
-        showProcessing()
+        
+        processingMessage = document.createElement('div');
+        processingMessage.textContent = 'Processing...';
+        processingMessage.style.position = 'fixed';
+        processingMessage.style.top = '50%';
+        processingMessage.style.left = '50%';
+        processingMessage.style.transform = 'translate(-50%, -50%)';
+        processingMessage.style.backgroundColor = '#000';
+        processingMessage.style.color = '#fff';
+        processingMessage.style.padding = '10px 20px';
+        processingMessage.style.borderRadius = '8px';
+        processingMessage.style.zIndex = '10001';
+        processingMessage.id="processing_wheel"
+        document.body.appendChild(processingMessage);
+
         const res = await fetch('../cmd/action_ai_regen_profile.php?name='+encodeURIComponent(npcName));
         let j={}; try { j = await res.json(); } catch(_e) { j={ok:false}; }
         
         document.location.reload()
         
 
-      } catch(_e){}
+      } catch(_e){console.log(_e)}
     });
   })();
 

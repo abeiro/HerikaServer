@@ -953,7 +953,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
-} elseif (strpos($gameRequest[0], "util_location_name")===0) {    // addnpc 
+} elseif (strpos($gameRequest[0], "util_location_name")===0) {    // util_location_name 
     
     
     $splitNameBase=explode("/",$gameRequest[3]);
@@ -962,7 +962,9 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             'locations',
             array(
                 'name' => $splitNameBase[0],
-                'formid' => $splitNameBase[1]
+                'formid' => $splitNameBase[1],
+                'region' => $splitNameBase[2],
+                'hold' => $splitNameBase[3]
             )
         );
     }
