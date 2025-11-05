@@ -25,11 +25,13 @@ class CoreProfile {
         // Seed defaults into metadata if not provided
         if (!isset($data['metadata']) || $data['metadata'] === '' || $data['metadata'] === null) {
             $defaultMeta = [
-                'rpg_comments' => ['levelup','sleep','lockpick'],
+                'RPG_COMMENTS' => ['levelup','sleep','lockpick'],
                 'DYNAMIC_PROFILE_FIELDS' => [
                     'relationships',
                     'goals'
-                ]
+                ],
+                'RPG_COMMENTS_CHANCE' => 100,
+                'COMBAT_BARK_COOLDOWN' => 30
             ];
             $data['metadata'] = json_encode($defaultMeta, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
         }

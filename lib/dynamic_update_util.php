@@ -151,7 +151,7 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
             $totalBuffer .= $buffer;
         }
         
-        $connectionHandler->close();
+        $connectionHandler->close("generateNearbyDiary");
         
         // Restore original gameRequest after diary generation
         if ($originalGameRequest !== null) {
@@ -212,23 +212,35 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
     return false;
 }
 
-// Function to process AUTO_DIARY for all current followers
+// Function to process AUTO_DIARY for nearby NPCs with auto_diary_enabled
 function processAutoDiary($gameRequest, $eventType) {
     global $db;
     
-    // Get current party data
-    $partyConf = DataGetCurrentPartyConf();
-    if (empty($partyConf)) {
-        Logger::info("AUTO_DIARY: No current party data found");
+    Logger::info("AUTO_DIARY: Function called for event type: $eventType");
+    
+    // Get nearby NPCs
+    $nearbyNpcsStr = DataBeingsInCloseRange();
+    Logger::info("AUTO_DIARY: DataBeingsInCloseRange returned: " . var_export($nearbyNpcsStr, true));
+    
+    if (empty($nearbyNpcsStr)) {
+        Logger::info("AUTO_DIARY: No nearby NPCs found (empty string)");
         return;
     }
     
-    Logger::debug("AUTO_DIARY: Raw party data: " . $partyConf);
+    Logger::debug("AUTO_DIARY: Raw nearby data: " . $nearbyNpcsStr);
     
-    // Parse party data
-    $currentParty = json_decode($partyConf, true);
-    if (!is_array($currentParty) || empty($currentParty)) {
-        Logger::info("AUTO_DIARY: Failed to parse party data or party is empty. Data was: " . $partyConf);
+    // Parse nearby NPCs (pipe-delimited string like "|Lydia|Serana|")
+    $nearbyNpcsStr = trim($nearbyNpcsStr, '|');
+    if (empty($nearbyNpcsStr)) {
+        Logger::info("AUTO_DIARY: No nearby NPCs after parsing");
+        return;
+    }
+    
+    $nearbyNpcs = explode('|', $nearbyNpcsStr);
+    $nearbyNpcs = array_filter(array_map('trim', $nearbyNpcs));
+    
+    if (empty($nearbyNpcs)) {
+        Logger::info("AUTO_DIARY: No valid nearby NPCs");
         return;
     }
     
@@ -236,18 +248,41 @@ function processAutoDiary($gameRequest, $eventType) {
     $generatedCount = 0;
     $diaryCooldownPeriod = isset($GLOBALS["DIARY_COOLDOWN"]) ? intval($GLOBALS["DIARY_COOLDOWN"]) : 30;
     
-    Logger::info("AUTO_DIARY: Processing $eventType event for " . count($currentParty) . " followers");
+    Logger::info("AUTO_DIARY: Processing $eventType event for " . count($nearbyNpcs) . " nearby NPCs");
     
-    foreach ($currentParty as $followerName => $followerData) {
-        if (empty($followerName) || !isset($followerData["name"])) {
+    foreach ($nearbyNpcs as $npcName) {
+        if (empty($npcName)) {
+            continue;
+        }
+        
+        // Get NPC data from database
+        $npcMaster = new NpcMaster();
+        $currentNpcData = $npcMaster->getByName($npcName);
+        
+        if (empty($currentNpcData)) {
+            Logger::debug("AUTO_DIARY: NPC '$npcName' not found in database, skipping");
+            continue;
+        }
+        
+        // Check if auto_diary_enabled is set for this NPC
+        $autoDiaryEnabled = false;
+        if (!empty($currentNpcData['extended_data'])) {
+            $extendedData = json_decode($currentNpcData['extended_data'], true);
+            if (is_array($extendedData) && !empty($extendedData['auto_diary_enabled'])) {
+                $autoDiaryEnabled = true;
+            }
+        }
+        
+        if (!$autoDiaryEnabled) {
+            Logger::debug("AUTO_DIARY: NPC '$npcName' does not have auto_diary_enabled, skipping");
             continue;
         }
         
         $processedCount++;
         
-        // Check diary cooldown for this specific follower
-        $npcName = preg_replace('/[^a-zA-Z0-9_]/', '_', $followerName);
-        $cooldownKey = "DIARY_LAST_TIMESTAMP_" . $npcName;
+        // Check diary cooldown for this specific NPC
+        $npcNameSafe = preg_replace('/[^a-zA-Z0-9_]/', '_', $npcName);
+        $cooldownKey = "DIARY_LAST_TIMESTAMP_" . $npcNameSafe;
         
         $diaryRecord = $db->fetchAll("SELECT value FROM conf_opts WHERE id='" . $db->escape($cooldownKey) . "'");
         
@@ -256,30 +291,49 @@ function processAutoDiary($gameRequest, $eventType) {
             $timeElapsed = time() - $lastTrigger;
 
             if ($timeElapsed < $diaryCooldownPeriod) {
-                Logger::info("AUTO_DIARY: Skipping $followerName (cooldown active: " . ($diaryCooldownPeriod - $timeElapsed) . " seconds remaining)");
+                Logger::info("AUTO_DIARY: Skipping $npcName (cooldown active: " . ($diaryCooldownPeriod - $timeElapsed) . " seconds remaining)");
                 continue;
             }
         }
         
-        // Update cooldown timestamp for this follower
-        $db->upsertRowOnConflict(
-            'conf_opts',
-            array(
-                'id' => $cooldownKey,
-                'value' => time()
-            ),
-            "id"
-        );
+        $profile = new CoreProfile();
+        $currentProfileData = $profile->getById($currentNpcData["profile_id"]);
+        $profile->setOldGlobals($currentProfileData);
+        $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+
+        // Check AUTO_DIARY_WAIT after loading profile (so profile overrides apply)
+        // For goodnight events, always generate. For waitstart events, check the setting.
+        $shouldGenerate = ($eventType === "goodnight") || 
+                         (isset($GLOBALS["AUTO_DIARY_WAIT"]) && $GLOBALS["AUTO_DIARY_WAIT"]);
         
-        // Generate diary entry for this follower
-        if (generateFollowerDiary($followerName, $gameRequest, $eventType)) {
-            $generatedCount++;
-            Logger::info("AUTO_DIARY: Generated diary entry for $followerName");
+        Logger::info("AUTO_DIARY: $npcName - eventType=$eventType, AUTO_DIARY_WAIT=" . 
+                    (isset($GLOBALS["AUTO_DIARY_WAIT"]) ? ($GLOBALS["AUTO_DIARY_WAIT"] ? 'true' : 'false') : 'not set') . 
+                    ", shouldGenerate=" . ($shouldGenerate ? 'true' : 'false'));
+
+        if ($shouldGenerate) {
+            // Update cooldown timestamp for this NPC
+            $db->upsertRowOnConflict(
+                'conf_opts',
+                array(
+                    'id' => $cooldownKey,
+                    'value' => time()
+                ),
+                "id"
+            );
+            
+            // Generate diary entry for this NPC
+            if (generateFollowerDiary($npcName, $gameRequest, $eventType)) {
+                $generatedCount++;
+                Logger::info("AUTO_DIARY: Generated diary entry for $npcName");
+            } else {
+                Logger::info("AUTO_DIARY: Failed to generate diary entry for $npcName");
+            }
         } else {
-            Logger::info("AUTO_DIARY: Failed to generate diary entry for $followerName");
+            Logger::info("AUTO_DIARY: Skipped $npcName - AUTO_DIARY_WAIT disabled for this profile");
         }
     }
     
+    Logger::info("AUTO_DIARY: Processed $processedCount NPCs with auto_diary_enabled, generated $generatedCount diary entries");
 }
 
 // Function to process a single NPC's dynamic profile
@@ -334,7 +388,7 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
         }
         
        
-        // Check if update connector is configured
+        // Check if core connector is configured for dynamic profile updates
         $connector = new LLMConnector();
         $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PROFILES"]);
         if (!$currentConnectorData) {
@@ -677,29 +731,8 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
         $connector->setOldGlobals($currentConnectorData);
 
-        // Get max tokens for this connector
-        $maxTokens = 800; // Default for field updates
-        switch($currentConnectorData["driver"]) {
-            case "openrouterjson":
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["openrouter"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-            case "openaijson":
-
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["openai"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-            case "google_openaijson":
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["google_openaijson"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-
-            case "koboldcppjson":
-
-                $maxTokens = isset($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"]) ? 
-                    min($GLOBALS["CONNECTOR"]["koboldcpp"]["MAX_TOKENS_MEMORY"], 800) : $maxTokens;
-                break;
-        }
+        // Get max tokens from core connector configuration (no hardcoded cap)
+        $maxTokens = !empty($currentConnectorData["max_tokens"]) ? (int)$currentConnectorData["max_tokens"] : 4000;
         
         $buffer=$connectionHandler->fast_request($contextData, ["max_tokens" => $maxTokens],"profile");
         
@@ -722,7 +755,7 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     }
 }
 
-function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
+function saveDynamicProfileUpdates($npcName, $updatedFields, $db,$updateTimeStamp=true) {
     $newConfFile = md5($npcName);
     $path = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
     $configFile = $path . "conf" . DIRECTORY_SEPARATOR . "conf_$newConfFile.php";
@@ -750,11 +783,14 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
             // Backup NPC.
             $npcMaster->backupNpcById($currentNpcData["id"]);
 
-            $currentNpcData["gamets_last_updated"]=DataLastKnownGameTS();
+            if ($updateTimeStamp)
+                $currentNpcData["gamets_last_updated"]=DataLastKnownGameTS();
+            
             $npcMaster->updateByArray($currentNpcData);
             
         }
         
+        /*
         if (file_exists($configFile)) {
             // Create backup
             @copy($configFile, $path . "conf" . DIRECTORY_SEPARATOR . ".conf_{$newConfFile}_" . time() . ".php");
@@ -811,28 +847,14 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db) {
                 
                 $currentConfContent[$fieldMapping[$field]]=$newValue;
                 
-                /*
-                $varName = $fieldMapping[$field];
-                $escapedValue = var_export($newValue, true);
-                
-                // Check if variable already exists in file
-                $pattern = '/\$' . preg_quote($varName, '/') . '\s*=\s*[^;]+;/';
-                
-                if (preg_match($pattern, $content)) {
-                    // Update existing variable
-                    $content = preg_replace($pattern, '$' . $varName . '=' . $escapedValue . ';', $content);
-                } else {
-                    // Add new variable before the closing 
-                    $content = str_replace('?>', '$' . $varName . '=' . $escapedValue . ';' . PHP_EOL . '?>', $content);
-                }
-                */
+         
             }
             
             // Write updated content back to file
             //file_put_contents($configFile, $content, LOCK_EX);
             write_php_assignments($currentConfContent,$configFile);
         }
-        
+        */
         
         Logger::info("saveDynamicProfileUpdates: Successfully saved updates for $npcName");
         return true;

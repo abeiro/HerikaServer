@@ -43,6 +43,7 @@ class openrouterjson
     private $_is_grok;
     private $_lastStreamedObject;
     
+    
     public function __construct()
     {
         $this->name="openrouterjson";
@@ -267,7 +268,7 @@ class openrouterjson
         }
 
         if (isset($GLOBALS["HERIKA_SPEECHSTYLE"])&&!empty($GLOBALS["HERIKA_SPEECHSTYLE"])) {
-            $speechReinforcement="Use #SpeechStyle.";
+            $speechReinforcement="Use <speech_style> for reference.";
         } else
             $speechReinforcement="";
 
@@ -1304,7 +1305,7 @@ class openrouterjson
                             'request' => json_encode($data),
                             'result' => "Ok",
                             'usage'=>json_encode($text_response["usage"]),
-                            'connector'=>$this->name,
+                            'connector'=>$callName,
                             'url'=>$this->_url
                         ));
                 }
@@ -1317,7 +1318,7 @@ class openrouterjson
                         array(
                             'request' => json_encode($data),
                             'result' => "ERROR|INVALID JSON RESPONSE",
-                            'connector'=>$this->name,
+                            'connector'=>$callName,
                             'url'=>$this->_url
                         ));
                 }

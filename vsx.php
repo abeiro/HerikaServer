@@ -1,18 +1,18 @@
 <?php
 
-require_once "lib/utils.php";
-
 /* Voice Sample Extractor */
 
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
-require_once $path . "conf" . DIRECTORY_SEPARATOR . "conf.php"; // API KEY must be there
-require_once $path . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
-require_once $path . "lib" . DIRECTORY_SEPARATOR . "fuz_convert.php"; // API KEY must be there
-require_once $path . "lib" . DIRECTORY_SEPARATOR . "auditing.php";
-require_once $path . "lib" . DIRECTORY_SEPARATOR . "logger.php";
+$GLOBALS["ENGINE_PATH"]=$path;
+
+require_once $path . "lib/utils.php";
+require_once $path . "conf/conf.php"; // API KEY must be there
+require_once $path . "lib/{$GLOBALS["DBDRIVER"]}.class.php";
+require_once $path . "lib/fuz_convert.php"; // API KEY must be there
+require_once $path . "lib/auditing.php";
+require_once $path . "lib/logger.php";
 
 $db = new sql();
-$GLOBALS["ENGINE_PATH"]=$path;
 
 require_once $path . "lib/core/npc_master.class.php";
 require_once $path . "lib/core/api_badge.class.php";

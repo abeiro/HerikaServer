@@ -7,6 +7,7 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "playthrough_storage.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "playthrough_schema.php");
 
 // Determine web root (match other core pages)
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -57,9 +58,15 @@ if (!$adminConn) {
     $initSQL[] = "ALTER TABLE chim_meta.playthrough_profiles ADD COLUMN IF NOT EXISTS eventlog_count BIGINT";
     $initSQL[] = "ALTER TABLE chim_meta.playthrough_profiles ADD COLUMN IF NOT EXISTS oghma_count BIGINT";
     $initSQL[] = "ALTER TABLE chim_meta.playthrough_profiles ADD COLUMN IF NOT EXISTS last_gamets BIGINT";
+    // Schema-based storage columns
+    $initSQL[] = "ALTER TABLE chim_meta.playthrough_profiles ADD COLUMN IF NOT EXISTS schema_name TEXT";
+    $initSQL[] = "ALTER TABLE chim_meta.playthrough_profiles ADD COLUMN IF NOT EXISTS storage_type TEXT DEFAULT 'dump'";
     foreach ($initSQL as $qs) {
         @pg_query($adminConn, $qs);
     }
+    
+    // Ensure schema cloning functions exist
+    pts_ensure_functions($adminConn);
     // If an older deployment created dump_data as BYTEA, migrate it to TEXT (plain SQL dumps)
     $colTypeRes = @pg_query($adminConn, "SELECT data_type FROM information_schema.columns WHERE table_schema='chim_meta' AND table_name='playthrough_blobs' AND column_name='dump_data'");
     if ($colTypeRes) {
@@ -92,24 +99,23 @@ if (!$adminConn) {
         $r3 = @pg_query($adminConn, "SELECT MAX(gamets) AS mx FROM {$schema}.eventlog");
         if ($r3 && ($rr = pg_fetch_assoc($r3)) && !is_null($rr['mx'])) { $lastGamets = intval($rr['mx']); }
 
-        $tmpFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . ('playthrough_default_'.time().'_'.mt_rand(1000,9999).'.sql');
-        $cmd = "PGPASSWORD=".escapeshellarg($password)." pg_dump -h ".escapeshellarg($host)." -p ".escapeshellarg($port)." -U ".escapeshellarg($username)." -d ".escapeshellarg($dbname)." -N chim_meta > ".escapeshellarg($tmpFile)." 2>&1";
-        $output = shell_exec($cmd);
-        if (file_exists($tmpFile) && filesize($tmpFile) > 0) {
-            $resCap = ptm_create_profile_with_lob(
+        // Use new schema-based storage for default profile
+        $schemaName = pts_sanitize_profile_name('default');
+        $cloneResult = pts_clone_schema($adminConn, 'public', $schemaName);
+        if ($cloneResult['success']) {
+            $size = pts_get_schema_size($adminConn, $schemaName);
+            @pg_query($adminConn, 'BEGIN');
+            $q1 = @pg_query_params(
                 $adminConn,
-                'default',
-                'Auto-captured default profile',
-                true,
-                $playerName,
-                $gameName,
-                (int)$eventlogCount,
-                (int)$oghmaCount,
-                (int)$lastGamets,
-                $tmpFile
+                "INSERT INTO chim_meta.playthrough_profiles (name, size_bytes, storage_type, notes, is_active, player_name, game, eventlog_count, oghma_count, last_gamets, schema_name) VALUES ($1,$2,$3,$4,true,$5,$6,$7,$8,$9,$10)",
+                ['default', (string)$size, 'schema', 'Auto-captured default profile', $playerName, $gameName, (string)$eventlogCount, (string)$oghmaCount, (string)$lastGamets, $schemaName]
             );
+            if ($q1) {
+                @pg_query($adminConn, 'COMMIT');
+            } else {
+                @pg_query($adminConn, 'ROLLBACK');
+            }
         }
-        @unlink($tmpFile);
     }
 }
 
@@ -137,74 +143,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else if (!$adminConn) {
             $message .= '<p><strong>Error:</strong> DB connection not available.</p>';
         } else {
-            // Create a plain SQL dump excluding the meta schema
-            $tmpFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . ('playthrough_dump_'.time().'_'.mt_rand(1000,9999).'.sql');
-            $cmd = "PGPASSWORD=".escapeshellarg($password)." pg_dump -h ".escapeshellarg($host)." -p ".escapeshellarg($port)." -U ".escapeshellarg($username)." -d ".escapeshellarg($dbname)." -N chim_meta > ".escapeshellarg($tmpFile)." 2>&1";
-            $output = shell_exec($cmd);
-
-            if (!file_exists($tmpFile) || filesize($tmpFile) === 0) {
-                $preview = $output ? '<pre>'.h(substr($output,0,2000)).'</pre>' : '';
-                $message .= '<p><strong>Error:</strong> Failed to create database snapshot.</p>'.$preview;
+            // Use schema-based storage for instant snapshots
+            $schemaName = pts_sanitize_profile_name($name);
+            
+            // Check if schema already exists
+            if (pts_schema_exists($adminConn, $schemaName)) {
+                $message .= '<p><strong>Error:</strong> A profile with this name already exists.</p>';
             } else {
-                // Collect metadata
-                $playerName = (string)($GLOBALS['PLAYER_NAME'] ?? 'Unknown');
-                $gameName = 'Skyrim';
-                $eventlogCount = 0; $oghmaCount = 0; $lastGamets = 0;
-                $r1 = @pg_query($adminConn, "SELECT COUNT(*) AS c FROM {$schema}.eventlog");
-                if ($r1 && ($rr = pg_fetch_assoc($r1))) { $eventlogCount = intval($rr['c']); }
-                $rex = @pg_query_params($adminConn, "SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name='oghma' LIMIT 1", [$schema]);
-                $hasOghma = ($rex && pg_fetch_assoc($rex)) ? true : false;
-                if ($hasOghma) {
-                    $r2 = @pg_query($adminConn, "SELECT COUNT(*) AS c FROM {$schema}.oghma");
-                    if ($r2 && ($rr = pg_fetch_assoc($r2))) { $oghmaCount = intval($rr['c']); }
-                }
-                $r3 = @pg_query($adminConn, "SELECT MAX(gamets) AS mx FROM {$schema}.eventlog");
-                if ($r3 && ($rr = pg_fetch_assoc($r3)) && !is_null($rr['mx'])) { $lastGamets = intval($rr['mx']); }
-
-                $resCap = ptm_create_profile_with_lob(
-                    $adminConn,
-                    $name,
-                    $notes,
-                    false,
-                    $playerName,
-                    $gameName,
-                    (int)$eventlogCount,
-                    (int)$oghmaCount,
-                    (int)$lastGamets,
-                    $tmpFile
-                );
-                if ($resCap['success']) {
-                    $message .= '<p><strong>✅ Snapshot created:</strong> '.h($name).' ('.h(formatFileSize((int)$resCap['size'])).')</p>';
-                } else {
+                // Clone public schema to new profile schema
+                $cloneResult = pts_clone_schema($adminConn, 'public', $schemaName);
+                
+                if (!$cloneResult['success']) {
                     $message .= '<p><strong>Error:</strong> Failed to create snapshot.</p>';
-                    $message .= '<pre>'.h($resCap['error']).'</pre>';
-                }
-                @unlink($tmpFile);
-            }
-        }
-    }
-
-    if ($action === 'switch') {
-        $profileId = intval($_POST['profile_id'] ?? 0);
-        if ($profileId <= 0) {
-            $message .= '<p><strong>Error:</strong> Invalid profile selected.</p>';
-        } else if (!$adminConn) {
-            $message .= '<p><strong>Error:</strong> DB connection not available.</p>';
-        } else {
-            // 1) Auto-snapshot current active profile BEFORE switching, to avoid data loss
-            $curRes = pg_query($adminConn, "SELECT id, name FROM chim_meta.playthrough_profiles WHERE is_active = true LIMIT 1");
-            $curRow = $curRes ? pg_fetch_assoc($curRes) : null;
-            if ($curRow) {
-                $curProfileId = intval($curRow['id']);
-                $tmpSnap = sys_get_temp_dir() . DIRECTORY_SEPARATOR . ('playthrough_autosave_'.time().'_'.mt_rand(1000,9999).'.sql');
-                $dumpCmd = "PGPASSWORD=".escapeshellarg($password)." pg_dump -h ".escapeshellarg($host)." -p ".escapeshellarg($port)." -U ".escapeshellarg($username)." -d ".escapeshellarg($dbname)." -N chim_meta > ".escapeshellarg($tmpSnap)." 2>&1";
-                $dumpOut = shell_exec($dumpCmd);
-                if (!file_exists($tmpSnap) || filesize($tmpSnap) === 0) {
-                    $preview = $dumpOut ? '<pre>'.h(substr($dumpOut,0,2000)).'</pre>' : '';
-                    $message .= '<p><strong>Error:</strong> Failed to snapshot current database before switching. Aborting to avoid data loss.</p>'.$preview;
-                    // Do not proceed with switch
+                    $message .= '<pre>'.h($cloneResult['error']).'</pre>';
                 } else {
-                    // Gather live metadata
+                    // Collect metadata
                     $playerName = (string)($GLOBALS['PLAYER_NAME'] ?? 'Unknown');
                     $gameName = 'Skyrim';
                     $eventlogCount = 0; $oghmaCount = 0; $lastGamets = 0;
@@ -218,78 +171,195 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     $r3 = @pg_query($adminConn, "SELECT MAX(gamets) AS mx FROM {$schema}.eventlog");
                     if ($r3 && ($rr = pg_fetch_assoc($r3)) && !is_null($rr['mx'])) { $lastGamets = intval($rr['mx']); }
-
-                    $upd = ptm_update_profile_blob_from_file(
+                    
+                    // Calculate schema size
+                    $size = pts_get_schema_size($adminConn, $schemaName);
+                    
+                    // Insert profile record
+                    @pg_query($adminConn, 'BEGIN');
+                    $q1 = @pg_query_params(
                         $adminConn,
-                        $curProfileId,
-                        $tmpSnap,
-                        $playerName,
-                        $gameName,
-                        (int)$eventlogCount,
-                        (int)$oghmaCount,
-                        (int)$lastGamets
+                        "INSERT INTO chim_meta.playthrough_profiles (name, size_bytes, storage_type, notes, is_active, player_name, game, eventlog_count, oghma_count, last_gamets, schema_name) VALUES ($1,$2,$3,$4,false,$5,$6,$7,$8,$9,$10)",
+                        [$name, (string)$size, 'schema', $notes, $playerName, $gameName, (string)$eventlogCount, (string)$oghmaCount, (string)$lastGamets, $schemaName]
                     );
+                    if ($q1) {
+                        @pg_query($adminConn, 'COMMIT');
+                        $message .= '<p><strong>✅ Snapshot created:</strong> '.h($name).' ('.h(formatFileSize($size)).')</p>';
+                    } else {
+                        @pg_query($adminConn, 'ROLLBACK');
+                        $message .= '<p><strong>Error:</strong> Failed to save snapshot metadata.</p>';
+                    }
+                }
+            }
+        }
+    }
+
+    if ($action === 'switch') {
+        $profileId = intval($_POST['profile_id'] ?? 0);
+        if ($profileId <= 0) {
+            $message .= '<p><strong>Error:</strong> Invalid profile selected.</p>';
+        } else if (!$adminConn) {
+            $message .= '<p><strong>Error:</strong> DB connection not available.</p>';
+        } else {
+            // Fetch target profile info
+            $targetRes = pg_query_params($adminConn, 'SELECT name, storage_type, schema_name FROM chim_meta.playthrough_profiles WHERE id=$1', [$profileId]);
+            $targetRow = $targetRes ? pg_fetch_assoc($targetRes) : null;
+            if (!$targetRow) {
+                $message .= '<p><strong>Error:</strong> Profile not found.</p>';
+                goto SWITCH_ABORT;
+            }
+            
+            $targetName = $targetRow['name'];
+            $targetStorageType = $targetRow['storage_type'] ?? 'dump';
+            $targetSchemaName = $targetRow['schema_name'] ?? '';
+            
+            // 1) Auto-save current active profile BEFORE switching
+            $curRes = pg_query($adminConn, "SELECT id, name, storage_type, schema_name FROM chim_meta.playthrough_profiles WHERE is_active = true LIMIT 1");
+            $curRow = $curRes ? pg_fetch_assoc($curRes) : null;
+            if ($curRow) {
+                $curProfileId = intval($curRow['id']);
+                $curStorageType = $curRow['storage_type'] ?? 'dump';
+                $curSchemaName = $curRow['schema_name'] ?? '';
+                
+                // Gather live metadata
+                $playerName = (string)($GLOBALS['PLAYER_NAME'] ?? 'Unknown');
+                $gameName = 'Skyrim';
+                $eventlogCount = 0; $oghmaCount = 0; $lastGamets = 0;
+                $r1 = @pg_query($adminConn, "SELECT COUNT(*) AS c FROM {$schema}.eventlog");
+                if ($r1 && ($rr = pg_fetch_assoc($r1))) { $eventlogCount = intval($rr['c']); }
+                $rex = @pg_query_params($adminConn, "SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name='oghma' LIMIT 1", [$schema]);
+                $hasOghma = ($rex && pg_fetch_assoc($rex)) ? true : false;
+                if ($hasOghma) {
+                    $r2 = @pg_query($adminConn, "SELECT COUNT(*) AS c FROM {$schema}.oghma");
+                    if ($r2 && ($rr = pg_fetch_assoc($r2))) { $oghmaCount = intval($rr['c']); }
+                }
+                $r3 = @pg_query($adminConn, "SELECT MAX(gamets) AS mx FROM {$schema}.eventlog");
+                if ($r3 && ($rr = pg_fetch_assoc($r3)) && !is_null($rr['mx'])) { $lastGamets = intval($rr['mx']); }
+                
+                if ($curStorageType === 'schema' && !empty($curSchemaName)) {
+                    // Schema-based: clone public back to profile schema
+                    $cloneResult = pts_clone_schema($adminConn, 'public', $curSchemaName);
+                    if (!$cloneResult['success']) {
+                        $message .= '<p><strong>Error:</strong> Failed to save current profile. Aborting switch.</p>';
+                        $message .= '<pre>'.h($cloneResult['error']).'</pre>';
+                        goto SWITCH_ABORT;
+                    }
+                    // Update metadata
+                    $size = pts_get_schema_size($adminConn, $curSchemaName);
+                    @pg_query_params(
+                        $adminConn,
+                        'UPDATE chim_meta.playthrough_profiles SET size_bytes=$2, player_name=$3, game=$4, eventlog_count=$5, oghma_count=$6, last_gamets=$7 WHERE id=$1',
+                        [(string)$curProfileId, (string)$size, $playerName, $gameName, (string)$eventlogCount, (string)$oghmaCount, (string)$lastGamets]
+                    );
+                } else {
+                    // Legacy dump-based: use old system
+                    $tmpSnap = sys_get_temp_dir() . DIRECTORY_SEPARATOR . ('playthrough_autosave_'.time().'_'.mt_rand(1000,9999).'.sql');
+                    $dumpCmd = "PGPASSWORD=".escapeshellarg($password)." pg_dump -h ".escapeshellarg($host)." -p ".escapeshellarg($port)." -U ".escapeshellarg($username)." -d ".escapeshellarg($dbname)." -N chim_meta > ".escapeshellarg($tmpSnap)." 2>&1";
+                    $dumpOut = shell_exec($dumpCmd);
+                    if (!file_exists($tmpSnap) || filesize($tmpSnap) === 0) {
+                        $preview = $dumpOut ? '<pre>'.h(substr($dumpOut,0,2000)).'</pre>' : '';
+                        $message .= '<p><strong>Error:</strong> Failed to snapshot current database. Aborting.</p>'.$preview;
+                        goto SWITCH_ABORT;
+                    }
+                    $upd = ptm_update_profile_blob_from_file($adminConn, $curProfileId, $tmpSnap, $playerName, $gameName, (int)$eventlogCount, (int)$oghmaCount, (int)$lastGamets);
+                    @unlink($tmpSnap);
                     if (!$upd['success']) {
-                        $message .= '<p><strong>Error:</strong> Failed to save current snapshot before switching. Aborting.</p>';
-                        @unlink($tmpSnap);
-                        // Do not proceed with switch
+                        $message .= '<p><strong>Error:</strong> Failed to save current snapshot. Aborting.</p>';
                         goto SWITCH_ABORT;
                     }
                 }
-                @unlink($tmpSnap);
             }
-
-            // Fetch snapshot to file (LOB or TEXT)
-            $resName = pg_query_params($adminConn, 'SELECT name FROM chim_meta.playthrough_profiles WHERE id=$1', [$profileId]);
-            $rowName = $resName ? pg_fetch_assoc($resName) : null;
-            if (!$rowName) {
-                $message .= '<p><strong>Error:</strong> Snapshot not found.</p>';
+            
+            // 2) Load target profile
+            if ($targetStorageType === 'schema' && !empty($targetSchemaName)) {
+                // Schema-based: fast switch
+                if (!pts_schema_exists($adminConn, $targetSchemaName)) {
+                    $message .= '<p><strong>Error:</strong> Profile schema does not exist.</p>';
+                    goto SWITCH_ABORT;
+                }
+                
+                // Recreate public schema
+                if (!pts_recreate_public_schema($adminConn)) {
+                    $message .= '<p><strong>Error:</strong> Failed to recreate public schema.</p>';
+                    goto SWITCH_ABORT;
+                }
+                
+                // Clone profile schema to public
+                $cloneResult = pts_clone_schema($adminConn, $targetSchemaName, 'public');
+                if (!$cloneResult['success']) {
+                    $message .= '<p><strong>Error:</strong> Failed to load profile.</p>';
+                    $message .= '<pre>'.h($cloneResult['error']).'</pre>';
+                    goto SWITCH_ABORT;
+                }
+                
+                // Mark active
+                pg_query($adminConn, 'BEGIN');
+                pg_query($adminConn, 'UPDATE chim_meta.playthrough_profiles SET is_active = false');
+                $resU = pg_query_params($adminConn, 'UPDATE chim_meta.playthrough_profiles SET is_active = true WHERE id=$1', [$profileId]);
+                if ($resU) {
+                    pg_query($adminConn, 'COMMIT');
+                    pg_query($adminConn, 'TRUNCATE table public.database_versioning'); // So views and functiosn get recreated on next server starttup
+                    $message .= '<p><strong>✅ Switched to profile:</strong> '.h($targetName).'</p>';
+                    $message .= '<div style="background:#4a1e0d; border:2px solid #dc2626; border-radius:8px; padding:15px; margin-top:15px;">';
+                    $message .= '<p style="color:#fbbf24; font-weight:bold; margin:0 0 10px 0;">⚠️ RESTART REQUIRED</p>';
+                    $message .= '<p style="margin:0 0 8px 0;">You must restart the CHIM server for the switch to take effect:</p>';
+                    $message .= '<ol style="margin:5px 0; padding-left:20px;">';
+                    $message .= '<li>Shutdown Skyrim</li>';
+                    $message .= '<li>Restart CHIM Server</li>';
+                    $message .= '<li>Restart Skyrim and load into the save you want to continue from</li>';
+                    $message .= '</ol>';
+                    $message .= '<p style="margin:8px 0 0 0; font-size:0.9em; color:#ccc;">Database connections were terminated during the schema switch.</p>';
+                    $message .= '</div>';
+                } else {
+                    pg_query($adminConn, 'ROLLBACK');
+                    $message .= '<p><strong>Warning:</strong> Profile loaded but failed to mark active.</p>';
+                }
             } else {
-                $name = $rowName['name'];
+                // Legacy dump-based: slow restore
                 $tmpFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . ('playthrough_restore_'.time().'_'.mt_rand(1000,9999).'.sql');
                 $ff = ptm_fetch_snapshot_to_file($adminConn, $profileId, $tmpFile);
                 if (!$ff['success']) {
-                    $message .= '<p><strong>Error:</strong> Failed to materialize snapshot file.</p><pre>'.h($ff['error']).'</pre>';
-                } else {
-                    // Drop and recreate public schema and required extensions
-                    $Q = array();
-                    $Q[] = "DROP SCHEMA IF EXISTS {$schema} CASCADE";
-                    $Q[] = "DROP EXTENSION IF EXISTS vector CASCADE";
-                    $Q[] = "DROP EXTENSION IF EXISTS pg_trgm CASCADE";
-                    $Q[] = "CREATE SCHEMA {$schema}";
-                    $Q[] = "CREATE EXTENSION IF NOT EXISTS vector";
-                    $Q[] = "CREATE EXTENSION IF NOT EXISTS pg_trgm";
-
-                    $errorOccurred = false;
-                    foreach ($Q as $QS) {
-                        $r = pg_query($adminConn, $QS);
-                        if (!$r) {
-                            $message .= '<p>Error executing query: '.h(pg_last_error($adminConn)).'</p>';
-                            $errorOccurred = true;
-                            break;
-                        }
+                    $message .= '<p><strong>Error:</strong> Failed to materialize snapshot.</p><pre>'.h($ff['error']).'</pre>';
+                    goto SWITCH_ABORT;
+                }
+                
+                // Drop and recreate public schema
+                $Q = ["DROP SCHEMA IF EXISTS {$schema} CASCADE", "DROP EXTENSION IF EXISTS vector CASCADE", "DROP EXTENSION IF EXISTS pg_trgm CASCADE", "CREATE SCHEMA {$schema}", "CREATE EXTENSION IF NOT EXISTS vector", "CREATE EXTENSION IF NOT EXISTS pg_trgm"];
+                $errorOccurred = false;
+                foreach ($Q as $QS) {
+                    if (!pg_query($adminConn, $QS)) {
+                        $message .= '<p>Error: '.h(pg_last_error($adminConn)).'</p>';
+                        $errorOccurred = true;
+                        break;
                     }
-
-                    if (!$errorOccurred) {
-                        // Restore using psql
-                        $psqlCommand = "PGPASSWORD=".escapeshellarg($password)." psql -h ".escapeshellarg($host)." -p ".escapeshellarg($port)." -U ".escapeshellarg($username)." -d ".escapeshellarg($dbname)." -f ".escapeshellarg($tmpFile);
-                        $output = [];
-                        $returnVar = 0;
-                        exec($psqlCommand, $output, $returnVar);
-                        if ($returnVar !== 0) {
-                            $message .= '<p><strong>Error:</strong> Failed to restore snapshot.</p><pre>'.h(implode("\n", $output)).'</pre>';
+                }
+                
+                if (!$errorOccurred) {
+                    $psqlCommand = "PGPASSWORD=".escapeshellarg($password)." psql -h ".escapeshellarg($host)." -p ".escapeshellarg($port)." -U ".escapeshellarg($username)." -d ".escapeshellarg($dbname)." -f ".escapeshellarg($tmpFile);
+                    $output = []; $returnVar = 0;
+                    exec($psqlCommand, $output, $returnVar);
+                    if ($returnVar !== 0) {
+                        $message .= '<p><strong>Error:</strong> Failed to restore snapshot.</p><pre>'.h(implode("\n", $output)).'</pre>';
+                    } else {
+                        pg_query($adminConn, 'BEGIN');
+                        pg_query($adminConn, 'UPDATE chim_meta.playthrough_profiles SET is_active = false');
+                        $resU = pg_query_params($adminConn, 'UPDATE chim_meta.playthrough_profiles SET is_active = true WHERE id=$1', [$profileId]);
+                        if ($resU) {
+                            pg_query($adminConn, 'COMMIT');
+                            $message .= '<p><strong>✅ Switched to profile:</strong> '.h($targetName).'</p>';
+                            $message .= '<div style="background:#4a1e0d; border:2px solid #dc2626; border-radius:8px; padding:15px; margin-top:15px;">';
+                            $message .= '<p style="color:#fbbf24; font-weight:bold; margin:0 0 10px 0;">⚠️ RESTART REQUIRED</p>';
+                            $message .= '<p style="margin:0 0 8px 0;">You must restart the CHIM server for the switch to take effect:</p>';
+                            $message .= '<ol style="margin:5px 0; padding-left:20px;">';
+                            $message .= '<li>Restart Apache/Nginx (or restart Docker container)</li>';
+                            $message .= '<li>Any background services connected to the database</li>';
+                            $message .= '<li>The Skyrim mod will automatically reconnect</li>';
+                            $message .= '</ol>';
+                            $message .= '<p style="margin:8px 0 0 0; font-size:0.9em; color:#ccc;">Database connections were terminated during the schema switch.</p>';
+                            $message .= '</div>';
                         } else {
-                            // Mark active flag
-                            pg_query($adminConn, 'BEGIN');
-                            pg_query($adminConn, 'UPDATE chim_meta.playthrough_profiles SET is_active = false');
-                            $resU = pg_query_params($adminConn, 'UPDATE chim_meta.playthrough_profiles SET is_active = true WHERE id=$1', [$profileId]);
-                            if ($resU) {
-                                pg_query($adminConn, 'COMMIT');
-                                $message .= '<p><strong>✅ Switched to profile:</strong> '.h($name).'</p>';
-                            } else {
-                                pg_query($adminConn, 'ROLLBACK');
-                                $message .= '<p><strong>Warning:</strong> Database restored but failed to mark profile active.</p>';
-                            }
+                            pg_query($adminConn, 'ROLLBACK');
+                            $message .= '<p><strong>Warning:</strong> Database restored but failed to mark profile active.</p>';
                         }
                     }
                 }
@@ -306,7 +376,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else if (!$adminConn) {
             $message .= '<p><strong>Error:</strong> DB connection not available.</p>';
         } else {
-            $row = $db->fetchOne("SELECT is_active, name FROM chim_meta.playthrough_profiles WHERE id = ".$profileId);
+            $row = $db->fetchOne("SELECT is_active, name, storage_type, schema_name FROM chim_meta.playthrough_profiles WHERE id = ".$profileId);
             if (!$row) {
                 $message .= '<p><strong>Error:</strong> Profile not found.</p>';
             } else if ((int)$row['is_active'] === 1) {
@@ -314,6 +384,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else if (strtolower((string)$row['name']) === 'default') {
                 $message .= '<p><strong>Error:</strong> Cannot delete the default profile.</p>';
             } else {
+                $storageType = $row['storage_type'] ?? 'dump';
+                $schemaName = $row['schema_name'] ?? '';
+                
+                // If schema-based, drop the schema first
+                if ($storageType === 'schema' && !empty($schemaName)) {
+                    $dropResult = pts_drop_schema($adminConn, $schemaName);
+                    if (!$dropResult['success']) {
+                        $message .= '<p><strong>Warning:</strong> Failed to drop schema: '.h($dropResult['error']).'</p>';
+                    }
+                }
+                
+                // Delete profile record (CASCADE will handle blobs for dump-based)
                 $ok = pg_query_params($adminConn, 'DELETE FROM chim_meta.playthrough_profiles WHERE id=$1', [$profileId]);
                 if ($ok) {
                     $message .= '<p><strong>✅ Deleted:</strong> '.h($row['name']).'</p>';
@@ -326,7 +408,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch profiles
-$profiles = $db->fetchAll("SELECT id, name, created_at, size_bytes, storage_format, notes, is_active, player_name, game, eventlog_count, oghma_count, last_gamets FROM chim_meta.playthrough_profiles ORDER BY COALESCE(last_gamets,0) DESC, created_at DESC");
+$profiles = $db->fetchAll("SELECT id, name, created_at, size_bytes, storage_format, storage_type, schema_name, notes, is_active, player_name, game, eventlog_count, oghma_count, last_gamets FROM chim_meta.playthrough_profiles ORDER BY COALESCE(last_gamets,0) DESC, created_at DESC");
 
 // Live stats for currently loaded (active) database; do not rely on metadata
 $activeProfileName = '';
@@ -430,7 +512,7 @@ if (!empty($timelineItems)) {
     /* Switch overlay */
     #switch-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 2000; display: none; align-items: center; justify-content: center; }
     #switch-overlay .loading-modal { background:#111; border:1px solid #444; border-radius:8px; padding:20px 24px; width: 340px; color:#e0e0e0; text-align:center; box-shadow: 0 12px 36px rgba(0,0,0,0.5); }
-    #switch-overlay .loading-title { font-family: 'MagicCards', serif; color: rgb(242, 124, 17); margin-bottom: 8px; font-size: 1.2em; }
+    #switch-overlay .loading-title { font-family: 'MagicCards', serif; color: rgb(242, 124, 17); margin-bottom: 8px; font-size: 1.2em; word-spacing: 6px; }
     #switch-overlay .loading-sub { font-size: 12px; color:#9fb1c9; margin-top: 6px; }
     .lds-ring { display:inline-block; position:relative; width:64px; height:64px; margin: 6px 0 2px 0; }
     .lds-ring div { box-sizing:border-box; display:block; position:absolute; width:51px; height:51px; margin:6px; border:6px solid #ffb862; border-radius:50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color:#ffb862 transparent transparent transparent; }
@@ -455,22 +537,44 @@ if (!empty($timelineItems)) {
     </div>
 
     <div class="page-header">
-        <h1>Playthrough Manager (Beta)</h1>
-        <div style="font-size: 0.95em; color: #ccc;">Create, switch, and manage full database playthrough snapshots.</div>
-        <div style="font-size: 0.95em; color: #ccc;">Dragon Breaks (snapshots) are created automatically when you load a save 3 ingame days behind your previous save.</div>
-        <div style="font-size: 0.95em; color: #ccc;">When loading a Dragon Break it is recommend to create a new snapshot from it and use that before you load back into your previous save.</div>
-
+        <h1>Playthrough Manager</h1>
+        <div style="font-size: 0.95em; color: #ccc; margin-bottom: 15px;">Create, switch, and manage playthrough snapshots using instant schema cloning.</div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border: 1px solid #444; margin-top: 15px;">
+            <div style="font-size: 0.9em; color: #e0e0e0; line-height: 1.6;">
+                <strong style="color: #4ade80;">How it works:</strong><br>
+                • <strong>Public Schema</strong> = Your active database schema where your current playthrough is stored.<br>
+                • <strong>Stored Snapshots</strong> = Backups in separate schemas<br>
+                • <strong>Switching</strong> = Copies a snapshot INTO public (auto-saves current public first)<br>
+                • <strong>Dragon Breaks</strong> = Auto-snapshots when you load a save 3+ days behind<br>
+            </div>
+        </div>
     </div>
 
-    <div class="content-section full-width-section">
-        <h2>🟢 Current Database Profile (Live)</h2>
-        <div style="display:flex; gap:12px; flex-wrap:wrap; font-size: 14px; color:#ccc;">
-                <div><strong style="color:#f8f9fa;">Active profile:</strong> <span id="live-active"><?php echo h($activeProfileName !== '' ? $activeProfileName : '(untracked)'); ?></span></div>
-                <div><strong style="color:#f8f9fa;">Player:</strong> <span id="live-player"><?php echo h($livePlayerName); ?></span></div>
+    <div class="content-section full-width-section" style="background: linear-gradient(135deg, #1a3a2a 0%, #2a2a2a 100%); border: 2px solid #4ade80;">
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+            <div style="font-size: 2.5em;">🎮</div>
+            <div style="flex: 1;">
+                <h2 style="margin: 0;">Active Database</h2>
+                <div style="font-size: 0.9em; color: #9fb1c9; margin-top: 4px;">
+                    This is the live database used by CHIM. It's on the Public Schema.
+                </div>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 6px; border-left: 4px solid #4ade80;">
+            <div style="display:flex; gap:12px; flex-wrap:wrap; font-size: 14px; color:#ccc; align-items: center;">
+                <div style="font-size: 1.1em; color: #4ade80; font-weight: bold;">
+                    📋 Last copied from: <?php echo h($activeProfileName !== '' ? $activeProfileName : '(unknown)'); ?>
+                </div>
+                <div style="border-left: 2px solid #444; padding-left: 12px; margin-left: 6px;">
+                    <strong style="color:#f8f9fa;">Player:</strong> <span id="live-player"><?php echo h($livePlayerName); ?></span>
+                </div>
                 <div><strong style="color:#f8f9fa;">Game:</strong> <span id="live-game"><?php echo h($liveGameName); ?></span></div>
-                <div><strong style="color:#f8f9fa;">eventlog:</strong> <span id="live-eventlog"><?php echo intval($liveEventlogCount); ?></span></div>
-                <div><strong style="color:#f8f9fa;">oghma:</strong> <span id="live-oghma"><?php echo intval($liveOghmaCount); ?></span></div>
-                <div><strong style="color:#f8f9fa;">last in-game:</strong> <span id="live-last"><?php echo h($liveSkyrimDate !== '' ? $liveSkyrimDate : 'n/a'); ?></span></div>
+                <div><strong style="color:#f8f9fa;">Events:</strong> <span id="live-eventlog"><?php echo intval($liveEventlogCount); ?></span></div>
+                <div><strong style="color:#f8f9fa;">Oghma:</strong> <span id="live-oghma"><?php echo intval($liveOghmaCount); ?></span></div>
+                <div><strong style="color:#f8f9fa;">Last in-game date:</strong> <span id="live-last"><?php echo h($liveSkyrimDate !== '' ? $liveSkyrimDate : 'n/a'); ?></span></div>
+            </div>
         </div>
         <?php if (!empty($timelineItems)) { ?>
         <div class="timeline" id="pt-timeline">
@@ -488,35 +592,50 @@ if (!empty($timelineItems)) {
 
     <div class="content-grid">
         <div class="content-section">
-            <h2>📦 Create Snapshot From Current</h2>
+            <h2>📦 Save Current Public Database</h2>
+            <div style="font-size: 0.9em; color: #9fb1c9; margin-bottom: 12px;">
+                Creates a snapshot of what's currently in the public schema.
+            </div>
                 <form method="post" class="create-form">
                     <input type="hidden" name="action" value="create">
-                    <label for="name">Profile name</label><br>
-                    <input type="text" id="name" name="name" required style="width: 100%; margin: 6px 0;">
+                    <label for="name">Snapshot name</label><br>
+                    <input type="text" id="name" name="name" required style="width: 100%; margin: 6px 0;" placeholder="e.g., Before Quest X">
                     <label for="notes">Notes (optional)</label><br>
-                    <input type="text" id="notes" name="notes" style="width: 100%; margin: 6px 0;">
+                    <input type="text" id="notes" name="notes" style="width: 100%; margin: 6px 0;" placeholder="e.g., Level 25, just finished main quest">
                     <div class="button-group">
-                        <button type="submit" class="button" style="background-color: rgb(1 53 166 / 90%); color: #fff;">Create Snapshot</button>
+                        <button type="submit" class="button" style="background-color: rgb(1 53 166 / 90%); color: #fff;">💾 Save Snapshot</button>
                     </div>
                 </form>
         </div>
 
         <div class="content-section">
-            <h2>🎮 Saved Playthroughs</h2>
+            <h2>💾 Stored Snapshots</h2>
+            <div style="font-size: 0.9em; color: #9fb1c9; margin-bottom: 12px;">
+                These snapshots are stored in separate database schemas. They are NOT actively used.<br>
+                Click "Copy to Public" to replace your active database with a snapshot.
+            </div>
                 <?php if (empty($profiles)) { ?>
-                    <div style="text-align:center; color:#ccc; padding: 12px;">No profiles yet. Create one from the left panel.</div>
+                    <div style="text-align:center; color:#ccc; padding: 12px;">No snapshots yet. Create one from the left panel.</div>
                 <?php } else { ?>
                     <div class="backup-list" style="max-height: 420px; overflow-y:auto; padding: 0; margin: 0; border: 1px solid #333333; border-radius: 8px; background-color: #1a1a1a;">
                         <?php foreach ($profiles as $p) { 
                             $nm = strtolower((string)($p['name'] ?? ''));
                             $nt = strtolower((string)($p['notes'] ?? ''));
                             $isDragon = (strpos($nm,'dragon') !== false) || (strpos($nt,'dragon') !== false);
+                            $storageType = $p['storage_type'] ?? 'dump';
+                            $isSchemaType = ($storageType === 'schema');
                         ?>
-                        <div class="backup-item<?php echo $isDragon ? ' dragonbreak' : ''; ?>" style="padding: 12px; border-bottom: 1px solid #333333;">
+                        <div class="backup-item<?php echo $isDragon ? ' dragonbreak' : ''; ?>" style="padding: 12px; border-bottom: 1px solid #333333; <?php if ((int)$p['is_active'] === 1) { echo 'background: rgba(74, 222, 128, 0.1); border-left: 4px solid #4ade80;'; } ?>">
                             <div style="display:flex; justify-content:space-between; gap: 10px;">
                                 <div style="flex:1; min-width:0;">
                                     <div style="font-weight:bold; font-size: 14px; word-break: break-all;">
+                                        <?php if ((int)$p['is_active'] === 1) { ?>
+                                            <span style="background:#4ade80; color:#000; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:bold; margin-right:6px;">✓ SOURCE OF PUBLIC</span>
+                                        <?php } ?>
                                         <?php echo h($p['name']); ?>
+                                        <?php if ($isSchemaType) { ?>
+                                        <?php } else { ?>
+                                        <?php } ?>
                                         <?php 
                                             $lg = isset($p['last_gamets']) ? intval($p['last_gamets']) : 0; 
                                             if ($liveLastGamets > 0 && $lg > 0) {
@@ -533,7 +652,6 @@ if (!empty($timelineItems)) {
                                                 }
                                             }
                                         ?>
-                                        <?php if ((int)$p['is_active'] === 1) { echo '<span style="color:#eaee05; font-weight:normal;"> (active)</span>'; } ?>
                                     </div>
                                     <div style="font-size: 12px; color:#ccc; display:flex; gap:10px; flex-wrap:wrap;">
                                         <span><?php echo h($p['created_at']); ?></span>
@@ -553,11 +671,15 @@ if (!empty($timelineItems)) {
                                     <?php } ?>
                                 </div>
                                 <div style="display:flex; gap:6px; align-items:flex-start;">
+                                    <?php if ((int)$p['is_active'] !== 1) { ?>
                                     <form method="post" class="switch-form">
                                         <input type="hidden" name="action" value="switch">
                                         <input type="hidden" name="profile_id" value="<?php echo (int)$p['id']; ?>">
-                                        <button type="submit" class="button" style="background-color: rgb(1 53 166 / 90%); color:#fff; padding:6px 10px;">Switch</button>
+                                        <button type="submit" class="button" style="background-color: rgb(1 53 166 / 90%); color:#fff; padding:6px 10px;">Copy to Public</button>
                                     </form>
+                                    <?php } else { ?>
+                                    <button class="button" style="background-color: #333; color:#999; padding:6px 10px; cursor: not-allowed;" disabled>Already Active</button>
+                                    <?php } ?>
                                     <?php $isDefault = (strtolower((string)$p['name']) === 'default'); ?>
                                     <?php if (!$isDefault) { ?>
                                     <form method="post" onsubmit="return confirm('Delete this snapshot? This action cannot be undone.');">
@@ -594,9 +716,9 @@ echo $buffer;
     document.addEventListener('submit', function(e){
         const form = e.target;
         if (form && form.classList && form.classList.contains('switch-form')) {
-            const ok = window.confirm('This will replace the current database with this snapshot. Continue?');
+            const ok = window.confirm('This will:\n\n1. Auto-save your current PUBLIC database to a snapshot\n2. Copy this snapshot INTO the PUBLIC schema\n3. You MUST restart the CHIM server after\n\nThe snapshot itself stays in its schema.\n\nContinue?');
             if (!ok) { e.preventDefault(); return false; }
-            if (overlayTitle) overlayTitle.textContent = 'Restoring Snapshot…';
+            if (overlayTitle) overlayTitle.textContent = 'Loading Snapshot';
             showOverlay();
         }
         if (form && form.classList && form.classList.contains('create-form')) {

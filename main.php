@@ -6,7 +6,7 @@ error_reporting(E_ALL);
 @define("STOPALL_MAGIC_WORD", "/wake up/i");
 
 @define("MAXIMUM_SENTENCE_SIZE", 125);
-@define("MINIMUM_SENTENCE_SIZE", 50);
+@define("MINIMUM_SENTENCE_SIZE", 75);
 
 date_default_timezone_set('Europe/Madrid');
 
@@ -17,17 +17,21 @@ $GLOBALS["MEMORY_THRESHOLD_MODIFIER"]=0;    // POST MEMORY
 $COOLDOWNMAP=[];
 
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
-require($path . "conf".DIRECTORY_SEPARATOR."conf.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."minimet5_service.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."utils_game_timestamp.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php"); 
-requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"globals.php");
+$GLOBALS["ENGINE_PATH"]=$path;
+
+require($path . "conf/conf.php");
+require_once($path . "lib/auditing.php");
+require_once($path . "lib/model_dynmodel.php");
+require_once($path . "lib/{$GLOBALS["DBDRIVER"]}.class.php");
+$GLOBALS["db"] = new sql();
+require_once($path . "lib/minimet5_service.php");
+require_once($path . "lib/data_functions.php");
+require_once($path . "lib/chat_helper_functions.php");
+require_once($path . "lib/memory_helper_vectordb.php");
+require_once($path . "lib/llm_randomizer.php");
+require_once($path . "lib/utils_game_timestamp.php");
+require_once($path . "lib/logger.php"); 
+requireFilesRecursively(__DIR__."/ext/","globals.php");
 
 // New profile system
 require_once($path . "lib/core/api_badge.class.php");
@@ -36,18 +40,15 @@ require_once($path . "lib/core/tts_connector.class.php");
 require_once($path . "lib/core/npc_master.class.php");
 require_once($path . "lib/core/core_profiles.class.php");
 
-$GLOBALS["ENGINE_PATH"]=$path;
-
 // PARSE GET RESPONSE into $gameRequest
 $cooldownPeriod = 600;
-
 
 
 if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
     // You can run this script directly with php: main.php "Player text"
     $GLOBALS["db"] = new sql();
 
-    $latsRid=$db->fetchAll("select *  from eventlog order by rowid desc LIMIT 1 OFFSET 0");
+    $latsRid=$db->fetchAll("select * from eventlog order by rowid desc LIMIT 1 OFFSET 0");
     $res=$db->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog where rowid={$latsRid[0]["rowid"]}");
     $res[0]["ts"]=$res[0]["ts"]+1;
     $res[0]["gamets"]=$res[0]["gamets"]+1;
@@ -73,12 +74,9 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
 }
 
 
-
-
 if (!isset($FUNCTIONS_ARE_ENABLED)) {
     $FUNCTIONS_ARE_ENABLED=false;
 }
-
 
 
 while (!getenv('PHPUNIT_TEST') && ob_get_length() && ob_end_clean())	;
@@ -97,7 +95,6 @@ $alreadysent = array();
 $overrideParameters=array();
 
 $ERROR_TRIGGERED=false;
-
 
 $LAST_ROLE="user";
 
@@ -581,22 +578,12 @@ if (isset($_GET["profile"])) {
         $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
         $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]=$currentProfileData;
         $connector=new LLMConnector();
-        $currentActiveModelProfile=$db->fetchOne("select value from conf_opts where id='chim_profile_model'");
-
-        if (isset($currentActiveModelProfile["value"])) {
-            if ($currentActiveModelProfile["value"]==1) 
-                $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
-            else if ($currentActiveModelProfile["value"]==2) 
-                $currentConnectorData=$connector->getById($currentProfileData["llm_secondary_id"]);
-            else if ($currentActiveModelProfile["value"]==3) 
-                $currentConnectorData=$connector->getById($currentProfileData["llm_tertiary_id"]); 
-            else if ($currentActiveModelProfile["value"]==4) 
-                $currentConnectorData=$connector->getById($currentProfileData["llm_quaternary_id"]);
-            else
-                $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
-
-        } else
-                $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+        
+        // Use randomizer to determine which connector slot to use
+        $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $currentNpcData, $npcMaster);
+        $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+        
+        $currentConnectorData = $connector->getById($connectorId); 
         
     
         $connector->setOldGlobals($currentConnectorData);
@@ -634,22 +621,12 @@ if (isset($_GET["profile"])) {
             $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]=$currentProfileData;
 
             $connector=new LLMConnector();
-            $currentActiveModelProfile=$db->fetchOne("select value from conf_opts where id='chim_profile_model'");
-
-            if (isset($currentActiveModelProfile["value"])) {
-                if ($currentActiveModelProfile["value"]==1) 
-                    $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
-                else if ($currentActiveModelProfile["value"]==2) 
-                    $currentConnectorData=$connector->getById($currentProfileData["llm_secondary_id"]);
-                else if ($currentActiveModelProfile["value"]==3) 
-                    $currentConnectorData=$connector->getById($currentProfileData["llm_tertiary_id"]); 
-                else if ($currentActiveModelProfile["value"]==4) 
-                    $currentConnectorData=$connector->getById($currentProfileData["llm_quaternary_id"]);
-                else
-                    $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
-
-            } else
-                    $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+            
+            // Use randomizer to determine which connector slot to use
+            $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $currentNpcData, $npcMaster);
+            $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+            
+            $currentConnectorData = $connector->getById($connectorId); 
             
         
             $connector->setOldGlobals($currentConnectorData);
@@ -728,7 +705,7 @@ $GLOBALS["active_profile"]=md5($GLOBALS["HERIKA_NAME"]);
 
 // End of profile selection
 
-// This is the correct place, after arse $gameRequest and before starting to do substituions
+// This is the correct place, after parsing $gameRequest and before starting to do substitutions
 
 if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"])) {
 
@@ -744,22 +721,12 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"])) 
     $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]=$currentProfileData;
 
     $connector=new LLMConnector();
-    $currentActiveModelProfile=$db->fetchOne("select value from conf_opts where id='chim_profile_model'");
-
-    if (isset($currentActiveModelProfile["value"])) {
-        if ($currentActiveModelProfile["value"]==1) 
-            $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
-        else if ($currentActiveModelProfile["value"]==2) 
-            $currentConnectorData=$connector->getById($currentProfileData["llm_secondary_id"]);
-        else if ($currentActiveModelProfile["value"]==3) 
-            $currentConnectorData=$connector->getById($currentProfileData["llm_tertiary_id"]); 
-        else if ($currentActiveModelProfile["value"]==4) 
-            $currentConnectorData=$connector->getById($currentProfileData["llm_quaternary_id"]);
-        else
-            $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
-
-    } else
-            $currentConnectorData=$connector->getById($currentProfileData["llm_primary_id"]); 
+    
+    // Use randomizer to determine which connector slot to use
+    $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $currentNpcData, $npcMaster);
+    $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+    
+    $currentConnectorData = $connector->getById($connectorId); 
     
 
     $connector->setOldGlobals($currentConnectorData);
@@ -884,7 +851,7 @@ if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme
         }
     }
     if (in_array($gameRequest[0],['backgroundaction'])) {
-        logEvent($gameRequest,$GLOBALS["HERIKA_NAME"]);// Force actors involved in this event...this is the current actor
+        
         require_once($GLOBALS["ENGINE_PATH"]."/processor/background_event.php");
     } else
         logEvent($gameRequest);
@@ -963,8 +930,40 @@ if (in_array($gameRequest[0],["bored"])) {
     }
 }
 
-// Combat bark event - log as infoaction
+// Combat bark event - log as infoaction and apply cooldown
 if (in_array($gameRequest[0],["combatbark"])) {
+    // Add configurable cooldown for combat barks to prevent spam (global across all NPCs)
+    $combatBarkCooldownPeriod = isset($GLOBALS["COMBAT_BARK_COOLDOWN"]) ? intval($GLOBALS["COMBAT_BARK_COOLDOWN"]) : 90;
+    
+    // Use a global cooldown key (shared across all NPCs)
+    $cooldownKey = "COMBAT_BARK_LAST_TIMESTAMP";
+    
+    // Fetch the last combat bark trigger timestamp
+    $combatBarkRecord = $GLOBALS["db"]->fetchAll("SELECT value FROM conf_opts WHERE id='" . $GLOBALS["db"]->escape($cooldownKey) . "'");
+    
+    // Check if the timestamp exists in the database
+    if (!empty($combatBarkRecord)) {
+        $lastTrigger = (int) $combatBarkRecord[0]['value'];
+        $timeElapsed = time() - $lastTrigger;
+
+        if ($timeElapsed < $combatBarkCooldownPeriod) {
+            // Cooldown is still active, exit
+            Logger::info("COMBAT_BARK is on cooldown. Try again in " . ($combatBarkCooldownPeriod - $timeElapsed) . " seconds.");
+            terminate();
+        }
+    }
+    
+    // Update the timestamp in the database to the current time
+    $currentTimestamp = time();
+    $GLOBALS["db"]->upsertRowOnConflict(
+        "conf_opts",
+        array(
+            "id"    => $cooldownKey,
+            "value" => $currentTimestamp
+        ),
+        'id'
+    );
+    
     $localGameRequest=$gameRequest;
     $localGameRequest[0]="infoaction";
     $localGameRequest[3].=" ({$GLOBALS["HERIKA_NAME"]} shouts during combat)";
@@ -1212,7 +1211,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     if (!empty($memoryInjection)) {
         
         //$memoryInjectionCtx[]= array('role' => 'user', 'content' => $gameRequest[3]);
-        $memoryInjectionCtx[]= array('role' => 'user', 'content' => "#MEMORY: {$GLOBALS["HERIKA_NAME"]} remembers this: [$memoryInjection]");
+        $memoryInjectionCtx[]= array('role' => 'user', 'content' => "<memory> {$GLOBALS["HERIKA_NAME"]} remembers this: [$memoryInjection] </memory>");
         //$GLOBALS["COMMAND_PROMPT"].="'{$gameRequest[3]}'\n{$GLOBALS["HERIKA_NAME"]}):$memoryInjection\n";
         
     } else {
@@ -1310,6 +1309,7 @@ $COOLDOWNMAP["WaitHere"]=300/0.00864;
 $COOLDOWNMAP["UseSoulGaze"]=300/0.00864;
 $COOLDOWNMAP["InspectSurroundings"]=100/0.00864;
 $COOLDOWNMAP["Inspect"]=300/0.00864;
+$COOLDOWNMAP["Relax"]=180/0.00864;
 
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
@@ -1357,7 +1357,7 @@ if (isset($GLOBALS["is_rolemastered"])) {
     }
 } 
 
-// MINIME_T5 STUFF, command assiastant
+// MINIME_T5 STUFF, command assistant
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     
@@ -1387,7 +1387,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
                         )
                     );
                     Logger::info("ENFORCING COMMAND: <{$preCommand["is_command"]}>");
-                    //$memoryInjectionCtx=[]; // Disable memorie when command.
+                    //$memoryInjectionCtx=[]; // Disable memories when command.
                     $COMMAND_PROMPT_ENFORCE_ACTIONS.="(USER MAY WANTS YOU TO ISSUE ACTION {$preCommand["is_command"]}).";
                     $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
                 } 
@@ -1452,7 +1452,7 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
 
 
 if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
-    $GLOBALS["PROMPT_HEAD"].=PHP_EOL.$GLOBALS["PLAYER_BIOS"];
+    $GLOBALS["PROMPT_HEAD"].=PHP_EOL."<player_character>\n".$GLOBALS["PLAYER_BIOS"]."\n</player_character>\n";
 }
 
 // Use centralized function from data_functions.php
@@ -1460,8 +1460,11 @@ $dynamicBiography = buildDynamicBiography($GLOBALS);
 
 
 if (isset($GLOBALS["PROFILE_PROMPT"])) {
-    $dynamicBiography.="\n\n#Part of a group\n{$GLOBALS["PROFILE_PROMPT"]}";
+    $dynamicBiography.="\n<group>\n#Part of a group\n{$GLOBALS["PROFILE_PROMPT"]}\n</group>";
 }
+
+
+
 
 // Middle term memory experiment
 $npcMaster=new NpcMaster();
@@ -1469,15 +1472,32 @@ $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
 $extended_data=$npcMaster->getExtendedData($currentNpcData);
 if (isset($extended_data["middle_term_memory"])&&is_array($extended_data["middle_term_memory"])) {
     $middle_term_memory = end($extended_data["middle_term_memory"]);
-    $dynamicBiography.="\n\n#Past events\n{$middle_term_memory}";
+    $dynamicBiography.="\n<middle_term_memory>\n#Past events\n{$middle_term_memory}\n</middle_term_memory>";
 
 }
 
+// Rumors and breaking news
+$currentHold=trim(DataLastKnownLocationHuman(true,false));
+if ($currentHold) {
+    error_log("[RUMORS] Current hold {$currentHold}");
+    $currentHoldEsc=$db->escape($currentHold);
+    $query="SELECT * FROM rumors WHERE hold like '%{$currentHoldEsc}%' and gamets>".round($gameRequest[2]- ( (3600 * 7 ) / 0.00864 ),0);
+    error_log($query);
+    $rumors = $db->fetchOne($query);
+
+    if (isset($rumors["content"])) {
+        $tag=strtolower(str_replace(" ","_",$rumors["type"]));
+        $rumors="\n<$tag>\n{$rumors["content"]}\n</$tag>";
+    }
+} else {
+    error_log("[RUMORS] Current hold {$currentHold} empty");
+    $rumors="";
+}
 
 if (!empty($GLOBALS["OGHMA_HINT"])) {
 
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n#Character details\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n\n#Knowledge\n" . $GLOBALS["OGHMA_HINT"]."\n\n#General Instructions\n". $GLOBALS["COMMAND_PROMPT"],
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>\n$rumors\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
 
     );
@@ -1485,7 +1505,7 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
     $GLOBALS["COMMAND_PROMPT"] = "";
 } else {
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n#Character details\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n\n#General Instructions\n". $GLOBALS["COMMAND_PROMPT"],
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>\n$rumors\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
     );
     //avoid reinjecting command prompt that we have already appended

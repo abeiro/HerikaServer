@@ -157,6 +157,7 @@ $PROMPTS=array(
     "im_alive"=>[ 
         "cue"=>["{$GLOBALS["HERIKA_NAME"]} parle du fait qu'il/elle se 'sent plus réel(le)'. Écris le dialogue de {$GLOBALS["HERIKA_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "player_request"=>["Le Narrateur : {$GLOBALS["HERIKA_NAME"]} ressent un choc soudain... et se sent 'plus réel(le)'"],
+        "extra"=> ["dontuse" => true] // Hardcoded disabled - ALIVE_MESSAGE permanently disabled
     ],
     "playerinfo"=>[ 
         "cue"=>["(Hors du jeu de rôle, la partie a été chargée) Raconte à {$GLOBALS["PLAYER_NAME"]} un bref résumé des derniers événements, puis rappelle-lui la tâche/mission/plan actuel(le)) {$GLOBALS["TEMPLATE_DIALOG"]}"]

@@ -116,6 +116,7 @@ function trimFileToLastLines($filePath, $maxLines) {
     }
     fclose($out);
     @rename($tmp, $filePath);
+    @chmod($filePath,1777);
 }
 
 /**

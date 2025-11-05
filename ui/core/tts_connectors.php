@@ -120,6 +120,7 @@ $ttsMap = [
 	'zonos_gradio' => 'ZONOS_GRADIO',
 	'piper-tts' => 'PIPERTTS',
 	'deepgram' => 'deepgram',
+	'cartesia' => 'CARTESIA',
 ];
 
 // Values for TTSFUNCTION select from schema
