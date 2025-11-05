@@ -1156,12 +1156,27 @@ class openrouterjsoncached
         global $alreadysent;
         $herikaName = isset($GLOBALS["HERIKA_NAME"]) ? $GLOBALS["HERIKA_NAME"] : 'default_herika';
 
+        // VERBOSE_LOGGING_START - process: First call
+        static $firstProcessCall = true;
+        if ($this->_verboseLogging && $firstProcessCall) {
+            logMessage("[CACHE-VERBOSE] ===== PROCESS(): STREAMING RESPONSE =====");
+            logMessage("[CACHE-VERBOSE] Beginning to process streaming response chunks");
+            logMessage("[CACHE-VERBOSE] Response format: {$this->_responseFormat}");
+            $firstProcessCall = false;
+        }
+        // VERBOSE_LOGGING_END
+
         if ($this->isDone())
             return "";
 
         $line = @fgets($this->primary_handler);
         if ($line === false) {
             if (feof($this->primary_handler)) {
+                // VERBOSE_LOGGING_START - process: EOF reached
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Stream EOF reached (end of response)");
+                }
+                // VERBOSE_LOGGING_END
                 return "";
             } else {
                 $error = error_get_last();
@@ -1169,6 +1184,13 @@ class openrouterjsoncached
                 logMessage("Read Err [{$this->name}:{$herikaName}]: {$errMsg}");
                 $this->_rawbuffer .= "\nRead Err: {$errMsg}\n";
                 $this->_forcedClose = true;
+
+                // VERBOSE_LOGGING_START - process: Read error
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] ✗ Stream read error: {$errMsg}");
+                }
+                // VERBOSE_LOGGING_END
+
                 return $errMsg;
             }
         }
@@ -1184,6 +1206,11 @@ class openrouterjsoncached
         if (strpos($line, 'data: ') === 0) {
             $jsonData = trim(substr($line, 6));
             if ($jsonData === '[DONE]') {
+                // VERBOSE_LOGGING_START - process: DONE marker
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] [DONE] marker received - stream complete");
+                }
+                // VERBOSE_LOGGING_END
                 return "";
             }
 
@@ -1192,6 +1219,17 @@ class openrouterjsoncached
                 if (json_last_error() === JSON_ERROR_NONE && is_array($data)) {
                     // Handle Anthropic format
                     if (isset($data['type'])) {
+                        // VERBOSE_LOGGING_START - process: Anthropic event type
+                        static $eventTypeCounts = [];
+                        if ($this->_verboseLogging) {
+                            $eventType = $data['type'];
+                            if (!isset($eventTypeCounts[$eventType])) {
+                                logMessage("[CACHE-VERBOSE] First Anthropic event type '{$eventType}' received");
+                                $eventTypeCounts[$eventType] = 1;
+                            }
+                        }
+                        // VERBOSE_LOGGING_END
+
                         switch ($data['type']) {
                             case 'content_block_delta':
                                 if (isset($data['delta']['type']) && $data['delta']['type'] === 'text_delta' &&
@@ -1204,12 +1242,25 @@ class openrouterjsoncached
                             case 'content_block_start':
                                 if (isset($data['content_block']['type']) && $data['content_block']['type'] === 'tool_use') {
                                     $this->_jsonResponsesEncoded[] = json_encode($data);
+
+                                    // VERBOSE_LOGGING_START - process: Tool use detected
+                                    if ($this->_verboseLogging) {
+                                        logMessage("[CACHE-VERBOSE] Tool use content block detected");
+                                    }
+                                    // VERBOSE_LOGGING_END
                                 }
                                 break;
 
                             case 'message_delta':
                                 if (isset($data['delta']['stop_reason']) && $data['delta']['stop_reason'] !== null) {
                                     logMessage("[{$this->name}:{$herikaName}] Stop (delta): " . $data['delta']['stop_reason']);
+
+                                    // VERBOSE_LOGGING_START - process: Stop reason
+                                    if ($this->_verboseLogging) {
+                                        logMessage("[CACHE-VERBOSE] Stop reason (delta): " . $data['delta']['stop_reason']);
+                                    }
+                                    // VERBOSE_LOGGING_END
+
                                     $this->_forcedClose = true;
                                 }
                                 break;
@@ -1237,6 +1288,20 @@ class openrouterjsoncached
                                         $efficiency
                                     );
                                     @file_put_contents(__DIR__ . DIRECTORY_SEPARATOR . "_cached_perf.log", $logPerfEntry, FILE_APPEND);
+
+                                    // VERBOSE_LOGGING_START - process: Cache performance
+                                    if ($this->_verboseLogging) {
+                                        logMessage("[CACHE-VERBOSE] ----- CACHE PERFORMANCE METRICS -----");
+                                        logMessage("[CACHE-VERBOSE] Cache read tokens: {$cacheRead}");
+                                        logMessage("[CACHE-VERBOSE] Cache creation tokens: {$cacheCreate}");
+                                        logMessage("[CACHE-VERBOSE] New input tokens: {$normalInput}");
+                                        logMessage("[CACHE-VERBOSE] Total input tokens: {$totalConsideredInput}");
+                                        logMessage("[CACHE-VERBOSE] Cache efficiency: {$efficiency}%");
+                                        if (isset($usage['output_tokens'])) {
+                                            logMessage("[CACHE-VERBOSE] Output tokens: {$usage['output_tokens']}");
+                                        }
+                                    }
+                                    // VERBOSE_LOGGING_END
                                 }
 
                                 $this->_forcedClose = true;
@@ -1247,6 +1312,13 @@ class openrouterjsoncached
                                 logMessage("Stream Err (Anthropic): {$eM}");
                                 $this->_rawbuffer .= "\nErr (Anthropic):{$eM}\n";
                                 $this->_forcedClose = true;
+
+                                // VERBOSE_LOGGING_START - process: Anthropic error
+                                if ($this->_verboseLogging) {
+                                    logMessage("[CACHE-VERBOSE] ✗ Anthropic error received: {$eM}");
+                                }
+                                // VERBOSE_LOGGING_END
+
                                 return $eM;
 
                             case 'ping':
@@ -1259,6 +1331,14 @@ class openrouterjsoncached
                     }
                     // Handle OpenAI format
                     elseif (isset($data["choices"][0]["delta"])) {
+                        // VERBOSE_LOGGING_START - process: OpenAI format detected
+                        static $openaiFormatLogged = false;
+                        if ($this->_verboseLogging && !$openaiFormatLogged) {
+                            logMessage("[CACHE-VERBOSE] OpenAI format detected");
+                            $openaiFormatLogged = true;
+                        }
+                        // VERBOSE_LOGGING_END
+
                         if (isset($data["choices"][0]["delta"]["content"])) {
                             $buffer = $data["choices"][0]["delta"]["content"];
                             $this->_buffer .= $buffer;
@@ -1266,10 +1346,23 @@ class openrouterjsoncached
 
                         if (isset($data["choices"][0]["delta"]["tool_calls"])) {
                             $this->_jsonResponsesEncoded[] = json_encode($data);
+
+                            // VERBOSE_LOGGING_START - process: OpenAI tool calls
+                            if ($this->_verboseLogging) {
+                                logMessage("[CACHE-VERBOSE] OpenAI tool calls detected");
+                            }
+                            // VERBOSE_LOGGING_END
                         }
 
                         if (isset($data["choices"][0]["finish_reason"]) && $data["choices"][0]["finish_reason"] !== null) {
                             logMessage("[{$this->name}:{$herikaName}] Stop (choice): " . $data["choices"][0]["finish_reason"]);
+
+                            // VERBOSE_LOGGING_START - process: OpenAI finish reason
+                            if ($this->_verboseLogging) {
+                                logMessage("[CACHE-VERBOSE] Finish reason: " . $data["choices"][0]["finish_reason"]);
+                            }
+                            // VERBOSE_LOGGING_END
+
                             $this->_forcedClose = true;
                         }
                     }
@@ -1279,15 +1372,34 @@ class openrouterjsoncached
                         logMessage("Stream Err (Generic): {$eM}");
                         $this->_rawbuffer .= "\nErr (Generic):{$eM}\n";
                         $this->_forcedClose = true;
+
+                        // VERBOSE_LOGGING_START - process: Generic error
+                        if ($this->_verboseLogging) {
+                            logMessage("[CACHE-VERBOSE] ✗ Generic error received: {$eM}");
+                        }
+                        // VERBOSE_LOGGING_END
+
                         return $eM;
                     }
                 } else {
                     logMessage("JSON Decode Err [{$this->name}:{$herikaName}]: " . json_last_error_msg());
+
+                    // VERBOSE_LOGGING_START - process: JSON decode error
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] ✗ JSON decode error: " . json_last_error_msg());
+                    }
+                    // VERBOSE_LOGGING_END
                 }
             }
         } elseif (trim($line) === "event: message_stop") {
             logMessage("[{$this->name}:{$herikaName}] Explicit stream end event received.");
             $this->_forcedClose = true;
+
+            // VERBOSE_LOGGING_START - process: Explicit stream end
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Explicit 'event: message_stop' received");
+            }
+            // VERBOSE_LOGGING_END
         }
 
         // Parse and return content based on format
