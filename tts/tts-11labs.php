@@ -27,7 +27,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood = "default", $stringforhash) 
 		if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]))
 			$voice=$GLOBALS["PATCH_OVERRIDE_VOICE"];
 
-		$url = "https://api.elevenlabs.io/v1/text-to-speech/{$voice}?{$GLOBALS["TTS"]["ELEVEN_LABS"]["optimize_streaming_latency"]}=1";
+		$url = "https://api.elevenlabs.io/v1/text-to-speech/{$voice}";
 
 		// Request headers
 		$headers = array(

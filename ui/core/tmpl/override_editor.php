@@ -1,0 +1,1003 @@
+<?php
+// Unified Override Editor Component
+// Configurable for both NPC Master (extended_data) and Core Profiles (metadata)
+
+// Configuration parameters (must be set before including this file)
+// $overrideEditorConfig = [
+//     'mode' => 'npc' | 'profile',  // Which mode to operate in
+//     'fieldName' => 'extended_data' | 'metadata',  // Which field to save to
+//     'allowedSettings' => [...],  // Array of setting keys to allow
+//     'reservedKeys' => [...],  // Keys that should not appear in UI (only for npc mode)
+//     'currentData' => [],  // Current override data
+//     'systemFields' => [],  // System-managed fields (only for npc mode)
+// ];
+
+if (!isset($overrideEditorConfig)) {
+    throw new Exception('Override editor config not set');
+}
+
+$mode = $overrideEditorConfig['mode'] ?? 'npc';
+$fieldName = $overrideEditorConfig['fieldName'] ?? 'extended_data';
+$allowedSettings = $overrideEditorConfig['allowedSettings'] ?? [];
+$reservedKeys = $overrideEditorConfig['reservedKeys'] ?? [];
+$currentData = $overrideEditorConfig['currentData'] ?? [];
+$systemFields = $overrideEditorConfig['systemFields'] ?? [];
+
+$isNpcMode = ($mode === 'npc');
+$isProfileMode = ($mode === 'profile');
+
+// CSS prefix for unique styling
+$prefix = $isProfileMode ? 'prof-' : '';
+
+// Icon mapping function
+function ovr_icon_for(string $key): string {
+    $u = strtoupper($key);
+    if (strpos($u, 'TTS') !== false) return '🔊';
+    if (strpos($u, 'DIARY') !== false) return '📙';
+    if (strpos($u, 'RECHAT') === 0) return '🔁';
+    if (strpos($u, 'CONTEXT_HISTORY') === 0) return '🧠';
+    if (strpos($u, 'OGHMA') === 0) return '🧾';
+    if (strpos($u, 'QUEST_') === 0) return '🧭';
+    if (strpos($u, 'LANG_') === 0 || strpos($u, 'CORE_LANG') === 0) return '🌐';
+    if ($u === 'HERIKA_ANIMATIONS') return '🎞️';
+    if (strpos($u, 'DYNAMIC') !== false) return '🔄';
+    if (strpos($u, 'BORED') !== false) return '💤';
+    return '⚙️';
+}
+
+// Full schema definition
+$fullSchema = [
+    'TTSFUNCTION' => [
+        'type' => 'select',
+        'values' => ['none','melotts','xtts-fastapi','xvasynth','azure','11labs','openai','kokoro','koboldcpp','zonos_gradio','piper-tts','mimic3','deepgram','cartesia'],
+        'description' => 'Text-to-Speech service. Overrides global TTS selection.',
+        'category' => 'Core Settings'
+    ],
+    'RECHAT_H' => [
+        'type' => 'integer',
+        'description' => 'Rechat Rounds. Higher values increase back-and-forth conversation. 1 = 1 Round | 2 = 2 Rounds | 3 = 3 Rounds etc',
+        'category' => 'Rechat'
+    ],
+    'RECHAT_P' => [
+        'type' => 'integer',
+        'description' => 'Rechat Probability. Chance of continuing an ongoing conversation. 0 = Never | 50 = 50% | 100 = Always',
+        'category' => 'Rechat'
+    ],
+    'RECHAT_ALLOW_ACTIONS' => [
+        'type' => 'boolean',
+        'description' => 'Allow triggering actions during Rechat conversations.',
+        'category' => 'Rechat'
+    ],
+    'CORE_LANG' => [
+        'type' => 'select',
+        'values' => ['','en','de','es','fr','jp'],
+        'description' => 'Custom Language. Leave blank for English.',
+        'category' => 'Core Settings'
+    ],
+    'ENFORCE_ACTIONS_PROMPT' => [
+        'type' => 'boolean',
+        'description' => 'Encourage using actions more often.',
+        'category' => 'Core Settings'
+    ],
+    'REMOVE_ASTERISKS_FROM_OUTPUT' => [
+        'type' => 'boolean',
+        'description' => 'Remove text between ** when responding (*cough*, *smiles*, etc)',
+        'category' => 'Core Settings'
+    ],
+    'MAX_WORDS_LIMIT' => [
+        'type' => 'integer',
+        'description' => 'Enforce a word limit for responses. Leave as 0 for no limit.',
+        'category' => 'Core Settings'
+    ],
+    'DIARY_PROMPT' => [
+        'type' => 'longstring',
+        'description' => 'Custom instructions for generating diary entries.',
+        'category' => 'Diary'
+    ],
+    'DIARY_COOLDOWN' => [
+        'type' => 'integer',
+        'description' => 'Cooldown in seconds between diary entries to prevent spam.',
+        'category' => 'Diary'
+    ],
+    'COMBAT_BARK_COOLDOWN' => [
+        'type' => 'integer',
+        'description' => 'Cooldown in seconds between combat barks. Global across all NPCs in the party.',
+        'category' => 'Combat'
+    ],
+    'AUTO_DIARY_WAIT' => [
+        'type' => 'boolean',
+        'description' => 'When AUTO_DIARY is enabled, controls whether diary entries are created during wait events.',
+        'category' => 'Diary'
+    ],
+    'OGHMA_INFINIUM' => [
+        'type' => 'boolean',
+        'description' => 'Enable Oghma knowledge lookups. Needs Minime-T5 enabled.',
+        'category' => 'Oghma'
+    ],
+    'OGHMA_AMOUNT' => [
+        'type' => 'select',
+        'values' => ['1','2','3'],
+        'description' => 'Number of Oghma keywords to extract from each response.',
+        'category' => 'Oghma'
+    ],
+    'MINIME_T5' => [
+        'type' => 'boolean',
+        'description' => 'Enable Minime-T5 LLM. Helps with action and memory functions. Only works in English!',
+        'category' => 'Oghma'
+    ],
+    'CONTEXT_HISTORY' => [
+        'type' => 'integer',
+        'description' => 'Amount of context history (dialogue and events) sent to LLM. Higher = more tokens used. Recommend max 100',
+        'category' => 'Context History'
+    ],
+    'CONTEXT_HISTORY_DIARY' => [
+        'type' => 'integer',
+        'description' => 'Amount of context history for diary entries. If 0, uses regular CONTEXT_HISTORY value.',
+        'category' => 'Context History'
+    ],
+    'CONTEXT_HISTORY_DYNAMIC_PROFILE' => [
+        'type' => 'integer',
+        'description' => 'Amount of context history for dynamic profile updates. If 0, uses regular CONTEXT_HISTORY value.',
+        'category' => 'Context History'
+    ],
+    'QUEST_COMMENT' => [
+        'type' => 'boolean',
+        'description' => 'Will trigger talking about new quest objectives.',
+        'category' => 'Quest'
+    ],
+    'QUEST_COMMENT_CHANCE' => [
+        'type' => 'select',
+        'values' => ['10%','25%','50%','75%','100%'],
+        'description' => 'Chance of commenting on quest updates.',
+        'category' => 'Quest'
+    ],
+    'BORED_EVENT' => [
+        'type' => 'integer',
+        'description' => 'Bored Event Probability. Chance of starting random conversations. 0 = Never | 50 = 50% | 100 = Always',
+        'category' => 'Behavior'
+    ],
+    'BORED_EVENT_SERVERSIDE' => [
+        'type' => 'boolean',
+        'description' => 'Smart Bored Events. Uses director to generate dynamic topics (slower but better quality).',
+        'category' => 'Behavior'
+    ],
+    'HERIKA_ANIMATIONS' => [
+        'type' => 'boolean',
+        'description' => 'Will issue animations to play',
+        'category' => 'Behavior'
+    ],
+    'LANG_LLM_XTTS' => [
+        'type' => 'boolean',
+        'description' => 'XTTS Only! Will offer a language field to LLM.',
+        'category' => 'Language/Voice'
+    ]
+];
+
+// Filter schema to only allowed settings
+$schema = [];
+foreach ($allowedSettings as $key) {
+    if (isset($fullSchema[$key])) {
+        $schema[$key] = $fullSchema[$key];
+    }
+}
+?>
+
+<style>
+.<?= $prefix ?>ovr-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    <?php if ($isNpcMode): ?>
+    border: 1px solid #4a4a4a;
+    border-radius: 8px;
+    padding: 12px;
+    background: #262626;
+    margin-bottom: 12px;
+    <?php endif; ?>
+}
+
+<?php if ($isNpcMode): ?>
+.<?= $prefix ?>ovr-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.<?= $prefix ?>ovr-title {
+    font-weight: 700;
+    color: rgb(242, 124, 17);
+    font-size: 16px;
+}
+<?php endif; ?>
+
+.<?= $prefix ?>ovr-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    <?php if ($isNpcMode): ?>margin-bottom: 12px;<?php endif; ?>
+}
+
+.<?= $prefix ?>ovr-item {
+    background: <?= $isProfileMode ? '#1a1a1a' : '#2a2a2a' ?>;
+    border: 1px solid #4a4a4a;
+    border-radius: <?= $isProfileMode ? '8px' : '6px' ?>;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: <?= $isProfileMode ? '32px' : 'auto' ?> 1fr auto;
+    gap: <?= $isProfileMode ? '10px' : '12px' ?>;
+    align-items: center;
+}
+
+.<?= $prefix ?>ovr-icon {
+    font-size: 20px;
+    text-align: center;
+}
+
+.<?= $prefix ?>ovr-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.<?= $prefix ?>ovr-key {
+    font-weight: <?= $isProfileMode ? '700' : '600' ?>;
+    color: #e9efff;
+    font-size: 14px;
+}
+
+.<?= $prefix ?>ovr-value {
+    color: #9fb1c9;
+    font-size: <?= $isProfileMode ? '12px' : '13px' ?>;
+    <?php if ($isNpcMode): ?>font-family: monospace;<?php endif; ?>
+    overflow-wrap: anywhere;
+}
+
+.<?= $prefix ?>ovr-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.<?= $prefix ?>ovr-empty {
+    color: #9fb1c9;
+    font-size: <?= $isProfileMode ? '13px' : 'italic' ?>;
+    text-align: center;
+    padding: <?= $isProfileMode ? '16px' : '20px' ?>;
+    <?php if ($isNpcMode): ?>font-style: italic;<?php endif; ?>
+}
+
+.btn-<?= $prefix ?>ovr {
+    padding: 4px <?= $isProfileMode ? '10px' : '8px' ?>;
+    border-radius: 4px;
+    border: 1px solid #4a4a4a;
+    background: #3a3a3a;
+    color: #e9efff;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s ease;
+}
+
+.btn-<?= $prefix ?>ovr:hover {
+    background: #4a4a4a;
+}
+
+.btn-<?= $prefix ?>ovr.danger {
+    <?php if ($isProfileMode): ?>
+    color: #ff6b6b;
+    <?php else: ?>
+    background: #5a2a2a;
+    border-color: #7a3a3a;
+    <?php endif; ?>
+}
+
+.btn-<?= $prefix ?>ovr.danger:hover {
+    background: <?= $isProfileMode ? '#5a2a2a' : '#6a2a2a' ?>;
+    <?php if ($isProfileMode): ?>border-color: #7a3a3a;<?php endif; ?>
+}
+
+.btn-add-<?= $prefix ?>ovr {
+    padding: 8px <?= $isProfileMode ? '14px' : '12px' ?>;
+    border-radius: 6px;
+    border: 1px solid <?= $isProfileMode ? 'rgb(242, 124, 17)' : '#4a4a4a' ?>;
+    background: rgb(242, 124, 17);
+    color: #111;
+    cursor: pointer;
+    font-weight: 700;
+    <?php if ($isProfileMode): ?>
+    font-size: 14px;
+    transition: all 0.2s ease;
+    <?php else: ?>
+    width: 100%;
+    <?php endif; ?>
+}
+
+.btn-add-<?= $prefix ?>ovr:hover {
+    <?php if ($isProfileMode): ?>
+    background: rgb(255, 140, 30);
+    transform: translateY(-1px);
+    <?php else: ?>
+    opacity: 0.9;
+    <?php endif; ?>
+}
+
+.<?= $prefix ?>ovr-modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,<?= $isProfileMode ? '0.7' : '0.65' ?>);
+    z-index: <?= $isProfileMode ? '10010' : '10100' ?>;
+    align-items: center;
+    justify-content: center;
+}
+
+.<?= $prefix ?>ovr-modal {
+    background: #2a2a2a;
+    border: 1px solid #4a4a4a;
+    border-radius: 10px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.<?= $prefix ?>ovr-modal-header {
+    padding: <?= $isProfileMode ? '14px 16px' : '12px 14px' ?>;
+    border-bottom: 1px solid #4a4a4a;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.<?= $prefix ?>ovr-modal-title {
+    font-weight: 700;
+    color: rgb(242, 124, 17);
+    font-size: <?= $isProfileMode ? '16px' : '18px' ?>;
+}
+
+.<?= $prefix ?>ovr-modal-body {
+    padding: <?= $isProfileMode ? '16px' : '14px' ?>;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.<?= $prefix ?>ovr-modal-footer {
+    padding: <?= $isProfileMode ? '12px 16px' : '12px 14px' ?>;
+    border-top: 1px solid #4a4a4a;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.<?= $prefix ?>ovr-search {
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #4a4a4a;
+    background: #2a2a2a;
+    color: #e9efff;
+    margin-bottom: 12px;
+}
+
+.<?= $prefix ?>ovr-settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: <?= $isProfileMode ? '8px' : '6px' ?>;
+    <?php if ($isNpcMode): ?>
+    max-height: 500px;
+    overflow-y: auto;
+    <?php endif; ?>
+}
+
+.<?= $prefix ?>ovr-setting-option {
+    padding: 10px;
+    border: 1px solid #4a4a4a;
+    border-radius: <?= $isProfileMode ? '8px' : '6px' ?>;
+    cursor: pointer;
+    background: <?= $isProfileMode ? '#1a1a1a' : '#2a2a2a' ?>;
+    transition: all 0.15s ease;
+}
+
+.<?= $prefix ?>ovr-setting-option:hover {
+    background: <?= $isProfileMode ? '#2a2a2a' : '#333333' ?>;
+    <?php if ($isProfileMode): ?>border-color: rgb(242, 124, 17);<?php endif; ?>
+}
+
+.<?= $prefix ?>ovr-setting-name {
+    font-weight: 600;
+    color: #e9efff;
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.<?= $prefix ?>ovr-setting-desc {
+    color: #9fb1c9;
+    font-size: 12px;
+}
+
+.<?= $prefix ?>ovr-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    <?php if ($isNpcMode): ?>margin-top: 12px;<?php endif; ?>
+}
+
+.<?= $prefix ?>ovr-input-label {
+    font-weight: <?= $isProfileMode ? '700' : '600' ?>;
+    color: rgb(242, 124, 17);
+    margin-bottom: 6px;
+    display: block;
+    font-size: 14px;
+}
+
+.<?= $prefix ?>ovr-input {
+    width: 100%;
+    padding: 8px <?= $isProfileMode ? '10px' : '8px' ?>;
+    border-radius: 6px;
+    border: 1px solid #4a4a4a;
+    background: <?= $isProfileMode ? '#1a1a1a' : '#2a2a2a' ?>;
+    color: #e9efff;
+    font-size: 14px;
+}
+
+.<?= $prefix ?>ovr-input:focus {
+    outline: none;
+    border-color: rgb(242, 124, 17);
+}
+
+<?php if ($isNpcMode): ?>
+.advanced-json-toggle {
+    margin-top: 12px;
+    cursor: pointer;
+    color: #9fb1c9;
+    font-size: 13px;
+    user-select: none;
+}
+
+.advanced-json-toggle:hover {
+    color: rgb(242, 124, 17);
+}
+
+.advanced-json-content {
+    display: none;
+    margin-top: 8px;
+    border: 1px solid #4a4a4a;
+    border-radius: 6px;
+    padding: 8px;
+    background: #1a1a1a;
+}
+<?php endif; ?>
+</style>
+
+<div class="<?= $prefix ?>ovr-container">
+    <?php if ($isNpcMode): ?>
+    <div class="<?= $prefix ?>ovr-header">
+        <div class="<?= $prefix ?>ovr-title">Current Overrides</div>
+    </div>
+    <?php endif; ?>
+    
+    <div id="<?= $prefix ?>ovr-list" class="<?= $prefix ?>ovr-list"></div>
+    
+    <button type="button" id="btn-add-<?= $prefix ?>ovr" class="btn-add-<?= $prefix ?>ovr">
+        + Add <?= $isProfileMode ? 'Global Setting ' : '' ?>Override
+    </button>
+    
+    <?php if ($isNpcMode): ?>
+    <div class="advanced-json-toggle" id="advanced-json-toggle">
+        ▼ Advanced: Raw JSON Editor (click to expand)
+    </div>
+    <div class="advanced-json-content" id="advanced-json-content">
+        <div id="extended_data_raw_editor" style="min-height: 300px;"></div>
+    </div>
+    <?php endif; ?>
+</div>
+
+<!-- Modal -->
+<div id="<?= $prefix ?>ovr-modal" class="<?= $prefix ?>ovr-modal-backdrop">
+    <div class="<?= $prefix ?>ovr-modal">
+        <div class="<?= $prefix ?>ovr-modal-header">
+            <div class="<?= $prefix ?>ovr-modal-title" id="<?= $prefix ?>ovr-modal-title">Add Override</div>
+            <button type="button" class="btn-<?= $prefix ?>ovr" id="<?= $prefix ?>ovr-modal-close">Close</button>
+        </div>
+        <div class="<?= $prefix ?>ovr-modal-body">
+            <div id="<?= $prefix ?>ovr-select-stage">
+                <?php if ($isNpcMode): ?>
+                <input type="text" id="<?= $prefix ?>ovr-search" class="<?= $prefix ?>ovr-search" placeholder="Filter settings..." style="margin-bottom:12px;">
+                <?php endif; ?>
+                <div style="color:#9fb1c9; font-size:13px; margin-bottom:8px;">
+                    Select a <?= $isProfileMode ? 'global ' : '' ?>setting to override:
+                </div>
+                <div id="<?= $prefix ?>ovr-settings-list" class="<?= $prefix ?>ovr-settings-list"></div>
+            </div>
+            <div id="<?= $prefix ?>ovr-value-stage" style="display: none;">
+                <div id="<?= $prefix ?>ovr-value-form"></div>
+            </div>
+        </div>
+        <div class="<?= $prefix ?>ovr-modal-footer">
+            <button type="button" class="btn-<?= $prefix ?>ovr" id="<?= $prefix ?>ovr-modal-back" style="display:none;">Back</button>
+            <button type="button" class="btn-<?= $prefix ?>ovr" id="<?= $prefix ?>ovr-modal-cancel">Cancel</button>
+            <button type="button" class="btn-add-<?= $prefix ?>ovr" id="<?= $prefix ?>ovr-modal-save" style="width:auto; display:none;">Save Override</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    const MODE = <?= json_encode($mode) ?>;
+    const IS_NPC_MODE = MODE === 'npc';
+    const IS_PROFILE_MODE = MODE === 'profile';
+    const FIELD_NAME = <?= json_encode($fieldName) ?>;
+    const PREFIX = <?= json_encode($prefix) ?>;
+    const RESERVED_KEYS = <?= json_encode($reservedKeys) ?>;
+    const SYSTEM_FIELDS = <?= json_encode($systemFields) ?>;
+    const CURRENT_DATA = <?= json_encode($currentData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+    const SCHEMA = <?= json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+    
+    let overridesState = {...CURRENT_DATA};
+    let selectedSetting = null;
+    let editingKey = null;
+    let rawJsonEditor = null;
+    
+    // Get element by ID with prefix
+    function el(id) {
+        return document.getElementById(PREFIX + id);
+    }
+    
+    // Icon mapping
+    function getIcon(key) {
+        const u = key.toUpperCase();
+        if (u.includes('TTS')) return '🔊';
+        if (u.includes('DIARY')) return '📙';
+        if (u.startsWith('RECHAT')) return '🔁';
+        if (u.startsWith('CONTEXT_HISTORY')) return '🧠';
+        if (u.startsWith('OGHMA')) return '🧾';
+        if (u.startsWith('QUEST_')) return '🧭';
+        if (u.includes('LANG_') || u.includes('CORE_LANG')) return '🌐';
+        if (u === 'HERIKA_ANIMATIONS') return '🎞️';
+        if (u.includes('DYNAMIC')) return '🔄';
+        if (u.includes('BORED')) return '💤';
+        return '⚙️';
+    }
+    
+    // Render overrides list
+    function renderOverridesList() {
+        const list = el('ovr-list');
+        if (!list) return;
+        
+        const keys = Object.keys(overridesState);
+        if (keys.length === 0) {
+            const emptyMsg = IS_PROFILE_MODE 
+                ? 'No global overrides set. Click "Add Global Setting Override" to customize settings for this profile.'
+                : 'No overrides set. Click "Add Override" to customize settings for this NPC.';
+            list.innerHTML = `<div class="${PREFIX}ovr-empty">${emptyMsg}</div>`;
+            return;
+        }
+        
+        list.innerHTML = keys.map(key => {
+            const value = overridesState[key];
+            const displayValue = typeof value === 'boolean' ? (value ? 'true' : 'false') : JSON.stringify(value);
+            return `
+                <div class="${PREFIX}ovr-item" data-key="${escapeHtml(key)}">
+                    <div class="${PREFIX}ovr-icon">${getIcon(key)}</div>
+                    <div class="${PREFIX}ovr-info">
+                        <div class="${PREFIX}ovr-key">${escapeHtml(key.toUpperCase())}</div>
+                        <div class="${PREFIX}ovr-value">${escapeHtml(displayValue)}</div>
+                    </div>
+                    <div class="${PREFIX}ovr-actions">
+                        <button type="button" class="btn-${PREFIX}ovr btn-edit-${PREFIX}ovr" data-key="${escapeHtml(key)}">Edit</button>
+                        <button type="button" class="btn-${PREFIX}ovr danger btn-remove-${PREFIX}ovr" data-key="${escapeHtml(key)}">×</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Rebind event listeners
+        list.querySelectorAll(`.btn-edit-${PREFIX}ovr`).forEach(btn => {
+            btn.addEventListener('click', function() {
+                editOverride(this.getAttribute('data-key'));
+            });
+        });
+        
+        list.querySelectorAll(`.btn-remove-${PREFIX}ovr`).forEach(btn => {
+            btn.addEventListener('click', function() {
+                removeOverride(this.getAttribute('data-key'));
+            });
+        });
+        
+        syncOverrides();
+    }
+    
+    // Sync overrides to form
+    function syncOverrides() {
+        if (IS_NPC_MODE) {
+            syncToTextarea();
+        } else if (IS_PROFILE_MODE) {
+            syncToMetadata();
+        }
+    }
+    
+    // Sync to textarea (NPC mode)
+    function syncToTextarea() {
+        const textarea = document.querySelector(`textarea[name="${FIELD_NAME}"]`);
+        if (!textarea) return;
+        
+        const merged = {...overridesState, ...SYSTEM_FIELDS};
+        textarea.value = JSON.stringify(merged);
+        
+        if (rawJsonEditor && typeof rawJsonEditor.set === 'function') {
+            try {
+                rawJsonEditor.set({json: merged});
+            } catch (e) {
+                console.error('Failed to update raw JSON editor:', e);
+            }
+        }
+    }
+    
+    // Sync to metadata via hidden inputs (Profile mode)
+    function syncToMetadata() {
+        const container = document.querySelector(`.${PREFIX}ovr-container`);
+        if (!container) return;
+        
+        container.querySelectorAll('input[name^="meta_vis["]').forEach(el => el.remove());
+        
+        const allKeys = Object.keys(SCHEMA);
+        for (const key of allKeys) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = `meta_vis[${key}]`;
+            input.value = overridesState.hasOwnProperty(key) ? String(overridesState[key]) : '';
+            container.appendChild(input);
+        }
+    }
+    
+    // Open add modal
+    function openAddModal() {
+        editingKey = null;
+        selectedSetting = null;
+        el('ovr-modal-title').textContent = IS_PROFILE_MODE ? 'Add Global Setting Override' : 'Add Override';
+        el('ovr-select-stage').style.display = 'block';
+        el('ovr-value-stage').style.display = 'none';
+        el('ovr-modal-save').style.display = 'none';
+        el('ovr-modal-back').style.display = 'none';
+        
+        if (IS_NPC_MODE) {
+            const searchInput = el('ovr-search');
+            if (searchInput) searchInput.value = '';
+        }
+        
+        renderSettingsList();
+        el('ovr-modal').style.display = 'flex';
+    }
+    
+    // Edit existing override
+    function editOverride(key) {
+        editingKey = key;
+        selectedSetting = key;
+        el('ovr-modal-title').textContent = IS_PROFILE_MODE ? 'Edit Global Setting Override' : 'Edit Override';
+        el('ovr-select-stage').style.display = 'none';
+        el('ovr-value-stage').style.display = 'block';
+        el('ovr-modal-save').style.display = 'block';
+        el('ovr-modal-back').style.display = 'none';
+        renderValueForm(key, overridesState[key]);
+        el('ovr-modal').style.display = 'flex';
+    }
+    
+    // Remove override
+    function removeOverride(key) {
+        if (!confirm(`Remove override for "${key.toUpperCase()}"?`)) return;
+        delete overridesState[key];
+        renderOverridesList();
+    }
+    
+    // Render settings list
+    function renderSettingsList(filter = '') {
+        const list = el('ovr-settings-list');
+        if (!list) return;
+        
+        const filterLower = filter.toLowerCase();
+        
+        // Group by category if NPC mode
+        if (IS_NPC_MODE) {
+            const categories = {};
+            for (const [key, schema] of Object.entries(SCHEMA)) {
+                const category = schema.category || 'Other';
+                if (!categories[category]) categories[category] = [];
+                categories[category].push(key);
+            }
+            
+            let hasResults = false;
+            let html = '';
+            
+            for (const [category, keys] of Object.entries(categories)) {
+                const filteredKeys = keys.filter(key => {
+                    if (!filter) return true;
+                    const label = key.toUpperCase();
+                    const desc = (SCHEMA[key].description || '').toLowerCase();
+                    return label.includes(filterLower.toUpperCase()) || desc.includes(filterLower) || key.toLowerCase().includes(filterLower);
+                });
+                
+                if (filteredKeys.length === 0) continue;
+                
+                hasResults = true;
+                html += `<div style="margin-top:${html?'16px':'0'}; margin-bottom:8px; color:rgb(242, 124, 17); font-weight:700; font-size:14px;">${category}</div>`;
+                
+                filteredKeys.forEach(key => {
+                    const schema = SCHEMA[key];
+                    const desc = (schema.description || '').substring(0, 120);
+                    html += `
+                        <div class="${PREFIX}ovr-setting-option" data-key="${escapeHtml(key)}">
+                            <div class="${PREFIX}ovr-setting-name">${getIcon(key)} ${escapeHtml(key.toUpperCase())}</div>
+                            <div class="${PREFIX}ovr-setting-desc">${escapeHtml(desc)}${desc.length >= 120 ? '...' : ''}</div>
+                        </div>
+                    `;
+                });
+            }
+            
+            if (!hasResults) {
+                list.innerHTML = `<div class="${PREFIX}ovr-empty">No settings found${filter ? ' matching "' + escapeHtml(filter) + '"' : ''}</div>`;
+                return;
+            }
+            
+            list.innerHTML = html;
+        } else {
+            // Profile mode - simple list
+            let html = '';
+            for (const [key, schema] of Object.entries(SCHEMA)) {
+                const desc = (schema.description || '').substring(0, 120);
+                html += `
+                    <div class="${PREFIX}ovr-setting-option" data-key="${escapeHtml(key)}">
+                        <div class="${PREFIX}ovr-setting-name">${getIcon(key)} ${escapeHtml(key.toUpperCase())}</div>
+                        <div class="${PREFIX}ovr-setting-desc">${escapeHtml(desc)}${desc.length >= 120 ? '...' : ''}</div>
+                    </div>
+                `;
+            }
+            list.innerHTML = html;
+        }
+        
+        // Bind click events
+        list.querySelectorAll(`.${PREFIX}ovr-setting-option`).forEach(opt => {
+            opt.addEventListener('click', function() {
+                selectSetting(this.getAttribute('data-key'));
+            });
+        });
+    }
+    
+    // Select a setting
+    function selectSetting(key) {
+        selectedSetting = key;
+        el('ovr-select-stage').style.display = 'none';
+        el('ovr-value-stage').style.display = 'block';
+        el('ovr-modal-save').style.display = 'block';
+        el('ovr-modal-back').style.display = 'block';
+        renderValueForm(key, overridesState[key]);
+    }
+    
+    // Render value form
+    function renderValueForm(key, currentValue) {
+        const form = el('ovr-value-form');
+        if (!form) return;
+        
+        const schema = SCHEMA[key] || {};
+        const type = schema.type || 'string';
+        const desc = (schema.description || '').replace(/<[^>]*>/g, '');
+        const values = schema.values || [];
+        
+        let inputHtml = '';
+        let validationHint = '';
+        
+        if (type === 'boolean') {
+            const checked = (currentValue === true || currentValue === 'true' || currentValue === 1) ? 'checked' : '';
+            inputHtml = `
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="${PREFIX}ovr-value-input" ${checked} style="transform: scale(1.5);">
+                    <span style="color: #e9efff;">Enabled</span>
+                </label>
+            `;
+        } else if (type === 'select' && values.length > 0) {
+            inputHtml = `
+                <select id="${PREFIX}ovr-value-input" class="${PREFIX}ovr-input" required>
+                    <option value="">-- Select --</option>
+                    ${values.map(v => `<option value="${escapeHtml(v)}" ${String(currentValue) === String(v) ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('')}
+                </select>
+            `;
+            validationHint = `<div style="color:#9fb1c9; font-size:11px; margin-top:4px;">✓ Valid options: ${values.join(', ')}</div>`;
+        } else if (type === 'integer') {
+            const val = currentValue ?? '';
+            inputHtml = `<input type="number" id="${PREFIX}ovr-value-input" class="${PREFIX}ovr-input" value="${escapeHtml(val)}" placeholder="Enter integer" step="1" required>`;
+            validationHint = `<div style="color:#9fb1c9; font-size:11px; margin-top:4px;">✓ Must be a whole number</div>`;
+        } else if (type === 'number') {
+            const val = currentValue ?? '';
+            inputHtml = `<input type="number" id="${PREFIX}ovr-value-input" class="${PREFIX}ovr-input" value="${escapeHtml(val)}" placeholder="Enter number" step="any" required>`;
+            validationHint = `<div style="color:#9fb1c9; font-size:11px; margin-top:4px;">✓ Must be a valid number</div>`;
+        } else if (type === 'longstring') {
+            inputHtml = `<textarea id="${PREFIX}ovr-value-input" class="${PREFIX}ovr-input" rows="6" placeholder="Enter value" required>${escapeHtml(currentValue ?? '')}</textarea>`;
+        } else {
+            inputHtml = `<input type="text" id="${PREFIX}ovr-value-input" class="${PREFIX}ovr-input" value="${escapeHtml(currentValue ?? '')}" placeholder="Enter value" required>`;
+        }
+        
+        form.innerHTML = `
+            <div class="${PREFIX}ovr-input-group">
+                <label class="${PREFIX}ovr-input-label">${getIcon(key)} ${escapeHtml(key.toUpperCase())}</label>
+                <div style="color:#9fb1c9; font-size:12px; margin-bottom:8px;">${escapeHtml(desc)}</div>
+                ${inputHtml}
+                ${validationHint}
+            </div>
+        `;
+    }
+    
+    // Save override
+    function saveOverride() {
+        if (!selectedSetting) return;
+        
+        const schema = SCHEMA[selectedSetting] || {};
+        const type = schema.type || 'string';
+        const input = el('ovr-value-input');
+        if (!input) return;
+        
+        let value = null;
+        let isValid = true;
+        let errorMsg = '';
+        
+        if (type === 'boolean') {
+            value = input.checked;
+        } else if (type === 'select') {
+            value = input.value;
+            if (value === '') {
+                isValid = false;
+                errorMsg = 'Please select a value';
+            }
+        } else if (type === 'integer') {
+            value = parseInt(input.value, 10);
+            if (isNaN(value)) {
+                isValid = false;
+                errorMsg = 'Please enter a valid integer';
+            }
+        } else if (type === 'number') {
+            value = parseFloat(input.value);
+            if (isNaN(value)) {
+                isValid = false;
+                errorMsg = 'Please enter a valid number';
+            }
+        } else {
+            value = input.value.trim();
+            if (value === '' && input.hasAttribute('required')) {
+                isValid = false;
+                errorMsg = 'This field is required';
+            }
+        }
+        
+        if (!isValid) {
+            alert(errorMsg);
+            return;
+        }
+        
+        overridesState[selectedSetting] = value;
+        renderOverridesList();
+        closeModal();
+    }
+    
+    // Close modal
+    function closeModal() {
+        el('ovr-modal').style.display = 'none';
+        selectedSetting = null;
+        editingKey = null;
+    }
+    
+    // Escape HTML
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = String(str ?? '');
+        return div.innerHTML;
+    }
+    
+    // Initialize
+    function init() {
+        renderOverridesList();
+        
+        // Bind events
+        const addBtn = document.getElementById(`btn-add-${PREFIX}ovr`);
+        if (addBtn) addBtn.addEventListener('click', openAddModal);
+        
+        const closeBtn = el('ovr-modal-close');
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        
+        const cancelBtn = el('ovr-modal-cancel');
+        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+        
+        const saveBtn = el('ovr-modal-save');
+        if (saveBtn) saveBtn.addEventListener('click', saveOverride);
+        
+        const backBtn = el('ovr-modal-back');
+        if (backBtn) {
+            backBtn.addEventListener('click', function() {
+                el('ovr-select-stage').style.display = 'block';
+                el('ovr-value-stage').style.display = 'none';
+                el('ovr-modal-save').style.display = 'none';
+                el('ovr-modal-back').style.display = 'none';
+                selectedSetting = null;
+            });
+        }
+        
+        if (IS_NPC_MODE) {
+            const searchInput = el('ovr-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    renderSettingsList(this.value);
+                });
+            }
+            
+            // Advanced JSON toggle
+            const jsonToggle = document.getElementById('advanced-json-toggle');
+            const jsonContent = document.getElementById('advanced-json-content');
+            if (jsonToggle && jsonContent) {
+                jsonToggle.addEventListener('click', function() {
+                    const isVisible = jsonContent.style.display === 'block';
+                    jsonContent.style.display = isVisible ? 'none' : 'block';
+                    this.textContent = isVisible ? '▼ Advanced: Raw JSON Editor (click to expand)' : '▲ Advanced: Raw JSON Editor (click to collapse)';
+                    
+                    if (!isVisible && !rawJsonEditor) {
+                        initRawJsonEditor();
+                    }
+                });
+            }
+        }
+        
+        // Close modal on backdrop click
+        const modal = el('ovr-modal');
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) closeModal();
+            });
+        }
+    }
+    
+    // Initialize raw JSON editor (NPC mode only)
+    async function initRawJsonEditor() {
+        try {
+            const { createJSONEditor } = await import('https://cdn.jsdelivr.net/npm/vanilla-jsoneditor/standalone.js');
+            const textarea = document.querySelector(`textarea[name="${FIELD_NAME}"]`);
+            const initialContent = textarea ? JSON.parse(textarea.value || '{}') : {};
+            
+            rawJsonEditor = createJSONEditor({
+                target: document.getElementById('extended_data_raw_editor'),
+                props: {
+                    content: { json: initialContent },
+                    onChange: (updatedContent) => {
+                        try {
+                            const newData = updatedContent.json || {};
+                            const newOverrides = {};
+                            for (const key in newData) {
+                                if (!RESERVED_KEYS.includes(key)) {
+                                    newOverrides[key] = newData[key];
+                                }
+                            }
+                            overridesState = newOverrides;
+                            renderOverridesList();
+                        } catch (e) {
+                            console.error('JSON editor update error:', e);
+                        }
+                    }
+                }
+            });
+        } catch (e) {
+            console.error('Failed to initialize raw JSON editor:', e);
+        }
+    }
+    
+    // Export sync functions
+    if (IS_NPC_MODE) {
+        window.syncExtendedDataOverrides = syncToTextarea;
+    } else if (IS_PROFILE_MODE) {
+        window.syncProfileGlobalOverrides = syncToMetadata;
+    }
+    
+    // Initialize on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+</script>
+

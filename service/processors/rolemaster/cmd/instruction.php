@@ -1,11 +1,13 @@
 <?php 
 require_once(__DIR__ . '/../../../../lib/logger.php');
 
+require_once($GLOBALS["ENGINE_ROOT"] . "/lib/{$GLOBALS["DBDRIVER"]}.class.php");
+if (!isset($GLOBALS["db"])) { $GLOBALS["db"] = new sql(); }
 
 require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/api_badge.class.php");
 require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/llm_connector.class.php");
 require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/npc_master.class.php");
-require_once($GLOBALS["ENGINE_ROOT"]  . "lib/core/core_profiles.class.php");
+require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/core_profiles.class.php");
 
 $GLOBALS["ENGINE_PATH"]=$GLOBALS["ENGINE_ROOT"]; // Todo, make this uniform
 

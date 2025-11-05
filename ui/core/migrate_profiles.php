@@ -1,22 +1,20 @@
 <?php
 
-$enginePath = __DIR__ . DIRECTORY_SEPARATOR . "../../";
-
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php");
-if (file_exists($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php"))
-    require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
-
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
-
+$enginePath = __DIR__ . "/../../";
 $GLOBALS["ENGINE_PATH"] = $enginePath;
-$GLOBALS["db"] = new sql();
 
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "npc_master.class.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "core_profiles.class.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "llm_connector.class.php");
+require_once($enginePath . "conf/conf.sample.php");
+if (file_exists($enginePath . "conf/conf.php"))
+    require_once($enginePath . "conf/conf.php");
+
+require_once($enginePath . "lib/model_dynmodel.php");
+require_once($enginePath . "lib/{$GLOBALS["DBDRIVER"]}.class.php");
+$GLOBALS["db"] = new sql();
+require_once($enginePath . "lib/data_functions.php");
+require_once($enginePath . "lib/logger.php");
+require_once($enginePath . "lib/core/npc_master.class.php");
+require_once($enginePath . "lib/core/core_profiles.class.php");
+require_once($enginePath . "lib/core/llm_connector.class.php");
 
 // Determine web root (match core pages)
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -25,12 +23,12 @@ if ($uiPos !== false) { $webRoot = substr($scriptPath, 0, $uiPos); } else { $web
 if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
-require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
+require_once(__DIR__."/../profile_loader.php");
 
 $TITLE = "CHIM - Migrate Legacy Profiles";
 ob_start();
-include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
-include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
+include(__DIR__."/../tmpl/head.html");
+include(__DIR__."/../tmpl/navbar.php");
 ?>
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">

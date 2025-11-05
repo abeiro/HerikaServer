@@ -194,7 +194,14 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
 
                 
                 if (isset($currentNpcData["core"]) && !empty($currentNpcData["core"])) {
-                    $actorDetailedListWithProfile[]=trim("{$currentNpcData["core"]} {$currentNpcData["gender"]} {$currentNpcData["race"]}");
+                    // NPC name should always be at core section.
+                    $npcName = $currentNpcData["npc_name"];
+                    $profileString = trim("{$currentNpcData["core"]} {$currentNpcData["gender"]} {$currentNpcData["race"]}");
+                    if (stripos($profileString, $npcName) !== 0) {
+                        $profileString = "{$npcName} {$profileString}";
+                    }
+                    $actorDetailedListWithProfile[] = $profileString;
+
                 }
                 else
                     $actorDetailedListWithProfile[]="$ittext";
@@ -237,7 +244,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     $followers[]="{$GLOBALS["PLAYER_NAME"]}";
     $followersV2[]=$GLOBALS["PLAYER_NAME"];
 
-    $lastDialog[] = array('role' => 'user', 'content' => "# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange");
+    $lastDialog[] = array('role' => 'user', 'content' => "<nearby_actors>\n# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange\n</nearby_actors>");
     
     /*
     if (!isset($GLOBALS["IS_NPC"]) || !$GLOBALS["IS_NPC"])
@@ -262,15 +269,16 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     }
 
 	if ($followersString!=$GLOBALS["PLAYER_NAME"] && !empty($followersString)) {
-	    $lastDialog[] = array('role' => 'user', 'content' => "# ADVENTURING PARTY
+	    $lastDialog[] = array('role' => 'user', 'content' => "<adventuring_party>
+        # ADVENTURING PARTY
 	     $followersString are together as an **adventuring party**, acting as close companions.
 	     - The others **can know each other**, but they are **not part** of {$followersString}’s group.
 	     - Generally speaking, any mention of **plans, missions, or objectives** refers **only to the adventuring party**, never to the other NPCs.
-	     ");
+	     </adventuring_party>");
 	}
     $arr_poi = DataPosibleLocationsToGo();
     if (isset($arr_poi) && is_array($arr_poi) && (count($arr_poi) > 0)) {
-        $lastDialog[] = array('role' => 'user', 'content' => "# POIs - Points of Interest nearby \n## ". (implode("\n## ",$arr_poi)));
+        $lastDialog[] = array('role' => 'user', 'content' => "<points_of_interest>\n# POIs - Points of Interest nearby \n## ". (implode("\n## ",$arr_poi))."\n</points_of_interest>");
     }
     
     
@@ -283,7 +291,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         $notes=[];
         foreach ($rolemasterNotes as $note)
             $notes[]= $note["data"];
-        $lastDialog[] = array('role' => 'user', 'content' => "# SCENE NOTES \n## ".implode(".",$notes));
+        $lastDialog[] = array('role' => 'user', 'content' => "<scene_notes>\n# SCENE NOTES \n## ".implode(".",$notes)."</scene_notes>");
     }
         
 
@@ -339,7 +347,7 @@ function DataPosibleLocationsToGo()
 
     //print_r($matches);
     // ? this part with 'Herika can see this beings in range:' seems outdated 
-    $results = $db->fetchAll("select  a.data  as data  FROM  eventlog a 
+    /* $results = $db->fetchAll("select  a.data  as data  FROM  eventlog a 
     WHERE type in ('infonpc')  order by gamets desc,ts desc LIMIT 50 OFFSET 0");
     $lastData = "";
     $matches = [];
@@ -366,7 +374,7 @@ function DataPosibleLocationsToGo()
             $retData[$k]=trim($retData[$k]);
         }
         
-    }
+    }     */
     //return ["Goldenglow Estate","Faldar's Tooth","Goldenglow Estate Sewer","Pit Wolf(dead)","Pit Wolf(dead)","Herika"];
     //error_log("DataPosibleLocationsToGo: ".print_r($retData,true));
     return array_values($retData);
@@ -620,7 +628,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         $lastNelements = -1;
     }
 
-    $nRecordsLimit = 16 + (2 * abs($lastNelements)); // reduce the default 1000 recs loaded from db to a number proportional to context_history 
+    $nRecordsLimit = 32 + (2 * abs($lastNelements)); // reduce the default 1000 recs loaded from db to a number proportional to context_history 
 
     if (isset($GLOBALS["gameRequest"][2])) { 
         $currentGameTs=intval($GLOBALS["gameRequest"][2]);
@@ -637,11 +645,14 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     $lastDialogFull = array();
     $actorEscaped=$db->escape($actor);
     $playerEscaped=$db->escape($GLOBALS["PLAYER_NAME"]);
+    
+    if (empty($actorEscaped))
+        $actorEscaped="%";
 
     $query="select  
     case 
       when type='infoaction' and a.data like '#%MEMORY%' then 'MEMORY'
-      when type like 'info%' or type like 'death%' or  type like 'funcret%' or type like 'location%'  then 'CONTEXTI'
+      when type like 'info%' or type like 'funcret%' or type like 'location%' then 'CONTEXTI'
       when a.data like '%background chat%' then 'BACKDIAG'
       when type='book' then 'BOOKEVT' 
       when type='quest' then 'QUEST' 
@@ -667,11 +678,18 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
     and type<>'request' and type<>'playerinfo' and type<>'im_alive'
     ".(($actorEscaped)?" 
-    and (people like '|%$actorEscaped%|' or people like '$actorEscaped' or type='info_timeforward') ":"")." 
+    and (
+     people like '%|$actorEscaped|%' 
+     or people like '$actorEscaped' 
+     or people like '%|$actorEscaped (busy)|%'
+     OR people LIKE '%|$actorEscaped (hostile)|%' 
+     or type='info_timeforward' )
+    ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
-    ((false)?"and gamets>".($currentGameTs-(60*60*60*60)):"").
-    " order by gamets desc,ts desc,rowid desc LIMIT $nRecordsLimit OFFSET 0";  
+    ((false)?" and gamets>".($currentGameTs-(60*60*60*60)):"").
+    " order by gamets desc, ts desc, rowid desc LIMIT $nRecordsLimit OFFSET 0";  
     
+    // OR people LIKE '%|$actorEscaped (far away)|%') this can be confusing in whisper mode
     $results = $db->fetchAll($query);
 
     //error_log($query);
@@ -698,7 +716,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     $lastGameTs=0;
     $memoryLogToRemove=[];
 
-    $focusOnChat=$GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"];
+    $focusOnChat=($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"] ?? false);
 
 
     foreach ($orderedData as $n=>$row) {
@@ -715,8 +733,10 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         // Figure out location form location field, and only add to context if changed    
         $printLocation=false;
         $string = $row["location"];
-        preg_match('/Context\s*(?:new\s*)?location:\s*([^,]+?)(?:,|$)/u', $string, $locationMatch);
-        preg_match('/Hold:\s*([^,\)]+?)(?:,|\)|$)/u', $string, $holdMatch);
+        if (!empty($string)) {
+            preg_match('/Context\s*(?:new\s*)?location:\s*([^,]+?)(?:,|$)/u', $string, $locationMatch);
+            preg_match('/Hold:\s*([^,\)]+?)(?:,|\)|$)/u', $string, $holdMatch);
+        }
         
         if (!isset($holdMatch[1])) {
             //error_log(print_r($string,true));
@@ -761,8 +781,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         } else if ((strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}:") !== false) && (strpos($rowData, "The Narrator:") === false)) {
             $speaker = "assistant";
             
-        } 
-         else if ((strpos($rowData, "{$GLOBALS["PLAYER_NAME"]}:") === 0)) {
+        } else if ((strpos($rowData, "{$GLOBALS["PLAYER_NAME"]}:") === 0)) {
             $speaker = "player";
             
         } else if ((strpos($rowData, "The Narrator:") === 0) && $row["type"]=="chat") {
@@ -793,7 +812,8 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
                 if (strpos($rowData," activates ")!==false) 
                     continue;
             }
-                
+            
+         
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="QUEST") {
@@ -852,13 +872,54 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             
         }
 
-        if (($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"])&&(true)) {
-            
+        // Compact info_timeforward events
+        if ($row["type"] == "info_timeforward") {
+            if (isset($previousRow) && $previousRow["type"] == "info_timeforward") {
+                // Extract hours passed from the current row and the current date/time portion
+                preg_match('/([\d.]+)\s*hours have passed\.?/i', $row["data"], $currentMatch);
+                $currentHours = isset($currentMatch[1]) ? (float)$currentMatch[1] : 0;
+                preg_match('/(Current date\/time: .+)$/i', $row["data"], $currentDateMatch);
+                $currentDateTime = isset($currentDateMatch[1]) ? trim($currentDateMatch[1]) : '';
+
+                // Extract hours passed from the previous row (if present)
+                preg_match('/([\d.]+)\s*hours have passed\.?/i', $previousRow["content"], $previousMatch);
+                $previousHours = isset($previousMatch[1]) ? (float)$previousMatch[1] : 0;
+
+                // Sum the hours
+                $totalHours = $currentHours + $previousHours;
+
+                // error_log("[TIMEFORWARD] $totalHours = $currentHours + $previousHours ");
+
+                // Build a normalized single-line content: "<hours> hours have passed. Current date/time: ..."
+                if ($currentDateTime !== '') {
+                    $previousRow["content"] = "{$totalHours} hours have passed. {$currentDateTime}";
+                } else {
+                    // Fallback: use the trimmed current row data if date/time portion wasn't found
+                    $previousRow["content"] = "{$totalHours} hours have passed. " . trim($row["data"]);
+                }
+
+                continue; // Skip adding this row to the context
+            } else {
+                $row["role"]="narratorci";
+                $row["content"]=trim($rowData);
+                $row["gamets"]=$lastGameTs;// gamets will be previous record gamets
+
+                $previousRow=$row;
+                continue; // Skip adding this row to the context
+            }
+        } else if (isset($previousRow) && $previousRow["type"] == "info_timeforward") {
+            $lastDialogFull[]=$previousRow;
+            unset($previousRow);
+        }
+
+        //if (($GLOBALS["FEATURES"]["MISC"]["ADD_TIME_MARKS"])&&(true) && $row["type"] != "info_timeforward") {
+        if ($row["type"] != "info_timeforward") {
+    
             
             if ($lastGameTs==0)
                 $lastGameTs=$row["gamets"];
             else {
-                $timeGapInHours=round(($row["gamets"]-$lastGameTs)* 0.0000024, 0);
+                $timeGapInHours=round(($row["gamets"]-$lastGameTs) * 0.0000024, 0);
                 
                 if ($timeGapInHours>36) {
                     $timeGapInDays=round($timeGapInHours/24,1);
@@ -867,12 +928,15 @@ A MAJOR TIME JUMP HAS OCCURRED.
 Elapsed time since last interaction: ~$timeGapInDays days
 New setting: $currentLocation
 !!! END CONTEXT !!! ");
+                } else if ($timeGapInHours>5) {
+                    $timeGapInDays=round($timeGapInHours/24,1);
+                    $lastDialogFull[] = array('role' => "narratorci", 'content' => "(minor timelapse of about $timeGapInHours hours)");
                 }
                 $lastGameTs=$row["gamets"];
             }
 
             if ($printLocation ) {
-                $hoursAgo=round(($currentGameTs-$row["gamets"])* 0.0000024, 0);
+                $hoursAgo=round(($currentGameTs-$row["gamets"]) * 0.0000024, 0);
                 if (!isset($timeStampBuffer[$hoursAgo])) {
                     if ($currentLocation) {
                         if (DataLastKnownLocationHuman(false,true)==$currentLocation)   // Enforce current location.
@@ -889,7 +953,9 @@ New setting: $currentLocation
         }
 
         $lastSpeaker = $speaker;
-        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => trim($rowData),'subtype'=>$row["subtype"]?:strtoupper($lastSpeaker));
+        $row= array('role' => $lastSpeaker, 'content' => trim($rowData),'subtype'=>$row["subtype"]?:strtoupper($lastSpeaker),'type'=>$row["type"]);
+        $lastDialogFull[] = $row;
+        $previousRow=$row;
 
     }
 
@@ -915,7 +981,7 @@ New setting: $currentLocation
 
     error_log("[buildHistoricContext] $localFlag memories removed");
     $lastDialogFull=array_reverse($lastDialogFullOnlyLastMemory);
-    // En of memory logs cleaning
+    // End of memory logs cleaning
 
     file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_.txt",print_r($query,true),FILE_APPEND);
     
@@ -950,12 +1016,17 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
                     $compactedBuffer .=" ";
                     if ($m>0) {
                         //$regexpNpcName = strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-', "["=>"\[", "]"=>"\]"]);
-                        preg_match('/^.*?:\s*(.*?)\s*\(.*?\)$/', $singleline, $matches);
+                        // Capture spoken text after a leading "Name:" (supports names with brackets and dashes)
+                        // and optionally strip a trailing parenthetical note like "(talking to X)".
+                        preg_match('/^\s*[^:]+:\s*(.*?)\s*(?:\([^)]*\))?\s*$/s', $singleline, $matches);
                         $extracted=$matches[1] ?? $singleline;
                         $compactedBuffer .= trim(removeTalkingToOccurrences($extracted));
+                        $compactedBuffer=str_replace("{$GLOBALS["HERIKA_NAME"]};","",$compactedBuffer);
 
-                    } else 
+                    } else {
                         $compactedBuffer .= trim(removeTalkingToOccurrences($singleline));
+                        $compactedBuffer=str_replace("{$GLOBALS["HERIKA_NAME"]}:","",$compactedBuffer);
+                    }
 
 
                 }
@@ -978,12 +1049,17 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
             $compactedBuffer .=" ";
             if ($m>0) {
                 //$regexpNpcName = strtr($GLOBALS["HERIKA_NAME"],["-"=>'\-', "["=>"\[", "]"=>"\]"]);
-                preg_match('/^.*?:\s*(.*?)\s*\(.*?\)$/', $singleline, $matches);
+                // Same robust extraction for subsequent lines in the buffer
+                preg_match('/^\s*[^:]+:\s*(.*?)\s*(?:\([^)]*\))?\s*$/s', $singleline, $matches);
                 $extracted=$matches[1] ?? $singleline;
                 $compactedBuffer .= trim(removeTalkingToOccurrences($extracted));
+                $compactedBuffer=str_replace("{$GLOBALS["HERIKA_NAME"]};","",$compactedBuffer);
 
-            } else 
+            } else {
                 $compactedBuffer .= trim(removeTalkingToOccurrences($singleline));
+                $compactedBuffer=str_replace("{$GLOBALS["HERIKA_NAME"]};","",$compactedBuffer);
+            }
+
 
 
         }
@@ -1018,7 +1094,8 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
                 
                 // Clean talking to and npc name , only leave it on first line
                 $matches = [];
-                preg_match('/^.*?:\s*(.*?)\s*\(.*?\)$/', $line["content"], $matches);
+                // And for compacting other dialog lines: capture content after the speaker name
+                preg_match('/^\s*[^:]+:\s*(.*?)\s*(?:\([^)]*\))?\s*$/s', $line["content"], $matches);
                 $buffer[]=$matches[1] ?? $line["content"];
             } else {
 
@@ -1106,8 +1183,10 @@ function replaceRoles($lastDialogFull,$actor,$lastNelements) {
         } else if ($line["role"] == "backgroundchat") {
         
             $lastDialogFull[$n]["role"] = "user";
-            $lastDialogFull[$n]["content"] = " (... ".PHP_EOL.$lastDialogFull[$n]["content"]."\n...)";
-
+            if (strlen(trim($lastDialogFull[$n]["content"])) > 0) {
+                $lastDialogFull[$n]["content"] = " (... ".PHP_EOL.$lastDialogFull[$n]["content"]."\n...)";
+            }
+            
         } else if ($line["role"] == "narratorci") {
         
             $lastDialogFull[$n]["role"] = "user";
@@ -1233,7 +1312,7 @@ function DataLastDataExpandedForBak($actor, $lastNelements = -10,$sqlfilter="")
     FROM  eventlog a WHERE 1=1
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' 
-    and type<>'updateprofile' and type<>'rechat' and type<>'setconf'
+    and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and type<>'backgroundaction'
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  
     and gamets>".($currentGameTs-(60*60*60*60))."
     order by gamets desc,ts desc,rowid desc LIMIT 1000 OFFSET 0");
@@ -1413,7 +1492,9 @@ function DataSpeechJournal($topic,$limit=50)
     $lastDialogFull = [];
     $tn=$db->escape($topic);
     $results = $db->fetchAll("SElECT  speaker,speech,location,listener,topic as quest, convert_gamets2skyrim_date(gamets) AS sk_date, gamets FROM speech
-      where (speaker like '%$tn%' or  listener like '%$tn%' or location like '%$tn%' or  companions like '%$tn%' or  companions like '%$tn%') 
+      where (speaker like '%$tn%' or  listener like '%$tn%' or location like '%$tn%' or  
+      companions like '%|$tn|%' or  companions like '%$tn%' OR companions LIKE '%|$tn (busy)|%' 
+      OR companions LIKE '%|$tn (hostile)|%' ) 
       and listener<>'unknown' 
       order by rowid desc");
     if (!$results) {
@@ -1552,48 +1633,50 @@ function DataGetCurrentTask()
     }
 
     $data = "";
-    $results = $db->fetchAll("SElECT distinct description as description,gamets FROM currentmission where sess<>'ephemeral' and gamets>$hourThreshold order by gamets desc");
+    $results = $db->fetchAll("SELECT distinct description as description,gamets FROM currentmission where sess<>'ephemeral' and gamets>$hourThreshold order by gamets desc LIMIT 5 ");
     if (!empty($results)) {
-        $data = "\n\n#Current Plans\n";
+        $data = "\n\n<current_plans>\n#Current Plans\n";
         $n = 0;
         foreach ($results as $row) {
             if ($n == 0) {
-                $data .= "  • Current: {$row["description"]}\n";
+                $data .= "## Current: {$row["description"]}.\n";
             } elseif ($n == 1) {
-                $data .= "  • Previous: {$row["description"]}\n";
+                $data .= "## Previous: {$row["description"]}.\n";
             } else {
                 break;
             }
             $n++;
         }
+        $data .="</current_plans>\n";
     }
 
     // quests are an unordered list (because of how the aiagent plugin works - delete current, bulk update)
     // we would need to get clever with ignoring _questreset or expiring untouched quests, and using upserts on _quest
     // quests, and making "current" if _questdata updates after initial insert
     // for now lets just list all active quests rather than saying Current: xxx Previous: yyy
-    $results = $db->fetchAll("SElECT  distinct name,briefing as description,gamets FROM quests order by gamets desc");
+    // ! listing all quests could generate thousands tokens in prompt, let's limit
+    $results = $db->fetchAll("SElECT  distinct name, briefing as description,gamets FROM quests order by gamets desc LIMIT 8"); 
     if (!$results) {
-        Logger::info("No quests ".__FILE__);
+        Logger::info("No quests ".__FILE__." ".__LINE__." ".__FUNCTION__);
         return $data;
     }
 
     // dont think we need to limit it now since we dont require exactly two to format Current: xxx Previous: yyy
-//    if (sizeof($results)>2) {
-//        Logger::info("Too much quests ".__FILE__);
-//        return $data;
-//    }
+    //    if (sizeof($results)>2) {
+    //        Logger::info("Too much quests ".__FILE__);
+    //        return $data;
+    //    }
 
-    $data .= "\n\n#Active Quests\n";
+    $data .= "\n\n<active_quests>\n#Active Quests\n";
     foreach ($results as $row) {
         $questDesc = trim($row["description"]);
         if (!empty($questDesc)) {
-            $data .= "  • {$row["name"]}: $questDesc\n";
+            $data .= "## {$row["name"]}: $questDesc\n";
         } else {
-            $data .= "  • {$row["name"]}\n";
+            $data .= "## {$row["name"]}\n";
         }
     }
-
+    $data .="</active_quests>\n";
     return $data;
 }
 
@@ -1638,31 +1721,26 @@ function DataLastKnowDate()
 {
 
     global $db;
-
-    // try first with conversion from gamets in SQL 
-    $lastLoc=$db->fetchAll("SELECT convert_gamets2skyrim_long_date(a.gamets) AS data FROM eventlog a  WHERE (type in ('infoloc')) ORDER BY gamets desc, ts desc LIMIT 1");
-    if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
-        // no dice, try old way
-        $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE (type in ('infoloc')) and (data like '%Current Date%')  order by gamets desc, ts desc LIMIT 1"); //make sure record has datetime
-        if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
-            return "";
-        }
-        $re = '/(\w+), (\d{1,2}:\d{2} (?:AM|PM)), (\d{1,2})(?:st|nd|rd|th) of ([A-Za-z\'\ ]+), 4E (\d+)/'; //extract also for months with apostrophe like Sun's Something
-        if (preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0)) {
-            return $matches[0][0];
-        } else {
-            Logger::info("DataLastKnowDate: NO match found");
-            return "";
-        }
-    } else { // ok, db is updated with new dts functions
-        if (isset($lastLoc[0]["data"]) && (strlen($lastLoc[0]["data"])>0)) {
-            Logger::debug("DataLastKnowDate: {$lastLoc[0]["data"]} ");
-            return $lastLoc[0]["data"];
-        } else {
-            Logger::error("DataLastKnowDate: NO match found");
-        }
+    
+    // Get gamets and use PHP conversion function (skip SQL function to avoid PostgreSQL errors)
+    $lastLoc=$db->fetchAll("SELECT a.gamets FROM eventlog a WHERE (type in ('infoloc')) ORDER BY gamets desc, ts desc LIMIT 1");
+    if (is_array($lastLoc) && sizeof($lastLoc) > 0 && !empty($lastLoc[0]["gamets"])) {
+        require_once(__DIR__ . "/utils_game_timestamp.php");
+        return convert_gamets2skyrim_long_date($lastLoc[0]["gamets"]);
     }
-    return "";
+    
+    // Fall back to parsing data field
+    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE (type in ('infoloc')) and (data like '%Current Date%')  order by gamets desc, ts desc LIMIT 1"); //make sure record has datetime
+    if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        return "";
+    }
+    $re = '/(\w+), (\d{1,2}:\d{2} (?:AM|PM)), (\d{1,2})(?:st|nd|rd|th) of ([A-Za-z\'\ ]+), 4E (\d+)/'; //extract also for months with apostrophe like Sun's Something
+    if (preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0)) {
+        return $matches[0][0];
+    } else {
+        Logger::info("DataLastKnowDate: NO match found");
+        return "";
+    }
 }
 
 
@@ -1687,7 +1765,7 @@ function DataLastKnownLocationHuman($hold=false,$cached=false)
 {
 
     global $db;
-
+    
     if ($cached && isset($GLOBALS["LAST_KNOW_LOCATION_HUMAN"]))
         return $GLOBALS["LAST_KNOW_LOCATION_HUMAN"];
 
@@ -1720,24 +1798,25 @@ function PackIntoSummary($onlyMissingDiary=false)
 {
 
     global $db;
-
+    
     if ($onlyMissingDiary) {
         $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
         select gamets,1,message,message,'diary',uid,speaker
         from memory
-        where event in ('diary','auto_diary')
-        and uid not in (select uid from memory_summary where classifier in  ('diary','auto_diary'))");
+        where event in ('diary','auto_diary','backgroundlife_diary')
+        and uid not in (select uid from memory_summary where classifier in  ('diary','auto_diary','backgroundlife_diary'))");
 
         $maxRow=0;
 
         Logger::info("Missing diary insert done");
 
     } else {
-        $results = $db->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary");
+        //$results = $GLOBALS["db"]->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary"); // 2.1ms
+        $results = $GLOBALS["db"]->fetchAll("select gamets_truncated from memory_summary order by gamets_truncated desc LIMIT 1"); // 0.5ms, faster 
 
-        $maxRow=$results[0]["gamets_truncated"]+0;
+        $maxRow = intval($results[0]["gamets_truncated"]);
 
-        $pfi=($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]+0)*100000;
+        $pfi = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] ?? 10) * 100000;
 
         $results = $db->query("insert into memory_summary select * from ( 
                                     select max(gamets) as gamets_truncated,count(*) as n,
@@ -1745,12 +1824,12 @@ function PackIntoSummary($onlyMissingDiary=false)
                                     NULL as summary,'dialogue' as classifier,max(uid) as uid
                                     from memory_v
                                     where 
-                                    message not like 'Dear Diary%'
+                                    message not ilike 'Dear Diary%'
                                     group by round(gamets/$pfi ,0)  HAVING count(*)>9 order by round(gamets/$pfi ,0) ASC
                                 ) as T where gamets_truncated>$maxRow 
                                 ");
         
-        Logger::info("Main insert done");
+        Logger::info("Main insert done. maxRow={$maxRow} pfi={$pfi} ");
         //$results = $db->query("delete from memory_summary  where classifier='dialogue' and packed_message not like '%Context%Location%'");
         
         $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
@@ -1761,7 +1840,7 @@ function PackIntoSummary($onlyMissingDiary=false)
                                 ");
 
                                 
-        Logger::info("Diary insert done");
+        Logger::info("Diary insert done. maxRow={$maxRow} ");
     }
 
     
@@ -1782,33 +1861,33 @@ function DataRechatHistory()
 
 
 
- function extractDialogueTarget($string) {
-        // Check if the string contains "(talking to"
-        if ($string && strpos($string, '(talking to') !== false) {
-            // Extract the target's name using regular expression
-            preg_match('/\(talking to ([^\)]+)\)/', $string, $matches);
-            
-            // Check if a match is found and extract the target's name
-            if (isset($matches[1])) {
-                $target = $matches[1];
+function extractDialogueTarget($string) {
+    // Check if the string contains "(talking to"
+    if ($string && strpos($string, '(talking to') !== false) {
+        // Extract the target's name using regular expression
+        preg_match('/\(talking to ([^\)]+)\)/', $string, $matches);
+        
+        // Check if a match is found and extract the target's name
+        if (isset($matches[1])) {
+            $target = $matches[1];
 
-                // Remove the "(talking to ...)" part from the original string
-                $cleanedString = preg_replace('/\(talking to [^\)]+\)/', '', $string);
-                if (strpos($cleanedString,"{$GLOBALS["HERIKA_NAME"]}:")===0) {
-                    $cleanedString=str_replace("{$GLOBALS["HERIKA_NAME"]}:","",$cleanedString);
-                }
-                
-                return ['target' => $target, 'cleanedString' => trim($cleanedString)];
+            // Remove the "(talking to ...)" part from the original string
+            $cleanedString = preg_replace('/\(talking to [^\)]+\)/', '', $string);
+            if (strpos($cleanedString,"{$GLOBALS["HERIKA_NAME"]}:")===0) {
+                $cleanedString=str_replace("{$GLOBALS["HERIKA_NAME"]}:","",$cleanedString);
             }
+            
+            return ['target' => $target, 'cleanedString' => trim($cleanedString)];
         }
+    }
 
-        // Return the original string if no target is found
-        return ['target' => null, 'cleanedString' => $string];
+    // Return the original string if no target is found
+    return ['target' => null, 'cleanedString' => $string];
 }
 
 function DataGetLastReadedBook() {
     global $db;
-
+    
     
     // To push where the book was taken from.
     $results = $db->fetchAll("select data from eventlog where data is not null and type='itemfound' and data like '%book%' 
@@ -1947,30 +2026,51 @@ function DataBeingsInCloseRange($excludeFarAway=false)
 
     global $db;
 
-    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infonpc_close')  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+    $s_res = "";
+    
+    $lastLoc=$db->fetchAll("SELECT a.data as data FROM eventlog a WHERE type in ('infonpc_close') order by gamets desc,ts desc LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
         return "";
     }
     
-    $beings=strtr($lastLoc[0]["data"],["beings in range:"=>""]);
-    $beingsArray=explode("/",$beings);
-    $beingsArrayNew=[];
-    foreach ($beingsArray as $k=>$v) {
-        if ($excludeFarAway && strpos($v,"(far away)")>0)
-            continue;
-        //if (strpos($v,")")===false) 
-            if (strpos($v,"Horse")!==0) 
-                if (strpos($v,"Chicken")!==0) 
-                    $beingsArrayNew[]=$v;
-            
+    $s_npcs = trim($lastLoc[0]["data"] ?? "");
+    if (strlen($s_npcs) > 0) {
+        if (stripos($s_npcs, "beings in range") !== false) {
+            $beings=strtr($s_npcs,["beings in range:"=>""]);
+        } else 
+            $beings=$s_npcs;
+        $beingsArray=explode("/",$beings);
+        $beingsArrayNew=[];
+        foreach ($beingsArray as $k=>$v) {
+            if ($excludeFarAway && strpos($v,"(far away)")>0)
+                continue;
+            if (strpos($v,"(dead)")>0) //??
+                continue;
+            if (empty($v))
+                continue;
+            //if (strpos($v,")")===false) 
+                if (strpos($v,"Horse")!==0) 
+                    if (strpos($v,"Chicken")!==0) 
+                    if (strpos($v,"Goat")!==0) 
+                    if (strpos($v,"House Cat")!==0) 
+                    if (strpos($v,"Stray Cat")!==0) 
+                    if (strpos($v,"Cow")!==0) 
+                    if (strpos($v,"Deer")!==0) 
+                    if (strpos($v,"Elk")!==0) 
+                    if (strpos($v,"Bear")!==0) 
+                    if (strpos($v,"Rabbit")!==0) 
+                    if (strpos($v,"Troll")!==0) 
+                    if (strpos($v,"Fox")!==0) 
+                        $beingsArrayNew[]=$v;
+        }
+        $beingsFormatted=implode("|",$beingsArrayNew);
+        $s_res = "|".$beingsFormatted."|";
     }
 
-    $beingsFormatted=implode("|",$beingsArrayNew);
-    
-    return "|".$beingsFormatted."|";
+    return $s_res;
 }
 
-// Find actor name iwth closest name, useful to sanitize actions parameters
+// Find actor name with closest name, useful to sanitize actions parameters
 function FindClosestActorName($actorName)
 {
     global $db;
@@ -1987,7 +2087,8 @@ function FindClosestActorName($actorName)
     foreach ($beingsArray as $v) {
         // Remove all text within parentheses and trim whitespace
         $v = trim(preg_replace('/\s*\([^)]*\)/', '', $v));
-
+        if (empty($v))
+            continue;
         // Exclude certain entities
         if (strpos($v, "Horse") !== 0 && strpos($v, "Chicken") !== 0) {
             $beingsArrayCleaned[] = $v;
@@ -2212,7 +2313,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         FROM memory_summary A
         where native_vec @@to_tsquery('$kwStringAny')
         and not (native_vec @@to_tsquery('#Reminiscence'))
-        and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
+        and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
 
         ORDER BY rank_all DESC, rank_any DESC;
         ",true);
@@ -2455,7 +2556,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                           AS mixed_distance
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
-                    and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
+                    and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
                     ORDER BY (embedding <-> $vectorString)
                     LIMIT 5 OFFSET 0
                 ";
@@ -2471,7 +2572,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                          summary
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
-                    and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
+                    and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
                     and (gamets_truncated<$timeThreshold or $timeThreshold=0)
                     
                     ORDER BY 
@@ -2549,7 +2650,7 @@ function DataSearchOghmaByVector($rawstring,$currentOghmaTopic,$locationCtx,$con
     $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
    
-    Logger::info("DataSearchOghmaByVector Expanded keywords: <$currentOghmaTopic> <$locationCtx> <$contextKeywords>");
+    Logger::info("DataSearchOghmaByVector <$TEST_TEXT> Expanded keywords: <$currentOghmaTopic> <$locationCtx> <$contextKeywords>");
     /***/
 
     $embeddingFunction=function($text) {
@@ -2716,6 +2817,7 @@ function call_llm() {
 
 
         $buffer=$connectionHandler->fast_request($contextData,$overrideParameters,'standard');
+        $buffer = preg_replace('/\*([^*]*\s+[^*]*)\*/', '', $buffer);
 
         error_log("[STEP 1] Elapsed time: " . (microtime(true) - $startTime) . " seconds");
 
@@ -2822,8 +2924,10 @@ function call_llm() {
                 'url' => nl2br(("$receivedData in " . (microtime(true) - $startTime) . " secs "))
             )
         );
-        Translation::translate($GLOBALS["ERROR_OPENAI"]);
-        Translation::$sentences = [Translation::$response];
+        if (Translation::isEnabled()) {
+            Translation::translate($GLOBALS["ERROR_OPENAI"]);
+            Translation::$sentences = [Translation::$response];
+        }        
         returnLines([$GLOBALS["ERROR_OPENAI"]]);
         
         $ERROR_TRIGGERED=true;
@@ -2883,7 +2987,7 @@ function call_llm() {
         $position = findDotPosition($buffer);
 
         //echo "<$buffer>".PHP_EOL;
-        if ($position !== false && $position>MINIMUM_SENTENCE_SIZE ) {
+        if (($position !== false) && ($position>MINIMUM_SENTENCE_SIZE)) {
             $extractedData = substr($buffer, 0, $position + 1);
             $remainingData = substr($buffer, $position + 1);
             $sentences=split_sentences_stream(cleanResponse($extractedData));
@@ -2900,20 +3004,21 @@ function call_llm() {
             $totalProcessedData.=$extractedData;
             $extractedData="";
             $buffer=$remainingData;
-            $user_input_after=$GLOBALS["db"]->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]");
+            //$user_input_after=$GLOBALS["db"]->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]"); //9.0ms
+            $user_input_after=$GLOBALS["db"]->fetchAll("select rowid as N from eventlog where type='user_input' and ts>$gameRequest[1] LIMIT 1"); // 2.1ms, faster than count(*)
             if (isset($user_input_after[0]))
                 if (isset($user_input_after[0]["N"]))
 
                     if ($user_input_after[0]["N"]>0) {
                         
-                        Logger::info("Generation stopped because user_input. ".__LINE__);
+                        Logger::info("Generation stopped because user_input. ".__FILE__." ".__LINE__." ".__FUNCTION__);
                         die('X-CUSTOM-CLOSE');
                         // Abort , user input detected
                     }
 
         }
 
-    }
+    } // --- end while
     
     
     if (trim($buffer)) {
@@ -2922,8 +3027,12 @@ function call_llm() {
 
         if (Translation::isEnabled()) {
             Translation::translate($buffer);
-            Translation::$sentences = split_sentences_stream(cleanResponse(trim(Translation::$response)));
-            Translation::normalizeArrays($sentences, Translation::$sentences);
+            if (isset(Translation::$response)) {
+                if (strlen(trim(Translation::$response)) > 0) {
+                    Translation::$sentences = split_sentences_stream(cleanResponse(trim(Translation::$response)));
+                    Translation::normalizeArrays($sentences, Translation::$sentences);
+                }
+            }
         }
 
         $GLOBALS["DEBUG_DATA"]["response"][]=["raw"=>$buffer,"processed"=>implode("|", $sentences)];
@@ -3228,7 +3337,11 @@ function call_llm() {
 
         }
     }
-    $connectionHandler->close('standard');
+    
+    if (isset($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) && $GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) {
+        ;//Was a faked stream
+    } else 
+        $connectionHandler->close('standard');
     //fwrite($fileLog, $totalBuffer . PHP_EOL); // Write the line to the file with a line break // DEBUG CODE
 
 
@@ -3376,7 +3489,7 @@ function GetLastInteraction($s_player_name, $s_npc_name) {
 function GetFirstInteraction($s_player_name, $s_npc_name) {
     global $db;
 	$i_res = 0;
-	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0)) {
+	if ((strlen($s_player_name)>0) && (strlen($s_npc_name)>0) && ($s_player_name != $s_npc_name)) {
 		$s_player = $db->escape($s_player_name);
 		$s_npc = $db->escape($s_npc_name);
 		$db_rec = $db->fetchAll("SELECT gamets FROM speech 
@@ -3864,13 +3977,16 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
         $currentData['extended_data'] = json_encode(["chim_core_migrated" => 2]);
         $currentData['profile_id'] = 1; // Default profile
         $currentData['md5'] = md5($currentData["npc_name"]);
+        $currentData['gamets_last_updated'] = $GLOBALS["gameRequest"][2];
 
         if ($EMPTY_PROFILE) {
             error_log("[CREATEPROFILE] Created initial empty profile");
         }
 
         $npcMaster->updateByArray($currentData);
+        return 1;
     }
+    return 2;
 }
 
 function getConfFileFor($npcname) {
@@ -3974,7 +4090,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         }
         
         if (!empty($equipmentParts)) {
-            $EQUIPMENT_ADD = "\n\n#Current Equipment\nYou are currently wearing/wielding:\n" . implode("\n", $equipmentParts);
+            $EQUIPMENT_ADD = "\n<equipment>\n#Current Equipment\nYou are currently wearing/wielding:\n" . implode("\n", $equipmentParts)."\n<equipment>";
         }
     }
 
@@ -3990,7 +4106,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         }
         
         if (!empty($equipmentParts)) {
-            $INVENTORY_ADD = "\n\n#Current Inventory:\n" . implode(",", $equipmentParts);
+            $INVENTORY_ADD = "\n<inventory>\n#Current Inventory:\n" . implode(",", $equipmentParts)."\n</inventory>";
         }
     }
     
@@ -4027,7 +4143,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
 			if ($m !== 'Unknown') { $lines[] = "  • Magicka: {$m}"; }
 			if ($st !== 'Unknown') { $lines[] = "  • Stamina: {$st}"; }
 			if (!empty($lines)) {
-				$STATS_ADD = "\n\n#Current Condition\n" . implode("\n", $lines);
+				$STATS_ADD = "\n\n<current_condition>\n#Current Condition\n" . implode("\n", $lines)."\n</current_condition>\n";
 			}
 		}
 	}
@@ -4060,7 +4176,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
                 }
                 
                 if (!empty($targetEquipmentParts)) {
-                    $TARGET_EQUIPMENT_ADD = "\n\n#{$targetName}'s Equipment\n{$targetName} is currently wearing/wielding:\n" . implode("\n", $targetEquipmentParts);
+                    $TARGET_EQUIPMENT_ADD = "\n<target_equipment>\n#{$targetName}'s Equipment\n{$targetName} is currently wearing/wielding:\n" . implode("\n", $targetEquipmentParts)."\n</target_equipment>\n";
                 }
             }
         }
@@ -4068,11 +4184,12 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
 
     foreach ($herikaFields as $fieldName => $label) {
         if (isset($FOLLOWER_CONF[$fieldName]) && !empty(trim($FOLLOWER_CONF[$fieldName]))) {
-            $dynamicBio .= "\n\n#$label\n" . trim($FOLLOWER_CONF[$fieldName]);
+            $xmlLabel=strtr(strtolower($label),[" "=>"_"]);
+            $dynamicBio .= "\n<$xmlLabel>\n" . trim($FOLLOWER_CONF[$fieldName])."\n</$xmlLabel>";
             
             // Add skills right after HERIKA_SKILLS section
             if ($fieldName=="HERIKA_SKILLS") {
-                $dynamicBio.=$SKILLS_ADD ?? "";
+                $dynamicBio.=!empty($SKILLS_ADD) ?"\n<rpg_skills>\n$SKILLS_ADD\n</rpg_skills>\n": "";
             }
             
             // Add equipment right after HERIKA_APPEARANCE section
@@ -4092,6 +4209,38 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         $dynamicBio = $FOLLOWER_CONF["HERIKA_DYNAMIC"];
     }
     
+    if (isset($GLOBALS["HOOKS"]["BIOGRAPHY_BUILDER"])) {
+        foreach ($GLOBALS["HOOKS"]["BIOGRAPHY_BUILDER"] as $fName => $builder) {
+            error_log("[buildDynamicBiography] BIOGRAPHY_BUILDER {$fName}");
+
+            if (!is_callable($builder)) {
+                error_log("[buildDynamicBiography] Builder {$fName} is not callable, skipping.");
+                continue;
+            }
+
+            // Call the builder. Support both styles:
+            //  - builder returns a new bio string
+            //  - builder modifies the first argument by-reference
+            // We call with call_user_func_array and pass $dynamicBio by-reference so
+            // builders that accept a reference can mutate it directly. If the builder
+            // returns a non-empty string, prefer that return value as the new bio.
+            $result = null;
+            try {
+                $result = call_user_func_array($builder, array(&$dynamicBio, $currentNpcData));
+            } catch (Throwable $e) {
+                // Protect against hook errors — log and continue with current bio
+                error_log("[buildDynamicBiography] Exception in builder {$fName}: " . $e->getMessage());
+                continue;
+            }
+
+            if (is_string($result) && strlen(trim($result)) > 0) {
+                // Builder returned a non-empty string -> use it
+                $dynamicBio = $result;
+            }
+            // otherwise assume builder mutated $dynamicBio by reference (or left it unchanged)
+        }
+    }
+
     return $dynamicBio;
 }
 
@@ -4561,4 +4710,5 @@ function getBaseDataForNpcFromLog($npcname) {
 
     return $currentNpcData;
 }
+
 ?>

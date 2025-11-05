@@ -15,17 +15,35 @@ function stt($filePath)
         $GLOBALS["db"] = new sql();
 
     $fileContent = file_get_contents($filePath);
+    if ($fileContent === false) {
+        error_log("STT Deepgram: warning - input file missing or unreadable! {$filePath}");
+        return null;
+    }
+    
+    $i_sz = filesize($filePath);
+    if ($i_sz == 144046) {
+        error_log("STT Deepgram: warning input file {$filePath} probably contains silence. "); //debug
+        //return null;
+    }
+    
     $stt_model = $GLOBALS["STT"]["DEEPGRAM"]["MODEL"] ?? "none";
     $stt_lang = $GLOBALS["STT"]["DEEPGRAM"]["LANG"] ?? "en";
 
     if (!(strpos($stt_model, "nova-3") === false)) { // nova-3 need keyterm not keywords
         $keywords = lastKeyWordsNew(30);
+        $url = "";
         foreach ($keywords as $keyword)
             $url .= "&keyterm=" . urlencode($keyword) . "%3A1";
-        if (stripos(" multi, en, en-US, de, nl, sv, sv-SE, da, da-DK ", $stt_lang) === false) {
+        if (stripos("|multi|en|en-US|de|nl|sv|sv-SE|da|da-DK|es|es-419|fr|fr-CA|pt|pt-BR|pt-PT|it|tr|no|id", $stt_lang) === false) { //es, es-419, fr, fr-CA, pt, pt-BR, pt-PT, it, tr, no, id
             $stt_lang = 'en';
         }
-    } else if (strpos($stt_model, "whisper") === false) {   //WHISPER MODELS DONT SUPPORT KEYWORDS
+    } elseif (!(strpos($stt_model, "flux-general") === false)) {// flux-general-en !!! TODO: update web-ui with this new option
+        $keywords = lastKeyWordsNew(30);
+        $url = "";
+        $stt_lang = 'en'; // flux is only EN at this moment
+        foreach ($keywords as $keyword)
+            $url .= "&keyterm=" . urlencode($keyword) . "%3A1";
+    } elseif (stripos($stt_model, "whisper") === false) {   //WHISPER MODELS DONT SUPPORT KEYWORDS
         $keywords = lastKeyWordsNew(30);
         foreach ($keywords as $keyword)
             $url .= "&keywords=" . urlencode($keyword) . "%3A1";
@@ -66,6 +84,6 @@ function stt($filePath)
     }
 
     $responseParsed = json_decode($response, true);
-    error_log("STT Deepgram: " . $response);
+    error_log("STT Deepgram: " . $response); // debug
     return $responseParsed['results']['channels'][0]['alternatives'][0]['transcript'];
 }

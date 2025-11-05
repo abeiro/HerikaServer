@@ -5,6 +5,7 @@ $enginePath = __DIR__.DIRECTORY_SEPARATOR."../../";
 require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+if (!isset($GLOBALS["db"])) { $GLOBALS["db"] = new sql(); }
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
@@ -192,6 +193,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
             if (is_array($v)) {
                 $v = array_values(array_filter($v, function($x){ return $x !== '' && $x !== null && strtolower((string)$x) !== 'keepmechecked'; }));
             }
+            // Skip scalar values that are empty (indicates deletion)
+            if (!is_array($v) && ($v === '' || $v === null)) {
+                continue;
+            }
             $base[$k] = $v;
         }
         $_POST['metadata'] = json_encode($base, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
@@ -223,6 +228,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
         foreach ((array)$_POST['meta_vis'] as $k=>$v) {
             if (is_array($v)) {
                 $v = array_values(array_filter($v, function($x){ return $x !== '' && $x !== null && strtolower((string)$x) !== 'keepmechecked'; }));
+            }
+            // Skip scalar values that are empty (indicates deletion)
+            if (!is_array($v) && ($v === '' || $v === null)) {
+                continue;
             }
             $base[$k] = $v;
         }
@@ -634,7 +643,7 @@ $ittById = $byId($ittRows);
         <small class="hint">Optional quick-access slot (1–4). Can be quickchanged ingame.</small>
 
         <div style="height:8px;"></div>
-        <label class="label-with-toggle">Default NPC
+        <label class="label-with-toggle">👤Default NPC
             <input type="hidden" name="default_npc" value="0">
             <input type="checkbox" name="default_npc" value="1" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 1 ? "checked" : "" ?>>
             <span class="toggle-text">On</span>
@@ -642,7 +651,7 @@ $ittById = $byId($ittRows);
         <small class="hint">When enabled, new NPCs will default to using this profile. Only 1 profile can be default.</small>
 
         <div style="height:6px;"></div>
-        <label class="label-with-toggle">Default Narrator
+        <label class="label-with-toggle">🗣️Default Narrator
             <input type="hidden" name="default_narrator" value="0">
             <input type="checkbox" name="default_narrator" value="1" <?= isset($editItem["default_narrator"]) && $editItem["default_narrator"] == 1 ? "checked" : "" ?>>
             <span class="toggle-text">On</span>
@@ -650,9 +659,85 @@ $ittById = $byId($ittRows);
         <small class="hint">When enabled, this profile is used for the narrator. Only 1 profile can be default narrator.</small>
 
         <div style="height:8px;"></div>
+        <?php
+            $dynamicProfileEnabled = false;
+            try {
+                if (!empty($editItem["metadata"])) {
+                    $metaData = json_decode($editItem["metadata"], true);
+                    if (is_array($metaData)) {
+                        $dynamicProfileEnabled = !empty($metaData['DYNAMIC_PROFILE_ENABLED']);
+                    }
+                }
+            } catch (Throwable $e) {}
+        ?>
+        <label class="label-with-toggle">♻️ Dynamic Profile
+            <input type="hidden" name="meta_vis[DYNAMIC_PROFILE_ENABLED]" value="">
+            <input type="checkbox" name="meta_vis[DYNAMIC_PROFILE_ENABLED]" value="1" <?= $dynamicProfileEnabled ? "checked" : "" ?>>
+            <span class="toggle-text">Off</span>
+        </label>
+        <small class="hint">Allow systems to evolve NPC profiles based on gameplay events. NPCs using this profile will have dynamic profile enabled by default.</small>
+
+        <div style="height:6px;"></div>
+        <?php
+            $mtmEnabled = false;
+            try {
+                if (!empty($editItem["metadata"])) {
+                    $metaData = json_decode($editItem["metadata"], true);
+                    if (is_array($metaData)) {
+                        $mtmEnabled = !empty($metaData['MIDDLE_TERM_MEMORY_ENABLED']);
+                    }
+                }
+            } catch (Throwable $e) {}
+        ?>
+        <label class="label-with-toggle">📃 Middle Term Memory
+            <input type="hidden" name="meta_vis[MIDDLE_TERM_MEMORY_ENABLED]" value="">
+            <input type="checkbox" name="meta_vis[MIDDLE_TERM_MEMORY_ENABLED]" value="1" <?= $mtmEnabled ? "checked" : "" ?>>
+            <span class="toggle-text">Off</span>
+        </label>
+        <small class="hint">Saves a list of recent events after every 10 memory summaries. NPCs using this profile will have MTM enabled by default.</small>
+
+        <div style="height:6px;"></div>
+        <?php
+            $autoDiaryEnabled = false;
+            try {
+                if (!empty($editItem["metadata"])) {
+                    $metaData = json_decode($editItem["metadata"], true);
+                    if (is_array($metaData)) {
+                        $autoDiaryEnabled = !empty($metaData['AUTO_DIARY_ENABLED']);
+                    }
+                }
+            } catch (Throwable $e) {}
+        ?>
+        <label class="label-with-toggle">📙 Auto Diary
+            <input type="hidden" name="meta_vis[AUTO_DIARY_ENABLED]" value="">
+            <input type="checkbox" name="meta_vis[AUTO_DIARY_ENABLED]" value="1" <?= $autoDiaryEnabled ? "checked" : "" ?>>
+            <span class="toggle-text">Off</span>
+        </label>
+        <small class="hint">Automatically generate diary entries when NPCs are nearby during sleep/wait events. NPCs using this profile will have auto diary enabled by default.</small>
+
+        <div style="height:8px;"></div>
         <label for="prompt">Profile Prompt</label>
         <textarea name="prompt" placeholder="<?= htmlspecialchars('') ?>"><?= htmlspecialchars($editItem["prompt"] ?? "") ?></textarea>
         <small class="hint">Optional: profile-specific system instructions appended to requests. Example is using this to hold specific instructions for followers and assigning the profile only to followers.</small>
+
+        <div style="height:8px;"></div>
+        <?php
+            $randomizerEnabled = false;
+            try {
+                if (!empty($editItem["metadata"])) {
+                    $metaData = json_decode($editItem["metadata"], true);
+                    if (is_array($metaData)) {
+                        $randomizerEnabled = !empty($metaData['LLM_RANDOMIZER_ENABLED']);
+                    }
+                }
+            } catch (Throwable $e) {}
+        ?>
+        <label class="label-with-toggle">LLM Randomizer
+            <input type="hidden" name="meta_vis[LLM_RANDOMIZER_ENABLED]" value="">
+            <input type="checkbox" name="meta_vis[LLM_RANDOMIZER_ENABLED]" value="1" <?= $randomizerEnabled ? "checked" : "" ?>>
+            <span class="toggle-text">Off</span>
+        </label>
+        <small class="hint">Randomly switches between the 4 LLM connectors for NPCs using this profile. Will roughly switch ever 2-3 responses per NPC. Is useful to add more variety to NPC responses and make them more dynamic.</small>
 
         <div style="margin-top:8px; display:flex; gap:8px;">
             <button type="button" id="btn_save_profile_settings" class="btn-save">Save Profile Settings</button>
@@ -661,7 +746,7 @@ $ittById = $byId($ittRows);
 
     <script>
     document.addEventListener('DOMContentLoaded', function(){
-        const names = ['default_npc','default_narrator'];
+        const names = ['default_npc','default_narrator','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
@@ -883,9 +968,32 @@ $ittById = $byId($ittRows);
                     <?php endforeach; ?>
                 </div>
                 <?php if (!empty($__rpgHelp)): ?><div class="help" style="grid-column:1/-1;"><?= htmlspecialchars($__rpgHelp) ?></div><?php endif; ?>
+                <?php
+                    // Get current RPG_Comments_Chance value from metadata
+                    $rpgChance = 100; // Default to 100%
+                    try {
+                        if (!empty($editItem["metadata"])) {
+                            $tmpMeta = json_decode($editItem["metadata"], true);
+                            if (is_array($tmpMeta) && isset($tmpMeta['RPG_COMMENTS_CHANCE'])) {
+                                $rpgChance = intval($tmpMeta['RPG_COMMENTS_CHANCE']);
+                            }
+                        }
+                    } catch (Throwable $_e) { $rpgChance = 100; }
+                ?>
+                <div style="grid-column: 1 / -1; margin-top: 12px; padding-top: 12px; border-top: 1px solid #33485f;">
+                    <div style="color: #e9efff;">
+                        <div style="font-weight: 600; margin-bottom: 6px;">🔁 Trigger Chance</div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="range" id="rpg_chance_range" min="0" max="100" step="1" value="<?= htmlspecialchars($rpgChance) ?>" oninput="document.getElementById('rpg_chance_num').value=this.value" style="flex: 1;">
+                            <input type="number" id="rpg_chance_num" name="meta_vis[RPG_COMMENTS_CHANCE]" min="0" max="100" step="1" value="<?= htmlspecialchars($rpgChance) ?>" style="width:80px;" oninput="metaClamp('rpg_chance_range','rpg_chance_num',0,100)">
+                        </div>
+                        <div style="color: #9fb1c9; font-size: 12px; margin-top: 6px;">Probability that enabled RPG comments will trigger when their conditions are met. 0 = Never | 50 = 50% | 100 = Always</div>
+                    </div>
+                </div>
             </div>
         </div>
         <?php endif; ?>
+        
         <?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
         <div style="margin-top:8px; display:flex; gap:8px;">
             <button type="button" id="btn_save_meta_settings" class="btn-save">Save Profile Settings</button>
@@ -893,6 +1001,48 @@ $ittById = $byId($ittRows);
             <button type="button" id="btn_back_to_top" class="btn-primary" title="Scroll to top">↑ Back to top</button>
         </div>
     </div>
+    
+    <!-- Global Settings Overrides -->
+    <div class="provider-card" style="margin-bottom:8px;">
+        <div class="provider-head">
+            <div class="provider-title">
+                <div class="provider-icon">🌐</div>
+                <div>Global Settings Overrides</div>
+            </div>
+        </div>
+        <div class="provider-body" style="display:block;">
+            <small style="color:#9fb1c9; display:block; margin-bottom:8px;">Override global settings for this profile. Changes here take precedence over global configurations.</small>
+            <?php
+            // Configure override editor for Profile mode
+            $currentProfileOverrides = [];
+            try {
+                if (!empty($editItem["metadata"])) {
+                    $metaData = json_decode($editItem["metadata"], true);
+                    if (is_array($metaData)) {
+                        $globalSettingKeys = ['TTSFUNCTION'];
+                        foreach ($globalSettingKeys as $key) {
+                            if (isset($metaData[$key])) {
+                                $currentProfileOverrides[$key] = $metaData[$key];
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable $e) {
+                $currentProfileOverrides = [];
+            }
+            $overrideEditorConfig = [
+                'mode' => 'profile',
+                'fieldName' => 'metadata',
+                'allowedSettings' => ['TTSFUNCTION'],
+                'reservedKeys' => ['DYNAMIC_PROFILE_ENABLED', 'MIDDLE_TERM_MEMORY_ENABLED', 'AUTO_DIARY_ENABLED', 'LLM_RANDOMIZER_ENABLED', 'RPG_COMMENTS', 'RPG_COMMENTS_CHANCE', 'DYNAMIC_PROFILE_FIELDS'],
+                'currentData' => $currentProfileOverrides,
+                'systemFields' => [],
+            ];
+            include(__DIR__."/tmpl/override_editor.php");
+            ?>
+        </div>
+    </div>
+    
     <!-- JSON Editor (second chunk) in collapsible -->
     <details id="metadata_section" class="collapsible">
         <summary class="collapsible-header">Metadata (Advanced JSON)</summary>
@@ -934,6 +1084,13 @@ $ittById = $byId($ittRows);
             // Surface connector save failure but continue to save profile data as well
             try { if (typeof showToast === 'function') showToast('Connector save failed: ' + e.message, true); } catch(_){ }
         }
+
+        // Sync profile global overrides to metadata
+        try {
+            if (typeof window.syncProfileGlobalOverrides === 'function') {
+                window.syncProfileGlobalOverrides();
+            }
+        } catch(_e) { console.error('Failed to sync profile global overrides:', _e); }
 
         const fd = new FormData(form);
         const hasId = !!(form.querySelector('input[name="id"]') && form.querySelector('input[name="id"]').value);

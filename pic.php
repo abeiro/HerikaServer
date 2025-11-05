@@ -5,14 +5,15 @@
 
 
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
-require_once($path . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
-require_once($path . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
-
 $GLOBALS["ENGINE_PATH"]=$path;
+
+require_once($path . "conf/conf.php"); // API KEY must be there
+require_once($path . "lib/model_dynmodel.php");
+require_once($path . "lib/{$GLOBALS["DBDRIVER"]}.class.php");
+if (!isset($GLOBALS["db"])) $GLOBALS["db"] = new sql();
+require_once($path . "lib/data_functions.php");
+require_once($path . "lib/chat_helper_functions.php");
+require_once($path . "lib/logger.php");
 
 $db = new sql();
 

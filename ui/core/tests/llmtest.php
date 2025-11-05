@@ -6,6 +6,7 @@ $enginePath = __DIR__ . "/../../../";
 require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
+if (!isset($GLOBALS["db"])) { $GLOBALS["db"] = new sql(); }
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "llm_connector.class.php");
@@ -120,7 +121,7 @@ require_once(__DIR__ . DIRECTORY_SEPARATOR . "../../profile_loader.php");
                             $accum .= $chunk;
                             if ($handler->isDone()) $done = true;
                         }
-                        $buffer = $handler->close();
+                        $buffer = $handler->close("llmtest");
                         $endTimeTrans = microtime(true) - $start;
                     } catch (Throwable $e) {
                         $errors[] = [ 'no' => E_ERROR, 'str' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine() ];

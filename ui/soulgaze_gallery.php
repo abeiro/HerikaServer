@@ -273,13 +273,13 @@ function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribut
      if (e.target === lb) close(); 
      if (e.target === lb_reimage1) {
         showProcessing();
-       
+        uHint=prompt('Hint');
         fetch('cmd/gallery_tool_convert_style_gpt.php', {
             method: 'POST',
             headers: {
             'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ source: lbImg.src })
+            body: JSON.stringify({ source: lbImg.src,userhint:uHint })
         })
         .then(response => response.json())
         .then(data => {
@@ -298,13 +298,14 @@ function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribut
         });
      } else if (e.target === lb_reimage2) {
         showProcessing();
-
+        uHint=prompt('Hint');
         fetch('cmd/gallery_tool_convert_style_replicate.php', {
             method: 'POST',
             headers: {
             'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ source: lbImg.src })
+            body: JSON.stringify({ source: lbImg.src,userhint:uHint })
+
         })
         .then(response => response.json())
         .then(data => {
@@ -320,13 +321,14 @@ function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribut
         });
      } else if (e.target === lb_reimage3) {
         showProcessing();
-
+        uHint=prompt('Hint');
         fetch('cmd/gallery_tool_convert_style_or.php', {
             method: 'POST',
             headers: {
             'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ source: lbImg.src })
+            body: JSON.stringify({ source: lbImg.src,userhint:uHint })
+
         })
         .then(response => response.json())
         .then(data => {
@@ -341,13 +343,14 @@ function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribut
         });
      } else if (e.target === lb_reimage4) {
         showProcessing();
+        uHint=prompt('Movement Hint');
 
         fetch('cmd/gallery_tool_animate_replicate.php', {
             method: 'POST',
             headers: {
             'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ source: lbImg.src })
+            body: JSON.stringify({ source: lbImg.src,userhint:uHint })
         })
         .then(response => response.json())
         .then(data => {

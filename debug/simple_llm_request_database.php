@@ -11,18 +11,19 @@ $GLOBALS["SCRIPTLINE_ANIMATION"]  = "";
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+
 $file       = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . 'CurrentModel_.json';
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-
-$enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
-
 $GLOBALS["ENGINE_PATH"]=$enginePath;
+
+require_once $enginePath . "conf/conf.php";
+require_once $enginePath . "lib/model_dynmodel.php";
+require_once $enginePath . "lib/{$GLOBALS["DBDRIVER"]}.class.php";
+if (!isset($GLOBALS["db"])) { $GLOBALS["db"] = new sql(); }
+require_once $enginePath . "lib/chat_helper_functions.php";
+require_once $enginePath . "lib/data_functions.php";
+require_once $enginePath . "lib/logger.php";
+
 
 $db = new sql();
 
@@ -36,14 +37,11 @@ require_once $enginePath . "lib/core/tts_connector.class.php";
 $connector = new LLMConnector();
 $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
 
-
 $connector->setOldGlobals($currentConnectorData);
-
 
 $CLEAN_CONTEXT_FOCUS_CHAT = false;
 
 $COMMAND_PROMPT = '';
-
 
 $database_desc=file_get_contents(__DIR__."/../lib/core/database_schema/database_description.txt");
 
@@ -58,7 +56,7 @@ $contextData = array_merge($head, $prompt);
 Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
 
 $connectionHandler =$connector->getConnector($currentConnectorData);
-$buffer=$connectionHandler->fast_request($contextData,["MAX_TOKENS"=>4096,"model"=>"openai/gpt-oss-120b"]);
+$buffer=$connectionHandler->fast_request($contextData,["MAX_TOKENS"=>4096,"model"=>"openai/gpt-oss-120b"],"sqlassistant");
 
 Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
 
