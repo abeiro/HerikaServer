@@ -1412,15 +1412,45 @@ class openrouterjsoncached
 
     // Helper method to parse and return content based on format
     private function _parseAndReturnContent() {
+        // VERBOSE_LOGGING_START - _parseAndReturnContent: Entry
+        static $parseCallCount = 0;
+        if ($this->_verboseLogging) {
+            $parseCallCount++;
+            if ($parseCallCount === 1) {
+                logMessage("[CACHE-VERBOSE] ----- PARSING RESPONSE CONTENT -----");
+                logMessage("[CACHE-VERBOSE] Response format: {$this->_responseFormat}");
+                logMessage("[CACHE-VERBOSE] Buffer length: " . strlen($this->_buffer));
+            }
+        }
+        // VERBOSE_LOGGING_END
+
         if ($this->_responseFormat === 'json') {
             // JSON format parsing
             $extracted_json_or_text = extractJson($this->_buffer);
             $tempJson = json_decode($extracted_json_or_text, true);
 
+            // VERBOSE_LOGGING_START - _parseAndReturnContent: JSON extraction
+            if ($this->_verboseLogging && $parseCallCount === 1) {
+                logMessage("[CACHE-VERBOSE] Extracted JSON length: " . strlen($extracted_json_or_text));
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    logMessage("[CACHE-VERBOSE] JSON decoded successfully");
+                    logMessage("[CACHE-VERBOSE] JSON keys: " . (is_array($tempJson) ? implode(', ', array_keys($tempJson)) : 'N/A'));
+                } else {
+                    logMessage("[CACHE-VERBOSE] ✗ JSON decode failed: " . json_last_error_msg());
+                }
+            }
+            // VERBOSE_LOGGING_END
+
             if (json_last_error() === JSON_ERROR_NONE && isset($tempJson['message']) && !empty($tempJson['message'])) {
                 if (isset($tempJson["mood"])) {
                     $GLOBALS["SCRIPTLINE_ANIMATION"] = function_exists('GetAnimationHex') ? GetAnimationHex($tempJson["mood"]) : '';
                     $GLOBALS["SCRIPTLINE_EXPRESSION"] = function_exists('GetExpression') ? GetExpression($tempJson["mood"]) : '';
+
+                    // VERBOSE_LOGGING_START - _parseAndReturnContent: Mood set
+                    if ($this->_verboseLogging && $parseCallCount === 1) {
+                        logMessage("[CACHE-VERBOSE] Mood extracted: {$tempJson['mood']}");
+                    }
+                    // VERBOSE_LOGGING_END
                 }
                 if (isset($tempJson["listener"])) {
                     if (isset($tempJson["action"]) && ($tempJson["action"] == "Talk") &&
@@ -1429,7 +1459,21 @@ class openrouterjsoncached
                     } else {
                         $GLOBALS["SCRIPTLINE_LISTENER"] = $tempJson["listener"];
                     }
+
+                    // VERBOSE_LOGGING_START - _parseAndReturnContent: Listener set
+                    if ($this->_verboseLogging && $parseCallCount === 1) {
+                        logMessage("[CACHE-VERBOSE] Listener extracted: " . $GLOBALS["SCRIPTLINE_LISTENER"]);
+                    }
+                    // VERBOSE_LOGGING_END
                 }
+
+                // VERBOSE_LOGGING_START - _parseAndReturnContent: Message extracted
+                if ($this->_verboseLogging && $parseCallCount === 1) {
+                    $msgPreview = substr($tempJson['message'], 0, 100);
+                    logMessage("[CACHE-VERBOSE] Message extracted (length: " . strlen($tempJson['message']) . ", preview): {$msgPreview}...");
+                }
+                // VERBOSE_LOGGING_END
+
                 return $tempJson['message'];
             }
         } else {
@@ -1443,22 +1487,54 @@ class openrouterjsoncached
                     $this->_includeTarget
                 );
 
+                // VERBOSE_LOGGING_START - _parseAndReturnContent: Simple format extraction
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Simple format extraction attempt, found: " . ($parsed['found'] ? 'YES' : 'NO'));
+                }
+                // VERBOSE_LOGGING_END
+
                 if ($parsed['found']) {
                     $this->_simpleFormatParsed = true;
 
                     if ($this->_includeMood && !empty($parsed['mood'])) {
                         $GLOBALS["SCRIPTLINE_ANIMATION"] = function_exists('GetAnimationHex') ? GetAnimationHex($parsed["mood"]) : '';
                         $GLOBALS["SCRIPTLINE_EXPRESSION"] = function_exists('GetExpression') ? GetExpression($parsed["mood"]) : '';
+
+                        // VERBOSE_LOGGING_START - _parseAndReturnContent: Simple mood
+                        if ($this->_verboseLogging) {
+                            logMessage("[CACHE-VERBOSE] Simple format mood: {$parsed['mood']}");
+                        }
+                        // VERBOSE_LOGGING_END
                     }
 
                     if ($this->_includeListener && !empty($parsed['listener'])) {
                         $GLOBALS["SCRIPTLINE_LISTENER"] = $parsed['listener'];
+
+                        // VERBOSE_LOGGING_START - _parseAndReturnContent: Simple listener
+                        if ($this->_verboseLogging) {
+                            logMessage("[CACHE-VERBOSE] Simple format listener: {$parsed['listener']}");
+                        }
+                        // VERBOSE_LOGGING_END
                     }
+
+                    // VERBOSE_LOGGING_START - _parseAndReturnContent: Simple message
+                    if ($this->_verboseLogging) {
+                        $msgPreview = substr($parsed['message'], 0, 100);
+                        logMessage("[CACHE-VERBOSE] Simple format message (length: " . strlen($parsed['message']) . ", preview): {$msgPreview}...");
+                    }
+                    // VERBOSE_LOGGING_END
 
                     return $parsed['message'];
                 }
             } else {
                 // Simple format already parsed, just return accumulated message
+                // VERBOSE_LOGGING_START - _parseAndReturnContent: Accumulating
+                if ($this->_verboseLogging && strlen($this->_buffer) > ($this->_lastReturnedLength ?? 0)) {
+                    logMessage("[CACHE-VERBOSE] Accumulating more content, buffer now: " . strlen($this->_buffer) . " chars");
+                    $this->_lastReturnedLength = strlen($this->_buffer);
+                }
+                // VERBOSE_LOGGING_END
+
                 return $this->_buffer;
             }
         }
@@ -1506,6 +1582,15 @@ class openrouterjsoncached
 
         logMessage("start process actions");
 
+        // VERBOSE_LOGGING_START - processActions: Entry
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ----- PROCESSING ACTIONS -----");
+            logMessage("[CACHE-VERBOSE] Response format: {$this->_responseFormat}");
+            logMessage("[CACHE-VERBOSE] Buffer length: " . strlen($this->_buffer));
+            logMessage("[CACHE-VERBOSE] Include actions: " . ($this->_includeActions ? 'YES' : 'NO'));
+        }
+        // VERBOSE_LOGGING_END
+
         if ($this->_responseFormat === 'json') {
             // JSON format action processing
             if (!empty($this->_buffer)) {
@@ -1518,6 +1603,16 @@ class openrouterjsoncached
 
                     if (json_last_error() === JSON_ERROR_NONE && is_array($parsedResponse)) {
                         logMessage("[{$this->name}:{$herikaName}] Parsed JSON from buffer: " . json_encode($parsedResponse));
+
+                        // VERBOSE_LOGGING_START - processActions: JSON parsed for actions
+                        if ($this->_verboseLogging) {
+                            logMessage("[CACHE-VERBOSE] JSON parsed for action processing");
+                            logMessage("[CACHE-VERBOSE] Has 'action' field: " . (isset($parsedResponse['action']) ? 'YES' : 'NO'));
+                            if (isset($parsedResponse['action'])) {
+                                logMessage("[CACHE-VERBOSE] Action value: {$parsedResponse['action']}");
+                            }
+                        }
+                        // VERBOSE_LOGGING_END
 
                         if (isset($parsedResponse['action']) && !empty($parsedResponse['action'])) {
                             $target = isset($parsedResponse['target']) ? $parsedResponse['target'] : '';
@@ -1533,11 +1628,37 @@ class openrouterjsoncached
                                 $alreadysent[$commandKey] = $commandString;
 
                                 logMessage("[{$this->name}:{$herikaName}] Generated command: {$commandString}");
+
+                                // VERBOSE_LOGGING_START - processActions: Command generated (JSON)
+                                if ($this->_verboseLogging) {
+                                    logMessage("[CACHE-VERBOSE] Command generated (JSON): {$commandString}");
+                                    logMessage("[CACHE-VERBOSE] Target: " . ($target ?: 'NONE'));
+                                    logMessage("[CACHE-VERBOSE] Character: {$character}");
+                                }
+                                // VERBOSE_LOGGING_END
+                            } else {
+                                // VERBOSE_LOGGING_START - processActions: Duplicate command skipped
+                                if ($this->_verboseLogging) {
+                                    logMessage("[CACHE-VERBOSE] Command skipped (duplicate): {$parsedResponse['action']}@{$target}");
+                                }
+                                // VERBOSE_LOGGING_END
                             }
                         }
                     } else {
                         logMessage("[{$this->name}:{$herikaName}] Failed to parse JSON: " . json_last_error_msg());
+
+                        // VERBOSE_LOGGING_START - processActions: JSON parse failed
+                        if ($this->_verboseLogging) {
+                            logMessage("[CACHE-VERBOSE] ✗ Failed to parse JSON for actions: " . json_last_error_msg());
+                        }
+                        // VERBOSE_LOGGING_END
                     }
+                } else {
+                    // VERBOSE_LOGGING_START - processActions: No valid JSON found
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] No valid JSON boundaries found in buffer");
+                    }
+                    // VERBOSE_LOGGING_END
                 }
             }
         } else {
@@ -1549,6 +1670,15 @@ class openrouterjsoncached
                 $this->_includeActions,
                 $this->_includeTarget
             );
+
+            // VERBOSE_LOGGING_START - processActions: Simple format parsed
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Simple format parsed for actions, found: " . ($parsed['found'] ? 'YES' : 'NO'));
+                if ($parsed['found'] && $this->_includeActions) {
+                    logMessage("[CACHE-VERBOSE] Action in simple format: " . (isset($parsed['action']) && !empty($parsed['action']) ? $parsed['action'] : 'NONE'));
+                }
+            }
+            // VERBOSE_LOGGING_END
 
             if ($parsed['found'] && $this->_includeActions && !empty($parsed['action'])) {
                 $action = validateActionName($parsed['action']);
@@ -1566,6 +1696,20 @@ class openrouterjsoncached
                     $alreadysent[$commandKey] = $commandString;
 
                     logMessage("[{$this->name}:{$herikaName}] Generated command from simple format: {$commandString}");
+
+                    // VERBOSE_LOGGING_START - processActions: Command generated (simple)
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] Command generated (simple format): {$commandString}");
+                        logMessage("[CACHE-VERBOSE] Validated action: {$action}");
+                        logMessage("[CACHE-VERBOSE] Target: " . ($target ?: 'NONE'));
+                    }
+                    // VERBOSE_LOGGING_END
+                } else {
+                    // VERBOSE_LOGGING_START - processActions: Duplicate command skipped (simple)
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] Command skipped (duplicate, simple format): {$action}@{$target}");
+                    }
+                    // VERBOSE_LOGGING_END
                 }
             }
         }
@@ -1580,9 +1724,28 @@ class openrouterjsoncached
 
         if (!empty($this->_commandBuffer)) {
             logMessage("[{$this->name}:{$herikaName}] Final Command Buffer: " . implode(", ", $this->_commandBuffer));
+
+            // VERBOSE_LOGGING_START - processActions: Commands finalized
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Total commands generated: " . count($this->_commandBuffer));
+                logMessage("[CACHE-VERBOSE] Commands: " . implode(", ", $this->_commandBuffer));
+            }
+            // VERBOSE_LOGGING_END
         } else {
             logMessage("[{$this->name}:{$herikaName}] No commands generated.");
+
+            // VERBOSE_LOGGING_START - processActions: No commands
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] No commands generated from response");
+            }
+            // VERBOSE_LOGGING_END
         }
+
+        // VERBOSE_LOGGING_START - processActions: Complete
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ===== ACTION PROCESSING COMPLETE =====");
+        }
+        // VERBOSE_LOGGING_END
 
         return empty($this->_commandBuffer) ? array() : $this->_commandBuffer;
     }
