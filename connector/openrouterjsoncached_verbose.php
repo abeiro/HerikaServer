@@ -373,7 +373,7 @@ class openrouterjsoncached_verbose
 
         // Build actions and response format instruction
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
-            $prefix = "{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
+            $prefix = isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]) ? "{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}" : "";
         } else {
             $prefix = "";
         }
@@ -1010,6 +1010,9 @@ class openrouterjsoncached_verbose
         $data["transforms"] = array();
 
         // Log request
+        if (!isset($GLOBALS["DEBUG_DATA"])) {
+            $GLOBALS["DEBUG_DATA"] = array();
+        }
         $GLOBALS["DEBUG_DATA"]["full"] = ($data);
         $this->_dataSent = json_encode($data, JSON_PRETTY_PRINT);
 
