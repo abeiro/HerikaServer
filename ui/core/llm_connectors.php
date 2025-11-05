@@ -425,6 +425,14 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                             <span class="toggle-text">On</span>
                         </label>
                     </div>
+
+                    <div style="margin-top:12px;">
+                        <label class="label-with-toggle"><span class='tip-label' data-tip='Recommended ON for advanced models (Claude 4.5, GPT-4, Gemini 2.0). Uses minimal quality instructions. Turn OFF for older/smaller models that benefit from explicit guidance.'>Minimize Quality Instructions (Recommended)</span>
+                            <input type="hidden" name="metadata[minimize_quality_prompt]" value="0">
+                            <input type="checkbox" name="metadata[minimize_quality_prompt]" value="1" <?= (!isset($metadata['minimize_quality_prompt']) || $metadata['minimize_quality_prompt']) ? 'checked' : '' ?>>
+                            <span class="toggle-text">On</span>
+                        </label>
+                    </div>
                 </div>
             </div>
             <div>
