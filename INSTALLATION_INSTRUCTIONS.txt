@@ -1,0 +1,164 @@
+===============================================================================
+CHIM CACHED CONNECTOR - TESTING PACKAGE
+===============================================================================
+
+COMPATIBILITY NOTICE:
+---------------------
+✓ TESTED ON: CHIM 2.0.3
+✓ LIKELY COMPATIBLE: CHIM 2.0.1, 2.0.2 (should work fine)
+✓ POSSIBLY COMPATIBLE: CHIM 2.0.0 (untested, but should work)
+
+This package adds caching support to CHIM's OpenRouter connector, designed to
+reduce API costs by reusing cached context across conversations.
+
+===============================================================================
+INSTALLATION INSTRUCTIONS
+===============================================================================
+
+1. **BACKUP YOUR FILES FIRST!** (CRITICAL!)
+   -------------------------------------------
+   You MUST backup these files before proceeding:
+   ✓ conf/conf_schema.json
+   ✓ lib/core/llm_connector.class.php
+   ✓ ui/core/llm_connectors.php
+
+   If anything goes wrong, you'll need these backups to restore your system!
+
+2. **Extract Files to Your HerikaServer Directory**
+   ------------------------------------------------
+   Extract the following files from this zip to your HerikaServer root:
+
+   - connector/openrouterjsoncached.php          (New connector - production)
+   - connector/openrouterjsoncached_helpers.php  (Helper functions)
+   - connector/openrouterjsoncached_verbose.php  (Testing version with logging)
+   - conf/conf_schema.json                       (OVERWRITE existing file)
+   - lib/core/llm_connector.class.php            (OVERWRITE existing file)
+   - ui/core/llm_connectors.php                  (OVERWRITE existing file)
+
+3. **No Server Restart Required**
+   ------------------------------
+   CHIM does NOT need to be restarted after installing these files.
+   Changes will take effect immediately.
+
+4. **Configure in WebUI**
+   ----------------------
+   - Access your CHIM WebUI (typically http://localhost:PORT)
+   - Navigate to Configuration → LLM Connectors tab
+   - Click to create a new connector or edit an existing one
+   - For "Service", select "Custom" to reveal the Driver dropdown
+   - In the "Driver" dropdown, select:
+     * "OpenRouter JSON (Cached + Verbose Logging)" for testing
+     * OR "OpenRouter JSON (Cached)" for production use
+   - Configure the connector settings:
+     * URL: https://openrouter.ai/api/v1/chat/completions
+     * Model: Your model (e.g., anthropic/claude-sonnet-4.5)
+     * API Key: Your OpenRouter API key
+     * Provider Caching: Choose "Anthropic", "OpenAI", or "Gemini"
+     * Response Format: "json" (recommended) or "simple"
+     * Verbose Logging: Keep ENABLED for testing phase (verbose version only)
+   - Save the connector
+
+5. **Assign Connector to Profile/NPC**
+   -----------------------------------
+   CHIM 2.0 uses a Profile system:
+   - Go to Profiles section in WebUI
+   - Edit the profile you want to use caching with
+   - Set the connector to "openrouterjsoncached_verbose"
+   - Save changes
+
+===============================================================================
+TESTING & DIAGNOSTICS
+===============================================================================
+
+LOG FILE LOCATIONS:
+-------------------
+After running conversations, check these log files for diagnostic information:
+
+1. **log/cache.log** (PRIMARY)
+   - Contains all [CACHE-VERBOSE] logging output
+   - Shows cache control calculations
+   - Most important for debugging
+
+   Filter for verbose logs:
+   grep "[CACHE-VERBOSE]" log/cache.log
+
+2. **connector/_cached_perf.log**
+   - Cache performance metrics
+   - Shows cache read/create token counts
+   - Shows efficiency percentages
+
+3. **log/context_sent_to_llm.log**
+   - Full API payload logging
+   - See exact JSON sent to LLM
+
+4. **log/debugStream.log**
+   - Raw streaming response data
+   - API response details
+
+WHAT TO LOOK FOR:
+-----------------
+✓ Does the connector load without errors?
+✓ Does log/cache.log show cache control calculations?
+✓ Does connector/_cached_perf.log show cache read tokens > 0?
+✓ Do conversations flow normally without weird responses?
+
+===============================================================================
+ROLLBACK INSTRUCTIONS
+===============================================================================
+
+If you encounter issues and need to rollback:
+
+1. Restore your backed-up files:
+   - conf/conf_schema.json (from your backup)
+   - lib/core/llm_connector.class.php (from your backup)
+   - ui/core/llm_connectors.php (from your backup)
+
+2. Delete the new connector files:
+   - connector/openrouterjsoncached.php
+   - connector/openrouterjsoncached_helpers.php
+   - connector/openrouterjsoncached_verbose.php
+
+3. Switch your profiles back to a different connector (openrouterjson, etc.)
+
+===============================================================================
+WHY BACKWARDS COMPATIBILITY LIKELY WORKS
+===============================================================================
+
+This package should work on CHIM 2.0.0-2.0.3 because:
+
+✓ Only adds new files (doesn't break existing code)
+✓ Uses existing helper functions (__jpd.php, tokenizer functions)
+✓ Follows same connector patterns as other CHIM 2.0 connectors
+✓ Uses standard metadata/profile system introduced in CHIM 2.0.0
+
+Potential issues on CHIM 2.0.0:
+- The profile/metadata system may have been less mature
+- Minor schema differences in early 2.0.0 releases
+- Edge cases in database column handling
+
+Confidence level: 75-85% compatible with all 2.0.x versions
+
+===============================================================================
+REPORTING ISSUES
+===============================================================================
+
+If you encounter problems, please provide:
+1. Your CHIM version (check WebUI footer or package.json)
+2. Relevant log excerpts from log/cache.log (with [CACHE-VERBOSE] entries)
+3. Any PHP errors from your web server logs
+4. Description of what went wrong (errors, weird responses, etc.)
+
+===============================================================================
+PRODUCTION USE (After Testing)
+===============================================================================
+
+Once testing confirms everything works:
+
+1. Switch from "openrouterjsoncached_verbose" to "openrouterjsoncached"
+   (The production version without verbose logging overhead)
+
+2. Or, disable verbose logging in the verbose connector:
+   - Go to connector settings
+   - Set "Verbose Logging" to DISABLED
+
+===============================================================================

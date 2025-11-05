@@ -145,16 +145,18 @@ function containsOnlySymbols(string $str): bool
 /**
  * Check if a value is "lazy empty" (empty, null, none, etc.)
  */
-function lazyEmpty($string)
-{
-    if (empty(trim($string)))
-        return true;
+if (!function_exists('lazyEmpty')) {
+    function lazyEmpty($string)
+    {
+        if (empty(trim($string)))
+            return true;
 
-    $trimmed = trim($string);
-    if ($trimmed == "Null" || $trimmed == "null" || $trimmed == "None" || $trimmed == "none")
-        return true;
+        $trimmed = trim($string);
+        if ($trimmed == "Null" || $trimmed == "null" || $trimmed == "None" || $trimmed == "none")
+            return true;
 
-    return false;
+        return false;
+    }
 }
 
 /**
