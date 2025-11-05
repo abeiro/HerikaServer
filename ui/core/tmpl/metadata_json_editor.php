@@ -55,6 +55,10 @@ $localSchemaOverrides = [
         'type' => 'integer',
         'description' => 'Cooldown period in seconds between diary entries to prevent spam. Each NPC has their own independent cooldown timer.',
     ],
+    'COMBAT_BARK_COOLDOWN' => [
+        'type' => 'integer',
+        'description' => 'Cooldown period in seconds between combat barks to prevent spam during combat. This cooldown is global across all NPCs in the party.',
+    ],
     'OGHMA_INFINIUM' => [
         'type' => 'boolean',
         'description' => "Needs Minime-T5 enabled and running. Tamriel lore information will be added to the prompt, enhancing their understanding on specific topics.",
@@ -94,7 +98,7 @@ $localSchemaOverrides = [
     ],
     'ENFORCE_ACTIONS_PROMPT' => [
         'type' => 'boolean',
-        'description' => 'Eencourage AI NPCs to use actions more often.',
+        'description' => 'Encourage AI NPCs to use actions more often.',
     ],
     'REMOVE_ASTERISKS_FROM_OUTPUT' => [
         'type' => 'boolean',
@@ -109,7 +113,7 @@ $localSchemaOverrides = [
 // Visual keys to expose (can be expanded easily)
 $visualKeys = [
   "RECHAT_H","RECHAT_P","CORE_LANG","MINIME_T5","BORED_EVENT",
-  "DIARY_PROMPT","OGHMA_AMOUNT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN",
+  "DIARY_PROMPT","OGHMA_AMOUNT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN","COMBAT_BARK_COOLDOWN",
   "OGHMA_INFINIUM","AUTO_DIARY_WAIT","CONTEXT_HISTORY","MAX_WORDS_LIMIT","HERIKA_ANIMATIONS",
   "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE","ENFORCE_ACTIONS_PROMPT",
   "REMOVE_ASTERISKS_FROM_OUTPUT","CONTEXT_HISTORY_DYNAMIC_PROFILE"
@@ -120,6 +124,7 @@ $visualGroups = [
   'Core' => ["CORE_LANG","ENFORCE_ACTIONS_PROMPT","REMOVE_ASTERISKS_FROM_OUTPUT","MAX_WORDS_LIMIT"],
   'Rechat' => ["RECHAT_H","RECHAT_P","RECHAT_ALLOW_ACTIONS"],
   'Diary' => ["DIARY_PROMPT","DIARY_COOLDOWN","AUTO_DIARY_WAIT"],
+  'Combat' => ["COMBAT_BARK_COOLDOWN"],
   'Oghma' => ["OGHMA_INFINIUM","OGHMA_AMOUNT","MINIME_T5"],
   'Context' => ["CONTEXT_HISTORY","CONTEXT_HISTORY_DIARY","CONTEXT_HISTORY_DYNAMIC_PROFILE"],
   'Quest' => ["QUEST_COMMENT","QUEST_COMMENT_CHANCE"],
@@ -137,6 +142,7 @@ function meta_pretty_label(string $name): string {
 function meta_icon_for(string $key): string {
     $u = strtoupper($key);
     if (strpos($u, 'DIARY') !== false) return '📙';
+    if (strpos($u, 'COMBAT_BARK') !== false) return '⚔️';
     if (strpos($u, 'RECHAT') === 0) return '🔁';
     if (strpos($u, 'CONTEXT_HISTORY') === 0) return '🧠';
     if (strpos($u, 'OGHMA') === 0) return '🧾';
@@ -198,6 +204,7 @@ function renderMetaInput($key, $schema, $value, $controlOnly = false) {
             'CONTEXT_HISTORY' => ['min'=>0,'max'=>200,'step'=>1],
             'RECHAT_H' => ['min'=>1,'max'=>10,'step'=>1],
             'DIARY_COOLDOWN' => ['min'=>10,'max'=>1200,'step'=>1],
+            'COMBAT_BARK_COOLDOWN' => ['min'=>10,'max'=>600,'step'=>1],
             'CONTEXT_HISTORY_DIARY' => ['min'=>0,'max'=>400,'step'=>1],
             'CONTEXT_HISTORY_DYNAMIC_PROFILE' => ['min'=>0,'max'=>400,'step'=>1]
         ];
@@ -461,5 +468,58 @@ function consolidation() {
         console.log("javascript init done");
 
     });
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const miniUpdateAppearance = document.getElementById('small_update_appearance');
+        miniUpdateAppearance.addEventListener('click', async function(e){
+            
+            e.preventDefault();
+            try {
+            const doc = document;
+            const nameEl = doc ? doc.getElementById('npc_name') : null;
+            const npcName = nameEl ? String(nameEl.value||'').trim() : '';
+            
+            showProcessing()
+            const res = await fetch('../cmd/action_ai_update_appearance.php?name='+encodeURIComponent(npcName));
+            let j = {}; try { 
+                j = await res.json(); 
+                if (j.done) {
+                     doc.getElementById('appearance').value = j.appearance
+                     hideProcessing()
+                }
+            } catch(_e) {
+                 j = {ok:false};
+                 }
+            
+            
+            
+
+            } catch(_e){console.log(_e)}
+        });
+    });
+
+    function showProcessing() {
+        
+        processingMessage = document.createElement('div');
+        processingMessage.textContent = 'Processing...';
+        processingMessage.style.position = 'fixed';
+        processingMessage.style.top = '50%';
+        processingMessage.style.left = '50%';
+        processingMessage.style.transform = 'translate(-50%, -50%)';
+        processingMessage.style.backgroundColor = '#000';
+        processingMessage.style.color = '#fff';
+        processingMessage.style.padding = '10px 20px';
+        processingMessage.style.borderRadius = '8px';
+        processingMessage.style.zIndex = '10001';
+        processingMessage.id="processing_wheel"
+        document.body.appendChild(processingMessage);
+      }
+    function hideProcessing() {
+        processingMessage.innerHTML=''
+        processingMessage.style.zIndex = '-10001';
+
+    }
+    var processingMessage;
+
 
 </script>

@@ -132,7 +132,7 @@ class Logger {
             $logFile = isset(self::$CUSTOM_LOG) && !empty(self::$CUSTOM_LOG) ? self::$CUSTOM_LOG : self::DEFAULT_LOG;
         }
         if (file_exists($logFile) && filesize($logFile) > $maxSize) {
-            unlink($logFile);
+            copy("/dev/null",$logFile);// Truncate, don't create a new file.
         }
     }
 }

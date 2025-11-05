@@ -735,6 +735,129 @@ function createBook($title,$content,$location) {
     );
 }
 
+
+function createLetter($title,$content) {
+
+    $width = 371;
+    $height = 471;
+    
+    $text = $content;
+    $name = $title;
+    
+
+    $fontPath = __DIR__.'/../data/fonts/GloriaHallelujah-Regular.ttf'; // Path to your TTF font file
+    $fontSize = 12; // Initial font size (we'll adjust if needed)
+    $minFontSize = 8; // smallest allowed font size
+    $maxTextHeight = 271; // maximum allowed vertical space for text
+
+    $backgroundPath = __DIR__ . '/../data/textures/chim.png';
+
+    $background = imagecreatefrompng($backgroundPath);
+
+    // Ensure the background has alpha transparency
+    imagesavealpha($background, true);
+
+    // Define the text color
+    $textColor = imagecolorallocate($background, 0, 0, 0); // Black color
+
+    // Split text into paragraphs based on newlines
+    $paragraphs = explode("\n", $text);
+
+    // We'll try decreasing font size until the rendered text height fits inside $maxTextHeight
+    $fittingFontSize = $fontSize;
+    while ($fittingFontSize >= $minFontSize) {
+        $yTest = 10; // starting top margin for measurement
+        $fits = true;
+
+        foreach ($paragraphs as $paragraph) {
+            $words = explode(" ", $paragraph);
+            $line = "";
+
+            foreach ($words as $word) {
+                $testLine = $line . $word . " ";
+                $bbox = imagettfbbox($fittingFontSize, 0, $fontPath, $testLine);
+                $lineWidth = abs($bbox[4] - $bbox[0]);
+
+                if ($lineWidth > $width) {
+                    // new line
+                    $line = $word . " ";
+                    $yTest += $fittingFontSize * 1.9; // approximate line height for measurement
+                } else {
+                    $line = $testLine;
+                }
+            }
+
+            if (trim($line) !== "") {
+                $yTest += $fittingFontSize * 1.9;
+            }
+
+            // paragraph spacing
+            $yTest += $fittingFontSize * 0.8;
+
+            if ($yTest > $maxTextHeight) {
+                $fits = false;
+                break;
+            }
+        }
+
+        if ($fits) {
+            break; // $fittingFontSize fits
+        }
+
+        $fittingFontSize--;
+    }
+
+    // Use $fittingFontSize to actually render text
+    $x = 10; // Small left margin
+    $y = 10; // Small top margin
+    $fontSize = $fittingFontSize+2;
+
+    foreach ($paragraphs as $paragraph) {
+        // Split each paragraph into lines that fit within image width
+        $words = explode(" ", $paragraph);
+        $line = "";
+
+        foreach ($words as $word) {
+            $testLine = $line . $word . " ";
+            $bbox = imagettfbbox($fontSize, 0, $fontPath, $testLine);
+            $lineWidth = abs($bbox[4] - $bbox[0]);
+
+            if ($lineWidth > $width) {
+                // Draw the current line and start a new line if it exceeds the boundary
+                $x=round($x,0);
+                $y=round($y,0);
+                imagettftext($background, $fontSize, 0, $x, $y, $textColor, $fontPath, trim($line));
+                $line = $word . " ";
+                $y += $fontSize * 1.9; // Move down for the next line
+            } else {
+                $line = $testLine;
+            }
+        }
+
+        // Draw the last line of the paragraph
+        if (trim($line) !== "") {
+            $x=round($x,0);
+            $y=round($y,0);
+            imagettftext($background, $fontSize, 0, $x, $y, $textColor, $fontPath, trim($line));
+            $y += $fontSize * 1.9;
+        }
+
+        // Add extra space between paragraphs
+        $y += $fontSize * 0.8;
+    }
+
+    // Output the final image with text overlay
+    @mkdir(__DIR__ . "/../data/books");
+    $filename = __DIR__ . "/../data/books/" . md5(strtolower($name)) . ".png";
+    imagepng($background, $filename);
+
+    // Free up memory
+    imagedestroy($background);
+
+    echo "Image saved as $filename" . PHP_EOL;
+   
+}
+
 function make_replacements($text) {
 
     return strtr($text,[

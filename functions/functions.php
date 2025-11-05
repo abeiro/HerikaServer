@@ -808,6 +808,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'GiveGoldTo',
         'GiveItemTo',
         'GoToSleep',
+        'UseSoulGaze'
 
     ];
 } else {
@@ -866,7 +867,7 @@ if (file_exists(__DIR__.DIRECTORY_SEPARATOR."../prompts/prompts_custom.php")) {
 
 foreach ($GLOBALS["FUNCTIONS"] as $n=>$v)
     if (!in_array(getFunctionCodeName($v["name"]),$GLOBALS["ENABLED_FUNCTIONS"])) {
-        error_log("[FUNCTION] Removing $n {$v["name"]}:".getFunctionCodeName($v["name"]));
+        // error_log("[FUNCTION] Removing $n {$v["name"]}:".getFunctionCodeName($v["name"]));
         unset($GLOBALS["FUNCTIONS"][$n]);
     }
 

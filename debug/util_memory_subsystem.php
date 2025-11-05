@@ -2,107 +2,110 @@
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
 $GLOBALS["ENGINE_ROOT"] = $enginePath;
 $GLOBALS["ENGINE_PATH"] = $GLOBALS["ENGINE_ROOT"]; // Todo, make this uniform
 
-$enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
+require_once $enginePath . "conf/conf.php";
 
 if (! isset($GLOBALS["DBDRIVER"])) {
     $GLOBALS["DBDRIVER"] = "postgresql";
 }
 
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "memory_helper_vectordb.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "minimet5_service.php";
+require_once $enginePath . "lib/logger.php";
+require_once $enginePath . "lib/{$GLOBALS["DBDRIVER"]}.class.php";
+if (! isset($GLOBALS["db"])) {$GLOBALS["db"] = new sql();}
+require_once $enginePath . "lib/model_dynmodel.php";
+require_once $enginePath . "lib/chat_helper_functions.php";
+require_once $enginePath . "lib/memory_helper_vectordb.php";
+require_once $enginePath . "lib/data_functions.php";
+require_once $enginePath . "lib/minimet5_service.php";
 
-require_once $GLOBALS["ENGINE_ROOT"] . "/lib/core/api_badge.class.php";
-require_once $GLOBALS["ENGINE_ROOT"] . "/lib/core/llm_connector.class.php";
-require_once $GLOBALS["ENGINE_ROOT"] . "/lib/core/tts_connector.class.php";
-require_once $GLOBALS["ENGINE_ROOT"] . "/lib/core/npc_master.class.php";
-require_once $GLOBALS["ENGINE_ROOT"] . "/lib/core/core_profiles.class.php";
+require_once $enginePath . "lib/core/api_badge.class.php";
+require_once $enginePath . "lib/core/llm_connector.class.php";
+require_once $enginePath . "lib/core/tts_connector.class.php";
+require_once $enginePath . "lib/core/npc_master.class.php";
+require_once $enginePath . "lib/core/core_profiles.class.php";
 
+function resyncMemorySummaries($db, $forceAll = false, $onlyFix = false)
+{
 
-function resyncMemorySummaries($db, $forceAll = false) {
-    
-
+    $processed_counter=0;
     // Determine query based on whether we're syncing all or just missing vectors
-    if ($forceAll) {
-        $countQuery = "SELECT COUNT(*) AS n FROM memory_summary WHERE summary IS NOT NULL";
-        $fetchQuery = "SELECT summary AS content, uid, classifier, rowid, companions FROM memory_summary WHERE summary IS NOT NULL";
-    } else {
-        $countQuery = "SELECT COUNT(*) AS count FROM memory_summary WHERE summary IS NOT NULL AND (embedding IS NULL OR native_vec IS NULL)";
-        $fetchQuery = "SELECT summary AS content, uid, classifier, rowid, companions FROM memory_summary WHERE summary IS NOT NULL AND (embedding IS NULL OR native_vec IS NULL)";
-    }
-
-    $results = $db->fetchOne($countQuery);
-    $memories_to_sync_count = isset($results['n']) ? (int)$results['n'] : (isset($results['count']) ? (int)$results['count'] : 0);
-
-    if ($memories_to_sync_count == 0) {
-        echo "No memories found requiring synchronization." . PHP_EOL;
-        return 0;
-    }
-
-    echo "Found {$memories_to_sync_count} memories to sync. Starting process..." . PHP_EOL;
-
-    $results = $db->fetchAll($fetchQuery);
-    $processed_counter = 0;
-
-    foreach ($results as $row) {
-        $TEST_TEXT = $row["content"];
-        $tagsCol = "";
-
-        // Extract and expand tags from #Tags: block
-        $pattern = '/#Tags:\s*(.+)/s';
-        if (preg_match($pattern, $TEST_TEXT, $matches)) {
-            preg_match_all('/#(\w+)/', $matches[1], $tagMatches);
-            $tags = $tagMatches[1] ?? [];
-
-            $expandedTags = array_map(function ($tag) {
-                return trim(preg_replace('/(?<!^)([A-Z])/', ' $1', $tag));
-            }, $tags);
-
-            $tagsCol = implode(', ', $expandedTags);
-            //error_log(" * Using tags: $tagsCol");
+    if ($onlyFix == false) {
+        if ($forceAll) {
+            $countQuery = "SELECT COUNT(*) AS n FROM memory_summary WHERE summary IS NOT NULL";
+            $fetchQuery = "SELECT summary AS content, uid, classifier, rowid, companions FROM memory_summary WHERE summary IS NOT NULL";
         } else {
-            error_log(" * No tags found; using body text ({$row["classifier"]})");
+            $countQuery = "SELECT COUNT(*) AS count FROM memory_summary WHERE summary IS NOT NULL AND (embedding IS NULL OR native_vec IS NULL)";
+            $fetchQuery = "SELECT summary AS content, uid, classifier, rowid, companions FROM memory_summary WHERE summary IS NOT NULL AND (embedding IS NULL OR native_vec IS NULL)";
         }
 
-        // Update embedding using storeMemory
-        if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
-            storeMemory($TEST_TEXT, $TEST_TEXT, $row["rowid"], $row["classifier"], $row["companions"]);
+        $results                = $db->fetchOne($countQuery);
+        $memories_to_sync_count = isset($results['n']) ? (int) $results['n'] : (isset($results['count']) ? (int) $results['count'] : 0);
+
+        if ($memories_to_sync_count == 0) {
+            echo "No memories found requiring synchronization." . PHP_EOL;
+            return 0;
         }
 
-        // Save extracted tags and update native_vec (FTS vector)
-        $db->update("memory_summary", "tags='" . $db->escape($tagsCol) . "'", "rowid={$row["rowid"]}");
-        $db->execQuery("UPDATE memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')), 'A') || setweight(to_tsvector(coalesce(summary, '')), 'B') WHERE rowid={$row["rowid"]}");
+        echo "Found {$memories_to_sync_count} memories to sync. Starting process..." . PHP_EOL;
 
-        $processed_counter++;
-        echo "Updated vector for memory ID {$row["rowid"]}. (Processed {$processed_counter} of {$memories_to_sync_count})" . PHP_EOL;
+        $results           = $db->fetchAll($fetchQuery);
+        $processed_counter = 0;
+
+        foreach ($results as $row) {
+            $TEST_TEXT = $row["content"];
+            $tagsCol   = "";
+
+            // Extract and expand tags from #Tags: block
+            $pattern = '/#Tags:\s*(.+)/s';
+            if (preg_match($pattern, $TEST_TEXT, $matches)) {
+                preg_match_all('/#(\w+)/', $matches[1], $tagMatches);
+                $tags = $tagMatches[1] ?? [];
+
+                $expandedTags = array_map(function ($tag) {
+                    return trim(preg_replace('/(?<!^)([A-Z])/', ' $1', $tag));
+                }, $tags);
+
+                $tagsCol = implode(', ', $expandedTags);
+                //error_log(" * Using tags: $tagsCol");
+            } else {
+                error_log(" * No tags found; using body text ({$row["classifier"]})");
+            }
+
+            // Update embedding using storeMemory
+            if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+                storeMemory($TEST_TEXT, $TEST_TEXT, $row["rowid"], $row["classifier"], $row["companions"]);
+            }
+
+            // Save extracted tags and update native_vec (FTS vector)
+            $db->update("memory_summary", "tags='" . $db->escape($tagsCol) . "'", "rowid={$row["rowid"]}");
+            $db->execQuery("UPDATE memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')), 'A') || setweight(to_tsvector(coalesce(summary, '')), 'B') WHERE rowid={$row["rowid"]}");
+
+            $processed_counter++;
+            echo "Updated vector for memory ID {$row["rowid"]}. (Processed {$processed_counter} of {$memories_to_sync_count})" . PHP_EOL;
+        }
+
+        if ($processed_counter > 0) {
+            echo "Successfully synchronized {$processed_counter} memories." . PHP_EOL;
+        }
     }
-
-    if ($processed_counter > 0) {
-        echo "Successfully synchronized {$processed_counter} memories." . PHP_EOL;
-    }
-
     // --- Fix companions field (first method) ---
     echo "Completing companions field (method 1)..." . PHP_EOL;
-    $pfi = ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] + 0) * 100000;
-    $people = $db->fetchAll("SELECT DISTINCT split_part(data, '@', 1) AS npc FROM eventlog WHERE type='addnpc'");
+    $pfi      = ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] + 0) * 100000;
+    $people   = $db->fetchAll("SELECT DISTINCT split_part(data, '@', 1) AS npc FROM eventlog WHERE type='addnpc'");
     $addednpc = array_column($people, 'npc');
 
     $missingCompanions = $db->fetchAll("SELECT * FROM memory_summary WHERE (companions IS NULL OR companions = '') and classifier<>'diary' ORDER BY gamets_truncated ASC");
+    $n=0;
     foreach ($missingCompanions as $row) {
         $peopleRows = $db->fetchAll("SELECT CASE WHEN party='[]' THEN people ELSE COALESCE(people, party) END AS people FROM eventlog WHERE gamets > {$row["gamets_truncated"]} - $pfi AND gamets <= {$row["gamets_truncated"]} + $pfi");
-        $npcs = [];
+        $npcs       = [];
         foreach ($peopleRows as $p) {
-            if (!empty($p["people"])) {
+            if (! empty($p["people"])) {
                 foreach (explode("|", $p["people"]) as $npc) {
                     $npc = trim(preg_replace('/\([^)]*\)/', '', $npc));
                     if ($npc !== '') {
@@ -115,23 +118,29 @@ function resyncMemorySummaries($db, $forceAll = false) {
         $npcInMemory = [];
         foreach ($npcs as $name => $occurrences) {
             if (in_array($name, $addednpc) && $occurrences > 1) {
-                if (strpos($row["packed_message"],$name)===false)
+                if (strpos($row["packed_message"], $name) === false) {
                     continue;
+                }
+
                 $npcInMemory[] = $name;
             }
         }
 
-        $peopleFmt = $db->escape(implode(",", $npcInMemory));
+        $peopleFmt = $db->escape("|" . implode("|", $npcInMemory) . "|");
         $db->query("UPDATE memory_summary SET companions='$peopleFmt' WHERE rowid={$row["rowid"]}");
+        if ($n++ % 100 == 0) {
+            echo "Completed $n/".sizeof($missingCompanions).PHP_EOL;
+        }
     }
 
     // --- Fix companions field (second method) ---
     echo "Completing companions field (method 2)..." . PHP_EOL;
+    $n=0;
     $missingCompanions2 = $db->fetchAll("SELECT * FROM memory_summary WHERE (companions IS NULL OR companions = '') and classifier<>'diary' ORDER BY gamets_truncated ASC");
     foreach ($missingCompanions2 as $row) {
         $peopleRow = $db->fetchOne("SELECT STRING_AGG(DISTINCT speaker || '|' || listener, '|') AS people FROM public.memory_v WHERE gamets > {$row["gamets_truncated"]} - $pfi AND gamets <= {$row["gamets_truncated"]} + $pfi");
-        $npcs = [];
-        if (!empty($peopleRow["people"])) {
+        $npcs      = [];
+        if (! empty($peopleRow["people"])) {
             foreach (explode("|", $peopleRow["people"]) as $npc) {
                 $npc = trim($npc);
                 if ($npc && $npc !== "unknown" && $npc !== "--" && $npc !== "-" && $npc !== "The Narrator") {
@@ -143,14 +152,19 @@ function resyncMemorySummaries($db, $forceAll = false) {
         $npcInMemory = [];
         foreach ($npcs as $name => $occurrences) {
             if ($occurrences > 1) {
-                if (strpos($row["packed_message"],$name)===false)
+                if (strpos($row["packed_message"], $name) === false) {
                     continue;
+                }
+
                 $npcInMemory[] = $name;
             }
         }
 
         $peopleFmt = $db->escape(implode(",", $npcInMemory));
         $db->query("UPDATE memory_summary SET companions='$peopleFmt' WHERE rowid={$row["rowid"]}");
+        if ($n++ % 100 == 0) {
+            echo "Completed $n/".sizeof($missingCompanions2).PHP_EOL;
+        }
     }
 
     return $processed_counter;
@@ -172,6 +186,7 @@ commands:
 	recreate	Recreate memory_summary table,
 	compact	    Recreate memory_summary table, and uses AI (LLM) to summarize data. Use 'compact noembed' to avoid TEXT2VEC sync.
     query_raw   Query for a memory. Only embedding will be used. (For testing)
+    fixcomp     Fix companions field
 
 Note: Memories are stored in memory_summary table, which holds info from events/dialogues... in a time packed format.
 
@@ -191,7 +206,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         $db             = new sql();
         $localStartTime = microtime(true);
 
-        if (isset($argv[3])&&(!empty($argv[3]))) {
+        if (isset($argv[3]) && (! empty($argv[3]))) {
             $npcMaster      = new NpcMaster();
             $currentNpcData = $npcMaster->getByName($argv[3]);
 
@@ -207,8 +222,8 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 
             $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
         } else {
-            $GLOBALS["MINIME_T5"]=true;
-            $GLOBALS["HERIKA_NAME"]="%";
+            $GLOBALS["MINIME_T5"]   = true;
+            $GLOBALS["HERIKA_NAME"] = "%";
         }
 
         if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
@@ -346,15 +361,24 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         print_r($res[0]);
 
     } elseif ($argv[1] == "sync") {
-       
+
         echo "Starting memory vector synchronization..." . PHP_EOL;
         $db = new sql();
         resyncMemorySummaries($db, false); // Only sync missing embeddings
-    
-        echo "Memory synchronization process finished." . PHP_EOL;
-    
 
-    } elseif ($argv[1] == "resync") {
+        echo "Memory synchronization process finished." . PHP_EOL;
+
+    } elseif ($argv[1] == "fixcomp") {
+
+        echo "Starting fixing..." . PHP_EOL;
+        $db = new sql();
+        $db->execQuery("update memory_summary set companions=null where classifier='dialogue'");
+
+        resyncMemorySummaries($db, false,true);
+
+        echo "Fixing process ended." . PHP_EOL;
+
+    }  elseif ($argv[1] == "resync") {
         echo "Starting full memory resync..." . PHP_EOL;
         $db = new sql();
         resyncMemorySummaries($db, true);
@@ -444,7 +468,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
                         }
                     }
                     // Database Prompt (Memory Compaction)
-                    $companionsLine = !empty($row["companions"]) ? "{$row["companions"]} are nearby characters.\n" : "";
+                    $companionsLine = ! empty($row["companions"]) ? "{$row["companions"]} are nearby characters.\n" : "";
 
                     $prompt   = [];
                     $prompt[] = ['role' => 'system',
@@ -456,7 +480,7 @@ Pay close attention to details that could influence a character's behavior or em
 
 Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 "];
-                    if (!empty($prevMemory["summary"])) {
+                    if (! empty($prevMemory["summary"])) {
                         $prompt[] = ['role' => 'user', 'content' => "#PREVIOUS MEMORY (for reference only)#\n{$prevMemory["summary"]}\n#END OF PREVIOUS MEMORY#"];
                     }
                     $prompt[] = ['role' => 'user', 'content' => "#CHAT HISTORY#\n{$row["packed_message"]}\n#END OF CHAT HISTORY#"];
@@ -465,7 +489,7 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
 
                     $GLOBALS["FORCE_MAX_TOKENS"] = $GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["MAX_TOKENS_MEMORY"];
 
-                    $buffer = $connectionHandler->fast_request($prompt, [],"summary");
+                    $buffer = $connectionHandler->fast_request($prompt, [], "summary");
 
                     $TEST_TEXT = strtr($buffer, ["**" => ""]); // Use the final buffer
 
@@ -544,8 +568,8 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
                 // The `native_vec` is already updated above. Explicit `storeMemory` for full embedding is best left to the `sync` command.
 
                 $toUpdate = []; // Reset for next iteration as in original script
-                
-            }               // End while loop
+
+            } // End while loop
 
             if ($processed_in_loop_counter > 0) {
                 echo "Attempted summarization for {$processed_in_loop_counter} entries (out of {$entries_to_process_count} found needing update)." . PHP_EOL;
@@ -554,13 +578,11 @@ Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
             }
         }
 
-
         echo "Starting memory vector synchronization..." . PHP_EOL;
         resyncMemorySummaries($db, false); // Only sync missing embeddings
-    
+
         echo "Memory synchronization process finished." . PHP_EOL;
         echo "Memory compaction process finished." . PHP_EOL;
-
 
     } elseif ($argv[1] == "recreate") {
         echo "Deleting memory_summary" . PHP_EOL;

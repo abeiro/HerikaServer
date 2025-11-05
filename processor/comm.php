@@ -17,6 +17,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     }
     $now=time();
 
+    error_log("[INIT] Should delete everthing after {$gameRequest[2]}");
     // Dragon Break autosnapshot: detect large rollback and snapshot before pruning
     try {
         $prevGamets = DataLastKnownGameTS();
@@ -37,7 +38,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $db->delete("currentmission", "gamets>={$gameRequest[2]}  ");
     $db->delete("currentmission", "localts>$now   ");
     $db->delete("diarylog", "gamets>={$gameRequest[2]}  ");
-    $db->delete("diarylog", "localts>=0$now ");
+    $db->delete("diarylog", "localts>=$now ");
     $db->delete("books", "gamets>=0{$gameRequest[2]}  ");
     $db->delete("books", "localts>$now ");
     $db->delete("responselog", " 1=1 ");
@@ -493,6 +494,10 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
    
     // error_log(print_r($speech,true));
     if (is_array($speech)) {
+        if (isset($speech["companions"])&&!empty($speech["companions"])&&is_array($speech["companions"])) {
+            // Ensure companion field has same format as DataBeingsInCloseRange
+            $companionsReformatStr="|".(implode("|",$speech["companions"]))."|";
+        }
         $db->insert(
             'speech',
             array(
@@ -502,7 +507,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 'speaker' => $speech["speaker"],
                 'speech' => $speech["speech"],
                 'location' => $speech["location"],
-                'companions'=>(isset($speech["companions"])&&is_array($speech["companions"]))?implode(",",$speech["companions"]):DataBeingsInCloseRange(),
+                'companions'=>(isset($companionsReformatStr))?$companionsReformatStr:DataBeingsInCloseRange(),
                 'sess' => 'pending',
                 'audios' => isset($speech["audios"])?$speech["audios"]:null,
                 'topic' => isset($speech["debug"])?$speech["debug"]:null,
@@ -728,7 +733,37 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     'tag' => ""
                 )
             );
+    } else if ($vars[0]=="chim_renamenpc") {
+    // Convert signed to unsigned using bitwise AND
+    $unsignedInt = ($vars[3]+0) & 0xFFFFFFFF;
+    // Represent as 8-digit zero-padded hex with 0x prefix
+    $unsignedIntHex = '0x' . strtoupper(str_pad(dechex($unsignedInt), 8, '0', STR_PAD_LEFT));
+        
+    $npcMaster=new NpcMaster();
+    $oldNpcData=$npcMaster->getByName($vars[1]);
+    $newNpcData=$npcMaster->getByName($vars[2]);
+    
+    if (!$newNpcData) {
+        createProfile($vars[2]);
+        $newNpcData=$npcMaster->getByName($vars[2]);
     }
+
+    $npcMaster->renameNPC($vars[1],$vars[2]);
+
+        $db->insert(
+            'responselog',
+            [
+                'localts' => time(),
+                'sent'    => 0,
+                'actor'   => "rolemaster",
+                'text'    => "",
+                'action'  => 'rolecommand|RenameNPC@'.$unsignedIntHex.'@'.$db->escape($vars[2]),
+                'tag'     => '',
+            ]
+        );
+         
+    }
+    
 
     $db->upsertRowOnConflict(
         'conf_opts',
@@ -745,7 +780,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 } elseif (strpos($gameRequest[0], "infosave")===0) {    // user saves. lets backup all NPC state.
 
     error_log("[INFOSAVE] Backup all profiles");
-    
+    logEvent($gameRequest);
+
     $npcMaster=new NpcMaster();
     $npcMaster->backupAllNpcs($gameRequest[2]);
     $MUST_END=true;
@@ -772,16 +808,37 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     if ($localName==$baseProfile)
         $baseProfile="";
 
-    if (!profile_exists($localName))
-        AddFirstTimeMet($localName, $momentum, $gameRequest[2],$gameRequest[1]);
+   
 
     
-    createProfile($localName,[],false,$baseProfile);
+    $retVal=createProfile($localName,[],false,$baseProfile); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
     audit_log("comm.php addnpc $localName");
+
+     if ($retVal==1)
+        AddFirstTimeMet($localName, $momentum, $gameRequest[2],$gameRequest[1]);
+
 
     // Update new data
     $npcMaster=new NpcMaster();
     $currentNpcData=$npcMaster->getByName($localName);
+    
+    if (isset($splitNameBase[4]) && $retVal==1) {
+        $currentNpcDataAlt=$npcMaster->getByRefId($splitNameBase[4]);
+        if ($currentNpcDataAlt && $currentNpcDataAlt["npc_name"]!=$currentNpcData["npc_name"] ) {
+            // Seems an NPC has changed name.
+            // It's disabled, but could be useful fot the Bujold quest e.g
+            // But seems bandit spawn are reusing refids
+            error_log("[ADDNPC] detected name change refid:{$splitNameBase[4]} {$currentNpcDataAlt["npc_name"]}!={$currentNpcData["npc_name"]}");
+            
+            if (false) {
+                $newId=$currentNpcData["id"];
+                $newName=$currentNpcData["npc_name"];
+
+                $npcMaster->renameNPC($oldName,$newName);
+            }      
+        }
+    }
+
     if ($currentNpcData) {
         $currentNpcData["base"]=$splitNameBase[1];
         $currentNpcData["gender"]=$splitNameBase[2];
@@ -896,7 +953,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
-} elseif (strpos($gameRequest[0], "util_location_name")===0) {    // addnpc 
+} elseif (strpos($gameRequest[0], "util_location_name")===0) {    // util_location_name 
     
     
     $splitNameBase=explode("/",$gameRequest[3]);
@@ -905,7 +962,9 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             'locations',
             array(
                 'name' => $splitNameBase[0],
-                'formid' => $splitNameBase[1]
+                'formid' => $splitNameBase[1],
+                'region' => $splitNameBase[2],
+                'hold' => $splitNameBase[3]
             )
         );
     }
@@ -1277,12 +1336,14 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         );
     }
     
-    // AUTO_DIARY functionality - trigger diary entries for all current followers
+    // AUTO_DIARY functionality - trigger diary entries for nearby NPCs with auto_diary_enabled
+    Logger::info("WAITSTART event: AUTO_DIARY=" . (isset($GLOBALS["AUTO_DIARY"]) ? ($GLOBALS["AUTO_DIARY"] ? 'true' : 'false') : 'not set'));
+    
     if (isset($GLOBALS["AUTO_DIARY"]) && $GLOBALS["AUTO_DIARY"]) {
-        // Check if AUTO_DIARY_WAIT is enabled for wait events
-        if (isset($GLOBALS["AUTO_DIARY_WAIT"]) && $GLOBALS["AUTO_DIARY_WAIT"]) {
-            processAutoDiary($gameRequest, "waitstart");
-        }
+        // Process autodiary - AUTO_DIARY_WAIT will be checked per-NPC after loading their profile
+        processAutoDiary($gameRequest, "waitstart");
+    } else {
+        Logger::info("AUTO_DIARY: Skipping waitstart - AUTO_DIARY is disabled");
     }
     
     $MUST_END=true;
@@ -1303,9 +1364,13 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         )
     );
     
-    // AUTO_DIARY functionality - trigger diary entries for all current followers
+    // AUTO_DIARY functionality - trigger diary entries for nearby NPCs with auto_diary_enabled
+    Logger::info("GOODNIGHT event: AUTO_DIARY=" . (isset($GLOBALS["AUTO_DIARY"]) ? ($GLOBALS["AUTO_DIARY"] ? 'true' : 'false') : 'not set'));
+    
     if (isset($GLOBALS["AUTO_DIARY"]) && $GLOBALS["AUTO_DIARY"]) {
         processAutoDiary($gameRequest, "goodnight");
+    } else {
+        Logger::info("AUTO_DIARY: Skipping goodnight - AUTO_DIARY is disabled");
     }
     
     $MUST_END=true;
@@ -1341,7 +1406,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     
 } elseif (strpos($gameRequest[0], "core_profile_assign")===0) {    // diary_nearby event - manual trigger for all NPCs in range
     
-    logEvent($gameRequest);
+    // logEvent($gameRequest);
 
     if (isset($_GET["profile"])) {
         $npcMaster=new NpcMaster();

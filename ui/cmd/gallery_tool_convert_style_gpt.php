@@ -60,7 +60,7 @@
                 $hints = "Hint: The person in the picture is a $gender $race";
             }
         }
-        
+        $userHint=$jsonDataInput["userhint"];
     // Read file contents into memory
         $source = file_get_contents($jsonDataInput["source"]);
         $extra="";
@@ -69,7 +69,7 @@
             "image[0]"       => new CURLStringFile($source, "source.png", "image/png"),
             "model"          => "gpt-image-1",
             "input_fidelity" => "high",
-            "prompt"         => "Convert image-0 to a semi-realistic style, like a high-quality CGI render. Reimagine the whole picture, while preserving concepts like tattos, eye color, hair style, hair color, clothing, make-up and environment. $extra. $hints",
+            "prompt"         => "Convert image-0 to a semi-realistic style, like a high-quality CGI render. Reimagine the whole picture, while preserving concepts like tattos, eye color, hair style, hair color, clothing, make-up and environment. $extra. $hints. $userHint",
         ];
 
         error_log(print_r($fields["prompt"],true));
