@@ -1598,6 +1598,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 } catch(_e){ console.error('Failed to sync feature toggles:', _e); }
 
                 // Sync edited middle_term_latest back into extended_data JSON
+                /*
                 try {
                   const mtmLatest = form.querySelector('#middle_term_latest');
                   if (mtmLatest && form.extended_data){
@@ -1615,9 +1616,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                       }
                     }
                     form.extended_data.value = JSON.stringify(obj);
+                    
                   }
                 } catch(_e){ console.error('Failed to sync middle term memory:', _e); }
-
+                */
                 if (form.metadata!=undefined) {
                   const content = jsonEditor.get()
 
