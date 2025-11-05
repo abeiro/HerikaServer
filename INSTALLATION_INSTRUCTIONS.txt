@@ -34,6 +34,7 @@ INSTALLATION INSTRUCTIONS
    - conf/conf_schema.json                       (OVERWRITE existing file)
    - lib/core/llm_connector.class.php            (OVERWRITE existing file)
    - ui/core/llm_connectors.php                  (OVERWRITE existing file)
+   - ui/events-memories.php                      (OVERWRITE existing file - fixes display bug)
 
 3. **No Server Restart Required**
    ------------------------------
