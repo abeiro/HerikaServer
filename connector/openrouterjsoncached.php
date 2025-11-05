@@ -863,6 +863,14 @@ class openrouterjsoncached
     private function _openPart4($customParms, $herikaName, $MAX_TOKENS, $toggleThinking, $thinkingTokens,
                                  $effort_level, $start_time, $finalMessagesToSend) {
 
+        // VERBOSE_LOGGING_START - _openPart4: Entry
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ===== _OPENPART4: FINAL PAYLOAD & API REQUEST =====");
+            logMessage("[CACHE-VERBOSE] Messages to send: " . count($finalMessagesToSend));
+            logMessage("[CACHE-VERBOSE] Toggle thinking: " . ($toggleThinking ? 'YES' : 'NO'));
+        }
+        // VERBOSE_LOGGING_END
+
         // Build reasoning configuration
         $reasoning = [
             "enabled" => $toggleThinking,
@@ -870,8 +878,20 @@ class openrouterjsoncached
 
         if ($this->_provider_caching === "OpenAI") {
             $reasoning["effort"] = $effort_level;
+
+            // VERBOSE_LOGGING_START - _openPart4: OpenAI reasoning
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Reasoning config (OpenAI): enabled={$toggleThinking}, effort={$effort_level}");
+            }
+            // VERBOSE_LOGGING_END
         } else {
             $reasoning["max_tokens"] = intval($thinkingTokens);
+
+            // VERBOSE_LOGGING_START - _openPart4: Standard reasoning
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Reasoning config (Standard): enabled={$toggleThinking}, max_tokens={$thinkingTokens}");
+            }
+            // VERBOSE_LOGGING_END
         }
 
         // Construct payload
@@ -894,6 +914,21 @@ class openrouterjsoncached
             ]
         );
 
+        // VERBOSE_LOGGING_START - _openPart4: Payload constructed
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ----- PAYLOAD BASE PARAMETERS -----");
+            logMessage("[CACHE-VERBOSE] Model: {$this->_model}");
+            logMessage("[CACHE-VERBOSE] Stream: true");
+            logMessage("[CACHE-VERBOSE] Temperature: {$data['temperature']}");
+            logMessage("[CACHE-VERBOSE] Top K: {$data['top_k']}");
+            logMessage("[CACHE-VERBOSE] Top P: {$data['top_p']}");
+            logMessage("[CACHE-VERBOSE] Frequency penalty: {$data['frequency_penalty']}");
+            logMessage("[CACHE-VERBOSE] Presence penalty: {$data['presence_penalty']}");
+            logMessage("[CACHE-VERBOSE] Repetition penalty: {$data['repetition_penalty']}");
+            logMessage("[CACHE-VERBOSE] Cache control: enabled=true, ttl=1h");
+        }
+        // VERBOSE_LOGGING_END
+
         // Handle max tokens
         $effectiveMaxTokens = null;
         if (isset($customParms["MAX_TOKENS"])) {
@@ -914,20 +949,50 @@ class openrouterjsoncached
         if ($effectiveMaxTokens !== null) {
             if ($effectiveMaxTokens > 0) {
                 $data["max_tokens"] = (int) $effectiveMaxTokens;
+
+                // VERBOSE_LOGGING_START - _openPart4: Max tokens set
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Max tokens: {$effectiveMaxTokens}");
+                }
+                // VERBOSE_LOGGING_END
             } else {
                 unset($data["max_tokens"]);
+
+                // VERBOSE_LOGGING_START - _openPart4: Max tokens unset (zero)
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Max tokens: unset (value was 0)");
+                }
+                // VERBOSE_LOGGING_END
             }
         } else {
             if (isset($data["max_tokens"]))
                 unset($data["max_tokens"]);
+
+            // VERBOSE_LOGGING_START - _openPart4: Max tokens unset (null)
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Max tokens: unset (not specified)");
+            }
+            // VERBOSE_LOGGING_END
         }
 
         // Add provider information
         if (!empty($GLOBALS["CONNECTOR"][$this->name]["PROVIDER"])) {
             $providers = explode(",", $GLOBALS["CONNECTOR"][$this->name]["PROVIDER"]);
             $data["provider"] = array("order" => $providers);
+
+            // VERBOSE_LOGGING_START - _openPart4: Custom providers
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Provider order (custom): " . implode(", ", $providers));
+            }
+            // VERBOSE_LOGGING_END
         } else {
             $data["provider"] = array("order" => array("Anthropic"));
+
+            // VERBOSE_LOGGING_START - _openPart4: Default provider
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Provider order (default): Anthropic");
+            }
+            // VERBOSE_LOGGING_END
         }
 
         $data["transforms"] = array();
@@ -935,6 +1000,15 @@ class openrouterjsoncached
         // Log request
         $GLOBALS["DEBUG_DATA"]["full"] = ($data);
         $this->_dataSent = json_encode($data, JSON_PRETTY_PRINT);
+
+        // VERBOSE_LOGGING_START - _openPart4: Payload finalized
+        if ($this->_verboseLogging) {
+            $payloadSize = strlen($this->_dataSent);
+            logMessage("[CACHE-VERBOSE] ----- PAYLOAD FINALIZED -----");
+            logMessage("[CACHE-VERBOSE] Payload JSON size: {$payloadSize} bytes");
+            logMessage("[CACHE-VERBOSE] Total messages in payload: " . count($finalMessagesToSend));
+        }
+        // VERBOSE_LOGGING_END
 
         try {
             $finalMsgCount = isset($finalMessagesToSend) ? count($finalMessagesToSend) : 0;
@@ -955,6 +1029,13 @@ class openrouterjsoncached
         $apiKey = isset($GLOBALS["CONNECTOR"][$this->name]["API_KEY"]) ? $GLOBALS["CONNECTOR"][$this->name]["API_KEY"] : '';
         if (empty($apiKey)) {
             logMessage("API Key missing!");
+
+            // VERBOSE_LOGGING_START - _openPart4: API key missing
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] ✗ API KEY MISSING - cannot proceed with request");
+            }
+            // VERBOSE_LOGGING_END
+
             return null;
         }
 
@@ -966,7 +1047,23 @@ class openrouterjsoncached
             "anthropic-beta: extended-cache-ttl-2025-04-11"
         );
 
+        // VERBOSE_LOGGING_START - _openPart4: Headers
+        if ($this->_verboseLogging) {
+            $maskedApiKey = substr($apiKey, 0, 8) . '...' . substr($apiKey, -4);
+            logMessage("[CACHE-VERBOSE] ----- API REQUEST HEADERS -----");
+            logMessage("[CACHE-VERBOSE] Authorization: Bearer {$maskedApiKey}");
+            logMessage("[CACHE-VERBOSE] Anthropic beta: extended-cache-ttl-2025-04-11");
+        }
+        // VERBOSE_LOGGING_END
+
         $timeout = isset($GLOBALS["HTTP_TIMEOUT"]) ? (int) $GLOBALS["HTTP_TIMEOUT"] : 60;
+
+        // VERBOSE_LOGGING_START - _openPart4: Timeout
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] HTTP timeout: {$timeout} seconds");
+        }
+        // VERBOSE_LOGGING_END
+
         $options = array(
             'http' => array(
                 'method' => 'POST',
@@ -986,15 +1083,43 @@ class openrouterjsoncached
         $this->_forcedClose = false;
         $this->_jsonResponsesEncoded = array();
 
+        // VERBOSE_LOGGING_START - _openPart4: Stream state initialized
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Stream state initialized (buffers cleared)");
+        }
+        // VERBOSE_LOGGING_END
+
         $end_time = microtime(true);
         $execution_time = $end_time - $start_time;
         logMessage("Time for preparing cached request: $execution_time seconds");
 
+        // VERBOSE_LOGGING_START - _openPart4: Preparation time
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Request preparation time: {$execution_time} seconds");
+        }
+        // VERBOSE_LOGGING_END
+
         // Open stream
+        // VERBOSE_LOGGING_START - _openPart4: Opening stream
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ----- OPENING STREAM -----");
+            logMessage("[CACHE-VERBOSE] Target URL: {$this->_url}");
+            logMessage("[CACHE-VERBOSE] Attempting to establish streaming connection...");
+        }
+        // VERBOSE_LOGGING_END
+
         try {
             $this->primary_handler = $this->send($this->_url, $context);
         } catch (Exception $e) {
             logMessage("fopen Exception [{$this->name}:{$herikaName}]: " . $e->getMessage());
+
+            // VERBOSE_LOGGING_START - _openPart4: Stream exception
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] ✗ STREAM EXCEPTION: " . $e->getMessage());
+                logMessage("[CACHE-VERBOSE] Request failed - returning null");
+            }
+            // VERBOSE_LOGGING_END
+
             return null;
         }
 
@@ -1005,8 +1130,24 @@ class openrouterjsoncached
             if (isset($http_response_header) && is_array($http_response_header)) {
                 logMessage("HTTP Headers on fail: " . implode("\n", $http_response_header));
             }
+
+            // VERBOSE_LOGGING_START - _openPart4: Stream open failed
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] ✗ STREAM OPEN FAILED: {$errMsg}");
+                logMessage("[CACHE-VERBOSE] Request failed - returning null");
+            }
+            // VERBOSE_LOGGING_END
+
             return null;
         }
+
+        // VERBOSE_LOGGING_START - _openPart4: Stream opened successfully
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ✓ Stream opened successfully");
+            logMessage("[CACHE-VERBOSE] Ready to receive streaming response");
+            logMessage("[CACHE-VERBOSE] ===== _OPENPART4 COMPLETE =====");
+        }
+        // VERBOSE_LOGGING_END
 
         return true;
     }
