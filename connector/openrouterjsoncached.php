@@ -526,6 +526,16 @@ class openrouterjsoncached
                                  $CONTEXTHISTORY, $dialogue_cache_uncached_count, $start_time,
                                  $finalMessagesToSend, $cacheCombinedDialogueFile, $cacheControlType, $dynamicEnvironment) {
 
+        // VERBOSE_LOGGING_START - _openPart3: Entry
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ===== _OPENPART3: DIALOGUE HISTORY & CACHE CONTROL =====");
+            logMessage("[CACHE-VERBOSE] Input context messages: " . count($contextData));
+            logMessage("[CACHE-VERBOSE] Max dialogue cache size: {$max_dialogue_cache_size}");
+            logMessage("[CACHE-VERBOSE] Dialogue uncached count: {$dialogue_cache_uncached_count}");
+            logMessage("[CACHE-VERBOSE] Has custom instruction: " . (!empty($lastCustomInstruction) ? 'YES' : 'NO'));
+        }
+        // VERBOSE_LOGGING_END
+
         // Process dialogue history
         $contentTextToSend = [];
         foreach ($contextData as $n => $element) {
@@ -551,17 +561,47 @@ class openrouterjsoncached
             }
         }
 
+        // VERBOSE_LOGGING_START - _openPart3: Dialogue processing complete
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Extracted dialogue entries: " . count($contentTextToSend));
+        }
+        // VERBOSE_LOGGING_END
+
         // Remove first few items if list is large (optimization)
         if (count($contentTextToSend) > 4) {
             $contentTextToSend = array_slice($contentTextToSend, 4);
+
+            // VERBOSE_LOGGING_START - _openPart3: List optimization
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] List optimized by removing first 4 items, new count: " . count($contentTextToSend));
+            }
+            // VERBOSE_LOGGING_END
         }
 
         // Remove instruction to add back later
         $instruction = array_pop($contentTextToSend);
 
+        // VERBOSE_LOGGING_START - _openPart3: Instruction extraction
+        if ($this->_verboseLogging) {
+            $instrPreview = is_array($instruction) && isset($instruction['text'])
+                ? substr($instruction['text'], 0, 80)
+                : 'N/A';
+            logMessage("[CACHE-VERBOSE] Extracted instruction for later re-insertion (preview): " . $instrPreview . "...");
+        }
+        // VERBOSE_LOGGING_END
+
         // Manage cached event list
         $completeEventList = manageCharacterEventList($contentTextToSend, $cacheCombinedDialogueFile, $max_dialogue_cache_size);
         logMessage("New elements added to cache: {$completeEventList['new_count']}");
+
+        // VERBOSE_LOGGING_START - _openPart3: Cache management result
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Cache file: {$cacheCombinedDialogueFile}");
+            logMessage("[CACHE-VERBOSE] New elements added to cache: {$completeEventList['new_count']}");
+            logMessage("[CACHE-VERBOSE] Total cached event list size: " . count($completeEventList['updated_list']));
+        }
+        // VERBOSE_LOGGING_END
+
         $completeEventList = $completeEventList['updated_list'];
 
         // Add custom instructions if present
@@ -569,12 +609,32 @@ class openrouterjsoncached
         if (!empty($lastCustomInstruction)) {
             $addToIndex = 1;
             $completeEventList[] = ['type' => 'text', 'text' => $lastCustomInstruction];
+
+            // VERBOSE_LOGGING_START - _openPart3: Custom instruction added
+            if ($this->_verboseLogging) {
+                $customPreview = substr($lastCustomInstruction, 0, 80);
+                logMessage("[CACHE-VERBOSE] Custom instruction added (length: " . strlen($lastCustomInstruction) . " chars, preview): " . $customPreview . "...");
+            }
+            // VERBOSE_LOGGING_END
         }
 
         $completeEventList[] = $instruction;
 
+        // VERBOSE_LOGGING_START - _openPart3: Instruction re-added
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Instruction re-added to end of list");
+            logMessage("[CACHE-VERBOSE] Complete event list size after all additions: " . count($completeEventList));
+        }
+        // VERBOSE_LOGGING_END
+
         // Store default target for simple format
         $this->_defaultTarget = getLastUserMessageSpeaker($contextData);
+
+        // VERBOSE_LOGGING_START - _openPart3: Default target
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Default target (for simple format): " . ($this->_defaultTarget ?: 'NONE'));
+        }
+        // VERBOSE_LOGGING_END
 
         // Calculate cache control index BEFORE adding to finalMessagesToSend
         $totalElements = count($completeEventList);
@@ -582,10 +642,28 @@ class openrouterjsoncached
 
         logMessage("Cache control calculation: totalElements=$totalElements, uncached=$dialogue_cache_uncached_count, addToIndex=$addToIndex, calculatedIndex=$lastIndex");
 
+        // VERBOSE_LOGGING_START - _openPart3: Cache control calculation
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ----- CACHE CONTROL CALCULATION -----");
+            logMessage("[CACHE-VERBOSE] Total elements in list: {$totalElements}");
+            logMessage("[CACHE-VERBOSE] Uncached count setting: {$dialogue_cache_uncached_count}");
+            logMessage("[CACHE-VERBOSE] Custom instruction offset: {$addToIndex}");
+            logMessage("[CACHE-VERBOSE] Calculated standard cache index: {$lastIndex}");
+            logMessage("[CACHE-VERBOSE] Provider caching mode: {$this->_provider_caching}");
+        }
+        // VERBOSE_LOGGING_END
+
         // Place cache control marker
         if ($lastIndex >= 0) {
             if ($this->_provider_caching == "Gemini") {
                 logMessage("Using gemini caching (ignores dialogue_cache_uncached_count)");
+
+                // VERBOSE_LOGGING_START - _openPart3: Gemini cache logic
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Using GEMINI batch-based caching (ignores dialogue_cache_uncached_count)");
+                }
+                // VERBOSE_LOGGING_END
+
                 $offset = 10;
                 $elements = count($completeEventList);
                 $batchSize = $CONTEXTHISTORY - $offset;
@@ -593,35 +671,102 @@ class openrouterjsoncached
 
                 logMessage("elements: $elements, batchsize: $batchSize, batchnumber: $batchNumber");
 
+                // VERBOSE_LOGGING_START - _openPart3: Gemini batch calculation
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Gemini batch calculation:");
+                    logMessage("[CACHE-VERBOSE]   Context history: {$CONTEXTHISTORY}");
+                    logMessage("[CACHE-VERBOSE]   Offset: {$offset}");
+                    logMessage("[CACHE-VERBOSE]   Batch size: {$batchSize}");
+                    logMessage("[CACHE-VERBOSE]   Batch number: {$batchNumber}");
+                }
+                // VERBOSE_LOGGING_END
+
                 $indexToCache = max(0, ($batchNumber * $CONTEXTHISTORY) - $offset);
 
                 if ($indexToCache >= $elements) {
                     logMessage("index bigger or equal then elements size.");
                     $indexToCache = $elements - 1;
+
+                    // VERBOSE_LOGGING_START - _openPart3: Gemini index adjustment
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] Index adjusted to last element: {$indexToCache}");
+                    }
+                    // VERBOSE_LOGGING_END
                 }
 
                 if ($indexToCache == 0) {
                     $indexToCache = 33; // Gemini requires minimum 32 tokens for caching, use 33 to be safe
+
+                    // VERBOSE_LOGGING_START - _openPart3: Gemini minimum tokens
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] Index was 0, adjusted to 33 (Gemini minimum 32 tokens requirement)");
+                    }
+                    // VERBOSE_LOGGING_END
                 }
 
                 logMessage("Index to Cache: $indexToCache");
 
+                // VERBOSE_LOGGING_START - _openPart3: Gemini final index
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Final Gemini cache index: {$indexToCache}");
+                }
+                // VERBOSE_LOGGING_END
+
                 if (isset($completeEventList[$indexToCache]) && $this->_provider_caching != "OpenAI") {
                     $completeEventList[$indexToCache]["cache_control"] = $cacheControlType;
+
+                    // VERBOSE_LOGGING_START - _openPart3: Gemini cache marker placed
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] ✓ Cache control marker placed at index {$indexToCache}");
+                    }
+                    // VERBOSE_LOGGING_END
                 } else {
                     logMessage("Warning: Index $indexToCache not found in array");
+
+                    // VERBOSE_LOGGING_START - _openPart3: Gemini cache marker failed
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] ✗ FAILED to place cache marker at index {$indexToCache} (index not found)");
+                    }
+                    // VERBOSE_LOGGING_END
                 }
             } else {
                 logMessage("Using standard caching with dialogue_cache_uncached_count=$dialogue_cache_uncached_count");
+
+                // VERBOSE_LOGGING_START - _openPart3: Standard cache logic
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Using STANDARD caching (respects dialogue_cache_uncached_count)");
+                    logMessage("[CACHE-VERBOSE] Target cache index: {$lastIndex}");
+                }
+                // VERBOSE_LOGGING_END
+
                 if (isset($completeEventList[$lastIndex]) && $this->_provider_caching != "OpenAI") {
                     $completeEventList[$lastIndex]["cache_control"] = $cacheControlType;
                     logMessage("Cache control placed at index $lastIndex");
+
+                    // VERBOSE_LOGGING_START - _openPart3: Standard cache marker placed
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] ✓ Cache control marker placed at index {$lastIndex}");
+                    }
+                    // VERBOSE_LOGGING_END
                 } else {
                     logMessage("Warning: Index $lastIndex not found in array for non gemini");
+
+                    // VERBOSE_LOGGING_START - _openPart3: Standard cache marker failed
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] ✗ FAILED to place cache marker at index {$lastIndex} (index not found)");
+                    }
+                    // VERBOSE_LOGGING_END
                 }
             }
         } else {
             logMessage("Warning: Calculated cache index is negative ($lastIndex), skipping cache control");
+
+            // VERBOSE_LOGGING_START - _openPart3: Negative cache index
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] ✗ Cache index is negative ({$lastIndex}), skipping cache control placement");
+                logMessage("[CACHE-VERBOSE] This may indicate insufficient dialogue history");
+            }
+            // VERBOSE_LOGGING_END
         }
 
         // Add dynamic environment context if available
@@ -633,12 +778,37 @@ class openrouterjsoncached
             $dynamicEnvironment = trim("ASSISTANT: Environmental Context: $text");
 
             array_splice($completeEventList, count($completeEventList) - 2, 0, [array('type' => 'text', 'text' => $dynamicEnvironment)]);
+
+            // VERBOSE_LOGGING_START - _openPart3: Dynamic environment inserted
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Dynamic environment inserted at position " . (count($completeEventList) - 3));
+                logMessage("[CACHE-VERBOSE] Dynamic environment length: " . strlen($dynamicEnvironment) . " chars");
+            }
+            // VERBOSE_LOGGING_END
+        } else {
+            // VERBOSE_LOGGING_START - _openPart3: No dynamic environment
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] No dynamic environment to insert (empty or only symbols)");
+            }
+            // VERBOSE_LOGGING_END
         }
 
         $completeEventList = removeDuplicateMemories($completeEventList);
 
+        // VERBOSE_LOGGING_START - _openPart3: Duplicate removal
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Duplicate memories removed, final list size: " . count($completeEventList));
+        }
+        // VERBOSE_LOGGING_END
+
         $tokenCount = countTokensByWords($completeEventList);
         logMessage("Estimated token count: $tokenCount");
+
+        // VERBOSE_LOGGING_START - _openPart3: Token count
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Estimated token count (by words): {$tokenCount}");
+        }
+        // VERBOSE_LOGGING_END
 
         // NOW add to finalMessagesToSend after all modifications are complete
         if ($this->_responseFormat === 'simple' && $this->_provider_caching === "Anthropic") {
@@ -649,11 +819,40 @@ class openrouterjsoncached
             ));
             $this->_usedPrefill = true;
             $this->_prefillContent = $prefillText;
+
+            // VERBOSE_LOGGING_START - _openPart3: Prefill added
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] ----- FINAL MESSAGE CONSTRUCTION -----");
+                logMessage("[CACHE-VERBOSE] Using PREFILL mode (simple format + Anthropic)");
+                logMessage("[CACHE-VERBOSE] Prefill text: '{$prefillText}'");
+                logMessage("[CACHE-VERBOSE] Added user message with " . count($completeEventList) . " content elements");
+                logMessage("[CACHE-VERBOSE] Added assistant prefill message");
+                logMessage("[CACHE-VERBOSE] Total messages in payload: " . count($finalMessagesToSend));
+            }
+            // VERBOSE_LOGGING_END
         } else {
             $finalMessagesToSend[] = array('role' => 'user', 'content' => $completeEventList);
             $this->_usedPrefill = false;
             $this->_prefillContent = '';
+
+            // VERBOSE_LOGGING_START - _openPart3: No prefill
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] ----- FINAL MESSAGE CONSTRUCTION -----");
+                logMessage("[CACHE-VERBOSE] Standard mode (no prefill)");
+                logMessage("[CACHE-VERBOSE] Response format: {$this->_responseFormat}");
+                logMessage("[CACHE-VERBOSE] Provider: {$this->_provider_caching}");
+                logMessage("[CACHE-VERBOSE] Added user message with " . count($completeEventList) . " content elements");
+                logMessage("[CACHE-VERBOSE] Total messages in payload: " . count($finalMessagesToSend));
+            }
+            // VERBOSE_LOGGING_END
         }
+
+        // VERBOSE_LOGGING_START - _openPart3: Completion
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ===== _OPENPART3 COMPLETE =====");
+            logMessage("[CACHE-VERBOSE] Proceeding to Part 4 (final payload construction and API request)...");
+        }
+        // VERBOSE_LOGGING_END
 
         // Continue to Part 4 for final payload construction...
         return $this->_openPart4($customParms, $herikaName, $MAX_TOKENS, $toggleThinking, $thinkingTokens,
