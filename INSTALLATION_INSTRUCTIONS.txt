@@ -20,6 +20,7 @@ INSTALLATION INSTRUCTIONS
    You MUST backup these files before proceeding:
    ✓ conf/conf_schema.json
    ✓ lib/core/llm_connector.class.php
+   ✓ ui/core/llm_connectors.php
 
    If anything goes wrong, you'll need these backups to restore your system!
 
@@ -32,6 +33,7 @@ INSTALLATION INSTRUCTIONS
    - connector/openrouterjsoncached_verbose.php  (Testing version with logging)
    - conf/conf_schema.json                       (OVERWRITE existing file)
    - lib/core/llm_connector.class.php            (OVERWRITE existing file)
+   - ui/core/llm_connectors.php                  (OVERWRITE existing file)
 
 3. **No Server Restart Required**
    ------------------------------
@@ -41,14 +43,20 @@ INSTALLATION INSTRUCTIONS
 4. **Configure in WebUI**
    ----------------------
    - Access your CHIM WebUI (typically http://localhost:PORT)
-   - Navigate to Settings → Connectors (or AI/LLM Connectors section)
-   - Look for "openrouterjsoncached_verbose" in the connector dropdown
-   - Select it and configure:
+   - Navigate to Configuration → LLM Connectors tab
+   - Click to create a new connector or edit an existing one
+   - For "Service", select "Custom" to reveal the Driver dropdown
+   - In the "Driver" dropdown, select:
+     * "OpenRouter JSON (Cached + Verbose Logging)" for testing
+     * OR "OpenRouter JSON (Cached)" for production use
+   - Configure the connector settings:
+     * URL: https://openrouter.ai/api/v1/chat/completions
+     * Model: Your model (e.g., anthropic/claude-sonnet-4.5)
+     * API Key: Your OpenRouter API key
      * Provider Caching: Choose "Anthropic", "OpenAI", or "Gemini"
      * Response Format: "json" (recommended) or "simple"
-     * Verbose Logging: Keep ENABLED for testing phase
-     * API Key: Your OpenRouter API key
-     * Model: Select your model (e.g., anthropic/claude-sonnet-4.5)
+     * Verbose Logging: Keep ENABLED for testing phase (verbose version only)
+   - Save the connector
 
 5. **Assign Connector to Profile/NPC**
    -----------------------------------
@@ -103,6 +111,7 @@ If you encounter issues and need to rollback:
 1. Restore your backed-up files:
    - conf/conf_schema.json (from your backup)
    - lib/core/llm_connector.class.php (from your backup)
+   - ui/core/llm_connectors.php (from your backup)
 
 2. Delete the new connector files:
    - connector/openrouterjsoncached.php
