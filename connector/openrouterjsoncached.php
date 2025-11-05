@@ -340,9 +340,24 @@ class openrouterjsoncached
                                  $customInstruction, $lastCustomInstruction, $toggleThinking, $thinkingTokens,
                                  $effort_level, $CONTEXTHISTORY, $dialogue_cache_uncached_count, $start_time) {
 
+        // VERBOSE_LOGGING_START - _openPart2: Entry
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] ===== _OPENPART2: SYSTEM PROMPT PROCESSING =====");
+            logMessage("[CACHE-VERBOSE] Herika Name: {$herikaName}");
+        }
+        // VERBOSE_LOGGING_END
+
         $cacheSystemFile = "system_cache_json_{$herikaName}.tmp";
         $cacheCombinedDialogueFile = "combined_dialogue_cache_json_{$herikaName}.tmp";
         $cacheControlType = ["type" => "ephemeral", "ttl" => "1h"];
+
+        // VERBOSE_LOGGING_START - Cache files
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] System cache file: {$cacheSystemFile}");
+            logMessage("[CACHE-VERBOSE] Dialogue cache file: {$cacheCombinedDialogueFile}");
+            logMessage("[CACHE-VERBOSE] Cache control type: ephemeral, TTL: 1h");
+        }
+        // VERBOSE_LOGGING_END
 
         // Build actions and response format instruction
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
@@ -384,6 +399,14 @@ class openrouterjsoncached
             }
 
             $formatInstruction = "{$prefix} $speechReinforcement $customInstruction Use ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure$zonosTones: " . json_encode($template);
+
+            // VERBOSE_LOGGING_START - JSON format
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Response format: JSON");
+                logMessage("[CACHE-VERBOSE] JSON template fields: " . implode(', ', array_keys($template)));
+                logMessage("[CACHE-VERBOSE] Format instruction length: " . strlen($formatInstruction));
+            }
+            // VERBOSE_LOGGING_END
         } else {
             $formatInstruction = buildSimpleFormatInstruction(
                 $this->_includeMood,
@@ -392,6 +415,14 @@ class openrouterjsoncached
                 $this->_includeTarget,
                 "{$prefix} $speechReinforcement $customInstruction"
             );
+
+            // VERBOSE_LOGGING_START - Simple format
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Response format: SIMPLE");
+                logMessage("[CACHE-VERBOSE] Simple format instruction length: " . strlen($formatInstruction));
+                logMessage("[CACHE-VERBOSE] Simple format preview: " . substr($formatInstruction, 0, 150) . "...");
+            }
+            // VERBOSE_LOGGING_END
         }
 
         $actionsText = "";
@@ -399,6 +430,13 @@ class openrouterjsoncached
             $actionsText .= "\n" . $availableActions . "\n";
         }
         $actionsText .= $formatInstruction;
+
+        // VERBOSE_LOGGING_START - Actions text
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Actions included: " . (!empty($availableActions) ? 'YES' : 'NO'));
+            logMessage("[CACHE-VERBOSE] Total actions+format length: " . strlen($actionsText));
+        }
+        // VERBOSE_LOGGING_END
 
         $dynamicEnvironment = "";
         $systemEntries = [];
@@ -430,6 +468,18 @@ class openrouterjsoncached
                                      $combatStatus . "\n\n" . $arousal . "\n\n" . $equipment . "\n\n" .
                                      $appearance . "\n\n" . $cleanliness;
 
+                // VERBOSE_LOGGING_START - Dynamic content extraction
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Dynamic content extracted:");
+                    logMessage("[CACHE-VERBOSE]   Environmental: " . (strlen($environmental) > 0 ? strlen($environmental) . " chars" : "NONE"));
+                    logMessage("[CACHE-VERBOSE]   Additional Info: " . (strlen($additional) > 0 ? strlen($additional) . " chars" : "NONE"));
+                    logMessage("[CACHE-VERBOSE]   Equipment: " . (strlen($equipment) > 0 ? strlen($equipment) . " chars" : "NONE"));
+                    logMessage("[CACHE-VERBOSE]   Appearance: " . (strlen($appearance) > 0 ? strlen($appearance) . " chars" : "NONE"));
+                    logMessage("[CACHE-VERBOSE]   Combat Status: " . (strlen($combatStatus) > 0 ? strlen($combatStatus) . " chars" : "NONE"));
+                    logMessage("[CACHE-VERBOSE]   Total dynamic environment length: " . strlen($dynamicEnvironment) . " chars");
+                }
+                // VERBOSE_LOGGING_END
+
                 $finalSend = $systemContentCurrent . "\n" . $actionsText;
 
                 $content = ['type' => 'text', 'text' => $finalSend];
@@ -437,10 +487,31 @@ class openrouterjsoncached
                     $content['cache_control'] = $cacheControlType;
                 }
                 $systemEntries[] = array("role" => "system", "content" => array($content));
+
+                // VERBOSE_LOGGING_START - System entry
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] System entry created:");
+                    logMessage("[CACHE-VERBOSE]   Static system content length: " . strlen($systemContentCurrent) . " chars");
+                    logMessage("[CACHE-VERBOSE]   Total with actions: " . strlen($finalSend) . " chars");
+                    logMessage("[CACHE-VERBOSE]   Cache control applied: " . ($this->_provider_caching !== "OpenAI" ? 'YES' : 'NO (OpenAI native)'));
+                }
+                // VERBOSE_LOGGING_END
             }
         }
 
+        // VERBOSE_LOGGING_START - System cache write
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Writing " . count($systemEntries) . " system entries to cache file: {$cacheSystemFile}");
+        }
+        // VERBOSE_LOGGING_END
+
         $finalMessagesToSend = writeArrayToFileWithCache($systemEntries, $cacheSystemFile);
+
+        // VERBOSE_LOGGING_START - System cache result
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] System cache write complete. Messages to send: " . count($finalMessagesToSend));
+        }
+        // VERBOSE_LOGGING_END
 
         // Continue to Part 3...
         return $this->_openPart3($contextData, $customParms, $herikaName, $MAX_TOKENS, $max_dialogue_cache_size,
