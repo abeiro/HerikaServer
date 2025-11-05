@@ -87,7 +87,11 @@ $head[] = [
         "You are a long-term narrative continuity summarizer for an improvised Skyrim universe chronicle.\n".
         "- Always read ALL provided materials.\n".
         "- Treat any **Previous Context History Summary** as the canonical prior unless anything in the new Context History explicitly supersedes it.\n".
-        "- Maintain in-universe tone and correct chronology. Do not invent facts outside the supplied context."
+        "- Maintain in-universe tone and correct chronology. Do not invent facts outside the supplied context.\n".
+        "- When combining prior and new histories, you may compress the earlier parts of the prior summary.\n".
+//        "(note: existing canonical summaries may be overly detailed from older instructions—revise them to follow this compression rule while preserving all key facts)\n".
+        "- Maintain roughly 20–25 bullet points total in **Notable Events**. Older portions should be condensed into broader, grouped statements unless they describe major quest milestones, major character life events (e.g., death, intimacy, severe injury, transformation), or other pivotal story turns.\n".
+        "- Preserve continuity and references to major quests even when compressing earlier material."
 ];
 
 $request =
@@ -96,14 +100,16 @@ $request =
     "Integrate them to produce an updated broad narrative strokes summary that preserves continuity. Summary sections:\n\n".
 
     "- **Notable Events in Chronological Order:**\n".
-    "  - Provide ~10 bullet points from earliest to latest, reflecting the whole story so far.\n".
+    "  - Provide ~10 bullet points from earliest to latest, reflecting the story so far.\n".
     "  - Prefer facts already established in the previous summary; only revise if the new context clearly changes them.\n\n".
 
     "- **Current Quest Progression and background:**\n".
-    "  - Name questlines, stages/milestones if stated, objectives completed/active, and motivations.\n". 
-    "When generating entries, ensure that {$GLOBALS['HERIKA_NAME']} — the protagonist — is actively present in the scene. ". 
+    "  - Name questlines, stages/milestones if stated, objectives completed/active, and motivations.\n".
+    "When generating entries, ensure that {$GLOBALS['HERIKA_NAME']} — the protagonist — is actively present in the scene. ".
     "Any narrative content that occurs before {$GLOBALS['HERIKA_NAME']}'s arrival or outside {$GLOBALS['HERIKA_NAME']}'s perspective should be omitted, ".
-    "reflect only events {$GLOBALS['HERIKA_NAME']} directly witness or participate in\n";
+    "reflect only events {$GLOBALS['HERIKA_NAME']} directly witness or participate in.\n".
+    "If the resulting summary would exceed roughly 25 bullet points, merge or generalise older entries into broader grouped events. ".
+    "Always retain explicit entries for major quest milestones, major character life events, or turning points.";
 
 if (!empty($previous))
     $prompt[] = ['role' => 'user', 'content' => "# Previous Context History Summary:\n$previous"];
