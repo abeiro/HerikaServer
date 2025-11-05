@@ -365,6 +365,67 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                         <span class="toggle-text">On</span>
                     </label>
                 </div>
+
+                <?php
+                // Decode metadata for caching settings
+                $metadata = [];
+                if (isset($editItem['metadata'])) {
+                    if (is_string($editItem['metadata'])) {
+                        $metadata = json_decode($editItem['metadata'], true) ?: [];
+                    } elseif (is_array($editItem['metadata'])) {
+                        $metadata = $editItem['metadata'];
+                    }
+                }
+                ?>
+
+                <!-- Caching Settings (shown only for cached connectors) -->
+                <div id="caching_settings" style="display:none; margin-top:16px; padding:12px; border:1px solid #4a4a4a; border-radius:8px; background:#1a1a1a;">
+                    <div style="font-weight:600; color:#e9efff; margin-bottom:12px;">🔄 Caching Settings</div>
+
+                    <label for='provider_caching'>Provider Caching Type</label><br>
+                    <select name="metadata[provider_caching]" id="provider_caching">
+                        <option value="Anthropic" <?= ($metadata['provider_caching'] ?? 'Anthropic') === 'Anthropic' ? 'selected' : '' ?>>Anthropic</option>
+                        <option value="OpenAI" <?= ($metadata['provider_caching'] ?? '') === 'OpenAI' ? 'selected' : '' ?>>OpenAI</option>
+                        <option value="Gemini" <?= ($metadata['provider_caching'] ?? '') === 'Gemini' ? 'selected' : '' ?>>Gemini</option>
+                    </select><br>
+
+                    <label for='response_format'>Response Format</label><br>
+                    <select name="metadata[response_format]" id="response_format">
+                        <option value="json" <?= ($metadata['response_format'] ?? 'json') === 'json' ? 'selected' : '' ?>>JSON (structured)</option>
+                        <option value="simple" <?= ($metadata['response_format'] ?? '') === 'simple' ? 'selected' : '' ?>>Simple (natural language)</option>
+                    </select><br>
+
+                    <label for='dialogue_cache_uncached_count'><span class='tip-label' data-tip='Number of most recent dialogue entries to keep uncached (0-10)'>Uncached Dialogue Count</span></label><br>
+                    <input type='number' name='metadata[dialogue_cache_uncached_count]' id='dialogue_cache_uncached_count' value='<?= htmlspecialchars($metadata['dialogue_cache_uncached_count'] ?? '4') ?>' min='0' max='10' step='1'><br>
+
+                    <div id="simple_format_options" style="display:none; margin-top:12px; padding:8px; border-left:3px solid #176529;">
+                        <div style="font-size:13px; font-weight:600; margin-bottom:8px;">Simple Format Content Options:</div>
+                        <label class="label-with-toggle"><span>Include Mood</span>
+                            <input type="hidden" name="metadata[include_mood_requirement]" value="0">
+                            <input type="checkbox" name="metadata[include_mood_requirement]" value="1" <?= isset($metadata['include_mood_requirement']) && $metadata['include_mood_requirement'] ? 'checked' : '' ?>>
+                        </label><br>
+                        <label class="label-with-toggle"><span>Include Listener</span>
+                            <input type="hidden" name="metadata[include_listener_requirement]" value="0">
+                            <input type="checkbox" name="metadata[include_listener_requirement]" value="1" <?= isset($metadata['include_listener_requirement']) && $metadata['include_listener_requirement'] ? 'checked' : '' ?>>
+                        </label><br>
+                        <label class="label-with-toggle"><span>Include Actions</span>
+                            <input type="hidden" name="metadata[include_actions_list]" value="0">
+                            <input type="checkbox" name="metadata[include_actions_list]" value="1" <?= isset($metadata['include_actions_list']) && $metadata['include_actions_list'] ? 'checked' : '' ?>>
+                        </label><br>
+                        <label class="label-with-toggle"><span>Include Target</span>
+                            <input type="hidden" name="metadata[include_target_requirement]" value="0">
+                            <input type="checkbox" name="metadata[include_target_requirement]" value="1" <?= isset($metadata['include_target_requirement']) && $metadata['include_target_requirement'] ? 'checked' : '' ?>>
+                        </label>
+                    </div>
+
+                    <div id="verbose_logging_option" style="display:none; margin-top:12px;">
+                        <label class="label-with-toggle"><span class='tip-label' data-tip='Enable detailed logging for testing (verbose connector only)'>Verbose Logging</span>
+                            <input type="hidden" name="metadata[verbose_logging]" value="0">
+                            <input type="checkbox" name="metadata[verbose_logging]" value="1" <?= isset($metadata['verbose_logging']) && $metadata['verbose_logging'] ? 'checked' : 'checked' ?>>
+                            <span class="toggle-text">On</span>
+                        </label>
+                    </div>
+                </div>
             </div>
             <div>
                 <?php
@@ -557,7 +618,37 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             } catch(_e){}
         })();
         icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service, true)); });
-        if (driverSelect){ driverSelect.addEventListener('change', function(){ if (driverInput) driverInput.value = this.value; }); }
+        if (driverSelect){ driverSelect.addEventListener('change', function(){ if (driverInput) driverInput.value = this.value; updateCachingSettings(); }); }
+
+        // Caching settings visibility logic
+        function updateCachingSettings(){
+            const driver = driverInput ? driverInput.value : (driverSelect ? driverSelect.value : '');
+            const cachingSettings = document.getElementById('caching_settings');
+            const simpleFormatOptions = document.getElementById('simple_format_options');
+            const verboseLoggingOption = document.getElementById('verbose_logging_option');
+            const responseFormatSelect = document.getElementById('response_format');
+
+            // Show caching settings only for cached drivers
+            const isCachedDriver = driver === 'openrouterjsoncached' || driver === 'openrouterjsoncached_verbose';
+            if (cachingSettings) cachingSettings.style.display = isCachedDriver ? '' : 'none';
+
+            // Show verbose logging option only for verbose driver
+            if (verboseLoggingOption) verboseLoggingOption.style.display = (driver === 'openrouterjsoncached_verbose') ? '' : 'none';
+
+            // Show simple format options based on response_format selection
+            if (responseFormatSelect && simpleFormatOptions) {
+                simpleFormatOptions.style.display = (responseFormatSelect.value === 'simple') ? '' : 'none';
+            }
+        }
+
+        // Listen for response format changes
+        const responseFormatSelect = document.getElementById('response_format');
+        if (responseFormatSelect) {
+            responseFormatSelect.addEventListener('change', updateCachingSettings);
+        }
+
+        // Initial call to set correct visibility
+        updateCachingSettings();
     })();
     </script>
     <div id="toast" class="toast-notification" style="position:static; margin: 8px auto 12px; display:block; opacity:0; transform:none; max-width:960px; width: calc(100% - 20px);"><span class="message"></span></div>

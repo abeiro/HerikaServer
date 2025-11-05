@@ -18,6 +18,11 @@ class LLMConnector {
             }
         }
 
+        // JSON encode metadata if it's an array
+        if (isset($data['metadata']) && is_array($data['metadata'])) {
+            $data['metadata'] = json_encode($data['metadata']);
+        }
+
         $filtered = array_intersect_key($data, array_flip($fields));
         return $GLOBALS["db"]->insert($this->table, $filtered);
     }
@@ -49,6 +54,11 @@ class LLMConnector {
             if (empty("$v") && $v!=="0") {
                 $data[$k] = null;
             }
+        }
+
+        // JSON encode metadata if it's an array
+        if (isset($data['metadata']) && is_array($data['metadata'])) {
+            $data['metadata'] = json_encode($data['metadata']);
         }
 
         $id = intval($id);
