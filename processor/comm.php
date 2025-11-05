@@ -972,6 +972,68 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
+} elseif (strpos($gameRequest[0], "util_location_npc")===0) {    // util_location_name 
+    
+    
+    $splitNameBase=explode("/",$gameRequest[3]);
+    if ($splitNameBase[0] && $splitNameBase[1]) {
+        $currentNpcData = $npcMaster->getByName($splitNameBase[0]);
+        
+        if ($currentNpcData) {
+            // Get existing metadata
+            $meta = [];
+            if (!empty($currentNpcData['metadata'])) {
+                $meta = json_decode($currentNpcData['metadata'], true);
+                if (!is_array($meta)) {
+                    $meta = [];
+                }
+            }
+            
+            // Update equipment section
+            $meta['last_coords'] = [$splitNameBase[1],$splitNameBase[2],$splitNameBase[3],$splitNameBase[4]];
+            
+            // Save back to database
+            $currentNpcData = $npcMaster->setMetadata($currentNpcData, $meta);
+            $npcMaster->updateByArray($currentNpcData);
+            
+            Logger::info("Updated last_coords for {$currentNpcData["npc_name"]}");
+        }
+    }
+
+    $MUST_END=true;
+    
+    
+}  elseif (strpos($gameRequest[0], "enable_bg")===0) {    // util_location_name 
+    
+    
+    $splitNameBase=explode("/",$gameRequest[3]);
+    if ($splitNameBase[0] && $splitNameBase[1]) {
+        $currentNpcData = $npcMaster->getByName($splitNameBase[0]);
+        
+        if ($currentNpcData) {
+            // Get existing metadata
+            $meta = [];
+            if (!empty($currentNpcData['extended_data'])) {
+                $meta = json_decode($currentNpcData['extended_data'], true);
+                if (!is_array($meta)) {
+                    $meta = [];
+                }
+            }
+            $currentNpcData["refid"]=$splitNameBase[1];
+            // Update equipment section
+            $meta['background_life_enabled'] = true;
+            
+            // Save back to database
+            $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $meta);
+            $npcMaster->updateByArray($currentNpcData);
+            
+            Logger::info("Updated background_life_enabled for {$currentNpcData["npc_name"]}");
+        }
+    }
+
+    $MUST_END=true;
+    
+    
 } elseif (strpos($gameRequest[0], "updateprofiles_batch_async")===0) {
     
     // Async batch processing for timer-based dynamic profile updates
