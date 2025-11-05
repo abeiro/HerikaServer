@@ -1351,6 +1351,67 @@ if (typeof window.consolidation !== 'function') {
                     <span class="toggle-text">On</span>
                 </label>
             </div>
+
+            <?php
+            // Decode metadata for caching settings (main editor)
+            $metadata_main = [];
+            if (isset($editItem['metadata'])) {
+                if (is_string($editItem['metadata'])) {
+                    $metadata_main = json_decode($editItem['metadata'], true) ?: [];
+                } elseif (is_array($editItem['metadata'])) {
+                    $metadata_main = $editItem['metadata'];
+                }
+            }
+            ?>
+
+            <!-- Caching Settings (shown only for cached connectors) - MAIN EDITOR -->
+            <div id="caching_settings_main" style="display:none; margin-top:16px; padding:12px; border:1px solid #4a4a4a; border-radius:8px; background:#1a1a1a;">
+                <div style="font-weight:600; color:#e9efff; margin-bottom:12px;">🔄 Caching Settings</div>
+
+                <label for='provider_caching_main'>Provider Caching Type</label><br>
+                <select name="metadata[provider_caching]" id="provider_caching_main">
+                    <option value="Anthropic" <?= ($metadata_main['provider_caching'] ?? 'Anthropic') === 'Anthropic' ? 'selected' : '' ?>>Anthropic</option>
+                    <option value="OpenAI" <?= ($metadata_main['provider_caching'] ?? '') === 'OpenAI' ? 'selected' : '' ?>>OpenAI</option>
+                    <option value="Gemini" <?= ($metadata_main['provider_caching'] ?? '') === 'Gemini' ? 'selected' : '' ?>>Gemini</option>
+                </select><br>
+
+                <label for='response_format_main'>Response Format</label><br>
+                <select name="metadata[response_format]" id="response_format_main">
+                    <option value="json" <?= ($metadata_main['response_format'] ?? 'json') === 'json' ? 'selected' : '' ?>>JSON (structured)</option>
+                    <option value="simple" <?= ($metadata_main['response_format'] ?? '') === 'simple' ? 'selected' : '' ?>>Simple (natural language)</option>
+                </select><br>
+
+                <label for='dialogue_cache_uncached_count_main'><span class='tip-label' data-tip='Number of most recent dialogue entries to keep uncached (0-10)'>Uncached Dialogue Count</span></label><br>
+                <input type='number' name='metadata[dialogue_cache_uncached_count]' id='dialogue_cache_uncached_count_main' value='<?= htmlspecialchars($metadata_main['dialogue_cache_uncached_count'] ?? '4') ?>' min='0' max='10' step='1'><br>
+
+                <div id="simple_format_options_main" style="display:none; margin-top:12px; padding:8px; border-left:3px solid #176529;">
+                    <div style="font-size:13px; font-weight:600; margin-bottom:8px;">Simple Format Content Options:</div>
+                    <label class="label-with-toggle"><span>Include Mood</span>
+                        <input type="hidden" name="metadata[include_mood_requirement]" value="0">
+                        <input type="checkbox" name="metadata[include_mood_requirement]" value="1" <?= (!isset($metadata_main['include_mood_requirement']) || $metadata_main['include_mood_requirement']) ? 'checked' : '' ?>>
+                    </label><br>
+                    <label class="label-with-toggle"><span>Include Listener</span>
+                        <input type="hidden" name="metadata[include_listener_requirement]" value="0">
+                        <input type="checkbox" name="metadata[include_listener_requirement]" value="1" <?= (!isset($metadata_main['include_listener_requirement']) || $metadata_main['include_listener_requirement']) ? 'checked' : '' ?>>
+                    </label><br>
+                    <label class="label-with-toggle"><span>Include Actions</span>
+                        <input type="hidden" name="metadata[include_actions_list]" value="0">
+                        <input type="checkbox" name="metadata[include_actions_list]" value="1" <?= (!isset($metadata_main['include_actions_list']) || $metadata_main['include_actions_list']) ? 'checked' : '' ?>>
+                    </label><br>
+                    <label class="label-with-toggle"><span>Include Target</span>
+                        <input type="hidden" name="metadata[include_target_requirement]" value="0">
+                        <input type="checkbox" name="metadata[include_target_requirement]" value="1" <?= (!isset($metadata_main['include_target_requirement']) || $metadata_main['include_target_requirement']) ? 'checked' : '' ?>>
+                    </label>
+                </div>
+
+                <div id="verbose_logging_option_main" style="display:none; margin-top:12px;">
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Enable detailed logging for testing (verbose connector only)'>Verbose Logging</span>
+                        <input type="hidden" name="metadata[verbose_logging]" value="0">
+                        <input type="checkbox" name="metadata[verbose_logging]" value="1" <?= (!isset($metadata_main['verbose_logging']) || $metadata_main['verbose_logging']) ? 'checked' : '' ?>>
+                        <span class="toggle-text">On</span>
+                    </label>
+                </div>
+            </div>
         </div>
 
         <div>
@@ -1521,8 +1582,50 @@ if (typeof window.consolidation !== 'function') {
     function detectService(){ const sValRaw=(document.getElementById('service_input')&&String(document.getElementById('service_input').value||''))||''; const sVal=sValRaw.toLowerCase(); if (['openrouter','openai','google','nanogpt','custom'].includes(sVal)) return sVal; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (u){ if (u.includes('openai.com')) return 'openai'; if (u.includes('generativelanguage.googleapis.com')) return 'google'; if (u.includes('openrouter.ai')) return 'openrouter'; if (u.includes('nano-gpt.com')) return 'nanogpt'; return 'custom'; } const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; if (d.includes('openai')) return 'openai'; if (d.includes('google')) return 'google'; if (d.includes('nanogpt')) return 'nanogpt'; if (d.includes('openrouter')) return 'openrouter'; return 'openrouter'; }
     (function init(){ const service = detectService(); applyService(service, false); const driverSelect = document.getElementById('driver_select'); if (driverSelect) { driverSelect.addEventListener('change', function(){ if (driverInput) driverInput.value = this.value; }); if (driverInput && driverInput.value) driverSelect.value = driverInput.value; } const btnWSL = document.getElementById('btn_wsl_ip'); const btnHost = document.getElementById('btn_host_ip'); function fillFrom(buttonEl, ip){ if (!buttonEl) return; const form = buttonEl.closest('form'); const urlEl = form ? form.querySelector('input[name="url"]') : document.querySelector('input[name="url"]'); if (!ip || !urlEl) return; urlEl.value = 'http://' + ip + ':5001'; try { urlEl.dispatchEvent(new Event('input', { bubbles:true })); } catch(_e){} try { urlEl.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){} try { urlEl.focus(); } catch(_e){} } if (btnWSL) btnWSL.addEventListener('click', function(){ let ip = this.getAttribute('data-ip')||''; if (!ip) { ip = '<?= htmlspecialchars($WSL_IP) ?>'; } fillFrom(this, String(ip).trim()); }); if (btnHost) btnHost.addEventListener('click', function(){ let ip = this.getAttribute('data-ip')||''; if (!ip) { ip = '<?= htmlspecialchars($HOST_IP) ?>'; } fillFrom(this, String(ip).trim()); }); })();
     icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service, true)); });
-    if (driverInput){ driverInput.addEventListener('input', ()=> applyService(detectService(), false)); driverInput.addEventListener('change', ()=> applyService(detectService(), false)); }
+    if (driverInput){ driverInput.addEventListener('input', ()=> { applyService(detectService(), false); updateCachingSettingsMain(); }); driverInput.addEventListener('change', ()=> { applyService(detectService(), false); updateCachingSettingsMain(); }); }
     if (urlInput){ urlInput.addEventListener('change', ()=> { const sEl=document.getElementById('service_input'); const sVal = sEl ? String(sEl.value||'').toLowerCase() : ''; if (sVal==='custom') return; applyService(detectService(), false); }); }
+
+    // Also listen to driver_select changes for caching settings
+    const driverSelect = document.getElementById('driver_select');
+    if (driverSelect) {
+        driverSelect.addEventListener('change', function() {
+            if (driverInput) driverInput.value = this.value;
+            updateCachingSettingsMain();
+        });
+    }
+})();
+
+// Caching settings visibility logic for main editor
+function updateCachingSettingsMain(){
+    const driverInput = document.querySelector('input[name="driver"]');
+    const driverSelect = document.getElementById('driver_select');
+    const driver = driverInput ? driverInput.value : (driverSelect ? driverSelect.value : '');
+    const cachingSettings = document.getElementById('caching_settings_main');
+    const simpleFormatOptions = document.getElementById('simple_format_options_main');
+    const verboseLoggingOption = document.getElementById('verbose_logging_option_main');
+    const responseFormatSelect = document.getElementById('response_format_main');
+
+    // Show caching settings only for cached drivers
+    const isCachedDriver = driver === 'openrouterjsoncached' || driver === 'openrouterjsoncached_verbose';
+    if (cachingSettings) cachingSettings.style.display = isCachedDriver ? '' : 'none';
+
+    // Show verbose logging option only for verbose driver
+    if (verboseLoggingOption) verboseLoggingOption.style.display = (driver === 'openrouterjsoncached_verbose') ? '' : 'none';
+
+    // Show simple format options based on response_format selection
+    if (responseFormatSelect && simpleFormatOptions) {
+        simpleFormatOptions.style.display = (responseFormatSelect.value === 'simple') ? '' : 'none';
+    }
+}
+
+// Listen for response format changes in main editor
+(function(){
+    const responseFormatSelect = document.getElementById('response_format_main');
+    if (responseFormatSelect) {
+        responseFormatSelect.addEventListener('change', updateCachingSettingsMain);
+    }
+    // Initial call to set correct visibility
+    updateCachingSettingsMain();
 })();
 function llmClamp(rangeId, numberId, min, max){ const r = document.getElementById(rangeId); const n = document.getElementById(numberId); if (!r || !n) return; let v = parseFloat(n.value); if (isNaN(v)) v = min; if (v < min) v = min; if (v > max) v = max; n.value = v; r.value = v; }
 // Clear advanced settings (all below Temperature)

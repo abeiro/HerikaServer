@@ -34,6 +34,8 @@ Bug Fixes (Pre-Release):
 ✓ Fixed type error in MAX_TOKENS calculation
 ✓ Fixed checkbox defaults in WebUI to match connector defaults
 ✓ Added metadata JSON encoding for database operations
+✓ Fixed stream_get_meta_data null pointer error in getHttpStatusCode
+✓ Fixed caching settings not appearing in main LLM Connectors page (only showed in Profiles)
 
 Compatibility:
 --------------

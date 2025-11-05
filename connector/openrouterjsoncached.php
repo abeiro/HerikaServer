@@ -208,7 +208,15 @@ class openrouterjsoncached
         if (isset($GLOBALS['mockConnectorResponseMetaData'])) {
             $responseInfo = call_user_func($GLOBALS['mockConnectorResponseMetaData']);
         } else {
+            if (!is_resource($this->primary_handler)) {
+                logMessage("[{$this->name}] getHttpStatusCode: primary_handler is null or not a resource");
+                return null;
+            }
             $responseInfo = stream_get_meta_data($this->primary_handler);
+        }
+
+        if (!isset($responseInfo['wrapper_data'][0])) {
+            return null;
         }
 
         $statusLine = $responseInfo['wrapper_data'][0];
