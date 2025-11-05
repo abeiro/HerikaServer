@@ -375,6 +375,10 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
    
     try {
         $characterDynamicProfile = $npcData["dynamic_profile"] ?? $GLOBALS["DYNAMIC_PROFILE"] ?? false;
+        
+        if (isset($profileMetadata["DYNAMIC_PROFILE_ENABLED"]) && $profileMetadata["DYNAMIC_PROFILE_ENABLED"]==1) {
+            $characterDynamicProfile=true;
+        }
 
         // restores logic now that DYNAMIC_PROFILE_FIELDS is in npcData
         $characterDynamicProfileFields = $npcData["DYNAMIC_PROFILE_FIELDS"] ??
