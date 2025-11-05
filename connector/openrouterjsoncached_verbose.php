@@ -1494,8 +1494,11 @@ class openrouterjsoncached_verbose
         } else {
             // Simple format parsing
             if (!$this->_simpleFormatParsed) {
+                // Prepend prefill content if used, since API doesn't return it in response
+                $bufferToParse = $this->_usedPrefill ? $this->_prefillContent . $this->_buffer : $this->_buffer;
+
                 $parsed = extractSimpleFormatFromBuffer(
-                    $this->_buffer,
+                    $bufferToParse,
                     $this->_includeMood,
                     $this->_includeListener,
                     $this->_includeActions,
