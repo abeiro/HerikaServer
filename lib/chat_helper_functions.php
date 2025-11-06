@@ -187,9 +187,8 @@ function stripReasoningTokens($text) {
     }
 
     // Clean up any resulting extra whitespace
-    // Collapse multiple spaces to single space, but preserve newlines
-    $cleaned = preg_replace('/ +/', ' ', $cleaned);  // Multiple spaces -> single space
-    $cleaned = preg_replace('/\n\n+/', "\n\n", $cleaned);  // Multiple newlines -> max double newline
+    // Collapse ALL whitespace (including newlines) to single spaces for roleplay responses
+    $cleaned = preg_replace('/\s+/', ' ', $cleaned);
     $cleaned = trim($cleaned);
 
     return $cleaned;
