@@ -2966,7 +2966,7 @@ function call_llm() {
         }
         else {
             $buffer.= $tmpData;
-            $totalBuffer.=$buffer; 
+            $totalBuffer.=$tmpData;  // Fixed: add only new chunk, not entire buffer
         }
 
         if ($connectionHandler->isDone()) {

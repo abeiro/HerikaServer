@@ -117,27 +117,38 @@ function cleanResponse($rawResponse)
 }
 
 function findDotPosition($s_string) {
-    
+
     $lastChar = substr($s_string, -1);
 
     if ($lastChar === ".")  // Dont eval on .. wait till next tokens
         return false;
-    
-    $dotPosition = strrpos($s_string, "."); // last dot in string
-    
-    /* // old version
-    if (($dotPosition !== false) && (strpos($s_string, ".", $dotPosition + 1) === false) && (substr($s_string, $dotPosition - 3, 3) !== "...")) {
-        return $dotPosition;
-    } */
-    
-    if ($dotPosition !== false) {// found last dot
-        // check for ...
-        if (substr($s_string, ($dotPosition - 1), 1) !== ".") { 
-            return $dotPosition;
+
+    // Get all sentence-ending punctuation marks
+    $eosPunc = getEndOfSentencePunctuation(); // .?!。？！
+    $punctChars = mb_str_split($eosPunc);
+
+    // Find the last occurrence of ANY sentence-ending punctuation
+    $lastPosition = false;
+    $lastPunctChar = '';
+
+    foreach ($punctChars as $punct) {
+        $pos = mb_strrpos($s_string, $punct);
+        if ($pos !== false) {
+            if ($lastPosition === false || $pos > $lastPosition) {
+                // For periods, check it's not part of ellipsis
+                if ($punct === '.') {
+                    // Check character before period is not also a period
+                    if ($pos > 0 && mb_substr($s_string, $pos - 1, 1) === '.') {
+                        continue; // Skip this period, it's part of ellipsis
+                    }
+                }
+                $lastPosition = $pos;
+                $lastPunctChar = $punct;
+            }
         }
     }
 
-    return false;
+    return $lastPosition;
 }
 
 function br2nl($string)
