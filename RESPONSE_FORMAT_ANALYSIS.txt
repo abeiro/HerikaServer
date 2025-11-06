@@ -1,0 +1,598 @@
+===============================================================================
+RESPONSE FORMAT ANALYSIS - JSON vs SIMPLE FORMAT
+===============================================================================
+
+## Overview
+
+HerikaServer supports two response formats from the LLM:
+1. **JSON Format**: Structured JSON object (standard CHIM format)
+2. **Simple Format**: Natural language with parenthetical metadata
+
+Both formats extract the same metadata (mood, listener, action, target) but use
+different prompting and parsing strategies.
+
+## Configuration
+
+**Setting**: `response_format` in connector configuration
+**Values**: "json" (default) or "simple"
+**Location**: conf/conf_schema.json lines 117, 164
+
+**Description from schema**:
+- **json**: Structured JSON output (standard CHIM format)
+- **simple**: Natural language with parenthetical metadata like
+  (mood)(listener)(action)(target). Recommended for less capable models.
+
+## Response Template Definition
+
+**File**: functions/json_response.php
+**Function**: setResponseTemplate() (lines 62-133)
+
+### Standard JSON Template (lines 109-117):
+```php
+$GLOBALS["responseTemplate"] = [
+    "character" => $GLOBALS["HERIKA_NAME"],
+    "listener" => "specify who {NPC} is talking to, comma separated, max two listeners...",
+    "mood" => implode("|", $moods),  // e.g. "happy|sad|angry|neutral"
+    "action" => implode("|", $GLOBALS["FUNC_LIST"]),  // e.g. "Talk|Attack|Think"
+    "target" => "action target actor|action destination location name",
+    "message" => "lines of dialogue"
+];
+```
+
+### With Language Support (lines 99-107):
+Adds: `"lang" => "en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi"`
+
+### With Zonos TTS (lines 121-132):
+Adds 8 tone fields: response_tone_happiness, sadness, disgust, fear, surprise,
+anger, other, neutral (all 0-1 values)
+
+## Format 1: JSON (Structured)
+
+### Instruction Building (openrouterjsoncached.php lines 336-352)
+
+**Process**:
+1. Load responseTemplate from $GLOBALS
+2. Remove disabled fields based on include flags:
+   - Line 339-340: Remove 'mood' if !_includeMood
+   - Line 342-343: Remove 'action' if !_includeActions
+   - Line 345-346: Remove 'target' if !_includeTarget
+   - Line 348-349: Remove 'listener' if !_includeListener
+
+3. Build instruction (line 352):
+```php
+$formatInstruction = "{$prefix} $speechReinforcement $customInstruction
+    Use ONLY this JSON object to give your answer. Do not send any other
+    characters outside of this JSON structure$zonosTones: " . json_encode($template);
+```
+
+**Example Full Instruction**:
+```
+Use ONLY this JSON object to give your answer. Do not send any other
+characters outside of this JSON structure:
+{
+  "character":"Lydia",
+  "listener":"specify who Lydia is talking to, comma separated, max two listeners, in addressing order",
+  "mood":"happy|sad|angry|neutral|excited|thoughtful",
+  "action":"Talk|Think|Attack|SearchMemory",
+  "target":"action target actor|action destination location name",
+  "message":"lines of dialogue"
+}
+```
+
+### Parsing JSON Response (openrouterjsoncached.php lines 867-886)
+
+**Process**:
+1. Extract JSON from buffer (line 869):
+   ```php
+   $extracted_json_or_text = extractJson($this->_buffer);
+   ```
+
+2. Parse JSON (line 870):
+   ```php
+   $tempJson = json_decode($extracted_json_or_text, true);
+   ```
+
+3. Validate (line 872):
+   - Check for no JSON errors
+   - Check for 'message' field
+   - Check message is not empty
+
+4. Extract metadata (lines 873-884):
+   - **Mood** (line 873-876): Set SCRIPTLINE_ANIMATION and SCRIPTLINE_EXPRESSION
+   - **Listener** (line 877-883): Set SCRIPTLINE_LISTENER (with fallback to target)
+   - **Action/Target**: Implicitly extracted for function calls
+
+5. Return message (line 885):
+   ```php
+   return $tempJson['message'];
+   ```
+
+**Example JSON Response**:
+```json
+{
+  "character": "Lydia",
+  "listener": "Player",
+  "mood": "thoughtful",
+  "action": "Talk",
+  "target": "",
+  "message": "I'm worried about that cave we passed. The locals say it's cursed."
+}
+```
+
+### JSON Enforcement Options
+
+**ENFORCE_JSON** (schema line 150, 197):
+- Forces response_format parameter in API request
+- Only works with specific models
+- Not used when response_format is 'simple'
+
+**PREFILL_JSON** (schema line 151, 198):
+- Prefills the JSON response with opening `{`
+- Helps models that struggle with JSON format
+- Only works with Anthropic models (prefill support)
+- Not used when response_format is 'simple'
+
+**json_schema** (schema line 156, 203):
+- Uses OpenRouter/OpenAI structured outputs
+- Enforces strict JSON schema at API level
+- Not all models support this
+- Requires ENFORCE_JSON to be true
+- Uses $GLOBALS["structuredOutputTemplate"] (json_response.php lines 136-196)
+
+
+## Format 2: Simple (Natural Language)
+
+### Instruction Building (openrouterjsoncached_helpers.php lines 475-513)
+
+**Function**: buildSimpleFormatInstruction()
+
+**Process**:
+1. Build list of enabled metadata parts (lines 477-481):
+   ```php
+   if ($includeMood) $parts[] = 'mood';
+   if ($includeListener) $parts[] = 'listener';
+   if ($includeActions) $parts[] = 'action';
+   if ($includeTarget) $parts[] = 'target';
+   ```
+
+2. If no metadata requested (lines 483-485):
+   ```php
+   return $customInstruction . " Respond naturally with your dialogue.";
+   ```
+
+3. Build format example (line 487):
+   ```php
+   $formatExample = '(' . implode(')(', $parts) . ')';
+   // e.g. "(mood)(listener)(action)(target)"
+   ```
+
+4. Build instruction text (lines 489-496):
+   ```php
+   $instruction = "Begin your response by noting your ";
+   $descriptions = [];
+   if ($includeMood) $descriptions[] = "emotional state";
+   if ($includeListener) $descriptions[] = "who you're speaking to";
+   if ($includeActions) $descriptions[] = "intended action";
+   if ($includeTarget) $descriptions[] = "action target";
+
+   $instruction .= implode(", ", $descriptions);
+   $instruction .= " in parentheses like this: {$formatExample}, then provide your dialogue naturally.";
+   ```
+
+5. Add valid moods list if configured (lines 499-501):
+   ```php
+   if ($includeMood && isset($GLOBALS["EMOTEMOODS"]) && !empty($GLOBALS["EMOTEMOODS"])) {
+       $instruction .= "Valid moods: " . $GLOBALS["EMOTEMOODS"] . ". ";
+   }
+   ```
+
+6. Add example (lines 503-510):
+   ```php
+   $exampleParts = [];
+   if ($includeMood) $exampleParts[] = "neutral";
+   if ($includeListener) $exampleParts[] = "Player";
+   if ($includeActions) $exampleParts[] = "Talk";
+   if ($includeTarget) $exampleParts[] = "Lydia";
+
+   $exampleFormat = '(' . implode(')(', $exampleParts) . ')';
+   $instruction .= "Example: {$exampleFormat} I'm worried about that cave we passed.";
+   ```
+
+**Example Full Instruction** (with all metadata enabled):
+```
+Begin your response by noting your emotional state, who you're speaking to,
+intended action, action target in parentheses like this: (mood)(listener)(action)(target),
+then provide your dialogue naturally. Valid moods: happy, sad, angry, neutral,
+excited, thoughtful. Example: (neutral)(Player)(Talk)(Lydia) I'm worried about
+that cave we passed.
+```
+
+**Example Simplified Instruction** (only mood and listener):
+```
+Begin your response by noting your emotional state, who you're speaking to
+in parentheses like this: (mood)(listener), then provide your dialogue naturally.
+Valid moods: happy, sad, angry, neutral. Example: (thoughtful)(Player)
+I'm worried about that cave we passed.
+```
+
+### Parsing Simple Response (openrouterjsoncached_helpers.php lines 518-577)
+
+**Function**: extractSimpleFormatFromBuffer()
+
+**Process**:
+
+1. Count enabled metadata groups (lines 519-523):
+   ```php
+   $groupCount = 0;
+   if ($includeMood) $groupCount++;
+   if ($includeListener) $groupCount++;
+   if ($includeActions) $groupCount++;
+   if ($includeTarget) $groupCount++;
+   ```
+
+2. Handle no metadata case (lines 525-533):
+   ```php
+   if ($groupCount === 0) {
+       return [
+           'mood' => '', 'listener' => '', 'action' => 'Talk', 'target' => '',
+           'message' => $buffer, 'found' => true
+       ];
+   }
+   ```
+
+3. Build regex pattern (lines 536-537):
+   ```php
+   $groupPattern = str_repeat('\(([^)]+)\)', $groupCount);
+   $pattern = '/^\s*' . $groupPattern . '\s*(.*)$/s';
+   ```
+
+   **Example patterns**:
+   - 4 groups: `/^\s*\(([^)]+)\)\(([^)]+)\)\(([^)]+)\)\(([^)]+)\)\s*(.*)$/s`
+   - 2 groups: `/^\s*\(([^)]+)\)\(([^)]+)\)\s*(.*)$/s`
+
+4. Match pattern against buffer (line 539):
+   ```php
+   if (preg_match($pattern, $buffer, $matches)) {
+   ```
+
+5. Extract groups in order (lines 540-544):
+   ```php
+   $groups = [];
+   for ($i = 1; $i <= $groupCount; $i++) {
+       $groups[] = $matches[$i];
+   }
+   $message = $matches[$groupCount + 1];
+   ```
+
+6. Initialize result with defaults (lines 546-553):
+   ```php
+   $result = [
+       'mood' => '',
+       'listener' => '',
+       'action' => 'Talk',  // ← Default action
+       'target' => '',
+       'message' => trim($message),
+       'found' => true
+   ];
+   ```
+
+7. Map groups to fields (lines 555-571):
+   ```php
+   $groupIndex = 0;
+   if ($includeMood && isset($groups[$groupIndex])) {
+       $result['mood'] = trim($groups[$groupIndex]);
+       $groupIndex++;
+   }
+   if ($includeListener && isset($groups[$groupIndex])) {
+       $result['listener'] = trim($groups[$groupIndex]);
+       $groupIndex++;
+   }
+   if ($includeActions && isset($groups[$groupIndex])) {
+       $result['action'] = trim($groups[$groupIndex]);
+       $groupIndex++;
+   }
+   if ($includeTarget && isset($groups[$groupIndex])) {
+       $result['target'] = trim($groups[$groupIndex]);
+       $groupIndex++;
+   }
+   ```
+
+8. Return result or not found (lines 573-576):
+   ```php
+   return $result;
+   }
+   return ['found' => false];
+   ```
+
+**Example Simple Response**:
+```
+(thoughtful)(Player)(Talk)() I'm worried about that cave we passed. The locals say it's cursed.
+```
+
+**Parsed Result**:
+```php
+[
+    'mood' => 'thoughtful',
+    'listener' => 'Player',
+    'action' => 'Talk',
+    'target' => '',
+    'message' => "I'm worried about that cave we passed. The locals say it's cursed.",
+    'found' => true
+]
+```
+
+### Simple Format Streaming (openrouterjsoncached.php lines 888-931)
+
+**Special Handling**: Simple format supports streaming word-by-word
+
+**First Parse** (lines 889-921):
+1. Prepend prefill content if used (lines 890-891):
+   ```php
+   $bufferToParse = $this->_usedPrefill ? $this->_prefillContent . $this->_buffer : $this->_buffer;
+   ```
+
+   **WHY**: Anthropic's API doesn't return prefilled text in response.
+   If we prefill with `(`, the buffer only contains `happy)(Player)(Talk) message...`
+   We need to reconstruct `(happy)(Player)(Talk) message...` for regex parsing.
+
+2. Parse buffer (line 893):
+   ```php
+   $parsed = extractSimpleFormatFromBuffer(...);
+   ```
+
+3. Mark as parsed and save position (lines 902-909):
+   ```php
+   $this->_simpleFormatParsed = true;
+   $messagePos = strpos($this->_buffer, $parsed['message']);
+   if ($messagePos !== false) {
+       $this->_simpleFormatMessageStart = $messagePos;
+       $this->_lastReturnedLength = strlen($parsed['message']);
+   }
+   ```
+
+4. Set metadata globals (lines 911-918):
+   ```php
+   if ($this->_includeMood && !empty($parsed['mood'])) {
+       $GLOBALS["SCRIPTLINE_ANIMATION"] = GetAnimationHex($parsed["mood"]);
+       $GLOBALS["SCRIPTLINE_EXPRESSION"] = GetExpression($parsed["mood"]);
+   }
+   if ($this->_includeListener && !empty($parsed['listener'])) {
+       $GLOBALS["SCRIPTLINE_LISTENER"] = $parsed['listener'];
+   }
+   ```
+
+5. Return initial message (line 920):
+   ```php
+   return $parsed['message'];
+   ```
+
+**Subsequent Calls** (lines 922-931):
+1. Extract new content since last call (lines 924-927):
+   ```php
+   if ($this->_simpleFormatMessageStart > 0) {
+       $currentMessage = substr($this->_buffer, $this->_simpleFormatMessageStart);
+       $newContent = substr($currentMessage, $this->_lastReturnedLength);
+       $this->_lastReturnedLength = strlen($currentMessage);
+       return $newContent;
+   }
+   ```
+
+**Streaming Example**:
+
+Buffer state over time:
+```
+Call 1: "(thoughtful)(Player)(Talk)() I'm worried"
+  → Returns: "I'm worried"
+  → _lastReturnedLength = 11
+
+Call 2: "(thoughtful)(Player)(Talk)() I'm worried about that"
+  → Returns: " about that"  (new content only)
+  → _lastReturnedLength = 22
+
+Call 3: "(thoughtful)(Player)(Talk)() I'm worried about that cave we passed."
+  → Returns: " cave we passed."
+  → _lastReturnedLength = 38
+```
+
+### Simple Format Prefill (openrouterjsoncached.php lines 541-552)
+
+**Only for Anthropic provider**:
+
+```php
+if ($this->_responseFormat === 'simple' && $this->_provider_caching === "Anthropic") {
+    $prefillParts = [];
+    if ($this->_includeMood) $prefillParts[] = '';
+    if ($this->_includeListener) $prefillParts[] = '';
+    if ($this->_includeActions) $prefillParts[] = '';
+    if ($this->_includeTarget) $prefillParts[] = '';
+
+    if (!empty($prefillParts)) {
+        $prefillText = '(';
+        $this->_usedPrefill = true;
+        $this->_prefillContent = $prefillText;
+
+        $messages[] = array("role" => "assistant", "content" => $prefillText);
+    }
+}
+```
+
+**Purpose**: Start the assistant response with `(` to ensure proper format.
+Model continues with: `happy)(Player)(Talk)() message text...`
+
+
+## Comparison: JSON vs Simple
+
+### JSON Format
+
+**Advantages**:
+- Structured data is easy to parse
+- Resistant to format breaking (extraction can find JSON anywhere in response)
+- Supports schema enforcement (json_schema mode)
+- Standard format used across CHIM ecosystem
+
+**Disadvantages**:
+- Some models struggle with JSON format
+- Requires JSON-specific enforcement/prefill tricks
+- Can't stream word-by-word (need full JSON object)
+- More verbose in prompt
+
+**Best For**:
+- Advanced models (Claude, GPT-4, Gemini Pro)
+- Models that support structured outputs
+- When strict format adherence is needed
+
+### Simple Format
+
+**Advantages**:
+- More natural for language models
+- Supports streaming word-by-word
+- Works well with less capable models
+- Shorter instruction prompt
+- More human-readable
+
+**Disadvantages**:
+- Format can break if model doesn't follow instructions
+- Regex parsing is less robust than JSON parsing
+- Requires prefill trick on Anthropic to ensure opening `(`
+- Must parse on first chunk to extract metadata
+
+**Best For**:
+- Smaller/weaker models that struggle with JSON
+- When word-by-word streaming is important
+- When simpler prompts improve quality
+
+
+## Metadata Fields
+
+Both formats extract the same metadata:
+
+### mood (if _includeMood)
+- Emotional state while speaking
+- Examples: happy, sad, angry, neutral, thoughtful, excited
+- Used to set: SCRIPTLINE_ANIMATION, SCRIPTLINE_EXPRESSION
+- Source: $GLOBALS["EMOTEMOODS"] (comma-separated list)
+
+### listener (if _includeListener)
+- Who the NPC is speaking to
+- Examples: Player, Lydia, Everyone
+- Used to set: SCRIPTLINE_LISTENER
+- Format: "comma separated, max two listeners, in addressing order"
+
+### action (if _includeActions)
+- Intended action by the NPC
+- Examples: Talk, Think, Attack, SearchMemory
+- Default: 'Talk' (if not specified in simple format)
+- Source: $GLOBALS["FUNC_LIST"] (available actions from functions)
+
+### target (if _includeTarget)
+- Target of the action
+- Examples: Player, Lydia, Dragon, "Whiterun"
+- Format: "action target actor | action destination location name"
+- Used as fallback for listener if action is Talk
+
+### message (always required)
+- The actual dialogue text
+- This is what gets returned to the game engine
+- Must be non-empty
+
+
+## Configuration Flags
+
+### Response Format Selection
+**Field**: `response_format`
+**Values**: "json" | "simple"
+**Default**: "json"
+
+### Metadata Inclusion Flags
+All default to their legacy values, configurable per connector:
+
+**_includeMood**: Include mood metadata (default: depends on EMOTEMOODS config)
+**_includeListener**: Include listener metadata (default: true)
+**_includeActions**: Include action metadata (default: depends on FUNCTIONS_ARE_ENABLED)
+**_includeTarget**: Include target metadata (default: depends on FUNCTIONS_ARE_ENABLED)
+
+These flags:
+1. Control which fields are removed from JSON template (lines 339-350)
+2. Control which groups are expected in simple format (buildSimpleFormatInstruction)
+3. Control which fields are parsed from simple format (extractSimpleFormatFromBuffer)
+
+
+## Code Flow Summary
+
+### JSON Format Flow:
+1. Build responseTemplate in functions/json_response.php
+2. Remove disabled fields in openrouterjsoncached.php:336-350
+3. Add JSON instruction to system prompt (line 352)
+4. LLM responds with JSON object
+5. Extract JSON from buffer with extractJson() (line 869)
+6. Parse JSON and validate (lines 870-872)
+7. Extract metadata and set globals (lines 873-884)
+8. Return message field (line 885)
+
+### Simple Format Flow:
+1. Build instruction with buildSimpleFormatInstruction() (helpers:475-513)
+2. Add simple format instruction to system prompt (openrouterjsoncached.php:354-361)
+3. Optionally prefill with '(' for Anthropic (lines 541-552)
+4. LLM responds with (metadata)(metadata)... message text
+5. On first chunk: Parse with extractSimpleFormatFromBuffer() (helpers:518-577)
+6. Extract metadata and set globals (openrouterjsoncached.php:911-918)
+7. Return message portion (line 920)
+8. On subsequent chunks: Return only new message content (lines 924-927)
+
+
+## Current Issues and Notes
+
+### ✅ Fixed in v1.0.3: Simple Format Empty Output
+**Issue**: When using simple format with Anthropic prefill, buffer didn't include
+the opening `(`, causing regex to fail.
+
+**Fix**: Lines 890-891 prepend prefill content before parsing:
+```php
+$bufferToParse = $this->_usedPrefill ? $this->_prefillContent . $this->_buffer : $this->_buffer;
+```
+
+### Note: Streaming Differences
+- **JSON**: Cannot stream word-by-word (need complete JSON object)
+  - Returns empty until complete JSON is in buffer
+  - Then returns full message at once
+
+- **Simple**: Can stream word-by-word
+  - First call returns initial message chunk
+  - Subsequent calls return only new content
+  - Provides better UX for long responses
+
+
+## Related Configuration Options
+
+### ENFORCE_JSON (JSON only)
+- Sends response_format parameter to API
+- Forces JSON mode when supported
+- Not used with simple format
+
+### PREFILL_JSON (JSON only)
+- Prefills response with `{` character
+- Only works with Anthropic models
+- Not used with simple format
+
+### json_schema (JSON only)
+- Uses OpenAI/OpenRouter structured outputs
+- Enforces strict JSON schema at API level
+- Requires model support
+- Not used with simple format
+
+### minimize_quality_prompt (Both formats)
+- Controls TEMPLATE_DIALOG verbosity
+- Recommended enabled for advanced models
+- Added in v1.0.3
+
+### custom_system_instruction (Both formats)
+- Added to format instruction in system prompt
+- Works with both JSON and simple formats
+- Renamed from custom_last_instruction in v1.0.4
+
+### custom_last_instruction (Both formats)
+- Inserted as second-to-last element in dialogue history
+- Works with both JSON and simple formats
+- Renamed from custom_last_user_instruction in v1.0.4
+
+===============================================================================

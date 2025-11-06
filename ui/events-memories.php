@@ -692,6 +692,16 @@ function getTimeColor($time) {
                                 if (isset($msg['role']) && isset($msg['content'])) {
                                     $role = $msg['role'];
                                     $content = $msg['content'];
+
+                                    // Handle both string and array content formats
+                                    if (is_array($content)) {
+                                        if (isset($content[0]['type']) && $content[0]['type'] === 'text' && isset($content[0]['text'])) {
+                                            $content = $content[0]['text'];
+                                        } else {
+                                            $content = json_encode($content, JSON_PRETTY_PRINT);
+                                        }
+                                    }
+
                                     $escapedContent = htmlspecialchars($content);
                                     $contentPreview = mb_substr($content, 0, 100);
                                     $escapedPreview = htmlspecialchars($contentPreview);

@@ -1,0 +1,309 @@
+===============================================================================
+CHIM CACHED CONNECTOR - VERSION HISTORY
+===============================================================================
+
+Version 1.0.7 (2025-11-06)
+--------------------------
+
+This release consolidates the cached connector implementation with reasoning
+support and UI improvements from multiple development branches.
+
+New Features:
+-------------
+✓ Reasoning toggle controls in LLM Connectors UI
+  - Added toggle_thinking checkbox for easy enable/disable
+  - Added thinking_tokens input for token limit control
+  - Added effort_level dropdown for OpenAI reasoning models
+  - UI controls integrate seamlessly with existing connector settings
+
+Configuration Updates:
+----------------------
+✓ Removed deprecated reasoning_model checkbox
+  - Reasoning models now auto-detected based on model name
+  - Simplifies configuration - no manual selection needed
+  - Backward compatible with existing configurations
+
+Files Modified:
+---------------
+• ui/core/llm_connectors.php - Added reasoning UI controls
+
+Version 1.0.6 (2025-11-06)
+--------------------------
+
+New Features:
+-------------
+✓ **Complete Reasoning/Chain-of-Thought (CoT) Support**
+  - Added toggle_thinking configuration (default: false) to enable/disable reasoning
+  - Added reasoning_effort setting for OpenAI models (minimal/low/medium/high)
+  - Reasoning tokens ALWAYS stripped from output regardless of toggle state
+  - Three-layer filtering ensures reasoning never appears in game dialogue:
+    1. API layer: reasoning.exclude=true parameter
+    2. Streaming layer: detect unclosed markers, wait for complete blocks
+    3. Output layer: strip any remaining tokens from final message
+
+Model Detection:
+----------------
+✓ **Automatic OpenAI Reasoning Model Detection**
+  - Detects o1, o3, o4, gpt-5* models (excludes gpt-5-chat)
+  - Automatically uses max_completion_tokens instead of max_tokens
+  - Strips incompatible parameters (temperature, top_p, etc.) for reasoning models
+  - Parameter stripping ONLY for OpenAI reasoning models when reasoning enabled
+
+✓ **Always-Reasoning Model Detection**
+  - Models like o1, o3, o4, gpt-5*, DeepSeek-R1 always use reasoning
+  - Reasoning automatically enabled regardless of toggle state
+  - Ensures proper API parameter handling
+
+Reasoning Token Filtering:
+---------------------------
+✓ **Supported Reasoning Markers**
+  - <think>...</think>, <thinking>...</thinking>
+  - <reasoning>...</reasoning>, <thought>...</thought>
+  - <reflection>...</reflection>, <cot>...</cot>
+  - <scratchpad>...</scratchpad>
+  - [THINK]...[/THINK], [THINKING]...[/THINKING]
+
+✓ **Streaming Detection**
+  - Detects incomplete reasoning blocks during streaming
+  - Waits for closing markers before processing sentences
+  - Ensures first actual response sentence still sent immediately
+  - Prevents reasoning from being sent to game mid-stream
+
+✓ **Final Output Filtering**
+  - Strips reasoning from JSON format messages
+  - Strips reasoning from simple format messages (both initial and incremental)
+  - Applies to all response types regardless of API filtering
+
+Configuration Updates:
+----------------------
+✓ Deprecated reasoning_model toggle (now auto-detected)
+✓ Updated toggle_thinking description to clarify reasoning support
+✓ Added "minimal" effort level for GPT-5+ models
+✓ Configuration changes backward compatible
+
+Technical Implementation:
+-------------------------
+• Added isOpenAIModel() detection for o1/o3/o4/gpt-5* models
+• Added isAlwaysReasoningModel() for models that can't disable reasoning
+• Added stripReasoningTokens() for token removal
+• Added hasUnclosedReasoningMarker() for streaming detection
+• Added extractReasoningFreeContent() for safe incremental processing
+
+Files Modified:
+---------------
+• conf/conf_schema.json - Configuration schema updates
+• connector/openrouterjsoncached.php - API parameters and output filtering
+• connector/openrouterjsoncached_verbose.php - Same with verbose logging
+• lib/chat_helper_functions.php - Reasoning detection functions
+• lib/data_functions.php - Streaming integration
+
+Bug Fixes (Post-Release):
+-------------------------
+✓ **CRITICAL: Fixed streaming blocked by unclosed reasoning markers**
+  - Problem: When buffer contained complete sentence followed by unclosed reasoning
+    (e.g., "Hello there.<think>Partial reasoning"), entire buffer was blocked
+  - Impact: First valid sentence was delayed until reasoning block completed
+  - Fix: Modified extractReasoningFreeContent() to extract content BEFORE unclosed markers
+  - Result: First sentences now stream immediately even when followed by reasoning
+  - Modified: lib/chat_helper_functions.php (extractReasoningFreeContent function)
+
+✓ **Confirmed correct whitespace handling**
+  - Initial assessment: Thought newline preservation was needed
+  - User correction: Roleplay responses must be single line with no newlines
+  - Resolution: Confirmed original whitespace collapsing behavior is correct
+  - All whitespace (including newlines) collapsed to single spaces as intended
+
+Known Limitations (Not Bugs):
+------------------------------
+• Nested reasoning tags (e.g., <think>Outer<think>Inner</think>More</think>) may
+  leave orphaned closing tags. This is acceptable as LLMs rarely output nested markers.
+• Ellipsis-only sentences won't send until more content arrives (streaming context)
+• Minimum 75 character requirement for sentence streaming (intentional throttling)
+
+Version 1.0.5 (2025-11-06)
+--------------------------
+
+Critical Bug Fixes:
+-------------------
+✓ **CRITICAL: Fixed streaming punctuation detection**
+  - Questions and exclamations now trigger immediate sentence sending
+  - Previously only periods (.) were detected, causing unnatural delays
+  - Now detects all punctuation: .?!。？！ (English and Japanese)
+  - Modified: lib/chat_helper_functions.php (findDotPosition function)
+  - Impact: Much more natural streaming behavior
+
+✓ **MEDIUM: Fixed buffer accumulation bug**
+  - Eliminated exponential memory duplication in totalBuffer
+  - Previously: $totalBuffer .= $buffer (added entire buffer each iteration)
+  - Now: $totalBuffer .= $tmpData (adds only new chunk)
+  - Modified: lib/data_functions.php (line 2969)
+  - Impact: Reduced memory usage, accurate debug logs
+
+✓ **CRITICAL: Fixed cache API compliance**
+  - Removed invalid top-level cache_control parameter from API payload
+  - Anthropic API does not accept cache_control at top level
+  - Cache control blocks remain correctly placed on content items
+  - Modified: connector/openrouterjsoncached.php, openrouterjsoncached_verbose.php
+  - Impact: Cache should now be created properly
+
+Files Added:
+------------
+• lib/chat_helper_functions.php - Streaming sentence detection
+• lib/data_functions.php - Main data processing and streaming logic
+
+Documentation Added:
+--------------------
+• FINAL_CODE_REVIEW.txt - Comprehensive review of all changes
+• STREAMING_BEHAVIOR_ANALYSIS.txt - Complete streaming system documentation
+• STREAMING_ERRORS_FOUND.txt - Detailed bug analysis
+• STREAMING_FIXES_APPLIED.txt - Fix documentation
+• CACHE_WRITING_INVESTIGATION.txt - Cache bug analysis
+• CACHE_VERIFICATION.txt - Cache structure verification
+
+Testing Recommendations:
+------------------------
+1. Test streaming with questions: "How are you?"
+2. Test streaming with exclamations: "Watch out!"
+3. Clear temp/ directory and verify cache file creation
+4. Monitor connector/_cached_perf.log for cache efficiency
+
+Version 1.0.4 (2025-11-06)
+--------------------------
+
+Breaking Changes (Configuration):
+----------------------------------
+⚠️ Custom instruction field names have been renamed for clarity:
+  - OLD: "custom_last_instruction" → NEW: "custom_system_instruction"
+    Location: System prompt (after character bio, before dialogue)
+    Purpose: Add custom instructions to system prompt (does NOT replace other instructions)
+
+  - OLD: "custom_last_user_instruction" → NEW: "custom_last_instruction"
+    Location: Right before current user message (literally last thing before model responds)
+    Purpose: Inject recent context or final instructions
+
+⚠️ If you were using these fields, you'll need to reconfigure them with new names.
+   Old values will NOT be automatically migrated.
+
+Improvements:
+-------------
+✓ Field descriptions now clearly explain placement in prompt structure
+✓ More intuitive naming that matches actual behavior
+
+Version 1.0.3 (2025-11-05)
+--------------------------
+
+New Features:
+-------------
+✓ Added "Minimize Quality Instructions" toggle (ENABLED by default)
+  - Recommended ON for advanced models (Claude 4.5, GPT-4, Gemini 2.0)
+  - Minimized: "Write {NPC}'s next dialogue line." (clean, lets model use natural ability)
+  - Default/Legacy: Adds explicit quality guidance for older/smaller models
+  - Configurable per connector in UI under Caching Settings
+  - Modified prompts/dialogue_prompt.php to be model-aware
+
+Bug Fixes:
+----------
+✓ Fixed simple response format empty output issue
+  - When using prefill with simple format, buffer was missing opening '('
+  - Now prepends prefill content to buffer before parsing
+  - Fixes regex pattern matching for (mood)(listener)(action) format
+
+Analysis Updates:
+-----------------
+✓ Investigated cache efficiency - confirmed working correctly with low-context scenarios
+✓ Analyzed removeDuplicateMemories() - confirmed proper behavior, no changes needed
+✓ Verified cache TTL correctly set to 1 hour
+✓ Confirmed dynamic environment insertion stays in uncached region
+✓ Documented complete context composition in CONTEXT_COMPOSITION_ANALYSIS.txt
+
+Version 1.0.2 (2025-11-05)
+--------------------------
+
+Bug Fixes:
+----------
+✓ Fixed events-memories.php crash when displaying array content format
+  - UI expected string content but connectors use array format [{type:'text', text:'...'}]
+  - Added proper handling for both string and array content formats
+
+Potential Cache Efficiency Issues Identified (not yet fixed - awaiting logs):
+------------------------------------------------------------------------------
+⚠️ Lines 450-451: First 4 dialogue entries removed before caching
+⚠️ Line 530-532: Dynamic environment inserted near end could be in cached portion
+
+Version 1.0.1 (2025-11-05)
+--------------------------
+
+Bug Fixes:
+----------
+✓ All fixes from 1.0.0 pre-release
+
+Version 1.0.0 (2025-11-05)
+--------------------------
+
+INITIAL RELEASE
+
+Features:
+---------
+✓ Multi-provider caching support (Anthropic, OpenAI, Gemini)
+✓ Dual response formats (JSON structured / Simple natural language)
+✓ Configurable dialogue cache with uncached recent messages
+✓ Dynamic content extraction to minimize cache invalidation
+✓ Simple format content control (mood, listener, actions, target)
+✓ Incremental cache building across conversations
+✓ Cache performance metrics logging
+✓ Verbose logging version for debugging
+
+Files Included:
+---------------
+• connector/openrouterjsoncached.php - Production connector
+• connector/openrouterjsoncached_helpers.php - Helper functions
+• connector/openrouterjsoncached_verbose.php - Testing connector with verbose logs
+• conf/conf_schema.json - Configuration schema
+• lib/core/llm_connector.class.php - Database integration
+• ui/core/llm_connectors.php - WebUI editor with caching settings
+
+Bug Fixes (Pre-Release):
+------------------------
+✓ Fixed function redeclaration error (lazyEmpty)
+✓ Fixed type error in max_dialogue_cache_size calculation
+✓ Fixed type error in MAX_TOKENS calculation
+✓ Fixed type error in FORCE_MAX_TOKENS (+ 0 to intval)
+✓ Fixed checkbox defaults in WebUI to match connector defaults
+✓ Added metadata JSON encoding for database operations
+✓ Fixed stream_get_meta_data null pointer error in getHttpStatusCode
+✓ Fixed caching settings not appearing in main LLM Connectors page (only showed in Profiles)
+✓ Fixed unsafe GLOBALS access (COMMAND_PROMPT_ENFORCE_ACTIONS, DEBUG_DATA initialization)
+✓ **CRITICAL: Fixed verbose connector completely non-functional** (missing configuration in llm_connector.class.php)
+
+Compatibility:
+--------------
+• TESTED: CHIM 2.0.3
+• LIKELY COMPATIBLE: CHIM 2.0.1, 2.0.2
+• POSSIBLY COMPATIBLE: CHIM 2.0.0
+
+Configuration Options:
+----------------------
+• provider_caching: Anthropic | OpenAI | Gemini (default: Anthropic)
+• response_format: json | simple (default: json)
+• dialogue_cache_uncached_count: 0-10 (default: 4)
+• verbose_logging: boolean (default: true for verbose version)
+
+Simple Format Options (when response_format = simple):
+------------------------------------------------------
+• include_mood_requirement: boolean (default: true)
+• include_listener_requirement: boolean (default: true)
+• include_actions_list: boolean (default: true)
+• include_target_requirement: boolean (default: true)
+
+Logging:
+--------
+• log/cache.log - Main verbose logging output
+• connector/_cached_perf.log - Cache performance metrics
+• log/context_sent_to_llm.log - Full API payloads
+• log/debugStream.log - Raw streaming data
+
+Known Issues:
+-------------
+• None reported yet - this is the initial testing release
+
+===============================================================================

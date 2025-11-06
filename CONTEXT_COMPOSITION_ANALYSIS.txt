@@ -1,0 +1,170 @@
+===============================================================================
+CONTEXT/PROMPT COMPOSITION ANALYSIS - CHIM 2.0
+===============================================================================
+
+## Current Context Structure (from main.php lines 1499-1513)
+
+The system prompt sent to the LLM is built as follows:
+
+```
+$head[] = array('role' => 'system', 'content' =>
+    strtr($GLOBALS["PROMPT_HEAD"] .
+          "\n\n<character>\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n" .
+          "<knowledge>\n" . $GLOBALS["OGHMA_HINT"] . "\n</knowledge>\n\n" .
+          "<general_instructions>\n" . $GLOBALS["COMMAND_PROMPT"] . "</general_instructions>\n" .
+          $rumors . "\n",
+    ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
+);
+```
+
+## Component Breakdown:
+
+### 1. PROMPT_HEAD (from conf.sample.php line 8)
+```
+$PROMPT_HEAD="Let's roleplay in the Universe of Skyrim. If the game director gives you an instruction, you must follow it.";
+```
+**Purpose**: Sets the roleplay context and establishes director authority
+**Source**: conf/conf.sample.php or database conf_opts table
+
+
+### 2. HERIKA_PERS (Character Biography)
+**Purpose**: Static character personality, background, traits, relationships
+**Source**: Character profile from database
+**Example structure**: Name, race, background story, personality traits, likes/dislikes
+
+
+### 3. Dynamic Biography (from data_functions.php)
+**Purpose**: Dynamically updated character state
+**Source**: Built by buildDynamicBiography() function
+**Includes**:
+- Current personality state
+- Current goals
+- Current relationships
+- Skills and occupations
+- Speech style
+- Group membership (if applicable)
+- Middle-term memory (past events)
+
+
+### 4. OGHMA_HINT (Knowledge Section) - Optional
+**Purpose**: Relevant lore/knowledge retrieved from Oghma database
+**Source**: processor/oghma.php memory retrieval system
+**Note**: Only included if relevant memories found
+
+
+### 5. COMMAND_PROMPT (from prompts/command_prompt.php line 31)
+```
+$COMMAND_PROMPT = "Don't write narrations.";
+```
+**Purpose**: General instructions for response format
+**Source**: prompts/command_prompt.php
+
+
+### 6. Rumors - Optional
+**Purpose**: Current hold-specific breaking news/rumors
+**Source**: Database rumors table
+**Note**: Only included if character is in a known hold
+
+
+## Complete Dialogue History Context:
+
+After the system prompt, the context includes:
+
+### 7. World Context ($contextDataWorld)
+**Source**: DataLastInfoFor() - last 2 entries of world info
+**Purpose**: Recent environmental/game state changes
+
+
+### 8. Historical Dialogue ($contextDataHistoric)
+**Source**: DataLastDataExpandedFor() - last N dialogue entries
+**Purpose**: Conversation history
+**Note**: Can be filtered to hide narrator dialogue if HIDE_NARRATOR_DIALOGUE enabled
+
+
+### 9. Current Prompt ($prompt)
+**Purpose**: User's current input/question
+**Format**: array('role' => 'user', 'content' => $request)
+
+
+## Cached Connector Processing (openrouterjsoncached.php)
+
+The cached connector receives this contextData and:
+
+1. **Extracts Dynamic Sections** (lines 386-397):
+   - Environmental Context
+   - Additional Information
+   - Equipment
+   - Physical Appearance
+   - Cleanliness
+   - Combat Vitals
+   - Arousal Status
+
+2. **Adds Response Format Instructions** (lines 336-361):
+   - For JSON format: template structure + custom instructions
+   - For simple format: (mood)(listener)(action) instructions
+
+3. **Adds Available Actions** (lines 329-332):
+   - If FUNCTIONS_ARE_ENABLED, includes action list
+
+
+## POTENTIAL "ROLEPLAY QUALITY PROMPT"
+
+Based on code analysis, there is NO extensive "roleplay quality prompt" currently in CHIM 2.0.
+
+The only roleplay-related instructions are:
+1. PROMPT_HEAD: "Let's roleplay in the Universe of Skyrim..."
+2. COMMAND_PROMPT: "Don't write narrations."
+3. TEMPLATE_DIALOG (in dialogue_prompt.php): "Write {NPC}'s next dialogue line. Avoid narrations..."
+
+These are quite minimal and designed to be model-agnostic.
+
+
+## Searching for CHIM 1.3 Legacy Prompt
+
+**Possible locations where a more extensive prompt might exist:**
+
+1. **Database conf_opts table**:
+   - Key: PROMPT_HEAD, COMMAND_PROMPT, or ROLEPLAY_QUALITY_PROMPT
+   - Check with: SELECT * FROM conf_opts WHERE id LIKE '%PROMPT%'
+
+2. **Custom prompt file**:
+   - prompts/command_prompt_custom.php (if exists)
+
+3. **Connector-specific config**:
+   - $GLOBALS["CONNECTOR"]["openrouterjson"]["custom_instruction"]
+   - Check conf.sample.php for connector-specific settings
+
+4. **Legacy JSON connector code**:
+   - connector/openaijson.php
+   - connector/koboldcppjson.php
+   - connector/google_openaijson.php
+
+   May contain hardcoded quality prompts
+
+
+## Questions for User:
+
+1. **What did the CHIM 1.3 roleplay quality prompt contain?**
+   - Was it about writing style/quality?
+   - Was it about character consistency?
+   - Was it about avoiding certain behaviors?
+
+2. **Where was it located in CHIM 1.3?**
+   - In connector code?
+   - In database config?
+   - In prompts/ files?
+
+3. **Example text** of what the prompt said would help locate similar in 2.0
+
+
+## Recommendations:
+
+Once we identify the exact prompt, we should:
+
+1. Add a new config option: `$GLOBALS["ROLEPLAY_QUALITY_PROMPT_ENABLED"]` (default: false)
+2. Add a new config field: `$GLOBALS["ROLEPLAY_QUALITY_PROMPT"]` for the prompt text
+3. Modify main.php to conditionally include this in the system prompt
+4. Add UI toggle in global_settings.php
+5. Update connector config schema to include the toggle
+
+===============================================================================

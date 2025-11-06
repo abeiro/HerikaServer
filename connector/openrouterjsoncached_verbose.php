@@ -6,9 +6,12 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_function
 // Cached version of openrouterjson connector with Anthropic/OpenAI/Gemini cache support
 // Based on CHIM 2.0 architecture with additional caching and response format features
 // VERBOSE LOGGING VERSION - includes comprehensive debugging logs for testing phase
+// Version: 1.0.0 (2025-11-05)
 
 class openrouterjsoncached_verbose
 {
+    const VERSION = '1.0.0';
+
     public $primary_handler;
     public $name;
 
@@ -114,7 +117,7 @@ class openrouterjsoncached_verbose
 
         // VERBOSE_LOGGING_START - Constructor initialization
         if ($this->_verboseLogging) {
-            logMessage("[CACHE-VERBOSE] Connector constructor initialized");
+            logMessage("[CACHE-VERBOSE] OpenRouter Cached Connector v" . self::VERSION . " (VERBOSE) initialized");
             logMessage("[CACHE-VERBOSE] Default provider_caching: {$this->_provider_caching}");
             logMessage("[CACHE-VERBOSE] Default response_format: {$this->_responseFormat}");
             logMessage("[CACHE-VERBOSE] Helper files loaded");
@@ -188,25 +191,64 @@ class openrouterjsoncached_verbose
     }
 
     private function isOpenAIModel($s_model="") {
+        // Detects OpenAI reasoning models that require special parameter handling
+        // These models use max_completion_tokens and require parameter stripping
         $b_res = false;
         if (strlen($s_model) > 0) {
+            // OpenRouter prefixed models
             $i_pos = stripos($s_model, "openai/o1");
             if ($i_pos === false)
                 $i_pos = stripos($s_model, "openai/o3");
             if ($i_pos === false)
-                $i_pos = stripos($s_model, "openai/o4-mini");
+                $i_pos = stripos($s_model, "openai/o4");
             if ($i_pos === false)
                 $i_pos = stripos($s_model, "azure-o1");
             if ($i_pos === false)
                 $i_pos = stripos($s_model, "azure-o3");
+            if ($i_pos === false)
+                $i_pos = stripos($s_model, "azure-o4");
+
+            // Direct model names (o1, o3, o4 series)
             if ($i_pos === false) {
                 if (($s_model == "o1") || ($s_model == "o1-mini") || ($s_model == "o1-preview") ||
                     ($s_model == "o3") || (strpos($s_model, "o3-mini") === 0) || (strpos($s_model, "o3-pro") === 0) ||
-                    (strpos($s_model, "o4-mini") === 0)) {
+                    ($s_model == "o4") || (strpos($s_model, "o4-mini") === 0)) {
                     $i_pos = 1;
                 }
             }
+
+            // GPT-5 series (but NOT gpt-5-chat)
+            if ($i_pos === false) {
+                if ((stripos($s_model, "gpt-5") !== false || stripos($s_model, "openai/gpt-5") !== false) &&
+                    stripos($s_model, "gpt-5-chat") === false) {
+                    // Matches: gpt-5, gpt-5-pro, gpt-5-codex, gpt-5-mini, gpt-5-nano, openai/gpt-5*
+                    // But NOT: gpt-5-chat
+                    $i_pos = 1;
+                }
+            }
+
             $b_res = (!($i_pos === false));
+        }
+        return $b_res;
+    }
+
+    private function isAlwaysReasoningModel($s_model="") {
+        // Detects models that ALWAYS have reasoning enabled (cannot be disabled)
+        // These models will always output reasoning tokens regardless of settings
+        $b_res = false;
+        if (strlen($s_model) > 0) {
+            // OpenAI reasoning models (o1, o3, o4, gpt-5*)
+            if ($this->isOpenAIModel($s_model)) {
+                $b_res = true;
+            }
+
+            // DeepSeek R1 (older version, always reasons)
+            if (!$b_res) {
+                $i_pos = stripos($s_model, "deepseek-r1");
+                if ($i_pos === false)
+                    $i_pos = stripos($s_model, "r1-1776");
+                $b_res = (!($i_pos === false));
+            }
         }
         return $b_res;
     }
@@ -215,7 +257,15 @@ class openrouterjsoncached_verbose
         if (isset($GLOBALS['mockConnectorResponseMetaData'])) {
             $responseInfo = call_user_func($GLOBALS['mockConnectorResponseMetaData']);
         } else {
+            if (!is_resource($this->primary_handler)) {
+                logMessage("[{$this->name}] getHttpStatusCode: primary_handler is null or not a resource");
+                return null;
+            }
             $responseInfo = stream_get_meta_data($this->primary_handler);
+        }
+
+        if (!isset($responseInfo['wrapper_data'][0])) {
+            return null;
         }
 
         $statusLine = $responseInfo['wrapper_data'][0];
@@ -240,15 +290,15 @@ class openrouterjsoncached_verbose
             return null;
         }
 
-        $MAX_TOKENS = ((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 4096) + 0);
+        $MAX_TOKENS = intval(isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 4096);
         $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? $GLOBALS["CONNECTOR"][$this->name]["model"] : 'anthropic/claude-3-haiku-20240307';
 
         // Model can be overridden by custom params
         $this->_model = isset($customParms["model"]) ? $customParms["model"] : $this->_model;
 
-        $max_dialogue_cache_size = ((isset($GLOBALS["CONNECTOR"][$this->name]["max_dialogue_cache_context_size"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_dialogue_cache_context_size"] : $n_ctxsize * 4) + 0);
-        $customInstruction = isset($GLOBALS["CONNECTOR"][$this->name]["custom_last_instruction"]) ? $GLOBALS["CONNECTOR"][$this->name]["custom_last_instruction"] : '';
-        $lastCustomInstruction = isset($GLOBALS["CONNECTOR"][$this->name]["custom_last_user_instruction"]) ? $GLOBALS["CONNECTOR"][$this->name]["custom_last_user_instruction"] : '';
+        $max_dialogue_cache_size = intval(isset($GLOBALS["CONNECTOR"][$this->name]["max_dialogue_cache_context_size"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_dialogue_cache_context_size"] : $n_ctxsize * 4);
+        $customInstruction = isset($GLOBALS["CONNECTOR"][$this->name]["custom_system_instruction"]) ? $GLOBALS["CONNECTOR"][$this->name]["custom_system_instruction"] : '';
+        $lastCustomInstruction = isset($GLOBALS["CONNECTOR"][$this->name]["custom_last_instruction"]) ? $GLOBALS["CONNECTOR"][$this->name]["custom_last_instruction"] : '';
 
         $toggleThinking = isset($GLOBALS["CONNECTOR"][$this->name]["toggle_thinking"]) ? $GLOBALS["CONNECTOR"][$this->name]["toggle_thinking"] : false;
         $thinkingTokens = isset($GLOBALS["CONNECTOR"][$this->name]["thinking_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["thinking_tokens"] : 1000;
@@ -362,7 +412,7 @@ class openrouterjsoncached_verbose
 
         // Build actions and response format instruction
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
-            $prefix = "{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
+            $prefix = isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]) ? "{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}" : "";
         } else {
             $prefix = "";
         }
@@ -872,25 +922,46 @@ class openrouterjsoncached_verbose
         }
         // VERBOSE_LOGGING_END
 
+        // Detect model capabilities
+        $isOpenAIReasoning = $this->isOpenAIModel($this->_model);
+        $isAlwaysReasoning = $this->isAlwaysReasoningModel($this->_model);
+
+        // VERBOSE_LOGGING_START - Model detection
+        if ($this->_verboseLogging) {
+            logMessage("[CACHE-VERBOSE] Model detection: OpenAI=" . ($isOpenAIReasoning ? 'YES' : 'NO') . ", AlwaysReasoning=" . ($isAlwaysReasoning ? 'YES' : 'NO'));
+        }
+        // VERBOSE_LOGGING_END
+
         // Build reasoning configuration
+        // Always include exclude:true to strip reasoning tokens from output
+        // Enable reasoning if: toggle is on OR model always reasons
         $reasoning = [
-            "enabled" => $toggleThinking,
+            "exclude" => true,
+            "enabled" => ($toggleThinking || $isAlwaysReasoning),
         ];
 
-        if ($this->_provider_caching === "OpenAI") {
+        // Add effort level for OpenAI models (supports minimal/low/medium/high)
+        if ($isOpenAIReasoning && $reasoning["enabled"]) {
             $reasoning["effort"] = $effort_level;
 
             // VERBOSE_LOGGING_START - _openPart4: OpenAI reasoning
             if ($this->_verboseLogging) {
-                logMessage("[CACHE-VERBOSE] Reasoning config (OpenAI): enabled={$toggleThinking}, effort={$effort_level}");
+                logMessage("[CACHE-VERBOSE] Reasoning config (OpenAI): exclude=true, enabled=" . ($reasoning["enabled"] ? 'true' : 'false') . ", effort={$effort_level}");
             }
             // VERBOSE_LOGGING_END
-        } else {
+        } else if ($reasoning["enabled"]) {
+            // For non-OpenAI models, use max_tokens instead of effort
             $reasoning["max_tokens"] = intval($thinkingTokens);
 
             // VERBOSE_LOGGING_START - _openPart4: Standard reasoning
             if ($this->_verboseLogging) {
-                logMessage("[CACHE-VERBOSE] Reasoning config (Standard): enabled={$toggleThinking}, max_tokens={$thinkingTokens}");
+                logMessage("[CACHE-VERBOSE] Reasoning config (Standard): exclude=true, enabled=true, max_tokens={$thinkingTokens}");
+            }
+            // VERBOSE_LOGGING_END
+        } else {
+            // VERBOSE_LOGGING_START - _openPart4: Reasoning disabled
+            if ($this->_verboseLogging) {
+                logMessage("[CACHE-VERBOSE] Reasoning config: exclude=true, enabled=false");
             }
             // VERBOSE_LOGGING_END
         }
@@ -908,11 +979,7 @@ class openrouterjsoncached_verbose
             'repetition_penalty' => floatval((isset($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"])) ? $GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"] : 1),
             'min_p' => floatval((isset($GLOBALS["CONNECTOR"][$this->name]["min_p"])) ? $GLOBALS["CONNECTOR"][$this->name]["min_p"] : 0),
             'top_a' => floatval((isset($GLOBALS["CONNECTOR"][$this->name]["top_a"])) ? $GLOBALS["CONNECTOR"][$this->name]["top_a"] : 0),
-            'reasoning' => $reasoning,
-            "cache_control" => [
-                "enabled" => true,
-                "ttl" => "1h"
-            ]
+            'reasoning' => $reasoning
         );
 
         // VERBOSE_LOGGING_START - _openPart4: Payload constructed
@@ -998,7 +1065,64 @@ class openrouterjsoncached_verbose
 
         $data["transforms"] = array();
 
+        // Handle OpenAI reasoning models - they require special parameter handling
+        if ($isOpenAIReasoning) {
+            // OpenAI models use max_completion_tokens instead of max_tokens
+            if (isset($data["max_tokens"])) {
+                $data["max_completion_tokens"] = $data["max_tokens"];
+                unset($data["max_tokens"]);
+
+                // VERBOSE_LOGGING_START - OpenAI token parameter switch
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] OpenAI model: Switched max_tokens to max_completion_tokens");
+                }
+                // VERBOSE_LOGGING_END
+            }
+
+            // If reasoning is enabled, OpenAI models ONLY accept these parameters
+            // All other parameters (temperature, top_p, penalties, etc.) must be stripped
+            if ($reasoning["enabled"]) {
+                // VERBOSE_LOGGING_START - Parameter stripping for OpenAI reasoning
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] OpenAI reasoning model detected - stripping incompatible parameters");
+                    logMessage("[CACHE-VERBOSE] Keeping only: model, messages, stream, reasoning, max_completion_tokens, provider, transforms");
+                }
+                // VERBOSE_LOGGING_END
+
+                $cleanedData = [
+                    'model' => $data['model'],
+                    'messages' => $data['messages'],
+                    'stream' => $data['stream'],
+                    'reasoning' => $data['reasoning']
+                ];
+
+                // Only add max_completion_tokens if it was set
+                if (isset($data['max_completion_tokens'])) {
+                    $cleanedData['max_completion_tokens'] = $data['max_completion_tokens'];
+                }
+
+                // Preserve provider and transforms if they exist
+                if (isset($data['provider'])) {
+                    $cleanedData['provider'] = $data['provider'];
+                }
+                if (isset($data['transforms'])) {
+                    $cleanedData['transforms'] = $data['transforms'];
+                }
+
+                $data = $cleanedData;
+
+                // VERBOSE_LOGGING_START - Parameters stripped
+                if ($this->_verboseLogging) {
+                    logMessage("[CACHE-VERBOSE] Parameters stripped successfully - payload cleaned for OpenAI reasoning API");
+                }
+                // VERBOSE_LOGGING_END
+            }
+        }
+
         // Log request
+        if (!isset($GLOBALS["DEBUG_DATA"])) {
+            $GLOBALS["DEBUG_DATA"] = array();
+        }
         $GLOBALS["DEBUG_DATA"]["full"] = ($data);
         $this->_dataSent = json_encode($data, JSON_PRETTY_PRINT);
 
@@ -1475,13 +1599,17 @@ class openrouterjsoncached_verbose
                 }
                 // VERBOSE_LOGGING_END
 
-                return $tempJson['message'];
+                // Strip any reasoning tokens from final message before returning
+                return stripReasoningTokens($tempJson['message']);
             }
         } else {
             // Simple format parsing
             if (!$this->_simpleFormatParsed) {
+                // Prepend prefill content if used, since API doesn't return it in response
+                $bufferToParse = $this->_usedPrefill ? $this->_prefillContent . $this->_buffer : $this->_buffer;
+
                 $parsed = extractSimpleFormatFromBuffer(
-                    $this->_buffer,
+                    $bufferToParse,
                     $this->_includeMood,
                     $this->_includeListener,
                     $this->_includeActions,
@@ -1525,7 +1653,8 @@ class openrouterjsoncached_verbose
                     }
                     // VERBOSE_LOGGING_END
 
-                    return $parsed['message'];
+                    // Strip any reasoning tokens from final message before returning
+                    return stripReasoningTokens($parsed['message']);
                 }
             } else {
                 // Simple format already parsed, just return accumulated message
@@ -1536,7 +1665,8 @@ class openrouterjsoncached_verbose
                 }
                 // VERBOSE_LOGGING_END
 
-                return $this->_buffer;
+                // Strip any reasoning tokens from accumulated content before returning
+                return stripReasoningTokens($this->_buffer);
             }
         }
 
