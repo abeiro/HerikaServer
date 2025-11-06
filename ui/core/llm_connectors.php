@@ -339,14 +339,9 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 echo "<div id='api_key_notice' class='api-key-notice'></div>";
                 ?>
                 </div>
-                <div id="reasoning_row">
-                    <label class="label-with-toggle"><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span>
-                        <input type="hidden" name="reasoning_model" value="0">
-                        <input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>>
-                        <span class="toggle-text">On</span>
-                    </label>
-                </div>
                 <?php
+                // Note: The old "reasoning_model" checkbox has been deprecated and removed.
+                // It has been replaced with toggle_thinking, thinking_tokens, and effort_level below.
                 // Parse metadata to get reasoning-related fields
                 $metadataArr = [];
                 if (isset($editItem["metadata"]) && !empty($editItem["metadata"])) {
@@ -367,9 +362,10 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     <label for='thinking_tokens'><span class='tip-label' data-tip='Maximum tokens for thinking/reasoning output (Anthropic/Gemini only). OpenAI uses effort_level instead. Leave empty to use default.'>Thinking Tokens</span></label>
                     <input type="number" id="thinking_tokens" value="<?= htmlspecialchars($thinkingTokens) ?>" min="0" step="1" placeholder="Optional">
                     <div style="height:6px;"></div>
-                    <label for='effort_level'><span class='tip-label' data-tip='Reasoning effort level for OpenAI reasoning models (o1, o3). Higher effort = more thorough but slower. Leave empty for default.'>Effort Level</span></label>
+                    <label for='effort_level'><span class='tip-label' data-tip='Reasoning effort level for OpenAI reasoning models (o1, o3, o4, gpt-5). minimal=Quick (gpt-5+), low=Basic, medium=Balanced, high=Thorough. Leave empty for default.'>Effort Level</span></label>
                     <select id="effort_level">
                         <option value="">-- select --</option>
+                        <option value="minimal" <?= $effortLevel === 'minimal' ? 'selected' : '' ?>>Minimal</option>
                         <option value="low" <?= $effortLevel === 'low' ? 'selected' : '' ?>>Low</option>
                         <option value="medium" <?= $effortLevel === 'medium' ? 'selected' : '' ?>>Medium</option>
                         <option value="high" <?= $effortLevel === 'high' ? 'selected' : '' ?>>High</option>
@@ -604,7 +600,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     }
     // Sync On/Off labels for checkboxes
     (function(){
-        const names = ['reasoning_model','enforce_json','json_schema','prefill_json'];
+        const names = ['enforce_json','json_schema','prefill_json'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
@@ -1261,14 +1257,7 @@ if (typeof window.consolidation !== 'function') {
             echo "<div id='api_key_notice' class='api-key-notice'></div>";
             ?>
             </div>
-            <div id="reasoning_row">
-                <label class="label-with-toggle"><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span>
-                    <input type="hidden" name="reasoning_model" value="0">
-                    <input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>>
-                    <span class="toggle-text">On</span>
-                </label>
-            </div>
-            <div id="reasoning_details_modal" style="margin-top:8px; margin-left:20px; padding:8px; border-left:2px solid #444;">
+            <div id="reasoning_details_modal" style="margin-top:8px; padding:8px; border-left:2px solid #444;">
                 <label class="label-with-toggle"><span class='tip-label' data-tip='Enable thinking/reasoning for supported models (like o1, DeepSeek-R1). Shows model internal reasoning process.'>Toggle Thinking</span>
                     <input type="hidden" id="toggle_thinking_hidden_modal" value="false">
                     <input type="checkbox" id="toggle_thinking_modal" value="true" <?= $toggleThinking ? "checked" : "" ?>>
@@ -1278,9 +1267,10 @@ if (typeof window.consolidation !== 'function') {
                 <label for='thinking_tokens_modal'><span class='tip-label' data-tip='Maximum tokens for thinking/reasoning output (Anthropic/Gemini only). OpenAI uses effort_level instead. Leave empty to use default.'>Thinking Tokens</span></label>
                 <input type="number" id="thinking_tokens_modal" value="<?= htmlspecialchars($thinkingTokens) ?>" min="0" step="1" placeholder="Optional">
                 <div style="height:6px;"></div>
-                <label for='effort_level_modal'><span class='tip-label' data-tip='Reasoning effort level for OpenAI reasoning models (o1, o3). Higher effort = more thorough but slower. Leave empty for default.'>Effort Level</span></label>
+                <label for='effort_level_modal'><span class='tip-label' data-tip='Reasoning effort level for OpenAI reasoning models (o1, o3, o4, gpt-5). minimal=Quick (gpt-5+), low=Basic, medium=Balanced, high=Thorough. Leave empty for default.'>Effort Level</span></label>
                 <select id="effort_level_modal">
                     <option value="">-- select --</option>
+                    <option value="minimal" <?= $effortLevel === 'minimal' ? 'selected' : '' ?>>Minimal</option>
                     <option value="low" <?= $effortLevel === 'low' ? 'selected' : '' ?>>Low</option>
                     <option value="medium" <?= $effortLevel === 'medium' ? 'selected' : '' ?>>Medium</option>
                     <option value="high" <?= $effortLevel === 'high' ? 'selected' : '' ?>>High</option>
@@ -1417,7 +1407,7 @@ if (typeof window.consolidation !== 'function') {
 <script>
 // Sync On/Off labels for checkboxes
 (function(){
-    const names = ['reasoning_model','enforce_json','json_schema','prefill_json'];
+    const names = ['enforce_json','json_schema','prefill_json'];
     names.forEach(n=>{
         const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
         if (!cb) return;
