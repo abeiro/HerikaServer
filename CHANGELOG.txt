@@ -1,0 +1,18 @@
+CHIM Cached Connector - Version 1.0.7 Changelog
+================================================
+
+Version 1.0.7 - 2025-11-06
+--------------------------
+
+This release packages the cached connector implementation from the
+claude/initial-setup-011CUs2rvaF7EKQHp6uZzyST branch.
+
+Changes:
+- Updated connector implementations
+- Latest configuration schema
+- Updated UI components
+- Current library implementations
+
+For detailed implementation information, refer to previous version changelogs
+and the project documentation.
+
