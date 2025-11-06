@@ -2,6 +2,76 @@
 CHIM CACHED CONNECTOR - VERSION HISTORY
 ===============================================================================
 
+Version 1.0.6 (2025-11-06)
+--------------------------
+
+New Features:
+-------------
+✓ **Complete Reasoning/Chain-of-Thought (CoT) Support**
+  - Added toggle_thinking configuration (default: false) to enable/disable reasoning
+  - Added reasoning_effort setting for OpenAI models (minimal/low/medium/high)
+  - Reasoning tokens ALWAYS stripped from output regardless of toggle state
+  - Three-layer filtering ensures reasoning never appears in game dialogue:
+    1. API layer: reasoning.exclude=true parameter
+    2. Streaming layer: detect unclosed markers, wait for complete blocks
+    3. Output layer: strip any remaining tokens from final message
+
+Model Detection:
+----------------
+✓ **Automatic OpenAI Reasoning Model Detection**
+  - Detects o1, o3, o4, gpt-5* models (excludes gpt-5-chat)
+  - Automatically uses max_completion_tokens instead of max_tokens
+  - Strips incompatible parameters (temperature, top_p, etc.) for reasoning models
+  - Parameter stripping ONLY for OpenAI reasoning models when reasoning enabled
+
+✓ **Always-Reasoning Model Detection**
+  - Models like o1, o3, o4, gpt-5*, DeepSeek-R1 always use reasoning
+  - Reasoning automatically enabled regardless of toggle state
+  - Ensures proper API parameter handling
+
+Reasoning Token Filtering:
+---------------------------
+✓ **Supported Reasoning Markers**
+  - <think>...</think>, <thinking>...</thinking>
+  - <reasoning>...</reasoning>, <thought>...</thought>
+  - <reflection>...</reflection>, <cot>...</cot>
+  - <scratchpad>...</scratchpad>
+  - [THINK]...[/THINK], [THINKING]...[/THINKING]
+
+✓ **Streaming Detection**
+  - Detects incomplete reasoning blocks during streaming
+  - Waits for closing markers before processing sentences
+  - Ensures first actual response sentence still sent immediately
+  - Prevents reasoning from being sent to game mid-stream
+
+✓ **Final Output Filtering**
+  - Strips reasoning from JSON format messages
+  - Strips reasoning from simple format messages (both initial and incremental)
+  - Applies to all response types regardless of API filtering
+
+Configuration Updates:
+----------------------
+✓ Deprecated reasoning_model toggle (now auto-detected)
+✓ Updated toggle_thinking description to clarify reasoning support
+✓ Added "minimal" effort level for GPT-5+ models
+✓ Configuration changes backward compatible
+
+Technical Implementation:
+-------------------------
+• Added isOpenAIModel() detection for o1/o3/o4/gpt-5* models
+• Added isAlwaysReasoningModel() for models that can't disable reasoning
+• Added stripReasoningTokens() for token removal
+• Added hasUnclosedReasoningMarker() for streaming detection
+• Added extractReasoningFreeContent() for safe incremental processing
+
+Files Modified:
+---------------
+• conf/conf_schema.json - Configuration schema updates
+• connector/openrouterjsoncached.php - API parameters and output filtering
+• connector/openrouterjsoncached_verbose.php - Same with verbose logging
+• lib/chat_helper_functions.php - Reasoning detection functions
+• lib/data_functions.php - Streaming integration
+
 Version 1.0.5 (2025-11-06)
 --------------------------
 
