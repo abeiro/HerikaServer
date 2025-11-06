@@ -308,7 +308,7 @@ class openrouterjsoncached
 
         $cacheSystemFile = "system_cache_json_{$herikaName}.tmp";
         $cacheCombinedDialogueFile = "combined_dialogue_cache_json_{$herikaName}.tmp";
-        $cacheControlType = ["type" => "ephemeral"];  // TTL controlled by anthropic-beta header, not here
+        $cacheControlType = ["type" => "ephemeral", "ttl" => "1h"];
 
         // Build actions and response format instruction
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
