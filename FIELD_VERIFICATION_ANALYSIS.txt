@@ -1,0 +1,189 @@
+===============================================================================
+CUSTOM INSTRUCTION FIELD VERIFICATION
+===============================================================================
+
+## Field 1: custom_system_instruction (formerly custom_last_instruction)
+========================================================================
+
+**CODE FLOW:**
+
+Line 251: Load from config
+```php
+$customInstruction = isset($GLOBALS["CONNECTOR"][$this->name]["custom_system_instruction"])
+    ? $GLOBALS["CONNECTOR"][$this->name]["custom_system_instruction"] : '';
+```
+
+Line 352 (JSON format) OR Line 359 (Simple format):
+```php
+// JSON:
+$formatInstruction = "{$prefix} $speechReinforcement $customInstruction Use ONLY this JSON object...";
+
+// Simple:
+$formatInstruction = buildSimpleFormatInstruction(..., "{$prefix} $speechReinforcement $customInstruction");
+```
+
+Line 367:
+```php
+$actionsText .= $formatInstruction;  // Appends format instruction to actions
+```
+
+Line 399:
+```php
+$finalSend = $systemContentCurrent . "\n" . $actionsText;
+// $systemContentCurrent = character bio, after removing dynamic sections
+// $actionsText = available actions + format instruction (with custom_system_instruction)
+```
+
+Line 401-405:
+```php
+$content = ['type' => 'text', 'text' => $finalSend];
+if ($this->_provider_caching !== "OpenAI") {
+    $content['cache_control'] = $cacheControlType;
+}
+$systemEntries[] = array("role" => "system", "content" => array($content));
+```
+
+**FINAL LOCATION:**
+```
+{
+  "role": "system",
+  "content": [
+    {
+      "type": "text",
+      "text": "[Character Bio and static info]\n\n[Available Actions]\n[Format Instructions] [custom_system_instruction text] Use ONLY this JSON..."
+    }
+  ]
+}
+```
+
+✓ VERIFIED: custom_system_instruction appears in system prompt, after bio/actions, within format instructions
+
+
+## Field 2: custom_last_instruction (formerly custom_last_user_instruction)
+===========================================================================
+
+**CODE FLOW:**
+
+Line 252: Load from config
+```php
+$lastCustomInstruction = isset($GLOBALS["CONNECTOR"][$this->name]["custom_last_instruction"])
+    ? $GLOBALS["CONNECTOR"][$this->name]["custom_last_instruction"] : '';
+```
+
+Lines 424-455: Build dialogue history array
+```php
+foreach ($contextData as $n => $element) {
+    if (isset($element["role"]) && $element["role"] != "system") {
+        // ... process dialogue entries ...
+        $contentTextToSend[] = array('type' => 'text', 'text' => "$contentString");
+    }
+}
+```
+
+Line 455: Remove current user message to re-add later
+```php
+$instruction = array_pop($contentTextToSend);  // This is the CURRENT user message
+```
+
+Line 458-460: Manage dialogue cache
+```php
+$completeEventList = manageCharacterEventList($contentTextToSend, ...);
+$completeEventList = $completeEventList['updated_list'];
+```
+
+Lines 464-469: Add custom_last_instruction BEFORE current user message
+```php
+if (!empty($lastCustomInstruction)) {
+    $addToIndex = 1;
+    $completeEventList[] = ['type' => 'text', 'text' => $lastCustomInstruction];  // ← Added here
+}
+
+$completeEventList[] = $instruction;  // ← Current user message added last
+```
+
+**FINAL STRUCTURE IN USER CONTENT:**
+```
+{
+  "role": "user",
+  "content": [
+    {"type": "text", "text": "[Previous dialogue entry 1]"},
+    {"type": "text", "text": "[Previous dialogue entry 2]"},
+    ...
+    {"type": "text", "text": "[Cached dialogue history]"},
+    {"type": "text", "text": "[Dynamic environment context]"},  ← Line 532
+    {"type": "text", "text": "[custom_last_instruction text]"},  ← Line 466 IF SET
+    {"type": "text", "text": "[Current user message/request]"}   ← Line 469 (this is $instruction)
+  ]
+}
+```
+
+✓ VERIFIED: custom_last_instruction appears right before current user message
+
+
+## VERIFICATION SUMMARY
+========================
+
+✅ **custom_system_instruction** - Working as documented
+   - Location: System prompt (after character bio, within format instructions)
+   - Does NOT replace other instructions
+   - Appended to format instruction text
+
+✅ **custom_last_instruction** - Working as documented
+   - Location: User content array, right before current user message
+   - Literally the last thing before model responds
+   - Used for injecting recent context or final instructions
+
+⚠️ **IMPORTANT NOTE ABOUT CACHE CONTROL:**
+
+The cache marker calculation (line 476) accounts for custom_last_instruction:
+```php
+$lastIndex = $totalElements - $dialogue_cache_uncached_count - 1 - $addToIndex;
+```
+
+If custom_last_instruction is set:
+- $addToIndex = 1
+- Cache marker is placed one element earlier
+- This keeps custom_last_instruction in the UNCACHED region
+
+This is CORRECT behavior because:
+- If you're adding recent context, it should be dynamic (uncached)
+- If it were cached, it would freeze that context
+
+
+## ACTUAL PROMPT STRUCTURE
+===========================
+
+When both fields are used, the complete structure is:
+
+1. **System Message** (CACHED):
+   ```
+   [PROMPT_HEAD: "Let's roleplay..."]
+   [Character Name, Race, Background]
+   [Dynamic Biography: goals, relationships, skills]
+   [Available Actions list]
+   [Format Instructions] [custom_system_instruction] Use ONLY this JSON...
+   [CACHE MARKER HERE]
+   ```
+
+2. **User Message** (partially cached):
+   ```
+   [World context: location changes, etc.]
+   [Dialogue history entry 1]
+   [Dialogue history entry 2]
+   ...
+   [Dialogue history entry N]
+   [CACHE MARKER HERE - last 4-6 entries uncached]
+   [Dynamic environment: equipment, appearance, combat status] ← At position count-2 before insertion
+   [custom_last_instruction] ← IF SET, second-to-last after all insertions
+   [Current user request] ← Always last
+   ```
+
+3. **Assistant Response** (if using simple format with prefill):
+   ```
+   [(  ← Prefill to start simple format
+   ```
+
+✓ VERIFIED: custom_last_instruction is second-to-last (current message is last)
+✓ VERIFIED: Dynamic environment is inserted before both custom_last_instruction and current message
+
+===============================================================================
