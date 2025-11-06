@@ -1,0 +1,144 @@
+===============================================================================
+"PLEASE RESPOND AS NPC" MESSAGE LOCATION VERIFICATION
+===============================================================================
+
+## The Message In Question:
+===========================
+
+The user asked about "Please respond as NPC_NAME" - this is actually the
+`$GLOBALS["TEMPLATE_DIALOG"]` variable which contains:
+
+**From dialogue_prompt.php line 42 (if minimized):**
+```
+" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line."
+```
+
+**From dialogue_prompt.php lines 45-47 (if not minimized):**
+```
+" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line. Avoid narrations,
+be original, creative, knowledgeable, use your own thoughts. Review dialogue
+history to focus on conversation topic and to avoid repeating sentences..."
+```
+
+## Complete Flow:
+=================
+
+**Step 1: Build the prompt "cue" (processor/request.php)**
+
+Lines 141-150:
+```php
+if (isset($PROMPTS[$gameRequest[0]]["player_request"])) {
+    $request = selectRandomInArray($PROMPTS[$gameRequest[0]]["cue"]);
+} else {
+    if (isset($PROMPTS[$gameRequest[0]]["cue"]))
+        $request = selectRandomInArray($PROMPTS[$gameRequest[0]]["cue"]);
+    else
+        $request = "{$GLOBALS["TEMPLATE_DIALOG"]}";
+}
+```
+
+The "cue" contains context + TEMPLATE_DIALOG, for example:
+- `"({$GLOBALS["HERIKA_NAME"]} comments about something) {$GLOBALS["TEMPLATE_DIALOG"]}"`
+- `"{$GLOBALS["TEMPLATE_DIALOG"]}"`
+
+**Step 2: Add to prompt array (main.php)**
+
+Lines 1555, 1574, 1589 (depending on request type):
+```php
+$prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
+```
+
+**Step 3: Merge with contextData (main.php)**
+
+Line 1556, 1601:
+```php
+$contextData = array_merge($head, ($contextDataFull), $prompt);
+```
+
+**Result: contextData structure sent to connector:**
+```php
+[
+  {'role' => 'system', 'content' => '[Character bio and instructions]'},
+  {'role' => 'user', 'content' => '[World context entry]'},
+  {'role' => 'user', 'content' => 'Player: Hello there'},
+  {'role' => 'user', 'content' => 'NPC: Hi!'},
+  ...
+  {'role' => 'user', 'content' => '(NPC comments about weather) Write NPC's next dialogue line.'}
+]
+```
+
+## In The Cached Connector:
+============================
+
+**Line 455: Extract the instruction**
+```php
+$instruction = array_pop($contentTextToSend);
+// $instruction = ['type' => 'text', 'text' => '(NPC comments...) Write NPC's next dialogue line.']
+```
+
+**Lines 464-469: Re-add at end**
+```php
+if (!empty($lastCustomInstruction)) {
+    $completeEventList[] = ['type' => 'text', 'text' => $lastCustomInstruction];
+}
+$completeEventList[] = $instruction;  // ← Re-added here
+```
+
+**Line 532: Dynamic environment inserted before it**
+```php
+array_splice($completeEventList, count($completeEventList) - 2, 0, [dynamicEnvironment]);
+```
+
+**FINAL ORDER IN USER CONTENT ARRAY:**
+```
+1. [Cached dialogue history]
+2. [CACHE MARKER]
+3. [Uncached dialogue]
+4. [Dynamic environment] ← Inserted at position -2
+5. [custom_last_instruction] ← IF SET
+6. [Instruction: "Write NPC's next dialogue line."] ← THIS IS THE MESSAGE
+```
+
+## ANSWER TO USER'S QUESTION:
+==============================
+
+The "Please respond as NPC_NAME" message is actually:
+- Variable: `$GLOBALS["TEMPLATE_DIALOG"]`
+- Text: "Write {NPC_NAME}'s next dialogue line." (with optional quality instructions)
+- Location: **LAST element in user content array** (always at position -0)
+- Origin: Built in processor/request.php from prompts/prompts.php "cue" entries
+
+It is the FINAL user message before the model responds.
+
+If `custom_last_instruction` is set, then the order is:
+- Position -2: custom_last_instruction
+- Position -1: Dynamic environment
+- Position 0 (last): "Write NPC's next dialogue line."
+
+Wait, that doesn't match my earlier analysis. Let me recheck the insertion order...
+
+Actually, looking at line 532 again:
+```php
+$insertPosition = max(0, count($completeEventList) - 2);
+array_splice($completeEventList, $insertPosition, 0, [dynamicEnvironment]);
+```
+
+If we have 3 elements: [dialogue, custom_last, instruction]
+- count = 3
+- insertPosition = 3 - 2 = 1
+- array_splice inserts BEFORE index 1
+
+Before: [0_dialogue, 1_custom_last, 2_instruction]
+After:  [0_dialogue, 1_dynamic, 2_custom_last, 3_instruction]
+
+So the final order is:
+1. Dialogue history
+2. Dynamic environment (inserted at count-2)
+3. custom_last_instruction (if set)
+4. Instruction: "Write NPC's next dialogue line."
+
+Dynamic environment is at position -3 (third from end)
+custom_last_instruction is at position -2 (second from end)
+Instruction is at position -1 (last)
+
+===============================================================================
