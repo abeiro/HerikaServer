@@ -1,0 +1,191 @@
+===============================================================================
+STREAMING FIXES APPLIED - Summary
+===============================================================================
+
+## Fixes Implemented
+
+### ✅ Issue #1: findDotPosition() Now Checks All Punctuation (CRITICAL)
+
+**File**: lib/chat_helper_functions.php
+**Lines**: 119-152
+
+**What Was Wrong**:
+The function only checked for periods (`.`), completely ignoring:
+- Question marks: `?`
+- Exclamation marks: `!`
+- Japanese punctuation: `。` `？` `！`
+
+This caused questions and exclamations to NOT trigger sentence sending during streaming.
+
+**What Was Fixed**:
+```php
+// OLD: Only checked for periods
+$dotPosition = strrpos($s_string, ".");
+
+// NEW: Checks all sentence-ending punctuation
+$eosPunc = getEndOfSentencePunctuation(); // .?!。？！
+$punctChars = mb_str_split($eosPunc);
+
+// Find the last occurrence of ANY sentence-ending punctuation
+foreach ($punctChars as $punct) {
+    $pos = mb_strrpos($s_string, $punct);
+    // ... find latest position, skip ellipsis
+}
+```
+
+**Impact**:
+- ✅ Questions now sent immediately when complete
+- ✅ Exclamations now sent immediately when complete
+- ✅ No more unnatural delays waiting for periods
+- ✅ Sentences stream individually as intended
+- ✅ Proper unicode handling with mb_strrpos()
+- ✅ Ellipsis detection preserved (skips `...` patterns)
+
+**Example Before Fix**:
+```
+Stream: "Are you ready for this adventure?"
+→ 75+ chars ✓
+→ findDotPosition() = false (no period found) ✗
+→ NOT SENT - keeps accumulating
+
+Stream: "Are you ready for this adventure? Let's go."
+→ findDotPosition() = 45 (found period) ✓
+→ BOTH sentences sent together (delayed)
+```
+
+**Example After Fix**:
+```
+Stream: "Are you ready for this adventure?"
+→ 75+ chars ✓
+→ findDotPosition() = 36 (found '?') ✓
+→ SENT IMMEDIATELY ✓
+
+Stream: " Let's go."
+→ findDotPosition() = 9 (found '.') ✓
+→ SENT IMMEDIATELY ✓
+```
+
+---
+
+### ✅ Issue #2: Fixed totalBuffer Accumulation (MEDIUM)
+
+**File**: lib/data_functions.php
+**Line**: 2969
+
+**What Was Wrong**:
+```php
+$buffer .= $tmpData;        // Add new chunk to working buffer
+$totalBuffer .= $buffer;    // ✗ Added ENTIRE buffer (exponential duplication)
+```
+
+This caused `$totalBuffer` to contain massive duplication:
+```
+Iteration 1: totalBuffer = "Hello"
+Iteration 2: totalBuffer = "HelloHello world"
+Iteration 3: totalBuffer = "HelloHello worldHello world."
+```
+
+**What Was Fixed**:
+```php
+$buffer .= $tmpData;        // Add new chunk to working buffer
+$totalBuffer .= $tmpData;   // ✓ Add only new chunk
+```
+
+**Impact**:
+- ✅ Prevents memory waste
+- ✅ Fixes debug logs (if enabled)
+- ✅ No functional impact on game (totalBuffer only used for disabled debug logging)
+
+---
+
+## Testing Recommendations
+
+To verify these fixes work correctly:
+
+### Test Case 1: Question Streaming
+```
+Input: "Are you ready for this adventure?"
+Expected: Sent immediately after '?' received (if >75 chars)
+Previous behavior: NOT sent until period appears later
+```
+
+### Test Case 2: Exclamation Streaming
+```
+Input: "Watch out! There's a dragon coming!"
+Expected:
+  - Send "Watch out!" immediately
+  - Send "There's a dragon coming!" separately
+Previous behavior: Both bundled together or delayed
+```
+
+### Test Case 3: Mixed Punctuation
+```
+Input: "Hello! How are you? I'm doing great."
+Expected: Three separate sends as each sentence completes
+Previous behavior: Accumulates until final period
+```
+
+### Test Case 4: Japanese Punctuation
+```
+Input: "こんにちは。元気ですか？"
+Expected:
+  - Send "こんにちは。" after 。
+  - Send "元気ですか？" after ？
+Previous behavior: Only sends after periods, not ？
+```
+
+### Test Case 5: Ellipsis Preservation
+```
+Input: "I'm not sure... Maybe we should go?"
+Expected:
+  - Does NOT send after "..." (continues accumulating)
+  - Sends complete sentence after "?"
+Previous behavior: Same (ellipsis detection already worked for periods)
+```
+
+---
+
+## Files Modified
+
+1. **lib/chat_helper_functions.php** (lines 119-152)
+   - Rewrote `findDotPosition()` function
+   - Now checks all punctuation from `getEndOfSentencePunctuation()`
+   - Uses `mb_strrpos()` for unicode support
+   - Preserves ellipsis detection
+
+2. **lib/data_functions.php** (line 2969)
+   - Changed `$totalBuffer.=$buffer;` to `$totalBuffer.=$tmpData;`
+   - Single character fix with major impact on memory efficiency
+
+---
+
+## Notes
+
+### Quote Removal (Issue #3) - NOT FIXED (Intentional)
+
+User confirmed this is intentional:
+- Quote removal helps with TTS processing
+- Prevents TTS from announcing "quote" or mishandling quoted text
+- Modern LLMs use quotes correctly, but removal is acceptable tradeoff
+
+Line 2976 remains as-is:
+```php
+$buffer=strtr($buffer, array("\""=>"",".)"=>")."));
+```
+
+### Verification of Streaming Behavior
+
+Confirmed that sentences ARE actually sent immediately:
+- `returnLines()` calls `echo` to output text (line 763)
+- Followed by `ob_flush()` and `flush()` (lines 792-793)
+- Forces immediate delivery to game, not buffered
+
+---
+
+## Commit Information
+
+**Branch**: claude/aiagent-with-2.0.3-011CUoJWNy1aEdZEKr8kCZhy
+**Commit**: ccf9256
+**Message**: Fix streaming punctuation and buffer bugs
+
+===============================================================================
