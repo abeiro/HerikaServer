@@ -1,0 +1,179 @@
+===============================================================================
+REASONING IMPLEMENTATION - BUGS FOUND AND FIXES
+===============================================================================
+
+Date: 2025-11-06
+Review of: Reasoning/CoT implementation in v1.0.6
+
+===============================================================================
+BUG #1: Streaming blocked when reasoning appears after complete sentence
+===============================================================================
+
+**Severity**: HIGH
+**Impact**: Delays streaming of actual dialogue
+
+**Problem**:
+When buffer contains: "Hello there.<think>Partial reasoning"
+
+Current behavior:
+- hasUnclosedReasoningMarker() returns true
+- extractReasoningFreeContent() returns false
+- Entire buffer processing skipped (continue)
+- "Hello there." is NOT sent to game
+- Waits for "</think>" before processing
+
+Expected behavior:
+- Should extract "Hello there." and send it
+- Keep "<think>Partial reasoning" in buffer for next iteration
+
+**Root Cause**:
+extractReasoningFreeContent() is all-or-nothing. If ANY unclosed marker exists,
+it returns false, even if there's valid content before the marker.
+
+**Fix Required**:
+Modify extractReasoningFreeContent() to:
+1. Strip complete reasoning blocks
+2. If unclosed markers exist, extract content BEFORE first unclosed marker
+3. Return the pre-marker content if it exists
+4. Only return false if buffer STARTS with unclosed marker
+
+===============================================================================
+BUG #2: Nested reasoning tags leave orphaned closing tags
+===============================================================================
+
+**Severity**: LOW (unlikely in practice)
+**Impact**: Orphaned </tag> in output
+
+**Problem**:
+If LLM outputs nested markers (unlikely but possible):
+```
+<think>
+  Outer
+  <think>Inner</think>
+  More
+</think>
+```
+
+Regex `/<think>.*?<\/think>/is` matches from FIRST <think> to FIRST </think>:
+- Removes: `<think>  Outer  <think>Inner</think>`
+- Leaves: `  More\n</think>`
+
+Orphaned `</think>` remains in output.
+
+**Fix Required**:
+Handle nested tags properly or add cleanup pass for orphaned closing tags.
+
+**Alternative**:
+Document that nested tags are not supported (acceptable for v1).
+
+===============================================================================
+BUG #3: Whitespace collapsing removes intentional newlines
+===============================================================================
+
+**Severity**: MEDIUM
+**Impact**: Formatting loss in multi-paragraph messages
+
+**Problem**:
+stripReasoningTokens() line 186:
+```php
+$cleaned = preg_replace('/\s+/', ' ', $cleaned);
+```
+
+This collapses ALL whitespace including newlines.
+
+Example:
+```
+"Hello there.
+
+How are you?"
+```
+
+Becomes:
+```
+"Hello there. How are you?"
+```
+
+**Fix Required**:
+Only collapse consecutive spaces, preserve newlines:
+```php
+$cleaned = preg_replace('/ +/', ' ', $cleaned);  // Only collapse spaces
+// Or preserve paragraph structure:
+$cleaned = preg_replace('/[^\S\n]+/', ' ', $cleaned);  // Collapse all whitespace except newlines
+```
+
+===============================================================================
+BUG #4: GPT-5-chat exclusion too broad
+===============================================================================
+
+**Severity**: LOW
+**Impact**: May incorrectly exclude valid reasoning models
+
+**Problem**:
+Line 213 in openrouterjsoncached.php:
+```php
+stripos($s_model, "gpt-5-chat") === false
+```
+
+This excludes ANY model containing "gpt-5-chat" as substring.
+- Excludes: "gpt-5-chat" ✓ (correct)
+- Also excludes: "gpt-5-chatbot", "gpt-5-chat-pro" (might be too broad)
+
+**Fix Required**:
+More precise matching:
+```php
+// Exclude only exact "gpt-5-chat" or "openai/gpt-5-chat"
+($s_model !== "gpt-5-chat" && stripos($s_model, "openai/gpt-5-chat") === false)
+```
+
+**Alternative**:
+Current behavior is conservative (safe) - may not need fixing.
+
+===============================================================================
+BUG #5: Reasoning parameter sent even when disabled
+===============================================================================
+
+**Severity**: LOW (might be intentional)
+**Impact**: Extra data in API request
+
+**Problem**:
+Lines 610-621 in openrouterjsoncached.php always create reasoning object:
+```php
+$reasoning = [
+    "exclude" => true,
+    "enabled" => ($toggleThinking || $isAlwaysReasoning),
+];
+```
+
+Even when enabled=false, this object is added to payload (line 636).
+
+Some APIs might not expect reasoning parameter when disabled.
+
+**Fix Required** (optional):
+Only add reasoning to payload when needed:
+```php
+// After building reasoning array
+if ($reasoning["enabled"] || $isAlwaysReasoning) {
+    $data['reasoning'] = $reasoning;
+}
+```
+
+**Alternative**:
+Current behavior might be correct if API always expects exclude:true.
+Need API documentation to confirm.
+
+===============================================================================
+SUMMARY
+===============================================================================
+
+**Critical**: Bug #1 (streaming delay)
+**Medium**: Bug #3 (whitespace)
+**Low**: Bugs #2, #4, #5
+
+**Recommendation**:
+- Fix Bug #1 immediately (breaks streaming benefit)
+- Fix Bug #3 (formatting issue)
+- Document Bug #2 as known limitation
+- Keep Bug #4 as-is (conservative is safer)
+- Verify Bug #5 with API documentation
+
+===============================================================================

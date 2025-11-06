@@ -156,6 +156,10 @@ function findDotPosition($s_string) {
  * Removes common reasoning markers: <think>, <thinking>, <reasoning>, <thought>, <reflection>
  * Also removes DeepSeek-style markers and other common patterns
  *
+ * NOTE: Nested markers of the same type are not fully supported. For example:
+ *   <think>Outer<think>Inner</think>More</think>
+ * May leave orphaned closing tags. This is acceptable as LLMs rarely output nested markers.
+ *
  * @param string $text Text to process
  * @return string Text with reasoning tokens removed
  */
@@ -183,7 +187,9 @@ function stripReasoningTokens($text) {
     }
 
     // Clean up any resulting extra whitespace
-    $cleaned = preg_replace('/\s+/', ' ', $cleaned);
+    // Collapse multiple spaces to single space, but preserve newlines
+    $cleaned = preg_replace('/ +/', ' ', $cleaned);  // Multiple spaces -> single space
+    $cleaned = preg_replace('/\n\n+/', "\n\n", $cleaned);  // Multiple newlines -> max double newline
     $cleaned = trim($cleaned);
 
     return $cleaned;
@@ -229,23 +235,48 @@ function hasUnclosedReasoningMarker($text) {
 /**
  * Extract reasoning-free portion from text during streaming
  * If text has complete reasoning blocks, they are stripped
- * If text has unclosed reasoning block, returns empty (wait for more)
+ * If text has unclosed reasoning block, extract content before it
  *
  * @param string $text Text to process
- * @return string|false Text with reasoning stripped, or false if should wait for more data
+ * @return string|false Text with reasoning stripped, or false if text starts with unclosed marker
  */
 function extractReasoningFreeContent($text) {
     if (empty($text)) {
         return $text;
     }
 
-    // If we have unclosed reasoning markers, we should wait for more data
-    if (hasUnclosedReasoningMarker($text)) {
-        return false;
+    // First, strip all complete reasoning blocks
+    $cleaned = stripReasoningTokens($text);
+
+    // Check if there are still unclosed markers after stripping complete blocks
+    if (hasUnclosedReasoningMarker($cleaned)) {
+        // Find position of first unclosed opening marker
+        $markers = [
+            '<think>', '<thinking>', '<reasoning>', '<thought>', '<reflection>',
+            '<cot>', '<scratchpad>', '[THINK]', '[THINKING]'
+        ];
+
+        $firstMarkerPos = false;
+        foreach ($markers as $marker) {
+            $pos = stripos($cleaned, $marker);
+            if ($pos !== false && ($firstMarkerPos === false || $pos < $firstMarkerPos)) {
+                $firstMarkerPos = $pos;
+            }
+        }
+
+        // If unclosed marker is at the start, wait for more data
+        if ($firstMarkerPos === 0) {
+            return false;
+        }
+
+        // If unclosed marker is later in the text, return content before it
+        if ($firstMarkerPos !== false) {
+            return trim(substr($cleaned, 0, $firstMarkerPos));
+        }
     }
 
-    // Strip all complete reasoning blocks
-    return stripReasoningTokens($text);
+    // No unclosed markers, return cleaned text
+    return $cleaned;
 }
 
 function br2nl($string)
