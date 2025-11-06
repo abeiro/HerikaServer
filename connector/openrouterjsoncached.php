@@ -585,11 +585,7 @@ class openrouterjsoncached
             'repetition_penalty' => floatval((isset($GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"])) ? $GLOBALS["CONNECTOR"][$this->name]["repetition_penalty"] : 1),
             'min_p' => floatval((isset($GLOBALS["CONNECTOR"][$this->name]["min_p"])) ? $GLOBALS["CONNECTOR"][$this->name]["min_p"] : 0),
             'top_a' => floatval((isset($GLOBALS["CONNECTOR"][$this->name]["top_a"])) ? $GLOBALS["CONNECTOR"][$this->name]["top_a"] : 0),
-            'reasoning' => $reasoning,
-            "cache_control" => [
-                "enabled" => true,
-                "ttl" => "1h"
-            ]
+            'reasoning' => $reasoning
         );
 
         // Handle max tokens
