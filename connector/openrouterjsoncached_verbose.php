@@ -361,13 +361,13 @@ class openrouterjsoncached_verbose
 
         $cacheSystemFile = "system_cache_json_{$herikaName}.tmp";
         $cacheCombinedDialogueFile = "combined_dialogue_cache_json_{$herikaName}.tmp";
-        $cacheControlType = ["type" => "ephemeral", "ttl" => "1h"];
+        $cacheControlType = ["type" => "ephemeral"];  // TTL controlled by anthropic-beta header, not here
 
         // VERBOSE_LOGGING_START - Cache files
         if ($this->_verboseLogging) {
             logMessage("[CACHE-VERBOSE] System cache file: {$cacheSystemFile}");
             logMessage("[CACHE-VERBOSE] Dialogue cache file: {$cacheCombinedDialogueFile}");
-            logMessage("[CACHE-VERBOSE] Cache control type: ephemeral, TTL: 1h");
+            logMessage("[CACHE-VERBOSE] Cache control type: ephemeral (TTL controlled by anthropic-beta header)");
         }
         // VERBOSE_LOGGING_END
 

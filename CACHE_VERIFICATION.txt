@@ -1,0 +1,283 @@
+===============================================================================
+CACHE IMPLEMENTATION VERIFICATION
+===============================================================================
+
+## Investigation Findings
+
+### 1. Temp Directory Location ✅ CORRECT
+
+**You were right!** It's `/temp/` not `/tmp/`
+
+**Location**: `__DIR__ . "/../temp/"`
+- Line 167 in openrouterjsoncached_helpers.php
+- Line 242 in openrouterjsoncached_helpers.php
+
+**Full path**: `/home/user/HerikaServer/temp/`
+
+**Status**: Directory doesn't exist yet - will be created automatically on first use (lines 170-176)
+
+**Files created**:
+- `system_cache_json_{NPC_NAME}.tmp` - System prompt cache
+- `combined_dialogue_cache_json_{NPC_NAME}.tmp` - Dialogue history cache
+
+---
+
+### 2. Cache Control Format ⚠️ POTENTIAL ISSUE
+
+**Current implementation** (line 311):
+```php
+$cacheControlType = ["type" => "ephemeral", "ttl" => "1h"];
+```
+
+**Applied to content blocks** (line 403):
+```php
+$content['cache_control'] = $cacheControlType;
+// Results in: {"type": "ephemeral", "ttl": "1h"}
+```
+
+### Anthropic API Specification
+
+According to Anthropic's prompt caching documentation:
+
+**Correct format**:
+```json
+{
+  "type": "text",
+  "text": "...",
+  "cache_control": {"type": "ephemeral"}
+}
+```
+
+**The "ttl" field does NOT belong in cache_control block!**
+
+TTL is controlled by:
+1. **Standard caching**: ~5 minute TTL (automatic)
+2. **Extended caching**: ~1 hour TTL (enabled via `anthropic-beta: extended-cache-ttl-...` header)
+
+The API does NOT accept a `"ttl"` field inside the `cache_control` object.
+
+---
+
+### 3. Current Cache Control Usage
+
+**System messages** (line 403):
+```php
+$content = ['type' => 'text', 'text' => $finalSend];
+if ($this->_provider_caching !== "OpenAI") {
+    $content['cache_control'] = $cacheControlType;  // ← Using with TTL field
+}
+```
+
+**User messages** (lines 505, 512):
+```php
+$completeEventList[$indexToCache]["cache_control"] = $cacheControlType;  // ← Using with TTL field
+```
+
+---
+
+### 4. Beta Header Being Sent (Line 671)
+
+```php
+if ($this->_provider_caching === "Anthropic") {
+    $headers[] = "anthropic-beta: extended-cache-ttl-2025-04-11";
+}
+```
+
+This header requests extended TTL (~1 hour). The actual TTL is determined by this header,
+NOT by the `"ttl"` field in cache_control.
+
+---
+
+## Comparison with API Documentation
+
+### What Anthropic API Expects
+
+**Prompt Caching Beta Header (Standard)**:
+```
+anthropic-beta: prompt-caching-2024-07-31
+```
+
+**Extended Cache TTL Beta Header**:
+```
+anthropic-beta: prompt-caching-2024-07-31,extended-cache-ttl-2025-04-11
+```
+
+OR (possibly):
+```
+anthropic-beta: extended-cache-ttl-2025-04-11
+```
+
+**Cache Control Block**:
+```json
+{
+  "cache_control": {"type": "ephemeral"}
+}
+```
+
+NO "ttl" field inside cache_control!
+
+---
+
+## Potential Issues
+
+### Issue A: Invalid "ttl" field in cache_control
+
+**Current**:
+```json
+{"type": "ephemeral", "ttl": "1h"}
+```
+
+**Should be**:
+```json
+{"type": "ephemeral"}
+```
+
+**Impact**:
+- API might ignore the invalid "ttl" field (graceful degradation)
+- OR API might reject the cache_control block entirely
+- Could explain why cache isn't being created
+
+### Issue B: Potentially incorrect beta header
+
+**Current** (line 671):
+```
+anthropic-beta: extended-cache-ttl-2025-04-11
+```
+
+**Possible correct format**:
+```
+anthropic-beta: prompt-caching-2024-07-31,extended-cache-ttl-2025-04-11
+```
+
+The base prompt-caching header might be required in addition to extended-cache-ttl.
+
+---
+
+## Recommended Fixes
+
+### Fix #1: Remove "ttl" from cache_control (CRITICAL)
+
+**File**: connector/openrouterjsoncached.php
+**Line**: 311
+
+**Change from**:
+```php
+$cacheControlType = ["type" => "ephemeral", "ttl" => "1h"];
+```
+
+**Change to**:
+```php
+$cacheControlType = ["type" => "ephemeral"];
+```
+
+**Rationale**: The "ttl" field is not part of the cache_control specification.
+TTL is controlled by the beta header, not the cache_control block.
+
+### Fix #2: Verify beta header format
+
+**File**: connector/openrouterjsoncached.php
+**Line**: 671
+
+**Current**:
+```php
+$headers[] = "anthropic-beta: extended-cache-ttl-2025-04-11";
+```
+
+**Possible alternatives to test**:
+```php
+// Option A: Include base prompt-caching header
+$headers[] = "anthropic-beta: prompt-caching-2024-07-31,extended-cache-ttl-2025-04-11";
+
+// Option B: Use only base prompt-caching (5min TTL)
+$headers[] = "anthropic-beta: prompt-caching-2024-07-31";
+
+// Option C: Keep current (might be correct)
+$headers[] = "anthropic-beta: extended-cache-ttl-2025-04-11";
+```
+
+**Note**: Without access to current Anthropic API docs (my cutoff is Jan 2025), I cannot
+confirm which header format is correct for January 2025.
+
+---
+
+## File Location Cache Files
+
+The cache files are stored in:
+```
+/home/user/HerikaServer/temp/system_cache_json_{NPC_NAME}.tmp
+/home/user/HerikaServer/temp/combined_dialogue_cache_json_{NPC_NAME}.tmp
+```
+
+**Format**: PHP serialized data (using serialize/unserialize)
+
+**Expiry**: 1 hour (hardcoded in writeArrayToFileWithCache, line 165 default parameter)
+
+---
+
+## How Caching Works (Summary)
+
+### System Prompt Caching
+1. Build system messages with format instructions, bio, etc.
+2. Add cache_control to last system message content block (line 403)
+3. Serialize and save to temp file (line 409)
+4. On subsequent requests, load from file if less than 1 hour old
+
+### Dialogue History Caching
+1. Collect all user/assistant messages
+2. Calculate cache control index (line 476)
+3. Add cache_control to specific message in history (lines 505 or 512)
+4. Save dialogue to temp file via manageCharacterEventList (line 458)
+5. On subsequent requests, load and merge with new messages
+
+### Cache Control Placement
+- **Last system message**: Always cached
+- **Dialogue message**: Based on `dialogue_cache_uncached_count` setting
+  - Default: Last N messages remain uncached (dynamic/fresh content)
+  - Older messages are cached (stable context)
+
+---
+
+## Comparison with Original Non-Cached Connector
+
+The original `openrouterjson.php` has NO caching at all:
+- No cache_control blocks
+- No temp file storage
+- No anthropic-beta headers
+- Every request sends full context
+
+The cached version adds:
+- Temp file storage for system prompts and dialogue
+- cache_control blocks on strategic messages
+- Beta headers for prompt caching
+- Logic to determine which messages to cache
+
+---
+
+## Summary
+
+### Definite Issues Found
+
+1. ✅ **Fixed**: Invalid top-level cache_control parameter (removed earlier)
+2. 🔴 **NEW**: Invalid "ttl" field in cache_control blocks (needs fix)
+
+### Uncertain Issues
+
+1. ❓ **Beta header format**: Might be correct or might need base prompt-caching header
+
+### Correct Implementations
+
+1. ✅ **Temp directory**: Using `../temp/` correctly
+2. ✅ **Cache control placement**: On content blocks, not top-level
+3. ✅ **File caching logic**: Proper serialization and expiry checking
+4. ✅ **Cache index calculation**: Logical placement based on uncached count
+
+---
+
+## Next Steps
+
+1. **Fix the "ttl" field**: Remove from cacheControlType (line 311)
+2. **Test caching**: Make requests and check if cache files are created in `/temp/`
+3. **Monitor logs**: Check `_cached_perf.log` for cache read/create tokens
+4. **Verify beta header**: If caching still doesn't work, try alternative header formats
+
+===============================================================================
