@@ -4,11 +4,13 @@ ALL FIXES SUMMARY - Complete List of Issues Fixed
 
 ## Session Summary
 
-This session identified and fixed **4 critical bugs** in HerikaServer:
+This session identified and fixed **3 critical bugs** in HerikaServer:
 1. Streaming punctuation detection (questions/exclamations ignored)
 2. Buffer accumulation error (memory duplication)
-3. Cache writing failure #1 (invalid top-level cache_control parameter)
-4. Cache writing failure #2 (invalid ttl field in cache_control blocks)
+3. Cache writing failure (invalid top-level cache_control parameter)
+
+**Note**: A 4th bug was initially identified (ttl field) but was REVERTED after user
+confirmed their working 1.3 version includes the ttl field.
 
 All fixes have been tested, committed, and pushed to branch:
 `claude/aiagent-with-2.0.3-011CUoJWNy1aEdZEKr8kCZhy`
@@ -170,51 +172,25 @@ These are the CORRECT locations per Anthropic API documentation.
 
 ---
 
-## Fix #4: Cache Writing Failure #2 (CRITICAL)
+## Fix #4: Cache TTL Field (REVERTED - WAS INCORRECT)
 
-**Issue**: Second cache bug - invalid "ttl" field in cache_control blocks
-**Impact**: API might reject cache_control blocks with invalid field
+**Status**: ⚠️ REVERTED - This was not actually a bug
 
-### Root Cause
-The cache_control block definition included an invalid "ttl" field:
+### Original (Incorrect) Assessment
+Initially identified the "ttl" field as invalid and removed it.
+
+### User Correction
+User confirmed their working 1.3 version includes:
 ```php
-$cacheControlType = ["type" => "ephemeral", "ttl" => "1h"];  // ✗ Invalid!
+$cacheControlType = ["type" => "ephemeral", "ttl" => "1h"];  // ✓ CORRECT!
 ```
 
-### Why This Was Wrong
-- Anthropic API does NOT accept a "ttl" field in cache_control blocks
-- Cache control blocks should ONLY contain: `{"type": "ephemeral"}`
-- TTL is controlled by the `anthropic-beta` header, NOT by cache_control content
-- This header is set at line 671: `anthropic-beta: extended-cache-ttl-2025-04-11`
+### Resolution
+- Reverted the removal of ttl field
+- Restored original working configuration
+- Both connectors now have ttl field back
 
-### Files Modified
-- `connector/openrouterjsoncached.php` (line 311)
-- `connector/openrouterjsoncached_verbose.php` (lines 364, 370)
-
-### What Was Changed
-```php
-// OLD:
-$cacheControlType = ["type" => "ephemeral", "ttl" => "1h"];
-
-// NEW:
-$cacheControlType = ["type" => "ephemeral"];  // TTL controlled by header
-```
-
-Also updated verbose logging:
-```php
-// OLD:
-logMessage("[CACHE-VERBOSE] Cache control type: ephemeral, TTL: 1h");
-
-// NEW:
-logMessage("[CACHE-VERBOSE] Cache control type: ephemeral (TTL controlled by anthropic-beta header)");
-```
-
-### Results
-- ✅ Cache control blocks now match API specification exactly
-- ✅ Combined with Fix #3, caching should now work correctly
-- ✅ Extended TTL (~1 hour) still active via anthropic-beta header
-
-### Temp Directory Verification
+### Temp Directory Verification (Still Valid)
 User correctly identified that cache files are stored in `/temp/` not `/tmp/`:
 - Location: `__DIR__ . "/../temp/"`
 - Files: `system_cache_json_{NPC_NAME}.tmp`, `combined_dialogue_cache_json_{NPC_NAME}.tmp`
@@ -271,20 +247,35 @@ announce "quote" or mishandle text. The `.)`→`).` fix is mostly correct anyway
 **Files**:
 - ALL_FIXES_SUMMARY.txt
 
-### Commit 4: Cache Fix #2
+### Commit 4: Cache Fix #2 (Incorrect - Later Reverted)
 **Hash**: a70a457
 **Message**: "Fix second caching bug: remove invalid ttl field from cache_control blocks"
 **Files**:
 - connector/openrouterjsoncached.php (line 311)
 - connector/openrouterjsoncached_verbose.php (lines 364, 370)
 - CACHE_VERIFICATION.txt
+**Status**: ⚠️ REVERTED in commit 187507d
+
+### Commit 5: Documentation Update
+**Hash**: d98a962
+**Message**: "Update summary with second cache fix details"
+**Files**:
+- ALL_FIXES_SUMMARY.txt
+
+### Commit 6: Revert Incorrect TTL Fix
+**Hash**: 187507d
+**Message**: "Revert ttl removal - ttl field is correct per user's working 1.3 version"
+**Files**:
+- connector/openrouterjsoncached.php (line 311)
+- connector/openrouterjsoncached_verbose.php (lines 364, 370)
+**Status**: ✅ Restored correct configuration
 
 ---
 
 ## Branch Information
 
 **Branch**: `claude/aiagent-with-2.0.3-011CUoJWNy1aEdZEKr8kCZhy`
-**Latest Commit**: a70a457
+**Latest Commit**: 187507d
 **Status**: All changes pushed to remote
 
 ---
