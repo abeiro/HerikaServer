@@ -2,6 +2,53 @@
 CHIM CACHED CONNECTOR - VERSION HISTORY
 ===============================================================================
 
+Version 1.0.5 (2025-11-06)
+--------------------------
+
+Critical Bug Fixes:
+-------------------
+✓ **CRITICAL: Fixed streaming punctuation detection**
+  - Questions and exclamations now trigger immediate sentence sending
+  - Previously only periods (.) were detected, causing unnatural delays
+  - Now detects all punctuation: .?!。？！ (English and Japanese)
+  - Modified: lib/chat_helper_functions.php (findDotPosition function)
+  - Impact: Much more natural streaming behavior
+
+✓ **MEDIUM: Fixed buffer accumulation bug**
+  - Eliminated exponential memory duplication in totalBuffer
+  - Previously: $totalBuffer .= $buffer (added entire buffer each iteration)
+  - Now: $totalBuffer .= $tmpData (adds only new chunk)
+  - Modified: lib/data_functions.php (line 2969)
+  - Impact: Reduced memory usage, accurate debug logs
+
+✓ **CRITICAL: Fixed cache API compliance**
+  - Removed invalid top-level cache_control parameter from API payload
+  - Anthropic API does not accept cache_control at top level
+  - Cache control blocks remain correctly placed on content items
+  - Modified: connector/openrouterjsoncached.php, openrouterjsoncached_verbose.php
+  - Impact: Cache should now be created properly
+
+Files Added:
+------------
+• lib/chat_helper_functions.php - Streaming sentence detection
+• lib/data_functions.php - Main data processing and streaming logic
+
+Documentation Added:
+--------------------
+• FINAL_CODE_REVIEW.txt - Comprehensive review of all changes
+• STREAMING_BEHAVIOR_ANALYSIS.txt - Complete streaming system documentation
+• STREAMING_ERRORS_FOUND.txt - Detailed bug analysis
+• STREAMING_FIXES_APPLIED.txt - Fix documentation
+• CACHE_WRITING_INVESTIGATION.txt - Cache bug analysis
+• CACHE_VERIFICATION.txt - Cache structure verification
+
+Testing Recommendations:
+------------------------
+1. Test streaming with questions: "How are you?"
+2. Test streaming with exclamations: "Watch out!"
+3. Clear temp/ directory and verify cache file creation
+4. Monitor connector/_cached_perf.log for cache efficiency
+
 Version 1.0.4 (2025-11-06)
 --------------------------
 
