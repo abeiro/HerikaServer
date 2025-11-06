@@ -181,25 +181,64 @@ class openrouterjsoncached
     }
 
     private function isOpenAIModel($s_model="") {
+        // Detects OpenAI reasoning models that require special parameter handling
+        // These models use max_completion_tokens and require parameter stripping
         $b_res = false;
         if (strlen($s_model) > 0) {
+            // OpenRouter prefixed models
             $i_pos = stripos($s_model, "openai/o1");
             if ($i_pos === false)
                 $i_pos = stripos($s_model, "openai/o3");
             if ($i_pos === false)
-                $i_pos = stripos($s_model, "openai/o4-mini");
+                $i_pos = stripos($s_model, "openai/o4");
             if ($i_pos === false)
                 $i_pos = stripos($s_model, "azure-o1");
             if ($i_pos === false)
                 $i_pos = stripos($s_model, "azure-o3");
+            if ($i_pos === false)
+                $i_pos = stripos($s_model, "azure-o4");
+
+            // Direct model names (o1, o3, o4 series)
             if ($i_pos === false) {
                 if (($s_model == "o1") || ($s_model == "o1-mini") || ($s_model == "o1-preview") ||
                     ($s_model == "o3") || (strpos($s_model, "o3-mini") === 0) || (strpos($s_model, "o3-pro") === 0) ||
-                    (strpos($s_model, "o4-mini") === 0)) {
+                    ($s_model == "o4") || (strpos($s_model, "o4-mini") === 0)) {
                     $i_pos = 1;
                 }
             }
+
+            // GPT-5 series (but NOT gpt-5-chat)
+            if ($i_pos === false) {
+                if ((stripos($s_model, "gpt-5") !== false || stripos($s_model, "openai/gpt-5") !== false) &&
+                    stripos($s_model, "gpt-5-chat") === false) {
+                    // Matches: gpt-5, gpt-5-pro, gpt-5-codex, gpt-5-mini, gpt-5-nano, openai/gpt-5*
+                    // But NOT: gpt-5-chat
+                    $i_pos = 1;
+                }
+            }
+
             $b_res = (!($i_pos === false));
+        }
+        return $b_res;
+    }
+
+    private function isAlwaysReasoningModel($s_model="") {
+        // Detects models that ALWAYS have reasoning enabled (cannot be disabled)
+        // These models will always output reasoning tokens regardless of settings
+        $b_res = false;
+        if (strlen($s_model) > 0) {
+            // OpenAI reasoning models (o1, o3, o4, gpt-5*)
+            if ($this->isOpenAIModel($s_model)) {
+                $b_res = true;
+            }
+
+            // DeepSeek R1 (older version, always reasons)
+            if (!$b_res) {
+                $i_pos = stripos($s_model, "deepseek-r1");
+                if ($i_pos === false)
+                    $i_pos = stripos($s_model, "r1-1776");
+                $b_res = (!($i_pos === false));
+            }
         }
         return $b_res;
     }
@@ -561,14 +600,23 @@ class openrouterjsoncached
     private function _openPart4($customParms, $herikaName, $MAX_TOKENS, $toggleThinking, $thinkingTokens,
                                  $effort_level, $start_time, $finalMessagesToSend) {
 
+        // Detect model capabilities
+        $isOpenAIReasoning = $this->isOpenAIModel($this->_model);
+        $isAlwaysReasoning = $this->isAlwaysReasoningModel($this->_model);
+
         // Build reasoning configuration
+        // Always include exclude:true to strip reasoning tokens from output
+        // Enable reasoning if: toggle is on OR model always reasons
         $reasoning = [
-            "enabled" => $toggleThinking,
+            "exclude" => true,
+            "enabled" => ($toggleThinking || $isAlwaysReasoning),
         ];
 
-        if ($this->_provider_caching === "OpenAI") {
+        // Add effort level for OpenAI models (supports minimal/low/medium/high)
+        if ($isOpenAIReasoning && $reasoning["enabled"]) {
             $reasoning["effort"] = $effort_level;
-        } else {
+        } else if ($reasoning["enabled"]) {
+            // For non-OpenAI models, use max_tokens instead of effort
             $reasoning["max_tokens"] = intval($thinkingTokens);
         }
 
@@ -625,6 +673,41 @@ class openrouterjsoncached
         }
 
         $data["transforms"] = array();
+
+        // Handle OpenAI reasoning models - they require special parameter handling
+        if ($isOpenAIReasoning) {
+            // OpenAI models use max_completion_tokens instead of max_tokens
+            if (isset($data["max_tokens"])) {
+                $data["max_completion_tokens"] = $data["max_tokens"];
+                unset($data["max_tokens"]);
+            }
+
+            // If reasoning is enabled, OpenAI models ONLY accept these parameters
+            // All other parameters (temperature, top_p, penalties, etc.) must be stripped
+            if ($reasoning["enabled"]) {
+                $cleanedData = [
+                    'model' => $data['model'],
+                    'messages' => $data['messages'],
+                    'stream' => $data['stream'],
+                    'reasoning' => $data['reasoning']
+                ];
+
+                // Only add max_completion_tokens if it was set
+                if (isset($data['max_completion_tokens'])) {
+                    $cleanedData['max_completion_tokens'] = $data['max_completion_tokens'];
+                }
+
+                // Preserve provider and transforms if they exist
+                if (isset($data['provider'])) {
+                    $cleanedData['provider'] = $data['provider'];
+                }
+                if (isset($data['transforms'])) {
+                    $cleanedData['transforms'] = $data['transforms'];
+                }
+
+                $data = $cleanedData;
+            }
+        }
 
         // Log request
         if (!isset($GLOBALS["DEBUG_DATA"])) {
