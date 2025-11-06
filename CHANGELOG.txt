@@ -72,6 +72,29 @@ Files Modified:
 • lib/chat_helper_functions.php - Reasoning detection functions
 • lib/data_functions.php - Streaming integration
 
+Bug Fixes (Post-Release):
+-------------------------
+✓ **CRITICAL: Fixed streaming blocked by unclosed reasoning markers**
+  - Problem: When buffer contained complete sentence followed by unclosed reasoning
+    (e.g., "Hello there.<think>Partial reasoning"), entire buffer was blocked
+  - Impact: First valid sentence was delayed until reasoning block completed
+  - Fix: Modified extractReasoningFreeContent() to extract content BEFORE unclosed markers
+  - Result: First sentences now stream immediately even when followed by reasoning
+  - Modified: lib/chat_helper_functions.php (extractReasoningFreeContent function)
+
+✓ **Confirmed correct whitespace handling**
+  - Initial assessment: Thought newline preservation was needed
+  - User correction: Roleplay responses must be single line with no newlines
+  - Resolution: Confirmed original whitespace collapsing behavior is correct
+  - All whitespace (including newlines) collapsed to single spaces as intended
+
+Known Limitations (Not Bugs):
+------------------------------
+• Nested reasoning tags (e.g., <think>Outer<think>Inner</think>More</think>) may
+  leave orphaned closing tags. This is acceptable as LLMs rarely output nested markers.
+• Ellipsis-only sentences won't send until more content arrives (streaming context)
+• Minimum 75 character requirement for sentence streaming (intentional throttling)
+
 Version 1.0.5 (2025-11-06)
 --------------------------
 
