@@ -27,6 +27,23 @@ $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
 $GLOBALS["db"] = $GLOBALS["db"] ?? null;
+
+// Load connector version information
+$cachedConnectorVersion = '';
+$cachedConnectorVersionVerbose = '';
+if (file_exists($enginePath . 'connector/openrouterjsoncached.php')) {
+    require_once($enginePath . 'connector/openrouterjsoncached.php');
+    if (class_exists('openrouterjsoncached')) {
+        $cachedConnectorVersion = defined('openrouterjsoncached::VERSION') ? openrouterjsoncached::VERSION : '';
+    }
+}
+if (file_exists($enginePath . 'connector/openrouterjsoncached_verbose.php')) {
+    require_once($enginePath . 'connector/openrouterjsoncached_verbose.php');
+    if (class_exists('openrouterjsoncached_verbose')) {
+        $cachedConnectorVersionVerbose = defined('openrouterjsoncached_verbose::VERSION') ? openrouterjsoncached_verbose::VERSION : '';
+    }
+}
+
 // Early Export CSV handler (must run before any output)
 if (isset($_GET["export"])) {
     if (!$GLOBALS["db"]) { $GLOBALS["db"] = new sql(); }
@@ -406,6 +423,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 <!-- Caching Settings (shown only for cached connectors) -->
                 <div id="caching_settings" style="display:none; margin-top:16px; padding:12px; border:1px solid #4a4a4a; border-radius:8px; background:#1a1a1a;">
                     <div style="font-weight:600; color:#e9efff; margin-bottom:12px;">🔄 Caching Settings</div>
+                    <div id="connector_version" style="font-size:0.85em; color:#999; margin-bottom:12px; font-style:italic;"></div>
 
                     <label for='provider_caching'>Provider Caching Type</label><br>
                     <select name="metadata[provider_caching]" id="provider_caching">
@@ -664,6 +682,18 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             // Show caching settings only for cached drivers
             const isCachedDriver = driver === 'openrouterjsoncached' || driver === 'openrouterjsoncached_verbose';
             if (cachingSettings) cachingSettings.style.display = isCachedDriver ? '' : 'none';
+
+            // Update connector version display
+            const versionDiv = document.getElementById('connector_version');
+            if (versionDiv) {
+                if (driver === 'openrouterjsoncached') {
+                    versionDiv.textContent = <?= json_encode($cachedConnectorVersion) ?>;
+                } else if (driver === 'openrouterjsoncached_verbose') {
+                    versionDiv.textContent = <?= json_encode($cachedConnectorVersionVerbose) ?>;
+                } else {
+                    versionDiv.textContent = '';
+                }
+            }
 
             // Show verbose logging option only for verbose driver
             if (verboseLoggingOption) verboseLoggingOption.style.display = (driver === 'openrouterjsoncached_verbose') ? '' : 'none';
@@ -1412,6 +1442,7 @@ if (typeof window.consolidation !== 'function') {
             <!-- Caching Settings (shown only for cached connectors) - MAIN EDITOR -->
             <div id="caching_settings_main" style="display:none; margin-top:16px; padding:12px; border:1px solid #4a4a4a; border-radius:8px; background:#1a1a1a;">
                 <div style="font-weight:600; color:#e9efff; margin-bottom:12px;">🔄 Caching Settings</div>
+                <div id="connector_version_main" style="font-size:0.85em; color:#999; margin-bottom:12px; font-style:italic;"></div>
 
                 <label for='provider_caching_main'>Provider Caching Type</label><br>
                 <select name="metadata[provider_caching]" id="provider_caching_main">
@@ -1653,6 +1684,18 @@ function updateCachingSettingsMain(){
     // Show caching settings only for cached drivers
     const isCachedDriver = driver === 'openrouterjsoncached' || driver === 'openrouterjsoncached_verbose';
     if (cachingSettings) cachingSettings.style.display = isCachedDriver ? '' : 'none';
+
+    // Update connector version display
+    const versionDiv = document.getElementById('connector_version_main');
+    if (versionDiv) {
+        if (driver === 'openrouterjsoncached') {
+            versionDiv.textContent = <?= json_encode($cachedConnectorVersion) ?>;
+        } else if (driver === 'openrouterjsoncached_verbose') {
+            versionDiv.textContent = <?= json_encode($cachedConnectorVersionVerbose) ?>;
+        } else {
+            versionDiv.textContent = '';
+        }
+    }
 
     // Show verbose logging option only for verbose driver
     if (verboseLoggingOption) verboseLoggingOption.style.display = (driver === 'openrouterjsoncached_verbose') ? '' : 'none';

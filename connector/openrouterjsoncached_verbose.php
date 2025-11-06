@@ -6,11 +6,11 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_function
 // Cached version of openrouterjson connector with Anthropic/OpenAI/Gemini cache support
 // Based on CHIM 2.0 architecture with additional caching and response format features
 // VERBOSE LOGGING VERSION - includes comprehensive debugging logs for testing phase
-// Version: 1.0.0 (2025-11-05)
 
 class openrouterjsoncached_verbose
 {
-    const VERSION = '1.0.0';
+    // ⚠️ IMPORTANT: Please update version number, date, and CHIM version after making changes
+    const VERSION = 'OpenRouter Cache Connector v1.0.8 for CHIM 2.0.3 | 2025/11/06 (VERBOSE)';
 
     public $primary_handler;
     public $name;
