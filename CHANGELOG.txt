@@ -2,6 +2,28 @@
 CHIM CACHED CONNECTOR - VERSION HISTORY
 ===============================================================================
 
+Version 1.0.4 (2025-11-06)
+--------------------------
+
+Breaking Changes (Configuration):
+----------------------------------
+⚠️ Custom instruction field names have been renamed for clarity:
+  - OLD: "custom_last_instruction" → NEW: "custom_system_instruction"
+    Location: System prompt (after character bio, before dialogue)
+    Purpose: Add custom instructions to system prompt (does NOT replace other instructions)
+
+  - OLD: "custom_last_user_instruction" → NEW: "custom_last_instruction"
+    Location: Right before current user message (literally last thing before model responds)
+    Purpose: Inject recent context or final instructions
+
+⚠️ If you were using these fields, you'll need to reconfigure them with new names.
+   Old values will NOT be automatically migrated.
+
+Improvements:
+-------------
+✓ Field descriptions now clearly explain placement in prompt structure
+✓ More intuitive naming that matches actual behavior
+
 Version 1.0.3 (2025-11-05)
 --------------------------
 
