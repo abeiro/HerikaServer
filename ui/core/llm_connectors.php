@@ -58,6 +58,7 @@ if (isset($_GET["export"])) {
         $valsEarly[] = $v;
     }
     fputcsv($outEarly, $valsEarly);
+    fflush($outEarly);
     fclose($outEarly);
     exit;
 }
@@ -836,12 +837,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import"])) {
         $tmp = $_FILES['import_file']['tmp_name'];
         $fh = fopen($tmp, 'r');
         if (!$fh) { header("Location: $redir"); exit; }
-        $header = fgetcsv($fh);
+        
+        // Read header, skipping any empty lines at the start
+        $header = false;
+        while (($line = fgetcsv($fh)) !== false) {
+            if (!empty(array_filter($line, function($v){ return trim((string)$v) !== ''; }))) {
+                $header = $line;
+                break;
+            }
+        }
         if ($header === false) { fclose($fh); header("Location: $redir"); exit; }
         $cols = array_map(function($v){ return strtolower(trim((string)$v)); }, $header);
-        $row = fgetcsv($fh);
+        
+        // Skip empty lines to find actual data row
+        $row = false;
+        while (($line = fgetcsv($fh)) !== false) {
+            if (!empty(array_filter($line, function($v){ return trim((string)$v) !== ''; }))) {
+                $row = $line;
+                break;
+            }
+        }
         fclose($fh);
         if ($row === false) { header("Location: $redir"); exit; }
+        
         $dataMap = [];
         for ($i=0; $i<count($cols); $i++) { $k = $cols[$i] ?? ''; if ($k==='') continue; $dataMap[$k] = $row[$i] ?? ''; }
 
@@ -901,8 +919,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import"])) {
             $newId = $last['id'] ?? '';
         }
         $redir = 'llm_connectors.php' . ($newId ? ('?edit=' . urlencode($newId)) : '');
-    } catch (Exception $_e) {
-        $redir = 'llm_connectors.php';
+    } catch (Exception $e) {
+        error_log("[CSV Import Error] " . $e->getMessage());
+        error_log("[CSV Import Error] Stack trace: " . $e->getTraceAsString());
+        $redir = 'llm_connectors.php?notice=' . urlencode('Import failed: ' . $e->getMessage());
     }
     header("Location: $redir");
     exit;

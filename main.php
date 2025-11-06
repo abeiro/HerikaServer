@@ -819,7 +819,7 @@ if ($gameRequest[0] == "npcspellcast") {
 // Exit if only a event info log.
 
 if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","itemfound",
-    "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast","backgroundaction"])) {
+    "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast","backgroundaction","reanimate"])) {
     $gameRequest[3]=isset($gameRequest[3])?$gameRequest[3]:"";
     $lastInfoNpcData=$db->escape($gameRequest[3]);
     if (in_array($gameRequest[0],['infonpc','infoloc','infonpc_close'])) {
@@ -1151,6 +1151,34 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
 if (isset($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])) {
     if ($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])
         terminate();
+}
+
+// Filter bleedout-related instructions based on RPG_COMMENTS setting
+// Note: Papyrus RecoverFromCombat sends "instruction" events when NPCs enter bleedout
+// These would trigger automatic AI responses, so we check RPG_COMMENTS to prevent that
+if ($gameRequest[0] === 'instruction' && isset($gameRequest[3])) {
+    if (stripos($gameRequest[3], 'wounded bleedingout') !== false || stripos($gameRequest[3], 'lost combat') !== false) {
+        // Check if bleedout RPG comments are enabled
+        if (empty($GLOBALS["RPG_COMMENTS"]) || !in_array('bleedout', $GLOBALS["RPG_COMMENTS"])) {
+            Logger::info("Bleedout instruction skipped (RPG comment disabled)");
+            terminate();
+        }
+        
+        // Apply RPG_COMMENTS_CHANCE probability
+        $chance = 100;
+        if (isset($GLOBALS["RPG_COMMENTS_CHANCE"])) {
+            $chance = intval($GLOBALS["RPG_COMMENTS_CHANCE"]);
+        }
+        $chance = max(0, min(100, $chance));
+        
+        if ($chance < 100) {
+            $roll = rand(1, 100);
+            if ($roll > $chance) {
+                Logger::info("Bleedout instruction skipped (failed chance roll: {$roll} > {$chance})");
+                terminate();
+            }
+        }
+    }
 }
 
 
