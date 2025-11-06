@@ -151,6 +151,103 @@ function findDotPosition($s_string) {
     return $lastPosition;
 }
 
+/**
+ * Strip reasoning/CoT tokens from text
+ * Removes common reasoning markers: <think>, <thinking>, <reasoning>, <thought>, <reflection>
+ * Also removes DeepSeek-style markers and other common patterns
+ *
+ * @param string $text Text to process
+ * @return string Text with reasoning tokens removed
+ */
+function stripReasoningTokens($text) {
+    if (empty($text)) {
+        return $text;
+    }
+
+    // Common reasoning markers (case-insensitive)
+    $patterns = [
+        '/<think>.*?<\/think>/is',           // <think>...</think>
+        '/<thinking>.*?<\/thinking>/is',     // <thinking>...</thinking>
+        '/<reasoning>.*?<\/reasoning>/is',   // <reasoning>...</reasoning>
+        '/<thought>.*?<\/thought>/is',       // <thought>...</thought>
+        '/<reflection>.*?<\/reflection>/is', // <reflection>...</reflection>
+        '/<cot>.*?<\/cot>/is',               // <cot>...</cot> (chain of thought)
+        '/<scratchpad>.*?<\/scratchpad>/is', // <scratchpad>...</scratchpad>
+        '/\[THINK\].*?\[\/THINK\]/is',       // [THINK]...[/THINK]
+        '/\[THINKING\].*?\[\/THINKING\]/is', // [THINKING]...[/THINKING]
+    ];
+
+    $cleaned = $text;
+    foreach ($patterns as $pattern) {
+        $cleaned = preg_replace($pattern, '', $cleaned);
+    }
+
+    // Clean up any resulting extra whitespace
+    $cleaned = preg_replace('/\s+/', ' ', $cleaned);
+    $cleaned = trim($cleaned);
+
+    return $cleaned;
+}
+
+/**
+ * Check if text contains an opening reasoning marker without closing
+ * Used for streaming to detect incomplete reasoning blocks
+ *
+ * @param string $text Text to check
+ * @return bool True if text has unclosed reasoning marker
+ */
+function hasUnclosedReasoningMarker($text) {
+    if (empty($text)) {
+        return false;
+    }
+
+    // Check for opening tags without closing
+    $markers = [
+        ['open' => '<think>', 'close' => '</think>'],
+        ['open' => '<thinking>', 'close' => '</thinking>'],
+        ['open' => '<reasoning>', 'close' => '</reasoning>'],
+        ['open' => '<thought>', 'close' => '</thought>'],
+        ['open' => '<reflection>', 'close' => '</reflection>'],
+        ['open' => '<cot>', 'close' => '</cot>'],
+        ['open' => '<scratchpad>', 'close' => '</scratchpad>'],
+        ['open' => '[THINK]', 'close' => '[/THINK]'],
+        ['open' => '[THINKING]', 'close' => '[/THINKING]'],
+    ];
+
+    foreach ($markers as $marker) {
+        $openCount = substr_count(strtolower($text), strtolower($marker['open']));
+        $closeCount = substr_count(strtolower($text), strtolower($marker['close']));
+
+        if ($openCount > $closeCount) {
+            return true; // Found unclosed marker
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Extract reasoning-free portion from text during streaming
+ * If text has complete reasoning blocks, they are stripped
+ * If text has unclosed reasoning block, returns empty (wait for more)
+ *
+ * @param string $text Text to process
+ * @return string|false Text with reasoning stripped, or false if should wait for more data
+ */
+function extractReasoningFreeContent($text) {
+    if (empty($text)) {
+        return $text;
+    }
+
+    // If we have unclosed reasoning markers, we should wait for more data
+    if (hasUnclosedReasoningMarker($text)) {
+        return false;
+    }
+
+    // Strip all complete reasoning blocks
+    return stripReasoningTokens($text);
+}
+
 function br2nl($string)
 {
     return preg_replace('/[\r\n]+/', '', preg_replace('/\<br(\s*)?\/?\>/i', "", $string));

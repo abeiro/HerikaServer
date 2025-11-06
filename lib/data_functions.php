@@ -2973,6 +2973,16 @@ function call_llm() {
             $breakFlag=true;
         }
 
+        // Strip reasoning tokens from buffer BEFORE any other processing
+        // If buffer has unclosed reasoning markers, skip processing this iteration (wait for more data)
+        $reasoningFreeBuffer = extractReasoningFreeContent($buffer);
+        if ($reasoningFreeBuffer === false) {
+            // Buffer contains unclosed reasoning markers - wait for more data
+            continue;
+        }
+        // Update buffer with reasoning-stripped version
+        $buffer = $reasoningFreeBuffer;
+
         $buffer=strtr($buffer, array("\""=>"",".)"=>")."));
 
         if (strlen($buffer)<MINIMUM_SENTENCE_SIZE) {	// Avoid too short buffers
@@ -3022,6 +3032,8 @@ function call_llm() {
     
     
     if (trim($buffer)) {
+        // Strip any remaining reasoning tokens from final buffer
+        $buffer = stripReasoningTokens($buffer);
         Logger::info("REMAINING DATA <$buffer>");
         $sentences=split_sentences_stream(cleanResponse(trim($buffer)));
 
