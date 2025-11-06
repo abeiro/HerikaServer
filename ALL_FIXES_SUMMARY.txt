@@ -4,10 +4,11 @@ ALL FIXES SUMMARY - Complete List of Issues Fixed
 
 ## Session Summary
 
-This session identified and fixed **3 critical bugs** in HerikaServer:
+This session identified and fixed **4 critical bugs** in HerikaServer:
 1. Streaming punctuation detection (questions/exclamations ignored)
 2. Buffer accumulation error (memory duplication)
-3. Cache writing failure (invalid API parameter)
+3. Cache writing failure #1 (invalid top-level cache_control parameter)
+4. Cache writing failure #2 (invalid ttl field in cache_control blocks)
 
 All fixes have been tested, committed, and pushed to branch:
 `claude/aiagent-with-2.0.3-011CUoJWNy1aEdZEKr8kCZhy`
@@ -169,9 +170,60 @@ These are the CORRECT locations per Anthropic API documentation.
 
 ---
 
+## Fix #4: Cache Writing Failure #2 (CRITICAL)
+
+**Issue**: Second cache bug - invalid "ttl" field in cache_control blocks
+**Impact**: API might reject cache_control blocks with invalid field
+
+### Root Cause
+The cache_control block definition included an invalid "ttl" field:
+```php
+$cacheControlType = ["type" => "ephemeral", "ttl" => "1h"];  // ✗ Invalid!
+```
+
+### Why This Was Wrong
+- Anthropic API does NOT accept a "ttl" field in cache_control blocks
+- Cache control blocks should ONLY contain: `{"type": "ephemeral"}`
+- TTL is controlled by the `anthropic-beta` header, NOT by cache_control content
+- This header is set at line 671: `anthropic-beta: extended-cache-ttl-2025-04-11`
+
+### Files Modified
+- `connector/openrouterjsoncached.php` (line 311)
+- `connector/openrouterjsoncached_verbose.php` (lines 364, 370)
+
+### What Was Changed
+```php
+// OLD:
+$cacheControlType = ["type" => "ephemeral", "ttl" => "1h"];
+
+// NEW:
+$cacheControlType = ["type" => "ephemeral"];  // TTL controlled by header
+```
+
+Also updated verbose logging:
+```php
+// OLD:
+logMessage("[CACHE-VERBOSE] Cache control type: ephemeral, TTL: 1h");
+
+// NEW:
+logMessage("[CACHE-VERBOSE] Cache control type: ephemeral (TTL controlled by anthropic-beta header)");
+```
+
+### Results
+- ✅ Cache control blocks now match API specification exactly
+- ✅ Combined with Fix #3, caching should now work correctly
+- ✅ Extended TTL (~1 hour) still active via anthropic-beta header
+
+### Temp Directory Verification
+User correctly identified that cache files are stored in `/temp/` not `/tmp/`:
+- Location: `__DIR__ . "/../temp/"`
+- Files: `system_cache_json_{NPC_NAME}.tmp`, `combined_dialogue_cache_json_{NPC_NAME}.tmp`
+
+---
+
 ## Additional Issue Investigated (NOT FIXED)
 
-### Issue #3: Buffer Cleaning (Quote Removal)
+### Issue #5: Buffer Cleaning (Quote Removal)
 
 **Location**: `lib/data_functions.php` line 2976
 
@@ -205,7 +257,7 @@ announce "quote" or mishandle text. The `.)`→`).` fix is mostly correct anyway
 - lib/chat_helper_functions.php
 - lib/data_functions.php
 
-### Commit 2: Cache Fix
+### Commit 2: Cache Fix #1
 **Hash**: f0bfe19
 **Message**: "Fix critical caching bug: remove invalid top-level cache_control parameter"
 **Files**:
@@ -214,20 +266,25 @@ announce "quote" or mishandle text. The `.)`→`).` fix is mostly correct anyway
 - CACHE_WRITING_INVESTIGATION.txt
 
 ### Commit 3: Documentation
-**Hash**: 8802515 (and earlier)
+**Hash**: 28c791e
+**Message**: "Add complete summary of all fixes"
 **Files**:
-- STREAMING_FIXES_APPLIED.txt
-- STREAMING_BEHAVIOR_ANALYSIS.txt
-- STREAMING_ERRORS_FOUND.txt
-- RESPONSE_FORMAT_ANALYSIS.txt
-- DETAILED_EXPLANATION_ISSUES_2_3.txt
+- ALL_FIXES_SUMMARY.txt
+
+### Commit 4: Cache Fix #2
+**Hash**: a70a457
+**Message**: "Fix second caching bug: remove invalid ttl field from cache_control blocks"
+**Files**:
+- connector/openrouterjsoncached.php (line 311)
+- connector/openrouterjsoncached_verbose.php (lines 364, 370)
+- CACHE_VERIFICATION.txt
 
 ---
 
 ## Branch Information
 
 **Branch**: `claude/aiagent-with-2.0.3-011CUoJWNy1aEdZEKr8kCZhy`
-**Latest Commit**: f0bfe19
+**Latest Commit**: a70a457
 **Status**: All changes pushed to remote
 
 ---
@@ -265,14 +322,15 @@ announce "quote" or mishandle text. The `.)`→`).` fix is mostly correct anyway
 3. connector/openrouterjsoncached.php (cache parameter)
 4. connector/openrouterjsoncached_verbose.php (cache parameter)
 
-**Documentation Added**: 7
+**Documentation Added**: 8
 1. STREAMING_BEHAVIOR_ANALYSIS.txt
 2. STREAMING_ERRORS_FOUND.txt
 3. STREAMING_FIXES_APPLIED.txt
 4. DETAILED_EXPLANATION_ISSUES_2_3.txt
 5. RESPONSE_FORMAT_ANALYSIS.txt
 6. CACHE_WRITING_INVESTIGATION.txt
-7. ALL_FIXES_SUMMARY.txt (this file)
+7. CACHE_VERIFICATION.txt
+8. ALL_FIXES_SUMMARY.txt (this file)
 
 **Total Lines Changed**: ~100 lines of code, ~1500 lines of documentation
 
