@@ -1599,7 +1599,8 @@ class openrouterjsoncached_verbose
                 }
                 // VERBOSE_LOGGING_END
 
-                return $tempJson['message'];
+                // Strip any reasoning tokens from final message before returning
+                return stripReasoningTokens($tempJson['message']);
             }
         } else {
             // Simple format parsing
@@ -1652,7 +1653,8 @@ class openrouterjsoncached_verbose
                     }
                     // VERBOSE_LOGGING_END
 
-                    return $parsed['message'];
+                    // Strip any reasoning tokens from final message before returning
+                    return stripReasoningTokens($parsed['message']);
                 }
             } else {
                 // Simple format already parsed, just return accumulated message
@@ -1663,7 +1665,8 @@ class openrouterjsoncached_verbose
                 }
                 // VERBOSE_LOGGING_END
 
-                return $this->_buffer;
+                // Strip any reasoning tokens from accumulated content before returning
+                return stripReasoningTokens($this->_buffer);
             }
         }
 

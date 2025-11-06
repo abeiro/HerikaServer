@@ -961,7 +961,8 @@ class openrouterjsoncached
                         $GLOBALS["SCRIPTLINE_LISTENER"] = $tempJson["listener"];
                     }
                 }
-                return $tempJson['message'];
+                // Strip any reasoning tokens from final message before returning
+                return stripReasoningTokens($tempJson['message']);
             }
         } else {
             // Simple format parsing
@@ -996,7 +997,8 @@ class openrouterjsoncached
                         $GLOBALS["SCRIPTLINE_LISTENER"] = $parsed['listener'];
                     }
 
-                    return $parsed['message'];
+                    // Strip any reasoning tokens from final message before returning
+                    return stripReasoningTokens($parsed['message']);
                 }
             } else {
                 // Simple format already parsed, return only new content since last call
@@ -1004,7 +1006,8 @@ class openrouterjsoncached
                     $currentMessage = substr($this->_buffer, $this->_simpleFormatMessageStart);
                     $newContent = substr($currentMessage, $this->_lastReturnedLength);
                     $this->_lastReturnedLength = strlen($currentMessage);
-                    return $newContent;
+                    // Strip any reasoning tokens from incremental content before returning
+                    return stripReasoningTokens($newContent);
                 }
                 return "";
             }
