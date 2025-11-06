@@ -2,6 +2,40 @@
 CHIM CACHED CONNECTOR - VERSION HISTORY
 ===============================================================================
 
+Version 1.0.8 (2025-11-06)
+--------------------------
+
+New Features:
+-------------
+✓ Version Tracking Display in UI
+  - Added VERSION constant to connector classes with full version info
+  - Format: "OpenRouter Cache Connector v1.0.8 for CHIM 2.0.3 | 2025/11/06"
+  - Version displays in UI under Cache Settings header as smaller gray text
+  - Separate version strings for normal and verbose connectors
+  - Comment reminder to update version, date, and CHIM version after changes
+
+Implementation:
+---------------
+✓ Connector classes now include comprehensive version information
+  - openrouterjsoncached: Shows standard version
+  - openrouterjsoncached_verbose: Shows version with (VERBOSE) marker
+✓ UI dynamically loads and displays version from connector class
+✓ Version appears in both profile editor and main connector modal
+✓ Only displays when cached connectors are selected
+
+Files Modified:
+---------------
+• connector/openrouterjsoncached.php - Added VERSION constant
+• connector/openrouterjsoncached_verbose.php - Added VERSION constant
+• ui/core/llm_connectors.php - Added version loading and display logic
+
+Benefits:
+---------
+• Easy to identify which connector version is installed
+• Quick verification of CHIM compatibility
+• Reminds developers to update version info after changes
+• Professional version tracking for future updates
+
 Version 1.0.7 (2025-11-06)
 --------------------------
 
