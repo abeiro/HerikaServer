@@ -117,27 +117,165 @@ function cleanResponse($rawResponse)
 }
 
 function findDotPosition($s_string) {
-    
+
     $lastChar = substr($s_string, -1);
 
     if ($lastChar === ".")  // Dont eval on .. wait till next tokens
         return false;
-    
-    $dotPosition = strrpos($s_string, "."); // last dot in string
-    
-    /* // old version
-    if (($dotPosition !== false) && (strpos($s_string, ".", $dotPosition + 1) === false) && (substr($s_string, $dotPosition - 3, 3) !== "...")) {
-        return $dotPosition;
-    } */
-    
-    if ($dotPosition !== false) {// found last dot
-        // check for ...
-        if (substr($s_string, ($dotPosition - 1), 1) !== ".") { 
-            return $dotPosition;
+
+    // Get all sentence-ending punctuation marks
+    $eosPunc = getEndOfSentencePunctuation(); // .?!。？！
+    $punctChars = mb_str_split($eosPunc);
+
+    // Find the last occurrence of ANY sentence-ending punctuation
+    $lastPosition = false;
+    $lastPunctChar = '';
+
+    foreach ($punctChars as $punct) {
+        $pos = mb_strrpos($s_string, $punct);
+        if ($pos !== false) {
+            if ($lastPosition === false || $pos > $lastPosition) {
+                // For periods, check it's not part of ellipsis
+                if ($punct === '.') {
+                    // Check character before period is not also a period
+                    if ($pos > 0 && mb_substr($s_string, $pos - 1, 1) === '.') {
+                        continue; // Skip this period, it's part of ellipsis
+                    }
+                }
+                $lastPosition = $pos;
+                $lastPunctChar = $punct;
+            }
+        }
+    }
+
+    return $lastPosition;
+}
+
+/**
+ * Strip reasoning/CoT tokens from text
+ * Removes common reasoning markers: <think>, <thinking>, <reasoning>, <thought>, <reflection>
+ * Also removes DeepSeek-style markers and other common patterns
+ *
+ * NOTE: Nested markers of the same type are not fully supported. For example:
+ *   <think>Outer<think>Inner</think>More</think>
+ * May leave orphaned closing tags. This is acceptable as LLMs rarely output nested markers.
+ *
+ * @param string $text Text to process
+ * @return string Text with reasoning tokens removed
+ */
+function stripReasoningTokens($text) {
+    if (empty($text)) {
+        return $text;
+    }
+
+    // Common reasoning markers (case-insensitive)
+    $patterns = [
+        '/<think>.*?<\/think>/is',           // <think>...</think>
+        '/<thinking>.*?<\/thinking>/is',     // <thinking>...</thinking>
+        '/<reasoning>.*?<\/reasoning>/is',   // <reasoning>...</reasoning>
+        '/<thought>.*?<\/thought>/is',       // <thought>...</thought>
+        '/<reflection>.*?<\/reflection>/is', // <reflection>...</reflection>
+        '/<cot>.*?<\/cot>/is',               // <cot>...</cot> (chain of thought)
+        '/<scratchpad>.*?<\/scratchpad>/is', // <scratchpad>...</scratchpad>
+        '/\[THINK\].*?\[\/THINK\]/is',       // [THINK]...[/THINK]
+        '/\[THINKING\].*?\[\/THINKING\]/is', // [THINKING]...[/THINKING]
+    ];
+
+    $cleaned = $text;
+    foreach ($patterns as $pattern) {
+        $cleaned = preg_replace($pattern, '', $cleaned);
+    }
+
+    // Clean up any resulting extra whitespace
+    // Collapse ALL whitespace (including newlines) to single spaces for roleplay responses
+    $cleaned = preg_replace('/\s+/', ' ', $cleaned);
+    $cleaned = trim($cleaned);
+
+    return $cleaned;
+}
+
+/**
+ * Check if text contains an opening reasoning marker without closing
+ * Used for streaming to detect incomplete reasoning blocks
+ *
+ * @param string $text Text to check
+ * @return bool True if text has unclosed reasoning marker
+ */
+function hasUnclosedReasoningMarker($text) {
+    if (empty($text)) {
+        return false;
+    }
+
+    // Check for opening tags without closing
+    $markers = [
+        ['open' => '<think>', 'close' => '</think>'],
+        ['open' => '<thinking>', 'close' => '</thinking>'],
+        ['open' => '<reasoning>', 'close' => '</reasoning>'],
+        ['open' => '<thought>', 'close' => '</thought>'],
+        ['open' => '<reflection>', 'close' => '</reflection>'],
+        ['open' => '<cot>', 'close' => '</cot>'],
+        ['open' => '<scratchpad>', 'close' => '</scratchpad>'],
+        ['open' => '[THINK]', 'close' => '[/THINK]'],
+        ['open' => '[THINKING]', 'close' => '[/THINKING]'],
+    ];
+
+    foreach ($markers as $marker) {
+        $openCount = substr_count(strtolower($text), strtolower($marker['open']));
+        $closeCount = substr_count(strtolower($text), strtolower($marker['close']));
+
+        if ($openCount > $closeCount) {
+            return true; // Found unclosed marker
         }
     }
 
     return false;
+}
+
+/**
+ * Extract reasoning-free portion from text during streaming
+ * If text has complete reasoning blocks, they are stripped
+ * If text has unclosed reasoning block, extract content before it
+ *
+ * @param string $text Text to process
+ * @return string|false Text with reasoning stripped, or false if text starts with unclosed marker
+ */
+function extractReasoningFreeContent($text) {
+    if (empty($text)) {
+        return $text;
+    }
+
+    // First, strip all complete reasoning blocks
+    $cleaned = stripReasoningTokens($text);
+
+    // Check if there are still unclosed markers after stripping complete blocks
+    if (hasUnclosedReasoningMarker($cleaned)) {
+        // Find position of first unclosed opening marker
+        $markers = [
+            '<think>', '<thinking>', '<reasoning>', '<thought>', '<reflection>',
+            '<cot>', '<scratchpad>', '[THINK]', '[THINKING]'
+        ];
+
+        $firstMarkerPos = false;
+        foreach ($markers as $marker) {
+            $pos = stripos($cleaned, $marker);
+            if ($pos !== false && ($firstMarkerPos === false || $pos < $firstMarkerPos)) {
+                $firstMarkerPos = $pos;
+            }
+        }
+
+        // If unclosed marker is at the start, wait for more data
+        if ($firstMarkerPos === 0) {
+            return false;
+        }
+
+        // If unclosed marker is later in the text, return content before it
+        if ($firstMarkerPos !== false) {
+            return trim(substr($cleaned, 0, $firstMarkerPos));
+        }
+    }
+
+    // No unclosed markers, return cleaned text
+    return $cleaned;
 }
 
 function br2nl($string)

@@ -24,12 +24,30 @@ $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should b
 // (a funcrec event comes, which just write  something into context. )
 // Morgan|ScriptQueue|Wrestling, you say? Now *that* sounds like a fun way to get acquainted.//Vixi Talax//
 //
-$TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line." . 
-" Avoid narrations, be original, creative, knowledgeable, use your own thoughts. " . 
-" Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines." . 
-"";
 
-// To keep the original one
+// Configurable quality instructions toggle
+// Check connector-specific setting for minimize_quality_prompt (defaults to true/minimized for better advanced model performance)
+$useMinimizedPrompt = true; // Default to minimized (recommended for advanced models like Claude 4.5, GPT-4, etc.)
+
+if (function_exists('DMgetCurrentModel')) {
+    $currentModel = DMgetCurrentModel();
+    if (isset($GLOBALS["CONNECTOR"][$currentModel]["minimize_quality_prompt"])) {
+        $useMinimizedPrompt = (bool)$GLOBALS["CONNECTOR"][$currentModel]["minimize_quality_prompt"];
+    }
+}
+
+if ($useMinimizedPrompt) {
+    // Minimized version (recommended for advanced models)
+    // Core instruction only - advanced models inherently understand to be creative and avoid repetition
+    $TEMPLATE_DIALOG = " Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line.";
+} else {
+    // Default/Legacy version (for older/smaller models that may benefit from explicit guidance)
+    $TEMPLATE_DIALOG = " Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line." .
+    " Avoid narrations, be original, creative, knowledgeable, use your own thoughts. " .
+    " Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines.";
+}
+
+// Legacy commented versions preserved for reference
 // $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line using this format \"{$GLOBALS["HERIKA_NAME"]}: ";
 
 

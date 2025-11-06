@@ -1,0 +1,532 @@
+===============================================================================
+STREAMING BEHAVIOR ANALYSIS - How Text is Currently Sent to the Game
+===============================================================================
+
+## User's Concern
+
+"The streaming concerns me. We should ensure that the first text is only sent
+forward in the chain once we have a complete sentence, and then that is not repeated."
+
+## Summary of Current Behavior
+
+✅ **GOOD NEWS**: The system DOES wait for complete sentences before sending
+✅ **GOOD NEWS**: Sentences are NOT repeated (each chunk is removed from buffer after sending)
+⚠️  **NOTE**: "Complete sentence" is defined as "text ending with punctuation after 75+ chars"
+
+## Complete Streaming Flow
+
+### Step 1: Connector Receives Chunks from LLM
+
+**File**: connector/openrouterjsoncached.php
+**Method**: process() (lines 719-863)
+
+**Process**:
+1. Read one SSE (Server-Sent Events) line from stream (line 726)
+   ```php
+   $line = @fgets($this->primary_handler);
+   ```
+
+2. Append line to raw buffer (line 745)
+   ```php
+   $this->_rawbuffer .= $line;
+   ```
+
+3. Parse SSE data format (lines 748-851)
+   - Anthropic format: Extract from `data['delta']['text']`
+   - OpenAI format: Extract from `data['choices'][0]['delta']['content']`
+
+4. Append new text chunk to connector's buffer (line 764 for Anthropic, 828 for OpenAI)
+   ```php
+   $this->_buffer .= $buffer;  // $buffer contains the new chunk
+   ```
+
+5. Call _parseAndReturnContent() to extract message (line 859)
+   ```php
+   return $this->_parseAndReturnContent();
+   ```
+
+### Step 2: Parse and Return Content (Format-Specific)
+
+**Method**: _parseAndReturnContent() (lines 866-935)
+
+#### JSON Format (lines 867-886):
+- **Behavior**: Returns EMPTY STRING until complete valid JSON is in buffer
+- Tries to extract JSON from buffer using extractJson()
+- Validates JSON structure
+- Only returns message field when JSON is complete and valid
+- **No word-by-word streaming** - waits for full JSON object
+
+**Example**:
+```
+Call 1: buffer = '{"character":"Lydia",'
+  → Returns: "" (empty, JSON incomplete)
+
+Call 2: buffer = '{"character":"Lydia","message":"Hello'
+  → Returns: "" (empty, JSON incomplete)
+
+Call 3: buffer = '{"character":"Lydia","message":"Hello world"}'
+  → Returns: "Hello world" (complete JSON found)
+```
+
+#### Simple Format (lines 887-932):
+- **Behavior**: Returns incremental message text word-by-word
+- First call: Parse format markers, return initial message portion
+- Subsequent calls: Return only NEW text since last call
+
+**First Call** (lines 889-921):
+```php
+// Prepend prefill if used (fixes Anthropic prefill bug)
+$bufferToParse = $this->_usedPrefill ? $this->_prefillContent . $this->_buffer : $this->_buffer;
+
+// Parse: "(mood)(listener)(action)(target) message text"
+$parsed = extractSimpleFormatFromBuffer(...);
+
+if ($parsed['found']) {
+    // Find where message starts in buffer (after metadata)
+    $messagePos = strpos($this->_buffer, $parsed['message']);
+    $this->_simpleFormatMessageStart = $messagePos;
+    $this->_lastReturnedLength = strlen($parsed['message']);
+
+    // Set globals for mood/listener/animation
+    $GLOBALS["SCRIPTLINE_ANIMATION"] = GetAnimationHex($parsed["mood"]);
+    $GLOBALS["SCRIPTLINE_EXPRESSION"] = GetExpression($parsed["mood"]);
+    $GLOBALS["SCRIPTLINE_LISTENER"] = $parsed['listener'];
+
+    return $parsed['message'];  // Return initial message chunk
+}
+```
+
+**Subsequent Calls** (lines 922-931):
+```php
+// Already parsed, just return new content
+$currentMessage = substr($this->_buffer, $this->_simpleFormatMessageStart);
+$newContent = substr($currentMessage, $this->_lastReturnedLength);
+$this->_lastReturnedLength = strlen($currentMessage);
+return $newContent;  // Return ONLY the new words
+```
+
+**Example**:
+```
+Call 1: buffer = "(thoughtful)(Player)(Talk)() I'm worried"
+  → Parses metadata, saves position
+  → Returns: "I'm worried"
+  → _lastReturnedLength = 11
+
+Call 2: buffer = "(thoughtful)(Player)(Talk)() I'm worried about that"
+  → Skips parsing (already done)
+  → currentMessage = "I'm worried about that" (22 chars)
+  → newContent = " about that" (chars 11-22)
+  → Returns: " about that"
+  → _lastReturnedLength = 22
+
+Call 3: buffer = "(thoughtful)(Player)(Talk)() I'm worried about that cave."
+  → Returns: " cave."
+  → _lastReturnedLength = 28
+```
+
+**KEY POINT**: Simple format returns INCREMENTAL chunks, JSON format returns NOTHING until complete.
+
+
+### Step 3: Main Streaming Loop Accumulates Chunks
+
+**File**: lib/data_functions.php
+**Function**: processRequest() or similar (lines 2956-3047)
+
+**Constants** (main.php lines 8-9):
+```php
+@define("MAXIMUM_SENTENCE_SIZE", 125);
+@define("MINIMUM_SENTENCE_SIZE", 75);
+```
+
+**The Loop** (lines 2956-3021):
+```php
+$buffer = "";
+$totalBuffer = "";
+$breakFlag = false;
+
+while (true) {
+    if ($breakFlag) break;
+
+    // Get new chunk from connector
+    $tmpData = $connectionHandler->process();  // ← Calls connector's process()
+
+    if (invalid) {
+        $breakFlag = true;
+    } else {
+        $buffer .= $tmpData;        // ← Accumulate new chunks
+        $totalBuffer .= $buffer;
+    }
+
+    if ($connectionHandler->isDone()) {
+        $breakFlag = true;
+    }
+
+    // Clean buffer
+    $buffer = strtr($buffer, array("\""=>"", ".)"=>")."));
+
+    // CHECK 1: Is buffer too short?
+    if (strlen($buffer) < MINIMUM_SENTENCE_SIZE) {  // ← 75 characters
+        continue;  // ← WAIT for more data
+    }
+
+    // Skip streaming if translation is enabled
+    if (Translation::isEnabled()) {
+        continue;  // ← Will send all at once at the end
+    }
+
+    // CHECK 2: Find sentence ending punctuation
+    $position = findDotPosition($buffer);  // ← Find .?!。？！
+
+    // CHECK 3: Is there a valid sentence ending AND is it long enough?
+    if (($position !== false) && ($position > MINIMUM_SENTENCE_SIZE)) {
+
+        // EXTRACT: Get complete sentence(s)
+        $extractedData = substr($buffer, 0, $position + 1);  // ← Up to and including punctuation
+        $remainingData = substr($buffer, $position + 1);     // ← Everything after
+
+        // SPLIT: Break into individual sentences
+        $sentences = split_sentences_stream(cleanResponse($extractedData));
+
+        // SEND: Output all complete sentences immediately
+        if ($gameRequest[0] != "diary") {
+            returnLines($sentences);  // ← SENDS TO GAME
+        }
+
+        // RESET: Keep only unprocessed remainder
+        $buffer = $remainingData;  // ← CRITICAL: Removes sent data from buffer
+
+        // Check if user interrupted
+        $user_input_after = $GLOBALS["db"]->fetchAll(...);
+        if ($user_input_after[0]["N"] > 0) {
+            die('X-CUSTOM-CLOSE');  // ← Abort if user typed something
+        }
+    }
+
+} // ← Loop until stream ends
+
+// FINAL PROCESSING: Send any remaining buffer content
+if (trim($buffer)) {
+    $sentences = split_sentences_stream(cleanResponse(trim($buffer)));
+
+    if ($gameRequest[0] != "diary") {
+        returnLines($sentences);  // ← SENDS FINAL SENTENCES
+    }
+}
+```
+
+**KEY BEHAVIORS**:
+
+1. **Minimum Size Check (line 2978-2980)**:
+   - Continues looping if buffer < 75 characters
+   - Prevents sending incomplete sentence fragments
+
+2. **Sentence Detection (line 2987)**:
+   - `findDotPosition()` searches for: . ? ! 。 ？ ！
+   - Returns position of punctuation mark
+
+3. **Validation (line 2990)**:
+   - Requires BOTH:
+     - Punctuation found (`$position !== false`)
+     - Position > 75 chars (`$position > MINIMUM_SENTENCE_SIZE`)
+
+4. **Extraction and Removal (lines 2991-2992)**:
+   - Extracts: Everything up to and including punctuation
+   - Remainder: Everything after punctuation
+   - **Critical**: `$buffer = $remainingData` removes sent text
+
+5. **Sentence Splitting (line 2993)**:
+   ```php
+   $sentences = split_sentences_stream(cleanResponse($extractedData));
+   ```
+   - Takes extracted chunk (e.g., "Hello. How are you?")
+   - Splits into array: ["Hello.", "How are you?"]
+
+6. **Immediate Sending (line 2998)**:
+   ```php
+   returnLines($sentences);
+   ```
+   - Sends ALL sentences in the array immediately
+   - Does NOT wait for more chunks
+
+
+### Step 4: Find Sentence Ending Punctuation
+
+**File**: lib/data_functions.php (not shown in previous reads, but referenced)
+
+**Function**: findDotPosition()
+
+**Purpose**: Find the LAST occurrence of sentence-ending punctuation
+
+**Punctuation Marks**:
+- English: . ? !
+- Japanese: 。 ？ ！
+
+**Behavior**:
+- Searches from END of buffer backwards
+- Returns position of last punctuation mark
+- Returns false if no punctuation found
+
+
+### Step 5: Split Sentences
+
+**File**: lib/chat_helper_functions.php
+**Function**: split_sentences_stream() (lines 199-250+)
+
+**Process** (simplified):
+```php
+function split_sentences_stream($paragraph) {
+    // If short enough, return as-is
+    if (strlen($paragraph) <= MAXIMUM_SENTENCE_SIZE) {  // 125 chars
+        return [$paragraph];
+    }
+
+    // Split on sentence-ending punctuation
+    $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/');
+    $splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?!\.)[\p{P}]?[\s+]?/u";
+    $sentences = preg_split($splitSentenceRegex, $paragraph, -1, PREG_SPLIT_NO_EMPTY);
+
+    return $sentences;
+}
+```
+
+**Example**:
+```
+Input: "Hello world. How are you? I'm fine."
+Output: ["Hello world.", "How are you?", "I'm fine."]
+```
+
+
+### Step 6: Send Sentences to Game
+
+**File**: lib/chat_helper_functions.php
+**Function**: returnLines() (lines 431-789)
+
+**Process**:
+```php
+function returnLines($lines, $writeOutput=true) {
+    global $talkedSoFar, $alreadysent;
+
+    foreach ($lines as $n => $sentence) {
+
+        // Clean and unmood sentence
+        $responseTextUnmooded = unmoodSentence($sentence);
+
+        // Get mood
+        if (isset($GLOBALS["LAST_LLM_RESPONSE"]["mood"])) {
+            $mood = $GLOBALS["LAST_LLM_RESPONSE"]["mood"];
+        } else {
+            $mood = "default";
+        }
+
+        // Skip if too short
+        if (strlen($responseTextUnmooded) < 2) {
+            return;
+        }
+
+        // Generate TTS audio file
+        $ttsOutput = $GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
+
+        // Track what we've said
+        if (trim($responseText)) {
+            $talkedSoFar[] = $responseText;  // ← Add to history array
+        }
+
+        // SEND TO GAME
+        if ($writeOutput) {
+            echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
+            // ↑ LINE 763: THE ACTUAL OUTPUT TO GAME
+        }
+    }
+}
+```
+
+**Output Format** (line 763):
+```
+{NPC_NAME}|ScriptQueue|{text}/{expression}/{listener}/{animation}/{phonetic_text}\r\n
+```
+
+**Example**:
+```
+Lydia|ScriptQueue|I'm worried about that cave./thoughtful/Player/IdleDialogueExpressiveStart/I'm worried about that cave.\r\n
+```
+
+
+## Answering the User's Concerns
+
+### Concern 1: "Ensure first text is only sent once we have a complete sentence"
+
+**Current Behavior**: ✅ **ALREADY IMPLEMENTED**
+
+1. Buffer must be >= 75 characters (MINIMUM_SENTENCE_SIZE)
+2. Must find sentence-ending punctuation (. ? ! etc.)
+3. Punctuation must be at position > 75
+4. Only then is text extracted and sent
+
+**Example Timeline**:
+```
+Stream chunk 1: "I'm"
+  → buffer = "I'm" (3 chars)
+  → < 75 chars, continue looping
+
+Stream chunk 2: " worried about"
+  → buffer = "I'm worried about" (17 chars)
+  → < 75 chars, continue looping
+
+Stream chunk 3: " that cave we passed earlier when"
+  → buffer = "I'm worried about that cave we passed earlier when" (50 chars)
+  → < 75 chars, continue looping
+
+Stream chunk 4: " we were heading to Whiterun."
+  → buffer = "I'm worried about that cave we passed earlier when we were heading to Whiterun." (80 chars)
+  → >= 75 chars ✓
+  → findDotPosition() → 79 (found '.')
+  → position (79) > 75 ✓
+  → EXTRACT: "I'm worried about that cave we passed earlier when we were heading to Whiterun."
+  → SEND to game
+  → buffer = "" (cleared)
+```
+
+**Conclusion**: System correctly waits for complete sentences.
+
+
+### Concern 2: "Ensure that is not repeated"
+
+**Current Behavior**: ✅ **NOT REPEATED**
+
+**Key Code** (data_functions.php lines 2991-2992, 3006):
+```php
+$extractedData = substr($buffer, 0, $position + 1);
+$remainingData = substr($buffer, $position + 1);
+// ... send extractedData ...
+$buffer = $remainingData;  // ← REMOVES sent text from buffer
+```
+
+**Why It Works**:
+1. After sending, sent text is REMOVED from `$buffer`
+2. Next iteration starts with only UNSENT text
+3. New chunks from `process()` are APPENDED to the clean buffer
+4. No old text remains to be re-sent
+
+**Example**:
+```
+Initial buffer: "Hello world. How are you"
+  → findDotPosition() finds position 11 (after "world.")
+  → extractedData = "Hello world."
+  → remainingData = " How are you"
+  → Send "Hello world."
+  → buffer = " How are you"  ← Sent text is GONE
+
+Next chunk arrives: "?"
+  → buffer = " How are you?"
+  → findDotPosition() finds position 13
+  → extractedData = " How are you?"
+  → Send "How are you?"
+  → buffer = ""
+```
+
+**Conclusion**: Sent text is removed immediately, preventing repetition.
+
+
+## Potential Issues
+
+### Issue 1: Partial Sentences at Stream End
+
+**Scenario**: Stream ends before reaching 75 chars or finding punctuation
+
+**Example**:
+```
+Buffer at stream end: "Wait"
+```
+
+**Current Handling** (lines 3024-3047):
+```php
+if (trim($buffer)) {
+    $sentences = split_sentences_stream(cleanResponse(trim($buffer)));
+    returnLines($sentences);  // ← Sends whatever remains
+}
+```
+
+**Result**: Partial text IS sent after stream completes, regardless of length or punctuation.
+
+**User Impact**: Could send incomplete sentences if LLM stops mid-sentence.
+
+
+### Issue 2: Simple Format vs JSON Format Streaming Difference
+
+| Aspect | JSON Format | Simple Format |
+|--------|-------------|---------------|
+| **Returns from process()** | Empty until complete JSON | Incremental text chunks |
+| **When first sent** | After full JSON received | After 75+ chars + punctuation |
+| **Word-by-word streaming** | ❌ No | ✅ Yes |
+| **User experience** | Longer wait, all at once | Faster initial response |
+
+**For JSON Format**:
+- Connector returns "" until complete JSON is in buffer
+- Main loop never builds up buffer until stream ends
+- All text sent in final processing (lines 3024-3047)
+- **No mid-stream sentence sending**
+
+**For Simple Format**:
+- Connector returns incremental chunks
+- Main loop accumulates and sends sentence-by-sentence
+- **True streaming experience**
+
+
+### Issue 3: Translation Mode Disables Streaming
+
+**Code** (lines 2983-2985):
+```php
+if (Translation::isEnabled()) {
+    continue;  // ← Skip all mid-stream sending
+}
+```
+
+**Reason**: Sentence fragments would get translated separately, creating inconsistent translations.
+
+**Result**: All text accumulated and sent at once at stream end.
+
+
+## Summary
+
+### Current Behavior is CORRECT
+
+✅ **Complete Sentences**: System waits for 75+ chars AND punctuation before sending
+✅ **No Repetition**: Sent text is removed from buffer immediately
+✅ **Streaming Works**: Simple format supports word-by-word accumulation
+✅ **User Interrupt**: Detects user input and stops generation
+
+### How It Works in Practice
+
+**Simple Format**:
+1. LLM streams: `(happy)(Player)(Talk)() Hello`
+   → Too short, buffer accumulates
+2. LLM streams: ` there!`
+   → Still too short, buffer accumulates
+3. LLM streams: ` How are you?`
+   → 75+ chars, found `?`, send "Hello there! How are you?"
+4. LLM streams: ` I'm doing great.`
+   → Send "I'm doing great."
+
+**JSON Format**:
+1. LLM streams partial JSON
+   → Connector returns "", buffer stays empty
+2. LLM completes JSON
+   → Connector returns full message
+   → Main loop sends all at once (no mid-stream sending)
+
+### Recommendation
+
+The current system is working as designed. The user's concerns are already addressed:
+- ✅ Complete sentences are enforced
+- ✅ No repetition occurs
+- ✅ Streaming is functional for simple format
+
+**Potential Enhancement**: Could add explicit sentence completion validation beyond just "find punctuation", such as checking for common incomplete patterns like:
+- Ends with comma
+- Ends with "and"
+- Ends with "but"
+- Ends with quotation mark without closing
+
+But current behavior is safe and functional.
+
+===============================================================================

@@ -2966,12 +2966,22 @@ function call_llm() {
         }
         else {
             $buffer.= $tmpData;
-            $totalBuffer.=$buffer; 
+            $totalBuffer.=$tmpData;  // Fixed: add only new chunk, not entire buffer
         }
 
         if ($connectionHandler->isDone()) {
             $breakFlag=true;
         }
+
+        // Strip reasoning tokens from buffer BEFORE any other processing
+        // If buffer has unclosed reasoning markers, skip processing this iteration (wait for more data)
+        $reasoningFreeBuffer = extractReasoningFreeContent($buffer);
+        if ($reasoningFreeBuffer === false) {
+            // Buffer contains unclosed reasoning markers - wait for more data
+            continue;
+        }
+        // Update buffer with reasoning-stripped version
+        $buffer = $reasoningFreeBuffer;
 
         $buffer=strtr($buffer, array("\""=>"",".)"=>")."));
 
@@ -3022,6 +3032,8 @@ function call_llm() {
     
     
     if (trim($buffer)) {
+        // Strip any remaining reasoning tokens from final buffer
+        $buffer = stripReasoningTokens($buffer);
         Logger::info("REMAINING DATA <$buffer>");
         $sentences=split_sentences_stream(cleanResponse(trim($buffer)));
 

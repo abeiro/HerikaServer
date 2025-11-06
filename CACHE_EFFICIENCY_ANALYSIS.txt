@@ -1,0 +1,229 @@
+===============================================================================
+CACHE EFFICIENCY ANALYSIS - Issues #2 and #3
+===============================================================================
+
+ISSUE #2: Dynamic Environment Insertion (Lines 530-532)
+========================================================
+
+CURRENT CODE FLOW:
+------------------
+1. Line 458: manageCharacterEventList() builds cached dialogue list
+2. Lines 464-467: Custom instruction added to END (if present, addToIndex=1)
+3. Line 469: Original instruction added to END
+4. Line 476: Cache control index calculated:
+   $lastIndex = $totalElements - $dialogue_cache_uncached_count - 1 - $addToIndex
+5. Lines 511-513: Cache control marker placed at $lastIndex
+6. Lines 530-532: Dynamic environment inserted at position (count - 2)
+7. Line 535: removeDuplicateMemories() called
+
+EXAMPLE WITH USER'S LOG:
+-------------------------
+From log: "Cache control calculation: totalElements=19, uncached=4, addToIndex=0, calculatedIndex=14"
+
+Before dynamic environment insertion:
+- Total elements: 19 (indices 0-18)
+- Cache marker at: index 14
+- Uncached region: indices 15-18 (4 elements)
+
+Dynamic environment insertion at position 17 (19 - 2):
+- array_splice inserts at index 17
+- Elements 17-18 shift to 18-19
+- New element at index 17
+
+After insertion:
+- Total elements: 20 (indices 0-19)
+- Cache marker at: index 14 (unchanged)
+- Uncached region: indices 15-19 (5 elements now)
+- Dynamic environment at: index 17 (INSIDE uncached region ✓)
+
+VERDICT: Dynamic environment is correctly placed OUTSIDE cached region
+------------------------------------------------------------------------
+
+In this case, the dynamic environment is at index 17, which is after the
+cache marker at index 14. This is CORRECT behavior.
+
+However, there's a LOGICAL ISSUE with the insertion timing:
+- Cache calculations happen BEFORE dynamic environment insertion
+- This means the uncached count is effectively (dialogue_cache_uncached_count + 1)
+- User expects 4 uncached dialogue messages, but gets 5 uncached elements
+  (4 dialogue + 1 dynamic environment)
+
+POTENTIAL PROBLEM SCENARIOS:
+----------------------------
+
+Case 1: Very short dialogue history (edge case)
+- Suppose only 6 elements before dynamic insertion
+- lastIndex = 6 - 4 - 1 - 0 = 1 (cache marker at index 1)
+- Dynamic environment inserted at 6 - 2 = 4
+- After insertion: 7 elements, marker at 1, dynamic at 4
+- Uncached region: 2-6 (5 elements, includes dynamic at 4)
+- Result: Still correct, dynamic is in uncached region
+
+Case 2: Dynamic environment changes frequently
+- If dynamic environment content changes every request
+- And if it somehow falls in cached region
+- Would cause cache invalidations (cache miss every request)
+
+TESTING RECOMMENDATION:
+-----------------------
+Check logs for dynamic environment content stability:
+- Does dynamic environment change every request?
+- Is it truly dynamic or relatively stable?
+- If stable, being near the cached region is fine
+- If changing frequently, current position is correct (uncached)
+
+The position at -2 (before last 2 elements) ensures it stays in the
+uncached region as long as dialogue_cache_uncached_count >= 2.
+
+
+ISSUE #3: removeDuplicateMemories() (Line 535)
+===============================================
+
+CURRENT FUNCTION BEHAVIOR:
+--------------------------
+The function at openrouterjsoncached_helpers.php:49-70:
+
+1. Iterates through array elements
+2. For items with text starting "#MEMORY:":
+   - Normalizes whitespace
+   - Checks if already seen
+   - If duplicate, SKIPS it (removes from array)
+   - If unique, keeps it
+3. All non-memory items are always kept
+4. Returns NEW filtered array
+
+CRITICAL ISSUE: Cache Marker Index Shifting
+--------------------------------------------
+
+When removeDuplicateMemories() is called AFTER cache marker placement:
+
+Before removeDuplicateMemories:
+- Element 0: (kept)
+- Element 1: (kept)
+- Element 2: #MEMORY: duplicate (will be removed)
+- Element 3: (kept)
+- ...
+- Element 14: (kept) [CACHE MARKER HERE]
+- Element 15: (kept)
+- Element 16: (kept)
+- Element 17: Dynamic environment
+- Element 18: (kept)
+- Element 19: (kept)
+
+After removeDuplicateMemories:
+- Element 0: (kept)
+- Element 1: (kept)
+- Element 2: (was element 3) (kept)
+- ...
+- Element 13: (was element 14) [CACHE MARKER IS HERE NOW]
+- Element 14: (was element 15) (kept)
+- Element 15: (was element 16) (kept)
+- Element 16: (was element 17 - dynamic environment)
+- Element 17: (was element 18) (kept)
+- Element 18: (was element 19) (kept)
+
+PROBLEM: The cache marker that was at index 14 is now at index 13!
+------------------------------------------------------------------
+
+If one duplicate memory is removed before the cache marker:
+- Intended: Cache everything up to and including index 14 (15 elements cached)
+- Actual: Cache everything up to and including index 13 (14 elements cached)
+- Result: One less element cached than intended
+
+If multiple duplicate memories are removed:
+- Each removal shifts the cache marker earlier
+- Could significantly reduce cached content
+- Undermines entire caching strategy
+
+ADDITIONAL ISSUE: Cache Marker Might Be On Wrong Element
+---------------------------------------------------------
+
+If removeDuplicateMemories removes elements:
+- The element that has the cache marker is preserved (markers are copied)
+- But the marker might now be on a different logical element
+- Cache provider sees marker at different content
+
+Example:
+- Before: marker on "USER: What's your name?" at index 14
+- After: marker on "USER: What's your name?" at index 13, but index 14 is now
+  the next element
+
+This could cause cache invalidation because the cache provider sees different
+content structure.
+
+RECOMMENDED FIX:
+----------------
+
+Option 1: Call removeDuplicateMemories BEFORE cache marker placement
+- Move line 535 to before line 476
+- Calculate cache index on already-deduplicated array
+- Ensures marker is placed at correct index
+
+Option 2: Recalculate and reapply cache marker after deduplication
+- After removeDuplicateMemories, recalculate lastIndex
+- Reapply cache_control to the new correct index
+
+Option 3: Track marker by element reference, not index
+- Before deduplication, identify which element should have marker
+- After deduplication, find that element and apply marker
+
+Option 1 is simplest and most reliable.
+
+TESTING VERIFICATION:
+---------------------
+
+To verify if this is causing issues, check logs for:
+1. "New elements added to cache" count
+2. Cache read token counts in _cached_perf.log
+3. Whether duplicate memories are actually being found/removed
+
+If removeDuplicateMemories is removing items, the cache efficiency
+would decrease because:
+- Fewer elements cached than calculated
+- Cache structure changes between requests
+- Provider can't match previous cache state
+
+
+VERIFICATION OF 1H CACHE TTL:
+==============================
+
+CONFIRMED: Cache TTL is set to 1 hour as intended
+--------------------------------------------------
+
+Line 311 of openrouterjsoncached.php:
+```
+$cacheControlType = ["type" => "ephemeral", "ttl" => "1h"];
+```
+
+Line 344 of openrouterjsoncached_helpers.php:
+```
+function manageCharacterEventList($newList, $filename = 'conversation_list.json',
+                                   $maxLength = 93, $maxAge = 3600)
+```
+$maxAge = 3600 seconds = 1 hour
+
+Both cache TTL settings are correctly set to 1 hour. No issue here.
+
+
+SUMMARY:
+========
+
+Issue #1 (lines 450-451 removing first 4 dialogue): ✓ User confirmed fine
+Issue #2 (dynamic environment insertion): ✓ Likely fine (in uncached region)
+Issue #3 (removeDuplicateMemories): ⚠️ CRITICAL BUG - causes index shifting
+Cache TTL: ✓ Correctly set to 1 hour
+
+
+HIGHEST PRIORITY FIX:
+=====================
+
+Fix removeDuplicateMemories index shifting by moving it BEFORE cache marker
+calculation. This is likely the root cause of the ~50% efficiency instead of
+the expected 80-90%.
+
+The fix is simple:
+- Move line 535 (removeDuplicateMemories call) to BEFORE line 476
+- This ensures cache marker is placed on the final, deduplicated array
+- No other changes needed
+
+===============================================================================

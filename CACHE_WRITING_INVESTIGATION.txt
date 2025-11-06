@@ -1,0 +1,336 @@
+===============================================================================
+CACHE WRITING INVESTIGATION - Why v1.0.3 May Not Be Writing Cache
+===============================================================================
+
+## Investigation Status: CRITICAL BUG FOUND
+
+## Issue #1: Invalid Top-Level cache_control Parameter
+
+**File**: connector/openrouterjsoncached.php
+**Lines**: 589-592
+
+### The Bug
+
+The connector adds an invalid top-level `cache_control` parameter to the API payload:
+
+```php
+$data = array(
+    'model' => $this->_model,
+    'messages' => $finalMessagesToSend,
+    'stream' => true,
+    // ... other params ...
+    "cache_control" => [          // ← INVALID!
+        "enabled" => true,
+        "ttl" => "1h"
+    ]
+);
+```
+
+### Why This Is Wrong
+
+**Anthropic API**: Does NOT have a top-level `cache_control` parameter. Cache control
+is specified at the individual message content block level:
+
+```json
+{
+  "model": "claude-3-5-sonnet-20240620",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "...",
+          "cache_control": {"type": "ephemeral"}  ← At content level
+        }
+      ]
+    }
+  ]
+}
+```
+
+**OpenRouter API**: Also does NOT have a top-level `cache_control` parameter with
+"enabled" and "ttl" fields. OpenRouter uses Anthropic's caching format when
+routing to Anthropic models.
+
+### Impact
+
+**Most Likely**: The API ignores this invalid parameter and accepts the request.
+Cache control blocks at the content level (lines 403, 505, 512) would still work.
+
+**Possible**: Some API implementations might reject the request entirely due to
+unexpected parameters, causing cache writing to fail completely.
+
+### Where Cache Control IS Correctly Applied
+
+The connector DOES add cache_control correctly to message content blocks:
+
+**System Messages** (line 403):
+```php
+$content = ['type' => 'text', 'text' => $finalSend];
+if ($this->_provider_caching !== "OpenAI") {
+    $content['cache_control'] = $cacheControlType;  // ← CORRECT
+}
+```
+
+**User Messages - Gemini** (line 505):
+```php
+if (isset($completeEventList[$indexToCache]) && $this->_provider_caching != "OpenAI") {
+    $completeEventList[$indexToCache]["cache_control"] = $cacheControlType;  // ← CORRECT
+}
+```
+
+**User Messages - Standard** (line 512):
+```php
+if (isset($completeEventList[$lastIndex]) && $this->_provider_caching != "OpenAI") {
+    $completeEventList[$lastIndex]["cache_control"] = $cacheControlType;  // ← CORRECT
+}
+```
+
+These are the correct locations for cache_control blocks.
+
+---
+
+## Issue #2: Streaming Fix May Have Introduced Edge Case
+
+**File**: lib/chat_helper_functions.php
+**Lines**: 119-152
+
+### Potential Issue
+
+The new `findDotPosition()` function uses `mb_str_split()` and `mb_strrpos()`.
+
+**Check**: Is multibyte support enabled? ✅ YES (PHP 8.4 has it)
+
+**Edge Case**: Empty strings or very short strings
+```php
+$punctChars = mb_str_split($eosPunc);  // Returns array of characters
+// If $eosPunc is empty, this returns empty array
+// foreach would handle this correctly (no iterations)
+```
+
+**Assessment**: No issue found. Function handles edge cases correctly.
+
+---
+
+## Issue #3: Provider Caching Configuration
+
+**File**: connector/openrouterjsoncached.php
+**Line**: 259
+
+```php
+$this->_provider_caching = isset($GLOBALS["CONNECTOR"][$this->name]["provider_caching"])
+    ? $GLOBALS["CONNECTOR"][$this->name]["provider_caching"]
+    : "Anthropic";
+```
+
+### Possible Misconfiguration
+
+If user has `provider_caching` set to something OTHER than "Anthropic", cache_control
+blocks won't be added:
+
+**Line 402-404**:
+```php
+if ($this->_provider_caching !== "OpenAI") {
+    $content['cache_control'] = $cacheControlType;
+}
+```
+
+This condition means:
+- ✅ Adds cache_control if `_provider_caching` = "Anthropic"
+- ✅ Adds cache_control if `_provider_caching` = "Gemini"
+- ✅ Adds cache_control if `_provider_caching` = anything except "OpenAI"
+- ❌ Skips cache_control if `_provider_caching` = "OpenAI"
+
+**Check**: What if user didn't configure this and it's not defaulting properly?
+
+**Default**: Line 98 and 259 both default to "Anthropic", so this should work.
+
+---
+
+## Issue #4: Cache File Writing
+
+**File**: connector/openrouterjsoncached_helpers.php (assumed, not in current files)
+
+The connector uses these cache functions:
+- `writeArrayToFileWithCache()` - line 409
+- `manageCharacterEventList()` - line 458
+
+**Question**: Do these functions actually write to disk?
+**Need to check**: The helper functions to verify they're working.
+
+---
+
+## Issue #5: Anthropic Beta Header
+
+**File**: connector/openrouterjsoncached.php
+**Line**: 671
+
+```php
+if ($this->_provider_caching === "Anthropic") {
+    $headers[] = "anthropic-beta: extended-cache-ttl-2025-04-11";
+}
+```
+
+### Verification Needed
+
+**Current header**: `anthropic-beta: extended-cache-ttl-2025-04-11`
+
+**Question**: Is this the correct beta header for January 2025?
+- This header was added for extended cache TTL feature
+- Format appears correct: `anthropic-beta: feature-name-date`
+- Date `2025-04-11` suggests feature availability date
+
+**Possible Issue**: If this beta feature expired or changed names, caching might fail.
+
+**Latest Anthropic docs** (as of Jan 2025):
+- Standard caching: `anthropic-beta: prompt-caching-2024-07-31`
+- Extended TTL might have different header
+
+---
+
+## Diagnostic Steps to Identify the Issue
+
+### Step 1: Check API Response Headers
+
+Look for cache-related headers in the response:
+- `x-cache-creation-input-tokens`
+- `x-cache-read-input-tokens`
+- Presence of these headers indicates cache is working
+
+### Step 2: Check Payload Structure
+
+Log the full `$data` payload (line 638):
+```php
+$this->_dataSent = json_encode($data, JSON_PRETTY_PRINT);
+```
+
+Check if:
+1. Top-level `cache_control` parameter is being sent (should be removed)
+2. Message content blocks have `cache_control` properly attached
+3. Format matches Anthropic's expectations
+
+### Step 3: Check Log Files
+
+**File**: connector/_cached_perf.log (created at line 803)
+```php
+@file_put_contents(__DIR__ . DIRECTORY_SEPARATOR . "_cached_perf.log", $logPerfEntry, FILE_APPEND);
+```
+
+Check for entries like:
+```
+[2025-01-06] CACHE_PERF Lydia: Read:0 Create:0 New:2450 Total:2450 Efficiency:0.0%
+```
+
+If `Create:0` and `Efficiency:0.0%` every time, cache is NOT being created.
+
+### Step 4: Check Temp Files
+
+**Files**:
+- `system_cache_json_{NPC_NAME}.tmp` (line 309)
+- `combined_dialogue_cache_json_{NPC_NAME}.tmp` (line 310)
+
+**Location**: Likely in `/tmp/` or connector directory
+
+**Check**:
+- Do these files exist?
+- Are they being written?
+- Do they contain serialized data?
+
+---
+
+## Likely Root Causes (In Priority Order)
+
+### 1. 🔴 HIGH: Invalid top-level cache_control parameter (lines 589-592)
+   - This parameter doesn't exist in any API
+   - May cause request rejection or confusion
+   - Should be REMOVED entirely
+   - **Fix**: Delete lines 589-592
+
+### 2. 🟡 MEDIUM: Incorrect anthropic-beta header (line 671)
+   - Header might be outdated or wrong format
+   - Extended cache TTL might not be available
+   - **Fix**: Verify correct header from Anthropic docs
+   - Standard caching: `prompt-caching-2024-07-31`
+
+### 3. 🟢 LOW: Cache helper functions not working
+   - Functions might have bugs
+   - File permissions might prevent writing
+   - **Fix**: Check helper function implementation
+
+### 4. 🟢 LOW: Provider caching misconfiguration
+   - User might have set wrong value
+   - But defaults to "Anthropic" so unlikely
+   - **Fix**: Verify in configuration
+
+---
+
+## Recommended Fixes
+
+### Fix #1: Remove Invalid Top-Level cache_control Parameter
+
+**File**: connector/openrouterjsoncached.php
+**Lines to DELETE**: 589-592
+
+```php
+// REMOVE THIS:
+"cache_control" => [
+    "enabled" => true,
+    "ttl" => "1h"
+]
+```
+
+This parameter serves no purpose and may be causing issues.
+
+### Fix #2: Verify Anthropic Beta Header
+
+**File**: connector/openrouterjsoncached.php
+**Line**: 671
+
+**Current**:
+```php
+$headers[] = "anthropic-beta: extended-cache-ttl-2025-04-11";
+```
+
+**Should probably be**:
+```php
+$headers[] = "anthropic-beta: prompt-caching-2024-07-31";
+```
+
+Or check latest Anthropic documentation for correct header.
+
+---
+
+## Testing After Fixes
+
+### Test 1: Verify Cache Creation
+1. Clear all cache temp files
+2. Make first request
+3. Check log: `Create:XXXX` should be > 0
+4. Check temp files exist and have content
+
+### Test 2: Verify Cache Reading
+1. Make second request with same context
+2. Check log: `Read:XXXX` should be > 0
+3. Efficiency should be 80-90%
+
+### Test 3: Check Request Payload
+1. Log full `$data` payload
+2. Verify NO top-level `cache_control`
+3. Verify message content blocks HAVE `cache_control`
+
+---
+
+## Summary
+
+**Most Likely Issue**: Invalid top-level `cache_control` parameter (lines 589-592)
+causing API to reject or ignore caching.
+
+**Secondary Issue**: Potentially incorrect anthropic-beta header (line 671).
+
+**Action Items**:
+1. Remove lines 589-592 (invalid cache_control parameter)
+2. Verify anthropic-beta header is correct
+3. Test and verify cache creation logs
+
+===============================================================================

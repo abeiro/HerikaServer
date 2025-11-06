@@ -1,0 +1,242 @@
+===============================================================================
+MEMORY DEDUPLICATION ANALYSIS - removeDuplicateMemories()
+===============================================================================
+
+EXECUTIVE SUMMARY:
+==================
+
+The current implementation has THREE deduplication mechanisms:
+1. Hash-based deduplication in manageCharacterEventList() - prevents duplicates in cache FILE
+2. removeNeighboringDuplicates() - removes consecutive duplicates in cache FILE
+3. removeDuplicateMemories() - removes duplicate #MEMORY: entries from FINAL PAYLOAD
+
+The question: Is removeDuplicateMemories() necessary, and does it break caching?
+
+
+DETAILED ANALYSIS:
+==================
+
+## 1. Hash-Based Deduplication (manageCharacterEventList lines 309-323)
+
+```php
+$existingHashes = [];
+foreach ($existingList as $existingItem) {
+    $hash = md5(json_encode($existingItem));
+    $existingHashes[$hash] = true;
+}
+
+$newElements = [];
+foreach ($newList as $newItem) {
+    $hash = md5(json_encode($newItem));
+    if (!isset($existingHashes[$hash])) {
+        $newElements[] = $newItem;
+        $existingHashes[$hash] = true;
+    }
+}
+```
+
+**Purpose**: Prevents ANY duplicate content (dialogue OR memories) from being written to cache file
+**Scope**: Operates on cache file persistence
+**Effect**: If a #MEMORY: entry already exists in cache, it won't be added again
+
+
+## 2. removeNeighboringDuplicates() (lines 91-109)
+
+```php
+for ($i = 1; $i < count($array); $i++) {
+    if (!arraysEqual($array[$i], $array[$i - 1])) {
+        $result[] = $array[$i];
+    }
+}
+```
+
+**Purpose**: Removes consecutive duplicate entries from cache file
+**Scope**: Operates on cache file persistence
+**Effect**: If same element appears twice in a row, second instance removed
+
+
+## 3. removeDuplicateMemories() (lines 49-70)
+
+```php
+function removeDuplicateMemories($array) {
+    $seenMemories = [];
+    $filteredArray = [];
+
+    foreach ($array as $index => $item) {
+        if (isset($item['text']) && strpos($item['text'], '#MEMORY:') === 0) {
+            $memoryText = $item['text'];
+            $normalizedMemory = preg_replace('/\s+/', ' ', trim($memoryText));
+
+            if (!isset($seenMemories[$normalizedMemory])) {
+                $seenMemories[$normalizedMemory] = true;
+                $filteredArray[] = $item;
+            }
+            // Duplicate #MEMORY: entries are skipped (not added to filteredArray)
+        } else {
+            $filteredArray[] = $item;  // All non-memory items kept as-is
+        }
+    }
+    return $filteredArray;
+}
+```
+
+**Purpose**: Removes duplicate #MEMORY: entries from final payload sent to LLM
+**Scope**: Operates on final payload (cached content + new content + instructions)
+**Effect**: If same #MEMORY: appears multiple times in final payload, only first kept
+
+
+EXECUTION ORDER:
+================
+
+Line 458: manageCharacterEventList() called
+           ↓ (hash deduplication prevents duplicates in cache)
+           ↓ (removeNeighboringDuplicates removes consecutive dupes)
+           ↓ (cache file written)
+           ↓ (cache file read back)
+Line 460: $completeEventList = cached content
+
+Lines 464-469: Custom instruction + instruction added
+Lines 476-513: Cache marker placed at specific index
+Lines 530-532: Dynamic environment inserted
+Line 535: removeDuplicateMemories() called ← AFTER CACHE MARKER PLACEMENT
+
+
+THE INDEX SHIFTING PROBLEM:
+============================
+
+Since removeDuplicateMemories() is called AFTER cache marker placement:
+
+Before removeDuplicateMemories():
+- Element 0-13: dialogue
+- Element 14: dialogue [CACHE MARKER HERE]
+- Element 15: #MEMORY: foo (duplicate)
+- Element 16: dialogue
+- Element 17: #MEMORY: bar (duplicate)
+- Element 18: dialogue
+Total: 19 elements, marker at 14, last 4 uncached (15-18)
+
+After removeDuplicateMemories():
+- Element 0-13: dialogue
+- Element 14: dialogue [CACHE MARKER HERE]
+- Element 15: dialogue (was 16)
+- Element 16: dialogue (was 18)
+Total: 17 elements, marker at 14, last 2 uncached (15-16) ← PROBLEM!
+
+**Issue**: Intended to have 4 uncached elements, but after removing 2 duplicate memories,
+only 2 elements remain uncached.
+
+
+BUT WAIT - DOES THIS ACTUALLY MATTER?
+======================================
+
+Cache markers are element properties, not index-based. When element X has a cache marker,
+that marker stays with element X even if its index changes.
+
+The provider's perspective:
+- Sees sequence of content elements
+- When it encounters cache_control marker, caches up to that point
+- Doesn't care about indices, only about content sequence
+
+So if:
+- Request 1: Marker on "USER: hello" at position 14 in sequence
+- Request 2: Same marker on "USER: hello" at position 14, but duplicates removed after it
+
+The cached portion (elements 0-14) is identical, so cache should hit!
+
+The number of uncached elements changes, but that's OK because:
+- Uncached elements are expected to change each request
+- The important part is that the CACHED portion matches
+
+
+POTENTIAL ISSUES:
+=================
+
+1. **Cache invalidation if duplicates removed BEFORE marker**:
+   If duplicate memories exist before the cache marker position, removing them causes
+   the marker to shift to a different content element, breaking cache.
+
+   Before:
+   - Element 12: dialogue
+   - Element 13: #MEMORY: duplicate (will be removed)
+   - Element 14: dialogue [MARKER]
+
+   After:
+   - Element 12: dialogue
+   - Element 13: dialogue [MARKER] (was element 14)
+
+   Now the marker is on different content! Cache miss.
+
+2. **Inconsistent uncached count**:
+   User configures dialogue_cache_uncached_count=4, expecting last 4 dialogue messages
+   uncached. But if duplicate memories removed, might end up with 2-3 uncached.
+   This is probably acceptable since the goal is fresh recent context.
+
+3. **Redundancy**:
+   If hash-based deduplication already prevents duplicates in cache, why do we need
+   removeDuplicateMemories? Answer: Because memories might appear in multiple places:
+   - Cached portion (from previous requests)
+   - New dialogue (from current request)
+   - System prompts (static memories)
+
+   removeDuplicateMemories() ensures the FINAL PAYLOAD doesn't have duplicates even
+   if they come from different sources.
+
+
+DOES THIS MATCH 1.3 CONNECTOR BEHAVIOR?
+========================================
+
+User said: "what we should do is ensure there are *no* changes to the existing cache,
+and rather, duplicate memories are *never* written to the cache"
+
+This is ALREADY WORKING via hash-based deduplication:
+- Duplicates never written to cache file ✓
+- Cache file only changes when NEW content added ✓
+- removeDuplicateMemories() operates on final payload, not cache file ✓
+
+
+RECOMMENDATION:
+===============
+
+**Option 1: Keep current behavior (likely correct)**
+- removeDuplicateMemories() serves a different purpose than cache deduplication
+- It ensures final payload to LLM doesn't have duplicate memories
+- Index shifting is acceptable because cache markers stay with content
+- Only risk: if duplicates removed BEFORE marker, cache invalidates
+
+**Option 2: Move removeDuplicateMemories() before cache marker placement**
+- Ensures cache marker is placed on deduplicated array
+- Prevents risk of marker shifting to different content
+- More predictable uncached count
+- Recommended if testing shows cache invalidation issues
+
+**Option 3: Only deduplicate memories AFTER cache marker position**
+- Prevents duplicates in uncached region without risking cache invalidation
+- Keeps cached portion stable
+- Most conservative approach
+
+
+QUESTIONS FOR USER:
+===================
+
+1. Is the v1.0.2 caching working correctly with current removeDuplicateMemories placement?
+   (User said it works, just low context)
+
+2. Are you seeing "Duplicates removed: N" in logs where N > 0?
+   (This would indicate removeDuplicateMemories is actually removing items)
+
+3. In the 1.3 connector, was removeDuplicateMemories called before or after cache marker?
+   (Would help understand intended behavior)
+
+4. Are duplicate memories actually appearing in logs/responses?
+   (Would indicate if current deduplication is insufficient)
+
+
+TESTING NEEDED:
+===============
+
+1. Check logs for "Memories:" output from removeDuplicateMemories (line 68)
+2. Check if duplicate #MEMORY: entries actually appear in context data
+3. Monitor cache hit rates with current implementation
+4. Test if moving removeDuplicateMemories causes any regressions
+
+===============================================================================
