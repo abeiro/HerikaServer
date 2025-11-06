@@ -807,7 +807,7 @@ function current_value(string $flatName, array $currentConf) {
                                 'zonos_gradio' => "Zonos TTS provides expressive voices with emotion controls. Recommended to use with cloud GPU hosting (Vast.ai). Uses roughly 6GB of VRAM.",
                                 'piper-tts' => "[Skyrim Voices]Piper-TTS is a middle quality and fast TTS. Requires manual installation of voices though. Under 1GB of VRAM. https://dwemerdynamics.hostwiki.io/en/TTS-Options",
                                 'deepgram' => "Deepgram TTS is a cloud option aimed at simple, quick voice generation. Requires API key.",
-                                'cartesia' => "Cartesia TTS provides high-quality voice cloning and generation. Automatically clones voices from your voice cache when first used. Supports emotions and multiple languages. Requires API key."
+                                'cartesia' => "[Skyrim Voices] Cartesia TTS provides high-quality automatic voice generation. Supports emotions and multiple languages. Requires API key."
                             ];
                             $ttsLower = strtolower((string)$ttsSelRender);
                             echo htmlspecialchars($ttsDescMap[$ttsLower] ?? '');
