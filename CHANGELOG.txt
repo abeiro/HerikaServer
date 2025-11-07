@@ -2,6 +2,46 @@
 CHIM CACHED CONNECTOR - VERSION HISTORY
 ===============================================================================
 
+Version 1.0.9 (2025-11-07)
+--------------------------
+
+Critical Bug Fixes:
+-------------------
+✓ **BUG #1: Fixed buildSimpleFormatInstruction() ignoring $customInstruction parameter**
+  - Problem: Custom instructions and speech style were not included in simple format
+  - Impact: Loss of speech reinforcement and custom character instructions
+  - Fix: Now properly prepends $customInstruction to simple format instruction
+  - Modified: connector/openrouterjsoncached_helpers.php (lines 512-516)
+
+✓ **BUG #2 (CRITICAL): Fixed cache collision between JSON and simple formats**
+  - Problem: Cache filenames hardcoded with "json" regardless of actual format selected
+  - Impact: Switching from JSON to simple format would use cached JSON instructions
+  - Root Cause: writeArrayToFileWithCache() returned old cached data with wrong format
+  - Fix: Cache filenames now include response format in the name
+  - Modified: connector/openrouterjsoncached.php (lines 349-350)
+  - Modified: connector/openrouterjsoncached_verbose.php (lines 408-409)
+  - Result: Different formats now use separate cache files
+
+✓ **BUG #3: Extended prefill support to all caching providers**
+  - Problem: Prefill only worked with Anthropic provider
+  - Impact: OpenAI and Gemini users couldn't use simple format prefill
+  - Fix: Removed provider check, now all providers get prefill in simple format
+  - Modified: connector/openrouterjsoncached.php (line 582)
+  - Modified: connector/openrouterjsoncached_verbose.php (line 884)
+
+Files Modified:
+---------------
+• connector/openrouterjsoncached.php - Cache filename fix, prefill extension
+• connector/openrouterjsoncached_verbose.php - Cache filename fix, prefill extension
+• connector/openrouterjsoncached_helpers.php - Custom instruction handling
+
+Benefits:
+---------
+• Simple format now works correctly with custom instructions and speech style
+• No more format instruction mixing between JSON and simple modes
+• All caching providers (Anthropic, OpenAI, Gemini) support prefill
+• Users can switch between formats without cache contamination
+
 Version 1.0.8 (2025-11-06)
 --------------------------
 
@@ -35,37 +75,6 @@ Benefits:
 • Quick verification of CHIM compatibility
 • Reminds developers to update version info after changes
 • Professional version tracking for future updates
-
-Critical Bug Fixes (Post-v1.0.8 Release):
-------------------------------------------
-✓ **BUG #1: Fixed buildSimpleFormatInstruction() ignoring $customInstruction parameter**
-  - Problem: Custom instructions and speech style were not included in simple format
-  - Impact: Loss of speech reinforcement and custom character instructions
-  - Fix: Now properly prepends $customInstruction to simple format instruction
-  - Modified: connector/openrouterjsoncached_helpers.php (lines 512-516)
-
-✓ **BUG #2 (CRITICAL): Fixed cache collision between JSON and simple formats**
-  - Problem: Cache filenames hardcoded with "json" regardless of actual format selected
-  - Impact: Switching from JSON to simple format would use cached JSON instructions
-  - Root Cause: writeArrayToFileWithCache() returned old cached data with wrong format
-  - Fix: Cache filenames now include response format in the name
-  - Modified: connector/openrouterjsoncached.php (lines 355-356)
-  - Modified: connector/openrouterjsoncached_verbose.php (lines 408-409)
-  - Result: Different formats now use separate cache files
-
-✓ **BUG #3: Extended prefill support to all caching providers**
-  - Problem: Prefill only worked with Anthropic provider
-  - Impact: OpenAI and Gemini users couldn't use simple format prefill
-  - Fix: Removed provider check, now all providers get prefill in simple format
-  - Modified: connector/openrouterjsoncached.php (line 599)
-  - Modified: connector/openrouterjsoncached_verbose.php (line 884)
-
-Debug Logging Added:
---------------------
-• Added comprehensive debug logging for format detection and instruction building
-• Logs show format value at multiple checkpoints (lines 312, 378, 383, 403, 411)
-• Logs prefixed with "BUG#2 DEBUG" for easy identification
-• Helps track format value through execution flow
 
 Version 1.0.7 (2025-11-06)
 --------------------------
