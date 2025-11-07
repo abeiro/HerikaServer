@@ -311,12 +311,6 @@ class openrouterjsoncached
             ? $GLOBALS["CONNECTOR"][$this->name]["response_format"]
             : 'json';
 
-        // DEBUG: Log response format detection
-        $rawFormatValue = isset($GLOBALS["CONNECTOR"][$this->name]["response_format"])
-            ? $GLOBALS["CONNECTOR"][$this->name]["response_format"]
-            : 'NOT_SET';
-        logMessage("BUG#2 DEBUG [Line 312]: Raw GLOBALS response_format = '{$rawFormatValue}', Final \$this->_responseFormat = '{$this->_responseFormat}'");
-
         $this->_includeActions = isset($GLOBALS["CONNECTOR"][$this->name]["include_actions_list"])
             ? (bool)$GLOBALS["CONNECTOR"][$this->name]["include_actions_list"]
             : true;
@@ -378,12 +372,8 @@ class openrouterjsoncached
         }
 
         // Build response format instruction based on format type
-        // DEBUG: Log response format before instruction building
-        logMessage("BUG#2 DEBUG [Line 378]: About to build format instruction. \$this->_responseFormat = '{$this->_responseFormat}'");
-
         $formatInstruction = "";
         if ($this->_responseFormat === 'json') {
-            logMessage("BUG#2 DEBUG [Line 383]: Entered JSON format branch");
             $template = isset($GLOBALS["responseTemplate"]) ? $GLOBALS["responseTemplate"] : [];
 
             if (!$this->_includeMood && is_array($template) && isset($template['mood'])) {
@@ -401,7 +391,6 @@ class openrouterjsoncached
 
             $formatInstruction = "{$prefix} $speechReinforcement $customInstruction Use ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure$zonosTones: " . json_encode($template);
         } else {
-            logMessage("BUG#2 DEBUG [Line 403]: Entered SIMPLE format branch");
             $formatInstruction = buildSimpleFormatInstruction(
                 $this->_includeMood,
                 $this->_includeListener,
@@ -410,12 +399,6 @@ class openrouterjsoncached
                 "{$prefix} $speechReinforcement $customInstruction"
             );
         }
-
-        // DEBUG: Log the final format instruction
-        $formatInstructionPreview = strlen($formatInstruction) > 200
-            ? substr($formatInstruction, 0, 200) . "..."
-            : $formatInstruction;
-        logMessage("BUG#2 DEBUG [Line 411]: Final format instruction (first 200 chars): {$formatInstructionPreview}");
 
         $actionsText = "";
         if (!empty($availableActions)) {
