@@ -2,6 +2,80 @@
 CHIM CACHED CONNECTOR - VERSION HISTORY
 ===============================================================================
 
+Version 1.0.9 (2025-11-07)
+--------------------------
+
+Critical Bug Fixes:
+-------------------
+✓ **BUG #1: Fixed buildSimpleFormatInstruction() ignoring $customInstruction parameter**
+  - Problem: Custom instructions and speech style were not included in simple format
+  - Impact: Loss of speech reinforcement and custom character instructions
+  - Fix: Now properly prepends $customInstruction to simple format instruction
+  - Modified: connector/openrouterjsoncached_helpers.php (lines 512-516)
+
+✓ **BUG #2 (CRITICAL): Fixed cache collision between JSON and simple formats**
+  - Problem: Cache filenames hardcoded with "json" regardless of actual format selected
+  - Impact: Switching from JSON to simple format would use cached JSON instructions
+  - Root Cause: writeArrayToFileWithCache() returned old cached data with wrong format
+  - Fix: Cache filenames now include response format in the name
+  - Modified: connector/openrouterjsoncached.php (lines 349-350)
+  - Modified: connector/openrouterjsoncached_verbose.php (lines 408-409)
+  - Result: Different formats now use separate cache files
+
+✓ **BUG #3: Extended prefill support to all caching providers**
+  - Problem: Prefill only worked with Anthropic provider
+  - Impact: OpenAI and Gemini users couldn't use simple format prefill
+  - Fix: Removed provider check, now all providers get prefill in simple format
+  - Modified: connector/openrouterjsoncached.php (line 582)
+  - Modified: connector/openrouterjsoncached_verbose.php (line 884)
+
+Files Modified:
+---------------
+• connector/openrouterjsoncached.php - Cache filename fix, prefill extension
+• connector/openrouterjsoncached_verbose.php - Cache filename fix, prefill extension
+• connector/openrouterjsoncached_helpers.php - Custom instruction handling
+
+Benefits:
+---------
+• Simple format now works correctly with custom instructions and speech style
+• No more format instruction mixing between JSON and simple modes
+• All caching providers (Anthropic, OpenAI, Gemini) support prefill
+• Users can switch between formats without cache contamination
+
+Version 1.0.8 (2025-11-06)
+--------------------------
+
+New Features:
+-------------
+✓ Version Tracking Display in UI
+  - Added VERSION constant to connector classes with full version info
+  - Format: "OpenRouter Cache Connector v1.0.8 for CHIM 2.0.3 | 2025/11/06"
+  - Version displays in UI under Cache Settings header as smaller gray text
+  - Separate version strings for normal and verbose connectors
+  - Comment reminder to update version, date, and CHIM version after changes
+
+Implementation:
+---------------
+✓ Connector classes now include comprehensive version information
+  - openrouterjsoncached: Shows standard version
+  - openrouterjsoncached_verbose: Shows version with (VERBOSE) marker
+✓ UI dynamically loads and displays version from connector class
+✓ Version appears in both profile editor and main connector modal
+✓ Only displays when cached connectors are selected
+
+Files Modified:
+---------------
+• connector/openrouterjsoncached.php - Added VERSION constant
+• connector/openrouterjsoncached_verbose.php - Added VERSION constant
+• ui/core/llm_connectors.php - Added version loading and display logic
+
+Benefits:
+---------
+• Easy to identify which connector version is installed
+• Quick verification of CHIM compatibility
+• Reminds developers to update version info after changes
+• Professional version tracking for future updates
+
 Version 1.0.7 (2025-11-06)
 --------------------------
 

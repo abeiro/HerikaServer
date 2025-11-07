@@ -509,6 +509,10 @@ function buildSimpleFormatInstruction($includeMood, $includeListener, $includeAc
     $exampleFormat = '(' . implode(')(', $exampleParts) . ')';
     $instruction .= "Example: {$exampleFormat} I'm worried about that cave we passed.";
 
+    // Prepend custom instruction (if provided) to match JSON format behavior
+    if (!empty($customInstruction)) {
+        return $customInstruction . " " . $instruction;
+    }
     return $instruction;
 }
 
