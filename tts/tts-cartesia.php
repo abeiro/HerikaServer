@@ -243,7 +243,7 @@ function generateCartesiaTTS($text, $voiceId, $mood = 'normal') {
     $url = "https://api.cartesia.ai/tts/bytes";
     
     // Get model ID
-    $modelId = $GLOBALS["TTS"]["CARTESIA"]["model_id"] ?? 'sonic-english';
+    $modelId = $GLOBALS["TTS"]["CARTESIA"]["model_id"] ?? 'sonic-3';
     
     // Get speed setting
     $speed = $GLOBALS["TTS"]["CARTESIA"]["speed"] ?? 'normal';
