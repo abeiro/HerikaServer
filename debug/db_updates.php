@@ -1854,6 +1854,175 @@ try {
 }
 
 //----------------------------------------------------
+// Prompts table: Migrate prompts from hardcoded PHP to database
+// Version 20250108001
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20250108001) {
+    Logger::debug("Applying prompts migration 20250108001");
+    
+    // Create the prompts table
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/prompts.sql"));
+    
+    // Seed with default prompt values for actively-used prompts
+    // Array-based cues are stored as JSON arrays
+    $defaultPrompts = [
+        // Combat and Action Prompts
+        ['name' => 'combatend', 'cue' => json_encode([
+            "({HERIKA_NAME} comments about  {PLAYER_NAME} weapons) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} comments about foes defeated) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} curses the defeated enemies.) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} insults the defeated enemies with anger) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a joke about the defeated enemies) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about the type of enemies that was defeated) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} notes something peculiar about last enemy defeated) {TEMPLATE_DIALOG}"
+        ]), 'description' => 'Triggered when combat ends'],
+        
+        ['name' => 'combatendmighty', 'cue' => json_encode([
+            "({HERIKA_NAME} comments about  {PLAYER_NAME} weapons) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} comments about defeated foes) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} curses the defeated enemies) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} insults the defeated enemies) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a joke about the defeated enemies) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about the type of enemies that was defeated) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} notes something peculiar about last enemy defeated) {TEMPLATE_DIALOG}"
+        ]), 'description' => 'Triggered when combat ends (mighty enemy variant)'],
+        
+        ['name' => 'combatbark', 'cue' => json_encode([
+            "({HERIKA_NAME} shouts a battle cry) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} taunts their enemy) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} yells a war cry) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} shouts encouragement to allies) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} curses at their foe) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes an intimidating threat) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} yells about their weapon striking true) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} shouts about the enemy's weakness) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} roars in fury) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} calls out enemy positions) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} shouts tactical advice) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a vengeful declaration) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} yells about defending their allies) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} shouts about their honor in battle) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a boastful combat comment) {TEMPLATE_DIALOG}"
+        ]), 'description' => 'Triggered during combat'],
+        
+        ['name' => 'bleedout', 'cue' => "{HERIKA_NAME} complain about almost being defeated in battle, {TEMPLATE_DIALOG}", 'description' => 'Triggered when NPC enters bleedout state'],
+        
+        // RPG Event Prompts
+        ['name' => 'goodmorning', 'cue' => "({HERIKA_NAME} comment about {PLAYER_NAME}s time asleep. {TEMPLATE_DIALOG}", 'description' => 'Triggered after sleeping'],
+        
+        ['name' => 'rpg_lvlup', 'cue' => "Comment about the experience gained by {PLAYER_NAME} in an immersive way. {TEMPLATE_DIALOG}", 'description' => 'Triggered on level up'],
+        
+        ['name' => 'rpg_shout', 'cue' => "Comment/ask about the the new shout learned by {PLAYER_NAME}. {TEMPLATE_DIALOG}", 'description' => 'Triggered when learning a shout'],
+        
+        ['name' => 'rpg_soul', 'cue' => "Comment/ask about the soul absorbed by {PLAYER_NAME}. {TEMPLATE_DIALOG}", 'description' => 'Triggered when absorbing a dragon soul'],
+        
+        ['name' => 'rpg_word', 'cue' => "Comment/ask about the new word learned by {PLAYER_NAME}. {TEMPLATE_DIALOG}", 'description' => 'Triggered when learning a word of power'],
+        
+        ['name' => 'lockpicked', 'cue' => json_encode([
+            "({HERIKA_NAME} comments about the lock picking event. Consider the context as it can be a door, a chest, etc. Also, consider the purpose, can be; stealing, looting, dungeon doors, etc. {TEMPLATE_DIALOG}"
+        ]), 'description' => 'Triggered when picking a lock'],
+        
+        // Bored Event
+        ['name' => 'bored', 'cue' => json_encode([
+            "({HERIKA_NAME} makes a comment about the current location) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about the current weather) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about today) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about what you are currently thinking about) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about the Gods of the Elder Scrolls Universe) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about how they currently feel) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about a historical event from the Elder Scrolls Universe) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about something they like or dislike) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about the last task we have completed) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about a recent rumor) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about something theyre curious about regarding {PLAYER_NAME}) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about current thoughts about {PLAYER_NAME}) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about a random entity in the area) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about what might happen next) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about their thoughts on the journey so far) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about something theyve been wanting to do) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about something completely unrelated) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about something they cant quite explain) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about the last combat encounter) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about the current ambiance) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about the smell of the area) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about a nearby creature or NPC) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about how the current location compares to another place) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about a lesson they learned in a place like this) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about the energy or atmosphere of the area) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about something they been thinking about lately) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about the danger or safety of this area) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about something they overheard earlier) {TEMPLATE_DIALOG}",
+            "({HERIKA_NAME} makes a comment about their hopes and dreams) {TEMPLATE_DIALOG}"
+        ]), 'description' => 'Triggered periodically when idle'],
+        
+        // Book Reading
+        ['name' => 'book', 'cue' => "({HERIKA_NAME} reads the book ) {TEMPLATE_DIALOG}", 'description' => 'Triggered when reading a book'],
+        
+        // Quest
+        ['name' => 'quest', 'cue' => "{TEMPLATE_DIALOG}", 'description' => 'Triggered on quest events'],
+        
+        // Vision/Soulgaze
+        ['name' => 'vision', 'cue' => "{ITT_AI_PROMPT}. ", 'description' => 'Triggered during soulgaze/image-to-text events'],
+        
+        // Player Info and Game State
+        ['name' => 'playerinfo', 'cue' => "(Out of roleplay, game has been loaded) Tell {PLAYER_NAME} a short summary about last events, and then remind {PLAYER_NAME} the current task/quest/plan) {TEMPLATE_DIALOG}", 'description' => 'Triggered when game loads'],
+        
+        ['name' => 'traveldone', 'cue' => "Comment about the destination reached. {TEMPLATE_DIALOG}", 'description' => 'Triggered when fast travel completes'],
+        
+        ['name' => 'location', 'cue' => "(Chat as {HERIKA_NAME})", 'description' => 'Triggered when asking about location'],
+        
+        // Chat and Dialogue
+        ['name' => 'inputtext', 'cue' => "$TEMPLATE_ACTION . {TEMPLATE_DIALOG} {MAXIMUM_WORDS}", 'description' => 'Player dialogue input (normal voice)'],
+        
+        ['name' => 'inputtext_s', 'cue' => "$TEMPLATE_ACTION . {TEMPLATE_DIALOG} {MAXIMUM_WORDS}", 'description' => 'Player dialogue input (whisper)'],
+        
+        ['name' => 'chatnf', 'cue' => "{TEMPLATE_DIALOG}", 'description' => 'Chat without function calls'],
+        
+        ['name' => 'rechat', 'cue' => json_encode([
+            "Dialogue/action turn for {HERIKA_NAME}. Consider only one answer and/or action involving a third actor, without repeating your answer for each actor. Keep current topic or change it. {TEMPLATE_DIALOG}",
+            "Dialogue turn for {HERIKA_NAME}. Consider an answer, keep current topic or change it. {TEMPLATE_DIALOG}",
+            "Dialogue/action turn for {HERIKA_NAME}. Focus speech and/or action only on one actor. {TEMPLATE_DIALOG}"
+        ]), 'description' => 'NPC interjections in conversations'],
+        
+        ['name' => 'memory', 'cue' => "$TEMPLATE_ACTION {HERIKA_NAME} remembers this memory. \"#MEMORY_INJECTION_RESULT#\" {TEMPLATE_DIALOG} ", 'description' => 'Memory recall events'],
+        
+        ['name' => 'diary', 'cue' => "Please write a short summary of {PLAYER_NAME} and {HERIKA_NAME}s last dialogues and events written above into {HERIKA_NAME}s diary . WRITE AS IF YOU WERE {HERIKA_NAME}.", 'description' => 'Diary generation'],
+        
+        ['name' => 'chatsimfollow', 'cue' => "{HERIKA_NAME} interjects in the conversation.) {TEMPLATE_DIALOG}", 'description' => 'Chat simulation follow-up'],
+        
+        // Special Instructions
+        ['name' => 'instruction', 'cue' => "{gameRequest[3]} write {HERIKA_NAME}'s dialogue lines without narrations. CHARACTER MUST FOLLOW NARRATOR INSTRUCTION", 'description' => 'Papyrus instruction events'],
+        
+        ['name' => 'welcome', 'cue' => "{gameRequest[3]}. {HERIKA_NAME} should Inspect surroundings to see who is in scene. Write {HERIKA_NAME}'s dialogue lines without narrations.", 'description' => 'NPC welcoming events'],
+        
+        ['name' => 'cheatmode', 'cue' => "PRIORITY INSTRUCTION -  {currentNpcData[\"npc_name\"]} must do this, even if breaks character's roleplay: $gameRequest[3]}", 'description' => 'Debug/cheat mode'],
+        
+        // After Function
+        ['name' => 'afterfunc', 'cue' => "{HERIKA_NAME} talks to {PLAYER_NAME}. {TEMPLATE_DIALOG}", 'description' => 'Default post-function response']
+    ];
+    
+    foreach ($defaultPrompts as $prompt) {
+        try {
+            $db->execQuery("
+                INSERT INTO public.prompts (name, cue, description) 
+                VALUES (
+                    '".$db->escape($prompt['name'])."',
+                    '".$db->escape($prompt['cue'])."',
+                    '".$db->escape($prompt['description'])."'
+                )
+                ON CONFLICT (name) DO NOTHING
+            ");
+        } catch (Exception $e) {
+            Logger::warn("Could not insert prompt {$prompt['name']}: ".$e->getMessage());
+        }
+    }
+    
+    $updateVersion("prompts", 20250108001);
+    Logger::info("Applied prompts migration 20250108001");
+}
+
+//----------------------------------------------------
 // Bio templates: new tables and combined view
 // Version 20250913001
 //----------------------------------------------------

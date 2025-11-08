@@ -115,10 +115,39 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	
 	
 } else if ($gameRequest[0] == "diary") {
-	// Use configurable DIARY_PROMPT or fallback to default
-	$diaryPrompt = isset($GLOBALS["DIARY_PROMPT"]) && !empty($GLOBALS["DIARY_PROMPT"]) 
-		? strtr($GLOBALS["DIARY_PROMPT"],['{$GLOBALS["HERIKA_NAME"]}'=>$GLOBALS["HERIKA_NAME"],'{$GLOBALS["PLAYER_NAME"]}'=>$GLOBALS["PLAYER_NAME"],'#HERIKA_NAME#'=>$GLOBALS["HERIKA_NAME"],'#PLAYER_NAME#'=>$GLOBALS["PLAYER_NAME"]])
-		: "Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}s diary . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}.";
+	// Priority: 1. Database prompt 2. Config DIARY_PROMPT 3. Hardcoded default
+	$diaryPrompt = null;
+	
+	// Try to get from database first
+	if (isset($GLOBALS["db"]) && class_exists('Prompts')) {
+		try {
+			require_once(__DIR__."/../lib/core/prompts.class.php");
+			$promptsManager = new Prompts();
+			$dbPrompt = $promptsManager->getPrompt('diary');
+			if ($dbPrompt && !empty($dbPrompt['cue'])) {
+				$diaryPrompt = $dbPrompt['cue'];
+			}
+		} catch (Exception $e) {
+			// Fallback if database not available
+		}
+	}
+	
+	// Fallback to config or hardcoded default
+	if (empty($diaryPrompt)) {
+		$diaryPrompt = isset($GLOBALS["DIARY_PROMPT"]) && !empty($GLOBALS["DIARY_PROMPT"]) 
+			? $GLOBALS["DIARY_PROMPT"]
+			: "Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}s diary . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}.";
+	}
+	
+	// Apply variable replacements
+	$diaryPrompt = strtr($diaryPrompt,[
+		'{$GLOBALS["HERIKA_NAME"]}'=>$GLOBALS["HERIKA_NAME"],
+		'{$GLOBALS["PLAYER_NAME"]}'=>$GLOBALS["PLAYER_NAME"],
+		'#HERIKA_NAME#'=>$GLOBALS["HERIKA_NAME"],
+		'#PLAYER_NAME#'=>$GLOBALS["PLAYER_NAME"],
+		'{HERIKA_NAME}'=>$GLOBALS["HERIKA_NAME"],
+		'{PLAYER_NAME}'=>$GLOBALS["PLAYER_NAME"]
+	]);
 	
 	// Add current game date/time context to the prompt
 	$diaryPrompt = "Current date and time: {$sk_date}. " . $diaryPrompt;

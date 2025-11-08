@@ -303,6 +303,38 @@ $PROMPTS=array(
     ],
 );
 
+// Load prompts from database and override hardcoded values
+// Database values completely replace hardcoded ones
+if (isset($GLOBALS["db"]) && class_exists('sql')) {
+    try {
+        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."core".DIRECTORY_SEPARATOR."prompts.class.php");
+        
+        $promptsManager = new Prompts();
+        
+        // Only load if table exists
+        if ($promptsManager->tableExists()) {
+            $dbPrompts = $promptsManager->getPromptsArray();
+            
+            // Override cue values from database
+            foreach ($dbPrompts as $name => $dbPrompt) {
+                if (isset($PROMPTS[$name])) {
+                    // Replace the cue field with database value
+                    $PROMPTS[$name]['cue'] = $dbPrompt['cue'];
+                } else {
+                    // Add new prompt from database if it doesn't exist in hardcoded prompts
+                    $PROMPTS[$name] = [
+                        'cue' => $dbPrompt['cue']
+                    ];
+                }
+            }
+        }
+    } catch (Exception $e) {
+        // Silently fail if database not available or table doesn't exist yet
+        // This allows the system to work during initial setup
+        error_log("Could not load prompts from database: " . $e->getMessage());
+    }
+}
+
 if (isset($GLOBALS["CORE_LANG"]))
 	if (file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php")) 
 		require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lang".DIRECTORY_SEPARATOR.$GLOBALS["CORE_LANG"].DIRECTORY_SEPARATOR."prompts.php");
