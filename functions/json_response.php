@@ -82,6 +82,7 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
+                    "item"=>"[OPTIONAL] For GiveItemTo: specify exact item name from <inventory>",
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                 ];
             } else {
@@ -91,7 +92,8 @@
                     "message"=>"lines of dialogue",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor|action destination location name "
+                    "target"=>"action target actor|action destination location name",
+                    "item"=>"[OPTIONAL] For GiveItemTo: specify exact item name from <inventory>"
                 ];
             }
         } else {
@@ -102,6 +104,7 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
+                    "item"=>"[OPTIONAL] For GiveItemTo: specify exact item name from <inventory>",
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                     "message"=>"lines of dialogue"
                 ];
@@ -112,6 +115,7 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
+                    "item"=>"[OPTIONAL] For GiveItemTo: specify exact item name from <inventory>",
                     "message"=>"lines of dialogue"
                 ];
             }

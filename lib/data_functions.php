@@ -3106,37 +3106,44 @@ function call_llm() {
 
 
                         } else if ($actionParts2[0]=="GiveItemTo") {
-                            // Lets polish the parammeters
-                            $localtarget=$actionParts2[1];
-                            $mang1=explode(",",$localtarget);
-                            $mang2=explode(" and ",$mang1[0]);
-                            $mang3=explode("(",$mang2[0]);
-                            $mang4=FindClosestActorName($mang3[0]);
-                            error_log("[ACTION POSTFILTER GiveItemTo] $localtarget => {$mang3[0]} => $mang4");
+                            // Check if parameter is JSON (multi-param) - skip post-filtering for JSON
+                            if (isset($actionParts2[1]) && substr(trim($actionParts2[1]), 0, 1) === '{') {
+                                error_log("[ACTION POSTFILTER GiveItemTo] JSON parameter detected, skipping post-filter");
+                                // Keep the action as-is for JSON parameters
+                            } else {
+                                // Legacy: polish the parameters for single-param format
+                                $localtarget=$actionParts2[1];
+                                $mang1=explode(",",$localtarget);
+                                $mang2=explode(" and ",$mang1[0]);
+                                $mang3=explode("(",$mang2[0]);
+                                $mang4=FindClosestActorName($mang3[0]);
+                                error_log("[ACTION POSTFILTER GiveItemTo] $localtarget => {$mang3[0]} => $mang4");
 
-                            if ($mang4)
-                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|GiveItemTo@{$mang4}";
-                            else
-                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|GiveItemTo@{$mang3[0]}";
-
-                            error_log("[ACTION POSTFILTER GiveItemTo] $localtarget => {$mang3[0]} => $destination");
-
+                                if ($mang4)
+                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|GiveItemTo@{$mang4}";
+                                else
+                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|GiveItemTo@{$mang3[0]}";
+                            }
 
                         } else if ($actionParts2[0]=="GiveGoldTo") {
-                            // Lets polish the parammeters
-                            $localtarget=$actionParts2[1];
-                            $mang1=explode(",",$localtarget);
-                            $mang2=explode(" and ",$mang1[0]);
-                            $mang3=explode("(",$mang2[0]);
-                            $mang4=FindClosestActorName($mang3[0]);
-                            error_log("[ACTION POSTFILTER GiveGoldTo] $localtarget => {$mang3[0]} => $$mang4");
+                            // Check if parameter is JSON (multi-param) - skip post-filtering for JSON
+                            if (isset($actionParts2[1]) && substr(trim($actionParts2[1]), 0, 1) === '{') {
+                                error_log("[ACTION POSTFILTER GiveGoldTo] JSON parameter detected, skipping post-filter");
+                                // Keep the action as-is for JSON parameters
+                            } else {
+                                // Legacy: polish the parameters for single-param format
+                                $localtarget=$actionParts2[1];
+                                $mang1=explode(",",$localtarget);
+                                $mang2=explode(" and ",$mang1[0]);
+                                $mang3=explode("(",$mang2[0]);
+                                $mang4=FindClosestActorName($mang3[0]);
+                                error_log("[ACTION POSTFILTER GiveGoldTo] $localtarget => {$mang3[0]} => $$mang4");
 
-                            if ($mang4)
-                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|GiveGoldTo@{$mang4}";
-                            else
-                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|GiveGoldTo@{$mang3[0]}";
-
-                            error_log("[ACTION POSTFILTER GiveGoldTo] $localtarget => {$mang3[0]} => $destination");
+                                if ($mang4)
+                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|GiveGoldTo@{$mang4}";
+                                else
+                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|GiveGoldTo@{$mang3[0]}";
+                            }
 
 
                         }  else if ($actionParts2[0]=="TradeItems") {
@@ -3329,11 +3336,17 @@ function call_llm() {
 
             }
             $GLOBALS["DEBUG_DATA"]["response"][]=$actions;
-            echo implode("\r\n", $actions).PHP_EOL;
             
-            file_put_contents(__DIR__."/../log/output_to_plugin.log",implode("\r\n", $actions).PHP_EOL, FILE_APPEND | LOCK_EX);
+            // Log actions before echoing
+            foreach ($actions as $action) {
+                Logger::info("Echoing action to plugin: {$action}");
+            }
+            
+            echo implode("\r\n", $actions)."\r\n";
+            
+            file_put_contents(__DIR__."/../log/output_to_plugin.log",implode("\r\n", $actions)."\r\n", FILE_APPEND | LOCK_EX);
             // Enforce flush output
-            @ob_end_flush();
+            if (ob_get_level()) @ob_end_flush();
             @flush();
 
         }

@@ -398,6 +398,80 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     }
     $MUST_END=true;
 
+} elseif ($gameRequest[0] == "itemtransfer") {
+    // Item transfer event: update both source and destination NPC inventories
+    Logger::info("RECEIVED itemtransfer command: ".$gameRequest[3]);
+    
+    // Parse: "SourceNPC gave ItemCount ItemName to DestNPC"
+    $message = $gameRequest[3];
+    
+    // Extract source NPC, destination NPC, item name and count
+    // Format: "Lydia gave 2 Health Potion to Faendal"
+    if (preg_match('/^(.+?) gave (\d+) (.+?) to (.+)$/', $message, $matches)) {
+        $sourceNpcName = trim($matches[1]);
+        $itemCount = intval($matches[2]);
+        $itemName = trim($matches[3]);
+        $destNpcName = trim($matches[4]);
+        
+        Logger::info("Item transfer: {$sourceNpcName} -> {$destNpcName}: {$itemCount}x {$itemName}");
+        
+        // Update source NPC inventory (decrement)
+        $sourceNpc = $npcMaster->getByName($sourceNpcName);
+        if ($sourceNpc) {
+            $sourceMeta = json_decode($sourceNpc['metadata'] ?? '{}', true);
+            if (!is_array($sourceMeta)) $sourceMeta = [];
+            
+            if (isset($sourceMeta['inventory']) && is_array($sourceMeta['inventory'])) {
+                foreach ($sourceMeta['inventory'] as $key => $item) {
+                    if ($item['name'] === $itemName) {
+                        $sourceMeta['inventory'][$key]['count'] -= $itemCount;
+                        if ($sourceMeta['inventory'][$key]['count'] <= 0) {
+                            unset($sourceMeta['inventory'][$key]);
+                        }
+                        break;
+                    }
+                }
+                $sourceMeta['inventory'] = array_values($sourceMeta['inventory']); // Re-index
+                $sourceNpc = $npcMaster->setMetadata($sourceNpc, $sourceMeta);
+                $npcMaster->updateByArray($sourceNpc);
+                Logger::info("Updated {$sourceNpcName} inventory (removed {$itemCount}x {$itemName})");
+            }
+        }
+        
+        // Update destination NPC inventory (increment)
+        $destNpc = $npcMaster->getByName($destNpcName);
+        if ($destNpc) {
+            $destMeta = json_decode($destNpc['metadata'] ?? '{}', true);
+            if (!is_array($destMeta)) $destMeta = [];
+            
+            if (!isset($destMeta['inventory'])) $destMeta['inventory'] = [];
+            
+            // Check if item already exists
+            $itemExists = false;
+            foreach ($destMeta['inventory'] as $key => $item) {
+                if ($item['name'] === $itemName) {
+                    $destMeta['inventory'][$key]['count'] += $itemCount;
+                    $itemExists = true;
+                    break;
+                }
+            }
+            
+            // Add new item if it doesn't exist
+            if (!$itemExists) {
+                $destMeta['inventory'][] = ['name' => $itemName, 'count' => $itemCount];
+            }
+            
+            $destMeta['inventory_updated'] = time();
+            $destNpc = $npcMaster->setMetadata($destNpc, $destMeta);
+            $npcMaster->updateByArray($destNpc);
+            Logger::info("Updated {$destNpcName} inventory (added {$itemCount}x {$itemName})");
+        }
+    } else {
+        Logger::warn("itemtransfer: Could not parse message format: {$message}");
+    }
+    
+    $MUST_END=true;
+
 } elseif ($gameRequest[0] == "updateskills") {
     // Live skills update (periodic, every 5 minutes)
     $updateData = explode("@",$gameRequest[3]);
