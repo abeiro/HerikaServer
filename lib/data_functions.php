@@ -959,7 +959,10 @@ New setting: $currentLocation
 
     }
 
- 
+    if (sizeof($previousRow)>0) {
+        $lastDialogFull[]=$previousRow;;
+    }
+
     file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_.txt",print_r($lastDialogFull,true));
 
     // Remove memory logs, only leave last one.
@@ -3266,7 +3269,7 @@ function call_llm() {
                             $mang2=explode(" and ",$mang1[0]);
                             $mang3=explode("(",$mang2[0]);
 
-                            $mang4=($mang3[0]);
+                            $mang4=trim($mang3[0])+0;
 
                             error_log("[ACTION POSTFILTER TakeGoldFromPlayer] $localtarget => {$mang3[0]} => $mang4");
 
@@ -3276,13 +3279,13 @@ function call_llm() {
                                 $qtyrecord=$GLOBALS["db"]->fetchOne("SELECT speech,(regexp_matches(speech, '\d+'))[1]::int AS quantity FROM public.speech 
                                 WHERE listener = '$localNpc' OR speaker = '$localNpc' order by rowid desc LIMIT 100");
                                 if (isset($qtyrecord["quantity"])) {
-                                    $qty=$qtyrecord["quantity"];
+                                    $qty=reim($qtyrecord["quantity"]);
                                     error_log("[ACTION POSTFILTER TakeGoldFromPlayer] quantity found $qty");
                                     $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TakeGoldFromPlayer@$qty";
                                 } else
                                 $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TakeGoldFromPlayer@";
                             } else
-                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TakeGoldFromPlayer@";
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TakeGoldFromPlayer@$mang4";
 
 
         

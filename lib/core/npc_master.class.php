@@ -737,7 +737,7 @@ SET extended_data = jsonb_set(
 )
 WHERE (extended_data ->> 'background_life_enabled')::boolean = true";
 
-        $GLOBALS["db"]->query($bglife_q);
+        $GLOBALS["db"]->execQuery($bglife_q);
         error_log("[NPC RESTORE] " . date('Y-m-d H:i:s') . ", NPCs restore made in " . (time() - $startTime) . " secs ");
         return true;
     }

@@ -947,7 +947,36 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
         $npcMaster->updateByArray($currentNpcData);
         
+        $profile=new CoreProfile();
+        $profData=json_decode($profile->getById($currentNpcData["profile_id"])["metadata"],true);
+
+        $doSalute=(isset($profData["SALUTATION_AFTER_1_DAY"]) && $profData["SALUTATION_AFTER_1_DAY"] || isset($meta["SALUTATION_AFTER_1_DAY"]) && $meta["SALUTATION_AFTER_1_DAY"] );
+        if ($doSalute) {
+            error_log("[salutation_after_a_while] enabled for {$currentNpcData["npc_name"]}, profile:{$profData["SALUTATION_AFTER_1_DAY"]} ,npc:{$meta["SALUTATION_AFTER_1_DAY"]}");
+            $lit=GetLastInteraction($GLOBALS["PLAYER_NAME"],$currentNpcData["npc_name"]);
+            if (gamets2days_between($lit,$gameRequest[2]) > 1) {
+                // If salutation_after_a_while is enable for this NPC, if 1 day has passed between last iteration, force a salutation.
+                $instructionText="should salutate {$GLOBALS["PLAYER_NAME"]}, as more than 1 day passed with no talking.";
+                $roleMasterAction = "rolecommand|Instruction@{$currentNpcData["npc_name"]}@{$instructionText}@0";
         
+                // Insert into database
+                $GLOBALS["db"]->insert(
+                    'responselog',
+                    array(
+                        'localts' => time(),
+                        'sent' => 0,
+                        'actor' => "rolemaster",
+                        'text' => '',
+                        'action' => $roleMasterAction,
+                        'tag' => ""
+                    )
+                );
+            } else {
+                error_log("[salutation_after_a_while] {$currentNpcData["npc_name"]} gamets2days_between($lit,$gameRequest[2]) > 1");
+            }
+        } else {
+            error_log("[salutation_after_a_while] disabled for {$currentNpcData["npc_name"]}");
+        }
     }
 
     $MUST_END=true;
@@ -990,7 +1019,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             }
             
             // Update equipment section
-            $meta['last_coords'] = [$splitNameBase[1],$splitNameBase[2],$splitNameBase[3],$splitNameBase[4]];
+            $meta['last_coords'] = [$splitNameBase[1],$splitNameBase[2],$splitNameBase[3],$splitNameBase[4],"last_updated"=>$gameRequest[2]];
             
             // Save back to database
             $currentNpcData = $npcMaster->setMetadata($currentNpcData, $meta);
@@ -1026,7 +1055,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             // Save back to database
             $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $meta);
             $npcMaster->updateByArray($currentNpcData);
-            
+            error_log("Updated background_life_enabled for {$currentNpcData["npc_name"]}");
             Logger::info("Updated background_life_enabled for {$currentNpcData["npc_name"]}");
         }
     }

@@ -33,10 +33,16 @@ if (isset($extended_data["middle_term_memory"])&&sizeof($extended_data["middle_t
 
 $dbNpcName=$GLOBALS["db"]->escape($selectedNpc);
 
-$contextDataFull=$GLOBALS["db"]->fetchAll("SELECT summary as content,gamets_truncated FROM memory_summary where summary is not null and companions like '%|$dbNpcName|%' and gamets_truncated>$gametsfrom order by gamets_truncated desc LIMIT 100");
+$query="SELECT summary as content,gamets_truncated FROM memory_summary where summary is not null and companions like '%|$dbNpcName|%' and gamets_truncated>$gametsfrom order by gamets_truncated desc LIMIT 100";
+error_log($query);
+$contextDataFull=$GLOBALS["db"]->fetchAll($query);
 // $task=DataGetCurrentTask();
+$limit=10;
 
-if (sizeof($contextDataFull)==0 ||sizeof($contextDataFull)<10 ) {
+if ($gametsfrom==0) // Lower limit for first one
+    $limit=5;
+
+if (sizeof($contextDataFull)==0 ||sizeof($contextDataFull)<$limit ) {
     Logger::info("\tNo memories to summarize for $selectedNpc");
     return;
 }
