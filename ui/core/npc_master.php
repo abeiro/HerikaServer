@@ -2090,27 +2090,66 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         const nameEl = doc ? doc.getElementById('npc_name') : null;
         const npcName = nameEl ? String(nameEl.value||'').trim() : '';
         
-        document.getElementById("npc_modal").style.cursor="wait"
+        if (!npcName) { alert('Enter NPC Name to generate profile.'); return; }
         
-        processingMessage = document.createElement('div');
-        processingMessage.textContent = 'Processing...';
-        processingMessage.style.position = 'fixed';
-        processingMessage.style.top = '50%';
-        processingMessage.style.left = '50%';
-        processingMessage.style.transform = 'translate(-50%, -50%)';
-        processingMessage.style.backgroundColor = '#000';
-        processingMessage.style.color = '#fff';
-        processingMessage.style.padding = '10px 20px';
-        processingMessage.style.borderRadius = '8px';
-        processingMessage.style.zIndex = '10001';
-        processingMessage.id="processing_wheel"
-        document.body.appendChild(processingMessage);
+        // Show prompt dialog for user to add custom instructions
+        const promptBox = document.createElement('div');
+        promptBox.style.position='fixed';
+        promptBox.style.inset='0';
+        promptBox.style.zIndex='10050';
+        promptBox.style.display='flex';
+        promptBox.style.alignItems='center';
+        promptBox.style.justifyContent='center';
+        promptBox.style.background='rgba(0,0,0,0.65)';
+        promptBox.innerHTML = '<div style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:16px; max-width:600px; width:92%; color:#e9efff;">\
+          <div style="font-weight:700; color:rgb(242,124,17); margin-bottom:8px; font-size:18px;">AI Generate Profile for "' + npcName.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) + '"</div>\
+          <div style="font-size:13px; color:#cfd9ea; margin-bottom:12px;">Add any specific information or instructions for the AI to consider when generating this profile. Leave blank to use default generation.</div>\
+          <label style="display:block; font-size:13px; margin:6px 0 4px; color:#cfd9ea; font-weight:600;">Custom Instructions (optional):</label>\
+          <textarea id="ai_user_prompt" placeholder="Example: This NPC should be a merchant specializing in enchanted weapons, with a mysterious past..." style="width:100%; min-height:120px; padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; resize:vertical; font-family:inherit;"></textarea>\
+          <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">\
+            <button id="ai_prompt_cancel" class="btn-cancel">Cancel</button>\
+            <button id="ai_prompt_ok" class="btn-save">Generate Profile</button>\
+          </div></div>';
+        document.body.appendChild(promptBox);
+        
+        const promptInput = promptBox.querySelector('#ai_user_prompt');
+        const okBtn = promptBox.querySelector('#ai_prompt_ok');
+        const cancelBtn = promptBox.querySelector('#ai_prompt_cancel');
+        
+        promptInput.focus();
+        
+        cancelBtn.addEventListener('click', function(){
+          document.body.removeChild(promptBox);
+        });
+        
+        okBtn.addEventListener('click', async function(){
+          const userPrompt = String(promptInput.value||'').trim();
+          document.body.removeChild(promptBox);
+          
+          document.getElementById("npc_modal").style.cursor="wait";
+          
+          const processingMessage = document.createElement('div');
+          processingMessage.textContent = 'Processing...';
+          processingMessage.style.position = 'fixed';
+          processingMessage.style.top = '50%';
+          processingMessage.style.left = '50%';
+          processingMessage.style.transform = 'translate(-50%, -50%)';
+          processingMessage.style.backgroundColor = '#000';
+          processingMessage.style.color = '#fff';
+          processingMessage.style.padding = '10px 20px';
+          processingMessage.style.borderRadius = '8px';
+          processingMessage.style.zIndex = '10001';
+          processingMessage.id="processing_wheel";
+          document.body.appendChild(processingMessage);
 
-        const res = await fetch('../cmd/action_ai_regen_profile.php?name='+encodeURIComponent(npcName));
-        let j={}; try { j = await res.json(); } catch(_e) { j={ok:false}; }
-        
-        document.location.reload()
-        
+          const params = new URLSearchParams({ name: npcName });
+          if (userPrompt) params.append('user_prompt', userPrompt);
+          
+          const res = await fetch('../cmd/action_ai_regen_profile.php?' + params.toString());
+          let j={}; try { j = await res.json(); } catch(_e) { j={ok:false}; }
+          
+          document.location.reload();
+        });
 
       } catch(_e){console.log(_e)}
     });

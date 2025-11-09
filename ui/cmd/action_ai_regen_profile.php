@@ -243,6 +243,9 @@ if ($npcGender !== "" && $npcRace !== "") {
     $characterSeed = " This character is {$npcRace}.";
 }
 
+// Get optional user prompt for custom generation instructions
+$userCustomPrompt = isset($jsonDataInput["user_prompt"]) ? trim((string)$jsonDataInput["user_prompt"]) : "";
+
 $userprompt["en"] = "El personaje principal en este cuaderno de bitácora es {$GLOBALS["HERIKA_NAME"]}.
 The main character in this logbook is {$GLOBALS["HERIKA_NAME"]}.{$characterSeed}
 Read the context history (context_history) and the recent memories (middle_term_memory),
@@ -264,6 +267,11 @@ This profile must be in XML format and have these fields.
 <goals>             Text. Long term Goals & Aspirations'
 
 ";
+
+// Append user's custom instructions if provided
+if ($userCustomPrompt !== "") {
+    $userprompt["en"] .= "\n\nADDITIONAL INSTRUCTIONS FROM USER:\n{$userCustomPrompt}\n\nMake sure to incorporate these specific details and instructions into the generated character sheet where appropriate.";
+}
 
 $metadata   = json_decode($currentNpcData["metadata"], true);
 $metadata_p = json_decode($currentProfileData["metadata"], true);
