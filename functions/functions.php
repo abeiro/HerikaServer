@@ -799,7 +799,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'AttackHunt',
         'TravelTo',
         'Follow',
-        'CheckInventory',
+        //'CheckInventory', // Commented out - redundant since <inventory> tag already shows NPC's items. Could be repurposed to check OTHER NPCs' inventories later.
         //'SheatheWeapon',
         'Relax',
         //'LeadTheWayTo',
@@ -835,7 +835,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'AttackHunt',
         'TravelTo',
         'Follow',
-        'CheckInventory',
+        //'CheckInventory', // Commented out - redundant since <inventory> tag already shows NPC's items. Could be repurposed to check OTHER NPCs' inventories later.
         'SheatheWeapon',
         'Relax',
         //'LeadTheWayTo',
