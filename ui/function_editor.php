@@ -456,9 +456,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         'OpenInventory' => 'Regular menu trading',
                                         'OpenInventory2' => 'Gift Trading',
                                         'CheckInventory' => 'Check of inventory status',
-                                        'GiveGoldTo' => 'Give money to another character (no real money is transferred wip)',
-                                        'GiveItemTo' => 'Give items to another character (no real items are transferred wip)',
-                                        'TakeGoldFromPlayer' => 'Receive or take money from player (no real money is transferred wip)'
+                                        'GiveGoldTo' => 'Give money to another character (no real money is transferred yet)',
+                                        'GiveItemTo' => 'Give items to another character',
+                                        'TakeGoldFromPlayer' => 'Receive or take money from player (no real money is transferred yet)'
                                     ];
                                     echo $descriptions[$func] ?? 'Inventory management function';
                                     ?>
