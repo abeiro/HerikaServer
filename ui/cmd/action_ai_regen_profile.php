@@ -231,15 +231,27 @@ if (sizeof($combinedEvents) == 0) {
 $head["en"][] = ['role' => 'system', 'content' => "You are a writing assistant.
 Examine this text containing events that occurred in the fictional universe of Skyrim (The Elder Scrolls)."];
 
+// Extract NPC gender and race for query seed
+$npcGender = isset($currentNpcData["gender"]) && trim((string)$currentNpcData["gender"]) !== "" ? trim((string)$currentNpcData["gender"]) : "";
+$npcRace = isset($currentNpcData["race"]) && trim((string)$currentNpcData["race"]) !== "" ? trim((string)$currentNpcData["race"]) : "";
+$characterSeed = "";
+if ($npcGender !== "" && $npcRace !== "") {
+    $characterSeed = " This character is {$npcRace} {$npcGender}.";
+} else if ($npcGender !== "") {
+    $characterSeed = " This character is {$npcGender}.";
+} else if ($npcRace !== "") {
+    $characterSeed = " This character is {$npcRace}.";
+}
+
 $userprompt["en"] = "El personaje principal en este cuaderno de bitácora es {$GLOBALS["HERIKA_NAME"]}.
-The main character in this logbook is {$GLOBALS["HERIKA_NAME"]}.
+The main character in this logbook is {$GLOBALS["HERIKA_NAME"]}.{$characterSeed}
 Read the context history (context_history) and the recent memories (middle_term_memory),
  paying attention to notable events and the names of relevant characters.
 
 
 Based on all this information, generate an character sheet for {$GLOBALS["HERIKA_NAME"]}.
 
-This shits must be in XML format and have this fields.
+This profile must be in XML format and have these fields.
 
 <core>              Text. Core Identity, name,race an gender, and most remarkable job. Should be in the form of a sentence. e.g. 'Rose. Imperial female warrior.'
 <npc_static_bio>    Text. Basic Summary, and bio. Create if not info available in <context_history>
