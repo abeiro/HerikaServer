@@ -860,13 +860,12 @@ function current_value(string $flatName, array $currentConf) {
                                 <textarea id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>" rows="3"><?php echo htmlspecialchars((string)$current); ?></textarea>
                             <?php elseif ($ftype==='url'): ?>
                                 <input type="url" id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
-                                <?php if ($ttsKeyCur==='XVASYNTH'): ?>
-                                    <div style="margin-top:6px;">
+                                <div style="margin-top:6px;">
+                                    <button type="button" class="btn-primary" style="padding: 6px 12px; background-color: rgba(37, 99, 235, 0.8); color: #ffffff; border: 1px solid rgba(138, 155, 182, 0.3); border-radius: 8px; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s ease-in-out; font-weight: 500; letter-spacing: 0.3px; backdrop-filter: blur(5px); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1); margin-right: 5px;" onclick="checkUrlFromServer('tts__<?php echo htmlspecialchars($fname); ?>')" onmouseover="this.style.backgroundColor='rgba(47, 109, 245, 0.9)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.15)';" onmouseout="this.style.backgroundColor='rgba(37, 99, 235, 0.8)'; this.style.transform='none'; this.style.boxShadow='0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1)';">Check Connection</button>
+                                    <?php if ($ttsKeyCur==='XVASYNTH'): ?>
                                         <button type="button" id="btn_host_ip_xvasynth" class="btn-primary" data-ip="<?php echo htmlspecialchars($HOST_IP); ?>">Host PC IP</button>
                                         <script>(function(){ try{ var b=document.getElementById('btn_host_ip_xvasynth'); var inp=document.getElementById('tts_url'); if(b && inp){ b.addEventListener('click', function(){ var ip=(b.getAttribute('data-ip')||'').trim(); if(!ip){ try{ alert('Host IP not set. Configure Network/HOST_IP in Settings.'); }catch(_){} return; } var v='http://'+ip+':8008'; inp.value=v; try{ inp.dispatchEvent(new Event('input', { bubbles:true })); }catch(_){} try{ inp.dispatchEvent(new Event('change', { bubbles:true })); }catch(_){} }); } }catch(_e){} })();</script>
-                                    </div>
-                                <?php elseif ($ttsKeyCur==='XTTSFASTAPI' && strtolower($fname)==='endpoint'): ?>
-                                    <div style="margin-top:6px;">
+                                    <?php elseif ($ttsKeyCur==='XTTSFASTAPI' && strtolower($fname)==='endpoint'): ?>
                                         <button type="button" id="btn_host_ip_xtts" class="btn-primary" data-ip="<?php echo htmlspecialchars($HOST_IP); ?>">Host PC IP</button>
                                         <button type="button" id="btn_wsl_ip_xtts" class="btn-primary" data-ip="<?php echo htmlspecialchars($WSL_IP); ?>">WSL IP</button>
                                         <script>(function(){ try{ var bh=document.getElementById('btn_host_ip_xtts'); var bw=document.getElementById('btn_wsl_ip_xtts'); var inp=document.getElementById('tts_endpoint'); function setHost(ip){ if(!ip){ try{ alert('Host IP not set. Configure Network/HOST_IP in Settings.'); }catch(_){} return; } try{ var u = new URL(inp.value||('http://'+ip+':8020')); u.protocol = 'http:'; u.hostname = ip; u.port = '8020'; inp.value = u.toString(); } catch(e){ inp.value = 'http://'+ip+':8020'; } try{ inp.dispatchEvent(new Event('input', { bubbles:true })); }catch(_){} try{ inp.dispatchEvent(new Event('change', { bubbles:true })); }catch(_){} }
@@ -874,8 +873,8 @@ function current_value(string $flatName, array $currentConf) {
                                         if(bh && inp){ bh.addEventListener('click', function(){ setHost((bh.getAttribute('data-ip')||'').trim()); }); }
                                         if(bw && inp){ bw.addEventListener('click', function(){ setWsl((bw.getAttribute('data-ip')||'').trim()); }); }
                                         }catch(_e){} })();</script>
-                                    </div>
-                                <?php endif; ?>
+                                    <?php endif; ?>
+                                </div>
                             <?php elseif ($ftype==='select'): $values=$def['values']??[]; ?>
                                 <select id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>">
                                     <?php foreach ($values as $opt): ?>
@@ -1034,6 +1033,9 @@ function current_value(string $flatName, array $currentConf) {
                                 <textarea id="stt_<?php echo htmlspecialchars($fname); ?>" name="stt__<?php echo htmlspecialchars($fname); ?>" rows="3"><?php echo htmlspecialchars((string)$current); ?></textarea>
                             <?php elseif ($ftype==='url'): ?>
                                 <input type="url" id="stt_<?php echo htmlspecialchars($fname); ?>" name="stt__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                                <div style="margin-top:6px;">
+                                    <button type="button" class="btn-primary" style="padding: 6px 12px; background-color: rgba(37, 99, 235, 0.8); color: #ffffff; border: 1px solid rgba(138, 155, 182, 0.3); border-radius: 8px; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s ease-in-out; font-weight: 500; letter-spacing: 0.3px; backdrop-filter: blur(5px); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1);" onclick="checkUrlFromServer('stt__<?php echo htmlspecialchars($fname); ?>')" onmouseover="this.style.backgroundColor='rgba(47, 109, 245, 0.9)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.15)';" onmouseout="this.style.backgroundColor='rgba(37, 99, 235, 0.8)'; this.style.transform='none'; this.style.boxShadow='0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1)';">Check Connection</button>
+                                </div>
                             <?php elseif ($ftype==='select'): $values=$def['values']??[]; ?>
                                 <select id="stt_<?php echo htmlspecialchars($fname); ?>" name="stt__<?php echo htmlspecialchars($fname); ?>">
                                     <?php foreach ($values as $opt): ?>
@@ -1123,6 +1125,9 @@ function current_value(string $flatName, array $currentConf) {
                                 <textarea id="itt_<?php echo htmlspecialchars($fname); ?>" name="itt__<?php echo htmlspecialchars($fname); ?>" rows="3"><?php echo htmlspecialchars((string)$current); ?></textarea>
                             <?php elseif ($ftype==='url'): ?>
                                 <input type="url" id="itt_<?php echo htmlspecialchars($fname); ?>" name="itt__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                                <div style="margin-top:6px;">
+                                    <button type="button" class="btn-primary" style="padding: 6px 12px; background-color: rgba(37, 99, 235, 0.8); color: #ffffff; border: 1px solid rgba(138, 155, 182, 0.3); border-radius: 8px; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s ease-in-out; font-weight: 500; letter-spacing: 0.3px; backdrop-filter: blur(5px); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1);" onclick="checkUrlFromServer('itt__<?php echo htmlspecialchars($fname); ?>')" onmouseover="this.style.backgroundColor='rgba(47, 109, 245, 0.9)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.15)';" onmouseout="this.style.backgroundColor='rgba(37, 99, 235, 0.8)'; this.style.transform='none'; this.style.boxShadow='0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1)';">Check Connection</button>
+                                </div>
                             <?php elseif ($ftype==='select'): $values=$def['values']??[]; ?>
                                 <select id="itt_<?php echo htmlspecialchars($fname); ?>" name="itt__<?php echo htmlspecialchars($fname); ?>">
                                     <?php foreach ($values as $opt): ?>
