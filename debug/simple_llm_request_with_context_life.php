@@ -1,0 +1,519 @@
+<?php
+
+$startTime = microtime(true);
+
+define("MAXIMUM_SENTENCE_SIZE", 125);
+define("MINIMUM_SENTENCE_SIZE", 15);
+
+$GLOBALS["SCRIPTLINE_EXPRESSION"] = "";
+$GLOBALS["SCRIPTLINE_LISTENER"]   = "";
+$GLOBALS["SCRIPTLINE_ANIMATION"]  = "";
+
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+$file       = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . 'CurrentModel_.json';
+$enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+
+$enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "rolemaster_helpers.php";
+$GLOBALS["ENGINE_PATH"] = $enginePath;
+
+$db = new sql();
+
+require_once $enginePath . "lib/core/npc_master.class.php";
+require_once $enginePath . "lib/core/api_badge.class.php";
+require_once $enginePath . "lib/core/core_profiles.class.php";
+require_once $enginePath . "lib/core/llm_connector.class.php";
+require_once $enginePath . "lib/core/tts_connector.class.php";
+
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "lazy_xml.php";
+require_once $enginePath . "debug" . DIRECTORY_SEPARATOR . "background_action_handler.php";
+
+$npcMaster = new NpcMaster();
+
+$connector            = new LLMConnector();
+$currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
+$currentNpcData       = $npcMaster->getByName($argv[1]);
+
+$profile            = new CoreProfile();
+$currentProfileData = $profile->getById($currentNpcData["profile_id"]);
+$connector->setOldGlobals($currentConnectorData);
+$npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+
+$CLEAN_CONTEXT_FOCUS_CHAT = false;
+
+$COMMAND_PROMPT = '';
+
+$dbNpcName = $db->escape($argv[1]);
+$limit     = 100;
+$momentum  = time();
+
+$GLOBALS["HERIKA_NAME"] = $argv[1];
+
+$res  = $db->fetchAll("select max(gamets) as last_gamets from eventlog");
+$res2 = $db->fetchAll("select max(ts) as ts from eventlog where gamets='{$res[0]["last_gamets"]}'");
+
+$last_gamets = $res[0]["last_gamets"] + 1;
+$last_ts     = $res2[0]["ts"];
+
+$gameRequest = ["inputtext", "0", $last_gamets, $argv[1]];
+
+$request = $argv[1];
+
+$dynamicBiography = buildDynamicBiography($GLOBALS);
+$npcMaster        = new NpcMaster();
+$currentNpcData   = $npcMaster->getByName($argv[1]);
+$extended_data    = $npcMaster->getExtendedData($currentNpcData);
+
+if (isset($extended_data["middle_term_memory"])) {
+    $middle_term_memory = end($extended_data["middle_term_memory"]);
+    $dynamicBiography .= "\n\n<middle_term_memory>\nPast events\n{$middle_term_memory}\n</middle_term_memory>";
+
+}
+
+// Things that happened after last iteration
+$npcNameEsc = $db->escape($GLOBALS["HERIKA_NAME"]);
+$query      = "SELECT max(gamets) as  gamets from speech where
+    (speaker='$npcNameEsc' or listener='$npcNameEsc' or companions like '%|$npcNameEsc|%')
+    ";
+
+error_log($query);
+$lastIt       = $db->fetchOne($query);
+$lastItNumber = $lastIt["gamets"] ?? 0;
+
+$task                = "";
+$history             = "\n<last_dialogue>\n";
+$sqlfilter           = " and gamets<$lastItNumber and type<>'prechat' and type<>'itemfound' and type<>'infoaction' and type<>'npcspellcast' and data not like '%inner thoughts%' ";
+$contextDataHistoric = DataLastDataExpandedFor("{$GLOBALS["HERIKA_NAME"]}", 50 * -1, $sqlfilter);
+
+if (! empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) && $GLOBALS["HERIKA_NAME"] !== "The Narrator") {
+    $isContextNarratorLine = function (string $content): bool {
+        if (strpos($content, 'The Narrator:') !== 0) {
+            return false;
+        }
+
+        if (preg_match('/^The Narrator:\s*\(/', $content)) {
+            return true;
+        }
+        // parenthetical
+        if (strpos($content, 'The Narrator: background dialogue:') === 0) {
+            return true;
+        }
+
+        if (strpos($content, 'The Narrator: action moved to new location:') === 0) {
+            return true;
+        }
+
+        if (strpos($content, 'The Narrator: SCENARIO CHANGE') === 0) {
+            return true;
+        }
+
+        if (preg_match('/^The Narrator:\s*about\s+\d+\s+hours\s+later/i', $content)) {
+            return true;
+        }
+
+        return false;
+    };
+    $contextDataHistoric = array_values(array_filter($contextDataHistoric, function ($entry) use ($isContextNarratorLine) {
+        if (! is_array($entry)) {
+            return true;
+        }
+
+        $content = isset($entry['content']) ? (string) $entry['content'] : '';
+        if (strpos($content, '(Talking to The Narrator)') !== false) {
+            return false;
+        }
+
+        if (strpos($content, 'The Narrator:') === 0) {
+            return $isContextNarratorLine($content);
+        }
+        return true;
+    }));
+}
+foreach ($contextDataHistoric as $element) {
+    if ($element["role"] != "assistant") {
+        $history .= trim("{$element["content"]}") . PHP_EOL . PHP_EOL;
+    } else {
+        $history .= trim("{$GLOBALS["HERIKA_NAME"]}: {$element["content"]}") . PHP_EOL . PHP_EOL;
+    }
+
+}
+$history .= "\nNote: {$GLOBALS["PLAYER_NAME"]} leaves and is absent from this point on.\n</last_dialogue>\n";
+
+$query = "SELECT location,gamets from speech where
+    (speaker='$npcNameEsc' or listener='$npcNameEsc' or companions like '%|$npcNameEsc|%')
+    order by gamets desc,ts desc
+    ";
+
+$lastLoc = $db->fetchOne($query);
+error_log($query);
+
+// Diary entries after last iteration
+
+$cn     = $db->escape($GLOBALS["HERIKA_NAME"]);
+$query2 = "SELECT content,gamets,topic FROM diarylog
+ where people='$cn' and gamets>{$lastIt["gamets"]} and (topic='Sent Letter' or topic='Journal Note')
+ order by gamets desc ,ts desc limit 5 offset 0";
+error_log($query2);
+$diaryEntry   = [];
+$diaryEntries = $db->fetchAll($query2);
+foreach (array_reverse($diaryEntries) as $dentry) {
+    //$history .= "\n<diary_entry>\n{$dentry["content"]}\n</diary_entry>\n";
+    $diaryEntry[] = ["gamets" => $dentry["gamets"], "content" => $dentry["content"], "type" => $dentry["topic"] == "Sent Letter" ? "sent_letter" : "diary_entry"];
+
+}
+
+$bgEvents = [];
+error_log("Last interaction {$lastIt["gamets"]}");
+if (isset($lastIt["gamets"])) {
+    $query2 = "SELECT gamets,data FROM eventlog where type='backgroundaction' and gamets>{$lastIt["gamets"]} order by gamets asc ,ts asc";
+    error_log($query2);
+    $backgroundEvents = $db->fetchAll($query2);
+    foreach ($backgroundEvents as $event) {
+        $eventParsed = json_decode($event["data"], true);
+        if (! $eventParsed["source"] || $eventParsed["source"] != "AIAgent.esp") // Only AIAgent.esp for now.
+        {
+            continue;
+        }
+
+        if (! $eventParsed["description"]) {
+            continue;
+        } else if ($eventParsed["description"] == "unknown") {
+            continue;
+        } else if ($eventParsed["actor"] != $GLOBALS["HERIKA_NAME"]) {
+            continue;
+        }
+
+        $hours      = ($event["gamets"] - $lastIt["gamets"]) * 0.0000024;
+        $bgEvents[] = ["gamets" => $event["gamets"], "content" => "{$eventParsed["description"]}", "type" => "event"];
+
+    }
+
+}
+
+$rumors = [];
+error_log("Last interaction {$lastIt["gamets"]}, {$lastLoc["location"]}");
+$currentHoldEsc = $db->escape($lastLoc["location"]);
+if (isset($lastIt["gamets"])) {
+    $query2 = "SELECT gamets,content FROM rumors WHERE hold='{$currentHoldEsc}' and gamets>" . ($gameRequest[2] - ((3600 * 7) / 0.00864));
+    error_log($query2);
+    $rumorsData = $db->fetchAll($query2);
+    foreach ($rumors as $event) {
+        $rumors[] = ["gamets" => $event["gamets"], "content" => "{$event["content"]}", "type" => "rumor"];
+
+    }
+
+}
+
+$bgEvents[] = ["gamets" => $lastLoc["gamets"], "content" => "{$lastLoc["location"]}", "type" => "last_known_location"];
+
+print_r($bgEvents);
+
+// Must mix bgEvents array and diaryEntry array, and order them using key gamets asc
+$combinedEvents = array_merge($bgEvents, $diaryEntry, $rumors);
+usort($combinedEvents, function ($a, $b) {
+    return $a['gamets'] <=> $b['gamets'];
+});
+
+print_r($combinedEvents);
+$previous = 0;
+foreach ($combinedEvents as $dentry) {
+    if ($dentry["type"] == "event" && $previous) {
+        $hours             = ($dentry["gamets"] - $previous) * 0.0000024;
+        $dentry["content"] = "* $hours hours later: {$dentry["content"]}";
+    }
+    $previous = $dentry["gamets"];
+    $history .= "\n<{$dentry["type"]}>\n{$dentry["content"]}\n</{$dentry["type"]}>\n";
+
+}
+
+echo "===========================================================" . PHP_EOL;
+
+// WIP
+$daysPassed = round(($last_gamets - $lastIt["gamets"]) * 0.0000024 / 24, 2);
+if (sizeof($combinedEvents) == 0) {
+
+    $history .= "Note: After this events, $daysPassed has passed";
+}
+
+//$head[] = ['role' => 'system', 'content' => "You're an AI writer. Examine this character's logbook from a story in the Skyrim universe."];
+$head["en"][] = ['role' => 'system', 'content' => "Eres un asistente de escritor. Examina este texto con hechos ocurridos en el universo ficticio de Skyrim (The Elder Scrolls)"];
+$head["es"][] = ['role' => 'system', 'content' => "You are a writing assistant. Examine this text containing events that occurred in the fictional universe of Skyrim (The Elder Scrolls)."];
+
+$userprompt["es"] = "El personaje principal en este cuaderno de bitácora es {$GLOBALS["HERIKA_NAME"]}.
+Lee el historial de contexto (context_history), las memorias recientes (middle_term_memory) , prestando atención a los eventos notables y a los nombres de personajes relevantes.
+
+
+Basandote en toda esta informacion, genera un soliloquio de {$GLOBALS["HERIKA_NAME"]},
+Ten en cuenta la seccion <speech_style> para el estilo de redacción.
+
+Este soliloquio deberia de contener lo que el personaje deberia de haber hecho en estos ultimos $daysPassed dia(s)
+* Que actividades ha de desarrollado.
+* Que posibles sucesos/encuentros podrian haber sucedido.
+* Pensamientos intimos.
+
+Nota importante: El personaje '{$GLOBALS["PLAYER_NAME"]}' y  {$GLOBALS["HERIKA_NAME"]} estan separados despues los hechos de <context_history>.
+Escribe en español en un par de parrafos un monologo, como si fueses {$GLOBALS["HERIKA_NAME"]} en primera persona hablandose a si misma/mismo.
+";
+
+$userprompt["en"] = "
+The main character in this logbook is {$GLOBALS["HERIKA_NAME"]}.
+Read the context history (context_history) and the recent memories (middle_term_memory), paying attention to notable events and the names of relevant characters.
+
+Based on all this information, generate an inner thought - soliloquy for {$GLOBALS["HERIKA_NAME"]}.
+Take into account the <speech_style> section for the writing style.
+
+This soliloquy should reflect what the character might have done over the last $daysPassed day(s):
+
+ * What activities they have engaged in. Detalied list.
+ * What possible events or encounters might have occurred.
+ * Intimate thoughts.
+
+Important note: Character {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]} ARE NOT  IN THE SAME PLACE after <context_history> events.
+Write in english as if you were {$GLOBALS["HERIKA_NAME"]}, soliloquy, speaking to yourself in first person.
+";
+
+$metadata   = json_decode($currentNpcData["metadata"], true);
+$metadata_p = json_decode($currentProfileData["metadata"], true);
+
+if ($metadata["CORE_LANG"] == "es" || $metadata_p["CORE_LANG"] == "es") {
+    $LANG = "es";
+} else {
+    $LANG = "en";
+}
+
+$prompt[] = ['role' => 'user', 'content' => "<character_sheet>\n{$GLOBALS["HERIKA_NAME"]}:\n$dynamicBiography\n</character_sheet>"];
+$prompt[] = ['role' => 'user', 'content' => "<context_history>\nContext History\n$history\n$task\n</context_history>"];
+
+$prompt[] = ['role' => 'user', 'content' => $userprompt[$LANG]];
+
+$contextData = array_merge($head[$LANG], $prompt);
+
+Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
+
+$connectionHandler = $connector->getConnector($currentConnectorData);
+$buffer            = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 2048, "model" => "google/gemini-2.5-flash-lite", "temperature" => 0.7], "backgroundlife");
+Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
+
+print_r($buffer . PHP_EOL);
+
+
+if (isset($argv[2]) && $argv[2] == "dryrun") {
+    die();
+}
+
+$extdata=$npcMaster->getExtendedData($currentNpcData);
+$extdata["background_life_last_updated"]=$last_gamets;
+$currentNpcData=$npcMaster->setExtendedData($currentNpcData,$extdata);
+$npcMaster->updateByArray($currentNpcData);
+
+// Step-2
+$prompt = [];
+if (isset($argv[2]) && $argv[2] == "full") {
+    $prompt[] = ['role' => 'system', 'content' => "
+Read the following text, which represents a mental note or inner monologue of a character within the Skyrim universe.
+Based on the content of the text, propose one of the following actions that would make sense for the development of the story:
+
+Character's name is {$GLOBALS["HERIKA_NAME"]}.
+$dynamicBiography
+
+<context_history>\nContext History\n$history\n$task\n</context_history>
+
+<text>
+$buffer
+</text>
+
+Possible actions:
+StayAtPlace - the character decides to remain where they currently are.
+TravelTo:<Place> - the character decides to travel to another location (replace <Place> with the chosen destination). Note that character should have a good reason to travel.
+SpreadRumor - the character create some rumorology
+Your answer must use markup - XML like - format, containing exactly 3 elements:
+
+<action> ... </action>
+<rumor> ... </rumor>
+<notification> ... </notification>
+
+
+Where:
+
+<action> describes the chosen action (e.g., StayAtPlace,TravelTo,SpreadRumor)
+
+<rumor> rumor spreaded if any
+
+<notification>Write it as a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["HERIKA_NAME"]}. Use same language as <text>.
+
+"];
+} else {
+    $prompt[] = ['role' => 'system', 'content' => "
+Read the following text, which represents a mental note or inner monologue of a character within the Skyrim universe.
+Based on the content of the text, propose one of the following actions that would make sense for the development of the story:
+
+Character's name is {$GLOBALS["HERIKA_NAME"]}.
+$dynamicBiography
+
+<text>
+$buffer
+</text>
+
+Possible actions:
+StayAtPlace - the character decides to remain where they currently are.
+Your answer must use markup - XML like - format, containing exactly two elements:
+
+<action> ... </action>
+<reason> ... </reason>
+<notification> ... </notification>
+
+
+Where:
+
+<action> describes the chosen action (e.g., StayAtPlace or TravelTo)
+
+<reason> briefly explains why this action fits the character’s current situation or motivations.
+
+<notification>Write it as a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["HERIKA_NAME"]}. Use same language as <text>.
+
+"];
+}
+$buffer2 = $connectionHandler->fast_request($prompt, ["MAX_TOKENS" => 2048, "model" => "mistralai/mistral-small-3.2-24b-instruct", "temperature" => 0], "backgroundlife");
+
+print_r($buffer2);
+//$parsed = parse_xml_fragment($buffer2);
+
+$parsed = [];
+$parsed["action"]=manual_get_tag_content($buffer2,"action");
+$parsed["notification"]=manual_get_tag_content($buffer2,"notification");
+$parsed["rumor"]=manual_get_tag_content($buffer2,"rumor");
+
+print_r($parsed);
+
+
+
+if (is_array($parsed)) {
+
+    $refHexString = (convertSignedToUnsignedHex(hexdec($currentNpcData["refid"])));
+
+    if (isset($parsed["action"])) {
+        $cmds = explode(":", $parsed["action"]);
+        if ($cmds[0] == "TravelTo") {
+            handleTravelToAction($cmds[1], $currentNpcData, $GLOBALS["HERIKA_NAME"], $last_ts, $last_gamets, $momentum, $eventParsed, $db);
+
+        } else if ($cmds[0] == "StayAtPlace") {
+            handleStayAtPlaceAction($cmds[1], $currentNpcData, $GLOBALS["HERIKA_NAME"], $last_ts, $last_gamets, $momentum, $db);
+        }
+    }
+
+    if ($parsed["notification"]) {
+        $dateStringSK = convert_gamets2skyrim_long_date(DataLastKnownGameTS());
+        $fullTitle    = "A letter from {$GLOBALS["HERIKA_NAME"]} ($dateStringSK)";
+
+        // This is going to create a picture with the letter.
+        createLetter($fullTitle, $parsed["notification"]);
+
+        // Will make plugin to download letter image to data folder, and will be stored using title's hash as name
+        $db->insert(
+            'responselog',
+            [
+                'localts' => time(),
+                'sent'    => 0,
+                'actor'   => "rolemaster",
+                'text'    => "",
+                'action'  => "rolecommand|generateLetter@$fullTitle",
+                'tag'     => '',
+            ]
+        );
+        // Will make plugin to generate formid for letter, and will send vanilla courier
+
+        $db->insert(
+            'responselog',
+            [
+                'localts' => time(),
+                'sent'    => 0,
+                'actor'   => "rolemaster",
+                'text'    => "",
+                'action'  => "rolecommand|BackgroundCmd@$refHexString@SendNote/" . $fullTitle,
+                'tag'     => '',
+            ]
+        );
+
+        $db->insert(
+            'eventlog',
+            [
+                'ts'     => $last_ts,
+                'gamets' => $last_gamets + 1,
+                'type'   => "chat",
+                'data'   => "The Narrator:{$GLOBALS["HERIKA_NAME"]} sent this letter to {$GLOBALS["PLAYER_NAME"]} " . "\n{$parsed["notification"]} )",
+                'sess' => $momentum,
+                'localts' => time(),
+                'people' => $GLOBALS["HERIKA_NAME"],
+                'location' => $eventParsed["location"] ?? null,
+                'party' => "",
+            ]
+        );
+        $db->insert(
+            'diarylog',
+            [
+                'ts'       => $last_ts,
+                'gamets'   => $last_gamets + 5,
+                'topic'    => "Sent Letter",
+                'content'  => convert_gamets2skyrim_long_date($last_gamets) . "\n" . $parsed["notification"],
+                'tags'     => "backgroundlife",
+                'people'   => $GLOBALS["HERIKA_NAME"],
+                'location' => $eventParsed["location"] ?? null,
+                'sess'     => $momentum,
+                'localts'  => time(),
+            ]
+        );
+    }
+
+    if ($parsed["rumor"]) {
+        shell_exec("php debug/simple_llm_request_with_context_rumors_custom.php " . escapeshellarg($parsed["rumor"]));
+    }
+}
+
+$db->insert(
+    'eventlog',
+    [
+        'ts'     => $last_ts,
+        'gamets' => $last_gamets,
+        'type'   => "chat",
+        'data'   => "{$GLOBALS["HERIKA_NAME"]}'s inner thoughts: " . $buffer . " )",
+        'sess'     => $momentum,
+        'localts'  => time(),
+        'people'   => $GLOBALS["HERIKA_NAME"],
+        'location' => $eventParsed["location"] ?? null,
+        'party'    => "",
+    ]
+);
+
+$db->insert(
+    'diarylog',
+    [
+        'ts'       => $last_ts,
+        'gamets'   => $last_gamets,
+        'topic'    => "Journal Note",
+        'content'  => convert_gamets2skyrim_long_date($last_gamets) . "\n" . trim($buffer),
+        'tags'     => "Auto-diary, backgroundlife",
+        'people'   => $GLOBALS["HERIKA_NAME"],
+        'location' => $eventParsed["location"] ?? null,
+        'sess'     => $momentum,
+        'localts'  => time(),
+    ]
+);
+
+logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"], trim($buffer), $momentum, $last_gamets, 'backgroundlife_diary', $last_ts);
+// Mark NPC as background_life_enabled
+$npcManager                          = new NpcMaster();
+$npcData                             = $npcManager->getByName($GLOBALS["HERIKA_NAME"]);
+$extended                            = json_decode($npcData["extended_data"], true);
+$extended["background_life_enabled"] = true;
+$npcData["extended_data"]            = json_encode($extended);
+$npcManager->updateByArray($npcData);
+
+die();
