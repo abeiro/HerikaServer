@@ -619,6 +619,248 @@ function removeEmptyElements(array $array): array {
     });
 }
 
+/**
+ * Consolidate repeated similar events
+ * 
+ * @param array $events Array of event entries with role, content, subtype, type, gamets
+ * @return array Consolidated array of events
+ */
+function consolidateEvents(array $events): array {
+    // Hardcoded defaults - always enabled for efficiency
+    $timeWindow = 300; // 5 minutes game time
+    $typesToConsolidate = ["death", "itemfound", "rpg_word", "spellcast", "npcspellcast", "infoaction"];
+    
+    $consolidated = [];
+    $consolidationBuffer = [];
+    
+    foreach ($events as $event) {
+        if (!isset($event['type']) || !in_array($event['type'], $typesToConsolidate)) {
+            // Flush buffer if we hit a non-consolidatable event
+            if (!empty($consolidationBuffer)) {
+                $consolidated = array_merge($consolidated, flushConsolidationBuffer($consolidationBuffer));
+                $consolidationBuffer = [];
+            }
+            $consolidated[] = $event;
+            continue;
+        }
+        
+        // Extract pattern from event content
+        $pattern = extractEventPattern($event);
+        if ($pattern === null) {
+            // Can't extract pattern, add as-is
+            if (!empty($consolidationBuffer)) {
+                $consolidated = array_merge($consolidated, flushConsolidationBuffer($consolidationBuffer));
+                $consolidationBuffer = [];
+            }
+            $consolidated[] = $event;
+            continue;
+        }
+        
+        // Check if this event can be merged with buffer
+        $merged = false;
+        $actorName = extractActorName($event['content']);
+        
+        foreach ($consolidationBuffer as $key => &$buffered) {
+            if ($buffered['pattern'] === $pattern) {
+                // Check time window
+                $timeDiff = abs(($event['gamets'] ?? 0) - ($buffered['first_gamets'] ?? 0));
+                if ($timeDiff <= $timeWindow) {
+                    // Check if this is a different actor doing the same action (e.g., combat engagement)
+                    $isMultiActorPattern = (strpos($pattern, 'combat:') === 0 || strpos($pattern, 'activate:') === 0);
+                    
+                    if ($isMultiActorPattern && $actorName) {
+                        // Multi-actor pattern: collect actor names
+                        if (!isset($buffered['actors'])) {
+                            $buffered['actors'] = [extractActorName($buffered['event']['content'])];
+                        }
+                        if (!in_array($actorName, $buffered['actors'])) {
+                            $buffered['actors'][] = $actorName;
+                        }
+                    } elseif (strpos($pattern, 'itemfound:') === 0) {
+                        // Item collection pattern: collect items
+                        if (!isset($buffered['items'])) {
+                            $buffered['items'] = [extractItemInfo($buffered['event']['content'])];
+                        }
+                        $buffered['items'][] = extractItemInfo($event['content']);
+                    } else {
+                        // Same actor repeating: increment count
+                        $buffered['count']++;
+                    }
+                    
+                    $buffered['last_gamets'] = $event['gamets'] ?? 0;
+                    $merged = true;
+                    break;
+                }
+            }
+        }
+        unset($buffered);
+        
+        if (!$merged) {
+            // Flush older patterns and start new buffer entry
+            $consolidationBuffer[] = [
+                'event' => $event,
+                'pattern' => $pattern,
+                'count' => 1,
+                'first_gamets' => $event['gamets'] ?? 0,
+                'last_gamets' => $event['gamets'] ?? 0,
+                'actors' => $actorName ? [$actorName] : null,
+                'items' => (strpos($pattern, 'itemfound:') === 0) ? [extractItemInfo($event['content'])] : null
+            ];
+        }
+    }
+    
+    // Flush remaining buffer
+    if (!empty($consolidationBuffer)) {
+        $consolidated = array_merge($consolidated, flushConsolidationBuffer($consolidationBuffer));
+    }
+    
+    return $consolidated;
+}
+
+/**
+ * Extract actor name from event content
+ * 
+ * @param string $content Event content
+ * @return string|null Actor name or null if not extractable
+ */
+function extractActorName(string $content): ?string {
+    // Extract actor from patterns like "ActorName does something"
+    if (preg_match('/^([^:]+?)(?:\s+(?:engages combat with|activates|uses|casts|has defeated|found|took|looted|gave)\s+.+)$/i', $content, $matches)) {
+        return trim($matches[1]);
+    }
+    return null;
+}
+
+/**
+ * Extract item information from item pickup event
+ * 
+ * @param string $content Event content
+ * @return string|null Item description with quantity
+ */
+function extractItemInfo(string $content): ?string {
+    // Extract "N ItemName from/in X" or just "N ItemName"
+    if (preg_match('/(?:found|took|looted|traded|gave)\s+(.+?)(?:,\(value.+\))?$/i', $content, $matches)) {
+        return trim($matches[1]);
+    }
+    return null;
+}
+
+/**
+ * Extract consolidation pattern from event
+ * 
+ * @param array $event Event data
+ * @return string|null Pattern identifier or null if not extractable
+ */
+function extractEventPattern(array $event): ?string {
+    $content = $event['content'] ?? '';
+    $type = $event['type'] ?? '';
+    
+    if ($type === 'death') {
+        // Pattern: "X DIED" (just death announcement)
+        if (preg_match('/^(.+?)\s+died\s*$/i', $content, $matches)) {
+            $victim = trim($matches[1]);
+            return "death_announce:{$victim}";
+        }
+        // Pattern: "X has defeated Y" or "X killed Y" etc
+        // Extract: actor + victim
+        if (preg_match('/^(.+?)\s+(?:has defeated|defeated|killed|slain)\s+(.+?)(?:\s+with\s+.+)?(?:\s+in an awesome move)?$/i', $content, $matches)) {
+            $actor = trim($matches[1]);
+            $victim = trim($matches[2]);
+            return "death:{$actor}→{$victim}";
+        }
+    } elseif ($type === 'itemfound') {
+        // Pattern: "X found/took/looted N Y" or "X found/took/looted Y"
+        // Group by actor only for multi-item consolidation
+        if (preg_match('/^(.+?)\s+(found|took|looted|traded|gave)\s+(.+)$/i', $content, $matches)) {
+            $actor = trim($matches[1]);
+            $action = trim($matches[2]);
+            return "itemfound:{$actor}→{$action}"; // Only actor+action, group all items together
+        }
+    } elseif ($type === 'rpg_word') {
+        // Generic combat shouts - consolidate identical ones
+        return "rpg_word:" . md5($content);
+    } elseif ($type === 'spellcast' || $type === 'npcspellcast') {
+        // Pattern: "X casts Y" or "X uses Y"
+        if (preg_match('/^(.+?)\s+(?:casts|uses)\s+(.+?)$/i', $content, $matches)) {
+            $actor = trim($matches[1]);
+            $spell = trim($matches[2]);
+            return "spell:{$actor}→{$spell}";
+        }
+    } elseif ($type === 'infoaction') {
+        // Pattern: "X engages combat with Y" - group by enemy only (multi-actor consolidation)
+        if (preg_match('/^(.+?)\s+engages combat with\s+(.+?)$/i', $content, $matches)) {
+            $enemy = trim($matches[2]);
+            return "combat:{$enemy}"; // Only enemy in pattern, so multiple actors get grouped
+        }
+        // Pattern: "X activates Y" - group by object only (multi-actor consolidation)
+        if (preg_match('/^(.+?)\s+activates\s+(.+?)$/i', $content, $matches)) {
+            $object = trim($matches[2]);
+            return "activate:{$object}"; // Only object in pattern
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * Flush consolidation buffer and format consolidated entries
+ * 
+ * @param array $buffer Consolidation buffer
+ * @return array Formatted events
+ */
+function flushConsolidationBuffer(array $buffer): array {
+    $result = [];
+    
+    foreach ($buffer as $buffered) {
+        $event = $buffered['event'];
+        
+        // Check if this is a multi-item consolidation
+        if (isset($buffered['items']) && count($buffered['items']) > 1) {
+            // Multiple items picked up by same actor - list them
+            $content = $event['content'];
+            
+            if (preg_match('/^(.+?)\s+(found|took|looted|traded|gave)\s+/i', $content, $matches)) {
+                $actor = trim($matches[1]);
+                $action = trim($matches[2]);
+                
+                // Build item list
+                $itemList = implode(', ', array_filter($buffered['items']));
+                $event['content'] = "{$actor} {$action} {$itemList}";
+            }
+        } elseif (isset($buffered['actors']) && count($buffered['actors']) > 1) {
+            // Multiple actors doing the same action - list them
+            $actorList = implode(', ', $buffered['actors']);
+            $content = $event['content'];
+            
+            // Replace single actor name with list and adjust verb to plural
+            if (preg_match('/^(.+?)\s+(engages combat with|activates|uses|casts)\s+(.+?)$/i', $content, $matches)) {
+                $action = trim($matches[2]);
+                $target = trim($matches[3]);
+                
+                // Convert verb to plural form
+                if (stripos($action, 'engages') !== false) {
+                    $action = 'engage combat with';
+                } elseif (stripos($action, 'activates') !== false) {
+                    $action = 'activate';
+                } elseif (stripos($action, 'uses') !== false) {
+                    $action = 'use';
+                } elseif (stripos($action, 'casts') !== false) {
+                    $action = 'cast';
+                }
+                
+                $event['content'] = "{$actorList} {$action} {$target}";
+            }
+        } elseif ($buffered['count'] > 1) {
+            // Same actor repeating - add count suffix
+            $event['content'] = trim($event['content']) . " (x{$buffered['count']})";
+        }
+        
+        $result[] = $event;
+    }
+    
+    return $result;
+}
+
 
 function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
 
@@ -983,6 +1225,14 @@ New setting: $currentLocation
     error_log("[buildHistoricContext] $localFlag memories removed");
     $lastDialogFull=array_reverse($lastDialogFullOnlyLastMemory);
     // End of memory logs cleaning
+    
+    // Consolidate repeated events to reduce context size
+    $eventCountBefore = count($lastDialogFull);
+    $lastDialogFull = consolidateEvents($lastDialogFull);
+    $eventCountAfter = count($lastDialogFull);
+    if ($eventCountBefore > $eventCountAfter) {
+        error_log("[buildHistoricContext] Consolidated events: {$eventCountBefore} → {$eventCountAfter} (saved " . ($eventCountBefore - $eventCountAfter) . " slots)");
+    }
 
     file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_.txt",print_r($query,true),FILE_APPEND);
     
