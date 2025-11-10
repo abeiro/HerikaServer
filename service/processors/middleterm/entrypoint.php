@@ -37,6 +37,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     }
 
     // BgL tracking coords
+    /*
     $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->>'last_coords' IS NOT NULL ");
     foreach ($allEnabledBgLNpc as $npc) {
         $mwdata=json_decode($npc["metadata"],true);
@@ -46,7 +47,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
         }
         
     }
-
+    */
     // BgL commands
     $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_last_updated' IS NOT NULL ");
     foreach ($allEnabledBgLNpc as $npc) {

@@ -3287,10 +3287,6 @@ function call_llm() {
                             } else
                                 $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TakeGoldFromPlayer@$mang4";
 
-
-        
-
-
                         } else if ($actionParts2[0]=="SetCurrentTask") {
                             // Lets polish the parammeters
                             if (empty(trim($actionParts2[1]))) {

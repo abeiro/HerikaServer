@@ -734,45 +734,45 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 )
             );
     } else if ($vars[0]=="chim_renamenpc") {
-    // Convert signed to unsigned using bitwise AND
-    $unsignedInt = ($vars[3]+0) & 0xFFFFFFFF;
-    // Represent as 8-digit zero-padded hex with 0x prefix
-    $unsignedIntHex = '0x' . strtoupper(str_pad(dechex($unsignedInt), 8, '0', STR_PAD_LEFT));
-        
-    $npcMaster=new NpcMaster();
-    $oldNpcData=$npcMaster->getByName($vars[1]);
-    $newNpcData=$npcMaster->getByName($vars[2]);
-    
-    if (!$newNpcData) {
-        createProfile($vars[2]);
+        // Convert signed to unsigned using bitwise AND
+        $unsignedInt = ($vars[3]+0) & 0xFFFFFFFF;
+        // Represent as 8-digit zero-padded hex with 0x prefix
+        $unsignedIntHex = '0x' . strtoupper(str_pad(dechex($unsignedInt), 8, '0', STR_PAD_LEFT));
+            
+        $npcMaster=new NpcMaster();
+        $oldNpcData=$npcMaster->getByName($vars[1]);
         $newNpcData=$npcMaster->getByName($vars[2]);
-    }
+        
+        if (!$newNpcData) {
+            createProfile($vars[2]);
+            $newNpcData=$npcMaster->getByName($vars[2]);
+        }
 
-    $npcMaster->renameNPC($vars[1],$vars[2]);
+        $npcMaster->renameNPC($vars[1],$vars[2]);
 
-        $db->insert(
-            'responselog',
-            [
-                'localts' => time(),
-                'sent'    => 0,
-                'actor'   => "rolemaster",
-                'text'    => "",
-                'action'  => 'rolecommand|RenameNPC@'.$unsignedIntHex.'@'.$db->escape($vars[2]),
-                'tag'     => '',
-            ]
+            $db->insert(
+                'responselog',
+                [
+                    'localts' => time(),
+                    'sent'    => 0,
+                    'actor'   => "rolemaster",
+                    'text'    => "",
+                    'action'  => 'rolecommand|RenameNPC@'.$unsignedIntHex.'@'.$db->escape($vars[2]),
+                    'tag'     => '',
+                ]
+            );
+            
+        }
+        
+
+        $db->upsertRowOnConflict(
+            'conf_opts',
+            array(
+                'id' => $vars[0],
+                'value' => $vars[1]
+            ),
+            "id"
         );
-         
-    }
-    
-
-    $db->upsertRowOnConflict(
-        'conf_opts',
-        array(
-            'id' => $vars[0],
-            'value' => $vars[1]
-        ),
-        "id"
-    );
     
     
     $MUST_END=true;

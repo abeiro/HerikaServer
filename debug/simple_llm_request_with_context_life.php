@@ -331,9 +331,9 @@ $buffer
 </text>
 
 Possible actions:
-StayAtPlace - the character decides to remain where they currently are.
-TravelTo:<Place> - the character decides to travel to another location (replace <Place> with the chosen destination). Note that character should have a good reason to travel.
-SpreadRumor - the character create some rumorology
+StayAtPlace - The character remains in their current location, performing activities locally.
+TravelTo:<Place> - the character decides to travel to another location (replace <Place> with the chosen destination).The character should have a clear and logical reason for traveling.
+SpreadRumor - The character initiates or influences a rumor. Use this action whenever the character’s activities affect others indirectly (e.g., “The character promotes fair trade locally, causing rumors of happier merchants.”).
 Your answer must use markup - XML like - format, containing exactly 3 elements:
 
 <action> ... </action>
@@ -343,9 +343,9 @@ Your answer must use markup - XML like - format, containing exactly 3 elements:
 
 Where:
 
-<action> describes the chosen action (e.g., StayAtPlace,TravelTo,SpreadRumor)
+<action>chosen action (e.g., StayAtPlace,TravelTo:<Place>,SpreadRumor)
 
-<rumor> rumor spreaded if any
+<rumor> rumor spreaded or created
 
 <notification>Write it as a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["HERIKA_NAME"]}. Use same language as <text>.
 

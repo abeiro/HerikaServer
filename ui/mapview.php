@@ -15,6 +15,76 @@
         exit;
     }
 
+    // Handle AJAX request update
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+        if ($_POST['action'] === 'request_update') {
+            handleRequestUpdate();
+            exit;
+        } elseif ($_POST['action'] === 'request_action') {
+            handleRequestAction();
+            exit;
+        } elseif ($_POST['action'] === 'request_reporting') {
+            handleRequestReporting();
+            exit;
+        } elseif ($_POST['action'] === 'update_coords') {
+            handleUpdateCoords();
+            exit;
+        }
+    }
+
+    function handleRequestUpdate() {
+        global $enginePath;
+        // Add your handler code here
+
+        `php $enginePath/debug/simple_llm_request_with_context_life_command.php "The Narrator" TrackAll`;
+
+        echo json_encode(['ok' => true, 'message' => 'Update request processed']);
+    }
+
+    function handleRequestAction() {
+        global $enginePath;
+        $npcName = isset($_POST['npc_name']) ? $_POST['npc_name'] : null;
+        
+        if (!$npcName) {
+            echo json_encode(['ok' => false, 'message' => 'NPC name required']);
+            return;
+        }
+        
+        // Add your handler code here
+        `php $enginePath/debug/simple_llm_request_with_context_life.php "$npcName" full`;
+
+        echo json_encode(['ok' => true, 'message' => "Action request processed for $npcName"]);
+    }
+
+    function handleRequestReporting() {
+        global $enginePath;
+        $npcName = isset($_POST['npc_name']) ? $_POST['npc_name'] : null;
+        
+        if (!$npcName) {
+            echo json_encode(['ok' => false, 'message' => 'NPC name required']);
+            return;
+        }
+        
+        // Add your handler code here
+           // Add your handler code here
+        `php $enginePath/debug/simple_llm_request_with_context_life.php "$npcName" `;
+        echo json_encode(['ok' => true, 'message' => "Reporting request processed for $npcName"]);
+    }
+
+    function handleUpdateCoords() {
+        global $enginePath;
+        $npcName = isset($_POST['npc_name']) ? $_POST['npc_name'] : null;
+        
+        if (!$npcName) {
+            echo json_encode(['ok' => false, 'message' => 'NPC name required']);
+            return;
+        }
+        
+        // Add your handler code here
+        `php $enginePath/debug/simple_llm_request_with_context_life_command.php "$npcName" Track`;
+        echo json_encode(['ok' => true, 'message' => "Coords update processed for $npcName"]);
+    }
+
     // Coordinate translation constants (world bounds)
     $WORLD_X_MIN = -225242;
     $WORLD_X_MAX = 217068;
@@ -51,14 +121,18 @@
         ];
     }
 
+    $result  =pg_query($adminConn,"select max(gamets) as last_gamets from eventlog");
+    $res = pg_fetch_assoc($result);
+    $last_gamets = $res["last_gamets"];
+    $currentDate=convert_gamets2skyrim_date($last_gamets);
+
     // --- Query total cost grouped by request type ---
     $query = "
     SELECT
-        npc_name,metadata,id,refid,
+        npc_name,metadata,id,refid,extended_data->>'background_life_last_updated' as last_report,
         metadata->>'last_coords' as last_coords
     FROM core_npc_master
     WHERE extended_data->>'background_life_enabled' = 'true'
-    AND metadata->>'last_coords' IS NOT NULL
 ";
 
     $result = pg_query($adminConn, $query);
@@ -83,20 +157,25 @@
                 $y = $coordsData[1];
             } else {
                 error_log("[MAP] Skipping {$row["npc_name"]} {$coords}" . print_r($coordsData, true));
-                continue; // Skip invalid coordinates
+                //continue; // Skip invalid coordinates
+                $x=$WORLD_X_MIN;
+                $y=$WORLD_Y_MIN;
+                $coordsData[3].=" missing coords";
             }
 
             $meta      = json_decode($row['metadata'], true);
             $markers[] = [
-                'name'     => $row['npc_name'],
-                'ingame_x' => (int) $x,
-                'ingame_y' => (int) $y,
-                'color'    => generateRandomColor(),
-                'size'     => 10,
-                'tag'      => $coordsData[3],
-                'figure'   => isset($meta["portrait"]) ? $meta["portrait"] : null,
-                'id'       => $row["id"],
-                'refid'    => $row["refid"],
+                'name'        => $row['npc_name'],
+                'ingame_x'    => (int) $x,
+                'ingame_y'    => (int) $y,
+                'color'       => generateRandomColor(),
+                'size'        => 10,
+                'tag'         => $coordsData[3],
+                'figure'      => isset($meta["portrait"]) ? $meta["portrait"] : null,
+                'id'          => $row["id"],
+                'refid'       => $row["refid"],
+                'last_pos_ts' => $coordsData["last_updated"]?convert_gamets2skyrim_date($coordsData["last_updated"]).",hours ago:".round(($last_gamets-$coordsData["last_updated"]) *0.0000024,0):null,
+                'last_report' => convert_gamets2skyrim_date($row["last_report"]).",hours ago:".round(($last_gamets-$row["last_report"]) *0.0000024,0),
             ];
 
         }
@@ -128,15 +207,17 @@
             'ingame_y' => $marker['ingame_y'],
             'tag'      => $marker['tag'],
             'figure'   => $marker["figure"] ? "../data/pictures/{$marker["figure"]}" : "images/races/default.png",
-            'id'    => $marker['id'],
-            'refid' => $marker['refid'],
+            'id'          => $marker['id'],
+            'refid'       => $marker['refid'],
+            'last_pos_ts' => $marker["last_pos_ts"],
+            'last_report' => $marker["last_report"],
 
         ];
     }
 
     // Apply grid offset to markers at the same location
     $locationKey = [];
-    foreach ($translatedMarkers as $n=>$marker) {
+    foreach ($translatedMarkers as $n => $marker) {
         $key = $translatedMarkers[$n]['x'] . ',' . $translatedMarkers[$n]['y'];
 
         if (! isset($locationKey[$key])) {
@@ -158,7 +239,7 @@
         $translatedMarkers[$n]['offset_y'] = $offsetY;
     }
     unset($marker);
-    
+
 ?>
 <!DOCTYPE html>
 <html>
@@ -189,7 +270,7 @@
             border: 3px solid #ffcc00;
             box-shadow: 0 0 20px rgba(255, 204, 0, 0.3);
             margin: 20px auto;
-            width: 100%;
+            width: 75%;
             box-sizing: border-box;
         }
         .map-container img {
@@ -197,6 +278,7 @@
             width: 100%;
             height: auto;
             border: 1px solid #666;
+            
         }
         .marker {
             position: absolute;
@@ -221,8 +303,8 @@
             padding: 5px 10px;
             border-radius: 3px;
             white-space: nowrap;
-            font-size: 22px;
-            top: 100%;
+            font-size: 16px;
+            top: -1px;
             left: 50%;
             transform: translateX(-50%);
             margin-top: 5px;
@@ -244,10 +326,16 @@
             border-radius: 4px;
         }
         .marker-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            display: flex;
+            /* grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); */
             gap: 15px;
             margin-top: 20px;
+            justify-content: space-around;
+            align-content: center;
+            align-items: baseline;
+            justify-items: stretch;
+            flex-direction: row-reverse;
+            flex-wrap: wrap;
         }
         .marker-item {
             background: #333;
@@ -276,6 +364,9 @@
             color: #aaa;
             margin: 5px 0;
         }
+        .marker-item-coords ul {
+            padding-left: 5px;
+        }
         #mapImage {
             opacity:1;
         }
@@ -283,26 +374,67 @@
             color:white;
             float:none;
         }
+        .map-controls {
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
+            background: #222;
+            border-radius: 4px;
+        }
+        .map-controls button {
+            background: #ffcc00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .map-controls button:hover {
+            background: #ffdd44;
+            transform: scale(1.05);
+        }
+        .map-controls button:active {
+            transform: scale(0.95);
+        }
+        .map-controls span {
+            color: #ffcc00;
+            margin: 0 15px;
+            font-weight: bold;
+        }
+        img.thumb {
+
+        }
+        .marker-action-btn {
+            background: #ff8844;
+            color: #000;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        .marker-action-btn:hover {
+            background: #ffaa66;
+            transform: scale(1.05);
+        }
+        .marker-action-btn:active {
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>⚔ Skyrim Map - Location Markers ⚔</h1>
-
-        <div class="info-panel">
-            <strong>Map Information:</strong><br>
-            Dimensions:                        <?php echo $mapWidth; ?>×<?php echo $mapHeight; ?> pixels<br>
-            Total Markers:                           <?php echo sizeof($translatedMarkers); ?><br>
-            Coordinate System: In-game to Map Translation
-        </div>
-
-        <div class="map-container">
+        
+        <div class="map-container" >
             <img src="<?php echo $mapImageUrl; ?>" alt="Skyrim Map" id="mapImage">
 
-
-
             <?php
-                
 
                 foreach ($translatedMarkers as $marker) {
                     // Calculate position as percentage for responsive scaling
@@ -315,34 +447,214 @@
                     echo '<div class="marker" style="left: ' . $percentX . '%; top: ' . $percentY . '%; transform: translate(calc(-50% + ' . $offsetX . 'px), calc(-50% + ' . $offsetY . 'px));">';
                     echo '<div class="marker-dot" id="mkr_' . $marker['id'] . '" style="width: ' . ($marker['size'] * 2) . 'px; height: ' . ($marker['size'] * 2) . 'px; background-color: ' . $marker['color'] . '; opacity: 0.8;">';
                     echo '</div>';
-                    echo '<div class="marker-label">'.PHP_EOL;
-                    echo $marker['name'] . '<br>';
+                    echo '<div class="marker-label">' . PHP_EOL;
+                    echo "<a style='color:white;text-decoration:none' href='#dtl_{$marker["id"]}'>{$marker["name"]}</a></br>";
                     echo '<small>(' . $marker['x'] . ', ' . $marker['y'] . '),' . $marker['tag'] . '</small>';
-                    echo '<img src="' . $marker['figure'] . '" />';
+                    echo '<img class="thumb" src="' . $marker['figure'] . '" />';
+                    echo '<br/><small>Last reported:' . $marker['last_report'] . '</small>';
+                    echo '<br/><small>Last tracked:' . $marker['last_pos_ts'] . '</small>';
                     echo '</div>';
-                    echo '</div>'.PHP_EOL;
+                    echo '</div>' . PHP_EOL;
                 }
             ?>
         </div>
+        <div style="width:20%;float:right">
+            <h1>⚔ Skyrim Map - Location Markers ⚔</h1>
+            <div class="info-panel">
+                <strong>Map Information:</strong><br>
+                Dimensions:                                               <?php echo $mapWidth; ?>×<?php echo $mapHeight; ?> pixels<br>
+                Total Markers:                                                     <?php echo sizeof($translatedMarkers); ?><br>
+                Current date: <?php echo $currentDate?><br/>
+            </div>
 
+            <div class="map-controls">
+                <button onclick="zoomMap(0.8)">🔍− Shrink</button>
+                <button onclick="zoomMap(1)">⟲ Reset</button>
+                <button onclick="zoomMap(1.2)">🔍+ Expand</button>
+                <span id="zoomLevel">100%</span>
+                <button onclick="requestUpdate()" style="background: #44cc44; margin-left: 20px;">📤 Request Update</button>
+            </div>
+        </div>
+        <br break="all"/>
         <div class="info-panel">
             <strong>📍 Markers:</strong>
             <div class="marker-list">
                 <?php foreach ($translatedMarkers as $marker) {?>
-                    <div class="marker-item" style="border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>)" >
+                    <div id="dtl_<?php echo $marker['id'] ?>" class="marker-item" style="background-blend-mode: soft-light;border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>)" >
                         <h4>
-                            <span class="marker-item-color" style="background-color:                                                                                     <?php echo $marker['color']; ?>;"></span>
+                            <span class="marker-item-color" style="background-color:                                                                                                                                                                         <?php echo $marker['color']; ?>;"></span>
                             <a href="#mkr_<?php echo $marker['id'] ?>"><?php echo $marker['name']; ?></a>
                         </h4>
                         <div class="marker-item-coords">
-                            <strong>In-game:</strong> x=<?php echo $marker['ingame_x']; ?>, y=<?php echo $marker['ingame_y']; ?><br>
-                            <strong>Map:</strong> (<?php echo $marker['x']; ?>,<?php echo $marker['y']; ?>)
-                            <strong>RefId:</strong> (<?php echo $marker['refid']; ?>)
+                            <ul>
+                            <li><strong>In-game:</strong> x=<?php echo $marker['ingame_x']; ?>, y=<?php echo $marker['ingame_y']; ?></li>
+                            <li><strong>Map:</strong> (<?php echo $marker['x']; ?>,<?php echo $marker['y']; ?>)</li>
+                            <li><strong>RefId:</strong> (<?php echo $marker['refid']; ?>)</li>
+                            <li><strong>Last Pos Ts.:</strong> (<?php echo $marker['last_pos_ts']; ?>)</li>
+                            <li><strong>Last reported:</strong> (<?php echo $marker['last_report']; ?>)</li>
+                            </ul>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
+                            <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn">🎬 Request Action</button>
+                            <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #4488ff;">📋 Request Reporting</button>
+                            <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #44ff44;">📍 Update Coords</button>
                         </div>
                     </div>
                 <?php }?>
             </div>
         </div>
     </div>
+
+    <script>
+        let currentScale = 1;
+
+        function zoomMap(scale) {
+            if (scale === 1) {
+                currentScale = 1;
+            } else {
+                currentScale *= scale;
+            }
+
+            // Clamp scale between 0.5 and 2.5
+            currentScale = Math.max(0.5, Math.min(2.5, currentScale));
+
+            const mapContainer = document.querySelector('.map-container');
+            const zoomDisplay = document.getElementById('zoomLevel');
+
+            // Update width based on scale
+            mapContainer.style.maxWidth = (100 * currentScale) + '%';
+            mapContainer.style.margin = '20px auto';
+
+            // Update zoom display
+            zoomDisplay.textContent = Math.round(currentScale * 100) + '%';
+        }
+
+        function requestUpdate() {
+            const formData = new FormData();
+            formData.append('action', 'request_update');
+            showProcessing()
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ok) {
+                    alert('Update request sent!');
+                    // Optionally reload the page
+                    // location.reload();
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
+                }
+                hideProcessing()
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                hideProcessing()
+                alert('Request failed');
+            });
+        }
+
+        function requestAction(npcName) {
+            const formData = new FormData();
+            formData.append('action', 'request_action');
+            formData.append('npc_name', npcName);
+            showProcessing()
+
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ok) {
+                    alert(data.message || 'Action request sent!');
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
+                }
+                hideProcessing()
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                hideProcessing()
+                alert('Request failed');
+            });
+        }
+
+        function requestReporting(npcName) {
+            const formData = new FormData();
+            formData.append('action', 'request_reporting');
+            formData.append('npc_name', npcName);
+            showProcessing()
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ok) {
+                    alert(data.message || 'Reporting request sent!');
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
+                }
+                hideProcessing();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                hideProcessing();
+                alert('Request failed');
+            });
+        }
+
+        function updateCoords(npcName) {
+            const formData = new FormData();
+            formData.append('action', 'update_coords');
+            formData.append('npc_name', npcName);
+            showProcessing()
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ok) {
+                    alert(data.message || 'Coords update sent!');
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
+                }
+                hideProcessing();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Request failed');
+                hideProcessing();
+            });
+        }
+        function showProcessing()
+        {
+
+            processingMessage                           = document . createElement('div');
+            processingMessage . textContent             = 'Processing...';
+            processingMessage . style . position        = 'fixed';
+            processingMessage . style . top             = '50%';
+            processingMessage . style . left            = '50%';
+            processingMessage . style . transform       = 'translate(-50%, -50%)';
+            processingMessage . style . backgroundColor = '#000';
+            processingMessage . style . color           = '#fff';
+            processingMessage . style . padding         = '10px 20px';
+            processingMessage . style . borderRadius    = '8px';
+            processingMessage . style . zIndex          = '10001';
+            processingMessage . id                      = "processing_wheel";
+            document . body . appendChild(processingMessage);
+        }
+        function hideProcessing()
+        {
+            processingMessage . innerHTML      = '';
+            processingMessage . style . zIndex = '-10001';
+
+        }
+
+    var processingMessage;
+    </script>
 </body>
 </html>

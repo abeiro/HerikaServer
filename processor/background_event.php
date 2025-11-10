@@ -44,6 +44,9 @@ if (is_array($bgevent)) {
                         error_log("[BGL] {$npcData["npc_name"]} has finished action {$bgevent["name"]}");
 
                 }
+                $extended["background_life_last"]=$bgevent;
+                $npcData=$npcManager->setExtendedData($npcData,$extended);
+                $npcManager->updateByArray($npcData);
             }
         }
     }
