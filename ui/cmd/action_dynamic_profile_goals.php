@@ -101,12 +101,30 @@ if ($method === "POST") {
 
         // Get current goals value and prompt
         $currentGoals = isset($jsonDataInput["HERIKA_GOALS"]) ? $jsonDataInput["HERIKA_GOALS"] : '';
-        $updatePrompt = isset($GLOBALS["DYNAMIC_PROMPT_GOALS"]) ? $GLOBALS["DYNAMIC_PROMPT_GOALS"] : '';
+        
+        // Load prompt from database with fallback to $GLOBALS
+        $updatePrompt = null;
+        try {
+            $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'dynamic_prompt_goals'");
+            if ($promptData) {
+                $updatePrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+            }
+        } catch (Exception $e) {
+            // Silent fallback to $GLOBALS
+        }
+        
+        // Fallback to $GLOBALS if database load failed
+        if (empty($updatePrompt)) {
+            $updatePrompt = isset($GLOBALS["DYNAMIC_PROMPT_GOALS"]) ? $GLOBALS["DYNAMIC_PROMPT_GOALS"] : '';
+        }
 
         if (empty($updatePrompt)) {
             echo json_encode(["status" => "error", "message" => "DYNAMIC_PROMPT_GOALS not configured"]);
             exit;
         }
+        
+        // Replace placeholders in the prompt
+        $updatePrompt = str_replace('{HERIKA_NAME}', $jsonDataInput["HERIKA_NAME"], $updatePrompt);
 
         // Collect other profile fields for context
         $profileContext = [];

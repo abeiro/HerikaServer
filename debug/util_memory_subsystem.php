@@ -492,10 +492,26 @@ Note: Memories are stored in memory_summary table, which holds info from events/
                             "Here are additional instructions: {SUMMARY_PROMPT}";
                     }
 
+                    // Load SUMMARY_PROMPT from database with fallback to $GLOBALS
+                    $summaryPromptValue = null;
+                    try {
+                        $summaryPromptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'summary_prompt'");
+                        if ($summaryPromptData) {
+                            $summaryPromptValue = (!empty($summaryPromptData['custom_prompt'])) ? $summaryPromptData['custom_prompt'] : $summaryPromptData['default_prompt'];
+                        }
+                    } catch (Exception $e) {
+                        // Silent fallback to $GLOBALS
+                    }
+                    
+                    // Fallback to $GLOBALS if database load failed
+                    if (empty($summaryPromptValue)) {
+                        $summaryPromptValue = $GLOBALS["SUMMARY_PROMPT"] ?? '';
+                    }
+                    
                     // Replace placeholders with actual values
                     $memoryPromptProcessed = str_replace(
                         ['{PLAYER_NAME}', '{COMPANIONS_LINE}', '{SUMMARY_PROMPT}'],
-                        [$GLOBALS["PLAYER_NAME"], $companionsLine, $GLOBALS["SUMMARY_PROMPT"]],
+                        [$GLOBALS["PLAYER_NAME"], $companionsLine, $summaryPromptValue],
                         $memoryPrompt
                     );
 

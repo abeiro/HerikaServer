@@ -313,14 +313,15 @@ $gsSections = [
         [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
     ],
-    'Dynamic Prompts' => [
-        [ 'name' => 'DYNAMIC_PROMPT_PERSONALITY', 'type' => 'longstring' ],
-        [ 'name' => 'DYNAMIC_PROMPT_RELATIONSHIPS', 'type' => 'longstring' ],
-        [ 'name' => 'DYNAMIC_PROMPT_OCCUPATION', 'type' => 'longstring' ],
-        [ 'name' => 'DYNAMIC_PROMPT_SKILLS', 'type' => 'longstring' ],
-        [ 'name' => 'DYNAMIC_PROMPT_SPEECHSTYLE', 'type' => 'longstring' ],
-        [ 'name' => 'DYNAMIC_PROMPT_GOALS', 'type' => 'longstring' ],
-    ],
+    // 'Dynamic Prompts' => [
+    //     // All dynamic prompts have been migrated to Prompts Manager (⚙️Prompts Manager in Config Hub)
+    //     // [ 'name' => 'DYNAMIC_PROMPT_PERSONALITY', 'type' => 'longstring' ],
+    //     // [ 'name' => 'DYNAMIC_PROMPT_RELATIONSHIPS', 'type' => 'longstring' ],
+    //     // [ 'name' => 'DYNAMIC_PROMPT_OCCUPATION', 'type' => 'longstring' ],
+    //     // [ 'name' => 'DYNAMIC_PROMPT_SKILLS', 'type' => 'longstring' ],
+    //     // [ 'name' => 'DYNAMIC_PROMPT_SPEECHSTYLE', 'type' => 'longstring' ],
+    //     // [ 'name' => 'DYNAMIC_PROMPT_GOALS', 'type' => 'longstring' ],
+    // ],
     'Narrator' => [
         [ 'name' => 'NARRATOR_TALKS', 'type' => 'boolean' ],
         [ 'name' => 'NARRATOR_WELCOME', 'type' => 'boolean' ],
@@ -328,7 +329,8 @@ $gsSections = [
         [ 'name' => 'HIDE_NARRATOR_DIALOGUE', 'type' => 'boolean' ]
     ],
     'Memory' => [
-        [ 'name' => 'SUMMARY_PROMPT', 'type' => 'longstring' ],
+        // SUMMARY_PROMPT moved to Prompts Manager
+        // [ 'name' => 'SUMMARY_PROMPT', 'type' => 'longstring' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@TXTAI_URL', 'type' => 'url' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
