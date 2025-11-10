@@ -49,13 +49,13 @@ main { padding: 80px 10px 10px; height: 100vh; }
         <div class="tab-buttons">
             <button class="tab-button active" data-tab="npc">🌟CHIM NPCs</button>
             <button class="tab-button" data-tab="globals">🌐Global Settings</button>
-            <button class="tab-button" data-tab="prompts">⚙️Prompts Manager</button>
             <button class="tab-button" data-tab="profiles">🗃️Profiles</button>
             <button class="tab-button" data-tab="llm">🧠LLM Connectors</button>
             <button class="tab-button" data-tab="keys">🔑API Keys</button>
             <button class="tab-button" data-tab="oghma">🐙Oghma Infinium</button>
             <button class="tab-button" data-tab="npcbio">🪪NPC Biographies</button>
             <button class="tab-button" data-tab="actions">⚔️Action Editor</button>
+            <button class="tab-button" data-tab="prompts">💬Prompts Manager</button>
             <button class="tab-button" data-tab="xtts">🗣️XTTS Management</button>
             <button class="tab-button" data-tab="serverplugins">🔌Server Plugins</button>
         </div>
