@@ -21,6 +21,41 @@ if (!$conn) {
 $message = '';
 
 /********************************************************************
+ *  EXPORT CUSTOM PROMPTS TO CSV
+ ********************************************************************/
+if (isset($_GET['action']) && $_GET['action'] === 'export_custom') {
+    $query = "
+        SELECT prompt_key, custom_prompt
+        FROM $schema.prompts
+        WHERE custom_prompt IS NOT NULL AND custom_prompt != ''
+        ORDER BY prompt_key ASC
+    ";
+    $result = pg_query($conn, $query);
+    
+    if ($result) {
+        $filename = 'custom_prompts_' . date('Y-m-d_H-i-s') . '.csv';
+        
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        
+        $output = fopen('php://output', 'w');
+        
+        // Write header
+        fputcsv($output, ['prompt_key', 'custom_prompt']);
+        
+        // Write data
+        while ($row = pg_fetch_assoc($result)) {
+            fputcsv($output, [$row['prompt_key'], $row['custom_prompt']]);
+        }
+        
+        fclose($output);
+        exit;
+    }
+}
+
+/********************************************************************
  *  HANDLE AJAX REQUESTS BEFORE OUTPUT BUFFER
  ********************************************************************/
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
@@ -103,6 +138,86 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 $isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
 
 $debugPaneLink = false;
+
+/********************************************************************
+ *  IMPORT CUSTOM PROMPTS FROM CSV
+ ********************************************************************/
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'import_custom') {
+    if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] === UPLOAD_ERR_OK) {
+        $fileTmpPath = $_FILES['csv_file']['tmp_name'];
+        $fileExtension = strtolower(pathinfo($_FILES['csv_file']['name'], PATHINFO_EXTENSION));
+        
+        if ($fileExtension === 'csv') {
+            if (($handle = fopen($fileTmpPath, 'r')) !== false) {
+                // Skip header row
+                fgetcsv($handle, 1000, ',');
+                
+                $importCount = 0;
+                $errorCount = 0;
+                $errors = [];
+                
+                while (($data = fgetcsv($handle, 10000, ',')) !== false) {
+                    if (count($data) < 2) {
+                        continue;
+                    }
+                    
+                    $prompt_key = trim($data[0]);
+                    $custom_prompt = $data[1];
+                    
+                    if (empty($prompt_key)) {
+                        continue;
+                    }
+                    
+                    // Check if prompt key exists
+                    $checkQuery = "SELECT prompt_key FROM $schema.prompts WHERE prompt_key = $1";
+                    $checkResult = pg_query_params($conn, $checkQuery, [$prompt_key]);
+                    
+                    if ($checkResult && pg_num_rows($checkResult) > 0) {
+                        // Update custom prompt
+                        $updateQuery = "
+                            UPDATE $schema.prompts 
+                            SET custom_prompt = $1, 
+                                updated_at = CURRENT_TIMESTAMP 
+                            WHERE prompt_key = $2
+                        ";
+                        $updateResult = pg_query_params($conn, $updateQuery, [$custom_prompt, $prompt_key]);
+                        
+                        if ($updateResult) {
+                            $importCount++;
+                        } else {
+                            $errorCount++;
+                            $errors[] = "Failed to update: $prompt_key";
+                        }
+                    } else {
+                        $errorCount++;
+                        $errors[] = "Prompt key not found: $prompt_key";
+                    }
+                }
+                
+                fclose($handle);
+                
+                if ($importCount > 0) {
+                    $message = "Successfully imported $importCount custom prompt(s).";
+                    if ($errorCount > 0) {
+                        $message .= " $errorCount error(s) occurred.";
+                    }
+                } else {
+                    $message = "No prompts were imported. " . ($errorCount > 0 ? "$errorCount error(s) occurred." : "");
+                }
+                
+                if (!empty($errors) && count($errors) <= 5) {
+                    $message .= "<br>" . implode("<br>", $errors);
+                }
+            } else {
+                $message = "Error reading CSV file.";
+            }
+        } else {
+            $message = "Invalid file type. Please upload a CSV file.";
+        }
+    } else {
+        $message = "No file uploaded or upload error occurred.";
+    }
+}
 
 /********************************************************************
  *  HANDLE NON-AJAX POST REQUESTS
@@ -407,6 +522,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         background: #666;
     }
 
+    /* Import/Export section */
+    .import-export-section {
+        background: #2a2a2a;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 25px;
+        border: 1px solid #4a4a4a;
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .import-export-section h3 {
+        color: rgb(242, 124, 17);
+        font-family: 'MagicCards', serif;
+        margin: 0;
+        flex: 1 0 100%;
+    }
+
+    .export-section, .import-section {
+        flex: 1;
+        min-width: 300px;
+    }
+
+    .export-section p, .import-section p {
+        color: #b0b0b0;
+        margin: 10px 0;
+        font-size: 0.9em;
+    }
+
+    .file-input-wrapper {
+        position: relative;
+        display: inline-block;
+        cursor: pointer;
+    }
+
+    .file-input-wrapper input[type="file"] {
+        position: absolute;
+        left: -9999px;
+    }
+
+    .file-input-label {
+        display: inline-block;
+        padding: 10px 20px;
+        background: #4a4a4a;
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+
+    .file-input-label:hover {
+        background: #5a5a5a;
+    }
+
+    .selected-file {
+        display: inline-block;
+        margin-left: 10px;
+        color: rgb(242, 124, 17);
+        font-size: 0.9em;
+    }
+
+    .btn-export {
+        background: rgb(100, 149, 237);
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1em;
+        transition: background 0.2s ease;
+    }
+
+    .btn-export:hover {
+        background: rgb(80, 129, 217);
+    }
+
+    .btn-import {
+        background: rgb(242, 124, 17);
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1em;
+        transition: background 0.2s ease;
+        margin-top: 10px;
+    }
+
+    .btn-import:hover {
+        background: rgb(222, 104, 0);
+    }
+
+    .btn-import:disabled {
+        background: #666;
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
     /* Modal styles */
     .modal {
         display: none;
@@ -597,6 +812,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <p>Note: Recommend for advanced users only. Changing prompts can cause unexpected behavior that may worsen the roleplay experience.</p>
         <p><strong>Default Prompt:</strong> System-maintained baseline that updates with CHIM. <strong>Custom Prompt:</strong> Your personalized override that takes precedence when set.</p>
         <p>Click <strong>Edit</strong> to view and modify prompts. Click <strong>Clear</strong> to revert to default.</p>
+    </div>
+
+    <div class="import-export-section">      
+        <div class="export-section">
+            <p><strong>📤 Export Custom Prompts</strong></p>
+            <p>Download all your custom prompts as a CSV file to share with others.</p>
+            <a href="?action=export_custom" class="btn-export">⬇️ Export Custom Prompts</a>
+        </div>
+        
+        <div class="import-section">
+            <p><strong>📥 Import Custom Prompts</strong></p>
+            <p>Upload a CSV file to import custom prompts shared by others.</p>
+            <form method="post" enctype="multipart/form-data" id="importForm">
+                <input type="hidden" name="action" value="import_custom">
+                <div class="file-input-wrapper">
+                    <input type="file" name="csv_file" id="csvFile" accept=".csv" onchange="handleFileSelect(this)">
+                    <label for="csvFile" class="file-input-label">📁 Choose CSV File</label>
+                    <span class="selected-file" id="selectedFileName"></span>
+                </div>
+                <br>
+                <button type="submit" class="btn-import" id="importBtn" disabled>⬆️ Import Custom Prompts</button>
+            </form>
+        </div>
     </div>
 
     <?php
@@ -931,6 +1169,20 @@ document.addEventListener('keydown', function(e) {
         closeEditModal();
     }
 });
+
+// Handle file selection for import
+function handleFileSelect(input) {
+    const fileNameSpan = document.getElementById('selectedFileName');
+    const importBtn = document.getElementById('importBtn');
+    
+    if (input.files && input.files[0]) {
+        fileNameSpan.textContent = input.files[0].name;
+        importBtn.disabled = false;
+    } else {
+        fileNameSpan.textContent = '';
+        importBtn.disabled = true;
+    }
+}
 </script>
 
 <?php
