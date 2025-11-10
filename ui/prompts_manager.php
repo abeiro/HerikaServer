@@ -594,7 +594,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     </div>
 
     <div class="info-box">
-        <h3>ℹ️ How It Works</h3>
+        <p>Note: Recommend for advanced users only. Changing prompts can cause unexpected behavior that may worsen the roleplay experience.</p>
         <p><strong>Default Prompt:</strong> System-maintained baseline that updates with CHIM. <strong>Custom Prompt:</strong> Your personalized override that takes precedence when set.</p>
         <p>Click <strong>Edit</strong> to view and modify prompts. Click <strong>Clear</strong> to revert to default.</p>
     </div>
