@@ -2016,6 +2016,188 @@ $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS region text");
 $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS hold text");
 
 //----------------------------------------------------
+// Prompts Table - System for managing default and custom prompts
+// Version 20251110001
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251110001) {
+    Logger::debug("Applying prompts table 20251110001");
+    
+    // Create prompts table
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.prompts (
+            prompt_key character varying(128) NOT NULL PRIMARY KEY,
+            default_prompt text NOT NULL,
+            custom_prompt text,
+            description text,
+            created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+            updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+    
+    // Seed initial middleterm narrative summarizer system prompt
+    $middletermPrompt = $db->escape(
+        "You are a long-term narrative continuity summarizer for an improvised Skyrim universe chronicle.\n".
+        "- Always read ALL provided materials.\n".
+        "- Treat any **Previous Context History Summary** as the canonical prior unless anything in the new Context History explicitly supersedes it.\n".
+        "- Maintain in-universe tone and correct chronology. Do not invent facts outside the supplied context.\n".
+        "- When combining prior and new histories, you may compress the earlier parts of the prior summary.\n".
+        "- Maintain roughly 20–25 bullet points total in **Notable Events**. Older portions should be condensed into broader, grouped statements unless they describe major quest milestones, major character life events (e.g., death, intimacy, severe injury, transformation), or other pivotal story turns.\n".
+        "- Preserve continuity and references to major quests even when compressing earlier material."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'middleterm_narrative_summarizer',
+            '$middletermPrompt',
+            'System prompt for long-term narrative continuity summarization in middleterm memory processing. Used in: service/processors/middleterm/cmd/generate.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Seed middleterm request/task prompt (uses {HERIKA_NAME} placeholder)
+    $middletermRequestPrompt = $db->escape(
+        "Main character in this logbook is {HERIKA_NAME}.\n".
+        "Task: Read **Context History** (newest session) and, if present, the **Previous Context History Summary** (prior canon). ".
+        "Integrate them to produce an updated broad narrative strokes summary that preserves continuity. Summary sections:\n\n".
+        "- **Notable Events in Chronological Order:**\n".
+        "  - Provide ~10 bullet points from earliest to latest, reflecting the story so far.\n".
+        "  - Prefer facts already established in the previous summary; only revise if the new context clearly changes them.\n\n".
+        "- **Current Quest Progression and background:**\n".
+        "  - Name questlines, stages/milestones if stated, objectives completed/active, and motivations.\n".
+        "When generating entries, ensure that {HERIKA_NAME} — the protagonist — is actively present in the scene. ".
+        "Any narrative content that occurs before {HERIKA_NAME}'s arrival or outside {HERIKA_NAME}'s perspective should be omitted, ".
+        "reflect only events {HERIKA_NAME} directly witness or participate in.\n".
+        "If the resulting summary would exceed roughly 25 bullet points, merge or generalise older entries into broader grouped events. ".
+        "Always retain explicit entries for major quest milestones, major character life events, or turning points."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'middleterm_narrative_request',
+            '$middletermRequestPrompt',
+            'User request/task instructions for middleterm narrative summarization (contains {HERIKA_NAME} placeholder). Used in: service/processors/middleterm/cmd/generate.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Seed character profile generation prompt (uses {HERIKA_NAME} and {CHARACTER_SEED} placeholders)
+    $profileGenPrompt = $db->escape(
+        "The main character in this logbook is {HERIKA_NAME}.{CHARACTER_SEED}\n".
+        "Read the context history (context_history) and the recent memories (middle_term_memory),\n".
+        " paying attention to notable events and the names of relevant characters.\n\n\n".
+        "Based on all this information, generate an character sheet for {HERIKA_NAME}.\n\n".
+        "This profile must be in XML format and have these fields.\n\n".
+        "<core>              Text. Core Identity, name,race an gender, and most remarkable job. Should be in the form of a sentence. e.g. 'Rose. Imperial female warrior.'\n".
+        "<npc_static_bio>    Text. Basic Summary, and bio. Create if not info available in <context_history>\n".
+        "<personality>       Text. Personality Traits. How the characters behave. Traumas. Likes.\n".
+        "<appearance>        Text. Physical Appearance. Infer from info available in <context_history>\n".
+        "<relationships>     Text. relationships with other actors.\n".
+        "<occupation>        Text. Main Occupation & Role\n".
+        "<skills>            Text. Skills & Abilities\n".
+        "<speechstyle>       Text. Speech Style\n".
+        "<goals>             Text. Long term Goals & Aspirations'\n"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'character_profile_generation',
+            '$profileGenPrompt',
+            'Prompt for AI-generated character profile/biography creation (contains {HERIKA_NAME} and {CHARACTER_SEED} placeholders). Used in: ui/cmd/action_ai_regen_profile.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Seed AI vision appearance description prompt (uses {HERIKA_NAME} placeholder)
+    $visionAppearancePrompt = $db->escape(
+        "Describe the character in the picture. Name is {HERIKA_NAME} .\n".
+        "Do not focus on clothing, focus on physical appearance (face, eyes, hair, figure, waist,legs,breast size, tattoos if any....). Be concise. \n".
+        "Start generation with this text:\n".
+        "{HERIKA_NAME} is "
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'ai_vision_appearance',
+            '$visionAppearancePrompt',
+            'AI vision prompt for describing character physical appearance from images (contains {HERIKA_NAME} placeholder). Used in: ui/cmd/action_ai_update_appearance.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Seed memory subsystem summary prompt (uses {PLAYER_NAME}, {COMPANIONS_LINE}, {SUMMARY_PROMPT} placeholders)
+    $memorySubsystemPrompt = $db->escape(
+        "{PLAYER_NAME} is the player.\n".
+        "{COMPANIONS_LINE}\n".
+        "You must write a memory summary from the narrator's point of view by analyzing the chat history. Focus only on roleplay elements: character behavior, feelings, relationships, decisions, dialogue, and locations relevant to the story. Ignore any references to game engine mechanics, menus, stats, or system messages.\n".
+        "Pay close attention to details that could influence a character's behavior or emotions, as well as tag names and locations. Include quotes from character dialogue in the summary if they are relevant to understanding actions, motivations, or relationships\n\n".
+        "Here are additional instructions: {SUMMARY_PROMPT}"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'memory_subsystem_summary',
+            '$memorySubsystemPrompt',
+            'Prompt for generating memory summaries from chat history (contains {PLAYER_NAME}, {COMPANIONS_LINE}, {SUMMARY_PROMPT} placeholders). Used in: debug/util_memory_subsystem.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Seed global dynamic prompts (migrated from conf schema)
+    
+    // SUMMARY_PROMPT - Memory summary instructions  
+    $summaryPrompt = $db->escape("Focus on key events, tagging characters, locations, and factions accurately. Ensure memories align and maintain chronological order while foreshadowing future arcs. Prioritize player agency, and use environmental cues to enhance storytelling and continuity.");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('summary_prompt', '$summaryPrompt', 'Additional instructions for memory summary generation. Used as {SUMMARY_PROMPT} placeholder in: debug/util_memory_subsystem.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    // DYNAMIC_PROMPT_PERSONALITY - Uses {HERIKA_NAME} placeholder
+    $dynPersonality = $db->escape("Based on the dialogue history and recent events, update {HERIKA_NAME} personality traits. Maintain all existing relevant personality traits and add new ones based on recent experiences. Focus on behavioral changes, emotional growth/regression, new traits that emerged, and changes in confidence or outlook. Emphasize any past traumas or new traumas caused by the death of companions, allies, or other known characters, and how these events shape the character's behavior and mindset. Return ONLY the updated personality description in 3-5 sentences. Do not include any introductory text, meta-commentary, or phrases like 'Here is the updated personality' or 'The character's personality is'. Start directly with the personality content.");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('dynamic_prompt_personality', '$dynPersonality', 'Instructions for updating NPC personality traits based on recent events (contains {HERIKA_NAME} placeholder). Used in: lib/dynamic_update_util.php, ui/cmd/action_dynamic_profile_*.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    // DYNAMIC_PROMPT_RELATIONSHIPS - Uses {HERIKA_NAME} placeholder
+    $dynRelationships = $db->escape("Based on recent interactions, update {HERIKA_NAME} relationships with other people and factions. Maintain all existing relevant relationships and add new ones or modify existing ones based on recent interactions. Focus on changed relationships, new relationships formed, evolved existing ones, and only remove relationships that are clearly no longer relevant. Return ONLY a bulleted list using * Name/Faction - Description format. Do not include any introductory text, meta-commentary, or phrases like 'Here are the updated relationships' or 'The character's relationships include'. Start directly with the first bullet point.");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('dynamic_prompt_relationships', '$dynRelationships', 'Instructions for updating NPC relationships based on interactions (contains {HERIKA_NAME} placeholder). Used in: lib/dynamic_update_util.php, ui/cmd/action_dynamic_profile_*.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    // DYNAMIC_PROMPT_OCCUPATION - Uses {HERIKA_NAME} placeholder
+    $dynOccupation = $db->escape("Based on story progression and events, update {HERIKA_NAME} occupation and role. Maintain the current occupation unless significant changes have occurred. Add new responsibilities, changes in social status, and professional affiliations. Focus on job changes, new duties, and evolving professional relationships. Return ONLY the updated occupation description in 2-3 sentences. Do not include any introductory text, meta-commentary, or phrases like 'The character's occupation is' or 'Here is the updated occupation'. Start directly with the occupation content.");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('dynamic_prompt_occupation', '$dynOccupation', 'Instructions for updating NPC occupation and role based on story progression (contains {HERIKA_NAME} placeholder). Used in: lib/dynamic_update_util.php, ui/cmd/action_dynamic_profile_*.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    // DYNAMIC_PROMPT_SKILLS - Uses {HERIKA_NAME} placeholder
+    $dynSkills = $db->escape("Based on experiences and training, update {HERIKA_NAME} skills and abilities. Maintain all existing relevant skills and add new ones based on recent experiences. Focus on new skills learned, existing skills improved, any skills that deteriorated, and combat/magical knowledge gained. Return ONLY a bulleted list using * Skill - Description format. Do not include any introductory text, meta-commentary, or phrases like 'Here are the updated skills' or 'The character's skills include'. Start directly with the first bullet point.");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('dynamic_prompt_skills', '$dynSkills', 'Instructions for updating NPC skills and abilities based on experiences (contains {HERIKA_NAME} placeholder). Used in: lib/dynamic_update_util.php, ui/cmd/action_dynamic_profile_*.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    // DYNAMIC_PROMPT_SPEECHSTYLE - Uses {HERIKA_NAME} placeholder
+    $dynSpeech = $db->escape("Based on recent interactions, update how {HERIKA_NAME} speaks and communicates. Maintain existing consistent speech patterns and add new ones based on recent interactions. Focus on changes in vocabulary, new mannerisms, accent changes, and confidence level in speech. Return ONLY the updated speech style description in 2-3 sentences. Do not include any introductory text, meta-commentary, or phrases like 'The character speaks' or 'Here is the updated speech style'. Start directly with the speech style content.");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('dynamic_prompt_speechstyle', '$dynSpeech', 'Instructions for updating NPC speech patterns and communication style (contains {HERIKA_NAME} placeholder). Used in: lib/dynamic_update_util.php, ui/cmd/action_dynamic_profile_*.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    // DYNAMIC_PROMPT_GOALS - Uses {HERIKA_NAME} placeholder
+    $dynGoals = $db->escape("Based on story developments and achievements, update the {HERIKA_NAME} goals and aspirations. Maintain existing relevant goals, compressing related goals, and add new ones. Remove goals that have been clearly completed or are no longer applicable. Focus on new aspirations that emerged, modified existing goals due to circumstances, and updated long-term objectives. Return ONLY a bulleted list using * Goal description as actionable aspiration format. Do not include any introductory text, meta-commentary, or phrases like 'Here are the updated goals' or 'The character's goals are'. Start directly with the first bullet point (maintain a maximum of 20 goals with reduction priority when required: 1- compress related goals, 2-eliminate 'study' related goals, 3- eliminate older goals).");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('dynamic_prompt_goals', '$dynGoals', 'Instructions for updating NPC goals and aspirations based on story developments (contains {HERIKA_NAME} placeholder). Used in: lib/dynamic_update_util.php, ui/cmd/action_dynamic_profile_*.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    $updateVersion("prompts", 20251110001);
+    Logger::info("Applied patch prompts 20251110001 - Added all dynamic prompts");
+}
+
+//----------------------------------------------------
 
 Logger::info(__FILE__." update file processed");
 

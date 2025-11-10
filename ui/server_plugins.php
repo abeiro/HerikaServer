@@ -145,7 +145,7 @@ td { padding: 10px; text-align: left; border-bottom: 1px solid #444; color: #f8f
         $pluginFoldersRoot = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "ext" . DIRECTORY_SEPARATOR;
         $pluginFolders = scandir($pluginFoldersRoot);
         foreach ($pluginFolders as $n => $folder) {
-            if (!is_dir($pluginFoldersRoot . $folder) || substr($folder, 0, 1) === '.' || $folder === 'xLifeLink_plugin') {
+            if (!is_dir($pluginFoldersRoot . $folder) || substr($folder, 0, 1) === '.' || $folder === 'xLifeLink_plugin' || $folder === 'herika_heal' || $folder === 'time_awareness') {
                 unset($pluginFolders[$n]);
             }
         }

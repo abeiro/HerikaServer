@@ -101,12 +101,30 @@ if ($method === "POST") {
 
         // Get current skills value and prompt
         $currentSkills = isset($jsonDataInput["HERIKA_SKILLS"]) ? $jsonDataInput["HERIKA_SKILLS"] : '';
-        $updatePrompt = isset($GLOBALS["DYNAMIC_PROMPT_SKILLS"]) ? $GLOBALS["DYNAMIC_PROMPT_SKILLS"] : '';
+        
+        // Load prompt from database with fallback to $GLOBALS
+        $updatePrompt = null;
+        try {
+            $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'dynamic_prompt_skills'");
+            if ($promptData) {
+                $updatePrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+            }
+        } catch (Exception $e) {
+            // Silent fallback to $GLOBALS
+        }
+        
+        // Fallback to $GLOBALS if database load failed
+        if (empty($updatePrompt)) {
+            $updatePrompt = isset($GLOBALS["DYNAMIC_PROMPT_SKILLS"]) ? $GLOBALS["DYNAMIC_PROMPT_SKILLS"] : '';
+        }
 
         if (empty($updatePrompt)) {
             echo json_encode(["status" => "error", "message" => "DYNAMIC_PROMPT_SKILLS not configured"]);
             exit;
         }
+        
+        // Replace placeholders in the prompt
+        $updatePrompt = str_replace('{HERIKA_NAME}', $jsonDataInput["HERIKA_NAME"], $updatePrompt);
 
         // Collect other profile fields for context
         $profileContext = [];

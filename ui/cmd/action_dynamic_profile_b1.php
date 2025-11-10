@@ -140,11 +140,42 @@ if ($method === "POST") {
             $fieldLabel = $fieldMapping[$field]['label'];
             
             $currentValue = isset($jsonDataInput[$varName]) ? $jsonDataInput[$varName] : '';
-            $updatePrompt = isset($GLOBALS[$promptName]) ? $GLOBALS[$promptName] : '';
+            
+            // Map to database prompt keys (lowercase with underscores)
+            $dbPromptKeyMapping = [
+                'DYNAMIC_PROMPT_PERSONALITY' => 'dynamic_prompt_personality',
+                'DYNAMIC_PROMPT_RELATIONSHIPS' => 'dynamic_prompt_relationships',
+                'DYNAMIC_PROMPT_OCCUPATION' => 'dynamic_prompt_occupation',
+                'DYNAMIC_PROMPT_SKILLS' => 'dynamic_prompt_skills',
+                'DYNAMIC_PROMPT_SPEECHSTYLE' => 'dynamic_prompt_speechstyle',
+                'DYNAMIC_PROMPT_GOALS' => 'dynamic_prompt_goals'
+            ];
+            
+            // Load prompt from database with fallback to $GLOBALS
+            $updatePrompt = null;
+            if (isset($dbPromptKeyMapping[$promptName])) {
+                try {
+                    global $db;
+                    $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = '{$dbPromptKeyMapping[$promptName]}'");
+                    if ($promptData) {
+                        $updatePrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+                    }
+                } catch (Exception $e) {
+                    // Silent fallback to $GLOBALS
+                }
+            }
+            
+            // Fallback to $GLOBALS if database load failed
+            if (empty($updatePrompt)) {
+                $updatePrompt = isset($GLOBALS[$promptName]) ? $GLOBALS[$promptName] : '';
+            }
 
             if (empty($updatePrompt)) {
                 return ["status" => "error", "message" => "{$promptName} not configured"];
             }
+            
+            // Replace placeholders in the prompt
+            $updatePrompt = str_replace('{HERIKA_NAME}', $jsonDataInput["HERIKA_NAME"], $updatePrompt);
 
             // Collect other profile fields for context (excluding the current field)
             $profileContext = [];
