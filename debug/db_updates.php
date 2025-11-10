@@ -2016,6 +2016,54 @@ $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS region text");
 $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS hold text");
 
 //----------------------------------------------------
+// Prompts Table - System for managing default and custom prompts
+// Version 20251110001
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251110001) {
+    Logger::debug("Applying prompts table 20251110001");
+    
+    // Create prompts table
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.prompts (
+            prompt_key character varying(128) NOT NULL PRIMARY KEY,
+            default_prompt text NOT NULL,
+            custom_prompt text,
+            description text,
+            created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+            updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+    
+    // Seed initial middleterm narrative summarizer prompt
+    $middletermPrompt = $db->escape(
+        "You are a long-term narrative continuity summarizer for an improvised Skyrim universe chronicle.\n".
+        "- Always read ALL provided materials.\n".
+        "- Treat any **Previous Context History Summary** as the canonical prior unless anything in the new Context History explicitly supersedes it.\n".
+        "- Maintain in-universe tone and correct chronology. Do not invent facts outside the supplied context.\n".
+        "- When combining prior and new histories, you may compress the earlier parts of the prior summary.\n".
+        "- Maintain roughly 20–25 bullet points total in **Notable Events**. Older portions should be condensed into broader, grouped statements unless they describe major quest milestones, major character life events (e.g., death, intimacy, severe injury, transformation), or other pivotal story turns.\n".
+        "- Preserve continuity and references to major quests even when compressing earlier material."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'middleterm_narrative_summarizer',
+            '$middletermPrompt',
+            'System prompt for long-term narrative continuity summarization in middleterm memory processing'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251110001);
+    Logger::info("Applied patch prompts 20251110001");
+}
+
+//----------------------------------------------------
 
 Logger::info(__FILE__." update file processed");
 

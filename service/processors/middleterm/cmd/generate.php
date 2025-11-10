@@ -81,17 +81,34 @@ Read the context history, paying attention to character names and notable events
 
 ";*/
 
-$head[] = [
-    'role' => 'system',
-    'content' =>
+// Load prompt from database with fallback to hardcoded default
+// Query prompts table: use custom_prompt if set, otherwise default_prompt, otherwise hardcoded fallback
+$promptContent = null;
+try {
+    $promptData = $GLOBALS["db"]->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'middleterm_narrative_summarizer'");
+    if ($promptData) {
+        // Use custom_prompt if set, otherwise use default_prompt
+        $promptContent = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+    }
+} catch (Exception $e) {
+    Logger::warn("Failed to load prompt from database, using hardcoded fallback: " . $e->getMessage());
+}
+
+// Hardcoded fallback if database query failed or returned no results
+if (!$promptContent) {
+    $promptContent = 
         "You are a long-term narrative continuity summarizer for an improvised Skyrim universe chronicle.\n".
         "- Always read ALL provided materials.\n".
         "- Treat any **Previous Context History Summary** as the canonical prior unless anything in the new Context History explicitly supersedes it.\n".
         "- Maintain in-universe tone and correct chronology. Do not invent facts outside the supplied context.\n".
         "- When combining prior and new histories, you may compress the earlier parts of the prior summary.\n".
-//        "(note: existing canonical summaries may be overly detailed from older instructions—revise them to follow this compression rule while preserving all key facts)\n".
         "- Maintain roughly 20–25 bullet points total in **Notable Events**. Older portions should be condensed into broader, grouped statements unless they describe major quest milestones, major character life events (e.g., death, intimacy, severe injury, transformation), or other pivotal story turns.\n".
-        "- Preserve continuity and references to major quests even when compressing earlier material."
+        "- Preserve continuity and references to major quests even when compressing earlier material.";
+}
+
+$head[] = [
+    'role' => 'system',
+    'content' => $promptContent
 ];
 
 $request =

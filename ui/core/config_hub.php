@@ -49,6 +49,7 @@ main { padding: 80px 10px 10px; height: 100vh; }
         <div class="tab-buttons">
             <button class="tab-button active" data-tab="npc">🌟CHIM NPCs</button>
             <button class="tab-button" data-tab="globals">🌐Global Settings</button>
+            <button class="tab-button" data-tab="prompts">⚙️Prompts Manager</button>
             <button class="tab-button" data-tab="profiles">🗃️Profiles</button>
             <button class="tab-button" data-tab="llm">🧠LLM Connectors</button>
             <button class="tab-button" data-tab="keys">🔑API Keys</button>
@@ -129,6 +130,11 @@ main { padding: 80px 10px 10px; height: 100vh; }
         <div id="globals" class="tab-content">
             <div class="embed-wrap">
                 <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/global_settings.php?embed=1"></iframe>
+            </div>
+        </div>
+        <div id="prompts" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/prompts_manager.php?embed=1"></iframe>
             </div>
         </div>
         <div id="serverplugins" class="tab-content">
