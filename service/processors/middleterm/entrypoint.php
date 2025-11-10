@@ -37,8 +37,8 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     }
 
     // BgL tracking coords
-    /*
-    $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->>'last_coords' IS NOT NULL ");
+    
+    $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->>'last_coords' IS NOT NULL AND metadata->'last_coords'->>'pending' IS NULL ");
     foreach ($allEnabledBgLNpc as $npc) {
         $mwdata=json_decode($npc["metadata"],true);
         if (!isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"] || $mwdata["last_coords"]["last_updated"]<($maxRow - ( 24 /0.0000024))) {
@@ -47,7 +47,8 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
         }
         
     }
-    */
+    
+
     // BgL commands
     $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_last_updated' IS NOT NULL ");
     foreach ($allEnabledBgLNpc as $npc) {
@@ -62,7 +63,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     $pfi = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] ?? 10) * 100000;
     
     if (($maxRow-$lastMemory)>($pfi)) {
-        echo "[SUMMARY] memory creation maxRow-lastMemory > pfi  ($maxRow-$lastMemory)>($pfi) ";
+        //echo "[SUMMARY] memory creation maxRow-lastMemory > pfi  ($maxRow-$lastMemory)>($pfi) ";
 
         $shellResult = shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 1 &");
         if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
@@ -70,7 +71,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
         }
 
     } else {
-        error_log("[SUMMARY] Skiping memory creation maxRow-lastMemory > pfi  ($maxRow-$lastMemory)>($pfi) ");
+        //error_log("[SUMMARY] Skiping memory creation maxRow-lastMemory > pfi  ($maxRow-$lastMemory)>($pfi) ");
     }
 
     //unset($GLOBALS["db"]);

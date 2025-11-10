@@ -202,7 +202,7 @@ $rumors = [];
 error_log("Last interaction {$lastIt["gamets"]}, {$lastLoc["location"]}");
 $currentHoldEsc = $db->escape($lastLoc["location"]);
 if (isset($lastIt["gamets"])) {
-    $query2 = "SELECT gamets,content FROM rumors WHERE hold='{$currentHoldEsc}' and gamets>" . ($gameRequest[2] - ((3600 * 7) / 0.00864));
+    $query2 = "SELECT gamets,content FROM rumors WHERE hold like '%{$currentHoldEsc}%' and gamets>" . ($gameRequest[2] - ((24 * 7) / 0.0000024));
     error_log($query2);
     $rumorsData = $db->fetchAll($query2);
     foreach ($rumors as $event) {
@@ -227,7 +227,8 @@ $previous = 0;
 foreach ($combinedEvents as $dentry) {
     if ($dentry["type"] == "event" && $previous) {
         $hours             = ($dentry["gamets"] - $previous) * 0.0000024;
-        $dentry["content"] = "* $hours hours later: {$dentry["content"]}";
+        $hoursAgo          = ($last_gamets - $dentry["gamets"]) * 0.0000024;
+        $dentry["content"] = "* $hours hours later: {$dentry["content"]}, $hoursAgo hours ago";
     }
     $previous = $dentry["gamets"];
     $history .= "\n<{$dentry["type"]}>\n{$dentry["content"]}\n</{$dentry["type"]}>\n";
@@ -309,11 +310,6 @@ if (isset($argv[2]) && $argv[2] == "dryrun") {
     die();
 }
 
-$extdata=$npcMaster->getExtendedData($currentNpcData);
-$extdata["background_life_last_updated"]=$last_gamets;
-$currentNpcData=$npcMaster->setExtendedData($currentNpcData,$extdata);
-$npcMaster->updateByArray($currentNpcData);
-
 // Step-2
 $prompt = [];
 if (isset($argv[2]) && $argv[2] == "full") {
@@ -331,7 +327,7 @@ $buffer
 </text>
 
 Possible actions:
-StayAtPlace - The character remains in their current location, performing activities locally.
+StayAtPlace - The character remains in their current location, performing activities locally. Take into account how much time character has been at this location and is current task. If gathering info or spreading rumors, should stay at least 48 hours.
 TravelTo:<Place> - the character decides to travel to another location (replace <Place> with the chosen destination).The character should have a clear and logical reason for traveling.
 SpreadRumor - The character initiates or influences a rumor. Use this action whenever the character’s activities affect others indirectly (e.g., “The character promotes fair trade locally, causing rumors of happier merchants.”).
 Your answer must use markup - XML like - format, containing exactly 3 elements:
@@ -385,6 +381,14 @@ $buffer2 = $connectionHandler->fast_request($prompt, ["MAX_TOKENS" => 2048, "mod
 
 print_r($buffer2);
 //$parsed = parse_xml_fragment($buffer2);
+
+
+$extdata=$npcMaster->getExtendedData($currentNpcData);
+$extdata["background_life_last_updated"]=$last_gamets;
+$currentNpcData=$npcMaster->setExtendedData($currentNpcData,$extdata);
+$npcMaster->updateByArray($currentNpcData);
+
+
 
 $parsed = [];
 $parsed["action"]=manual_get_tag_content($buffer2,"action");
@@ -473,7 +477,7 @@ if (is_array($parsed)) {
     }
 
     if ($parsed["rumor"]) {
-        shell_exec("php debug/simple_llm_request_with_context_rumors_custom.php " . escapeshellarg($parsed["rumor"]));
+        shell_exec("php $enginePath/debug/simple_llm_request_with_context_rumors_custom.php " . escapeshellarg($parsed["rumor"]));
     }
 }
 

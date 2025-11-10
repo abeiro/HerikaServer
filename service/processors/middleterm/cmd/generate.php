@@ -34,7 +34,7 @@ if (isset($extended_data["middle_term_memory"])&&sizeof($extended_data["middle_t
 $dbNpcName=$GLOBALS["db"]->escape($selectedNpc);
 
 $query="SELECT summary as content,gamets_truncated FROM memory_summary where summary is not null and companions like '%|$dbNpcName|%' and gamets_truncated>$gametsfrom order by gamets_truncated desc LIMIT 100";
-error_log($query);
+// error_log($query);
 $contextDataFull=$GLOBALS["db"]->fetchAll($query);
 // $task=DataGetCurrentTask();
 $limit=10;

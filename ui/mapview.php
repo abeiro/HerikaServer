@@ -304,7 +304,7 @@
             border-radius: 3px;
             white-space: nowrap;
             font-size: 16px;
-            top: -1px;
+            top: 15px;
             left: 50%;
             transform: translateX(-50%);
             margin-top: 5px;

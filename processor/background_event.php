@@ -38,7 +38,7 @@ if (is_array($bgevent)) {
             $extended = json_decode($npcData["extended_data"], true);
             if (isset($extended["background_life_enabled"]) && $extended["background_life_enabled"]==true) {
                 $lastAction=$GLOBALS["db"]->fetchOne("select * from actions_issued where actorname='$cn' order by gamets desc,ts desc limit 1 offset 0");
-                if (isset($lastAction) && ($lastAction["action"]==$bgevent["name"])) {
+                if (isset($lastAction) && isset($lastAction["action"]) && ($lastAction["action"]==$bgevent["name"])) {
                     // NPC finishes? last action issued
                     if ($bgevent["event"]=="end")
                         error_log("[BGL] {$npcData["npc_name"]} has finished action {$bgevent["name"]}");

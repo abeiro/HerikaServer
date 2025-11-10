@@ -1202,8 +1202,10 @@ New setting: $currentLocation
 
     }
 
-    if (sizeof($previousRow)>0) {
-        $lastDialogFull[]=$previousRow;;
+    if (isset($previousRow)) {
+        if (sizeof($previousRow)>0) {
+            $lastDialogFull[]=$previousRow;;
+        }
     }
 
     file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_.txt",print_r($lastDialogFull,true));
