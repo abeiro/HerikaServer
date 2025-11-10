@@ -808,45 +808,45 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 )
             );
     } else if ($vars[0]=="chim_renamenpc") {
-    // Convert signed to unsigned using bitwise AND
-    $unsignedInt = ($vars[3]+0) & 0xFFFFFFFF;
-    // Represent as 8-digit zero-padded hex with 0x prefix
-    $unsignedIntHex = '0x' . strtoupper(str_pad(dechex($unsignedInt), 8, '0', STR_PAD_LEFT));
-        
-    $npcMaster=new NpcMaster();
-    $oldNpcData=$npcMaster->getByName($vars[1]);
-    $newNpcData=$npcMaster->getByName($vars[2]);
-    
-    if (!$newNpcData) {
-        createProfile($vars[2]);
+        // Convert signed to unsigned using bitwise AND
+        $unsignedInt = ($vars[3]+0) & 0xFFFFFFFF;
+        // Represent as 8-digit zero-padded hex with 0x prefix
+        $unsignedIntHex = '0x' . strtoupper(str_pad(dechex($unsignedInt), 8, '0', STR_PAD_LEFT));
+            
+        $npcMaster=new NpcMaster();
+        $oldNpcData=$npcMaster->getByName($vars[1]);
         $newNpcData=$npcMaster->getByName($vars[2]);
-    }
+        
+        if (!$newNpcData) {
+            createProfile($vars[2]);
+            $newNpcData=$npcMaster->getByName($vars[2]);
+        }
 
-    $npcMaster->renameNPC($vars[1],$vars[2]);
+        $npcMaster->renameNPC($vars[1],$vars[2]);
 
-        $db->insert(
-            'responselog',
-            [
-                'localts' => time(),
-                'sent'    => 0,
-                'actor'   => "rolemaster",
-                'text'    => "",
-                'action'  => 'rolecommand|RenameNPC@'.$unsignedIntHex.'@'.$db->escape($vars[2]),
-                'tag'     => '',
-            ]
+            $db->insert(
+                'responselog',
+                [
+                    'localts' => time(),
+                    'sent'    => 0,
+                    'actor'   => "rolemaster",
+                    'text'    => "",
+                    'action'  => 'rolecommand|RenameNPC@'.$unsignedIntHex.'@'.$db->escape($vars[2]),
+                    'tag'     => '',
+                ]
+            );
+            
+        }
+        
+
+        $db->upsertRowOnConflict(
+            'conf_opts',
+            array(
+                'id' => $vars[0],
+                'value' => $vars[1]
+            ),
+            "id"
         );
-         
-    }
-    
-
-    $db->upsertRowOnConflict(
-        'conf_opts',
-        array(
-            'id' => $vars[0],
-            'value' => $vars[1]
-        ),
-        "id"
-    );
     
     
     $MUST_END=true;
@@ -1021,7 +1021,36 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
         $npcMaster->updateByArray($currentNpcData);
         
+        $profile=new CoreProfile();
+        $profData=json_decode($profile->getById($currentNpcData["profile_id"])["metadata"],true);
+
+        $doSalute=(isset($profData["SALUTATION_AFTER_1_DAY"]) && $profData["SALUTATION_AFTER_1_DAY"] || isset($meta["SALUTATION_AFTER_1_DAY"]) && $meta["SALUTATION_AFTER_1_DAY"] );
+        if ($doSalute) {
+            error_log("[salutation_after_a_while] enabled for {$currentNpcData["npc_name"]}, profile:{$profData["SALUTATION_AFTER_1_DAY"]} ,npc:{$meta["SALUTATION_AFTER_1_DAY"]}");
+            $lit=GetLastInteraction($GLOBALS["PLAYER_NAME"],$currentNpcData["npc_name"]);
+            if (gamets2days_between($lit,$gameRequest[2]) > 1) {
+                // If salutation_after_a_while is enable for this NPC, if 1 day has passed between last iteration, force a salutation.
+                $instructionText="should salutate {$GLOBALS["PLAYER_NAME"]}, as more than 1 day passed with no talking.";
+                $roleMasterAction = "rolecommand|Instruction@{$currentNpcData["npc_name"]}@{$instructionText}@0";
         
+                // Insert into database
+                $GLOBALS["db"]->insert(
+                    'responselog',
+                    array(
+                        'localts' => time(),
+                        'sent' => 0,
+                        'actor' => "rolemaster",
+                        'text' => '',
+                        'action' => $roleMasterAction,
+                        'tag' => ""
+                    )
+                );
+            } else {
+                error_log("[salutation_after_a_while] {$currentNpcData["npc_name"]} gamets2days_between($lit,$gameRequest[2]) > 1");
+            }
+        } else {
+            error_log("[salutation_after_a_while] disabled for {$currentNpcData["npc_name"]}");
+        }
     }
 
     $MUST_END=true;
@@ -1046,6 +1075,68 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
+} elseif (strpos($gameRequest[0], "util_location_npc")===0) {    // util_location_name 
+    
+    
+    $splitNameBase=explode("/",$gameRequest[3]);
+    if ($splitNameBase[0] && $splitNameBase[1]) {
+        $currentNpcData = $npcMaster->getByName($splitNameBase[0]);
+        
+        if ($currentNpcData) {
+            // Get existing metadata
+            $meta = [];
+            if (!empty($currentNpcData['metadata'])) {
+                $meta = json_decode($currentNpcData['metadata'], true);
+                if (!is_array($meta)) {
+                    $meta = [];
+                }
+            }
+            
+            // Update equipment section
+            $meta['last_coords'] = [$splitNameBase[1],$splitNameBase[2],$splitNameBase[3],$splitNameBase[4],"last_updated"=>$gameRequest[2]];
+            
+            // Save back to database
+            $currentNpcData = $npcMaster->setMetadata($currentNpcData, $meta);
+            $npcMaster->updateByArray($currentNpcData);
+            
+            Logger::info("Updated last_coords for {$currentNpcData["npc_name"]}");
+        }
+    }
+
+    $MUST_END=true;
+    
+    
+}  elseif (strpos($gameRequest[0], "enable_bg")===0) {    // util_location_name 
+    
+    
+    $splitNameBase=explode("/",$gameRequest[3]);
+    if ($splitNameBase[0] && $splitNameBase[1]) {
+        $currentNpcData = $npcMaster->getByName($splitNameBase[0]);
+        
+        if ($currentNpcData) {
+            // Get existing metadata
+            $meta = [];
+            if (!empty($currentNpcData['extended_data'])) {
+                $meta = json_decode($currentNpcData['extended_data'], true);
+                if (!is_array($meta)) {
+                    $meta = [];
+                }
+            }
+            $currentNpcData["refid"]=$splitNameBase[1];
+            // Update equipment section
+            $meta['background_life_enabled'] = true;
+            
+            // Save back to database
+            $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $meta);
+            $npcMaster->updateByArray($currentNpcData);
+            error_log("Updated background_life_enabled for {$currentNpcData["npc_name"]}");
+            Logger::info("Updated background_life_enabled for {$currentNpcData["npc_name"]}");
+        }
+    }
+
+    $MUST_END=true;
+    
+    
 } elseif (strpos($gameRequest[0], "updateprofiles_batch_async")===0) {
     
     // Async batch processing for timer-based dynamic profile updates
@@ -1059,7 +1150,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $npcList = explode(',', $gameRequest[3]);
     $enabledNPCs = [];
     
-    Logger::info("updateprofiles_batch_async: Checking " . count($npcList) . " NPCs for enabled dynamic profiles");
+    Logger::info("updateprofiles_batch_async: Checking " . count($npcList) . ",{$gameRequest[3]} NPCs for enabled dynamic profiles");
     
     // First pass: quickly check which NPCs have DYNAMIC_PROFILE enabled
     foreach ($npcList as $npcName) {
@@ -1080,6 +1171,14 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         
         // Check if DYNAMIC_PROFILE is enabled for this NPC
         $isDynamicEnabled = $npcData["dynamic_profile"] ?? $GLOBALS["DYNAMIC_PROFILE"] ?? false;
+
+        // Check  if DYNAMIC_PROFILE is enabled for NPC's profile.
+        $profile=new CoreProfile();
+        $currentProfileData=$profile->getById($npcData["profile_id"]);
+        $profile_metadata=json_decode($currentProfileData["metadata"],true);
+        if ($profile_metadata["DYNAMIC_PROFILE_ENABLED"])
+            $isDynamicEnabled=true;
+        
 
         if ($isDynamicEnabled) {
             $enabledNPCs[] = $npcName;

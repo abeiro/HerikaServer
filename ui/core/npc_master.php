@@ -201,6 +201,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
                 $tmp = json_decode($postedExt, true);
                 if (!is_array($tmp)) {
                     $_POST['extended_data'] = '{}'; // Ensure valid JSON
+                } else {
+                  if ($_POST["middle_term_enabled"]) { // If enabled on NPC form,  but not present in extended_data
+                    $tmp["middle_term_enabled"]=1;
+                    $_POST['extended_data']=json_encode($tmp);
+                  }
                 }
             } else {
                 $_POST['extended_data'] = '{}';
@@ -1507,7 +1512,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Override global and profile settings for this specific NPC. Changes here take precedence over all other configurations.</small>
             <?php
             // Configure override editor for NPC mode
-            $reservedKeys = ['middle_term_memory', 'middle_term_enabled', 'auto_diary_enabled', 'chim_core_migrated'];
+            $reservedKeys = [ 'middle_term_enabled', 'auto_diary_enabled', 'chim_core_migrated'];
             $extendedDataRaw = isset($editItem["extended_data"]) ? $editItem["extended_data"] : '{}';
             $extendedDataObj = json_decode($extendedDataRaw, true) ?: [];
             $currentOverrides = [];
@@ -1598,6 +1603,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 } catch(_e){ console.error('Failed to sync feature toggles:', _e); }
 
                 // Sync edited middle_term_latest back into extended_data JSON
+                /*
                 try {
                   const mtmLatest = form.querySelector('#middle_term_latest');
                   if (mtmLatest && form.extended_data){
@@ -1615,9 +1621,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                       }
                     }
                     form.extended_data.value = JSON.stringify(obj);
+                    
                   }
                 } catch(_e){ console.error('Failed to sync middle term memory:', _e); }
-
+                */
                 if (form.metadata!=undefined) {
                   const content = jsonEditor.get()
 

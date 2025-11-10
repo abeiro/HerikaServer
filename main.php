@@ -157,7 +157,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 $fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
     "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
-    "util_location_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace","combatbark"];
+    "util_location_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace","combatbark","util_location_npc","enable_bg"];
 
 if (isset($GLOBALS["external_fast_commands"])) {
     $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
@@ -1505,27 +1505,32 @@ if (isset($extended_data["middle_term_memory"])&&is_array($extended_data["middle
 }
 
 // Rumors and breaking news
+$rumorsText="";
 $currentHold=trim(DataLastKnownLocationHuman(true,false));
 if ($currentHold) {
     error_log("[RUMORS] Current hold {$currentHold}");
     $currentHoldEsc=$db->escape($currentHold);
-    $query="SELECT * FROM rumors WHERE hold like '%{$currentHoldEsc}%' and gamets>".round($gameRequest[2]- ( (3600 * 7 ) / 0.00864 ),0);
+    $query="SELECT * FROM rumors WHERE hold like '%{$currentHoldEsc}%' and gamets>".round($gameRequest[2]- ( 2 * 24 /0.0000024));
     error_log($query);
-    $rumors = $db->fetchOne($query);
+    $rumors = $db->fetchAll($query);
 
-    if (isset($rumors["content"])) {
-        $tag=strtolower(str_replace(" ","_",$rumors["type"]));
-        $rumors="\n<$tag>\n{$rumors["content"]}\n</$tag>";
+    foreach ($rumors as $n=>$rumor) {
+       if (isset($rumor["content"])) {
+            $tag=strtolower(str_replace(" ","_",$rumor["type"]));
+            $rumorsText.="\n<$tag>\n{$rumor["content"]}\n</$tag>";
+        }
+        if ($n>=2) {
+            break;
+        }
     }
 } else {
     error_log("[RUMORS] Current hold {$currentHold} empty");
-    $rumors="";
 }
 
 if (!empty($GLOBALS["OGHMA_HINT"])) {
 
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>\n$rumors\n",
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>\n$rumorsText\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
 
     );

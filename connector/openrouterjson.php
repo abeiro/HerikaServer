@@ -598,6 +598,9 @@ class openrouterjson
             if (!(stripos($this->_model, "qwen3-") === false)) {//qwen3
                 $data["enable_thinking"] = false;
             }            
+            if (stripos($this->_model, "grok-3-mini") != false) {//grok-3-mini needs reasoning cand cannot be disabled
+                $data["reasoning"]["enabled"] = true;
+            }            
         }
         
         if ($this->_is_openai) {
@@ -1247,8 +1250,11 @@ class openrouterjson
             //Logger::debug("reasoning " . $this->_model);
             if (!(stripos($this->_model, "qwen3-") === false)) {//qwen3
                 $data["enable_thinking"] = false;
-            }            
-        }
+            }       
+            if (stripos($this->_model, "grok-3-mini") != false) {//grok-3-mini needs reasoning cand cannot be disabled
+                $data["reasoning"]["enabled"] = true;
+            }        
+    }
         
         if ($this->_is_openai) {
             // OpenAI models use max_completion_tokens

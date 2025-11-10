@@ -24,7 +24,7 @@ function convertSignedToUnsignedHex($signedInt)
 {
     // Convert signed to unsigned using bitwise AND
     $unsignedInt = $signedInt & 0xFFFFFFFF;
-    return "0x" . dechex($unsignedInt);
+    return "0x" . str_pad(dechex($unsignedInt),8,"0",STR_PAD_LEFT);
 
 }
 

@@ -393,7 +393,7 @@ function consolidation() {
         return confirm("Metadata is empty. You sure?");
     }
 
-    debugger;
+    
     if (form.extended_data!=undefined) {
         const content2 = jsonEditor2.get()
 
