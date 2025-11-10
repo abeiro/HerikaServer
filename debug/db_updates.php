@@ -2035,7 +2035,7 @@ if ($checkVersion("prompts")<20251110001) {
         )
     ");
     
-    // Seed initial middleterm narrative summarizer prompt
+    // Seed initial middleterm narrative summarizer system prompt
     $middletermPrompt = $db->escape(
         "You are a long-term narrative continuity summarizer for an improvised Skyrim universe chronicle.\n".
         "- Always read ALL provided materials.\n".
@@ -2052,6 +2052,110 @@ if ($checkVersion("prompts")<20251110001) {
             'middleterm_narrative_summarizer',
             '$middletermPrompt',
             'System prompt for long-term narrative continuity summarization in middleterm memory processing'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Seed middleterm request/task prompt (uses {HERIKA_NAME} placeholder)
+    $middletermRequestPrompt = $db->escape(
+        "Main character in this logbook is {HERIKA_NAME}.\n".
+        "Task: Read **Context History** (newest session) and, if present, the **Previous Context History Summary** (prior canon). ".
+        "Integrate them to produce an updated broad narrative strokes summary that preserves continuity. Summary sections:\n\n".
+        "- **Notable Events in Chronological Order:**\n".
+        "  - Provide ~10 bullet points from earliest to latest, reflecting the story so far.\n".
+        "  - Prefer facts already established in the previous summary; only revise if the new context clearly changes them.\n\n".
+        "- **Current Quest Progression and background:**\n".
+        "  - Name questlines, stages/milestones if stated, objectives completed/active, and motivations.\n".
+        "When generating entries, ensure that {HERIKA_NAME} — the protagonist — is actively present in the scene. ".
+        "Any narrative content that occurs before {HERIKA_NAME}'s arrival or outside {HERIKA_NAME}'s perspective should be omitted, ".
+        "reflect only events {HERIKA_NAME} directly witness or participate in.\n".
+        "If the resulting summary would exceed roughly 25 bullet points, merge or generalise older entries into broader grouped events. ".
+        "Always retain explicit entries for major quest milestones, major character life events, or turning points."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'middleterm_narrative_request',
+            '$middletermRequestPrompt',
+            'User request/task instructions for middleterm narrative summarization (contains {HERIKA_NAME} placeholder)'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Seed character profile generation prompt (uses {HERIKA_NAME} and {CHARACTER_SEED} placeholders)
+    $profileGenPrompt = $db->escape(
+        "The main character in this logbook is {HERIKA_NAME}.{CHARACTER_SEED}\n".
+        "Read the context history (context_history) and the recent memories (middle_term_memory),\n".
+        " paying attention to notable events and the names of relevant characters.\n\n\n".
+        "Based on all this information, generate an character sheet for {HERIKA_NAME}.\n\n".
+        "This profile must be in XML format and have these fields.\n\n".
+        "<core>              Text. Core Identity, name,race an gender, and most remarkable job. Should be in the form of a sentence. e.g. 'Rose. Imperial female warrior.'\n".
+        "<npc_static_bio>    Text. Basic Summary, and bio. Create if not info available in <context_history>\n".
+        "<personality>       Text. Personality Traits. How the characters behave. Traumas. Likes.\n".
+        "<appearance>        Text. Physical Appearance. Infer from info available in <context_history>\n".
+        "<relationships>     Text. relationships with other actors.\n".
+        "<occupation>        Text. Main Occupation & Role\n".
+        "<skills>            Text. Skills & Abilities\n".
+        "<speechstyle>       Text. Speech Style\n".
+        "<goals>             Text. Long term Goals & Aspirations'\n"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'character_profile_generation',
+            '$profileGenPrompt',
+            'Prompt for AI-generated character profile/biography creation (contains {HERIKA_NAME} and {CHARACTER_SEED} placeholders)'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Seed AI vision appearance description prompt (uses {HERIKA_NAME} placeholder)
+    $visionAppearancePrompt = $db->escape(
+        "Describe the character in the picture. Name is {HERIKA_NAME} .\n".
+        "Do not focus on clothing, focus on physical appearance (face, eyes, hair, figure, waist,legs,breast size, tattoos if any....). Be concise. \n".
+        "Start generation with this text:\n".
+        "{HERIKA_NAME} is "
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'ai_vision_appearance',
+            '$visionAppearancePrompt',
+            'AI vision prompt for describing character physical appearance from images (contains {HERIKA_NAME} placeholder)'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Seed memory subsystem summary prompt (uses {PLAYER_NAME}, {COMPANIONS_LINE}, {SUMMARY_PROMPT} placeholders)
+    $memorySubsystemPrompt = $db->escape(
+        "{PLAYER_NAME} is the player.\n".
+        "{COMPANIONS_LINE}\n".
+        "You must write a memory summary from the narrator's point of view by analyzing the chat history. Focus only on roleplay elements: character behavior, feelings, relationships, decisions, dialogue, and locations relevant to the story. Ignore any references to game engine mechanics, menus, stats, or system messages.\n".
+        "Pay close attention to details that could influence a character's behavior or emotions, as well as tag names and locations. Include quotes from character dialogue in the summary if they are relevant to understanding actions, motivations, or relationships\n\n".
+        "Here are additional instructions: {SUMMARY_PROMPT}"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'memory_subsystem_summary',
+            '$memorySubsystemPrompt',
+            'Prompt for generating memory summaries from chat history (contains {PLAYER_NAME}, {COMPANIONS_LINE}, {SUMMARY_PROMPT} placeholders)'
         )
         ON CONFLICT (prompt_key) DO UPDATE SET
             default_prompt = EXCLUDED.default_prompt,

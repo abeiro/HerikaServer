@@ -111,22 +111,38 @@ $head[] = [
     'content' => $promptContent
 ];
 
-$request =
-    "Main character in this logbook is {$GLOBALS['HERIKA_NAME']}.\n".
-    "Task: Read **Context History** (newest session) and, if present, the **Previous Context History Summary** (prior canon). ".
-    "Integrate them to produce an updated broad narrative strokes summary that preserves continuity. Summary sections:\n\n".
+// Load request prompt from database with fallback to hardcoded default
+$requestPrompt = null;
+try {
+    $promptData = $GLOBALS["db"]->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'middleterm_narrative_request'");
+    if ($promptData) {
+        // Use custom_prompt if set, otherwise use default_prompt
+        $requestPrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+    }
+} catch (Exception $e) {
+    Logger::warn("Failed to load request prompt from database, using hardcoded fallback: " . $e->getMessage());
+}
 
-    "- **Notable Events in Chronological Order:**\n".
-    "  - Provide ~10 bullet points from earliest to latest, reflecting the story so far.\n".
-    "  - Prefer facts already established in the previous summary; only revise if the new context clearly changes them.\n\n".
+// Hardcoded fallback if database query failed or returned no results
+if (!$requestPrompt) {
+    $requestPrompt = 
+        "Main character in this logbook is {HERIKA_NAME}.\n".
+        "Task: Read **Context History** (newest session) and, if present, the **Previous Context History Summary** (prior canon). ".
+        "Integrate them to produce an updated broad narrative strokes summary that preserves continuity. Summary sections:\n\n".
+        "- **Notable Events in Chronological Order:**\n".
+        "  - Provide ~10 bullet points from earliest to latest, reflecting the story so far.\n".
+        "  - Prefer facts already established in the previous summary; only revise if the new context clearly changes them.\n\n".
+        "- **Current Quest Progression and background:**\n".
+        "  - Name questlines, stages/milestones if stated, objectives completed/active, and motivations.\n".
+        "When generating entries, ensure that {HERIKA_NAME} — the protagonist — is actively present in the scene. ".
+        "Any narrative content that occurs before {HERIKA_NAME}'s arrival or outside {HERIKA_NAME}'s perspective should be omitted, ".
+        "reflect only events {HERIKA_NAME} directly witness or participate in.\n".
+        "If the resulting summary would exceed roughly 25 bullet points, merge or generalise older entries into broader grouped events. ".
+        "Always retain explicit entries for major quest milestones, major character life events, or turning points.";
+}
 
-    "- **Current Quest Progression and background:**\n".
-    "  - Name questlines, stages/milestones if stated, objectives completed/active, and motivations.\n".
-    "When generating entries, ensure that {$GLOBALS['HERIKA_NAME']} — the protagonist — is actively present in the scene. ".
-    "Any narrative content that occurs before {$GLOBALS['HERIKA_NAME']}'s arrival or outside {$GLOBALS['HERIKA_NAME']}'s perspective should be omitted, ".
-    "reflect only events {$GLOBALS['HERIKA_NAME']} directly witness or participate in.\n".
-    "If the resulting summary would exceed roughly 25 bullet points, merge or generalise older entries into broader grouped events. ".
-    "Always retain explicit entries for major quest milestones, major character life events, or turning points.";
+// Replace {HERIKA_NAME} placeholder with actual character name
+$request = str_replace('{HERIKA_NAME}', $GLOBALS['HERIKA_NAME'], $requestPrompt);
 
 if (!empty($previous))
     $prompt[] = ['role' => 'user', 'content' => "# Previous Context History Summary:\n$previous"];
