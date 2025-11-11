@@ -278,7 +278,23 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
 	}
     $arr_poi = DataPosibleLocationsToGo();
     if (isset($arr_poi) && is_array($arr_poi) && (count($arr_poi) > 0)) {
-        $lastDialog[] = array('role' => 'user', 'content' => "<points_of_interest>\n# POIs - Points of Interest nearby \n## ". (implode("\n## ",$arr_poi))."\n</points_of_interest>");
+        // Filter blacklisted locations
+        if (isset($GLOBALS["LOCATION_BLACKLIST"]) && !empty($GLOBALS["LOCATION_BLACKLIST"])) {
+            $blacklistedLocations = array_map('trim', explode(',', strtolower($GLOBALS["LOCATION_BLACKLIST"])));
+            $arr_poi = array_filter($arr_poi, function($poi) use ($blacklistedLocations) {
+                $poiLower = strtolower($poi);
+                foreach ($blacklistedLocations as $blacklistedLocation) {
+                    if (!empty($blacklistedLocation) && strpos($poiLower, $blacklistedLocation) !== false) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+        }
+        
+        if (count($arr_poi) > 0) {
+            $lastDialog[] = array('role' => 'user', 'content' => "<points_of_interest>\n# POIs - Points of Interest nearby \n## ". (implode("\n## ",$arr_poi))."\n</points_of_interest>");
+        }
     }
     
     
