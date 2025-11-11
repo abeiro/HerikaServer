@@ -537,7 +537,7 @@ function extractSimpleFormatFromBuffer($buffer, $includeMood, $includeListener, 
         ];
     }
 
-    $groupPattern = str_repeat('\(([^)]+)\)', $groupCount);
+    $groupPattern = str_repeat('\(?([^)]+)\)', $groupCount);
     $pattern = '/^\s*' . $groupPattern . '\s*:?\s*(.*)$/s';
 
     if (preg_match($pattern, $buffer, $matches)) {

@@ -2,6 +2,53 @@
 CHIM CACHED CONNECTOR - VERSION HISTORY
 ===============================================================================
 
+Version 1.0.22 (2025-11-11)
+---------------------------
+
+Critical Bug Fixes:
+-------------------
+✓ **BUG #8 (CRITICAL): Fixed format markers appearing in-game text**
+  - Problem: Format markers like "lovely)" were appearing in game dialogue
+  - Root Cause: Regex required BOTH opening and closing parentheses: `(mood)`
+    * When LLM outputs `mood)` (with prefill) or without opening paren, regex failed
+    * Fallback returned entire buffer including format markers
+  - Impact: Format markers visible in-game, breaking immersion
+  - Fix: Made opening parenthesis OPTIONAL in regex pattern
+    * OLD pattern: `\(([^)]+)\)` - requires both `(` and `)`
+    * NEW pattern: `\(?([^)]+)\)` - opening `(` is optional with `\(?`
+    * Now accepts BOTH: `(mood)` and `mood)` formats
+    * Works for all combinations: `(mood)(action)` OR `mood)(action)`
+  - Testing: Added comprehensive test suite with 17 test cases
+    * Tests all combinations of mood/listener/action/target enabled/disabled
+    * Tests both full format `(mood)` and prefill format `mood)`
+    * Tests with and without optional colons
+    * All 17 tests pass successfully
+  - Modified: connector/openrouterjsoncached_helpers.php (line 540 - regex pattern)
+  - Added: test_simple_format_regex.php (comprehensive test suite)
+  - Result: Format markers no longer appear in-game, works with all format variations
+
+Supported Format Variations:
+-----------------------------
+✓ Single element: `(mood)` or `mood)`
+✓ Multiple elements: `(mood)(listener)` or `mood)(listener)`
+✓ With colon: `(mood):` or `mood):`
+✓ All combinations of enabled/disabled fields work correctly
+
+Files Modified:
+---------------
+• connector/openrouterjsoncached_helpers.php - Made opening paren optional
+• connector/openrouterjsoncached.php - Version updated to 1.0.22
+• connector/openrouterjsoncached_verbose.php - Version updated to 1.0.22
+• test_simple_format_regex.php - NEW: Comprehensive test suite (17 tests)
+
+Benefits:
+---------
+• Format markers no longer appear in game text
+• Robust handling of LLM output variations
+• Works correctly with or without prefill
+• All format element combinations tested and verified
+• Future-proof against LLM output format changes
+
 Version 1.0.21 (2025-11-11)
 ---------------------------
 
