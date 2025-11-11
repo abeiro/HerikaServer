@@ -13,6 +13,11 @@ class LLMConnector {
         ];
 
         foreach ($data as $k => $v) {
+            // Convert array values to JSON (fallback if not already done)
+            if (is_array($v)) {
+                $data[$k] = json_encode($v);
+                continue;
+            }
             if (empty("$v") && $v !== "0") {
                 $data[$k] = null;
             }
@@ -46,6 +51,11 @@ class LLMConnector {
         ];
 
         foreach ($data as $k => $v) {
+            // Convert array values to JSON (fallback if not already done)
+            if (is_array($v)) {
+                $data[$k] = json_encode($v);
+                continue;
+            }
             if (empty("$v") && $v!=="0") {
                 $data[$k] = null;
             }
@@ -167,6 +177,38 @@ class LLMConnector {
             if (is_array($metadata)) {
                 foreach ($metadata as $key => $value) {
                     $GLOBALS["CONNECTOR"]["openrouterjson"][$key] = $value;
+                }
+            }
+
+        } else if ($currentConnectorData["driver"] == "openrouterjsoncached") {
+
+            $apiBadge=new ApiBadge();
+            $apiKeyData=$apiBadge->getById($currentConnectorData["api_badge_id"]);
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["url"] = $currentConnectorData["url"] ?? 'https://openrouter.ai/api/v1/chat/completions';
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["model"] = $currentConnectorData["model"] ?? 'anthropic/claude-3-haiku-20240307';
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["PROVIDER"] = $currentConnectorData["provider"] ?? '';
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["reasoning_model"] = $currentConnectorData["reasoning_model"] ?? false;
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["max_tokens"] = $currentConnectorData["max_tokens"] ?? '1024';
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["temperature"] = $currentConnectorData["temperature"] ?? 1.0;
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["presence_penalty"] = $currentConnectorData["presence_penalty"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["frequency_penalty"] = $currentConnectorData["frequency_penalty"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["repetition_penalty"] = $currentConnectorData["repetition_penalty"] ?? 1.0;
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["top_p"] = $currentConnectorData["top_p"] ?? 1.0;
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["top_k"] = $currentConnectorData["top_k"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["min_p"] = $currentConnectorData["min_p"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["top_a"] = $currentConnectorData["top_a"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["ENFORCE_JSON"] = $currentConnectorData["enforce_json"] ?? true;
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["PREFILL_JSON"] = $currentConnectorData["prefill_json"] ?? false;
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["API_KEY"] = $apiKeyData["api_key"];
+            $GLOBALS["CONNECTOR"]["openrouterjsoncached"]["json_schema"] = $currentConnectorData["json_schema"] ?? false;
+
+             // Decode metadata and extended_data if available
+             // Metadata should contain caching-specific settings like:
+             // provider_caching, response_format, include_mood, include_actions, include_target, include_listener, dialogue_cache_uncached_count
+            $metadata = json_decode($currentConnectorData['metadata'] ?? '{}', true);
+            if (is_array($metadata)) {
+                foreach ($metadata as $key => $value) {
+                    $GLOBALS["CONNECTOR"]["openrouterjsoncached"][$key] = $value;
                 }
             }
 

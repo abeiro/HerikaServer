@@ -305,6 +305,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     <input type="text" id="driver_input" name="driver" value="<?= htmlspecialchars($editItem["driver"] ?? "") ?>" style="display:none"><br>
                     <select id="driver_select" style="display:none">
                         <option value="openrouterjson">OpenRouter JSON</option>
+                        <option value="openrouterjsoncached" title="⚠️ CACHE MODE: Uses prompt caching to reduce costs. May reduce roleplay quality due to cached static content. Best for high-volume usage.">OpenRouter JSON (Cached)</option>
                         <option value="openaijson">OpenAI JSON</option>
                         <option value="google_openaijson">Google OpenAI JSON</option>
                     </select>
@@ -459,6 +460,93 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 echo "</div>";
                 echo "</div>";
                 ?>
+
+                <?php
+                // Decode metadata for caching settings
+                $metadata = [];
+                if (isset($editItem['metadata'])) {
+                    if (is_string($editItem['metadata'])) {
+                        $metadata = json_decode($editItem['metadata'], true) ?: [];
+                    } elseif (is_array($editItem['metadata'])) {
+                        $metadata = $editItem['metadata'];
+                    }
+                }
+                ?>
+
+                <!-- Caching Settings (shown only for cached connectors) -->
+                <div id="caching_settings" style="display:none; margin-top:16px; padding:12px; border:1px solid #4a4a4a; border-radius:8px; background:#1a1a1a;">
+                    <div style="font-weight:600; color:#e9efff; margin-bottom:12px;">🔄 Caching Settings</div>
+
+                    <label for='provider_caching'>Provider Caching Type</label><br>
+                    <select name="metadata[provider_caching]" id="provider_caching">
+                        <option value="Anthropic" <?= ($metadata['provider_caching'] ?? 'Anthropic') === 'Anthropic' ? 'selected' : '' ?>>Anthropic</option>
+                        <option value="OpenAI" <?= ($metadata['provider_caching'] ?? '') === 'OpenAI' ? 'selected' : '' ?>>OpenAI</option>
+                        <option value="Gemini" <?= ($metadata['provider_caching'] ?? '') === 'Gemini' ? 'selected' : '' ?>>Gemini</option>
+                    </select><br>
+
+                    <label for='dialogue_cache_uncached_count'><span class='tip-label' data-tip='Number of most recent dialogue entries to keep uncached (0-10)'>Uncached Dialogue Count</span></label><br>
+                    <input type='number' name='metadata[dialogue_cache_uncached_count]' id='dialogue_cache_uncached_count' value='<?= htmlspecialchars($metadata['dialogue_cache_uncached_count'] ?? '4') ?>' min='0' max='10' step='1'><br>
+
+                    <div style="margin-top:12px;">
+                        <label class="label-with-toggle"><span class='tip-label' data-tip='Recommended ON for advanced models (Claude 3.5, GPT-4, Gemini 2.0). Uses minimal quality instructions. Turn OFF for older/smaller models that benefit from explicit guidance.'>Minimize Quality Instructions (Recommended)</span>
+                            <input type="hidden" name="metadata[minimize_quality_prompt]" value="0">
+                            <input type="checkbox" name="metadata[minimize_quality_prompt]" value="1" <?= (!isset($metadata['minimize_quality_prompt']) || $metadata['minimize_quality_prompt']) ? 'checked' : '' ?>>
+                            <span class="toggle-text">On</span>
+                        </label>
+                    </div>
+
+                    <!-- Response Format Section (Collapsible) -->
+                    <div style="margin-top:16px; border:1px solid #4a4a4a; border-radius:8px; background:#252525;">
+                        <div class="collapsible-header" data-target="response_format_section" style="padding:10px; cursor:pointer; user-select:none; font-weight:600; color:#e9efff; display:flex; justify-content:space-between; align-items:center;">
+                            <span>📝 Response Format</span>
+                            <span class="collapse-arrow">▼</span>
+                        </div>
+                        <div id="response_format_section" class="collapsible-content" style="padding:10px; display:none;">
+                            <label for='response_format'>Response Format</label><br>
+                            <select name="metadata[response_format]" id="response_format">
+                                <option value="json" <?= ($metadata['response_format'] ?? 'json') === 'json' ? 'selected' : '' ?>>JSON (structured)</option>
+                                <option value="simple" <?= ($metadata['response_format'] ?? '') === 'simple' ? 'selected' : '' ?>>Simple (natural language)</option>
+                            </select><br>
+
+                            <div style="margin-top:12px;">
+                                <label class="label-with-toggle"><span class='tip-label' data-tip='Include action selection in response format. Required for NPCs to perform actions.'>Include Actions</span>
+                                    <input type="hidden" name="metadata[include_actions_list]" value="0">
+                                    <input type="checkbox" name="metadata[include_actions_list]" value="1" <?= (!isset($metadata['include_actions_list']) || $metadata['include_actions_list']) ? 'checked' : '' ?>>
+                                </label><br>
+                                <label class="label-with-toggle"><span class='tip-label' data-tip='Include mood/emotion in response. Used for NPC animations and expressions.'>Include Mood</span>
+                                    <input type="hidden" name="metadata[include_mood_requirement]" value="0">
+                                    <input type="checkbox" name="metadata[include_mood_requirement]" value="1" <?= (!isset($metadata['include_mood_requirement']) || $metadata['include_mood_requirement']) ? 'checked' : '' ?>>
+                                </label><br>
+                                <label class="label-with-toggle"><span class='tip-label' data-tip='Include action target (who/what the action is directed at).'>Include Target</span>
+                                    <input type="hidden" name="metadata[include_target_requirement]" value="0">
+                                    <input type="checkbox" name="metadata[include_target_requirement]" value="1" <?= (!isset($metadata['include_target_requirement']) || $metadata['include_target_requirement']) ? 'checked' : '' ?>>
+                                </label><br>
+                                <label class="label-with-toggle"><span class='tip-label' data-tip='Include listener field (who the NPC is talking to). Useful for multi-NPC conversations.'>Include Listener</span>
+                                    <input type="hidden" name="metadata[include_listener_requirement]" value="0">
+                                    <input type="checkbox" name="metadata[include_listener_requirement]" value="1" <?= (!isset($metadata['include_listener_requirement']) || $metadata['include_listener_requirement']) ? 'checked' : '' ?>>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Settings Section (Collapsible) -->
+                    <div style="margin-top:16px; border:1px solid #4a4a4a; border-radius:8px; background:#252525;">
+                        <div class="collapsible-header" data-target="advanced_settings_section" style="padding:10px; cursor:pointer; user-select:none; font-weight:600; color:#e9efff; display:flex; justify-content:space-between; align-items:center;">
+                            <span>⚙️ Advanced Settings</span>
+                            <span class="collapse-arrow">▼</span>
+                        </div>
+                        <div id="advanced_settings_section" class="collapsible-content" style="padding:10px; display:none;">
+                            <label for='max_dialogue_cache_context_size'><span class='tip-label' data-tip='Maximum number of dialogue entries to cache in temp files. Higher = more context but larger cache files. Recommended: 93'>Max Dialogue Cache Context Size</span></label><br>
+                            <input type='number' name='metadata[max_dialogue_cache_context_size]' id='max_dialogue_cache_context_size' value='<?= htmlspecialchars($metadata['max_dialogue_cache_context_size'] ?? '93') ?>' min='0' step='1'><br>
+
+                            <label for='custom_system_instruction'><span class='tip-label' data-tip='Additional instruction added to the system prompt (after character bio, before dialogue history). Does NOT replace other instructions.'>Custom System Instruction</span></label><br>
+                            <textarea name='metadata[custom_system_instruction]' id='custom_system_instruction' rows='3' style='width:100%; box-sizing:border-box;'><?= htmlspecialchars($metadata['custom_system_instruction'] ?? '') ?></textarea><br>
+
+                            <label for='custom_last_instruction'><span class='tip-label' data-tip='Custom text inserted as second-to-last element in dialogue history (current user message is always last). Appears right before user current request.'>Custom Last Instruction</span></label><br>
+                            <textarea name='metadata[custom_last_instruction]' id='custom_last_instruction' rows='3' style='width:100%; box-sizing:border-box;'><?= htmlspecialchars($metadata['custom_last_instruction'] ?? '') ?></textarea>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </form>
@@ -556,7 +644,40 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             } catch(_e){}
         })();
         icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service, true)); });
-        if (driverSelect){ driverSelect.addEventListener('change', function(){ if (driverInput) driverInput.value = this.value; }); }
+        if (driverSelect){ driverSelect.addEventListener('change', function(){ if (driverInput) driverInput.value = this.value; updateCachingSettings(); }); }
+
+        // Caching settings visibility logic
+        function updateCachingSettings(){
+            const driver = driverInput ? driverInput.value : (driverSelect ? driverSelect.value : '');
+            const cachingSettings = document.getElementById('caching_settings');
+
+            // Show caching settings only for cached driver
+            const isCachedDriver = driver === 'openrouterjsoncached';
+            if (cachingSettings) cachingSettings.style.display = isCachedDriver ? '' : 'none';
+        }
+
+        // Initial call to set correct visibility
+        updateCachingSettings();
+
+        // Collapsible section handlers
+        (function(){
+            const headers = document.querySelectorAll('.collapsible-header');
+            headers.forEach(function(header){
+                header.addEventListener('click', function(){
+                    const targetId = this.getAttribute('data-target');
+                    const content = document.getElementById(targetId);
+                    const arrow = this.querySelector('.collapse-arrow');
+                    if (!content) return;
+                    if (content.style.display === 'none' || content.style.display === ''){
+                        content.style.display = 'block';
+                        if (arrow) arrow.textContent = '▲';
+                    } else {
+                        content.style.display = 'none';
+                        if (arrow) arrow.textContent = '▼';
+                    }
+                });
+            });
+        })();
     })();
     </script>
     <div id="toast" class="toast-notification" style="position:static; margin: 8px auto 12px; display:block; opacity:0; transform:none; max-width:960px; width: calc(100% - 20px);"><span class="message"></span></div>
@@ -807,6 +928,12 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
     // Seed required defaults for new connector (force values on create)
     $payload = $_POST;
+    
+    // Convert metadata array to JSON string if needed
+    if (isset($payload['metadata']) && is_array($payload['metadata'])) {
+        $payload['metadata'] = json_encode($payload['metadata']);
+    }
+    
     $payload['driver'] = 'openrouterjson';
     $payload['temperature'] = 1;
     $payload['url'] = 'https://openrouter.ai/api/v1/chat/completions';
@@ -952,7 +1079,14 @@ if (isset($_GET["create_blank"])) {
 // Handle Save (update without leaving current connector)
 if ($_SERVER["REQUEST_METHOD"] === "POST" && (isset($_POST["save"]) || isset($_POST["update"])) ) {
     $id = $_POST["id"] ?? '';
-    $llm->update($id, $_POST);
+    
+    // Process POST data - convert metadata array to JSON string if needed
+    $data = $_POST;
+    if (isset($data['metadata']) && is_array($data['metadata'])) {
+        $data['metadata'] = json_encode($data['metadata']);
+    }
+    
+    $llm->update($id, $data);
     $redir = 'llm_connectors.php' . ($id !== '' ? ('?edit=' . urlencode($id)) : '');
     if (isset($_POST['partial']) && $_POST['partial'] === 'editor') {
         $redir .= ($id !== '' ? '&' : '?') . 'partial=editor';
@@ -1202,6 +1336,7 @@ if (typeof window.consolidation !== 'function') {
                 <input type="text" id="driver_input" name="driver" value="<?= htmlspecialchars($editItem["driver"] ?? "") ?>" style="display:none"><br>
                 <select id="driver_select">
                     <option value="openrouterjson">OpenRouter JSON</option>
+                    <option value="openrouterjsoncached" title="⚠️ CACHE MODE: Uses prompt caching to reduce costs. May reduce roleplay quality due to cached static content. Best for high-volume usage.">OpenRouter JSON (Cached)</option>
                     <option value="openaijson">OpenAI JSON</option>
                     <option value="google_openaijson">Google OpenAI JSON</option>
                 </select>
@@ -1374,6 +1509,93 @@ if (typeof window.consolidation !== 'function') {
             echo "</div>";
             echo "</div>";
             ?>
+
+            <?php
+            // Decode metadata for caching settings (main editor)
+            $metadata_main = [];
+            if (isset($editItem['metadata'])) {
+                if (is_string($editItem['metadata'])) {
+                    $metadata_main = json_decode($editItem['metadata'], true) ?: [];
+                } elseif (is_array($editItem['metadata'])) {
+                    $metadata_main = $editItem['metadata'];
+                }
+            }
+            ?>
+
+            <!-- Caching Settings (shown only for cached connectors) - MAIN EDITOR -->
+            <div id="caching_settings_main" style="display:none; margin-top:16px; padding:12px; border:1px solid #4a4a4a; border-radius:8px; background:#1a1a1a;">
+                <div style="font-weight:600; color:#e9efff; margin-bottom:12px;">🔄 Caching Settings</div>
+
+                <label for='provider_caching_main'>Provider Caching Type</label><br>
+                <select name="metadata[provider_caching]" id="provider_caching_main">
+                    <option value="Anthropic" <?= ($metadata_main['provider_caching'] ?? 'Anthropic') === 'Anthropic' ? 'selected' : '' ?>>Anthropic</option>
+                    <option value="OpenAI" <?= ($metadata_main['provider_caching'] ?? '') === 'OpenAI' ? 'selected' : '' ?>>OpenAI</option>
+                    <option value="Gemini" <?= ($metadata_main['provider_caching'] ?? '') === 'Gemini' ? 'selected' : '' ?>>Gemini</option>
+                </select><br>
+
+                <label for='dialogue_cache_uncached_count_main'><span class='tip-label' data-tip='Number of most recent dialogue entries to keep uncached (0-10)'>Uncached Dialogue Count</span></label><br>
+                <input type='number' name='metadata[dialogue_cache_uncached_count]' id='dialogue_cache_uncached_count_main' value='<?= htmlspecialchars($metadata_main['dialogue_cache_uncached_count'] ?? '4') ?>' min='0' max='10' step='1'><br>
+
+                <div style="margin-top:12px;">
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Recommended ON for advanced models (Claude 3.5, GPT-4, Gemini 2.0). Uses minimal quality instructions. Turn OFF for older/smaller models that benefit from explicit guidance.'>Minimize Quality Instructions (Recommended)</span>
+                        <input type="hidden" name="metadata[minimize_quality_prompt]" value="0">
+                        <input type="checkbox" name="metadata[minimize_quality_prompt]" value="1" <?= (!isset($metadata_main['minimize_quality_prompt']) || $metadata_main['minimize_quality_prompt']) ? 'checked' : '' ?>>
+                        <span class="toggle-text">On</span>
+                    </label>
+                </div>
+
+                <!-- Response Format Section (Collapsible) -->
+                <div style="margin-top:16px; border:1px solid #4a4a4a; border-radius:8px; background:#252525;">
+                    <div class="collapsible-header" data-target="response_format_section_main" style="padding:10px; cursor:pointer; user-select:none; font-weight:600; color:#e9efff; display:flex; justify-content:space-between; align-items:center;">
+                        <span>📝 Response Format</span>
+                        <span class="collapse-arrow">▼</span>
+                    </div>
+                    <div id="response_format_section_main" class="collapsible-content" style="padding:10px; display:none;">
+                        <label for='response_format_main'>Response Format</label><br>
+                        <select name="metadata[response_format]" id="response_format_main">
+                            <option value="json" <?= ($metadata_main['response_format'] ?? 'json') === 'json' ? 'selected' : '' ?>>JSON (structured)</option>
+                            <option value="simple" <?= ($metadata_main['response_format'] ?? '') === 'simple' ? 'selected' : '' ?>>Simple (natural language)</option>
+                        </select><br>
+
+                        <div style="margin-top:12px;">
+                            <label class="label-with-toggle"><span class='tip-label' data-tip='Include action selection in response format. Required for NPCs to perform actions.'>Include Actions</span>
+                                <input type="hidden" name="metadata[include_actions_list]" value="0">
+                                <input type="checkbox" name="metadata[include_actions_list]" value="1" <?= (!isset($metadata_main['include_actions_list']) || $metadata_main['include_actions_list']) ? 'checked' : '' ?>>
+                            </label><br>
+                            <label class="label-with-toggle"><span class='tip-label' data-tip='Include mood/emotion in response. Used for NPC animations and expressions.'>Include Mood</span>
+                                <input type="hidden" name="metadata[include_mood_requirement]" value="0">
+                                <input type="checkbox" name="metadata[include_mood_requirement]" value="1" <?= (!isset($metadata_main['include_mood_requirement']) || $metadata_main['include_mood_requirement']) ? 'checked' : '' ?>>
+                            </label><br>
+                            <label class="label-with-toggle"><span class='tip-label' data-tip='Include action target (who/what the action is directed at).'>Include Target</span>
+                                <input type="hidden" name="metadata[include_target_requirement]" value="0">
+                                <input type="checkbox" name="metadata[include_target_requirement]" value="1" <?= (!isset($metadata_main['include_target_requirement']) || $metadata_main['include_target_requirement']) ? 'checked' : '' ?>>
+                            </label><br>
+                            <label class="label-with-toggle"><span class='tip-label' data-tip='Include listener field (who the NPC is talking to). Useful for multi-NPC conversations.'>Include Listener</span>
+                                <input type="hidden" name="metadata[include_listener_requirement]" value="0">
+                                <input type="checkbox" name="metadata[include_listener_requirement]" value="1" <?= (!isset($metadata_main['include_listener_requirement']) || $metadata_main['include_listener_requirement']) ? 'checked' : '' ?>>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Settings Section (Collapsible) -->
+                <div style="margin-top:16px; border:1px solid #4a4a4a; border-radius:8px; background:#252525;">
+                    <div class="collapsible-header" data-target="advanced_settings_section_main" style="padding:10px; cursor:pointer; user-select:none; font-weight:600; color:#e9efff; display:flex; justify-content:space-between; align-items:center;">
+                        <span>⚙️ Advanced Settings</span>
+                        <span class="collapse-arrow">▼</span>
+                    </div>
+                    <div id="advanced_settings_section_main" class="collapsible-content" style="padding:10px; display:none;">
+                        <label for='max_dialogue_cache_context_size_main'><span class='tip-label' data-tip='Maximum number of dialogue entries to cache in temp files. Higher = more context but larger cache files. Recommended: 93'>Max Dialogue Cache Context Size</span></label><br>
+                        <input type='number' name='metadata[max_dialogue_cache_context_size]' id='max_dialogue_cache_context_size_main' value='<?= htmlspecialchars($metadata_main['max_dialogue_cache_context_size'] ?? '93') ?>' min='0' step='1'><br>
+
+                        <label for='custom_system_instruction_main'><span class='tip-label' data-tip='Additional instruction added to the system prompt (after character bio, before dialogue history). Does NOT replace other instructions.'>Custom System Instruction</span></label><br>
+                        <textarea name='metadata[custom_system_instruction]' id='custom_system_instruction_main' rows='3' style='width:100%; box-sizing:border-box;'><?= htmlspecialchars($metadata_main['custom_system_instruction'] ?? '') ?></textarea><br>
+
+                        <label for='custom_last_instruction_main'><span class='tip-label' data-tip='Custom text inserted as second-to-last element in dialogue history (current user message is always last). Appears right before user current request.'>Custom Last Instruction</span></label><br>
+                        <textarea name='metadata[custom_last_instruction]' id='custom_last_instruction_main' rows='3' style='width:100%; box-sizing:border-box;'><?= htmlspecialchars($metadata_main['custom_last_instruction'] ?? '') ?></textarea>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1446,8 +1668,53 @@ if (typeof window.consolidation !== 'function') {
     function detectService(){ const sValRaw=(document.getElementById('service_input')&&String(document.getElementById('service_input').value||''))||''; const sVal=sValRaw.toLowerCase(); if (['openrouter','openai','google','nanogpt','custom'].includes(sVal)) return sVal; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (u){ if (u.includes('openai.com')) return 'openai'; if (u.includes('generativelanguage.googleapis.com')) return 'google'; if (u.includes('openrouter.ai')) return 'openrouter'; if (u.includes('nano-gpt.com')) return 'nanogpt'; return 'custom'; } const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; if (d.includes('openai')) return 'openai'; if (d.includes('google')) return 'google'; if (d.includes('nanogpt')) return 'nanogpt'; if (d.includes('openrouter')) return 'openrouter'; return 'openrouter'; }
     (function init(){ const service = detectService(); applyService(service, false); const driverSelect = document.getElementById('driver_select'); if (driverSelect) { driverSelect.addEventListener('change', function(){ if (driverInput) driverInput.value = this.value; }); if (driverInput && driverInput.value) driverSelect.value = driverInput.value; } const btnWSL = document.getElementById('btn_wsl_ip'); const btnHost = document.getElementById('btn_host_ip'); function fillFrom(buttonEl, ip){ if (!buttonEl) return; const form = buttonEl.closest('form'); const urlEl = form ? form.querySelector('input[name="url"]') : document.querySelector('input[name="url"]'); if (!ip || !urlEl) return; urlEl.value = 'http://' + ip + ':5001'; try { urlEl.dispatchEvent(new Event('input', { bubbles:true })); } catch(_e){} try { urlEl.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){} try { urlEl.focus(); } catch(_e){} } if (btnWSL) btnWSL.addEventListener('click', function(){ let ip = this.getAttribute('data-ip')||''; if (!ip) { ip = '<?= htmlspecialchars($WSL_IP) ?>'; } fillFrom(this, String(ip).trim()); }); if (btnHost) btnHost.addEventListener('click', function(){ let ip = this.getAttribute('data-ip')||''; if (!ip) { ip = '<?= htmlspecialchars($HOST_IP) ?>'; } fillFrom(this, String(ip).trim()); }); })();
     icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service, true)); });
-    if (driverInput){ driverInput.addEventListener('input', ()=> applyService(detectService(), false)); driverInput.addEventListener('change', ()=> applyService(detectService(), false)); }
+    if (driverInput){ driverInput.addEventListener('input', ()=> { applyService(detectService(), false); updateCachingSettingsMain(); }); driverInput.addEventListener('change', ()=> { applyService(detectService(), false); updateCachingSettingsMain(); }); }
     if (urlInput){ urlInput.addEventListener('change', ()=> { const sEl=document.getElementById('service_input'); const sVal = sEl ? String(sEl.value||'').toLowerCase() : ''; if (sVal==='custom') return; applyService(detectService(), false); }); }
+
+    // Caching settings visibility logic for main editor
+    function updateCachingSettingsMain(){
+        const driver = driverInput ? driverInput.value : '';
+        const driverSelect = document.getElementById('driver_select');
+        const driverFromSelect = driverSelect ? driverSelect.value : '';
+        const actualDriver = driver || driverFromSelect;
+        const cachingSettings = document.getElementById('caching_settings_main');
+
+        // Show caching settings only for cached driver
+        const isCachedDriver = actualDriver === 'openrouterjsoncached';
+        if (cachingSettings) cachingSettings.style.display = isCachedDriver ? '' : 'none';
+    }
+
+    // Also listen to driver select changes
+    const driverSelect = document.getElementById('driver_select');
+    if (driverSelect) {
+        driverSelect.addEventListener('change', function(){
+            if (driverInput) driverInput.value = this.value;
+            updateCachingSettingsMain();
+        });
+    }
+
+    // Initial call to set correct visibility
+    updateCachingSettingsMain();
+
+    // Collapsible section handlers for main editor
+    (function(){
+        const headers = document.querySelectorAll('.collapsible-header');
+        headers.forEach(function(header){
+            header.addEventListener('click', function(){
+                const targetId = this.getAttribute('data-target');
+                const content = document.getElementById(targetId);
+                const arrow = this.querySelector('.collapse-arrow');
+                if (!content) return;
+                if (content.style.display === 'none' || content.style.display === ''){
+                    content.style.display = 'block';
+                    if (arrow) arrow.textContent = '▲';
+                } else {
+                    content.style.display = 'none';
+                    if (arrow) arrow.textContent = '▼';
+                }
+            });
+        });
+    })();
 })();
 function llmClamp(rangeId, numberId, min, max){ const r = document.getElementById(rangeId); const n = document.getElementById(numberId); if (!r || !n) return; let v = parseFloat(n.value); if (isNaN(v)) v = min; if (v < min) v = min; if (v > max) v = max; n.value = v; r.value = v; }
 // Clear advanced settings (all below Temperature)
