@@ -1255,6 +1255,29 @@ New setting: $currentLocation
         error_log("[buildHistoricContext] Consolidated events: {$eventCountBefore} → {$eventCountAfter} (saved " . ($eventCountBefore - $eventCountAfter) . " slots)");
     }
 
+    // Filter ambient combat deaths if configured
+    if (!empty($GLOBALS["HIDE_AMBIENT_COMBAT"])) {
+        $beforeFilter = count($lastDialogFull);
+        $lastDialogFull = array_values(array_filter($lastDialogFull, function($event) {
+            // Keep non-death events
+            if (!isset($event['type']) || $event['type'] !== 'death') {
+                return true;
+            }
+            
+            // Keep death events that don't contain "has killed" (i.e., keep "has defeated")
+            $content = $event['content'] ?? '';
+            if (stripos($content, 'has killed') !== false) {
+                return false; // Filter out ambient combat
+            }
+            
+            return true; // Keep significant combat events
+        }));
+        $afterFilter = count($lastDialogFull);
+        if ($beforeFilter > $afterFilter) {
+            error_log("[buildHistoricContext] Filtered ambient combat: {$beforeFilter} → {$afterFilter} (removed " . ($beforeFilter - $afterFilter) . " events)");
+        }
+    }
+
     file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_.txt",print_r($query,true),FILE_APPEND);
     
     return $lastDialogFull;
