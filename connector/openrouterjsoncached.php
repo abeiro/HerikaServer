@@ -9,7 +9,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_function
 class openrouterjsoncached
 {
     // ⚠️ IMPORTANT: Please update version number, date, and CHIM version after making changes
-    const VERSION = 'OpenRouter Cache Connector v1.0.22 for CHIM 2.0.3 | 2025/11/11';
+    const VERSION = 'OpenRouter Cache Connector v1.0.22-debug for CHIM 2.0.3 | 2025/11/11';
 
     public $primary_handler;
     public $name;
@@ -986,22 +986,41 @@ class openrouterjsoncached
                 if ($parsed['found']) {
                     $this->_simpleFormatParsed = true;
 
+                    // DEBUG: Log parsing details
+                    logMessage("[{$this->name}] DEBUG: Simple format parsed successfully");
+                    logMessage("[{$this->name}] DEBUG: Raw buffer (first 100): " . substr($this->_buffer, 0, 100));
+                    logMessage("[{$this->name}] DEBUG: Buffer to parse (first 100): " . substr($bufferToParse, 0, 100));
+                    logMessage("[{$this->name}] DEBUG: Parsed mood: [{$parsed['mood']}]");
+                    logMessage("[{$this->name}] DEBUG: Parsed message (first 100): [" . substr($parsed['message'], 0, 100) . "]");
+                    logMessage("[{$this->name}] DEBUG: Used prefill: " . ($this->_usedPrefill ? 'YES' : 'NO'));
+                    if ($this->_usedPrefill) {
+                        logMessage("[{$this->name}] DEBUG: Prefill content: [{$this->_prefillContent}]");
+                    }
+
                     // Calculate where the message starts in the buffer (after format markers)
                     // Search in the same buffer used for parsing (with prefill if applicable)
                     $messagePos = strpos($bufferToParse, $parsed['message']);
+                    logMessage("[{$this->name}] DEBUG: strpos result: " . ($messagePos !== false ? $messagePos : 'FALSE'));
+
                     if ($messagePos !== false) {
                         // If prefill was used, adjust position to account for prefill length
                         if ($this->_usedPrefill) {
+                            $originalPos = $messagePos;
                             $messagePos = $messagePos - strlen($this->_prefillContent);
                             if ($messagePos < 0) {
                                 $messagePos = 0;
                             }
+                            logMessage("[{$this->name}] DEBUG: Position adjusted from $originalPos to $messagePos (prefill length: " . strlen($this->_prefillContent) . ")");
                         }
                         $this->_simpleFormatMessageStart = $messagePos;
                         $this->_lastReturnedLength = strlen($parsed['message']);
+                        logMessage("[{$this->name}] DEBUG: Message start position set to: $messagePos");
+                        logMessage("[{$this->name}] DEBUG: Substring from position (first 100): [" . substr($this->_buffer, $messagePos, 100) . "]");
                     } else {
                         // Fallback: assume message starts at beginning
                         logMessage("[{$this->name}] Warning: Could not find message position in buffer, using fallback (position 0)");
+                        logMessage("[{$this->name}] DEBUG: Searching for: [" . substr($parsed['message'], 0, 50) . "]");
+                        logMessage("[{$this->name}] DEBUG: In buffer: [" . substr($bufferToParse, 0, 100) . "]");
                         $this->_simpleFormatMessageStart = 0;
                         $this->_lastReturnedLength = strlen($parsed['message']);
                     }
