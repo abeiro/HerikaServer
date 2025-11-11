@@ -97,7 +97,7 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
             'sent'    => 0,
             'actor'   => "rolemaster",
             'text'    => "",
-            'action'  => "rolecommand|BackgroundCmd@$refHexString@ReturnHome/",
+            'action'  => "rolecommand|BackgroundCmd@$refHexString@StayAyPlace/",
             'tag'     => '',
         ]
     );
@@ -118,6 +118,40 @@ function handleTrack($currentNpcData,$db) {
             'actor'   => "rolemaster",
             'text'    => "",
             'action'  => "rolecommand|BackgroundCmd@$refHexString@Track/",
+            'tag'     => '',
+        ]
+    );
+    
+    return true;
+}
+
+/**
+ * Handle returnHome action for NPC background life
+ * 
+ * @param string $location The location where the NPC stays
+ * @param array $currentNpcData The NPC data array containing refid
+ * @param string $npcName The NPC character name
+ * @param int $last_ts The last timestamp
+ * @param int $last_gamets The last game timestamp
+ * @param int $momentum The current momentum/session timestamp
+ * @param object $db The database connection object
+ * @return bool True if action was successfully processed, false otherwise
+ */
+function handleReturnHome($location, $currentNpcData, $npcName, $last_ts, $last_gamets, $momentum, $db) {
+    $cnLocation = $db->escape($location);
+    $locId = $db->fetchOne("select formid from locations where name='$cnLocation'");
+    
+    $refHexString = convertSignedToUnsignedHex(hexdec($currentNpcData["refid"]));
+    
+    // Insert response log entry with return home command
+    $db->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent'    => 0,
+            'actor'   => "rolemaster",
+            'text'    => "",
+            'action'  => "rolecommand|BackgroundCmd@$refHexString@ReturnHome/",
             'tag'     => '',
         ]
     );

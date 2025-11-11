@@ -45,6 +45,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $db->delete("rolemaster", " 1=1 ");
     $db->delete("actions_issued", "gamets>={$gameRequest[2]}  ");
     $db->delete("moods_issued", "gamets>={$gameRequest[2]}  ");
+    $db->delete("rumors", "gamets>={$gameRequest[2]}  ");
 
     /* This is obsolete */
     /*

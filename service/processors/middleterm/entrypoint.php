@@ -36,7 +36,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
         require("cmd" . DIRECTORY_SEPARATOR . "generate.php");
     }
 
-    // BgL tracking coords
+    // BgL tracking coords, in-game daily
     
     $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->>'last_coords' IS NOT NULL AND metadata->'last_coords'->>'pending' IS NULL ");
     foreach ($allEnabledBgLNpc as $npc) {
@@ -49,7 +49,18 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     }
     
 
+     // BgL tracking coords, on NPCs marked with gps_track. in-game hourly
+    
+    $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->'gps_track' = 'true' ");
+    foreach ($allEnabledBgLNpc as $npc) {
+         $mwdata=json_decode($npc["metadata"],true);
+        if (!isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"] || $mwdata["last_coords"]["last_updated"]<($maxRow - ( 1 /0.0000024))) {
+            echo("[BACKGROUND-LIFE] Tracking {$npc["npc_name"]} gps_track=true ".PHP_EOL);
+            `php $enginePath/debug/simple_llm_request_with_context_life_command.php "{$npc["npc_name"]}" Track`;
+        }
+    }
     // BgL commands
+    /*
     $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_last_updated' IS NOT NULL ");
     foreach ($allEnabledBgLNpc as $npc) {
         $mwdata=json_decode($npc["extended_data"],true);
@@ -59,6 +70,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
         }
         break;  // One per iteration
     }
+    */
 
     $pfi = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] ?? 10) * 100000;
     

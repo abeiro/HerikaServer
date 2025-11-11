@@ -373,6 +373,7 @@
         .marker-item a {
             color:white;
             float:none;
+            text-decoration:none;
         }
         .map-controls {
             text-align: center;
@@ -448,7 +449,7 @@
                     echo '<div class="marker-dot" id="mkr_' . $marker['id'] . '" style="width: ' . ($marker['size'] * 2) . 'px; height: ' . ($marker['size'] * 2) . 'px; background-color: ' . $marker['color'] . '; opacity: 0.8;">';
                     echo '</div>';
                     echo '<div class="marker-label">' . PHP_EOL;
-                    echo "<a style='color:white;text-decoration:none' href='#dtl_{$marker["id"]}'>{$marker["name"]}</a></br>";
+                    echo "<a style='color:white;text-decoration:none' href='#dtl_{$marker["id"]}'>{$marker["name"]} &nbsp; ↗️</a></br>";
                     echo '<small>(' . $marker['x'] . ', ' . $marker['y'] . '),' . $marker['tag'] . '</small>';
                     echo '<img class="thumb" src="' . $marker['figure'] . '" />';
                     echo '<br/><small>Last reported:' . $marker['last_report'] . '</small>';
@@ -483,7 +484,7 @@
                     <div id="dtl_<?php echo $marker['id'] ?>" class="marker-item" style="background-blend-mode: soft-light;border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>)" >
                         <h4>
                             <span class="marker-item-color" style="background-color:                                                                                                                                                                         <?php echo $marker['color']; ?>;"></span>
-                            <a href="#mkr_<?php echo $marker['id'] ?>"><?php echo $marker['name']; ?></a>
+                            <a href="#mkr_<?php echo $marker['id'] ?>"><?php echo $marker['name']; ?> &nbsp; ↗️</a>
                         </h4>
                         <div class="marker-item-coords">
                             <ul>

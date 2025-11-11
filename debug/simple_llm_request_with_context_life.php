@@ -71,6 +71,7 @@ $dynamicBiography = buildDynamicBiography($GLOBALS);
 $npcMaster        = new NpcMaster();
 $currentNpcData   = $npcMaster->getByName($argv[1]);
 $extended_data    = $npcMaster->getExtendedData($currentNpcData);
+$metadata         = $npcMaster->getMetadata($currentNpcData);
 
 if (isset($extended_data["middle_term_memory"])) {
     $middle_term_memory = end($extended_data["middle_term_memory"]);
@@ -166,7 +167,10 @@ $diaryEntry   = [];
 $diaryEntries = $db->fetchAll($query2);
 foreach (array_reverse($diaryEntries) as $dentry) {
     //$history .= "\n<diary_entry>\n{$dentry["content"]}\n</diary_entry>\n";
-    $diaryEntry[] = ["gamets" => $dentry["gamets"], "content" => $dentry["content"], "type" => $dentry["topic"] == "Sent Letter" ? "sent_letter" : "diary_entry"];
+    $diaryEntry[] = [
+        "gamets"  => $dentry["gamets"],
+        "content" => number_format(($last_gamets - $dentry["gamets"]) * 0.0000024, 2) . " hours ago...\n" . $dentry["content"],
+        "type"    => $dentry["topic"] == "Sent Letter" ? "sent_letter" : "diary_entry"];
 
 }
 
@@ -214,6 +218,16 @@ if (isset($lastIt["gamets"])) {
 
 $bgEvents[] = ["gamets" => $lastLoc["gamets"], "content" => "{$lastLoc["location"]}", "type" => "last_known_location"];
 
+if (isset($metadata["last_coords"]) && $metadata["last_coords"][3]) {
+    $bgEvents[] = [
+        "gamets"  => $metadata["last_coords"]["last_updated"],
+        "content" => "{$metadata["last_coords"][3]}, " .
+        number_format(($last_gamets - $metadata["last_coords"]["last_updated"]) * 0.0000024, 2) .
+        " hours ago",
+        "type" => "last_reported_location"];
+    $LAST_REPORTED_LOCATION = $metadata["last_coords"][3];
+}
+
 print_r($bgEvents);
 
 // Must mix bgEvents array and diaryEntry array, and order them using key gamets asc
@@ -228,7 +242,7 @@ foreach ($combinedEvents as $dentry) {
     if ($dentry["type"] == "event" && $previous) {
         $hours             = ($dentry["gamets"] - $previous) * 0.0000024;
         $hoursAgo          = ($last_gamets - $dentry["gamets"]) * 0.0000024;
-        $dentry["content"] = "* $hours hours later: {$dentry["content"]}, $hoursAgo hours ago";
+        $dentry["content"] = "* $hours hours after last entry: {$dentry["content"]}, $hoursAgo hours ago";
     }
     $previous = $dentry["gamets"];
     $history .= "\n<{$dentry["type"]}>\n{$dentry["content"]}\n</{$dentry["type"]}>\n";
@@ -277,6 +291,9 @@ This soliloquy should reflect what the character might have done over the last $
  * What possible events or encounters might have occurred.
  * Intimate thoughts.
 
+Always respect the character’s last known location. If the character is currently in a specific place, generated content should occur in that same area or its surroundings.
+The character may express the intention to travel elsewhere, but such travel should only be described as a future plan, not an immediate action.
+
 Important note: Character {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]} ARE NOT  IN THE SAME PLACE after <context_history> events.
 Write in english as if you were {$GLOBALS["HERIKA_NAME"]}, soliloquy, speaking to yourself in first person.
 ";
@@ -305,7 +322,6 @@ Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
 
 print_r($buffer . PHP_EOL);
 
-
 if (isset($argv[2]) && $argv[2] == "dryrun") {
     die();
 }
@@ -326,8 +342,8 @@ $dynamicBiography
 $buffer
 </text>
 
-Possible actions:
-StayAtPlace - The character remains in their current location, performing activities locally. Take into account how much time character has been at this location and is current task. If gathering info or spreading rumors, should stay at least 48 hours.
+Possible actions (check character's goals section):
+StayAtPlace - The character remains in their current location, performing activities locally. Take into account how much time character has been at this location and is current task. If gathering info or spreading rumors, should stay at least 24 hours.
 TravelTo:<Place> - the character decides to travel to another location (replace <Place> with the chosen destination).The character should have a clear and logical reason for traveling.
 SpreadRumor - The character initiates or influences a rumor. Use this action whenever the character’s activities affect others indirectly (e.g., “The character promotes fair trade locally, causing rumors of happier merchants.”).
 Your answer must use markup - XML like - format, containing exactly 3 elements:
@@ -382,22 +398,17 @@ $buffer2 = $connectionHandler->fast_request($prompt, ["MAX_TOKENS" => 2048, "mod
 print_r($buffer2);
 //$parsed = parse_xml_fragment($buffer2);
 
-
-$extdata=$npcMaster->getExtendedData($currentNpcData);
-$extdata["background_life_last_updated"]=$last_gamets;
-$currentNpcData=$npcMaster->setExtendedData($currentNpcData,$extdata);
+$extdata                                 = $npcMaster->getExtendedData($currentNpcData);
+$extdata["background_life_last_updated"] = $last_gamets;
+$currentNpcData                          = $npcMaster->setExtendedData($currentNpcData, $extdata);
 $npcMaster->updateByArray($currentNpcData);
 
-
-
-$parsed = [];
-$parsed["action"]=manual_get_tag_content($buffer2,"action");
-$parsed["notification"]=manual_get_tag_content($buffer2,"notification");
-$parsed["rumor"]=manual_get_tag_content($buffer2,"rumor");
+$parsed                 = [];
+$parsed["action"]       = manual_get_tag_content($buffer2, "action");
+$parsed["notification"] = manual_get_tag_content($buffer2, "notification");
+$parsed["rumor"]        = manual_get_tag_content($buffer2, "rumor");
 
 print_r($parsed);
-
-
 
 if (is_array($parsed)) {
 
@@ -466,10 +477,10 @@ if (is_array($parsed)) {
                 'ts'       => $last_ts,
                 'gamets'   => $last_gamets + 5,
                 'topic'    => "Sent Letter",
-                'content'  => convert_gamets2skyrim_long_date($last_gamets) . "\n" . $parsed["notification"],
+                'content'  => $parsed["notification"],
                 'tags'     => "backgroundlife",
                 'people'   => $GLOBALS["HERIKA_NAME"],
-                'location' => $eventParsed["location"] ?? null,
+                'location' => $LAST_REPORTED_LOCATION?? null,
                 'sess'     => $momentum,
                 'localts'  => time(),
             ]
@@ -477,7 +488,8 @@ if (is_array($parsed)) {
     }
 
     if ($parsed["rumor"]) {
-        shell_exec("php $enginePath/debug/simple_llm_request_with_context_rumors_custom.php " . escapeshellarg($parsed["rumor"]));
+        $detParm = "{$parsed["rumor"]} (Contextual information about reasons of this rumor: {$parsed["notification"]})";
+        shell_exec("php $enginePath/debug/simple_llm_request_with_context_rumors_custom.php " . escapeshellarg($detParm));
     }
 }
 

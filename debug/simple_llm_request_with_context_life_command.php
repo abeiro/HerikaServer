@@ -78,7 +78,7 @@ $query      = "SELECT max(gamets) as  gamets from speech where
     (speaker='$npcNameEsc' or listener='$npcNameEsc' or companions like '%|$npcNameEsc|%')
     ";
 
-error_log($query);
+// error_log($query);
 $lastIt       = $db->fetchOne($query);
 $lastItNumber = $lastIt["gamets"] ?? 0;
 $momentum=time();
@@ -91,6 +91,8 @@ if ($cmds[0] == "TravelTo") {
 
 } else if ($cmds[0] == "StayAtPlace") {
     handleStayAtPlaceAction($cmds[1], $currentNpcData, $GLOBALS["HERIKA_NAME"], $last_ts, $last_gamets, $momentum, $db);
+} else if ($cmds[0] == "ReturnHome") {
+    handleReturnHome($cmds[1], $currentNpcData, $GLOBALS["HERIKA_NAME"], $last_ts, $last_gamets, $momentum, $db);
 } else if ($cmds[0] == "Track") {
     $metadata=$npcMaster->getMetadata($currentNpcData);
     $metadata["last_coords"]["pending"]=true;
