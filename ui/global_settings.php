@@ -301,6 +301,8 @@ $gsSections = [
         [ 'name' => 'PLAYER_SPEECH_STYLE', 'type' => 'longstring' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
         [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
+        [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
+        [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
         [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
     ],
     'Diary' => [
@@ -1162,6 +1164,68 @@ function current_value(string $flatName, array $currentConf) {
                 </div>
             </div>
         </div>
+        
+        <?php
+        // Show old conf.php prompt values for migration reference
+        $oldConfPrompts = [];
+        $promptKeysToCheck = [
+            'SUMMARY_PROMPT' => 'summary_prompt',
+            'DYNAMIC_PROMPT_PERSONALITY' => 'dynamic_prompt_personality',
+            'DYNAMIC_PROMPT_RELATIONSHIPS' => 'dynamic_prompt_relationships',
+            'DYNAMIC_PROMPT_OCCUPATION' => 'dynamic_prompt_occupation',
+            'DYNAMIC_PROMPT_SKILLS' => 'dynamic_prompt_skills',
+            'DYNAMIC_PROMPT_SPEECHSTYLE' => 'dynamic_prompt_speechstyle',
+            'DYNAMIC_PROMPT_GOALS' => 'dynamic_prompt_goals'
+        ];
+        
+        foreach ($promptKeysToCheck as $confKey => $dbKey) {
+            if (isset($GLOBALS[$confKey]) && !empty(trim($GLOBALS[$confKey]))) {
+                $oldConfPrompts[$confKey] = [
+                    'db_key' => $dbKey,
+                    'value' => $GLOBALS[$confKey]
+                ];
+            }
+        }
+        
+        if (!empty($oldConfPrompts)):
+        ?>
+        <div class="section-container" style="margin-top: 24px; border: 2px solid #ffb862; border-radius: 8px; padding: 20px; background: rgba(255, 184, 98, 0.05);">
+            <h3 style="margin: 0 0 12px 0; color: #ffb862; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                <span>Legacy conf.php Prompts</span>
+            </h3>
+            <div style="background: rgba(0,0,0,0.2); border-radius: 6px; padding: 16px; margin-bottom: 16px;">
+                <p style="margin: 0 0 12px 0; color: #cfd8e3; line-height: 1.6;">
+                    <strong>These prompts have been migrated to the new database-backed Prompts Manager.</strong><br>
+                    Your old <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px;">conf.php</code> values are shown below for reference. 
+                    You can ignore this if you never customized the memory or dynamic prompts in the past.
+                </p>
+                <ol style="margin: 8px 0 0 20px; color: #cfd8e3; line-height: 1.8;">
+                    <li>Copy your desired custom prompt value from below</li>
+                    <li>Go to <strong>Prompts Manager</strong> in Config Hub</li>
+                    <li>Find the corresponding prompt and click <strong>Edit</strong></li>
+                    <li>Paste your custom value and <strong>Save</strong></li>
+                </ol>
+            </div>
+            
+            <div style="max-height: 500px; overflow-y: auto; border: 1px solid rgba(138,155,182,0.2); border-radius: 6px; background: #0d1117;">
+                <?php foreach ($oldConfPrompts as $confKey => $promptInfo): ?>
+                <div style="border-bottom: 1px solid rgba(138,155,182,0.1); padding: 16px;">
+                    <div style="margin-bottom: 8px;">
+                        <strong style="color: #ffb862; font-size: 15px;"><?php echo htmlspecialchars($confKey); ?></strong>
+                        <div style="color: #8a9bb6; font-size: 12px; margin-top: 4px;">
+                            Database key: <code style="background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 3px;"><?php echo htmlspecialchars($promptInfo['db_key']); ?></code>
+                        </div>
+                    </div>
+                    <textarea 
+                        readonly 
+                        style="width: 100%; min-height: 100px; background: rgba(0,0,0,0.3); color: #cfd8e3; border: 1px solid rgba(138,155,182,0.2); border-radius: 4px; padding: 10px; font-family: monospace; font-size: 12px; resize: vertical;"
+                    ><?php echo htmlspecialchars($promptInfo['value']); ?></textarea>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        
         <div class="actions"></div>
     </form>
 </main>

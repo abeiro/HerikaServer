@@ -200,6 +200,27 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     if (stripos($profileString, $npcName) !== 0) {
                         $profileString = "{$npcName} {$profileString}";
                     }
+                    
+                    // Add appearance if available
+                    if (!empty($currentNpcData["appearance"])) {
+                        $profileString .= ". Appearance: " . trim($currentNpcData["appearance"]);
+                    }
+                    
+                    // Add equipment if available
+                    $metaData = $npcMaster->getMetaData($currentNpcData);
+                    if (isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
+                        $equipmentParts = [];
+                        $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'left_hand', 'right_hand'];
+                        foreach ($slots as $slot) {
+                            if (!empty($metaData["equipment"][$slot])) {
+                                $equipmentParts[] = $metaData["equipment"][$slot];
+                            }
+                        }
+                        if (!empty($equipmentParts)) {
+                            $profileString .= ". Equipment: " . implode(", ", $equipmentParts);
+                        }
+                    }
+                    
                     $actorDetailedListWithProfile[] = $profileString;
 
                 }
@@ -278,7 +299,23 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
 	}
     $arr_poi = DataPosibleLocationsToGo();
     if (isset($arr_poi) && is_array($arr_poi) && (count($arr_poi) > 0)) {
-        $lastDialog[] = array('role' => 'user', 'content' => "<points_of_interest>\n# POIs - Points of Interest nearby \n## ". (implode("\n## ",$arr_poi))."\n</points_of_interest>");
+        // Filter blacklisted locations
+        if (isset($GLOBALS["LOCATION_BLACKLIST"]) && !empty($GLOBALS["LOCATION_BLACKLIST"])) {
+            $blacklistedLocations = array_map('trim', explode(',', strtolower($GLOBALS["LOCATION_BLACKLIST"])));
+            $arr_poi = array_filter($arr_poi, function($poi) use ($blacklistedLocations) {
+                $poiLower = strtolower($poi);
+                foreach ($blacklistedLocations as $blacklistedLocation) {
+                    if (!empty($blacklistedLocation) && strpos($poiLower, $blacklistedLocation) !== false) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+        }
+        
+        if (count($arr_poi) > 0) {
+            $lastDialog[] = array('role' => 'user', 'content' => "<points_of_interest>\n# POIs - Points of Interest nearby \n## ". (implode("\n## ",$arr_poi))."\n</points_of_interest>");
+        }
     }
     
     
@@ -1237,6 +1274,29 @@ New setting: $currentLocation
     $eventCountAfter = count($lastDialogFull);
     if ($eventCountBefore > $eventCountAfter) {
         error_log("[buildHistoricContext] Consolidated events: {$eventCountBefore} → {$eventCountAfter} (saved " . ($eventCountBefore - $eventCountAfter) . " slots)");
+    }
+
+    // Filter ambient combat deaths if configured
+    if (!empty($GLOBALS["HIDE_AMBIENT_COMBAT"])) {
+        $beforeFilter = count($lastDialogFull);
+        $lastDialogFull = array_values(array_filter($lastDialogFull, function($event) {
+            // Keep non-death events
+            if (!isset($event['type']) || $event['type'] !== 'death') {
+                return true;
+            }
+            
+            // Keep death events that don't contain "has killed" (i.e., keep "has defeated")
+            $content = $event['content'] ?? '';
+            if (stripos($content, 'has killed') !== false) {
+                return false; // Filter out ambient combat
+            }
+            
+            return true; // Keep significant combat events
+        }));
+        $afterFilter = count($lastDialogFull);
+        if ($beforeFilter > $afterFilter) {
+            error_log("[buildHistoricContext] Filtered ambient combat: {$beforeFilter} → {$afterFilter} (removed " . ($beforeFilter - $afterFilter) . " events)");
+        }
     }
 
     file_put_contents(__DIR__."/../log/context_for_{$actor}_stage_1_.txt",print_r($query,true),FILE_APPEND);

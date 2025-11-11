@@ -1,19 +1,31 @@
 <?php
-    $enginePath = dirname(__DIR__) . DIRECTORY_SEPARATOR;
-    require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php";
+// Get the relative web path from document root to our application
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
 
-    $host     = 'localhost';
-    $port     = '5432';
-    $dbname   = 'dwemer';
-    $schema   = 'public';
-    $username = 'dwemer';
-    $password = 'dwemer';
+require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
-    $adminConn = @pg_connect("host={$host} port={$port} dbname={$dbname} user={$username} password={$password}");
-    if (! $adminConn) {
-        echo json_encode(['ok' => false]);
-        exit;
-    }
+$TITLE = "🗺️ Background Life - Map Viewer";
+
+ob_start();
+
+$enginePath = dirname(__DIR__) . DIRECTORY_SEPARATOR;
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php";
+
+$host     = 'localhost';
+$port     = '5432';
+$dbname   = 'dwemer';
+$schema   = 'public';
+$username = 'dwemer';
+$password = 'dwemer';
+
+$adminConn = @pg_connect("host={$host} port={$port} dbname={$dbname} user={$username} password={$password}");
+if (! $adminConn) {
+    echo json_encode(['ok' => false]);
+    exit;
+}
 
     // Handle AJAX request update
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
@@ -241,195 +253,311 @@
     unset($marker);
 
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Skyrim Map Viewer</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 20px;
-            background: #1a1a1a;
-            font-family: 'Arial', sans-serif;
-            color: #fff;
-        }
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
-        }
-        h1 {
-            color: #ffcc00;
-            text-align: center;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-        .map-container {
-            position: relative;
-            display: inline-block;
-            background: #111;
-            padding: 10px;
-            border: 3px solid #ffcc00;
-            box-shadow: 0 0 20px rgba(255, 204, 0, 0.3);
-            margin: 20px auto;
-            width: 75%;
-            box-sizing: border-box;
-        }
-        .map-container img {
-            display: block;
-            width: 100%;
-            height: auto;
-            border: 1px solid #666;
-            
-        }
-        .marker {
-            position: absolute;
-            transform: translate(-50%, -50%);
-            cursor: pointer;
-        }
-        .marker-dot {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            position:relative;
-        }
-        .marker-label {
-            position: absolute;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 3px;
-            white-space: nowrap;
-            font-size: 16px;
-            top: 15px;
-            left: 50%;
-            transform: translateX(-50%);
-            margin-top: 5px;
-            border: 1px solid #ffcc00;
-            display: none;
-            z-index: 20;
-        }
-        .marker:hover{
-            z-index: 200;
-        }
-        .marker:hover .marker-label {
-            display: block;
-        }
-        .info-panel {
-            background: #222;
-            padding: 15px;
-            border-left: 4px solid #ffcc00;
-            margin: 20px 0;
-            border-radius: 4px;
-        }
-        .marker-list {
-            display: flex;
-            /* grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); */
-            gap: 15px;
-            margin-top: 20px;
-            justify-content: space-around;
-            align-content: center;
-            align-items: baseline;
-            justify-items: stretch;
-            flex-direction: row-reverse;
-            flex-wrap: wrap;
-        }
-        .marker-item {
-            background: #333;
-            padding: 12px;
-            border-left: 4px solid;
-            border-radius: 4px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position-x: right;
-        }
-        .marker-item-color {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            vertical-align: middle;
-            margin-right: 10px;
-            border: 2px solid white;
-        }
-        .marker-item h4 {
-            margin: 8px 0;
-            color: #ffcc00;
-        }
-        .marker-item-coords {
-            font-size: 11px;
-            color: #aaa;
-            margin: 5px 0;
-        }
-        .marker-item-coords ul {
-            padding-left: 5px;
-        }
-        #mapImage {
-            opacity:1;
-        }
-        .marker-item a {
-            color:white;
-            float:none;
-            text-decoration:none;
-        }
-        .map-controls {
-            text-align: center;
-            margin: 15px 0;
-            padding: 10px;
-            background: #222;
-            border-radius: 4px;
-        }
-        .map-controls button {
-            background: #ffcc00;
-            color: #000;
-            border: none;
-            padding: 10px 20px;
-            margin: 5px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-        .map-controls button:hover {
-            background: #ffdd44;
-            transform: scale(1.05);
-        }
-        .map-controls button:active {
-            transform: scale(0.95);
-        }
-        .map-controls span {
-            color: #ffcc00;
-            margin: 0 15px;
-            font-weight: bold;
-        }
-        img.thumb {
 
+<?php
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
+?>
+
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<style>
+    /* Override main container styles */
+    main {
+        padding-top: 10px;
+        padding-bottom: 20px;
+        padding-left: 5%;
+        padding-right: 5%;
+        width: 100%;
+        margin: 0;
+    }
+    
+    /* Override footer styles */
+    footer {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        height: 20px;
+        background: #031633;
+        z-index: 100;
+    }
+
+    /* MagicCards font import */
+    @font-face {
+        font-family: 'MagicCards';
+        src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+    }
+
+    /* Header Styling */
+    .page-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: #2a2a2a;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+    }
+
+    .page-header h1 {
+        margin: 0;
+        font-family: 'MagicCards', serif;
+        word-spacing: 8px;
+        font-size: 2.2em;
+        color: rgb(242, 124, 17);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .container {
+        max-width: 100%;
+        margin: 0 auto;
+    }
+
+    .map-container {
+        position: relative;
+        display: inline-block;
+        background: #1a1a1a;
+        padding: 15px;
+        border: 3px solid rgb(242, 124, 17);
+        box-shadow: 0 0 20px rgba(242, 124, 17, 0.3);
+        margin: 20px auto;
+        width: 75%;
+        box-sizing: border-box;
+        border-radius: 8px;
+    }
+
+    .map-container img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border: 1px solid #4a4a4a;
+        border-radius: 4px;
+    }
+
+    .marker {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        cursor: pointer;
+    }
+
+    .marker-dot {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        position: relative;
+    }
+
+    .marker-label {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        white-space: nowrap;
+        font-size: 14px;
+        top: 15px;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-top: 5px;
+        border: 2px solid rgb(242, 124, 17);
+        display: none;
+        z-index: 20;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .marker:hover {
+        z-index: 200;
+    }
+
+    .marker:hover .marker-label {
+        display: block;
+    }
+
+    .info-panel {
+        background: #2a2a2a;
+        padding: 20px;
+        border-left: 4px solid rgb(242, 124, 17);
+        margin: 20px 0;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+    }
+
+    .info-panel h3 {
+        color: rgb(242, 124, 17);
+        font-family: 'MagicCards', serif;
+        margin-top: 0;
+        word-spacing: 6px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+
+    .info-panel strong {
+        color: rgb(242, 124, 17);
+    }
+
+    .marker-list {
+        display: flex;
+        gap: 15px;
+        margin-top: 20px;
+        justify-content: space-around;
+        align-content: center;
+        align-items: baseline;
+        justify-items: stretch;
+        flex-direction: row-reverse;
+        flex-wrap: wrap;
+    }
+
+    .marker-item {
+        background: #2a2a2a;
+        padding: 15px;
+        border-left: 4px solid;
+        border-radius: 8px;
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position-x: right;
+        border: 1px solid #4a4a4a;
+    }
+
+    .marker-item-color {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        vertical-align: middle;
+        margin-right: 10px;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .marker-item h4 {
+        margin: 8px 0;
+        color: rgb(242, 124, 17);
+        font-family: 'MagicCards', serif;
+        word-spacing: 4px;
+    }
+
+    .marker-item-coords {
+        font-size: 12px;
+        color: #bbb;
+        margin: 5px 0;
+    }
+
+    .marker-item-coords ul {
+        padding-left: 15px;
+    }
+
+    .marker-item-coords li {
+        margin: 3px 0;
+    }
+
+    #mapImage {
+        opacity: 1;
+    }
+
+    .marker-item a {
+        color: white;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    .marker-item a:hover {
+        color: rgb(242, 124, 17);
+    }
+
+    .map-controls {
+        text-align: center;
+        margin: 15px 0;
+        padding: 15px;
+        background: #2a2a2a;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+    }
+
+    .map-controls button {
+        background: rgb(242, 124, 17);
+        color: #000;
+        border: none;
+        padding: 10px 20px;
+        margin: 5px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .map-controls button:hover {
+        background: rgb(255, 140, 30);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(242, 124, 17, 0.4);
+    }
+
+    .map-controls button:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .map-controls span {
+        color: rgb(242, 124, 17);
+        margin: 0 15px;
+        font-weight: bold;
+        font-size: 16px;
+    }
+
+    img.thumb {
+        max-width: 100px;
+        border-radius: 4px;
+        margin-top: 5px;
+    }
+
+    .marker-action-btn {
+        background: rgb(242, 124, 17);
+        color: #000;
+        border: none;
+        padding: 8px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .marker-action-btn:hover {
+        background: rgb(255, 140, 30);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(242, 124, 17, 0.4);
+    }
+
+    .marker-action-btn:active {
+        transform: translateY(0);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        main {
+            padding-left: 5%;
+            padding-right: 5%;
         }
-        .marker-action-btn {
-            background: #ff8844;
-            color: #000;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 12px;
-            transition: all 0.3s ease;
+
+        .map-container {
+            width: 95%;
         }
-        .marker-action-btn:hover {
-            background: #ffaa66;
-            transform: scale(1.05);
+
+        .page-header h1 {
+            font-size: 1.5em;
         }
-        .marker-action-btn:active {
-            transform: scale(0.95);
-        }
-    </style>
-</head>
-<body>
+    }
+</style>
+
+<main>
+    <div class="page-header">
+        <h1>🗺️ Background Life - Command Center</h1>
+    </div>
     <div class="container">
         
         <div class="map-container" >
@@ -460,12 +588,11 @@
             ?>
         </div>
         <div style="width:20%;float:right">
-            <h1>⚔ Skyrim Map - Location Markers ⚔</h1>
             <div class="info-panel">
-                <strong>Map Information:</strong><br>
-                Dimensions:                                               <?php echo $mapWidth; ?>×<?php echo $mapHeight; ?> pixels<br>
-                Total Markers:                                                     <?php echo sizeof($translatedMarkers); ?><br>
-                Current date: <?php echo $currentDate?><br/>
+                <h3>⚔ Map Info ⚔</h3>
+                <strong>Dimensions:</strong> <?php echo $mapWidth; ?>×<?php echo $mapHeight; ?> pixels<br>
+                <strong>Total Markers:</strong> <?php echo sizeof($translatedMarkers); ?><br>
+                <strong>Current Date:</strong> <?php echo $currentDate?><br/>
             </div>
 
             <div class="map-controls">
@@ -473,12 +600,12 @@
                 <button onclick="zoomMap(1)">⟲ Reset</button>
                 <button onclick="zoomMap(1.2)">🔍+ Expand</button>
                 <span id="zoomLevel">100%</span>
-                <button onclick="requestUpdate()" style="background: #44cc44; margin-left: 20px;">📤 Request Update</button>
+                <button onclick="requestUpdate()" style="margin-left: 20px;">📤 Request Update</button>
             </div>
         </div>
         <br break="all"/>
         <div class="info-panel">
-            <strong>📍 Markers:</strong>
+            <h3>📍 Location Markers</h3>
             <div class="marker-list">
                 <?php foreach ($translatedMarkers as $marker) {?>
                     <div id="dtl_<?php echo $marker['id'] ?>" class="marker-item" style="background-blend-mode: soft-light;border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>)" >
@@ -657,5 +784,14 @@
 
     var processingMessage;
     </script>
-</body>
-</html>
+</main>
+
+<?php
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl/footer.html");
+
+$buffer = ob_get_contents();
+ob_end_clean();
+$title = $TITLE;
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+echo $buffer;
+?>
