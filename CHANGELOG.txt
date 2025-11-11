@@ -2,6 +2,49 @@
 CHIM CACHED CONNECTOR - VERSION HISTORY
 ===============================================================================
 
+Version 1.0.20 (2025-11-11)
+---------------------------
+
+Critical Bug Fixes:
+-------------------
+✓ **BUG #6 (CRITICAL): Fixed simple format messages not appearing in-game**
+  - Problem: Simple format responses were not appearing in CHIM event log or in-game
+  - Root Cause #1: Regex pattern didn't handle LLMs outputting "(mood):" with colon
+    * Pattern only matched "(mood) " without colon
+    * When LLM used colon, parsing failed silently
+  - Root Cause #2: No fallback handling when format parsing failed
+    * When extractSimpleFormatFromBuffer() returned ['found'=>false], code fell through
+    * Returned empty string on line 1020/1034, causing complete message loss
+  - Impact: Messages completely lost when LLM didn't follow exact format
+  - Fix #1: Updated regex to allow optional colons after format markers
+    * OLD: `/^\s*\(([^)]+)\)\s*(.*)$/s`
+    * NEW: `/^\s*\(([^)]+)\)\s*:?\s*(.*)$/s`
+    * The `:?` makes the colon optional
+  - Fix #2: Added comprehensive fallback error handling
+    * Logs ERROR when simple format parsing fails
+    * Logs first 200 chars of buffer for debugging
+    * Returns entire raw buffer as dialogue instead of empty string
+    * Marks format as "parsed" to prevent infinite re-parsing
+    * Verbose connector includes complete buffer dump
+  - Modified: connector/openrouterjsoncached_helpers.php (line 541 - regex pattern)
+  - Modified: connector/openrouterjsoncached.php (lines 1004-1016 - fallback handling)
+  - Modified: connector/openrouterjsoncached_verbose.php (lines 1667-1686 - fallback with verbose logging)
+  - Result: Messages ALWAYS appear, even if LLM doesn't follow format correctly
+
+Files Modified:
+---------------
+• connector/openrouterjsoncached_helpers.php - Updated regex to accept optional colon
+• connector/openrouterjsoncached.php - Added fallback handling for parsing failures
+• connector/openrouterjsoncached_verbose.php - Added fallback with verbose logging
+
+Benefits:
+---------
+• Simple format messages now appear reliably in-game
+• Handles both "(mood) message" and "(mood): message" formats
+• Fallback prevents message loss when LLM doesn't follow instructions
+• Comprehensive error logging helps debug LLM format compliance issues
+• Verbose connector provides complete buffer dump for troubleshooting
+
 Version 1.0.19 (2025-11-11)
 ---------------------------
 

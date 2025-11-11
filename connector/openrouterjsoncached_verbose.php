@@ -10,7 +10,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_function
 class openrouterjsoncached_verbose
 {
     // ⚠️ IMPORTANT: Please update version number, date, and CHIM version after making changes
-    const VERSION = 'OpenRouter Cache Connector v1.0.19 for CHIM 2.0.3 | 2025/11/11 (VERBOSE)';
+    const VERSION = 'OpenRouter Cache Connector v1.0.20 for CHIM 2.0.3 | 2025/11/11 (VERBOSE)';
 
     public $primary_handler;
     public $name;
@@ -1664,6 +1664,25 @@ class openrouterjsoncached_verbose
 
                     // Strip any reasoning tokens from final message before returning
                     return stripReasoningTokens($parsed['message']);
+                } else {
+                    // CRITICAL: Simple format parsing failed - use fallback to prevent lost messages
+                    logMessage("[{$this->name}] ERROR: Simple format parsing failed! LLM did not follow format instructions. Using raw buffer as fallback.");
+                    logMessage("[{$this->name}] Buffer content (first 200 chars): " . substr($this->_buffer, 0, 200));
+
+                    // VERBOSE_LOGGING_START - _parseAndReturnContent: Simple format parsing failed
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] PARSING FAILURE - Complete buffer content:");
+                        logMessage("[CACHE-VERBOSE] " . $this->_buffer);
+                    }
+                    // VERBOSE_LOGGING_END
+
+                    // Mark as parsed to prevent re-parsing
+                    $this->_simpleFormatParsed = true;
+                    $this->_simpleFormatMessageStart = 0;
+                    $this->_lastReturnedLength = strlen($this->_buffer);
+
+                    // Return the entire buffer as the message
+                    return stripReasoningTokens($this->_buffer);
                 }
             } else {
                 // Simple format already parsed, return only new content since last call
