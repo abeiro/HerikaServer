@@ -193,21 +193,6 @@ if (! $adminConn) {
         }
     }
 
-    // Add Ivarstead location marker
-    $markers[] = [
-        'name'        => 'Ivarstead',
-        'ingame_x'    => 76375,
-        'ingame_y'    => -64263,
-        'color'       => '#FFD700',
-        'size'        => 12,
-        'tag'         => 'Town',
-        'figure'      => null,
-        'id'          => 'ivarstead',
-        'refid'       => '96145',
-        'last_pos_ts' => null,
-        'last_report' => null,
-    ];
-
     // Translate all marker coordinates
     $translatedMarkers = [];
     $locationMap       = []; // Track markers at each location
