@@ -7,6 +7,24 @@ Version 1.0.22 (2025-11-11)
 
 Critical Bug Fixes:
 -------------------
+✓ **BUG #9 (CRITICAL): Fixed parsing attempted on incomplete streaming buffer**
+  - Problem: Format markers like "lovely):" were still appearing in-game text
+  - Root Cause: Parsing was attempted when buffer contained only "lovely" (incomplete)
+    * First streaming chunk arrives with just "lovely"
+    * Code immediately attempts to parse before closing ")" arrives
+    * Regex requires at least "mood)" to match, but buffer only has "lovely"
+    * Parsing fails with ['found' => false]
+    * Fallback triggers and returns entire raw buffer: "lovely"
+    * Buffer is marked as parsed, subsequent chunks ignored or mishandled
+  - Impact: Format markers visible in-game, immersion broken
+  - Fix: Added check to wait for at least one closing parenthesis before parsing
+    * if (strpos($bufferToParse, ')') === false) return "";
+    * Waits for format marker to be complete before attempting parse
+    * Ensures regex has valid input to match against
+  - Modified: connector/openrouterjsoncached.php (lines 978-983)
+  - Modified: connector/openrouterjsoncached_verbose.php (lines 1616-1623)
+  - Result: Format markers no longer appear, parsing only happens on complete data
+
 ✓ **BUG #8 (CRITICAL): Fixed format markers appearing in-game text**
   - Problem: Format markers like "lovely)" were appearing in game dialogue
   - Root Cause: Regex required BOTH opening and closing parentheses: `(mood)`

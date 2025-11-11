@@ -1613,6 +1613,15 @@ class openrouterjsoncached_verbose
                 // Prepend prefill content if used, since API doesn't return it in response
                 $bufferToParse = $this->_usedPrefill ? $this->_prefillContent . $this->_buffer : $this->_buffer;
 
+                // BUG#9 FIX: Don't attempt parsing until we have at least a closing parenthesis
+                // If buffer is incomplete (e.g., just "lovely" without ")"), wait for more content
+                if (strpos($bufferToParse, ')') === false) {
+                    if ($this->_verboseLogging) {
+                        logMessage("[CACHE-VERBOSE] Waiting for closing parenthesis, buffer: " . substr($bufferToParse, 0, 50));
+                    }
+                    return "";  // Return empty, wait for more streaming content
+                }
+
                 $parsed = extractSimpleFormatFromBuffer(
                     $bufferToParse,
                     $this->_includeMood,

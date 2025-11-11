@@ -9,7 +9,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_function
 class openrouterjsoncached
 {
     // ⚠️ IMPORTANT: Please update version number, date, and CHIM version after making changes
-    const VERSION = 'OpenRouter Cache Connector v1.0.22-debug for CHIM 2.0.3 | 2025/11/11';
+    const VERSION = 'OpenRouter Cache Connector v1.0.22 for CHIM 2.0.3 | 2025/11/11';
 
     public $primary_handler;
     public $name;
@@ -974,6 +974,13 @@ class openrouterjsoncached
             if (!$this->_simpleFormatParsed) {
                 // Prepend prefill content if used, since API doesn't return it in response
                 $bufferToParse = $this->_usedPrefill ? $this->_prefillContent . $this->_buffer : $this->_buffer;
+
+                // BUG#9 FIX: Don't attempt parsing until we have at least a closing parenthesis
+                // If buffer is incomplete (e.g., just "lovely" without ")"), wait for more content
+                if (strpos($bufferToParse, ')') === false) {
+                    logMessage("[{$this->name}] DEBUG: Waiting for closing parenthesis, buffer: " . substr($bufferToParse, 0, 50));
+                    return "";  // Return empty, wait for more streaming content
+                }
 
                 $parsed = extractSimpleFormatFromBuffer(
                     $bufferToParse,
