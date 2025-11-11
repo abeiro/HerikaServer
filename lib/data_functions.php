@@ -200,6 +200,27 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     if (stripos($profileString, $npcName) !== 0) {
                         $profileString = "{$npcName} {$profileString}";
                     }
+                    
+                    // Add appearance if available
+                    if (!empty($currentNpcData["appearance"])) {
+                        $profileString .= ". Appearance: " . trim($currentNpcData["appearance"]);
+                    }
+                    
+                    // Add equipment if available
+                    $metaData = $npcMaster->getMetaData($currentNpcData);
+                    if (isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
+                        $equipmentParts = [];
+                        $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'left_hand', 'right_hand'];
+                        foreach ($slots as $slot) {
+                            if (!empty($metaData["equipment"][$slot])) {
+                                $equipmentParts[] = $metaData["equipment"][$slot];
+                            }
+                        }
+                        if (!empty($equipmentParts)) {
+                            $profileString .= ". Equipment: " . implode(", ", $equipmentParts);
+                        }
+                    }
+                    
                     $actorDetailedListWithProfile[] = $profileString;
 
                 }
