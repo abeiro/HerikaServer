@@ -2,6 +2,67 @@
 CHIM CACHED CONNECTOR - VERSION HISTORY
 ===============================================================================
 
+Version 1.0.23 (2025-11-11)
+---------------------------
+
+Critical Bug Fixes:
+-------------------
+✓ **BUG #10 (CRITICAL): Fixed regex consuming user's personal formatting colons**
+  - Problem: Regex pattern with `:?` was consuming colons from user's personal roleplay format
+  - User Format Context: Users may use their own formatting like `: action :` dialogue
+  - Root Cause: Optional colon in regex pattern `/^\s*...\s*:?\s*(.*)$/s`
+    * The `:?` matched colons that were part of user's personal formatting
+    * These colons should be preserved as part of the message content
+  - Impact: User's personal formatting colons were being stripped incorrectly
+  - Fix: Removed `:?` from regex pattern and added explicit colon-stripping logic
+    * Regex change:
+      - OLD: `$pattern = '/^\s*' . $groupPattern . '\s*:?\s*(.*)$/s';`
+      - NEW: `$pattern = '/^\s*' . $groupPattern . '\s*(.*)$/s';`
+    * Added post-processing to strip single leading colon from message:
+      - Handles immediate colons: `mood): text` → `text`
+      - Handles spaced colons: `mood) : text` → `text`
+      - Preserves internal colons in user's personal format
+    * Now only matches format markers, handles delimiters explicitly
+  - Modified: connector/openrouterjsoncached_helpers.php (lines 541, 550-558)
+  - Testing: All 17 test cases pass
+  - Result: User's personal formatting colons preserved while stripping format delimiters
+
+UI Restoration:
+---------------
+✓ **Restored complete configuration UI from v1.0.18**
+  - Problem: Lost advanced settings and collapsible UI sections due to branch divergence
+  - User Impact: Missing configuration fields, simplified UI without organization
+  - Restored Features:
+    1. **Advanced Settings collapsible section** with 3 fields:
+       * max_dialogue_cache_context_size (default: 93)
+       * custom_system_instruction (textarea)
+       * custom_last_instruction (textarea)
+    2. **Response Format collapsible section**:
+       * Include Mood, Listener, Actions, Target (4 checkboxes)
+       * Detailed tooltips explaining each option
+    3. **JavaScript collapsible handlers**:
+       * Click to expand/collapse sections
+       * Arrow rotation (▼ to ▶)
+       * localStorage persistence across page refreshes
+       * Auto-restore collapsed state on page load
+  - Modified: ui/core/llm_connectors.php (lines 460-504, 743-781)
+  - Result: Full UI functionality restored with proper organization
+
+Files Modified:
+---------------
+• connector/openrouterjsoncached_helpers.php - Removed `:?` from regex
+• ui/core/llm_connectors.php - Restored full UI from v1.0.18
+• connector/openrouterjsoncached.php - Version updated to 1.0.23
+• connector/openrouterjsoncached_verbose.php - Version updated to 1.0.23
+
+Benefits:
+---------
+• User's personal formatting is preserved correctly
+• Complete configuration UI with advanced settings
+• Better organization with collapsible sections
+• Persistent UI state across browser sessions
+• All features from v1.0.18 restored without losing bug fixes from 1.0.19-1.0.22
+
 Version 1.0.22 (2025-11-11)
 ---------------------------
 

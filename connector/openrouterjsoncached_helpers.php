@@ -538,7 +538,7 @@ function extractSimpleFormatFromBuffer($buffer, $includeMood, $includeListener, 
     }
 
     $groupPattern = str_repeat('\(?([^)]+)\)', $groupCount);
-    $pattern = '/^\s*' . $groupPattern . '\s*:?\s*(.*)$/s';
+    $pattern = '/^\s*' . $groupPattern . '\s*(.*)$/s';
 
     if (preg_match($pattern, $buffer, $matches)) {
         $groups = [];
@@ -547,12 +547,22 @@ function extractSimpleFormatFromBuffer($buffer, $includeMood, $includeListener, 
         }
         $message = $matches[$groupCount + 1];
 
+        // Trim whitespace first
+        $message = trim($message);
+
+        // Strip a single leading colon with optional surrounding whitespace
+        // This handles cases like "mood): text" or "mood) : text"
+        // while mostly preserving user's personal formatting
+        if (strlen($message) > 0 && $message[0] === ':') {
+            $message = ltrim(substr($message, 1));
+        }
+
         $result = [
             'mood' => '',
             'listener' => '',
             'action' => 'Talk',
             'target' => '',
-            'message' => trim($message),
+            'message' => $message,
             'found' => true
         ];
 
