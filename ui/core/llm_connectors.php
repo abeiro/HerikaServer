@@ -484,14 +484,14 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 echo "<label for='max_tokens' style='margin-top:10px; display:block;'><span class='tip-label' data-tip='" . htmlspecialchars($tipMaxTokens, ENT_QUOTES) . "'>Max Tokens</span></label>";
                 echo "<input type='number' name='max_tokens' value='" . htmlspecialchars($editItem["max_tokens"] ?? "") . "' min='0' step='1'>";
                 $ranges = [
-                    'temperature' => ['min'=>0,'max'=>2,'step'=>0.01],
-                    'presence_penalty' => ['min'=>-2,'max'=>2,'step'=>0.01],
-                    'frequency_penalty' => ['min'=>-2,'max'=>2,'step'=>0.01],
-                    'repetition_penalty' => ['min'=>0,'max'=>2,'step'=>0.01],
-                    'top_p' => ['min'=>0,'max'=>1,'step'=>0.01],
+                    'temperature' => ['min'=>0,'max'=>2,'step'=>0.0001],
+                    'presence_penalty' => ['min'=>-2,'max'=>2,'step'=>0.0001],
+                    'frequency_penalty' => ['min'=>-2,'max'=>2,'step'=>0.0001],
+                    'repetition_penalty' => ['min'=>0,'max'=>2,'step'=>0.0001],
+                    'top_p' => ['min'=>0,'max'=>1,'step'=>0.0001],
                     'top_k' => ['min'=>0,'max'=>100,'step'=>1],
-                    'min_p' => ['min'=>0,'max'=>1,'step'=>0.01],
-                    'top_a' => ['min'=>0,'max'=>1,'step'=>0.01],
+                    'min_p' => ['min'=>0,'max'=>1,'step'=>0.0001],
+                    'top_a' => ['min'=>0,'max'=>1,'step'=>0.0001],
                 ];
                 $displayDefaults = [
                     'temperature' => 1,
@@ -1496,14 +1496,14 @@ if (typeof window.consolidation !== 'function') {
             echo "<label for='max_tokens' style='margin-top:10px; display:block;'><span class='tip-label' data-tip='" . htmlspecialchars($tipMaxTokens, ENT_QUOTES) . "'>Max Tokens</span></label>";
             echo "<input type='number' name='max_tokens' value='" . htmlspecialchars($editItem["max_tokens"] ?? "") . "' min='0' step='1'>";
             $ranges = [
-                'temperature' => ['min'=>0,'max'=>2,'step'=>0.01],
-                'presence_penalty' => ['min'=>-2,'max'=>2,'step'=>0.01],
-                'frequency_penalty' => ['min'=>-2,'max'=>2,'step'=>0.01],
-                'repetition_penalty' => ['min'=>0,'max'=>2,'step'=>0.01],
-                'top_p' => ['min'=>0,'max'=>1,'step'=>0.01],
+                'temperature' => ['min'=>0,'max'=>2,'step'=>0.0001],
+                'presence_penalty' => ['min'=>-2,'max'=>2,'step'=>0.0001],
+                'frequency_penalty' => ['min'=>-2,'max'=>2,'step'=>0.0001],
+                'repetition_penalty' => ['min'=>0,'max'=>2,'step'=>0.0001],
+                'top_p' => ['min'=>0,'max'=>1,'step'=>0.0001],
                 'top_k' => ['min'=>0,'max'=>100,'step'=>1],
-                'min_p' => ['min'=>0,'max'=>1,'step'=>0.01],
-                'top_a' => ['min'=>0,'max'=>1,'step'=>0.01],
+                'min_p' => ['min'=>0,'max'=>1,'step'=>0.0001],
+                'top_a' => ['min'=>0,'max'=>1,'step'=>0.0001],
             ];
             $displayDefaults = [
                 'temperature' => 1,

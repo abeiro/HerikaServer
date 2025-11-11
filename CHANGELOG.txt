@@ -5,8 +5,8 @@ CHIM CACHED CONNECTOR - VERSION HISTORY
 Version 1.0.19 (2025-11-11)
 ---------------------------
 
-Critical Bug Fix:
------------------
+Critical Bug Fixes:
+-------------------
 ✓ **BUG #4 (CRITICAL): Fixed space removal in simple format streaming**
   - Problem: stripReasoningTokens() was being called on incremental streaming chunks
   - Root Cause: The function uses trim() which removes leading/trailing spaces from each chunk
@@ -17,6 +17,14 @@ Critical Bug Fix:
   - Modified: connector/openrouterjsoncached.php (lines 1011-1014)
   - Modified: connector/openrouterjsoncached_verbose.php (lines 1630-1635, 1673-1682)
   - Result: Spaces are now preserved correctly during streaming
+
+✓ **BUG #5: Fixed decimal precision loss in UI parameter inputs**
+  - Problem: Parameter inputs (temperature, top_p, etc.) limited to 2 decimal places (0.01 step)
+  - Impact: Users couldn't enter precise values like 0.9827 or 0.7234
+  - Root Cause: Step value changed from 0.0001 to 0.01 in llm_connectors.php
+  - Fix: Restored step=>0.0001 for all floating-point parameters
+  - Modified: ui/core/llm_connectors.php (lines 487-494, 1499-1506)
+  - Result: Users can now enter 4 decimal places as in v1.0.17
 
 Additional Fix in Verbose Connector:
 -------------------------------------
@@ -30,6 +38,7 @@ Files Modified:
 ---------------
 • connector/openrouterjsoncached.php - Removed stripReasoningTokens() from streaming chunks
 • connector/openrouterjsoncached_verbose.php - Fixed streaming logic + added message start tracking
+• ui/core/llm_connectors.php - Restored 4-decimal precision for parameter inputs
 
 Benefits:
 ---------
@@ -37,6 +46,7 @@ Benefits:
 • Roleplay actions and dialogue render as intended
 • Streaming performance improved by eliminating redundant processing
 • Both normal and verbose connectors now have consistent streaming behavior
+• Full parameter precision restored (0.0001 step = 4 decimal places)
 
 Version 1.0.9 (2025-11-07)
 --------------------------
