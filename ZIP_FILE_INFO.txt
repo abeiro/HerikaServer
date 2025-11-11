@@ -1,16 +1,16 @@
-CACHED CONNECTOR PACKAGE v1.0.21
+CACHED CONNECTOR PACKAGE v1.0.22
 ==================================
 
-FILE: CHIM_Cached_Connector_v1.0.21.zip
-SIZE: 152 KB (compressed from 718 KB)
-LOCATION: /home/user/HerikaServer/CHIM_Cached_Connector_v1.0.21.zip
-VERSION: 1.0.21 (Bug #7 fix: Restored missing v1.0.18 critical fixes)
+FILE: CHIM_Cached_Connector_v1.0.22.zip
+SIZE: 153 KB (compressed from 719 KB)
+LOCATION: /home/user/HerikaServer/CHIM_Cached_Connector_v1.0.22.zip
+VERSION: 1.0.22 (Bug #8 fix: Format markers no longer appear in-game)
 
 CONTENTS:
 ---------
-✓ connector/openrouterjsoncached.php                 (Base connector - v1.0.21)
-✓ connector/openrouterjsoncached_verbose.php         (Verbose logging version - v1.0.21)
-✓ connector/openrouterjsoncached_helpers.php         (Helper functions with regex fix)
+✓ connector/openrouterjsoncached.php                 (Base connector - v1.0.22)
+✓ connector/openrouterjsoncached_verbose.php         (Verbose logging version - v1.0.22)
+✓ connector/openrouterjsoncached_helpers.php         (Helper functions with robust regex)
 ✓ connector/OPENROUTERJSONCACHED_README.md           (Connector documentation)
 ✓ connector/__jpd.php                                (JSON parsing dependency)
 ✓ lib/core/llm_connector.class.php                   (Integration code)
@@ -35,25 +35,23 @@ COMPATIBILITY:
 Uses CHIM 2.0 database-driven profile system.
 Only ADDS new files, modifies 2 existing files (conf_schema.json, llm_connector.class.php).
 
-WHAT'S NEW IN v1.0.21:
+WHAT'S NEW IN v1.0.22:
 ----------------------
-🔧 **BUG #7 FIX (CRITICAL)**: Restored 6 missing critical fixes from v1.0.18 branch
-   • Simple format with prefill now works correctly - full messages appear
-   • Fixed: Only first word was appearing (e.g., just "lovely" instead of full dialogue)
-   • Root cause: Incomplete branch merge left out critical code from v1.0.18
-
-   The 6 Missing Fixes:
-   1. _simpleFormatMessageStart initialization: Changed from 0 to -1
-   2. Added prefill position adjustment logic when calculating message start
-   3. Added fallback handling when message position not found
-   4. Fixed streaming check: Changed from > 0 to >= 0
-   5. Fixed prefix construction to use trim(implode()) method
-   6. Added FUNCTIONS_ARE_ENABLED check for includeActions
+🔧 **BUG #8 FIX (CRITICAL)**: Format markers no longer appear in-game text
+   • Fixed: "lovely)" was appearing in dialogue instead of being stripped
+   • Root cause: Regex required BOTH opening and closing parentheses
+   • Solution: Made opening parenthesis OPTIONAL in regex pattern
+   • Now supports ALL format variations:
+     - Full format: (mood), (mood)(action), etc.
+     - Prefill format: mood), mood)(action), etc.
+     - With/without colons: (mood): or mood):
+   • Added comprehensive test suite: 17 tests, all passing
 
 🔧 **Previous fixes included**:
+   • Bug #7: All 6 missing v1.0.18 fixes restored (prefill position tracking)
+   • Bug #6: Regex accepts optional colons + fallback handling
    • Bug #4: Space removal in streaming fixed
    • Bug #5: 4-decimal precision restored for parameters
-   • Bug #6: Simple format regex accepts optional colons + fallback handling
 
 QUICK START:
 ------------
@@ -80,8 +78,9 @@ WHAT THIS PROVIDES:
 -------------------
 ✓ Multi-provider caching (Anthropic, OpenAI, Gemini)
 ✓ JSON and Simple response formats
-✓ Simple format now FULLY FUNCTIONAL with all fixes
-✓ Handles both "(mood) message" and "(mood): message" formats
+✓ Simple format FULLY FUNCTIONAL with robust format handling
+✓ Handles all format variations: (mood), mood), (mood)(action), mood)(action)
+✓ Works with or without colons after format markers
 ✓ Proper prefill position tracking for streaming
 ✓ Comprehensive verbose logging
 ✓ Cache performance metrics
@@ -102,10 +101,26 @@ Branch: claude/fix-cache-connectors-011CV2UAD8LHFom1mofFyHt2
 
 VERIFICATION CHECKLIST (All fixes confirmed present):
 ------------------------------------------------------
-✓ 1. _simpleFormatMessageStart = -1 (both connectors)
-✓ 2. FUNCTIONS_ARE_ENABLED check (both connectors)
-✓ 3. trim(implode()) for prefix (both connectors, 2 instances each)
-✓ 4. Prefill position adjustment logic (both connectors)
-✓ 5. Streaming check >= 0 (both connectors)
-✓ 6. Regex with optional colon :? (helpers)
-✓ 7. Version 1.0.21 (both connectors)
+✓ 1. Opening parenthesis optional: \(? in regex pattern
+✓ 2. All 17 test cases pass (test_simple_format_regex.php)
+✓ 3. Supports both (mood) and mood) formats
+✓ 4. Supports multiple elements: (mood)(action) and mood)(action)
+✓ 5. Works with and without colons: (mood): and mood):
+✓ 6. All previous fixes from v1.0.21 included
+✓ 7. Version 1.0.22 (both connectors)
+
+TESTED FORMAT COMBINATIONS (17 test cases, all passing):
+---------------------------------------------------------
+✓ (lovely) message                    - Full format, single element
+✓ lovely) message                     - Prefill format, single element
+✓ (lovely): message                   - Full format with colon
+✓ lovely): message                    - Prefill format with colon
+✓ (lovely)(Player) message            - Full format, two elements
+✓ lovely)(Player) message             - Prefill format, two elements
+✓ (lovely)(Player)(Talk) message      - Full format, three elements
+✓ lovely)(Player)(Talk) message       - Prefill format, three elements
+✓ (lovely)(Player)(Talk)(Lydia) msg   - Full format, all four elements
+✓ lovely)(Player)(Talk)(Lydia) msg    - Prefill format, all four elements
+✓ Plus tests for listener-only, action-only, and all variations
+
+All combinations work correctly with format markers properly stripped!
