@@ -2,6 +2,62 @@
 CHIM CACHED CONNECTOR - VERSION HISTORY
 ===============================================================================
 
+Version 1.0.21 (2025-11-11)
+---------------------------
+
+Critical Bug Fixes:
+-------------------
+✓ **BUG #7 (CRITICAL): Fixed simple format with prefill showing only first word**
+  - Problem: Only first word appeared in-game (e.g., only "lovely" instead of full message)
+  - Root Cause: Missing critical code from v1.0.18 branch due to incomplete branch merge
+    * 6 separate issues caused by branch divergence between development branches
+  - Impact: Simple format completely broken with prefill - dialogue truncated to single word
+  - Fixes Applied:
+    1. _simpleFormatMessageStart initialization: Changed from 0 to -1
+       * Allows proper detection of uninitialized state
+    2. Added prefill position adjustment logic when calculating message start
+       * Searches in bufferToParse (includes prefill) instead of raw buffer
+       * Subtracts prefill length from message position to get correct offset
+       * Prevents off-by-one errors that caused truncation
+    3. Added fallback handling when message position not found
+       * Logs warning and uses position 0 as safe fallback
+       * Prevents silent failures
+    4. Fixed streaming check: Changed from > 0 to >= 0
+       * Position 0 is valid when message starts at buffer beginning
+       * Previous check excluded valid position 0
+    5. Fixed prefix construction to use trim(implode()) method
+       * Properly combines prefix, speech reinforcement, and custom instructions
+       * Removes extra whitespace that could break format parsing
+    6. Added FUNCTIONS_ARE_ENABLED check for includeActions
+       * Respects global function toggle setting
+       * Matches behavior of v1.0.18
+  - Modified: connector/openrouterjsoncached.php (6 separate fixes throughout file)
+  - Modified: connector/openrouterjsoncached_verbose.php (same 6 fixes applied)
+  - Result: Simple format with prefill now works correctly, full messages appear in-game
+
+Technical Details:
+------------------
+The issue occurred because two parallel development branches diverged:
+- Branch A (claude/aiagent-update-2.0.3-011CUs6A7NhcfwcMQJyoQ32j): Had v1.0.17/18 fixes
+- Branch B (claude/fix-cache-connectors-011CV2UAD8LHFom1mofFyHt2): Had Bug #4/5 fixes
+
+When continuing work on Branch B, the critical v1.0.17/18 fixes were not present,
+causing simple format to break. This version restores all missing functionality
+by carefully merging the critical fixes from both branches.
+
+Files Modified:
+---------------
+• connector/openrouterjsoncached.php - All 6 critical fixes applied
+• connector/openrouterjsoncached_verbose.php - All 6 critical fixes applied
+
+Benefits:
+---------
+• Simple format with prefill now works correctly
+• Full dialogue messages appear in-game instead of single words
+• Proper message position tracking during streaming
+• Consistent behavior with v1.0.18 reference implementation
+• All branch-specific improvements now merged together
+
 Version 1.0.20 (2025-11-11)
 ---------------------------
 

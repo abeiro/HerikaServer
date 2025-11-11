@@ -9,7 +9,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_function
 class openrouterjsoncached
 {
     // ⚠️ IMPORTANT: Please update version number, date, and CHIM version after making changes
-    const VERSION = 'OpenRouter Cache Connector v1.0.20 for CHIM 2.0.3 | 2025/11/11';
+    const VERSION = 'OpenRouter Cache Connector v1.0.21 for CHIM 2.0.3 | 2025/11/11';
 
     public $primary_handler;
     public $name;
@@ -105,7 +105,7 @@ class openrouterjsoncached
         $this->_simpleFormatParsed = false;
         $this->_usedPrefill = false;
         $this->_prefillContent = '';
-        $this->_simpleFormatMessageStart = 0;
+        $this->_simpleFormatMessageStart = -1;
         $this->_lastReturnedLength = 0;
         $this->_jsonResponsesEncoded = array();
 
@@ -311,9 +311,10 @@ class openrouterjsoncached
             ? $GLOBALS["CONNECTOR"][$this->name]["response_format"]
             : 'json';
 
-        $this->_includeActions = isset($GLOBALS["CONNECTOR"][$this->name]["include_actions_list"])
-            ? (bool)$GLOBALS["CONNECTOR"][$this->name]["include_actions_list"]
-            : true;
+        $this->_includeActions = (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"])
+            && (isset($GLOBALS["CONNECTOR"][$this->name]["include_actions_list"])
+                ? (bool)$GLOBALS["CONNECTOR"][$this->name]["include_actions_list"]
+                : true);
 
         $this->_includeMood = isset($GLOBALS["CONNECTOR"][$this->name]["include_mood_requirement"])
             ? (bool)$GLOBALS["CONNECTOR"][$this->name]["include_mood_requirement"]
@@ -389,14 +390,16 @@ class openrouterjsoncached
                 unset($template['listener']);
             }
 
-            $formatInstruction = "{$prefix} $speechReinforcement $customInstruction Use ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure$zonosTones: " . json_encode($template);
+            $prefixPart = trim(implode(' ', array_filter([$prefix, $speechReinforcement, $customInstruction], 'strlen')));
+            $formatInstruction = "{$prefixPart} Use ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure$zonosTones: " . json_encode($template);
         } else {
+            $prefixPart = trim(implode(' ', array_filter([$prefix, $speechReinforcement, $customInstruction], 'strlen')));
             $formatInstruction = buildSimpleFormatInstruction(
                 $this->_includeMood,
                 $this->_includeListener,
                 $this->_includeActions,
                 $this->_includeTarget,
-                "{$prefix} $speechReinforcement $customInstruction"
+                $prefixPart
             );
         }
 
@@ -984,9 +987,22 @@ class openrouterjsoncached
                     $this->_simpleFormatParsed = true;
 
                     // Calculate where the message starts in the buffer (after format markers)
-                    $messagePos = strpos($this->_buffer, $parsed['message']);
+                    // Search in the same buffer used for parsing (with prefill if applicable)
+                    $messagePos = strpos($bufferToParse, $parsed['message']);
                     if ($messagePos !== false) {
+                        // If prefill was used, adjust position to account for prefill length
+                        if ($this->_usedPrefill) {
+                            $messagePos = $messagePos - strlen($this->_prefillContent);
+                            if ($messagePos < 0) {
+                                $messagePos = 0;
+                            }
+                        }
                         $this->_simpleFormatMessageStart = $messagePos;
+                        $this->_lastReturnedLength = strlen($parsed['message']);
+                    } else {
+                        // Fallback: assume message starts at beginning
+                        logMessage("[{$this->name}] Warning: Could not find message position in buffer, using fallback (position 0)");
+                        $this->_simpleFormatMessageStart = 0;
                         $this->_lastReturnedLength = strlen($parsed['message']);
                     }
 
@@ -1016,7 +1032,7 @@ class openrouterjsoncached
                 }
             } else {
                 // Simple format already parsed, return only new content since last call
-                if ($this->_simpleFormatMessageStart > 0) {
+                if ($this->_simpleFormatMessageStart >= 0) {
                     $currentMessage = substr($this->_buffer, $this->_simpleFormatMessageStart);
                     $newContent = substr($currentMessage, $this->_lastReturnedLength);
                     $this->_lastReturnedLength = strlen($currentMessage);
