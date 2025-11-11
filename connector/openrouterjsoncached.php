@@ -9,7 +9,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_function
 class openrouterjsoncached
 {
     // ⚠️ IMPORTANT: Please update version number, date, and CHIM version after making changes
-    const VERSION = 'OpenRouter Cache Connector v1.0.9 for CHIM 2.0.3 | 2025/11/07';
+    const VERSION = 'OpenRouter Cache Connector v1.0.10 for CHIM 2.0.3 | 2025/11/11';
 
     public $primary_handler;
     public $name;
@@ -1008,8 +1008,10 @@ class openrouterjsoncached
                     $currentMessage = substr($this->_buffer, $this->_simpleFormatMessageStart);
                     $newContent = substr($currentMessage, $this->_lastReturnedLength);
                     $this->_lastReturnedLength = strlen($currentMessage);
-                    // Strip any reasoning tokens from incremental content before returning
-                    return stripReasoningTokens($newContent);
+                    // BUG#4 FIX: Don't call stripReasoningTokens() on streaming chunks
+                    // It uses trim() which removes leading/trailing spaces, breaking word boundaries
+                    // Reasoning tokens are already stripped from the initial complete message
+                    return $newContent;
                 }
                 return "";
             }

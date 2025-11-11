@@ -10,7 +10,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_function
 class openrouterjsoncached_verbose
 {
     // ⚠️ IMPORTANT: Please update version number, date, and CHIM version after making changes
-    const VERSION = 'OpenRouter Cache Connector v1.0.9 for CHIM 2.0.3 | 2025/11/07 (VERBOSE)';
+    const VERSION = 'OpenRouter Cache Connector v1.0.10 for CHIM 2.0.3 | 2025/11/11 (VERBOSE)';
 
     public $primary_handler;
     public $name;
@@ -1627,6 +1627,13 @@ class openrouterjsoncached_verbose
                 if ($parsed['found']) {
                     $this->_simpleFormatParsed = true;
 
+                    // Calculate where the message starts in the buffer (after format markers)
+                    $messagePos = strpos($this->_buffer, $parsed['message']);
+                    if ($messagePos !== false) {
+                        $this->_simpleFormatMessageStart = $messagePos;
+                        $this->_lastReturnedLength = strlen($parsed['message']);
+                    }
+
                     if ($this->_includeMood && !empty($parsed['mood'])) {
                         $GLOBALS["SCRIPTLINE_ANIMATION"] = function_exists('GetAnimationHex') ? GetAnimationHex($parsed["mood"]) : '';
                         $GLOBALS["SCRIPTLINE_EXPRESSION"] = function_exists('GetExpression') ? GetExpression($parsed["mood"]) : '';
@@ -1659,16 +1666,27 @@ class openrouterjsoncached_verbose
                     return stripReasoningTokens($parsed['message']);
                 }
             } else {
-                // Simple format already parsed, just return accumulated message
-                // VERBOSE_LOGGING_START - _parseAndReturnContent: Accumulating
-                if ($this->_verboseLogging && strlen($this->_buffer) > ($this->_lastReturnedLength ?? 0)) {
-                    logMessage("[CACHE-VERBOSE] Accumulating more content, buffer now: " . strlen($this->_buffer) . " chars");
-                    $this->_lastReturnedLength = strlen($this->_buffer);
+                // Simple format already parsed, return only new content since last call
+                // VERBOSE_LOGGING_START - _parseAndReturnContent: Returning incremental content
+                if ($this->_verboseLogging) {
+                    $bufferLen = strlen($this->_buffer);
+                    $lastLen = $this->_lastReturnedLength ?? 0;
+                    if ($bufferLen > $lastLen) {
+                        logMessage("[CACHE-VERBOSE] Buffer grew from {$lastLen} to {$bufferLen} chars, returning new content");
+                    }
                 }
                 // VERBOSE_LOGGING_END
 
-                // Strip any reasoning tokens from accumulated content before returning
-                return stripReasoningTokens($this->_buffer);
+                // BUG#4 FIX: Don't call stripReasoningTokens() on streaming chunks
+                // It uses trim() which removes leading/trailing spaces, breaking word boundaries
+                // Reasoning tokens are already stripped from the initial complete message
+                if ($this->_simpleFormatMessageStart > 0) {
+                    $currentMessage = substr($this->_buffer, $this->_simpleFormatMessageStart);
+                    $newContent = substr($currentMessage, $this->_lastReturnedLength);
+                    $this->_lastReturnedLength = strlen($currentMessage);
+                    return $newContent;
+                }
+                return "";
             }
         }
 

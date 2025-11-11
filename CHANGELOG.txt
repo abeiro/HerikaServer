@@ -2,6 +2,42 @@
 CHIM CACHED CONNECTOR - VERSION HISTORY
 ===============================================================================
 
+Version 1.0.10 (2025-11-11)
+---------------------------
+
+Critical Bug Fix:
+-----------------
+✓ **BUG #4 (CRITICAL): Fixed space removal in simple format streaming**
+  - Problem: stripReasoningTokens() was being called on incremental streaming chunks
+  - Root Cause: The function uses trim() which removes leading/trailing spaces from each chunk
+  - Impact: Spaces between words were removed, concatenating words together
+    Example: " sets down the leather" + " satchel" → "setsdowntheleathersatchel"
+  - Fix: Only call stripReasoningTokens() once on the initial parsed message
+  - Reasoning tokens are stripped from the complete first message, not from streaming chunks
+  - Modified: connector/openrouterjsoncached.php (lines 1011-1014)
+  - Modified: connector/openrouterjsoncached_verbose.php (lines 1630-1635, 1673-1682)
+  - Result: Spaces are now preserved correctly during streaming
+
+Additional Fix in Verbose Connector:
+-------------------------------------
+✓ **Added missing _simpleFormatMessageStart calculation in verbose connector**
+  - Problem: Verbose connector wasn't tracking where the message starts after format markers
+  - Impact: Incremental streaming didn't work properly in verbose mode
+  - Fix: Calculate and store message start position when format is first parsed
+  - Modified: connector/openrouterjsoncached_verbose.php (lines 1630-1635)
+
+Files Modified:
+---------------
+• connector/openrouterjsoncached.php - Removed stripReasoningTokens() from streaming chunks
+• connector/openrouterjsoncached_verbose.php - Fixed streaming logic + added message start tracking
+
+Benefits:
+---------
+• Simple format text now displays correctly with proper spacing
+• Roleplay actions and dialogue render as intended
+• Streaming performance improved by eliminating redundant processing
+• Both normal and verbose connectors now have consistent streaming behavior
+
 Version 1.0.9 (2025-11-07)
 --------------------------
 
