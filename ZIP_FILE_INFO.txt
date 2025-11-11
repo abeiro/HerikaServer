@@ -1,19 +1,30 @@
-CACHED CONNECTOR TESTING PACKAGE
-=================================
+CACHED CONNECTOR PACKAGE v1.0.20
+==================================
 
-FILE: CHIM_Cached_Connector_Testing.zip
-SIZE: 50 KB (compressed from 257 KB)
-LOCATION: /home/user/HerikaServer/CHIM_Cached_Connector_Testing.zip
-VERSION: 1.0 (Updated with backup warnings and compatibility notes)
+FILE: CHIM_Cached_Connector_v1.0.20.zip
+SIZE: 151 KB (compressed from 712 KB)
+LOCATION: /home/user/HerikaServer/CHIM_Cached_Connector_v1.0.20.zip
+VERSION: 1.0.20 (Bug #6 fix: Simple format messages not appearing in-game)
 
 CONTENTS:
 ---------
-✓ INSTALLATION_INSTRUCTIONS.txt          (Comprehensive setup guide)
-✓ connector/openrouterjsoncached.php     (Base connector)
-✓ connector/openrouterjsoncached_helpers.php   (Helper functions)
-✓ connector/openrouterjsoncached_verbose.php   (Verbose logging version - RECOMMENDED)
-✓ conf/conf_schema.json                  (Configuration schema)
-✓ lib/core/llm_connector.class.php       (Integration code)
+✓ connector/openrouterjsoncached.php                 (Base connector - v1.0.20)
+✓ connector/openrouterjsoncached_verbose.php         (Verbose logging version - v1.0.20)
+✓ connector/openrouterjsoncached_helpers.php         (Helper functions with regex fix)
+✓ connector/OPENROUTERJSONCACHED_README.md           (Connector documentation)
+✓ connector/__jpd.php                                (JSON parsing dependency)
+✓ lib/core/llm_connector.class.php                   (Integration code)
+✓ lib/tokenizer_helper_functions.php                 (Tokenizer utilities)
+✓ conf/conf_schema.json                              (Configuration schema)
+✓ functions/json_response.php                        (Response templates)
+✓ ui/core/core_profiles.php                          (Profile editor)
+✓ ui/core/llm_connectors.php                         (Connector settings with 4-decimal precision)
+✓ ui/conf_wizard.php                                 (Configuration wizard)
+✓ ui/conf_wizardbackup.php                           (Config backup)
+✓ ui/quickstart.php                                  (Quick start guide)
+✓ CHANGELOG.txt                                      (Complete version history)
+✓ INSTALLATION_INSTRUCTIONS.txt                      (Setup guide)
+✓ ZIP_FILE_INFO.txt                                  (This file)
 
 COMPATIBILITY:
 --------------
@@ -22,7 +33,19 @@ COMPATIBILITY:
 ✓ POSSIBLY COMPATIBLE: CHIM 2.0.0 (untested)
 
 Uses CHIM 2.0 database-driven profile system.
-Only ADDS new files, doesn't modify existing connectors.
+Only ADDS new files, modifies 2 existing files (conf_schema.json, llm_connector.class.php).
+
+WHAT'S NEW IN v1.0.20:
+----------------------
+🔧 **BUG #6 FIX (CRITICAL)**: Simple format messages now appear in-game reliably
+   • Fixed regex pattern to accept optional colons: "(mood):" or "(mood) "
+   • Added fallback handling when LLM doesn't follow format exactly
+   • Messages ALWAYS appear, even if format parsing fails
+   • Comprehensive error logging for debugging
+
+🔧 **Previous fixes included**:
+   • Bug #4: Space removal in streaming fixed
+   • Bug #5: 4-decimal precision restored for parameters
 
 QUICK START:
 ------------
@@ -43,23 +66,27 @@ RECOMMENDED FOR TESTERS:
 Use openrouterjsoncached_verbose.php first!
 - Has verbose_logging enabled by default
 - Shows [CACHE-VERBOSE] logs for debugging
-- Helps track cache performance
+- Helps track cache performance and format parsing
 
 WHAT THIS PROVIDES:
 -------------------
 ✓ Multi-provider caching (Anthropic, OpenAI, Gemini)
 ✓ JSON and Simple response formats
+✓ Simple format now works reliably with fallback handling
+✓ Handles both "(mood) message" and "(mood): message" formats
 ✓ Comprehensive verbose logging
 ✓ Cache performance metrics
+✓ 4-decimal precision for all parameters
 ✓ Compatible with CHIM 2.0.x versions
 
 ROLLBACK:
 ---------
 If issues occur:
 1. Restore backed-up conf_schema.json and llm_connector.class.php
-2. Delete the 3 new connector files
+2. Delete the connector files from connector/ directory
 3. Refresh browser
 
 SUPPORT:
 --------
-GitHub: https://github.com/Unknwn-Prson/HerikaServer/tree/aiagent
+GitHub: https://github.com/Unknwn-Prson/HerikaServer
+Branch: claude/fix-cache-connectors-011CV2UAD8LHFom1mofFyHt2
