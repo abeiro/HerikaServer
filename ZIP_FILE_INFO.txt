@@ -1,15 +1,15 @@
-CACHED CONNECTOR PACKAGE v1.0.20
+CACHED CONNECTOR PACKAGE v1.0.21
 ==================================
 
-FILE: CHIM_Cached_Connector_v1.0.20.zip
-SIZE: 151 KB (compressed from 712 KB)
-LOCATION: /home/user/HerikaServer/CHIM_Cached_Connector_v1.0.20.zip
-VERSION: 1.0.20 (Bug #6 fix: Simple format messages not appearing in-game)
+FILE: CHIM_Cached_Connector_v1.0.21.zip
+SIZE: 152 KB (compressed from 718 KB)
+LOCATION: /home/user/HerikaServer/CHIM_Cached_Connector_v1.0.21.zip
+VERSION: 1.0.21 (Bug #7 fix: Restored missing v1.0.18 critical fixes)
 
 CONTENTS:
 ---------
-✓ connector/openrouterjsoncached.php                 (Base connector - v1.0.20)
-✓ connector/openrouterjsoncached_verbose.php         (Verbose logging version - v1.0.20)
+✓ connector/openrouterjsoncached.php                 (Base connector - v1.0.21)
+✓ connector/openrouterjsoncached_verbose.php         (Verbose logging version - v1.0.21)
 ✓ connector/openrouterjsoncached_helpers.php         (Helper functions with regex fix)
 ✓ connector/OPENROUTERJSONCACHED_README.md           (Connector documentation)
 ✓ connector/__jpd.php                                (JSON parsing dependency)
@@ -35,17 +35,25 @@ COMPATIBILITY:
 Uses CHIM 2.0 database-driven profile system.
 Only ADDS new files, modifies 2 existing files (conf_schema.json, llm_connector.class.php).
 
-WHAT'S NEW IN v1.0.20:
+WHAT'S NEW IN v1.0.21:
 ----------------------
-🔧 **BUG #6 FIX (CRITICAL)**: Simple format messages now appear in-game reliably
-   • Fixed regex pattern to accept optional colons: "(mood):" or "(mood) "
-   • Added fallback handling when LLM doesn't follow format exactly
-   • Messages ALWAYS appear, even if format parsing fails
-   • Comprehensive error logging for debugging
+🔧 **BUG #7 FIX (CRITICAL)**: Restored 6 missing critical fixes from v1.0.18 branch
+   • Simple format with prefill now works correctly - full messages appear
+   • Fixed: Only first word was appearing (e.g., just "lovely" instead of full dialogue)
+   • Root cause: Incomplete branch merge left out critical code from v1.0.18
+
+   The 6 Missing Fixes:
+   1. _simpleFormatMessageStart initialization: Changed from 0 to -1
+   2. Added prefill position adjustment logic when calculating message start
+   3. Added fallback handling when message position not found
+   4. Fixed streaming check: Changed from > 0 to >= 0
+   5. Fixed prefix construction to use trim(implode()) method
+   6. Added FUNCTIONS_ARE_ENABLED check for includeActions
 
 🔧 **Previous fixes included**:
    • Bug #4: Space removal in streaming fixed
    • Bug #5: 4-decimal precision restored for parameters
+   • Bug #6: Simple format regex accepts optional colons + fallback handling
 
 QUICK START:
 ------------
@@ -72,8 +80,9 @@ WHAT THIS PROVIDES:
 -------------------
 ✓ Multi-provider caching (Anthropic, OpenAI, Gemini)
 ✓ JSON and Simple response formats
-✓ Simple format now works reliably with fallback handling
+✓ Simple format now FULLY FUNCTIONAL with all fixes
 ✓ Handles both "(mood) message" and "(mood): message" formats
+✓ Proper prefill position tracking for streaming
 ✓ Comprehensive verbose logging
 ✓ Cache performance metrics
 ✓ 4-decimal precision for all parameters
@@ -90,3 +99,13 @@ SUPPORT:
 --------
 GitHub: https://github.com/Unknwn-Prson/HerikaServer
 Branch: claude/fix-cache-connectors-011CV2UAD8LHFom1mofFyHt2
+
+VERIFICATION CHECKLIST (All fixes confirmed present):
+------------------------------------------------------
+✓ 1. _simpleFormatMessageStart = -1 (both connectors)
+✓ 2. FUNCTIONS_ARE_ENABLED check (both connectors)
+✓ 3. trim(implode()) for prefix (both connectors, 2 instances each)
+✓ 4. Prefill position adjustment logic (both connectors)
+✓ 5. Streaming check >= 0 (both connectors)
+✓ 6. Regex with optional colon :? (helpers)
+✓ 7. Version 1.0.21 (both connectors)
