@@ -142,17 +142,22 @@ if (! $adminConn) {
     $query = "
     SELECT
         npc_name,metadata,id,refid,extended_data->>'background_life_last_updated' as last_report,
-        metadata->>'last_coords' as last_coords
+        metadata->>'last_coords' as last_coords,metadata->>'last_coords_history' as last_coords_history
     FROM core_npc_master
     WHERE extended_data->>'background_life_enabled' = 'true'
+    order by npc_name asc
 ";
 
     $result = pg_query($adminConn, $query);
 
     // Generate random colors for markers
-    function generateRandomColor()
+    function generateRandomColor($seed)
     {
-        return sprintf('#%06X', mt_rand(0, 0xFFFFFF));
+        // Create a hash from the seed string
+        $hash = crc32($seed);
+        
+        // Use the hash to generate a consistent color
+        return sprintf('#%06X', abs($hash) % 0xFFFFFF);
     }
 
     // Build markers array from database results
@@ -176,11 +181,34 @@ if (! $adminConn) {
             }
 
             $meta      = json_decode($row['metadata'], true);
+            
+            // Parse history coordinates
+            $coordsHistory = [];
+            if (!empty($row['last_coords_history'])) {
+                $historyData = json_decode($row['last_coords_history'], true);
+                if (is_array($historyData)) {
+                    foreach ($historyData as $historicalCoord) {
+      
+                        if (isset($historicalCoord[0]) && isset($historicalCoord[1])) {
+                            if (($last_gamets-$historicalCoord['last_updated'])*0.0000024 < 24) { // Only if last coord is recent
+                                $coordsHistory[] = [
+                                    'x' => (int) $historicalCoord[0],
+                                    'y' => (int) $historicalCoord[1],
+                                    'z' => isset($historicalCoord[2]) ? (int) $historicalCoord[2] : 0,
+                                    'location' => isset($historicalCoord[3]) ? $historicalCoord[3] : '',
+                                    'last_updated' => isset($historicalCoord['last_updated']) ? $historicalCoord['last_updated'] : null,
+                                ];
+                            }
+                        }
+                    }
+                }
+            }
+            
             $markers[] = [
                 'name'        => $row['npc_name'],
                 'ingame_x'    => (int) $x,
                 'ingame_y'    => (int) $y,
-                'color'       => generateRandomColor(),
+                'color'       => generateRandomColor($row['npc_name']),
                 'size'        => 10,
                 'tag'         => $coordsData[3],
                 'figure'      => isset($meta["portrait"]) ? $meta["portrait"] : null,
@@ -188,6 +216,7 @@ if (! $adminConn) {
                 'refid'       => $row["refid"],
                 'last_pos_ts' => $coordsData["last_updated"]?convert_gamets2skyrim_date($coordsData["last_updated"]).",hours ago:".round(($last_gamets-$coordsData["last_updated"]) *0.0000024,0):null,
                 'last_report' => convert_gamets2skyrim_date($row["last_report"]).",hours ago:".round(($last_gamets-$row["last_report"]) *0.0000024,0),
+                'coords_history' => $coordsHistory,
             ];
 
         }
@@ -209,6 +238,29 @@ if (! $adminConn) {
             $WORLD_Y_MAX
         );
 
+        // Translate history coordinates
+        $translatedHistory = [];
+        foreach ($marker['coords_history'] as $histCoord) {
+            $histTranslated = translateCoords(
+                $histCoord['x'],
+                $histCoord['y'],
+                $mapWidth,
+                $mapHeight,
+                $WORLD_X_MIN,
+                $WORLD_X_MAX,
+                $WORLD_Y_MIN,
+                $WORLD_Y_MAX
+            );
+            $translatedHistory[] = [
+                'x' => $histTranslated['x'],
+                'y' => $histTranslated['y'],
+                'ingame_x' => $histCoord['x'],
+                'ingame_y' => $histCoord['y'],
+                'location' => $histCoord['location'],
+                'last_updated' => $histCoord['last_updated'] ? convert_gamets2skyrim_date($histCoord['last_updated']) . ", " . round(($last_gamets - $histCoord['last_updated']) * 0.0000024, 0) . " hours ago" : null,
+            ];
+        }
+
         $translatedMarkers[] = [
             'name'     => $marker['name'],
             'x'        => $coords['x'],
@@ -223,7 +275,7 @@ if (! $adminConn) {
             'refid'       => $marker['refid'],
             'last_pos_ts' => $marker["last_pos_ts"],
             'last_report' => $marker["last_report"],
-
+            'coords_history' => $translatedHistory,
         ];
     }
 
@@ -349,6 +401,45 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         justify-content: center;
         z-index: 10;
         position: relative;
+    }
+
+    .history-marker {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+        z-index: 5;
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+    }
+
+    .history-marker:hover {
+        opacity: 1;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+        z-index: 15;
+    }
+
+    .history-marker-label {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 6px 10px;
+        border-radius: 4px;
+        white-space: nowrap;
+        font-size: 12px;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-top: 3px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        display: none;
+        z-index: 20;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+
+    .history-marker:hover .history-marker-label {
+        display: block;
     }
 
     .marker-label {
@@ -584,6 +675,33 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     echo '<br/><small>Last tracked:' . $marker['last_pos_ts'] . '</small>';
                     echo '</div>';
                     echo '</div>' . PHP_EOL;
+                    
+                    // Render history markers
+                    if (!empty($marker['coords_history'])) {
+                        $size_modifier=2;
+                        foreach ($marker['coords_history'] as $index => $histCoord) {
+                            if ($histCoord['x']== $marker['x'] && $histCoord['y']== $marker['y'] )
+                                continue; // Skip same place
+                            
+                            $histPercentX = ($histCoord['x'] / $mapWidth) * 100;
+                            $histPercentY = ($histCoord['y'] / $mapHeight) * 100;
+                            // Make history markers smaller: 5px radius instead of 10px
+                            $size_modifier+=0.5;
+                            $histSize = round($size_modifier,0);
+
+                            
+                            echo '<div class="history-marker" style="left: ' . $histPercentX . '%; top: ' . $histPercentY . '%; width: ' . ($histSize * 2) . 'px; height: ' . ($histSize * 2) . 'px; background-color: ' . $marker['color'] . '; opacity: 0.3;">';
+                            echo '<div class="history-marker-label">' . PHP_EOL;
+                            echo "<strong>" . $marker['name'] . "</strong><br/>";
+                            echo "In-game: (" . $histCoord['ingame_x'] . ", " . $histCoord['ingame_y'] . ")<br/>";
+                            if (!empty($histCoord['location'])) {
+                                echo "Location: " . $histCoord['location'] . "<br/>";
+                            }
+                            echo "Tracked: " . $histCoord['last_updated'] . "<br/>";
+                            echo "</div>";
+                            echo '</div>' . PHP_EOL;
+                        }
+                    }
                 }
             ?>
         </div>
@@ -747,10 +865,15 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             .then(data => {
                 if (data.ok) {
                     alert(data.message || 'Coords update sent!');
+                    // Reload the page after a short delay to see updates
+                    setTimeout(() => {
+                        location.reload();
+                    }, 200);
                 } else {
                     alert('Error: ' + (data.message || 'Unknown error'));
                 }
                 hideProcessing();
+             
             })
             .catch(error => {
                 console.error('Error:', error);
