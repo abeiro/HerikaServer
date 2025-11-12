@@ -2009,6 +2009,46 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
     modelInput.addEventListener('change', () => { clearProviderIfOpenRouter(); maybeAutofillProvider(); if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
     modelInput.addEventListener('input', () => { clearProviderIfOpenRouter(); maybeAutofillProvider(); if (isOpen && providersCache) renderList(providersCache, providerInput.value, getRelevantProviderSlugs()); });
 })();
+
+// Collapsible section handlers for main form (must run after DOM is loaded)
+(function(){
+    const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+
+    collapsibleHeaders.forEach(header => {
+        const targetId = header.getAttribute('data-target');
+        const content = document.getElementById(targetId);
+        const arrow = header.querySelector('.collapse-arrow');
+
+        if (!content || !arrow) return;
+
+        // Restore state from localStorage
+        const storageKey = 'llm_collapse_' + targetId;
+        const isCollapsed = localStorage.getItem(storageKey) === 'true';
+
+        if (isCollapsed) {
+            content.style.display = 'none';
+            arrow.textContent = '▶';
+        } else {
+            content.style.display = 'block';
+            arrow.textContent = '▼';
+        }
+
+        // Add click handler
+        header.addEventListener('click', function() {
+            const isCurrentlyVisible = content.style.display !== 'none';
+
+            if (isCurrentlyVisible) {
+                content.style.display = 'none';
+                arrow.textContent = '▶';
+                localStorage.setItem(storageKey, 'true');
+            } else {
+                content.style.display = 'block';
+                arrow.textContent = '▼';
+                localStorage.setItem(storageKey, 'false');
+            }
+        });
+    });
+})();
 </script>
 
 <!-- list/grid moved to left pane -->
