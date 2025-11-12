@@ -311,6 +311,10 @@ class openrouterjsoncached
             ? $GLOBALS["CONNECTOR"][$this->name]["response_format"]
             : 'json';
 
+        // DEBUG: Log what response format is being loaded
+        error_log("[{$this->name}] CRITICAL DEBUG - Response Format Setting: {$this->_responseFormat}");
+        error_log("[{$this->name}] CRITICAL DEBUG - Raw metadata value: " . ($GLOBALS["CONNECTOR"][$this->name]["response_format"] ?? 'NOT SET'));
+
         $this->_includeActions = (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"])
             && (isset($GLOBALS["CONNECTOR"][$this->name]["include_actions_list"])
                 ? (bool)$GLOBALS["CONNECTOR"][$this->name]["include_actions_list"]
@@ -374,6 +378,8 @@ class openrouterjsoncached
 
         // Build response format instruction based on format type
         $formatInstruction = "";
+        error_log("[{$this->name}] CRITICAL DEBUG - Building format instruction for: {$this->_responseFormat}");
+
         if ($this->_responseFormat === 'json') {
             $template = isset($GLOBALS["responseTemplate"]) ? $GLOBALS["responseTemplate"] : [];
 
@@ -392,6 +398,7 @@ class openrouterjsoncached
 
             $prefixPart = trim(implode(' ', array_filter([$prefix, $speechReinforcement, $customInstruction], 'strlen')));
             $formatInstruction = "{$prefixPart} Use ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure$zonosTones: " . json_encode($template);
+            error_log("[{$this->name}] CRITICAL DEBUG - JSON format instruction created");
         } else {
             $prefixPart = trim(implode(' ', array_filter([$prefix, $speechReinforcement, $customInstruction], 'strlen')));
             $formatInstruction = buildSimpleFormatInstruction(
@@ -401,6 +408,7 @@ class openrouterjsoncached
                 $this->_includeTarget,
                 $prefixPart
             );
+            error_log("[{$this->name}] CRITICAL DEBUG - Simple format instruction created");
         }
 
         $actionsText = "";
