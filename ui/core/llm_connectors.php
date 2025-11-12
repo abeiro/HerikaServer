@@ -829,96 +829,117 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
 // Handle Import CSV (create new connector from CSV)
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import"])) {
     $redir = 'llm_connectors.php';
+    $importedIds = [];
+    
     try {
-        if (!isset($_FILES['import_file']) || !is_uploaded_file($_FILES['import_file']['tmp_name'])) {
+        if (!isset($_FILES['import_file']) || !isset($_FILES['import_file']['tmp_name'])) {
             header("Location: $redir");
             exit;
         }
-        $tmp = $_FILES['import_file']['tmp_name'];
-        $fh = fopen($tmp, 'r');
-        if (!$fh) { header("Location: $redir"); exit; }
         
-        // Read header, skipping any empty lines at the start
-        $header = false;
-        while (($line = fgetcsv($fh)) !== false) {
-            if (!empty(array_filter($line, function($v){ return trim((string)$v) !== ''; }))) {
-                $header = $line;
-                break;
+        // Handle multiple files
+        $files = $_FILES['import_file'];
+        $fileCount = is_array($files['tmp_name']) ? count($files['tmp_name']) : 1;
+        
+        for ($fileIndex = 0; $fileIndex < $fileCount; $fileIndex++) {
+            $tmp = is_array($files['tmp_name']) ? $files['tmp_name'][$fileIndex] : $files['tmp_name'];
+            
+            if (!is_uploaded_file($tmp)) {
+                continue;
+            }
+            
+            $fh = fopen($tmp, 'r');
+            if (!$fh) { continue; }
+            
+            // Read header, skipping any empty lines at the start
+            $header = false;
+            while (($line = fgetcsv($fh)) !== false) {
+                if (!empty(array_filter($line, function($v){ return trim((string)$v) !== ''; }))) {
+                    $header = $line;
+                    break;
+                }
+            }
+            if ($header === false) { fclose($fh); continue; }
+            $cols = array_map(function($v){ return strtolower(trim((string)$v)); }, $header);
+            
+            // Skip empty lines to find actual data row
+            $row = false;
+            while (($line = fgetcsv($fh)) !== false) {
+                if (!empty(array_filter($line, function($v){ return trim((string)$v) !== ''; }))) {
+                    $row = $line;
+                    break;
+                }
+            }
+            fclose($fh);
+            if ($row === false) { continue; }
+            
+            $dataMap = [];
+            for ($i=0; $i<count($cols); $i++) { $k = $cols[$i] ?? ''; if ($k==='') continue; $dataMap[$k] = $row[$i] ?? ''; }
+
+            $getString = function($k) use ($dataMap){ $v = isset($dataMap[$k]) ? (string)$dataMap[$k] : ''; return trim($v); };
+            $getInt = function($k) use ($dataMap){ $v = isset($dataMap[$k]) ? $dataMap[$k] : ''; $v = trim((string)$v); if ($v==='') return null; return (int)$v; };
+            $getFloat = function($k) use ($dataMap){ $v = isset($dataMap[$k]) ? $dataMap[$k] : ''; $v = trim((string)$v); if ($v==='') return null; return (float)$v; };
+            $getBool = function($k) use ($dataMap){ $v = isset($dataMap[$k]) ? $dataMap[$k] : ''; $s = strtolower(trim((string)$v)); if ($s==='') return null; if ($s==='1'||$s==='true'||$s==='yes'||$s==='y'||$s==='on') return 1; if ($s==='0'||$s==='false'||$s==='no'||$s==='n'||$s==='off') return 0; return null; };
+
+            $payload = [];
+            $payload['label'] = $getString('label');
+            $payload['service'] = $getString('service');
+            $payload['url'] = $getString('url');
+            $payload['model'] = $getString('model');
+            $payload['provider'] = $getString('provider');
+            $payload['driver'] = $getString('driver');
+            $payload['api_badge_id'] = $getInt('api_badge_id');
+            $payload['max_tokens'] = $getInt('max_tokens');
+            $payload['temperature'] = $getFloat('temperature');
+            $payload['presence_penalty'] = $getFloat('presence_penalty');
+            $payload['frequency_penalty'] = $getFloat('frequency_penalty');
+            $payload['repetition_penalty'] = $getFloat('repetition_penalty');
+            $payload['top_p'] = $getFloat('top_p');
+            $payload['top_k'] = $getInt('top_k');
+            $payload['min_p'] = $getFloat('min_p');
+            $payload['top_a'] = $getFloat('top_a');
+            $b = $getBool('enforce_json'); if ($b!==null) $payload['enforce_json'] = $b; else unset($payload['enforce_json']);
+            $b = $getBool('json_schema'); if ($b!==null) $payload['json_schema'] = $b; else unset($payload['json_schema']);
+            $b = $getBool('prefill_json'); if ($b!==null) $payload['prefill_json'] = $b; else unset($payload['prefill_json']);
+            $b = $getBool('reasoning_model'); if ($b!==null) $payload['reasoning_model'] = $b; else unset($payload['reasoning_model']);
+            $meta = $getString('metadata'); if ($meta !== '') { $payload['metadata'] = $meta; }
+
+            // Infer service if missing
+            if (($payload['service'] ?? '') === '') {
+                $d = strtolower((string)($payload['driver'] ?? ''));
+                $u = strtolower((string)($payload['url'] ?? ''));
+                if (strpos($d,'openai')!==false || strpos($u,'openai.com')!==false) $payload['service']='openai';
+                elseif (strpos($d,'google')!==false || strpos($u,'generativelanguage.googleapis.com')!==false) $payload['service']='google';
+                elseif (strpos($u,'nano-gpt.com')!==false) $payload['service']='nanogpt';
+                elseif (strpos($d,'openrouter')!==false || strpos($u,'openrouter.ai')!==false) $payload['service']='openrouter';
+                else $payload['service']='custom';
+            }
+            // Seed minimal defaults similar to create_blank when missing
+            if (!isset($payload['driver']) || $payload['driver']==='') {
+                $svc = $payload['service'] ?? 'openrouter';
+                $payload['driver'] = ($svc==='openrouter') ? 'openrouterjson' : (($svc==='openai') ? 'openaijson' : (($svc==='google') ? 'google_openaijson' : (($svc==='nanogpt') ? 'openrouterjson' : 'openaijson')));
+            }
+            if (!isset($payload['temperature']) || $payload['temperature']===null) $payload['temperature'] = 1;
+            if (!isset($payload['max_tokens']) || $payload['max_tokens']===null) $payload['max_tokens'] = 250;
+
+            // Ensure label present
+            if ($payload['label'] === '') { $payload['label'] = 'Imported Connector'; }
+            // Keep label as-is (no import suffix)
+
+            $newId = $llm->create($payload);
+            if (!$newId) {
+                $last = $GLOBALS["db"]->fetchOne("SELECT id FROM core_llm_connector ORDER BY id DESC LIMIT 1");
+                $newId = $last['id'] ?? '';
+            }
+            if ($newId) {
+                $importedIds[] = $newId;
             }
         }
-        if ($header === false) { fclose($fh); header("Location: $redir"); exit; }
-        $cols = array_map(function($v){ return strtolower(trim((string)$v)); }, $header);
         
-        // Skip empty lines to find actual data row
-        $row = false;
-        while (($line = fgetcsv($fh)) !== false) {
-            if (!empty(array_filter($line, function($v){ return trim((string)$v) !== ''; }))) {
-                $row = $line;
-                break;
-            }
+        // Redirect to the first imported connector if any were successfully imported
+        if (!empty($importedIds)) {
+            $redir = 'llm_connectors.php?edit=' . urlencode($importedIds[0]);
         }
-        fclose($fh);
-        if ($row === false) { header("Location: $redir"); exit; }
-        
-        $dataMap = [];
-        for ($i=0; $i<count($cols); $i++) { $k = $cols[$i] ?? ''; if ($k==='') continue; $dataMap[$k] = $row[$i] ?? ''; }
-
-        $getString = function($k) use ($dataMap){ $v = isset($dataMap[$k]) ? (string)$dataMap[$k] : ''; return trim($v); };
-        $getInt = function($k) use ($dataMap){ $v = isset($dataMap[$k]) ? $dataMap[$k] : ''; $v = trim((string)$v); if ($v==='') return null; return (int)$v; };
-        $getFloat = function($k) use ($dataMap){ $v = isset($dataMap[$k]) ? $dataMap[$k] : ''; $v = trim((string)$v); if ($v==='') return null; return (float)$v; };
-        $getBool = function($k) use ($dataMap){ $v = isset($dataMap[$k]) ? $dataMap[$k] : ''; $s = strtolower(trim((string)$v)); if ($s==='') return null; if ($s==='1'||$s==='true'||$s==='yes'||$s==='y'||$s==='on') return 1; if ($s==='0'||$s==='false'||$s==='no'||$s==='n'||$s==='off') return 0; return null; };
-
-        $payload = [];
-        $payload['label'] = $getString('label');
-        $payload['service'] = $getString('service');
-        $payload['url'] = $getString('url');
-        $payload['model'] = $getString('model');
-        $payload['provider'] = $getString('provider');
-        $payload['driver'] = $getString('driver');
-        $payload['api_badge_id'] = $getInt('api_badge_id');
-        $payload['max_tokens'] = $getInt('max_tokens');
-        $payload['temperature'] = $getFloat('temperature');
-        $payload['presence_penalty'] = $getFloat('presence_penalty');
-        $payload['frequency_penalty'] = $getFloat('frequency_penalty');
-        $payload['repetition_penalty'] = $getFloat('repetition_penalty');
-        $payload['top_p'] = $getFloat('top_p');
-        $payload['top_k'] = $getInt('top_k');
-        $payload['min_p'] = $getFloat('min_p');
-        $payload['top_a'] = $getFloat('top_a');
-        $b = $getBool('enforce_json'); if ($b!==null) $payload['enforce_json'] = $b; else unset($payload['enforce_json']);
-        $b = $getBool('json_schema'); if ($b!==null) $payload['json_schema'] = $b; else unset($payload['json_schema']);
-        $b = $getBool('prefill_json'); if ($b!==null) $payload['prefill_json'] = $b; else unset($payload['prefill_json']);
-        $b = $getBool('reasoning_model'); if ($b!==null) $payload['reasoning_model'] = $b; else unset($payload['reasoning_model']);
-        $meta = $getString('metadata'); if ($meta !== '') { $payload['metadata'] = $meta; }
-
-        // Infer service if missing
-        if (($payload['service'] ?? '') === '') {
-            $d = strtolower((string)($payload['driver'] ?? ''));
-            $u = strtolower((string)($payload['url'] ?? ''));
-            if (strpos($d,'openai')!==false || strpos($u,'openai.com')!==false) $payload['service']='openai';
-            elseif (strpos($d,'google')!==false || strpos($u,'generativelanguage.googleapis.com')!==false) $payload['service']='google';
-            elseif (strpos($u,'nano-gpt.com')!==false) $payload['service']='nanogpt';
-            elseif (strpos($d,'openrouter')!==false || strpos($u,'openrouter.ai')!==false) $payload['service']='openrouter';
-            else $payload['service']='custom';
-        }
-        // Seed minimal defaults similar to create_blank when missing
-        if (!isset($payload['driver']) || $payload['driver']==='') {
-            $svc = $payload['service'] ?? 'openrouter';
-            $payload['driver'] = ($svc==='openrouter') ? 'openrouterjson' : (($svc==='openai') ? 'openaijson' : (($svc==='google') ? 'google_openaijson' : (($svc==='nanogpt') ? 'openrouterjson' : 'openaijson')));
-        }
-        if (!isset($payload['temperature']) || $payload['temperature']===null) $payload['temperature'] = 1;
-        if (!isset($payload['max_tokens']) || $payload['max_tokens']===null) $payload['max_tokens'] = 250;
-
-        // Ensure label present
-        if ($payload['label'] === '') { $payload['label'] = 'Imported Connector'; }
-        // Keep label as-is (no import suffix)
-
-        $newId = $llm->create($payload);
-        if (!$newId) {
-            $last = $GLOBALS["db"]->fetchOne("SELECT id FROM core_llm_connector ORDER BY id DESC LIMIT 1");
-            $newId = $last['id'] ?? '';
-        }
-        $redir = 'llm_connectors.php' . ($newId ? ('?edit=' . urlencode($newId)) : '');
     } catch (Exception $e) {
         error_log("[CSV Import Error] " . $e->getMessage());
         error_log("[CSV Import Error] Stack trace: " . $e->getTraceAsString());
@@ -1013,7 +1034,7 @@ if (isset($_GET["edit"])) {
             </form>
             <form method="post" style="display:inline" action="llm_connectors.php" enctype="multipart/form-data" id="llm_import_form">
                 <input type="hidden" name="import" value="1">
-                <input type="file" name="import_file" id="llm_import_file" accept=".csv" style="display:none">
+                <input type="file" name="import_file[]" id="llm_import_file" accept=".csv" multiple style="display:none">
                 <button type="button" class="btn-primary" id="llm_import_btn">Import</button>
             </form>
         </div>

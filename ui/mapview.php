@@ -304,6 +304,43 @@ if (! $adminConn) {
     }
     unset($marker);
 
+    // Load passive location markers from JSON file
+    $locationMarkersFile = __DIR__ . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'location_markers.json';
+    $passiveMarkers = [];
+    
+    if (file_exists($locationMarkersFile)) {
+        $locationData = json_decode(file_get_contents($locationMarkersFile), true);
+        
+        if ($locationData && isset($locationData['locations'])) {
+            foreach ($locationData['locations'] as $location) {
+                $coords = translateCoords(
+                    $location['coords']['x'],
+                    $location['coords']['y'],
+                    $mapWidth,
+                    $mapHeight,
+                    $WORLD_X_MIN,
+                    $WORLD_X_MAX,
+                    $WORLD_Y_MIN,
+                    $WORLD_Y_MAX
+                );
+                
+                $passiveMarkers[] = [
+                    'name' => $location['name'],
+                    'x' => $coords['x'],
+                    'y' => $coords['y'],
+                    'ingame_x' => $location['coords']['x'],
+                    'ingame_y' => $location['coords']['y'],
+                    'icon' => $location['icon'],
+                    'type' => $location['type'],
+                    'description' => $location['description'],
+                    'editorID' => $location['editorID'],
+                    'formID' => $location['formID'],
+                    'locationID' => $location['locationID'],
+                ];
+            }
+        }
+    }
+
 ?>
 
 <?php
@@ -628,6 +665,88 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         transform: translateY(0);
     }
 
+    /* Passive Location Markers */
+    .location-marker {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        cursor: pointer;
+        z-index: 5;
+    }
+
+    .location-marker-icon {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.8;
+        transition: all 0.3s ease;
+    }
+
+    .location-marker-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+    }
+
+    .location-marker:hover .location-marker-icon {
+        opacity: 1;
+        transform: scale(1.3);
+    }
+
+    .location-marker:hover .location-marker-icon img {
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8));
+    }
+
+    .location-marker-label {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        white-space: nowrap;
+        font-size: 14px;
+        top: 15px;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-top: 5px;
+        border: 2px solid rgb(242, 124, 17);
+        display: none;
+        z-index: 30;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .location-marker:hover {
+        z-index: 250;
+    }
+
+    .location-marker:hover .location-marker-label {
+        display: block;
+    }
+
+    .location-marker-label .location-name {
+        font-weight: bold;
+        font-size: 14px;
+        margin-bottom: 5px;
+        color: rgb(242, 124, 17);
+    }
+
+    .location-marker-label .location-desc {
+        font-size: 11px;
+        color: #bbb;
+        font-style: italic;
+        margin-top: 5px;
+    }
+
+    .location-marker-label .location-coords {
+        font-size: 10px;
+        color: #888;
+        margin-top: 6px;
+        border-top: 1px solid #444;
+        padding-top: 5px;
+    }
+
     /* Responsive Design */
     @media (max-width: 768px) {
         main {
@@ -655,7 +774,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             <img src="<?php echo $mapImageUrl; ?>" alt="Skyrim Map" id="mapImage">
 
             <?php
-
+                // Render NPC markers
                 foreach ($translatedMarkers as $marker) {
                     // Calculate position as percentage for responsive scaling
                     $percentX = ($marker['x'] / $mapWidth) * 100;
@@ -703,13 +822,36 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                         }
                     }
                 }
+
+                // Render passive location markers
+                foreach ($passiveMarkers as $location) {
+                    $percentX = ($location['x'] / $mapWidth) * 100;
+                    $percentY = ($location['y'] / $mapHeight) * 100;
+                    $iconPath = $webRoot . '/ui/images/map icons/' . $location['icon'];
+
+                    echo '<div class="location-marker" style="left: ' . $percentX . '%; top: ' . $percentY . '%;">';
+                    echo '<div class="location-marker-icon">';
+                    echo '<img src="' . htmlspecialchars($iconPath) . '" alt="' . htmlspecialchars($location['name']) . '" />';
+                    echo '</div>';
+                    echo '<div class="location-marker-label">';
+                    echo '<div class="location-name">' . htmlspecialchars($location['name']) . '</div>';
+                    echo '<div class="location-desc">' . htmlspecialchars($location['description']) . '</div>';
+                    echo '<div class="location-coords">';
+                    echo 'Type: ' . htmlspecialchars($location['type']) . '<br/>';
+                    echo 'Coords: ' . $location['ingame_x'] . ', ' . $location['ingame_y'] . '<br/>';
+                    echo 'FormID: ' . htmlspecialchars($location['formID']);
+                    echo '</div>';
+                    echo '</div>';
+                    echo '</div>' . PHP_EOL;
+                }
             ?>
         </div>
         <div style="width:20%;float:right">
             <div class="info-panel">
                 <h3>⚔ Map Info ⚔</h3>
                 <strong>Dimensions:</strong> <?php echo $mapWidth; ?>×<?php echo $mapHeight; ?> pixels<br>
-                <strong>Total Markers:</strong> <?php echo sizeof($translatedMarkers); ?><br>
+                <strong>NPC Markers:</strong> <?php echo sizeof($translatedMarkers); ?><br>
+                <strong>Location Markers:</strong> <?php echo sizeof($passiveMarkers); ?><br>
                 <strong>Current Date:</strong> <?php echo $currentDate?><br/>
             </div>
 
@@ -723,7 +865,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         </div>
         <br break="all"/>
         <div class="info-panel">
-            <h3>📍 Location Markers</h3>
+            <h3>📍 NPC Markers</h3>
             <div class="marker-list">
                 <?php foreach ($translatedMarkers as $marker) {?>
                     <div id="dtl_<?php echo $marker['id'] ?>" class="marker-item" style="background-blend-mode: soft-light;border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>)" >

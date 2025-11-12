@@ -219,6 +219,16 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         if (!empty($equipmentParts)) {
                             $profileString .= ". Equipment: " . implode(", ", $equipmentParts);
                         }
+                        
+                        // Check if humanoid NPC has no body armor - if so, note they're naked
+                        $humanoidRaces = ['nord', 'imperial', 'breton', 'redguard', 'orc', 'orsimer', 
+                                        'altmer', 'highelf', 'bosmer', 'woodelf', 'dunmer', 'darkelf', 
+                                        'argonian', 'khajiit', 'khajit'];
+                        $npcRace = isset($currentNpcData["race"]) ? strtolower(trim($currentNpcData["race"])) : '';
+                        
+                        if ($npcRace && in_array($npcRace, $humanoidRaces) && empty($metaData["equipment"]["armor"])) {
+                            $profileString .= ". Naked (no body armor/clothing worn)";
+                        }
                     }
                     
                     $actorDetailedListWithProfile[] = $profileString;
@@ -4415,7 +4425,19 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         }
         
         if (!empty($equipmentParts)) {
-            $EQUIPMENT_ADD = "\n<equipment>\n#Current Equipment\nYou are currently wearing/wielding:\n" . implode("\n", $equipmentParts)."\n<equipment>";
+            $EQUIPMENT_ADD = "\n<equipment>\n#Current Equipment\nYou are currently wearing/wielding:\n" . implode("\n", $equipmentParts);
+            
+            // Check if humanoid NPC has no body armor - if so, note they're naked
+            $humanoidRaces = ['nord', 'imperial', 'breton', 'redguard', 'orc', 'orsimer', 
+                            'altmer', 'highelf', 'bosmer', 'woodelf', 'dunmer', 'darkelf', 
+                            'argonian', 'khajiit', 'khajit'];
+            $npcRace = isset($currentNpcData["race"]) ? strtolower(trim($currentNpcData["race"])) : '';
+            
+            if ($npcRace && in_array($npcRace, $humanoidRaces) && empty($metaData["equipment"]["armor"])) {
+                $EQUIPMENT_ADD .= "\nNote: You are naked (no body armor/clothing worn).";
+            }
+            
+            $EQUIPMENT_ADD .= "\n</equipment>";
         }
     }
 
@@ -4501,7 +4523,19 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
                 }
                 
                 if (!empty($targetEquipmentParts)) {
-                    $TARGET_EQUIPMENT_ADD = "\n<target_equipment>\n#{$targetName}'s Equipment\n{$targetName} is currently wearing/wielding:\n" . implode("\n", $targetEquipmentParts)."\n</target_equipment>\n";
+                    $TARGET_EQUIPMENT_ADD = "\n<target_equipment>\n#{$targetName}'s Equipment\n{$targetName} is currently wearing/wielding:\n" . implode("\n", $targetEquipmentParts);
+                    
+                    // Check if humanoid NPC has no body armor - if so, note they're naked
+                    $humanoidRaces = ['nord', 'imperial', 'breton', 'redguard', 'orc', 'orsimer', 
+                                    'altmer', 'highelf', 'bosmer', 'woodelf', 'dunmer', 'darkelf', 
+                                    'argonian', 'khajiit', 'khajit'];
+                    $targetRace = isset($targetNpcData["race"]) ? strtolower(trim($targetNpcData["race"])) : '';
+                    
+                    if ($targetRace && in_array($targetRace, $humanoidRaces) && empty($targetMetaData["equipment"]["armor"])) {
+                        $TARGET_EQUIPMENT_ADD .= "\nNote: {$targetName} is naked (no body armor/clothing worn).";
+                    }
+                    
+                    $TARGET_EQUIPMENT_ADD .= "\n</target_equipment>\n";
                 }
             }
         }
