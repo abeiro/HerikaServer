@@ -583,42 +583,47 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .location-marker-icon {
-        width: 24px;
-        height: 24px;
-        background: linear-gradient(135deg, #d4af37 0%, #f4e5a5 50%, #d4af37 100%);
-        border-radius: 50%;
-        border: 2px solid rgba(212, 175, 55, 0.8);
-        box-shadow: 0 0 8px rgba(212, 175, 55, 0.6);
+        width: 32px;
+        height: 32px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 12px;
-        opacity: 0.7;
+        opacity: 0.8;
         transition: all 0.3s ease;
+    }
+
+    .location-marker-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
     }
 
     .location-marker:hover .location-marker-icon {
         opacity: 1;
-        transform: scale(1.2);
-        box-shadow: 0 0 15px rgba(212, 175, 55, 0.9);
+        transform: scale(1.3);
+    }
+
+    .location-marker:hover .location-marker-icon img {
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8));
     }
 
     .location-marker-label {
         position: absolute;
-        background: rgba(0, 0, 0, 0.95);
-        color: #d4af37;
-        padding: 10px 14px;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 8px 12px;
         border-radius: 6px;
         white-space: nowrap;
-        font-size: 13px;
-        top: 30px;
+        font-size: 14px;
+        top: 15px;
         left: 50%;
         transform: translateX(-50%);
-        border: 2px solid #d4af37;
+        margin-top: 5px;
+        border: 2px solid rgb(242, 124, 17);
         display: none;
         z-index: 30;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-        min-width: 150px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
     }
 
     .location-marker:hover {
@@ -633,7 +638,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         font-weight: bold;
         font-size: 14px;
         margin-bottom: 5px;
-        color: #f4e5a5;
+        color: rgb(242, 124, 17);
     }
 
     .location-marker-label .location-desc {
@@ -704,10 +709,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 foreach ($passiveMarkers as $location) {
                     $percentX = ($location['x'] / $mapWidth) * 100;
                     $percentY = ($location['y'] / $mapHeight) * 100;
+                    $iconPath = $webRoot . '/ui/images/map icons/' . $location['icon'];
 
                     echo '<div class="location-marker" style="left: ' . $percentX . '%; top: ' . $percentY . '%;">';
                     echo '<div class="location-marker-icon">';
-                    echo htmlspecialchars($location['icon']);
+                    echo '<img src="' . htmlspecialchars($iconPath) . '" alt="' . htmlspecialchars($location['name']) . '" />';
                     echo '</div>';
                     echo '<div class="location-marker-label">';
                     echo '<div class="location-name">' . htmlspecialchars($location['name']) . '</div>';
@@ -767,33 +773,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 <?php }?>
             </div>
         </div>
-
-        <?php if (!empty($passiveMarkers)) { ?>
-        <div class="info-panel" style="margin-top: 20px;">
-            <h3>🏰 Static Location Markers</h3>
-            <div class="marker-list">
-                <?php foreach ($passiveMarkers as $location) {?>
-                    <div class="marker-item" style="border-left-color: #d4af37;">
-                        <h4>
-                            <span class="marker-item-color" style="background: linear-gradient(135deg, #d4af37 0%, #f4e5a5 50%, #d4af37 100%);"></span>
-                            <?php echo htmlspecialchars($location['icon']); ?> <?php echo htmlspecialchars($location['name']); ?>
-                        </h4>
-                        <div class="marker-item-coords">
-                            <p><strong>Description:</strong> <?php echo htmlspecialchars($location['description']); ?></p>
-                            <ul>
-                                <li><strong>Type:</strong> <?php echo htmlspecialchars($location['type']); ?></li>
-                                <li><strong>In-game:</strong> x=<?php echo $location['ingame_x']; ?>, y=<?php echo $location['ingame_y']; ?></li>
-                                <li><strong>Map:</strong> (<?php echo $location['x']; ?>, <?php echo $location['y']; ?>)</li>
-                                <li><strong>Editor ID:</strong> <?php echo htmlspecialchars($location['editorID']); ?></li>
-                                <li><strong>Form ID:</strong> <?php echo htmlspecialchars($location['formID']); ?></li>
-                                <li><strong>Location ID:</strong> <?php echo $location['locationID']; ?></li>
-                            </ul>
-                        </div>
-                    </div>
-                <?php }?>
-            </div>
-        </div>
-        <?php } ?>
     </div>
 
     <script>

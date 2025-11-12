@@ -12,7 +12,7 @@
                 "y": -7423
             },
             "type": "city",
-            "icon": "🏙️",
+            "icon": "SR-mapicon-Whiterun.png",
             "description": "Major city in the plains of Whiterun Hold"
         },
         {
@@ -27,7 +27,7 @@
                 "y": 35597
             },
             "type": "city",
-            "icon": "🏙️",
+            "icon": "SR-mapicon-Windhelm.png",
             "description": "Ancient city and capital of Eastmarch"
         },
         {
@@ -42,7 +42,7 @@
                 "y": 102864
             },
             "type": "city",
-            "icon": "🏙️",
+            "icon": "SR-mapicon-Winterhold.png",
             "description": "Northern city, home to the College of Winterhold"
         },
         {
@@ -57,7 +57,7 @@
                 "y": 106138
             },
             "type": "city",
-            "icon": "🏙️",
+            "icon": "SR-mapicon-Dawnstar.png",
             "description": "Port city on the northern coast"
         },
         {
@@ -72,7 +72,7 @@
                 "y": 66734
             },
             "type": "city",
-            "icon": "🏙️",
+            "icon": "SR-mapicon-Morthal.png",
             "description": "Small city in the marshes of Hjaalmarch"
         },
         {
@@ -87,7 +87,7 @@
                 "y": -86284
             },
             "type": "city",
-            "icon": "🏙️",
+            "icon": "SR-mapicon-Falkreath.png",
             "description": "Southern city near the border"
         },
         {
@@ -102,7 +102,7 @@
                 "y": -44792
             },
             "type": "town",
-            "icon": "🏘️",
+            "icon": "SR-mapicon-Town.png",
             "description": "Small lumber town in Whiterun Hold"
         },
         {
@@ -117,7 +117,7 @@
                 "y": -64263
             },
             "type": "town",
-            "icon": "🏘️",
+            "icon": "SR-mapicon-Town.png",
             "description": "Small settlement in the Rift"
         },
         {
@@ -132,7 +132,7 @@
                 "y": 6952
             },
             "type": "town",
-            "icon": "🏘️",
+            "icon": "SR-mapicon-Town.png",
             "description": "Farming village in western Whiterun Hold"
         },
         {
@@ -147,7 +147,7 @@
                 "y": -79481
             },
             "type": "town",
-            "icon": "🔥",
+            "icon": "SR-mapicon-Town.png",
             "description": "Destroyed town near the southern border"
         },
         {
@@ -162,7 +162,7 @@
                 "y": 38549
             },
             "type": "town",
-            "icon": "🏘️",
+            "icon": "SR-mapicon-Town.png",
             "description": "Mining town in the Reach"
         },
         {
@@ -177,7 +177,7 @@
                 "y": 82900
             },
             "type": "town",
-            "icon": "🏘️",
+            "icon": "SR-mapicon-Town.png",
             "description": "Small village in Haafingar"
         },
         {
@@ -192,7 +192,7 @@
                 "y": -60530
             },
             "type": "town",
-            "icon": "🏘️",
+            "icon": "SR-mapicon-Town.png",
             "description": "Mining village in the Rift"
         },
         {
@@ -207,7 +207,7 @@
                 "y": -110597
             },
             "type": "stronghold",
-            "icon": "⚔️",
+            "icon": "SR-mapicon-Orc_Stronghold.png",
             "description": "Orc stronghold in the Rift"
         },
         {
@@ -222,7 +222,7 @@
                 "y": 10036
             },
             "type": "stronghold",
-            "icon": "⚔️",
+            "icon": "SR-mapicon-Orc_Stronghold.png",
             "description": "Orc stronghold in Eastmarch"
         },
         {
@@ -237,7 +237,7 @@
                 "y": -22742
             },
             "type": "stronghold",
-            "icon": "⚔️",
+            "icon": "SR-mapicon-Orc_Stronghold.png",
             "description": "Orc stronghold in the Reach"
         },
         {
@@ -252,7 +252,7 @@
                 "y": 81847
             },
             "type": "stronghold",
-            "icon": "⚔️",
+            "icon": "SR-mapicon-Orc_Stronghold.png",
             "description": "Orc stronghold in the Reach"
         },
         {
@@ -267,7 +267,7 @@
                 "y": 46035
             },
             "type": "inn",
-            "icon": "🍺",
+            "icon": "SR-mapicon-Town.png",
             "description": "Roadside inn in the Pale"
         },
         {
@@ -282,7 +282,7 @@
                 "y": 5255
             },
             "type": "city",
-            "icon": "🏙️",
+            "icon": "SR-mapicon-Markarth.png",
             "description": "Ancient Dwemer city carved into the mountainside"
         },
         {
@@ -297,7 +297,7 @@
                 "y": 104648
             },
             "type": "city",
-            "icon": "🏙️",
+            "icon": "SR-mapicon-Solitude.png",
             "description": "Capital of Skyrim and seat of the High King"
         },
         {
@@ -312,7 +312,7 @@
                 "y": -96600
             },
             "type": "city",
-            "icon": "🏙️",
+            "icon": "20111122181415!SR-mapicon-Riften.png",
             "description": "Major city on the shores of Lake Honrich"
         }
     ]
