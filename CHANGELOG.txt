@@ -2,6 +2,48 @@
 CHIM CACHED CONNECTOR - VERSION HISTORY
 ===============================================================================
 
+Version 1.0.24 (2025-11-12)
+---------------------------
+
+Debug & Diagnostics:
+--------------------
+✓ **Added critical debug logging for response format investigation**
+  - Problem: Response format set to JSON in UI but LLM outputting simple format
+  - Debug logging added to diagnose configuration loading issues
+  - Logs added:
+    * Response format setting as loaded from metadata
+    * Raw metadata value from GLOBALS
+    * Which format instruction branch is executed (JSON vs Simple)
+  - Error log output shows:
+    * "[connector] CRITICAL DEBUG - Response Format Setting: [json|simple]"
+    * "[connector] CRITICAL DEBUG - Raw metadata value: [value]"
+    * "[connector] CRITICAL DEBUG - Building format instruction for: [format]"
+    * "[connector] CRITICAL DEBUG - [JSON|Simple] format instruction created"
+  - Purpose: Identify discrepancy between UI configuration and runtime behavior
+  - Modified: connector/openrouterjsoncached.php (lines 314-316, 381, 401, 411)
+  - Modified: connector/openrouterjsoncached_verbose.php (lines 329-331, 442, 462, 480)
+
+UI Improvements:
+----------------
+✓ **Added Advanced Settings collapsible to main connector form**
+  - Previously only available in edit modal
+  - Added Minimize Quality Instructions toggle
+  - Added Advanced Settings collapsible section with 3 fields
+  - Now matches edit modal UI structure
+  - Modified: ui/core/llm_connectors.php (lines 1557-1581)
+
+Files Modified:
+---------------
+• connector/openrouterjsoncached.php - Debug logging + version 1.0.24
+• connector/openrouterjsoncached_verbose.php - Debug logging + version 1.0.24
+• ui/core/llm_connectors.php - Advanced Settings for main form
+
+Benefits:
+---------
+• Diagnostic capability to investigate format mismatch issues
+• Complete UI parity between main form and edit modal
+• Better troubleshooting for configuration issues
+
 Version 1.0.23 (2025-11-11)
 ---------------------------
 
