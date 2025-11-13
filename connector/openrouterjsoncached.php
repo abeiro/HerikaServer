@@ -9,7 +9,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_function
 class openrouterjsoncached
 {
     // ⚠️ IMPORTANT: Please update version number, date, and CHIM version after making changes
-    const VERSION = 'OpenRouter Cache Connector v1.1.14 for CHIM 2.0.3 | 2025/11/13';
+    const VERSION = 'OpenRouter Cache Connector v1.1.15 for CHIM 2.0.3 | 2025/11/13';
 
     public $primary_handler;
     public $name;
@@ -1197,6 +1197,9 @@ class openrouterjsoncached
             $sentence = $sentences[$this->_sentencesSent];
             $this->_sentencesSent++;
             logMessage("[{$this->name}] Flushing complete sentence #{$this->_sentencesSent}: " . substr($sentence, 0, 80));
+            if (!empty($sentence) && $sentence[0] === ':') {
+                logMessage("[{$this->name}] Flush: ⚠️ FLUSHED SENTENCE STARTS WITH COLON");
+            }
             return $sentence;
         }
 
@@ -1353,6 +1356,13 @@ class openrouterjsoncached
             if ($this->_sentencesSent < count($sentences)) {
                 $sentence = $sentences[$this->_sentencesSent];
                 $this->_sentencesSent++;
+
+                // Diagnostic logging to track what is being returned
+                logMessage("[{$this->name}] _parseAndReturnContent returning sentence #{$this->_sentencesSent}: " . substr($sentence, 0, 100));
+                if (!empty($sentence) && $sentence[0] === ':') {
+                    logMessage("[{$this->name}] _parseAndReturnContent: ⚠️ SENTENCE STARTS WITH COLON");
+                }
+
                 // No stripReasoningTokens() call - already done in Step 0!
                 return $sentence;
             }
