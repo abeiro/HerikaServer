@@ -1149,6 +1149,12 @@ class openrouterjsoncached
         // Extract message portion
         $message = substr($normalizedBuffer, $this->_metadataEnd);
 
+        // Strip leading colon (handles "mood): text" or "mood) : text")
+        $message = trim($message);
+        if (strlen($message) > 0 && $message[0] === ':') {
+            $message = ltrim(substr($message, 1));
+        }
+
         // Split into sentences
         $sentences = $this->_splitIntoSentences($message);
 
@@ -1283,6 +1289,12 @@ class openrouterjsoncached
 
             // Step 6: Extract message portion
             $message = substr($normalizedBuffer, $this->_metadataEnd);
+
+            // Strip leading colon (handles "mood): text" or "mood) : text")
+            $message = trim($message);
+            if (strlen($message) > 0 && $message[0] === ':') {
+                $message = ltrim(substr($message, 1));
+            }
 
             // Step 7: Split message into sentences
             $sentences = $this->_splitIntoSentences($message);
