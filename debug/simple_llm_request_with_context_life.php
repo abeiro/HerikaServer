@@ -161,7 +161,7 @@ error_log($query);
 $cn     = $db->escape($GLOBALS["HERIKA_NAME"]);
 $query2 = "SELECT content,gamets,topic FROM diarylog
  where people='$cn' and gamets>{$lastIt["gamets"]} and (topic='Sent Letter' or topic='Journal Note')
- order by gamets desc ,ts desc limit 5 offset 0";
+ order by gamets desc ,ts desc limit 16 offset 0";
 error_log($query2);
 $diaryEntry   = [];
 $diaryEntries = $db->fetchAll($query2);
@@ -202,19 +202,6 @@ if (isset($lastIt["gamets"])) {
 
 }
 
-$rumors = [];
-error_log("Last interaction {$lastIt["gamets"]}, {$lastLoc["location"]}");
-$currentHoldEsc = $db->escape($lastLoc["location"]);
-if (isset($lastIt["gamets"])) {
-    $query2 = "SELECT gamets,content FROM rumors WHERE hold like '%{$currentHoldEsc}%' and gamets>" . ($gameRequest[2] - ((24 * 7) / 0.0000024));
-    error_log($query2);
-    $rumorsData = $db->fetchAll($query2);
-    foreach ($rumors as $event) {
-        $rumors[] = ["gamets" => $event["gamets"], "content" => "{$event["content"]}", "type" => "rumor"];
-
-    }
-
-}
 
 $bgEvents[] = ["gamets" => $lastLoc["gamets"], "content" => "{$lastLoc["location"]}", "type" => "last_known_location"];
 
@@ -226,6 +213,38 @@ if (isset($metadata["last_coords"]) && $metadata["last_coords"][3]) {
         " hours ago",
         "type" => "last_reported_location"];
     $LAST_REPORTED_LOCATION = $metadata["last_coords"][3];
+}
+
+if (isset($metadata['last_coords_history'])) {
+    $localLast="";
+    foreach ($metadata['last_coords_history'] as $historicalCoord) {
+        if (!empty($historicalCoord[3])) {
+            if ($localLast==$historicalCoord[3]) 
+                continue;
+            $bgEvents[] = [
+                "gamets"  => $historicalCoord["last_updated"],
+                "content" => "{$historicalCoord[3]}, " .
+                number_format(($last_gamets - $historicalCoord["last_updated"]) * 0.0000024, 2) .
+                " hours ago",
+                "type" => "reported_location"];
+            $localLast=$historicalCoord[3];
+        }
+    }
+}
+
+
+$rumors = [];
+error_log("Last interaction {$lastIt["gamets"]}, {$lastLoc["location"]}");
+$currentHoldEsc = $db->escape($LAST_REPORTED_LOCATION);
+if ($currentHoldEsc) {
+    $query2 = "SELECT gamets,content FROM rumors WHERE hold like '%{$currentHoldEsc}%' and gamets>" . ($gameRequest[2] - ((24 * 7) / 0.0000024));
+    error_log($query2);
+    $rumorsData = $db->fetchAll($query2);
+    foreach ($rumors as $event) {
+        $bgEvents[] = ["gamets" => $event["gamets"], "content" => "{$event["content"]}", "type" => "rumor"];
+
+    }
+
 }
 
 print_r($bgEvents);
@@ -345,7 +364,7 @@ $buffer
 Possible actions (check character's goals section):
 StayAtPlace - The character remains in their current location, performing activities locally. Take into account how much time character has been at this location and is current task. If gathering info or spreading rumors, should stay at least 24 hours.
 TravelTo:<Place> - the character decides to travel to another location (replace <Place> with the chosen destination).The character should have a clear and logical reason for traveling.
-SpreadRumor - The character initiates or influences a rumor. Use this action whenever the character’s activities affect others indirectly (e.g., “The character promotes fair trade locally, causing rumors of happier merchants.”).
+ReturnHome: character returns to its base location. Use when no further action is needed or all goals have been accomplished.
 Your answer must use markup - XML like - format, containing exactly 3 elements:
 
 <action> ... </action>
@@ -355,11 +374,9 @@ Your answer must use markup - XML like - format, containing exactly 3 elements:
 
 Where:
 
-<action>chosen action (e.g., StayAtPlace,TravelTo:<Place>,SpreadRumor)
-
-<rumor> rumor spreaded or created
-
-<notification>Write it as a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["HERIKA_NAME"]}. Use same language as <text>.
+action: chosen action (e.g., StayAtPlace,TravelTo:<Place>,ReturnHome)
+rumor:  rumor spreaded or created. rumor should be located and related to current character's location ($LAST_REPORTED_LOCATION), e.g if character is at Dawnstar, rumor should be Dawnstar related.
+notification: Write it as a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["HERIKA_NAME"]}. Use same language as <text>.
 
 "];
 } else {
@@ -375,21 +392,20 @@ $buffer
 </text>
 
 Possible actions:
-StayAtPlace - the character decides to remain where they currently are.
-Your answer must use markup - XML like - format, containing exactly two elements:
+StayAtPlace - The character remains in their current location, performing activities locally. Take into account how much time character has been at this location and is current task. If gathering info or spreading rumors, should stay at least 24 hours.Your answer must use markup - XML like - format, containing exactly two elements:
+SpreadRumor - Character activities generate rumors, also, character can explictly create a rumor. E.G. If character's goal or activity is to enforce local trade, create a rumor about local trading being enhaced.
 
 <action> ... </action>
-<reason> ... </reason>
+<rumor> ... </rumor>
 <notification> ... </notification>
 
 
 Where:
 
-<action> describes the chosen action (e.g., StayAtPlace or TravelTo)
+action: chosen action (StayAtPlace or SpreadRumor)
+rumor:  rumor spreaded or created. rumor should be located and related to current character's location ($LAST_REPORTED_LOCATION), e.g if character is at Dawnstar, rumor should be Dawnstar related.
+notification: Write it as a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["HERIKA_NAME"]}. Use same language as <text>.
 
-<reason> briefly explains why this action fits the character’s current situation or motivations.
-
-<notification>Write it as a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["HERIKA_NAME"]}. Use same language as <text>.
 
 "];
 }
@@ -480,7 +496,7 @@ if (is_array($parsed)) {
                 'content'  => $parsed["notification"],
                 'tags'     => "backgroundlife",
                 'people'   => $GLOBALS["HERIKA_NAME"],
-                'location' => $LAST_REPORTED_LOCATION?? null,
+                'location' => $LAST_REPORTED_LOCATION ?? null,
                 'sess'     => $momentum,
                 'localts'  => time(),
             ]
@@ -488,7 +504,7 @@ if (is_array($parsed)) {
     }
 
     if ($parsed["rumor"]) {
-        $detParm = "{$parsed["rumor"]} (Contextual information about reasons of this rumor: {$parsed["notification"]})";
+        $detParm = "Location: $LAST_REPORTED_LOCATION, {$parsed["rumor"]} (Contextual information about reasons of this rumor: {$parsed["notification"]})";
         shell_exec("php $enginePath/debug/simple_llm_request_with_context_rumors_custom.php " . escapeshellarg($detParm));
     }
 }

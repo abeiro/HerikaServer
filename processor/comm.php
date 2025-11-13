@@ -1094,6 +1094,15 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             }
             
             // Update equipment section
+            if (isset($meta["last_coords"])) {
+                $meta["last_coords_history"][]=$meta['last_coords'];
+                // Keep only last 10 elements
+                if (count($meta["last_coords_history"]) > 10) {
+                    $meta["last_coords_history"] = array_slice($meta["last_coords_history"], -5);
+                }
+
+            }
+
             $meta['last_coords'] = [$splitNameBase[1],$splitNameBase[2],$splitNameBase[3],$splitNameBase[4],"last_updated"=>$gameRequest[2]];
             
             // Save back to database
