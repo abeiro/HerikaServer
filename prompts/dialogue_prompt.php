@@ -10,11 +10,11 @@
 // Common patterns to use in most functions
 $MAXIMUM_WORDS=($GLOBALS["MAX_WORDS_LIMIT"]>0)?"(Maximum {$GLOBALS["MAX_WORDS_LIMIT"]} words)":"";
 
-// Legacy Database Prompt (Dialogue) - Commented out, now handled by configurable toggle below
-// $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should be a casual direct reaction to what was just said." .
-// " Avoid narrations, be original, creative, knowledgeable, use your own thoughts. " .
-// " Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines." .
-// " {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines will use this format \"{$GLOBALS["HERIKA_NAME"]}: ";
+// Database Prompt (Dialogue) - Default template (may be overridden below by minimize_quality_prompt setting)
+$TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should be a casual direct reaction to what was just said." .
+" Avoid narrations, be original, creative, knowledgeable, use your own thoughts. " .
+" Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines." .
+" {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines will use this format \"{$GLOBALS["HERIKA_NAME"]}: ";
 
 // Database Prompt (Dialogue)
 // "should be a casual direct reaction to what was just said" is not always true, maybe last line was the same NPC,
@@ -26,33 +26,34 @@ $MAXIMUM_WORDS=($GLOBALS["MAX_WORDS_LIMIT"]>0)?"(Maximum {$GLOBALS["MAX_WORDS_LI
 //
 
 // Configurable quality instructions toggle
-// Check connector-specific setting for minimize_quality_prompt (defaults to true/minimized for better advanced model performance)
-$useMinimizedPrompt = true; // Default to minimized (recommended for advanced models like Claude 4.5, GPT-4, etc.)
-
+// Check connector-specific setting for minimize_quality_prompt (defaults to false to use full template above)
 if (function_exists('DMgetCurrentModel')) {
     $currentModel = DMgetCurrentModel();
-    logMessage("[dialogue_prompt] Current model: " . $currentModel);
-    if (isset($GLOBALS["CONNECTOR"][$currentModel]["minimize_quality_prompt"])) {
-        $useMinimizedPrompt = (bool)$GLOBALS["CONNECTOR"][$currentModel]["minimize_quality_prompt"];
-        logMessage("[dialogue_prompt] minimize_quality_prompt setting found: " . ($useMinimizedPrompt ? 'true' : 'false'));
+    logMessage("[dialogue_prompt] Current model: " . var_export($currentModel, true));
+
+    if (isset($GLOBALS["CONNECTOR"][$currentModel])) {
+        logMessage("[dialogue_prompt] Connector config found for model: " . $currentModel);
+        logMessage("[dialogue_prompt] Full connector config: " . var_export($GLOBALS["CONNECTOR"][$currentModel], true));
+
+        if (isset($GLOBALS["CONNECTOR"][$currentModel]["minimize_quality_prompt"])) {
+            $useMinimizedPrompt = (bool)$GLOBALS["CONNECTOR"][$currentModel]["minimize_quality_prompt"];
+            logMessage("[dialogue_prompt] minimize_quality_prompt setting found: " . var_export($useMinimizedPrompt, true));
+
+            if ($useMinimizedPrompt) {
+                // Minimized version (recommended for advanced models)
+                $TEMPLATE_DIALOG = " Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line.";
+                logMessage("[dialogue_prompt] Using MINIMIZED prompt template");
+            } else {
+                logMessage("[dialogue_prompt] minimize_quality_prompt is false, keeping FULL template");
+            }
+        } else {
+            logMessage("[dialogue_prompt] minimize_quality_prompt setting NOT found in connector config, using FULL template");
+        }
     } else {
-        logMessage("[dialogue_prompt] minimize_quality_prompt setting NOT found, using default: true");
+        logMessage("[dialogue_prompt] No connector config found for model: " . $currentModel);
     }
 } else {
     logMessage("[dialogue_prompt] DMgetCurrentModel function not found");
-}
-
-if ($useMinimizedPrompt) {
-    // Minimized version (recommended for advanced models)
-    // Core instruction only - advanced models inherently understand to be creative and avoid repetition
-    $TEMPLATE_DIALOG = " Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line.";
-    logMessage("[dialogue_prompt] Using MINIMIZED prompt template");
-} else {
-    // Default/Legacy version (for older/smaller models that may benefit from explicit guidance)
-    $TEMPLATE_DIALOG = " Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line." .
-    " Avoid narrations, be original, creative, knowledgeable, use your own thoughts. " .
-    " Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines.";
-    logMessage("[dialogue_prompt] Using FULL/LEGACY prompt template");
 }
 
 // Legacy commented versions preserved for reference
