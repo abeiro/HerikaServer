@@ -17,6 +17,26 @@ $useMinimizedTemplate = true;
 
 if (function_exists('DMgetCurrentModel')) {
     $currentModel = DMgetCurrentModel();
+
+    // Debug logging to verify setting is being read
+    if (function_exists('logMessage')) {
+        logMessage("[dialogue_prompt] Current model from DMgetCurrentModel: " . var_export($currentModel, true));
+        if (isset($GLOBALS["CONNECTOR"][$currentModel])) {
+            logMessage("[dialogue_prompt] Connector config exists for: " . $currentModel);
+            if (isset($GLOBALS["CONNECTOR"][$currentModel]["minimize_quality_prompt"])) {
+                $rawValue = $GLOBALS["CONNECTOR"][$currentModel]["minimize_quality_prompt"];
+                logMessage("[dialogue_prompt] minimize_quality_prompt raw value: " . var_export($rawValue, true) . " (type: " . gettype($rawValue) . ")");
+                $useMinimizedTemplate = (bool)$rawValue;
+                logMessage("[dialogue_prompt] minimize_quality_prompt after (bool) cast: " . var_export($useMinimizedTemplate, true));
+            } else {
+                logMessage("[dialogue_prompt] minimize_quality_prompt setting NOT FOUND in connector config, using default: true");
+            }
+        } else {
+            logMessage("[dialogue_prompt] No connector config found for model: " . var_export($currentModel, true));
+        }
+    }
+
+    // Set template based on setting (fallback to checking if setting exists)
     if (isset($GLOBALS["CONNECTOR"][$currentModel]["minimize_quality_prompt"])) {
         // Cast to bool for proper string "1"/"0" handling
         $useMinimizedTemplate = (bool)$GLOBALS["CONNECTOR"][$currentModel]["minimize_quality_prompt"];
@@ -26,9 +46,15 @@ if (function_exists('DMgetCurrentModel')) {
 if ($useMinimizedTemplate) {
     // Minimized template - just the core instruction (recommended for advanced models)
     $TEMPLATE_DIALOG = " Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line.";
+    if (function_exists('logMessage')) {
+        logMessage("[dialogue_prompt] Using MINIMIZED template");
+    }
 } else {
     // Full template with explicit quality instructions (for older/smaller models)
     $TEMPLATE_DIALOG = " Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line as a casual direct reaction to what was just said. Avoid narrations, be original, creative, knowledgeable, use your own thoughts. Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines.";
+    if (function_exists('logMessage')) {
+        logMessage("[dialogue_prompt] Using FULL template with quality instructions");
+    }
 }
 
 // Database Prompt (Dialogue)
