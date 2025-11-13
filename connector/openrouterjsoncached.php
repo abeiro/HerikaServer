@@ -925,6 +925,19 @@ class openrouterjsoncached
                                     @file_put_contents(__DIR__ . DIRECTORY_SEPARATOR . "_cached_perf.log", $logPerfEntry, FILE_APPEND);
                                 }
 
+                                logMessage("[{$this->name}:{$herikaName}] Stop (delta): " . $data['delta']['stop_reason']);
+
+                                // Flush remaining simple format content before closing
+                                if ($this->_responseFormat === 'simple') {
+                                    $flushed = $this->_flushRemainingSimpleFormat();
+                                    if (!empty($flushed)) {
+                                        // Return flushed content immediately
+                                        // Don't set _forcedClose yet - flush might have more content
+                                        // Will be set on next call when flush returns empty
+                                        return $flushed;
+                                    }
+                                }
+
                                 $this->_forcedClose = true;
                                 break;
 
@@ -956,6 +969,18 @@ class openrouterjsoncached
 
                         if (isset($data["choices"][0]["finish_reason"]) && $data["choices"][0]["finish_reason"] !== null) {
                             logMessage("[{$this->name}:{$herikaName}] Stop (choice): " . $data["choices"][0]["finish_reason"]);
+
+                            // Flush remaining simple format content before closing
+                            if ($this->_responseFormat === 'simple') {
+                                $flushed = $this->_flushRemainingSimpleFormat();
+                                if (!empty($flushed)) {
+                                    // Return flushed content immediately
+                                    // Don't set _forcedClose yet - flush might have more content
+                                    // Will be set on next call when flush returns empty
+                                    return $flushed;
+                                }
+                            }
+
                             $this->_forcedClose = true;
                         }
                     }
@@ -973,6 +998,18 @@ class openrouterjsoncached
             }
         } elseif (trim($line) === "event: message_stop") {
             logMessage("[{$this->name}:{$herikaName}] Explicit stream end event received.");
+
+            // Flush remaining simple format content before closing
+            if ($this->_responseFormat === 'simple') {
+                $flushed = $this->_flushRemainingSimpleFormat();
+                if (!empty($flushed)) {
+                    // Return flushed content immediately
+                    // Don't set _forcedClose yet - flush might have more content
+                    // Will be set on next call when flush returns empty
+                    return $flushed;
+                }
+            }
+
             $this->_forcedClose = true;
         }
 
