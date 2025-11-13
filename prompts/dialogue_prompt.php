@@ -31,20 +31,28 @@ $useMinimizedPrompt = true; // Default to minimized (recommended for advanced mo
 
 if (function_exists('DMgetCurrentModel')) {
     $currentModel = DMgetCurrentModel();
+    logMessage("[dialogue_prompt] Current model: " . $currentModel);
     if (isset($GLOBALS["CONNECTOR"][$currentModel]["minimize_quality_prompt"])) {
         $useMinimizedPrompt = (bool)$GLOBALS["CONNECTOR"][$currentModel]["minimize_quality_prompt"];
+        logMessage("[dialogue_prompt] minimize_quality_prompt setting found: " . ($useMinimizedPrompt ? 'true' : 'false'));
+    } else {
+        logMessage("[dialogue_prompt] minimize_quality_prompt setting NOT found, using default: true");
     }
+} else {
+    logMessage("[dialogue_prompt] DMgetCurrentModel function not found");
 }
 
 if ($useMinimizedPrompt) {
     // Minimized version (recommended for advanced models)
     // Core instruction only - advanced models inherently understand to be creative and avoid repetition
     $TEMPLATE_DIALOG = " Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line.";
+    logMessage("[dialogue_prompt] Using MINIMIZED prompt template");
 } else {
     // Default/Legacy version (for older/smaller models that may benefit from explicit guidance)
     $TEMPLATE_DIALOG = " Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line." .
     " Avoid narrations, be original, creative, knowledgeable, use your own thoughts. " .
     " Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines.";
+    logMessage("[dialogue_prompt] Using FULL/LEGACY prompt template");
 }
 
 // Legacy commented versions preserved for reference
