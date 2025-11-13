@@ -550,13 +550,6 @@ function extractSimpleFormatFromBuffer($buffer, $includeMood, $includeListener, 
         // Trim whitespace first
         $message = trim($message);
 
-        // Strip a single leading colon with optional surrounding whitespace
-        // This handles cases like "mood): text" or "mood) : text"
-        // while mostly preserving user's personal formatting
-        if (strlen($message) > 0 && $message[0] === ':') {
-            $message = ltrim(substr($message, 1));
-        }
-
         $result = [
             'mood' => '',
             'listener' => '',
@@ -566,6 +559,7 @@ function extractSimpleFormatFromBuffer($buffer, $includeMood, $includeListener, 
             'found' => true
         ];
 
+        // Parse metadata fields FIRST so we know what the action is
         $groupIndex = 0;
         if ($includeMood && isset($groups[$groupIndex])) {
             $result['mood'] = trim($groups[$groupIndex]);
@@ -582,6 +576,19 @@ function extractSimpleFormatFromBuffer($buffer, $includeMood, $includeListener, 
         if ($includeTarget && isset($groups[$groupIndex])) {
             $result['target'] = trim($groups[$groupIndex]);
             $groupIndex++;
+        }
+
+        // ONLY strip leading colon for Talk actions
+        // For other actions (like gestures/movements), the colon is intentional:
+        // Format: (mood)(listener)(action)(target): action description
+        // The leading : indicates an action description, not dialogue
+        if (strcasecmp($result['action'], 'Talk') === 0) {
+            // Strip a single leading colon with optional surrounding whitespace
+            // This handles cases like "(mood): text" or "(mood) : text"
+            if (strlen($message) > 0 && $message[0] === ':') {
+                $message = ltrim(substr($message, 1));
+                $result['message'] = $message;
+            }
         }
 
         return $result;
