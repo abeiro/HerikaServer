@@ -70,6 +70,7 @@ class openrouterjsoncached
     private $_metadataEnd;
     private $_sentencesSent;
     private $_metadataGroups;
+    private $_flushedPartial;  // Track if trailing partial was flushed at stream end
 
     public function __construct()
     {
@@ -122,6 +123,7 @@ class openrouterjsoncached
         $this->_metadataEnd = -1;
         $this->_sentencesSent = 0;
         $this->_metadataGroups = [];
+        $this->_flushedPartial = false;
 
         require_once(__DIR__."/__jpd.php");
         require_once(__DIR__."/openrouterjsoncached_helpers.php");
@@ -832,6 +834,13 @@ class openrouterjsoncached
         $line = @fgets($this->primary_handler);
         if ($line === false) {
             if (feof($this->primary_handler)) {
+                // Stream ended - flush remaining simple format content if any
+                if ($this->_responseFormat === 'simple') {
+                    $flushed = $this->_flushRemainingSimpleFormat();
+                    if (!empty($flushed)) {
+                        return $flushed;
+                    }
+                }
                 return "";
             } else {
                 $error = error_get_last();
@@ -854,6 +863,13 @@ class openrouterjsoncached
         if (strpos($line, 'data: ') === 0) {
             $jsonData = trim(substr($line, 6));
             if ($jsonData === '[DONE]') {
+                // Stream ended with explicit DONE marker - flush remaining simple format content if any
+                if ($this->_responseFormat === 'simple') {
+                    $flushed = $this->_flushRemainingSimpleFormat();
+                    if (!empty($flushed)) {
+                        return $flushed;
+                    }
+                }
                 return "";
             }
 
@@ -1111,6 +1127,63 @@ class openrouterjsoncached
                 }
             }
         }
+    }
+
+    /**
+     * Flushes remaining content when stream ends (handles trailing partials)
+     * Based on design doc lines 280-310 close() algorithm
+     * Returns content incrementally across multiple calls
+     */
+    private function _flushRemainingSimpleFormat() {
+        // If metadata was never extracted, nothing to flush
+        if ($this->_metadataEnd === -1) {
+            return "";
+        }
+
+        // Normalize buffer for prefill
+        $normalizedBuffer = $this->_buffer;
+        if ($this->_usedPrefill && !empty($normalizedBuffer) && $normalizedBuffer[0] !== '(') {
+            $normalizedBuffer = '(' . $normalizedBuffer;
+        }
+
+        // Extract message portion
+        $message = substr($normalizedBuffer, $this->_metadataEnd);
+
+        // Split into sentences
+        $sentences = $this->_splitIntoSentences($message);
+
+        // First priority: Flush unsent complete sentences
+        if ($this->_sentencesSent < count($sentences)) {
+            $sentence = $sentences[$this->_sentencesSent];
+            $this->_sentencesSent++;
+            logMessage("[{$this->name}] Flushing complete sentence #{$this->_sentencesSent}");
+            return $sentence;
+        }
+
+        // Second priority: Flush trailing partial (once)
+        if (!$this->_flushedPartial) {
+            $this->_flushedPartial = true;
+
+            // Find trailing partial (text after last punctuation)
+            if (preg_match_all('/[.!?…]/', $message, $matches, PREG_OFFSET_CAPTURE)) {
+                $lastMatch = end($matches[0]);
+                $lastPunctPos = $lastMatch[1];
+                $partial = trim(substr($message, $lastPunctPos + 1));
+            } else {
+                // No punctuation at all - entire message is partial
+                $partial = trim($message);
+            }
+
+            // Return partial with added period if non-empty and lacks punctuation
+            if (!empty($partial) && !preg_match('/[.!?…]$/', $partial)) {
+                $partial .= '.';
+                logMessage("[{$this->name}] Flushing trailing partial: \"" . substr($partial, 0, 50) . "\"");
+                return $partial;
+            }
+        }
+
+        // Nothing left to flush
+        return "";
     }
 
     /**
