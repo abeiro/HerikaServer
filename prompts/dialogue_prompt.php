@@ -10,11 +10,11 @@
 // Common patterns to use in most functions
 $MAXIMUM_WORDS=($GLOBALS["MAX_WORDS_LIMIT"]>0)?"(Maximum {$GLOBALS["MAX_WORDS_LIMIT"]} words)":"";
 
-// Database Prompt (Dialogue)
-$TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should be a casual direct reaction to what was just said." . 
-" Avoid narrations, be original, creative, knowledgeable, use your own thoughts. " . 
-" Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines." . 
-" {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines will use this format \"{$GLOBALS["HERIKA_NAME"]}: ";
+// Legacy Database Prompt (Dialogue) - Commented out, now handled by configurable toggle below
+// $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should be a casual direct reaction to what was just said." .
+// " Avoid narrations, be original, creative, knowledgeable, use your own thoughts. " .
+// " Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines." .
+// " {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines will use this format \"{$GLOBALS["HERIKA_NAME"]}: ";
 
 // Database Prompt (Dialogue)
 // "should be a casual direct reaction to what was just said" is not always true, maybe last line was the same NPC,
