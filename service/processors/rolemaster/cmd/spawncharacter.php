@@ -66,8 +66,22 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
             }
         }
 
-       
-      
+        $GLOBALS["custom_json_template"]=[
+                "name" => "Name Surname/Name Nickname",
+                "gender" => "male|female",
+                "class" => "beggar|warrior|assassin|mage|farmer|soldier|merchant|noble|priest",
+                "race" => "Nord|Imperial|Argonian|RedGuard|Orc|Breton",
+                "location" => "current location name|nearby",
+                "appearance" => "(describe actor)",
+                "background" => "(give a background for the actor)",
+                "speechStyle" => "(describe speech style)",
+                "traits"=>"traits",
+                "disposition" => "defiant|submissive|friendly|serious|sad|aggressive|cheerful|distrustful|furious|drunk|high",
+                "goal"=>"NPC's goal in life."
+        ];
+        
+        $GLOBALS["custom_json_template_as_text"]=json_encode($GLOBALS["custom_json_template"]);
+
         if (!$GLOBALS["argv"][3]) {
             $sysprompt="You are a game director, you must create a new NPC/actor";
         } else {
@@ -85,29 +99,18 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
  * Use Tamrielic names. Use Name and Surname (example Hans Ulfon) or name nickname (Example: Orik Stormbreaker, Nidia the Witch)
  * Name should $nameRandom
  * Human Races are Nord, Imperial RedGuard and Breton.
- * Give your answer as JSON object
+ * Give your answer as JSON object:
+ {$GLOBALS["custom_json_template_as_text"]}
+        
+ * Use classes and races specified in the above JSON. Non existans classes or races will throw error.
  $sysprompt
 ");
-        
-        
         
         $customParm["response_format"]=["type"=>"json_object"];
         $customParm["MAX_TOKENS"]=4000;
         
         $GLOBALS["HOOKS"]["JSON_TEMPLATE"][]=function() {
-            $GLOBALS["responseTemplate"] = [
-                "name" => "Name Surname/Name Nickname",
-                "gender" => "male|female",
-                "class" => "beggar|warrior|assassin|mage|farmer|soldier|merchant|noble",
-                "race" => "Nord|Imperial|Argonian|RedGuard|Orc|Breton",
-                "location" => "current location name|nearby",
-                "appearance" => "(describe actor)",
-                "background" => "(give a background for the actor)",
-                "speechStyle" => "(describe speech style)",
-                "traits"=>"traits",
-                "disposition" => "defiant|submissive|friendly|serious|sad|aggressive|cheerful|distrustful|furious|drunk|high",
-                "goal"=>"NPC's goal in life."
-            ];
+            $GLOBALS["responseTemplate"] = $GLOBALS["custom_json_template"];
         };
 
         $GLOBALS["CONNECTOR"][$GLOBALS["CURRENT_CONNECTOR"]]["json_schema"]=false;

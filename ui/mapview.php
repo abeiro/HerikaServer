@@ -426,6 +426,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         position: absolute;
         transform: translate(-50%, -50%);
         cursor: pointer;
+        z-index:10;
     }
 
     .marker-dot {

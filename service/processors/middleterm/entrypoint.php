@@ -54,7 +54,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->'gps_track' = 'true' ");
     foreach ($allEnabledBgLNpc as $npc) {
          $mwdata=json_decode($npc["metadata"],true);
-        if (!isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"] || $mwdata["last_coords"]["last_updated"]<($maxRow - ( 1 /0.0000024))) {
+        if (!isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"] || $mwdata["last_coords"]["last_updated"]<($maxRow - ( (1/4) / 0.0000024))) {
             echo("[BACKGROUND-LIFE] Tracking {$npc["npc_name"]} gps_track=true ".PHP_EOL);
             `php $enginePath/debug/simple_llm_request_with_context_life_command.php "{$npc["npc_name"]}" Track`;
         }
