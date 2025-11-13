@@ -1243,12 +1243,25 @@ class openrouterjsoncached
         // Split on sentence endings followed by space (no end-of-buffer here!)
         $parts = preg_split('/(?<=\.\.\.)\s+|(?<=[.!?])\s+/', $text, -1, PREG_SPLIT_NO_EMPTY);
 
+        logMessage("[{$this->name}] _splitIntoSentences: Split into " . count($parts) . " parts");
+
         // Filter: keep only sentences ending with punctuation
         $sentences = [];
-        foreach ($parts as $part) {
+        foreach ($parts as $i => $part) {
+            $beforeTrim = $part;
             $part = trim($part);
+
+            // Log if trim removed colons
+            if ($beforeTrim !== $part && strpos($beforeTrim, ':') !== false) {
+                logMessage("[{$this->name}] _splitIntoSentences: Part $i BEFORE trim: " . substr($beforeTrim, 0, 80));
+                logMessage("[{$this->name}] _splitIntoSentences: Part $i AFTER trim: " . substr($part, 0, 80));
+            }
+
             if (preg_match('/[.!?…]+$/', $part)) {
+                logMessage("[{$this->name}] _splitIntoSentences: Part $i kept (ends with punctuation): " . substr($part, 0, 80));
                 $sentences[] = $part;
+            } else {
+                logMessage("[{$this->name}] _splitIntoSentences: Part $i filtered out (no ending punctuation): " . substr($part, 0, 80));
             }
         }
 
