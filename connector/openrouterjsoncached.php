@@ -1137,6 +1137,7 @@ class openrouterjsoncached
     private function _flushRemainingSimpleFormat() {
         // If metadata was never extracted, nothing to flush
         if ($this->_metadataEnd === -1) {
+            logMessage("[{$this->name}] Flush: No metadata extracted, nothing to flush");
             return "";
         }
 
@@ -1148,21 +1149,17 @@ class openrouterjsoncached
 
         // Extract message portion
         $message = substr($normalizedBuffer, $this->_metadataEnd);
-
-        // Strip leading colon (handles "mood): text" or "mood) : text")
-        $message = trim($message);
-        if (strlen($message) > 0 && $message[0] === ':') {
-            $message = ltrim(substr($message, 1));
-        }
+        logMessage("[{$this->name}] Flush: Message length=" . strlen($message) . ", first 100 chars: " . substr($message, 0, 100));
 
         // Split into sentences
         $sentences = $this->_splitIntoSentences($message);
+        logMessage("[{$this->name}] Flush: Found " . count($sentences) . " complete sentences, already sent " . $this->_sentencesSent);
 
         // First priority: Flush unsent complete sentences
         if ($this->_sentencesSent < count($sentences)) {
             $sentence = $sentences[$this->_sentencesSent];
             $this->_sentencesSent++;
-            logMessage("[{$this->name}] Flushing complete sentence #{$this->_sentencesSent}");
+            logMessage("[{$this->name}] Flushing complete sentence #{$this->_sentencesSent}: " . substr($sentence, 0, 80));
             return $sentence;
         }
 
@@ -1175,20 +1172,29 @@ class openrouterjsoncached
                 $lastMatch = end($matches[0]);
                 $lastPunctPos = $lastMatch[1];
                 $partial = trim(substr($message, $lastPunctPos + 1));
+                logMessage("[{$this->name}] Flush: Last punctuation at position $lastPunctPos, partial length=" . strlen($partial));
             } else {
                 // No punctuation at all - entire message is partial
                 $partial = trim($message);
+                logMessage("[{$this->name}] Flush: No punctuation found, entire message is partial, length=" . strlen($partial));
             }
 
             // Return partial with added period if non-empty and lacks punctuation
             if (!empty($partial) && !preg_match('/[.!?…]$/', $partial)) {
                 $partial .= '.';
-                logMessage("[{$this->name}] Flushing trailing partial: \"" . substr($partial, 0, 50) . "\"");
+                logMessage("[{$this->name}] Flushing trailing partial (" . strlen($partial) . " chars): \"" . substr($partial, 0, 100) . "...\"");
                 return $partial;
+            } else if (empty($partial)) {
+                logMessage("[{$this->name}] Flush: Partial is empty, nothing to return");
+            } else {
+                logMessage("[{$this->name}] Flush: Partial already ends with punctuation: \"" . substr($partial, 0, 50) . "\"");
             }
+        } else {
+            logMessage("[{$this->name}] Flush: Already flushed partial");
         }
 
         // Nothing left to flush
+        logMessage("[{$this->name}] Flush: Nothing left to flush");
         return "";
     }
 
@@ -1289,12 +1295,6 @@ class openrouterjsoncached
 
             // Step 6: Extract message portion
             $message = substr($normalizedBuffer, $this->_metadataEnd);
-
-            // Strip leading colon (handles "mood): text" or "mood) : text")
-            $message = trim($message);
-            if (strlen($message) > 0 && $message[0] === ':') {
-                $message = ltrim(substr($message, 1));
-            }
 
             // Step 7: Split message into sentences
             $sentences = $this->_splitIntoSentences($message);
