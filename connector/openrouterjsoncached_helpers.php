@@ -578,21 +578,10 @@ function extractSimpleFormatFromBuffer($buffer, $includeMood, $includeListener, 
             $groupIndex++;
         }
 
-        // ONLY strip leading colon for Talk actions when action field is enabled
-        // For other actions (like gestures/movements), the colon is intentional:
-        // Format: (mood)(listener)(action)(target): action description
-        // The leading : indicates an action description, not dialogue
-        //
-        // CRITICAL: Only strip if actions field is ENABLED and action is Talk
-        // If actions field is disabled, we can't determine intent, so preserve colon
-        if ($includeActions && strcasecmp($result['action'], 'Talk') === 0) {
-            // Strip a single leading colon with optional surrounding whitespace
-            // This handles cases like "(mood): text" or "(mood) : text"
-            if (strlen($message) > 0 && $message[0] === ':') {
-                $message = ltrim(substr($message, 1));
-                $result['message'] = $message;
-            }
-        }
+        // Do NOT strip leading colons - they are intentional formatting
+        // Format: (mood)(listener)(action)(target): message or action description
+        // The leading : is part of the simple format specification
+        // Preserved in all cases regardless of action type
 
         return $result;
     }
