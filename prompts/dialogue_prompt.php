@@ -10,7 +10,7 @@
 // Common patterns to use in most functions
 $MAXIMUM_WORDS=($GLOBALS["MAX_WORDS_LIMIT"]>0)?"(Maximum {$GLOBALS["MAX_WORDS_LIMIT"]} words)":"";
 
-// Database Prompt (Dialogue)
+// Database Prompt (Dialogue) - Default full template
 $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should be a casual direct reaction to what was just said." .
 " Avoid narrations, be original, creative, knowledgeable, use your own thoughts. " .
 " Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines." .
@@ -24,6 +24,17 @@ $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should b
 // (a funcrec event comes, which just write  something into context. )
 // Morgan|ScriptQueue|Wrestling, you say? Now *that* sounds like a fun way to get acquainted.//Vixi Talax//
 //
+
+// Apply minimize_quality_prompt setting if enabled
+// Recommended for advanced models (Claude 3.5+, GPT-4+, Gemini 2.0) that inherently understand quality
+if (function_exists('DMgetCurrentModel')) {
+    $currentModel = DMgetCurrentModel();
+    if (isset($GLOBALS["CONNECTOR"][$currentModel]["minimize_quality_prompt"]) &&
+        $GLOBALS["CONNECTOR"][$currentModel]["minimize_quality_prompt"]) {
+        // Minimized template - just the core instruction
+        $TEMPLATE_DIALOG = " Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line.";
+    }
+}
 
 // Legacy commented versions preserved for reference
 // $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line using this format \"{$GLOBALS["HERIKA_NAME"]}: ";
