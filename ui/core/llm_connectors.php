@@ -269,6 +269,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
         <?php endif; ?>
         <input type="hidden" name="partial" value="editor">
+        <input type="hidden" name="metadata" value='<?= htmlspecialchars($editItem["metadata"] ?? "{}") ?>'>
         <div class="two-col-llm">
             <div>
                 <div class="top-actions" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
@@ -1352,6 +1353,7 @@ if (typeof window.consolidation !== 'function') {
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
     <?php endif; ?>
+    <input type="hidden" name="metadata" value='<?= htmlspecialchars($editItem["metadata"] ?? "{}") ?>'>
 
     <div class="two-col-llm">
         <div>
@@ -2068,7 +2070,7 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
         if (!result) return false;
 
         // Now merge our custom reasoning fields into metadata
-        const form = document.querySelector('form[method="POST"]');
+        const form = document.querySelector('form[method="POST"]') || document.querySelector('form[method="post"]');
         if (!form || !form.metadata) return result;
 
         try {
@@ -2080,6 +2082,29 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
             } catch (_e) {
                 metadata = {};
             }
+
+            // Collect all metadata[key] fields and merge them into the JSON
+            // This handles caching settings and other connector-specific metadata
+            const metadataArrayFields = form.querySelectorAll('[name^="metadata["]');
+            metadataArrayFields.forEach(field => {
+                const match = field.name.match(/^metadata\[(.+)\]$/);
+                if (match) {
+                    const key = match[1];
+                    let value = field.value;
+
+                    // Handle checkboxes - get the checked state
+                    if (field.type === 'checkbox') {
+                        value = field.checked ? (field.value === '1' ? 1 : field.value) : 0;
+                    } else if (field.type === 'number') {
+                        value = parseInt(value, 10);
+                    }
+
+                    // Only include non-empty values (except for 0 which is valid)
+                    if (value !== '' || value === 0) {
+                        metadata[key] = value;
+                    }
+                }
+            });
 
             // Collect reasoning field values (check both regular and modal IDs)
             const toggleThinkingEl = document.getElementById('toggle_thinking') || document.getElementById('toggle_thinking_modal');
@@ -2111,8 +2136,13 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
                 }
             }
 
-            // Update form metadata field
+            // Update form metadata field with merged JSON
             form.metadata.value = JSON.stringify(metadata);
+
+            // Disable all metadata[key] fields so they don't override the hidden metadata field
+            metadataArrayFields.forEach(field => {
+                field.disabled = true;
+            });
         } catch (err) {
             console.error('Error merging reasoning fields into metadata:', err);
         }
