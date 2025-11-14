@@ -1,0 +1,384 @@
+CHIM Cached Connector v1.1.19 - Installation Instructions
+==========================================================
+
+IMPORTANT: This version (v1.1.19) fixes a CRITICAL bug where the thinking
+toggle and related settings were not saving. It also adds comprehensive
+diagnostic logging to help debug colon stripping issues. Upgrading is
+highly recommended if you use thinking/reasoning models.
+
+
+QUICK INSTALL (Recommended)
+============================
+
+1. BACKUP YOUR FILES
+   -----------------
+   Before installing, backup these files in case you need to revert:
+   - connector/openrouterjsoncached.php
+   - connector/openrouterjsoncached_verbose.php
+   - connector/openrouterjsoncached_helpers.php
+   - connector/__jpd.php
+   - lib/tokenizer_helper_functions.php
+   - lib/chat_helper_functions.php
+   - lib/core/llm_connector.class.php
+   - ui/core/llm_connectors.php
+   - ui/core/core_profiles.php
+   - conf/conf_schema.json
+
+2. EXTRACT ZIP
+   -----------
+   Extract all files from CHIM_Cached_Connector_v1.1.19_package.zip
+
+3. COPY FILES
+   ----------
+   Copy to your CHIM installation directory, preserving folder structure:
+
+   connector/*     → [CHIM]/connector/
+   lib/*           → [CHIM]/lib/
+   functions/*     → [CHIM]/functions/
+   conf/*          → [CHIM]/conf/
+   ui/*            → [CHIM]/ui/
+   prompts/*       → [CHIM]/prompts/
+
+4. CLEAR CACHE (IMPORTANT!)
+   -------------------------
+   Delete these cache files:
+   - [CHIM]/temp/system_cache_*.tmp
+   - [CHIM]/temp/combined_dialogue_cache_*.tmp
+
+5. RESTART CHIM
+   ------------
+   Restart your CHIM server/application
+   If using PHP-FPM or opcache, restart PHP service
+
+6. VERIFY INSTALLATION
+   -------------------
+   a) Check version:
+      - log/cache.log should show "v1.1.19 initialized"
+
+   b) Test thinking toggle:
+      - Go to LLM Connectors UI
+      - Enable "Toggle Thinking"
+      - Set "Thinking Tokens" to 1000
+      - Select "Effort Level"
+      - Click Save
+      - Reload page - settings should persist ✅
+
+   c) Check diagnostic logging:
+      - Enable simple format
+      - Test with NPC dialogue
+      - Check log/chim.log for [unmoodSentence] entries
+      - Should see ⚠️ or ✅ markers
+
+
+DETAILED INSTALLATION
+======================
+
+STEP 1: BACKUP
+--------------
+Create backups of files that will be replaced:
+
+mkdir -p ~/chim_backup_$(date +%Y%m%d)
+cp connector/openrouterjsoncached*.php ~/chim_backup_$(date +%Y%m%d)/
+cp connector/__jpd.php ~/chim_backup_$(date +%Y%m%d)/
+cp lib/tokenizer_helper_functions.php ~/chim_backup_$(date +%Y%m%d)/
+cp lib/chat_helper_functions.php ~/chim_backup_$(date +%Y%m%d)/
+cp lib/core/llm_connector.class.php ~/chim_backup_$(date +%Y%m%d)/
+cp functions/json_response.php ~/chim_backup_$(date +%Y%m%d)/
+cp conf/conf_schema.json ~/chim_backup_$(date +%Y%m%d)/
+cp ui/core/llm_connectors.php ~/chim_backup_$(date +%Y%m%d)/
+cp ui/core/core_profiles.php ~/chim_backup_$(date +%Y%m%d)/
+
+
+STEP 2: EXTRACT
+---------------
+Extract the ZIP file to a temporary location:
+
+unzip CHIM_Cached_Connector_v1.1.19_package.zip -d /tmp/chim_update/
+
+
+STEP 3: COPY CONNECTOR FILES
+-----------------------------
+cp /tmp/chim_update/CHIM_Cached_Connector_v1.1.19_package/connector/openrouterjsoncached.php [CHIM]/connector/
+cp /tmp/chim_update/CHIM_Cached_Connector_v1.1.19_package/connector/openrouterjsoncached_verbose.php [CHIM]/connector/
+cp /tmp/chim_update/CHIM_Cached_Connector_v1.1.19_package/connector/openrouterjsoncached_helpers.php [CHIM]/connector/
+cp /tmp/chim_update/CHIM_Cached_Connector_v1.1.19_package/connector/__jpd.php [CHIM]/connector/
+cp /tmp/chim_update/CHIM_Cached_Connector_v1.1.19_package/connector/OPENROUTERJSONCACHED_README.md [CHIM]/connector/
+
+
+STEP 4: COPY LIBRARY FILES
+---------------------------
+cp /tmp/chim_update/CHIM_Cached_Connector_v1.1.19_package/lib/tokenizer_helper_functions.php [CHIM]/lib/
+cp /tmp/chim_update/CHIM_Cached_Connector_v1.1.19_package/lib/chat_helper_functions.php [CHIM]/lib/
+cp /tmp/chim_update/CHIM_Cached_Connector_v1.1.19_package/lib/core/llm_connector.class.php [CHIM]/lib/core/
+
+
+STEP 5: COPY FUNCTION FILES
+----------------------------
+cp /tmp/chim_update/CHIM_Cached_Connector_v1.1.19_package/functions/json_response.php [CHIM]/functions/
+
+
+STEP 6: COPY CONFIGURATION
+---------------------------
+cp /tmp/chim_update/CHIM_Cached_Connector_v1.1.19_package/conf/conf_schema.json [CHIM]/conf/
+
+
+STEP 7: COPY UI FILES (REQUIRED for thinking toggle fix)
+---------------------------------------------------------
+cp /tmp/chim_update/CHIM_Cached_Connector_v1.1.19_package/ui/core/core_profiles.php [CHIM]/ui/core/
+cp /tmp/chim_update/CHIM_Cached_Connector_v1.1.19_package/ui/core/llm_connectors.php [CHIM]/ui/core/
+cp /tmp/chim_update/CHIM_Cached_Connector_v1.1.19_package/ui/conf_wizard.php [CHIM]/ui/
+cp /tmp/chim_update/CHIM_Cached_Connector_v1.1.19_package/ui/conf_wizardbackup.php [CHIM]/ui/
+cp /tmp/chim_update/CHIM_Cached_Connector_v1.1.19_package/ui/quickstart.php [CHIM]/ui/
+
+
+STEP 8: COPY PROMPTS
+--------------------
+cp /tmp/chim_update/CHIM_Cached_Connector_v1.1.19_package/prompts/dialogue_prompt.php [CHIM]/prompts/
+
+NOTE: This will overwrite your existing dialogue_prompt.php. If you have
+custom modifications, backup first and manually merge changes.
+
+
+STEP 9: CLEAR CACHE
+--------------------
+IMPORTANT: You MUST clear cache when upgrading
+
+rm -f [CHIM]/temp/system_cache_*.tmp
+rm -f [CHIM]/temp/combined_dialogue_cache_*.tmp
+
+
+STEP 10: RESTART PHP/WEB SERVER
+--------------------------------
+If using PHP-FPM:
+   sudo systemctl restart php-fpm
+   OR
+   sudo systemctl restart php8.1-fpm  # Adjust version as needed
+
+If using Apache with mod_php:
+   sudo systemctl restart apache2
+
+If using nginx:
+   sudo systemctl restart nginx
+
+
+STEP 11: VERIFY INSTALLATION
+-----------------------------
+1. Check version in logs:
+   tail -f [CHIM]/log/cache.log | grep "initialized"
+   Should show: "OpenRouter Cache Connector v1.1.19 initialized"
+
+2. Test thinking toggle:
+   - Open browser to LLM Connectors UI
+   - Select a connector to edit
+   - Find "Toggle Thinking" checkbox
+   - Enable it
+   - Set "Thinking Tokens" to 1000
+   - Select "Effort Level" = "medium"
+   - Click "Save" button
+   - Wait for page to reload
+   - Settings should still be there (not reset to OFF) ✅
+   - Open browser dev console (F12)
+   - Check for any JavaScript errors
+
+3. Check form has metadata field:
+   - Right-click page, select "View Page Source"
+   - Search for: name="metadata"
+   - Should find: <input type="hidden" name="metadata" value='...'>
+   - If missing, ui/core/llm_connectors.php wasn't updated correctly
+
+4. Test simple format with diagnostic logging:
+   - Enable response_format = "simple" in configuration
+   - Send test message to LLM
+   - Check log/chim.log for [unmoodSentence] messages
+   - Should see markers like ⚠️, ✅, or ❌
+
+5. Verify colon preservation in connector:
+   - grep -A 3 "Do NOT strip" [CHIM]/connector/openrouterjsoncached_helpers.php
+   - Should show the colon preservation comment block
+
+
+UPGRADING FROM SPECIFIC VERSIONS
+=================================
+
+FROM v1.1.18:
+------------
+Changes: Thinking toggle fix + diagnostic logging for colons
+Action: Standard upgrade (all files, especially ui/core/llm_connectors.php)
+Cache: Clear recommended
+Impact: Thinking toggle now saves, colon debugging enabled
+
+FROM v1.1.16-17:
+---------------
+Changes: Colon stripping logic removed + thinking toggle fix
+Action: Standard upgrade (all files)
+Cache: Clear recommended
+Impact: Colons preserved correctly + thinking toggle works
+
+FROM v1.1.9-15:
+--------------
+Changes: All v1.1.18 fixes + thinking toggle fix
+Action: Standard upgrade (all files)
+Cache: Clear recommended
+
+FROM v1.0.x:
+-----------
+Changes: Complete simple format rewrite + all v1.1.x fixes
+Action: Standard upgrade (all files)
+Cache: Clear REQUIRED (parser completely changed)
+Impact: All major bugs fixed + new features
+
+
+CONFIGURATION AFTER INSTALL
+============================
+
+1. RESPONSE FORMAT
+   ---------------
+   In your connector configuration, set:
+
+   response_format = "simple"  // Recommended with v1.1.19
+
+   Or:
+
+   response_format = "json"  // Classic format
+
+2. FIELD CONTROL
+   -------------
+   Enable/disable specific fields:
+
+   include_mood_requirement = true
+   include_listener_requirement = true
+   include_actions_list = true
+   include_target_requirement = true
+
+3. CACHE SETTINGS
+   --------------
+   provider_caching = "Anthropic"  // or "OpenAI", "Gemini"
+   max_dialogue_cache_context_size = 200
+   dialogue_cache_uncached_count = 4
+
+4. MINIMIZE QUALITY PROMPT
+   -----------------------
+   minimize_quality_prompt = true  // For Claude 3.5+, GPT-4+, Gemini 2.0+, etc.
+   minimize_quality_prompt = false  // For older/smaller models
+
+5. THINKING/REASONING SETTINGS
+   ---------------------------
+   In LLM Connectors UI:
+   - Toggle Thinking: ON (for o1, DeepSeek-R1, etc.)
+   - Thinking Tokens: 1000-4000 (Anthropic/Gemini only)
+   - Effort Level: low/medium/high (OpenAI reasoning models only)
+
+
+TROUBLESHOOTING
+===============
+
+PROBLEM: Thinking toggle still not saving
+SOLUTION: - Clear browser cache (Ctrl+Shift+Delete)
+          - Verify ui/core/llm_connectors.php was updated
+          - Check browser console for JavaScript errors
+          - View page source, search for name="metadata"
+          - Should find <input type="hidden" name="metadata">
+          - If missing, file didn't update correctly
+
+PROBLEM: JavaScript error "form.metadata is undefined"
+SOLUTION: - The hidden metadata field is missing
+          - Re-copy ui/core/llm_connectors.php from package
+          - Clear PHP opcache if enabled
+          - Restart web server
+
+PROBLEM: Settings save but disappear on page reload
+SOLUTION: - Check database permissions
+          - Look for SQL errors in error logs
+          - Verify core_llm_connector table structure
+          - Check metadata column can store JSON
+
+PROBLEM: Version still shows v1.1.18 or earlier after upgrade
+SOLUTION: - Clear PHP opcache if enabled
+          - Restart web server
+          - Check that files were actually copied (permissions issue?)
+          - Verify file modification timestamps
+
+PROBLEM: No diagnostic logging appearing in log/chim.log
+SOLUTION: - Verify lib/chat_helper_functions.php was updated
+          - Check that simple format is enabled
+          - Look for [returnLines] or [unmoodSentence] in logs
+          - Ensure log directory is writable
+
+PROBLEM: Colons still being stripped
+SOLUTION: - Check diagnostic logs in log/chim.log
+          - Look for "❌ COLON WAS STRIPPED" markers
+          - Identify which checkpoint shows the stripping
+          - Report findings for proper fix
+
+PROBLEM: Cache not working after upgrade
+SOLUTION: - Verify you cleared cache files
+          - Check provider_caching matches your API provider
+          - Look for cache statistics in _cached_perf.log
+
+PROBLEM: Simple format not working
+SOLUTION: - Verify response_format = "simple" in configuration
+          - Check log/cache.log for parser initialization
+          - Look for timeout fallback messages (triggers at 100 chars)
+
+PROBLEM: minimize_quality_prompt not working
+SOLUTION: - Check log/lastlog.log for diagnostic messages
+          - Verify setting is in correct configuration section
+          - Check model name matches configuration key
+
+
+ROLLBACK PROCEDURE
+==================
+
+If you need to revert to your previous version:
+
+1. Stop CHIM
+
+2. Restore from backup:
+   cp ~/chim_backup_YYYYMMDD/* [CHIM]/connector/
+   cp ~/chim_backup_YYYYMMDD/* [CHIM]/lib/
+   cp ~/chim_backup_YYYYMMDD/* [CHIM]/ui/core/
+   (restore other files as needed)
+
+3. Clear cache:
+   rm -f [CHIM]/temp/system_cache_*.tmp
+   rm -f [CHIM]/temp/combined_dialogue_cache_*.tmp
+
+4. Restart CHIM and web server
+
+
+SUPPORT
+=======
+
+- README: See connector/OPENROUTERJSONCACHED_README.md
+- Changelog: See CHANGELOG.txt
+- Package Info: See ZIP_FILE_INFO.txt
+- Design Document: CODING-DESIGN-DOCUMENT-FOR-CLAUDE.md (on GitHub)
+
+
+WHAT'S NEXT
+===========
+
+After successful installation:
+
+1. Test thinking toggle - should save correctly now
+2. Test with simple format enabled
+3. Monitor log/chim.log for diagnostic messages
+4. If colons are stripped, note which checkpoint shows ❌
+5. Report any issues with log snippets
+
+
+VERSION HISTORY
+===============
+v1.1.19 (2025/11/14) - Thinking toggle fix + diagnostic logging for colons
+v1.1.18 (2025/11/14) - Complete colon stripping removal
+v1.1.17 (2025/11/13) - Actions field check (partial fix)
+v1.1.16 (2025/11/13) - Conditional colon stripping (incomplete)
+v1.1.15 (2025/11/13) - Return tracking diagnostics
+v1.1.14 (2025/11/13) - Split diagnostics
+v1.1.13 (2025/11/13) - minimize_quality_prompt default change
+v1.1.12 (2025/11/13) - minimize_quality_prompt implementation
+v1.1.11 (2025/11/13) - minimize_quality_prompt placeholder
+v1.1.10 (2025/11/13) - Flush on finish_reason fix
+v1.1.9 (2025/11/13) - Colon preservation fix
+v1.1.8 (2025/11/13) - Complete simple format rewrite
+v1.0.24 (2025/11/12) - Streaming bug fixes

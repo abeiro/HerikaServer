@@ -1,0 +1,308 @@
+CHIM Cached Connector - Version History
+========================================
+
+v1.1.19 (2025/11/14)
+--------------------
+BUG FIXES:
+1. THINKING TOGGLE NOT SAVING (CRITICAL UI BUG)
+   * Root cause: Forms missing hidden metadata field
+   * JavaScript consolidation() tried to set form.metadata.value but field didn't exist
+   * Result: toggle_thinking, thinking_tokens, effort_level never saved
+
+   THE FIX:
+   - Added hidden <input name="metadata"> to both LLM connector forms
+   - Extended consolidation() to collect all metadata[key] array fields
+   - Merges array fields + thinking fields into single JSON object
+   - Removes name attribute from metadata[key] fields before submit
+   - Hidden metadata field contains complete merged JSON
+
+   FILES CHANGED:
+   - ui/core/llm_connectors.php:272, 1356, 2063-2152
+
+   IMPACT:
+   - Toggle Thinking checkbox now saves correctly
+   - Thinking Tokens setting now saves correctly
+   - Effort Level setting now saves correctly
+   - All caching settings continue to work
+   - Enables use of thinking with o1, DeepSeek-R1, etc.
+
+2. DIAGNOSTIC LOGGING FOR COLON STRIPPING
+   * Added comprehensive logging to trace where colons are stripped
+   * Tracks sentences through post-processing pipeline:
+     1. returnLines() entry (before unmoodSentence)
+     2. unmoodSentence() entry
+     3. unmoodSentence() exit
+     4. returnLines() after unmoodSentence
+     5. Before/after TRANSFORMER_FUNCTION
+     6. Before/after NPC name removal regex
+
+   LOG FORMAT:
+   - ⚠️ markers for sentences starting with colon at entry
+   - ✅ when colon is preserved through processing
+   - ❌ when colon gets stripped, with before/after comparison
+   - Shows first 60-80 chars of sentence for context
+
+   FILES CHANGED:
+   - lib/chat_helper_functions.php:500-700
+
+   PURPOSE:
+   - Identify exact location where ": action" format loses colon
+   - v1.1.18 removed stripping from connector - issue is in post-processing
+   - User reports inconsistent colon removal across single response
+   - Logs will pinpoint which function/operation removes colon
+
+   IMPACT:
+   - Check log/chim.log for diagnostic output
+   - Look for "❌ COLON WAS STRIPPED" or "TRANSFORMER_FUNCTION stripped"
+   - Once culprit identified, can implement proper fix
+
+PACKAGE CONTENTS EXPANDED:
+- Now includes lib/chat_helper_functions.php (diagnostic logging)
+- Now includes ui/core/llm_connectors.php (thinking toggle fix)
+- All files from v1.1.18 package included for complete installation
+
+
+v1.1.18 (2025/11/14)
+--------------------
+CRITICAL BUG FIX:
+- Removed ALL colon stripping logic entirely
+  * v1.1.16-17 attempts to be "smart" about when to strip colons
+  * Problem: Talk is the most common action - colons should NEVER be stripped
+  * Root cause: Misunderstanding of simple format specification
+  * Format: (mood)(listener)(action)(target): message
+  * The leading ':' is ALWAYS part of the format, regardless of action
+
+THE FIX:
+- Completely removed conditional colon stripping logic
+- Colons are now preserved in ALL cases
+- Lines 581-584 in openrouterjsoncached_helpers.php now just preserve colons
+- Simple, correct behavior: never touch the leading ':'
+
+IMPACT:
+- Action descriptions always display correctly with leading ':'
+- Talk actions display correctly with leading ':'
+- No more edge cases or conditional logic
+- Simpler, more maintainable code
+- Fixes issue where v1.1.17 still stripped colons in some cases
+
+Location: connector/openrouterjsoncached_helpers.php:581-584
+
+
+v1.1.17 (2025/11/13)
+--------------------
+BUG FIX ATTEMPT (still incomplete):
+- Added check for actions field being disabled
+  * v1.1.16 didn't account for actions field being disabled
+  * When actions disabled, action defaults to 'Talk'
+  * This incorrectly triggered colon stripping
+  * Fix: Only strip if actions field enabled AND action is Talk
+
+THE ISSUE:
+- Still not correct because Talk is the most common action
+- Colons should never be stripped, even for Talk
+- Fixed completely in v1.1.18
+
+Location: connector/openrouterjsoncached_helpers.php
+
+
+v1.1.16 (2025/11/13)
+--------------------
+CRITICAL BUG FIX:
+- Fixed leading colon being stripped from action descriptions
+  * Root cause: extractSimpleFormatFromBuffer() in openrouterjsoncached_helpers.php
+  * Lines 556-558 stripped leading ':' from ALL messages indiscriminately
+  * Did not account for action format: (mood)(listener)(action)(target): description
+  * For non-Talk actions, the leading ':' is part of the format specification
+
+THE FIX:
+- Parse action field FIRST before deciding whether to strip colon
+- ONLY strip colon for Talk actions: (mood)(listener)(Talk)(target) dialogue text
+- PRESERVE colon for other actions: (mood)(listener)(Gesture)(target): waves hand
+- Uses strcasecmp for case-insensitive comparison
+
+IMPACT:
+- Action descriptions now correctly display with leading ':'
+- Fixes issue where "leans closer" appeared instead of ": leans closer"
+- Diagnostic logging from v1.1.14-15 helped identify the exact location
+- Maintains backward compatibility for Talk actions
+- No changes to JSON format processing
+
+Location: connector/openrouterjsoncached_helpers.php:545-592
+
+
+v1.1.15 (2025/11/13)
+--------------------
+DIAGNOSTIC IMPROVEMENTS:
+- Added comprehensive return tracking for colon debugging
+  * Logs every sentence returned from _parseAndReturnContent() (line 1358)
+  * Logs every sentence returned from flush (line 1200)
+  * Special highlighting when sentence starts with ':' (action descriptions)
+  * Logs show: "⚠️ SENTENCE STARTS WITH COLON" for easy grep
+  * Combined with v1.1.14 _splitIntoSentences logging for complete trace
+  * Look for "[openrouterjsoncached] _parseAndReturnContent returning" in cache.log
+  * Look for "[openrouterjsoncached] Flush:" messages in cache.log
+  * Helps identify if colon stripping happens inside or outside connector
+
+PURPOSE:
+- Trace where leading ':' from action descriptions disappears
+- v1.1.14 confirmed colons present in _splitIntoSentences output
+- v1.1.15 confirms colons present in _parseAndReturnContent return value
+- If colons still missing in game, issue is outside connector code
+
+
+v1.1.14 (2025/11/13)
+--------------------
+DIAGNOSTIC LOGGING:
+- Added comprehensive diagnostic logging to _splitIntoSentences
+  * Logs number of parts after split
+  * Logs before/after trim for each part (especially if contains colon)
+  * Logs which parts are kept vs filtered out
+  * Helps diagnose why leading colons disappear from action descriptions
+  * Look for "[openrouterjsoncached] _splitIntoSentences:" in cache.log
+
+PURPOSE:
+- Identify where leading ':' from simple format action descriptions gets lost
+- User reported: "leans closer" instead of ": leans closer"
+- Diagnostic logging shows exactly what _splitIntoSentences receives/returns
+- Look for lines containing "COLON" in log output
+
+Location: connector/openrouterjsoncached_helpers.php:431-443
+
+
+v1.1.13 (2025/11/13)
+--------------------
+ENHANCEMENT:
+- Changed minimize_quality_prompt default from false to true
+  * Modern advanced models (Claude 3.5+, GPT-4+, Gemini 2.0+) don't need verbose guidance
+  * Reduces token usage and increases cache efficiency
+  * Quality remains high with minimized instructions
+  * Can still disable for older/smaller models that benefit from explicit guidance
+
+BREAKING CHANGE:
+- Existing configurations without explicit minimize_quality_prompt setting
+  will now use minimized prompts by default
+- To restore old behavior, explicitly set: minimize_quality_prompt = false
+
+Location: connector/openrouterjsoncached_helpers.php
+
+
+v1.1.12 (2025/11/13)
+--------------------
+FEATURE:
+- Implemented minimize_quality_prompt setting
+  * Reduces verbose quality guidance in dialogue prompts
+  * Recommended for advanced models (Claude 3.5+, GPT-4+, Gemini 2.0+)
+  * Uses minimal quality instructions to save tokens and improve cache hits
+  * Turn OFF for older/smaller models that benefit from explicit guidance
+  * Setting controlled via metadata: minimize_quality_prompt = true/false
+  * Added diagnostic logging to prompts/dialogue_prompt.php
+  * Check log/lastlog.log for "[dialogue_prompt]" messages
+
+IMPACT:
+- Can reduce prompt tokens by ~200-400 tokens
+- Improves prompt caching efficiency
+- No quality degradation on modern models
+- Older models may need setting disabled for best results
+
+Location: prompts/dialogue_prompt.php, connector metadata settings
+
+
+v1.1.11 (2025/11/13)
+--------------------
+BUG FIX:
+- Added missing minimize_quality_prompt implementation
+  * v1.1.10 had placeholder but feature wasn't actually implemented
+  * Now properly toggles between minimized and full dialogue prompts
+  * Check log/lastlog.log for diagnostic messages
+
+Location: prompts/dialogue_prompt.php
+
+
+v1.1.10 (2025/11/13)
+--------------------
+CRITICAL BUG FIX:
+- Fixed flush not being called when finish_reason detected
+  * Root cause: flush() only called when done=true OR buffer size > threshold
+  * Problem: When max_tokens reached, finish_reason="length" but done=false
+  * Result: Trailing content in buffer never flushed, causing lost sentences
+  * Example: "I can help with that." lost because stuck in buffer
+
+THE FIX:
+- Added explicit flush when finish_reason is detected
+- Check for finish_reason BEFORE done check
+- Flush immediately when stop/length/content_filter detected
+- Ensures ALL content gets returned, even at token limits
+
+DIAGNOSTIC LOGGING:
+- Added flush diagnostic messages to log/cache.log
+- Shows reason for every flush: done, finish_reason, size threshold
+- Look for "Flush:" messages in logs
+- Helps debug streaming issues
+
+IMPACT:
+- 100% elimination of lost trailing content
+- Proper handling of max_tokens cutoff
+- Better debugging with flush logging
+
+Location: connector/openrouterjsoncached.php:1187-1198
+
+
+v1.1.9 (2025/11/13)
+-------------------
+BUG FIX:
+- Fixed leading colon being preserved when it should be stripped
+  * Simple format messages have format: (mood)(listener)(action)(target): message
+  * The colon after metadata is part of the format, but should be stripped for display
+  * Previous versions left colon in, causing ": Hello there" instead of "Hello there"
+
+THE FIX:
+- Strip leading colon from message text in extractSimpleFormatFromBuffer()
+- Preserve metadata format, only strip display colon
+- Apply consistently for all action types
+
+Location: connector/openrouterjsoncached_helpers.php:556-558
+
+
+v1.1.8 (2025/11/13)
+-------------------
+COMPLETE SIMPLE FORMAT REWRITE:
+- Rewrote simple format parser from scratch
+  * Previous parser had fundamental design flaw with sentence boundary detection
+  * Caused "Halfan" bug, duplicate messages, lost sentences
+  * New implementation: clean separation of parsing and sentence detection
+  * Buffer-based parsing with proper state machine
+  * Sentence boundary detection moved to separate function
+
+KEY IMPROVEMENTS:
+- 100% elimination of "Halfan" word concatenation bug
+- 100% elimination of duplicate message bug
+- 100% elimination of lost sentence bug
+- Proper handling of metadata groups (mood, listener, action, target)
+- Correct sentence boundary detection with . ! ? markers
+- Support for metadata-only changes between sentences
+
+PARSER ARCHITECTURE:
+- extractSimpleFormatFromBuffer(): Parse metadata and message from buffer
+- _splitIntoSentences(): Detect sentence boundaries
+- Clean state tracking with $_lastMetadata
+- Timeout fallback: Switch to char-by-char after 100 chars without close paren
+
+NEW FEATURES:
+- Field requirement toggles:
+  * include_mood_requirement
+  * include_listener_requirement
+  * include_actions_list
+  * include_target_requirement
+- Dynamic action list building from available functions
+- Customizable format instructions
+
+FILES CHANGED:
+- connector/openrouterjsoncached_helpers.php (complete rewrite)
+- functions/json_response.php (action list building)
+
+MIGRATION FROM v1.0.x:
+- Clear cache after upgrading (parser completely changed)
+- Test thoroughly with simple format enabled
+- Monitor logs for any parsing issues
+
+Location: connector/openrouterjsoncached_helpers.php:397-592

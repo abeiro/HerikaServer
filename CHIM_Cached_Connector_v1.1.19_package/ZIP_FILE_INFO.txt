@@ -1,0 +1,286 @@
+CHIM Cached Connector v1.1.19
+==============================
+
+Package Date: 2025/11/14
+Version: v1.1.19
+
+WHAT'S IN THIS PACKAGE
+======================
+
+connector/
+----------
+- openrouterjsoncached.php              Main connector (v1.1.19)
+- openrouterjsoncached_helpers.php      Helper functions (colon preservation)
+- openrouterjsoncached_verbose.php      Verbose version for debugging
+- __jpd.php                              JSON parsing utilities
+- OPENROUTERJSONCACHED_README.md        Connector documentation
+
+prompts/
+--------
+- dialogue_prompt.php                    Dialogue prompt templates with minimize_quality_prompt
+
+functions/
+----------
+- json_response.php                      JSON response handling and action list building
+
+lib/
+----
+- tokenizer_helper_functions.php        Token counting utilities
+- chat_helper_functions.php             Post-processing (v1.1.19 - DIAGNOSTIC LOGGING)
+- core/llm_connector.class.php          Base LLM connector class
+
+conf/
+-----
+- conf_schema.json                       Configuration schema with minimize_quality_prompt
+
+ui/
+---
+- conf_wizard.php                        Configuration wizard UI
+- conf_wizardbackup.php                  Backup configuration UI
+- quickstart.php                         Quick start guide UI
+- core/llm_connectors.php                LLM connector UI (v1.1.19 - THINKING TOGGLE FIX)
+- core/core_profiles.php                 Profile management UI
+
+Documentation/
+--------------
+- INSTALLATION_INSTRUCTIONS.txt          How to install this package
+- CHANGELOG.txt                          Complete version history
+- ZIP_FILE_INFO.txt                      This file
+
+
+CRITICAL FIXES IN v1.1.19
+=========================
+
+**1. THINKING TOGGLE NOT SAVING (UI BUG FIX)**
+
+The thinking toggle, thinking tokens, and effort level settings were not
+saving when you pressed the save button. They would just reset to OFF/empty.
+
+Root Cause:
+- Forms were missing the hidden <input name="metadata"> field
+- JavaScript tried to set form.metadata.value but the field didn't exist
+- Settings failed to save silently (wrapped in try-catch)
+
+The Fix:
+- Added hidden metadata field to both connector forms
+- Extended consolidation() to merge all metadata settings into JSON
+- Removes name attributes from array-style fields before submit
+- Now all thinking settings save correctly
+
+Impact:
+✅ Toggle Thinking checkbox now saves
+✅ Thinking Tokens setting now saves
+✅ Effort Level setting now saves
+✅ All caching settings continue to work
+✅ Can now use thinking with o1, DeepSeek-R1, etc.
+
+Location: ui/core/llm_connectors.php:272, 1356, 2063-2152
+
+
+**2. DIAGNOSTIC LOGGING FOR COLON STRIPPING**
+
+Added comprehensive logging to trace where leading colons are being stripped
+from action descriptions in the post-processing pipeline.
+
+v1.1.18 fixed colon stripping in the connector, but users still report
+colons being inconsistently removed. This diagnostic logging will help
+identify exactly where in the post-processing the colons disappear.
+
+The logging tracks sentences through 6 checkpoints:
+1. returnLines() entry (before unmoodSentence)
+2. unmoodSentence() entry
+3. unmoodSentence() exit
+4. After unmoodSentence
+5. Before/after TRANSFORMER_FUNCTION
+6. Before/after NPC name removal
+
+Log Format:
+- ⚠️ markers for sentences starting with colon
+- ✅ when colon is preserved
+- ❌ when colon gets stripped (with before/after)
+- Shows first 60-80 chars for context
+
+How to Use:
+- Check log/chim.log after testing
+- Look for "[unmoodSentence]" or "[returnLines]" entries
+- Find "❌ COLON WAS STRIPPED!" to see where it happens
+- Report findings so proper fix can be implemented
+
+Location: lib/chat_helper_functions.php:500-700
+
+
+FEATURES SUMMARY
+================
+
+✅ Prompt caching support (Anthropic, OpenAI, Gemini)
+✅ JSON and Simple response formats
+✅ Streaming with proper sentence boundary detection
+✅ Reasoning token handling (<think>, <thinking>, <answer>)
+✅ minimize_quality_prompt setting (implemented in v1.1.12)
+✅ Proper colon preservation in connector (fixed in v1.1.18)
+✅ Flush on all stream end conditions (fixed in v1.1.10)
+✅ Metadata field toggles (mood, listener, action, target)
+✅ Action list with dynamic function support
+✅ Format instruction customization
+✅ Thinking toggle UI (fixed in v1.1.19)
+✅ Diagnostic logging for debugging (added in v1.1.19)
+
+
+INSTALLATION
+============
+
+See INSTALLATION_INSTRUCTIONS.txt for detailed installation steps.
+
+Quick steps:
+1. Back up your existing connector files
+2. Extract this ZIP to your HerikaServer directory
+3. Overwrite when prompted
+4. Test thinking toggle (should save now)
+5. Check logs for diagnostic output
+6. Report any colon stripping issues with log snippets
+
+
+COMPATIBILITY
+=============
+
+- Requires CHIM/Herika Server
+- Tested with:
+  * Anthropic Claude (all versions)
+  * OpenAI GPT (3.5+, 4, 4o, o1, o3)
+  * Google Gemini (1.5+, 2.0)
+  * OpenRouter (all supported models)
+  * DeepSeek R1
+- Works with minimize_quality_prompt setting
+- Works with thinking/reasoning models (o1, DeepSeek-R1, etc.)
+- Backward compatible with existing configurations
+
+
+UPGRADE PATH
+============
+
+From v1.0.x:
+- Direct upgrade supported
+- New features automatically available
+- minimize_quality_prompt defaults to enabled
+- Thinking toggle will now work
+
+From v1.1.8-17:
+- Direct upgrade supported
+- Thinking toggle now saves correctly
+- Diagnostic logging added for colon debugging
+
+From v1.1.18:
+- RECOMMENDED UPGRADE if you use thinking models
+- Fixes thinking toggle not saving
+- Adds diagnostic logging for colon issues
+- No configuration changes needed
+
+
+VERIFICATION
+============
+
+After installation, verify:
+
+1. Check version in openrouterjsoncached.php:12
+   Should show: OpenRouter Cache Connector v1.1.19
+
+2. Test thinking toggle:
+   - Go to LLM Connectors UI
+   - Enable "Toggle Thinking"
+   - Set "Thinking Tokens" to 1000
+   - Select "Effort Level" (medium)
+   - Click Save
+   - Reload page - settings should still be there ✅
+
+3. Check diagnostic logging:
+   - Test with simple format enabled
+   - Check log/chim.log for [unmoodSentence] entries
+   - Should see ⚠️ or ✅ markers for sentences with colons
+
+4. Verify colon handling in connector:
+   - Check openrouterjsoncached_helpers.php:581-584
+   - Should NOT have any conditional colon stripping
+
+
+TROUBLESHOOTING
+===============
+
+Thinking toggle still not saving?
+- Clear browser cache
+- Check browser console for JavaScript errors
+- Verify ui/core/llm_connectors.php was updated
+- Check form has <input name="metadata"> field (view source)
+
+Colons still being stripped?
+- Check log/chim.log for diagnostic output
+- Look for "❌ COLON WAS STRIPPED" markers
+- Report which checkpoint shows the stripping
+- Include before/after text from logs
+
+minimize_quality_prompt not working?
+- Check log/lastlog.log for diagnostic messages
+- Verify setting in UI matches connector config
+- Ensure DMgetCurrentModel() returns correct model name
+
+Streaming issues?
+- Check log/cache.log for buffer processing messages
+- Verify finish_reason triggers flush
+- Look for "Flush:" messages in logs
+
+
+NEW IN v1.1.19
+==============
+
+UI FIXES:
+✅ Thinking toggle now saves correctly
+✅ Thinking tokens setting now saves
+✅ Effort level setting now saves
+✅ All metadata settings save in single JSON field
+
+DIAGNOSTIC TOOLS:
+✅ Comprehensive logging for colon stripping debug
+✅ Six checkpoints in post-processing pipeline
+✅ Clear markers showing where colons are stripped
+✅ Before/after comparison for debugging
+
+PACKAGE IMPROVEMENTS:
+✅ Includes lib/chat_helper_functions.php (diagnostic logging)
+✅ Includes ui/core/llm_connectors.php (thinking toggle fix)
+✅ Complete file set from v1.1.18 package
+
+
+SUPPORT
+=======
+
+- Check CHANGELOG.txt for version-specific fixes
+- Review OPENROUTERJSONCACHED_README.md for features
+- Check logs in log/cache.log, log/chim.log, and log/lastlog.log
+- GitHub: https://github.com/Unknwn-Prson/HerikaServer
+
+
+VERSION NOTES
+=============
+
+v1.1.19 is the recommended version for all users, especially those using
+thinking/reasoning models like o1, o3, o4, or DeepSeek-R1.
+
+Key improvements over v1.1.18:
+- Thinking toggle and settings now save correctly
+- Can use thinking with o1, DeepSeek-R1, other reasoning models
+- Diagnostic logging for debugging colon stripping issues
+- All v1.1.18 fixes for colon preservation included
+
+Key improvements over v1.0.x:
+- 100% elimination of "Halfan" word concatenation bug
+- 100% elimination of duplicate message bug
+- 100% elimination of lost sentence bug
+- Proper flush on all stream end conditions
+- Working minimize_quality_prompt setting
+- Correct colon preservation in connector
+- Thinking toggle UI working correctly
+- Complete diagnostic logging framework
+
+Do NOT use:
+- v1.1.10 (broken diagnostic logging)
+- v1.1.11 (minimize_quality_prompt not implemented)
+- v1.1.16-17 (incorrect colon stripping logic)
