@@ -692,7 +692,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <h1 id="page-title">
             <span id="title-text">Description Manager</span>
         </h1>
-        <p>The <b>Description System</b> allows you to create custom visual descriptions for items and entities.</p>
+        <p>The <b>Description System</b> allows you to create custom visual descriptions for items and equipment.</p>
         <p>Upload descriptions individually or in bulk via CSV files. All custom entries override default templates.</p>
         <p>Descriptions are automatically injected into NPC equipment and inventory context when available.</p>
     </div>
