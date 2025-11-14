@@ -745,17 +745,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $query_combined = "
                     SELECT *
                     FROM {$schema}.combined_descriptions
-                    WHERE LOWER(baseid) LIKE LOWER($1) 
+                    WHERE LOWER(name) LIKE LOWER($1) 
                     AND (LOWER(baseid) LIKE LOWER($2) OR LOWER(name) LIKE LOWER($2))
-                    ORDER BY baseid ASC
+                    ORDER BY name ASC
                 ";
                 $params_combined = [$letter . '%', '%' . $searchTerm . '%'];
             } else {
                 $query_combined = "
                     SELECT *
                     FROM {$schema}.combined_descriptions
-                    WHERE LOWER(baseid) LIKE LOWER($1)
-                    ORDER BY baseid ASC
+                    WHERE LOWER(name) LIKE LOWER($1)
+                    ORDER BY name ASC
                 ";
                 $params_combined = [$letter . '%'];
             }
@@ -765,14 +765,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     SELECT *
                     FROM {$schema}.combined_descriptions
                     WHERE LOWER(baseid) LIKE LOWER($1) OR LOWER(name) LIKE LOWER($1)
-                    ORDER BY baseid ASC
+                    ORDER BY name ASC
                 ";
                 $params_combined = ['%' . $searchTerm . '%'];
             } else {
                 $query_combined = "
                     SELECT *
                     FROM {$schema}.combined_descriptions
-                    ORDER BY baseid ASC
+                    ORDER BY name ASC
                 ";
                 $params_combined = [];
             }
@@ -783,27 +783,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             : pg_query($conn, $query_combined);
         ?>
 
-        <h2 id="entries">📋 Item Descriptions Database</h2>
+        <h2 id="entries">📋 Descriptions Database</h2>
         
         <div class="action-container">
             <button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>
             <div class="search-container">
-                <input type="text" id="searchBox" placeholder="Search items..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555555; background-color: #4a4a4a; color: #f8f9fa;">
+                <input type="text" id="searchBox" placeholder="Search descriptions..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555555; background-color: #4a4a4a; color: #f8f9fa;">
                 <button onclick="applySearch()" class="action-button edit">Search</button>
             </div>
         </div>
 
         <!-- Alphabetic filter -->
         <div class="filter-section">
-            <strong>Filter by Base ID:</strong>
+            <strong>Filter by Name:</strong>
             <div class="filter-buttons">
                 <a href="?#entries" class="alphabet-button">All</a>
                 <?php
                 foreach (range('A', 'Z') as $char) {
                     echo '<a href="?letter=' . $char . '#entries" class="alphabet-button">' . $char . '</a>';
-                }
-                foreach (range('0', '9') as $num) {
-                    echo '<a href="?letter=' . $num . '#entries" class="alphabet-button">' . $num . '</a>';
                 }
                 ?>
             </div>
@@ -857,7 +854,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 <div id="editModal" class="modal-backdrop">
     <div class="modal-container">
         <div class="modal-header">
-            <h2 class="modal-title">Edit Item Entry</h2>
+            <h2 class="modal-title">Edit Description</h2>
         </div>
         <div class="modal-body">
             <form action="<?php echo $formAction; ?>" method="post">
@@ -868,8 +865,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <small>Base IDs cannot be changed after creation. If you need to change an ID, create a new entry.</small>
                 <input type="text" name="baseid" id="edit_baseid" readonly style="background-color: #2a2a2a; cursor: not-allowed;" required>
 
-                <label for="edit_name">Item Name:</label>
-                <small>Display name for the item (optional).</small>
+                <label for="edit_name">Name:</label>
+                <small>Display name for the entry (optional).</small>
                 <input type="text" name="name" id="edit_name">
 
                 <label for="edit_description">Visual Description:</label>
@@ -893,11 +890,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <div class="modal-body">
             <form action="" method="post">
                 <label for="new_baseid">Base ID (required):</label>
-                <small>Unique identifier for this item (e.g., 0001397E).</small>
+                <small>Unique identifier for this entry (e.g., 0001397E).</small>
                 <input type="text" name="baseid" id="new_baseid" required>
 
-                <label for="new_name">Item Name:</label>
-                <small>Display name for the item (optional).</small>
+                <label for="new_name">Name:</label>
+                <small>Display name for the entry (optional).</small>
                 <input type="text" name="name" id="new_name">
 
                 <label for="new_description">Visual Description:</label>
