@@ -341,6 +341,7 @@
     },
     "CARTESIA": {
       "_title": "Cartesia TTS",
+      "API_KEY": {"type":"apikey","description":"Cartesia API key.","code":"CARTESIA_API_KEY"},
       "voiceid": {"type":"string","description":"Voice file name. Works the same as CHIM-XTTS voiceid. Will only work with voices in your Voice Cache. Voice will be automatically cloned to Cartesia when first used.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "language": {"type":"select","values":["en","fr","de","es","pt","zh","ja","hi","it","ko","nl","pl","ru","sv","tr","tl","bg","ro","ar","cs","el","fi","hr","ms","sk","da","ta","uk","hu","no","vi","bn","th","he","ka","id","te","gu","kn","ml","mr","pa"],"description":"Language to use for TTS generation. Sonic 3 supports 42 languages."},
       "model_id": {"type":"select","values":["sonic-3","sonic-english","sonic-multilingual"],"description":"Cartesia model to use. sonic-3 is the latest model with 42 languages, volume/speed/emotion controls. Use sonic-3-2025-10-27 to pin a specific snapshot.","helpurl":"https://docs.cartesia.ai/"},

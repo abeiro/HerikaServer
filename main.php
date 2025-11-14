@@ -67,7 +67,7 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
     if (strpos($_SERVER["QUERY_STRING"],"&")===false)
         $receivedData = mb_scrub(base64_decode(substr($_SERVER["QUERY_STRING"],5)));
     else
-        $receivedData = mb_scrub(base64_decode(substr($_SERVER["QUERY_STRING"],5,strpos($_SERVER["QUERY_STRING"],"&")-4)));
+        $receivedData = mb_scrub(base64_decode(substr($_SERVER["QUERY_STRING"],5,strpos($_SERVER["QUERY_STRING"],"&")-5)));
 
     //error_log($receivedData." ".$_GET["profile"]);
 

@@ -1,10 +1,11 @@
 <?php
 
 /* CSV Import Processor - Called by csv_import.php endpoint
- * Handles three types of CSV imports:
+ * Handles four types of CSV imports:
  * - biography_import: NPC character data
  * - oghma_import: Knowledge base entries
  * - dynamic_oghma_import: Quest-specific knowledge entries
+ * - description_import: Item/entity description data
  */
 if (isset($_POST['csv_import']) && $_POST['csv_import'] == '1' && isset($_POST['type'])) {
     $import_type = $_POST['type'];
@@ -33,6 +34,9 @@ if (isset($_POST['csv_import']) && $_POST['csv_import'] == '1' && isset($_POST['
             break;
         case 'dynamic_oghma_import':
             handleDynamicOghmaImport($csvData, $timestamp, $game_timestamp);
+            break;
+        case 'description_import':
+            handleDescriptionImport($csvData, $timestamp, $game_timestamp);
             break;
         default:
             Logger::error("CSV Import: Unknown import type: $import_type");
@@ -624,6 +628,109 @@ function handleDynamicOghmaImport($csvData, $timestamp, $game_timestamp) {
                 'ts' => $timestamp,
                 'gamets' => $game_timestamp,
                 'type' => 'dynamic_oghma_import',
+                'data' => "CSV upload failed: " . $e->getMessage(),
+                'sess' => 'web',
+                'localts' => time(),
+                'people' => '',
+                'location' => '',
+                'party' => ''
+            )
+        );
+    }
+    
+    return true;
+}
+
+function handleDescriptionImport($csvData, $timestamp, $game_timestamp) {
+    global $db;
+    
+    Logger::info("Description Import: STARTED - Processing CSV data upload");
+    
+    $processedCount = 0;
+    $errorCount = 0;
+    
+    try {
+        // Create a temporary file to properly parse complex CSV data
+        $tempFile = tempnam(sys_get_temp_dir(), 'description_import_');
+        file_put_contents($tempFile, $csvData);
+        
+        $handle = fopen($tempFile, 'r');
+        if ($handle === false) {
+            Logger::error("Description Import: Could not open temporary CSV file");
+            return false;
+        }
+        
+        // Skip header row
+        fgetcsv($handle, 1000, ',');
+        
+        // Process each data row (baseid, name, description)
+        while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+            $baseid      = trim($data[0] ?? '');
+            $name        = $data[1] ?? '';
+            $description = $data[2] ?? '';
+            
+            if (!empty($baseid)) {
+                // Truncate baseid to 128 characters
+                if (strlen($baseid) > 128) {
+                    $baseid = substr($baseid, 0, 128);
+                }
+                
+                // Insert or update record using upsertRowOnConflict
+                try {
+                    $db->upsertRowOnConflict(
+                        'descriptions_custom',
+                        array(
+                            'baseid' => $baseid,
+                            'name' => $name,
+                            'description' => $description
+                        ),
+                        'baseid'
+                    );
+                    $processedCount++;
+                    Logger::debug("Description Import: Successfully processed: $baseid");
+                } catch (Exception $e) {
+                    Logger::error("Description Import: Error processing '$baseid': " . $e->getMessage());
+                    $errorCount++;
+                }
+            } else {
+                Logger::debug("Description Import: Skipping empty or invalid row (baseid missing)");
+            }
+        }
+        
+        fclose($handle);
+        unlink($tempFile);
+        
+        Logger::info("Description Import: Processing complete. $processedCount records processed, $errorCount errors");
+        
+        // Log the event for audit purposes
+        $db->insert(
+            'eventlog',
+            array(
+                'ts' => $timestamp,
+                'gamets' => $game_timestamp,
+                'type' => 'description_import',
+                'data' => "CSV upload: $processedCount records processed, $errorCount errors",
+                'sess' => 'web',
+                'localts' => time(),
+                'people' => '',
+                'location' => '',
+                'party' => ''
+            )
+        );
+        
+    } catch (Exception $e) {
+        Logger::error("Description Import: Fatal error processing CSV: " . $e->getMessage());
+        // Clean up temp file if it exists
+        if (isset($tempFile) && file_exists($tempFile)) {
+            unlink($tempFile);
+        }
+        // Log the error event
+        $db->insert(
+            'eventlog',
+            array(
+                'ts' => $timestamp,
+                'gamets' => $game_timestamp,
+                'type' => 'item_import',
                 'data' => "CSV upload failed: " . $e->getMessage(),
                 'sess' => 'web',
                 'localts' => time(),
