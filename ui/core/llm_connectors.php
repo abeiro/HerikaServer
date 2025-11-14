@@ -2065,27 +2065,41 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
 (function(){
     const originalConsolidation = window.consolidation;
     window.consolidation = function() {
+        console.log('[CONSOLIDATION DEBUG] Starting consolidation...');
+
         // First run the original consolidation (from metadata_json_editor.php)
         const result = originalConsolidation ? originalConsolidation() : true;
+        console.log('[CONSOLIDATION DEBUG] Original consolidation result:', result);
         if (!result) return false;
 
         // Now merge our custom reasoning fields into metadata
         const form = document.querySelector('form[method="POST"]') || document.querySelector('form[method="post"]');
-        if (!form || !form.metadata) return result;
+        console.log('[CONSOLIDATION DEBUG] Found form:', !!form);
+        console.log('[CONSOLIDATION DEBUG] Form has metadata field:', form ? !!form.metadata : false);
+
+        if (!form || !form.metadata) {
+            console.warn('[CONSOLIDATION DEBUG] No form or metadata field found, returning');
+            return result;
+        }
 
         try {
             // Parse existing metadata
             let metadata = {};
             try {
                 const metaStr = form.metadata.value || '{}';
+                console.log('[CONSOLIDATION DEBUG] Initial metadata string:', metaStr);
                 metadata = JSON.parse(metaStr);
+                console.log('[CONSOLIDATION DEBUG] Parsed metadata:', metadata);
             } catch (_e) {
+                console.error('[CONSOLIDATION DEBUG] Error parsing metadata:', _e);
                 metadata = {};
             }
 
             // Collect all metadata[key] fields and merge them into the JSON
             // This handles caching settings and other connector-specific metadata
             const metadataArrayFields = form.querySelectorAll('[name^="metadata["]');
+            console.log('[CONSOLIDATION DEBUG] Found', metadataArrayFields.length, 'metadata[key] fields');
+
             metadataArrayFields.forEach(field => {
                 const match = field.name.match(/^metadata\[(.+)\]$/);
                 if (match) {
@@ -2102,6 +2116,7 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
                     // Only include non-empty values (except for 0 which is valid)
                     if (value !== '' || value === 0) {
                         metadata[key] = value;
+                        console.log('[CONSOLIDATION DEBUG] Added metadata[' + key + '] =', value);
                     }
                 }
             });
@@ -2111,9 +2126,14 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
             const thinkingTokensEl = document.getElementById('thinking_tokens') || document.getElementById('thinking_tokens_modal');
             const effortLevelEl = document.getElementById('effort_level') || document.getElementById('effort_level_modal');
 
+            console.log('[CONSOLIDATION DEBUG] Found toggle_thinking element:', !!toggleThinkingEl);
+            console.log('[CONSOLIDATION DEBUG] Found thinking_tokens element:', !!thinkingTokensEl);
+            console.log('[CONSOLIDATION DEBUG] Found effort_level element:', !!effortLevelEl);
+
             // Add toggle_thinking
             if (toggleThinkingEl) {
                 metadata.toggle_thinking = toggleThinkingEl.checked;
+                console.log('[CONSOLIDATION DEBUG] toggle_thinking =', toggleThinkingEl.checked);
             }
 
             // Add thinking_tokens (only if not empty)
@@ -2121,8 +2141,10 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
                 const val = thinkingTokensEl.value.trim();
                 if (val !== '') {
                     metadata.thinking_tokens = parseInt(val, 10);
+                    console.log('[CONSOLIDATION DEBUG] thinking_tokens =', parseInt(val, 10));
                 } else {
                     delete metadata.thinking_tokens;
+                    console.log('[CONSOLIDATION DEBUG] thinking_tokens deleted (empty)');
                 }
             }
 
@@ -2131,23 +2153,29 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
                 const val = effortLevelEl.value.trim();
                 if (val !== '') {
                     metadata.effort_level = val;
+                    console.log('[CONSOLIDATION DEBUG] effort_level =', val);
                 } else {
                     delete metadata.effort_level;
+                    console.log('[CONSOLIDATION DEBUG] effort_level deleted (empty)');
                 }
             }
 
             // Update form metadata field with merged JSON
-            form.metadata.value = JSON.stringify(metadata);
+            const finalJSON = JSON.stringify(metadata);
+            form.metadata.value = finalJSON;
+            console.log('[CONSOLIDATION DEBUG] Final metadata JSON:', finalJSON);
 
             // Remove name attribute from metadata[key] fields so they don't override the hidden metadata field
             // (Disabling would prevent submission, removing name keeps field visible but excludes from POST)
             metadataArrayFields.forEach(field => {
                 field.removeAttribute('name');
             });
+            console.log('[CONSOLIDATION DEBUG] Removed name attributes from', metadataArrayFields.length, 'fields');
         } catch (err) {
-            console.error('Error merging reasoning fields into metadata:', err);
+            console.error('[CONSOLIDATION DEBUG] Error merging reasoning fields into metadata:', err);
         }
 
+        console.log('[CONSOLIDATION DEBUG] Consolidation complete, returning true');
         return result;
     };
 })();
