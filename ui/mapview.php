@@ -98,10 +98,12 @@ if (! $adminConn) {
     }
 
     // Coordinate translation constants (world bounds)
+    // X: west (negative) to east (positive)
+    // Y: south (negative) to north (positive)
     $WORLD_X_MIN = -225242;
     $WORLD_X_MAX = 217068;
-    $WORLD_Y_MIN = -164195;
-    $WORLD_Y_MAX = 204675;
+    $WORLD_Y_MIN = -164195;  // SOUTH (negative)
+    $WORLD_Y_MAX = 204675;   // NORTH (positive)
 
     // Map dimensions (from the actual image)
     $mapWidth  = 1950;
@@ -117,11 +119,12 @@ if (! $adminConn) {
         $worldXRange = $worldXMax - $worldXMin;
         $worldYRange = $worldYMax - $worldYMin;
 
-        // X: map left-right
+        // X: west to east, left to right on map
         $mapX = (($ingameX - $worldXMin) / $worldXRange) * $mapWidth;
 
-        // Y: inverted (north at top, south at bottom)
-        $mapY = (1 - (($ingameY - $worldYMin) / $worldYRange)) * $mapHeight;
+        // Y: south (negative) to north (positive), but image Y is top to bottom
+        // So we need to invert: north (high Y) maps to top of image (low Y)
+        $mapY = (($worldYMax - $ingameY) / $worldYRange) * $mapHeight;
 
         // Clamp coordinates to map bounds
         $mapX = max(0, min($mapWidth, $mapX));
@@ -172,6 +175,7 @@ if (! $adminConn) {
             if ($coordsData && isset($coordsData[0]) && isset($coordsData[1])) {
                 $x = $coordsData[0];
                 $y = $coordsData[1];
+                $z = $coordsData[2];
             } else {
                 error_log("[MAP] Skipping {$row["npc_name"]} {$coords}" . print_r($coordsData, true));
                 //continue; // Skip invalid coordinates
@@ -208,6 +212,7 @@ if (! $adminConn) {
                 'name'        => $row['npc_name'],
                 'ingame_x'    => (int) $x,
                 'ingame_y'    => (int) $y,
+                'ingame_z'    => (int) $z,
                 'color'       => generateRandomColor($row['npc_name']),
                 'size'        => 10,
                 'tag'         => $coordsData[3],
@@ -268,6 +273,7 @@ if (! $adminConn) {
             'color'    => $marker['color'],
             'size'     => $marker['size'],
             'ingame_x' => $marker['ingame_x'],
+            'ingame_z' => $marker['ingame_z'],
             'ingame_y' => $marker['ingame_y'],
             'tag'      => $marker['tag'],
             'figure'   => $marker["figure"] ? "../data/pictures/{$marker["figure"]}" : "images/races/default.png",
@@ -876,7 +882,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                         </h4>
                         <div class="marker-item-coords">
                             <ul>
-                            <li><strong>In-game:</strong> x=<?php echo $marker['ingame_x']; ?>, y=<?php echo $marker['ingame_y']; ?></li>
+                            <li><strong>In-game:</strong> x=<?php echo $marker['ingame_x']; ?>, y=<?php echo $marker['ingame_y']; ?>, z=<?php echo $marker['ingame_z']; ?></li>
                             <li><strong>Map:</strong> (<?php echo $marker['x']; ?>,<?php echo $marker['y']; ?>)</li>
                             <li><strong>RefId:</strong> (<?php echo $marker['refid']; ?>)</li>
                             <li><strong>Last Pos Ts.:</strong> (<?php echo $marker['last_pos_ts']; ?>)</li>

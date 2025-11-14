@@ -672,6 +672,7 @@ class NpcMaster
             "WITH deleted AS (
     DELETE FROM core_npc_master
     WHERE npc_name<>'The Narrator' and COALESCE(lock_profile,0)=0
+    and COALESCE(gamets_last_updated,0)>0
     RETURNING id
 ),
 restore AS (

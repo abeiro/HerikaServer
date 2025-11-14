@@ -882,6 +882,13 @@ function convertSignedToUnsignedHex($signedInt) {
 
 }
 
+function convertHex($signedInt) {
+    // Convert signed to unsigned using bitwise AND
+    $unsignedInt = $signedInt;
+    return  "0x" . str_pad(dechex($unsignedInt),8,"0",STR_PAD_LEFT) ;
+
+}
+
 function SkTopicCheck($character,$topic,$lastCall,$retries,$quest_id)
 {
     $contextDataHistoric = checkHistory($character);
