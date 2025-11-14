@@ -503,7 +503,7 @@ function unmoodSentence($sentence) {
     // DIAGNOSTIC: Log input sentence, especially if starts with colon
     $startsWithColon = (strlen($sentence) > 0 && $sentence[0] === ':');
     if ($startsWithColon) {
-        error_log("[unmoodSentence] ⚠️ INPUT STARTS WITH COLON: " . substr($sentence, 0, 80));
+        Logger::info("[unmoodSentence] ⚠️ INPUT STARTS WITH COLON: " . substr($sentence, 0, 80));
     }
 
     $output = $sentence;
@@ -572,12 +572,12 @@ function unmoodSentence($sentence) {
     // DIAGNOSTIC: Log output, especially if input had colon but output doesn't
     $outputStartsWithColon = (strlen($responseTextUnmooded) > 0 && $responseTextUnmooded[0] === ':');
     if ($startsWithColon && !$outputStartsWithColon) {
-        error_log("[unmoodSentence] ❌ COLON WAS STRIPPED!");
-        error_log("[unmoodSentence]    INPUT:  " . substr($sentence, 0, 80));
-        error_log("[unmoodSentence]    OUTPUT: " . substr($responseTextUnmooded, 0, 80));
+        Logger::info("[unmoodSentence] ❌ COLON WAS STRIPPED!");
+        Logger::info("[unmoodSentence]    INPUT:  " . substr($sentence, 0, 80));
+        Logger::info("[unmoodSentence]    OUTPUT: " . substr($responseTextUnmooded, 0, 80));
     } elseif ($startsWithColon && $outputStartsWithColon) {
-        error_log("[unmoodSentence] ✅ COLON PRESERVED");
-        error_log("[unmoodSentence]    OUTPUT: " . substr($responseTextUnmooded, 0, 80));
+        Logger::info("[unmoodSentence] ✅ COLON PRESERVED");
+        Logger::info("[unmoodSentence]    OUTPUT: " . substr($responseTextUnmooded, 0, 80));
     }
 
     return $responseTextUnmooded;
@@ -613,7 +613,7 @@ function returnLines($lines,$writeOutput=true)
         // DIAGNOSTIC: Log sentence before unmoodSentence
         $beforeStartsWithColon = (strlen($sentence) > 0 && $sentence[0] === ':');
         if ($beforeStartsWithColon) {
-            error_log("[returnLines] Before unmoodSentence, sentence starts with colon: " . substr($sentence, 0, 60));
+            Logger::info("[returnLines] Before unmoodSentence, sentence starts with colon: " . substr($sentence, 0, 60));
         }
 
         $responseTextUnmooded=unmoodSentence($sentence);
@@ -622,9 +622,9 @@ function returnLines($lines,$writeOutput=true)
         $afterStartsWithColon = (strlen($responseTextUnmooded) > 0 && $responseTextUnmooded[0] === ':');
         if ($beforeStartsWithColon) {
             if ($afterStartsWithColon) {
-                error_log("[returnLines] After unmoodSentence, colon preserved: " . substr($responseTextUnmooded, 0, 60));
+                Logger::info("[returnLines] After unmoodSentence, colon preserved: " . substr($responseTextUnmooded, 0, 60));
             } else {
-                error_log("[returnLines] After unmoodSentence, colon MISSING: " . substr($responseTextUnmooded, 0, 60));
+                Logger::info("[returnLines] After unmoodSentence, colon MISSING: " . substr($responseTextUnmooded, 0, 60));
             }
         }
 
@@ -643,9 +643,9 @@ function returnLines($lines,$writeOutput=true)
 
                 $afterTransformColon = (strlen($responseTextUnmooded) > 0 && $responseTextUnmooded[0] === ':');
                 if ($beforeTransformColon && !$afterTransformColon) {
-                    error_log("[returnLines] ❌ TRANSFORMER_FUNCTION stripped colon!");
-                    error_log("[returnLines]    BEFORE: " . substr($beforeTransform, 0, 60));
-                    error_log("[returnLines]    AFTER:  " . substr($responseTextUnmooded, 0, 60));
+                    Logger::info("[returnLines] ❌ TRANSFORMER_FUNCTION stripped colon!");
+                    Logger::info("[returnLines]    BEFORE: " . substr($beforeTransform, 0, 60));
+                    Logger::info("[returnLines]    AFTER:  " . substr($responseTextUnmooded, 0, 60));
                 }
             }
         }
@@ -690,11 +690,11 @@ function returnLines($lines,$writeOutput=true)
 
         $afterNameRemovalColon = (strlen($responseTextUnmooded) > 0 && $responseTextUnmooded[0] === ':');
         if ($beforeNameRemovalColon && !$afterNameRemovalColon) {
-            error_log("[returnLines] ❌ NPC name removal stripped colon!");
-            error_log("[returnLines]    NPC NAME: " . $GLOBALS["HERIKA_NAME"]);
-            error_log("[returnLines]    PATTERN:  /{$GLOBALS["HERIKA_NAME"]}\s*:\s*/");
-            error_log("[returnLines]    BEFORE:   " . substr($beforeNameRemoval, 0, 60));
-            error_log("[returnLines]    AFTER:    " . substr($responseTextUnmooded, 0, 60));
+            Logger::info("[returnLines] ❌ NPC name removal stripped colon!");
+            Logger::info("[returnLines]    NPC NAME: " . $GLOBALS["HERIKA_NAME"]);
+            Logger::info("[returnLines]    PATTERN:  /{$GLOBALS["HERIKA_NAME"]}\s*:\s*/");
+            Logger::info("[returnLines]    BEFORE:   " . substr($beforeNameRemoval, 0, 60));
+            Logger::info("[returnLines]    AFTER:    " . substr($responseTextUnmooded, 0, 60));
         }
 
         $responseText = $responseTextUnmooded;
