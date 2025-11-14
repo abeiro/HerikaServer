@@ -1,10 +1,11 @@
 <?php
 
 /* CSV Import Processor - Called by csv_import.php endpoint
- * Handles three types of CSV imports:
+ * Handles four types of CSV imports:
  * - biography_import: NPC character data
  * - oghma_import: Knowledge base entries
  * - dynamic_oghma_import: Quest-specific knowledge entries
+ * - item_import: Item description data
  */
 if (isset($_POST['csv_import']) && $_POST['csv_import'] == '1' && isset($_POST['type'])) {
     $import_type = $_POST['type'];
@@ -33,6 +34,9 @@ if (isset($_POST['csv_import']) && $_POST['csv_import'] == '1' && isset($_POST['
             break;
         case 'dynamic_oghma_import':
             handleDynamicOghmaImport($csvData, $timestamp, $game_timestamp);
+            break;
+        case 'item_import':
+            handleItemImport($csvData, $timestamp, $game_timestamp);
             break;
         default:
             Logger::error("CSV Import: Unknown import type: $import_type");
@@ -624,6 +628,141 @@ function handleDynamicOghmaImport($csvData, $timestamp, $game_timestamp) {
                 'ts' => $timestamp,
                 'gamets' => $game_timestamp,
                 'type' => 'dynamic_oghma_import',
+                'data' => "CSV upload failed: " . $e->getMessage(),
+                'sess' => 'web',
+                'localts' => time(),
+                'people' => '',
+                'location' => '',
+                'party' => ''
+            )
+        );
+    }
+    
+    return true;
+}
+
+function handleItemImport($csvData, $timestamp, $game_timestamp) {
+    global $db;
+    
+    Logger::info("Item Import: STARTED - Processing CSV data upload");
+    
+    $processedCount = 0;
+    $errorCount = 0;
+    
+    try {
+        // Create a temporary file to properly parse complex CSV data
+        $tempFile = tempnam(sys_get_temp_dir(), 'item_import_');
+        file_put_contents($tempFile, $csvData);
+        
+        $handle = fopen($tempFile, 'r');
+        if ($handle === false) {
+            Logger::error("Item Import: Could not open temporary CSV file");
+            return false;
+        }
+        
+        // Read and process header
+        $header = fgetcsv($handle, 0, ',');
+        if ($header === false || empty($header)) {
+            Logger::error("Item Import: Invalid CSV header");
+            fclose($handle);
+            unlink($tempFile);
+            return false;
+        }
+        
+        // Normalize header labels and create header map
+        $headerMap = [];
+        foreach ($header as $i => $colName) {
+            $normalized = strtolower(trim($colName));
+            $headerMap[$normalized] = $i;
+        }
+        
+        // Process each data row
+        while (($data = fgetcsv($handle, 0, ',')) !== false) {
+            if (empty($data) || count($data) < 2) {
+                continue; // Skip empty or invalid rows
+            }
+            
+            // Extract required fields
+            $baseid = '';
+            if (isset($headerMap['baseid']) && isset($data[$headerMap['baseid']])) {
+                $baseid = trim($data[$headerMap['baseid']]);
+            }
+            
+            $name = '';
+            if (isset($headerMap['name']) && isset($data[$headerMap['name']])) {
+                $name = trim($data[$headerMap['name']]);
+            }
+            
+            $description = '';
+            if (isset($headerMap['description']) && isset($data[$headerMap['description']])) {
+                $description = trim($data[$headerMap['description']]);
+            }
+            
+            // Skip if required fields are missing
+            if (empty($baseid)) {
+                Logger::warn("Item Import: Skipping row with missing baseid");
+                $errorCount++;
+                continue;
+            }
+            
+            // Truncate baseid to 128 characters
+            if (strlen($baseid) > 128) {
+                $baseid = substr($baseid, 0, 128);
+            }
+            
+            // Insert or update record using upsertRowOnConflict
+            try {
+                $db->upsertRowOnConflict(
+                    'item_description_custom',
+                    array(
+                        'baseid' => $baseid,
+                        'name' => $name,
+                        'description' => $description
+                    ),
+                    'baseid'
+                );
+                $processedCount++;
+                Logger::debug("Item Import: Successfully processed item: $baseid");
+            } catch (Exception $e) {
+                Logger::error("Item Import: Error processing item '$baseid': " . $e->getMessage());
+                $errorCount++;
+            }
+        }
+        
+        fclose($handle);
+        unlink($tempFile);
+        
+        Logger::info("Item Import: Processing complete. $processedCount records processed, $errorCount errors");
+        
+        // Log the event for audit purposes
+        $db->insert(
+            'eventlog',
+            array(
+                'ts' => $timestamp,
+                'gamets' => $game_timestamp,
+                'type' => 'item_import',
+                'data' => "CSV upload: $processedCount records processed, $errorCount errors",
+                'sess' => 'web',
+                'localts' => time(),
+                'people' => '',
+                'location' => '',
+                'party' => ''
+            )
+        );
+        
+    } catch (Exception $e) {
+        Logger::error("Item Import: Fatal error processing CSV: " . $e->getMessage());
+        // Clean up temp file if it exists
+        if (isset($tempFile) && file_exists($tempFile)) {
+            unlink($tempFile);
+        }
+        // Log the error event
+        $db->insert(
+            'eventlog',
+            array(
+                'ts' => $timestamp,
+                'gamets' => $game_timestamp,
+                'type' => 'item_import',
                 'data' => "CSV upload failed: " . $e->getMessage(),
                 'sess' => 'web',
                 'localts' => time(),

@@ -4342,6 +4342,31 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
      */
     $dynamicBio = '';
     
+    // Helper function to get item description from combined view
+    $getItemDescription = function($itemName, $baseid = null) {
+        global $db;
+        
+        // Try by baseid first if provided
+        if (!empty($baseid)) {
+            $escapedBaseid = $db->escape($baseid);
+            $result = $db->fetchAll("SELECT description FROM combined_item_descriptions WHERE baseid='{$escapedBaseid}' LIMIT 1");
+            if (!empty($result) && !empty($result[0]['description'])) {
+                return $result[0]['description'];
+            }
+        }
+        
+        // Fallback to name-based search
+        if (!empty($itemName) && $itemName != '<Missing Name>') {
+            $escapedName = $db->escape($itemName);
+            $result = $db->fetchAll("SELECT description FROM combined_item_descriptions WHERE LOWER(name) = LOWER('{$escapedName}') LIMIT 1");
+            if (!empty($result) && !empty($result[0]['description'])) {
+                return $result[0]['description'];
+            }
+        }
+        
+        return null;
+    };
+    
     // List of new HERIKA fields to include
     $herikaFields = [
         'HERIKA_BACKGROUND' => 'Basic Summary',
@@ -4407,6 +4432,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
     // Add NPC's own equipment
     if (isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
         $equipmentParts = [];
+        $describedBaseids = []; // Track which baseids we've already described
         $slots = [
             'helmet' => 'Helmet',
             'armor' => 'Armor', 
@@ -4420,7 +4446,27 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         
         foreach ($slots as $slot => $label) {
             if (!empty($metaData["equipment"][$slot])) {
-                $equipmentParts[] = "  • {$label}: {$metaData["equipment"][$slot]}";
+                $itemName = $metaData["equipment"][$slot];
+                $baseid = isset($metaData["equipment"][$slot . '_baseid']) ? $metaData["equipment"][$slot . '_baseid'] : null;
+                
+                $itemLine = "  • {$label}: {$itemName}";
+                
+                // Try to add item description only if we haven't described this baseid yet
+                if (!empty($baseid) && !in_array($baseid, $describedBaseids)) {
+                    $description = $getItemDescription($itemName, $baseid);
+                    if ($description) {
+                        $itemLine .= " - {$description}";
+                        $describedBaseids[] = $baseid; // Mark this baseid as described
+                    }
+                } elseif (empty($baseid)) {
+                    // No baseid, try name-based (won't dedupe without baseid)
+                    $description = $getItemDescription($itemName, null);
+                    if ($description) {
+                        $itemLine .= " - {$description}";
+                    }
+                }
+                
+                $equipmentParts[] = $itemLine;
             }
         }
         
@@ -4445,15 +4491,44 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
     if (isset($metaData["inventory"]) && is_array($metaData["inventory"])) {
        
         $equipmentParts=[];
+        // Continue using the same $describedBaseids from equipment to dedupe across all items
+        if (!isset($describedBaseids)) {
+            $describedBaseids = [];
+        }
+        
         foreach ($metaData["inventory"] as $item) {
             if ($item["name"]!='<Missing Name>') {
-                $equipmentParts[]="{$item["count"]} {$item["name"]}";
+                $itemName = $item["name"];
+                $itemCount = $item["count"];
+                $baseid = isset($item["baseid"]) ? $item["baseid"] : null;
+                
+                $itemLine = "{$itemCount} {$itemName}";
+                
+                // Try to add item description for notable items (limit descriptions to avoid clutter)
+                // Only if we haven't already described this baseid
+                if ($itemCount <= 5) { // Only add descriptions for items with low counts
+                    if (!empty($baseid) && !in_array($baseid, $describedBaseids)) {
+                        $description = $getItemDescription($itemName, $baseid);
+                        if ($description) {
+                            $itemLine .= " ({$description})";
+                            $describedBaseids[] = $baseid; // Mark this baseid as described
+                        }
+                    } elseif (empty($baseid)) {
+                        // No baseid, try name-based (won't dedupe without baseid)
+                        $description = $getItemDescription($itemName, null);
+                        if ($description) {
+                            $itemLine .= " ({$description})";
+                        }
+                    }
+                }
+                
+                $equipmentParts[] = $itemLine;
             }
             
         }
         
         if (!empty($equipmentParts)) {
-            $INVENTORY_ADD = "\n<inventory>\n#Current Inventory:\n" . implode(",", $equipmentParts)."\n</inventory>";
+            $INVENTORY_ADD = "\n<inventory>\n#Current Inventory:\n" . implode(", ", $equipmentParts)."\n</inventory>";
         }
     }
     
