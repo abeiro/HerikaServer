@@ -7,7 +7,7 @@ $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
-$TITLE = "🗡️CHIM - Item Descriptions";
+$TITLE = "📜 CHIM - Descriptions";
 
 // Enable error reporting (for development purposes)
 error_reporting(E_ALL);
@@ -34,13 +34,13 @@ if (!$conn) {
 // ────────────────────────────────────────────────────────────────────
 //
 
-// EXPORT CUSTOM ITEMS
+// EXPORT CUSTOM DESCRIPTIONS
 if (isset($_GET['action']) && $_GET['action'] == 'export_custom_items') {
-    $export_query = "SELECT baseid, name, description FROM {$schema}.item_description_custom ORDER BY baseid ASC";
+    $export_query = "SELECT baseid, name, description FROM {$schema}.descriptions_custom ORDER BY baseid ASC";
     $export_result = pg_query($conn, $export_query);
 
     if ($export_result) {
-        $filename = 'custom_items_export_' . date('Y-m-d_H-i-s') . '.csv';
+        $filename = 'custom_descriptions_export_' . date('Y-m-d_H-i-s') . '.csv';
         
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
@@ -63,7 +63,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'export_custom_items') {
 
 // DOWNLOAD EXAMPLE CSV
 if (isset($_GET['action']) && $_GET['action'] == 'download_example') {
-    $filename = 'example_items.csv';
+    $filename = 'example_descriptions.csv';
     
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="' . $filename . '"');
@@ -123,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
         }
 
         $query = "
-            INSERT INTO {$schema}.item_description_custom
+            INSERT INTO {$schema}.descriptions_custom
                 (baseid, name, description)
             VALUES ($1, $2, $3)
             ON CONFLICT (baseid)
@@ -176,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                         }
 
                         $query = "
-                            INSERT INTO $schema.item_description_custom (
+                            INSERT INTO $schema.descriptions_custom (
                                 baseid,
                                 name,
                                 description
@@ -222,7 +222,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
 // ────────────────────────────────────────────────────────────────────
 //
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['truncate_items'])) {
-    $truncate_query = "TRUNCATE TABLE {$schema}.item_description_custom";
+    $truncate_query = "TRUNCATE TABLE {$schema}.descriptions_custom";
     $result = pg_query($conn, $truncate_query);
 
     if ($result) {
@@ -250,7 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
 
         $query = "
-            INSERT INTO {$schema}.item_description_custom
+            INSERT INTO {$schema}.descriptions_custom
                 (baseid, name, description)
             VALUES ($1, $2, $3)
             ON CONFLICT (baseid)
@@ -690,10 +690,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     <div class="page-header">
         <h1 id="page-title">
-            <span id="title-text">Item Description Manager</span>
+            <span id="title-text">Description Manager</span>
         </h1>
-        <p>The <b>Item Description System</b> allows you to create custom visual descriptions for items.</p>
-        <p>Upload item descriptions individually or in bulk via CSV files. All custom entries override default templates.</p>
+        <p>The <b>Description System</b> allows you to create custom visual descriptions for items and entities.</p>
+        <p>Upload descriptions individually or in bulk via CSV files. All custom entries override default templates.</p>
         <p>Descriptions are automatically injected into NPC equipment and inventory context when available.</p>
     </div>
 
@@ -708,7 +708,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <div class="button-group">
                     <input type="submit" name="submit_csv" value="Upload CSV" class="action-button upload-csv">
                     <a href="?action=download_example" class="action-button download-csv">Download Example CSV</a>
-                    <a href="?action=export_custom_items" class="action-button export-csv">Export Custom Items</a>
+                    <a href="?action=export_custom_items" class="action-button export-csv">Export Custom Descriptions</a>
                 </div>
                 <p style="margin-top: 15px;">CSV format: baseid, name, description</p>
             </form>
@@ -716,8 +716,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         <div class="content-section">
             <h2>Database Management</h2>
-            <p>Verify uploads: <br><b>Server Actions → Database Manager → dwemer → public → item_description_custom</b></p>
-            <p>View merged data: <br><b>Server Actions → Database Manager → dwemer → public → Views → combined_item_descriptions</b></p>
+            <p>Verify uploads: <br><b>Server Actions → Database Manager → dwemer → public → descriptions_custom</b></p>
+            <p>View merged data: <br><b>Server Actions → Database Manager → dwemer → public → Views → combined_descriptions</b></p>
             
             <div class="button-group" style="margin-top: 20px;">
                 <form action="" method="post" style="display: inline;">
@@ -726,7 +726,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         name="truncate_items" 
                         value="Factory Reset Item Override Table"
                         class="btn-danger"
-                        onclick="return confirm('Are you sure you want to DELETE ALL ENTRIES in item_description_custom? This action is IRREVERSIBLE!');"
+                        onclick="return confirm('Are you sure you want to DELETE ALL ENTRIES in descriptions_custom? This action is IRREVERSIBLE!');"
                     >
                 </form>
             </div>
@@ -744,7 +744,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             if (!empty($searchTerm)) {
                 $query_combined = "
                     SELECT *
-                    FROM {$schema}.combined_item_descriptions
+                    FROM {$schema}.combined_descriptions
                     WHERE LOWER(baseid) LIKE LOWER($1) 
                     AND (LOWER(baseid) LIKE LOWER($2) OR LOWER(name) LIKE LOWER($2))
                     ORDER BY baseid ASC
@@ -753,7 +753,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             } else {
                 $query_combined = "
                     SELECT *
-                    FROM {$schema}.combined_item_descriptions
+                    FROM {$schema}.combined_descriptions
                     WHERE LOWER(baseid) LIKE LOWER($1)
                     ORDER BY baseid ASC
                 ";
@@ -763,7 +763,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             if (!empty($searchTerm)) {
                 $query_combined = "
                     SELECT *
-                    FROM {$schema}.combined_item_descriptions
+                    FROM {$schema}.combined_descriptions
                     WHERE LOWER(baseid) LIKE LOWER($1) OR LOWER(name) LIKE LOWER($1)
                     ORDER BY baseid ASC
                 ";
@@ -771,7 +771,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             } else {
                 $query_combined = "
                     SELECT *
-                    FROM {$schema}.combined_item_descriptions
+                    FROM {$schema}.combined_descriptions
                     ORDER BY baseid ASC
                 ";
                 $params_combined = [];
@@ -845,10 +845,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             echo '</div>';
 
             if ($rowCountCombined === 0) {
-                echo '<p>No items found.</p>';
+                echo '<p>No descriptions found.</p>';
             }
         } else {
-            echo '<p>Error fetching combined item descriptions: ' . pg_last_error($conn) . '</p>';
+            echo '<p>Error fetching combined descriptions: ' . pg_last_error($conn) . '</p>';
         }
         ?>
     </div>
@@ -888,7 +888,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 <div id="newEntryModal" class="modal-backdrop">
     <div class="modal-container">
         <div class="modal-header">
-            <h2 class="modal-title">Add New Item Entry</h2>
+            <h2 class="modal-title">Add New Description</h2>
         </div>
         <div class="modal-body">
             <form action="" method="post">

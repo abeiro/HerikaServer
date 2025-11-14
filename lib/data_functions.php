@@ -4349,7 +4349,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         // Try by baseid first if provided
         if (!empty($baseid)) {
             $escapedBaseid = $db->escape($baseid);
-            $result = $db->fetchAll("SELECT description FROM combined_item_descriptions WHERE baseid='{$escapedBaseid}' LIMIT 1");
+            $result = $db->fetchAll("SELECT description FROM combined_descriptions WHERE baseid='{$escapedBaseid}' LIMIT 1");
             if (!empty($result) && !empty($result[0]['description'])) {
                 return $result[0]['description'];
             }
@@ -4358,7 +4358,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         // Fallback to name-based search
         if (!empty($itemName) && $itemName != '<Missing Name>') {
             $escapedName = $db->escape($itemName);
-            $result = $db->fetchAll("SELECT description FROM combined_item_descriptions WHERE LOWER(name) = LOWER('{$escapedName}') LIMIT 1");
+            $result = $db->fetchAll("SELECT description FROM combined_descriptions WHERE LOWER(name) = LOWER('{$escapedName}') LIMIT 1");
             if (!empty($result) && !empty($result[0]['description'])) {
                 return $result[0]['description'];
             }

@@ -1998,54 +1998,74 @@ try {
 // Version 20241113001
 //----------------------------------------------------
 
-if ($checkVersion("item_description")<20241113001) {
-    Logger::debug("Applying item_description 20241113001");
+if ($checkVersion("descriptions")<20241114001) {
+    Logger::debug("Applying descriptions 20241114001");
     $db->execQuery("
-        CREATE TABLE IF NOT EXISTS public.item_description (
+        CREATE TABLE IF NOT EXISTS public.descriptions (
             baseid character varying(128) NOT NULL PRIMARY KEY,
             name text,
             description text
         );
     ");
-    $updateVersion("item_description",20241113001);
-    Logger::info("Applied patch item_description 20241113001");
+    $updateVersion("descriptions",20241114001);
+    Logger::info("Applied patch descriptions 20241114001");
 }
 
-if ($checkVersion("item_description_custom")<20241113001) {
-    Logger::debug("Applying item_description_custom 20241113001");
+if ($checkVersion("descriptions_custom")<20241114001) {
+    Logger::debug("Applying descriptions_custom 20241114001");
     $db->execQuery("
-        CREATE TABLE IF NOT EXISTS public.item_description_custom (
+        CREATE TABLE IF NOT EXISTS public.descriptions_custom (
             baseid character varying(128) NOT NULL PRIMARY KEY,
             name text,
             description text
         );
     ");
-    $updateVersion("item_description_custom",20241113001);
-    Logger::info("Applied patch item_description_custom 20241113001");
+    $updateVersion("descriptions_custom",20241114001);
+    Logger::info("Applied patch descriptions_custom 20241114001");
+}
+
+if ($checkVersion("descriptions_defaults")<20241114001) {
+    Logger::debug("Applying descriptions_defaults 20241114001");
+    
+    $sqlFile = __DIR__ . '/../data/descriptions_20241114001.sql';
+    if (file_exists($sqlFile)) {
+        $sql = file_get_contents($sqlFile);
+        if ($sql !== false) {
+            $db->execQuery($sql);
+            Logger::info("Imported descriptions from descriptions_20241114001.sql");
+        } else {
+            Logger::warn("Could not read descriptions_20241114001.sql");
+        }
+    } else {
+        Logger::warn("descriptions_20241114001.sql not found at $sqlFile");
+    }
+    
+    $updateVersion("descriptions_defaults",20241114001);
+    Logger::info("Applied patch descriptions_defaults 20241114001");
 }
 
 // Always (re)create combined view once base tables exist
 try {
-    $db->execQuery("DROP VIEW IF EXISTS public.combined_item_descriptions CASCADE;");
+    $db->execQuery("DROP VIEW IF EXISTS public.combined_descriptions CASCADE;");
     $db->execQuery("
-        CREATE VIEW public.combined_item_descriptions AS
+        CREATE VIEW public.combined_descriptions AS
         SELECT c.baseid,
                c.name,
                c.description
-          FROM public.item_description_custom c
+          FROM public.descriptions_custom c
         UNION ALL
         SELECT i.baseid,
                i.name,
                i.description
-          FROM (public.item_description i
-                LEFT JOIN public.item_description_custom c
+          FROM (public.descriptions i
+                LEFT JOIN public.descriptions_custom c
                   ON ((i.baseid)::text = (c.baseid)::text))
          WHERE c.baseid IS NULL;
     ");
-    $updateVersion("combined_item_descriptions",20241113001);
-    Logger::info("Created view combined_item_descriptions 20241113001");
+    $updateVersion("combined_descriptions",20241114001);
+    Logger::info("Created view combined_descriptions 20241114001");
 } catch (Exception $e) {
-    Logger::error("Error creating combined_item_descriptions view: " . $e->getMessage());
+    Logger::error("Error creating combined_descriptions view: " . $e->getMessage());
 }
 
 

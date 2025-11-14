@@ -5,7 +5,7 @@
  * - biography_import: NPC character data
  * - oghma_import: Knowledge base entries
  * - dynamic_oghma_import: Quest-specific knowledge entries
- * - item_import: Item description data
+ * - description_import: Item/entity description data
  */
 if (isset($_POST['csv_import']) && $_POST['csv_import'] == '1' && isset($_POST['type'])) {
     $import_type = $_POST['type'];
@@ -35,8 +35,8 @@ if (isset($_POST['csv_import']) && $_POST['csv_import'] == '1' && isset($_POST['
         case 'dynamic_oghma_import':
             handleDynamicOghmaImport($csvData, $timestamp, $game_timestamp);
             break;
-        case 'item_import':
-            handleItemImport($csvData, $timestamp, $game_timestamp);
+        case 'description_import':
+            handleDescriptionImport($csvData, $timestamp, $game_timestamp);
             break;
         default:
             Logger::error("CSV Import: Unknown import type: $import_type");
@@ -641,29 +641,29 @@ function handleDynamicOghmaImport($csvData, $timestamp, $game_timestamp) {
     return true;
 }
 
-function handleItemImport($csvData, $timestamp, $game_timestamp) {
+function handleDescriptionImport($csvData, $timestamp, $game_timestamp) {
     global $db;
     
-    Logger::info("Item Import: STARTED - Processing CSV data upload");
+    Logger::info("Description Import: STARTED - Processing CSV data upload");
     
     $processedCount = 0;
     $errorCount = 0;
     
     try {
         // Create a temporary file to properly parse complex CSV data
-        $tempFile = tempnam(sys_get_temp_dir(), 'item_import_');
+        $tempFile = tempnam(sys_get_temp_dir(), 'description_import_');
         file_put_contents($tempFile, $csvData);
         
         $handle = fopen($tempFile, 'r');
         if ($handle === false) {
-            Logger::error("Item Import: Could not open temporary CSV file");
+            Logger::error("Description Import: Could not open temporary CSV file");
             return false;
         }
         
         // Skip header row
         fgetcsv($handle, 1000, ',');
         
-        // Process each data row (same format as Oghma)
+        // Process each data row (baseid, name, description)
         while (($data = fgetcsv($handle, 1000, ',')) !== false) {
             $baseid      = trim($data[0] ?? '');
             $name        = $data[1] ?? '';
@@ -678,7 +678,7 @@ function handleItemImport($csvData, $timestamp, $game_timestamp) {
                 // Insert or update record using upsertRowOnConflict
                 try {
                     $db->upsertRowOnConflict(
-                        'item_description_custom',
+                        'descriptions_custom',
                         array(
                             'baseid' => $baseid,
                             'name' => $name,
@@ -687,20 +687,20 @@ function handleItemImport($csvData, $timestamp, $game_timestamp) {
                         'baseid'
                     );
                     $processedCount++;
-                    Logger::debug("Item Import: Successfully processed item: $baseid");
+                    Logger::debug("Description Import: Successfully processed: $baseid");
                 } catch (Exception $e) {
-                    Logger::error("Item Import: Error processing item '$baseid': " . $e->getMessage());
+                    Logger::error("Description Import: Error processing '$baseid': " . $e->getMessage());
                     $errorCount++;
                 }
             } else {
-                Logger::debug("Item Import: Skipping empty or invalid row (baseid missing)");
+                Logger::debug("Description Import: Skipping empty or invalid row (baseid missing)");
             }
         }
         
         fclose($handle);
         unlink($tempFile);
         
-        Logger::info("Item Import: Processing complete. $processedCount records processed, $errorCount errors");
+        Logger::info("Description Import: Processing complete. $processedCount records processed, $errorCount errors");
         
         // Log the event for audit purposes
         $db->insert(
@@ -708,7 +708,7 @@ function handleItemImport($csvData, $timestamp, $game_timestamp) {
             array(
                 'ts' => $timestamp,
                 'gamets' => $game_timestamp,
-                'type' => 'item_import',
+                'type' => 'description_import',
                 'data' => "CSV upload: $processedCount records processed, $errorCount errors",
                 'sess' => 'web',
                 'localts' => time(),
@@ -719,7 +719,7 @@ function handleItemImport($csvData, $timestamp, $game_timestamp) {
         );
         
     } catch (Exception $e) {
-        Logger::error("Item Import: Fatal error processing CSV: " . $e->getMessage());
+        Logger::error("Description Import: Fatal error processing CSV: " . $e->getMessage());
         // Clean up temp file if it exists
         if (isset($tempFile) && file_exists($tempFile)) {
             unlink($tempFile);
