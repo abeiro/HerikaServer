@@ -660,72 +660,40 @@ function handleItemImport($csvData, $timestamp, $game_timestamp) {
             return false;
         }
         
-        // Read and process header
-        $header = fgetcsv($handle, 0, ',');
-        if ($header === false || empty($header)) {
-            Logger::error("Item Import: Invalid CSV header");
-            fclose($handle);
-            unlink($tempFile);
-            return false;
-        }
+        // Skip header row
+        fgetcsv($handle, 1000, ',');
         
-        // Normalize header labels and create header map
-        $headerMap = [];
-        foreach ($header as $i => $colName) {
-            $normalized = strtolower(trim($colName));
-            $headerMap[$normalized] = $i;
-        }
-        
-        // Process each data row
-        while (($data = fgetcsv($handle, 0, ',')) !== false) {
-            if (empty($data) || count($data) < 2) {
-                continue; // Skip empty or invalid rows
-            }
+        // Process each data row (same format as Oghma)
+        while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+            $baseid      = trim($data[0] ?? '');
+            $name        = $data[1] ?? '';
+            $description = $data[2] ?? '';
             
-            // Extract required fields
-            $baseid = '';
-            if (isset($headerMap['baseid']) && isset($data[$headerMap['baseid']])) {
-                $baseid = trim($data[$headerMap['baseid']]);
-            }
-            
-            $name = '';
-            if (isset($headerMap['name']) && isset($data[$headerMap['name']])) {
-                $name = trim($data[$headerMap['name']]);
-            }
-            
-            $description = '';
-            if (isset($headerMap['description']) && isset($data[$headerMap['description']])) {
-                $description = trim($data[$headerMap['description']]);
-            }
-            
-            // Skip if required fields are missing
-            if (empty($baseid)) {
-                Logger::warn("Item Import: Skipping row with missing baseid");
-                $errorCount++;
-                continue;
-            }
-            
-            // Truncate baseid to 128 characters
-            if (strlen($baseid) > 128) {
-                $baseid = substr($baseid, 0, 128);
-            }
-            
-            // Insert or update record using upsertRowOnConflict
-            try {
-                $db->upsertRowOnConflict(
-                    'item_description_custom',
-                    array(
-                        'baseid' => $baseid,
-                        'name' => $name,
-                        'description' => $description
-                    ),
-                    'baseid'
-                );
-                $processedCount++;
-                Logger::debug("Item Import: Successfully processed item: $baseid");
-            } catch (Exception $e) {
-                Logger::error("Item Import: Error processing item '$baseid': " . $e->getMessage());
-                $errorCount++;
+            if (!empty($baseid)) {
+                // Truncate baseid to 128 characters
+                if (strlen($baseid) > 128) {
+                    $baseid = substr($baseid, 0, 128);
+                }
+                
+                // Insert or update record using upsertRowOnConflict
+                try {
+                    $db->upsertRowOnConflict(
+                        'item_description_custom',
+                        array(
+                            'baseid' => $baseid,
+                            'name' => $name,
+                            'description' => $description
+                        ),
+                        'baseid'
+                    );
+                    $processedCount++;
+                    Logger::debug("Item Import: Successfully processed item: $baseid");
+                } catch (Exception $e) {
+                    Logger::error("Item Import: Error processing item '$baseid': " . $e->getMessage());
+                    $errorCount++;
+                }
+            } else {
+                Logger::debug("Item Import: Skipping empty or invalid row (baseid missing)");
             }
         }
         
