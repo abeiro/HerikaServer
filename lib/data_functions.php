@@ -4440,6 +4440,8 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
             'gloves' => 'Gloves',
             'amulet' => 'Amulet',
             'ring' => 'Ring',
+            'cape' => 'Cape',
+            'backpack' => 'Backpack',
             'left_hand' => 'Left Hand',
             'right_hand' => 'Right Hand'
         ];

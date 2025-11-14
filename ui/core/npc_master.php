@@ -1369,6 +1369,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                             'gloves' => '🧤 Gloves',
                             'amulet' => '📿 Amulet',
                             'ring' => '💍 Ring',
+                            'cape' => '🧣 Cape',
+                            'backpack' => '🎒 Backpack',
                             'left_hand' => '🤚 Left Hand',
                             'right_hand' => '👉 Right Hand'
                         ];

@@ -273,8 +273,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     if (!empty($updateData[0])) {
         $npcName = $updateData[0];
         
-        // Parse equipment (8 slots) - format: name^baseid
-        $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'left_hand', 'right_hand'];
+        // Parse equipment (10 slots) - format: name^baseid
+        $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'cape', 'backpack', 'left_hand', 'right_hand'];
         $equipment = [];
         
         for ($i = 0; $i < count($slots); $i++) {
@@ -917,7 +917,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $meta["skills"]["alchemy"]=$splitNameBase[21];
         $meta["skills"]["enchanting"]=$splitNameBase[22];
         
-        // NPC equipment (8 slots from Skyrim) - format: name^baseid
+        // NPC equipment (10 slots from Skyrim) - format: name^baseid
         $equipmentSlots = [
             23 => 'helmet',
             24 => 'armor',
@@ -925,8 +925,10 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             26 => 'gloves',
             27 => 'amulet',
             28 => 'ring',
-            29 => 'left_hand',
-            30 => 'right_hand'
+            29 => 'cape',
+            30 => 'backpack',
+            31 => 'left_hand',
+            32 => 'right_hand'
         ];
         
         foreach ($equipmentSlots as $index => $slotName) {
@@ -942,15 +944,15 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         }
         
         // NPC stats (core attributes)
-        $meta["stats"]["level"]=isset($splitNameBase[31]) ? intval($splitNameBase[31]) : 1;
-        $meta["stats"]["health"]=isset($splitNameBase[32]) ? floatval($splitNameBase[32]) : 0;
-        $meta["stats"]["health_max"]=isset($splitNameBase[33]) ? floatval($splitNameBase[33]) : 0;
-        $meta["stats"]["magicka"]=isset($splitNameBase[34]) ? floatval($splitNameBase[34]) : 0;
-        $meta["stats"]["magicka_max"]=isset($splitNameBase[35]) ? floatval($splitNameBase[35]) : 0;
-        $meta["stats"]["stamina"]=isset($splitNameBase[36]) ? floatval($splitNameBase[36]) : 0;
-        $meta["stats"]["stamina_max"]=isset($splitNameBase[37]) ? floatval($splitNameBase[37]) : 0;
+        $meta["stats"]["level"]=isset($splitNameBase[33]) ? intval($splitNameBase[33]) : 1;
+        $meta["stats"]["health"]=isset($splitNameBase[34]) ? floatval($splitNameBase[34]) : 0;
+        $meta["stats"]["health_max"]=isset($splitNameBase[35]) ? floatval($splitNameBase[35]) : 0;
+        $meta["stats"]["magicka"]=isset($splitNameBase[36]) ? floatval($splitNameBase[36]) : 0;
+        $meta["stats"]["magicka_max"]=isset($splitNameBase[37]) ? floatval($splitNameBase[37]) : 0;
+        $meta["stats"]["stamina"]=isset($splitNameBase[38]) ? floatval($splitNameBase[38]) : 0;
+        $meta["stats"]["stamina_max"]=isset($splitNameBase[39]) ? floatval($splitNameBase[39]) : 0;
 
-        $meta["mods"]=isset($splitNameBase[38]) ?explode("#",$splitNameBase[38]):null;
+        $meta["mods"]=isset($splitNameBase[40]) ?explode("#",$splitNameBase[40]):null;
 
        
         // Importing rules
