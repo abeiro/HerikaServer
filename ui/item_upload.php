@@ -326,6 +326,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     }
 
+    #title-text {
+        font-family: 'MagicCards', serif;
+    }
+
     .page-header p {
         margin: 5px 0;
         color: #d0d0d0;
@@ -406,58 +410,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         flex-wrap: wrap;
     }
 
-    .action-button {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 1em;
-        text-decoration: none;
-        display: inline-block;
-        text-align: center;
-        transition: all 0.3s ease;
-        font-weight: 500;
+    /* Button styles imported from main.css */
+    .action-button.export-csv {
+        background-color: rgba(242, 124, 17, 0.8);
     }
 
-    .action-button.upload-csv {
-        background-color: rgba(74, 158, 255, 0.8);
-        color: white;
+    .action-button.export-csv:hover {
+        background-color: rgba(242, 124, 17, 1);
     }
-
-    .action-button.upload-csv:hover {
-        background-color: rgba(74, 158, 255, 1);
-    }
-
-    .action-button.download-csv {
-        background-color: rgba(144, 238, 144, 0.8);
-        color: black;
-    }
-
-    .action-button.download-csv:hover {
-        background-color: rgba(144, 238, 144, 1);
-    }
-
-    .action-button.edit {
-        background-color: rgba(74, 158, 255, 0.8);
-        color: white;
-        font-size: 0.9em;
-        padding: 6px 12px;
-    }
-
-    .action-button.edit:hover {
-        background-color: rgba(74, 158, 255, 1);
-    }
-
-    .action-button.add-new {
-        background-color: rgba(144, 238, 144, 0.8);
-        color: black;
-    }
-
-    .action-button.add-new:hover {
-        background-color: rgba(144, 238, 144, 1);
-    }
-
-    /* Button styles imported from main.css - no overrides needed */
 
     /* Table container height adjustment */
     .table-container {
@@ -566,7 +526,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         display: flex;
         gap: 10px;
         min-width: 300px;
-        flex-grow: 1;
     }
 
     /* Modal specific overrides - match Oghma styling exactly */
@@ -730,13 +689,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     </div>
 
     <div class="page-header">
-        <h1>
+        <h1 id="page-title">
             <span id="title-text">Item Description Manager</span>
-            <a href="https://dwemerdynamics.hostwiki.io/en/Item-Descriptions" target="_blank" rel="noopener" 
-               style="display: inline-block; margin-left: 15px; color: rgb(242, 124, 17); text-decoration: none; font-size: 0.7em; vertical-align: top; border: 2px solid rgb(242, 124, 17); border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 20px; transition: all 0.3s ease;" 
-               title="View detailed documentation about Item Descriptions"
-               onmouseover="this.style.background='rgb(242, 124, 17)'; this.style.color='white';" 
-               onmouseout="this.style.background='transparent'; this.style.color='rgb(242, 124, 17)';">ℹ</a>
         </h1>
         <p>The <b>Item Description System</b> allows you to create custom visual descriptions for items.</p>
         <p>Upload item descriptions individually or in bulk via CSV files. All custom entries override default templates.</p>
@@ -754,7 +708,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <div class="button-group">
                     <input type="submit" name="submit_csv" value="Upload CSV" class="action-button upload-csv">
                     <a href="?action=download_example" class="action-button download-csv">Download Example CSV</a>
-                    <a href="?action=export_custom_items" class="action-button" style="background: rgba(242, 124, 17, 0.8); color: white;">Export Custom Items</a>
+                    <a href="?action=export_custom_items" class="action-button export-csv">Export Custom Items</a>
                 </div>
                 <p style="margin-top: 15px;">CSV format: baseid, name, description</p>
             </form>
