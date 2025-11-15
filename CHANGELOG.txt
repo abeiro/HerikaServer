@@ -1,5 +1,17 @@
 # CHIM Cached Connector - Changelog
 
+## v1.1.30 (2025-11-15) - DEBUG: Added load debugging
+
+### Debug Changes
+- **ADDED:** Debug logging for metadata loading from database
+  - Logs raw metadata string from DB
+  - Logs decoded metadata array
+  - Logs toggle_thinking value and type
+  - Logs final toggleThinking boolean
+  - Look for "[LLM LOAD DEBUG]" in PHP error log
+
+---
+
 ## v1.1.29 (2025-11-15) - DEBUG: Added metadata tracing
 
 ### Debug Changes
@@ -365,7 +377,7 @@ issues and solutions.
 
 ## Release Information
 
-**Current Version:** v1.1.29
+**Current Version:** v1.1.30
 **Release Date:** 2025-11-15
 **Status:** Production Ready
 **Branch:** claude/1.1.22-testing-01SD3JLwpdiGRsLvnUEQ9JEY
