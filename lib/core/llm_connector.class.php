@@ -50,16 +50,25 @@ class LLMConnector {
             "top_p", "top_k", "min_p", "top_a"
         ];
 
+        // DEBUG: Log metadata before processing
+        error_log("[LLM UPDATE DEBUG] Received metadata: " . var_export($data['metadata'] ?? 'NOT SET', true));
+
         foreach ($data as $k => $v) {
             if (empty("$v") && $v!=="0") {
                 $data[$k] = null;
             }
         }
 
+        // DEBUG: Log metadata after empty check
+        error_log("[LLM UPDATE DEBUG] After empty check: " . var_export($data['metadata'] ?? 'NOT SET', true));
+
         // JSON encode metadata if it's an array
         if (isset($data['metadata']) && is_array($data['metadata'])) {
             $data['metadata'] = json_encode($data['metadata']);
         }
+
+        // DEBUG: Log final metadata value
+        error_log("[LLM UPDATE DEBUG] Final metadata to save: " . var_export($data['metadata'] ?? 'NOT SET', true));
 
         $id = intval($id);
         $where = "id = {$id}";
