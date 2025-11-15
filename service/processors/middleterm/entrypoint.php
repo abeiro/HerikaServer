@@ -18,7 +18,6 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     require_once $enginePath . "lib/core/core_profiles.class.php";
     require_once $enginePath . "lib/core/llm_connector.class.php";
 
-
     //$results = $GLOBALS["db"]->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary where summary is not null order by gamets_truncated desc limit 1"); //0.8ms
     $results = $GLOBALS["db"]->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary where summary is not null"); // 0.5ms, faster 
     $lastMemory = intval($results[0]["gamets_truncated"]);
@@ -36,31 +35,34 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
         require("cmd" . DIRECTORY_SEPARATOR . "generate.php");
     }
 
+    // BgL tracking coords, on NPCs marked with gps_track. in-game hourly
+    $oneDayAgoGamets=$maxRow - ( (24) / 0.0000024);
+    $oneHourAgoGamets=$maxRow - ( (1) / 0.0000024);
+    $fiveDaysAgoGamets=$maxRow - ( (24 * 5) / 0.0000024);
+
     // BgL tracking coords, in-game daily
     
     $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->>'last_coords' IS NOT NULL AND metadata->'last_coords'->>'pending' IS NULL ");
     foreach ($allEnabledBgLNpc as $npc) {
         $mwdata=json_decode($npc["metadata"],true);
-        if (!isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"] || $mwdata["last_coords"]["last_updated"]<($maxRow - ( 24 /0.0000024))) {
-            echo("[BACKGROUND-LIFE] Daily Tracking {$npc["npc_name"]}".PHP_EOL);
+        if (!isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"] || $mwdata["last_coords"]["last_updated"]<($oneDayAgoGamets)) {
+            logger::info("[BACKGROUND-LIFE] Daily Tracking {$npc["npc_name"]}");
             `php $enginePath/debug/simple_llm_request_with_context_life_command.php "{$npc["npc_name"]}" Track`;
         }
         
     }
     
 
-     // BgL tracking coords, on NPCs marked with gps_track. in-game hourly
-    $oneDayAgoGamets=$maxRow - ( (24) / 0.0000024);
-    $oneHourAgoGamets=$maxRow - ( (1) / 0.0000024);
-    $fiveDaysAgoGamets=$maxRow - ( (24 * 5) / 0.0000024);
+ 
 
     $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->'gps_track' = 'true' AND (metadata->'last_coords'->>'pending' IS NULL or (metadata->'last_coords'->>'last_updated')::numeric < $oneHourAgoGamets) ");
+    
     foreach ($allEnabledBgLNpc as $npc) {
          $mwdata=json_decode($npc["metadata"],true);
         if (!isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"] 
             || $mwdata["last_coords"]["last_updated"]<($maxRow - ( (1) / 0.0000024))
             ) {
-            echo("[BACKGROUND-LIFE] RT Tracking {$npc["npc_name"]} gps_track=true ".PHP_EOL);
+            logger::info("[BACKGROUND-LIFE] Hourly Tracking {$npc["npc_name"]}");
             `php $enginePath/debug/simple_llm_request_with_context_life_command.php "{$npc["npc_name"]}" Track`;
         }
     }
@@ -70,19 +72,19 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     foreach ($allEnabledBgLNpc as $npc) {
         $mwdata=json_decode($npc["extended_data"],true);
         if (isset($mwdata["background_life_last_updated"])  && $mwdata["background_life_last_updated"]<($fiveDaysAgoGamets)) {
-            echo("[BACKGROUND-LIFE] Generating event for {$npc["npc_name"]}".PHP_EOL);
+            logger::info("[BACKGROUND-LIFE] Passive event for {$npc["npc_name"]}");
             `php $enginePath/debug/simple_llm_request_with_context_life.php "{$npc["npc_name"]}" `;
         }
         break;  // One per iteration
     }
 
     // BgL commands
-    // In-game weekly
+    // In-game each 5 days
     $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_last_updated' IS NOT NULL AND extended_data->>'background_life_commands' = 'true' ");
     foreach ($allEnabledBgLNpc as $npc) {
         $mwdata=json_decode($npc["extended_data"],true);
         if (isset($mwdata["background_life_last_updated"])  && $mwdata["background_life_last_updated"]<($fiveDaysAgoGamets)) {
-            echo("[BACKGROUND-LIFE] Generating event for {$npc["npc_name"]}".PHP_EOL);
+            logger::info("[BACKGROUND-LIFE] Event for {$npc["npc_name"]}");
             `php $enginePath/debug/simple_llm_request_with_context_life.php "{$npc["npc_name"]}" full`;
         }
         break;  // One per iteration
