@@ -1,5 +1,16 @@
 # CHIM Cached Connector - Changelog
 
+## v1.1.27 (2025-11-15) - ACTUAL WORKING FIX
+
+### Critical Fixes
+- **FIXED:** Check for BOTH toggle_thinking AND toggle_thinking_modal
+  - Issue: When editing connectors, only toggle_thinking_modal exists
+  - Fix: `const toggleThinkingEl = document.getElementById('toggle_thinking') || document.getElementById('toggle_thinking_modal');`
+  - This handles both regular and modal versions of the field
+  - Same fix applied to thinking_tokens and effort_level fields
+
+---
+
 ## v1.1.24 (2025-11-15) - CRITICAL BUG FIX (FINAL - TESTED)
 
 ### Critical Fixes
@@ -332,12 +343,12 @@ issues and solutions.
 
 ## Release Information
 
-**Current Version:** v1.1.24
+**Current Version:** v1.1.27
 **Release Date:** 2025-11-15
 **Status:** Production Ready
 **Branch:** claude/1.1.22-testing-01SD3JLwpdiGRsLvnUEQ9JEY
 
-**Critical:** This version includes essential bug fix - direct textarea access.
+**Critical:** This version includes the ACTUAL working fix - checks for modal field versions.
 Upgrade is highly recommended for all users.
 
 ---
