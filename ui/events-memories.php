@@ -265,6 +265,14 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     body.modal-open {
         overflow: hidden;
     }
+
+    /* Checkbox column styling */
+    th:has(#selectAllCheckbox),
+    td:has(.event-checkbox) {
+        text-align: center !important;
+        width: 40px !important;
+        padding: 8px !important;
+    }
 </style>
 <?php
 
@@ -301,13 +309,31 @@ if (isset($_GET['delete_last'])) {
             WHERE rowid IN (
                 SELECT rowid
                 FROM eventlog
-                WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','infoitems')
+                WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','infoitems','description_import')
                 ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
                 LIMIT $delCount
             )
         ");
         header("Location: events-memories.php?tab=eventlog");
         exit;
+    }
+}
+
+// Handle bulk delete of selected events
+if (isset($_POST['delete_selected']) && !empty($_POST['rowids'])) {
+    $rowids = $_POST['rowids'];
+    if (is_array($rowids)) {
+        // Sanitize and validate row IDs
+        $sanitizedRowids = array_map('intval', $rowids);
+        $sanitizedRowids = array_filter($sanitizedRowids, function($id) { return $id > 0; });
+        
+        if (count($sanitizedRowids) > 0) {
+            $rowidsStr = implode(',', $sanitizedRowids);
+            $query = "DELETE FROM eventlog WHERE rowid IN ($rowidsStr)";
+            $db->query($query);
+            header("Location: events-memories.php?tab=eventlog&deleted=" . count($sanitizedRowids));
+            exit;
+        }
     }
 }
 
@@ -405,6 +431,12 @@ function getTimeColor($time) {
         <!-- Event Log Tab -->
         <div id="eventlog-tab" class="tab-content <?php echo $activeTab === 'eventlog' ? 'active' : ''; ?>">
             <?php
+            // Show success message if events were deleted
+            if (isset($_GET['deleted'])) {
+                $deletedCount = intval($_GET['deleted']);
+                echo "<div style='background: #28a745; color: white; padding: 10px; border-radius: 5px; margin: 10px 0;'>Successfully deleted $deletedCount event(s)!</div>";
+            }
+            
             // Event Log title with integrated monitor toggle and delete buttons
             $isAutoRefresh = isset($_GET["autorefresh"]) && $_GET["autorefresh"];
             echo "<div style='display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0;'>";
@@ -417,7 +449,8 @@ function getTimeColor($time) {
             }
             
             // Add delete buttons inline
-            echo "<div style='margin-left: auto; display: flex; gap: 5px; flex-wrap: wrap;'>";
+            echo "<div style='margin-left: auto; display: flex; gap: 5px; flex-wrap: wrap; align-items: center;'>";
+            echo "<button id='deleteSelectedBtn' onclick='deleteSelectedEvents()' class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em; display: none;'>🗑️ Delete Selected (<span id='selectedCount'>0</span>)</button>";
             echo "<button onclick=\"if(confirm('Are you sure you want to delete the last 20 events?')) window.location.href='events-memories.php?tab=eventlog&delete_last=20'\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete Latest 20</button>";
             echo "<button onclick=\"if(confirm('Are you sure you want to delete the last 50 events?')) window.location.href='events-memories.php?tab=eventlog&delete_last=50'\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete Latest 50</button>";
             echo "<button onclick=\"if(confirm('Are you sure you want to delete the last 100 events?')) window.location.href='events-memories.php?tab=eventlog&delete_last=100'\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete Latest 100</button>";
@@ -432,7 +465,7 @@ function getTimeColor($time) {
             $results = $db->fetchAll(
                 "SELECT type, data, people, gamets, localts, ts, ROWID
                  FROM eventlog a
-                 WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems')
+                 WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import')
                  ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
                  LIMIT $limit OFFSET $offset"
             );
@@ -447,6 +480,9 @@ function getTimeColor($time) {
             
             $mappedResults = array_map(function ($row) use ($columnHeaders) {
                 $mappedRow = [];
+                // Add checkbox column first
+                $mappedRow['☑'] = '<input type="checkbox" class="event-checkbox" data-rowid="' . htmlspecialchars($row['ROWID'] ?? '') . '" style="cursor: pointer; width: 18px; height: 18px;">';
+                
                 foreach ($row as $key => $value) {
                     if ($key === 'gamets' && !empty($value)) {
                         $value = convert_gamets2skyrim_long_date2($value);
@@ -506,7 +542,7 @@ function getTimeColor($time) {
             $nextPage = $page + 1;
             
             // Get total count for pagination
-            $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','infoitems')";
+            $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','infoitems','description_import')";
             $countResult = $db->fetchAll($countQuery);
             $totalRecords = $countResult[0]['total'];
             $totalPages = ceil($totalRecords / $limit);
@@ -1241,6 +1277,104 @@ function switchTab(tabName) {
     url.searchParams.set('tab', tabName);
     window.history.pushState({}, '', url);
 }
+
+// Checkbox selection functionality
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.event-checkbox:checked');
+    const count = checkboxes.length;
+    const deleteBtn = document.getElementById('deleteSelectedBtn');
+    const countSpan = document.getElementById('selectedCount');
+    
+    if (countSpan) {
+        countSpan.textContent = count;
+    }
+    
+    if (deleteBtn) {
+        deleteBtn.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+}
+
+function deleteSelectedEvents() {
+    const checkboxes = document.querySelectorAll('.event-checkbox:checked');
+    const rowids = Array.from(checkboxes).map(cb => cb.getAttribute('data-rowid'));
+    
+    if (rowids.length === 0) {
+        alert('Please select at least one event to delete.');
+        return;
+    }
+    
+    if (!confirm(`Are you sure you want to delete ${rowids.length} selected event(s)?`)) {
+        return;
+    }
+    
+    // Create a form and submit it
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = 'events-memories.php?tab=eventlog';
+    
+    const deleteInput = document.createElement('input');
+    deleteInput.type = 'hidden';
+    deleteInput.name = 'delete_selected';
+    deleteInput.value = '1';
+    form.appendChild(deleteInput);
+    
+    rowids.forEach(rowid => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'rowids[]';
+        input.value = rowid;
+        form.appendChild(input);
+    });
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Toggle all checkboxes
+function toggleAllCheckboxes(selectAllCheckbox) {
+    const checkboxes = document.querySelectorAll('.event-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = selectAllCheckbox.checked;
+    });
+    updateSelectedCount();
+}
+
+// Add event listeners when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Add "Select All" checkbox to the table header
+    const eventlogTab = document.getElementById('eventlog-tab');
+    if (eventlogTab) {
+        const tables = eventlogTab.querySelectorAll('table');
+        if (tables.length > 0) {
+            const firstTable = tables[0];
+            const headerRow = firstTable.querySelector('tr.primary');
+            if (headerRow) {
+                const firstTh = headerRow.querySelector('th');
+                if (firstTh && firstTh.textContent.trim() === '☑') {
+                    firstTh.innerHTML = '<input type="checkbox" id="selectAllCheckbox" onchange="toggleAllCheckboxes(this)" style="cursor: pointer; width: 18px; height: 18px;" title="Select/Deselect All">';
+                }
+            }
+        }
+    }
+    
+    // Add change listeners to all checkboxes
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('event-checkbox')) {
+            updateSelectedCount();
+            
+            // Update "Select All" checkbox state
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            if (selectAllCheckbox) {
+                const allCheckboxes = document.querySelectorAll('.event-checkbox');
+                const checkedCheckboxes = document.querySelectorAll('.event-checkbox:checked');
+                selectAllCheckbox.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length;
+            }
+        }
+    });
+    
+    // Initial count update
+    updateSelectedCount();
+});
 </script>
 
 <?php
