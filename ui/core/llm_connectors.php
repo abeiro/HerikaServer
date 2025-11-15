@@ -2087,50 +2087,24 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
 
 // Override consolidation() to handle metadata fields for llm_connectors
 window.consolidation = function() {
-    console.log('[Consolidation] ===== CALLED =====');
-    console.log('[Consolidation] Called from:', new Error().stack.split('\n')[1]);
+    console.log('[Consolidation] LLM Connectors consolidation called');
 
-    // Debug: Find ALL elements with IDs containing "toggle" or "thinking"
-    const allElementsWithIds = document.querySelectorAll('[id]');
-    const relevantIds = [];
-    allElementsWithIds.forEach(el => {
-        if (el.id.includes('toggle') || el.id.includes('thinking')) {
-            relevantIds.push({
-                id: el.id,
-                tag: el.tagName,
-                type: el.type,
-                visible: el.offsetParent !== null,
-                inForm: !!el.form
-            });
-        }
-    });
-    console.log('[Consolidation] Elements with toggle/thinking IDs:', relevantIds.length);
-    relevantIds.forEach((info, i) => {
-        console.log(`  [${i}] id="${info.id}" tag=${info.tag} type=${info.type} visible=${info.visible} inForm=${info.inForm}`);
-    });
-
-    // Try to find toggle_thinking
-    const toggleThinkingEl = document.getElementById('toggle_thinking');
-    console.log('[Consolidation] getElementById("toggle_thinking"):', toggleThinkingEl);
+    // CRITICAL FIX: Try BOTH regular and modal versions of toggle_thinking
+    const toggleThinkingEl = document.getElementById('toggle_thinking') || document.getElementById('toggle_thinking_modal');
 
     if (!toggleThinkingEl) {
-        console.log('[Consolidation] ERROR: No toggle_thinking field found');
-        console.log('[Consolidation] Trying querySelectorAll instead...');
-        const allToggleThinking = document.querySelectorAll('[id="toggle_thinking"]');
-        console.log('[Consolidation] querySelectorAll found:', allToggleThinking.length, 'elements');
-        allToggleThinking.forEach((el, i) => {
-            console.log(`  [${i}]:`, el, 'form:', el.form, 'visible:', el.offsetParent !== null);
-        });
-        return true; // Can't continue without this field
-    }
-
-    // Get the form that contains the toggle_thinking field
-    const form = toggleThinkingEl.form;
-    if (!form) {
-        console.log('[Consolidation] ERROR: toggle_thinking field has no parent form');
+        console.log('[Consolidation] ERROR: No toggle_thinking field found (tried both regular and modal)');
         return true;
     }
-    console.log('[Consolidation] Found correct form via toggle_thinking field');
+    console.log('[Consolidation] Found toggle_thinking field:', toggleThinkingEl.id);
+
+    // Get the form that contains the field
+    const form = toggleThinkingEl.form;
+    if (!form) {
+        console.log('[Consolidation] ERROR: Field has no parent form');
+        return true;
+    }
+    console.log('[Consolidation] Found form via', toggleThinkingEl.id);
 
     // Find the metadata textarea in THIS form
     const metadataTextarea = form.querySelector('textarea[name="metadata"]');
