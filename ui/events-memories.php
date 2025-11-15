@@ -301,7 +301,7 @@ if (isset($_GET['delete_last'])) {
             WHERE rowid IN (
                 SELECT rowid
                 FROM eventlog
-                WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close')
+                WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','infoitems')
                 ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
                 LIMIT $delCount
             )
@@ -432,7 +432,7 @@ function getTimeColor($time) {
             $results = $db->fetchAll(
                 "SELECT type, data, people, gamets, localts, ts, ROWID
                  FROM eventlog a
-                 WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import')
+                 WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems')
                  ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
                  LIMIT $limit OFFSET $offset"
             );
@@ -506,7 +506,7 @@ function getTimeColor($time) {
             $nextPage = $page + 1;
             
             // Get total count for pagination
-            $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init')";
+            $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','infoitems')";
             $countResult = $db->fetchAll($countQuery);
             $totalRecords = $countResult[0]['total'];
             $totalPages = ceil($totalRecords / $limit);

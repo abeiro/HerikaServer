@@ -818,16 +818,26 @@ if ($gameRequest[0] == "npcspellcast") {
 
 // Exit if only a event info log.
 
-if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","itemfound",
-    "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast","backgroundaction","reanimate"])) {
+if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","infoitems","chatme","chat","infoaction","death","itemfound",
+    "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast","backgroundaction","reanimate","itempickup"])) {
     $gameRequest[3]=isset($gameRequest[3])?$gameRequest[3]:"";
     $lastInfoNpcData=$db->escape($gameRequest[3]);
-    if (in_array($gameRequest[0],['infonpc','infoloc','infonpc_close'])) {
+    if (in_array($gameRequest[0],['infonpc','infoloc','infonpc_close','infoitems'])) {
         // Special cases
-        $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
-        if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
-            //error_log("Skipping {$gameRequest[0]}");
-            terminate();
+        if ($gameRequest[0] === 'infoitems') {
+            // For infoitems, use shorter duplicate window (2 seconds) to allow refreshes
+            $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type = 'infoitems' and data='$lastInfoNpcData' and localts>".(time()-2));
+            
+            if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
+                terminate();
+            }
+        } else {
+            // For other types, use normal 5 second window
+            $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
+            if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
+                //error_log("Skipping {$gameRequest[0]}");
+                terminate();
+            }
         }
     }
     // Update player name from infoplayer event
@@ -853,8 +863,9 @@ if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme
     if (in_array($gameRequest[0],['backgroundaction'])) {
         
         require_once($GLOBALS["ENGINE_PATH"]."/processor/background_event.php");
-    } else
+    } else {
         logEvent($gameRequest);
+    }
     terminate();
 }
 

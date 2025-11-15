@@ -34,6 +34,7 @@ $ENABLED_FUNCTIONS_LOCAL=[
     'ReturnBackHome',
     'GiveGoldTo',
     'GiveItemTo',
+    'PickupItem',
     'GoToSleep',
     'UseSoulGaze'
 //    'WaitHere'
@@ -103,7 +104,8 @@ $F_TRANSLATIONS_LOCAL["ComeCloser"]="{$GLOBALS["HERIKA_NAME"]} aproaches to {$GL
 $F_TRANSLATIONS_LOCAL["Brawl"]="{$GLOBALS["HERIKA_NAME"]} engages non lethtal combat with another actor, using weapons";
 $F_TRANSLATIONS_LOCAL["ReturnBackHome"]="{$GLOBALS["HERIKA_NAME"]} travels to home/origin place.Returns home.";
 $F_TRANSLATIONS_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives gold/coins/septims to another actor. Specify the amount to give";
-$F_TRANSLATIONS_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives a specific item from inventory to another actor. REQUIRED: Check <inventory> tag first, then specify exact item name and amount";
+$F_TRANSLATIONS_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives a specific item from inventory to another actor. REQUIRED: Must include 'item' field with exact item name from <inventory> tag, and 'target' field with recipient name";
+$F_TRANSLATIONS_LOCAL["PickupItem"]="{$GLOBALS["HERIKA_NAME"]} picks up a specific item from the ground. Use the exact RefID:ItemName format from nearby_items (e.g. 0x12345:Iron Sword)";
 $F_TRANSLATIONS_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} takes a nap";
 $F_TRANSLATIONS_LOCAL["UseSoulGaze"]="Use the spell SoulGaze, a powerful incantation that allows {$GLOBALS["HERIKA_NAME"]} to perceive surroundings in vivid detail through {$GLOBALS["PLAYER_NAME"]}'s eyes. The spell, however, causes some disturbance to the caster.";
 
@@ -142,6 +144,7 @@ $F_RETURNMESSAGES_LOCAL["Brawl"]="{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES_LOCAL["ReturnBackHome"]="{$GLOBALS["HERIKA_NAME"]} goes back home";
 $F_RETURNMESSAGES_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives gold to #TARGET#";
 $F_RETURNMESSAGES_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives #ITEM# to #TARGET#";
+$F_RETURNMESSAGES_LOCAL["PickupItem"]="{$GLOBALS["HERIKA_NAME"]} picks up #ITEM#";
 $F_RETURNMESSAGES_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} takes a nap";
 $F_RETURNMESSAGES_LOCAL["UseSoulGaze"]="{$GLOBALS["HERIKA_NAME"]} used soulgaze";
 
@@ -183,7 +186,8 @@ $F_NAMES_LOCAL["ComeCloser"]="ComeCloser";
 $F_NAMES_LOCAL["Brawl"]="Fight";
 $F_NAMES_LOCAL["ReturnBackHome"]="ExitLocation";
 $F_NAMES_LOCAL["GiveGoldTo"]="GiveCoinsTo";
-$F_NAMES_LOCAL["GiveItemTo"]="GiveItemToActor";
+$F_NAMES_LOCAL["GiveItemTo"]="GiveItemTo";
+$F_NAMES_LOCAL["PickupItem"]="PickupItem";
 $F_NAMES_LOCAL["GoToSleep"]="GoToSleep";
 $F_NAMES_LOCAL["UseSoulGaze"]="UseSoulGaze";
 
@@ -670,6 +674,24 @@ $GLOBALS["FUNCTIONS"] = [
         ]
     ],
     [
+        "name" => $F_NAMES_LOCAL["PickupItem"],
+        "description" => $F_TRANSLATIONS_LOCAL["PickupItem"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Target actor (leave empty for PickupItem)"
+                ],
+                "item" => [
+                    "type" => "string",
+                    "description" => "REQUIRED: Exact RefID:ItemName from <nearby_items> tag (e.g., 0x12345:Iron Sword). Must match format exactly.",
+                ]
+            ],
+            "required" => ["item"],
+        ]
+    ],
+    [
         "name" => $F_NAMES_LOCAL["GoToSleep"],
         "description" => $F_TRANSLATIONS_LOCAL["GoToSleep"],
         "parameters" => [
@@ -819,6 +841,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'Brawl',
         'GiveGoldTo',
         'GiveItemTo',
+        'PickupItem',
         'GoToSleep',
         'UseSoulGaze'
 
@@ -851,6 +874,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'Brawl',
         'GiveGoldTo',
         'GiveItemTo',
+        'PickupItem',
         'GoToSleep',
         'UseSoulGaze'
         //'GetDateTime',

@@ -86,7 +86,7 @@ function DataLastDataFor($actor, $lastNelements = -10)
     end||a.data  as data 
     FROM  eventlog a WHERE data like '%$actor%' 
     and type<>'combatend'  
-    and type<>'bored' and type<>'init' and type<>'lockpicked' and type<>'infonpc' and type<>'infoloc' and type<>'info' and type<>'funcret'  and type<>'quest'
+    and type<>'bored' and type<>'init' and type<>'lockpicked' and type<>'infonpc' and type<>'infoloc' and type<>'infoitems' and type<>'info' and type<>'funcret'  and type<>'quest'
     and type<>'user_input'
     and type<>'funccall'  and type<>'togglemodel' order by gamets desc,ts desc,localts desc,rowid desc LIMIT 150 OFFSET 0");
     $lastData = "";
@@ -276,6 +276,79 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     $followersV2[]=$GLOBALS["PLAYER_NAME"];
 
     $lastDialog[] = array('role' => 'user', 'content' => "<nearby_actors>\n# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange\n</nearby_actors>");
+    
+    // Add nearby items to context if available
+    $itemsInRange = DataItemsInCloseRange();
+    
+    if (!empty($itemsInRange)) {
+        $itemsList = explode(',', $itemsInRange);
+        $formattedItems = [];
+        $seenBaseIDs = [];
+        $itemDescriptions = [];
+        
+        foreach ($itemsList as $item) {
+            $trimmedItem = trim($item);
+            if (empty($trimmedItem)) continue;
+            
+            // Parse format: "0xRefID:0xBaseID:ItemName" (new) or "0xRefID:ItemName" (old)
+            $parts = explode(':', $trimmedItem, 3);
+            
+            if (count($parts) >= 3) {
+                // New format with BaseID
+                $refID = $parts[0];
+                $baseID = $parts[1];
+                $itemName = $parts[2];
+                
+                // Format for display: "RefID:ItemName" (hide BaseID from NPC, keep STEALING tag)
+                $displayItem = "{$refID}:{$itemName}";
+                $formattedItems[] = $displayItem;
+                
+                // Strip (STEALING) tag for description lookup to avoid duplicates
+                $itemNameClean = str_replace(' (STEALING)', '', $itemName);
+                
+                // Track unique base IDs for descriptions
+                if (!in_array($baseID, $seenBaseIDs)) {
+                    $seenBaseIDs[] = $baseID;
+                    
+                    // Look up description from description table
+                    $baseIDDec = hexdec(str_replace('0x', '', $baseID));
+                    $descRecord = $GLOBALS["db"]->fetchOne(
+                        "SELECT description FROM item_descriptions WHERE baseid = '{$baseIDDec}' LIMIT 1"
+                    );
+                    
+                    if ($descRecord && !empty($descRecord['description'])) {
+                        // Store description under clean name (without STEALING tag)
+                        $itemDescriptions[$itemNameClean] = $descRecord['description'];
+                    }
+                }
+            } elseif (count($parts) == 2) {
+                // Old format without BaseID - just use as-is
+                $refID = $parts[0];
+                $itemName = $parts[1];
+                
+                // Keep STEALING tag in display
+                $displayItem = "{$refID}:{$itemName}";
+                $formattedItems[] = $displayItem;
+            }
+        }
+        
+        if (!empty($formattedItems)) {
+            $itemsText = implode("\n## ", $formattedItems);
+            
+            // Add descriptions for unique items if available
+            $descriptionText = "";
+            if (!empty($itemDescriptions)) {
+                $descParts = [];
+                foreach ($itemDescriptions as $name => $desc) {
+                    $descParts[] = "{$name}: {$desc}";
+                }
+                $descriptionText = "\n\n# ITEM DESCRIPTIONS\n## " . implode("\n## ", $descParts);
+            }
+            
+            $contextContent = "<nearby_items>\n# NEARBY ITEMS ON THE GROUND (format: RefID:ItemName)\n## {$itemsText}{$descriptionText}\n</nearby_items>";
+            $lastDialog[] = array('role' => 'user', 'content' => $contextContent);
+        }
+    }
     
     /*
     if (!isset($GLOBALS["IS_NPC"]) || !$GLOBALS["IS_NPC"])
@@ -964,7 +1037,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     end as subtype,a.data  as data , gamets,localts,type,location
     FROM  eventlog a WHERE 1=1
     and type<>'combatend'  
-    and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc'  
+    and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc' and type<>'infoitems'  
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
     and type<>'request' and type<>'playerinfo' and type<>'im_alive'
     ".(($actorEscaped)?" 
@@ -1637,7 +1710,7 @@ function DataLastDataExpandedForBak($actor, $lastNelements = -10,$sqlfilter="")
     end||a.data  as data , gamets,localts,type
     FROM  eventlog a WHERE 1=1
     and type<>'combatend'  
-    and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' 
+    and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infoitems' 
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and type<>'backgroundaction'
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  
     and gamets>".($currentGameTs-(60*60*60*60))."
@@ -2394,6 +2467,32 @@ function DataBeingsInCloseRange($excludeFarAway=false)
     }
 
     return $s_res;
+}
+
+function DataItemsInCloseRange()
+{
+    global $db;
+
+    $lastItems = $db->fetchAll("SELECT a.data as data FROM eventlog a WHERE type in ('infoitems') order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+    
+    if (!is_array($lastItems) || sizeof($lastItems) == 0) {
+        return "";
+    }
+    
+    $s_items = trim($lastItems[0]["data"] ?? "");
+    
+    if (strlen($s_items) > 0) {
+        if (stripos($s_items, "items in range") !== false) {
+            // Extract items from "(items in range:0x123:Item1,0x456:Item2)"
+            // Use greedy match (.+) to capture everything including (STEALING) tags until the LAST closing paren
+            if (preg_match('/\(items in range:(.+)\)/', $s_items, $matches)) {
+                $items = $matches[1];
+                return $items; // Return comma-separated list
+            }
+        }
+    }
+    
+    return "";
 }
 
 // Find actor name with closest name, useful to sanitize actions parameters
@@ -3164,6 +3263,7 @@ function call_llm() {
         "mood"=>"One of :".implode("|",explode(",",$GLOBALS["EMOTEMOODS"])),
         "action"=>"One of :".implode("|",$GLOBALS["FUNC_LIST"]),
         "target"=>"action target actor|action destination location name",
+        "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem - use exact name from inventory or nearby_items)",
         "lang"=>"language used, (es|en|fr|...)"]);
 
 
@@ -3628,7 +3728,104 @@ function call_llm() {
                                 error_log("[ACTION POSTFILTER SetCurrentTask, using target as parameter {$actionParts2[1]}] ");
                             }
 
+                        } else if ($actionParts2[0]=="PickupItem") {
+                            // Parse item parameter - can be JSON or plain string
+                            $itemParam = trim($actionParts2[1]);
                             
+                            Logger::info("[PickupItem PostFilter] Raw LLM item parameter: '{$itemParam}'");
+                            
+                            // Check if parameter is JSON (multi-param format)
+                            if (substr($itemParam, 0, 1) === '{') {
+                                // JSON format: {"target":"","item":"0xFF00550D:Diamond"}
+                                $params = json_decode($itemParam, true);
+                                $itemParam = isset($params['item']) ? trim($params['item']) : '';
+                                Logger::info("[PickupItem PostFilter] Extracted item from JSON: '{$itemParam}'");
+                            }
+                            
+                            // If still empty, can't proceed
+                            if (empty($itemParam)) {
+                                Logger::warn("[PickupItem PostFilter] No item parameter provided, skipping");
+                                continue;
+                            }
+                            
+                            // Get the last infoitems context from eventlog (contains RefID:BaseID:ItemName)
+                            $lastItemsContext = $GLOBALS["db"]->fetchOne(
+                                "SELECT data FROM eventlog WHERE type='infoitems' ORDER BY localts DESC LIMIT 1"
+                            );
+                            
+                            if ($lastItemsContext && !empty($lastItemsContext['data'])) {
+                                Logger::info("[PickupItem PostFilter] Found infoitems in database");
+                                // Extract items from context: "(items in range:0xRef:0xBase:Item1,0xRef2:0xBase2:Item2)"
+                                // Use greedy match to capture everything including (STEALING) tags
+                                if (preg_match('/\(items in range:(.+)\)/', $lastItemsContext['data'], $matches)) {
+                                    $itemsStr = $matches[1];
+                                    $itemsList = explode(',', $itemsStr);
+                                    
+                                    Logger::info("[PickupItem PostFilter] Found " . count($itemsList) . " items in database");
+                                    Logger::info("[PickupItem PostFilter] First 3 items: " . implode(' | ', array_slice($itemsList, 0, 3)));
+                                    
+                                    $foundItem = false;
+                                    
+                                    // Check if LLM provided the RefID:ItemName format
+                                    if (preg_match('/^0x[0-9A-Fa-f]+:/', $itemParam)) {
+                                        // LLM provided "0xRefID:ItemName", extract the RefID
+                                        $paramParts = explode(':', $itemParam, 2);
+                                        $paramRefID = $paramParts[0];
+                                        
+                                        Logger::info("[PickupItem PostFilter] LLM provided RefID: {$paramRefID}, searching for exact match...");
+                                        
+                                        // Search for exact RefID match
+                                        foreach ($itemsList as $itemEntry) {
+                                            // Parse "RefID:BaseID:ItemName" from database
+                                            $entryParts = explode(':', trim($itemEntry), 3);
+                                            if (count($entryParts) >= 3) {
+                                                $refID = $entryParts[0];
+                                                $itemName = $entryParts[2];
+                                                
+                                                // Exact RefID match (case-insensitive)
+                                                if (strcasecmp($refID, $paramRefID) === 0) {
+                                                    // Send RefID:ItemName without (STEALING) tag to game
+                                                    $cleanItemName = str_replace(' (STEALING)', '', $itemName);
+                                                    $cleanFormat = "{$refID}:{$cleanItemName}";
+                                                    Logger::info("[PickupItem PostFilter] EXACT MATCH FOUND! Sending: {$cleanFormat}");
+                                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|PickupItem@{$cleanFormat}";
+                                                    $foundItem = true;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        
+                                        if (!$foundItem) {
+                                            Logger::warn("[PickupItem PostFilter] No exact match found for RefID: {$paramRefID}");
+                                            Logger::warn("[PickupItem PostFilter] Item may have despawned or moved. Available RefIDs: " . 
+                                                implode(', ', array_map(function($item) {
+                                                    $parts = explode(':', trim($item), 3);
+                                                    return $parts[0] ?? 'invalid';
+                                                }, array_slice($itemsList, 0, 10))));
+                                        }
+                                    } else {
+                                        // LLM provided just the item name, search by name
+                                        foreach ($itemsList as $itemEntry) {
+                                            $entryParts = explode(':', trim($itemEntry), 3);
+                                            if (count($entryParts) >= 3) {
+                                                $refID = $entryParts[0];
+                                                $itemName = $entryParts[2];
+                                                
+                                                // Strip (STEALING) tag for comparison
+                                                $cleanItemName = str_replace(' (STEALING)', '', $itemName);
+                                                
+                                                if (stripos($cleanItemName, $itemParam) !== false) {
+                                                    // Send RefID:ItemName without (STEALING) tag to game
+                                                    $displayFormat = "{$refID}:{$cleanItemName}";
+                                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|PickupItem@{$displayFormat}";
+                                                    $foundItem = true;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
 
                         }
                     }
@@ -3686,13 +3883,26 @@ function call_llm() {
 function AddFirstTimeMet($followerName,$momentum,$gamets,$ts) {
 
     $fn=$GLOBALS["db"]->escape($followerName);
-    $already=$GLOBALS["db"]->fetchAll("select 1 as t from memory where event='first_met' and message like '%met {$fn}%'");
+    
+    // Check if already recorded - with error handling
+    $already = @$GLOBALS["db"]->fetchAll("select 1 as t from memory where event='first_met' and message like '%met {$fn}%'");
+    if ($already === false) {
+        Logger::warn("[AddFirstTimeMet] Query to memory table failed for follower: {$followerName}");
+        return;
+    }
+    
     if (is_array($already) && sizeof($already)>0) {
         // Already exists;
         return;
     }
 
-    $realFirst=$GLOBALS["db"]->fetchAll("SELECT gamets,convert_gamets2skyrim_date(gamets) as sk_date,ts,localts FROM speech where companions ilike '%$fn%' order by rowid asc limit 1 offset 0");
+    // Get first interaction timestamp - with error handling
+    $realFirst = @$GLOBALS["db"]->fetchAll("SELECT gamets,convert_gamets2skyrim_date(gamets) as sk_date,ts,localts FROM speech where companions ilike '%$fn%' order by rowid asc limit 1 offset 0");
+    
+    if ($realFirst === false) {
+        Logger::warn("[AddFirstTimeMet] Query to speech table failed for follower: {$followerName}");
+        return;
+    }
 
     if (is_array($realFirst) && sizeof($realFirst)>0) {
         $gamets=$realFirst[0]["gamets"];

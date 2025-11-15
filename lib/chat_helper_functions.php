@@ -1708,7 +1708,7 @@ function logEvent($dataArray,$forcePeople='')
             $dataArray[2] = $new_gts;
         }
 
-        $db->insert(
+        $insertResult = $db->insert(
             'eventlog',
             array(
                 'ts' => $dataArray[1],
