@@ -15,7 +15,7 @@
             "mod_download_url": ""
         },
         "aiagent_nsfw": {
-            "name": "AIAgentNSFW",
+            "name": "aiagent_nsfw",
             "description": "Integration with OSTIM.",
             "git_repo": "maister-sk/aiagent_nsfw",
             "github_url": "https://github.com/maister-sk/aiagent_nsfw",
