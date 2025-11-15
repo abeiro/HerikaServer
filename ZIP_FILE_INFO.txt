@@ -1,8 +1,8 @@
-# CHIM Cached Connector v1.1.23 - Complete File List
+# CHIM Cached Connector v1.1.24 - Complete File List
 
-**Version:** 1.1.23 FINAL FIX
+**Version:** 1.1.24 FINAL FIX (TESTED)
 **Date:** 2025-11-15
-**Fix Applied:** Thinking Toggle Save Bug Fixed (v1.0.12 approach + all other metadata fields preserved)
+**Fix Applied:** Thinking Toggle Save Bug Fixed - Direct textarea access method
 
 ---
 
@@ -149,15 +149,16 @@ IMPORTANT: Always backup before installing!
 
 ## Version Information
 
-Package Version: 1.1.23 FINAL FIX
+Package Version: 1.1.24 FINAL FIX (TESTED)
 Created: 2025-11-15
 Branch: claude/1.1.22-testing-01SD3JLwpdiGRsLvnUEQ9JEY
 Status: Production Ready
 
 Critical Fixes:
-- Thinking toggle save issue fixed using exact v1.0.12 approach
+- Thinking toggle save issue FIXED - metadata textarea accessed directly via querySelector
+- Issue: form.metadata doesn't work when both textarea and metadata[...] array fields exist
+- Solution: Use form.querySelector('textarea[name="metadata"]') instead
 - Debugger statement removed
-- Metadata consolidation working for all fields
-- All other metadata fields (provider_caching, response_format, etc.) preserved
+- All metadata fields working (thinking toggles + provider_caching, response_format, etc.)
 - All connector functionality intact
 

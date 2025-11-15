@@ -2096,10 +2096,13 @@ window.consolidation = function() {
         return true; // Let it submit anyway
     }
 
-    if (!form.metadata) {
-        console.log('[Consolidation] No form.metadata field found');
+    // Find the metadata textarea directly (form.metadata doesn't work when there are metadata[...] fields)
+    const metadataTextarea = form.querySelector('textarea[name="metadata"]');
+    if (!metadataTextarea) {
+        console.log('[Consolidation] No metadata textarea found');
         return true; // Let it submit anyway
     }
+    console.log('[Consolidation] Found metadata textarea');
 
     try {
         // Start with empty metadata object
@@ -2107,7 +2110,7 @@ window.consolidation = function() {
 
         // Try to parse existing metadata from textarea
         try {
-            const metaStr = form.metadata.value || '{}';
+            const metaStr = metadataTextarea.value || '{}';
             metadata = JSON.parse(metaStr);
             console.log('[Consolidation] Starting with metadata:', metadata);
         } catch (_e) {
@@ -2184,9 +2187,9 @@ window.consolidation = function() {
             }
         });
 
-        // Update form metadata field with final JSON
-        form.metadata.value = JSON.stringify(metadata);
-        console.log('[Consolidation] Final metadata JSON:', form.metadata.value);
+        // Update metadata textarea with final JSON
+        metadataTextarea.value = JSON.stringify(metadata);
+        console.log('[Consolidation] Final metadata JSON:', metadataTextarea.value);
 
         // CRITICAL: Remove name attributes from all metadata[...] fields
         // so only the textarea submits to PHP

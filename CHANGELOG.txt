@@ -1,5 +1,15 @@
 # CHIM Cached Connector - Changelog
 
+## v1.1.24 (2025-11-15) - CRITICAL BUG FIX (FINAL - TESTED)
+
+### Critical Fixes
+- **FIXED:** Metadata textarea not found - access it directly via querySelector
+  - Fixed: `form.metadata` doesn't work when both textarea AND metadata[...] fields exist
+  - Changed to: `form.querySelector('textarea[name="metadata"]')`
+  - Now the consolidation function can actually find and update the textarea
+
+---
+
 ## v1.1.23 (2025-11-15) - CRITICAL BUG FIX (FINAL)
 
 ### Critical Fixes
@@ -322,12 +332,12 @@ issues and solutions.
 
 ## Release Information
 
-**Current Version:** v1.1.23
+**Current Version:** v1.1.24
 **Release Date:** 2025-11-15
 **Status:** Production Ready
 **Branch:** claude/1.1.22-testing-01SD3JLwpdiGRsLvnUEQ9JEY
 
-**Critical:** This version includes essential bug fixes with proven v1.0.12 approach.
+**Critical:** This version includes essential bug fix - direct textarea access.
 Upgrade is highly recommended for all users.
 
 ---
