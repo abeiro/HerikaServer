@@ -2104,7 +2104,10 @@ window.consolidation = function() {
             });
         }
     });
-    console.log('[Consolidation] Elements with toggle/thinking IDs:', relevantIds);
+    console.log('[Consolidation] Elements with toggle/thinking IDs:', relevantIds.length);
+    relevantIds.forEach((info, i) => {
+        console.log(`  [${i}] id="${info.id}" tag=${info.tag} type=${info.type} visible=${info.visible} inForm=${info.inForm}`);
+    });
 
     // Try to find toggle_thinking
     const toggleThinkingEl = document.getElementById('toggle_thinking');
