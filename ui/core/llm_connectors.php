@@ -269,7 +269,6 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
         <?php endif; ?>
         <input type="hidden" name="partial" value="editor">
-        <input type="hidden" name="metadata" value='<?= htmlspecialchars($editItem["metadata"] ?? "{}") ?>'>
         <div class="two-col-llm">
             <div>
                 <div class="top-actions" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
@@ -372,16 +371,16 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 ?>
                 <div id="reasoning_details" style="margin-top:8px; margin-left:20px; padding:8px; border-left:2px solid #444;">
                     <label class="label-with-toggle"><span class='tip-label' data-tip='Enable thinking/reasoning for supported models (like o1, DeepSeek-R1). Shows model internal reasoning process.'>Toggle Thinking</span>
-                        <input type="hidden" id="toggle_thinking_hidden" value="false">
-                        <input type="checkbox" id="toggle_thinking" value="true" <?= $toggleThinking ? "checked" : "" ?>>
+                        <input type="hidden" name="metadata[toggle_thinking]" value="0">
+                        <input type="checkbox" name="metadata[toggle_thinking]" id="toggle_thinking" value="1" <?= $toggleThinking ? "checked" : "" ?>>
                         <span class="toggle-text">On</span>
                     </label>
                     <div style="height:6px;"></div>
                     <label for='thinking_tokens'><span class='tip-label' data-tip='Maximum tokens for thinking/reasoning output (Anthropic/Gemini only). OpenAI uses effort_level instead. Leave empty to use default.'>Thinking Tokens</span></label>
-                    <input type="number" id="thinking_tokens" value="<?= htmlspecialchars($thinkingTokens) ?>" min="0" step="1" placeholder="Optional">
+                    <input type="number" name="metadata[thinking_tokens]" id="thinking_tokens" value="<?= htmlspecialchars($thinkingTokens) ?>" min="0" step="1" placeholder="Optional">
                     <div style="height:6px;"></div>
                     <label for='effort_level'><span class='tip-label' data-tip='Reasoning effort level for OpenAI reasoning models (o1, o3, o4, gpt-5). minimal=Quick (gpt-5+), low=Basic, medium=Balanced, high=Thorough. Leave empty for default.'>Effort Level</span></label>
-                    <select id="effort_level">
+                    <select name="metadata[effort_level]" id="effort_level">
                         <option value="">-- select --</option>
                         <option value="minimal" <?= $effortLevel === 'minimal' ? 'selected' : '' ?>>Minimal</option>
                         <option value="low" <?= $effortLevel === 'low' ? 'selected' : '' ?>>Low</option>
@@ -1353,7 +1352,6 @@ if (typeof window.consolidation !== 'function') {
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
     <?php endif; ?>
-    <input type="hidden" name="metadata" value='<?= htmlspecialchars($editItem["metadata"] ?? "{}") ?>'>
 
     <div class="two-col-llm">
         <div>
@@ -1456,16 +1454,16 @@ if (typeof window.consolidation !== 'function') {
             </div>
             <div id="reasoning_details_modal" style="margin-top:8px; padding:8px; border-left:2px solid #444;">
                 <label class="label-with-toggle"><span class='tip-label' data-tip='Enable thinking/reasoning for supported models (like o1, DeepSeek-R1). Shows model internal reasoning process.'>Toggle Thinking</span>
-                    <input type="hidden" id="toggle_thinking_hidden_modal" value="false">
-                    <input type="checkbox" id="toggle_thinking_modal" value="true" <?= $toggleThinking ? "checked" : "" ?>>
+                    <input type="hidden" name="metadata[toggle_thinking]" value="0">
+                    <input type="checkbox" name="metadata[toggle_thinking]" id="toggle_thinking_modal" value="1" <?= $toggleThinking ? "checked" : "" ?>>
                     <span class="toggle-text">On</span>
                 </label>
                 <div style="height:6px;"></div>
                 <label for='thinking_tokens_modal'><span class='tip-label' data-tip='Maximum tokens for thinking/reasoning output (Anthropic/Gemini only). OpenAI uses effort_level instead. Leave empty to use default.'>Thinking Tokens</span></label>
-                <input type="number" id="thinking_tokens_modal" value="<?= htmlspecialchars($thinkingTokens) ?>" min="0" step="1" placeholder="Optional">
+                <input type="number" name="metadata[thinking_tokens]" id="thinking_tokens_modal" value="<?= htmlspecialchars($thinkingTokens) ?>" min="0" step="1" placeholder="Optional">
                 <div style="height:6px;"></div>
                 <label for='effort_level_modal'><span class='tip-label' data-tip='Reasoning effort level for OpenAI reasoning models (o1, o3, o4, gpt-5). minimal=Quick (gpt-5+), low=Basic, medium=Balanced, high=Thorough. Leave empty for default.'>Effort Level</span></label>
-                <select id="effort_level_modal">
+                <select name="metadata[effort_level]" id="effort_level_modal">
                     <option value="">-- select --</option>
                     <option value="minimal" <?= $effortLevel === 'minimal' ? 'selected' : '' ?>>Minimal</option>
                     <option value="low" <?= $effortLevel === 'low' ? 'selected' : '' ?>>Low</option>
@@ -2061,122 +2059,14 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
  ?>
 
 <script>
-// Extend consolidation() to merge reasoning fields into metadata
+// The thinking toggle fields now use name="metadata[key]" attributes
+// They will be automatically collected by PHP into the metadata array
+// No special JavaScript consolidation needed - just run the original
 (function(){
     const originalConsolidation = window.consolidation;
     window.consolidation = function() {
-        console.log('[CONSOLIDATION DEBUG] Starting consolidation...');
-
-        // First run the original consolidation (from metadata_json_editor.php)
-        const result = originalConsolidation ? originalConsolidation() : true;
-        console.log('[CONSOLIDATION DEBUG] Original consolidation result:', result);
-        if (!result) return false;
-
-        // Now merge our custom reasoning fields into metadata
-        const form = document.querySelector('form[method="POST"]') || document.querySelector('form[method="post"]');
-        console.log('[CONSOLIDATION DEBUG] Found form:', !!form);
-        console.log('[CONSOLIDATION DEBUG] Form has metadata field:', form ? !!form.metadata : false);
-
-        if (!form || !form.metadata) {
-            console.warn('[CONSOLIDATION DEBUG] No form or metadata field found, returning');
-            return result;
-        }
-
-        try {
-            // Parse existing metadata
-            let metadata = {};
-            try {
-                const metaStr = form.metadata.value || '{}';
-                console.log('[CONSOLIDATION DEBUG] Initial metadata string:', metaStr);
-                metadata = JSON.parse(metaStr);
-                console.log('[CONSOLIDATION DEBUG] Parsed metadata:', metadata);
-            } catch (_e) {
-                console.error('[CONSOLIDATION DEBUG] Error parsing metadata:', _e);
-                metadata = {};
-            }
-
-            // Collect all metadata[key] fields and merge them into the JSON
-            // This handles caching settings and other connector-specific metadata
-            const metadataArrayFields = form.querySelectorAll('[name^="metadata["]');
-            console.log('[CONSOLIDATION DEBUG] Found', metadataArrayFields.length, 'metadata[key] fields');
-
-            metadataArrayFields.forEach(field => {
-                const match = field.name.match(/^metadata\[(.+)\]$/);
-                if (match) {
-                    const key = match[1];
-                    let value = field.value;
-
-                    // Handle checkboxes - get the checked state
-                    if (field.type === 'checkbox') {
-                        value = field.checked ? (field.value === '1' ? 1 : field.value) : 0;
-                    } else if (field.type === 'number') {
-                        value = parseInt(value, 10);
-                    }
-
-                    // Only include non-empty values (except for 0 which is valid)
-                    if (value !== '' || value === 0) {
-                        metadata[key] = value;
-                        console.log('[CONSOLIDATION DEBUG] Added metadata[' + key + '] =', value);
-                    }
-                }
-            });
-
-            // Collect reasoning field values (check both regular and modal IDs)
-            const toggleThinkingEl = document.getElementById('toggle_thinking') || document.getElementById('toggle_thinking_modal');
-            const thinkingTokensEl = document.getElementById('thinking_tokens') || document.getElementById('thinking_tokens_modal');
-            const effortLevelEl = document.getElementById('effort_level') || document.getElementById('effort_level_modal');
-
-            console.log('[CONSOLIDATION DEBUG] Found toggle_thinking element:', !!toggleThinkingEl);
-            console.log('[CONSOLIDATION DEBUG] Found thinking_tokens element:', !!thinkingTokensEl);
-            console.log('[CONSOLIDATION DEBUG] Found effort_level element:', !!effortLevelEl);
-
-            // Add toggle_thinking
-            if (toggleThinkingEl) {
-                metadata.toggle_thinking = toggleThinkingEl.checked;
-                console.log('[CONSOLIDATION DEBUG] toggle_thinking =', toggleThinkingEl.checked);
-            }
-
-            // Add thinking_tokens (only if not empty)
-            if (thinkingTokensEl) {
-                const val = thinkingTokensEl.value.trim();
-                if (val !== '') {
-                    metadata.thinking_tokens = parseInt(val, 10);
-                    console.log('[CONSOLIDATION DEBUG] thinking_tokens =', parseInt(val, 10));
-                } else {
-                    delete metadata.thinking_tokens;
-                    console.log('[CONSOLIDATION DEBUG] thinking_tokens deleted (empty)');
-                }
-            }
-
-            // Add effort_level (only if not empty)
-            if (effortLevelEl) {
-                const val = effortLevelEl.value.trim();
-                if (val !== '') {
-                    metadata.effort_level = val;
-                    console.log('[CONSOLIDATION DEBUG] effort_level =', val);
-                } else {
-                    delete metadata.effort_level;
-                    console.log('[CONSOLIDATION DEBUG] effort_level deleted (empty)');
-                }
-            }
-
-            // Update form metadata field with merged JSON
-            const finalJSON = JSON.stringify(metadata);
-            form.metadata.value = finalJSON;
-            console.log('[CONSOLIDATION DEBUG] Final metadata JSON:', finalJSON);
-
-            // Remove name attribute from metadata[key] fields so they don't override the hidden metadata field
-            // (Disabling would prevent submission, removing name keeps field visible but excludes from POST)
-            metadataArrayFields.forEach(field => {
-                field.removeAttribute('name');
-            });
-            console.log('[CONSOLIDATION DEBUG] Removed name attributes from', metadataArrayFields.length, 'fields');
-        } catch (err) {
-            console.error('[CONSOLIDATION DEBUG] Error merging reasoning fields into metadata:', err);
-        }
-
-        console.log('[CONSOLIDATION DEBUG] Consolidation complete, returning true');
-        return result;
+        // Just run the original consolidation from metadata_json_editor.php
+        return originalConsolidation ? originalConsolidation() : true;
     };
 })();
 
