@@ -9,7 +9,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_function
 class openrouterjsoncached
 {
     // ⚠️ IMPORTANT: Please update version number, date, and CHIM version after making changes
-    const VERSION = 'OpenRouter Cache Connector v1.1.20 for CHIM 2.0.3 | 2025/11/15';
+    const VERSION = 'OpenRouter Cache Connector v1.1.21 for CHIM 2.0.3 | 2025/11/15';
 
     public $primary_handler;
     public $name;
@@ -306,9 +306,12 @@ class openrouterjsoncached
         $customInstruction = isset($GLOBALS["CONNECTOR"][$this->name]["custom_system_instruction"]) ? $GLOBALS["CONNECTOR"][$this->name]["custom_system_instruction"] : '';
         $lastCustomInstruction = isset($GLOBALS["CONNECTOR"][$this->name]["custom_last_instruction"]) ? $GLOBALS["CONNECTOR"][$this->name]["custom_last_instruction"] : '';
 
-        $toggleThinking = isset($GLOBALS["CONNECTOR"][$this->name]["toggle_thinking"]) ? $GLOBALS["CONNECTOR"][$this->name]["toggle_thinking"] : false;
-        $thinkingTokens = isset($GLOBALS["CONNECTOR"][$this->name]["thinking_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["thinking_tokens"] : 1000;
-        $effort_level = isset($GLOBALS["CONNECTOR"][$this->name]["effort_level"]) ? $GLOBALS["CONNECTOR"][$this->name]["effort_level"] : "low";
+        // Thinking/reasoning configuration
+        $toggleThinking = isset($GLOBALS["CONNECTOR"][$this->name]["toggle_thinking"]) ? (bool)$GLOBALS["CONNECTOR"][$this->name]["toggle_thinking"] : false;
+        $thinkingTokens = isset($GLOBALS["CONNECTOR"][$this->name]["thinking_tokens"]) && !empty($GLOBALS["CONNECTOR"][$this->name]["thinking_tokens"]) ? intval($GLOBALS["CONNECTOR"][$this->name]["thinking_tokens"]) : 1000;
+        $effort_level = isset($GLOBALS["CONNECTOR"][$this->name]["effort_level"]) && !empty($GLOBALS["CONNECTOR"][$this->name]["effort_level"]) ? $GLOBALS["CONNECTOR"][$this->name]["effort_level"] : "low";
+
+        logMessage("Thinking Config: toggle=" . var_export($toggleThinking, true) . ", tokens={$thinkingTokens}, effort={$effort_level}");
 
         // Cache provider configuration
         $this->_provider_caching = isset($GLOBALS["CONNECTOR"][$this->name]["provider_caching"]) ? $GLOBALS["CONNECTOR"][$this->name]["provider_caching"] : "Anthropic";
@@ -641,12 +644,18 @@ class openrouterjsoncached
             "enabled" => ($toggleThinking || $isAlwaysReasoning),
         ];
 
+        logMessage("Reasoning config: isOpenAI=" . var_export($isOpenAIReasoning, true) .
+                   ", isAlwaysReasoning=" . var_export($isAlwaysReasoning, true) .
+                   ", enabled=" . var_export($reasoning["enabled"], true));
+
         // Add effort level for OpenAI models (supports minimal/low/medium/high)
         if ($isOpenAIReasoning && $reasoning["enabled"]) {
             $reasoning["effort"] = $effort_level;
+            logMessage("Using OpenAI reasoning with effort: {$effort_level}");
         } else if ($reasoning["enabled"]) {
             // For non-OpenAI models, use max_tokens instead of effort
             $reasoning["max_tokens"] = intval($thinkingTokens);
+            logMessage("Using extended thinking with max_tokens: {$thinkingTokens}");
         }
 
         // Construct payload
