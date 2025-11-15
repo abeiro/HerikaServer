@@ -2088,34 +2088,68 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
 // Override consolidation() to handle metadata fields for llm_connectors
 // Don't call the original from metadata_json_editor.php as it's designed for core_profiles
 window.consolidation = function() {
-    console.log('[Consolidation] LLM Connectors consolidation called');
+    console.log('[Consolidation] === DEBUGGING START ===');
+
+    // Debug: How many forms exist?
+    const allForms = document.querySelectorAll('form');
+    console.log('[Consolidation] Total forms on page:', allForms.length);
 
     const form = document.querySelector('form[method="post"]') || document.querySelector('form[method="POST"]');
     if (!form) {
-        console.log('[Consolidation] No form found');
-        return true; // Let it submit anyway
+        console.log('[Consolidation] ERROR: No form found');
+        return true;
+    }
+    console.log('[Consolidation] Form found:', form);
+    console.log('[Consolidation] Form has', form.elements.length, 'elements');
+
+    // Debug: List all textareas in the form
+    const allTextareas = form.querySelectorAll('textarea');
+    console.log('[Consolidation] Textareas in form:', allTextareas.length);
+    allTextareas.forEach((ta, i) => {
+        console.log(`  Textarea ${i}:`, 'name=', ta.name, 'id=', ta.id);
+    });
+
+    // Debug: Check if metadata textarea exists ANYWHERE on page
+    const metadataTextareaAnywhere = document.querySelector('textarea[name="metadata"]');
+    console.log('[Consolidation] Metadata textarea anywhere on page?', !!metadataTextareaAnywhere);
+    if (metadataTextareaAnywhere) {
+        console.log('[Consolidation] Found it! Parent:', metadataTextareaAnywhere.parentElement?.tagName);
     }
 
-    // Find the metadata textarea directly (form.metadata doesn't work when there are metadata[...] fields)
+    // Find the metadata textarea in THIS form
     const metadataTextarea = form.querySelector('textarea[name="metadata"]');
     if (!metadataTextarea) {
-        console.log('[Consolidation] No metadata textarea found');
-        return true; // Let it submit anyway
+        console.log('[Consolidation] ERROR: No metadata textarea in THIS form');
+        console.log('[Consolidation] Trying to continue anyway to see what happens...');
+        // Don't return yet, let's see what else we can find
+    } else {
+        console.log('[Consolidation] SUCCESS: Found metadata textarea in form');
     }
-    console.log('[Consolidation] Found metadata textarea');
 
     try {
         // Start with empty metadata object
         let metadata = {};
 
-        // Try to parse existing metadata from textarea
-        try {
-            const metaStr = metadataTextarea.value || '{}';
-            metadata = JSON.parse(metaStr);
-            console.log('[Consolidation] Starting with metadata:', metadata);
-        } catch (_e) {
-            metadata = {};
-            console.log('[Consolidation] Failed to parse metadata, starting fresh');
+        // Try to parse existing metadata from textarea (if it exists)
+        if (metadataTextarea) {
+            try {
+                const metaStr = metadataTextarea.value || '{}';
+                metadata = JSON.parse(metaStr);
+                console.log('[Consolidation] Starting with metadata:', metadata);
+            } catch (_e) {
+                metadata = {};
+                console.log('[Consolidation] Failed to parse metadata, starting fresh');
+            }
+        } else {
+            console.log('[Consolidation] No textarea, starting with empty metadata');
+            // If no textarea exists, CREATE ONE!
+            console.log('[Consolidation] CREATING metadata textarea dynamically...');
+            const newTextarea = document.createElement('textarea');
+            newTextarea.name = 'metadata';
+            newTextarea.style.display = 'none';
+            newTextarea.value = '{}';
+            form.appendChild(newTextarea);
+            console.log('[Consolidation] Created and appended textarea to form');
         }
 
         // Collect thinking toggle fields by ID
@@ -2188,8 +2222,13 @@ window.consolidation = function() {
         });
 
         // Update metadata textarea with final JSON
-        metadataTextarea.value = JSON.stringify(metadata);
-        console.log('[Consolidation] Final metadata JSON:', metadataTextarea.value);
+        const finalTextarea = form.querySelector('textarea[name="metadata"]');
+        if (finalTextarea) {
+            finalTextarea.value = JSON.stringify(metadata);
+            console.log('[Consolidation] Final metadata JSON:', finalTextarea.value);
+        } else {
+            console.log('[Consolidation] ERROR: Still no textarea after trying to create it!');
+        }
 
         // CRITICAL: Remove name attributes from all metadata[...] fields
         // so only the textarea submits to PHP
