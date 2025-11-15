@@ -1,8 +1,8 @@
-# CHIM Cached Connector v1.1.29 - Complete File List
+# CHIM Cached Connector v1.1.30 - Complete File List
 
-**Version:** 1.1.29 DEBUG
+**Version:** 1.1.30 DEBUG
 **Date:** 2025-11-15
-**Changes:** Added debug logging to trace metadata value during PHP update
+**Changes:** Added debug logging for both save AND load of metadata
 
 ---
 
@@ -149,15 +149,17 @@ IMPORTANT: Always backup before installing!
 
 ## Version Information
 
-Package Version: 1.1.29 DEBUG
+Package Version: 1.1.30 DEBUG
 Created: 2025-11-15
 Branch: claude/1.1.22-testing-01SD3JLwpdiGRsLvnUEQ9JEY
 Status: Debug Build
 
 Debug Changes:
 - Added debug logging to lib/core/llm_connector.class.php update() method
-- Logs metadata value at three points: received, after empty check, final
-- Look for "[LLM UPDATE DEBUG]" in PHP error log
+- Added debug logging to ui/core/llm_connectors.php for loading metadata
+- Logs metadata value at save: received, after empty check, final
+- Logs metadata value at load: raw from DB, decoded, toggle_thinking value/type, final bool
+- Look for "[LLM UPDATE DEBUG]" and "[LLM LOAD DEBUG]" in PHP error log
 - Includes all v1.1.28 fixes (missing textarea, modal field IDs)
-- Use this to diagnose why metadata is not persisting correctly
+- Use this to diagnose full save/load cycle
 
