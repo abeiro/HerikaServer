@@ -326,6 +326,9 @@ $gsSections = [
     // ],
     'Narrator' => [
         [ 'name' => 'NARRATOR_TALKS', 'type' => 'boolean' ],
+        [ 'name' => 'RANDOM_NARATION', 'type' => 'boolean' ],
+        [ 'name' => 'RANDOM_NARATION_CHANCE', 'type' => 'integer', 'min' => 1, 'max' => 100 ],
+        [ 'name' => 'RANDOM_NARRATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 10 ],
         [ 'name' => 'NARRATOR_WELCOME', 'type' => 'boolean' ],
         [ 'name' => 'BOOK_EVENT_ALWAYS_NARRATOR', 'type' => 'boolean' ],
         [ 'name' => 'HIDE_NARRATOR_DIALOGUE', 'type' => 'boolean' ]

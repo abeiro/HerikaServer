@@ -2285,6 +2285,35 @@ if ($checkVersion("prompts")<20251110001) {
 }
 
 //----------------------------------------------------
+// RANDOM NARRATION PROMPT
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251116001) {
+    Logger::debug("Applying prompts table 20251116001 - Adding random_narration_prompt");
+    
+    // Seed random narration prompt
+    $randomNarrationPrompt = $db->escape(
+        "Describe the current scene visually using ONLY details from the provided context. Focus on the characters present - their appearance, expressions, body language, and what they're wearing. Include environmental details like lighting and atmosphere. Keep it grounded and concise (2-3 sentences). Do not invent new information, advance the plot, or include dialogue."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'random_narration_prompt',
+            '$randomNarrationPrompt',
+            'Prompt for random Narrator interjections that add cinematic visual scene descriptions during conversations. Styled as atmospheric, present-tense narration (2-3 sentences). Used when RANDOM_NARATION is enabled in global settings.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251116001);
+    Logger::info("Applied patch prompts 20251116001 - Added random_narration_prompt");
+}
+
+//----------------------------------------------------
 
 Logger::info(__FILE__." update file processed");
 

@@ -1021,14 +1021,15 @@ if (is_array($currentParty)) {
 
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"prerequest.php");
 
-if (in_array($gameRequest[0],["rechat"]) ) {
+if (in_array($gameRequest[0],["rechat","narration"]) ) {
     
     //RECHAT. Must choose if we continue conversation or no.
+    // Note: narration is part of rechat system (random narrator interjections count as rechat rounds)
 
     $rechatHistory=DataRechatHistory();
     
-    if (sizeof($rechatHistory)>(intval($GLOBALS["RECHAT_H"])))    {   // TOO MUCH RECHAT
-        Logger::info("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">{$GLOBALS["RECHAT_H"]}");
+    if (sizeof($rechatHistory)>=(intval($GLOBALS["RECHAT_H"])))    {   // TOO MUCH RECHAT
+        Logger::info("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">={$GLOBALS["RECHAT_H"]}");
         // Lets try to summarize
         sem_release($semaphore);
         while(ob_get_length() && ob_end_clean());
@@ -1064,6 +1065,120 @@ if (in_array($gameRequest[0],["rechat"]) ) {
                     }
 
             usleep(100);
+        }
+    }
+
+    // RANDOM NARRATION - Narrator visual scene descriptions
+    // Trigger after any NPC response (after first NPC responds to player)
+    // AND only on "rechat" events (not on events already converted to "narration")
+    // AND only if The Narrator wasn't the last speaker (prevent consecutive narrations)
+    if (!empty($GLOBALS["RANDOM_NARATION"]) && $GLOBALS["RANDOM_NARATION"] && $gameRequest[0] === "rechat" && sizeof($rechatHistory) >= 1) {
+        // Check if the last event was a narration event (if so, skip to prevent consecutive narrations)
+        $lastEvent = $db->fetchOne("SELECT type FROM eventlog WHERE type IN ('rechat', 'narration') ORDER BY gamets DESC, ts DESC LIMIT 1");
+        $wasLastNarration = ($lastEvent && $lastEvent['type'] === 'narration');
+        
+        // Check cooldown - ensure at least N non-narration events occurred since last narration
+        $cooldownRounds = isset($GLOBALS["RANDOM_NARRATION_COOLDOWN"]) ? intval($GLOBALS["RANDOM_NARRATION_COOLDOWN"]) : 2;
+        $eventsSinceNarration = $db->fetchOne("
+            SELECT COUNT(*) as count 
+            FROM eventlog 
+            WHERE type IN ('rechat', 'inputtext', 'inputtext_s') 
+            AND gamets > (
+                SELECT COALESCE(MAX(gamets), 0) 
+                FROM eventlog 
+                WHERE type = 'narration'
+            )
+        ");
+        
+        $eventCount = $eventsSinceNarration ? intval($eventsSinceNarration['count']) : 999;
+        
+        // Skip if cooldown hasn't passed
+        if ($eventCount < $cooldownRounds) {
+            Logger::info("[RANDOM_NARRATION] Skipped - Cooldown active (events since last: {$eventCount}, required: {$cooldownRounds})");
+        } else if ($wasLastNarration) {
+            Logger::info("[RANDOM_NARRATION] Skipped - Last event was narration, preventing consecutive narrations");
+        } else {
+            $randomChance = rand(1, 100);
+            $narrationChance = isset($GLOBALS["RANDOM_NARATION_CHANCE"]) ? intval($GLOBALS["RANDOM_NARATION_CHANCE"]) : 15;
+            
+            if ($randomChance <= $narrationChance) {
+                Logger::info("[RANDOM_NARRATION] Triggered (chance: $randomChance <= $narrationChance)");
+            
+            // Switch to The Narrator profile temporarily
+            $npcMaster = new NpcMaster();
+            $narratorData = $npcMaster->getByName("The Narrator");
+            
+            if ($narratorData) {
+                // Store current profile data
+                $originalHerikaName = $GLOBALS["HERIKA_NAME"];
+                
+                // Load Narrator profile - set connector and profile first, npc data last
+                $profile = new CoreProfile();
+                $currentProfileData = $profile->getById($narratorData["profile_id"]);
+                
+                $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] = $currentProfileData;
+                
+                $connector = new LLMConnector();
+                $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $narratorData, $npcMaster);
+                $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+                $currentConnectorData = $connector->getById($connectorId);
+                
+                $connector->setOldGlobals($currentConnectorData);
+                $profile->setOldGlobals($currentProfileData);
+                
+                // These will be re-populated by setOldGlobalsFromCurrentNpcData if The Narrator has them set
+                $GLOBALS['HERIKA_APPEARANCE'] = '';
+                $GLOBALS['HERIKA_SKILLS'] = '';
+                $GLOBALS['HERIKA_BACKGROUND'] = '';
+                $GLOBALS['HERIKA_OCCUPATION'] = '';
+                $GLOBALS['HERIKA_RELATIONSHIPS'] = '';
+                $GLOBALS['HERIKA_GOALS'] = '';
+                $GLOBALS['HERIKA_SPEECHSTYLE'] = '';
+                
+                $npcMaster->setOldGlobalsFromCurrentNpcData($narratorData);
+                
+                $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
+                
+                // Load random narration prompt from database with fallback
+                $narrationPrompt = null;
+                try {
+                    $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'random_narration_prompt'");
+                    if ($promptData) {
+                        // Use custom_prompt if set, otherwise use default_prompt
+                        $narrationPrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+                        Logger::info("[RANDOM_NARRATION] Loaded prompt from database (custom: " . (!empty($promptData['custom_prompt']) ? 'yes' : 'no') . ")");
+                    }
+                } catch (Exception $e) {
+                    Logger::warn("[RANDOM_NARRATION] Failed to load prompt from database, using hardcoded fallback: " . $e->getMessage());
+                }
+                
+                // Hardcoded fallback if database query failed or returned no results
+                if (!$narrationPrompt) {
+                    $narrationPrompt = 'Describe the current scene visually using ONLY details from the provided context. Focus on the characters present - their appearance, expressions, body language, and what they\'re wearing. Include environmental details like lighting and atmosphere. Keep it grounded and concise (2-3 sentences). Do not invent new information, advance the plot, or include dialogue.';
+                    Logger::info("[RANDOM_NARRATION] Using hardcoded fallback prompt");
+                }
+                
+                // Mark this as a narration event (not a regular rechat)
+                $gameRequest[0] = "narration";
+                
+                // Send event type header IMMEDIATELY before any output
+                // This must be done early so C++ plugin knows this is narration
+                header("X-Event-Type: narration");
+                Logger::info("[RANDOM_NARRATION] Sent X-Event-Type: narration header");
+                
+                // Store narration prompt for later injection (after prompts.php is loaded)
+                $GLOBALS["RANDOM_NARRATION_PROMPT"] = $narrationPrompt;
+                
+                Logger::info("[RANDOM_NARRATION] Executing as The Narrator with narration request");
+                
+                // Process will continue with Narrator profile loaded
+                // After response, it will send to game as normal narrator dialogue
+            } else {
+                Logger::warn("[RANDOM_NARRATION] Skipped - Narrator profile not found");
+            }
+            } else {
+                Logger::trace("[RANDOM_NARRATION] Not triggered (chance: $randomChance > $narrationChance)");
+            }
         }
     }
 
@@ -1105,6 +1220,14 @@ if ($EXECUTION_MODE=="INJECTION_LOG") {
 // Include prompts, command prompts and functions.
 require(__DIR__.DIRECTORY_SEPARATOR."prompt.includes.php");
 $gameRequest[0] = strtolower($gameRequest[0]); // one more time in case it was changed by an extension
+
+// Inject random narration prompt if this is a narration event
+// This must happen AFTER prompts.php is loaded to avoid being overwritten
+// Inject as the "cue" so it appears as the penultimate user message (like section 81 for normal NPCs)
+if (isset($GLOBALS["RANDOM_NARRATION_PROMPT"]) && $gameRequest[0] == "narration") {
+    $PROMPTS["narration"]["cue"] = [$GLOBALS["RANDOM_NARRATION_PROMPT"]];
+    Logger::info("[RANDOM_NARRATION] Injected narration prompt as cue");
+}
 
 // Take care of override request if needed..
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php");
@@ -1242,7 +1365,7 @@ if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[
 // Offer memory in CONTEXT 
 
 
-if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat"]) ) {
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat","narration"]) ) {
 
     $memoryInjection=offerMemory($gameRequest);
     //Logger::info("Memory injection:".json_encode($memoryInjection));
@@ -1267,7 +1390,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 
 // Rechat case
-if (in_array($gameRequest[0],["rechat"]) ) {
+if (in_array($gameRequest[0],["rechat","narration"]) ) {
     // CHAOS mode
     
     if (isset($GLOBALS["RECHAT_ALLOW_ACTIONS"]) && $GLOBALS["RECHAT_ALLOW_ACTIONS"]) {
@@ -1506,10 +1629,11 @@ if (isset($GLOBALS["PROFILE_PROMPT"])) {
 
 
 // Middle term memory experiment
+// Skip middle-term memory for The Narrator (atmospheric narration shouldn't include individual NPC memories)
 $npcMaster=new NpcMaster();
 $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
 $extended_data=$npcMaster->getExtendedData($currentNpcData);
-if (isset($extended_data["middle_term_memory"])&&is_array($extended_data["middle_term_memory"])) {
+if ($GLOBALS["HERIKA_NAME"] !== "The Narrator" && isset($extended_data["middle_term_memory"])&&is_array($extended_data["middle_term_memory"])) {
     $middle_term_memory = end($extended_data["middle_term_memory"]);
     $dynamicBiography.="\n<middle_term_memory>\n#Past events\n{$middle_term_memory}\n</middle_term_memory>";
 
@@ -1536,6 +1660,11 @@ if ($currentHold) {
     }
 } else {
     error_log("[RUMORS] Current hold {$currentHold} empty");
+}
+
+// For narration events, simplify the command prompt (no actions needed for atmospheric descriptions)
+if ($gameRequest[0] === "narration") {
+    $GLOBALS["COMMAND_PROMPT"] = "Respond with atmospheric narration only. Use the Talk action.";
 }
 
 if (!empty($GLOBALS["OGHMA_HINT"])) {

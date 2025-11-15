@@ -1714,7 +1714,7 @@ function DataLastDataExpandedForBak($actor, $lastNelements = -10,$sqlfilter="")
     FROM  eventlog a WHERE 1=1
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infoitems' 
-    and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and type<>'backgroundaction'
+    and type<>'updateprofile' and type<>'rechat' and type<>'narration' and type<>'setconf' and type<>'backgroundaction'
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  
     and gamets>".($currentGameTs-(60*60*60*60))."
     order by gamets desc,ts desc,rowid desc LIMIT 1000 OFFSET 0");
@@ -2254,7 +2254,8 @@ function DataRechatHistory()
 
     global $db;
     // Actually we don't need the data here, just an array which size must match the history size.
-    $lastRechat=$db->fetchAll("select gamets FROM  eventlog a  WHERE type in ('rechat','inputtext','inputtext_s') 
+    // Include 'narration' type as it's an official part of rechat (random narrator interjections)
+    $lastRechat=$db->fetchAll("select gamets FROM  eventlog a  WHERE type in ('rechat','narration','inputtext','inputtext_s') 
     and localts>".(time()-120)."  order by gamets desc,ts desc LIMIT 10 OFFSET 0");
     
     return $lastRechat;
@@ -3417,7 +3418,8 @@ function call_llm() {
 
         $buffer=strtr($buffer, array("\""=>"",".)"=>")."));
 
-        if (strlen($buffer)<MINIMUM_SENTENCE_SIZE) {	// Avoid too short buffers
+        // For narration events, allow immediate streaming without minimum buffer size
+        if ($gameRequest[0] !== "narration" && strlen($buffer)<MINIMUM_SENTENCE_SIZE) {	// Avoid too short buffers
             continue;
         }
 
@@ -3429,7 +3431,7 @@ function call_llm() {
         $position = findDotPosition($buffer);
 
         //echo "<$buffer>".PHP_EOL;
-        if (($position !== false) && ($position>MINIMUM_SENTENCE_SIZE)) {
+        if (($position !== false) && ($gameRequest[0] === "narration" || $position>MINIMUM_SENTENCE_SIZE)) {
             $extractedData = substr($buffer, 0, $position + 1);
             $remainingData = substr($buffer, $position + 1);
             $sentences=split_sentences_stream(cleanResponse($extractedData));
@@ -4655,8 +4657,8 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         $SKILLS_ADD = $formattedSkills;
     } 
     
-    // Add NPC's own equipment
-    if (isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
+    // Add NPC's own equipment (skip for The Narrator - they don't need equipment context)
+    if ($FOLLOWER_CONF["HERIKA_NAME"] !== "The Narrator" && isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
         $equipmentParts = [];
         $describedBaseids = []; // Track which baseids we've already described
         $slots = [
@@ -4715,8 +4717,8 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         }
     }
 
-     // Add NPC's inventory
-    if (isset($metaData["inventory"]) && is_array($metaData["inventory"])) {
+     // Add NPC's inventory (skip for The Narrator - they don't need inventory context)
+    if ($FOLLOWER_CONF["HERIKA_NAME"] !== "The Narrator" && isset($metaData["inventory"]) && is_array($metaData["inventory"])) {
        
         $equipmentParts=[];
         // Continue using the same $describedBaseids from equipment to dedupe across all items
