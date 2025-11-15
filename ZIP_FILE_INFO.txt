@@ -1,8 +1,8 @@
-# CHIM Cached Connector v1.1.27 - Complete File List
+# CHIM Cached Connector v1.1.28 - Complete File List
 
-**Version:** 1.1.27 ACTUAL WORKING FIX
+**Version:** 1.1.28 FINAL FIX
 **Date:** 2025-11-15
-**Fix Applied:** Check for BOTH toggle_thinking and toggle_thinking_modal fields
+**Fix Applied:** Added missing metadata textarea to second form at line 1356
 
 ---
 
@@ -149,16 +149,18 @@ IMPORTANT: Always backup before installing!
 
 ## Version Information
 
-Package Version: 1.1.27 ACTUAL WORKING FIX
+Package Version: 1.1.28 FINAL FIX
 Created: 2025-11-15
 Branch: claude/1.1.22-testing-01SD3JLwpdiGRsLvnUEQ9JEY
 Status: Production Ready
 
 Critical Fixes:
-- Thinking toggle save issue ACTUALLY FIXED
-- Issue: When editing connectors, fields are toggle_thinking_MODAL not toggle_thinking
-- Solution: Check for BOTH versions: getElementById('toggle_thinking') || getElementById('toggle_thinking_modal')
-- Same fix for thinking_tokens and effort_level fields
+- Thinking toggle save issue FINALLY FIXED
+- Issue: Second form (line 1352) was missing metadata textarea
+- Only first form (line 267) had the textarea
+- Consolidation function couldn't find textarea when using modal edit form
+- Solution: Added `<textarea name="metadata" style="display:none">` at line 1356
+- Combined with v1.1.27 fix checking for both regular and modal field IDs
 - All metadata fields working (thinking toggles + provider_caching, response_format, etc.)
 - All connector functionality intact
 

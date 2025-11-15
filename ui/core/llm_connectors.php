@@ -1353,6 +1353,7 @@ if (typeof window.consolidation !== 'function') {
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
     <?php endif; ?>
+    <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "{}") ?></textarea>
 
     <div class="two-col-llm">
         <div>

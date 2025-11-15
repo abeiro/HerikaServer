@@ -1,6 +1,17 @@
 # CHIM Cached Connector - Changelog
 
-## v1.1.27 (2025-11-15) - ACTUAL WORKING FIX
+## v1.1.28 (2025-11-15) - FINAL FIX: Added missing metadata textarea
+
+### Critical Fixes
+- **FIXED:** Added missing metadata textarea to second form (line 1356)
+  - Issue: Second form at line 1352 was missing `<textarea name="metadata">`
+  - Only first form (line 267) had the textarea
+  - Consolidation function couldn't find textarea in edit modal form
+  - Fix: Added `<textarea name="metadata" style="display:none">` to second form
+
+---
+
+## v1.1.27 (2025-11-15) - Check for modal field versions
 
 ### Critical Fixes
 - **FIXED:** Check for BOTH toggle_thinking AND toggle_thinking_modal
@@ -343,12 +354,12 @@ issues and solutions.
 
 ## Release Information
 
-**Current Version:** v1.1.27
+**Current Version:** v1.1.28
 **Release Date:** 2025-11-15
 **Status:** Production Ready
 **Branch:** claude/1.1.22-testing-01SD3JLwpdiGRsLvnUEQ9JEY
 
-**Critical:** This version includes the ACTUAL working fix - checks for modal field versions.
+**Critical:** This version includes the FINAL fix - added missing metadata textarea to second form.
 Upgrade is highly recommended for all users.
 
 ---
