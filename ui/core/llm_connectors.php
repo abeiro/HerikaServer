@@ -2085,7 +2085,7 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
     });
 })();
 
-// Wrap consolidation function to merge all metadata[...] fields into the metadata JSON
+// Extend consolidation() to merge reasoning fields into metadata
 (function(){
     const originalConsolidation = window.consolidation;
     window.consolidation = function() {
@@ -2093,12 +2093,12 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
         const result = originalConsolidation ? originalConsolidation() : true;
         if (!result) return false;
 
-        // Now merge all metadata[...] fields into metadata
-        const form = document.forms[0];
+        // Now merge our custom reasoning fields into metadata
+        const form = document.querySelector('form[method="POST"]');
         if (!form || !form.metadata) return result;
 
         try {
-            // Parse existing metadata from JSON editor
+            // Parse existing metadata
             let metadata = {};
             try {
                 const metaStr = form.metadata.value || '{}';
@@ -2107,41 +2107,43 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
                 metadata = {};
             }
 
-            // Collect all metadata[...] field values from the form
-            const metadataInputs = form.querySelectorAll('[name^="metadata["]');
-            metadataInputs.forEach(inp => {
-                const match = inp.name.match(/^metadata\[([^\]]+)\]$/);
-                if (!match) return;
-                const key = match[1];
+            // Collect reasoning field values (check both regular and modal IDs)
+            const toggleThinkingEl = document.getElementById('toggle_thinking') || document.getElementById('toggle_thinking_modal');
+            const thinkingTokensEl = document.getElementById('thinking_tokens') || document.getElementById('thinking_tokens_modal');
+            const effortLevelEl = document.getElementById('effort_level') || document.getElementById('effort_level_modal');
 
-                if (inp.type === 'checkbox') {
-                    // For checkboxes, set value if checked (and not the hidden '0' field)
-                    if (inp.checked && inp.value !== '0') {
-                        metadata[key] = inp.value === '1' || inp.value === 'true' ? true : inp.value;
-                    } else if (key === 'toggle_thinking' && !inp.checked) {
-                        // Explicitly set toggle_thinking to false when unchecked
-                        metadata[key] = false;
-                    }
-                } else if (inp.type === 'number') {
-                    const val = inp.value.trim();
-                    if (val !== '') {
-                        metadata[key] = parseFloat(val);
-                    }
-                } else if (inp.tagName.toLowerCase() === 'select' || inp.type === 'text') {
-                    const val = inp.value.trim();
-                    if (val !== '') {
-                        metadata[key] = val;
-                    }
+            // Add toggle_thinking
+            if (toggleThinkingEl) {
+                metadata.toggle_thinking = toggleThinkingEl.checked;
+            }
+
+            // Add thinking_tokens (only if not empty)
+            if (thinkingTokensEl) {
+                const val = thinkingTokensEl.value.trim();
+                if (val !== '') {
+                    metadata.thinking_tokens = parseInt(val, 10);
+                } else {
+                    delete metadata.thinking_tokens;
                 }
-            });
+            }
 
-            // Update form.metadata.value with merged metadata
+            // Add effort_level (only if not empty)
+            if (effortLevelEl) {
+                const val = effortLevelEl.value.trim();
+                if (val !== '') {
+                    metadata.effort_level = val;
+                } else {
+                    delete metadata.effort_level;
+                }
+            }
+
+            // Update form metadata field
             form.metadata.value = JSON.stringify(metadata);
-        } catch (e) {
-            console.error('Error merging metadata fields:', e);
+        } catch (err) {
+            console.error('Error merging reasoning fields into metadata:', err);
         }
 
-        return true;
+        return result;
     };
 })();
 </script>
