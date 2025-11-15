@@ -54,13 +54,17 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     
 
  
-
+    // GPS coords track
+    if (false) {
+        // This will track every 5 secs
+        $oneHourAgoGamets=$maxRow;
+    }
     $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->'gps_track' = 'true' AND (metadata->'last_coords'->>'pending' IS NULL or (metadata->'last_coords'->>'last_updated')::numeric < $oneHourAgoGamets) ");
     
     foreach ($allEnabledBgLNpc as $npc) {
          $mwdata=json_decode($npc["metadata"],true);
         if (!isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"] 
-            || $mwdata["last_coords"]["last_updated"]<($maxRow - ( (1) / 0.0000024))
+            || $mwdata["last_coords"]["last_updated"]<$oneHourAgoGamets 
             ) {
             logger::info("[BACKGROUND-LIFE] Hourly Tracking {$npc["npc_name"]}");
             `php $enginePath/debug/simple_llm_request_with_context_life_command.php "{$npc["npc_name"]}" Track`;
