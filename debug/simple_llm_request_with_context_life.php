@@ -89,7 +89,7 @@ error_log($query);
 $lastIt       = $db->fetchOne($query);
 $lastItNumber = $lastIt["gamets"] ?? 0;
 
-if (($last_gamets-$lastIt)< ((24 *3 )/0.0000024 )) {
+if (($last_gamets-$lastItNumber)< ((24 *3 )/0.0000024 )) {
     Logger::info("[BACKGROUND LIFE] $npcNameEsc Last iteration less than 3 days ago");
     $extdata                                 = $npcMaster->getExtendedData($currentNpcData);
     $extdata["background_life_last_updated"] = $last_gamets;

@@ -47,7 +47,10 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
         $mwdata=json_decode($npc["metadata"],true);
         if (!isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"] || $mwdata["last_coords"]["last_updated"]<($oneDayAgoGamets)) {
             logger::info("[BACKGROUND-LIFE] Daily Tracking {$npc["npc_name"]}");
-            `php $enginePath/debug/simple_llm_request_with_context_life_command.php "{$npc["npc_name"]}" Track`;
+            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_command.php \"{$npc["npc_name"]}\" Track ");
+            if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
+                Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
+            }
         }
         
     }
@@ -67,7 +70,10 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
             || $mwdata["last_coords"]["last_updated"]<$oneHourAgoGamets 
             ) {
             logger::info("[BACKGROUND-LIFE] Hourly Tracking {$npc["npc_name"]}");
-            `php $enginePath/debug/simple_llm_request_with_context_life_command.php "{$npc["npc_name"]}" Track`;
+            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_command.php \"{$npc["npc_name"]}\" Track ");
+            if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
+                Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
+            }
         }
     }
     // BgL content
@@ -77,7 +83,10 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
         $mwdata=json_decode($npc["extended_data"],true);
         if (isset($mwdata["background_life_last_updated"])  && $mwdata["background_life_last_updated"]<($fiveDaysAgoGamets)) {
             logger::info("[BACKGROUND-LIFE] Passive event for {$npc["npc_name"]}");
-            `php $enginePath/debug/simple_llm_request_with_context_life.php "{$npc["npc_name"]}" `;
+            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life.php \"{$npc["npc_name"]}\" ");
+            if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
+                Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
+            }
         }
         break;  // One per iteration
     }
@@ -89,7 +98,10 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
         $mwdata=json_decode($npc["extended_data"],true);
         if (isset($mwdata["background_life_last_updated"])  && $mwdata["background_life_last_updated"]<($fiveDaysAgoGamets)) {
             logger::info("[BACKGROUND-LIFE] Event for {$npc["npc_name"]}");
-            `php $enginePath/debug/simple_llm_request_with_context_life.php "{$npc["npc_name"]}" full`;
+            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life.php \"{$npc["npc_name"]}\" full ");
+            if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
+                Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
+            }
         }
         break;  // One per iteration
     }
@@ -100,7 +112,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     if (($maxRow-$lastMemory)>($pfi)) {
         //echo "[SUMMARY] memory creation maxRow-lastMemory > pfi  ($maxRow-$lastMemory)>($pfi) ";
 
-        $shellResult = shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 1 &");
+        $shellResult = shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 1 ");
         if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
             Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
         }
