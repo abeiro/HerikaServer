@@ -366,7 +366,14 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     $tmpMeta = json_decode($editItem["metadata"], true);
                     if (is_array($tmpMeta)) $metadataArr = $tmpMeta;
                 }
+                // DEBUG: Log what we're loading
+                error_log("[LLM LOAD DEBUG] Raw metadata from DB: " . var_export($editItem["metadata"] ?? 'NOT SET', true));
+                error_log("[LLM LOAD DEBUG] Decoded metadata array: " . var_export($metadataArr, true));
+                error_log("[LLM LOAD DEBUG] toggle_thinking value: " . var_export($metadataArr["toggle_thinking"] ?? 'NOT SET', true) . " (type: " . gettype($metadataArr["toggle_thinking"] ?? null) . ")");
+
                 $toggleThinking = isset($metadataArr["toggle_thinking"]) && ($metadataArr["toggle_thinking"] === true || $metadataArr["toggle_thinking"] === 'true' || $metadataArr["toggle_thinking"] === 1);
+                error_log("[LLM LOAD DEBUG] Final toggleThinking bool: " . var_export($toggleThinking, true));
+
                 $thinkingTokens = $metadataArr["thinking_tokens"] ?? '';
                 $effortLevel = $metadataArr["effort_level"] ?? '';
                 ?>
