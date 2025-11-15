@@ -1,0 +1,354 @@
+CHIM Cached Connector - Version History
+========================================
+
+v1.1.20 (2025/11/15)
+--------------------
+CRITICAL BUG FIX - THINKING TOGGLE NOT SAVING:
+- Fixed thinking toggle, thinking_tokens, and effort_level not saving
+  * Root cause: Form fields were missing name attributes entirely
+  * Fields without name attributes are not submitted with HTML forms
+  * This is basic HTML form behavior that was overlooked
+
+THE FIX:
+- Added name="metadata[toggle_thinking]" to checkbox (both regular and modal)
+- Added name="metadata[thinking_tokens]" to number input (both versions)
+- Added name="metadata[effort_level]" to select dropdown (both versions)
+- Matches pattern used by all working metadata fields
+- PHP automatically collects metadata[key] POST fields into array
+- LLMConnector class JSON-encodes array and stores in database
+
+IMPACT:
+- ✅ Toggle Thinking checkbox now saves correctly
+- ✅ Thinking Tokens value now saves correctly
+- ✅ Effort Level selection now saves correctly
+- ✅ All caching and other metadata settings continue to work
+- ✅ Can now use thinking with o1, o3, o4, DeepSeek-R1, etc.
+
+CLEANUP:
+- Removed diagnostic logging from chat_helper_functions.php
+- Restored to clean version without excessive per-sentence logging
+- Connector logging remains minimal (5 lines only)
+
+FILES CHANGED:
+- ui/core/llm_connectors.php:375-376, 381, 384, 1459-1460, 1465, 1468
+- connector/openrouterjsoncached.php:12 (version number)
+- lib/chat_helper_functions.php (restored to clean version)
+
+CHIM Cached Connector - Version History
+========================================
+
+v1.1.18 (2025/11/14)
+--------------------
+CRITICAL BUG FIX:
+- Removed ALL colon stripping logic entirely
+  * v1.1.16-17 attempts to be "smart" about when to strip colons
+  * Problem: Talk is the most common action - colons should NEVER be stripped
+  * Root cause: Misunderstanding of simple format specification
+  * Format: (mood)(listener)(action)(target): message
+  * The leading ':' is ALWAYS part of the format, regardless of action
+
+THE FIX:
+- Completely removed conditional colon stripping logic
+- Colons are now preserved in ALL cases
+- Lines 581-584 in openrouterjsoncached_helpers.php now just preserve colons
+- Simple, correct behavior: never touch the leading ':'
+
+IMPACT:
+- Action descriptions always display correctly with leading ':'
+- Talk actions display correctly with leading ':'
+- No more edge cases or conditional logic
+- Simpler, more maintainable code
+- Fixes issue where v1.1.17 still stripped colons in some cases
+
+Location: connector/openrouterjsoncached_helpers.php:581-584
+
+
+v1.1.17 (2025/11/13)
+--------------------
+BUG FIX ATTEMPT (still incomplete):
+- Added check for actions field being disabled
+  * v1.1.16 didn't account for actions field being disabled
+  * When actions disabled, action defaults to 'Talk'
+  * This incorrectly triggered colon stripping
+  * Fix: Only strip if actions field enabled AND action is Talk
+
+THE ISSUE:
+- Still not correct because Talk is the most common action
+- Colons should never be stripped, even for Talk
+- Fixed completely in v1.1.18
+
+Location: connector/openrouterjsoncached_helpers.php
+
+
+v1.1.16 (2025/11/13)
+--------------------
+CRITICAL BUG FIX:
+- Fixed leading colon being stripped from action descriptions
+  * Root cause: extractSimpleFormatFromBuffer() in openrouterjsoncached_helpers.php
+  * Lines 556-558 stripped leading ':' from ALL messages indiscriminately
+  * Did not account for action format: (mood)(listener)(action)(target): description
+  * For non-Talk actions, the leading ':' is part of the format specification
+
+THE FIX:
+- Parse action field FIRST before deciding whether to strip colon
+- ONLY strip colon for Talk actions: (mood)(listener)(Talk)(target) dialogue text
+- PRESERVE colon for other actions: (mood)(listener)(Gesture)(target): waves hand
+- Uses strcasecmp for case-insensitive comparison
+
+IMPACT:
+- Action descriptions now correctly display with leading ':'
+- Fixes issue where "leans closer" appeared instead of ": leans closer"
+- Diagnostic logging from v1.1.14-15 helped identify the exact location
+- Maintains backward compatibility for Talk actions
+- No changes to JSON format processing
+
+Location: connector/openrouterjsoncached_helpers.php:545-592
+
+
+v1.1.15 (2025/11/13)
+--------------------
+DIAGNOSTIC IMPROVEMENTS:
+- Added comprehensive return tracking for colon debugging
+  * Logs every sentence returned from _parseAndReturnContent() (line 1358)
+  * Logs every sentence returned from flush (line 1200)
+  * Special highlighting when sentence starts with ':' (action descriptions)
+  * Logs show: "⚠️ SENTENCE STARTS WITH COLON" for easy grep
+  * Combined with v1.1.14 _splitIntoSentences logging for complete trace
+  * Look for "[openrouterjsoncached] _parseAndReturnContent returning" in cache.log
+  * Look for "[openrouterjsoncached] Flush:" messages in cache.log
+  * Helps identify if colon stripping happens inside or outside connector
+
+PURPOSE:
+- Trace where leading ':' from action descriptions disappears
+- v1.1.14 confirmed colons present in _splitIntoSentences output
+- v1.1.15 confirms colons present in _parseAndReturnContent return value
+- If colons still missing in game, issue is outside connector code
+
+
+v1.1.14 (2025/11/13)
+--------------------
+DIAGNOSTIC LOGGING:
+- Added comprehensive diagnostic logging to _splitIntoSentences
+  * Logs number of parts after split
+  * Logs before/after trim for each part (especially if contains colon)
+  * Logs which parts are kept vs filtered out
+  * Helps diagnose why leading colons disappear from action descriptions
+  * Look for "[openrouterjsoncached] _splitIntoSentences:" in cache.log
+
+
+v1.1.13 (2025/11/13)
+--------------------
+BUG FIXES:
+- Fixed minimize_quality_prompt setting not applying (v1.1.12 had logic bug)
+  * Now defaults to minimized=true (matches UI default of checked)
+  * Uses (bool) cast to handle string "1"/"0" properly
+  * Previous: defaulted to full, only minimized if explicitly true
+  * Now: works correctly with UI toggle
+
+- Fixed grammar in full template
+  * Changed: "should be a casual" → "as a casual"
+  * Removed incomplete: "will use this format..." ending
+  * Full template now reads naturally
+
+- Added comprehensive diagnostic logging
+  * Logs model name from DMgetCurrentModel()
+  * Logs whether connector config found
+  * Logs raw value and type of setting
+  * Logs value after (bool) cast
+  * Logs which template is used (MINIMIZED vs FULL)
+  * Check log/lastlog.log or log/cache.log
+
+
+v1.1.12 (2025/11/13)
+--------------------
+FEATURE IMPLEMENTATION:
+- Fully implemented minimize_quality_prompt setting
+  * v1.1.10/v1.1.11 added diagnostic logging but caused bugs
+  * Feature existed in UI and schema since early versions but had no backend code
+  * Now properly checks $GLOBALS["CONNECTOR"][model]["minimize_quality_prompt"]
+  * Modifies $TEMPLATE_DIALOG based on setting for full compatibility
+  * When enabled: Uses minimized template "Write {NPC}'s next dialogue line."
+  * When disabled/not set: Uses full template with quality instructions
+  * Recommended for advanced models (Claude 3.5+, GPT-4+, Gemini 2.0)
+  * Implementation in prompts/dialogue_prompt.php lines 28-37
+  * Backward compatible - defaults to full template if setting not found
+
+
+v1.1.11 (2025/11/13) - SKIP THIS VERSION
+-----------------------------------------
+BUG FIX (but still broken):
+- Removed buggy diagnostic logging code
+  * Deleted diagnostic logging for minimize_quality_prompt (lines 28-57)
+  * Code was causing issues preventing requests from being sent
+  * Restored to clean state but feature still not implemented
+  * Investigation revealed minimize_quality_prompt was never implemented
+
+
+v1.1.10 (2025/11/13) - BROKEN, DO NOT USE
+------------------------------------------
+CRITICAL BUG FIX:
+- Fixed flush not called when finish_reason detected
+  * Previous: Flush only at EOF or [DONE] markers
+  * Problem: When max_tokens reached (finish_reason: 'length'), flush wasn't triggered
+  * Impact: Trailing content lost when stream ended with finish_reason
+  * Fix: Added flush calls at all stream end conditions:
+    - Anthropic stop_reason handler (line 930-938)
+    - OpenAI finish_reason handler (line 973-982)
+    - message_stop event handler (line 1002-1011)
+  * Result: All content now returned regardless of stream end condition
+
+FAILED FEATURE (caused bugs):
+- Attempted to add diagnostic logging for minimize_quality_prompt
+  * Added comprehensive logging in prompts/dialogue_prompt.php
+  * Duplicate $TEMPLATE_DIALOG definitions caused early failure
+  * Prevented requests from being sent to LLM
+  * Fixed in v1.1.11 by removing diagnostic code
+
+
+v1.1.9 (2025/11/13)
+-------------------
+BUG FIXES:
+- Fixed leading colon preservation
+  * v1.1.8 incorrectly stripped leading ':' from messages
+  * Now preserves colons: ':' stays as ':'
+  * Reverted incorrect colon stripping logic
+
+IMPROVEMENTS:
+- Enhanced flush logging for diagnostics
+  * Logs message length and preview
+  * Logs complete sentence count vs already sent
+  * Logs partial detection (position, length)
+  * Logs why partial is/isn't returned
+  * Helps diagnose missing action descriptions
+
+
+v1.1.8 (2025/11/13)
+-------------------
+CRITICAL BUG FIXES:
+- Fixed "Halfan" bug - Word concatenation from offset desync
+  * Old: "Half an hour" → "Halfan hour"
+  * New: Impossible due to index-based tracking
+
+- Fixed message duplication - Length tracking errors
+  * Old: Complex offset math caused re-sending
+  * New: Simple sentence counter prevents duplicates
+
+- Fixed lost sentences - Position calculation failures
+  * Old: Sentences could be skipped
+  * New: Index iteration ensures all sentences sent
+
+- Fixed data loss at stream end - Trailing partials
+  * Old: Incomplete text lost when max_tokens reached
+  * New: Flush mechanism returns all content + adds period
+
+- Fixed reasoning token interference
+  * Old: <think> tags broke format detection
+  * New: Preprocessing strips tags before parsing
+
+NEW FEATURES:
+- Reasoning token preprocessing
+  * Handles <think>, <thinking>, <answer> tags
+  * State machine for reliable stripping
+  * Supports prefill cases (orphaned closing tags)
+
+- Timeout fallback
+  * Triggers at 100 characters without format
+  * Graceful degradation to sentence splitting
+  * Prevents complete failure when LLM ignores format
+
+- Trailing partial flush
+  * Returns unsent complete sentences first
+  * Finds trailing text after last punctuation
+  * Adds period if needed
+  * Incremental return across multiple process() calls
+
+ARCHITECTURE IMPROVEMENTS:
+- Ultra-simple parser design
+  * Single buffer (no separate sentence buffer)
+  * Wait when ambiguous (only process when certain)
+  * No offset math (index-based sentence tracking)
+  * Combined metadata+sentence detection
+
+- State variables
+  * _reasoningState: 'NORMAL' | 'WAITING_FOR_REASONING_CLOSE'
+  * _metadataEnd: Position where message starts (-1 = not found)
+  * _sentencesSent: Count of sentences returned (simple counter)
+  * _flushedPartial: Track if trailing partial was flushed
+
+
+v1.0.24 (2025/11/12)
+--------------------
+- Bug fixes for streaming
+- Improved error handling
+
+
+v1.0.19f (2025/11/11)
+---------------------
+- Format investigation
+- UI improvements
+- Cache performance logging
+
+
+v1.0.19e (2025/11/10)
+---------------------
+- Cache efficiency improvements
+- Anthropic cache control support
+
+
+v1.0.19d (2025/11/09)
+---------------------
+- OpenAI native caching support
+- Gemini batch caching support
+
+
+v1.0.19c (2025/11/08)
+---------------------
+- Initial prompt caching implementation
+- Response format control (JSON vs simple)
+
+
+v1.0.19b (2025/11/07)
+---------------------
+- Streaming optimization
+- JSON parsing improvements
+
+
+v1.0.19 (2025/11/06)
+--------------------
+- Initial release with OpenRouter support
+- Basic JSON response format
+- Streaming support
+
+
+COMPARISON: v1.0.x vs v1.1.8+ vs v1.1.12 vs v1.1.18
+====================================================
+
+Aspect                  | v1.0.x             | v1.1.8-11          | v1.1.12-17         | v1.1.18
+------------------------|--------------------|--------------------|--------------------|-----------------
+Buffer mgmt             | Separate sentence  | Single buffer      | Single buffer      | Single buffer
+Position track          | Multiple offsets   | One index counter  | One index counter  | One index counter
+Metadata detect         | Separate logic     | Combined           | Combined           | Combined
+Reasoning               | Post-parsing strip | Pre-preprocess     | Pre-preprocess     | Pre-preprocess
+State vars              | 8+ to sync         | 7 clean vars       | 7 clean vars       | 7 clean vars
+Failure mode            | Offset desync      | Wait for chunk     | Wait for chunk     | Wait for chunk
+"Halfan" bug            | Possible           | Impossible         | Impossible         | Impossible
+Duplication             | Possible           | Impossible         | Impossible         | Impossible
+Data loss               | Possible           | Impossible         | Impossible         | Impossible
+Finish_reason flush     | Content lost       | Flush called       | Flush called       | Flush called
+minimize_quality_prompt | Not implemented    | Not implemented    | ✅ Implemented     | ✅ Implemented
+Colon stripping         | Always stripped    | Smart stripping    | Conditional strip  | ✅ NEVER stripped
+
+
+KEY DATES
+=========
+2025/11/14 - v1.1.18 release (removed all colon stripping)
+2025/11/13 - v1.1.17 release (attempted fix for actions disabled)
+2025/11/13 - v1.1.16 release (conditional colon stripping)
+2025/11/13 - v1.1.12 release (minimize_quality_prompt implemented)
+2025/11/13 - v1.1.11 release (removed buggy logging, still broken)
+2025/11/13 - v1.1.10 release (flush fix + broken diagnostic logging)
+2025/11/13 - v1.1.9 release (colon preservation fix)
+2025/11/13 - v1.1.8 release (complete simple format rewrite)
+2025/11/12 - v1.0.24 release
+2025/11/11 - v1.0.19f release
+2025/11/06 - v1.0.19 initial release

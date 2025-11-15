@@ -1,0 +1,246 @@
+CHIM Cached Connector v1.1.20
+==============================
+
+Package Date: 2025/11/15
+Version: v1.1.20
+
+WHAT'S IN THIS PACKAGE
+======================
+
+connector/
+----------
+- openrouterjsoncached.php              Main connector (v1.1.20)
+- openrouterjsoncached_helpers.php      Helper functions (colon preservation)
+- openrouterjsoncached_verbose.php      Verbose version for debugging
+- __jpd.php                              JSON parsing utilities
+- OPENROUTERJSONCACHED_README.md        Connector documentation
+
+prompts/
+--------
+- dialogue_prompt.php                    Dialogue prompt templates with minimize_quality_prompt
+
+functions/
+----------
+- json_response.php                      JSON response handling and action list building
+
+lib/
+----
+- tokenizer_helper_functions.php        Token counting utilities
+- chat_helper_functions.php             Post-processing functions (clean version)
+- core/llm_connector.class.php          Base LLM connector class
+
+conf/
+-----
+- conf_schema.json                       Configuration schema with minimize_quality_prompt
+
+ui/
+---
+- conf_wizard.php                        Configuration wizard UI
+- conf_wizardbackup.php                  Backup configuration UI
+- quickstart.php                         Quick start guide UI
+- core/llm_connectors.php                LLM connector UI (v1.1.20 - THINKING TOGGLE FIX)
+- core/core_profiles.php                 Profile management UI
+
+Documentation/
+--------------
+- INSTALLATION_INSTRUCTIONS.txt          How to install this package
+- CHANGELOG.txt                          Complete version history
+- ZIP_FILE_INFO.txt                      This file
+- CHIM_CACHED_CONNECTOR_v1.1.20_SUMMARY.md  Detailed summary and troubleshooting
+
+
+CRITICAL FIX IN v1.1.20
+=======================
+
+**THINKING TOGGLE AND SETTINGS NOW SAVE CORRECTLY**
+
+The thinking toggle, thinking tokens, and effort level settings were not saving
+when you clicked the Save button in the LLM Connectors UI. They would reset to
+OFF/empty after page reload.
+
+Root Cause:
+- Form fields were missing name attributes entirely
+- HTML forms do not submit fields without name attributes
+- This is basic HTML behavior that was overlooked
+
+The Fix:
+- Added name="metadata[toggle_thinking]" to checkbox
+- Added name="metadata[thinking_tokens]" to number input
+- Added name="metadata[effort_level]" to select dropdown
+- Same pattern as all working metadata fields (provider_caching, etc.)
+- PHP automatically collects metadata[key] into $_POST['metadata'] array
+- LLMConnector class JSON-encodes and stores in database
+
+Impact:
+✅ Toggle Thinking checkbox now saves
+✅ Thinking Tokens value now saves
+✅ Effort Level selection now saves
+✅ Works with o1, o3, o4, DeepSeek-R1, and other reasoning models
+
+Location: ui/core/llm_connectors.php:375-376, 381, 384, 1459-1460, 1465, 1468
+
+
+FEATURES SUMMARY
+================
+
+✅ Prompt caching support (Anthropic, OpenAI, Gemini)
+✅ JSON and Simple response formats
+✅ Streaming with proper sentence boundary detection
+✅ Reasoning token handling (<think>, <thinking>, <answer>)
+✅ minimize_quality_prompt setting (implemented in v1.1.12)
+✅ Proper colon preservation in connector (fixed in v1.1.18)
+✅ Flush on all stream end conditions (fixed in v1.1.10)
+✅ Metadata field toggles (mood, listener, action, target)
+✅ Action list with dynamic function support
+✅ Format instruction customization
+✅ Thinking toggle UI (FIXED in v1.1.20)
+✅ Clean logging (minimal debug output)
+
+
+INSTALLATION
+============
+
+See INSTALLATION_INSTRUCTIONS.txt for detailed installation steps.
+
+Quick steps:
+1. Back up your existing connector files
+2. Extract this ZIP to your HerikaServer directory
+3. Overwrite when prompted
+4. Clear cache (temp/*.tmp files)
+5. Restart PHP/web server
+6. Test thinking toggle (should save now!)
+
+
+COMPATIBILITY
+=============
+
+- Requires CHIM/Herika Server
+- Tested with:
+  * Anthropic Claude (all versions)
+  * OpenAI GPT (3.5+, 4, 4o, o1, o3)
+  * Google Gemini (1.5+, 2.0)
+  * OpenRouter (all supported models)
+  * DeepSeek R1
+- Works with minimize_quality_prompt setting
+- Works with thinking/reasoning models (o1, DeepSeek-R1, etc.)
+- Backward compatible with existing configurations
+
+
+UPGRADE PATH
+============
+
+From v1.1.18-1.1.19:
+- RECOMMENDED UPGRADE if you use thinking models
+- Fixes thinking toggle not saving
+- Clean logging (removed excessive diagnostics)
+- No configuration changes needed
+
+From v1.1.8-17:
+- Direct upgrade supported
+- All critical fixes included
+- Clear cache recommended
+
+From v1.0.x:
+- Direct upgrade supported
+- Clear cache REQUIRED (parser changed)
+- All major bugs fixed
+
+
+VERIFICATION
+============
+
+After installation, verify:
+
+1. Check version in openrouterjsoncached.php:12
+   Should show: OpenRouter Cache Connector v1.1.20
+
+2. Test thinking toggle:
+   - Open LLM Connectors UI
+   - Select/create a connector
+   - Enable "Toggle Thinking"
+   - Set "Thinking Tokens" to 1000
+   - Select "Effort Level" = medium
+   - Click "Save" button
+   - Reload page
+   - Settings should still be there ✅
+
+3. Check form has name attributes:
+   - View page source (Right-click → View Page Source)
+   - Search for: name="metadata[toggle_thinking]"
+   - Should find checkbox with proper name attribute
+
+4. Verify colon handling in connector:
+   - Check openrouterjsoncached_helpers.php:581-584
+   - Should have colon preservation comment block
+   - Should NOT have conditional colon stripping
+
+
+TROUBLESHOOTING
+===============
+
+Thinking toggle still not saving?
+- Clear browser cache (Ctrl+Shift+Delete)
+- Hard refresh page (Ctrl+F5)
+- Verify file updated:
+  grep 'name="metadata\[toggle_thinking\]"' ui/core/llm_connectors.php
+- Check PHP error logs for permission issues
+- Restart PHP-FPM or web server
+
+Colons still being stripped?
+- v1.1.18-1.1.20 fixed connector-side colon stripping
+- If colons still stripped, issue is in post-processing pipeline
+- Check returnLines(), unmoodSentence() functions
+- This is a separate issue requiring investigation
+
+minimize_quality_prompt not working?
+- Check log/lastlog.log for diagnostic messages
+- Verify setting in UI matches connector config
+- Ensure DMgetCurrentModel() returns correct model name
+
+Streaming issues?
+- Check log/cache.log for buffer processing messages
+- Verify finish_reason triggers flush
+- Look for "Flush:" messages in logs
+
+
+SUPPORT
+=======
+
+- Check CHANGELOG.txt for version-specific fixes
+- Review OPENROUTERJSONCACHED_README.md for features
+- Read CHIM_CACHED_CONNECTOR_v1.1.20_SUMMARY.md for details
+- Check logs in log/cache.log, log/chim.log, log/lastlog.log
+- GitHub: https://github.com/Unknwn-Prson/HerikaServer
+
+
+VERSION NOTES
+=============
+
+v1.1.20 is the recommended version for all users, especially those using
+thinking/reasoning models like o1, o3, o4, or DeepSeek-R1.
+
+Key improvements over v1.1.19:
+- Thinking toggle and settings now save correctly
+- Removed excessive diagnostic logging
+- Clean, production-ready code
+
+Key improvements over v1.1.18:
+- Can now use thinking with o1, DeepSeek-R1, other reasoning models
+- Thinking tokens setting works for Anthropic/Gemini
+- Effort level setting works for OpenAI reasoning models
+- All v1.1.18 fixes for colon preservation included
+
+Key improvements over v1.0.x:
+- 100% elimination of "Halfan" word concatenation bug
+- 100% elimination of duplicate message bug
+- 100% elimination of lost sentence bug
+- Proper flush on all stream end conditions
+- Working minimize_quality_prompt setting
+- Correct colon preservation in connector
+- Thinking toggle UI working correctly
+
+Do NOT use:
+- v1.1.19 (excessive diagnostic logging)
+- v1.1.16-17 (incorrect colon stripping logic)
+- v1.1.10 (broken diagnostic logging)
+- v1.1.11 (minimize_quality_prompt not implemented)

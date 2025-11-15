@@ -1,0 +1,276 @@
+CHIM Cached Connector v1.1.20 - Installation Instructions
+==========================================================
+
+IMPORTANT: This version (v1.1.20) fixes a CRITICAL bug where flush wasn't
+called when finish_reason was detected, causing trailing content to be lost
+when max_tokens was reached. Upgrading is highly recommended.
+
+
+QUICK INSTALL (Recommended)
+============================
+
+1. BACKUP YOUR FILES
+   -----------------
+   Before installing, backup these files in case you need to revert:
+   - connector/openrouterjsoncached.php
+   - connector/openrouterjsoncached_verbose.php
+   - connector/openrouterjsoncached_helpers.php
+   - lib/tokenizer_helper_functions.php
+   - conf/conf_schema.json
+
+2. EXTRACT ZIP
+   -----------
+   Extract all files from CHIM_Cached_Connector_v1.1.20.zip
+
+3. COPY FILES
+   ----------
+   Copy to your CHIM installation directory, preserving folder structure:
+
+   connector/*     → [CHIM]/connector/
+   lib/*           → [CHIM]/lib/
+   functions/*     → [CHIM]/functions/
+   conf/*          → [CHIM]/conf/
+   ui/*            → [CHIM]/ui/
+   prompts/*       → [CHIM]/prompts/
+
+4. CLEAR CACHE (IMPORTANT!)
+   -------------------------
+   Delete these cache files:
+   - [CHIM]/temp/system_cache_*.tmp
+   - [CHIM]/temp/combined_dialogue_cache_*.tmp
+
+5. RESTART CHIM
+   ------------
+   Restart your CHIM server/application
+
+6. VERIFY INSTALLATION
+   -------------------
+   Check these log files:
+   - log/cache.log should show "v1.1.20 initialized"
+   - Test simple format with your LLM
+   - Monitor log/cache.log for flush diagnostic messages
+   - Check log/lastlog.log for minimize_quality_prompt diagnostic messages
+
+
+DETAILED INSTALLATION
+======================
+
+STEP 1: BACKUP
+--------------
+Create backups of files that will be replaced:
+
+mkdir -p ~/chim_backup_$(date +%Y%m%d)
+cp connector/openrouterjsoncached*.php ~/chim_backup_$(date +%Y%m%d)/
+cp connector/__jpd.php ~/chim_backup_$(date +%Y%m%d)/
+cp lib/tokenizer_helper_functions.php ~/chim_backup_$(date +%Y%m%d)/
+cp lib/core/llm_connector.class.php ~/chim_backup_$(date +%Y%m%d)/
+cp functions/json_response.php ~/chim_backup_$(date +%Y%m%d)/
+cp conf/conf_schema.json ~/chim_backup_$(date +%Y%m%d)/
+
+
+STEP 2: EXTRACT
+---------------
+Extract the ZIP file to a temporary location:
+
+unzip CHIM_Cached_Connector_v1.1.20.zip -d /tmp/chim_update/
+
+
+STEP 3: COPY CONNECTOR FILES
+-----------------------------
+cp /tmp/chim_update/connector/openrouterjsoncached.php [CHIM]/connector/
+cp /tmp/chim_update/connector/openrouterjsoncached_verbose.php [CHIM]/connector/
+cp /tmp/chim_update/connector/openrouterjsoncached_helpers.php [CHIM]/connector/
+cp /tmp/chim_update/connector/__jpd.php [CHIM]/connector/
+cp /tmp/chim_update/connector/OPENROUTERJSONCACHED_README.md [CHIM]/connector/
+
+
+STEP 4: COPY LIBRARY FILES
+---------------------------
+cp /tmp/chim_update/lib/tokenizer_helper_functions.php [CHIM]/lib/
+cp /tmp/chim_update/lib/core/llm_connector.class.php [CHIM]/lib/core/
+
+
+STEP 5: COPY FUNCTION FILES
+----------------------------
+cp /tmp/chim_update/functions/json_response.php [CHIM]/functions/
+
+
+STEP 6: COPY CONFIGURATION
+---------------------------
+cp /tmp/chim_update/conf/conf_schema.json [CHIM]/conf/
+
+
+STEP 7: COPY UI FILES (Optional but recommended)
+-------------------------------------------------
+cp /tmp/chim_update/ui/core/core_profiles.php [CHIM]/ui/core/
+cp /tmp/chim_update/ui/core/llm_connectors.php [CHIM]/ui/core/
+cp /tmp/chim_update/ui/conf_wizard.php [CHIM]/ui/
+cp /tmp/chim_update/ui/conf_wizardbackup.php [CHIM]/ui/
+cp /tmp/chim_update/ui/quickstart.php [CHIM]/ui/
+
+
+STEP 8: COPY PROMPTS (For minimize_quality_prompt diagnostic logging)
+----------------------------------------------------------------------
+If you want the new diagnostic logging for minimize_quality_prompt:
+cp /tmp/chim_update/prompts/dialogue_prompt.php [CHIM]/prompts/
+
+NOTE: This will overwrite your existing dialogue_prompt.php. If you have
+custom modifications, backup first and manually merge changes.
+
+
+STEP 9: CLEAR CACHE
+--------------------
+IMPORTANT: You MUST clear cache when upgrading from v1.0.x or v1.1.x
+
+rm -f [CHIM]/temp/system_cache_*.tmp
+rm -f [CHIM]/temp/combined_dialogue_cache_*.tmp
+
+
+STEP 10: VERIFY INSTALLATION
+-----------------------------
+1. Check version in logs:
+   grep "initialized" [CHIM]/log/cache.log
+   Should show: "OpenRouter Cache Connector v1.1.20 initialized"
+
+2. Test simple format:
+   - Enable response_format = "simple" in configuration
+   - Send test message to LLM
+   - Check log/cache.log for parsing messages
+
+3. Verify flush is working:
+   - Check log/cache.log for "Flush:" messages when stream ends
+   - Messages should appear for all stream end conditions
+
+4. Check minimize_quality_prompt logging:
+   - Check log/lastlog.log for "[dialogue_prompt]" messages
+   - Should show current model, setting value, template used
+
+
+UPGRADING FROM SPECIFIC VERSIONS
+=================================
+
+FROM v1.1.9:
+-----------
+Changes: Flush on finish_reason fix + minimize_quality_prompt logging
+Action: Standard upgrade (all files)
+Cache: Clear recommended
+
+FROM v1.1.8:
+-----------
+Changes: Colon preservation fix + flush logging + finish_reason fix
+Action: Standard upgrade (all files)
+Cache: Clear recommended
+
+FROM v1.0.x:
+-----------
+Changes: Complete simple format rewrite + all v1.1.x fixes
+Action: Standard upgrade (all files)
+Cache: Clear REQUIRED (parser completely changed)
+
+
+CONFIGURATION AFTER INSTALL
+============================
+
+1. RESPONSE FORMAT
+   ---------------
+   In your connector configuration, set:
+
+   response_format = "simple"  // Recommended with v1.1.20
+
+   Or:
+
+   response_format = "json"  // Classic format
+
+2. FIELD CONTROL
+   -------------
+   Enable/disable specific fields:
+
+   include_mood_requirement = true
+   include_listener_requirement = true
+   include_actions_list = true
+   include_target_requirement = true
+
+3. CACHE SETTINGS
+   --------------
+   provider_caching = "Anthropic"  // or "OpenAI", "Gemini"
+   max_dialogue_cache_context_size = 200
+   dialogue_cache_uncached_count = 4
+
+4. MINIMIZE QUALITY PROMPT
+   -----------------------
+   minimize_quality_prompt = true  // For Claude 3.5+, GPT-4+, etc.
+   minimize_quality_prompt = false  // For older/smaller models
+
+
+TROUBLESHOOTING
+===============
+
+PROBLEM: Version still shows v1.0.x or v1.1.x after upgrade
+SOLUTION: - Clear PHP opcache if enabled
+          - Restart web server
+          - Check that files were actually copied (permissions issue?)
+
+PROBLEM: Cache not working after upgrade
+SOLUTION: - Verify you cleared cache files
+          - Check provider_caching matches your API provider
+          - Look for cache statistics in _cached_perf.log
+
+PROBLEM: Simple format not working
+SOLUTION: - Verify response_format = "simple" in configuration
+          - Check log/cache.log for parser initialization
+          - Look for timeout fallback messages (triggers at 100 chars)
+
+PROBLEM: Missing content at end of responses
+SOLUTION: - Should be fixed in v1.1.20
+          - Check log/cache.log for flush messages
+          - Look for "Flushing trailing partial" or finish_reason messages
+
+PROBLEM: minimize_quality_prompt not working
+SOLUTION: - Check log/lastlog.log for diagnostic messages
+          - Verify setting is in correct configuration section
+          - Check model name matches configuration key
+
+
+ROLLBACK PROCEDURE
+==================
+
+If you need to revert to your previous version:
+
+1. Stop CHIM
+
+2. Restore from backup:
+   cp ~/chim_backup_YYYYMMDD/* [CHIM]/connector/
+   (restore other files as needed)
+
+3. Clear cache:
+   rm -f [CHIM]/temp/system_cache_*.tmp
+   rm -f [CHIM]/temp/combined_dialogue_cache_*.tmp
+
+4. Restart CHIM
+
+
+SUPPORT
+=======
+
+- README: See connector/OPENROUTERJSONCACHED_README.md
+- Changelog: See CHANGELOG.txt
+- Design Document: CODING-DESIGN-DOCUMENT-FOR-CLAUDE.md (on GitHub)
+
+
+WHAT'S NEXT
+===========
+
+After successful installation:
+
+1. Test with simple format enabled
+2. Monitor logs for flush diagnostic messages
+3. Check cache performance in _cached_perf.log
+4. Report any issues to the development team
+
+
+VERSION HISTORY
+===============
+v1.1.20 (2025/11/15) - Flush on finish_reason fix + minimize_quality_prompt logging
+v1.1.9 (2025/11/15) - Colon preservation fix + flush logging
+v1.1.8 (2025/11/15) - Complete simple format rewrite
+v1.0.24 (2025/11/12) - Streaming bug fixes

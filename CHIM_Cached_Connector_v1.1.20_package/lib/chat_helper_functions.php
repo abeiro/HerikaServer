@@ -500,12 +500,6 @@ function checkOAIComplains($responseTextUnmooded)
 function unmoodSentence($sentence) {
     global $forceMood;
 
-    // DIAGNOSTIC: Log input sentence, especially if starts with colon
-    $startsWithColon = (strlen($sentence) > 0 && $sentence[0] === ':');
-    if ($startsWithColon) {
-        Logger::info("[unmoodSentence] ⚠️ INPUT STARTS WITH COLON: " . substr($sentence, 0, 80));
-    }
-
     $output = $sentence;
 
     // Determine whether to process asterisks:
@@ -569,17 +563,6 @@ function unmoodSentence($sentence) {
         $forceMood = "whispering";
     }
 
-    // DIAGNOSTIC: Log output, especially if input had colon but output doesn't
-    $outputStartsWithColon = (strlen($responseTextUnmooded) > 0 && $responseTextUnmooded[0] === ':');
-    if ($startsWithColon && !$outputStartsWithColon) {
-        Logger::info("[unmoodSentence] ❌ COLON WAS STRIPPED!");
-        Logger::info("[unmoodSentence]    INPUT:  " . substr($sentence, 0, 80));
-        Logger::info("[unmoodSentence]    OUTPUT: " . substr($responseTextUnmooded, 0, 80));
-    } elseif ($startsWithColon && $outputStartsWithColon) {
-        Logger::info("[unmoodSentence] ✅ COLON PRESERVED");
-        Logger::info("[unmoodSentence]    OUTPUT: " . substr($responseTextUnmooded, 0, 80));
-    }
-
     return $responseTextUnmooded;
 }
 
@@ -609,24 +592,7 @@ function returnLines($lines,$writeOutput=true)
         //$sentence = preg_replace('/[[:^print:]]/', '', $output); // Remove non ASCII chracters
 
         $sentence=$output;
-
-        // DIAGNOSTIC: Log sentence before unmoodSentence
-        $beforeStartsWithColon = (strlen($sentence) > 0 && $sentence[0] === ':');
-        if ($beforeStartsWithColon) {
-            Logger::info("[returnLines] Before unmoodSentence, sentence starts with colon: " . substr($sentence, 0, 60));
-        }
-
         $responseTextUnmooded=unmoodSentence($sentence);
-
-        // DIAGNOSTIC: Log after unmoodSentence
-        $afterStartsWithColon = (strlen($responseTextUnmooded) > 0 && $responseTextUnmooded[0] === ':');
-        if ($beforeStartsWithColon) {
-            if ($afterStartsWithColon) {
-                Logger::info("[returnLines] After unmoodSentence, colon preserved: " . substr($responseTextUnmooded, 0, 60));
-            } else {
-                Logger::info("[returnLines] After unmoodSentence, colon MISSING: " . substr($responseTextUnmooded, 0, 60));
-            }
-        }
 
         $scoring = checkOAIComplains($responseTextUnmooded);
 
@@ -636,17 +602,7 @@ function returnLines($lines,$writeOutput=true)
             $FORCED_STOP = true;
         } else {
             if (isset($TRANSFORMER_FUNCTION)) {
-                $beforeTransform = $responseTextUnmooded;
-                $beforeTransformColon = (strlen($beforeTransform) > 0 && $beforeTransform[0] === ':');
-
                 $responseTextUnmooded = $TRANSFORMER_FUNCTION($responseTextUnmooded);
-
-                $afterTransformColon = (strlen($responseTextUnmooded) > 0 && $responseTextUnmooded[0] === ':');
-                if ($beforeTransformColon && !$afterTransformColon) {
-                    Logger::info("[returnLines] ❌ TRANSFORMER_FUNCTION stripped colon!");
-                    Logger::info("[returnLines]    BEFORE: " . substr($beforeTransform, 0, 60));
-                    Logger::info("[returnLines]    AFTER:  " . substr($responseTextUnmooded, 0, 60));
-                }
             }
         }
 
@@ -682,20 +638,7 @@ function returnLines($lines,$writeOutput=true)
             return;
         }
 
-        // DIAGNOSTIC: Check if NPC name removal affects colons
-        $beforeNameRemoval = $responseTextUnmooded;
-        $beforeNameRemovalColon = (strlen($beforeNameRemoval) > 0 && $beforeNameRemoval[0] === ':');
-
         $responseTextUnmooded = preg_replace("/{$GLOBALS["HERIKA_NAME"]}\s*:\s*/", '', $responseTextUnmooded);	// Should not happen
-
-        $afterNameRemovalColon = (strlen($responseTextUnmooded) > 0 && $responseTextUnmooded[0] === ':');
-        if ($beforeNameRemovalColon && !$afterNameRemovalColon) {
-            Logger::info("[returnLines] ❌ NPC name removal stripped colon!");
-            Logger::info("[returnLines]    NPC NAME: " . $GLOBALS["HERIKA_NAME"]);
-            Logger::info("[returnLines]    PATTERN:  /{$GLOBALS["HERIKA_NAME"]}\s*:\s*/");
-            Logger::info("[returnLines]    BEFORE:   " . substr($beforeNameRemoval, 0, 60));
-            Logger::info("[returnLines]    AFTER:    " . substr($responseTextUnmooded, 0, 60));
-        }
 
         $responseText = $responseTextUnmooded;
         $responseForTTS = $responseTextUnmooded;
