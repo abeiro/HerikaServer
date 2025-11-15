@@ -261,6 +261,10 @@ class sql
         }
 
         $finalData = array();
+        
+        if (!$result)
+            throw new Exception("SQL: FetchAll query failed '{$q}' " . $this->GetLastError() . $this->extract_caller());
+
         while ($row = pg_fetch_assoc($result)) {
             $finalData[] = $row;
         }
