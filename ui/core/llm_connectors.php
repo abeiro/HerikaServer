@@ -2169,6 +2169,14 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
 
             // Update form metadata field
             form.metadata.value = JSON.stringify(metadata);
+
+            // CRITICAL: Remove name attributes from all metadata[...] fields
+            // Otherwise PHP will receive the array fields and ignore the textarea
+            metadataInputs.forEach(inp => {
+                if (inp.name.startsWith('metadata[')) {
+                    inp.removeAttribute('name');
+                }
+            });
         } catch (err) {
             console.error('Error merging reasoning fields into metadata:', err);
         }
