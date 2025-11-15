@@ -269,7 +269,6 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
         <?php endif; ?>
         <input type="hidden" name="partial" value="editor">
-        <input type="hidden" name="metadata" id="metadata_field" value="">
         <div class="two-col-llm">
             <div>
                 <div class="top-actions" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
@@ -1352,7 +1351,6 @@ if (typeof window.consolidation !== 'function') {
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
     <?php endif; ?>
-    <input type="hidden" name="metadata" id="metadata_field_main" value="">
 
     <div class="two-col-llm">
         <div>
@@ -2059,68 +2057,65 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
  ?>
 
 <script>
-// Custom consolidation for llm_connectors.php
-// Collects all metadata fields and consolidates them into the hidden metadata field
+// Extend consolidation() to merge reasoning fields into metadata
 (function(){
     const originalConsolidation = window.consolidation;
     window.consolidation = function() {
-        // Get the current form (either embedded or main)
+        // First run the original consolidation (from metadata_json_editor.php)
+        const result = originalConsolidation ? originalConsolidation() : true;
+        if (!result) return false;
+
+        // Now merge our custom reasoning fields into metadata
         const form = document.querySelector('form[method="post"]');
-        if (!form) return true;
+        if (!form || !form.metadata) return result;
 
-        // Check if there's a JSON editor on this page (e.g., core_profiles.php)
-        const hasJsonEditor = (typeof window.jsonEditor !== 'undefined') || document.getElementById('metadata');
+        try {
+            // Parse existing metadata
+            let metadata = {};
+            try {
+                const metaStr = form.metadata.value || '{}';
+                metadata = JSON.parse(metaStr);
+            } catch (_e) {
+                metadata = {};
+            }
 
-        if (hasJsonEditor && originalConsolidation && typeof originalConsolidation === 'function') {
-            // Use the original consolidation for pages with JSON editor
-            return originalConsolidation();
+            // Collect reasoning field values (check both regular and modal IDs)
+            const toggleThinkingEl = document.getElementById('toggle_thinking') || document.getElementById('toggle_thinking_modal');
+            const thinkingTokensEl = document.getElementById('thinking_tokens') || document.getElementById('thinking_tokens_modal');
+            const effortLevelEl = document.getElementById('effort_level') || document.getElementById('effort_level_modal');
+
+            // Add toggle_thinking
+            if (toggleThinkingEl) {
+                metadata.toggle_thinking = toggleThinkingEl.checked;
+            }
+
+            // Add thinking_tokens (only if not empty)
+            if (thinkingTokensEl) {
+                const val = thinkingTokensEl.value.trim();
+                if (val !== '') {
+                    metadata.thinking_tokens = parseInt(val, 10);
+                } else {
+                    delete metadata.thinking_tokens;
+                }
+            }
+
+            // Add effort_level (only if not empty)
+            if (effortLevelEl) {
+                const val = effortLevelEl.value.trim();
+                if (val !== '') {
+                    metadata.effort_level = val;
+                } else {
+                    delete metadata.effort_level;
+                }
+            }
+
+            // Update form metadata field
+            form.metadata.value = JSON.stringify(metadata);
+        } catch (err) {
+            console.error('Error merging reasoning fields into metadata:', err);
         }
 
-        // For llm_connectors.php: Collect fields with data-metadata-key attribute
-        const metadata = {};
-
-        // Collect all regular metadata[...] fields (provider_caching, response_format, etc.)
-        const regularInputs = form.querySelectorAll('[name^="metadata["]');
-        regularInputs.forEach(input => {
-            const match = input.name.match(/^metadata\[([^\]]+)\]$/);
-            if (!match) return;
-            const key = match[1];
-
-            if (input.type === 'checkbox') {
-                if (input.checked) metadata[key] = input.value;
-            } else {
-                if (input.value !== '') metadata[key] = input.value;
-            }
-        });
-
-        // Collect special thinking fields with data-metadata-key attribute
-        const specialInputs = form.querySelectorAll('[data-metadata-key]');
-        specialInputs.forEach(input => {
-            const key = input.getAttribute('data-metadata-key');
-            if (!key) return;
-
-            if (input.type === 'checkbox') {
-                metadata[key] = input.checked ? true : false;
-            } else if (input.type === 'number') {
-                if (input.value !== '') metadata[key] = input.value;
-            } else {
-                if (input.value !== '') metadata[key] = input.value;
-            }
-        });
-
-        // Convert string booleans to actual booleans for consistency
-        Object.keys(metadata).forEach(key => {
-            if (metadata[key] === 'true' || metadata[key] === '1') metadata[key] = true;
-            else if (metadata[key] === 'false' || metadata[key] === '0') metadata[key] = false;
-        });
-
-        // Set the hidden metadata field
-        const metadataField = form.querySelector('input[name="metadata"]');
-        if (metadataField) {
-            metadataField.value = JSON.stringify(metadata);
-        }
-
-        return true;
+        return result;
     };
 })();
 
