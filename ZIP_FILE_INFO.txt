@@ -1,8 +1,8 @@
-# CHIM Cached Connector v1.1.22 - Complete File List
+# CHIM Cached Connector v1.1.23 - Complete File List
 
-**Version:** 1.1.22 FINAL FIX
+**Version:** 1.1.23 FINAL FIX
 **Date:** 2025-11-15
-**Fix Applied:** Thinking Toggle Save Bug Fixed
+**Fix Applied:** Thinking Toggle Save Bug Fixed (v1.0.12 approach + all other metadata fields preserved)
 
 ---
 
@@ -118,14 +118,16 @@ This package contains ALL files necessary for the CHIM Cached Connector implemen
 
 ---
 
-## Critical Files for v1.1.22 Fix
+## Critical Files for v1.1.23 Fix
 
 ### Modified Files:
 
-1. **ui/core/llm_connectors.php** (Line 272)
+1. **ui/core/llm_connectors.php** (Lines 272, 2088-2178)
    - Added: <textarea name="metadata" style="display:none">
    - Added: JSON editor container div
-   - Fix: Provides target for consolidation() function
+   - Added: Hybrid consolidation wrapper using v1.0.12 approach for thinking toggles
+   - Fix: Thinking toggle fields handled by ID (toggle_thinking, thinking_tokens, effort_level)
+   - Fix: All other metadata fields (provider_caching, response_format, etc.) still work
 
 2. **ui/core/tmpl/metadata_json_editor.php** (Line 396)
    - Removed: debugger; statement
@@ -147,14 +149,15 @@ IMPORTANT: Always backup before installing!
 
 ## Version Information
 
-Package Version: 1.1.22 FINAL FIX
+Package Version: 1.1.23 FINAL FIX
 Created: 2025-11-15
 Branch: claude/1.1.22-testing-01SD3JLwpdiGRsLvnUEQ9JEY
 Status: Production Ready
 
 Critical Fixes:
-- Thinking toggle save issue fixed
+- Thinking toggle save issue fixed using exact v1.0.12 approach
 - Debugger statement removed
-- Metadata consolidation working
+- Metadata consolidation working for all fields
+- All other metadata fields (provider_caching, response_format, etc.) preserved
 - All connector functionality intact
 

@@ -2137,6 +2137,36 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
                 }
             }
 
+            // Also collect ALL OTHER metadata[...] fields (provider_caching, response_format, etc.)
+            // This ensures other settings that worked in 1.1.22 continue to work
+            const metadataInputs = form.querySelectorAll('[name^="metadata["]');
+            metadataInputs.forEach(inp => {
+                const match = inp.name.match(/^metadata\[([^\]]+)\]$/);
+                if (!match) return;
+                const key = match[1];
+
+                // Skip the 3 thinking toggle fields we already handled above
+                if (key === 'toggle_thinking' || key === 'thinking_tokens' || key === 'effort_level') return;
+
+                // Handle other metadata fields
+                if (inp.type === 'checkbox') {
+                    // For checkboxes, only include if checked (skip hidden '0' fields)
+                    if (inp.checked && inp.value !== '0') {
+                        metadata[key] = inp.value === '1' || inp.value === 'true' ? true : inp.value;
+                    }
+                } else if (inp.type === 'number') {
+                    const val = inp.value.trim();
+                    if (val !== '') {
+                        metadata[key] = parseFloat(val);
+                    }
+                } else if (inp.tagName.toLowerCase() === 'select' || inp.type === 'text') {
+                    const val = inp.value.trim();
+                    if (val !== '') {
+                        metadata[key] = val;
+                    }
+                }
+            });
+
             // Update form metadata field
             form.metadata.value = JSON.stringify(metadata);
         } catch (err) {
