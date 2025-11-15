@@ -2084,6 +2084,66 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
         sync(); // Initial sync
     });
 })();
+
+// Wrap consolidation function to merge all metadata[...] fields into the metadata JSON
+(function(){
+    const originalConsolidation = window.consolidation;
+    window.consolidation = function() {
+        // First run the original consolidation (from metadata_json_editor.php)
+        const result = originalConsolidation ? originalConsolidation() : true;
+        if (!result) return false;
+
+        // Now merge all metadata[...] fields into metadata
+        const form = document.forms[0];
+        if (!form || !form.metadata) return result;
+
+        try {
+            // Parse existing metadata from JSON editor
+            let metadata = {};
+            try {
+                const metaStr = form.metadata.value || '{}';
+                metadata = JSON.parse(metaStr);
+            } catch (_e) {
+                metadata = {};
+            }
+
+            // Collect all metadata[...] field values from the form
+            const metadataInputs = form.querySelectorAll('[name^="metadata["]');
+            metadataInputs.forEach(inp => {
+                const match = inp.name.match(/^metadata\[([^\]]+)\]$/);
+                if (!match) return;
+                const key = match[1];
+
+                if (inp.type === 'checkbox') {
+                    // For checkboxes, set value if checked (and not the hidden '0' field)
+                    if (inp.checked && inp.value !== '0') {
+                        metadata[key] = inp.value === '1' || inp.value === 'true' ? true : inp.value;
+                    } else if (key === 'toggle_thinking' && !inp.checked) {
+                        // Explicitly set toggle_thinking to false when unchecked
+                        metadata[key] = false;
+                    }
+                } else if (inp.type === 'number') {
+                    const val = inp.value.trim();
+                    if (val !== '') {
+                        metadata[key] = parseFloat(val);
+                    }
+                } else if (inp.tagName.toLowerCase() === 'select' || inp.type === 'text') {
+                    const val = inp.value.trim();
+                    if (val !== '') {
+                        metadata[key] = val;
+                    }
+                }
+            });
+
+            // Update form.metadata.value with merged metadata
+            form.metadata.value = JSON.stringify(metadata);
+        } catch (e) {
+            console.error('Error merging metadata fields:', e);
+        }
+
+        return true;
+    };
+})();
 </script>
 
 </main>
