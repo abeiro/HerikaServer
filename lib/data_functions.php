@@ -2487,10 +2487,23 @@ function DataItemsInCloseRange()
     if (strlen($s_items) > 0) {
         if (stripos($s_items, "items in range") !== false) {
             // Extract items from "(items in range:0x123:Item1,0x456:Item2)"
-            // Use greedy match (.+) to capture everything including (STEALING) tags until the LAST closing paren
+            // Use greedy match (.+) to capture everything including (STEALING) and (LOOKING AT) tags until the LAST closing paren
             if (preg_match('/\(items in range:(.+)\)/', $s_items, $matches)) {
                 $items = $matches[1];
-                return $items; // Return comma-separated list
+                
+                // Translate (LOOKING AT) marker to natural language
+                // Replace "(LOOKING AT)" with "{$GLOBALS['PLAYER_NAME']} is looking at"
+                $playerName = $GLOBALS["PLAYER_NAME"] ?? "Player";
+                $items = preg_replace_callback(
+                    '/([^,]+)\s*\(LOOKING AT\)/',
+                    function($match) use ($playerName) {
+                        // $match[1] is the item (e.g., "0x123:0x456:Soul Gem (Grand)")
+                        return trim($match[1]) . " ({$playerName} is looking at this)";
+                    },
+                    $items
+                );
+                
+                return $items; // Return comma-separated list with translated markers
             }
         }
     }
