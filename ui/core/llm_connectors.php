@@ -2089,13 +2089,25 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
 (function(){
     const originalConsolidation = window.consolidation;
     window.consolidation = function() {
+        console.log('[Consolidation] WRAPPER CALLED');
+
         // First run the original consolidation (from metadata_json_editor.php)
         const result = originalConsolidation ? originalConsolidation() : true;
-        if (!result) return false;
+        if (!result) {
+            console.log('[Consolidation] Original consolidation returned false, aborting');
+            return false;
+        }
 
         // Now merge our custom reasoning fields into metadata
         const form = document.querySelector('form[method="POST"]');
-        if (!form || !form.metadata) return result;
+        if (!form) {
+            console.log('[Consolidation] No form found, aborting');
+            return result;
+        }
+        if (!form.metadata) {
+            console.log('[Consolidation] No form.metadata field found, aborting');
+            return result;
+        }
 
         try {
             // Parse existing metadata
@@ -2103,8 +2115,10 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
             try {
                 const metaStr = form.metadata.value || '{}';
                 metadata = JSON.parse(metaStr);
+                console.log('[Consolidation] Starting with metadata:', metadata);
             } catch (_e) {
                 metadata = {};
+                console.log('[Consolidation] Failed to parse metadata, starting fresh');
             }
 
             // Collect reasoning field values (check both regular and modal IDs)
@@ -2112,9 +2126,16 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
             const thinkingTokensEl = document.getElementById('thinking_tokens') || document.getElementById('thinking_tokens_modal');
             const effortLevelEl = document.getElementById('effort_level') || document.getElementById('effort_level_modal');
 
+            console.log('[Consolidation] Found elements:', {
+                toggleThinkingEl: !!toggleThinkingEl,
+                thinkingTokensEl: !!thinkingTokensEl,
+                effortLevelEl: !!effortLevelEl
+            });
+
             // Add toggle_thinking
             if (toggleThinkingEl) {
                 metadata.toggle_thinking = toggleThinkingEl.checked;
+                console.log('[Consolidation] Set toggle_thinking =', toggleThinkingEl.checked);
             }
 
             // Add thinking_tokens (only if not empty)
@@ -2122,8 +2143,10 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
                 const val = thinkingTokensEl.value.trim();
                 if (val !== '') {
                     metadata.thinking_tokens = parseInt(val, 10);
+                    console.log('[Consolidation] Set thinking_tokens =', parseInt(val, 10));
                 } else {
                     delete metadata.thinking_tokens;
+                    console.log('[Consolidation] Removed thinking_tokens (empty)');
                 }
             }
 
@@ -2132,8 +2155,10 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
                 const val = effortLevelEl.value.trim();
                 if (val !== '') {
                     metadata.effort_level = val;
+                    console.log('[Consolidation] Set effort_level =', val);
                 } else {
                     delete metadata.effort_level;
+                    console.log('[Consolidation] Removed effort_level (empty)');
                 }
             }
 
@@ -2169,16 +2194,21 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
 
             // Update form metadata field
             form.metadata.value = JSON.stringify(metadata);
+            console.log('[Consolidation] Final metadata JSON:', form.metadata.value);
 
             // CRITICAL: Remove name attributes from all metadata[...] fields
             // Otherwise PHP will receive the array fields and ignore the textarea
+            let removedCount = 0;
             metadataInputs.forEach(inp => {
-                if (inp.name.startsWith('metadata[')) {
+                if (inp.name && inp.name.startsWith('metadata[')) {
+                    console.log('[Consolidation] Removing name from:', inp.name, '(type:', inp.type, ', value:', inp.value, ')');
                     inp.removeAttribute('name');
+                    removedCount++;
                 }
             });
+            console.log('[Consolidation] Removed', removedCount, 'name attributes');
         } catch (err) {
-            console.error('Error merging reasoning fields into metadata:', err);
+            console.error('[Consolidation] ERROR:', err);
         }
 
         return result;
