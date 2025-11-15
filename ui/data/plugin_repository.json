@@ -13,6 +13,13 @@
             "git_repo": "Dwemer-Dynamics/CHIM-MindMap",
             "github_url": "https://github.com/Dwemer-Dynamics/CHIM-MindMap",
             "mod_download_url": ""
+        },
+        "aiagent_nsfw": {
+            "name": "AIAgentNSFW",
+            "description": "Integration with OSTIM.",
+            "git_repo": "maister-sk/aiagent_nsfw",
+            "github_url": "https://github.com/maister-sk/aiagent_nsfw",
+            "mod_download_url": "https://github.com/maister-sk/aiagent_nsfw/releases/download/<version>/AIAgentNSFW.zip"
         }
     }
 } 
