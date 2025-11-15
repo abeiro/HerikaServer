@@ -2090,6 +2090,11 @@ if ($checkTableExists("rumors") == -1) {
 $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS region text");
 $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS hold text");
 
+if ($checkTableExists("master_packages") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/master_packages.sql"));
+} else
+    Logger::info(__FILE__." master_packages exists");
+
 //----------------------------------------------------
 // Prompts Table - System for managing default and custom prompts
 // Version 20251110001

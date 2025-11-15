@@ -175,6 +175,8 @@ td { padding: 10px; text-align: left; border-bottom: 1px solid #444; color: #f8f
                 $configUrl = $manifest['config_url'] ?? '';
                 $version = $manifest['version'] ?? '';
                 $gitRepo = $manifest['git_repo'] ?? '';
+                $modDownloadUrl = $manifest['mod_download_url'] ?strtr($manifest['mod_download_url'],["<version>"=>"{$manifest['version']}"]): '';
+
                 $latestVersion = '';
                 if (!empty($gitRepo)) {
                     $latestVersion = getLatestGithubRelease($gitRepo);
@@ -195,6 +197,10 @@ td { padding: 10px; text-align: left; border-bottom: 1px solid #444; color: #f8f
                     if (isset($manifest['schema_version']) && $manifest['schema_version']==2) {
                         echo ' <button onclick="window.open(\'' . htmlspecialchars("/HerikaServer/ext/generic_installer.php?PACKAGE_NAME={$manifest['name']}&GITHUB_REPO={$manifest['git_repo']}") . '\', \'_blank\')" class="btn-base btn-save">Update plugin</button>';
                     }
+                    if (!empty($modDownloadUrl)) {
+                        echo ' <button onclick="window.open(\'' . htmlspecialchars($modDownloadUrl) . '\', \'_blank\')" class="btn-base btn-save">Skyrim MOD</button>';
+                    }
+
                 } else {
                     echo 'No Plugin Page';
                 }

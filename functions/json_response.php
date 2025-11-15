@@ -202,7 +202,8 @@
                         "message",
                         "mood",
                         "action",
-                        "target"
+                        "target",
+                        "item"
                     ],
                     "additionalProperties" => false
                 ),
