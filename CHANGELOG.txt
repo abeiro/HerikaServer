@@ -1,5 +1,22 @@
 # CHIM Cached Connector - Changelog
 
+## v1.1.31 (2025-11-15) - ACTUAL FIX: Restored v1.0.12 extend pattern
+
+### Critical Fixes
+- **FIXED:** Restored v1.0.12 consolidation EXTEND pattern instead of REPLACE
+  - Issue: Current version completely replaced consolidation function
+  - This broke integration when metadata_json_editor.php loaded after llm_connectors.php
+  - Fix: Preserve and call original consolidation, then merge reasoning fields
+  - Pattern: `const originalConsolidation = window.consolidation; window.consolidation = function() { originalConsolidation(); /* merge */ }`
+  - Now works regardless of script load order
+- **ADDED:** Comprehensive debugging with DEBUG_CONSOLIDATION markers
+  - All debug logs marked with comments for easy removal later
+  - Version tagged as v1.1.31 in console logs
+- **IMPROVED:** Error handling returns false instead of true to prevent corrupted saves
+- **PRESERVED:** All v1.1.22+ features (metadata field collection, name attribute removal)
+
+---
+
 ## v1.1.30 (2025-11-15) - DEBUG: Added load debugging
 
 ### Debug Changes
@@ -377,10 +394,13 @@ issues and solutions.
 
 ## Release Information
 
-**Current Version:** v1.1.30
+**Current Version:** v1.1.31
 **Release Date:** 2025-11-15
 **Status:** Production Ready
 **Branch:** claude/1.1.22-testing-01SD3JLwpdiGRsLvnUEQ9JEY
+
+**Critical:** This version restores the v1.0.12 extend pattern that was broken in previous versions.
+Upgrade is HIGHLY recommended for all users.
 
 **Critical:** This version includes the FINAL fix - added missing metadata textarea to second form.
 Upgrade is highly recommended for all users.
