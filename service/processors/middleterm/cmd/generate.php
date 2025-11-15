@@ -43,7 +43,7 @@ if ($gametsfrom==0) // Lower limit for first one
     $limit=5;
 
 if (sizeof($contextDataFull)==0 ||sizeof($contextDataFull)<$limit ) {
-    Logger::info("\tNo memories to summarize for $selectedNpc");
+    // Logger::info("\tNo memories to summarize for $selectedNpc");
     return;
 }
 

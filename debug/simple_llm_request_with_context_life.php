@@ -239,10 +239,10 @@ $currentHoldEsc = $db->escape($LAST_REPORTED_LOCATION);
 if ($currentHoldEsc) {
     $query2 = "SELECT gamets,content FROM rumors WHERE hold like '%{$currentHoldEsc}%' and gamets>" . ($gameRequest[2] - ((24 * 7) / 0.0000024));
     error_log($query2);
-    $rumorsData = $db->fetchAll($query2);
+    $rumors = $db->fetchAll($query2);
     foreach ($rumors as $event) {
         $bgEvents[] = ["gamets" => $event["gamets"], "content" => "{$event["content"]}", "type" => "rumor"];
-
+        error_log("[BACKGROUNDLIFE] Adding rumor {$event["content"]}");
     }
 
 }
@@ -250,7 +250,7 @@ if ($currentHoldEsc) {
 print_r($bgEvents);
 
 // Must mix bgEvents array and diaryEntry array, and order them using key gamets asc
-$combinedEvents = array_merge($bgEvents, $diaryEntry, $rumors);
+$combinedEvents = array_merge($bgEvents, $diaryEntry);
 usort($combinedEvents, function ($a, $b) {
     return $a['gamets'] <=> $b['gamets'];
 });
@@ -364,7 +364,7 @@ $buffer
 Possible actions (check character's goals section):
 StayAtPlace - The character remains in their current location, performing activities locally. Take into account how much time character has been at this location and is current task. If gathering info or spreading rumors, should stay at least 24 hours.
 TravelTo:<Place> - the character decides to travel to another location (replace <Place> with the chosen destination).The character should have a clear and logical reason for traveling.
-ReturnHome: character returns to its base location. Use when no further action is needed or all goals have been accomplished.
+ReturnHome - Character returns to its base location, probably to meet {$GLOBALS["PLAYER_NAME"]} . Use when no further action is needed or all goals have been accomplished.
 Your answer must use markup - XML like - format, containing exactly 3 elements:
 
 <action> ... </action>
@@ -437,6 +437,8 @@ if (is_array($parsed)) {
 
         } else if ($cmds[0] == "StayAtPlace") {
             handleStayAtPlaceAction($cmds[1], $currentNpcData, $GLOBALS["HERIKA_NAME"], $last_ts, $last_gamets, $momentum, $db);
+        } else if ($cmds[0] == "ReturnHome") {
+            handleReturnHome($cmds[1], $currentNpcData, $GLOBALS["HERIKA_NAME"], $last_ts, $last_gamets, $momentum, $db);
         }
     }
 

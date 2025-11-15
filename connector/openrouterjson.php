@@ -483,7 +483,7 @@ class openrouterjson
         
         if (!$assistantAppearedInhistory) { // is this still needed?
             
-            if (isset($GLOBALS["CHIM_NO_EXAMPLES"]) && $GLOBALS["CHIM_NO_EXAMPLES"]) {
+            if (isset($GLOBALS["CHIM_LLM_EXAMPLES"]) && $GLOBALS["CHIM_LLM_EXAMPLES"]) {
                 $contextExamples=[];
             } else {
                 // EXAMPLES

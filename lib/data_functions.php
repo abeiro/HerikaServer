@@ -1324,7 +1324,10 @@ New setting: $currentLocation
 
     if (isset($previousRow)) {
         if (sizeof($previousRow)>0) {
-            $lastDialogFull[]=$previousRow;;
+            if (sizeof($lastDialogFull) === 0 || $previousRow !== end($lastDialogFull)) {
+                $lastDialogFull[]=$previousRow;
+            }
+            
         }
     }
 

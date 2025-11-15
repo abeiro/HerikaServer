@@ -15,14 +15,19 @@
  */
 function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $last_gamets, $momentum, $locationSrc, $db) {
     $cnLocation = $db->escape($location);
-    $locId = $db->fetchOne("select formid from locations where name='$cnLocation' order by case when name=region then 1 else 0 end desc");
-    
+    if ($cnLocation=="random") {
+        $locId = $db->fetchOne("select name,region,hold,formid from locations order by case when name=region then 1 else 0 end desc, random()");
+        error_log("[handleTravelToAction] random picked: ".print_r($locId,true));
+    } else {
+        $locId = $db->fetchOne("select formid from locations where name='$cnLocation' order by case when name=region then 1 else 0 end desc");
+    }
+
     if (!isset($locId["formid"])) {
         return false;
     }
     
     $refHexString = convertSignedToUnsignedHex(hexdec($currentNpcData["refid"]));
-    $locHexString = convertSignedToUnsignedHex(hexdec($locId["formid"]));
+    $locHexString = (convertHex($locId["formid"]));
 
     error_log("Using refid $refHexString , location $locHexString");
     // Insert response log entry for travel command

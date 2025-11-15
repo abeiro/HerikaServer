@@ -1101,6 +1101,22 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             $npcMaster->updateByArray($currentNpcData);
             
             Logger::info("Updated last_coords for {$currentNpcData["npc_name"]}");
+
+            // Experiment
+            try {
+                $db->insert(
+                    'point_cloud',
+                    array(
+                        'x' => $splitNameBase[1],
+                        'y' => $splitNameBase[2],
+                        'z' => $splitNameBase[3],
+                        'tag' => $splitNameBase[4],
+                        'gamets'=>$gameRequest[2]
+                    )
+                );
+            } catch (Exception $e) {
+                Logger::warn("Failed to insert cloud point location data: " . $e->getMessage());
+            }
         }
     }
 

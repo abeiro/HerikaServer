@@ -473,8 +473,17 @@ function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
 
 
     $parm5 = $masterDataTemplates["{$gender}_{$race}"][array_rand($masterDataTemplates["{$gender}_{$race}"])];
-    $parm1 = $masterData["{$gender}_{$race}_{$class}"][array_rand($masterData["{$gender}_{$race}_{$class}"])];
-    $parm2=$outfit["{$class}"][array_rand($outfit["{$class}"])];
+    $dclass=$class;
+    if ($class=="priest")
+        $dclass="mage";
+    
+    
+    $parm1 = $masterData["{$gender}_{$race}_{$dclass}"][array_rand($masterData["{$gender}_{$race}_{$dclass}"])];
+
+    if ($class=="priest")
+        $dclass="bard";
+
+    $parm2=$outfit["{$dclass}"][array_rand($outfit["{$dclass}"])];
 
     //$parm3=$weapon["{$weapon}"][0];
     $rumors=false;
@@ -870,6 +879,13 @@ function convertSignedToUnsignedHex($signedInt) {
     // Convert signed to unsigned using bitwise AND
     $unsignedInt = $signedInt & 0xFFFFFFFF;
     return  "0x" . dechex($unsignedInt) ;
+
+}
+
+function convertHex($signedInt) {
+    // Convert signed to unsigned using bitwise AND
+    $unsignedInt = $signedInt;
+    return  "0x" . str_pad(dechex($unsignedInt),8,"0",STR_PAD_LEFT) ;
 
 }
 

@@ -42,7 +42,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     foreach ($allEnabledBgLNpc as $npc) {
         $mwdata=json_decode($npc["metadata"],true);
         if (!isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"] || $mwdata["last_coords"]["last_updated"]<($maxRow - ( 24 /0.0000024))) {
-            echo("[BACKGROUND-LIFE] Tracking {$npc["npc_name"]}".PHP_EOL);
+            echo("[BACKGROUND-LIFE] Daily Tracking {$npc["npc_name"]}".PHP_EOL);
             `php $enginePath/debug/simple_llm_request_with_context_life_command.php "{$npc["npc_name"]}" Track`;
         }
         
@@ -50,27 +50,44 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     
 
      // BgL tracking coords, on NPCs marked with gps_track. in-game hourly
-    
-    $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->'gps_track' = 'true' ");
+    $oneDayAgoGamets=$maxRow - ( (24) / 0.0000024);
+    $oneHourAgoGamets=$maxRow - ( (1) / 0.0000024);
+    $fiveDaysAgoGamets=$maxRow - ( (24 * 5) / 0.0000024);
+
+    $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->'gps_track' = 'true' AND (metadata->'last_coords'->>'pending' IS NULL or (metadata->'last_coords'->>'last_updated')::numeric < $oneHourAgoGamets) ");
     foreach ($allEnabledBgLNpc as $npc) {
          $mwdata=json_decode($npc["metadata"],true);
-        if (!isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"] || $mwdata["last_coords"]["last_updated"]<($maxRow - ( 1 /0.0000024))) {
-            echo("[BACKGROUND-LIFE] Tracking {$npc["npc_name"]} gps_track=true ".PHP_EOL);
+        if (!isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"] 
+            || $mwdata["last_coords"]["last_updated"]<($maxRow - ( (1) / 0.0000024))
+            ) {
+            echo("[BACKGROUND-LIFE] RT Tracking {$npc["npc_name"]} gps_track=true ".PHP_EOL);
             `php $enginePath/debug/simple_llm_request_with_context_life_command.php "{$npc["npc_name"]}" Track`;
         }
     }
-    // BgL commands
-    /*
-    $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_last_updated' IS NOT NULL ");
+    // BgL content
+    // In-game each 5 days
+    $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_last_updated' IS NOT NULL AND (extended_data->>'background_life_commands' = 'false' or extended_data->>'background_life_commands'  IS NULL)");
     foreach ($allEnabledBgLNpc as $npc) {
         $mwdata=json_decode($npc["extended_data"],true);
-        if (isset($mwdata["background_life_last_updated"])  && $mwdata["background_life_last_updated"]<($maxRow - ( 7 * 24 /0.0000024))) {
+        if (isset($mwdata["background_life_last_updated"])  && $mwdata["background_life_last_updated"]<($fiveDaysAgoGamets)) {
+            echo("[BACKGROUND-LIFE] Generating event for {$npc["npc_name"]}".PHP_EOL);
+            `php $enginePath/debug/simple_llm_request_with_context_life.php "{$npc["npc_name"]}" `;
+        }
+        break;  // One per iteration
+    }
+
+    // BgL commands
+    // In-game weekly
+    $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_last_updated' IS NOT NULL AND extended_data->>'background_life_commands' = 'true' ");
+    foreach ($allEnabledBgLNpc as $npc) {
+        $mwdata=json_decode($npc["extended_data"],true);
+        if (isset($mwdata["background_life_last_updated"])  && $mwdata["background_life_last_updated"]<($fiveDaysAgoGamets)) {
             echo("[BACKGROUND-LIFE] Generating event for {$npc["npc_name"]}".PHP_EOL);
             `php $enginePath/debug/simple_llm_request_with_context_life.php "{$npc["npc_name"]}" full`;
         }
         break;  // One per iteration
     }
-    */
+    
 
     $pfi = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] ?? 10) * 100000;
     
