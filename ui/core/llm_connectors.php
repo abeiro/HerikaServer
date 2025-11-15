@@ -371,15 +371,16 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 ?>
                 <div id="reasoning_details" style="margin-top:8px; margin-left:20px; padding:8px; border-left:2px solid #444;">
                     <label class="label-with-toggle"><span class='tip-label' data-tip='Enable thinking/reasoning for supported models (like o1, DeepSeek-R1). Shows model internal reasoning process.'>Toggle Thinking</span>
-                        <input type="checkbox" id="toggle_thinking" value="1" data-metadata-key="toggle_thinking" <?= $toggleThinking ? "checked" : "" ?>>
+                        <input type="hidden" name="metadata[toggle_thinking]" value="0">
+                        <input type="checkbox" name="metadata[toggle_thinking]" id="toggle_thinking" value="1" <?= $toggleThinking ? "checked" : "" ?>>
                         <span class="toggle-text">On</span>
                     </label>
                     <div style="height:6px;"></div>
                     <label for='thinking_tokens'><span class='tip-label' data-tip='Maximum tokens for thinking/reasoning output (Anthropic/Gemini only). OpenAI uses effort_level instead. Leave empty to use default.'>Thinking Tokens</span></label>
-                    <input type="number" id="thinking_tokens" data-metadata-key="thinking_tokens" value="<?= htmlspecialchars($thinkingTokens) ?>" min="0" step="1" placeholder="Optional">
+                    <input type="number" name="metadata[thinking_tokens]" id="thinking_tokens" value="<?= htmlspecialchars($thinkingTokens) ?>" min="0" step="1" placeholder="Optional">
                     <div style="height:6px;"></div>
                     <label for='effort_level'><span class='tip-label' data-tip='Reasoning effort level for OpenAI reasoning models (o1, o3, o4, gpt-5). minimal=Quick (gpt-5+), low=Basic, medium=Balanced, high=Thorough. Leave empty for default.'>Effort Level</span></label>
-                    <select id="effort_level" data-metadata-key="effort_level">
+                    <select name="metadata[effort_level]" id="effort_level">
                         <option value="">-- select --</option>
                         <option value="minimal" <?= $effortLevel === 'minimal' ? 'selected' : '' ?>>Minimal</option>
                         <option value="low" <?= $effortLevel === 'low' ? 'selected' : '' ?>>Low</option>
@@ -1453,15 +1454,16 @@ if (typeof window.consolidation !== 'function') {
             </div>
             <div id="reasoning_details_modal" style="margin-top:8px; padding:8px; border-left:2px solid #444;">
                 <label class="label-with-toggle"><span class='tip-label' data-tip='Enable thinking/reasoning for supported models (like o1, DeepSeek-R1). Shows model internal reasoning process.'>Toggle Thinking</span>
-                    <input type="checkbox" id="toggle_thinking_modal" value="1" data-metadata-key="toggle_thinking" <?= $toggleThinking ? "checked" : "" ?>>
+                    <input type="hidden" name="metadata[toggle_thinking]" value="0">
+                    <input type="checkbox" name="metadata[toggle_thinking]" id="toggle_thinking_modal" value="1" <?= $toggleThinking ? "checked" : "" ?>>
                     <span class="toggle-text">On</span>
                 </label>
                 <div style="height:6px;"></div>
                 <label for='thinking_tokens_modal'><span class='tip-label' data-tip='Maximum tokens for thinking/reasoning output (Anthropic/Gemini only). OpenAI uses effort_level instead. Leave empty to use default.'>Thinking Tokens</span></label>
-                <input type="number" id="thinking_tokens_modal" data-metadata-key="thinking_tokens" value="<?= htmlspecialchars($thinkingTokens) ?>" min="0" step="1" placeholder="Optional">
+                <input type="number" name="metadata[thinking_tokens]" id="thinking_tokens_modal" value="<?= htmlspecialchars($thinkingTokens) ?>" min="0" step="1" placeholder="Optional">
                 <div style="height:6px;"></div>
                 <label for='effort_level_modal'><span class='tip-label' data-tip='Reasoning effort level for OpenAI reasoning models (o1, o3, o4, gpt-5). minimal=Quick (gpt-5+), low=Basic, medium=Balanced, high=Thorough. Leave empty for default.'>Effort Level</span></label>
-                <select id="effort_level_modal" data-metadata-key="effort_level">
+                <select name="metadata[effort_level]" id="effort_level_modal">
                     <option value="">-- select --</option>
                     <option value="minimal" <?= $effortLevel === 'minimal' ? 'selected' : '' ?>>Minimal</option>
                     <option value="low" <?= $effortLevel === 'low' ? 'selected' : '' ?>>Low</option>
@@ -2057,69 +2059,7 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
  ?>
 
 <script>
-// Extend consolidation() to merge reasoning fields into metadata
-(function(){
-    const originalConsolidation = window.consolidation;
-    window.consolidation = function() {
-        // First run the original consolidation (from metadata_json_editor.php)
-        const result = originalConsolidation ? originalConsolidation() : true;
-        if (!result) return false;
-
-        // Now merge our custom reasoning fields into metadata
-        const form = document.querySelector('form[method="post"]');
-        if (!form || !form.metadata) return result;
-
-        try {
-            // Parse existing metadata
-            let metadata = {};
-            try {
-                const metaStr = form.metadata.value || '{}';
-                metadata = JSON.parse(metaStr);
-            } catch (_e) {
-                metadata = {};
-            }
-
-            // Collect reasoning field values (check both regular and modal IDs)
-            const toggleThinkingEl = document.getElementById('toggle_thinking') || document.getElementById('toggle_thinking_modal');
-            const thinkingTokensEl = document.getElementById('thinking_tokens') || document.getElementById('thinking_tokens_modal');
-            const effortLevelEl = document.getElementById('effort_level') || document.getElementById('effort_level_modal');
-
-            // Add toggle_thinking
-            if (toggleThinkingEl) {
-                metadata.toggle_thinking = toggleThinkingEl.checked;
-            }
-
-            // Add thinking_tokens (only if not empty)
-            if (thinkingTokensEl) {
-                const val = thinkingTokensEl.value.trim();
-                if (val !== '') {
-                    metadata.thinking_tokens = parseInt(val, 10);
-                } else {
-                    delete metadata.thinking_tokens;
-                }
-            }
-
-            // Add effort_level (only if not empty)
-            if (effortLevelEl) {
-                const val = effortLevelEl.value.trim();
-                if (val !== '') {
-                    metadata.effort_level = val;
-                } else {
-                    delete metadata.effort_level;
-                }
-            }
-
-            // Update form metadata field
-            form.metadata.value = JSON.stringify(metadata);
-        } catch (err) {
-            console.error('Error merging reasoning fields into metadata:', err);
-        }
-
-        return result;
-    };
-})();
-
-// Sync On/Off labels for the new reasoning toggle checkboxes
+// Sync On/Off labels for the reasoning toggle checkboxes
 (function(){
     const toggleIds = ['toggle_thinking', 'toggle_thinking_modal'];
     toggleIds.forEach(id => {
