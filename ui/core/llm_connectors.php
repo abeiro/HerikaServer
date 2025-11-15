@@ -2099,20 +2099,35 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
     const originalConsolidation = window.consolidation;
     window.consolidation = function() {
         // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
-        console.log('[Consolidation v1.1.31] LLM Connectors consolidation called');
+        console.log('[Consolidation v1.1.32] LLM Connectors consolidation called');
         // END DEBUG_CONSOLIDATION
 
         // First run original consolidation (from metadata_json_editor.php if it exists)
-        const originalResult = originalConsolidation ? originalConsolidation() : true;
-        if (!originalResult) {
-            // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
-            console.log('[Consolidation v1.1.31] Original consolidation returned false, aborting');
-            // END DEBUG_CONSOLIDATION
-            return false;
+        // Wrap in try/catch because the original may be incompatible with llm_connectors form structure
+        let originalResult = true;
+        if (originalConsolidation) {
+            try {
+                originalResult = originalConsolidation();
+                // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
+                console.log('[Consolidation v1.1.32] Original consolidation completed successfully');
+                // END DEBUG_CONSOLIDATION
+                if (!originalResult) {
+                    // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
+                    console.log('[Consolidation v1.1.32] Original consolidation returned false, aborting');
+                    // END DEBUG_CONSOLIDATION
+                    return false;
+                }
+            } catch (err) {
+                // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
+                console.log('[Consolidation v1.1.32] Original consolidation threw error (likely incompatible form structure), continuing:', err.message);
+                // END DEBUG_CONSOLIDATION
+                // Continue with our own consolidation even if original fails
+                originalResult = true;
+            }
         }
 
         // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
-        console.log('[Consolidation v1.1.31] Original consolidation completed, now merging reasoning fields');
+        console.log('[Consolidation v1.1.32] Now merging reasoning fields');
         // END DEBUG_CONSOLIDATION
 
         // Try BOTH regular and modal versions of toggle_thinking
@@ -2120,20 +2135,20 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
 
         if (!toggleThinkingEl) {
             // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
-            console.log('[Consolidation v1.1.31] No toggle_thinking field found, skipping reasoning field merge');
+            console.log('[Consolidation v1.1.32] No toggle_thinking field found, skipping reasoning field merge');
             // END DEBUG_CONSOLIDATION
             return originalResult;
         }
 
         // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
-        console.log('[Consolidation v1.1.31] Found toggle_thinking field:', toggleThinkingEl.id);
+        console.log('[Consolidation v1.1.32] Found toggle_thinking field:', toggleThinkingEl.id);
         // END DEBUG_CONSOLIDATION
 
         // Get the form that contains the field
         const form = toggleThinkingEl.form;
         if (!form) {
             // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
-            console.log('[Consolidation v1.1.31] Field has no parent form, skipping');
+            console.log('[Consolidation v1.1.32] Field has no parent form, skipping');
             // END DEBUG_CONSOLIDATION
             return originalResult;
         }
@@ -2142,7 +2157,7 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
         const metadataTextarea = form.querySelector('textarea[name="metadata"]');
         if (!metadataTextarea) {
             // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
-            console.log('[Consolidation v1.1.31] No metadata textarea in form, skipping');
+            console.log('[Consolidation v1.1.32] No metadata textarea in form, skipping');
             // END DEBUG_CONSOLIDATION
             return originalResult;
         }
@@ -2154,12 +2169,12 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
                 const metaStr = metadataTextarea.value || '{}';
                 metadata = JSON.parse(metaStr);
                 // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
-                console.log('[Consolidation v1.1.31] Starting with metadata:', metadata);
+                console.log('[Consolidation v1.1.32] Starting with metadata:', metadata);
                 // END DEBUG_CONSOLIDATION
             } catch (_e) {
                 metadata = {};
                 // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
-                console.log('[Consolidation v1.1.31] Failed to parse metadata, starting fresh');
+                console.log('[Consolidation v1.1.32] Failed to parse metadata, starting fresh');
                 // END DEBUG_CONSOLIDATION
             }
 
@@ -2170,7 +2185,7 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
             // Merge toggle_thinking
             metadata.toggle_thinking = toggleThinkingEl.checked;
             // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
-            console.log('[Consolidation v1.1.31] Set toggle_thinking =', toggleThinkingEl.checked);
+            console.log('[Consolidation v1.1.32] Set toggle_thinking =', toggleThinkingEl.checked);
             // END DEBUG_CONSOLIDATION
 
             // Merge thinking_tokens (only if not empty)
@@ -2179,7 +2194,7 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
                 if (val !== '') {
                     metadata.thinking_tokens = parseInt(val, 10);
                     // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
-                    console.log('[Consolidation v1.1.31] Set thinking_tokens =', parseInt(val, 10));
+                    console.log('[Consolidation v1.1.32] Set thinking_tokens =', parseInt(val, 10));
                     // END DEBUG_CONSOLIDATION
                 } else {
                     delete metadata.thinking_tokens;
@@ -2192,7 +2207,7 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
                 if (val !== '') {
                     metadata.effort_level = val;
                     // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
-                    console.log('[Consolidation v1.1.31] Set effort_level =', val);
+                    console.log('[Consolidation v1.1.32] Set effort_level =', val);
                     // END DEBUG_CONSOLIDATION
                 } else {
                     delete metadata.effort_level;
@@ -2230,7 +2245,7 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
             // Update metadata textarea with final merged JSON
             metadataTextarea.value = JSON.stringify(metadata);
             // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
-            console.log('[Consolidation v1.1.31] Final metadata JSON:', metadataTextarea.value);
+            console.log('[Consolidation v1.1.32] Final metadata JSON:', metadataTextarea.value);
             // END DEBUG_CONSOLIDATION
 
             // CRITICAL: Remove name attributes from all metadata[...] fields
@@ -2243,13 +2258,13 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
                 }
             });
             // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
-            console.log('[Consolidation v1.1.31] Removed', removedCount, 'name attributes');
+            console.log('[Consolidation v1.1.32] Removed', removedCount, 'name attributes');
             // END DEBUG_CONSOLIDATION
 
             return true;
         } catch (err) {
             // DEBUG_CONSOLIDATION: Remove this block to disable consolidation debugging
-            console.error('[Consolidation v1.1.31] ERROR:', err);
+            console.error('[Consolidation v1.1.32] ERROR:', err);
             // END DEBUG_CONSOLIDATION
             return false; // Prevent submission on error to avoid saving corrupted data
         }

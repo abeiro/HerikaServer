@@ -1,5 +1,17 @@
 # CHIM Cached Connector - Changelog
 
+## v1.1.32 (2025-11-15) - COMPATIBILITY FIX: Wrap original consolidation in try/catch
+
+### Critical Fixes
+- **FIXED:** Wrapped original consolidation call in try/catch for compatibility
+  - Issue: Original consolidation from metadata_json_editor.php fails on llm_connectors forms
+  - Error: "Cannot read properties of undefined (reading 'value')" at form.metadata.value
+  - Root cause: metadata_json_editor.php designed for core_profiles.php, incompatible with llm_connectors
+  - Solution: Catch the error and continue with our consolidation logic
+  - Now works even if original consolidation is incompatible
+
+---
+
 ## v1.1.31 (2025-11-15) - ACTUAL FIX: Restored v1.0.12 extend pattern
 
 ### Critical Fixes
@@ -394,7 +406,7 @@ issues and solutions.
 
 ## Release Information
 
-**Current Version:** v1.1.31
+**Current Version:** v1.1.32
 **Release Date:** 2025-11-15
 **Status:** Production Ready
 **Branch:** claude/1.1.22-testing-01SD3JLwpdiGRsLvnUEQ9JEY
