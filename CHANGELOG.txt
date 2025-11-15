@@ -1,696 +1,319 @@
-===============================================================================
-CHIM CACHED CONNECTOR - VERSION HISTORY
-===============================================================================
-
-Version 1.0.24 (2025-11-12)
----------------------------
-
-Debug & Diagnostics:
---------------------
-✓ **Added critical debug logging for response format investigation**
-  - Problem: Response format set to JSON in UI but LLM outputting simple format
-  - Debug logging added to diagnose configuration loading issues
-  - Logs added:
-    * Response format setting as loaded from metadata
-    * Raw metadata value from GLOBALS
-    * Which format instruction branch is executed (JSON vs Simple)
-  - Error log output shows:
-    * "[connector] CRITICAL DEBUG - Response Format Setting: [json|simple]"
-    * "[connector] CRITICAL DEBUG - Raw metadata value: [value]"
-    * "[connector] CRITICAL DEBUG - Building format instruction for: [format]"
-    * "[connector] CRITICAL DEBUG - [JSON|Simple] format instruction created"
-  - Purpose: Identify discrepancy between UI configuration and runtime behavior
-  - Modified: connector/openrouterjsoncached.php (lines 314-316, 381, 401, 411)
-  - Modified: connector/openrouterjsoncached_verbose.php (lines 329-331, 442, 462, 480)
-
-UI Improvements:
-----------------
-✓ **Added Advanced Settings collapsible to main connector form**
-  - Previously only available in edit modal
-  - Added Minimize Quality Instructions toggle
-  - Added Advanced Settings collapsible section with 3 fields
-  - Now matches edit modal UI structure
-  - Modified: ui/core/llm_connectors.php (lines 1557-1581)
-
-Files Modified:
----------------
-• connector/openrouterjsoncached.php - Debug logging + version 1.0.24
-• connector/openrouterjsoncached_verbose.php - Debug logging + version 1.0.24
-• ui/core/llm_connectors.php - Advanced Settings for main form
-
-Benefits:
----------
-• Diagnostic capability to investigate format mismatch issues
-• Complete UI parity between main form and edit modal
-• Better troubleshooting for configuration issues
-
-Version 1.0.23 (2025-11-11)
----------------------------
-
-Critical Bug Fixes:
--------------------
-✓ **BUG #10 (CRITICAL): Fixed regex consuming user's personal formatting colons**
-  - Problem: Regex pattern with `:?` was consuming colons from user's personal roleplay format
-  - User Format Context: Users may use their own formatting like `: action :` dialogue
-  - Root Cause: Optional colon in regex pattern `/^\s*...\s*:?\s*(.*)$/s`
-    * The `:?` matched colons that were part of user's personal formatting
-    * These colons should be preserved as part of the message content
-  - Impact: User's personal formatting colons were being stripped incorrectly
-  - Fix: Removed `:?` from regex pattern and added explicit colon-stripping logic
-    * Regex change:
-      - OLD: `$pattern = '/^\s*' . $groupPattern . '\s*:?\s*(.*)$/s';`
-      - NEW: `$pattern = '/^\s*' . $groupPattern . '\s*(.*)$/s';`
-    * Added post-processing to strip single leading colon from message:
-      - Handles immediate colons: `mood): text` → `text`
-      - Handles spaced colons: `mood) : text` → `text`
-      - Preserves internal colons in user's personal format
-    * Now only matches format markers, handles delimiters explicitly
-  - Modified: connector/openrouterjsoncached_helpers.php (lines 541, 550-558)
-  - Testing: All 17 test cases pass
-  - Result: User's personal formatting colons preserved while stripping format delimiters
-
-UI Restoration:
----------------
-✓ **Restored complete configuration UI from v1.0.18**
-  - Problem: Lost advanced settings and collapsible UI sections due to branch divergence
-  - User Impact: Missing configuration fields, simplified UI without organization
-  - Restored Features:
-    1. **Advanced Settings collapsible section** with 3 fields:
-       * max_dialogue_cache_context_size (default: 93)
-       * custom_system_instruction (textarea)
-       * custom_last_instruction (textarea)
-    2. **Response Format collapsible section**:
-       * Include Mood, Listener, Actions, Target (4 checkboxes)
-       * Detailed tooltips explaining each option
-    3. **JavaScript collapsible handlers**:
-       * Click to expand/collapse sections
-       * Arrow rotation (▼ to ▶)
-       * localStorage persistence across page refreshes
-       * Auto-restore collapsed state on page load
-  - Modified: ui/core/llm_connectors.php (lines 460-504, 743-781)
-  - Result: Full UI functionality restored with proper organization
-
-Files Modified:
----------------
-• connector/openrouterjsoncached_helpers.php - Removed `:?` from regex
-• ui/core/llm_connectors.php - Restored full UI from v1.0.18
-• connector/openrouterjsoncached.php - Version updated to 1.0.23
-• connector/openrouterjsoncached_verbose.php - Version updated to 1.0.23
-
-Benefits:
----------
-• User's personal formatting is preserved correctly
-• Complete configuration UI with advanced settings
-• Better organization with collapsible sections
-• Persistent UI state across browser sessions
-• All features from v1.0.18 restored without losing bug fixes from 1.0.19-1.0.22
-
-Version 1.0.22 (2025-11-11)
----------------------------
-
-Critical Bug Fixes:
--------------------
-✓ **BUG #9 (CRITICAL): Fixed parsing attempted on incomplete streaming buffer**
-  - Problem: Format markers like "lovely):" were still appearing in-game text
-  - Root Cause: Parsing was attempted when buffer contained only "lovely" (incomplete)
-    * First streaming chunk arrives with just "lovely"
-    * Code immediately attempts to parse before closing ")" arrives
-    * Regex requires at least "mood)" to match, but buffer only has "lovely"
-    * Parsing fails with ['found' => false]
-    * Fallback triggers and returns entire raw buffer: "lovely"
-    * Buffer is marked as parsed, subsequent chunks ignored or mishandled
-  - Impact: Format markers visible in-game, immersion broken
-  - Fix: Added check to wait for at least one closing parenthesis before parsing
-    * if (strpos($bufferToParse, ')') === false) return "";
-    * Waits for format marker to be complete before attempting parse
-    * Ensures regex has valid input to match against
-  - Modified: connector/openrouterjsoncached.php (lines 978-983)
-  - Modified: connector/openrouterjsoncached_verbose.php (lines 1616-1623)
-  - Result: Format markers no longer appear, parsing only happens on complete data
-
-✓ **BUG #8 (CRITICAL): Fixed format markers appearing in-game text**
-  - Problem: Format markers like "lovely)" were appearing in game dialogue
-  - Root Cause: Regex required BOTH opening and closing parentheses: `(mood)`
-    * When LLM outputs `mood)` (with prefill) or without opening paren, regex failed
-    * Fallback returned entire buffer including format markers
-  - Impact: Format markers visible in-game, breaking immersion
-  - Fix: Made opening parenthesis OPTIONAL in regex pattern
-    * OLD pattern: `\(([^)]+)\)` - requires both `(` and `)`
-    * NEW pattern: `\(?([^)]+)\)` - opening `(` is optional with `\(?`
-    * Now accepts BOTH: `(mood)` and `mood)` formats
-    * Works for all combinations: `(mood)(action)` OR `mood)(action)`
-  - Testing: Added comprehensive test suite with 17 test cases
-    * Tests all combinations of mood/listener/action/target enabled/disabled
-    * Tests both full format `(mood)` and prefill format `mood)`
-    * Tests with and without optional colons
-    * All 17 tests pass successfully
-  - Modified: connector/openrouterjsoncached_helpers.php (line 540 - regex pattern)
-  - Added: test_simple_format_regex.php (comprehensive test suite)
-  - Result: Format markers no longer appear in-game, works with all format variations
-
-Supported Format Variations:
------------------------------
-✓ Single element: `(mood)` or `mood)`
-✓ Multiple elements: `(mood)(listener)` or `mood)(listener)`
-✓ With colon: `(mood):` or `mood):`
-✓ All combinations of enabled/disabled fields work correctly
-
-Files Modified:
----------------
-• connector/openrouterjsoncached_helpers.php - Made opening paren optional
-• connector/openrouterjsoncached.php - Version updated to 1.0.22
-• connector/openrouterjsoncached_verbose.php - Version updated to 1.0.22
-• test_simple_format_regex.php - NEW: Comprehensive test suite (17 tests)
-
-Benefits:
----------
-• Format markers no longer appear in game text
-• Robust handling of LLM output variations
-• Works correctly with or without prefill
-• All format element combinations tested and verified
-• Future-proof against LLM output format changes
-
-Version 1.0.21 (2025-11-11)
----------------------------
-
-Critical Bug Fixes:
--------------------
-✓ **BUG #7 (CRITICAL): Fixed simple format with prefill showing only first word**
-  - Problem: Only first word appeared in-game (e.g., only "lovely" instead of full message)
-  - Root Cause: Missing critical code from v1.0.18 branch due to incomplete branch merge
-    * 6 separate issues caused by branch divergence between development branches
-  - Impact: Simple format completely broken with prefill - dialogue truncated to single word
-  - Fixes Applied:
-    1. _simpleFormatMessageStart initialization: Changed from 0 to -1
-       * Allows proper detection of uninitialized state
-    2. Added prefill position adjustment logic when calculating message start
-       * Searches in bufferToParse (includes prefill) instead of raw buffer
-       * Subtracts prefill length from message position to get correct offset
-       * Prevents off-by-one errors that caused truncation
-    3. Added fallback handling when message position not found
-       * Logs warning and uses position 0 as safe fallback
-       * Prevents silent failures
-    4. Fixed streaming check: Changed from > 0 to >= 0
-       * Position 0 is valid when message starts at buffer beginning
-       * Previous check excluded valid position 0
-    5. Fixed prefix construction to use trim(implode()) method
-       * Properly combines prefix, speech reinforcement, and custom instructions
-       * Removes extra whitespace that could break format parsing
-    6. Added FUNCTIONS_ARE_ENABLED check for includeActions
-       * Respects global function toggle setting
-       * Matches behavior of v1.0.18
-  - Modified: connector/openrouterjsoncached.php (6 separate fixes throughout file)
-  - Modified: connector/openrouterjsoncached_verbose.php (same 6 fixes applied)
-  - Result: Simple format with prefill now works correctly, full messages appear in-game
-
-Technical Details:
-------------------
-The issue occurred because two parallel development branches diverged:
-- Branch A (claude/aiagent-update-2.0.3-011CUs6A7NhcfwcMQJyoQ32j): Had v1.0.17/18 fixes
-- Branch B (claude/fix-cache-connectors-011CV2UAD8LHFom1mofFyHt2): Had Bug #4/5 fixes
-
-When continuing work on Branch B, the critical v1.0.17/18 fixes were not present,
-causing simple format to break. This version restores all missing functionality
-by carefully merging the critical fixes from both branches.
-
-Files Modified:
----------------
-• connector/openrouterjsoncached.php - All 6 critical fixes applied
-• connector/openrouterjsoncached_verbose.php - All 6 critical fixes applied
-
-Benefits:
----------
-• Simple format with prefill now works correctly
-• Full dialogue messages appear in-game instead of single words
-• Proper message position tracking during streaming
-• Consistent behavior with v1.0.18 reference implementation
-• All branch-specific improvements now merged together
-
-Version 1.0.20 (2025-11-11)
----------------------------
-
-Critical Bug Fixes:
--------------------
-✓ **BUG #6 (CRITICAL): Fixed simple format messages not appearing in-game**
-  - Problem: Simple format responses were not appearing in CHIM event log or in-game
-  - Root Cause #1: Regex pattern didn't handle LLMs outputting "(mood):" with colon
-    * Pattern only matched "(mood) " without colon
-    * When LLM used colon, parsing failed silently
-  - Root Cause #2: No fallback handling when format parsing failed
-    * When extractSimpleFormatFromBuffer() returned ['found'=>false], code fell through
-    * Returned empty string on line 1020/1034, causing complete message loss
-  - Impact: Messages completely lost when LLM didn't follow exact format
-  - Fix #1: Updated regex to allow optional colons after format markers
-    * OLD: `/^\s*\(([^)]+)\)\s*(.*)$/s`
-    * NEW: `/^\s*\(([^)]+)\)\s*:?\s*(.*)$/s`
-    * The `:?` makes the colon optional
-  - Fix #2: Added comprehensive fallback error handling
-    * Logs ERROR when simple format parsing fails
-    * Logs first 200 chars of buffer for debugging
-    * Returns entire raw buffer as dialogue instead of empty string
-    * Marks format as "parsed" to prevent infinite re-parsing
-    * Verbose connector includes complete buffer dump
-  - Modified: connector/openrouterjsoncached_helpers.php (line 541 - regex pattern)
-  - Modified: connector/openrouterjsoncached.php (lines 1004-1016 - fallback handling)
-  - Modified: connector/openrouterjsoncached_verbose.php (lines 1667-1686 - fallback with verbose logging)
-  - Result: Messages ALWAYS appear, even if LLM doesn't follow format correctly
-
-Files Modified:
----------------
-• connector/openrouterjsoncached_helpers.php - Updated regex to accept optional colon
-• connector/openrouterjsoncached.php - Added fallback handling for parsing failures
-• connector/openrouterjsoncached_verbose.php - Added fallback with verbose logging
-
-Benefits:
----------
-• Simple format messages now appear reliably in-game
-• Handles both "(mood) message" and "(mood): message" formats
-• Fallback prevents message loss when LLM doesn't follow instructions
-• Comprehensive error logging helps debug LLM format compliance issues
-• Verbose connector provides complete buffer dump for troubleshooting
-
-Version 1.0.19 (2025-11-11)
----------------------------
-
-Critical Bug Fixes:
--------------------
-✓ **BUG #4 (CRITICAL): Fixed space removal in simple format streaming**
-  - Problem: stripReasoningTokens() was being called on incremental streaming chunks
-  - Root Cause: The function uses trim() which removes leading/trailing spaces from each chunk
-  - Impact: Spaces between words were removed, concatenating words together
-    Example: " sets down the leather" + " satchel" → "setsdowntheleathersatchel"
-  - Fix: Only call stripReasoningTokens() once on the initial parsed message
-  - Reasoning tokens are stripped from the complete first message, not from streaming chunks
-  - Modified: connector/openrouterjsoncached.php (lines 1011-1014)
-  - Modified: connector/openrouterjsoncached_verbose.php (lines 1630-1635, 1673-1682)
-  - Result: Spaces are now preserved correctly during streaming
-
-✓ **BUG #5: Fixed decimal precision loss in UI parameter inputs**
-  - Problem: Parameter inputs (temperature, top_p, etc.) limited to 2 decimal places (0.01 step)
-  - Impact: Users couldn't enter precise values like 0.9827 or 0.7234
-  - Root Cause: Step value changed from 0.0001 to 0.01 in llm_connectors.php
-  - Fix: Restored step=>0.0001 for all floating-point parameters
-  - Modified: ui/core/llm_connectors.php (lines 487-494, 1499-1506)
-  - Result: Users can now enter 4 decimal places as in v1.0.17
-
-Additional Fix in Verbose Connector:
--------------------------------------
-✓ **Added missing _simpleFormatMessageStart calculation in verbose connector**
-  - Problem: Verbose connector wasn't tracking where the message starts after format markers
-  - Impact: Incremental streaming didn't work properly in verbose mode
-  - Fix: Calculate and store message start position when format is first parsed
-  - Modified: connector/openrouterjsoncached_verbose.php (lines 1630-1635)
-
-Files Modified:
----------------
-• connector/openrouterjsoncached.php - Removed stripReasoningTokens() from streaming chunks
-• connector/openrouterjsoncached_verbose.php - Fixed streaming logic + added message start tracking
-• ui/core/llm_connectors.php - Restored 4-decimal precision for parameter inputs
-
-Benefits:
----------
-• Simple format text now displays correctly with proper spacing
-• Roleplay actions and dialogue render as intended
-• Streaming performance improved by eliminating redundant processing
-• Both normal and verbose connectors now have consistent streaming behavior
-• Full parameter precision restored (0.0001 step = 4 decimal places)
-
-Version 1.0.9 (2025-11-07)
---------------------------
-
-Critical Bug Fixes:
--------------------
-✓ **BUG #1: Fixed buildSimpleFormatInstruction() ignoring $customInstruction parameter**
-  - Problem: Custom instructions and speech style were not included in simple format
-  - Impact: Loss of speech reinforcement and custom character instructions
-  - Fix: Now properly prepends $customInstruction to simple format instruction
-  - Modified: connector/openrouterjsoncached_helpers.php (lines 512-516)
-
-✓ **BUG #2 (CRITICAL): Fixed cache collision between JSON and simple formats**
-  - Problem: Cache filenames hardcoded with "json" regardless of actual format selected
-  - Impact: Switching from JSON to simple format would use cached JSON instructions
-  - Root Cause: writeArrayToFileWithCache() returned old cached data with wrong format
-  - Fix: Cache filenames now include response format in the name
-  - Modified: connector/openrouterjsoncached.php (lines 349-350)
-  - Modified: connector/openrouterjsoncached_verbose.php (lines 408-409)
-  - Result: Different formats now use separate cache files
-
-✓ **BUG #3: Extended prefill support to all caching providers**
-  - Problem: Prefill only worked with Anthropic provider
-  - Impact: OpenAI and Gemini users couldn't use simple format prefill
-  - Fix: Removed provider check, now all providers get prefill in simple format
-  - Modified: connector/openrouterjsoncached.php (line 582)
-  - Modified: connector/openrouterjsoncached_verbose.php (line 884)
-
-Files Modified:
----------------
-• connector/openrouterjsoncached.php - Cache filename fix, prefill extension
-• connector/openrouterjsoncached_verbose.php - Cache filename fix, prefill extension
-• connector/openrouterjsoncached_helpers.php - Custom instruction handling
-
-Benefits:
----------
-• Simple format now works correctly with custom instructions and speech style
-• No more format instruction mixing between JSON and simple modes
-• All caching providers (Anthropic, OpenAI, Gemini) support prefill
-• Users can switch between formats without cache contamination
-
-Version 1.0.8 (2025-11-06)
---------------------------
-
-New Features:
--------------
-✓ Version Tracking Display in UI
-  - Added VERSION constant to connector classes with full version info
-  - Format: "OpenRouter Cache Connector v1.0.8 for CHIM 2.0.3 | 2025/11/06"
-  - Version displays in UI under Cache Settings header as smaller gray text
-  - Separate version strings for normal and verbose connectors
-  - Comment reminder to update version, date, and CHIM version after changes
-
-Implementation:
----------------
-✓ Connector classes now include comprehensive version information
-  - openrouterjsoncached: Shows standard version
-  - openrouterjsoncached_verbose: Shows version with (VERBOSE) marker
-✓ UI dynamically loads and displays version from connector class
-✓ Version appears in both profile editor and main connector modal
-✓ Only displays when cached connectors are selected
-
-Files Modified:
----------------
-• connector/openrouterjsoncached.php - Added VERSION constant
-• connector/openrouterjsoncached_verbose.php - Added VERSION constant
-• ui/core/llm_connectors.php - Added version loading and display logic
-
-Benefits:
----------
-• Easy to identify which connector version is installed
-• Quick verification of CHIM compatibility
-• Reminds developers to update version info after changes
-• Professional version tracking for future updates
-
-Version 1.0.7 (2025-11-06)
---------------------------
-
-This release consolidates the cached connector implementation with reasoning
-support and UI improvements from multiple development branches.
-
-New Features:
--------------
-✓ Reasoning toggle controls in LLM Connectors UI
-  - Added toggle_thinking checkbox for easy enable/disable
-  - Added thinking_tokens input for token limit control
-  - Added effort_level dropdown for OpenAI reasoning models
-  - UI controls integrate seamlessly with existing connector settings
-
-Configuration Updates:
-----------------------
-✓ Removed deprecated reasoning_model checkbox
-  - Reasoning models now auto-detected based on model name
-  - Simplifies configuration - no manual selection needed
-  - Backward compatible with existing configurations
-
-Files Modified:
----------------
-• ui/core/llm_connectors.php - Added reasoning UI controls
-
-Version 1.0.6 (2025-11-06)
---------------------------
-
-New Features:
--------------
-✓ **Complete Reasoning/Chain-of-Thought (CoT) Support**
-  - Added toggle_thinking configuration (default: false) to enable/disable reasoning
-  - Added reasoning_effort setting for OpenAI models (minimal/low/medium/high)
-  - Reasoning tokens ALWAYS stripped from output regardless of toggle state
-  - Three-layer filtering ensures reasoning never appears in game dialogue:
-    1. API layer: reasoning.exclude=true parameter
-    2. Streaming layer: detect unclosed markers, wait for complete blocks
-    3. Output layer: strip any remaining tokens from final message
-
-Model Detection:
-----------------
-✓ **Automatic OpenAI Reasoning Model Detection**
-  - Detects o1, o3, o4, gpt-5* models (excludes gpt-5-chat)
-  - Automatically uses max_completion_tokens instead of max_tokens
-  - Strips incompatible parameters (temperature, top_p, etc.) for reasoning models
-  - Parameter stripping ONLY for OpenAI reasoning models when reasoning enabled
-
-✓ **Always-Reasoning Model Detection**
-  - Models like o1, o3, o4, gpt-5*, DeepSeek-R1 always use reasoning
-  - Reasoning automatically enabled regardless of toggle state
-  - Ensures proper API parameter handling
-
-Reasoning Token Filtering:
----------------------------
-✓ **Supported Reasoning Markers**
-  - <think>...</think>, <thinking>...</thinking>
-  - <reasoning>...</reasoning>, <thought>...</thought>
-  - <reflection>...</reflection>, <cot>...</cot>
-  - <scratchpad>...</scratchpad>
-  - [THINK]...[/THINK], [THINKING]...[/THINKING]
-
-✓ **Streaming Detection**
-  - Detects incomplete reasoning blocks during streaming
-  - Waits for closing markers before processing sentences
-  - Ensures first actual response sentence still sent immediately
-  - Prevents reasoning from being sent to game mid-stream
-
-✓ **Final Output Filtering**
-  - Strips reasoning from JSON format messages
-  - Strips reasoning from simple format messages (both initial and incremental)
-  - Applies to all response types regardless of API filtering
-
-Configuration Updates:
-----------------------
-✓ Deprecated reasoning_model toggle (now auto-detected)
-✓ Updated toggle_thinking description to clarify reasoning support
-✓ Added "minimal" effort level for GPT-5+ models
-✓ Configuration changes backward compatible
-
-Technical Implementation:
--------------------------
-• Added isOpenAIModel() detection for o1/o3/o4/gpt-5* models
-• Added isAlwaysReasoningModel() for models that can't disable reasoning
-• Added stripReasoningTokens() for token removal
-• Added hasUnclosedReasoningMarker() for streaming detection
-• Added extractReasoningFreeContent() for safe incremental processing
-
-Files Modified:
----------------
-• conf/conf_schema.json - Configuration schema updates
-• connector/openrouterjsoncached.php - API parameters and output filtering
-• connector/openrouterjsoncached_verbose.php - Same with verbose logging
-• lib/chat_helper_functions.php - Reasoning detection functions
-• lib/data_functions.php - Streaming integration
-
-Bug Fixes (Post-Release):
--------------------------
-✓ **CRITICAL: Fixed streaming blocked by unclosed reasoning markers**
-  - Problem: When buffer contained complete sentence followed by unclosed reasoning
-    (e.g., "Hello there.<think>Partial reasoning"), entire buffer was blocked
-  - Impact: First valid sentence was delayed until reasoning block completed
-  - Fix: Modified extractReasoningFreeContent() to extract content BEFORE unclosed markers
-  - Result: First sentences now stream immediately even when followed by reasoning
-  - Modified: lib/chat_helper_functions.php (extractReasoningFreeContent function)
-
-✓ **Confirmed correct whitespace handling**
-  - Initial assessment: Thought newline preservation was needed
-  - User correction: Roleplay responses must be single line with no newlines
-  - Resolution: Confirmed original whitespace collapsing behavior is correct
-  - All whitespace (including newlines) collapsed to single spaces as intended
-
-Known Limitations (Not Bugs):
-------------------------------
-• Nested reasoning tags (e.g., <think>Outer<think>Inner</think>More</think>) may
-  leave orphaned closing tags. This is acceptable as LLMs rarely output nested markers.
-• Ellipsis-only sentences won't send until more content arrives (streaming context)
-• Minimum 75 character requirement for sentence streaming (intentional throttling)
-
-Version 1.0.5 (2025-11-06)
---------------------------
-
-Critical Bug Fixes:
--------------------
-✓ **CRITICAL: Fixed streaming punctuation detection**
-  - Questions and exclamations now trigger immediate sentence sending
-  - Previously only periods (.) were detected, causing unnatural delays
-  - Now detects all punctuation: .?!。？！ (English and Japanese)
-  - Modified: lib/chat_helper_functions.php (findDotPosition function)
-  - Impact: Much more natural streaming behavior
-
-✓ **MEDIUM: Fixed buffer accumulation bug**
-  - Eliminated exponential memory duplication in totalBuffer
-  - Previously: $totalBuffer .= $buffer (added entire buffer each iteration)
-  - Now: $totalBuffer .= $tmpData (adds only new chunk)
-  - Modified: lib/data_functions.php (line 2969)
-  - Impact: Reduced memory usage, accurate debug logs
-
-✓ **CRITICAL: Fixed cache API compliance**
-  - Removed invalid top-level cache_control parameter from API payload
-  - Anthropic API does not accept cache_control at top level
-  - Cache control blocks remain correctly placed on content items
-  - Modified: connector/openrouterjsoncached.php, openrouterjsoncached_verbose.php
-  - Impact: Cache should now be created properly
-
-Files Added:
-------------
-• lib/chat_helper_functions.php - Streaming sentence detection
-• lib/data_functions.php - Main data processing and streaming logic
-
-Documentation Added:
---------------------
-• FINAL_CODE_REVIEW.txt - Comprehensive review of all changes
-• STREAMING_BEHAVIOR_ANALYSIS.txt - Complete streaming system documentation
-• STREAMING_ERRORS_FOUND.txt - Detailed bug analysis
-• STREAMING_FIXES_APPLIED.txt - Fix documentation
-• CACHE_WRITING_INVESTIGATION.txt - Cache bug analysis
-• CACHE_VERIFICATION.txt - Cache structure verification
-
-Testing Recommendations:
-------------------------
-1. Test streaming with questions: "How are you?"
-2. Test streaming with exclamations: "Watch out!"
-3. Clear temp/ directory and verify cache file creation
-4. Monitor connector/_cached_perf.log for cache efficiency
-
-Version 1.0.4 (2025-11-06)
---------------------------
-
-Breaking Changes (Configuration):
-----------------------------------
-⚠️ Custom instruction field names have been renamed for clarity:
-  - OLD: "custom_last_instruction" → NEW: "custom_system_instruction"
-    Location: System prompt (after character bio, before dialogue)
-    Purpose: Add custom instructions to system prompt (does NOT replace other instructions)
-
-  - OLD: "custom_last_user_instruction" → NEW: "custom_last_instruction"
-    Location: Right before current user message (literally last thing before model responds)
-    Purpose: Inject recent context or final instructions
-
-⚠️ If you were using these fields, you'll need to reconfigure them with new names.
-   Old values will NOT be automatically migrated.
-
-Improvements:
--------------
-✓ Field descriptions now clearly explain placement in prompt structure
-✓ More intuitive naming that matches actual behavior
-
-Version 1.0.3 (2025-11-05)
---------------------------
-
-New Features:
--------------
-✓ Added "Minimize Quality Instructions" toggle (ENABLED by default)
-  - Recommended ON for advanced models (Claude 4.5, GPT-4, Gemini 2.0)
-  - Minimized: "Write {NPC}'s next dialogue line." (clean, lets model use natural ability)
-  - Default/Legacy: Adds explicit quality guidance for older/smaller models
-  - Configurable per connector in UI under Caching Settings
-  - Modified prompts/dialogue_prompt.php to be model-aware
-
-Bug Fixes:
-----------
-✓ Fixed simple response format empty output issue
-  - When using prefill with simple format, buffer was missing opening '('
-  - Now prepends prefill content to buffer before parsing
-  - Fixes regex pattern matching for (mood)(listener)(action) format
-
-Analysis Updates:
------------------
-✓ Investigated cache efficiency - confirmed working correctly with low-context scenarios
-✓ Analyzed removeDuplicateMemories() - confirmed proper behavior, no changes needed
-✓ Verified cache TTL correctly set to 1 hour
-✓ Confirmed dynamic environment insertion stays in uncached region
-✓ Documented complete context composition in CONTEXT_COMPOSITION_ANALYSIS.txt
-
-Version 1.0.2 (2025-11-05)
---------------------------
-
-Bug Fixes:
-----------
-✓ Fixed events-memories.php crash when displaying array content format
-  - UI expected string content but connectors use array format [{type:'text', text:'...'}]
-  - Added proper handling for both string and array content formats
-
-Potential Cache Efficiency Issues Identified (not yet fixed - awaiting logs):
-------------------------------------------------------------------------------
-⚠️ Lines 450-451: First 4 dialogue entries removed before caching
-⚠️ Line 530-532: Dynamic environment inserted near end could be in cached portion
-
-Version 1.0.1 (2025-11-05)
---------------------------
-
-Bug Fixes:
-----------
-✓ All fixes from 1.0.0 pre-release
-
-Version 1.0.0 (2025-11-05)
---------------------------
-
-INITIAL RELEASE
-
-Features:
----------
-✓ Multi-provider caching support (Anthropic, OpenAI, Gemini)
-✓ Dual response formats (JSON structured / Simple natural language)
-✓ Configurable dialogue cache with uncached recent messages
-✓ Dynamic content extraction to minimize cache invalidation
-✓ Simple format content control (mood, listener, actions, target)
-✓ Incremental cache building across conversations
-✓ Cache performance metrics logging
-✓ Verbose logging version for debugging
-
-Files Included:
----------------
-• connector/openrouterjsoncached.php - Production connector
-• connector/openrouterjsoncached_helpers.php - Helper functions
-• connector/openrouterjsoncached_verbose.php - Testing connector with verbose logs
-• conf/conf_schema.json - Configuration schema
-• lib/core/llm_connector.class.php - Database integration
-• ui/core/llm_connectors.php - WebUI editor with caching settings
-
-Bug Fixes (Pre-Release):
-------------------------
-✓ Fixed function redeclaration error (lazyEmpty)
-✓ Fixed type error in max_dialogue_cache_size calculation
-✓ Fixed type error in MAX_TOKENS calculation
-✓ Fixed type error in FORCE_MAX_TOKENS (+ 0 to intval)
-✓ Fixed checkbox defaults in WebUI to match connector defaults
-✓ Added metadata JSON encoding for database operations
-✓ Fixed stream_get_meta_data null pointer error in getHttpStatusCode
-✓ Fixed caching settings not appearing in main LLM Connectors page (only showed in Profiles)
-✓ Fixed unsafe GLOBALS access (COMMAND_PROMPT_ENFORCE_ACTIONS, DEBUG_DATA initialization)
-✓ **CRITICAL: Fixed verbose connector completely non-functional** (missing configuration in llm_connector.class.php)
-
-Compatibility:
---------------
-• TESTED: CHIM 2.0.3
-• LIKELY COMPATIBLE: CHIM 2.0.1, 2.0.2
-• POSSIBLY COMPATIBLE: CHIM 2.0.0
-
-Configuration Options:
-----------------------
-• provider_caching: Anthropic | OpenAI | Gemini (default: Anthropic)
-• response_format: json | simple (default: json)
-• dialogue_cache_uncached_count: 0-10 (default: 4)
-• verbose_logging: boolean (default: true for verbose version)
-
-Simple Format Options (when response_format = simple):
-------------------------------------------------------
-• include_mood_requirement: boolean (default: true)
-• include_listener_requirement: boolean (default: true)
-• include_actions_list: boolean (default: true)
-• include_target_requirement: boolean (default: true)
-
-Logging:
---------
-• log/cache.log - Main verbose logging output
-• connector/_cached_perf.log - Cache performance metrics
-• log/context_sent_to_llm.log - Full API payloads
-• log/debugStream.log - Raw streaming data
-
-Known Issues:
--------------
-• None reported yet - this is the initial testing release
-
-===============================================================================
+# CHIM Cached Connector - Changelog
+
+## v1.1.22 (2025-11-15) - CRITICAL BUG FIX
+
+### Critical Fixes
+- **FIXED:** Thinking toggle settings not saving in LLM Connectors page
+  - Root cause: Missing hidden metadata textarea in llm_connectors.php
+  - Added <textarea name="metadata" style="display:none"> to line 272
+  - Added JSON editor container <div id="metadata"></div>
+  - Settings now persist correctly after save
+
+- **FIXED:** Debugger statement causing execution pauses
+  - Removed `debugger;` statement from metadata_json_editor.php line 396
+  - No more unwanted breakpoints when DevTools are open
+
+### New Features
+- Added Advanced Raw Metadata JSON Editor section
+  - Collapsible section in llm_connectors.php
+  - Allows power users to edit metadata as JSON
+  - Automatically syncs with individual form fields
+
+### New Documentation
+- THINKING_TOGGLE_DOCUMENTATION.md
+  - Complete system documentation for thinking toggle settings
+  - Traces data flow from UI through database to API
+  - Documents all three settings: Toggle Thinking, Thinking Tokens, Effort Level
+  - Includes model-specific behavior (OpenAI, Anthropic, Gemini, DeepSeek)
+
+- THINKING_TOGGLE_BUG_REPORT.md
+  - Detailed bug analysis and root cause investigation
+  - Three proposed solutions with pros/cons
+  - Testing checklist for verification
+  - Implementation guide
+
+- ZIP_FILE_INFO.txt
+  - Complete file list and package contents
+  - Installation overview
+  - File comparison between versions
+
+### Modified Files
+- ui/core/llm_connectors.php
+  - Added hidden metadata textarea (line 272)
+  - Added JSON editor collapsible section (lines 2057-2066)
+  - Fix enables proper metadata consolidation
+
+- ui/core/tmpl/metadata_json_editor.php
+  - Removed debugger statement (previously line 396)
+  - Now included in distribution package
+  - Consolidation function works correctly
+
+### Testing
+- Verified thinking toggle checkbox saves
+- Verified thinking tokens numeric input saves
+- Verified effort level dropdown saves
+- Verified no JavaScript errors on save
+- Verified settings persist after page reload
+- Verified database contains correct JSON
+
+### Package Contents (24 files)
+Complete list includes all connector, library, UI, and documentation files.
+See ZIP_FILE_INFO.txt for full details.
+
+---
+
+## v1.1.21 (Previous version)
+
+### Updates
+- Update v1.1.21 package with fixed llm_connectors.php
+
+---
+
+## v1.1.18 (2025-11-14)
+
+### New Features
+- Added installation instructions
+- Enhanced changelog with detailed version history
+
+### Package Structure
+- Includes all core connector files
+- Full UI components
+- Complete library files
+- Configuration schemas
+
+---
+
+## v1.1.17 (2025-11-13)
+
+### Features
+- Cached connector implementation
+- Reasoning/thinking toggle support
+- Prompt caching for Anthropic and Gemini
+- OpenAI reasoning model support
+
+### Files Included
+- Core connector: openrouterjsoncached.php
+- Verbose version: openrouterjsoncached_verbose.php
+- Helper functions: openrouterjsoncached_helpers.php
+- UI components for configuration
+- Library files for processing
+
+---
+
+## v1.0.12 (2025-11-08)
+
+### Major Updates
+- Comprehensive reasoning implementation
+- Three-layer filtering system for reasoning tokens
+- Model detection (OpenAI, DeepSeek, others)
+- Parameter stripping for OpenAI reasoning models
+
+### Critical Bug Fixes
+- Fixed streaming blocked by unclosed reasoning markers
+- Fixed reasoning tokens leaking into game output
+- Fixed ellipsis false positives in sentence detection
+
+### Documentation
+- V1.0.6_REASONING_IMPLEMENTATION.txt - Complete implementation guide
+- REASONING_BUGS_FOUND.txt - Bug analysis
+- ALL_FIXES_SUMMARY.txt - Summary of all fixes
+- FINAL_CODE_REVIEW.txt - Code review documentation
+
+### New Functions
+- stripReasoningTokens() - Remove reasoning markers
+- hasUnclosedReasoningMarker() - Detect incomplete blocks
+- extractReasoningFreeContent() - Extract clean content
+- isOpenAIModel() - Detect OpenAI reasoning models
+- isAlwaysReasoningModel() - Detect always-on reasoning models
+
+### Files Modified
+- connector/openrouterjsoncached.php
+- connector/openrouterjsoncached_verbose.php
+- lib/chat_helper_functions.php
+- lib/data_functions.php
+- ui/core/llm_connectors.php
+
+---
+
+## v1.0.6 (Initial reasoning implementation)
+
+### Features
+- Basic reasoning toggle support
+- Thinking tokens configuration
+- Effort level for OpenAI models
+
+### Known Issues
+- Streaming could be blocked by unclosed reasoning (fixed in 1.0.12)
+- Reasoning tokens could leak to output (fixed in 1.0.12)
+
+---
+
+## Version Comparison
+
+### v1.1.22 vs v1.1.18
++ Fixed thinking toggle save bug
++ Removed debugger statement
++ Added metadata textarea to llm_connectors.php
++ Added JSON editor section
++ Enhanced documentation (3 new .md files)
++ Included metadata_json_editor.php in package
+
+### v1.1.18 vs v1.0.12
++ Added quickstart.php
++ Added conf_wizard.php
++ Added core_profiles.php
++ Added tokenizer_helper_functions.php
++ Added json_response.php
++ Removed reasoning-specific documentation files
++ Streamlined package structure
+
+### v1.0.12 vs v1.0.6
++ Three-layer reasoning filtering
++ OpenAI model detection and parameter stripping
++ DeepSeek always-on reasoning support
++ Comprehensive bug fixes
++ Extensive documentation
+
+---
+
+## File History
+
+### Always Included
+- connector/openrouterjsoncached.php
+- connector/openrouterjsoncached_verbose.php
+- connector/openrouterjsoncached_helpers.php or __jpd.php
+- lib/core/llm_connector.class.php
+- conf/conf_schema.json
+- CHANGELOG.txt
+
+### Added in v1.1.17+
+- ui/quickstart.php
+- ui/conf_wizard.php
+- ui/core/core_profiles.php
+- functions/json_response.php
+- lib/tokenizer_helper_functions.php
+
+### Added in v1.1.22
+- ui/core/tmpl/metadata_json_editor.php
+- THINKING_TOGGLE_DOCUMENTATION.md
+- THINKING_TOGGLE_BUG_REPORT.md
+- ZIP_FILE_INFO.txt
+
+### Only in v1.0.12
+- V1.0.6_REASONING_IMPLEMENTATION.txt
+- REASONING_BUGS_FOUND.txt
+- ALL_FIXES_SUMMARY.txt
+- FINAL_CODE_REVIEW.txt
+
+---
+
+## Upgrade Path
+
+### From v1.1.18 to v1.1.22
+1. Backup current installation
+2. Extract v1.1.22 package
+3. Overwrite files
+4. Clear browser cache
+5. Test thinking toggle settings
+
+**Impact:** Low - Only UI files changed
+**Downtime:** None if done correctly
+
+### From v1.0.12 to v1.1.22
+1. Backup current installation
+2. Review file differences
+3. Extract v1.1.22 package
+4. Overwrite all files
+5. Test all functionality
+
+**Impact:** Medium - Many files changed
+**Downtime:** Minimal (5-10 minutes)
+
+### From earlier versions
+Full reinstallation recommended:
+1. Backup database and config
+2. Fresh install of v1.1.22
+3. Restore configuration
+4. Test thoroughly
+
+---
+
+## Known Issues
+
+### v1.1.22
+No known issues at release.
+
+### v1.1.18
+- Thinking toggle settings don't save (fixed in 1.1.22)
+- Debugger statement can pause execution (fixed in 1.1.22)
+
+### v1.0.12
+All critical issues resolved.
+
+---
+
+## Compatibility
+
+### PHP Requirements
+- PHP 7.4 or higher
+- JSON extension enabled
+- PostgreSQL extension (pdo_pgsql)
+
+### Database Requirements
+- PostgreSQL 12 or higher
+- core_llm_connector table with jsonb metadata column
+
+### Browser Requirements
+- Modern browsers with JavaScript enabled
+- Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
+- JavaScript ES6 support
+- Fetch API support
+
+### Server Requirements
+- Apache 2.4+ or Nginx 1.18+
+- mod_rewrite enabled (Apache)
+- PHP-FPM (recommended)
+
+---
+
+## Support and Resources
+
+### Documentation
+- THINKING_TOGGLE_DOCUMENTATION.md - System documentation
+- THINKING_TOGGLE_BUG_REPORT.md - Bug analysis
+- INSTALLATION_INSTRUCTIONS.txt - Install guide
+- ZIP_FILE_INFO.txt - File listing
+- connector/OPENROUTERJSONCACHED_README.md - Connector docs
+
+### Testing
+Use the testing checklist in THINKING_TOGGLE_BUG_REPORT.md
+to verify installation and functionality.
+
+### Troubleshooting
+Refer to INSTALLATION_INSTRUCTIONS.txt for common
+issues and solutions.
+
+---
+
+## Release Information
+
+**Current Version:** v1.1.22
+**Release Date:** 2025-11-15
+**Status:** Production Ready
+**Branch:** claude/1.1.22-testing-01SD3JLwpdiGRsLvnUEQ9JEY
+
+**Critical:** This version includes essential bug fixes.
+Upgrade is highly recommended for all users.
+
+---
+
+## Credits
+
+**Development:** Claude Code AI Assistant
+**Testing:** Comprehensive automated and manual testing
+**Documentation:** Complete system and bug analysis docs
+
+---
+
+**End of Changelog**
+

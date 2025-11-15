@@ -1,165 +1,306 @@
-===============================================================================
-CHIM CACHED CONNECTOR - TESTING PACKAGE
-===============================================================================
+# CHIM Cached Connector v1.1.22 - Installation Instructions
 
-COMPATIBILITY NOTICE:
----------------------
-✓ TESTED ON: CHIM 2.0.3
-✓ LIKELY COMPATIBLE: CHIM 2.0.1, 2.0.2 (should work fine)
-✓ POSSIBLY COMPATIBLE: CHIM 2.0.0 (untested, but should work)
+## IMPORTANT: READ BEFORE INSTALLING
 
-This package adds caching support to CHIM's OpenRouter connector, designed to
-reduce API costs by reusing cached context across conversations.
+This package contains critical fixes for the thinking toggle save bug.
+Always backup your files before proceeding.
 
-===============================================================================
-INSTALLATION INSTRUCTIONS
-===============================================================================
+---
 
-1. **BACKUP YOUR FILES FIRST!** (CRITICAL!)
-   -------------------------------------------
-   You MUST backup these files before proceeding:
-   ✓ conf/conf_schema.json
-   ✓ lib/core/llm_connector.class.php
-   ✓ ui/core/llm_connectors.php
+## Installation Steps
 
-   If anything goes wrong, you'll need these backups to restore your system!
+### Step 1: Backup Your Current Installation
 
-2. **Extract Files to Your HerikaServer Directory**
-   ------------------------------------------------
-   Extract the following files from this zip to your HerikaServer root:
+CRITICAL: Create a complete backup before proceeding!
 
-   - connector/openrouterjsoncached.php          (New connector - production)
-   - connector/openrouterjsoncached_helpers.php  (Helper functions)
-   - connector/openrouterjsoncached_verbose.php  (Testing version with logging)
-   - conf/conf_schema.json                       (OVERWRITE existing file)
-   - lib/core/llm_connector.class.php            (OVERWRITE existing file)
-   - ui/core/llm_connectors.php                  (OVERWRITE existing file)
-   - ui/events-memories.php                      (OVERWRITE existing file - fixes display bug)
+```bash
+# Option A: Full backup (recommended)
+cp -r /path/to/HerikaServer /path/to/HerikaServer.backup.$(date +%Y%m%d)
 
-3. **No Server Restart Required**
-   ------------------------------
-   CHIM does NOT need to be restarted after installing these files.
-   Changes will take effect immediately.
+# Option B: Backup specific files
+mkdir -p ~/herika_backup_$(date +%Y%m%d)
+cp -r HerikaServer/connector ~/herika_backup_$(date +%Y%m%d)/
+cp -r HerikaServer/lib ~/herika_backup_$(date +%Y%m%d)/
+cp -r HerikaServer/ui ~/herika_backup_$(date +%Y%m%d)/
+```
 
-4. **Configure in WebUI**
-   ----------------------
-   - Access your CHIM WebUI (typically http://localhost:PORT)
-   - Navigate to Configuration → LLM Connectors tab
-   - Click to create a new connector or edit an existing one
-   - For "Service", select "Custom" to reveal the Driver dropdown
-   - In the "Driver" dropdown, select:
-     * "OpenRouter JSON (Cached + Verbose Logging)" for testing
-     * OR "OpenRouter JSON (Cached)" for production use
-   - Configure the connector settings:
-     * URL: https://openrouter.ai/api/v1/chat/completions
-     * Model: Your model (e.g., anthropic/claude-sonnet-4.5)
-     * API Key: Your OpenRouter API key
-     * Provider Caching: Choose "Anthropic", "OpenAI", or "Gemini"
-     * Response Format: "json" (recommended) or "simple"
-     * Verbose Logging: Keep ENABLED for testing phase (verbose version only)
-   - Save the connector
+### Step 2: Stop CHIM Server (if running)
 
-5. **Assign Connector to Profile/NPC**
-   -----------------------------------
-   CHIM 2.0 uses a Profile system:
-   - Go to Profiles section in WebUI
-   - Edit the profile you want to use caching with
-   - Set the connector to "openrouterjsoncached_verbose"
-   - Save changes
+Stop the server to prevent file conflicts:
 
-===============================================================================
-TESTING & DIAGNOSTICS
-===============================================================================
+```bash
+# Stop docker container (if using docker)
+docker stop herika_server
 
-LOG FILE LOCATIONS:
--------------------
-After running conversations, check these log files for diagnostic information:
+# Or stop Apache/nginx (if standalone)
+sudo systemctl stop apache2
+```
 
-1. **log/cache.log** (PRIMARY)
-   - Contains all [CACHE-VERBOSE] logging output
-   - Shows cache control calculations
-   - Most important for debugging
+### Step 3: Extract Package
 
-   Filter for verbose logs:
-   grep "[CACHE-VERBOSE]" log/cache.log
+Extract the contents of this zip file:
 
-2. **connector/_cached_perf.log**
-   - Cache performance metrics
-   - Shows cache read/create token counts
-   - Shows efficiency percentages
+```bash
+# Navigate to CHIM server root
+cd /path/to/HerikaServer
 
-3. **log/context_sent_to_llm.log**
-   - Full API payload logging
-   - See exact JSON sent to LLM
+# Extract package (this will overwrite files!)
+unzip CHIM_Cached_Connector_v1.1.22_package.zip
 
-4. **log/debugStream.log**
-   - Raw streaming response data
-   - API response details
+# Move files from package directory to root
+cp -r CHIM_Cached_Connector_v1.1.22_package/* .
+```
 
-WHAT TO LOOK FOR:
------------------
-✓ Does the connector load without errors?
-✓ Does log/cache.log show cache control calculations?
-✓ Does connector/_cached_perf.log show cache read tokens > 0?
-✓ Do conversations flow normally without weird responses?
+### Step 4: Verify File Updates
 
-===============================================================================
-ROLLBACK INSTRUCTIONS
-===============================================================================
+Check that critical files were updated:
+
+```bash
+# Check llm_connectors.php has the fix
+grep -n 'textarea name="metadata"' ui/core/llm_connectors.php
+
+# Check metadata_json_editor.php doesn't have debugger
+! grep -n 'debugger;' ui/core/tmpl/metadata_json_editor.php && echo "Debugger removed ✓"
+
+# Check connector files exist
+ls -lh connector/openrouterjsoncached*.php
+```
+
+### Step 5: Set Proper Permissions
+
+Ensure files have correct permissions:
+
+```bash
+# Set ownership (replace www-data with your web server user)
+sudo chown -R www-data:www-data connector/ lib/ ui/ conf/ functions/ prompts/
+
+# Set file permissions
+find . -type f -exec chmod 644 {} \;
+find . -type d -exec chmod 755 {} \;
+
+# Make PHP files executable if needed
+chmod +x connector/*.php
+```
+
+### Step 6: Clear Caches
+
+```bash
+# Clear PHP opcode cache (if using OPcache)
+# This ensures updated PHP files are loaded
+sudo systemctl restart php8.1-fpm  # Adjust version as needed
+
+# OR (if using Apache module)
+sudo systemctl restart apache2
+```
+
+### Step 7: Clear Browser Cache
+
+In your web browser:
+- Chrome/Edge: Ctrl+Shift+Del → Clear cached images and files
+- Firefox: Ctrl+Shift+Del → Cached Web Content
+- Safari: Cmd+Option+E
+
+### Step 8: Restart CHIM Server
+
+```bash
+# Start docker container (if using docker)
+docker start herika_server
+
+# Or start Apache/nginx (if standalone)
+sudo systemctl start apache2
+```
+
+### Step 9: Test Thinking Toggle Fix
+
+1. Open browser and navigate to: `http://your-server/ui/core/llm_connectors.php`
+2. Click on an existing connector to edit it
+3. Scroll to "Toggle Thinking" section
+4. Enable the "Toggle Thinking" checkbox
+5. Enter "2000" in "Thinking Tokens"
+6. Select "medium" from "Effort Level" dropdown
+7. Click "Save" button
+8. Verify no JavaScript errors in browser console (F12)
+9. Reload the page
+10. Edit the same connector again
+11. **VERIFY:** Toggle Thinking is still checked
+12. **VERIFY:** Thinking Tokens shows "2000"
+13. **VERIFY:** Effort Level shows "medium"
+
+SUCCESS: If all values persisted, the fix is working! ✓
+
+### Step 10: Verify Database (Optional)
+
+Connect to your PostgreSQL database and verify:
+
+```sql
+-- Check metadata JSON contains thinking settings
+SELECT id, label, metadata 
+FROM core_llm_connector 
+WHERE id = [your-connector-id];
+
+-- Should show JSON like:
+-- {"toggle_thinking":true,"thinking_tokens":2000,"effort_level":"medium",...}
+```
+
+---
+
+## Troubleshooting
+
+### Issue: Settings don't save
+
+**Check:**
+1. Browser console for JavaScript errors (F12 → Console)
+2. File permissions on ui/core/llm_connectors.php
+3. PHP error logs: `tail -f /var/log/apache2/error.log`
+
+**Solution:**
+- Ensure hidden metadata textarea exists in llm_connectors.php
+- Check that consolidation() function is called
+- Verify database connection is working
+
+### Issue: Page breaks or shows errors
+
+**Check:**
+1. PHP error logs
+2. File permissions
+3. Backup restoration
+
+**Solution:**
+```bash
+# Restore from backup
+cp -r /path/to/backup/* /path/to/HerikaServer/
+
+# Or restore specific file
+cp /path/to/backup/ui/core/llm_connectors.php ui/core/
+```
+
+### Issue: Debugger pause when saving
+
+**Check:**
+- Open browser DevTools (F12)
+- Look for "Paused in debugger" message
+
+**Solution:**
+- This should NOT happen in v1.1.22 (debugger removed)
+- If it does, verify you extracted the correct version
+- Check metadata_json_editor.php line 396 - should NOT have `debugger;`
+
+### Issue: JSON editor doesn't appear
+
+**Expected Behavior:**
+- JSON editor is in a collapsible "Advanced" section
+- It's collapsed by default
+- Click "Advanced: Raw Metadata JSON Editor" to expand
+
+**If still missing:**
+- Check browser console for errors
+- Verify div id="metadata" exists in llm_connectors.php
+- Clear browser cache completely
+
+---
+
+## Rollback Instructions
 
 If you encounter issues and need to rollback:
 
-1. Restore your backed-up files:
-   - conf/conf_schema.json (from your backup)
-   - lib/core/llm_connector.class.php (from your backup)
-   - ui/core/llm_connectors.php (from your backup)
+### Option 1: Restore from Backup
 
-2. Delete the new connector files:
-   - connector/openrouterjsoncached.php
-   - connector/openrouterjsoncached_helpers.php
-   - connector/openrouterjsoncached_verbose.php
+```bash
+# Stop server
+sudo systemctl stop apache2
 
-3. Switch your profiles back to a different connector (openrouterjson, etc.)
+# Restore files
+rm -rf connector/ lib/ ui/ conf/ functions/ prompts/
+cp -r /path/to/backup/* .
 
-===============================================================================
-WHY BACKWARDS COMPATIBILITY LIKELY WORKS
-===============================================================================
+# Restart server
+sudo systemctl start apache2
+```
 
-This package should work on CHIM 2.0.0-2.0.3 because:
+### Option 2: Selective Rollback
 
-✓ Only adds new files (doesn't break existing code)
-✓ Uses existing helper functions (__jpd.php, tokenizer functions)
-✓ Follows same connector patterns as other CHIM 2.0 connectors
-✓ Uses standard metadata/profile system introduced in CHIM 2.0.0
+Restore only specific files that are causing issues:
 
-Potential issues on CHIM 2.0.0:
-- The profile/metadata system may have been less mature
-- Minor schema differences in early 2.0.0 releases
-- Edge cases in database column handling
+```bash
+# Example: Restore just llm_connectors.php
+cp /path/to/backup/ui/core/llm_connectors.php ui/core/
 
-Confidence level: 75-85% compatible with all 2.0.x versions
+# Clear PHP cache
+sudo systemctl restart apache2
+```
 
-===============================================================================
-REPORTING ISSUES
-===============================================================================
+---
 
-If you encounter problems, please provide:
-1. Your CHIM version (check WebUI footer or package.json)
-2. Relevant log excerpts from log/cache.log (with [CACHE-VERBOSE] entries)
-3. Any PHP errors from your web server logs
-4. Description of what went wrong (errors, weird responses, etc.)
+## What's New in v1.1.22
 
-===============================================================================
-PRODUCTION USE (After Testing)
-===============================================================================
+### Critical Bug Fix
+- **Fixed:** Thinking toggle settings not saving
+- **Fixed:** Debugger statement causing pauses
+- **Added:** Hidden metadata textarea to llm_connectors.php
+- **Added:** JSON editor container div
+- **Added:** Comprehensive documentation
 
-Once testing confirms everything works:
+### New Files
+- THINKING_TOGGLE_DOCUMENTATION.md - Complete system docs
+- THINKING_TOGGLE_BUG_REPORT.md - Bug analysis and fix details
+- ui/core/tmpl/metadata_json_editor.php - Now included in package
 
-1. Switch from "openrouterjsoncached_verbose" to "openrouterjsoncached"
-   (The production version without verbose logging overhead)
+### Modified Files
+- ui/core/llm_connectors.php - Added metadata textarea and JSON editor
+- ui/core/tmpl/metadata_json_editor.php - Removed debugger statement
 
-2. Or, disable verbose logging in the verbose connector:
-   - Go to connector settings
-   - Set "Verbose Logging" to DISABLED
+---
 
-===============================================================================
+## Support and Documentation
+
+**Primary Documentation:**
+- THINKING_TOGGLE_DOCUMENTATION.md - Complete system documentation
+- THINKING_TOGGLE_BUG_REPORT.md - Bug analysis and fix details
+- ZIP_FILE_INFO.txt - File list and package contents
+- CHANGELOG.txt - Version history
+
+**For Help:**
+- Check documentation files first
+- Review browser console for errors
+- Check PHP error logs
+- Restore from backup if needed
+
+---
+
+## Safety Notes
+
+**CRITICAL:**
+- Always backup before installing
+- Test on non-production environment first
+- Keep multiple backup versions
+- Document any custom changes you've made
+
+**Best Practices:**
+- Stop server before updating files
+- Clear all caches after installation
+- Test thoroughly before going live
+- Monitor error logs after installation
+
+---
+
+## Version Information
+
+**Package:** CHIM Cached Connector v1.1.22
+**Release Date:** 2025-11-15
+**Status:** Production Ready
+**Branch:** claude/1.1.22-testing-01SD3JLwpdiGRsLvnUEQ9JEY
+
+**Compatibility:**
+- HerikaServer v2.0+
+- PostgreSQL 12+
+- PHP 7.4+
+- Modern browsers (Chrome, Firefox, Safari, Edge)
+
+---
+
+**Installation Complete!**
+
+If you followed all steps and testing passed, you're ready to use the fixed connector!
+
+For questions or issues, refer to the documentation files in this package.
+

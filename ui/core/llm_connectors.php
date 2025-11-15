@@ -269,6 +269,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
         <?php endif; ?>
         <input type="hidden" name="partial" value="editor">
+        <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "{}") ?></textarea>
         <div class="two-col-llm">
             <div>
                 <div class="top-actions" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
@@ -2052,6 +2053,17 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
 </script>
 
 <!-- list/grid moved to left pane -->
+
+<!-- Advanced: Raw Metadata JSON Editor -->
+<details class="collapsible" style="margin-top:16px;">
+    <summary style="cursor:pointer; font-weight:600; padding:8px 0; color:#e9efff;">
+        ⚙️ Advanced: Raw Metadata JSON Editor
+    </summary>
+    <div style="padding:8px 0; color:#bbb; font-size:12px; margin-bottom:8px;">
+        Edit metadata as raw JSON. Changes here will override individual fields above. Use with caution.
+    </div>
+    <div id="metadata"></div>
+</details>
 
 <?php
  // Provides a JSON editor for metadata field and form consolidation function (only needed if metadata field is present)

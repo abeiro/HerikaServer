@@ -1,187 +1,160 @@
-CACHED CONNECTOR PACKAGE v1.0.24
-==================================
+# CHIM Cached Connector v1.1.22 - Complete File List
 
-FILE: CHIM_Cached_Connector_v1.0.24.zip
-SIZE: ~159 KB (compressed from 737 KB)
-LOCATION: /home/user/HerikaServer/CHIM_Cached_Connector_v1.0.24.zip
-VERSION: 1.0.24 (Debug Logging + UI Improvements)
+**Version:** 1.1.22 FINAL FIX
+**Date:** 2025-11-15
+**Fix Applied:** Thinking Toggle Save Bug Fixed
 
-CONTENTS:
----------
-✓ connector/openrouterjsoncached.php                 (Base connector - v1.0.24)
-✓ connector/openrouterjsoncached_verbose.php         (Verbose logging version - v1.0.24)
-✓ connector/openrouterjsoncached_helpers.php         (Helper functions with improved regex)
-✓ connector/OPENROUTERJSONCACHED_README.md           (Connector documentation)
-✓ connector/__jpd.php                                (JSON parsing dependency)
-✓ lib/core/llm_connector.class.php                   (Integration code)
-✓ lib/tokenizer_helper_functions.php                 (Tokenizer utilities)
-✓ conf/conf_schema.json                              (Configuration schema)
-✓ functions/json_response.php                        (Response templates)
-✓ ui/core/core_profiles.php                          (Profile editor)
-✓ ui/core/llm_connectors.php                         (Connector settings with full UI)
-✓ ui/conf_wizard.php                                 (Configuration wizard)
-✓ ui/conf_wizardbackup.php                           (Config backup)
-✓ ui/quickstart.php                                  (Quick start guide)
-✓ CHANGELOG.txt                                      (Complete version history)
-✓ INSTALLATION_INSTRUCTIONS.txt                      (Setup guide)
-✓ ZIP_FILE_INFO.txt                                  (This file)
+---
 
-COMPATIBILITY:
---------------
-✓ TESTED ON: CHIM 2.0.3
-✓ LIKELY COMPATIBLE: CHIM 2.0.1, 2.0.2
-✓ POSSIBLY COMPATIBLE: CHIM 2.0.0 (untested)
+## Package Contents
 
-Uses CHIM 2.0 database-driven profile system.
-Only ADDS new files, modifies 2 existing files (conf_schema.json, llm_connector.class.php).
+This package contains ALL files necessary for the CHIM Cached Connector implementation to function properly, including the critical fix for the thinking toggle save issue.
 
-WHAT'S NEW IN v1.0.24:
-----------------------
-🔍 **DEBUG & DIAGNOSTICS**:
-   • Added critical debug logging for response format investigation
-   • Problem: Response format set to JSON in UI but LLM outputting simple format
-   • Logs show:
-     - Response format setting as loaded from metadata
-     - Raw metadata value from GLOBALS
-     - Which format instruction branch is executed (JSON vs Simple)
-   • Error log entries (check /var/log/apache2/error.log or PHP error log):
-     ```
-     [connector] CRITICAL DEBUG - Response Format Setting: json
-     [connector] CRITICAL DEBUG - Raw metadata value: json
-     [connector] CRITICAL DEBUG - Building format instruction for: json
-     [connector] CRITICAL DEBUG - JSON format instruction created
-     ```
-   • Helps diagnose configuration loading and format mismatch issues
+### Core Connector Files
 
-🎨 **UI IMPROVEMENTS**:
-   • Added Advanced Settings collapsible to main connector form
-   • Previously only available in edit modal
-   • Added Minimize Quality Instructions toggle
-   • Now has complete UI parity with edit modal
+1. **connector/openrouterjsoncached.php**
+   - Main cached connector implementation
+   - Handles API requests with prompt caching support
+   - Includes reasoning/thinking toggle support
+   - Size: ~71KB
 
-🔧 **Previous fixes included** (from v1.0.23):
-   • Bug #10: Regex no longer consumes user's personal formatting colons
-   • Complete UI restoration from v1.0.18
-   • Advanced Settings collapsible section
-   • Response Format collapsible section
-   • JavaScript handlers with localStorage persistence
+2. **connector/openrouterjsoncached_verbose.php**
+   - Verbose logging version for debugging
+   - Same functionality as main connector with detailed logs
+   - Size: ~99KB
 
-🔧 **Previous fixes included** (from v1.0.19-1.0.22):
-   • Bug #9: Wait for closing parenthesis before parsing
-   • Bug #8: Opening parenthesis optional in regex (supports prefill format)
-   • Bug #7: All 6 missing v1.0.18 fixes restored (prefill position tracking)
-   • Bug #6: Regex accepts optional colons + fallback handling
-   • Bug #4: Space removal in streaming fixed
-   • Bug #5: 4-decimal precision restored for parameters
+3. **connector/openrouterjsoncached_helpers.php**
+   - Helper functions for cached connectors
+   - Shared utilities and common operations
+   - Size: ~20KB
 
-QUICK START:
-------------
-1. **BACKUP THESE FILES FIRST!**
-   - conf/conf_schema.json
-   - lib/core/llm_connector.class.php
+4. **connector/__jpd.php**
+   - JSON processing and data handling utilities
+   - Size: ~13KB
 
-2. Extract zip to HerikaServer root directory
+5. **connector/OPENROUTERJSONCACHED_README.md**
+   - Comprehensive documentation for cached connectors
+   - Configuration guide and usage instructions
 
-3. Refresh browser (NO SERVER RESTART NEEDED!)
+### Configuration Files
 
-4. Select "openrouterjsoncached_verbose" in WebUI
+6. **conf/conf_schema.json**
+   - Configuration schema for all settings
+   - Includes metadata field definitions
 
-5. Configure and test
+### Core Library Files
 
-6. **Check error logs** for debug output:
-   - Look for "CRITICAL DEBUG" entries
-   - Verify response format is being loaded correctly
+7. **lib/core/llm_connector.class.php**
+   - LLM Connector class for database operations
+   - Handles create, update, read, delete operations
+   - Includes metadata JSON encoding/decoding
 
-RECOMMENDED FOR TESTERS:
-------------------------
-Use openrouterjsoncached_verbose.php first!
-- Has verbose_logging enabled by default
-- Shows [CACHE-VERBOSE] logs for debugging
-- Shows CRITICAL DEBUG logs for format investigation
-- Helps track cache performance and format parsing
+8. **lib/chat_helper_functions.php**
+   - CRITICAL: Contains reasoning token filtering functions
+   - stripReasoningTokens(), hasUnclosedReasoningMarker(), etc.
 
-TROUBLESHOOTING FORMAT ISSUES:
-------------------------------
-If you see simple format output when JSON is selected:
+9. **lib/data_functions.php**
+   - Core data processing functions
+   - Includes streaming loop with reasoning extraction
 
-1. **Check error logs** for debug entries:
-   ```bash
-   tail -100 /var/log/apache2/error.log | grep "CRITICAL DEBUG"
-   ```
+10. **lib/tokenizer_helper_functions.php**
+    - Tokenizer utilities and helpers
 
-2. **Look for**:
-   - "Response Format Setting: simple" (should be "json")
-   - "Simple format instruction created" (should be "JSON format instruction created")
+### User Interface Files
 
-3. **If format is wrong**:
-   - Metadata not being saved correctly in database
-   - Wrong connector being used by active profile
-   - Cache files need to be deleted
+11. **ui/core/llm_connectors.php** (FIXED)
+    - Main LLM connectors management interface
+    - Now includes hidden metadata textarea
+    - Includes JSON editor container div
+    - Thinking toggle settings properly save
 
-4. **Delete cache files**:
-   ```bash
-   rm -f /path/to/HerikaServer/tmp/system_cache_*.tmp
-   rm -f /path/to/HerikaServer/tmp/combined_dialogue_cache_*.tmp
-   ```
+12. **ui/core/core_profiles.php**
+    - Core profiles management interface
+    - Includes metadata editor integration
 
-WHAT THIS PROVIDES:
--------------------
-✓ Multi-provider caching (Anthropic, OpenAI, Gemini)
-✓ JSON and Simple response formats
-✓ Simple format FULLY FUNCTIONAL with robust format handling
-✓ Handles all format variations: (mood), mood), (mood)(action), mood)(action)
-✓ Works with or without colons after format markers
-✓ Preserves user's personal formatting colons correctly
-✓ Proper prefill position tracking for streaming
-✓ Comprehensive verbose logging
-✓ **NEW: Critical debug logging for format diagnostics**
-✓ Cache performance metrics
-✓ 4-decimal precision for all parameters
-✓ Full UI with Advanced Settings and collapsible sections
-✓ localStorage persistence for UI preferences
-✓ Compatible with CHIM 2.0.x versions
+13. **ui/core/tmpl/metadata_json_editor.php** (FIXED)
+    - Metadata JSON editor and consolidation function
+    - Debugger statement removed
+    - Handles metadata consolidation
 
-ROLLBACK:
----------
-If issues occur:
-1. Restore backed-up conf_schema.json and llm_connector.class.php
-2. Delete the connector files from connector/ directory
-3. Refresh browser
+14. **ui/quickstart.php**
+    - Quick start configuration wizard
 
-SUPPORT:
---------
-GitHub: https://github.com/Unknwn-Prson/HerikaServer
-Branch: claude/fix-cache-connectors-011CV2UAD8LHFom1mofFyHt2
+15. **ui/conf_wizard.php**
+    - Full configuration wizard interface
 
-VERIFICATION CHECKLIST (All fixes confirmed present):
-------------------------------------------------------
-✓ 1. Debug logging for response format (NEW in v1.0.24)
-✓ 2. Advanced Settings on main form (NEW in v1.0.24)
-✓ 3. Regex pattern without :? - explicit colon handling instead
-✓ 4. All 17 test cases pass (test_simple_format_regex.php)
-✓ 5. Supports both (mood) and mood) formats
-✓ 6. Supports multiple elements: (mood)(action) and mood)(action)
-✓ 7. Works with and without colons: (mood): and mood):
-✓ 8. Preserves user's personal formatting colons
-✓ 9. Advanced Settings section with 3 fields restored
-✓ 10. Response Format collapsible section restored
-✓ 11. JavaScript collapsible handlers with localStorage
-✓ 12. All previous fixes from v1.0.19-1.0.23 included
-✓ 13. Version 1.0.24 (both connectors)
+16. **ui/conf_wizardbackup.php**
+    - Configuration wizard backup/restore
 
-TESTED FORMAT COMBINATIONS (17 test cases, all passing):
----------------------------------------------------------
-✓ (lovely) message                    - Full format, single element
-✓ lovely) message                     - Prefill format, single element
-✓ (lovely): message                   - Full format with colon
-✓ lovely): message                    - Prefill format with colon
-✓ (lovely)(Player) message            - Full format, two elements
-✓ lovely)(Player) message             - Prefill format, two elements
-✓ (lovely)(Player)(Talk) message      - Full format, three elements
-✓ lovely)(Player)(Talk) message       - Prefill format, three elements
-✓ (lovely)(Player)(Talk)(Lydia) msg   - Full format, all four elements
-✓ lovely)(Player)(Talk)(Lydia) msg    - Prefill format, all four elements
-✓ Plus tests for listener-only, action-only, and all variations
-✓ Real-world case: lovely) : pauses... - User's personal format preserved
+17. **ui/events-memories.php**
+    - Events and memories management
 
-All combinations work correctly with format markers properly stripped!
+### Functions
+
+18. **functions/json_response.php**
+    - JSON response formatting and handling
+
+### Prompts
+
+19. **prompts/dialogue_prompt.php**
+    - Dialogue prompt template
+
+### Documentation Files
+
+20. **CHANGELOG.txt**
+    - Version history and changes
+
+21. **INSTALLATION_INSTRUCTIONS.txt**
+    - Step-by-step installation guide
+
+22. **THINKING_TOGGLE_DOCUMENTATION.md** (NEW)
+    - Complete system documentation for thinking toggle settings
+
+23. **THINKING_TOGGLE_BUG_REPORT.md** (NEW)
+    - Detailed bug analysis and fix documentation
+
+24. **ZIP_FILE_INFO.txt**
+    - This file
+
+---
+
+## Critical Files for v1.1.22 Fix
+
+### Modified Files:
+
+1. **ui/core/llm_connectors.php** (Line 272)
+   - Added: <textarea name="metadata" style="display:none">
+   - Added: JSON editor container div
+   - Fix: Provides target for consolidation() function
+
+2. **ui/core/tmpl/metadata_json_editor.php** (Line 396)
+   - Removed: debugger; statement
+   - Fix: Prevents execution pause
+
+---
+
+## Installation Instructions
+
+IMPORTANT: Always backup before installing!
+
+1. Backup your CHIM server directory
+2. Extract zip to CHIM server root
+3. Verify critical files were updated
+4. Test thinking toggle functionality
+5. Clear browser cache
+
+---
+
+## Version Information
+
+Package Version: 1.1.22 FINAL FIX
+Created: 2025-11-15
+Branch: claude/1.1.22-testing-01SD3JLwpdiGRsLvnUEQ9JEY
+Status: Production Ready
+
+Critical Fixes:
+- Thinking toggle save issue fixed
+- Debugger statement removed
+- Metadata consolidation working
+- All connector functionality intact
+
