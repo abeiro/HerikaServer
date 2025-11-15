@@ -1,8 +1,8 @@
-# CHIM Cached Connector v1.1.28 - Complete File List
+# CHIM Cached Connector v1.1.29 - Complete File List
 
-**Version:** 1.1.28 FINAL FIX
+**Version:** 1.1.29 DEBUG
 **Date:** 2025-11-15
-**Fix Applied:** Added missing metadata textarea to second form at line 1356
+**Changes:** Added debug logging to trace metadata value during PHP update
 
 ---
 
@@ -149,18 +149,15 @@ IMPORTANT: Always backup before installing!
 
 ## Version Information
 
-Package Version: 1.1.28 FINAL FIX
+Package Version: 1.1.29 DEBUG
 Created: 2025-11-15
 Branch: claude/1.1.22-testing-01SD3JLwpdiGRsLvnUEQ9JEY
-Status: Production Ready
+Status: Debug Build
 
-Critical Fixes:
-- Thinking toggle save issue FINALLY FIXED
-- Issue: Second form (line 1352) was missing metadata textarea
-- Only first form (line 267) had the textarea
-- Consolidation function couldn't find textarea when using modal edit form
-- Solution: Added `<textarea name="metadata" style="display:none">` at line 1356
-- Combined with v1.1.27 fix checking for both regular and modal field IDs
-- All metadata fields working (thinking toggles + provider_caching, response_format, etc.)
-- All connector functionality intact
+Debug Changes:
+- Added debug logging to lib/core/llm_connector.class.php update() method
+- Logs metadata value at three points: received, after empty check, final
+- Look for "[LLM UPDATE DEBUG]" in PHP error log
+- Includes all v1.1.28 fixes (missing textarea, modal field IDs)
+- Use this to diagnose why metadata is not persisting correctly
 

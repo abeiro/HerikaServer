@@ -1,5 +1,16 @@
 # CHIM Cached Connector - Changelog
 
+## v1.1.29 (2025-11-15) - DEBUG: Added metadata tracing
+
+### Debug Changes
+- **ADDED:** Debug logging to trace metadata value through PHP update process
+  - Logs metadata before processing
+  - Logs metadata after empty check
+  - Logs final metadata value being saved
+  - Look for "[LLM UPDATE DEBUG]" in PHP error log
+
+---
+
 ## v1.1.28 (2025-11-15) - FINAL FIX: Added missing metadata textarea
 
 ### Critical Fixes
@@ -354,7 +365,7 @@ issues and solutions.
 
 ## Release Information
 
-**Current Version:** v1.1.28
+**Current Version:** v1.1.29
 **Release Date:** 2025-11-15
 **Status:** Production Ready
 **Branch:** claude/1.1.22-testing-01SD3JLwpdiGRsLvnUEQ9JEY
