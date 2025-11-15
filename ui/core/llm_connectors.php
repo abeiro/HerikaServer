@@ -269,6 +269,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
         <?php endif; ?>
         <input type="hidden" name="partial" value="editor">
+        <input type="hidden" name="metadata" id="metadata_field" value="">
         <div class="two-col-llm">
             <div>
                 <div class="top-actions" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
@@ -1352,6 +1353,7 @@ if (typeof window.consolidation !== 'function') {
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
     <?php endif; ?>
+    <input type="hidden" name="metadata" id="metadata_field_main" value="">
 
     <div class="two-col-llm">
         <div>
@@ -2059,14 +2061,64 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
  ?>
 
 <script>
-// The thinking toggle fields now use name="metadata[key]" attributes
-// They will be automatically collected by PHP into the metadata array
-// No special JavaScript consolidation needed - just run the original
+// Custom consolidation for llm_connectors.php
+// Collects all metadata[...] fields and consolidates them into the hidden metadata field
 (function(){
     const originalConsolidation = window.consolidation;
     window.consolidation = function() {
-        // Just run the original consolidation from metadata_json_editor.php
-        return originalConsolidation ? originalConsolidation() : true;
+        // Get the current form (either embedded or main)
+        const form = document.querySelector('form[method="post"]');
+        if (!form) return true;
+
+        // Collect all metadata[...] fields into an object
+        const metadata = {};
+        const inputs = form.querySelectorAll('[name^="metadata["]');
+
+        // Build a map of fields by key to handle duplicates (hidden + checkbox pairs)
+        const fieldsByKey = {};
+        inputs.forEach(input => {
+            const match = input.name.match(/^metadata\[([^\]]+)\]$/);
+            if (!match) return;
+            const key = match[1];
+            if (!fieldsByKey[key]) fieldsByKey[key] = [];
+            fieldsByKey[key].push(input);
+        });
+
+        // Process each unique key
+        Object.keys(fieldsByKey).forEach(key => {
+            const fields = fieldsByKey[key];
+
+            // Check if this is a checkbox (will have both hidden and checkbox inputs)
+            const checkbox = fields.find(f => f.type === 'checkbox');
+            if (checkbox) {
+                // Use checkbox value if checked, otherwise use hidden field value
+                metadata[key] = checkbox.checked ? checkbox.value : '0';
+            } else {
+                // For non-checkbox fields, just use the value
+                const field = fields[0];
+                metadata[key] = field.value;
+            }
+
+            // Convert string booleans to actual booleans
+            if (metadata[key] === 'true' || metadata[key] === '1') metadata[key] = true;
+            else if (metadata[key] === 'false' || metadata[key] === '0') metadata[key] = false;
+            else if (metadata[key] === '' || metadata[key] === null) delete metadata[key]; // Remove empty values
+        });
+
+        // Check if there's a JSON editor on this page (e.g., core_profiles.php)
+        const hasJsonEditor = (typeof window.jsonEditor !== 'undefined') || document.getElementById('metadata');
+
+        if (hasJsonEditor && originalConsolidation && typeof originalConsolidation === 'function') {
+            // Use the original consolidation for pages with JSON editor
+            return originalConsolidation();
+        } else {
+            // For llm_connectors.php: Set the hidden metadata field with collected values
+            const metadataField = form.querySelector('input[name="metadata"]');
+            if (metadataField) {
+                metadataField.value = JSON.stringify(metadata);
+            }
+            return true;
+        }
     };
 })();
 
