@@ -2086,16 +2086,39 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
 })();
 
 // Override consolidation() to handle metadata fields for llm_connectors
-// Don't call the original from metadata_json_editor.php as it's designed for core_profiles
 window.consolidation = function() {
-    console.log('[Consolidation] LLM Connectors consolidation called');
+    console.log('[Consolidation] ===== CALLED =====');
+    console.log('[Consolidation] Called from:', new Error().stack.split('\n')[1]);
 
-    // CRITICAL FIX: Find the correct form by finding a field that's definitely in it
-    // There are multiple forms on the page, so querySelector finds the wrong one
+    // Debug: Find ALL elements with IDs containing "toggle" or "thinking"
+    const allElementsWithIds = document.querySelectorAll('[id]');
+    const relevantIds = [];
+    allElementsWithIds.forEach(el => {
+        if (el.id.includes('toggle') || el.id.includes('thinking')) {
+            relevantIds.push({
+                id: el.id,
+                tag: el.tagName,
+                type: el.type,
+                visible: el.offsetParent !== null,
+                inForm: !!el.form
+            });
+        }
+    });
+    console.log('[Consolidation] Elements with toggle/thinking IDs:', relevantIds);
+
+    // Try to find toggle_thinking
     const toggleThinkingEl = document.getElementById('toggle_thinking');
+    console.log('[Consolidation] getElementById("toggle_thinking"):', toggleThinkingEl);
+
     if (!toggleThinkingEl) {
-        console.log('[Consolidation] No toggle_thinking field found, nothing to save');
-        return true;
+        console.log('[Consolidation] ERROR: No toggle_thinking field found');
+        console.log('[Consolidation] Trying querySelectorAll instead...');
+        const allToggleThinking = document.querySelectorAll('[id="toggle_thinking"]');
+        console.log('[Consolidation] querySelectorAll found:', allToggleThinking.length, 'elements');
+        allToggleThinking.forEach((el, i) => {
+            console.log(`  [${i}]:`, el, 'form:', el.form, 'visible:', el.offsetParent !== null);
+        });
+        return true; // Can't continue without this field
     }
 
     // Get the form that contains the toggle_thinking field
