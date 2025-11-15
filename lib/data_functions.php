@@ -310,10 +310,10 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 if (!in_array($baseID, $seenBaseIDs)) {
                     $seenBaseIDs[] = $baseID;
                     
-                    // Look up description from description table
+                    // Look up description from descriptions table
                     $baseIDDec = hexdec(str_replace('0x', '', $baseID));
                     $descRecord = $GLOBALS["db"]->fetchOne(
-                        "SELECT description FROM item_descriptions WHERE baseid = '{$baseIDDec}' LIMIT 1"
+                        "SELECT description FROM descriptions WHERE baseid = '{$baseIDDec}' LIMIT 1"
                     );
                     
                     if ($descRecord && !empty($descRecord['description'])) {
