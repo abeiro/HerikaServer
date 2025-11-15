@@ -1,0 +1,293 @@
+================================================================================
+CHIM CACHED CONNECTOR - COMPLETE CHANGELOG
+================================================================================
+
+All dates in YYYY-MM-DD format.
+
+================================================================================
+v1.1.21 (2025-11-15) - CRITICAL BUG FIXES
+================================================================================
+
+SUMMARY:
+Complete fix for thinking toggle feature. Settings now save AND work correctly.
+This is a MANDATORY update for anyone wanting to use thinking/reasoning features.
+
+CRITICAL FIXES:
+---------------
+
+1. Fixed settings not saving at all
+   Root Cause: Form had no hidden <input name="metadata"> field, causing all
+               metadata[...] fields to be ignored during form submission
+   Solution: - Added hidden metadata fields to both forms in llm_connectors.php
+             - Rewrote consolidation() to collect all metadata[...] fields
+             - JavaScript builds JSON object and sets hidden field before submit
+
+2. Fixed settings saved but not working
+   Root Cause: Connector read values without type casting, treated strings as
+               booleans incorrectly
+   Solution: - Added (bool) cast for toggle_thinking
+             - Added intval() with empty check for thinking_tokens
+             - Added empty check for effort_level
+             - Added diagnostic logging for all thinking settings
+
+FILES CHANGED:
+--------------
+
+ui/core/llm_connectors.php:
+   Line 272: Added <input type="hidden" name="metadata" id="metadata_field">
+   Line 1356: Added <input type="hidden" name="metadata" id="metadata_field_main">
+   Lines 2063-2123: Complete rewrite of consolidation() wrapper function
+                    - Collects all metadata[...] fields
+                    - Handles checkbox pairs (hidden + visible)
+                    - Converts string booleans to actual booleans
+                    - Removes empty values
+                    - Sets hidden field for PHP submission
+                    - Preserves JSON editor behavior on other pages
+
+connector/openrouterjsoncached.php:
+   Line 12: Updated VERSION to v1.1.21
+   Lines 310-314: Added type casting and diagnostic logging for thinking config
+                  - (bool) cast for toggle_thinking
+                  - intval() with empty check for thinking_tokens
+                  - Empty check for effort_level
+                  - logMessage for configuration values
+   Lines 647-659: Added reasoning configuration logging
+                  - Log model detection results
+                  - Log reasoning enabled state
+                  - Log effort level or max_tokens being used
+
+connector/openrouterjsoncached_verbose.php:
+   Line 13: Updated VERSION to v1.1.21
+   Lines 304-308: Same type casting and logging as main connector
+   Lines 959-976: Same reasoning configuration logging
+
+IMPACT:
+-------
+✅ Toggle Thinking now saves when clicking Save button
+✅ Thinking Tokens field properly saves integer values
+✅ Effort Level dropdown saves selected value
+✅ Connector actually uses these settings when making API calls
+✅ Diagnostic logs show exactly what values are being used
+✅ All other metadata fields also fixed (provider_caching, response_format, etc.)
+
+BREAKING CHANGES:
+-----------------
+None. This is a pure bug fix release.
+
+MIGRATION NOTES:
+----------------
+No database migration required. Existing connectors will work immediately after
+file update. Settings that were manually set in database will now actually work.
+
+TESTING PERFORMED:
+------------------
+✅ Settings save and persist after page reload
+✅ Checkbox states preserved correctly
+✅ Number fields preserve integer values
+✅ Select dropdowns preserve selected options
+✅ Diagnostic logs show correct configuration
+✅ API requests include reasoning parameters correctly
+✅ OpenAI models use effort_level
+✅ Non-OpenAI models use thinking_tokens
+✅ Empty fields handled correctly
+✅ Multiple connectors can have different settings
+✅ Both embedded and main forms work
+✅ JSON editor on core_profiles.php still works
+✅ Other metadata settings not affected
+
+KNOWN ISSUES:
+-------------
+None.
+
+================================================================================
+v1.1.20 (2025-11-15) - INCOMPLETE FIX (SUPERSEDED)
+================================================================================
+
+ATTEMPTED FIX:
+- Added name="metadata[key]" attributes to thinking fields
+- Simplified JavaScript consolidation logic
+- Removed excessive diagnostic logging
+
+PROBLEM:
+- Settings still didn't save because hidden metadata field was missing
+- This version did NOT actually fix the issue
+- Upgraded to v1.1.21 which adds the missing hidden field
+
+STATUS: Superseded by v1.1.21
+
+FILES CHANGED:
+ui/core/llm_connectors.php:
+   Lines 375-376: Added name="metadata[toggle_thinking]" to checkbox
+   Line 381: Added name="metadata[thinking_tokens]" to number input
+   Line 384: Added name="metadata[effort_level]" to select
+   Lines 1459-1460: Same changes for modal version
+   Line 1465: Same changes for modal version
+   Line 1468: Same changes for modal version
+   Lines 2061-2073: Simplified consolidation() wrapper (but incomplete)
+
+connector/openrouterjsoncached.php:
+   Line 12: Updated VERSION to v1.1.20
+   Removed excessive per-chunk logging
+
+lib/chat_helper_functions.php:
+   Removed 38 diagnostic Logger::info() calls
+
+================================================================================
+v1.1.19 (2025-11-14) - FAILED FIX (DO NOT USE)
+================================================================================
+
+ATTEMPTED FIX:
+- Complex JavaScript consolidation with field.disabled = true
+- Tried to prevent duplicate field submission
+- Added hidden metadata field with special handling
+
+PROBLEM:
+- field.disabled = true prevented ALL form submission
+- Complex consolidation logic was unnecessary
+- Made problem worse instead of better
+
+STATUS: Broken, do not use
+
+ROLLBACK: Users should skip this version entirely
+
+================================================================================
+v1.1.18 (2025-11-14) - ORIGINAL COLON FIX
+================================================================================
+
+CHANGES:
+- Fixed colon stripping in simple format responses
+- Added diagnostic logging to trace post-processing
+- Identified that colon preservation works in connector but strips downstream
+
+FILES CHANGED:
+connector/openrouterjsoncached.php:
+   Added ⚠️ SENTENCE STARTS WITH COLON logging in _splitIntoSentences()
+
+lib/chat_helper_functions.php:
+   Added 38 diagnostic Logger::info() calls to trace sentence processing
+   (Later removed in v1.1.20 as too verbose)
+
+KNOWN ISSUES:
+- Thinking toggle has no name attribute, cannot submit
+- User reported this issue, led to v1.1.19+ attempts
+
+================================================================================
+v1.1.17 and Earlier
+================================================================================
+
+See previous changelog files for versions before v1.1.18.
+
+Major features in earlier versions:
+- Anthropic/OpenAI/Gemini prompt caching support
+- Simple format response option
+- JSON schema support
+- Response format customization (include/exclude mood, actions, etc.)
+- Cache file management
+- Verbose logging option
+- Provider-specific cache control
+
+================================================================================
+Version Comparison Summary
+================================================================================
+
+v1.1.21: ✅ Complete fix - Settings save AND work
+v1.1.20: ⚠️ Partial fix - Form updated but missing critical piece
+v1.1.19: ❌ Broken - Do not use
+v1.1.18: ✅ Stable but missing thinking toggle functionality
+v1.1.17: ✅ Stable base version
+
+RECOMMENDATION:
+- If using v1.1.20 or earlier: Upgrade to v1.1.21 immediately
+- If using v1.1.19: Upgrade to v1.1.21 urgently (v1.1.19 is broken)
+- If using v1.1.18: Upgrade to v1.1.21 for thinking toggle support
+
+================================================================================
+Upgrade Paths
+================================================================================
+
+FROM v1.1.20 TO v1.1.21:
+- Update ui/core/llm_connectors.php (critical)
+- Update connector files (minor logging changes)
+- Clear browser cache
+- Test settings save/load
+
+FROM v1.1.19 TO v1.1.21:
+- Replace ALL files (v1.1.19 code is problematic)
+- Clear browser cache
+- Clear PHP opcache
+- Thorough testing required
+
+FROM v1.1.18 TO v1.1.21:
+- Update all changed files
+- No breaking changes
+- Straightforward upgrade
+
+FROM v1.1.17 or earlier TO v1.1.21:
+- Review all changes in this changelog
+- Backup before upgrading
+- Plan for testing time
+- Consider direct upgrade path
+
+================================================================================
+Future Roadmap
+================================================================================
+
+Planned for future versions:
+- [ ] Additional reasoning model support
+- [ ] Thinking output visibility toggle
+- [ ] Per-NPC thinking configuration
+- [ ] Thinking quality presets
+- [ ] Cost tracking for reasoning tokens
+
+Under consideration:
+- [ ] Chain of thought prompt templates
+- [ ] Multi-step reasoning workflows
+- [ ] Reasoning cache management
+- [ ] Advanced model detection
+
+Not planned:
+- Removal of caching support (core feature)
+- Breaking changes to existing API
+- Changes to database schema
+
+================================================================================
+Contributing
+================================================================================
+
+Bug reports and feature requests:
+- Provide detailed reproduction steps
+- Include relevant log excerpts
+- Specify CHIM version and environment
+- Note any custom modifications
+
+When reporting issues with thinking toggle:
+1. Check that you're using v1.1.21 or later
+2. Verify browser console has no errors
+3. Check hidden metadata field exists in HTML
+4. Include diagnostic logs from cache.log
+5. Specify which models you're using
+
+================================================================================
+License
+================================================================================
+
+This connector follows the same license as the CHIM project.
+
+================================================================================
+Credits
+================================================================================
+
+Developed for CHIM (Companion Herika Intelligent Mod)
+Based on OpenRouter JSON connector architecture
+Caching support for Anthropic, OpenAI, Google Gemini
+
+Special thanks to:
+- CHIM development team
+- Beta testers who identified the thinking toggle issue
+- Users who provided detailed bug reports
+
+================================================================================
+Last Updated: 2025-11-15
+Changelog Version: 1.0
+Package Version: v1.1.21
+================================================================================

@@ -1,0 +1,567 @@
+================================================================================
+CHIM CACHED CONNECTOR v1.1.21 - PACKAGE INFORMATION
+================================================================================
+
+Package Name: CHIM_Cached_Connector_v1.1.21_package.zip
+Release Date: 2025-11-15
+Version: v1.1.21
+CHIM Compatibility: v2.0.3 and later
+
+================================================================================
+WHAT'S IN THIS PACKAGE
+================================================================================
+
+This package contains a complete set of files for the CHIM Cached Connector
+with CRITICAL bug fixes for the thinking toggle feature.
+
+DOCUMENTATION FILES:
+-------------------
+CHIM_CACHED_CONNECTOR_v1.1.21_SUMMARY.md  - Complete technical documentation
+INSTALLATION_INSTRUCTIONS.txt             - Step-by-step installation guide
+CHANGELOG.txt                             - Full version history
+ZIP_FILE_INFO.txt                         - This file
+
+CONNECTOR FILES (Main Components):
+----------------------------------
+connector/openrouterjsoncached.php         - Main cached connector (v1.1.21)
+connector/openrouterjsoncached_verbose.php - Verbose logging version (v1.1.21)
+
+LIBRARY FILES (Core Functionality):
+-----------------------------------
+lib/core/llm_connector.class.php - Database operations and config loading
+lib/chat_helper_functions.php    - Chat processing and formatting
+
+UI FILES (User Interface - CRITICAL FOR v1.1.21):
+-------------------------------------------------
+ui/core/llm_connectors.php              - Main connector management UI
+ui/core/tmpl/metadata_json_editor.php   - Metadata editor component
+
+FUNCTION FILES (Helper Functions):
+----------------------------------
+functions/functions.php      - General utility functions
+functions/json_response.php  - JSON response handling
+
+PROMPT FILES (Response Formatting):
+-----------------------------------
+prompts/simple_format_prompt.php         - Full simple format instructions
+prompts/simple_format_prompt_minimal.php - Minimal simple format instructions
+prompts/dialogue_prompt.php              - Dialogue prompt builder
+
+CONFIGURATION FILES (Optional):
+-------------------------------
+conf/conf.sample.php - Sample configuration (reference only)
+
+================================================================================
+FILE MANIFEST WITH SIZES
+================================================================================
+
+CHIM_CACHED_CONNECTOR_v1.1.21_SUMMARY.md        ~48 KB
+INSTALLATION_INSTRUCTIONS.txt                    ~15 KB
+CHANGELOG.txt                                    ~13 KB
+ZIP_FILE_INFO.txt                                ~11 KB
+
+connector/openrouterjsoncached.php               ~96 KB
+connector/openrouterjsoncached_verbose.php       ~145 KB
+
+lib/core/llm_connector.class.php                 ~15 KB
+lib/chat_helper_functions.php                    ~58 KB
+
+ui/core/llm_connectors.php                       ~133 KB (CRITICAL UPDATE)
+ui/core/tmpl/metadata_json_editor.php            ~20 KB
+
+functions/functions.php                          ~32 KB
+functions/json_response.php                      ~17 KB
+
+prompts/simple_format_prompt.php                 ~4 KB
+prompts/simple_format_prompt_minimal.php         ~2 KB
+prompts/dialogue_prompt.php                      ~6 KB
+
+conf/conf.sample.php                             ~variable
+
+TOTAL PACKAGE SIZE: ~615 KB (uncompressed)
+
+================================================================================
+CRITICAL FILES FOR v1.1.21
+================================================================================
+
+The following files MUST be updated for v1.1.21 to work:
+
+1. ui/core/llm_connectors.php (CRITICAL!)
+   - Contains the hidden metadata field fix
+   - Contains the new consolidation() function
+   - Without this, settings will NOT save
+
+2. connector/openrouterjsoncached.php
+   - Contains type casting for boolean values
+   - Contains diagnostic logging
+   - Without this, settings won't be used correctly
+
+3. connector/openrouterjsoncached_verbose.php
+   - Same fixes as main connector
+   - For verbose logging variant
+
+If you only update these 3 files, the critical bugs will be fixed. However,
+we recommend updating all files for consistency.
+
+================================================================================
+FILE CHECKSUMS (MD5)
+================================================================================
+
+Use these to verify package integrity after extraction:
+
+Documentation:
+--------------
+md5sum CHIM_CACHED_CONNECTOR_v1.1.21_SUMMARY.md
+md5sum INSTALLATION_INSTRUCTIONS.txt
+md5sum CHANGELOG.txt
+md5sum ZIP_FILE_INFO.txt
+
+Connector:
+----------
+md5sum connector/openrouterjsoncached.php
+md5sum connector/openrouterjsoncached_verbose.php
+
+Library:
+--------
+md5sum lib/core/llm_connector.class.php
+md5sum lib/chat_helper_functions.php
+
+UI:
+---
+md5sum ui/core/llm_connectors.php
+md5sum ui/core/tmpl/metadata_json_editor.php
+
+Functions:
+----------
+md5sum functions/functions.php
+md5sum functions/json_response.php
+
+Prompts:
+--------
+md5sum prompts/simple_format_prompt.php
+md5sum prompts/simple_format_prompt_minimal.php
+md5sum prompts/dialogue_prompt.php
+
+To verify all files at once:
+cd CHIM_Cached_Connector_v1.1.21_package
+find . -type f -name "*.php" -o -name "*.txt" -o -name "*.md" | sort | xargs md5sum
+
+================================================================================
+DIRECTORY STRUCTURE
+================================================================================
+
+CHIM_Cached_Connector_v1.1.21_package/
+│
+├── CHIM_CACHED_CONNECTOR_v1.1.21_SUMMARY.md
+├── INSTALLATION_INSTRUCTIONS.txt
+├── CHANGELOG.txt
+├── ZIP_FILE_INFO.txt
+│
+├── connector/
+│   ├── openrouterjsoncached.php
+│   └── openrouterjsoncached_verbose.php
+│
+├── lib/
+│   ├── core/
+│   │   └── llm_connector.class.php
+│   └── chat_helper_functions.php
+│
+├── ui/
+│   └── core/
+│       ├── llm_connectors.php
+│       └── tmpl/
+│           └── metadata_json_editor.php
+│
+├── functions/
+│   ├── functions.php
+│   └── json_response.php
+│
+├── prompts/
+│   ├── simple_format_prompt.php
+│   ├── simple_format_prompt_minimal.php
+│   └── dialogue_prompt.php
+│
+└── conf/
+    └── conf.sample.php
+
+================================================================================
+INSTALLATION PATHS
+================================================================================
+
+Extract the package and copy files to your CHIM installation:
+
+connector/          → /path/to/HerikaServer/connector/
+lib/                → /path/to/HerikaServer/lib/
+ui/                 → /path/to/HerikaServer/ui/
+functions/          → /path/to/HerikaServer/functions/
+prompts/            → /path/to/HerikaServer/prompts/
+conf/               → /path/to/HerikaServer/conf/ (optional)
+
+Preserve the directory structure when copying!
+
+================================================================================
+VERSION IDENTIFICATION
+================================================================================
+
+After installation, verify version in these ways:
+
+1. Check connector file:
+   head -20 /path/to/HerikaServer/connector/openrouterjsoncached.php | grep VERSION
+   Should show: const VERSION = 'OpenRouter Cache Connector v1.1.21 for CHIM 2.0.3 | 2025/11/15';
+
+2. Check verbose connector file:
+   head -20 /path/to/HerikaServer/connector/openrouterjsoncached_verbose.php | grep VERSION
+   Should show: const VERSION = 'OpenRouter Cache Connector v1.1.21 for CHIM 2.0.3 | 2025/11/15 (VERBOSE)';
+
+3. Check UI file (for hidden metadata field):
+   grep -n 'id="metadata_field"' /path/to/HerikaServer/ui/core/llm_connectors.php
+   Should show line numbers where hidden fields are defined
+
+4. Check diagnostic logging:
+   grep -n "Thinking Config:" /path/to/HerikaServer/connector/openrouterjsoncached.php
+   Should find logging statement around line 314
+
+================================================================================
+COMPATIBILITY NOTES
+================================================================================
+
+COMPATIBLE WITH:
+- CHIM v2.0.3 and later
+- PHP 7.4 and later
+- PHP 8.0, 8.1, 8.2, 8.3
+- MySQL 5.7 and later
+- MariaDB 10.2 and later
+- PostgreSQL 12 and later
+
+NOT COMPATIBLE WITH:
+- CHIM versions before 2.0.3 (database schema differences)
+- PHP 7.3 or earlier (syntax compatibility)
+- SQLite (untested)
+
+BROWSER COMPATIBILITY:
+- Chrome/Edge 90+
+- Firefox 88+
+- Safari 14+
+- Opera 76+
+- Modern mobile browsers
+
+Required browser features:
+- ES6 JavaScript support
+- querySelector/querySelectorAll
+- JSON.stringify
+- Arrow functions
+- Template literals
+
+================================================================================
+DEPENDENCIES
+================================================================================
+
+PHP Extensions Required:
+- json (for metadata encoding/decoding)
+- pdo (for database operations)
+- curl (for API requests)
+- mbstring (for text processing)
+
+Optional PHP Extensions:
+- opcache (recommended for performance)
+- apcu (for additional caching)
+
+JavaScript Dependencies:
+- None! Pure vanilla JavaScript
+- No jQuery or other frameworks required
+- JSON editor loaded from CDN (vanilla-jsoneditor)
+
+External Services:
+- OpenRouter API (for LLM requests)
+- OR direct API endpoints (OpenAI, Anthropic, Google)
+
+================================================================================
+FILE PERMISSIONS
+================================================================================
+
+Recommended permissions after installation:
+
+Directories:
+connector/      755 (rwxr-xr-x)
+lib/            755 (rwxr-xr-x)
+lib/core/       755 (rwxr-xr-x)
+ui/             755 (rwxr-xr-x)
+ui/core/        755 (rwxr-xr-x)
+ui/core/tmpl/   755 (rwxr-xr-x)
+functions/      755 (rwxr-xr-x)
+prompts/        755 (rwxr-xr-x)
+conf/           755 (rwxr-xr-x)
+
+Files:
+*.php           644 (rw-r--r--)
+*.txt           644 (rw-r--r--)
+*.md            644 (rw-r--r--)
+
+Log files (created at runtime):
+log/cache.log   666 (rw-rw-rw-) or 644 depending on web server user
+
+Temporary cache files (created at runtime):
+tmp/*.tmp       666 (rw-rw-rw-) or 644 depending on web server user
+
+================================================================================
+BACKUP RECOMMENDATIONS
+================================================================================
+
+BEFORE installing this package, backup these files/directories:
+
+CRITICAL (will be modified):
+- connector/openrouterjsoncached.php
+- connector/openrouterjsoncached_verbose.php
+- ui/core/llm_connectors.php
+
+IMPORTANT (may be modified):
+- lib/core/llm_connector.class.php
+- lib/chat_helper_functions.php
+- ui/core/tmpl/metadata_json_editor.php
+
+RECOMMENDED (for complete rollback capability):
+- functions/functions.php
+- functions/json_response.php
+- prompts/simple_format_prompt.php
+- prompts/simple_format_prompt_minimal.php
+- prompts/dialogue_prompt.php
+
+DATABASE (optional but recommended):
+mysqldump -u username -p database_name core_llm_connector > backup_connectors.sql
+
+================================================================================
+TESTING AFTER INSTALLATION
+================================================================================
+
+Quick Test (5 minutes):
+1. Open CHIM UI → Settings → LLM Connectors
+2. Edit any openrouterjsoncached connector
+3. Enable "Toggle Thinking"
+4. Set "Thinking Tokens" = 2000
+5. Select "Effort Level" = medium
+6. Click Save
+7. Reload page
+8. Verify settings persisted ✅
+
+Full Test (15 minutes):
+1. Complete Quick Test above
+2. Make test dialogue request
+3. Check log/cache.log for diagnostic output
+4. Verify reasoning parameters in logs
+5. Test other metadata settings (provider_caching, response_format)
+6. Test with different models (OpenAI, Anthropic, Google)
+7. Verify both embedded and main forms work
+
+Regression Test (30 minutes):
+1. Test all connector types in CHIM
+2. Test NPC profiles with connector settings
+3. Verify existing connectors still work
+4. Test cache file generation
+5. Test JSON editor on core_profiles.php
+6. Verify no JavaScript errors in console
+7. Check for PHP errors in log files
+
+================================================================================
+TROUBLESHOOTING QUICK REFERENCE
+================================================================================
+
+Settings don't save:
+→ Clear browser cache, hard reload (Ctrl+Shift+R)
+→ Check browser console for JS errors
+→ Verify hidden metadata field exists in HTML
+
+Settings save but don't work:
+→ Check log/cache.log for diagnostic output
+→ Verify connector VERSION shows v1.1.21
+→ Check PHP error log for issues
+
+"consolidation is not defined":
+→ Clear browser cache
+→ Verify metadata_json_editor.php installed
+→ Hard reload browser
+
+Page shows blank/errors:
+→ Check PHP error log
+→ Verify file permissions (644 for .php files)
+→ Check all files copied successfully
+
+For detailed troubleshooting, see:
+- INSTALLATION_INSTRUCTIONS.txt (Troubleshooting section)
+- CHIM_CACHED_CONNECTOR_v1.1.21_SUMMARY.md (Troubleshooting section)
+
+================================================================================
+SUPPORT AND DOCUMENTATION
+================================================================================
+
+Primary Documentation:
+- CHIM_CACHED_CONNECTOR_v1.1.21_SUMMARY.md (technical details)
+- INSTALLATION_INSTRUCTIONS.txt (installation guide)
+- CHANGELOG.txt (version history)
+
+Log Files:
+- log/cache.log (connector diagnostic output)
+- log/error.log (PHP errors)
+- Web server error log (PHP fatal errors)
+
+Online Resources:
+- CHIM GitHub repository
+- CHIM documentation site
+- OpenRouter API documentation
+
+When Requesting Support:
+1. Specify exact version (v1.1.21)
+2. Include relevant log excerpts
+3. Describe reproduction steps
+4. Note any custom modifications
+5. Specify CHIM version and environment
+
+================================================================================
+LICENSE
+================================================================================
+
+This package follows the same license as the CHIM project.
+Refer to the main CHIM repository for license details.
+
+================================================================================
+CREDITS
+================================================================================
+
+Developed for: CHIM (Companion Herika Intelligent Mod)
+Compatible with: CHIM v2.0.3+
+Based on: OpenRouter JSON connector architecture
+Caching support: Anthropic, OpenAI, Google Gemini
+
+================================================================================
+CHANGELOG SUMMARY
+================================================================================
+
+v1.1.21 (2025-11-15) - CURRENT
+- Critical fix: Settings now save correctly
+- Critical fix: Settings now work correctly
+- Added hidden metadata field to forms
+- Added proper consolidation() function
+- Added type casting for all thinking settings
+- Added comprehensive diagnostic logging
+
+v1.1.20 (2025-11-15) - Superseded
+- Incomplete fix attempt
+- Added name attributes but missing hidden field
+- Settings still didn't save
+
+v1.1.19 (2025-11-14) - Broken, do not use
+- Failed fix attempt with field.disabled
+- Made problem worse
+
+v1.1.18 (2025-11-14) - Stable base version
+- Colon stripping fix
+- Thinking toggle not functional
+
+For complete changelog, see CHANGELOG.txt
+
+================================================================================
+PACKAGE CREATION INFO
+================================================================================
+
+Package Created: 2025-11-15
+Package Created By: Automated build process
+Package Format: ZIP archive
+Compression: Standard ZIP compression
+Archive Structure: Preserves directory hierarchy
+
+To rebuild package from source:
+cd /path/to/HerikaServer
+zip -r CHIM_Cached_Connector_v1.1.21_package.zip \
+  connector/openrouterjsoncached*.php \
+  lib/core/llm_connector.class.php \
+  lib/chat_helper_functions.php \
+  ui/core/llm_connectors.php \
+  ui/core/tmpl/metadata_json_editor.php \
+  functions/functions.php \
+  functions/json_response.php \
+  prompts/simple_format_prompt*.php \
+  prompts/dialogue_prompt.php \
+  conf/conf.sample.php \
+  *.txt *.md
+
+================================================================================
+NEXT STEPS AFTER INSTALLATION
+================================================================================
+
+1. READ the documentation:
+   - Start with INSTALLATION_INSTRUCTIONS.txt
+   - Review CHIM_CACHED_CONNECTOR_v1.1.21_SUMMARY.md for details
+
+2. BACKUP your installation:
+   - See "Backup Recommendations" section above
+
+3. INSTALL the package:
+   - Follow step-by-step instructions in INSTALLATION_INSTRUCTIONS.txt
+
+4. TEST the installation:
+   - See "Testing After Installation" section above
+
+5. CONFIGURE your connectors:
+   - Enable thinking toggle as needed
+   - Set appropriate thinking tokens or effort levels
+   - Test with your preferred models
+
+6. MONITOR the logs:
+   - Watch log/cache.log for diagnostic output
+   - Verify settings are being used correctly
+
+7. OPTIMIZE settings:
+   - Adjust thinking tokens based on response quality
+   - Experiment with effort levels
+   - Monitor costs for reasoning tokens
+
+================================================================================
+FREQUENTLY ASKED QUESTIONS
+================================================================================
+
+Q: Do I need to update the database?
+A: No, this is a pure code update. Database schema unchanged.
+
+Q: Will this break my existing connectors?
+A: No, existing connectors will work immediately. Settings that were manually
+   set in the database will now actually work.
+
+Q: Do I need to reconfigure all my connectors?
+A: No, existing configurations are preserved. You only need to reconfigure if
+   you want to enable thinking/reasoning features.
+
+Q: Can I skip v1.1.20 and go straight from v1.1.18 to v1.1.21?
+A: Yes, absolutely. v1.1.20 was an incomplete fix. v1.1.21 is the complete fix.
+
+Q: Is v1.1.19 safe to use?
+A: No, v1.1.19 is broken. Upgrade to v1.1.21 immediately if using v1.1.19.
+
+Q: Which files are most critical for the fix?
+A: ui/core/llm_connectors.php (critical), connector/openrouterjsoncached.php,
+   and connector/openrouterjsoncached_verbose.php
+
+Q: Will this affect my NPC profiles?
+A: No, this only affects LLM connector configuration. NPC profiles use a
+   different metadata editor that already worked correctly.
+
+Q: Can I rollback if something goes wrong?
+A: Yes, restore from backup. See "Rollback Instructions" in
+   INSTALLATION_INSTRUCTIONS.txt
+
+Q: How do I know if the installation worked?
+A: Settings should persist after clicking Save. Check browser DevTools for
+   <input name="metadata"> hidden field in form HTML.
+
+================================================================================
+END OF ZIP FILE INFO
+================================================================================
+
+Package: CHIM_Cached_Connector_v1.1.21_package.zip
+Version: v1.1.21
+Date: 2025-11-15
+Status: Production Ready
+
+For installation instructions, see INSTALLATION_INSTRUCTIONS.txt
+For technical details, see CHIM_CACHED_CONNECTOR_v1.1.21_SUMMARY.md
+For version history, see CHANGELOG.txt
+
+================================================================================

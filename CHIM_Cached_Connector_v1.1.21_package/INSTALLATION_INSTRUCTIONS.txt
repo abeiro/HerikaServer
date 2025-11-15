@@ -1,0 +1,321 @@
+================================================================================
+CHIM CACHED CONNECTOR v1.1.21 - INSTALLATION INSTRUCTIONS
+================================================================================
+
+IMPORTANT: v1.1.21 fixes critical bugs where thinking toggle settings would not
+save AND would not work even if manually set in database. This is a MANDATORY
+update if you want to use thinking/reasoning features.
+
+================================================================================
+PREREQUISITES
+================================================================================
+
+1. CHIM Server v2.0.3 or later installed and running
+2. Database configured and accessible
+3. Write permissions to CHIM installation directory
+4. Backup of current installation (CRITICAL - see below)
+
+================================================================================
+PRE-INSTALLATION CHECKLIST
+================================================================================
+
+[ ] Stop any running CHIM processes
+[ ] Create backup of current installation
+[ ] Verify CHIM version is 2.0.3 or later
+[ ] Note any custom modifications to files being replaced
+[ ] Have database backup (optional but recommended)
+
+================================================================================
+BACKUP YOUR INSTALLATION (CRITICAL!)
+================================================================================
+
+Before proceeding, backup these directories:
+
+cd /path/to/HerikaServer
+
+# Backup connector files
+cp -r connector connector.backup_$(date +%Y%m%d)
+
+# Backup library files
+cp -r lib lib.backup_$(date +%Y%m%d)
+
+# Backup UI files
+cp -r ui ui.backup_$(date +%Y%m%d)
+
+# Backup function files
+cp -r functions functions.backup_$(date +%Y%m%d)
+
+# Backup prompt files
+cp -r prompts prompts.backup_$(date +%Y%m%d)
+
+# Backup config (if modifying)
+cp -r conf conf.backup_$(date +%Y%m%d)
+
+If something goes wrong, you can restore with:
+rm -rf connector && mv connector.backup_YYYYMMDD connector
+(repeat for other directories)
+
+================================================================================
+INSTALLATION STEPS
+================================================================================
+
+1. EXTRACT PACKAGE
+   ---------------
+   unzip CHIM_Cached_Connector_v1.1.21_package.zip
+   cd CHIM_Cached_Connector_v1.1.21_package
+
+2. COPY CONNECTOR FILES
+   -------------------
+   cp connector/openrouterjsoncached.php /path/to/HerikaServer/connector/
+   cp connector/openrouterjsoncached_verbose.php /path/to/HerikaServer/connector/
+
+3. COPY LIBRARY FILES
+   -----------------
+   cp lib/core/llm_connector.class.php /path/to/HerikaServer/lib/core/
+   cp lib/chat_helper_functions.php /path/to/HerikaServer/lib/
+
+4. COPY UI FILES (CRITICAL FOR THE FIX!)
+   ------------
+   cp ui/core/llm_connectors.php /path/to/HerikaServer/ui/core/
+   cp ui/core/tmpl/metadata_json_editor.php /path/to/HerikaServer/ui/core/tmpl/
+
+5. COPY FUNCTION FILES
+   ------------------
+   cp functions/functions.php /path/to/HerikaServer/functions/
+   cp functions/json_response.php /path/to/HerikaServer/functions/
+
+6. COPY PROMPT FILES
+   ----------------
+   cp prompts/simple_format_prompt.php /path/to/HerikaServer/prompts/
+   cp prompts/simple_format_prompt_minimal.php /path/to/HerikaServer/prompts/
+   cp prompts/dialogue_prompt.php /path/to/HerikaServer/prompts/
+
+7. SET PERMISSIONS
+   ---------------
+   cd /path/to/HerikaServer
+   chmod 644 connector/openrouterjsoncached*.php
+   chmod 644 lib/core/llm_connector.class.php
+   chmod 644 lib/chat_helper_functions.php
+   chmod 644 ui/core/llm_connectors.php
+   chmod 644 ui/core/tmpl/metadata_json_editor.php
+   chmod 644 functions/*.php
+   chmod 644 prompts/*.php
+
+8. CLEAR CACHES
+   ------------
+   # Clear PHP opcache if enabled
+   # Method varies by setup - typically:
+   # - Restart PHP-FPM: systemctl restart php-fpm
+   # - OR restart Apache: systemctl restart apache2
+   # - OR just wait 60 seconds for opcache to expire
+
+   # Clear browser cache
+   # - Hard reload: Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac)
+   # - Or clear browser cache manually
+
+================================================================================
+POST-INSTALLATION VERIFICATION
+================================================================================
+
+1. VERIFY FILE VERSIONS
+   -------------------
+   # Check connector version
+   head -20 connector/openrouterjsoncached.php | grep VERSION
+   # Should show: v1.1.21
+
+2. TEST UI ACCESS
+   -------------
+   - Open CHIM UI in browser
+   - Navigate to Settings → LLM Connectors
+   - You should see the connectors list without errors
+
+3. TEST SETTINGS SAVE (CRITICAL!)
+   -----------------
+   a) Click "Edit" on any openrouterjsoncached connector
+   b) Enable "Toggle Thinking" checkbox
+   c) Set "Thinking Tokens" to 2000
+   d) Select "Effort Level" = medium
+   e) Click "Save" button
+   f) **Page should reload**
+   g) **Settings should still be set** (toggle ON, tokens=2000, effort=medium)
+
+   IF SETTINGS RESET TO OFF:
+   - Check browser console for JavaScript errors (F12 → Console)
+   - Verify hidden metadata field exists in HTML
+   - Check that ui/core/llm_connectors.php was updated correctly
+
+4. TEST FUNCTIONALITY
+   -----------------
+   a) Make a test dialogue request using the connector
+   b) Check log/cache.log for:
+
+      [INFO] Thinking Config: toggle=true, tokens=2000, effort=medium
+      [INFO] Reasoning config: enabled=true
+      [INFO] Using OpenAI reasoning with effort: medium
+
+   IF YOU DON'T SEE THESE LOGS:
+   - Check that connector files were updated
+   - Verify connector is actually being used
+   - Check for PHP errors in log/error.log
+
+5. VERIFY OTHER SETTINGS STILL WORK
+   -------------------------------
+   - Try changing URL, model, temperature
+   - Try changing provider caching type
+   - Try changing response format
+   - All should save and persist correctly
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+PROBLEM: Settings don't save (reset after clicking Save)
+SOLUTION:
+   1. Check browser console (F12) for JavaScript errors
+   2. Verify this in browser DevTools Console:
+      document.querySelector('input[name="metadata"]')
+      Should return: <input type="hidden" name="metadata" ...>
+      If null: ui/core/llm_connectors.php wasn't updated correctly
+   3. Hard reload browser (Ctrl+Shift+R)
+   4. Clear browser cache completely
+
+PROBLEM: Settings save but don't work (connector doesn't use them)
+SOLUTION:
+   1. Check log/cache.log for diagnostic output
+   2. Should see: "Thinking Config: toggle=..."
+   3. If not, connector files weren't updated
+   4. Verify connector file VERSION shows v1.1.21
+
+PROBLEM: "consolidation is not defined" error
+SOLUTION:
+   1. Clear browser cache
+   2. Hard reload (Ctrl+Shift+R)
+   3. Verify metadata_json_editor.php is in ui/core/tmpl/
+   4. Check PHP error log for file not found errors
+
+PROBLEM: Page shows blank or PHP errors
+SOLUTION:
+   1. Check PHP error log (location varies by setup)
+   2. Common issue: File permissions too restrictive
+   3. Try: chmod 644 on all copied files
+   4. Verify all files copied successfully
+
+PROBLEM: Database errors about metadata field
+SOLUTION:
+   1. Metadata column should exist in core_llm_connector table
+   2. Run: DESCRIBE core_llm_connector;
+   3. Should have: metadata (TEXT or LONGTEXT)
+   4. If missing, run database migration for CHIM 2.0.3
+
+================================================================================
+ROLLBACK INSTRUCTIONS
+================================================================================
+
+If you need to rollback to your previous version:
+
+1. Stop CHIM processes
+
+2. Restore from backup:
+   cd /path/to/HerikaServer
+   rm -rf connector lib ui functions prompts
+   mv connector.backup_YYYYMMDD connector
+   mv lib.backup_YYYYMMDD lib
+   mv ui.backup_YYYYMMDD ui
+   mv functions.backup_YYYYMMDD functions
+   mv prompts.backup_YYYYMMDD prompts
+
+3. Clear caches (PHP opcache + browser)
+
+4. Restart CHIM
+
+Note: Database data is not affected by rollback. Any connectors configured
+with thinking settings will simply have those settings ignored by the old
+connector code.
+
+================================================================================
+UPGRADING FROM SPECIFIC VERSIONS
+================================================================================
+
+FROM v1.1.20:
+   - Only ui/core/llm_connectors.php changed significantly
+   - Connector files have minor logging additions
+   - Safe to upgrade, no breaking changes
+
+FROM v1.1.19 or earlier:
+   - Major changes to form submission
+   - MUST update all files
+   - Test thoroughly after upgrade
+
+FROM v1.1.18 or earlier:
+   - Significant architectural changes
+   - Backup is CRITICAL
+   - Plan for testing time
+
+FROM versions before v1.1.x:
+   - Consider this a major upgrade
+   - Review CHANGELOG.txt for all changes
+   - Thorough testing required
+
+================================================================================
+WHAT'S NEW IN v1.1.21
+================================================================================
+
+CRITICAL FIXES:
+1. Settings now actually SAVE when you click Save
+   - Added hidden metadata field to forms
+   - Added proper consolidation() function
+   - All metadata[...] fields now collected correctly
+
+2. Connector now actually USES saved settings
+   - Added type casting for boolean values
+   - Added integer conversion for numeric values
+   - Added diagnostic logging to verify settings
+
+IMPACT:
+- Thinking toggle feature now fully functional
+- Can use o1, o3, o4, gpt-5 with effort levels
+- Can use Claude, Gemini, DeepSeek-R1 with thinking tokens
+- All other metadata settings also fixed
+
+AFFECTED FILES:
+- ui/core/llm_connectors.php (major changes)
+- connector/openrouterjsoncached.php (minor changes)
+- connector/openrouterjsoncached_verbose.php (minor changes)
+
+See CHIM_CACHED_CONNECTOR_v1.1.21_SUMMARY.md for complete technical details.
+
+================================================================================
+SUPPORT
+================================================================================
+
+For issues with this package:
+1. Check log/cache.log for diagnostic output
+2. Check browser console (F12) for JavaScript errors
+3. Check PHP error log for PHP errors
+4. Review TROUBLESHOOTING section above
+5. Review CHIM_CACHED_CONNECTOR_v1.1.21_SUMMARY.md
+
+For CHIM-related issues:
+- Refer to main CHIM documentation
+- Check CHIM GitHub repository
+
+================================================================================
+FINAL CHECKLIST
+================================================================================
+
+After installation, verify:
+[ ] Connector version shows v1.1.21
+[ ] UI loads without errors
+[ ] Settings save and persist after reload
+[ ] Diagnostic logs appear in cache.log
+[ ] Test dialogue request works
+[ ] Thinking toggle actually enables reasoning
+[ ] Browser cache cleared
+[ ] PHP opcache cleared (if applicable)
+
+If all items checked, installation is complete!
+
+================================================================================
+Last Updated: 2025-11-15
+Package Version: v1.1.21
+================================================================================
