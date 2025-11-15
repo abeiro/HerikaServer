@@ -372,16 +372,15 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 ?>
                 <div id="reasoning_details" style="margin-top:8px; margin-left:20px; padding:8px; border-left:2px solid #444;">
                     <label class="label-with-toggle"><span class='tip-label' data-tip='Enable thinking/reasoning for supported models (like o1, DeepSeek-R1). Shows model internal reasoning process.'>Toggle Thinking</span>
-                        <input type="hidden" name="metadata[toggle_thinking]" value="0">
-                        <input type="checkbox" name="metadata[toggle_thinking]" id="toggle_thinking" value="1" <?= $toggleThinking ? "checked" : "" ?>>
+                        <input type="checkbox" id="toggle_thinking" value="1" data-metadata-key="toggle_thinking" <?= $toggleThinking ? "checked" : "" ?>>
                         <span class="toggle-text">On</span>
                     </label>
                     <div style="height:6px;"></div>
                     <label for='thinking_tokens'><span class='tip-label' data-tip='Maximum tokens for thinking/reasoning output (Anthropic/Gemini only). OpenAI uses effort_level instead. Leave empty to use default.'>Thinking Tokens</span></label>
-                    <input type="number" name="metadata[thinking_tokens]" id="thinking_tokens" value="<?= htmlspecialchars($thinkingTokens) ?>" min="0" step="1" placeholder="Optional">
+                    <input type="number" id="thinking_tokens" data-metadata-key="thinking_tokens" value="<?= htmlspecialchars($thinkingTokens) ?>" min="0" step="1" placeholder="Optional">
                     <div style="height:6px;"></div>
                     <label for='effort_level'><span class='tip-label' data-tip='Reasoning effort level for OpenAI reasoning models (o1, o3, o4, gpt-5). minimal=Quick (gpt-5+), low=Basic, medium=Balanced, high=Thorough. Leave empty for default.'>Effort Level</span></label>
-                    <select name="metadata[effort_level]" id="effort_level">
+                    <select id="effort_level" data-metadata-key="effort_level">
                         <option value="">-- select --</option>
                         <option value="minimal" <?= $effortLevel === 'minimal' ? 'selected' : '' ?>>Minimal</option>
                         <option value="low" <?= $effortLevel === 'low' ? 'selected' : '' ?>>Low</option>
@@ -1456,16 +1455,15 @@ if (typeof window.consolidation !== 'function') {
             </div>
             <div id="reasoning_details_modal" style="margin-top:8px; padding:8px; border-left:2px solid #444;">
                 <label class="label-with-toggle"><span class='tip-label' data-tip='Enable thinking/reasoning for supported models (like o1, DeepSeek-R1). Shows model internal reasoning process.'>Toggle Thinking</span>
-                    <input type="hidden" name="metadata[toggle_thinking]" value="0">
-                    <input type="checkbox" name="metadata[toggle_thinking]" id="toggle_thinking_modal" value="1" <?= $toggleThinking ? "checked" : "" ?>>
+                    <input type="checkbox" id="toggle_thinking_modal" value="1" data-metadata-key="toggle_thinking" <?= $toggleThinking ? "checked" : "" ?>>
                     <span class="toggle-text">On</span>
                 </label>
                 <div style="height:6px;"></div>
                 <label for='thinking_tokens_modal'><span class='tip-label' data-tip='Maximum tokens for thinking/reasoning output (Anthropic/Gemini only). OpenAI uses effort_level instead. Leave empty to use default.'>Thinking Tokens</span></label>
-                <input type="number" name="metadata[thinking_tokens]" id="thinking_tokens_modal" value="<?= htmlspecialchars($thinkingTokens) ?>" min="0" step="1" placeholder="Optional">
+                <input type="number" id="thinking_tokens_modal" data-metadata-key="thinking_tokens" value="<?= htmlspecialchars($thinkingTokens) ?>" min="0" step="1" placeholder="Optional">
                 <div style="height:6px;"></div>
                 <label for='effort_level_modal'><span class='tip-label' data-tip='Reasoning effort level for OpenAI reasoning models (o1, o3, o4, gpt-5). minimal=Quick (gpt-5+), low=Basic, medium=Balanced, high=Thorough. Leave empty for default.'>Effort Level</span></label>
-                <select name="metadata[effort_level]" id="effort_level_modal">
+                <select id="effort_level_modal" data-metadata-key="effort_level">
                     <option value="">-- select --</option>
                     <option value="minimal" <?= $effortLevel === 'minimal' ? 'selected' : '' ?>>Minimal</option>
                     <option value="low" <?= $effortLevel === 'low' ? 'selected' : '' ?>>Low</option>
@@ -2062,7 +2060,7 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
 
 <script>
 // Custom consolidation for llm_connectors.php
-// Collects all metadata[...] fields and consolidates them into the hidden metadata field
+// Collects all metadata fields and consolidates them into the hidden metadata field
 (function(){
     const originalConsolidation = window.consolidation;
     window.consolidation = function() {
@@ -2070,55 +2068,59 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
         const form = document.querySelector('form[method="post"]');
         if (!form) return true;
 
-        // Collect all metadata[...] fields into an object
-        const metadata = {};
-        const inputs = form.querySelectorAll('[name^="metadata["]');
-
-        // Build a map of fields by key to handle duplicates (hidden + checkbox pairs)
-        const fieldsByKey = {};
-        inputs.forEach(input => {
-            const match = input.name.match(/^metadata\[([^\]]+)\]$/);
-            if (!match) return;
-            const key = match[1];
-            if (!fieldsByKey[key]) fieldsByKey[key] = [];
-            fieldsByKey[key].push(input);
-        });
-
-        // Process each unique key
-        Object.keys(fieldsByKey).forEach(key => {
-            const fields = fieldsByKey[key];
-
-            // Check if this is a checkbox (will have both hidden and checkbox inputs)
-            const checkbox = fields.find(f => f.type === 'checkbox');
-            if (checkbox) {
-                // Use checkbox value if checked, otherwise use hidden field value
-                metadata[key] = checkbox.checked ? checkbox.value : '0';
-            } else {
-                // For non-checkbox fields, just use the value
-                const field = fields[0];
-                metadata[key] = field.value;
-            }
-
-            // Convert string booleans to actual booleans
-            if (metadata[key] === 'true' || metadata[key] === '1') metadata[key] = true;
-            else if (metadata[key] === 'false' || metadata[key] === '0') metadata[key] = false;
-            else if (metadata[key] === '' || metadata[key] === null) delete metadata[key]; // Remove empty values
-        });
-
         // Check if there's a JSON editor on this page (e.g., core_profiles.php)
         const hasJsonEditor = (typeof window.jsonEditor !== 'undefined') || document.getElementById('metadata');
 
         if (hasJsonEditor && originalConsolidation && typeof originalConsolidation === 'function') {
             // Use the original consolidation for pages with JSON editor
             return originalConsolidation();
-        } else {
-            // For llm_connectors.php: Set the hidden metadata field with collected values
-            const metadataField = form.querySelector('input[name="metadata"]');
-            if (metadataField) {
-                metadataField.value = JSON.stringify(metadata);
-            }
-            return true;
         }
+
+        // For llm_connectors.php: Collect fields with data-metadata-key attribute
+        const metadata = {};
+
+        // Collect all regular metadata[...] fields (provider_caching, response_format, etc.)
+        const regularInputs = form.querySelectorAll('[name^="metadata["]');
+        regularInputs.forEach(input => {
+            const match = input.name.match(/^metadata\[([^\]]+)\]$/);
+            if (!match) return;
+            const key = match[1];
+
+            if (input.type === 'checkbox') {
+                if (input.checked) metadata[key] = input.value;
+            } else {
+                if (input.value !== '') metadata[key] = input.value;
+            }
+        });
+
+        // Collect special thinking fields with data-metadata-key attribute
+        const specialInputs = form.querySelectorAll('[data-metadata-key]');
+        specialInputs.forEach(input => {
+            const key = input.getAttribute('data-metadata-key');
+            if (!key) return;
+
+            if (input.type === 'checkbox') {
+                metadata[key] = input.checked ? true : false;
+            } else if (input.type === 'number') {
+                if (input.value !== '') metadata[key] = input.value;
+            } else {
+                if (input.value !== '') metadata[key] = input.value;
+            }
+        });
+
+        // Convert string booleans to actual booleans for consistency
+        Object.keys(metadata).forEach(key => {
+            if (metadata[key] === 'true' || metadata[key] === '1') metadata[key] = true;
+            else if (metadata[key] === 'false' || metadata[key] === '0') metadata[key] = false;
+        });
+
+        // Set the hidden metadata field
+        const metadataField = form.querySelector('input[name="metadata"]');
+        if (metadataField) {
+            metadataField.value = JSON.stringify(metadata);
+        }
+
+        return true;
     };
 })();
 
