@@ -2085,135 +2085,127 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
     });
 })();
 
-// Extend consolidation() to merge reasoning fields into metadata
-(function(){
-    const originalConsolidation = window.consolidation;
-    window.consolidation = function() {
-        console.log('[Consolidation] WRAPPER CALLED');
+// Override consolidation() to handle metadata fields for llm_connectors
+// Don't call the original from metadata_json_editor.php as it's designed for core_profiles
+window.consolidation = function() {
+    console.log('[Consolidation] LLM Connectors consolidation called');
 
-        // First run the original consolidation (from metadata_json_editor.php)
-        const result = originalConsolidation ? originalConsolidation() : true;
-        if (!result) {
-            console.log('[Consolidation] Original consolidation returned false, aborting');
-            return false;
-        }
+    const form = document.querySelector('form[method="post"]') || document.querySelector('form[method="POST"]');
+    if (!form) {
+        console.log('[Consolidation] No form found');
+        return true; // Let it submit anyway
+    }
 
-        // Now merge our custom reasoning fields into metadata
-        const form = document.querySelector('form[method="POST"]');
-        if (!form) {
-            console.log('[Consolidation] No form found, aborting');
-            return result;
-        }
-        if (!form.metadata) {
-            console.log('[Consolidation] No form.metadata field found, aborting');
-            return result;
-        }
+    if (!form.metadata) {
+        console.log('[Consolidation] No form.metadata field found');
+        return true; // Let it submit anyway
+    }
 
+    try {
+        // Start with empty metadata object
+        let metadata = {};
+
+        // Try to parse existing metadata from textarea
         try {
-            // Parse existing metadata
-            let metadata = {};
-            try {
-                const metaStr = form.metadata.value || '{}';
-                metadata = JSON.parse(metaStr);
-                console.log('[Consolidation] Starting with metadata:', metadata);
-            } catch (_e) {
-                metadata = {};
-                console.log('[Consolidation] Failed to parse metadata, starting fresh');
-            }
-
-            // Collect reasoning field values (check both regular and modal IDs)
-            const toggleThinkingEl = document.getElementById('toggle_thinking') || document.getElementById('toggle_thinking_modal');
-            const thinkingTokensEl = document.getElementById('thinking_tokens') || document.getElementById('thinking_tokens_modal');
-            const effortLevelEl = document.getElementById('effort_level') || document.getElementById('effort_level_modal');
-
-            console.log('[Consolidation] Found elements:', {
-                toggleThinkingEl: !!toggleThinkingEl,
-                thinkingTokensEl: !!thinkingTokensEl,
-                effortLevelEl: !!effortLevelEl
-            });
-
-            // Add toggle_thinking
-            if (toggleThinkingEl) {
-                metadata.toggle_thinking = toggleThinkingEl.checked;
-                console.log('[Consolidation] Set toggle_thinking =', toggleThinkingEl.checked);
-            }
-
-            // Add thinking_tokens (only if not empty)
-            if (thinkingTokensEl) {
-                const val = thinkingTokensEl.value.trim();
-                if (val !== '') {
-                    metadata.thinking_tokens = parseInt(val, 10);
-                    console.log('[Consolidation] Set thinking_tokens =', parseInt(val, 10));
-                } else {
-                    delete metadata.thinking_tokens;
-                    console.log('[Consolidation] Removed thinking_tokens (empty)');
-                }
-            }
-
-            // Add effort_level (only if not empty)
-            if (effortLevelEl) {
-                const val = effortLevelEl.value.trim();
-                if (val !== '') {
-                    metadata.effort_level = val;
-                    console.log('[Consolidation] Set effort_level =', val);
-                } else {
-                    delete metadata.effort_level;
-                    console.log('[Consolidation] Removed effort_level (empty)');
-                }
-            }
-
-            // Also collect ALL OTHER metadata[...] fields (provider_caching, response_format, etc.)
-            // This ensures other settings that worked in 1.1.22 continue to work
-            const metadataInputs = form.querySelectorAll('[name^="metadata["]');
-            metadataInputs.forEach(inp => {
-                const match = inp.name.match(/^metadata\[([^\]]+)\]$/);
-                if (!match) return;
-                const key = match[1];
-
-                // Skip the 3 thinking toggle fields we already handled above
-                if (key === 'toggle_thinking' || key === 'thinking_tokens' || key === 'effort_level') return;
-
-                // Handle other metadata fields
-                if (inp.type === 'checkbox') {
-                    // For checkboxes, only include if checked (skip hidden '0' fields)
-                    if (inp.checked && inp.value !== '0') {
-                        metadata[key] = inp.value === '1' || inp.value === 'true' ? true : inp.value;
-                    }
-                } else if (inp.type === 'number') {
-                    const val = inp.value.trim();
-                    if (val !== '') {
-                        metadata[key] = parseFloat(val);
-                    }
-                } else if (inp.tagName.toLowerCase() === 'select' || inp.type === 'text') {
-                    const val = inp.value.trim();
-                    if (val !== '') {
-                        metadata[key] = val;
-                    }
-                }
-            });
-
-            // Update form metadata field
-            form.metadata.value = JSON.stringify(metadata);
-            console.log('[Consolidation] Final metadata JSON:', form.metadata.value);
-
-            // CRITICAL: Remove name attributes from all metadata[...] fields
-            // Otherwise PHP will receive the array fields and ignore the textarea
-            let removedCount = 0;
-            metadataInputs.forEach(inp => {
-                if (inp.name && inp.name.startsWith('metadata[')) {
-                    console.log('[Consolidation] Removing name from:', inp.name, '(type:', inp.type, ', value:', inp.value, ')');
-                    inp.removeAttribute('name');
-                    removedCount++;
-                }
-            });
-            console.log('[Consolidation] Removed', removedCount, 'name attributes');
-        } catch (err) {
-            console.error('[Consolidation] ERROR:', err);
+            const metaStr = form.metadata.value || '{}';
+            metadata = JSON.parse(metaStr);
+            console.log('[Consolidation] Starting with metadata:', metadata);
+        } catch (_e) {
+            metadata = {};
+            console.log('[Consolidation] Failed to parse metadata, starting fresh');
         }
 
-        return result;
-    };
-})();
+        // Collect thinking toggle fields by ID
+        const toggleThinkingEl = document.getElementById('toggle_thinking') || document.getElementById('toggle_thinking_modal');
+        const thinkingTokensEl = document.getElementById('thinking_tokens') || document.getElementById('thinking_tokens_modal');
+        const effortLevelEl = document.getElementById('effort_level') || document.getElementById('effort_level_modal');
+
+        console.log('[Consolidation] Found elements:', {
+            toggleThinkingEl: !!toggleThinkingEl,
+            thinkingTokensEl: !!thinkingTokensEl,
+            effortLevelEl: !!effortLevelEl
+        });
+
+        // Add toggle_thinking
+        if (toggleThinkingEl) {
+            metadata.toggle_thinking = toggleThinkingEl.checked;
+            console.log('[Consolidation] Set toggle_thinking =', toggleThinkingEl.checked);
+        }
+
+        // Add thinking_tokens (only if not empty)
+        if (thinkingTokensEl) {
+            const val = thinkingTokensEl.value.trim();
+            if (val !== '') {
+                metadata.thinking_tokens = parseInt(val, 10);
+                console.log('[Consolidation] Set thinking_tokens =', parseInt(val, 10));
+            } else {
+                delete metadata.thinking_tokens;
+                console.log('[Consolidation] Removed thinking_tokens (empty)');
+            }
+        }
+
+        // Add effort_level (only if not empty)
+        if (effortLevelEl) {
+            const val = effortLevelEl.value.trim();
+            if (val !== '') {
+                metadata.effort_level = val;
+                console.log('[Consolidation] Set effort_level =', val);
+            } else {
+                delete metadata.effort_level;
+                console.log('[Consolidation] Removed effort_level (empty)');
+            }
+        }
+
+        // Collect ALL OTHER metadata[...] fields
+        const metadataInputs = form.querySelectorAll('[name^="metadata["]');
+        metadataInputs.forEach(inp => {
+            const match = inp.name.match(/^metadata\[([^\]]+)\]$/);
+            if (!match) return;
+            const key = match[1];
+
+            // Skip the 3 thinking toggle fields we already handled
+            if (key === 'toggle_thinking' || key === 'thinking_tokens' || key === 'effort_level') return;
+
+            // Handle other metadata fields
+            if (inp.type === 'checkbox') {
+                if (inp.checked && inp.value !== '0') {
+                    metadata[key] = inp.value === '1' || inp.value === 'true' ? true : inp.value;
+                }
+            } else if (inp.type === 'number') {
+                const val = inp.value.trim();
+                if (val !== '') {
+                    metadata[key] = parseFloat(val);
+                }
+            } else if (inp.tagName.toLowerCase() === 'select' || inp.type === 'text') {
+                const val = inp.value.trim();
+                if (val !== '') {
+                    metadata[key] = val;
+                }
+            }
+        });
+
+        // Update form metadata field with final JSON
+        form.metadata.value = JSON.stringify(metadata);
+        console.log('[Consolidation] Final metadata JSON:', form.metadata.value);
+
+        // CRITICAL: Remove name attributes from all metadata[...] fields
+        // so only the textarea submits to PHP
+        let removedCount = 0;
+        metadataInputs.forEach(inp => {
+            if (inp.name && inp.name.startsWith('metadata[')) {
+                console.log('[Consolidation] Removing name from:', inp.name);
+                inp.removeAttribute('name');
+                removedCount++;
+            }
+        });
+        console.log('[Consolidation] Removed', removedCount, 'name attributes');
+
+        return true;
+    } catch (err) {
+        console.error('[Consolidation] ERROR:', err);
+        return true; // Let it submit anyway
+    }
+};
 </script>
 
 </main>
