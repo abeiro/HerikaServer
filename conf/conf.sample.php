@@ -125,6 +125,8 @@ $dynamic_profile_b1 = false; // Utility button for updating all dynamic profile 
 $RPG_COMMENTS=["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"]; //AI Service(s).
 $DETECT_MAGIC_EVENT=true; //Enable detection and logging of NPC spellcasting events.
 $MAGIC_EVENT_BLACKLIST=""; //Comma-separated list of magic events to exclude from logging.
+$LOCATION_BLACKLIST="Dark Brotherhood Sanctuary, Twilight Sepulcher"; //Comma-separated list of location names to exclude from Points of Interest context.
+$HIDE_AMBIENT_COMBAT=false; //Hide ambient NPC-to-NPC combat deaths from context.
 
 //[AI/LLM Service Selection]
 $CONNECTORS=["openrouterjson","openaijson","koboldcppjson"]; //AI Service(s).
@@ -429,6 +431,10 @@ $STT["LOCALWHISPER"]["FORMFIELD"]="audio_file"; //(audio_file,file) Form field n
 $STT["DEEPGRAM"]["LANG"]="en"; //Language.
 $STT["DEEPGRAM"]["MODEL"]="nova-3"; //Model to use.
 
+$STT["PARAKEET"]["LANG"]="en";
+
+
+
 //[Image to Text (Soulgaze)]
 $ITTFUNCTION="openrouter";
 //OpenAI
@@ -496,6 +502,9 @@ $FEATURES["MISC"]["LIFE_LINK_PLUGIN"]=false; // WIP. Use life link plugin for dy
 
 $BORED_EVENT_SERVERSIDE=false;
 $RECHAT_ALLOW_ACTIONS=false;
+$RANDOM_NARATION=false;
+$RANDOM_NARATION_CHANCE=15;
+$RANDOM_NARRATION_COOLDOWN=2;
 
 ?>
 

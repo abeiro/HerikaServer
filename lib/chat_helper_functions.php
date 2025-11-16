@@ -120,8 +120,16 @@ function findDotPosition($s_string) {
     
     $lastChar = substr($s_string, -1);
 
-    if ($lastChar === ".")  // Dont eval on .. wait till next tokens
-        return false;
+    // Only skip if it ends with ellipsis (...), not regular sentence endings
+    // This allows streaming to work properly for complete sentences
+    if ($lastChar === ".") {
+        // Check if it's an ellipsis (...)
+        $last3Chars = substr($s_string, -3);
+        if ($last3Chars === "...") {
+            return false; // Don't process ellipsis yet
+        }
+        // Otherwise, allow processing of regular sentence endings
+    }
     
     $dotPosition = strrpos($s_string, "."); // last dot in string
     
@@ -1708,7 +1716,7 @@ function logEvent($dataArray,$forcePeople='')
             $dataArray[2] = $new_gts;
         }
 
-        $db->insert(
+        $insertResult = $db->insert(
             'eventlog',
             array(
                 'ts' => $dataArray[1],

@@ -131,6 +131,9 @@ foreach ($files as $mconf) {
     foreach ($OVERRIDES as $k=>$v) $GLOBALS[$k] = $v;
 }
 
+// Also make backups on new system
+$npcMaster->backupAllNpcs(0);
+
 ?>
     </div>
 </main>

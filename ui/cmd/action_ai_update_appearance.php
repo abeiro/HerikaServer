@@ -64,7 +64,7 @@ $metadata=json_decode($currentNpcData["metadata"],true);
 $image="";
 if (isset($metadata["portrait"])) {
     $image=$enginePath."/data/pictures/{$metadata["portrait"]}";
-} else if (file_exists($enginePath."/data/pictures/{$metadata["portrait"]}")) {
+} else if (file_exists($enginePath."/data/pictures/profile/{$currentNpcData["refid"]}.jpg")) {
     $image=$enginePath."/data/pictures/profile/{$currentNpcData["refid"]}.jpg";
 }
 
@@ -75,10 +75,29 @@ if (!$image) {
 
 require_once($path."itt/itt-{$GLOBALS["ITTFUNCTION"]}.php");
 
-$GLOBALS["ITT"][$GLOBALS["ITTFUNCTION"]]["AI_VISION_PROMPT"]="Describe the character in the picture. Name is {$GLOBALS["HERIKA_NAME"]} .
-Do not focus on clothing, focus on physical appearance (face, eyes, hair, figure, waist,legs,breast size, tattoos if any....). Be concise. 
-Start generation with this text:
-{$GLOBALS["HERIKA_NAME"]} is " ;
+// Load AI vision appearance prompt from database with fallback to hardcoded default
+$visionPrompt = null;
+try {
+    $promptData = $GLOBALS["db"]->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'ai_vision_appearance'");
+    if ($promptData) {
+        // Use custom_prompt if set, otherwise use default_prompt
+        $visionPrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+    }
+} catch (Exception $e) {
+    Logger::warn("Failed to load AI vision appearance prompt from database, using hardcoded fallback: " . $e->getMessage());
+}
+
+// Hardcoded fallback if database query failed or returned no results
+if (!$visionPrompt) {
+    $visionPrompt = 
+        "Describe the character in the picture. Name is {HERIKA_NAME} .\n".
+        "Do not focus on clothing, focus on physical appearance (face, eyes, hair, figure, waist,legs,breast size, tattoos if any....). Be concise. \n".
+        "Start generation with this text:\n".
+        "{HERIKA_NAME} is ";
+}
+
+// Replace {HERIKA_NAME} placeholder with actual character name
+$GLOBALS["ITT"][$GLOBALS["ITTFUNCTION"]]["AI_VISION_PROMPT"] = str_replace('{HERIKA_NAME}', $GLOBALS["HERIKA_NAME"], $visionPrompt);
 
 $desc = itt($image,"");
 

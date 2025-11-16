@@ -575,6 +575,8 @@ foreach ($allowedSettings as $key) {
         }
         
         list.innerHTML = keys.map(key => {
+            if (key == "middle_term_memory")
+                return;
             const value = overridesState[key];
             const displayValue = typeof value === 'boolean' ? (value ? 'true' : 'false') : JSON.stringify(value);
             return `

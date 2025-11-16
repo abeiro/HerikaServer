@@ -18,16 +18,6 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     require_once $enginePath . "lib/core/core_profiles.class.php";
     require_once $enginePath . "lib/core/llm_connector.class.php";
 
-
-    $allEnabledMtNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->'middle_term_enabled' = '1' ");
-
-    foreach ($allEnabledMtNpc as $npc) {
-        $mwdata=json_decode($npc["extended_data"]);
-        echo "[MIDDLETERM] {$npc["npc_name"]} has middleterm memory enabled".PHP_EOL;
-        $GLOBALS["SELECTED_NPC"]=$npc["npc_name"];
-        require("cmd" . DIRECTORY_SEPARATOR . "generate.php");
-    }
-
     //$results = $GLOBALS["db"]->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary where summary is not null order by gamets_truncated desc limit 1"); //0.8ms
     $results = $GLOBALS["db"]->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary where summary is not null"); // 0.5ms, faster 
     $lastMemory = intval($results[0]["gamets_truncated"]);
@@ -36,18 +26,99 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     $results = $GLOBALS["db"]->fetchAll("select max(gamets) as gamets from eventlog"); // faster
     $maxRow = intval($results[0]["gamets"]);
 
+    $allEnabledMtNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->'middle_term_enabled' = '1' ");
+
+    foreach ($allEnabledMtNpc as $npc) {
+        $mwdata=json_decode($npc["extended_data"]);
+        // echo "[MIDDLETERM] {$npc["npc_name"]} has middleterm memory enabled".PHP_EOL;
+        $GLOBALS["SELECTED_NPC"]=$npc["npc_name"];
+        require("cmd" . DIRECTORY_SEPARATOR . "generate.php");
+    }
+
+    // BgL tracking coords, on NPCs marked with gps_track. in-game hourly
+    $oneDayAgoGamets=$maxRow - ( (24) / 0.0000024);
+    $oneHourAgoGamets=$maxRow - ( (1) / 0.0000024);
+    $fiveDaysAgoGamets=$maxRow - ( (24 * 5) / 0.0000024);
+
+    // BgL tracking coords, in-game daily
+    
+    $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->>'last_coords' IS NOT NULL AND metadata->'last_coords'->>'pending' IS NULL ");
+    foreach ($allEnabledBgLNpc as $npc) {
+        $mwdata=json_decode($npc["metadata"],true);
+        if (!isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"] || $mwdata["last_coords"]["last_updated"]<($oneDayAgoGamets)) {
+            logger::info("[BACKGROUND-LIFE] Daily Tracking {$npc["npc_name"]}");
+            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_command.php \"{$npc["npc_name"]}\" Track ");
+            if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
+                Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
+            }
+        }
+        
+    }
+    
+
+ 
+    // GPS coords track
+    if (false) {
+        // This will track every 5 secs
+        $oneHourAgoGamets=$maxRow;
+    }
+    $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->'gps_track' = 'true' AND (metadata->'last_coords'->>'pending' IS NULL or (metadata->'last_coords'->>'last_updated')::numeric < $oneHourAgoGamets) ");
+    
+    foreach ($allEnabledBgLNpc as $npc) {
+         $mwdata=json_decode($npc["metadata"],true);
+        if (!isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"] 
+            || $mwdata["last_coords"]["last_updated"]<$oneHourAgoGamets 
+            ) {
+            logger::info("[BACKGROUND-LIFE] Hourly Tracking {$npc["npc_name"]}");
+            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_command.php \"{$npc["npc_name"]}\" Track ");
+            if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
+                Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
+            }
+        }
+    }
+    // BgL content
+    // In-game each 5 days
+    $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_last_updated' IS NOT NULL AND (extended_data->>'background_life_commands' = 'false' or extended_data->>'background_life_commands'  IS NULL)");
+    foreach ($allEnabledBgLNpc as $npc) {
+        $mwdata=json_decode($npc["extended_data"],true);
+        if (isset($mwdata["background_life_last_updated"])  && $mwdata["background_life_last_updated"]<($fiveDaysAgoGamets)) {
+            logger::info("[BACKGROUND-LIFE] Passive event for {$npc["npc_name"]}");
+            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life.php \"{$npc["npc_name"]}\" ");
+            if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
+                Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
+            }
+        }
+        break;  // One per iteration
+    }
+
+    // BgL commands
+    // In-game each 5 days
+    $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_last_updated' IS NOT NULL AND extended_data->>'background_life_commands' = 'true' ");
+    foreach ($allEnabledBgLNpc as $npc) {
+        $mwdata=json_decode($npc["extended_data"],true);
+        if (isset($mwdata["background_life_last_updated"])  && $mwdata["background_life_last_updated"]<($fiveDaysAgoGamets)) {
+            logger::info("[BACKGROUND-LIFE] Event for {$npc["npc_name"]}");
+            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life.php \"{$npc["npc_name"]}\" full ");
+            if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
+                Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
+            }
+        }
+        break;  // One per iteration
+    }
+    
+
     $pfi = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] ?? 10) * 100000;
     
     if (($maxRow-$lastMemory)>($pfi)) {
-        echo "[SUMMARY] memory creation maxRow-lastMemory > pfi  ($maxRow-$lastMemory)>($pfi) ";
+        //echo "[SUMMARY] memory creation maxRow-lastMemory > pfi  ($maxRow-$lastMemory)>($pfi) ";
 
-        $shellResult = shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 1 &");
+        $shellResult = shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 1 ");
         if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
             Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
         }
 
     } else {
-        error_log("[SUMMARY] Skiping memory creation maxRow-lastMemory > pfi  ($maxRow-$lastMemory)>($pfi) ");
+        //error_log("[SUMMARY] Skiping memory creation maxRow-lastMemory > pfi  ($maxRow-$lastMemory)>($pfi) ");
     }
 
     //unset($GLOBALS["db"]);

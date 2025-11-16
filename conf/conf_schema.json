@@ -29,6 +29,9 @@
   "RECHAT_H": {"userlvl":"basic","type":"integer","description":"Rechat Rounds. Higher values will increase the amount of times AI NPC's will go back-and-forth during a conversation.<br>1 = 1 Round | 2 = 2 Rounds | 3 = 3 Rounds etc","_title":"Roleplay Management"},
   "RECHAT_P": {"userlvl":"basic","type":"integer","description":"Rechat Probability. Chance that an AI NPC will continue an ongoing conversation.<br>0 = Never | 50 = 50% | 100 = Always"},
   "RECHAT_ALLOW_ACTIONS": {"userlvl":"basic","type":"boolean","description":"Allow AI NPCs to trigger actions between eachother during Rechat. This can cause some chaos..."},
+  "RANDOM_NARATION": {"userlvl":"basic","type":"boolean","scope":"global","description":"Enable random Narrator interjections. The Narrator will occasionally add visual scene descriptions during conversations."},
+  "RANDOM_NARATION_CHANCE": {"userlvl":"basic","type":"integer","scope":"global","description":"Probability (1-100) that the Narrator will interject with a scene description. Default: 15%"},
+  "RANDOM_NARRATION_COOLDOWN": {"userlvl":"basic","type":"integer","scope":"global","description":"Minimum number of conversation rounds between Narrator interjections. Prevents narration spam. Range: 0-10, Default: 2"},
   "BORED_EVENT": {"userlvl":"basic","type":"integer","description":"Bored Event Probability. Chance of an AI NPC starting a random conversation every couple of minutes.<br>0 = Never | 50 = 50% | 100 = Always"},
   "BORED_EVENT_SERVERSIDE": {"userlvl":"basic","type":"boolean","description":"Smart Bored Events. Will use the director to generate dynamic bored event topics. It is slower but topics will improve the quality of bored event topics.","scope":"global"},
   "CONTEXT_HISTORY": {"userlvl":"basic","type":"integer","description":"Amount of context history (dialogue and events) that will be sent to LLM. Improves short term memory.<br>Higher Context = more tokens used and slower response time.<br><b>We recommend you do not go over 100</b>"},
@@ -47,6 +50,8 @@
   "RPG_COMMENTS": {"type":"selectmultiple","values":["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"],"description":"Pick which comments you want a chance to trigger when one of these ingame events happens."},
   "DETECT_MAGIC_EVENT": {"userlvl":"basic","type":"boolean","scope":"global","description":"Enable detection and logging of spellcasting events. When disabled, spellcast events will not be logged to the context log."},
   "MAGIC_EVENT_BLACKLIST": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated list of magic event names to exclude from logging (e.g. 'Administer Mixture, [BFCO-AttackSwingFX] 0.5/1.5, Healing')."},
+  "LOCATION_BLACKLIST": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated list of location names to exclude from Points of Interest context (e.g. 'Dark Brotherhood Sanctuary, Twilight Sepulcher')."},
+  "HIDE_AMBIENT_COMBAT": {"userlvl":"basic","type":"boolean","scope":"global","description":"Hide ambient NPC-to-NPC combat deaths from context during requests. Only player and companion kills will be shown. This is useful for hiding the violent nature of Skyrim's nature from being detected."},
   "HERIKA_ANIMATIONS": {"userlvl":"basic","type":"boolean","description":"Will issue animations for the NPC to play", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features","_title":"Advanced Configuration"},
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the CHIM Server. Leave it blank for English."},
   "LANG_LLM_XTTS": {"userlvl":"pro","type":"boolean","description":"XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language."},
@@ -339,6 +344,7 @@
     },
     "CARTESIA": {
       "_title": "Cartesia TTS",
+      "API_KEY": {"type":"apikey","description":"Cartesia API key.","code":"CARTESIA_API_KEY"},
       "voiceid": {"type":"string","description":"Voice file name. Works the same as CHIM-XTTS voiceid. Will only work with voices in your Voice Cache. Voice will be automatically cloned to Cartesia when first used.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "language": {"type":"select","values":["en","fr","de","es","pt","zh","ja","hi","it","ko","nl","pl","ru","sv","tr","tl","bg","ro","ar","cs","el","fi","hr","ms","sk","da","ta","uk","hu","no","vi","bn","th","he","ka","id","te","gu","kn","ml","mr","pa"],"description":"Language to use for TTS generation. Sonic 3 supports 42 languages."},
       "model_id": {"type":"select","values":["sonic-3","sonic-english","sonic-multilingual"],"description":"Cartesia model to use. sonic-3 is the latest model with 42 languages, volume/speed/emotion controls. Use sonic-3-2025-10-27 to pin a specific snapshot.","helpurl":"https://docs.cartesia.ai/"},
@@ -372,7 +378,7 @@
   },
   "PLAYER_RESPEECH":{"type":"boolean","description":"Allows the AI to rewrite player speech with Chat Assist & Creation modes.","scope":"global"},
   "STTFUNCTION": {
-    "type":"select","values":["none","whisper","localwhisper","azure","deepgram"],"description":"Speech-to-Text service options. Translates your voice to text.", 
+    "type":"select","values":["none","whisper","localwhisper","azure","deepgram","parakeet"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service","scope":"global"
     },
   "STT": {
@@ -398,6 +404,9 @@
       "API_KEY": {"type":"apikey","description":"Deepgram API key.","code":"DEEPGRAM_API_KEY"},
       "LANG":{"type":"string","description":"Language"},
       "MODEL":{"type":"select","values":["nova-3","nova-2","whisper-medium","enhanced","nova","base"],"description":"Model to use"}
+    }, "PARAKEET": {
+      "_title":"parakeet-api-server",
+      "LANG": {"type":"string","description":"Language to detect for STT."}
     }
   },
   "ITTFUNCTION": {

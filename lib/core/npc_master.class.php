@@ -672,6 +672,7 @@ class NpcMaster
             "WITH deleted AS (
     DELETE FROM core_npc_master
     WHERE npc_name<>'The Narrator' and COALESCE(lock_profile,0)=0
+    and COALESCE(gamets_last_updated,0)>0
     RETURNING id
 ),
 restore AS (
@@ -728,6 +729,16 @@ FROM restore
         error_log("[NPC RESTORE] using gamets: $timestamp.. " . date('Y-m-d H:i:s'));
         $GLOBALS["db"]->query($query);
 
+        $bglife_q="UPDATE public.core_npc_master
+SET extended_data = jsonb_set(
+    extended_data,
+    '{background_life_enabled}',   -- JSON path
+    'false'::jsonb,                -- new value
+    true                           -- create if missing (optional)
+)
+WHERE (extended_data ->> 'background_life_enabled')::boolean = true";
+
+        $GLOBALS["db"]->execQuery($bglife_q);
         error_log("[NPC RESTORE] " . date('Y-m-d H:i:s') . ", NPCs restore made in " . (time() - $startTime) . " secs ");
         return true;
     }
