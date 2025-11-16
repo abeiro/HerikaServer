@@ -894,7 +894,20 @@ function extractActorName(string $content): ?string {
 function extractItemInfo(string $content): ?string {
     // Extract "N ItemName from/in X" or just "N ItemName"
     if (preg_match('/(?:found|took|looted|traded|gave)\s+(.+?)(?:,\(value.+\))?$/i', $content, $matches)) {
-        return trim($matches[1]);
+        $itemInfo = trim($matches[1]);
+        
+        // Extract just the item name (remove quantity) for blacklist check
+        // Pattern: "2 Iron Sword" or "Iron Sword" or "an Iron Sword"
+        if (preg_match('/^(?:\d+\s+|an?\s+)?(.+?)$/i', $itemInfo, $nameMatches)) {
+            $itemName = trim($nameMatches[1]);
+            
+            // Check if item is blacklisted
+            if (isItemBlacklisted($itemName)) {
+                return null; // Filter out blacklisted items
+            }
+        }
+        
+        return $itemInfo;
     }
     return null;
 }
@@ -968,19 +981,31 @@ function flushConsolidationBuffer(array $buffer): array {
     foreach ($buffer as $buffered) {
         $event = $buffered['event'];
         
-        // Check if this is a multi-item consolidation
-        if (isset($buffered['items']) && count($buffered['items']) > 1) {
-            // Multiple items picked up by same actor - list them
-            $content = $event['content'];
+        // Check if this is an item event (single or multi) and filter blacklisted items
+        if (isset($buffered['items'])) {
+            // Filter out null entries (blacklisted items)
+            $filteredItems = array_filter($buffered['items']);
             
-            if (preg_match('/^(.+?)\s+(found|took|looted|traded|gave)\s+/i', $content, $matches)) {
-                $actor = trim($matches[1]);
-                $action = trim($matches[2]);
-                
-                // Build item list
-                $itemList = implode(', ', array_filter($buffered['items']));
-                $event['content'] = "{$actor} {$action} {$itemList}";
+            // If all items were filtered out, skip this event entirely
+            if (empty($filteredItems)) {
+                continue;
             }
+            
+            // Check if this is a multi-item consolidation
+            if (count($filteredItems) > 1) {
+                // Multiple items picked up by same actor - list them
+                $content = $event['content'];
+                
+                if (preg_match('/^(.+?)\s+(found|took|looted|traded|gave)\s+/i', $content, $matches)) {
+                    $actor = trim($matches[1]);
+                    $action = trim($matches[2]);
+                    
+                    // Build item list from filtered items
+                    $itemList = implode(', ', $filteredItems);
+                    $event['content'] = "{$actor} {$action} {$itemList}";
+                }
+            }
+            // Single item events will keep their original content (already filtered by extractItemInfo)
         } elseif (isset($buffered['actors']) && count($buffered['actors']) > 1) {
             // Multiple actors doing the same action - list them
             $actorList = implode(', ', $buffered['actors']);
