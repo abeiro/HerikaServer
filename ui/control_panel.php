@@ -49,6 +49,7 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
         <button class="tab-button active" data-tab="srvlogs">🌲Server Logs</button>
         <button class="tab-button" data-tab="cache">🎼Audio & Image Cache</button>
         <button class="tab-button" data-tab="requests">🔍Request Logs</button>
+        <button class="tab-button" data-tab="audit">📋Audit Log</button>
         <button class="tab-button" data-tab="responses">💬Response Queue</button>
         <button class="tab-button" data-tab="playthrough">🎮Playthrough Manager</button>
         <button class="tab-button" data-tab="dbmgr">🗄️Database Manager</button>
@@ -67,6 +68,11 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
     <div id="requests" class="tab-content">
         <div class="embed-wrap">
             <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/index.php?table=audit_request&embed=1"></iframe>
+        </div>
+    </div>
+    <div id="audit" class="tab-content">
+        <div class="embed-wrap">
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/audit.php?embed=1"></iframe>
         </div>
     </div>
     <div id="responses" class="tab-content">

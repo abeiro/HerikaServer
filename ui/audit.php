@@ -2,6 +2,14 @@
 
 $enginePath = dirname(__DIR__) . DIRECTORY_SEPARATOR;
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php");
+require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+
+// Get the relative web path from document root to our application
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$uiPos = strpos($scriptPath, '/ui/');
+if ($uiPos !== false) { $webRoot = substr($scriptPath, 0, $uiPos); } else { $webRoot = ''; }
+if ($webRoot == '/') $webRoot = '';
+$webRoot = rtrim($webRoot, '/');
 
 $host = 'localhost';
 $port = '5432';
@@ -64,179 +72,274 @@ if ($result) {
 }
 
 pg_close($adminConn);
+
+$TITLE = "💰 Audit Log - Cost Distribution";
+$isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
+
+ob_start();
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."head.html");
+if (!$isEmbed) {
+    include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."navbar.php");
+}
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Cost Distribution by Request Type</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      background: #f8fafc;
-      padding: 40px;
-      text-align: center;
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<style>
+    @font-face {
+        font-family: 'MagicCards';
+        src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
     }
-    h2 {
-      margin-bottom: 20px;
+
+    main {
+        padding-top: <?php echo $isEmbed ? '20px' : '100px'; ?>;
+        padding-bottom: 40px;
+        padding-left: 5%;
+        padding-right: 5%;
+        width: 100%;
+        margin: 0;
     }
-    h3 {
-      margin-bottom: 20px;
-      color: #374151;
+
+    .page-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: #2a2a2a;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
     }
+
+    .page-header h1 {
+        margin-bottom: 10px;
+        font-family: 'MagicCards', serif;
+        word-spacing: 8px;
+        font-size: 2.2em;
+        color: rgb(242, 124, 17);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .page-header h3 {
+        color: rgb(242, 124, 17);
+        margin: 10px 0;
+        font-size: 1.2em;
+    }
+
     .filters {
-      margin-bottom: 30px;
-      padding: 20px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      display: inline-block;
+        margin-bottom: 30px;
+        padding: 25px;
+        background: #2a2a2a;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
     }
+
     .filters form {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      justify-content: center;
-      align-items: center;
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
     }
+
     .filters label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+        color: #f8f9fa;
+        font-weight: 500;
     }
-    .filters input[type="radio"],
+
+    .filters input[type="radio"] {
+        cursor: pointer;
+    }
+
     .filters input[type="date"],
     .filters input[type="week"] {
-      padding: 6px 8px;
-      border: 1px solid #d1d5db;
-      border-radius: 4px;
-      font-size: 14px;
+        padding: 8px 12px;
+        border: 1px solid #4a4a4a;
+        border-radius: 4px;
+        font-size: 14px;
+        background: #3a3a3a;
+        color: #f8f9fa;
     }
+
     .filters button {
-      padding: 6px 12px;
-      background: #3b82f6;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
+        padding: 8px 16px;
+        background: rgb(242, 124, 17);
+        color: #000;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
     }
+
     .filters button:hover {
-      background: #2563eb;
+        background: rgb(255, 140, 30);
+        box-shadow: 0 2px 8px rgba(242, 124, 17, 0.4);
     }
+
+    .chart-section {
+        background: #2a2a2a;
+        padding: 30px;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
     .chart-container {
-      position: relative;
-      width: 90%;
-      max-width: 700px;
-      height: 700px;
-      margin: 0 auto;
+        position: relative;
+        width: 100%;
+        max-width: 700px;
+        height: 700px;
+        margin: 0 auto;
     }
+
     canvas {
-      width: 100% !important;
-      height: 100% !important;
-    }
-  </style>
-</head>
-<body>
-
-  <h2>Cost Distribution by Request Type</h2>
-  
-  <div class="filters">
-    <form method="GET" action="" id="filterForm">
-      <label>
-        <input type="radio" name="filter" value="today" <?php echo $filter_type === 'today' ? 'checked' : ''; ?>> 
-        Today
-      </label>
-      
-      <label>
-        Filter by Date:
-        <input type="date" name="date" value="<?php echo $selected_date; ?>" id="dateInput">
-        <button type="button" onclick="setFilterToDate()">Apply Date</button>
-      </label>
-      
-      <label>
-        Filter by Week:
-        <input type="week" name="week" value="<?php echo $selected_week; ?>" id="weekInput">
-        <button type="button" onclick="setFilterToWeek()">Apply Week</button>
-      </label>
-    </form>
-  </div>
-
-  <h3><?php echo $period_label; ?></h3>
-  <h3>Total Cost: $<?php echo number_format($total_sum, 2); ?></h3>
-
-  <div class="chart-container">
-    <canvas id="costChart"></canvas>
-  </div>
-
-  <script>
-    function setFilterToDate() {
-      const dateInput = document.getElementById('dateInput').value;
-      if (dateInput) {
-        window.location.href = '?filter=date&date=' + encodeURIComponent(dateInput);
-      }
+        width: 100% !important;
+        height: 100% !important;
     }
 
-    function setFilterToWeek() {
-      const weekInput = document.getElementById('weekInput').value;
-      if (weekInput) {
-        window.location.href = '?filter=week&week=' + encodeURIComponent(weekInput);
-      }
-    }
-
-    // Handle radio button for "Today"
-    document.querySelectorAll('input[name="filter"]').forEach(radio => {
-      radio.addEventListener('change', function() {
-        if (this.value === 'today') {
-          window.location.href = '?filter=today';
+    @media (max-width: 768px) {
+        main {
+            padding-left: 3%;
+            padding-right: 3%;
         }
-      });
-    });
 
-    const labels = <?php echo json_encode($labels); ?>;
-    const dataValues = <?php echo json_encode($values, JSON_NUMERIC_CHECK); ?>;
-    const labelWithCost = labels.map((label, i) => `${label} ($${dataValues[i].toFixed(2)})`);
-
-    const ctx = document.getElementById('costChart').getContext('2d');
-    const costChart = new Chart(ctx, {
-      type: 'pie',
-      data: {
-        labels: labelWithCost,
-        datasets: [{
-          label: 'Total Cost',
-          data: dataValues,
-          backgroundColor: [
-            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-            '#ec4899', '#14b8a6', '#6366f1', '#f97316', '#22c55e'
-          ],
-          borderColor: '#ffffff',
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              boxWidth: 20,
-              padding: 15
-            }
-          },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                return `${context.label}: $${context.parsed.toFixed(2)}`;
-              }
-            }
-          }
+        .page-header h1 {
+            font-size: 1.6em;
         }
-      }
-    });
-  </script>
 
-</body>
-</html>
+        .chart-container {
+            height: 500px;
+        }
+
+        .filters form {
+            flex-direction: column;
+        }
+    }
+</style>
+
+<main>
+    <div class="page-header">
+        <h1>💰 Cost Distribution by Request Type</h1>
+        <h3><?php echo $period_label; ?></h3>
+        <h3>Total Cost: $<?php echo number_format($total_sum, 2); ?></h3>
+    </div>
+
+    <div class="filters">
+        <form method="GET" action="" id="filterForm">
+            <label>
+                <input type="radio" name="filter" value="today" <?php echo $filter_type === 'today' ? 'checked' : ''; ?>> 
+                Today
+            </label>
+            
+            <label>
+                Filter by Date:
+                <input type="date" name="date" value="<?php echo $selected_date; ?>" id="dateInput">
+                <button type="button" onclick="setFilterToDate()">Apply Date</button>
+            </label>
+            
+            <label>
+                Filter by Week:
+                <input type="week" name="week" value="<?php echo $selected_week; ?>" id="weekInput">
+                <button type="button" onclick="setFilterToWeek()">Apply Week</button>
+            </label>
+        </form>
+    </div>
+
+    <div class="chart-section">
+        <div class="chart-container">
+            <canvas id="costChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        function setFilterToDate() {
+            const dateInput = document.getElementById('dateInput').value;
+            if (dateInput) {
+                window.location.href = '?filter=date&date=' + encodeURIComponent(dateInput);
+            }
+        }
+
+        function setFilterToWeek() {
+            const weekInput = document.getElementById('weekInput').value;
+            if (weekInput) {
+                window.location.href = '?filter=week&week=' + encodeURIComponent(weekInput);
+            }
+        }
+
+        // Handle radio button for "Today"
+        document.querySelectorAll('input[name="filter"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'today') {
+                    window.location.href = '?filter=today';
+                }
+            });
+        });
+
+        const labels = <?php echo json_encode($labels); ?>;
+        const dataValues = <?php echo json_encode($values, JSON_NUMERIC_CHECK); ?>;
+        const labelWithCost = labels.map((label, i) => `${label} ($${dataValues[i].toFixed(2)})`);
+
+        const ctx = document.getElementById('costChart').getContext('2d');
+        const costChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labelWithCost,
+                datasets: [{
+                    label: 'Total Cost',
+                    data: dataValues,
+                    backgroundColor: [
+                        'rgb(242, 124, 17)', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+                        '#ec4899', '#14b8a6', '#6366f1', '#f97316', '#22c55e'
+                    ],
+                    borderColor: '#2a2a2a',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 20,
+                            padding: 15,
+                            color: '#f8f9fa',
+                            font: {
+                                size: 13
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#2a2a2a',
+                        titleColor: 'rgb(242, 124, 17)',
+                        bodyColor: '#f8f9fa',
+                        borderColor: '#4a4a4a',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.label}: $${context.parsed.toFixed(2)}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</main>
+
+<?php
+include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."footer.html");
+$buffer = ob_get_contents();
+ob_end_clean();
+$title = $TITLE;
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+echo $buffer;
+?>
