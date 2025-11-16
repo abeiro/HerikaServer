@@ -78,9 +78,6 @@ $isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
 
 ob_start();
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."head.html");
-if (!$isEmbed) {
-    include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."navbar.php");
-}
 ?>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -94,7 +91,7 @@ if (!$isEmbed) {
     }
 
     main {
-        padding-top: <?php echo $isEmbed ? '20px' : '100px'; ?>;
+        padding-top: 20px;
         padding-bottom: 40px;
         padding-left: 5%;
         padding-right: 5%;

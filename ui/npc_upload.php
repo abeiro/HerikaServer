@@ -1083,7 +1083,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
             ];
             echo '  <td style="font-size: 0.85em; line-height: 1.4;">';
             foreach ($voiceFields as $type => $voice) {
-                $displayValue = !empty(trim($voice)) ? htmlspecialchars($voice) : '<span style="color: #888; font-style: italic;">None</span>';
+                $displayValue = !empty(trim($voice)) ? htmlspecialchars($voice) : '<span style="color: #888; font-style: italic;">Automatic</span>';
                 echo '<div style="margin-bottom: 2px;"><strong>' . $type . ':</strong> ' . $displayValue . '</div>';
             }
             echo '</td>';

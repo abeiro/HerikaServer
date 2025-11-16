@@ -50,6 +50,23 @@ function ReplacePlayerNamePlaceholder($s_input) {
     return $s_res;
 }
 
+function isItemBlacklisted($itemName) {
+    if (!isset($GLOBALS["ITEM_BLACKLIST"]) || empty($GLOBALS["ITEM_BLACKLIST"])) {
+        return false;
+    }
+    
+    $blacklistedItems = array_map('trim', explode(',', $GLOBALS["ITEM_BLACKLIST"]));
+    $itemNameLower = strtolower(trim($itemName));
+    
+    foreach ($blacklistedItems as $blacklistedItem) {
+        if (strtolower($blacklistedItem) === $itemNameLower) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
 
 function DataDequeue()
 {
@@ -213,7 +230,11 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'left_hand', 'right_hand'];
                         foreach ($slots as $slot) {
                             if (!empty($metaData["equipment"][$slot])) {
-                                $equipmentParts[] = $metaData["equipment"][$slot];
+                                $itemName = $metaData["equipment"][$slot];
+                                // Skip blacklisted items
+                                if (!isItemBlacklisted($itemName)) {
+                                    $equipmentParts[] = $itemName;
+                                }
                             }
                         }
                         if (!empty($equipmentParts)) {
@@ -299,12 +320,17 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 $baseID = $parts[1];
                 $itemName = $parts[2];
                 
+                // Strip (STEALING) tag for blacklist check
+                $itemNameClean = str_replace(' (STEALING)', '', $itemName);
+                
+                // Skip blacklisted items
+                if (isItemBlacklisted($itemNameClean)) {
+                    continue;
+                }
+                
                 // Format for display: "RefID:ItemName" (hide BaseID from NPC, keep STEALING tag)
                 $displayItem = "{$refID}:{$itemName}";
                 $formattedItems[] = $displayItem;
-                
-                // Strip (STEALING) tag for description lookup to avoid duplicates
-                $itemNameClean = str_replace(' (STEALING)', '', $itemName);
                 
                 // Track unique base IDs for descriptions
                 if (!in_array($baseID, $seenBaseIDs)) {
@@ -326,6 +352,14 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 $refID = $parts[0];
                 $itemName = $parts[1];
                 
+                // Strip (STEALING) tag for blacklist check
+                $itemNameClean = str_replace(' (STEALING)', '', $itemName);
+                
+                // Skip blacklisted items
+                if (isItemBlacklisted($itemNameClean)) {
+                    continue;
+                }
+                
                 // Keep STEALING tag in display
                 $displayItem = "{$refID}:{$itemName}";
                 $formattedItems[] = $displayItem;
@@ -345,7 +379,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 $descriptionText = "\n\n# ITEM DESCRIPTIONS\n## " . implode("\n## ", $descParts);
             }
             
-            $contextContent = "<nearby_items>\n# NEARBY ITEMS ON THE GROUND (format: RefID:ItemName)\n## {$itemsText}{$descriptionText}\n</nearby_items>";
+            $contextContent = "<nearby_items>\n# NEARBY ITEMS (format: RefID:ItemName)\n## {$itemsText}{$descriptionText}\n</nearby_items>";
             $lastDialog[] = array('role' => 'user', 'content' => $contextContent);
         }
     }
@@ -860,7 +894,20 @@ function extractActorName(string $content): ?string {
 function extractItemInfo(string $content): ?string {
     // Extract "N ItemName from/in X" or just "N ItemName"
     if (preg_match('/(?:found|took|looted|traded|gave)\s+(.+?)(?:,\(value.+\))?$/i', $content, $matches)) {
-        return trim($matches[1]);
+        $itemInfo = trim($matches[1]);
+        
+        // Extract just the item name (remove quantity) for blacklist check
+        // Pattern: "2 Iron Sword" or "Iron Sword" or "an Iron Sword"
+        if (preg_match('/^(?:\d+\s+|an?\s+)?(.+?)$/i', $itemInfo, $nameMatches)) {
+            $itemName = trim($nameMatches[1]);
+            
+            // Check if item is blacklisted
+            if (isItemBlacklisted($itemName)) {
+                return null; // Filter out blacklisted items
+            }
+        }
+        
+        return $itemInfo;
     }
     return null;
 }
@@ -934,19 +981,31 @@ function flushConsolidationBuffer(array $buffer): array {
     foreach ($buffer as $buffered) {
         $event = $buffered['event'];
         
-        // Check if this is a multi-item consolidation
-        if (isset($buffered['items']) && count($buffered['items']) > 1) {
-            // Multiple items picked up by same actor - list them
-            $content = $event['content'];
+        // Check if this is an item event (single or multi) and filter blacklisted items
+        if (isset($buffered['items'])) {
+            // Filter out null entries (blacklisted items)
+            $filteredItems = array_filter($buffered['items']);
             
-            if (preg_match('/^(.+?)\s+(found|took|looted|traded|gave)\s+/i', $content, $matches)) {
-                $actor = trim($matches[1]);
-                $action = trim($matches[2]);
-                
-                // Build item list
-                $itemList = implode(', ', array_filter($buffered['items']));
-                $event['content'] = "{$actor} {$action} {$itemList}";
+            // If all items were filtered out, skip this event entirely
+            if (empty($filteredItems)) {
+                continue;
             }
+            
+            // Check if this is a multi-item consolidation
+            if (count($filteredItems) > 1) {
+                // Multiple items picked up by same actor - list them
+                $content = $event['content'];
+                
+                if (preg_match('/^(.+?)\s+(found|took|looted|traded|gave)\s+/i', $content, $matches)) {
+                    $actor = trim($matches[1]);
+                    $action = trim($matches[2]);
+                    
+                    // Build item list from filtered items
+                    $itemList = implode(', ', $filteredItems);
+                    $event['content'] = "{$actor} {$action} {$itemList}";
+                }
+            }
+            // Single item events will keep their original content (already filtered by extractItemInfo)
         } elseif (isset($buffered['actors']) && count($buffered['actors']) > 1) {
             // Multiple actors doing the same action - list them
             $actorList = implode(', ', $buffered['actors']);
@@ -4684,6 +4743,12 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         foreach ($slots as $slot => $label) {
             if (!empty($metaData["equipment"][$slot])) {
                 $itemName = $metaData["equipment"][$slot];
+                
+                // Skip blacklisted items
+                if (isItemBlacklisted($itemName)) {
+                    continue;
+                }
+                
                 $baseid = isset($metaData["equipment"][$slot . '_baseid']) ? $metaData["equipment"][$slot . '_baseid'] : null;
                 
                 $itemLine = "  • {$label}: {$itemName}";
@@ -4736,6 +4801,12 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         foreach ($metaData["inventory"] as $item) {
             if ($item["name"]!='<Missing Name>') {
                 $itemName = $item["name"];
+                
+                // Skip blacklisted items
+                if (isItemBlacklisted($itemName)) {
+                    continue;
+                }
+                
                 $itemCount = $item["count"];
                 $baseid = isset($item["baseid"]) ? $item["baseid"] : null;
                 

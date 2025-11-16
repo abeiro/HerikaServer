@@ -126,6 +126,7 @@ $RPG_COMMENTS=["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "
 $DETECT_MAGIC_EVENT=true; //Enable detection and logging of NPC spellcasting events.
 $MAGIC_EVENT_BLACKLIST=""; //Comma-separated list of magic events to exclude from logging.
 $LOCATION_BLACKLIST="Dark Brotherhood Sanctuary, Twilight Sepulcher"; //Comma-separated list of location names to exclude from Points of Interest context.
+$ITEM_BLACKLIST=""; //Comma-separated list of item/armor names to exclude from dynamic context.
 $HIDE_AMBIENT_COMBAT=false; //Hide ambient NPC-to-NPC combat deaths from context.
 
 //[AI/LLM Service Selection]
