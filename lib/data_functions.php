@@ -379,7 +379,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 $descriptionText = "\n\n# ITEM DESCRIPTIONS\n## " . implode("\n## ", $descParts);
             }
             
-            $contextContent = "<nearby_items>\n# NEARBY ITEMS ON THE GROUND (format: RefID:ItemName)\n## {$itemsText}{$descriptionText}\n</nearby_items>";
+            $contextContent = "<nearby_items>\n# NEARBY ITEMS (format: RefID:ItemName)\n## {$itemsText}{$descriptionText}\n</nearby_items>";
             $lastDialog[] = array('role' => 'user', 'content' => $contextContent);
         }
     }
