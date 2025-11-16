@@ -26,6 +26,12 @@
 
     // specify the available actions which will be made available in the context
     Function setActions() {
+        // Skip actions list for narration events (The Narrator doesn't need action options for atmospheric descriptions)
+        if (isset($GLOBALS["gameRequest"]) && $GLOBALS["gameRequest"][0] === "narration") {
+            $GLOBALS["FUNC_LIST"] = ["Talk"];  // Only Talk action for narration
+            return;
+        }
+        
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             // inject the prompt here with the actions (original flat format)
             $GLOBALS["COMMAND_PROMPT"].="\n<available_actions_list>\n";
