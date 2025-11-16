@@ -3420,8 +3420,12 @@ function call_llm() {
 
         $buffer=strtr($buffer, array("\""=>"",".)"=>")."));
 
+        
+        $INCREMENTAL_SENTENCESIZE=20;
+        
+
         // For narration events, allow immediate streaming without minimum buffer size
-        if ($gameRequest[0] !== "narration" && strlen($buffer)<MINIMUM_SENTENCE_SIZE) {	// Avoid too short buffers
+        if ($gameRequest[0] !== "narration" && strlen($buffer)<$INCREMENTAL_SENTENCESIZE) {	// Avoid too short buffers
             continue;
         }
 
@@ -3433,7 +3437,7 @@ function call_llm() {
         $position = findDotPosition($buffer);
 
         //echo "<$buffer>".PHP_EOL;
-        if (($position !== false) && ($gameRequest[0] === "narration" || $position>MINIMUM_SENTENCE_SIZE)) {
+        if (($position !== false) && ($gameRequest[0] === "narration" || $position>$INCREMENTAL_SENTENCESIZE)) {
             $extractedData = substr($buffer, 0, $position + 1);
             $remainingData = substr($buffer, $position + 1);
             $sentences=split_sentences_stream(cleanResponse($extractedData));
@@ -3442,6 +3446,7 @@ function call_llm() {
 
             if ($gameRequest[0] != "diary") {
                 returnLines($sentences);
+                $INCREMENTAL_SENTENCESIZE=MINIMUM_SENTENCE_SIZE;
             } else {
                 $talkedSoFar[md5(implode(" ", $sentences))]=implode(" ", $sentences);
             }
