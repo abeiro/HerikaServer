@@ -3332,7 +3332,7 @@ function call_llm() {
 
     } else {
 
-        $connectionHandler->open($contextData,$overrideParameters);
+        
             /* *****
         Player TTS
 
@@ -3341,6 +3341,8 @@ function call_llm() {
         if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && !Translation::isSavePlayerTranslationEnabled()) {
             require(__DIR__."/../processor/player_tts.php");
         }
+
+        $connectionHandler->open($contextData,$overrideParameters);
     }
 
 

@@ -431,6 +431,10 @@ $STT["LOCALWHISPER"]["FORMFIELD"]="audio_file"; //(audio_file,file) Form field n
 $STT["DEEPGRAM"]["LANG"]="en"; //Language.
 $STT["DEEPGRAM"]["MODEL"]="nova-3"; //Model to use.
 
+$STT["PARAKEET"]["LANG"]="en";
+
+
+
 //[Image to Text (Soulgaze)]
 $ITTFUNCTION="openrouter";
 //OpenAI
