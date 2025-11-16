@@ -50,6 +50,23 @@ function ReplacePlayerNamePlaceholder($s_input) {
     return $s_res;
 }
 
+function isItemBlacklisted($itemName) {
+    if (!isset($GLOBALS["ITEM_BLACKLIST"]) || empty($GLOBALS["ITEM_BLACKLIST"])) {
+        return false;
+    }
+    
+    $blacklistedItems = array_map('trim', explode(',', $GLOBALS["ITEM_BLACKLIST"]));
+    $itemNameLower = strtolower(trim($itemName));
+    
+    foreach ($blacklistedItems as $blacklistedItem) {
+        if (strtolower($blacklistedItem) === $itemNameLower) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
 
 function DataDequeue()
 {
@@ -213,7 +230,11 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'left_hand', 'right_hand'];
                         foreach ($slots as $slot) {
                             if (!empty($metaData["equipment"][$slot])) {
-                                $equipmentParts[] = $metaData["equipment"][$slot];
+                                $itemName = $metaData["equipment"][$slot];
+                                // Skip blacklisted items
+                                if (!isItemBlacklisted($itemName)) {
+                                    $equipmentParts[] = $itemName;
+                                }
                             }
                         }
                         if (!empty($equipmentParts)) {
@@ -299,12 +320,17 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 $baseID = $parts[1];
                 $itemName = $parts[2];
                 
+                // Strip (STEALING) tag for blacklist check
+                $itemNameClean = str_replace(' (STEALING)', '', $itemName);
+                
+                // Skip blacklisted items
+                if (isItemBlacklisted($itemNameClean)) {
+                    continue;
+                }
+                
                 // Format for display: "RefID:ItemName" (hide BaseID from NPC, keep STEALING tag)
                 $displayItem = "{$refID}:{$itemName}";
                 $formattedItems[] = $displayItem;
-                
-                // Strip (STEALING) tag for description lookup to avoid duplicates
-                $itemNameClean = str_replace(' (STEALING)', '', $itemName);
                 
                 // Track unique base IDs for descriptions
                 if (!in_array($baseID, $seenBaseIDs)) {
@@ -325,6 +351,14 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 // Old format without BaseID - just use as-is
                 $refID = $parts[0];
                 $itemName = $parts[1];
+                
+                // Strip (STEALING) tag for blacklist check
+                $itemNameClean = str_replace(' (STEALING)', '', $itemName);
+                
+                // Skip blacklisted items
+                if (isItemBlacklisted($itemNameClean)) {
+                    continue;
+                }
                 
                 // Keep STEALING tag in display
                 $displayItem = "{$refID}:{$itemName}";
@@ -4684,6 +4718,12 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         foreach ($slots as $slot => $label) {
             if (!empty($metaData["equipment"][$slot])) {
                 $itemName = $metaData["equipment"][$slot];
+                
+                // Skip blacklisted items
+                if (isItemBlacklisted($itemName)) {
+                    continue;
+                }
+                
                 $baseid = isset($metaData["equipment"][$slot . '_baseid']) ? $metaData["equipment"][$slot . '_baseid'] : null;
                 
                 $itemLine = "  • {$label}: {$itemName}";
@@ -4736,6 +4776,12 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         foreach ($metaData["inventory"] as $item) {
             if ($item["name"]!='<Missing Name>') {
                 $itemName = $item["name"];
+                
+                // Skip blacklisted items
+                if (isItemBlacklisted($itemName)) {
+                    continue;
+                }
+                
                 $itemCount = $item["count"];
                 $baseid = isset($item["baseid"]) ? $item["baseid"] : null;
                 
