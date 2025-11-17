@@ -298,7 +298,7 @@ function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribut
         });
      } else if (e.target === lb_reimage2) {
         showProcessing();
-        uHint=prompt('Hint');
+        uHint=prompt('Hint','Convert image-0 to a semi-realistic style, like a high-quality CGI render. Reimagine the whole picture, while preserving  details like tattos, skin color, eye color, hair style, hair color, clothing, make-up , body proportions and environment.');
         fetch('cmd/gallery_tool_convert_style_replicate.php', {
             method: 'POST',
             headers: {
