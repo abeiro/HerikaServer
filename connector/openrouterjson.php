@@ -601,6 +601,9 @@ class openrouterjson
             if (stripos($this->_model, "grok-3-mini") != false) {//grok-3-mini needs reasoning cand cannot be disabled
                 $data["reasoning"]["enabled"] = true;
             }            
+            if (stripos($this->_model, "qwen3-235b-a22b-thinking-2507") != false) {//qwen/qwen3-235b-a22b-thinking-2507 needs reasoning cand cannot be disabled
+                $data["reasoning"]["enabled"] = true;
+            }            
         }
         
         if ($this->_is_openai) {
