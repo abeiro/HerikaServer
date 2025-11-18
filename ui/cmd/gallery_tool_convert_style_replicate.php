@@ -75,7 +75,7 @@ if ($method === 'POST') {
 
     $payload = json_encode([
         "input" => [
-            "prompt"                 => "Convert image-0 to a semi-realistic style, like a high-quality CGI render. Reimagine the whole picture, while preserving  details like tattos, skin color, eye color, hair style, hair color, clothing, make-up , body proportions and environment. $hints",
+            "prompt"                 => $jsonDataInput["userhint"]?$jsonDataInput["userhint"]:"Convert image-0 to a semi-realistic style, like a high-quality CGI render. Reimagine the whole picture, while preserving  details like tattos, skin color, eye color, hair style, hair color, clothing, make-up , body proportions and environment. $hints",
             "input_image"            => $sourceImageData,
             "output_format"          => "png",
             "num_inference_steps"    => 30,
