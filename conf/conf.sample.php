@@ -390,6 +390,18 @@ $TTS["PIPERTTS"]["noise_w_scale"]=0.0; //phoneme width variability - default 0.8
 $TTS["PIPERTTS"]["speaker"]=''; // name of speaker for multi-speaker voices
 $TTS["PIPERTTS"]["speaker_id"]=0; //id of speaker for multi-speaker voices; overrides speaker
 
+//Deepgram TTS
+$TTS["deepgram"]["API_KEY"]=''; //API key.
+$TTS["deepgram"]["model"]='aura-asteria-en'; //Voice ID.
+$TTS["deepgram"]["bitrate"]=24000; //Bitrate.
+
+//Cartesia TTS
+$TTS["CARTESIA"]["API_KEY"]=''; //API key.
+$TTS["CARTESIA"]["voiceid"]=''; //Voice file name. Works like XTTS voiceid.
+$TTS["CARTESIA"]["language"]='en'; //Language (en, fr, de, es, etc.).
+$TTS["CARTESIA"]["model_id"]='sonic-3'; //Model (sonic-3, sonic-english, sonic-multilingual).
+$TTS["CARTESIA"]["speed"]='normal'; //Speed (slowest, slow, normal, fast, fastest).
+
 //[Player TTS]
 $TTSFUNCTION_PLAYER="none";
 $TTSFUNCTION_PLAYER_VOICE="malenord";
