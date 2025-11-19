@@ -866,7 +866,29 @@ if ($checkVersion("npc_templates_custom")<20250211001) {
 //  sql_gamets_convert_functions 20250218001
 //----------------------------------------------------
 
-if ($checkVersion("sql_gamets_convert_functions")<20250218001) {
+// Check if functions exist to force patch if they're missing
+$checkFunctionExists = function($functionName) {
+    global $db;
+    $query = "
+        SELECT 1 
+        FROM information_schema.routines 
+        WHERE routine_schema = 'public' 
+          AND routine_name = '$functionName'
+    ";
+    $result = $db->fetchAll($query);
+    return (sizeof($result) > 0);
+};
+
+$forceRecreate = false;
+if (!$checkFunctionExists('convert_gamets2skyrim_date') || 
+    !$checkFunctionExists('convert_gamets2days') ||
+    !$checkFunctionExists('convert_gamets2gregorian_date') ||
+    !$checkFunctionExists('convert_gamets2skyrim_long_date')) {
+    Logger::warn("Some gamets conversion functions are missing. Forcing recreation.");
+    $forceRecreate = true;
+}
+
+if ($checkVersion("sql_gamets_convert_functions")<20250218001 || $forceRecreate) {
     Logger::debug(" try patch: sql_gamets_convert_functions 20250218001");
 
     $db->execQuery("DROP VIEW IF EXISTS public.speech_view;");
@@ -1033,7 +1055,17 @@ if ($checkVersion("sql_gamets_convert_functions")<20250218001) {
     Logger::debug("Applied patch: sql_gamets_convert_functions 20250218001");
 }
 
-if ($checkVersion("sql_gamets_convert_functions")<20250226001) {
+// Check if additional functions exist to force patch if they're missing
+$forceRecreate2 = false;
+if (!$checkFunctionExists('convert_gamets2skyrim_date_fmt') || 
+    !$checkFunctionExists('convert_gamets2skyrim_long_date2_nt') ||
+    !$checkFunctionExists('convert_gamets2skyrim_long_date_nt') ||
+    !$checkFunctionExists('convert_gamets2skyrim_time_daypart')) {
+    Logger::warn("Some additional gamets conversion functions are missing. Forcing recreation.");
+    $forceRecreate2 = true;
+}
+
+if ($checkVersion("sql_gamets_convert_functions")<20250226001 || $forceRecreate2) {
     Logger::debug(" try patch: sql_gamets_convert_functions 2 20250226001");
 
     $db->execQuery("DROP FUNCTION IF EXISTS public.convert_gamets2skyrim_date_fmt(gamets bigint, s_format text) CASCADE;");
@@ -1213,67 +1245,81 @@ if ($checkVersion("sql_gamets_convert_functions")<20250226001) {
 
 
 // Views dependant on sql_gamets_convert_functions
-// Ensure speech_view exists
-$query = "
-    SELECT view_definition 
-    FROM information_schema.views 
-    WHERE table_name = 'speech_view'
-";
+// Only create views if the required functions exist
+$requiredFunctions = [
+    'convert_gamets2skyrim_date',
+    'convert_gamets2skyrim_long_date',
+    'convert_gamets2days',
+    'convert_gamets2gregorian_date'
+];
 
-
-$existsColumn=$db->fetchAll($query);
-if (!$existsColumn[0]["view_definition"]) {
-        $db->execQuery("CREATE OR REPLACE VIEW public.speech_view  AS
-  SELECT s.sess,
-    s.speaker,
-    s.speech,
-    s.location,
-    s.listener,
-    s.topic,
-    s.localts,
-    s.gamets,
-    s.ts,
-    s.rowid,
-    s.companions,
-    s.audios,
-    public.convert_gamets2skyrim_date(s.gamets) AS sk_date,
-    public.convert_gamets2skyrim_long_date(s.gamets) AS sk_long_date,
-    public.convert_gamets2days(s.gamets) AS sk_days,
-    public.convert_gamets2gregorian_date(s.gamets) AS gregorian_date
-   FROM public.speech s;
-");
-
+$allFunctionsExist = true;
+foreach ($requiredFunctions as $funcName) {
+    if (!$checkFunctionExists($funcName)) {
+        Logger::warn("Required function $funcName does not exist. Skipping view creation. Run database functions patch first.");
+        $allFunctionsExist = false;
+        break;
+    }
 }
 
+if ($allFunctionsExist) {
+    // Ensure speech_view exists
+    $query = "
+        SELECT view_definition 
+        FROM information_schema.views 
+        WHERE table_name = 'speech_view'
+    ";
 
-// Ensure eventlog_view exists
-$query = "
-    SELECT view_definition 
-    FROM information_schema.views 
-    WHERE table_name = 'eventlog_view'
-";
+    $existsColumn=$db->fetchAll($query);
+    if (!$existsColumn[0]["view_definition"]) {
+            $db->execQuery("CREATE OR REPLACE VIEW public.speech_view  AS
+      SELECT s.sess,
+        s.speaker,
+        s.speech,
+        s.location,
+        s.listener,
+        s.topic,
+        s.localts,
+        s.gamets,
+        s.ts,
+        s.rowid,
+        s.companions,
+        s.audios,
+        public.convert_gamets2skyrim_date(s.gamets) AS sk_date,
+        public.convert_gamets2skyrim_long_date(s.gamets) AS sk_long_date,
+        public.convert_gamets2days(s.gamets) AS sk_days,
+        public.convert_gamets2gregorian_date(s.gamets) AS gregorian_date
+       FROM public.speech s;
+    ");
+    }
 
+    // Ensure eventlog_view exists
+    $query = "
+        SELECT view_definition 
+        FROM information_schema.views 
+        WHERE table_name = 'eventlog_view'
+    ";
 
-$existsColumn=$db->fetchAll($query);
-if (!$existsColumn[0]["view_definition"]) {
-        $db->execQuery("CREATE OR REPLACE VIEW public.eventlog_view  AS
- SELECT e.type,
-    e.data,
-    e.sess,
-    e.gamets,
-    e.localts,
-    e.ts,
-    e.rowid,
-    e.people,
-    e.location,
-    e.party,
-    public.convert_gamets2skyrim_date(e.gamets) AS sk_date,
-    public.convert_gamets2skyrim_long_date(e.gamets) AS sk_long_date,
-    public.convert_gamets2days(e.gamets) AS sk_days,
-    public.convert_gamets2gregorian_date(e.gamets) AS gregorian_date
-   FROM public.eventlog e;
-");
-
+    $existsColumn=$db->fetchAll($query);
+    if (!$existsColumn[0]["view_definition"]) {
+            $db->execQuery("CREATE OR REPLACE VIEW public.eventlog_view  AS
+     SELECT e.type,
+        e.data,
+        e.sess,
+        e.gamets,
+        e.localts,
+        e.ts,
+        e.rowid,
+        e.people,
+        e.location,
+        e.party,
+        public.convert_gamets2skyrim_date(e.gamets) AS sk_date,
+        public.convert_gamets2skyrim_long_date(e.gamets) AS sk_long_date,
+        public.convert_gamets2days(e.gamets) AS sk_days,
+        public.convert_gamets2gregorian_date(e.gamets) AS gregorian_date
+       FROM public.eventlog e;
+    ");
+    }
 }
 
 //----------------------------------------------------
