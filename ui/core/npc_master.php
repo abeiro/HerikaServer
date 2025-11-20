@@ -1111,9 +1111,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 salCb.setAttribute('data-profile-default', profile.sal ? '1' : '0');
                 const hint = salCb.closest('.form-item').querySelector('.hint');
                 if (hint) {
-                    const base = 'Enable salutation responses after periods of absence.';
-                    hint.innerHTML = base + (profile.sal ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '');
-                }
+                    const base = 'Enable salutation responses after periods of absence.';                }
             }
             
             // Update background_life_commands
@@ -1123,9 +1121,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 blcCb.setAttribute('data-profile-default', profile.blc ? '1' : '0');
                 const hint = blcCb.closest('.form-item').querySelector('.hint');
                 if (hint) {
-                    const base = 'Enable background life command processing for this NPC.';
-                    hint.innerHTML = base + (profile.blc ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '');
-                }
+                    const base = 'NPC generates inner thoughts every 5 in-game days. When enabled, NPC can also autonomously travel to new locations based on AI decisions. When disabled, only generates thoughts without movement.';                }
             }
             
             // Update gps_track
@@ -1135,9 +1131,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 gpsCb.setAttribute('data-profile-default', profile.gps ? '1' : '0');
                 const hint = gpsCb.closest('.form-item').querySelector('.hint');
                 if (hint) {
-                    const base = 'Enable GPS tracking for this NPC\'s location.';
-                    hint.innerHTML = base + (profile.gps ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '');
-                }
+                    const base = 'Tracks NPC coordinates every in-game hour (default is daily).';                }
             }
         }
     })();
@@ -1390,17 +1384,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         </div>
 
         <div class="form-item">
-            <label for="background_life_commands" class="label-with-toggle">🎮Background Life Commands
+            <label for="background_life_commands" class="label-with-toggle">🎮 Background Life: Autonomous Actions
                 <input type="checkbox" id="background_life_commands" name="background_life_commands" value="1" <?= $blcChecked ? "checked" : "" ?> data-profile-default="<?= $profileBlcEnabled ? '1' : '0' ?>">
             </label>
-            <small class="hint">Enable background life command processing for this NPC.<?= $blcFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
+            <small class="hint">NPC generates inner thoughts every 5 in-game days. When enabled, NPC can also autonomously travel to new locations based on AI decisions. When disabled, only generates thoughts without movement.<?= $blcFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
         </div>
 
         <div class="form-item">
-            <label for="gps_track" class="label-with-toggle">📍GPS Track
+            <label for="gps_track" class="label-with-toggle">📍 Background Life: Hourly Tracking
                 <input type="checkbox" id="gps_track" name="gps_track" value="1" <?= $gpsChecked ? "checked" : "" ?> data-profile-default="<?= $profileGpsEnabled ? '1' : '0' ?>">
             </label>
-            <small class="hint">Enable GPS tracking for this NPC's location.<?= $gpsFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
+            <small class="hint">Tracks NPC coordinates every in-game hour (default is daily).<?= $gpsFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
         </div>
 
         <div class="form-item span-2">
