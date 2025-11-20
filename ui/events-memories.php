@@ -161,6 +161,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         text-align: center;
     }
 
+    /* Event Log Table - People Present column should be 3x wider */
+    #eventlog-tab table th:nth-child(4),
+    #eventlog-tab table td:nth-child(4) {
+        min-width: 300px;
+        width: 20%;
+    }
+
     /* Responsive Table */
     @media (max-width: 768px) {
         .table-container {
@@ -179,6 +186,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         .tab-button {
             padding: 10px 14px;
             font-size: 0.9em;
+        }
+        
+        #eventlog-tab table th:nth-child(4),
+        #eventlog-tab table td:nth-child(4) {
+            min-width: 150px;
+            width: auto;
         }
     }
 
@@ -441,11 +454,18 @@ function getTimeColor($time) {
             $isAutoRefresh = isset($_GET["autorefresh"]) && $_GET["autorefresh"];
             echo "<div style='display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0;'>";
             
+            echo "<button id='live-toggle-btn-eventlog' onclick=\"toggleAutoRefreshEventLog()\" class='btn-base " . ($isAutoRefresh ? "btn-secondary" : "btn-primary") . "' style='padding: 8px 12px; font-size: 0.9em;' title='Toggle live monitoring'>";
+            echo $isAutoRefresh ? "⏸️ Stop Live" : "📡 Monitor Live";
+            echo "</button>";
+            
             if ($isAutoRefresh) {
-                echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog'\" class='btn-base btn-secondary' style='padding: 8px 12px; font-size: 0.9em;' title='Stop monitoring events'>⏸️ Stop Live</button>";
-                echo "<span style='margin-left: 10px; color: #28a745; font-weight: bold; font-size: 0.9em;'>🔴 LIVE</span>";
+                echo "<span id='live-indicator-eventlog' style='margin-left: 10px; color: #28a745; font-weight: bold; font-size: 0.9em;'>🔴 LIVE</span>";
+                echo "<span id='last-update-eventlog' style='margin-left: 10px; color: #aaa; font-size: 0.8em;'></span>";
+                echo "<span id='new-events-count-eventlog' style='margin-left: 10px; color: #4CAF50; font-size: 0.8em;'></span>";
             } else {
-                echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&autorefresh=true'\" class='btn-base btn-primary' style='padding: 8px 12px; font-size: 0.9em;' title='Start monitoring events with auto-refresh'>📡 Monitor Live</button>";
+                echo "<span id='live-indicator-eventlog' style='margin-left: 10px; color: #28a745; font-weight: bold; font-size: 0.9em; display: none;'>🔴 LIVE</span>";
+                echo "<span id='last-update-eventlog' style='margin-left: 10px; color: #aaa; font-size: 0.8em; display: none;'></span>";
+                echo "<span id='new-events-count-eventlog' style='margin-left: 10px; color: #4CAF50; font-size: 0.8em; display: none;'></span>";
             }
             
             // Add delete buttons inline
@@ -591,11 +611,200 @@ function getTimeColor($time) {
             }
             </script>";
             
+            echo "<div id='eventlog-table-container'>";
             print_array_as_table($mappedResults);
+            echo "</div>";
             
-            if (isset($_GET["autorefresh"]) && $_GET["autorefresh"]) {
-                header("Refresh:5");
+            // Smart AJAX auto-refresh script
+            echo "<script>
+            let autoRefreshIntervalEventLog = null;
+            let isLiveModeEventLog = " . ($isAutoRefresh ? 'true' : 'false') . ";
+            let lastRowIdEventLog = 0;
+            let totalNewEventsEventLog = 0;
+            const currentPageEventLog = $page;
+            const currentLimitEventLog = $limit;
+            const headersEventLog = " . json_encode($columnHeaders) . ";
+            
+            function getLastRowIdEventLog() {
+                const table = document.querySelector('#eventlog-table-container table');
+                if (!table) return 0;
+                
+                const rows = table.querySelectorAll('tr');
+                let maxRowId = 0;
+                
+                rows.forEach(row => {
+                    const checkbox = row.querySelector('.event-checkbox');
+                    if (checkbox) {
+                        const rowId = parseInt(checkbox.getAttribute('data-rowid'));
+                        if (!isNaN(rowId) && rowId > maxRowId) {
+                            maxRowId = rowId;
+                        }
+                    }
+                });
+                
+                return maxRowId;
             }
+            
+            function updateEventTableEventLog() {
+                if (!isLiveModeEventLog) return;
+                
+                const liveIndicator = document.getElementById('live-indicator-eventlog');
+                if (liveIndicator) {
+                    liveIndicator.style.opacity = '0.5';
+                }
+                
+                const sinceRowId = lastRowIdEventLog;
+                
+                fetch('" . $webRoot . "/ui/api/eventlog.php?since_rowid=' + sinceRowId)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.data.length > 0) {
+                            const table = document.querySelector('#eventlog-table-container table');
+                            if (!table) return;
+                            
+                            const tbody = table.querySelector('tbody') || table;
+                            const headerRow = tbody.querySelector('tr:first-child');
+                            
+                            data.data.reverse().forEach(row => {
+                                const newRow = document.createElement('tr');
+                                newRow.style.backgroundColor = '#2d5a2d';
+                                
+                                // Add checkbox cell
+                                const checkboxTd = document.createElement('td');
+                                checkboxTd.innerHTML = '<input type=\"checkbox\" class=\"event-checkbox\" data-rowid=\"' + (row['ROWID'] || '') + '\" style=\"cursor: pointer; width: 18px; height: 18px;\" onclick=\"updateDeleteButton()\">';
+                                newRow.appendChild(checkboxTd);
+                                
+                                // Add data cells
+                                const td1 = document.createElement('td');
+                                td1.innerHTML = row['Event'] || '';
+                                newRow.appendChild(td1);
+                                
+                                const td2 = document.createElement('td');
+                                td2.innerHTML = row['Events'] || '';
+                                newRow.appendChild(td2);
+                                
+                                // People Present column
+                                const td3 = document.createElement('td');
+                                td3.textContent = row['People Present'] || '';
+                                newRow.appendChild(td3);
+                                
+                                const td4 = document.createElement('td');
+                                td4.innerHTML = row[headersEventLog['gamets']] || '';
+                                newRow.appendChild(td4);
+                                
+                                const td5 = document.createElement('td');
+                                td5.innerHTML = row['Time (UTC)'] || '';
+                                newRow.appendChild(td5);
+                                
+                                const td6 = document.createElement('td');
+                                td6.innerHTML = row['TS'] || '';
+                                newRow.appendChild(td6);
+                                
+                                const td7 = document.createElement('td');
+                                td7.textContent = row['ROWID'] || '';
+                                newRow.appendChild(td7);
+                                
+                                if (headerRow && headerRow.nextSibling) {
+                                    tbody.insertBefore(newRow, headerRow.nextSibling);
+                                } else {
+                                    tbody.appendChild(newRow);
+                                }
+                                
+                                const rowIdNum = parseInt(row['ROWID']);
+                                if (!isNaN(rowIdNum) && rowIdNum > lastRowIdEventLog) {
+                                    lastRowIdEventLog = rowIdNum;
+                                }
+                                
+                                setTimeout(() => {
+                                    newRow.style.transition = 'background-color 1s';
+                                    newRow.style.backgroundColor = '';
+                                }, 3000);
+                            });
+                            
+                            totalNewEventsEventLog += data.new_count;
+                            const countEl = document.getElementById('new-events-count-eventlog');
+                            if (countEl) {
+                                countEl.textContent = '+' + totalNewEventsEventLog + ' new';
+                                countEl.style.display = 'inline';
+                            }
+                        }
+                        
+                        const now = new Date();
+                        const timeStr = now.toLocaleTimeString();
+                        const updateEl = document.getElementById('last-update-eventlog');
+                        if (updateEl) {
+                            updateEl.textContent = 'Last checked: ' + timeStr;
+                            updateEl.style.display = 'inline';
+                        }
+                        
+                        if (liveIndicator) {
+                            liveIndicator.style.opacity = '1';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching eventlog:', error);
+                        const liveIndicator = document.getElementById('live-indicator-eventlog');
+                        if (liveIndicator) {
+                            liveIndicator.style.opacity = '1';
+                        }
+                    });
+            }
+            
+            function toggleAutoRefreshEventLog() {
+                isLiveModeEventLog = !isLiveModeEventLog;
+                
+                const btn = document.getElementById('live-toggle-btn-eventlog');
+                const indicator = document.getElementById('live-indicator-eventlog');
+                const updateEl = document.getElementById('last-update-eventlog');
+                const countEl = document.getElementById('new-events-count-eventlog');
+                
+                if (isLiveModeEventLog) {
+                    btn.textContent = '⏸️ Stop Live';
+                    btn.className = 'btn-base btn-secondary';
+                    btn.style.padding = '8px 12px';
+                    btn.style.fontSize = '0.9em';
+                    
+                    if (indicator) indicator.style.display = 'inline';
+                    if (updateEl) updateEl.style.display = 'inline';
+                    if (countEl) countEl.style.display = 'inline';
+                    
+                    lastRowIdEventLog = getLastRowIdEventLog();
+                    totalNewEventsEventLog = 0;
+                    
+                    autoRefreshIntervalEventLog = setInterval(updateEventTableEventLog, 5000);
+                    
+                    const now = new Date();
+                    if (updateEl) {
+                        updateEl.textContent = 'Last checked: ' + now.toLocaleTimeString();
+                    }
+                } else {
+                    btn.textContent = '📡 Monitor Live';
+                    btn.className = 'btn-base btn-primary';
+                    btn.style.padding = '8px 12px';
+                    btn.style.fontSize = '0.9em';
+                    
+                    if (indicator) indicator.style.display = 'none';
+                    if (updateEl) updateEl.style.display = 'none';
+                    if (countEl) countEl.style.display = 'none';
+                    
+                    if (autoRefreshIntervalEventLog) {
+                        clearInterval(autoRefreshIntervalEventLog);
+                        autoRefreshIntervalEventLog = null;
+                    }
+                }
+            }
+            
+            if (isLiveModeEventLog) {
+                lastRowIdEventLog = getLastRowIdEventLog();
+                autoRefreshIntervalEventLog = setInterval(updateEventTableEventLog, 5000);
+                
+                const now = new Date();
+                const updateEl = document.getElementById('last-update-eventlog');
+                if (updateEl) {
+                    updateEl.textContent = 'Last checked: ' + now.toLocaleTimeString();
+                }
+            }
+            </script>";
             ?>
         </div>
 
