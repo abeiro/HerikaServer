@@ -493,16 +493,16 @@ if ($dynOnly) {
 }
 if ($mtmOnly) {
     // Robust match on JSON/text; tolerates whitespace and works for json/jsonb
-    $where .= " and coalesce(extended_data::text,'') ~ '\"middle_term_enabled\"\\s*:\\s*1'";
+    $where .= " and coalesce(extended_data::text,'') ~ '\"middle_term_enabled\"\\s*:\\s*(true|1)'";
 }
 if ($salOnly) {
-    $where .= " and coalesce(extended_data::text,'') ~ '\"salutation_after_a_while\"\\s*:\\s*1'";
+    $where .= " and coalesce(extended_data::text,'') ~ '\"salutation_after_a_while\"\\s*:\\s*(true|1)'";
 }
 if ($blcOnly) {
-    $where .= " and coalesce(extended_data::text,'') ~ '\"background_life_commands\"\\s*:\\s*1'";
+    $where .= " and coalesce(extended_data::text,'') ~ '\"background_life_commands\"\\s*:\\s*(true|1)'";
 }
 if ($gpsOnly) {
-    $where .= " and coalesce(metadata::text,'') ~ '\"gps_track\"\\s*:\\s*1'";
+    $where .= " and coalesce(metadata::text,'') ~ '\"gps_track\"\\s*:\\s*(true|1)'";
 }
 
 // Default: favorites first, then alphabetical by name
