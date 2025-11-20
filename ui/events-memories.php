@@ -460,12 +460,8 @@ function getTimeColor($time) {
             
             if ($isAutoRefresh) {
                 echo "<span id='live-indicator-eventlog' style='margin-left: 10px; color: #28a745; font-weight: bold; font-size: 0.9em;'>🔴 LIVE</span>";
-                echo "<span id='last-update-eventlog' style='margin-left: 10px; color: #aaa; font-size: 0.8em;'></span>";
-                echo "<span id='new-events-count-eventlog' style='margin-left: 10px; color: #4CAF50; font-size: 0.8em;'></span>";
             } else {
                 echo "<span id='live-indicator-eventlog' style='margin-left: 10px; color: #28a745; font-weight: bold; font-size: 0.9em; display: none;'>🔴 LIVE</span>";
-                echo "<span id='last-update-eventlog' style='margin-left: 10px; color: #aaa; font-size: 0.8em; display: none;'></span>";
-                echo "<span id='new-events-count-eventlog' style='margin-left: 10px; color: #4CAF50; font-size: 0.8em; display: none;'></span>";
             }
             
             // Add delete buttons inline
@@ -573,24 +569,51 @@ function getTimeColor($time) {
                 echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$prevPage&limit=$limit'\" class='btn-base btn-primary'>Previous</button> ";
             }
             
-            for ($i = 1; $i <= 5 && $i <= $totalPages; $i++) {
-                if ($i == $page) {
-                    echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$i&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$i</button> ";
-                } else {
-                    echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$i&limit=$limit'\" class='btn-base btn-primary'>$i</button> ";
-                }
-            }
-            
-            if ($totalPages > 10) {
-                echo "<span style='margin: 0 5px; color: #fff;'>...</span>";
-                
-                $startLastPages = max(6, $totalPages - 4);
-                for ($i = $startLastPages; $i <= $totalPages; $i++) {
+            // Smart pagination: show current page and surrounding pages
+            if ($totalPages <= 10) {
+                // Show all pages if 10 or fewer
+                for ($i = 1; $i <= $totalPages; $i++) {
                     if ($i == $page) {
                         echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$i&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$i</button> ";
                     } else {
                         echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$i&limit=$limit'\" class='btn-base btn-primary'>$i</button> ";
                     }
+                }
+            } else {
+                // Always show first page
+                if ($page == 1) {
+                    echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=1&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>1</button> ";
+                } else {
+                    echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=1&limit=$limit'\" class='btn-base btn-primary'>1</button> ";
+                }
+                
+                // Show ellipsis if current page is far from start
+                if ($page > 4) {
+                    echo "<span style='margin: 0 5px; color: #fff;'>...</span>";
+                }
+                
+                // Show pages around current page
+                $start = max(2, $page - 2);
+                $end = min($totalPages - 1, $page + 2);
+                
+                for ($i = $start; $i <= $end; $i++) {
+                    if ($i == $page) {
+                        echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$i&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$i</button> ";
+                    } else {
+                        echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$i&limit=$limit'\" class='btn-base btn-primary'>$i</button> ";
+                    }
+                }
+                
+                // Show ellipsis if current page is far from end
+                if ($page < $totalPages - 3) {
+                    echo "<span style='margin: 0 5px; color: #fff;'>...</span>";
+                }
+                
+                // Always show last page
+                if ($page == $totalPages) {
+                    echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$totalPages&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$totalPages</button> ";
+                } else {
+                    echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$totalPages&limit=$limit'\" class='btn-base btn-primary'>$totalPages</button> ";
                 }
             }
             
@@ -722,19 +745,6 @@ function getTimeColor($time) {
                             });
                             
                             totalNewEventsEventLog += data.new_count;
-                            const countEl = document.getElementById('new-events-count-eventlog');
-                            if (countEl) {
-                                countEl.textContent = '+' + totalNewEventsEventLog + ' new';
-                                countEl.style.display = 'inline';
-                            }
-                        }
-                        
-                        const now = new Date();
-                        const timeStr = now.toLocaleTimeString();
-                        const updateEl = document.getElementById('last-update-eventlog');
-                        if (updateEl) {
-                            updateEl.textContent = 'Last checked: ' + timeStr;
-                            updateEl.style.display = 'inline';
                         }
                         
                         if (liveIndicator) {
@@ -755,28 +765,25 @@ function getTimeColor($time) {
                 
                 const btn = document.getElementById('live-toggle-btn-eventlog');
                 const indicator = document.getElementById('live-indicator-eventlog');
-                const updateEl = document.getElementById('last-update-eventlog');
-                const countEl = document.getElementById('new-events-count-eventlog');
                 
                 if (isLiveModeEventLog) {
+                    // If not on page 1, navigate to page 1 with autorefresh enabled
+                    if (currentPageEventLog !== 1) {
+                        window.location.href = 'events-memories.php?tab=eventlog&page=1&limit=' + currentLimitEventLog + '&autorefresh=true';
+                        return;
+                    }
+                    
                     btn.textContent = '⏸️ Stop Live';
                     btn.className = 'btn-base btn-secondary';
                     btn.style.padding = '8px 12px';
                     btn.style.fontSize = '0.9em';
                     
                     if (indicator) indicator.style.display = 'inline';
-                    if (updateEl) updateEl.style.display = 'inline';
-                    if (countEl) countEl.style.display = 'inline';
                     
                     lastRowIdEventLog = getLastRowIdEventLog();
                     totalNewEventsEventLog = 0;
                     
                     autoRefreshIntervalEventLog = setInterval(updateEventTableEventLog, 5000);
-                    
-                    const now = new Date();
-                    if (updateEl) {
-                        updateEl.textContent = 'Last checked: ' + now.toLocaleTimeString();
-                    }
                 } else {
                     btn.textContent = '📡 Monitor Live';
                     btn.className = 'btn-base btn-primary';
@@ -784,8 +791,6 @@ function getTimeColor($time) {
                     btn.style.fontSize = '0.9em';
                     
                     if (indicator) indicator.style.display = 'none';
-                    if (updateEl) updateEl.style.display = 'none';
-                    if (countEl) countEl.style.display = 'none';
                     
                     if (autoRefreshIntervalEventLog) {
                         clearInterval(autoRefreshIntervalEventLog);
@@ -797,12 +802,6 @@ function getTimeColor($time) {
             if (isLiveModeEventLog) {
                 lastRowIdEventLog = getLastRowIdEventLog();
                 autoRefreshIntervalEventLog = setInterval(updateEventTableEventLog, 5000);
-                
-                const now = new Date();
-                const updateEl = document.getElementById('last-update-eventlog');
-                if (updateEl) {
-                    updateEl.textContent = 'Last checked: ' + now.toLocaleTimeString();
-                }
             }
             </script>";
             ?>
