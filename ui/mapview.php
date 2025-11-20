@@ -128,6 +128,9 @@ if (!function_exists('race_icon_web_path')) {
         } elseif ($_POST['action'] === 'update_all_coords') {
             handleUpdateAllCoords();
             exit;
+        } elseif ($_POST['action'] === 'toggle_bg_life_setting') {
+            handleToggleBgLifeSetting();
+            exit;
         }
     }
 
@@ -183,6 +186,62 @@ if (!function_exists('race_icon_web_path')) {
         echo json_encode(['ok' => true, 'message' => 'All NPC coords update processed']);
     }
 
+    function handleToggleBgLifeSetting() {
+        global $adminConn;
+        
+        $npcId = isset($_POST['npc_id']) ? intval($_POST['npc_id']) : 0;
+        $setting = isset($_POST['setting']) ? $_POST['setting'] : '';
+        $value = isset($_POST['value']) ? filter_var($_POST['value'], FILTER_VALIDATE_BOOLEAN) : false;
+        
+        if (!$npcId || !$setting) {
+            echo json_encode(['ok' => false, 'message' => 'Invalid parameters']);
+            return;
+        }
+        
+        // Get current NPC data
+        $query = "SELECT metadata, extended_data FROM core_npc_master WHERE id = $1";
+        $result = pg_query_params($adminConn, $query, [$npcId]);
+        
+        if (!$result || pg_num_rows($result) === 0) {
+            echo json_encode(['ok' => false, 'message' => 'NPC not found']);
+            return;
+        }
+        
+        $row = pg_fetch_assoc($result);
+        
+        if ($setting === 'bg_life_commands') {
+            // Update extended_data
+            $extData = json_decode($row['extended_data'], true) ?: [];
+            $extData['background_life_commands'] = $value;
+            $extDataJson = json_encode($extData);
+            
+            $updateQuery = "UPDATE core_npc_master SET extended_data = $1 WHERE id = $2";
+            $updateResult = pg_query_params($adminConn, $updateQuery, [$extDataJson, $npcId]);
+            
+            if ($updateResult) {
+                echo json_encode(['ok' => true, 'message' => 'Autonomous Actions ' . ($value ? 'enabled' : 'disabled')]);
+            } else {
+                echo json_encode(['ok' => false, 'message' => 'Update failed']);
+            }
+        } elseif ($setting === 'gps_track') {
+            // Update metadata
+            $metadata = json_decode($row['metadata'], true) ?: [];
+            $metadata['gps_track'] = $value;
+            $metadataJson = json_encode($metadata);
+            
+            $updateQuery = "UPDATE core_npc_master SET metadata = $1 WHERE id = $2";
+            $updateResult = pg_query_params($adminConn, $updateQuery, [$metadataJson, $npcId]);
+            
+            if ($updateResult) {
+                echo json_encode(['ok' => true, 'message' => 'Hourly Tracking ' . ($value ? 'enabled' : 'disabled')]);
+            } else {
+                echo json_encode(['ok' => false, 'message' => 'Update failed']);
+            }
+        } else {
+            echo json_encode(['ok' => false, 'message' => 'Invalid setting']);
+        }
+    }
+
     // Coordinate translation constants (world bounds)
     // X: west (negative) to east (positive)
     // Y: south (negative) to north (positive)
@@ -230,7 +289,7 @@ if (!function_exists('race_icon_web_path')) {
     // --- Query total cost grouped by request type ---
     $query = "
     SELECT
-        npc_name,metadata,id,refid,race,extended_data->>'background_life_last_updated' as last_report,
+        npc_name,metadata,extended_data,id,refid,race,extended_data->>'background_life_last_updated' as last_report,
         metadata->>'last_coords' as last_coords,metadata->>'last_coords_history' as last_coords_history
     FROM core_npc_master
     WHERE extended_data->>'background_life_enabled' = 'true'
@@ -271,6 +330,11 @@ if (!function_exists('race_icon_web_path')) {
             }
 
             $meta      = json_decode($row['metadata'], true);
+            $extData   = json_decode($row['extended_data'], true);
+            
+            // Parse background life settings
+            $bgLifeCommands = isset($extData['background_life_commands']) ? (bool)$extData['background_life_commands'] : false;
+            $gpsTrack = isset($meta['gps_track']) ? (bool)$meta['gps_track'] : false;
             
             // Parse history coordinates
             $coordsHistory = [];
@@ -309,6 +373,8 @@ if (!function_exists('race_icon_web_path')) {
                 'last_pos_ts' => $coordsData["last_updated"]?convert_gamets2skyrim_date($coordsData["last_updated"]).",hours ago:".round(($last_gamets-$coordsData["last_updated"]) *0.0000024,0):null,
                 'last_report' => convert_gamets2skyrim_date($row["last_report"]).",hours ago:".round(($last_gamets-$row["last_report"]) *0.0000024,0),
                 'coords_history' => $coordsHistory,
+                'bg_life_commands' => $bgLifeCommands,
+                'gps_track' => $gpsTrack,
             ];
 
         }
@@ -380,6 +446,8 @@ if (!function_exists('race_icon_web_path')) {
             'last_pos_ts' => $marker["last_pos_ts"],
             'last_report' => $marker["last_report"],
             'coords_history' => $translatedHistory,
+            'bg_life_commands' => $marker['bg_life_commands'],
+            'gps_track' => $marker['gps_track'],
         ];
     }
 
@@ -788,6 +856,63 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         color: rgb(242, 124, 17);
     }
 
+    .toggle-label-inline {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        gap: 6px;
+        font-size: 12px;
+        color: #ddd;
+        transition: color 0.3s ease;
+        padding: 6px 10px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 6px;
+        border: 1px solid #333;
+    }
+
+    .toggle-label-inline:hover {
+        color: rgb(242, 124, 17);
+        background: rgba(242, 124, 17, 0.1);
+    }
+
+    .toggle-checkbox {
+        width: 36px;
+        height: 18px;
+        appearance: none;
+        background: #444;
+        border-radius: 9px;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.3s ease;
+        border: 1px solid #666;
+        flex-shrink: 0;
+    }
+
+    .toggle-checkbox:checked {
+        background: rgb(242, 124, 17);
+    }
+
+    .toggle-checkbox::before {
+        content: '';
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: white;
+        top: 1px;
+        left: 2px;
+        transition: transform 0.3s ease;
+    }
+
+    .toggle-checkbox:checked::before {
+        transform: translateX(18px);
+    }
+
+    .toggle-text {
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
     .map-controls {
         text-align: center;
         margin: 0;
@@ -1112,6 +1237,26 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                     <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn">🚶‍➡️Trigger Action</button>
                                     <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #4488ff;">✉️ Request Letter</button>
                                 </div>
+                                <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <label class="toggle-label-inline">
+                                        <input type="checkbox" 
+                                               class="toggle-checkbox" 
+                                               data-npc-id="<?php echo $marker['id']; ?>" 
+                                               data-setting="bg_life_commands" 
+                                               <?php echo $marker['bg_life_commands'] ? 'checked' : ''; ?>
+                                               onchange="toggleBgLifeSetting(this)">
+                                        <span class="toggle-text">🎮 Auto Actions</span>
+                                    </label>
+                                    <label class="toggle-label-inline">
+                                        <input type="checkbox" 
+                                               class="toggle-checkbox" 
+                                               data-npc-id="<?php echo $marker['id']; ?>" 
+                                               data-setting="gps_track" 
+                                               <?php echo $marker['gps_track'] ? 'checked' : ''; ?>
+                                               onchange="toggleBgLifeSetting(this)">
+                                        <span class="toggle-text">📍 Hourly Tracking</span>
+                                    </label>
+                                </div>
                             </div>
                         <?php }?>
                     </div>
@@ -1228,6 +1373,41 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 console.error('Error:', error);
                 alert('Request failed');
                 hideProcessing();
+            });
+        }
+
+        function toggleBgLifeSetting(checkbox) {
+            const npcId = checkbox.getAttribute('data-npc-id');
+            const setting = checkbox.getAttribute('data-setting');
+            const value = checkbox.checked;
+            
+            const formData = new FormData();
+            formData.append('action', 'toggle_bg_life_setting');
+            formData.append('npc_id', npcId);
+            formData.append('setting', setting);
+            formData.append('value', value ? '1' : '0');
+            
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ok) {
+                    // Show success message without alert
+                    console.log(data.message);
+                    // Optional: show a brief toast notification
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
+                    // Revert checkbox on error
+                    checkbox.checked = !value;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Request failed');
+                // Revert checkbox on error
+                checkbox.checked = !value;
             });
         }
 
