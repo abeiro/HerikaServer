@@ -875,6 +875,98 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         background: rgba(242, 124, 17, 0.1);
     }
 
+    .bgl-instructions-box {
+        background: #2a2a2a;
+        padding: 15px;
+        border-left: 4px solid rgb(242, 124, 17);
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+        margin-bottom: 15px;
+    }
+
+    .bgl-instructions-box h3 {
+        color: rgb(242, 124, 17);
+        font-family: 'MagicCards', serif;
+        margin-top: 0;
+        margin-bottom: 12px;
+        word-spacing: 6px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        font-size: 1.2em;
+    }
+
+    .bgl-instructions-content {
+        color: #ddd;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    .instruction-section {
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #3a3a3a;
+    }
+
+    .instruction-section:last-of-type {
+        border-bottom: none;
+    }
+
+    .instruction-section strong {
+        color: rgb(242, 124, 17);
+        display: block;
+        margin-bottom: 6px;
+    }
+
+    .instruction-section ul,
+    .instruction-section ol {
+        margin: 6px 0;
+        padding-left: 25px;
+    }
+
+    .instruction-section li {
+        margin: 4px 0;
+    }
+
+    .instruction-section em {
+        color: #aaa;
+        font-style: italic;
+    }
+
+    .instruction-note {
+        background: rgba(242, 124, 17, 0.1);
+        padding: 8px 12px;
+        border-radius: 6px;
+        border-left: 3px solid rgb(242, 124, 17);
+        margin-top: 10px;
+        font-size: 12px;
+    }
+
+    .instruction-note strong {
+        color: rgb(242, 124, 17);
+    }
+
+    .toggle-instructions-btn {
+        width: 100%;
+        margin-top: 10px;
+        background: #3a3a3a;
+        color: #ddd;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .toggle-instructions-btn:hover {
+        background: #4a4a4a;
+        color: rgb(242, 124, 17);
+    }
+
+    .bgl-instructions-box.collapsed .bgl-instructions-content {
+        display: none;
+    }
+
     .toggle-checkbox {
         width: 36px;
         height: 18px;
@@ -1210,6 +1302,45 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             </div>
 
             <div class="sidebar-section">
+                <div class="bgl-instructions-box collapsed">
+                    <h3>📖 How Background Life Works</h3>
+                    <div class="bgl-instructions-content">
+                        <div class="instruction-section">
+                            <strong>Getting Started:</strong>
+                            <ol>
+                                <li>Look at an NPC in-game and press the <strong>Diary Hotkey</strong> to add them to Background Life</li>
+                                <li>You can either: <ul>
+                                    <li>Talk to the NPC and give commands like: <em>"Go to Riften and then to Whiterun to do X and Y"</em></li>
+                                    <li>Wait 5 ingame days for them to automatically trigger background life.</li>
+                                </ul>
+                                <li>They shall now travel around Skyrim.</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="instruction-section">
+                            <strong>NPC Settings:</strong>
+                            <ul>
+                                <li><strong>🎮 Auto Actions:</strong> Every 5 in-game days, NPC generates inner thoughts. When enabled, they can autonomously travel to new locations. When disabled, only thoughts are generated.</li>
+                                <li><strong>📍 Hourly Tracking:</strong> Tracks NPC coordinates every in-game hour (default is daily) for detailed movement history.</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="instruction-section">
+                            <strong>Control Buttons:</strong>
+                            <ul>
+                                <li><strong>Trigger Action:</strong> Forces the NPC to generate an action immediately (may move or stay based on AI decision)</li>
+                                <li><strong>Request Letter:</strong> Forces the NPC to send you a letter about their current activities</li>
+                                <li><strong>Update All NPC Coords:</strong> Refreshes position tracking for all Background Life NPCs</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="instruction-note">
+                            <strong>💡 Note:</strong> Events are triggered automatically every 5 in-game days. The buttons are mainly for testing or forcing immediate updates.
+                        </div>
+                    </div>
+                    <button class="toggle-instructions-btn" onclick="toggleInstructions()">Show Instructions</button>
+                </div>
+
                 <div class="npc-list-container">
                     <div class="npc-list-header">
                         <h3>📍 NPC Markers</h3>
@@ -1412,6 +1543,19 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 // Revert checkbox on error
                 checkbox.checked = !value;
             });
+        }
+
+        function toggleInstructions() {
+            const box = document.querySelector('.bgl-instructions-box');
+            const btn = document.querySelector('.toggle-instructions-btn');
+            
+            if (box.classList.contains('collapsed')) {
+                box.classList.remove('collapsed');
+                btn.textContent = 'Hide Instructions';
+            } else {
+                box.classList.add('collapsed');
+                btn.textContent = 'Show Instructions';
+            }
         }
 
         function showProcessing()
