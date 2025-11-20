@@ -318,7 +318,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["bulk_delete_npcs"])) 
         $confirm = trim((string)($_POST['confirm'] ?? ''));
         if ($confirm !== 'Delete') { echo json_encode(["ok"=>false, "error"=>"Confirmation text mismatch"]); exit; }
         // Delete all unlocked NPCs except The Narrator (by name or id=1)
-        $sql = "with del as (delete from core_npc_master where coalesce(lock_profile,0)=0 and not (npc_name='The Narrator' or id=1) returning 1) select count(*) as c from del";
+        // Use trim and case-insensitive comparison for robustness, and ensure lock_profile is explicitly compared as integer
+        $sql = "with del as (delete from core_npc_master where (lock_profile is null or lock_profile = 0) and id <> 1 and trim(lower(npc_name)) <> 'the narrator' returning 1) select count(*) as c from del";
         $row = $GLOBALS['db']->fetchOne($sql);
         $deleted = intval($row['c'] ?? 0);
         echo json_encode(["ok"=>true, "deleted"=>$deleted]);
