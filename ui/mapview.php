@@ -29,10 +29,7 @@ if (! $adminConn) {
 
     // Handle AJAX request update
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-        if ($_POST['action'] === 'request_update') {
-            handleRequestUpdate();
-            exit;
-        } elseif ($_POST['action'] === 'request_action') {
+        if ($_POST['action'] === 'request_action') {
             handleRequestAction();
             exit;
         } elseif ($_POST['action'] === 'request_reporting') {
@@ -41,16 +38,10 @@ if (! $adminConn) {
         } elseif ($_POST['action'] === 'update_coords') {
             handleUpdateCoords();
             exit;
+        } elseif ($_POST['action'] === 'update_all_coords') {
+            handleUpdateAllCoords();
+            exit;
         }
-    }
-
-    function handleRequestUpdate() {
-        global $enginePath;
-        // Add your handler code here
-
-        `php $enginePath/debug/simple_llm_request_with_context_life_command.php "The Narrator" TrackAll`;
-
-        echo json_encode(['ok' => true, 'message' => 'Update request processed']);
     }
 
     function handleRequestAction() {
@@ -95,6 +86,14 @@ if (! $adminConn) {
         // Add your handler code here
         `php $enginePath/debug/simple_llm_request_with_context_life_command.php "$npcName" Track`;
         echo json_encode(['ok' => true, 'message' => "Coords update processed for $npcName"]);
+    }
+
+    function handleUpdateAllCoords() {
+        global $enginePath;
+        
+        // Update coordinates for all NPCs
+        `php $enginePath/debug/simple_llm_request_with_context_life_command.php "The Narrator" TrackAll`;
+        echo json_encode(['ok' => true, 'message' => 'All NPC coords update processed']);
     }
 
     // Coordinate translation constants (world bounds)
@@ -407,6 +406,23 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         margin: 0 auto;
     }
 
+    .content-wrapper {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+
+    .map-section {
+        flex: 0 0 75%;
+    }
+
+    .sidebar-section {
+        flex: 0 0 calc(25% - 20px);
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
     .map-container {
         position: relative;
         display: inline-block;
@@ -414,10 +430,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         padding: 15px;
         border: 3px solid rgb(242, 124, 17);
         box-shadow: 0 0 20px rgba(242, 124, 17, 0.3);
-        margin: 20px auto;
-        width: 75%;
+        margin: 0 auto;
+        width: 100%;
         box-sizing: border-box;
         border-radius: 8px;
+        overflow: auto;
     }
 
     .map-container img {
@@ -533,27 +550,77 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         color: rgb(242, 124, 17);
     }
 
+    .npc-list-container {
+        background: #2a2a2a;
+        padding: 20px;
+        border-left: 4px solid rgb(242, 124, 17);
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .npc-list-container h3 {
+        color: rgb(242, 124, 17);
+        font-family: 'MagicCards', serif;
+        margin-top: 0;
+        margin-bottom: 10px;
+        word-spacing: 6px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+
+    .npc-list-header {
+        position: sticky;
+        top: 0;
+        background: #2a2a2a;
+        padding-bottom: 10px;
+        z-index: 10;
+    }
+
+    .update-all-coords-btn {
+        width: 100%;
+        margin-top: 10px;
+        background: #44ff44;
+        color: #000;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        transition: all 0.3s ease;
+    }
+
+    .update-all-coords-btn:hover {
+        background: #55ff55;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(68, 255, 68, 0.4);
+    }
+
+    .update-all-coords-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
     .marker-list {
         display: flex;
+        flex-direction: column;
         gap: 15px;
-        margin-top: 20px;
-        justify-content: space-around;
-        align-content: center;
-        align-items: baseline;
-        justify-items: stretch;
-        flex-direction: row-reverse;
-        flex-wrap: wrap;
     }
 
     .marker-item {
-        background: #2a2a2a;
+        background: #1a1a1a;
         padding: 15px;
         border-left: 4px solid;
         border-radius: 8px;
-        background-size: contain;
+        background-size: 80px;
         background-repeat: no-repeat;
-        background-position-x: right;
+        background-position: right 10px center;
         border: 1px solid #4a4a4a;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .marker-item-color {
@@ -572,6 +639,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         color: rgb(242, 124, 17);
         font-family: 'MagicCards', serif;
         word-spacing: 4px;
+        padding-right: 90px;
     }
 
     .marker-item-coords {
@@ -604,7 +672,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .map-controls {
         text-align: center;
-        margin: 15px 0;
+        margin: 0;
         padding: 15px;
         background: #2a2a2a;
         border-radius: 8px;
@@ -615,12 +683,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         background: rgb(242, 124, 17);
         color: #000;
         border: none;
-        padding: 10px 20px;
-        margin: 5px;
-        border-radius: 8px;
+        padding: 8px 12px;
+        margin: 3px;
+        border-radius: 6px;
         cursor: pointer;
         font-weight: bold;
-        font-size: 14px;
+        font-size: 12px;
         transition: all 0.3s ease;
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
@@ -638,9 +706,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .map-controls span {
         color: rgb(242, 124, 17);
-        margin: 0 15px;
+        margin: 5px;
         font-weight: bold;
-        font-size: 16px;
+        font-size: 14px;
+        display: block;
+        margin-top: 10px;
     }
 
     img.thumb {
@@ -754,31 +824,69 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         padding-top: 5px;
     }
 
+    /* Scrollbar styling for NPC list */
+    .npc-list-container::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    .npc-list-container::-webkit-scrollbar-track {
+        background: #1a1a1a;
+        border-radius: 5px;
+    }
+
+    .npc-list-container::-webkit-scrollbar-thumb {
+        background: rgb(242, 124, 17);
+        border-radius: 5px;
+    }
+
+    .npc-list-container::-webkit-scrollbar-thumb:hover {
+        background: rgb(255, 140, 30);
+    }
+
     /* Responsive Design */
+    @media (max-width: 1200px) {
+        .content-wrapper {
+            flex-direction: column;
+        }
+
+        .map-section {
+            flex: 0 0 100%;
+        }
+
+        .sidebar-section {
+            flex: 0 0 100%;
+        }
+
+        .npc-list-container {
+            max-height: 600px;
+        }
+    }
+
     @media (max-width: 768px) {
         main {
             padding-left: 5%;
             padding-right: 5%;
         }
 
-        .map-container {
-            width: 95%;
-        }
-
         .page-header h1 {
             font-size: 1.5em;
+        }
+
+        .npc-list-container {
+            max-height: 400px;
         }
     }
 </style>
 
 <main>
     <div class="page-header">
-        <h1>🗺️ Background Life - Command Center</h1>
+        <h1>🗺️ Background Life Manager</h1>
     </div>
     <div class="container">
-        
-        <div class="map-container" >
-            <img src="<?php echo $mapImageUrl; ?>" alt="Skyrim Map" id="mapImage">
+        <div class="content-wrapper">
+            <div class="map-section">
+                <div class="map-container" >
+                    <img src="<?php echo $mapImageUrl; ?>" alt="Skyrim Map" id="mapImage">
 
             <?php
                 // Render NPC markers
@@ -852,104 +960,49 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     echo '</div>' . PHP_EOL;
                 }
             ?>
-        </div>
-        <div style="width:20%;float:right">
-            <div class="info-panel">
-                <h3>⚔ Map Info ⚔</h3>
-                <strong>Dimensions:</strong> <?php echo $mapWidth; ?>×<?php echo $mapHeight; ?> pixels<br>
-                <strong>NPC Markers:</strong> <?php echo sizeof($translatedMarkers); ?><br>
-                <strong>Location Markers:</strong> <?php echo sizeof($passiveMarkers); ?><br>
-                <strong>Current Date:</strong> <?php echo $currentDate?><br/>
+                </div>
             </div>
 
-            <div class="map-controls">
-                <button onclick="zoomMap(0.8)">🔍− Shrink</button>
-                <button onclick="zoomMap(1)">⟲ Reset</button>
-                <button onclick="zoomMap(1.2)">🔍+ Expand</button>
-                <span id="zoomLevel">100%</span>
-                <button onclick="requestUpdate()" style="margin-left: 20px;">📤 Request Update</button>
-            </div>
-        </div>
-        <br break="all"/>
-        <div class="info-panel">
-            <h3>📍 NPC Markers</h3>
-            <div class="marker-list">
-                <?php foreach ($translatedMarkers as $marker) {?>
-                    <div id="dtl_<?php echo $marker['id'] ?>" class="marker-item" style="background-blend-mode: soft-light;border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>)" >
-                        <h4>
-                            <span class="marker-item-color" style="background-color:                                                                                                                                                                         <?php echo $marker['color']; ?>;"></span>
-                            <a href="#mkr_<?php echo $marker['id'] ?>"><?php echo $marker['name']; ?> &nbsp; ↗️</a>
-                        </h4>
-                        <div class="marker-item-coords">
-                            <ul>
-                            <li><strong>In-game:</strong> x=<?php echo $marker['ingame_x']; ?>, y=<?php echo $marker['ingame_y']; ?>, z=<?php echo $marker['ingame_z']; ?></li>
-                            <li><strong>Map:</strong> (<?php echo $marker['x']; ?>,<?php echo $marker['y']; ?>)</li>
-                            <li><strong>RefId:</strong> (<?php echo $marker['refid']; ?>)</li>
-                            <li><strong>Last Pos Ts.:</strong> (<?php echo $marker['last_pos_ts']; ?>)</li>
-                            <li><strong>Last reported:</strong> (<?php echo $marker['last_report']; ?>)</li>
-                            </ul>
+            <div class="sidebar-section">
+                <div class="npc-list-container">
+                    <div class="npc-list-header">
+                        <h3>📍 NPC Markers</h3>
+                        <div style="color: #bbb; font-size: 13px; padding-bottom: 10px; border-bottom: 1px solid #4a4a4a;">
+                            <strong>Tracked NPCs:</strong> <?php echo sizeof($translatedMarkers); ?> | 
+                            <strong>Markers:</strong> <?php echo sizeof($passiveMarkers); ?><br/>
+                            <strong>Current Ingame Date:</strong> <?php echo $currentDate?>
                         </div>
-                        <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
-                            <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn">🎬 Request Action</button>
-                            <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #4488ff;">📋 Request Reporting</button>
-                            <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #44ff44;">📍 Update Coords</button>
-                        </div>
+                        <button onclick="updateAllCoords()" class="update-all-coords-btn">📍 Update All NPC Coords</button>
                     </div>
-                <?php }?>
+                    <div class="marker-list">
+                        <?php foreach ($translatedMarkers as $marker) {?>
+                            <div id="dtl_<?php echo $marker['id'] ?>" class="marker-item" style="background-blend-mode: soft-light;border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>)" >
+                                <h4>
+                                    <span class="marker-item-color" style="background-color:                                                                                                                                                                         <?php echo $marker['color']; ?>;"></span>
+                                    <a href="#mkr_<?php echo $marker['id'] ?>"><?php echo $marker['name']; ?> &nbsp; ↗️</a>
+                                </h4>
+                                <div class="marker-item-coords">
+                                    <ul>
+                                    <li><strong>In-game:</strong> x=<?php echo $marker['ingame_x']; ?>, y=<?php echo $marker['ingame_y']; ?>, z=<?php echo $marker['ingame_z']; ?></li>
+                                    <li><strong>Map:</strong> (<?php echo $marker['x']; ?>,<?php echo $marker['y']; ?>)</li>
+                                    <li><strong>RefId:</strong> (<?php echo $marker['refid']; ?>)</li>
+                                    <li><strong>Last Pos Ts.:</strong> (<?php echo $marker['last_pos_ts']; ?>)</li>
+                                    <li><strong>Last reported:</strong> (<?php echo $marker['last_report']; ?>)</li>
+                                    </ul>
+                                </div>
+                                <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
+                                    <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn">🚶‍➡️Trigger Action</button>
+                                    <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #4488ff;">✉️ Request Letter</button>
+                                </div>
+                            </div>
+                        <?php }?>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        let currentScale = 1;
-
-        function zoomMap(scale) {
-            if (scale === 1) {
-                currentScale = 1;
-            } else {
-                currentScale *= scale;
-            }
-
-            // Clamp scale between 0.5 and 2.5
-            currentScale = Math.max(0.5, Math.min(2.5, currentScale));
-
-            const mapContainer = document.querySelector('.map-container');
-            const zoomDisplay = document.getElementById('zoomLevel');
-
-            // Update width based on scale
-            mapContainer.style.maxWidth = (100 * currentScale) + '%';
-            mapContainer.style.margin = '20px auto';
-
-            // Update zoom display
-            zoomDisplay.textContent = Math.round(currentScale * 100) + '%';
-        }
-
-        function requestUpdate() {
-            const formData = new FormData();
-            formData.append('action', 'request_update');
-            showProcessing()
-            fetch(window.location.href, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.ok) {
-                    alert('Update request sent!');
-                    // Optionally reload the page
-                    // location.reload();
-                } else {
-                    alert('Error: ' + (data.message || 'Unknown error'));
-                }
-                hideProcessing()
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                hideProcessing()
-                alert('Request failed');
-            });
-        }
-
         function requestAction(npcName) {
             const formData = new FormData();
             formData.append('action', 'request_action');
@@ -1030,6 +1083,36 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 hideProcessing();
             });
         }
+
+        function updateAllCoords() {
+            const formData = new FormData();
+            formData.append('action', 'update_all_coords');
+            showProcessing()
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ok) {
+                    alert(data.message || 'All coords update sent!');
+                    // Reload the page after a short delay to see updates
+                    setTimeout(() => {
+                        location.reload();
+                    }, 200);
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
+                }
+                hideProcessing();
+             
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Request failed');
+                hideProcessing();
+            });
+        }
+
         function showProcessing()
         {
 
