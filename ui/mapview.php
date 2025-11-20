@@ -27,6 +27,93 @@ if (! $adminConn) {
     exit;
 }
 
+// Helper function to resolve NPC portrait path (same as npc_master.php)
+if (!function_exists('race_icon_web_path')) {
+    function race_icon_web_path($race, $webRoot, $refid, $md5 = '', $npcName = '', $portraitRel = ''){
+        global $enginePath;
+        // 0) If metadata specifies a portrait relative path under data/pictures, use it first
+        $portraitRel = trim((string)$portraitRel);
+        if ($portraitRel !== '') {
+            $portraitRel = ltrim(str_replace(['\\'], '/', $portraitRel), '/');
+            $picturesRootFs = rtrim("{$enginePath}/data/pictures/", '/\\') . DIRECTORY_SEPARATOR;
+            $picturesRootUrl = rtrim($webRoot . '/data/pictures/', '/');
+            $fs = realpath($picturesRootFs . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $portraitRel));
+            $picturesRootFs=realpath($picturesRootFs);
+            if ($fs !== false && strpos($fs, $picturesRootFs) === 0 && is_file($fs)) {
+                return $picturesRootUrl . '/' . str_replace('%2F','/', rawurlencode($portraitRel));
+            }
+        }
+        // 1) Prefer per-NPC portrait from data/pictures/profile
+        $refid = strtoupper($refid);
+        $profileDirFs = rtrim("{$enginePath}/data/pictures/profile/", '/\\') . DIRECTORY_SEPARATOR;
+        $profileDirUrl = rtrim($webRoot . '/data/pictures/profile/', '/');
+        $exts = ['png','jpg','jpeg','webp','gif'];
+        $candidates = [];
+        if (!empty($md5)) { $candidates[] = $md5; }
+        if (!empty($refid)) { $candidates[] = $refid; }
+        if (!empty($npcName)) {
+            $in = strtolower((string)$npcName);
+            $words = preg_split('/[^a-z0-9]+/', $in, -1, PREG_SPLIT_NO_EMPTY);
+            if (!empty($words)) {
+                $candidates[] = implode('', $words);
+                $candidates[] = implode('-', $words);
+                $candidates[] = implode('_', $words);
+            }
+        }
+        $seen = [];
+        foreach ($candidates as $base){
+            $base = trim((string)$base);
+            if ($base === '' || isset($seen[$base])) continue;
+            $seen[$base] = true;
+            foreach ($exts as $ext){
+                $fs = $profileDirFs . $base . '.' . $ext;
+                if (file_exists($fs)) {
+                    return $profileDirUrl . '/' . rawurlencode($base . '.' . $ext);
+                }
+            }
+        }
+
+        // 2) Fallback to race icon pack
+        $in = strtolower((string)$race);
+        $words = preg_split('/[^a-z0-9]+/', $in, -1, PREG_SPLIT_NO_EMPTY);
+        $slug = implode('', $words);
+        if ($slug === '') { $words = []; }
+        $aliases = [
+            'highelf'=>'altmer', 'altmer'=>'altmer',
+            'woodelf'=>'bosmer', 'bosmer'=>'bosmer',
+            'darkelf'=>'dunmer', 'dunmer'=>'dunmer',
+            'orsimer'=>'orc', 'orc'=>'orc',
+            'argonian'=>'argonian', 'khajiit'=>'khajiit', 'khajit'=>'khajiit',
+            'breton'=>'breton', 'imperial'=>'imperial',
+            'nord'=>'nord', 'redguard'=>'redguard',
+            'oldpeople'=>'nord', 'oldpeoplerace'=>'nord',
+        ];
+        $base = $aliases[$slug] ?? $slug;
+        $variants = [];
+        $variants[] = $base;
+        if (!empty($words)){
+            $variants[] = implode('', $words);
+            $variants[] = implode('-', $words);
+            $variants[] = implode('_', $words);
+        }
+        // Synonyms/misspellings
+        if ($base === 'khajiit') { $variants[] = 'khajit'; }
+        if ($base === 'khajit') { $variants[] = 'khajiit'; }
+        $variants = array_values(array_unique(array_filter($variants, function($v){ return $v !== ''; })));
+        $fsDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'ui' . DIRECTORY_SEPARATOR . 'images' . DIRECTORY_SEPARATOR . 'races' . DIRECTORY_SEPARATOR;
+        $exts2 = ['png','jpg','jpeg','webp','gif','svg'];
+        foreach ($variants as $name){
+            foreach ($exts2 as $ext){
+                $fs = $fsDir . $name . '.' . $ext;
+                if (file_exists($fs)) return $webRoot . '/ui/images/races/' . $name . '.' . $ext;
+            }
+        }
+        $defaultFs = $fsDir . 'default.png';
+        if (file_exists($defaultFs)) { return $webRoot . '/ui/images/races/default.png'; }
+        return '';
+    }
+}
+
     // Handle AJAX request update
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($_POST['action'] === 'request_action') {
@@ -143,7 +230,7 @@ if (! $adminConn) {
     // --- Query total cost grouped by request type ---
     $query = "
     SELECT
-        npc_name,metadata,id,refid,extended_data->>'background_life_last_updated' as last_report,
+        npc_name,metadata,id,refid,race,extended_data->>'background_life_last_updated' as last_report,
         metadata->>'last_coords' as last_coords,metadata->>'last_coords_history' as last_coords_history
     FROM core_npc_master
     WHERE extended_data->>'background_life_enabled' = 'true'
@@ -215,7 +302,8 @@ if (! $adminConn) {
                 'color'       => generateRandomColor($row['npc_name']),
                 'size'        => 10,
                 'tag'         => $coordsData[3],
-                'figure'      => isset($meta["portrait"]) ? $meta["portrait"] : null,
+                'portrait'    => isset($meta["portrait"]) ? $meta["portrait"] : '',
+                'race'        => $row['race'],
                 'id'          => $row["id"],
                 'refid'       => $row["refid"],
                 'last_pos_ts' => $coordsData["last_updated"]?convert_gamets2skyrim_date($coordsData["last_updated"]).",hours ago:".round(($last_gamets-$coordsData["last_updated"]) *0.0000024,0):null,
@@ -265,6 +353,17 @@ if (! $adminConn) {
             ];
         }
 
+        // Resolve NPC portrait using the helper function
+        $md5 = md5($marker['name']);
+        $figureUrl = race_icon_web_path(
+            $marker['race'],
+            $webRoot,
+            $marker['refid'],
+            $md5,
+            $marker['name'],
+            $marker['portrait']
+        );
+
         $translatedMarkers[] = [
             'name'     => $marker['name'],
             'x'        => $coords['x'],
@@ -275,7 +374,7 @@ if (! $adminConn) {
             'ingame_z' => $marker['ingame_z'],
             'ingame_y' => $marker['ingame_y'],
             'tag'      => $marker['tag'],
-            'figure'   => $marker["figure"] ? "../data/pictures/{$marker["figure"]}" : "images/races/default.png",
+            'figure'   => $figureUrl,
             'id'          => $marker['id'],
             'refid'       => $marker['refid'],
             'last_pos_ts' => $marker["last_pos_ts"],
@@ -611,16 +710,35 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .marker-item {
-        background: #1a1a1a;
+        background-color: #1a1a1a;
         padding: 15px;
         border-left: 4px solid;
         border-radius: 8px;
-        background-size: 80px;
+        background-size: 100px;
         background-repeat: no-repeat;
         background-position: right 10px center;
         border: 1px solid #4a4a4a;
         width: 100%;
         box-sizing: border-box;
+        position: relative;
+    }
+
+    .marker-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(to right, #1a1a1a 60%, transparent 100%);
+        border-radius: 8px;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    .marker-item > * {
+        position: relative;
+        z-index: 2;
     }
 
     .marker-item-color {
@@ -976,7 +1094,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     </div>
                     <div class="marker-list">
                         <?php foreach ($translatedMarkers as $marker) {?>
-                            <div id="dtl_<?php echo $marker['id'] ?>" class="marker-item" style="background-blend-mode: soft-light;border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>)" >
+                            <div id="dtl_<?php echo $marker['id'] ?>" class="marker-item" style="border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>)" >
                                 <h4>
                                     <span class="marker-item-color" style="background-color:                                                                                                                                                                         <?php echo $marker['color']; ?>;"></span>
                                     <a href="#mkr_<?php echo $marker['id'] ?>"><?php echo $marker['name']; ?> &nbsp; ↗️</a>
@@ -986,8 +1104,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                     <li><strong>In-game:</strong> x=<?php echo $marker['ingame_x']; ?>, y=<?php echo $marker['ingame_y']; ?>, z=<?php echo $marker['ingame_z']; ?></li>
                                     <li><strong>Map:</strong> (<?php echo $marker['x']; ?>,<?php echo $marker['y']; ?>)</li>
                                     <li><strong>RefId:</strong> (<?php echo $marker['refid']; ?>)</li>
-                                    <li><strong>Last Pos Ts.:</strong> (<?php echo $marker['last_pos_ts']; ?>)</li>
-                                    <li><strong>Last reported:</strong> (<?php echo $marker['last_report']; ?>)</li>
+                                    <li><strong>Last Position Timestamp:</strong> (<?php echo $marker['last_pos_ts']; ?>)</li>
+                                    <li><strong>Last Reported:</strong> (<?php echo $marker['last_report']; ?>)</li>
                                     </ul>
                                 </div>
                                 <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
