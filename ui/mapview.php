@@ -1308,7 +1308,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                         <div class="instruction-section">
                             <strong>Getting Started:</strong>
                             <ol>
-                                <li>Look at an NPC in-game and press the <strong>Diary Hotkey</strong> to add them to Background Life</li>
+                                <li><b>Make sure you dismiss the NPC first before adding to Background Life!</b></li>
+                                <li>Look at an NPC in-game and press the <strong>Roleplay Wheel Hotkey (CHIM MCM Menu)</strong> to add them to Background Life</li>
                                 <li>You can either: <ul>
                                     <li>Talk to the NPC and give commands like: <em>"Go to Riften and then to Whiterun to do X and Y"</em></li>
                                     <li>Wait 5 ingame days for them to automatically trigger background life.</li>
@@ -1328,9 +1329,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                         <div class="instruction-section">
                             <strong>Control Buttons:</strong>
                             <ul>
-                                <li><strong>Trigger Action:</strong> Forces the NPC to generate an action immediately (may move or stay based on AI decision)</li>
-                                <li><strong>Request Letter:</strong> Forces the NPC to send you a letter about their current activities</li>
-                                <li><strong>Update All NPC Coords:</strong> Refreshes position tracking for all Background Life NPCs</li>
+                                <li><strong>Trigger Action:</strong> Forces the NPC to generate an action immediately (may move or stay based on AI decision).</li>
+                                <li><strong>Request Letter:</strong> Forces the NPC to send you a letter about their current activities. You will need to be in a town so the courier can deliver it.</li>
+                                <li><strong>Update All NPC Coords:</strong> Refreshes position tracking for all Background Life NPC.s</li>
                             </ul>
                         </div>
                         
