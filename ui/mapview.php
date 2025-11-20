@@ -991,6 +991,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         transform: translate(-50%, -50%);
         cursor: pointer;
         z-index: 5;
+        border: none;
     }
 
     .location-marker-icon {
@@ -1001,6 +1002,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         justify-content: center;
         opacity: 0.8;
         transition: all 0.3s ease;
+        border: none;
     }
 
     .location-marker-icon img {
@@ -1008,6 +1010,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         height: 100%;
         object-fit: contain;
         filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+        border: none;
     }
 
     .location-marker:hover .location-marker-icon {
@@ -1031,7 +1034,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         left: 50%;
         transform: translateX(-50%);
         margin-top: 5px;
-        border: 2px solid rgb(242, 124, 17);
+        border: none;
         display: none;
         z-index: 30;
         box-shadow: 0 4px 8px rgba(0,0,0,0.3);
