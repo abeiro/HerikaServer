@@ -1091,6 +1091,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type='reanimate' then 'CONTEXTI' 
       when type='info_timeforward' then 'TIMELAPSE' 
       when type='backgroundaction' then 'CONTEXTI' 
+      when type='innerchat' then 'BGLCHAT' 
       when type like 'ext_%' then 'PLUGIN'
       else '' 
     end as subtype,a.data  as data , gamets,localts,type,location
@@ -1212,6 +1213,9 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         } else if ($row["subtype"]=="BACKDIAG") {
             if ($focusOnChat)
                 continue;
+            $speaker = "backgroundchat";
+            
+        } else if ($row["subtype"]=="BGLCHAT") {
             $speaker = "backgroundchat";
             
         } else if ($row["subtype"]=="BOOKEVT") {

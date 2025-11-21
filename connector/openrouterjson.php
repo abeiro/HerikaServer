@@ -963,6 +963,9 @@ class openrouterjson
 
         $json_response=$this->_lastStreamedObject;
 
+        if (!isset($json_response["usage"]))
+            $json_response["usage"]=[];
+        
         if ($json_response) {
                 if ($GLOBALS["db"]) {
                     $GLOBALS["db"]->insert(

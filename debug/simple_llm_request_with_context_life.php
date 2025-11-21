@@ -489,7 +489,7 @@ if (is_array($parsed)) {
             [
                 'ts'     => $last_ts,
                 'gamets' => $last_gamets + 1,
-                'type'   => "chat",
+                'type'   => "innerchat",
                 'data'   => "The Narrator:{$GLOBALS["HERIKA_NAME"]} sent this letter to {$GLOBALS["PLAYER_NAME"]} " . "\n{$parsed["notification"]} )",
                 'sess' => $momentum,
                 'localts' => time(),
@@ -525,7 +525,7 @@ $db->insert(
     [
         'ts'     => $last_ts,
         'gamets' => $last_gamets,
-        'type'   => "chat",
+        'type'   => "innerchat",
         'data'   => "{$GLOBALS["HERIKA_NAME"]}'s inner thoughts: " . $buffer . " )",
         'sess'     => $momentum,
         'localts'  => time(),
