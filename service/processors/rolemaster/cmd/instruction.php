@@ -32,8 +32,14 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
 
     } else {
         logMsg("Using {$GLOBALS["CURRENT_CONNECTOR"]}");
+    
+        $sqlfilter=" and type not in ('prechat','backgroundaction') ";
 
         $contextDataHistoric = DataLastDataExpandedFor("", -50);    // Full context
+        
+        foreach ($contextDataHistoric as $element) {
+            // We should clean here background events entries
+        }
         
         $contextDataHistoric =array_merge([["role"=>"user","content"=>"# HISTORIC DIALOGUE AND EVENTS IN CHRONOLOGICAL ORDER"]], $contextDataHistoric);
 

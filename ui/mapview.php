@@ -288,14 +288,33 @@ if (!function_exists('race_icon_web_path')) {
 
     // --- Query total cost grouped by request type ---
     $query = "
-    SELECT
+    select A.*,B.content FROM 
+    (SELECT
         npc_name,metadata,extended_data,id,refid,race,extended_data->>'background_life_last_updated' as last_report,
         metadata->>'last_coords' as last_coords,metadata->>'last_coords_history' as last_coords_history
     FROM core_npc_master
     WHERE extended_data->>'background_life_enabled' = 'true'
-    order by npc_name asc
+    ) A
+    LEFT JOIN  (
+    SELECT topic, gamets, content, people
+        FROM (
+            SELECT
+                topic,
+                gamets,
+                content,
+                people,
+                ROW_NUMBER() OVER (
+                    PARTITION BY people
+                    ORDER BY gamets DESC
+                ) AS rn
+            FROM public.diarylog
+            WHERE topic = 'Sent Letter'
+        ) t
+        WHERE rn = 1
+    ) B ON (B.people=A.npc_name)
+    order by A.npc_name asc
 ";
-
+    error_log($query);
     $result = pg_query($adminConn, $query);
 
     // Generate random colors for markers
@@ -375,6 +394,7 @@ if (!function_exists('race_icon_web_path')) {
                 'coords_history' => $coordsHistory,
                 'bg_life_commands' => $bgLifeCommands,
                 'gps_track' => $gpsTrack,
+                'last_letter' => $row["content"],
             ];
 
         }
@@ -448,6 +468,7 @@ if (!function_exists('race_icon_web_path')) {
             'coords_history' => $translatedHistory,
             'bg_life_commands' => $marker['bg_life_commands'],
             'gps_track' => $marker['gps_track'],
+            'last_letter' => $marker['last_letter'],
         ];
     }
 
@@ -557,6 +578,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         background: #2a2a2a;
         border-radius: 8px;
         border: 1px solid #4a4a4a;
+        position: relative;
     }
 
     .page-header h1 {
@@ -566,6 +588,22 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         font-size: 2.2em;
         color: rgb(242, 124, 17);
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .open-new-window {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        font-size: 24px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        padding: 8px 12px;
+        border-radius: 6px;
+    }
+
+    .page-header .open-new-window:hover {
+        background: rgba(242, 124, 17, 0.2);
+        transform: scale(1.1);
     }
 
     .container {
@@ -587,7 +625,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         flex: 0 0 calc(25% - 20px);
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        gap: 10px;
     }
 
     .map-container {
@@ -723,7 +761,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border-left: 4px solid rgb(242, 124, 17);
         border-radius: 8px;
         border: 1px solid #4a4a4a;
-        max-height: calc(100vh - 200px);
+        max-height: calc(100vh - 450px);
         overflow-y: auto;
         overflow-x: hidden;
     }
@@ -789,6 +827,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         width: 100%;
         box-sizing: border-box;
         position: relative;
+        
     }
 
     .marker-item::before {
@@ -824,8 +863,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         margin: 8px 0;
         color: rgb(242, 124, 17);
         font-family: 'MagicCards', serif;
-        word-spacing: 4px;
-        padding-right: 90px;
+        display: inline-block;
+        vertical-align: text-top;
     }
 
     .marker-item-coords {
@@ -881,7 +920,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border-left: 4px solid rgb(242, 124, 17);
         border-radius: 8px;
         border: 1px solid #4a4a4a;
-        margin-bottom: 15px;
+        margin-bottom: 5px;
     }
 
     .bgl-instructions-box h3 {
@@ -1007,7 +1046,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .map-controls {
         text-align: center;
-        margin: 0;
+        margin: 0 0 15px 0;
         padding: 15px;
         background: #2a2a2a;
         border-radius: 8px;
@@ -1048,6 +1087,82 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         margin-top: 10px;
     }
 
+    .map-width-controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 15px;
+        padding: 12px;
+        background: #2a2a2a;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+    }
+
+    .map-width-controls label {
+        color: rgb(242, 124, 17);
+        font-weight: bold;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .map-width-slider {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .map-width-slider input[type="range"] {
+        flex: 1;
+        height: 6px;
+        border-radius: 3px;
+        background: #3a3a3a;
+        outline: none;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+    .map-width-slider input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: rgb(242, 124, 17);
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(242, 124, 17, 0.5);
+        transition: all 0.2s ease;
+    }
+
+    .map-width-slider input[type="range"]::-webkit-slider-thumb:hover {
+        box-shadow: 0 0 8px rgba(242, 124, 17, 0.8);
+        transform: scale(1.2);
+    }
+
+    .map-width-slider input[type="range"]::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: rgb(242, 124, 17);
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 2px 4px rgba(242, 124, 17, 0.5);
+        transition: all 0.2s ease;
+    }
+
+    .map-width-slider input[type="range"]::-moz-range-thumb:hover {
+        box-shadow: 0 0 8px rgba(242, 124, 17, 0.8);
+        transform: scale(1.2);
+    }
+
+    .map-width-value {
+        color: #ddd;
+        font-weight: bold;
+        font-size: 12px;
+        min-width: 35px;
+        text-align: right;
+    }
+
     img.thumb {
         max-width: 100px;
         border-radius: 4px;
@@ -1056,6 +1171,19 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .marker-action-btn {
         background: rgb(242, 124, 17);
+        color: #000;
+        border: none;
+        padding: 8px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .marker-action-btn-trans {
+        background: rgba(242, 124, 17,0);
         color: #000;
         border: none;
         padding: 8px 14px;
@@ -1214,15 +1342,34 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             max-height: 400px;
         }
     }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+            opacity: 1;
+        }
+        50% {
+            transform: scale(2);
+            opacity: 0.75;
+        }
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .pulsing {
+        animation: pulse 1s ease-in-out infinite;
+        z-index:100000
+    }
+
 </style>
 
 <main>
-    <div class="page-header">
-        <h1>🗺️ Background Life Manager</h1>
-    </div>
     <div class="container">
         <div class="content-wrapper">
             <div class="map-section">
+               
                 <div class="map-container" >
                     <img src="<?php echo $mapImageUrl; ?>" alt="Skyrim Map" id="mapImage">
 
@@ -1341,9 +1488,14 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     </div>
                     <button class="toggle-instructions-btn" onclick="toggleInstructions()">Show Instructions</button>
                 </div>
-
-                <div class="npc-list-container">
-                    <div class="npc-list-header">
+                 <div class="map-width-controls">
+                    <label>Map Width:</label>
+                    <div class="map-width-slider">
+                        <input type="range" id="mapWidthSlider" min="30" max="100" value="100" onchange="updateMapWidthFromSlider()" oninput="updateMapWidthFromSlider()">
+                        <span class="map-width-value"><span id="widthValue">100</span>%</span>
+                    </div>
+                </div>
+                <div class="npc-list-header">
                         <h3>📍 NPC Markers</h3>
                         <div style="color: #bbb; font-size: 13px; padding-bottom: 10px; border-bottom: 1px solid #4a4a4a;">
                             <strong>Tracked NPCs:</strong> <?php echo sizeof($translatedMarkers); ?> | 
@@ -1351,13 +1503,16 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                             <strong>Current Ingame Date:</strong> <?php echo $currentDate?>
                         </div>
                         <button onclick="updateAllCoords()" class="update-all-coords-btn">📍 Update All NPC Coords</button>
-                    </div>
+                </div>
+                <div class="npc-list-container">
+                    
                     <div class="marker-list">
                         <?php foreach ($translatedMarkers as $marker) {?>
-                            <div id="dtl_<?php echo $marker['id'] ?>" class="marker-item" style="border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>)" >
+                            <div id="dtl_<?php echo $marker['id'] ?>" class="marker-item" style="border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>);background-position-y: top;" >
                                 <h4>
                                     <span class="marker-item-color" style="background-color:                                                                                                                                                                         <?php echo $marker['color']; ?>;"></span>
-                                    <a href="#mkr_<?php echo $marker['id'] ?>"><?php echo $marker['name']; ?> &nbsp; ↗️</a>
+                                    <!--<a href="#mkr_<?php echo $marker['id'] ?>"><?php echo $marker['name']; ?> &nbsp; ↗️</a> -->
+                                    <span onclick="pulseAnimation('mkr_<?php echo $marker['id'] ?>')" style="cursor:pointer"><?php echo $marker['name']; ?> &nbsp; ↗️</span>
                                 </h4>
                                 <div class="marker-item-coords">
                                     <ul>
@@ -1365,12 +1520,18 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                     <li><strong>Map:</strong> (<?php echo $marker['x']; ?>,<?php echo $marker['y']; ?>)</li>
                                     <li><strong>RefId:</strong> (<?php echo $marker['refid']; ?>)</li>
                                     <li><strong>Last Position Timestamp:</strong> (<?php echo $marker['last_pos_ts']; ?>)</li>
-                                    <li><strong>Last Reported:</strong> (<?php echo $marker['last_report']; ?>)</li>
+                                    <li><strong>Last Reported:</strong>
+                                        <span title="<?php echo htmlentities($marker['last_letter']); ?>">
+                                            (<?php echo $marker['last_report']; ?>)
+                                            <?php if (isset($marker['last_letter'])) echo "<span style='cursor:help'>📜</span>";?>
+                                    </span>
+                                    </li>
                                     </ul>
                                 </div>
                                 <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
                                     <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn">🚶‍➡️Trigger Action</button>
                                     <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #4488ff;">✉️ Request Letter</button>
+                                    <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" title="Request coords update now" class="marker-action-btn-trans" >📍</button>
                                 </div>
                                 <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
                                     <label class="toggle-label-inline">
@@ -1399,8 +1560,49 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             </div>
         </div>
     </div>
-
+    <span class="open-new-window" onclick="openInNewWindow()" title="Open in new window">↗️</span>
     <script>
+        function openInNewWindow() {
+            window.open(window.location.href, '_blank');
+        }
+
+        function updateMapWidthFromSlider() {
+            const slider = document.getElementById('mapWidthSlider');
+            const widthPercent = slider.value + '%';
+            const mapContainer = document.querySelector('.map-container');
+            mapContainer.style.width = widthPercent;
+            
+            // Update the displayed value
+            document.getElementById('widthValue').textContent = slider.value;
+            
+            // Save preference to localStorage
+            localStorage.setItem('mapViewWidth', widthPercent);
+        }
+
+        function setMapWidth(width) {
+            const mapContainer = document.querySelector('.map-container');
+            mapContainer.style.width = width;
+            
+            // Extract numeric value from width (e.g., "100%" -> 100)
+            const numericValue = parseInt(width);
+            const slider = document.getElementById('mapWidthSlider');
+            if (slider) {
+                slider.value = numericValue;
+                document.getElementById('widthValue').textContent = numericValue;
+            }
+            
+            // Save preference to localStorage
+            localStorage.setItem('mapViewWidth', width);
+        }
+
+        // Restore saved width preference on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedWidth = localStorage.getItem('mapViewWidth');
+            if (savedWidth) {
+                setMapWidth(savedWidth);
+            }
+        });
+
         function requestAction(npcName) {
             const formData = new FormData();
             formData.append('action', 'request_action');
@@ -1584,6 +1786,15 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         }
 
     var processingMessage;
+        function pulseAnimation(id) {
+            const el = document.getElementById(id);
+
+            el.classList.add("pulsing");
+
+            setTimeout(() => {
+            el.classList.remove("pulsing");
+            }, 5000); // 3 seconds
+        }
     </script>
 </main>
 
