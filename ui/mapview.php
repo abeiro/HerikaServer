@@ -27,12 +27,96 @@ if (! $adminConn) {
     exit;
 }
 
+// Helper function to resolve NPC portrait path (same as npc_master.php)
+if (!function_exists('race_icon_web_path')) {
+    function race_icon_web_path($race, $webRoot, $refid, $md5 = '', $npcName = '', $portraitRel = ''){
+        global $enginePath;
+        // 0) If metadata specifies a portrait relative path under data/pictures, use it first
+        $portraitRel = trim((string)$portraitRel);
+        if ($portraitRel !== '') {
+            $portraitRel = ltrim(str_replace(['\\'], '/', $portraitRel), '/');
+            $picturesRootFs = rtrim("{$enginePath}/data/pictures/", '/\\') . DIRECTORY_SEPARATOR;
+            $picturesRootUrl = rtrim($webRoot . '/data/pictures/', '/');
+            $fs = realpath($picturesRootFs . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $portraitRel));
+            $picturesRootFs=realpath($picturesRootFs);
+            if ($fs !== false && strpos($fs, $picturesRootFs) === 0 && is_file($fs)) {
+                return $picturesRootUrl . '/' . str_replace('%2F','/', rawurlencode($portraitRel));
+            }
+        }
+        // 1) Prefer per-NPC portrait from data/pictures/profile
+        $refid = strtoupper($refid);
+        $profileDirFs = rtrim("{$enginePath}/data/pictures/profile/", '/\\') . DIRECTORY_SEPARATOR;
+        $profileDirUrl = rtrim($webRoot . '/data/pictures/profile/', '/');
+        $exts = ['png','jpg','jpeg','webp','gif'];
+        $candidates = [];
+        if (!empty($md5)) { $candidates[] = $md5; }
+        if (!empty($refid)) { $candidates[] = $refid; }
+        if (!empty($npcName)) {
+            $in = strtolower((string)$npcName);
+            $words = preg_split('/[^a-z0-9]+/', $in, -1, PREG_SPLIT_NO_EMPTY);
+            if (!empty($words)) {
+                $candidates[] = implode('', $words);
+                $candidates[] = implode('-', $words);
+                $candidates[] = implode('_', $words);
+            }
+        }
+        $seen = [];
+        foreach ($candidates as $base){
+            $base = trim((string)$base);
+            if ($base === '' || isset($seen[$base])) continue;
+            $seen[$base] = true;
+            foreach ($exts as $ext){
+                $fs = $profileDirFs . $base . '.' . $ext;
+                if (file_exists($fs)) {
+                    return $profileDirUrl . '/' . rawurlencode($base . '.' . $ext);
+                }
+            }
+        }
+
+        // 2) Fallback to race icon pack
+        $in = strtolower((string)$race);
+        $words = preg_split('/[^a-z0-9]+/', $in, -1, PREG_SPLIT_NO_EMPTY);
+        $slug = implode('', $words);
+        if ($slug === '') { $words = []; }
+        $aliases = [
+            'highelf'=>'altmer', 'altmer'=>'altmer',
+            'woodelf'=>'bosmer', 'bosmer'=>'bosmer',
+            'darkelf'=>'dunmer', 'dunmer'=>'dunmer',
+            'orsimer'=>'orc', 'orc'=>'orc',
+            'argonian'=>'argonian', 'khajiit'=>'khajiit', 'khajit'=>'khajiit',
+            'breton'=>'breton', 'imperial'=>'imperial',
+            'nord'=>'nord', 'redguard'=>'redguard',
+            'oldpeople'=>'nord', 'oldpeoplerace'=>'nord',
+        ];
+        $base = $aliases[$slug] ?? $slug;
+        $variants = [];
+        $variants[] = $base;
+        if (!empty($words)){
+            $variants[] = implode('', $words);
+            $variants[] = implode('-', $words);
+            $variants[] = implode('_', $words);
+        }
+        // Synonyms/misspellings
+        if ($base === 'khajiit') { $variants[] = 'khajit'; }
+        if ($base === 'khajit') { $variants[] = 'khajiit'; }
+        $variants = array_values(array_unique(array_filter($variants, function($v){ return $v !== ''; })));
+        $fsDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'ui' . DIRECTORY_SEPARATOR . 'images' . DIRECTORY_SEPARATOR . 'races' . DIRECTORY_SEPARATOR;
+        $exts2 = ['png','jpg','jpeg','webp','gif','svg'];
+        foreach ($variants as $name){
+            foreach ($exts2 as $ext){
+                $fs = $fsDir . $name . '.' . $ext;
+                if (file_exists($fs)) return $webRoot . '/ui/images/races/' . $name . '.' . $ext;
+            }
+        }
+        $defaultFs = $fsDir . 'default.png';
+        if (file_exists($defaultFs)) { return $webRoot . '/ui/images/races/default.png'; }
+        return '';
+    }
+}
+
     // Handle AJAX request update
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-        if ($_POST['action'] === 'request_update') {
-            handleRequestUpdate();
-            exit;
-        } elseif ($_POST['action'] === 'request_action') {
+        if ($_POST['action'] === 'request_action') {
             handleRequestAction();
             exit;
         } elseif ($_POST['action'] === 'request_reporting') {
@@ -41,16 +125,13 @@ if (! $adminConn) {
         } elseif ($_POST['action'] === 'update_coords') {
             handleUpdateCoords();
             exit;
+        } elseif ($_POST['action'] === 'update_all_coords') {
+            handleUpdateAllCoords();
+            exit;
+        } elseif ($_POST['action'] === 'toggle_bg_life_setting') {
+            handleToggleBgLifeSetting();
+            exit;
         }
-    }
-
-    function handleRequestUpdate() {
-        global $enginePath;
-        // Add your handler code here
-
-        `php $enginePath/debug/simple_llm_request_with_context_life_command.php "The Narrator" TrackAll`;
-
-        echo json_encode(['ok' => true, 'message' => 'Update request processed']);
     }
 
     function handleRequestAction() {
@@ -95,6 +176,70 @@ if (! $adminConn) {
         // Add your handler code here
         `php $enginePath/debug/simple_llm_request_with_context_life_command.php "$npcName" Track`;
         echo json_encode(['ok' => true, 'message' => "Coords update processed for $npcName"]);
+    }
+
+    function handleUpdateAllCoords() {
+        global $enginePath;
+        
+        // Update coordinates for all NPCs
+        `php $enginePath/debug/simple_llm_request_with_context_life_command.php "The Narrator" TrackAll`;
+        echo json_encode(['ok' => true, 'message' => 'All NPC coords update processed']);
+    }
+
+    function handleToggleBgLifeSetting() {
+        global $adminConn;
+        
+        $npcId = isset($_POST['npc_id']) ? intval($_POST['npc_id']) : 0;
+        $setting = isset($_POST['setting']) ? $_POST['setting'] : '';
+        $value = isset($_POST['value']) ? filter_var($_POST['value'], FILTER_VALIDATE_BOOLEAN) : false;
+        
+        if (!$npcId || !$setting) {
+            echo json_encode(['ok' => false, 'message' => 'Invalid parameters']);
+            return;
+        }
+        
+        // Get current NPC data
+        $query = "SELECT metadata, extended_data FROM core_npc_master WHERE id = $1";
+        $result = pg_query_params($adminConn, $query, [$npcId]);
+        
+        if (!$result || pg_num_rows($result) === 0) {
+            echo json_encode(['ok' => false, 'message' => 'NPC not found']);
+            return;
+        }
+        
+        $row = pg_fetch_assoc($result);
+        
+        if ($setting === 'bg_life_commands') {
+            // Update extended_data
+            $extData = json_decode($row['extended_data'], true) ?: [];
+            $extData['background_life_commands'] = $value;
+            $extDataJson = json_encode($extData);
+            
+            $updateQuery = "UPDATE core_npc_master SET extended_data = $1 WHERE id = $2";
+            $updateResult = pg_query_params($adminConn, $updateQuery, [$extDataJson, $npcId]);
+            
+            if ($updateResult) {
+                echo json_encode(['ok' => true, 'message' => 'Autonomous Actions ' . ($value ? 'enabled' : 'disabled')]);
+            } else {
+                echo json_encode(['ok' => false, 'message' => 'Update failed']);
+            }
+        } elseif ($setting === 'gps_track') {
+            // Update metadata
+            $metadata = json_decode($row['metadata'], true) ?: [];
+            $metadata['gps_track'] = $value;
+            $metadataJson = json_encode($metadata);
+            
+            $updateQuery = "UPDATE core_npc_master SET metadata = $1 WHERE id = $2";
+            $updateResult = pg_query_params($adminConn, $updateQuery, [$metadataJson, $npcId]);
+            
+            if ($updateResult) {
+                echo json_encode(['ok' => true, 'message' => 'Hourly Tracking ' . ($value ? 'enabled' : 'disabled')]);
+            } else {
+                echo json_encode(['ok' => false, 'message' => 'Update failed']);
+            }
+        } else {
+            echo json_encode(['ok' => false, 'message' => 'Invalid setting']);
+        }
     }
 
     // Coordinate translation constants (world bounds)
@@ -144,7 +289,7 @@ if (! $adminConn) {
     // --- Query total cost grouped by request type ---
     $query = "
     SELECT
-        npc_name,metadata,id,refid,extended_data->>'background_life_last_updated' as last_report,
+        npc_name,metadata,extended_data,id,refid,race,extended_data->>'background_life_last_updated' as last_report,
         metadata->>'last_coords' as last_coords,metadata->>'last_coords_history' as last_coords_history
     FROM core_npc_master
     WHERE extended_data->>'background_life_enabled' = 'true'
@@ -185,6 +330,11 @@ if (! $adminConn) {
             }
 
             $meta      = json_decode($row['metadata'], true);
+            $extData   = json_decode($row['extended_data'], true);
+            
+            // Parse background life settings
+            $bgLifeCommands = isset($extData['background_life_commands']) ? (bool)$extData['background_life_commands'] : false;
+            $gpsTrack = isset($meta['gps_track']) ? (bool)$meta['gps_track'] : false;
             
             // Parse history coordinates
             $coordsHistory = [];
@@ -216,12 +366,15 @@ if (! $adminConn) {
                 'color'       => generateRandomColor($row['npc_name']),
                 'size'        => 10,
                 'tag'         => $coordsData[3],
-                'figure'      => isset($meta["portrait"]) ? $meta["portrait"] : null,
+                'portrait'    => isset($meta["portrait"]) ? $meta["portrait"] : '',
+                'race'        => $row['race'],
                 'id'          => $row["id"],
                 'refid'       => $row["refid"],
                 'last_pos_ts' => $coordsData["last_updated"]?convert_gamets2skyrim_date($coordsData["last_updated"]).",hours ago:".round(($last_gamets-$coordsData["last_updated"]) *0.0000024,0):null,
                 'last_report' => convert_gamets2skyrim_date($row["last_report"]).",hours ago:".round(($last_gamets-$row["last_report"]) *0.0000024,0),
                 'coords_history' => $coordsHistory,
+                'bg_life_commands' => $bgLifeCommands,
+                'gps_track' => $gpsTrack,
             ];
 
         }
@@ -266,6 +419,17 @@ if (! $adminConn) {
             ];
         }
 
+        // Resolve NPC portrait using the helper function
+        $md5 = md5($marker['name']);
+        $figureUrl = race_icon_web_path(
+            $marker['race'],
+            $webRoot,
+            $marker['refid'],
+            $md5,
+            $marker['name'],
+            $marker['portrait']
+        );
+
         $translatedMarkers[] = [
             'name'     => $marker['name'],
             'x'        => $coords['x'],
@@ -276,12 +440,14 @@ if (! $adminConn) {
             'ingame_z' => $marker['ingame_z'],
             'ingame_y' => $marker['ingame_y'],
             'tag'      => $marker['tag'],
-            'figure'   => $marker["figure"] ? "../data/pictures/{$marker["figure"]}" : "images/races/default.png",
+            'figure'   => $figureUrl,
             'id'          => $marker['id'],
             'refid'       => $marker['refid'],
             'last_pos_ts' => $marker["last_pos_ts"],
             'last_report' => $marker["last_report"],
             'coords_history' => $translatedHistory,
+            'bg_life_commands' => $marker['bg_life_commands'],
+            'gps_track' => $marker['gps_track'],
         ];
     }
 
@@ -407,6 +573,23 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         margin: 0 auto;
     }
 
+    .content-wrapper {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+
+    .map-section {
+        flex: 0 0 75%;
+    }
+
+    .sidebar-section {
+        flex: 0 0 calc(25% - 20px);
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
     .map-container {
         position: relative;
         display: inline-block;
@@ -414,10 +597,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         padding: 15px;
         border: 3px solid rgb(242, 124, 17);
         box-shadow: 0 0 20px rgba(242, 124, 17, 0.3);
-        margin: 20px auto;
-        width: 75%;
+        margin: 0 auto;
+        width: 100%;
         box-sizing: border-box;
         border-radius: 8px;
+        overflow: auto;
     }
 
     .map-container img {
@@ -533,27 +717,96 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         color: rgb(242, 124, 17);
     }
 
+    .npc-list-container {
+        background: #2a2a2a;
+        padding: 20px;
+        border-left: 4px solid rgb(242, 124, 17);
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .npc-list-container h3 {
+        color: rgb(242, 124, 17);
+        font-family: 'MagicCards', serif;
+        margin-top: 0;
+        margin-bottom: 10px;
+        word-spacing: 6px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+
+    .npc-list-header {
+        position: sticky;
+        top: 0;
+        background: #2a2a2a;
+        padding-bottom: 10px;
+        z-index: 10;
+    }
+
+    .update-all-coords-btn {
+        width: 100%;
+        margin-top: 10px;
+        background: #44ff44;
+        color: #000;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        transition: all 0.3s ease;
+    }
+
+    .update-all-coords-btn:hover {
+        background: #55ff55;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(68, 255, 68, 0.4);
+    }
+
+    .update-all-coords-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
     .marker-list {
         display: flex;
+        flex-direction: column;
         gap: 15px;
-        margin-top: 20px;
-        justify-content: space-around;
-        align-content: center;
-        align-items: baseline;
-        justify-items: stretch;
-        flex-direction: row-reverse;
-        flex-wrap: wrap;
     }
 
     .marker-item {
-        background: #2a2a2a;
+        background-color: #1a1a1a;
         padding: 15px;
         border-left: 4px solid;
         border-radius: 8px;
-        background-size: contain;
+        background-size: 100px;
         background-repeat: no-repeat;
-        background-position-x: right;
+        background-position: right 10px center;
         border: 1px solid #4a4a4a;
+        width: 100%;
+        box-sizing: border-box;
+        position: relative;
+    }
+
+    .marker-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(to right, #1a1a1a 60%, transparent 100%);
+        border-radius: 8px;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    .marker-item > * {
+        position: relative;
+        z-index: 2;
     }
 
     .marker-item-color {
@@ -572,6 +825,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         color: rgb(242, 124, 17);
         font-family: 'MagicCards', serif;
         word-spacing: 4px;
+        padding-right: 90px;
     }
 
     .marker-item-coords {
@@ -602,9 +856,158 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         color: rgb(242, 124, 17);
     }
 
+    .toggle-label-inline {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        gap: 6px;
+        font-size: 12px;
+        color: #ddd;
+        transition: color 0.3s ease;
+        padding: 6px 10px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 6px;
+        border: 1px solid #333;
+    }
+
+    .toggle-label-inline:hover {
+        color: rgb(242, 124, 17);
+        background: rgba(242, 124, 17, 0.1);
+    }
+
+    .bgl-instructions-box {
+        background: #2a2a2a;
+        padding: 15px;
+        border-left: 4px solid rgb(242, 124, 17);
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+        margin-bottom: 15px;
+    }
+
+    .bgl-instructions-box h3 {
+        color: rgb(242, 124, 17);
+        font-family: 'MagicCards', serif;
+        margin-top: 0;
+        margin-bottom: 12px;
+        word-spacing: 6px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        font-size: 1.2em;
+    }
+
+    .bgl-instructions-content {
+        color: #ddd;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    .instruction-section {
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #3a3a3a;
+    }
+
+    .instruction-section:last-of-type {
+        border-bottom: none;
+    }
+
+    .instruction-section strong {
+        color: rgb(242, 124, 17);
+        display: block;
+        margin-bottom: 6px;
+    }
+
+    .instruction-section ul,
+    .instruction-section ol {
+        margin: 6px 0;
+        padding-left: 25px;
+    }
+
+    .instruction-section li {
+        margin: 4px 0;
+    }
+
+    .instruction-section em {
+        color: #aaa;
+        font-style: italic;
+    }
+
+    .instruction-note {
+        background: rgba(242, 124, 17, 0.1);
+        padding: 8px 12px;
+        border-radius: 6px;
+        border-left: 3px solid rgb(242, 124, 17);
+        margin-top: 10px;
+        font-size: 12px;
+    }
+
+    .instruction-note strong {
+        color: rgb(242, 124, 17);
+    }
+
+    .toggle-instructions-btn {
+        width: 100%;
+        margin-top: 10px;
+        background: #3a3a3a;
+        color: #ddd;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .toggle-instructions-btn:hover {
+        background: #4a4a4a;
+        color: rgb(242, 124, 17);
+    }
+
+    .bgl-instructions-box.collapsed .bgl-instructions-content {
+        display: none;
+    }
+
+    .toggle-checkbox {
+        width: 36px;
+        height: 18px;
+        appearance: none;
+        background: #444;
+        border-radius: 9px;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.3s ease;
+        border: 1px solid #666;
+        flex-shrink: 0;
+    }
+
+    .toggle-checkbox:checked {
+        background: rgb(242, 124, 17);
+    }
+
+    .toggle-checkbox::before {
+        content: '';
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: white;
+        top: 1px;
+        left: 2px;
+        transition: transform 0.3s ease;
+    }
+
+    .toggle-checkbox:checked::before {
+        transform: translateX(18px);
+    }
+
+    .toggle-text {
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
     .map-controls {
         text-align: center;
-        margin: 15px 0;
+        margin: 0;
         padding: 15px;
         background: #2a2a2a;
         border-radius: 8px;
@@ -615,12 +1018,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         background: rgb(242, 124, 17);
         color: #000;
         border: none;
-        padding: 10px 20px;
-        margin: 5px;
-        border-radius: 8px;
+        padding: 8px 12px;
+        margin: 3px;
+        border-radius: 6px;
         cursor: pointer;
         font-weight: bold;
-        font-size: 14px;
+        font-size: 12px;
         transition: all 0.3s ease;
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
@@ -638,9 +1041,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .map-controls span {
         color: rgb(242, 124, 17);
-        margin: 0 15px;
+        margin: 5px;
         font-weight: bold;
-        font-size: 16px;
+        font-size: 14px;
+        display: block;
+        margin-top: 10px;
     }
 
     img.thumb {
@@ -678,6 +1083,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         transform: translate(-50%, -50%);
         cursor: pointer;
         z-index: 5;
+        border: none;
     }
 
     .location-marker-icon {
@@ -688,6 +1094,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         justify-content: center;
         opacity: 0.8;
         transition: all 0.3s ease;
+        border: none;
     }
 
     .location-marker-icon img {
@@ -695,6 +1102,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         height: 100%;
         object-fit: contain;
         filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+        border: none;
     }
 
     .location-marker:hover .location-marker-icon {
@@ -718,7 +1126,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         left: 50%;
         transform: translateX(-50%);
         margin-top: 5px;
-        border: 2px solid rgb(242, 124, 17);
+        border: none;
         display: none;
         z-index: 30;
         box-shadow: 0 4px 8px rgba(0,0,0,0.3);
@@ -754,31 +1162,69 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         padding-top: 5px;
     }
 
+    /* Scrollbar styling for NPC list */
+    .npc-list-container::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    .npc-list-container::-webkit-scrollbar-track {
+        background: #1a1a1a;
+        border-radius: 5px;
+    }
+
+    .npc-list-container::-webkit-scrollbar-thumb {
+        background: rgb(242, 124, 17);
+        border-radius: 5px;
+    }
+
+    .npc-list-container::-webkit-scrollbar-thumb:hover {
+        background: rgb(255, 140, 30);
+    }
+
     /* Responsive Design */
+    @media (max-width: 1200px) {
+        .content-wrapper {
+            flex-direction: column;
+        }
+
+        .map-section {
+            flex: 0 0 100%;
+        }
+
+        .sidebar-section {
+            flex: 0 0 100%;
+        }
+
+        .npc-list-container {
+            max-height: 600px;
+        }
+    }
+
     @media (max-width: 768px) {
         main {
             padding-left: 5%;
             padding-right: 5%;
         }
 
-        .map-container {
-            width: 95%;
-        }
-
         .page-header h1 {
             font-size: 1.5em;
+        }
+
+        .npc-list-container {
+            max-height: 400px;
         }
     }
 </style>
 
 <main>
     <div class="page-header">
-        <h1>🗺️ Background Life - Command Center</h1>
+        <h1>🗺️ Background Life Manager</h1>
     </div>
     <div class="container">
-        
-        <div class="map-container" >
-            <img src="<?php echo $mapImageUrl; ?>" alt="Skyrim Map" id="mapImage">
+        <div class="content-wrapper">
+            <div class="map-section">
+                <div class="map-container" >
+                    <img src="<?php echo $mapImageUrl; ?>" alt="Skyrim Map" id="mapImage">
 
             <?php
                 // Render NPC markers
@@ -852,104 +1298,109 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     echo '</div>' . PHP_EOL;
                 }
             ?>
-        </div>
-        <div style="width:20%;float:right">
-            <div class="info-panel">
-                <h3>⚔ Map Info ⚔</h3>
-                <strong>Dimensions:</strong> <?php echo $mapWidth; ?>×<?php echo $mapHeight; ?> pixels<br>
-                <strong>NPC Markers:</strong> <?php echo sizeof($translatedMarkers); ?><br>
-                <strong>Location Markers:</strong> <?php echo sizeof($passiveMarkers); ?><br>
-                <strong>Current Date:</strong> <?php echo $currentDate?><br/>
+                </div>
             </div>
 
-            <div class="map-controls">
-                <button onclick="zoomMap(0.8)">🔍− Shrink</button>
-                <button onclick="zoomMap(1)">⟲ Reset</button>
-                <button onclick="zoomMap(1.2)">🔍+ Expand</button>
-                <span id="zoomLevel">100%</span>
-                <button onclick="requestUpdate()" style="margin-left: 20px;">📤 Request Update</button>
-            </div>
-        </div>
-        <br break="all"/>
-        <div class="info-panel">
-            <h3>📍 NPC Markers</h3>
-            <div class="marker-list">
-                <?php foreach ($translatedMarkers as $marker) {?>
-                    <div id="dtl_<?php echo $marker['id'] ?>" class="marker-item" style="background-blend-mode: soft-light;border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>)" >
-                        <h4>
-                            <span class="marker-item-color" style="background-color:                                                                                                                                                                         <?php echo $marker['color']; ?>;"></span>
-                            <a href="#mkr_<?php echo $marker['id'] ?>"><?php echo $marker['name']; ?> &nbsp; ↗️</a>
-                        </h4>
-                        <div class="marker-item-coords">
+            <div class="sidebar-section">
+                <div class="bgl-instructions-box collapsed">
+                    <h3>📖 How Background Life Works</h3>
+                    <div class="bgl-instructions-content">
+                        <div class="instruction-section">
+                            <strong>Getting Started:</strong>
+                            <ol>
+                                <li><b>Make sure you dismiss the NPC first before adding to Background Life!</b></li>
+                                <li>Look at an NPC in-game and press the <strong>Roleplay Wheel Hotkey (CHIM MCM Menu)</strong> to add them to Background Life</li>
+                                <li>You can either: <ul>
+                                    <li>Talk to the NPC and give commands like: <em>"Go to Riften and then to Whiterun to do X and Y"</em></li>
+                                    <li>Wait 5 ingame days for them to automatically trigger background life.</li>
+                                </ul>
+                                <li>They shall now travel around Skyrim.</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="instruction-section">
+                            <strong>NPC Settings:</strong>
                             <ul>
-                            <li><strong>In-game:</strong> x=<?php echo $marker['ingame_x']; ?>, y=<?php echo $marker['ingame_y']; ?>, z=<?php echo $marker['ingame_z']; ?></li>
-                            <li><strong>Map:</strong> (<?php echo $marker['x']; ?>,<?php echo $marker['y']; ?>)</li>
-                            <li><strong>RefId:</strong> (<?php echo $marker['refid']; ?>)</li>
-                            <li><strong>Last Pos Ts.:</strong> (<?php echo $marker['last_pos_ts']; ?>)</li>
-                            <li><strong>Last reported:</strong> (<?php echo $marker['last_report']; ?>)</li>
+                                <li><strong>🎮 Auto Actions:</strong> Every 5 in-game days, NPC generates inner thoughts. When enabled, they can autonomously travel to new locations. When disabled, only thoughts are generated.</li>
+                                <li><strong>📍 Hourly Tracking:</strong> Tracks NPC coordinates every in-game hour (default is daily) for detailed movement history.</li>
                             </ul>
                         </div>
-                        <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
-                            <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn">🎬 Request Action</button>
-                            <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #4488ff;">📋 Request Reporting</button>
-                            <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #44ff44;">📍 Update Coords</button>
+                        
+                        <div class="instruction-section">
+                            <strong>Control Buttons:</strong>
+                            <ul>
+                                <li><strong>Trigger Action:</strong> Forces the NPC to generate an action immediately (may move or stay based on AI decision).</li>
+                                <li><strong>Request Letter:</strong> Forces the NPC to send you a letter about their current activities. You will need to be in a town so the courier can deliver it.</li>
+                                <li><strong>Update All NPC Coords:</strong> Refreshes position tracking for all Background Life NPC.s</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="instruction-note">
+                            <strong>💡 Note:</strong> Events are triggered automatically every 5 in-game days. The buttons are mainly for testing or forcing immediate updates.
                         </div>
                     </div>
-                <?php }?>
+                    <button class="toggle-instructions-btn" onclick="toggleInstructions()">Show Instructions</button>
+                </div>
+
+                <div class="npc-list-container">
+                    <div class="npc-list-header">
+                        <h3>📍 NPC Markers</h3>
+                        <div style="color: #bbb; font-size: 13px; padding-bottom: 10px; border-bottom: 1px solid #4a4a4a;">
+                            <strong>Tracked NPCs:</strong> <?php echo sizeof($translatedMarkers); ?> | 
+                            <strong>Markers:</strong> <?php echo sizeof($passiveMarkers); ?><br/>
+                            <strong>Current Ingame Date:</strong> <?php echo $currentDate?>
+                        </div>
+                        <button onclick="updateAllCoords()" class="update-all-coords-btn">📍 Update All NPC Coords</button>
+                    </div>
+                    <div class="marker-list">
+                        <?php foreach ($translatedMarkers as $marker) {?>
+                            <div id="dtl_<?php echo $marker['id'] ?>" class="marker-item" style="border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>)" >
+                                <h4>
+                                    <span class="marker-item-color" style="background-color:                                                                                                                                                                         <?php echo $marker['color']; ?>;"></span>
+                                    <a href="#mkr_<?php echo $marker['id'] ?>"><?php echo $marker['name']; ?> &nbsp; ↗️</a>
+                                </h4>
+                                <div class="marker-item-coords">
+                                    <ul>
+                                    <li><strong>In-game:</strong> x=<?php echo $marker['ingame_x']; ?>, y=<?php echo $marker['ingame_y']; ?>, z=<?php echo $marker['ingame_z']; ?></li>
+                                    <li><strong>Map:</strong> (<?php echo $marker['x']; ?>,<?php echo $marker['y']; ?>)</li>
+                                    <li><strong>RefId:</strong> (<?php echo $marker['refid']; ?>)</li>
+                                    <li><strong>Last Position Timestamp:</strong> (<?php echo $marker['last_pos_ts']; ?>)</li>
+                                    <li><strong>Last Reported:</strong> (<?php echo $marker['last_report']; ?>)</li>
+                                    </ul>
+                                </div>
+                                <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
+                                    <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn">🚶‍➡️Trigger Action</button>
+                                    <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #4488ff;">✉️ Request Letter</button>
+                                </div>
+                                <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <label class="toggle-label-inline">
+                                        <input type="checkbox" 
+                                               class="toggle-checkbox" 
+                                               data-npc-id="<?php echo $marker['id']; ?>" 
+                                               data-setting="bg_life_commands" 
+                                               <?php echo $marker['bg_life_commands'] ? 'checked' : ''; ?>
+                                               onchange="toggleBgLifeSetting(this)">
+                                        <span class="toggle-text">🎮 Auto Actions</span>
+                                    </label>
+                                    <label class="toggle-label-inline">
+                                        <input type="checkbox" 
+                                               class="toggle-checkbox" 
+                                               data-npc-id="<?php echo $marker['id']; ?>" 
+                                               data-setting="gps_track" 
+                                               <?php echo $marker['gps_track'] ? 'checked' : ''; ?>
+                                               onchange="toggleBgLifeSetting(this)">
+                                        <span class="toggle-text">📍 Hourly Tracking</span>
+                                    </label>
+                                </div>
+                            </div>
+                        <?php }?>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        let currentScale = 1;
-
-        function zoomMap(scale) {
-            if (scale === 1) {
-                currentScale = 1;
-            } else {
-                currentScale *= scale;
-            }
-
-            // Clamp scale between 0.5 and 2.5
-            currentScale = Math.max(0.5, Math.min(2.5, currentScale));
-
-            const mapContainer = document.querySelector('.map-container');
-            const zoomDisplay = document.getElementById('zoomLevel');
-
-            // Update width based on scale
-            mapContainer.style.maxWidth = (100 * currentScale) + '%';
-            mapContainer.style.margin = '20px auto';
-
-            // Update zoom display
-            zoomDisplay.textContent = Math.round(currentScale * 100) + '%';
-        }
-
-        function requestUpdate() {
-            const formData = new FormData();
-            formData.append('action', 'request_update');
-            showProcessing()
-            fetch(window.location.href, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.ok) {
-                    alert('Update request sent!');
-                    // Optionally reload the page
-                    // location.reload();
-                } else {
-                    alert('Error: ' + (data.message || 'Unknown error'));
-                }
-                hideProcessing()
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                hideProcessing()
-                alert('Request failed');
-            });
-        }
-
         function requestAction(npcName) {
             const formData = new FormData();
             formData.append('action', 'request_action');
@@ -1030,6 +1481,84 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 hideProcessing();
             });
         }
+
+        function updateAllCoords() {
+            const formData = new FormData();
+            formData.append('action', 'update_all_coords');
+            showProcessing()
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ok) {
+                    alert(data.message || 'All coords update sent!');
+                    // Reload the page after a short delay to see updates
+                    setTimeout(() => {
+                        location.reload();
+                    }, 200);
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
+                }
+                hideProcessing();
+             
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Request failed');
+                hideProcessing();
+            });
+        }
+
+        function toggleBgLifeSetting(checkbox) {
+            const npcId = checkbox.getAttribute('data-npc-id');
+            const setting = checkbox.getAttribute('data-setting');
+            const value = checkbox.checked;
+            
+            const formData = new FormData();
+            formData.append('action', 'toggle_bg_life_setting');
+            formData.append('npc_id', npcId);
+            formData.append('setting', setting);
+            formData.append('value', value ? '1' : '0');
+            
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ok) {
+                    // Show success message without alert
+                    console.log(data.message);
+                    // Optional: show a brief toast notification
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
+                    // Revert checkbox on error
+                    checkbox.checked = !value;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Request failed');
+                // Revert checkbox on error
+                checkbox.checked = !value;
+            });
+        }
+
+        function toggleInstructions() {
+            const box = document.querySelector('.bgl-instructions-box');
+            const btn = document.querySelector('.toggle-instructions-btn');
+            
+            if (box.classList.contains('collapsed')) {
+                box.classList.remove('collapsed');
+                btn.textContent = 'Hide Instructions';
+            } else {
+                box.classList.add('collapsed');
+                btn.textContent = 'Show Instructions';
+            }
+        }
+
         function showProcessing()
         {
 

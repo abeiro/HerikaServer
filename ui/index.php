@@ -398,10 +398,10 @@ if (isset($_POST["animation"])) {
         echo "<h1 class='my-2' style='margin-right: 15px;'>Event Log</h1>";
         
         if ($isAutoRefresh) {
-            echo "<button onclick=\"window.location.href='?table=eventlog'\" class='btn-base btn-secondary' style='padding: 8px 12px; font-size: 0.9em;' title='Stop monitoring events'>⏸️ Stop Live</button>";
+            echo "<button onclick=\"window.location.href='?table=eventlog&page=1'\" class='btn-base btn-secondary' style='padding: 8px 12px; font-size: 0.9em;' title='Stop monitoring events'>⏸️ Stop Live</button>";
             echo "<span style='margin-left: 10px; color: #28a745; font-weight: bold; font-size: 0.9em;'>🔴 LIVE</span>";
         } else {
-            echo "<button onclick=\"window.location.href='?table=eventlog&autorefresh=true'\" class='btn-base btn-primary' style='padding: 8px 12px; font-size: 0.9em;' title='Start monitoring events with auto-refresh'>📡 Monitor Live</button>";
+            echo "<button onclick=\"window.location.href='?table=eventlog&page=1&autorefresh=true'\" class='btn-base btn-primary' style='padding: 8px 12px; font-size: 0.9em;' title='Start monitoring events with auto-refresh'>📡 Monitor Live</button>";
         }
         echo "</div>";
         
@@ -422,27 +422,51 @@ if (isset($_POST["animation"])) {
             echo "<button onclick=\"window.location.href='?table=eventlog&page=$prevPage&limit=$limit'\" class='btn-base btn-primary'>Previous</button> ";
         }
         
-        // First 5 pages (1-5)
-        for ($i = 1; $i <= 5 && $i <= $totalPages; $i++) {
-            if ($i == $page) {
-                echo "<button onclick=\"window.location.href='?table=eventlog&page=$i&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$i</button> ";
-            } else {
-                echo "<button onclick=\"window.location.href='?table=eventlog&page=$i&limit=$limit'\" class='btn-base btn-primary'>$i</button> ";
-            }
-        }
-        
-        // Show ellipsis and last 5 pages if we have more than 10 pages total
-        if ($totalPages > 10) {
-            echo "<span style='margin: 0 5px; color: #fff;'>...</span>";
-            
-            // Last 5 pages
-            $startLastPages = max(6, $totalPages - 4);
-            for ($i = $startLastPages; $i <= $totalPages; $i++) {
+        // Smart pagination: show current page and surrounding pages
+        if ($totalPages <= 10) {
+            // Show all pages if 10 or fewer
+            for ($i = 1; $i <= $totalPages; $i++) {
                 if ($i == $page) {
                     echo "<button onclick=\"window.location.href='?table=eventlog&page=$i&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$i</button> ";
                 } else {
                     echo "<button onclick=\"window.location.href='?table=eventlog&page=$i&limit=$limit'\" class='btn-base btn-primary'>$i</button> ";
                 }
+            }
+        } else {
+            // Always show first page
+            if ($page == 1) {
+                echo "<button onclick=\"window.location.href='?table=eventlog&page=1&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>1</button> ";
+            } else {
+                echo "<button onclick=\"window.location.href='?table=eventlog&page=1&limit=$limit'\" class='btn-base btn-primary'>1</button> ";
+            }
+            
+            // Show ellipsis if current page is far from start
+            if ($page > 4) {
+                echo "<span style='margin: 0 5px; color: #fff;'>...</span>";
+            }
+            
+            // Show pages around current page
+            $start = max(2, $page - 2);
+            $end = min($totalPages - 1, $page + 2);
+            
+            for ($i = $start; $i <= $end; $i++) {
+                if ($i == $page) {
+                    echo "<button onclick=\"window.location.href='?table=eventlog&page=$i&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$i</button> ";
+                } else {
+                    echo "<button onclick=\"window.location.href='?table=eventlog&page=$i&limit=$limit'\" class='btn-base btn-primary'>$i</button> ";
+                }
+            }
+            
+            // Show ellipsis if current page is far from end
+            if ($page < $totalPages - 3) {
+                echo "<span style='margin: 0 5px; color: #fff;'>...</span>";
+            }
+            
+            // Always show last page
+            if ($page == $totalPages) {
+                echo "<button onclick=\"window.location.href='?table=eventlog&page=$totalPages&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$totalPages</button> ";
+            } else {
+                echo "<button onclick=\"window.location.href='?table=eventlog&page=$totalPages&limit=$limit'\" class='btn-base btn-primary'>$totalPages</button> ";
             }
         }
         

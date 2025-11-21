@@ -161,6 +161,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         text-align: center;
     }
 
+    /* Event Log Table - People Present column should be 3x wider */
+    #eventlog-tab table th:nth-child(4),
+    #eventlog-tab table td:nth-child(4) {
+        min-width: 300px;
+        width: 20%;
+    }
+
     /* Responsive Table */
     @media (max-width: 768px) {
         .table-container {
@@ -179,6 +186,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         .tab-button {
             padding: 10px 14px;
             font-size: 0.9em;
+        }
+        
+        #eventlog-tab table th:nth-child(4),
+        #eventlog-tab table td:nth-child(4) {
+            min-width: 150px;
+            width: auto;
         }
     }
 
@@ -441,11 +454,14 @@ function getTimeColor($time) {
             $isAutoRefresh = isset($_GET["autorefresh"]) && $_GET["autorefresh"];
             echo "<div style='display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0;'>";
             
+            echo "<button id='live-toggle-btn-eventlog' onclick=\"toggleAutoRefreshEventLog()\" class='btn-base " . ($isAutoRefresh ? "btn-secondary" : "btn-primary") . "' style='padding: 8px 12px; font-size: 0.9em;' title='Toggle live monitoring'>";
+            echo $isAutoRefresh ? "⏸️ Stop Live" : "📡 Monitor Live";
+            echo "</button>";
+            
             if ($isAutoRefresh) {
-                echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog'\" class='btn-base btn-secondary' style='padding: 8px 12px; font-size: 0.9em;' title='Stop monitoring events'>⏸️ Stop Live</button>";
-                echo "<span style='margin-left: 10px; color: #28a745; font-weight: bold; font-size: 0.9em;'>🔴 LIVE</span>";
+                echo "<span id='live-indicator-eventlog' style='margin-left: 10px; color: #28a745; font-weight: bold; font-size: 0.9em;'>🔴 LIVE</span>";
             } else {
-                echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&autorefresh=true'\" class='btn-base btn-primary' style='padding: 8px 12px; font-size: 0.9em;' title='Start monitoring events with auto-refresh'>📡 Monitor Live</button>";
+                echo "<span id='live-indicator-eventlog' style='margin-left: 10px; color: #28a745; font-weight: bold; font-size: 0.9em; display: none;'>🔴 LIVE</span>";
             }
             
             // Add delete buttons inline
@@ -456,6 +472,11 @@ function getTimeColor($time) {
             echo "<button onclick=\"if(confirm('Are you sure you want to delete the last 100 events?')) window.location.href='events-memories.php?tab=eventlog&delete_last=100'\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete Latest 100</button>";
             echo "<button onclick=\"deleteAllEventsConfirm()\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em; background-color: #dc2626; font-weight: bold;'>⚠️ Delete ALL</button>";
             echo "</div>";
+            echo "</div>";
+            
+            // Add informational note about blacklist settings
+            echo "<div style='background: #1a4d6d; color: #e0f2ff; padding: 12px 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #3b82f6; font-size: 0.9em;'>";
+            echo "ℹ️ <strong>Note:</strong> Depending on your blacklist settings in Global Settings not all these events will show up in AI context. This is just a list of some of the more relevant context that is being logged.";
             echo "</div>";
 
             $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 100;
@@ -553,24 +574,51 @@ function getTimeColor($time) {
                 echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$prevPage&limit=$limit'\" class='btn-base btn-primary'>Previous</button> ";
             }
             
-            for ($i = 1; $i <= 5 && $i <= $totalPages; $i++) {
-                if ($i == $page) {
-                    echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$i&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$i</button> ";
-                } else {
-                    echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$i&limit=$limit'\" class='btn-base btn-primary'>$i</button> ";
-                }
-            }
-            
-            if ($totalPages > 10) {
-                echo "<span style='margin: 0 5px; color: #fff;'>...</span>";
-                
-                $startLastPages = max(6, $totalPages - 4);
-                for ($i = $startLastPages; $i <= $totalPages; $i++) {
+            // Smart pagination: show current page and surrounding pages
+            if ($totalPages <= 10) {
+                // Show all pages if 10 or fewer
+                for ($i = 1; $i <= $totalPages; $i++) {
                     if ($i == $page) {
                         echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$i&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$i</button> ";
                     } else {
                         echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$i&limit=$limit'\" class='btn-base btn-primary'>$i</button> ";
                     }
+                }
+            } else {
+                // Always show first page
+                if ($page == 1) {
+                    echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=1&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>1</button> ";
+                } else {
+                    echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=1&limit=$limit'\" class='btn-base btn-primary'>1</button> ";
+                }
+                
+                // Show ellipsis if current page is far from start
+                if ($page > 4) {
+                    echo "<span style='margin: 0 5px; color: #fff;'>...</span>";
+                }
+                
+                // Show pages around current page
+                $start = max(2, $page - 2);
+                $end = min($totalPages - 1, $page + 2);
+                
+                for ($i = $start; $i <= $end; $i++) {
+                    if ($i == $page) {
+                        echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$i&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$i</button> ";
+                    } else {
+                        echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$i&limit=$limit'\" class='btn-base btn-primary'>$i</button> ";
+                    }
+                }
+                
+                // Show ellipsis if current page is far from end
+                if ($page < $totalPages - 3) {
+                    echo "<span style='margin: 0 5px; color: #fff;'>...</span>";
+                }
+                
+                // Always show last page
+                if ($page == $totalPages) {
+                    echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$totalPages&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$totalPages</button> ";
+                } else {
+                    echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$totalPages&limit=$limit'\" class='btn-base btn-primary'>$totalPages</button> ";
                 }
             }
             
@@ -591,11 +639,176 @@ function getTimeColor($time) {
             }
             </script>";
             
+            echo "<div id='eventlog-table-container'>";
             print_array_as_table($mappedResults);
+            echo "</div>";
             
-            if (isset($_GET["autorefresh"]) && $_GET["autorefresh"]) {
-                header("Refresh:5");
+            // Smart AJAX auto-refresh script
+            echo "<script>
+            let autoRefreshIntervalEventLog = null;
+            let isLiveModeEventLog = " . ($isAutoRefresh ? 'true' : 'false') . ";
+            let lastRowIdEventLog = 0;
+            let totalNewEventsEventLog = 0;
+            const currentPageEventLog = $page;
+            const currentLimitEventLog = $limit;
+            const headersEventLog = " . json_encode($columnHeaders) . ";
+            
+            function getLastRowIdEventLog() {
+                const table = document.querySelector('#eventlog-table-container table');
+                if (!table) return 0;
+                
+                const rows = table.querySelectorAll('tr');
+                let maxRowId = 0;
+                
+                rows.forEach(row => {
+                    const checkbox = row.querySelector('.event-checkbox');
+                    if (checkbox) {
+                        const rowId = parseInt(checkbox.getAttribute('data-rowid'));
+                        if (!isNaN(rowId) && rowId > maxRowId) {
+                            maxRowId = rowId;
+                        }
+                    }
+                });
+                
+                return maxRowId;
             }
+            
+            function updateEventTableEventLog() {
+                if (!isLiveModeEventLog) return;
+                
+                const liveIndicator = document.getElementById('live-indicator-eventlog');
+                if (liveIndicator) {
+                    liveIndicator.style.opacity = '0.5';
+                }
+                
+                const sinceRowId = lastRowIdEventLog;
+                
+                fetch('" . $webRoot . "/ui/api/eventlog.php?since_rowid=' + sinceRowId)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.data.length > 0) {
+                            const table = document.querySelector('#eventlog-table-container table');
+                            if (!table) return;
+                            
+                            const tbody = table.querySelector('tbody') || table;
+                            const headerRow = tbody.querySelector('tr:first-child');
+                            
+                            data.data.reverse().forEach(row => {
+                                const newRow = document.createElement('tr');
+                                newRow.style.backgroundColor = '#2d5a2d';
+                                
+                                // Add checkbox cell
+                                const checkboxTd = document.createElement('td');
+                                checkboxTd.innerHTML = '<input type=\"checkbox\" class=\"event-checkbox\" data-rowid=\"' + (row['ROWID'] || '') + '\" style=\"cursor: pointer; width: 18px; height: 18px;\" onclick=\"updateDeleteButton()\">';
+                                newRow.appendChild(checkboxTd);
+                                
+                                // Add data cells
+                                const td1 = document.createElement('td');
+                                td1.innerHTML = row['Event'] || '';
+                                newRow.appendChild(td1);
+                                
+                                const td2 = document.createElement('td');
+                                td2.innerHTML = row['Events'] || '';
+                                newRow.appendChild(td2);
+                                
+                                // People Present column
+                                const td3 = document.createElement('td');
+                                td3.textContent = row['People Present'] || '';
+                                newRow.appendChild(td3);
+                                
+                                const td4 = document.createElement('td');
+                                td4.innerHTML = row[headersEventLog['gamets']] || '';
+                                newRow.appendChild(td4);
+                                
+                                const td5 = document.createElement('td');
+                                td5.innerHTML = row['Time (UTC)'] || '';
+                                newRow.appendChild(td5);
+                                
+                                const td6 = document.createElement('td');
+                                td6.innerHTML = row['TS'] || '';
+                                newRow.appendChild(td6);
+                                
+                                const td7 = document.createElement('td');
+                                td7.textContent = row['ROWID'] || '';
+                                newRow.appendChild(td7);
+                                
+                                if (headerRow && headerRow.nextSibling) {
+                                    tbody.insertBefore(newRow, headerRow.nextSibling);
+                                } else {
+                                    tbody.appendChild(newRow);
+                                }
+                                
+                                const rowIdNum = parseInt(row['ROWID']);
+                                if (!isNaN(rowIdNum) && rowIdNum > lastRowIdEventLog) {
+                                    lastRowIdEventLog = rowIdNum;
+                                }
+                                
+                                setTimeout(() => {
+                                    newRow.style.transition = 'background-color 1s';
+                                    newRow.style.backgroundColor = '';
+                                }, 3000);
+                            });
+                            
+                            totalNewEventsEventLog += data.new_count;
+                        }
+                        
+                        if (liveIndicator) {
+                            liveIndicator.style.opacity = '1';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching eventlog:', error);
+                        const liveIndicator = document.getElementById('live-indicator-eventlog');
+                        if (liveIndicator) {
+                            liveIndicator.style.opacity = '1';
+                        }
+                    });
+            }
+            
+            function toggleAutoRefreshEventLog() {
+                isLiveModeEventLog = !isLiveModeEventLog;
+                
+                const btn = document.getElementById('live-toggle-btn-eventlog');
+                const indicator = document.getElementById('live-indicator-eventlog');
+                
+                if (isLiveModeEventLog) {
+                    // If not on page 1, navigate to page 1 with autorefresh enabled
+                    if (currentPageEventLog !== 1) {
+                        window.location.href = 'events-memories.php?tab=eventlog&page=1&limit=' + currentLimitEventLog + '&autorefresh=true';
+                        return;
+                    }
+                    
+                    btn.textContent = '⏸️ Stop Live';
+                    btn.className = 'btn-base btn-secondary';
+                    btn.style.padding = '8px 12px';
+                    btn.style.fontSize = '0.9em';
+                    
+                    if (indicator) indicator.style.display = 'inline';
+                    
+                    lastRowIdEventLog = getLastRowIdEventLog();
+                    totalNewEventsEventLog = 0;
+                    
+                    autoRefreshIntervalEventLog = setInterval(updateEventTableEventLog, 5000);
+                } else {
+                    btn.textContent = '📡 Monitor Live';
+                    btn.className = 'btn-base btn-primary';
+                    btn.style.padding = '8px 12px';
+                    btn.style.fontSize = '0.9em';
+                    
+                    if (indicator) indicator.style.display = 'none';
+                    
+                    if (autoRefreshIntervalEventLog) {
+                        clearInterval(autoRefreshIntervalEventLog);
+                        autoRefreshIntervalEventLog = null;
+                    }
+                }
+            }
+            
+            if (isLiveModeEventLog) {
+                lastRowIdEventLog = getLastRowIdEventLog();
+                autoRefreshIntervalEventLog = setInterval(updateEventTableEventLog, 5000);
+            }
+            </script>";
             ?>
         </div>
 
