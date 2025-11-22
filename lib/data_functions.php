@@ -4118,6 +4118,17 @@ function GetLastInteraction($s_player_name, $s_npc_name) {
 	return $i_res;
 }
 
+function GetLastSpeechTs() {
+    global $db;
+    $i_res=0;
+	$db_rec = $db->fetchAll("SELECT gamets as gamets FROM speech 
+        WHERE (gamets > 0) ORDER BY gamets DESC LIMIT 1 ");
+	if (is_array($db_rec) && sizeof($db_rec)>0) {
+		$i_res = intval($db_rec[0]['gamets']);
+	}
+	
+	return $i_res;
+}
 
 function GetFirstInteraction($s_player_name, $s_npc_name) {
     global $db;

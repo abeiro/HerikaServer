@@ -927,10 +927,13 @@ if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
 
 // Fake entry to mark time passing when bored event
 if (in_array($gameRequest[0],["bored"])) {
-    $localGameRequest=$gameRequest;
-    $localGameRequest[0]="infoaction";
-    $localGameRequest[3].=". (Time passes without anyone in the group talking) ";
-    logEvent($localGameRequest);
+    if (($localGameRequest[2]-GetLastSpeechTs())> (( 1 /0.0000024)) ) {
+        $localGameRequest=$gameRequest;
+        $localGameRequest[0]="infoaction";
+            $localGameRequest[3].=". (Time passes without anyone in the group talking) ";
+        logEvent($localGameRequest);
+    }
+    
     $GLOBALS["ADD_PLAYER_BIOS"]=false;
 
     if ((isset($GLOBALS["BORED_EVENT_SERVERSIDE"])&&($GLOBALS["BORED_EVENT_SERVERSIDE"]))) {
