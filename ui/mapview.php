@@ -1460,7 +1460,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                 <li>You can either:
                                     <ul>
                                         <li>Talk to the NPC and give commands like: <em>"Go to Riften and then to Whiterun to do X and Y"</em></li>
-                                        <li>Wait 5 ingame days for them to automatically trigger background life.</li>
+                                        <li>Wait for the configured trigger period (default: 5 in-game days, configurable in Global Settings) for them to automatically trigger background life.</li>
                                     </ul>
                                 </li>
                                 <li>They shall now travel around Skyrim.</li>
@@ -1470,7 +1470,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                         <div class="instruction-section">
                             <strong>NPC Settings:</strong>
                             <ul>
-                                <li><strong>🎮 Auto Actions:</strong> Every 5 in-game days, NPC generates inner thoughts. When enabled, they can autonomously travel to new locations. When disabled, only thoughts are generated.</li>
+                                <li><strong>🎮 Auto Actions:</strong> Based on the trigger period (configurable in Global Settings, default: 5 in-game days), NPC generates inner thoughts. When enabled, they can autonomously travel to new locations. When disabled, only thoughts are generated.</li>
                                 <li><strong>📍 Hourly Tracking:</strong> Tracks NPC coordinates every in-game hour (default is daily) for detailed movement history.</li>
                             </ul>
                         </div>
@@ -1485,7 +1485,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                         </div>
                         
                         <div class="instruction-note">
-                            <strong>💡 Note:</strong> Events are triggered automatically every 5 in-game days. The buttons are mainly for testing or forcing immediate updates.
+                            <strong>💡 Note:</strong> Events are triggered automatically based on the configured trigger period (Global Settings, default: 5 in-game days). The buttons are mainly for testing or forcing immediate updates.
                         </div>
                     </div>
                     <button class="toggle-instructions-btn" onclick="toggleInstructions()">Show Instructions</button>
