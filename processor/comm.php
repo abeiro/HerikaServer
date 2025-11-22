@@ -274,7 +274,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $npcName = $updateData[0];
         
         // Parse equipment (10 slots) - format: name^baseid
-        $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'cape', 'backpack', 'left_hand', 'right_hand'];
+        $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'cape', 'backpack', 'left_hand', 'right_hand','shirt'];
         $equipment = [];
         
         for ($i = 0; $i < count($slots); $i++) {

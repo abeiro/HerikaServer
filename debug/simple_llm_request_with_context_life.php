@@ -345,7 +345,7 @@ $contextData = array_merge($head[$LANG], $prompt);
 Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
 
 $connectionHandler = $connector->getConnector($currentConnectorData);
-$buffer            = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 2048, "model" => "google/gemini-2.5-flash-lite", "temperature" => 0.7], "backgroundlife");
+$buffer            = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 2048], "backgroundlife");
 Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
 
 print_r($buffer . PHP_EOL);
@@ -418,7 +418,7 @@ notification: Write it as a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["
 
 "];
 }
-$buffer2 = $connectionHandler->fast_request($prompt, ["MAX_TOKENS" => 2048, "model" => "mistralai/mistral-small-3.2-24b-instruct", "temperature" => 0], "backgroundlife");
+$buffer2 = $connectionHandler->fast_request($prompt, ["MAX_TOKENS" => 2048], "backgroundlife");
 
 print_r($buffer2);
 //$parsed = parse_xml_fragment($buffer2);
@@ -489,7 +489,7 @@ if (is_array($parsed)) {
             [
                 'ts'     => $last_ts,
                 'gamets' => $last_gamets + 1,
-                'type'   => "chat",
+                'type'   => "innerchat",
                 'data'   => "The Narrator:{$GLOBALS["HERIKA_NAME"]} sent this letter to {$GLOBALS["PLAYER_NAME"]} " . "\n{$parsed["notification"]} )",
                 'sess' => $momentum,
                 'localts' => time(),
@@ -525,7 +525,7 @@ $db->insert(
     [
         'ts'     => $last_ts,
         'gamets' => $last_gamets,
-        'type'   => "chat",
+        'type'   => "innerchat",
         'data'   => "{$GLOBALS["HERIKA_NAME"]}'s inner thoughts: " . $buffer . " )",
         'sess'     => $momentum,
         'localts'  => time(),
