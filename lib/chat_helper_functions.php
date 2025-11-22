@@ -416,6 +416,16 @@ function unmoodSentence($sentence) {
         "#SpeechStyle" => "",
         "#SpeechStyle:" => ""
     ]);
+    
+    // Clean player name from output (for AUTOCHAT mode) - handles multiple repetitions
+    if (isset($GLOBALS["PLAYER_NAME"])) {
+        $playerName = preg_quote($GLOBALS["PLAYER_NAME"], '/');
+        // Remove all leading occurrences of "PLAYERNAME:" or "PLAYERNAME: " (case-insensitive)
+        $output = preg_replace('/^(?:' . $playerName . '\s*:\s*)+/i', '', $output);
+    }
+    
+    // Remove AUTOCHAT mode wrapper pattern **(...)** (after player name is cleaned)
+    $output = preg_replace('/^\*\*\([^)]*\)\*\*\s*/i', '', $output);
 
     $output = preg_replace('/\s*# ?ACTIONS.*/', '', $output);  // Remove "#ACTIONS ..."
     $output = preg_replace('/#[A-Za-z]+/', '', $output);       // Remove "#<text>"
