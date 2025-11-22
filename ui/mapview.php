@@ -1457,10 +1457,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                             <ol>
                                 <li><b>Make sure you dismiss the NPC first before adding to Background Life!</b></li>
                                 <li>Look at an NPC in-game and press the <strong>Roleplay Wheel Hotkey (CHIM MCM Menu)</strong> to add them to Background Life</li>
-                                <li>You can either: <ul>
-                                    <li>Talk to the NPC and give commands like: <em>"Go to Riften and then to Whiterun to do X and Y"</em></li>
-                                    <li>Wait 5 ingame days for them to automatically trigger background life.</li>
-                                </ul>
+                                <li>You can either:
+                                    <ul>
+                                        <li>Talk to the NPC and give commands like: <em>"Go to Riften and then to Whiterun to do X and Y"</em></li>
+                                        <li>Wait 5 ingame days for them to automatically trigger background life.</li>
+                                    </ul>
+                                </li>
                                 <li>They shall now travel around Skyrim.</li>
                             </ol>
                         </div>
@@ -1531,7 +1533,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                 <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
                                     <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn">🚶‍➡️Trigger Action</button>
                                     <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #4488ff;">✉️ Request Letter</button>
-                                    <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" title="Request coords update now" class="marker-action-btn-trans" >📍</button>
+                                    <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" title="Request coords update now" class="marker-action-btn-trans" style="border: 2px solid #00ff00; background: #44ff44;">📍</button>
                                 </div>
                                 <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
                                     <label class="toggle-label-inline">
