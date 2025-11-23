@@ -435,9 +435,6 @@ function getTimeColor($time) {
             <button class="tab-button <?php echo $activeTab === 'books' ? 'active' : ''; ?>" onclick="switchTab('books')">
                 📚 Books
             </button>
-            <button class="tab-button <?php echo $activeTab === 'mapview' ? 'active' : ''; ?>" onclick="switchTab('mapview')">
-                🗺️ Background Life
-            </button>
             
         </div>
 
@@ -1363,11 +1360,6 @@ function getTimeColor($time) {
                 echo "</div>";
             }
             ?>
-        </div>
-
-        <!-- Background Life (Mapview) Tab -->
-        <div id="mapview-tab" class="tab-content <?php echo $activeTab === 'mapview' ? 'active' : ''; ?>">
-            <iframe src="<?php echo $webRoot; ?>/ui/mapview.php" style="width: 100%; height: 80vh; border: 1px solid #444; border-radius: 6px; background: #1a1a1a;"></iframe>
         </div>
     </div>
 </div>
