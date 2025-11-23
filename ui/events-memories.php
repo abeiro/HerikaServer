@@ -476,7 +476,7 @@ function getTimeColor($time) {
             
             // Add informational note about blacklist settings
             echo "<div style='background: #1a4d6d; color: #e0f2ff; padding: 12px 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #3b82f6; font-size: 0.9em;'>";
-            echo "ℹ️ <strong>Note:</strong> Depending on your blacklist settings in Global Settings not all these events will show up in AI context. This is just a list of some of the more relevant context that is being logged.";
+            echo "ℹ️ <strong>Note:</strong> Not all events will show up in AI context. Any blacklist settings will not be used for context. This is a raw log of some of the more relevant events.";
             echo "</div>";
 
             $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 100;
