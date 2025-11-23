@@ -82,33 +82,34 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
         }
     }
     // BgL content
-    // In-game based on MCM configured days
-    $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_last_updated' IS NOT NULL AND (extended_data->>'background_life_commands' = 'false' or extended_data->>'background_life_commands'  IS NULL)");
+    // In-game based on configured days
+    $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND (extended_data->>'background_life_commands' = 'false' or extended_data->>'background_life_commands'  IS NULL)");
     foreach ($allEnabledBgLNpc as $npc) {
         $mwdata=json_decode($npc["extended_data"],true);
-        if (isset($mwdata["background_life_last_updated"])  && $mwdata["background_life_last_updated"]<($bglTriggerDaysAgoGamets)) {
+        // Trigger if never updated, or if last update is older than configured threshold
+        if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"]<($bglTriggerDaysAgoGamets)) {
             logger::info("[BACKGROUND-LIFE] Passive event for {$npc["npc_name"]}");
             $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life.php \"{$npc["npc_name"]}\" ");
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
                 Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
             }
+            break;  // One per iteration - break after processing
         }
-        break;  // One per iteration
     }
 
     // BgL commands
-    // In-game based on MCM configured days
-    $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_last_updated' IS NOT NULL AND extended_data->>'background_life_commands' = 'true' ");
+    $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_commands' = 'true' ");
     foreach ($allEnabledBgLNpc as $npc) {
         $mwdata=json_decode($npc["extended_data"],true);
-        if (isset($mwdata["background_life_last_updated"])  && $mwdata["background_life_last_updated"]<($bglTriggerDaysAgoGamets)) {
+        // Trigger if never updated, or if last update is older than configured threshold
+        if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"]<($bglTriggerDaysAgoGamets)) {
             logger::info("[BACKGROUND-LIFE] Event for {$npc["npc_name"]}");
             $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life.php \"{$npc["npc_name"]}\" full ");
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
                 Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
             }
+            break;  // One per iteration - break after processing
         }
-        break;  // One per iteration
     }
     
 
