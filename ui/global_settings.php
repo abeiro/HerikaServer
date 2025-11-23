@@ -245,7 +245,7 @@ function pretty_label(string $flatName): string {
     $connectorLabels = [
         'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
         'CORE_CONNECTOR_SUMMARY' => 'Summaries',
-        'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory',
+        'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory/Background Life',
         'CORE_CONNECTOR_PROFILES' => 'Dynamic Profiles',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
     ];
