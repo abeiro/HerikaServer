@@ -37,7 +37,7 @@ if ($sinceRowId > 0) {
     $results = $db->fetchAll(
         "SELECT type, data, people, gamets, localts, ts, rowid
          FROM eventlog a
-         WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import')
+         WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import','backgroundaction','innerchat')
          AND rowid > $sinceRowId
          ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
          LIMIT 50"
@@ -47,7 +47,7 @@ if ($sinceRowId > 0) {
     $results = $db->fetchAll(
         "SELECT type, data, people, gamets, localts, ts, rowid
          FROM eventlog a
-         WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import')
+         WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import','backgroundaction','innerchat')
          ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
          LIMIT $limit OFFSET $offset"
     );
@@ -116,7 +116,7 @@ $mappedResults = array_map(function ($row) use ($columnHeaders) {
 }, $results);
 
 // Get total count for pagination info
-$countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init')";
+$countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','backgroundaction','innerchat')";
 $countResult = $db->fetchAll($countQuery);
 $totalRecords = $countResult[0]['total'];
 $totalPages = ceil($totalRecords / $limit);
