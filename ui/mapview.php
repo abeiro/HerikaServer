@@ -1798,6 +1798,113 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             }, 5000); // 3 seconds
         }
     </script>
+
+    <?php
+    // Rumors section
+    // Calculate 7 in-game days threshold
+    $sevenDaysInGamets = (7 * 24) / 0.0000024; // 7 days worth of gamets
+    $sevenDaysAgoGamets = $last_gamets - $sevenDaysInGamets;
+    
+    // Query current rumors (last 7 in-game days)
+    $currentRumorsQuery = "SELECT id, gamets, ts, hold, content, type FROM rumors WHERE gamets >= $1 ORDER BY gamets DESC";
+    $currentRumorsResult = pg_query_params($adminConn, $currentRumorsQuery, [$sevenDaysAgoGamets]);
+    $currentRumors = [];
+    if ($currentRumorsResult) {
+        while ($row = pg_fetch_assoc($currentRumorsResult)) {
+            $currentRumors[] = $row;
+        }
+    }
+    
+    // Query outdated rumors (older than 7 in-game days)
+    $outdatedRumorsQuery = "SELECT id, gamets, ts, hold, content, type FROM rumors WHERE gamets < $1 ORDER BY gamets DESC";
+    $outdatedRumorsResult = pg_query_params($adminConn, $outdatedRumorsQuery, [$sevenDaysAgoGamets]);
+    $outdatedRumors = [];
+    if ($outdatedRumorsResult) {
+        while ($row = pg_fetch_assoc($outdatedRumorsResult)) {
+            $outdatedRumors[] = $row;
+        }
+    }
+    ?>
+    
+    <div style="margin-top: 40px;">
+        <div class="page-header" style="margin-bottom: 20px;">
+            <h1>📰 Rumors</h1>
+        </div>
+        
+        <!-- Current Rumors -->
+        <div class="info-panel" style="margin-bottom: 30px;">
+            <h3>🔥 Current Rumors (Last 7 In-Game Days)</h3>
+            <?php if (empty($currentRumors)): ?>
+                <p style="color: #888; font-style: italic;">No current rumors</p>
+            <?php else: ?>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                        <thead>
+                            <tr style="background: #1a1a1a; border-bottom: 2px solid rgb(242, 124, 17);">
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">Hold</th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">Type</th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">Content</th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">In-Game Date</th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">Age</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($currentRumors as $rumor): ?>
+                                <?php 
+                                    $rumorDate = convert_gamets2skyrim_date($rumor['gamets']);
+                                    $hoursAgo = round(($last_gamets - $rumor['gamets']) * 0.0000024, 1);
+                                ?>
+                                <tr style="border-bottom: 1px solid #333;">
+                                    <td style="padding: 12px; color: #ddd;"><?php echo htmlspecialchars($rumor['hold'] ?? 'Unknown'); ?></td>
+                                    <td style="padding: 12px; color: #bbb; font-size: 12px;"><?php echo htmlspecialchars($rumor['type'] ?? 'General'); ?></td>
+                                    <td style="padding: 12px; color: #fff;"><?php echo htmlspecialchars($rumor['content']); ?></td>
+                                    <td style="padding: 12px; color: #bbb; font-size: 12px; white-space: nowrap;"><?php echo htmlspecialchars($rumorDate); ?></td>
+                                    <td style="padding: 12px; color: #888; font-size: 12px; white-space: nowrap;"><?php echo $hoursAgo; ?> hours ago</td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+        
+        <!-- Outdated Rumors -->
+        <div class="info-panel">
+            <h3>📜 Outdated Rumors (Older than 7 In-Game Days)</h3>
+            <?php if (empty($outdatedRumors)): ?>
+                <p style="color: #888; font-style: italic;">No outdated rumors</p>
+            <?php else: ?>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                        <thead>
+                            <tr style="background: #1a1a1a; border-bottom: 2px solid #666;">
+                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Hold</th>
+                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Type</th>
+                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Content</th>
+                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">In-Game Date</th>
+                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Age</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($outdatedRumors as $rumor): ?>
+                                <?php 
+                                    $rumorDate = convert_gamets2skyrim_date($rumor['gamets']);
+                                    $hoursAgo = round(($last_gamets - $rumor['gamets']) * 0.0000024, 1);
+                                ?>
+                                <tr style="border-bottom: 1px solid #333; opacity: 0.6;">
+                                    <td style="padding: 12px; color: #888;"><?php echo htmlspecialchars($rumor['hold'] ?? 'Unknown'); ?></td>
+                                    <td style="padding: 12px; color: #777; font-size: 12px;"><?php echo htmlspecialchars($rumor['type'] ?? 'General'); ?></td>
+                                    <td style="padding: 12px; color: #999;"><?php echo htmlspecialchars($rumor['content']); ?></td>
+                                    <td style="padding: 12px; color: #777; font-size: 12px; white-space: nowrap;"><?php echo htmlspecialchars($rumorDate); ?></td>
+                                    <td style="padding: 12px; color: #666; font-size: 12px; white-space: nowrap;"><?php echo $hoursAgo; ?> hours ago</td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
 </main>
 
 <?php
