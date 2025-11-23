@@ -137,6 +137,7 @@ function getPeopleList($conn, $schema) {
                 trim(unnest(string_to_array(trim(d.people, '|'), '|'))) as person
             FROM {$schema}.diarylog d
             WHERE d.people IS NOT NULL AND d.people != ''
+            AND d.topic NOT IN ('Sent Letter', 'Journal Note')
         )
         SELECT 
             person,
@@ -175,6 +176,7 @@ function getEntriesByPerson($conn, $schema, $person) {
         SELECT rowid, topic, content, tags, people, location, localts, gamets
         FROM {$schema}.diarylog
         WHERE people LIKE $1
+        AND topic NOT IN ('Sent Letter', 'Journal Note')
         ORDER BY localts DESC
     ";
     
@@ -294,6 +296,7 @@ function handle_csv_export($conn, $schema) {
                         SELECT rowid, topic, content, tags, people, location, localts, gamets
                         FROM {$schema}.diarylog
                         WHERE people LIKE '%' || $1 || '%'
+                        AND topic NOT IN ('Sent Letter', 'Journal Note')
                         ORDER BY localts DESC
                     ";
                     $result = pg_query_params($conn, $query, [$person]);
@@ -303,6 +306,7 @@ function handle_csv_export($conn, $schema) {
                         SELECT rowid, topic, content, tags, people, location, localts, gamets
                         FROM {$schema}.diarylog
                         WHERE gamets > 0
+                        AND topic NOT IN ('Sent Letter', 'Journal Note')
                         ORDER BY gamets ASC
                     ";
                     $result = pg_query($conn, $query);
@@ -319,6 +323,7 @@ function handle_csv_export($conn, $schema) {
                         SELECT rowid, topic, content, tags, people, location, localts, gamets
                         FROM {$schema}.diarylog
                         WHERE localts >= $1 AND localts <= $2
+                        AND topic NOT IN ('Sent Letter', 'Journal Note')
                         ORDER BY localts ASC
                     ";
                     $result = pg_query_params($conn, $query, [$startOfDay, $endOfDay]);
@@ -333,6 +338,7 @@ function handle_csv_export($conn, $schema) {
                 $query = "
                     SELECT rowid, topic, content, tags, people, location, localts, gamets
                     FROM {$schema}.diarylog
+                    WHERE topic NOT IN ('Sent Letter', 'Journal Note')
                     ORDER BY localts ASC
                 ";
                 $result = pg_query($conn, $query);
@@ -578,13 +584,15 @@ if ($useTamrielicTime) {
             EXTRACT(YEAR FROM gamets) as year
             FROM {$schema}.diarylog 
             WHERE EXTRACT(MONTH FROM gamets) = $month 
-            AND EXTRACT(YEAR FROM gamets) = $year";
+            AND EXTRACT(YEAR FROM gamets) = $year
+            AND topic NOT IN ('Sent Letter', 'Journal Note')";
 } else {
     $sql = "SELECT DISTINCT 
             TO_CHAR(localts AT TIME ZONE 'UTC', 'YYYY-MM-DD') as date
             FROM {$schema}.diarylog 
             WHERE EXTRACT(MONTH FROM localts AT TIME ZONE 'UTC') = $month 
-            AND EXTRACT(YEAR FROM localts AT TIME ZONE 'UTC') = $year";
+            AND EXTRACT(YEAR FROM localts AT TIME ZONE 'UTC') = $year
+            AND topic NOT IN ('Sent Letter', 'Journal Note')";
 }
 
 // Prepare the SQL query with explicit casting to double precision
@@ -607,6 +615,7 @@ $allDatesQuery = "
         END as sort_field
     FROM {$schema}.diarylog
     WHERE gamets > 0
+    AND topic NOT IN ('Sent Letter', 'Journal Note')
     ORDER BY sort_field ASC
 ";
 
@@ -875,6 +884,7 @@ if ($shouldFetchEvents) {
                     localts >= " . (isset($startOfDay) ? $startOfDay : 0) . " AND localts <= " . (isset($endOfDay) ? $endOfDay : 0) . "
             END
         )
+        AND topic NOT IN ('Sent Letter', 'Journal Note')
         ORDER BY localts ASC
     ";
 

@@ -322,7 +322,7 @@ if (isset($_GET['delete_last'])) {
             WHERE rowid IN (
                 SELECT rowid
                 FROM eventlog
-                WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','infoitems','description_import')
+                WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','infoitems','description_import','backgroundaction','innerchat')
                 ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
                 LIMIT $delCount
             )
@@ -435,9 +435,6 @@ function getTimeColor($time) {
             <button class="tab-button <?php echo $activeTab === 'books' ? 'active' : ''; ?>" onclick="switchTab('books')">
                 📚 Books
             </button>
-            <button class="tab-button <?php echo $activeTab === 'mapview' ? 'active' : ''; ?>" onclick="switchTab('mapview')">
-                🗺️ Background Life
-            </button>
             
         </div>
 
@@ -476,7 +473,7 @@ function getTimeColor($time) {
             
             // Add informational note about blacklist settings
             echo "<div style='background: #1a4d6d; color: #e0f2ff; padding: 12px 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #3b82f6; font-size: 0.9em;'>";
-            echo "ℹ️ <strong>Note:</strong> Depending on your blacklist settings in Global Settings not all these events will show up in AI context. This is just a list of some of the more relevant context that is being logged.";
+            echo "ℹ️ <strong>Note:</strong> Not all events will show up in AI context. Any blacklist settings will not be used for context. This is a raw log of some of the more relevant events.";
             echo "</div>";
 
             $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 100;
@@ -486,7 +483,7 @@ function getTimeColor($time) {
             $results = $db->fetchAll(
                 "SELECT type, data, people, gamets, localts, ts, ROWID
                  FROM eventlog a
-                 WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import')
+                 WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import','backgroundaction','innerchat')
                  ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
                  LIMIT $limit OFFSET $offset"
             );
@@ -563,7 +560,7 @@ function getTimeColor($time) {
             $nextPage = $page + 1;
             
             // Get total count for pagination
-            $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','infoitems','description_import')";
+            $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','infoitems','description_import','backgroundaction','innerchat')";
             $countResult = $db->fetchAll($countQuery);
             $totalRecords = $countResult[0]['total'];
             $totalPages = ceil($totalRecords / $limit);
@@ -1363,11 +1360,6 @@ function getTimeColor($time) {
                 echo "</div>";
             }
             ?>
-        </div>
-
-        <!-- Background Life (Mapview) Tab -->
-        <div id="mapview-tab" class="tab-content <?php echo $activeTab === 'mapview' ? 'active' : ''; ?>">
-            <iframe src="<?php echo $webRoot; ?>/ui/mapview.php" style="width: 100%; height: 80vh; border: 1px solid #444; border-radius: 6px; background: #1a1a1a;"></iframe>
         </div>
     </div>
 </div>

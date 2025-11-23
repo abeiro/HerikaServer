@@ -377,6 +377,36 @@ if (!function_exists('race_icon_web_path')) {
                 }
             }
             
+            // Fetch diary entries (letters and thoughts) for this NPC
+            $diaryLetters = [];
+            $diaryThoughts = [];
+            
+            $letterQuery = "SELECT topic, content, tags, location, localts, gamets 
+                            FROM diarylog 
+                            WHERE people LIKE $1 AND topic = 'Sent Letter'
+                            ORDER BY gamets DESC, localts DESC
+                            LIMIT 10";
+            $letterResult = pg_query_params($adminConn, $letterQuery, ['%' . $row['npc_name'] . '%']);
+            if ($letterResult) {
+                while ($letter = pg_fetch_assoc($letterResult)) {
+                    $letter['skyrim_date'] = !empty($letter['gamets']) ? convert_gamets2skyrim_long_date2($letter['gamets']) : 'Unknown date';
+                    $diaryLetters[] = $letter;
+                }
+            }
+            
+            $thoughtQuery = "SELECT topic, content, tags, location, localts, gamets 
+                             FROM diarylog 
+                             WHERE people LIKE $1 AND (topic != 'Sent Letter' OR topic IS NULL)
+                             ORDER BY gamets DESC, localts DESC
+                             LIMIT 10";
+            $thoughtResult = pg_query_params($adminConn, $thoughtQuery, ['%' . $row['npc_name'] . '%']);
+            if ($thoughtResult) {
+                while ($thought = pg_fetch_assoc($thoughtResult)) {
+                    $thought['skyrim_date'] = !empty($thought['gamets']) ? convert_gamets2skyrim_long_date2($thought['gamets']) : 'Unknown date';
+                    $diaryThoughts[] = $thought;
+                }
+            }
+            
             $markers[] = [
                 'name'        => $row['npc_name'],
                 'ingame_x'    => (int) $x,
@@ -395,6 +425,8 @@ if (!function_exists('race_icon_web_path')) {
                 'bg_life_commands' => $bgLifeCommands,
                 'gps_track' => $gpsTrack,
                 'last_letter' => $row["content"],
+                'diary_letters' => $diaryLetters,
+                'diary_thoughts' => $diaryThoughts,
             ];
 
         }
@@ -469,6 +501,8 @@ if (!function_exists('race_icon_web_path')) {
             'bg_life_commands' => $marker['bg_life_commands'],
             'gps_track' => $marker['gps_track'],
             'last_letter' => $marker['last_letter'],
+            'diary_letters' => $marker['diary_letters'],
+            'diary_thoughts' => $marker['diary_thoughts'],
         ];
     }
 
@@ -1455,12 +1489,14 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                         <div class="instruction-section">
                             <strong>Getting Started:</strong>
                             <ol>
-                                <li><b>Make sure you dismiss the NPC first before adding to Background Life!</b></li>
+                                <li><b>Make sure you the game is running and that the NPC is not a current follower (dismiss them).</b></li>
                                 <li>Look at an NPC in-game and press the <strong>Roleplay Wheel Hotkey (CHIM MCM Menu)</strong> to add them to Background Life</li>
-                                <li>You can either: <ul>
-                                    <li>Talk to the NPC and give commands like: <em>"Go to Riften and then to Whiterun to do X and Y"</em></li>
-                                    <li>Wait 5 ingame days for them to automatically trigger background life.</li>
-                                </ul>
+                                <li>You can either:
+                                    <ul>
+                                        <li>Talk to the NPC and give commands like: <em>"Go to Riften and then to Whiterun to do X and Y"</em></li>
+                                        <li>Wait for the configured trigger period (default: 5 in-game days, configurable in Global Settings) for them to automatically trigger background life.</li>
+                                    </ul>
+                                </li>
                                 <li>They shall now travel around Skyrim.</li>
                             </ol>
                         </div>
@@ -1468,7 +1504,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                         <div class="instruction-section">
                             <strong>NPC Settings:</strong>
                             <ul>
-                                <li><strong>🎮 Auto Actions:</strong> Every 5 in-game days, NPC generates inner thoughts. When enabled, they can autonomously travel to new locations. When disabled, only thoughts are generated.</li>
+                                <li><strong>🎮 Auto Actions:</strong> Based on the trigger period (configurable in Global Settings, default: 5 in-game days), NPC generates inner thoughts. When enabled, they can autonomously travel to new locations. When disabled, only thoughts are generated.</li>
                                 <li><strong>📍 Hourly Tracking:</strong> Tracks NPC coordinates every in-game hour (default is daily) for detailed movement history.</li>
                             </ul>
                         </div>
@@ -1483,7 +1519,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                         </div>
                         
                         <div class="instruction-note">
-                            <strong>💡 Note:</strong> Events are triggered automatically every 5 in-game days. The buttons are mainly for testing or forcing immediate updates.
+                            <strong>💡 Note:</strong> Events are triggered automatically based on the configured trigger period (Global Settings, default: 5 in-game days). The buttons are mainly for testing or forcing immediate updates.
                         </div>
                     </div>
                     <button class="toggle-instructions-btn" onclick="toggleInstructions()">Show Instructions</button>
@@ -1531,7 +1567,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                 <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
                                     <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn">🚶‍➡️Trigger Action</button>
                                     <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #4488ff;">✉️ Request Letter</button>
-                                    <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" title="Request coords update now" class="marker-action-btn-trans" >📍</button>
+                                    <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" title="Request coords update now" class="marker-action-btn-trans" style="border: 2px solid #00ff00; background: #44ff44;">📍</button>
+                                    <button onclick="viewDiary('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #8844ff;" title="View letters & inner thoughts">✉️💭 View</button>
                                 </div>
                                 <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
                                     <label class="toggle-label-inline">
@@ -1562,6 +1599,19 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     </div>
     <span class="open-new-window" onclick="openInNewWindow()" title="Open in new window">↗️</span>
     <script>
+        // NPC Diary Data - embedded directly in page
+        const npcDiaryData = <?php echo json_encode(array_combine(
+            array_column($translatedMarkers, 'name'),
+            array_map(function($m) {
+                return [
+                    'letters' => $m['diary_letters'],
+                    'thoughts' => $m['diary_thoughts'],
+                    'letter_count' => count($m['diary_letters']),
+                    'thought_count' => count($m['diary_thoughts'])
+                ];
+            }, $translatedMarkers)
+        ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+        
         function openInNewWindow() {
             window.open(window.location.href, '_blank');
         }
@@ -1795,7 +1845,266 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             el.classList.remove("pulsing");
             }, 5000); // 3 seconds
         }
+
+        // Letters & Thoughts Modal Functions
+        let currentDiaryTab = 'letters';
+        
+        function viewDiary(npcName) {
+            const modal = document.getElementById('diaryModal');
+            const modalContent = document.getElementById('diaryModalContent');
+            const modalTitle = document.getElementById('diaryModalTitle');
+            
+            // Show modal
+            modal.style.display = 'block';
+            modalTitle.textContent = npcName + "'s Letters & Thoughts";
+            
+            // Get data from embedded npcDiaryData
+            const data = npcDiaryData[npcName];
+            
+            if (data) {
+                renderDiaryContent(data);
+            } else {
+                modalContent.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">💭</p><p>No data found for this NPC</p></div>';
+            }
+        }
+
+        function renderDiaryContent(data) {
+            const modalContent = document.getElementById('diaryModalContent');
+            
+            let html = '';
+            
+            // Tab buttons
+            html += '<div style="display: flex; border-bottom: 2px solid #3a3a3a; margin-bottom: 20px;">';
+            html += '<button id="lettersTab" onclick="switchDiaryTab(\'letters\')" style="flex: 1; padding: 12px; background: ' + (currentDiaryTab === 'letters' ? '#8844ff' : '#2a2a2a') + '; border: none; color: white; cursor: pointer; font-size: 1em; transition: background 0.3s;">✉️ Letters (' + data.letter_count + ')</button>';
+            html += '<button id="thoughtsTab" onclick="switchDiaryTab(\'thoughts\')" style="flex: 1; padding: 12px; background: ' + (currentDiaryTab === 'thoughts' ? '#8844ff' : '#2a2a2a') + '; border: none; color: white; cursor: pointer; font-size: 1em; transition: background 0.3s;">💭 Inner Thoughts (' + data.thought_count + ')</button>';
+            html += '</div>';
+            
+            // Letters content
+            html += '<div id="lettersContent" style="display: ' + (currentDiaryTab === 'letters' ? 'block' : 'none') + '; max-height: 55vh; overflow-y: auto;">';
+            if (data.letters && data.letters.length > 0) {
+                data.letters.forEach((entry) => {
+                    html += renderEntry(entry, '#4488ff');
+                });
+            } else {
+                html += '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">✉️</p><p>No letters found</p></div>';
+            }
+            html += '</div>';
+            
+            // Thoughts content
+            html += '<div id="thoughtsContent" style="display: ' + (currentDiaryTab === 'thoughts' ? 'block' : 'none') + '; max-height: 55vh; overflow-y: auto;">';
+            if (data.thoughts && data.thoughts.length > 0) {
+                data.thoughts.forEach((entry) => {
+                    html += renderEntry(entry, '#8844ff');
+                });
+            } else {
+                html += '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">💭</p><p>No inner thoughts found</p></div>';
+            }
+            html += '</div>';
+            
+            modalContent.innerHTML = html;
+        }
+
+        function renderEntry(entry, borderColor) {
+            let html = '<div style="background: #2a2a2a; padding: 15px; margin-bottom: 15px; border-radius: 8px; border-left: 4px solid ' + borderColor + ';">';
+            html += '<div style="display: flex; justify-content: space-between; margin-bottom: 10px;">';
+            html += '<strong style="color: ' + borderColor + '; font-size: 1.1em;">' + escapeHtml(entry.topic || 'Journal Entry') + '</strong>';
+            html += '<span style="color: #888; font-size: 0.9em;">' + escapeHtml(entry.skyrim_date || 'Unknown date') + '</span>';
+            html += '</div>';
+            
+            if (entry.content) {
+                html += '<div style="color: #ddd; margin-bottom: 10px; line-height: 1.6; white-space: pre-wrap;">' + escapeHtml(entry.content) + '</div>';
+            }
+            
+            html += '<div style="display: flex; gap: 15px; color: #888; font-size: 0.85em; padding-top: 8px; border-top: 1px solid #3a3a3a;">';
+            if (entry.location) {
+                html += '<span>📍 ' + escapeHtml(entry.location) + '</span>';
+            }
+            if (entry.tags) {
+                html += '<span>🏷️ ' + escapeHtml(entry.tags) + '</span>';
+            }
+            html += '</div>';
+            html += '</div>';
+            
+            return html;
+        }
+
+        function switchDiaryTab(tab) {
+            currentDiaryTab = tab;
+            
+            const lettersContent = document.getElementById('lettersContent');
+            const thoughtsContent = document.getElementById('thoughtsContent');
+            const lettersTab = document.getElementById('lettersTab');
+            const thoughtsTab = document.getElementById('thoughtsTab');
+            
+            if (tab === 'letters') {
+                lettersContent.style.display = 'block';
+                thoughtsContent.style.display = 'none';
+                lettersTab.style.background = '#8844ff';
+                thoughtsTab.style.background = '#2a2a2a';
+            } else {
+                lettersContent.style.display = 'none';
+                thoughtsContent.style.display = 'block';
+                lettersTab.style.background = '#2a2a2a';
+                thoughtsTab.style.background = '#8844ff';
+            }
+        }
+
+        function closeDiaryModal() {
+            const modal = document.getElementById('diaryModal');
+            modal.style.display = 'none';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('diaryModal');
+            if (event.target == modal) {
+                closeDiaryModal();
+            }
+        }
     </script>
+
+    <!-- Letters & Thoughts Modal -->
+    <div id="diaryModal" style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); backdrop-filter: blur(5px);">
+        <div style="background-color: #1a1a1a; margin: 5% auto; padding: 0; border: 2px solid #8844ff; width: 80%; max-width: 900px; border-radius: 12px; box-shadow: 0 4px 20px rgba(136, 68, 255, 0.3);">
+            <div style="background: linear-gradient(135deg, #8844ff 0%, #6622cc 100%); padding: 20px; border-radius: 10px 10px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                <h2 id="diaryModalTitle" style="margin: 0; color: white; font-family: 'MagicCards', sans-serif; letter-spacing: 1.5px;">💭✉️ Letters & Thoughts</h2>
+                <span onclick="closeDiaryModal()" style="color: white; font-size: 32px; font-weight: bold; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">&times;</span>
+            </div>
+            <div id="diaryModalContent" style="padding: 20px; color: #fff;">
+                Loading...
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .loading-spinner {
+            border: 4px solid #2a2a2a;
+            border-top: 4px solid #8844ff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+
+    <?php
+    // Rumors section
+    // Calculate 7 in-game days threshold
+    $sevenDaysInGamets = (7 * 24) / 0.0000024; // 7 days worth of gamets
+    $sevenDaysAgoGamets = $last_gamets - $sevenDaysInGamets;
+    
+    // Query current rumors (last 7 in-game days)
+    $currentRumorsQuery = "SELECT id, gamets, ts, hold, content, type FROM rumors WHERE gamets >= $1 ORDER BY gamets DESC";
+    $currentRumorsResult = pg_query_params($adminConn, $currentRumorsQuery, [$sevenDaysAgoGamets]);
+    $currentRumors = [];
+    if ($currentRumorsResult) {
+        while ($row = pg_fetch_assoc($currentRumorsResult)) {
+            $currentRumors[] = $row;
+        }
+    }
+    
+    // Query outdated rumors (older than 7 in-game days)
+    $outdatedRumorsQuery = "SELECT id, gamets, ts, hold, content, type FROM rumors WHERE gamets < $1 ORDER BY gamets DESC";
+    $outdatedRumorsResult = pg_query_params($adminConn, $outdatedRumorsQuery, [$sevenDaysAgoGamets]);
+    $outdatedRumors = [];
+    if ($outdatedRumorsResult) {
+        while ($row = pg_fetch_assoc($outdatedRumorsResult)) {
+            $outdatedRumors[] = $row;
+        }
+    }
+    ?>
+    
+    <div style="margin-top: 40px;">
+        <div class="page-header" style="margin-bottom: 20px;">
+            <h1>📰 Rumors</h1>
+        </div>
+        
+        <!-- Current Rumors -->
+        <div class="info-panel" style="margin-bottom: 30px;">
+            <h3>🔥 Current Rumors (Last 7 In-Game Days)</h3>
+            <?php if (empty($currentRumors)): ?>
+                <p style="color: #888; font-style: italic;">No current rumors</p>
+            <?php else: ?>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                        <thead>
+                            <tr style="background: #1a1a1a; border-bottom: 2px solid rgb(242, 124, 17);">
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">Hold</th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">Type</th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">Content</th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">In-Game Date</th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">Age</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($currentRumors as $rumor): ?>
+                                <?php 
+                                    $rumorDate = convert_gamets2skyrim_date($rumor['gamets']);
+                                    $hoursAgo = round(($last_gamets - $rumor['gamets']) * 0.0000024, 1);
+                                ?>
+                                <tr style="border-bottom: 1px solid #333;">
+                                    <td style="padding: 12px; color: #ddd;"><?php echo htmlspecialchars($rumor['hold'] ?? 'Unknown'); ?></td>
+                                    <td style="padding: 12px; color: #bbb; font-size: 12px;"><?php echo htmlspecialchars($rumor['type'] ?? 'General'); ?></td>
+                                    <td style="padding: 12px; color: #fff;"><?php echo htmlspecialchars($rumor['content']); ?></td>
+                                    <td style="padding: 12px; color: #bbb; font-size: 12px; white-space: nowrap;"><?php echo htmlspecialchars($rumorDate); ?></td>
+                                    <td style="padding: 12px; color: #888; font-size: 12px; white-space: nowrap;"><?php echo $hoursAgo; ?> hours ago</td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+        
+        <!-- Outdated Rumors -->
+        <div class="info-panel">
+            <h3>📜 Outdated Rumors (Older than 7 In-Game Days)</h3>
+            <?php if (empty($outdatedRumors)): ?>
+                <p style="color: #888; font-style: italic;">No outdated rumors</p>
+            <?php else: ?>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                        <thead>
+                            <tr style="background: #1a1a1a; border-bottom: 2px solid #666;">
+                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Hold</th>
+                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Type</th>
+                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Content</th>
+                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">In-Game Date</th>
+                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Age</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($outdatedRumors as $rumor): ?>
+                                <?php 
+                                    $rumorDate = convert_gamets2skyrim_date($rumor['gamets']);
+                                    $hoursAgo = round(($last_gamets - $rumor['gamets']) * 0.0000024, 1);
+                                ?>
+                                <tr style="border-bottom: 1px solid #333; opacity: 0.6;">
+                                    <td style="padding: 12px; color: #888;"><?php echo htmlspecialchars($rumor['hold'] ?? 'Unknown'); ?></td>
+                                    <td style="padding: 12px; color: #777; font-size: 12px;"><?php echo htmlspecialchars($rumor['type'] ?? 'General'); ?></td>
+                                    <td style="padding: 12px; color: #999;"><?php echo htmlspecialchars($rumor['content']); ?></td>
+                                    <td style="padding: 12px; color: #777; font-size: 12px; white-space: nowrap;"><?php echo htmlspecialchars($rumorDate); ?></td>
+                                    <td style="padding: 12px; color: #666; font-size: 12px; white-space: nowrap;"><?php echo $hoursAgo; ?> hours ago</td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
 </main>
 
 <?php

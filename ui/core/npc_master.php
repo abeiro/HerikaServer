@@ -1121,7 +1121,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 blcCb.setAttribute('data-profile-default', profile.blc ? '1' : '0');
                 const hint = blcCb.closest('.form-item').querySelector('.hint');
                 if (hint) {
-                    const base = 'NPC generates inner thoughts every 5 in-game days. When enabled, NPC can also autonomously travel to new locations based on AI decisions. When disabled, only generates thoughts without movement.';                }
+                    const base = 'NPC generates inner thoughts based on the trigger period (configurable in Global Settings, default: 5 in-game days). When enabled, NPC can also autonomously travel to new locations based on AI decisions. When disabled, only generates thoughts without movement.';                }
             }
             
             // Update gps_track
@@ -1387,14 +1387,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <label for="background_life_commands" class="label-with-toggle">🎮 Background Life: Autonomous Actions
                 <input type="checkbox" id="background_life_commands" name="background_life_commands" value="1" <?= $blcChecked ? "checked" : "" ?> data-profile-default="<?= $profileBlcEnabled ? '1' : '0' ?>">
             </label>
-            <small class="hint">NPC generates inner thoughts every 5 in-game days. When enabled, NPC can also autonomously travel to new locations based on AI decisions. When disabled, only generates thoughts without movement.<?= $blcFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
+            <small class="hint">NPC generates inner thoughts based on the trigger period (configurable in Global Settings, default: 5 in-game days). When enabled, NPC can also autonomously travel to new locations based on AI decisions. When disabled, only generates thoughts without movement.</small>
         </div>
 
         <div class="form-item">
             <label for="gps_track" class="label-with-toggle">📍 Background Life: Hourly Tracking
                 <input type="checkbox" id="gps_track" name="gps_track" value="1" <?= $gpsChecked ? "checked" : "" ?> data-profile-default="<?= $profileGpsEnabled ? '1' : '0' ?>">
             </label>
-            <small class="hint">Tracks NPC coordinates every in-game hour (default is daily).<?= $gpsFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
+            <small class="hint">Tracks NPC coordinates every in-game hour (default is daily).</small>
         </div>
 
         <div class="form-item span-2">
