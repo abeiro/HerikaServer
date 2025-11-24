@@ -639,7 +639,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         width: 100%;
         box-sizing: border-box;
         border-radius: 8px;
-        overflow: auto;
+        overflow: visible;
     }
 
     .map-container img {
