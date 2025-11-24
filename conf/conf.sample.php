@@ -17,6 +17,7 @@ $DIARY_COOLDOWN=120; //Cooldown period in seconds between diary entries to preve
 $DYNAMIC_PROFILE=false; //Dynamic profile updates using a timer system.
 $AUTO_DIARY=true; //Automatically create diary entries for all current followers when sleeping. Wait events are controlled by AUTO_DIARY_WAIT setting. Each follower respects their individual diary cooldown timer.
 $AUTO_DIARY_WAIT=false; //When AUTO_DIARY is enabled, this controls whether diary entries are created during wait events. If false, auto diary will only trigger on sleep events.
+$BGL_TRIGGER_DAYS=5; //Number of in-game days between Background Life events. NPCs will generate thoughts and take actions based on this interval. Range: 1-30 days.
 $MINIME_T5=false; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_KNOWLEDGE="knowall"; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_AMOUNT=1; //Number of Oghma keywords to extract from each response. More keyword extraction will mean longer response times.

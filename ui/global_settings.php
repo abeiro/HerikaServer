@@ -245,7 +245,7 @@ function pretty_label(string $flatName): string {
     $connectorLabels = [
         'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
         'CORE_CONNECTOR_SUMMARY' => 'Summaries',
-        'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory',
+        'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory/Background Life',
         'CORE_CONNECTOR_PROFILES' => 'Dynamic Profiles',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
     ];
@@ -305,6 +305,7 @@ $gsSections = [
         [ 'name' => 'ITEM_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
         [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
+        [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
     ],
     'Diary' => [
         [ 'name' => 'AUTO_DIARY', 'type' => 'boolean' ],

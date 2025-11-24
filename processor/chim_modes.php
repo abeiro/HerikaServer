@@ -20,14 +20,17 @@
 // * Spawn Character (SPAWN)
 //      Call spawn character directly.
 //
-// * Easy Roleplay (IMPERSONATION)
-//      (Smart Impersonation) (we should need a prompt parameter so user can customice this). 
-//      Just prefix two asterisks at user input, and add the prompt. 
-//      Example: "Hello" => **(Rewrite and translate the following text into English, employing Skyrim lore language and drawing upon the context.) Hello.
+// * Cheat Mode (CHEATMODE)
+//      Processes ALL user input through cheatmode function (no # prefix required).
+//      Sends input wrapped in <> brackets directly to LLM with functions enabled.
+//      NPCs will execute whatever action/command is requested.
+//      Example: "give me 1000 gold" => <give me 1000 gold>
 //
-// * Easy Roleplay (CREATION)
-//      
-//      Example: "Speech about being the Dragonborn" => **(Generate text employing Skyrim lore language and drawing upon the context, following the next instruction:Speech about being the Dragonborn ) 
+// * Auto Chat (AUTOCHAT)
+//      Generates clean text following player instructions using Skyrim lore language.
+//      Wraps input with **() to generate contextual text without stage directions.
+//      Example: "Speech about being the Dragonborn" => **(Generate text employing Skyrim lore language and drawing upon the context, following the next instruction:Speech about being the Dragonborn)
+//      Example: "Hello" => **(Hello) 
 //
 // * Event Injection (INJECTION_LOG)
 //      (Whatever is typed/said is injected into event log as an roleplay instruction)
@@ -106,15 +109,19 @@ if ($EXECUTION_MODE=="STANDARD") {
     exec("php /var/www/html/HerikaServer/service/manager.php rolemaster spawn \"$instruction\"", $output, $returnCode);
     terminate();
 
-} else if ($EXECUTION_MODE=="IMPERSONATION") {
+} else if ($EXECUTION_MODE=="CHEATMODE") {
+    // Process all input as cheat commands
+    $cleaned_player_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
+    $newSpeech = strtr($cleaned_player_dialogue, ["#"=>""]);
+    $gameRequest[0] = "cheatmode";
+    $gameRequest[3] = "<$newSpeech>";
+    $GLOBALS["FUNCTIONS_ARE_ENABLED"] = true;
     
-    $gameRequest[3]="**".$gameRequest[3];
-    $GLOBALS["PLAYER_RESPEECH"]=true;
+} else if ($EXECUTION_MODE=="AUTOCHAT") {
     
-} else if ($EXECUTION_MODE=="CREATION") {
-    
-    $gameRequest[3]="**(".$gameRequest[3].")";
-    $GLOBALS["PLAYER_RESPEECH"]=true;
+    $cleaned_player_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
+    $gameRequest[3]="**(".$cleaned_player_dialogue.")";
+    // Don't set PLAYER_RESPEECH to avoid name duplication
     
 } else if ($EXECUTION_MODE=="INJECTION_LOG") {
     $cleaned_player_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
