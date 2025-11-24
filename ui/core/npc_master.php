@@ -1111,27 +1111,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 salCb.setAttribute('data-profile-default', profile.sal ? '1' : '0');
                 const hint = salCb.closest('.form-item').querySelector('.hint');
                 if (hint) {
-                    const base = 'Enable salutation responses after periods of absence.';                }
-            }
-            
-            // Update background_life_commands
-            const blcCb = document.getElementById('background_life_commands');
-            if (blcCb) {
-                blcCb.checked = profile.blc;
-                blcCb.setAttribute('data-profile-default', profile.blc ? '1' : '0');
-                const hint = blcCb.closest('.form-item').querySelector('.hint');
-                if (hint) {
-                    const base = 'NPC generates inner thoughts based on the trigger period (configurable in Global Settings, default: 5 in-game days). When enabled, NPC can also autonomously travel to new locations based on AI decisions. When disabled, only generates thoughts without movement.';                }
-            }
-            
-            // Update gps_track
-            const gpsCb = document.getElementById('gps_track');
-            if (gpsCb) {
-                gpsCb.checked = profile.gps;
-                gpsCb.setAttribute('data-profile-default', profile.gps ? '1' : '0');
-                const hint = gpsCb.closest('.form-item').querySelector('.hint');
-                if (hint) {
-                    const base = 'Tracks NPC coordinates every in-game hour (default is daily).';                }
+                    const base = 'NPC will greet you after you have been away for a while.';
+                }
             }
         }
     })();
@@ -1278,10 +1259,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             }
         } catch (Throwable $e) { }
         
-        // Read profile-level settings for the three new toggles
+        // Read profile-level settings for the toggles
         $profileSalEnabled = false;
-        $profileBlcEnabled = false;
-        $profileGpsEnabled = false;
         if ($currentProfileId !== '') {
             foreach (($profileConnRows ?? []) as $prow) {
                 if ((string)($prow['id'] ?? '') === $currentProfileId) {
@@ -1293,11 +1272,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                         }
                     } catch (Throwable $e) {}
                     $salVal = isset($pmeta['SALUTATION_AFTER_A_WHILE']) ? $pmeta['SALUTATION_AFTER_A_WHILE'] : null;
-                    $blcVal = isset($pmeta['BACKGROUND_LIFE_COMMANDS']) ? $pmeta['BACKGROUND_LIFE_COMMANDS'] : null;
-                    $gpsVal = isset($pmeta['GPS_TRACK']) ? $pmeta['GPS_TRACK'] : null;
                     $profileSalEnabled = ($salVal === '1' || $salVal === 1 || $salVal === true);
-                    $profileBlcEnabled = ($blcVal === '1' || $blcVal === 1 || $blcVal === true);
-                    $profileGpsEnabled = ($gpsVal === '1' || $gpsVal === 1 || $gpsVal === true);
                     break;
                 }
             }
@@ -1317,40 +1292,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             }
             if (!$hasNpcOverride) {
                 $salFromProfile = true;
-            }
-        } catch (Throwable $e) { }
-        
-        // Background Life Commands: check extended_data override or fall back to profile default
-        $blcChecked = $profileBlcEnabled;
-        $blcFromProfile = false;
-        try {
-            $hasNpcOverride = false;
-            if (is_array($editItem) && !empty($editItem['extended_data'])) {
-                $tmpEd = json_decode((string)$editItem['extended_data'], true);
-                if (is_array($tmpEd) && array_key_exists('background_life_commands', $tmpEd) && $tmpEd['background_life_commands'] !== null && $tmpEd['background_life_commands'] !== '') {
-                    $blcChecked = !empty($tmpEd['background_life_commands']);
-                    $hasNpcOverride = true;
-                }
-            }
-            if (!$hasNpcOverride) {
-                $blcFromProfile = true;
-            }
-        } catch (Throwable $e) { }
-        
-        // GPS Track: check metadata override or fall back to profile default
-        $gpsChecked = $profileGpsEnabled;
-        $gpsFromProfile = false;
-        try {
-            $hasNpcOverride = false;
-            if (is_array($editItem) && !empty($editItem['metadata'])) {
-                $tmpMd = json_decode((string)$editItem['metadata'], true);
-                if (is_array($tmpMd) && array_key_exists('gps_track', $tmpMd) && $tmpMd['gps_track'] !== null && $tmpMd['gps_track'] !== '') {
-                    $gpsChecked = !empty($tmpMd['gps_track']);
-                    $hasNpcOverride = true;
-                }
-            }
-            if (!$hasNpcOverride) {
-                $gpsFromProfile = true;
             }
         } catch (Throwable $e) { }
         ?>
@@ -1380,21 +1321,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <label for="salutation_after_a_while" class="label-with-toggle">👋Auto Salutations
                 <input type="checkbox" id="salutation_after_a_while" name="salutation_after_a_while" value="1" <?= $salChecked ? "checked" : "" ?> data-profile-default="<?= $profileSalEnabled ? '1' : '0' ?>">
             </label>
-            <small class="hint">Enable salutation responses after periods of absence.<?= $salFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
-        </div>
-
-        <div class="form-item">
-            <label for="background_life_commands" class="label-with-toggle">🎮 Background Life: Autonomous Actions
-                <input type="checkbox" id="background_life_commands" name="background_life_commands" value="1" <?= $blcChecked ? "checked" : "" ?> data-profile-default="<?= $profileBlcEnabled ? '1' : '0' ?>">
-            </label>
-            <small class="hint">NPC generates inner thoughts based on the trigger period (configurable in Global Settings, default: 5 in-game days). When enabled, NPC can also autonomously travel to new locations based on AI decisions. When disabled, only generates thoughts without movement.</small>
-        </div>
-
-        <div class="form-item">
-            <label for="gps_track" class="label-with-toggle">📍 Background Life: Hourly Tracking
-                <input type="checkbox" id="gps_track" name="gps_track" value="1" <?= $gpsChecked ? "checked" : "" ?> data-profile-default="<?= $profileGpsEnabled ? '1' : '0' ?>">
-            </label>
-            <small class="hint">Tracks NPC coordinates every in-game hour (default is daily).</small>
+            <small class="hint">NPC will automatically greet you after a while.</small>
         </div>
 
         <div class="form-item span-2">
@@ -1687,7 +1614,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Override global and profile settings for this specific NPC. Changes here take precedence over all other configurations.</small>
             <?php
             // Configure override editor for NPC mode
-            $reservedKeys = [ 'middle_term_enabled', 'auto_diary_enabled', 'chim_core_migrated', 'salutation_after_a_while', 'background_life_commands'];
+            $reservedKeys = [ 'middle_term_enabled', 'auto_diary_enabled', 'chim_core_migrated', 'salutation_after_a_while'];
             $extendedDataRaw = isset($editItem["extended_data"]) ? $editItem["extended_data"] : '{}';
             $extendedDataObj = json_decode($extendedDataRaw, true) ?: [];
             $currentOverrides = [];
@@ -1734,7 +1661,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                   const mtm = form.querySelector('#middle_term_enabled');
                   const ad = form.querySelector('#auto_diary_enabled');
                   const sal = form.querySelector('#salutation_after_a_while');
-                  const blc = form.querySelector('#background_life_commands');
                   const dyn = form.querySelector('#dynamic_profile');
                   if (form.extended_data){
                     let obj = {};
@@ -1770,16 +1696,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                       }
                     }
                     
-                    // Background Life Commands: only save if differs from profile default
-                    if (blc) {
-                      const profileDefault = blc.getAttribute('data-profile-default') === '1';
-                      if (blc.checked !== profileDefault) {
-                        obj.background_life_commands = blc.checked ? true : false;
-                      } else {
-                        delete obj.background_life_commands; // Remove to inherit from profile
-                      }
-                    }
-                    
                     form.extended_data.value = JSON.stringify(obj);
                   }
                   
@@ -1795,24 +1711,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                       // Inherit: send empty/null to clear override
                       if (dynHidden) dynHidden.value = '';
                       dyn.value = '';
-                    }
-                  }
-                  
-                  // GPS Track: save to metadata instead of extended_data
-                  const gps = form.querySelector('#gps_track');
-                  if (gps && form.metadata) {
-                    try {
-                      const content = jsonEditor.get();
-                      let metaObj = content.json || {};
-                      const profileDefault = gps.getAttribute('data-profile-default') === '1';
-                      if (gps.checked !== profileDefault) {
-                        metaObj.gps_track = gps.checked ? true : false;
-                      } else {
-                        delete metaObj.gps_track; // Remove to inherit from profile
-                      }
-                      form.metadata.value = JSON.stringify(metaObj, null, 0);
-                    } catch(_e) {
-                      console.error('Failed to sync GPS track to metadata:', _e);
                     }
                   }
                 } catch(_e){ console.error('Failed to sync feature toggles:', _e); }
@@ -3097,32 +2995,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           if (left){
             let icon = left.querySelector('.npc-sal-icon');
             if (sal){ if (!icon){ icon = document.createElement('span'); icon.className='npc-sal-icon'; icon.title='Auto Salutation enabled'; icon.textContent='👋'; left.appendChild(icon); } }
-            else { if (icon){ icon.remove(); } }
-          }
-        } catch(_e){}
-        // Toggle Background Life Commands icon (🎮) based on extended_data.background_life_commands
-        try {
-          const blc = (function(){
-            const raw = String(data.extended_data||'').trim(); if (!raw) return 0;
-            try { const o = JSON.parse(raw); return (o && Number(o.background_life_commands||0)===1) ? 1 : 0; } catch(_e){ return 0; }
-          })();
-          const left = card.querySelector('.npc-title-left');
-          if (left){
-            let icon = left.querySelector('.npc-blc-icon');
-            if (blc){ if (!icon){ icon = document.createElement('span'); icon.className='npc-blc-icon'; icon.title='Background life commands enabled'; icon.textContent='🎮'; left.appendChild(icon); } }
-            else { if (icon){ icon.remove(); } }
-          }
-        } catch(_e){}
-        // Toggle GPS Track icon (📍) based on metadata.gps_track
-        try {
-          const gps = (function(){
-            const raw = String(data.metadata||'').trim(); if (!raw) return 0;
-            try { const o = JSON.parse(raw); return (o && Number(o.gps_track||0)===1) ? 1 : 0; } catch(_e){ return 0; }
-          })();
-          const left = card.querySelector('.npc-title-left');
-          if (left){
-            let icon = left.querySelector('.npc-gps-icon');
-            if (gps){ if (!icon){ icon = document.createElement('span'); icon.className='npc-gps-icon'; icon.title='GPS track enabled'; icon.textContent='📍'; left.appendChild(icon); } }
             else { if (icon){ icon.remove(); } }
           }
         } catch(_e){}
