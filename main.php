@@ -118,6 +118,17 @@ $GLOBALS["AUDIT_RUNID_REQUEST"]=$gameRequest[0];
 
 $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 
+// Handle deprecated events now processed by gamedata.php
+if (in_array($gameRequest[0], ['updateequipment', 'updateinventory', 'updateskills', 'updatestats'])) {
+    // These events are now handled by gamedata.php with JSON POST
+    // The C++ plugin has been updated to use the new endpoint
+    echo "DEPRECATED: This event is now handled by gamedata.php\n";
+    if (!getenv("PHPUNIT_TEST")) {
+        @ob_end_flush();
+        @flush();
+    }
+    exit;
+}
 
 // Database Connection
 $db = new sql();
