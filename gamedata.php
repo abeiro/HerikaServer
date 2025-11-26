@@ -58,6 +58,9 @@ try {
         case 'stats':
             handleStatsUpdate($data, $npcMaster);
             break;
+        case 'spells':
+            handleSpellsUpdate($data, $npcMaster);
+            break;
         default:
             http_response_code(400);
             echo "Bad Request: Unknown type";
@@ -275,5 +278,59 @@ function handleStatsUpdate(array $data, NpcMaster $npcMaster): void {
     $npcMaster->updateByArray($currentData);
     
     Logger::debug("[gamedata.php] Updated stats for {$actorType}: {$actorName}");
+}
+
+/**
+ * Handle spells update
+ */
+function handleSpellsUpdate(array $data, NpcMaster $npcMaster): void {
+    $actorName = $data['actor_name'];
+    $actorType = $data['actor_type'];
+    
+    if (!isset($data['spells'])) {
+        Logger::error("[gamedata.php] Spells update missing spells data for {$actorName}");
+        return;
+    }
+    
+    $spells = $data['spells'];
+    
+    // Get or create NPC/Player record
+    $currentData = $npcMaster->getByName($actorName);
+    
+    if (!$currentData) {
+        // NPC/Player not in database yet - this is normal for NPCs not yet encountered
+        if ($actorType === 'player') {
+            Logger::warn("[gamedata.php] Player record not found, skipping spells update for: {$actorName}");
+        }
+        // NPC not in database yet - this is normal, they haven't been encountered
+        return;
+    }
+    
+    // Get existing metadata
+    $meta = [];
+    if (!empty($currentData['metadata'])) {
+        $meta = json_decode($currentData['metadata'], true);
+        if (!is_array($meta)) {
+            $meta = [];
+        }
+    }
+    
+    // Update spells section - store as array
+    $meta['spells'] = [];
+    foreach ($spells as $spell) {
+        if (isset($spell['name']) && isset($spell['baseid'])) {
+            $meta['spells'][] = [
+                'name' => $spell['name'],
+                'baseid' => $spell['baseid'],
+                'casting_type' => isset($spell['casting_type']) ? intval($spell['casting_type']) : 0,
+                'delivery' => isset($spell['delivery']) ? intval($spell['delivery']) : 0
+            ];
+        }
+    }
+    $meta['spells_updated'] = time();
+    
+    // Save back to database
+    $currentData = $npcMaster->setMetadata($currentData, $meta);
+    $npcMaster->updateByArray($currentData);
 }
 
