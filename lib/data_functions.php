@@ -4680,6 +4680,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
     $EQUIPMENT_ADD="";
     $TARGET_EQUIPMENT_ADD="";
     $STATS_ADD="";
+    $SPELLS_ADD="";
     
     $npcMaster=new NpcMaster();
     $currentNpcData=$npcMaster->getByName($FOLLOWER_CONF["HERIKA_NAME"]);
@@ -4882,6 +4883,66 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
 		}
 	}
     
+    // Add NPC's known spells (skip for The Narrator)
+    if ($FOLLOWER_CONF["HERIKA_NAME"] !== "The Narrator" && isset($metaData["spells"]) && is_array($metaData["spells"])) {
+        $spellParts = [];
+        // Continue using the same $describedBaseids from equipment/inventory to dedupe across all items
+        if (!isset($describedBaseids)) {
+            $describedBaseids = [];
+        }
+        
+        // Casting type labels
+        $castingTypes = [
+            0 => 'Concentration',
+            1 => 'Fire & Forget',
+            2 => 'Constant'
+        ];
+        // Delivery type labels
+        $deliveryTypes = [
+            0 => 'Self',
+            1 => 'Contact',
+            2 => 'Aimed',
+            3 => 'Target Actor',
+            4 => 'Target Location'
+        ];
+        
+        foreach ($metaData["spells"] as $spell) {
+            $spellName = isset($spell['name']) ? $spell['name'] : null;
+            $baseid = isset($spell['baseid']) ? $spell['baseid'] : null;
+            $castingType = isset($spell['casting_type']) ? intval($spell['casting_type']) : 0;
+            $deliveryType = isset($spell['delivery']) ? intval($spell['delivery']) : 0;
+            
+            if (empty($spellName)) {
+                continue;
+            }
+            
+            // Only add spells that have descriptions in the database
+            $description = null;
+            if (!empty($baseid) && !in_array($baseid, $describedBaseids)) {
+                $description = $getItemDescription($spellName, $baseid);
+                if ($description) {
+                    $describedBaseids[] = $baseid;
+                }
+            }
+            
+            // Skip spells without descriptions
+            if (!$description) {
+                continue;
+            }
+            
+            // Format: Spell Name (Casting Type, Delivery) - Description
+            $castingLabel = $castingTypes[$castingType] ?? 'Unknown';
+            $deliveryLabel = $deliveryTypes[$deliveryType] ?? 'Unknown';
+            
+            $spellLine = "  • {$spellName} ({$castingLabel}, {$deliveryLabel}) - {$description}";
+            $spellParts[] = $spellLine;
+        }
+        
+        if (!empty($spellParts)) {
+            $SPELLS_ADD = "\n\n<spells>\n#Known Spells\nYou know the following spells:\n" . implode("\n", $spellParts) . "\n</spells>\n";
+        }
+    }
+    
     // Add dialogue target's equipment (if DIALOGUE_TARGET is set)
     if (isset($GLOBALS["DIALOGUE_TARGET"]) && !empty($GLOBALS["DIALOGUE_TARGET"])) {
         $targetName = $GLOBALS["DIALOGUE_TARGET"];
@@ -4944,6 +5005,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
                 $dynamicBio.=$TARGET_EQUIPMENT_ADD ?? "";
                 $dynamicBio.=$INVENTORY_ADD ?? "";
                 $dynamicBio.=$STATS_ADD ?? "";
+                $dynamicBio.=$SPELLS_ADD ?? "";
             }
         }
     }
