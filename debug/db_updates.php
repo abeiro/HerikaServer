@@ -1761,6 +1761,43 @@ if ($checkTableExists("core_api_badge") == -1) {
 } else
     Logger::info(__FILE__." core_api_badge exists");
 
+// Add unique constraint on core_api_badge.label to prevent duplicates
+if ($checkTableExists("core_api_badge") > 0 && $checkVersion("core_api_badge") < 20251127001) {
+    try {
+        // Remove duplicates: keep row with highest id and non-empty key per label (case-insensitive)
+        $db->execQuery("
+            DELETE FROM public.core_api_badge a
+            WHERE a.id NOT IN (
+                SELECT DISTINCT ON (LOWER(label)) id
+                FROM public.core_api_badge
+                ORDER BY LOWER(label), CASE WHEN api_key = '' THEN 0 ELSE 1 END DESC, id DESC
+            )
+        ");
+        
+        // Normalize label casing to match preset expectations
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'OpenRouter' WHERE LOWER(label) = 'openrouter'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'OpenAI' WHERE LOWER(label) = 'openai'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Deepgram' WHERE LOWER(label) = 'deepgram'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Google' WHERE LOWER(label) = 'google'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Azure' WHERE LOWER(label) = 'azure'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'ElevenLabs' WHERE LOWER(label) = 'elevenlabs'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Cartesia' WHERE LOWER(label) = 'cartesia'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Replicate' WHERE LOWER(label) = 'replicate'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Nano-GPT' WHERE LOWER(label) = 'nano-gpt'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'DeepL' WHERE LOWER(label) = 'deepl'");
+        
+        // Add unique constraint
+        $db->execQuery("ALTER TABLE public.core_api_badge ADD CONSTRAINT core_api_badge_label_unique UNIQUE (label)");
+        
+        // Add case-insensitive index for faster lookups
+        $db->execQuery("CREATE INDEX IF NOT EXISTS idx_core_api_badge_label_lower ON public.core_api_badge (LOWER(label))");
+        
+        $updateVersion("core_api_badge", 20251127001);
+        Logger::info("Applied core_api_badge unique constraint 20251127001 (cleaned duplicates, normalized case, added UNIQUE constraint)");
+    } catch (Exception $e) {
+        Logger::warn("core_api_badge unique constraint update: " . $e->getMessage());
+    }
+}
 
 if ($checkTableExists("core_itt_connector") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_itt_connector.sql"));
