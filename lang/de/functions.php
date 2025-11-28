@@ -78,6 +78,7 @@ $F_TRANSLATIONS_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gibt einer einzel
 $F_TRANSLATIONS_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gibt einer einzelnen Person/einem NPC einen Gegenstand. Was genau gegeben wird, ergibt sich aus dem Dialog.";
 $F_TRANSLATIONS_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} legt sich schlafen.";
 $F_TRANSLATIONS_LOCAL["UseSoulGaze"]="Verwendet den Zauber Seelenschau. Dadurch kann {$GLOBALS["HERIKA_NAME"]} die Umgebung durch die Augen von {$GLOBALS["PLAYER_NAME"]} sehr genau wahrnehmen. Der Zauber stört allerdings den Anwender etwas.";
+$F_TRANSLATIONS_LOCAL["CastSpell"]="{$GLOBALS["HERIKA_NAME"]} wirkt einen Zauber auf einen Zielakteur. Muss den Zaubernamen aus <spells> und den Namen des Zielakteurs angeben. Verwende 'self' als Ziel für selbstgerichtete Zauber.";
 
 $GLOBALS["F_TRANSLATIONS"]=$F_TRANSLATIONS_LOCAL;
 
@@ -117,6 +118,7 @@ $F_RETURNMESSAGES_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gibt Gold an #T
 $F_RETURNMESSAGES_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gibt Gegenstände an #TARGET#.";
 $F_RETURNMESSAGES_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} legt sich schlafen.";
 $F_RETURNMESSAGES_LOCAL["UseSoulGaze"]="{$GLOBALS["HERIKA_NAME"]} nutzt den Zauber Seelenschau.";
+$F_RETURNMESSAGES_LOCAL["CastSpell"]="{$GLOBALS["HERIKA_NAME"]} wirkt #ITEM# auf #TARGET#";
 
 $GLOBALS["F_RETURNMESSAGES"]=$F_RETURNMESSAGES_LOCAL;
 
@@ -160,6 +162,7 @@ $F_NAMES_LOCAL["GiveGoldTo"]="GoldGeben";
 $F_NAMES_LOCAL["GiveItemTo"]="GegenstandGeben";
 $F_NAMES_LOCAL["GoToSleep"]="SchlafenGehen";
 $F_NAMES_LOCAL["UseSoulGaze"]="SeelenschauNutzen";
+$F_NAMES_LOCAL["CastSpell"]="ZauberWirken";
 
 
 $GLOBALS["F_NAMES"]=$F_NAMES_LOCAL;

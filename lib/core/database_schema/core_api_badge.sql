@@ -66,13 +66,16 @@ ALTER TABLE ONLY public.core_api_badge ALTER COLUMN id SET DEFAULT nextval('publ
 -- Data for Name: core_api_badge; Type: TABLE DATA; Schema: public; Owner: dwemer
 --
 
-INSERT INTO public.core_api_badge VALUES (1, 'openrouter', '');
+INSERT INTO public.core_api_badge VALUES (1, 'OpenRouter', '');
 INSERT INTO public.core_api_badge VALUES (2, 'OpenAI', '');
 INSERT INTO public.core_api_badge VALUES (3, 'Deepgram', '');
 INSERT INTO public.core_api_badge VALUES (4, 'Google', '');
 INSERT INTO public.core_api_badge VALUES (5, 'Azure', '');
 INSERT INTO public.core_api_badge VALUES (6, 'ElevenLabs', '');
 INSERT INTO public.core_api_badge VALUES (7, 'Replicate', '');
+INSERT INTO public.core_api_badge VALUES (8, 'Cartesia', '');
+INSERT INTO public.core_api_badge VALUES (9, 'Nano-GPT', '');
+INSERT INTO public.core_api_badge VALUES (10, 'DeepL', '');
 
 
 --
@@ -88,6 +91,21 @@ SELECT pg_catalog.setval('public.api_badge_id_seq', 2, true);
 
 ALTER TABLE ONLY public.core_api_badge
     ADD CONSTRAINT my_table_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: core_api_badge core_api_badge_label_unique; Type: CONSTRAINT; Schema: public; Owner: dwemer
+--
+
+ALTER TABLE ONLY public.core_api_badge
+    ADD CONSTRAINT core_api_badge_label_unique UNIQUE (label);
+
+
+--
+-- Name: idx_core_api_badge_label_lower; Type: INDEX; Schema: public; Owner: dwemer
+--
+
+CREATE INDEX idx_core_api_badge_label_lower ON public.core_api_badge USING btree (lower(label));
 
 
 --

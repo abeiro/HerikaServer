@@ -67,6 +67,57 @@ function isItemBlacklisted($itemName) {
     return false;
 }
 
+/**
+ * Get height description based on scale value
+ * Reads height descriptions from prompts table with hardcoded fallback
+ * 
+ * @param float $scale The NPC scale value (typically 0.6 to 1.4)
+ * @return string Height description or empty string if not found
+ */
+function getHeightDescription(float $scale): string {
+    static $heightDescriptions = null;
+    
+    // Hardcoded fallback in case database fails
+    $fallbackDescriptions = [
+        ['name' => 'VerySmall', 'min_scale' => 0.0, 'max_scale' => 0.60, 'description' => 'Very small and tiny in stature'],
+        ['name' => 'Small', 'min_scale' => 0.60, 'max_scale' => 0.80, 'description' => 'Smaller than most people'],
+        ['name' => 'ModestStature', 'min_scale' => 0.80, 'max_scale' => 0.95, 'description' => 'Slightly below average height'],
+        ['name' => 'Average', 'min_scale' => 0.95, 'max_scale' => 1.05, 'description' => 'Typical height'],
+        ['name' => 'Tall', 'min_scale' => 1.05, 'max_scale' => 1.20, 'description' => 'Tall, standing a head above most people'],
+        ['name' => 'VeryTall', 'min_scale' => 1.20, 'max_scale' => 1.40, 'description' => 'Very tall'],
+        ['name' => 'Giantlike', 'min_scale' => 1.40, 'max_scale' => 99.0, 'description' => 'Giant in height and stature']
+    ];
+    
+    // Load height descriptions from prompts table (cached)
+    if ($heightDescriptions === null) {
+        try {
+            global $db;
+            $result = $db->fetchOne("SELECT COALESCE(custom_prompt, default_prompt) as prompt FROM prompts WHERE prompt_key = 'height_descriptions'");
+            
+            if ($result && !empty($result['prompt'])) {
+                $data = json_decode($result['prompt'], true);
+                $heightDescriptions = $data['height_descriptions'] ?? $fallbackDescriptions;
+            } else {
+                // Database query succeeded but no data - use fallback
+                $heightDescriptions = $fallbackDescriptions;
+            }
+        } catch (Exception $e) {
+            // Database error - use fallback
+            Logger::debug("Using fallback height descriptions due to database error: " . $e->getMessage());
+            $heightDescriptions = $fallbackDescriptions;
+        }
+    }
+    
+    // Find matching height description
+    foreach ($heightDescriptions as $desc) {
+        if ($scale >= $desc['min_scale'] && $scale < $desc['max_scale']) {
+            return $desc['description'];
+        }
+    }
+    
+    return ''; // No description if out of range
+}
+
 
 function DataDequeue()
 {
@@ -200,9 +251,46 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 $ittext="{$actor}";
             }
 
-            if ($actor==$GLOBALS["PLAYER_NAME"] && false) //PC as regular NPC
-                $actorDetailedListWithProfile[]="$actor: player character $ittext";
-            else {
+            if ($actor==$GLOBALS["PLAYER_NAME"]) {
+                // Player character - read from core_player table
+                $profileString = "$actor: player character";
+                
+                try {
+                    require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+                    $player = new Player();
+                    
+                    // Add appearance if available
+                    $appearance = $player->get('appearance');
+                    if (!empty($appearance)) {
+                        $profileString .= ". " . trim($appearance);
+                    }
+                    
+                    // Add equipment if available
+                    $equipmentData = $player->getJson('equipment');
+                    if (is_array($equipmentData) && !empty($equipmentData)) {
+                        $equipmentParts = [];
+                        $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'left_hand', 'right_hand'];
+                        foreach ($slots as $slot) {
+                            if (!empty($equipmentData[$slot])) {
+                                $itemName = $equipmentData[$slot];
+                                // Skip blacklisted items
+                                if (!isItemBlacklisted($itemName)) {
+                                    $equipmentParts[] = $itemName;
+                                }
+                            }
+                        }
+                        if (!empty($equipmentParts)) {
+                            $profileString .= ". Equipment: " . implode(", ", $equipmentParts);
+                        }
+                    }
+                    
+                } catch (Exception $e) {
+                    Logger::debug("Could not load player data for context: " . $e->getMessage());
+                }
+                
+                $actorDetailedListWithProfile[] = $profileString . $ittext;
+                
+            } else {
                 
                 $actorName = preg_replace("/\s*\(.*?\)\s*/", "", $actor);
                 $codename = npcNameToCodename($actorName);
@@ -223,8 +311,18 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $profileString .= ". Appearance: " . trim($currentNpcData["appearance"]);
                     }
                     
-                    // Add equipment if available
+                    // Get metadata once for both scale and equipment
                     $metaData = $npcMaster->getMetaData($currentNpcData);
+                    
+                    // Add height description based on scale
+                    if (isset($metaData["stats"]["scale"])) {
+                        $heightDesc = getHeightDescription(floatval($metaData["stats"]["scale"]));
+                        if (!empty($heightDesc)) {
+                            $profileString .= ". " . $heightDesc;
+                        }
+                    }
+                    
+                    // Add equipment if available
                     if (isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
                         $equipmentParts = [];
                         $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'left_hand', 'right_hand'];
@@ -2416,12 +2514,25 @@ function DataGetLastReadedBook() {
 
 function DataGetTrackedStat($stat) {
     global $db;
-
-    $results = $db->fetchAll("select * from conf_opts where id='$stat'");
     
-
+    // Try to get from core_player table first
+    try {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+        $player = new Player();
+        $value = $player->get($stat);
+        
+        if ($value !== null) {
+            return json_encode([['id' => $stat, 'value' => $value]]);
+        }
+    } catch (Exception $e) {
+        Logger::debug("Could not read stat from core_player: " . $e->getMessage());
+    }
+    
+    // Fallback to conf_opts
+    $escapedStat = $db->escape($stat);
+    $results = $db->fetchAll("select * from conf_opts where id='{$escapedStat}'");
+    
     return json_encode($results);
-    
 }
 
 function DataGetCurrentPartyConf() {
@@ -4737,6 +4848,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
     $EQUIPMENT_ADD="";
     $TARGET_EQUIPMENT_ADD="";
     $STATS_ADD="";
+    $SPELLS_ADD="";
     
     $npcMaster=new NpcMaster();
     $currentNpcData=$npcMaster->getByName($FOLLOWER_CONF["HERIKA_NAME"]);
@@ -4939,6 +5051,66 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
 		}
 	}
     
+    // Add NPC's known spells (skip for The Narrator)
+    if ($FOLLOWER_CONF["HERIKA_NAME"] !== "The Narrator" && isset($metaData["spells"]) && is_array($metaData["spells"])) {
+        $spellParts = [];
+        // Continue using the same $describedBaseids from equipment/inventory to dedupe across all items
+        if (!isset($describedBaseids)) {
+            $describedBaseids = [];
+        }
+        
+        // Casting type labels
+        $castingTypes = [
+            0 => 'Concentration',
+            1 => 'Fire & Forget',
+            2 => 'Constant'
+        ];
+        // Delivery type labels
+        $deliveryTypes = [
+            0 => 'Self',
+            1 => 'Contact',
+            2 => 'Aimed',
+            3 => 'Target Actor',
+            4 => 'Target Location'
+        ];
+        
+        foreach ($metaData["spells"] as $spell) {
+            $spellName = isset($spell['name']) ? $spell['name'] : null;
+            $baseid = isset($spell['baseid']) ? $spell['baseid'] : null;
+            $castingType = isset($spell['casting_type']) ? intval($spell['casting_type']) : 0;
+            $deliveryType = isset($spell['delivery']) ? intval($spell['delivery']) : 0;
+            
+            if (empty($spellName)) {
+                continue;
+            }
+            
+            // Only add spells that have descriptions in the database
+            $description = null;
+            if (!empty($baseid) && !in_array($baseid, $describedBaseids)) {
+                $description = $getItemDescription($spellName, $baseid);
+                if ($description) {
+                    $describedBaseids[] = $baseid;
+                }
+            }
+            
+            // Skip spells without descriptions
+            if (!$description) {
+                continue;
+            }
+            
+            // Format: Spell Name (Casting Type, Delivery) - Description
+            $castingLabel = $castingTypes[$castingType] ?? 'Unknown';
+            $deliveryLabel = $deliveryTypes[$deliveryType] ?? 'Unknown';
+            
+            $spellLine = "  • {$spellName} ({$castingLabel}, {$deliveryLabel}) - {$description}";
+            $spellParts[] = $spellLine;
+        }
+        
+        if (!empty($spellParts)) {
+            $SPELLS_ADD = "\n\n<spells>\n#Known Spells\nYou know the following spells:\n" . implode("\n", $spellParts) . "\n</spells>\n";
+        }
+    }
+    
     // Add dialogue target's equipment (if DIALOGUE_TARGET is set)
     if (isset($GLOBALS["DIALOGUE_TARGET"]) && !empty($GLOBALS["DIALOGUE_TARGET"])) {
         $targetName = $GLOBALS["DIALOGUE_TARGET"];
@@ -5001,6 +5173,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
                 $dynamicBio.=$TARGET_EQUIPMENT_ADD ?? "";
                 $dynamicBio.=$INVENTORY_ADD ?? "";
                 $dynamicBio.=$STATS_ADD ?? "";
+                $dynamicBio.=$SPELLS_ADD ?? "";
             }
         }
     }

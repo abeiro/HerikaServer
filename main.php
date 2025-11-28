@@ -118,14 +118,41 @@ $GLOBALS["AUDIT_RUNID_REQUEST"]=$gameRequest[0];
 
 $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 
+// Handle deprecated events now processed by gamedata.php
+if (in_array($gameRequest[0], ['updateequipment', 'updateinventory', 'updateskills', 'updatestats'])) {
+    // These events are now handled by gamedata.php with JSON POST
+    // The C++ plugin has been updated to use the new endpoint
+    echo "DEPRECATED: This event is now handled by gamedata.php\n";
+    if (!getenv("PHPUNIT_TEST")) {
+        @ob_end_flush();
+        @flush();
+    }
+    exit;
+}
 
 // Database Connection
 $db = new sql();
 
-// Load PLAYER_NAME from database if available (overrides conf.php)
-$playerNameFromDb = $db->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
-if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
-    $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
+// Load PLAYER_NAME from core_player table
+try {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+    $player = new Player();
+    $playerNameFromTable = $player->get('player_name');
+    if ($playerNameFromTable !== null && $playerNameFromTable !== '') {
+        $GLOBALS["PLAYER_NAME"] = $playerNameFromTable;
+    } else {
+        // Fallback to conf_opts
+        $playerNameFromDb = $db->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
+        if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
+            $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
+        }
+    }
+} catch (Exception $e) {
+    // Fallback to conf_opts on error
+    $playerNameFromDb = $db->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
+    if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
+        $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
+    }
 }
 
 require_once($path . "processor" .DIRECTORY_SEPARATOR."chim_modes.php");
@@ -840,25 +867,11 @@ if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","infoit
             }
         }
     }
-    // Update player name from infoplayer event
+    // NOTE: Automatic player name detection from infoplayer event is disabled
+    // Player name is now managed through Player Management UI or quickstart menu
     if ($gameRequest[0] == 'infoplayer') {
         // infoplayer format: level:{},name:"{}",race:"{}",gender:"{}"
-        if (preg_match('/name:"([^"]+)"/', $gameRequest[3], $matches)) {
-            $playerNameFromGame = $matches[1];
-            if (!empty($playerNameFromGame) && $playerNameFromGame !== $GLOBALS["PLAYER_NAME"]) {
-                $GLOBALS["PLAYER_NAME"] = $playerNameFromGame;
-                // Persist to database for future requests
-                $db->upsertRowOnConflict(
-                    'conf_opts',
-                    array(
-                        'id' => 'PLAYER_NAME',
-                        'value' => $db->escape($playerNameFromGame)
-                    ),
-                    'id'
-                );
-                Logger::info("Updated PLAYER_NAME from game: {$playerNameFromGame}");
-            }
-        }
+        // Player name detection is disabled - manage through Player Management
     }
     if (in_array($gameRequest[0],['backgroundaction'])) {
         
@@ -871,24 +884,10 @@ if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","infoit
 
 // Check if the gameRequest matches specific types
 if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
-    // Update player name from playerinfo event  
-    // playerinfo format: level:{},name:"{}",race:"{}"
-    if (isset($gameRequest[3]) && preg_match('/name:"([^"]+)"/', $gameRequest[3], $matches)) {
-        $playerNameFromGame = $matches[1];
-        if (!empty($playerNameFromGame) && $playerNameFromGame !== $GLOBALS["PLAYER_NAME"]) {
-            $GLOBALS["PLAYER_NAME"] = $playerNameFromGame;
-            // Persist to database for future requests
-            $db->upsertRowOnConflict(
-                'conf_opts',
-                array(
-                    'id' => 'PLAYER_NAME',
-                    'value' => $db->escape($playerNameFromGame)
-                ),
-                'id'
-            );
-            Logger::info("Updated PLAYER_NAME from game: {$playerNameFromGame}");
-        }
-    }
+    // NOTE: Automatic player name detection from game is disabled
+    // Player name is now managed through Player Management UI or quickstart menu
+    // This was formerly: Update player name from playerinfo event
+    
     if (!$GLOBALS["NARRATOR_WELCOME"]) {
         logEvent($gameRequest);
         terminate();
@@ -1617,8 +1616,26 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
 
 
 if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
-    $GLOBALS["PROMPT_HEAD"].=PHP_EOL."<player_character>\n".$GLOBALS["PLAYER_BIOS"]."\n</player_character>\n";
+    // Try to get player appearance from core_player table first
+    $playerAppearance = '';
+    try {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+        $player = new Player();
+        $playerAppearance = $player->get('appearance');
+    } catch (Exception $e) {
+        Logger::debug("Could not load player appearance from core_player: " . $e->getMessage());
+    }
+    
+    // Fallback to PLAYER_BIOS if core_player is empty
+    if (empty($playerAppearance) && isset($GLOBALS["PLAYER_BIOS"])) {
+        $playerAppearance = $GLOBALS["PLAYER_BIOS"];
+    }
+    
+    if (!empty($playerAppearance)) {
+        $GLOBALS["PROMPT_HEAD"].=PHP_EOL."<player_character>\n".$playerAppearance."\n</player_character>\n";
+    }
 }
+
 
 // Use centralized function from data_functions.php
 $dynamicBiography = buildDynamicBiography($GLOBALS);

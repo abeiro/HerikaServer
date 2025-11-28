@@ -294,11 +294,8 @@ function icon_for_field(string $flatName): string {
 // Curated, manually-defined global settings (exclude TTS, STT, ITT)
 $gsSections = [
     'General' => [
-        [ 'name' => 'PLAYER_NAME', 'type' => 'string' ],
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
-        [ 'name' => 'PLAYER_BIOS', 'type' => 'longstring' ],
         [ 'name' => 'PLAYER_RESPEECH', 'type' => 'boolean' ],
-        [ 'name' => 'PLAYER_SPEECH_STYLE', 'type' => 'longstring' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
         [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
@@ -694,20 +691,18 @@ function current_value(string $flatName, array $currentConf) {
         <input type="hidden" name="gs_tab" id="gs_tab" value="<?php echo htmlspecialchars($activeTab); ?>">
         <div class="content-grid" id="tab-global">
             <div class="content-section">
-                <h2>Player</h2>
-                <div class="provider-grid">
-                    <div class="provider-card">
-                        <div class="provider-head">
-                            <div class="provider-title">
-                                <div class="provider-icon">🏷️</div>
-                                <div>Player Name</div>
-                                <div class="provider-toggle"></div>
-                            </div>
+                <h2>Player Settings</h2>
+                <div class="provider-card" style="background: #2a3a4a; border-left: 3px solid #4a8ab6;">
+                    <div class="provider-body" style="padding: 16px;">
+                        <div style="font-size: 15px; color: #e9efff; margin-bottom: 8px;">
+                            ℹ️ <strong>Player management has moved!</strong>
                         </div>
-                        <div class="provider-body">
-                            <input type="text" name="PLAYER_NAME" value="<?php echo htmlspecialchars((string)current_value('PLAYER_NAME', $currentConf)); ?>">
+                        <div style="color: #cfd8e3; margin-bottom: 12px;">
+                            Player Name, Appearance (formerly Player Bios), and Speech Style are now managed in the dedicated <strong>Player Management</strong> tab.
                         </div>
-                        <div style="margin-top:6px; color:#bbb; font-size:12px;">This is your in-game character name. Usually set automatically when you load a save.</div>
+                        <a href="<?php echo $webRoot; ?>/ui/core/config_hub.php?tab=player" style="display: inline-block; background: #207a4a; color: #fff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600;">
+                            👤 Go to Player Management
+                        </a>
                     </div>
                 </div>
             </div>

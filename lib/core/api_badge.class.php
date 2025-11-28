@@ -33,10 +33,10 @@ class ApiBadge {
         return $this->db->fetchOne($query);
     }
 
-    // Read by Label
+    // Read by Label (case-insensitive)
     public function getByLabel($label) {
         $escaped = $this->escape($label);
-        $query = "SELECT * FROM {$this->table} WHERE label = '{$escaped}' LIMIT 1";
+        $query = "SELECT * FROM {$this->table} WHERE LOWER(label) = LOWER('{$escaped}') ORDER BY id ASC LIMIT 1";
         return $this->db->fetchOne($query);
     }
 
