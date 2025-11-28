@@ -12,7 +12,7 @@ if (file_exists($schemaPath)) {
 $localSchemaOverrides = [
     'RECHAT_H' => [
         'type' => 'integer',
-        'description' => "Rechat Rounds. Higher values will increase the amount of times AI NPC's will go back-and-forth during a conversation. 1 = 1 Round | 2 = 2 Rounds | 3 = 3 Rounds etc",
+        'description' => "Rechat Responses. Higher values will increase the amount of times AI NPC's will go back-and-forth during a conversation. 1 = 1 Response | 2 = 2 Responses | 3 = 3 Responses etc",
     ],
     'RECHAT_P' => [
         'type' => 'integer',
@@ -238,6 +238,20 @@ function renderMetaInput($key, $schema, $value, $controlOnly = false) {
             $keysInVisual = array_values(array_intersect($keys, $visualKeys));
             if (count($keysInVisual) === 0) continue;
             echo '<h2 style="font-family: \''."MagicCards".'\', serif; color: rgb(242,124,17); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); word-spacing: 6px; margin: 10px 0 12px; font-size: 1.2em;">'.htmlspecialchars($title).'</h2>';
+            
+            // Add Rechat Calculator before Rechat section
+            if ($title === 'Rechat') {
+                $rechatH = $metadataCurrent['RECHAT_H'] ?? 2;
+                $rechatP = $metadataCurrent['RECHAT_P'] ?? 50;
+                echo '<div class="provider-card" style="margin-bottom: 12px; background: #1a1a1a; padding: 10px 12px;">';
+                echo   '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">';
+                echo     '<div style="font-size: 18px;">🔁</div>';
+                echo     '<div style="font-weight: 700; color: rgb(242, 124, 17); font-size: 13px;">Rechat Response Calculator</div>';
+                echo   '</div>';
+                echo   '<div id="rechat-calc-output" style="font-size: 13px; line-height: 1.6;"></div>';
+                echo '</div>';
+            }
+            
             echo '<div class="provider-grid">';
             foreach ($keysInVisual as $k) {
                 $schemaEntry = $localSchemaOverrides[$k] ?? ($confSchema[$k] ?? []);
@@ -317,6 +331,61 @@ function renderMetaInput($key, $schema, $value, $controlOnly = false) {
             function sync(){ if (span) span.textContent = cb.checked ? 'On' : 'Off'; }
             cb.addEventListener('change', sync);
         });
+        
+        // Rechat Calculator
+        function updateRechatCalculator() {
+            const output = document.getElementById('rechat-calc-output');
+            if (!output) return;
+            
+            const rechatHNum = document.getElementById('meta_num_RECHAT_H');
+            const rechatPNum = document.getElementById('meta_num_RECHAT_P');
+            
+            if (!rechatHNum || !rechatPNum) return;
+            
+            const rechatH = parseInt(rechatHNum.value) || 2;
+            const rechatP = parseInt(rechatPNum.value) || 50;
+            
+            const maxResponses = Math.max(1, rechatH);
+            const probability = Math.max(0, Math.min(100, rechatP)) / 100;
+            
+            let parts = [];
+            for (let response = 1; response <= maxResponses; response++) {
+                let responseProb = 0;
+                let color = '#9fb1c9';
+                
+                if (response === 1) {
+                    responseProb = 100;
+                    color = '#6dd19c';
+                } else {
+                    responseProb = Math.pow(probability, response - 1) * 100;
+                    
+                    if (responseProb >= 50) color = '#6dd19c';
+                    else if (responseProb >= 25) color = 'rgb(242, 124, 17)';
+                    else if (responseProb >= 10) color = '#ffa500';
+                    else color = '#ff6b6b';
+                }
+                
+                parts.push('<span style="color: ' + color + '; font-weight: 600;">Response ' + response + ': ' + responseProb.toFixed(1) + '%</span>');
+            }
+            
+            output.innerHTML = parts.join(' <span style="color: #4a4a4a;">|</span> ');
+        }
+        
+        // Initialize calculator on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateRechatCalculator();
+            
+            // Listen to both range and number inputs
+            const rechatHRange = document.getElementById('meta_range_RECHAT_H');
+            const rechatHNum = document.getElementById('meta_num_RECHAT_H');
+            const rechatPRange = document.getElementById('meta_range_RECHAT_P');
+            const rechatPNum = document.getElementById('meta_num_RECHAT_P');
+            
+            if (rechatHRange) rechatHRange.addEventListener('input', updateRechatCalculator);
+            if (rechatHNum) rechatHNum.addEventListener('input', updateRechatCalculator);
+            if (rechatPRange) rechatPRange.addEventListener('input', updateRechatCalculator);
+            if (rechatPNum) rechatPNum.addEventListener('input', updateRechatCalculator);
+        });
     })();
     </script>
 <?php endif; ?>
@@ -393,7 +462,7 @@ function consolidation() {
         return confirm("Metadata is empty. You sure?");
     }
 
-    debugger;
+    
     if (form.extended_data!=undefined) {
         const content2 = jsonEditor2.get()
 

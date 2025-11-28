@@ -17,6 +17,7 @@ $DIARY_COOLDOWN=120; //Cooldown period in seconds between diary entries to preve
 $DYNAMIC_PROFILE=false; //Dynamic profile updates using a timer system.
 $AUTO_DIARY=true; //Automatically create diary entries for all current followers when sleeping. Wait events are controlled by AUTO_DIARY_WAIT setting. Each follower respects their individual diary cooldown timer.
 $AUTO_DIARY_WAIT=false; //When AUTO_DIARY is enabled, this controls whether diary entries are created during wait events. If false, auto diary will only trigger on sleep events.
+$BGL_TRIGGER_DAYS=5; //Number of in-game days between Background Life events. NPCs will generate thoughts and take actions based on this interval. Range: 1-30 days.
 $MINIME_T5=false; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_KNOWLEDGE="knowall"; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_AMOUNT=1; //Number of Oghma keywords to extract from each response. More keyword extraction will mean longer response times.
@@ -125,6 +126,9 @@ $dynamic_profile_b1 = false; // Utility button for updating all dynamic profile 
 $RPG_COMMENTS=["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"]; //AI Service(s).
 $DETECT_MAGIC_EVENT=true; //Enable detection and logging of NPC spellcasting events.
 $MAGIC_EVENT_BLACKLIST=""; //Comma-separated list of magic events to exclude from logging.
+$LOCATION_BLACKLIST="Dark Brotherhood Sanctuary, Twilight Sepulcher"; //Comma-separated list of location names to exclude from Points of Interest context.
+$ITEM_BLACKLIST=""; //Comma-separated list of item/armor names to exclude from dynamic context.
+$HIDE_AMBIENT_COMBAT=false; //Hide ambient NPC-to-NPC combat deaths from context.
 
 //[AI/LLM Service Selection]
 $CONNECTORS=["openrouterjson","openaijson","koboldcppjson"]; //AI Service(s).
@@ -387,6 +391,18 @@ $TTS["PIPERTTS"]["noise_w_scale"]=0.0; //phoneme width variability - default 0.8
 $TTS["PIPERTTS"]["speaker"]=''; // name of speaker for multi-speaker voices
 $TTS["PIPERTTS"]["speaker_id"]=0; //id of speaker for multi-speaker voices; overrides speaker
 
+//Deepgram TTS
+$TTS["deepgram"]["API_KEY"]=''; //API key.
+$TTS["deepgram"]["model"]='aura-asteria-en'; //Voice ID.
+$TTS["deepgram"]["bitrate"]=24000; //Bitrate.
+
+//Cartesia TTS
+$TTS["CARTESIA"]["API_KEY"]=''; //API key.
+$TTS["CARTESIA"]["voiceid"]=''; //Voice file name. Works like XTTS voiceid.
+$TTS["CARTESIA"]["language"]='en'; //Language (en, fr, de, es, etc.).
+$TTS["CARTESIA"]["model_id"]='sonic-3'; //Model (sonic-3, sonic-english, sonic-multilingual).
+$TTS["CARTESIA"]["speed"]='normal'; //Speed (slowest, slow, normal, fast, fastest).
+
 //[Player TTS]
 $TTSFUNCTION_PLAYER="none";
 $TTSFUNCTION_PLAYER_VOICE="malenord";
@@ -428,6 +444,10 @@ $STT["LOCALWHISPER"]["FORMFIELD"]="audio_file"; //(audio_file,file) Form field n
 //Deepgram STT
 $STT["DEEPGRAM"]["LANG"]="en"; //Language.
 $STT["DEEPGRAM"]["MODEL"]="nova-3"; //Model to use.
+
+$STT["PARAKEET"]["LANG"]="en";
+
+
 
 //[Image to Text (Soulgaze)]
 $ITTFUNCTION="openrouter";
@@ -496,6 +516,9 @@ $FEATURES["MISC"]["LIFE_LINK_PLUGIN"]=false; // WIP. Use life link plugin for dy
 
 $BORED_EVENT_SERVERSIDE=false;
 $RECHAT_ALLOW_ACTIONS=false;
+$RANDOM_NARATION=false;
+$RANDOM_NARATION_CHANCE=15;
+$RANDOM_NARRATION_COOLDOWN=2;
 
 ?>
 

@@ -231,27 +231,65 @@ if (sizeof($combinedEvents) == 0) {
 $head["en"][] = ['role' => 'system', 'content' => "You are a writing assistant.
 Examine this text containing events that occurred in the fictional universe of Skyrim (The Elder Scrolls)."];
 
-$userprompt["en"] = "El personaje principal en este cuaderno de bitácora es {$GLOBALS["HERIKA_NAME"]}.
-The main character in this logbook is {$GLOBALS["HERIKA_NAME"]}.
-Read the context history (context_history) and the recent memories (middle_term_memory),
- paying attention to notable events and the names of relevant characters.
+// Extract NPC gender and race for query seed
+$npcGender = isset($currentNpcData["gender"]) && trim((string)$currentNpcData["gender"]) !== "" ? trim((string)$currentNpcData["gender"]) : "";
+$npcRace = isset($currentNpcData["race"]) && trim((string)$currentNpcData["race"]) !== "" ? trim((string)$currentNpcData["race"]) : "";
+$characterSeed = "";
+if ($npcGender !== "" && $npcRace !== "") {
+    $characterSeed = " This character is {$npcRace} {$npcGender}.";
+} else if ($npcGender !== "") {
+    $characterSeed = " This character is {$npcGender}.";
+} else if ($npcRace !== "") {
+    $characterSeed = " This character is {$npcRace}.";
+}
 
+// Get optional user prompt for custom generation instructions
+$userCustomPrompt = isset($jsonDataInput["user_prompt"]) ? trim((string)$jsonDataInput["user_prompt"]) : "";
 
-Based on all this information, generate an character sheet for {$GLOBALS["HERIKA_NAME"]}.
+// Load profile generation prompt from database with fallback to hardcoded default
+$profilePrompt = null;
+try {
+    $promptData = $GLOBALS["db"]->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'character_profile_generation'");
+    if ($promptData) {
+        // Use custom_prompt if set, otherwise use default_prompt
+        $profilePrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+    }
+} catch (Exception $e) {
+    Logger::warn("Failed to load profile generation prompt from database, using hardcoded fallback: " . $e->getMessage());
+}
 
-This shits must be in XML format and have this fields.
+// Hardcoded fallback if database query failed or returned no results
+if (!$profilePrompt) {
+    $profilePrompt = 
+        "The main character in this logbook is {HERIKA_NAME}.{CHARACTER_SEED}\n".
+        "Read the context history (context_history) and the recent memories (middle_term_memory),\n".
+        " paying attention to notable events and the names of relevant characters.\n\n\n".
+        "Based on all this information, generate an character sheet for {HERIKA_NAME}.\n\n".
+        "This profile must be in XML format and have these fields.\n\n".
+        "<core>              Text. Core Identity, name,race an gender, and most remarkable job. Should be in the form of a sentence. e.g. 'Rose. Imperial female warrior.'\n".
+        "<npc_static_bio>    Text. Basic Summary, and bio. Create if not info available in <context_history>\n".
+        "<personality>       Text. Personality Traits. How the characters behave. Traumas. Likes.\n".
+        "<appearance>        Text. Physical Appearance. Infer from info available in <context_history>\n".
+        "<relationships>     Text. relationships with other actors.\n".
+        "<occupation>        Text. Main Occupation & Role\n".
+        "<skills>            Text. Skills & Abilities\n".
+        "<speechstyle>       Text. Speech Style\n".
+        "<goals>             Text. Long term Goals & Aspirations'\n";
+}
 
-<core>              Text. Core Identity, name,race an gender, and most remarkable job. Should be in the form of a sentence. e.g. 'Rose. Imperial female warrior.'
-<npc_static_bio>    Text. Basic Summary, and bio. Create if not info available in <context_history>
-<personality>       Text. Personality Traits. How the characters behave. Traumas. Likes.
-<appearance>        Text. Physical Appearance. Infer from info available in <context_history>
-<relationships>     Text. relationships with other actors.
-<occupation>        Text. Main Occupation & Role
-<skills>            Text. Skills & Abilities
-<speechstyle>       Text. Speech Style
-<goals>             Text. Long term Goals & Aspirations'
+// Replace placeholders with actual values
+$profilePromptProcessed = str_replace(
+    ['{HERIKA_NAME}', '{CHARACTER_SEED}'],
+    [$GLOBALS["HERIKA_NAME"], $characterSeed],
+    $profilePrompt
+);
 
-";
+$userprompt["en"] = $profilePromptProcessed;
+
+// Append user's custom instructions if provided
+if ($userCustomPrompt !== "") {
+    $userprompt["en"] .= "\n\nADDITIONAL INSTRUCTIONS FROM USER:\n{$userCustomPrompt}\n\nMake sure to incorporate these specific details and instructions into the generated character sheet where appropriate.";
+}
 
 $metadata   = json_decode($currentNpcData["metadata"], true);
 $metadata_p = json_decode($currentProfileData["metadata"], true);

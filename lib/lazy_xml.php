@@ -115,7 +115,7 @@ function manual_get_tag_content(string $text, string $tag): ?string
 
     // Trim and decode entities
     $content = trim($content);
-    $content = html_entity_decode($content, ENT_QUOTES | ENT_XML1, 'UTF-8');
+    $content = strip_tags($content);
 
     return $content === '' ? null : $content;
 }

@@ -3,7 +3,6 @@
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_functions.php");
 
-
 class openrouterjson
 {
     public $primary_handler;
@@ -484,7 +483,7 @@ class openrouterjson
         
         if (!$assistantAppearedInhistory) { // is this still needed?
             
-            if (isset($GLOBALS["CHIM_NO_EXAMPLES"]) && $GLOBALS["CHIM_NO_EXAMPLES"]) {
+            if (isset($GLOBALS["CHIM_LLM_EXAMPLES"]) && $GLOBALS["CHIM_LLM_EXAMPLES"]) {
                 $contextExamples=[];
             } else {
                 // EXAMPLES
@@ -599,6 +598,16 @@ class openrouterjson
             if (!(stripos($this->_model, "qwen3-") === false)) {//qwen3
                 $data["enable_thinking"] = false;
             }            
+            if (stripos($this->_model, "grok-3-mini") != false) {//grok-3-mini needs reasoning cand cannot be disabled
+                $data["reasoning"]["enabled"] = true;
+            }            
+            if (stripos($this->_model, "qwen3-235b-a22b-thinking-2507") != false) {//qwen/qwen3-235b-a22b-thinking-2507 needs reasoning cand cannot be disabled
+                $data["reasoning"]["enabled"] = true;
+            }   
+            
+            if ($this->_model=="x-ai/grok-4") {//qwen/qwen3-235b-a22b-thinking-2507 needs reasoning cand cannot be disabled
+                $data["reasoning"]["enabled"] = true;
+            }         
         }
         
         if ($this->_is_openai) {
@@ -958,6 +967,9 @@ class openrouterjson
 
         $json_response=$this->_lastStreamedObject;
 
+        if (!isset($json_response["usage"]))
+            $json_response["usage"]=[];
+        
         if ($json_response) {
                 if ($GLOBALS["db"]) {
                     $GLOBALS["db"]->insert(
@@ -1029,15 +1041,59 @@ class openrouterjson
                 if (!isset($parsedResponse["target"]))    
                     $parsedResponse["target"] = "";
                 
-                if (!empty($parsedResponse["action"])) {
-                    if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
+                // Build parameter string - use JSON for functions with multiple parameters
+                $functionDef=findFunctionByName(trim($parsedResponse["action"]));
+                $paramString = "";
+                $functionCodeName = "";
+                if (isset($functionDef)) {
+                    $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
+                    $paramCount = count($functionDef["parameters"]["properties"] ?? []);
+                    
+                    // For functions with multiple parameters, send as JSON
+                    if ($paramCount > 1) {
+                        $params = [];
+                        foreach (array_keys($functionDef["parameters"]["properties"] ?? []) as $paramName) {
+                            if (isset($parsedResponse[$paramName])) {
+                                $params[$paramName] = $parsedResponse[$paramName];
+                            }
+                        }
                         
-                        $functionDef=findFunctionByName(trim($parsedResponse["action"]));
+                        // Check if required parameters are missing
+                        $requiredParams = $functionDef["parameters"]["required"] ?? [];
+                        $missingParams = [];
+                        foreach ($requiredParams as $reqParam) {
+                            if (!isset($params[$reqParam]) || $params[$reqParam] === "") {
+                                $missingParams[] = $reqParam;
+                            }
+                        }
+                        
+                        if (!empty($missingParams)) {
+                            Logger::warn("openrouterjson: Missing required parameters for {$functionCodeName}: " . implode(", ", $missingParams) . ". Skipping command.");
+                            // Skip this command by setting action to empty
+                            $parsedResponse["action"] = "";
+                            $functionCodeName = "";
+                        } else {
+                            $paramString = json_encode($params);
+                            Logger::info("openrouterjson: Multi-param function {$functionCodeName}, params: {$paramString}");
+                        }
+                    } else {
+                        // Legacy: single parameter as plain string
+                        $paramString = $parsedResponse["target"] ?? "";
+                    }
+                } else {
+                    $paramString = $parsedResponse["target"] ?? "";
+                    $functionCodeName = $parsedResponse["action"] ?? "";
+                }
+                
+                $commandStr = "{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$paramString}\r\n";
+                Logger::info("openrouterjson: Sending command: {$commandStr}");
+                if (!empty($parsedResponse["action"])) {
+                    if (!isset($alreadysent[md5($commandStr)])) {
+                        
                         if (isset($functionDef)) {
-                            $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
                             if (strlen($functionDef["parameters"]["required"][0] ?? '')>0) {
-                                if (!empty($parsedResponse["target"])) {
-                                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
+                                if (!empty($paramString)) {
+                                    $this->_commandBuffer[]=$commandStr;
                                 }
                                 else {
                                     $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@\r\n";
@@ -1046,16 +1102,13 @@ class openrouterjson
                                 }
                                     
                             } else {
-                                $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
+                                $this->_commandBuffer[]=$commandStr;
                             }
                         } elseif ($parsedResponse["action"] != "Talk") {
                             Logger::warn("openrouterjson: Function not found for {$parsedResponse["action"]}");
                         }
                         
-                        //$functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                        //$this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n";
-                        //echo "Herika|command|$functionCodeName@$parameter\r\n";
-                        $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")]=end($this->_commandBuffer);
+                        $alreadysent[md5($commandStr)]=end($this->_commandBuffer);
                     
                     } else {
                          Logger::warn("openrouterjson: Function not found for {$parsedResponse["action"]} already sent");
@@ -1071,6 +1124,12 @@ class openrouterjson
         }
 
         //print_r($parsedResponse);
+        Logger::info("openrouterjson: Returning command buffer with " . count($this->_commandBuffer) . " commands");
+        if (!empty($this->_commandBuffer)) {
+            foreach ($this->_commandBuffer as $cmd) {
+                Logger::info("openrouterjson: Buffer contains: {$cmd}");
+            }
+        }
         return $this->_commandBuffer;
     }
 
@@ -1201,8 +1260,11 @@ class openrouterjson
             //Logger::debug("reasoning " . $this->_model);
             if (!(stripos($this->_model, "qwen3-") === false)) {//qwen3
                 $data["enable_thinking"] = false;
-            }            
-        }
+            }       
+            if (stripos($this->_model, "grok-3-mini") != false) {//grok-3-mini needs reasoning cand cannot be disabled
+                $data["reasoning"]["enabled"] = true;
+            }        
+    }
         
         if ($this->_is_openai) {
             // OpenAI models use max_completion_tokens
@@ -1343,3 +1405,4 @@ class openrouterjson
     }
 
 }
+

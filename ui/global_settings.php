@@ -51,7 +51,7 @@ $ittOptions = array_values(array_filter($ittOptionsRaw, function($v){ return str
 
 // Mappings
 $ttsMap = [ 'melotts' => 'MELOTTS','xtts-fastapi' => 'XTTSFASTAPI','mimic3' => 'MIMIC3','xvasynth' => 'XVASYNTH','azure' => 'AZURE','11labs' => 'ELEVEN_LABS','openai' => 'openai','kokoro' => 'KOKORO','koboldcpp' => 'koboldcpp','zonos_gradio' => 'ZONOS_GRADIO','piper-tts' => 'PIPERTTS','deepgram' => 'deepgram','cartesia' => 'CARTESIA' ];
-$sttMap = [ 'whisper' => 'WHISPER','localwhisper' => 'LOCALWHISPER','azure' => 'AZURE','deepgram' => 'DEEPGRAM' ];
+$sttMap = [ 'whisper' => 'WHISPER','localwhisper' => 'LOCALWHISPER','azure' => 'AZURE','deepgram' => 'DEEPGRAM','parakeet'=>"PARAKEET" ];
 $ittMap = [ 'openai' => 'openai','google_openai' => 'google_openai','openrouter' => 'openrouter' ];
 
 // Active tab tracking for postback previews
@@ -245,7 +245,7 @@ function pretty_label(string $flatName): string {
     $connectorLabels = [
         'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
         'CORE_CONNECTOR_SUMMARY' => 'Summaries',
-        'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory',
+        'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory/Background Life',
         'CORE_CONNECTOR_PROFILES' => 'Dynamic Profiles',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
     ];
@@ -301,7 +301,11 @@ $gsSections = [
         [ 'name' => 'PLAYER_SPEECH_STYLE', 'type' => 'longstring' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
         [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
+        [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
+        [ 'name' => 'ITEM_BLACKLIST', 'type' => 'longstring' ],
+        [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
         [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
+        [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
     ],
     'Diary' => [
         [ 'name' => 'AUTO_DIARY', 'type' => 'boolean' ],
@@ -313,22 +317,27 @@ $gsSections = [
         [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
     ],
-    'Dynamic Prompts' => [
-        [ 'name' => 'DYNAMIC_PROMPT_PERSONALITY', 'type' => 'longstring' ],
-        [ 'name' => 'DYNAMIC_PROMPT_RELATIONSHIPS', 'type' => 'longstring' ],
-        [ 'name' => 'DYNAMIC_PROMPT_OCCUPATION', 'type' => 'longstring' ],
-        [ 'name' => 'DYNAMIC_PROMPT_SKILLS', 'type' => 'longstring' ],
-        [ 'name' => 'DYNAMIC_PROMPT_SPEECHSTYLE', 'type' => 'longstring' ],
-        [ 'name' => 'DYNAMIC_PROMPT_GOALS', 'type' => 'longstring' ],
-    ],
+    // 'Dynamic Prompts' => [
+    //     // All dynamic prompts have been migrated to Prompts Manager (⚙️Prompts Manager in Config Hub)
+    //     // [ 'name' => 'DYNAMIC_PROMPT_PERSONALITY', 'type' => 'longstring' ],
+    //     // [ 'name' => 'DYNAMIC_PROMPT_RELATIONSHIPS', 'type' => 'longstring' ],
+    //     // [ 'name' => 'DYNAMIC_PROMPT_OCCUPATION', 'type' => 'longstring' ],
+    //     // [ 'name' => 'DYNAMIC_PROMPT_SKILLS', 'type' => 'longstring' ],
+    //     // [ 'name' => 'DYNAMIC_PROMPT_SPEECHSTYLE', 'type' => 'longstring' ],
+    //     // [ 'name' => 'DYNAMIC_PROMPT_GOALS', 'type' => 'longstring' ],
+    // ],
     'Narrator' => [
         [ 'name' => 'NARRATOR_TALKS', 'type' => 'boolean' ],
+        [ 'name' => 'RANDOM_NARATION', 'type' => 'boolean' ],
+        [ 'name' => 'RANDOM_NARATION_CHANCE', 'type' => 'integer', 'min' => 1, 'max' => 100 ],
+        [ 'name' => 'RANDOM_NARRATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 10 ],
         [ 'name' => 'NARRATOR_WELCOME', 'type' => 'boolean' ],
         [ 'name' => 'BOOK_EVENT_ALWAYS_NARRATOR', 'type' => 'boolean' ],
         [ 'name' => 'HIDE_NARRATOR_DIALOGUE', 'type' => 'boolean' ]
     ],
     'Memory' => [
-        [ 'name' => 'SUMMARY_PROMPT', 'type' => 'longstring' ],
+        // SUMMARY_PROMPT moved to Prompts Manager
+        // [ 'name' => 'SUMMARY_PROMPT', 'type' => 'longstring' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@TXTAI_URL', 'type' => 'url' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
@@ -860,13 +869,12 @@ function current_value(string $flatName, array $currentConf) {
                                 <textarea id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>" rows="3"><?php echo htmlspecialchars((string)$current); ?></textarea>
                             <?php elseif ($ftype==='url'): ?>
                                 <input type="url" id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
-                                <?php if ($ttsKeyCur==='XVASYNTH'): ?>
-                                    <div style="margin-top:6px;">
+                                <div style="margin-top:6px;">
+                                    <button type="button" class="btn-primary" style="padding: 6px 12px; background-color: rgba(37, 99, 235, 0.8); color: #ffffff; border: 1px solid rgba(138, 155, 182, 0.3); border-radius: 8px; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s ease-in-out; font-weight: 500; letter-spacing: 0.3px; backdrop-filter: blur(5px); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1); margin-right: 5px;" onclick="checkUrlFromServer('tts__<?php echo htmlspecialchars($fname); ?>')" onmouseover="this.style.backgroundColor='rgba(47, 109, 245, 0.9)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.15)';" onmouseout="this.style.backgroundColor='rgba(37, 99, 235, 0.8)'; this.style.transform='none'; this.style.boxShadow='0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1)';">Check Connection</button>
+                                    <?php if ($ttsKeyCur==='XVASYNTH'): ?>
                                         <button type="button" id="btn_host_ip_xvasynth" class="btn-primary" data-ip="<?php echo htmlspecialchars($HOST_IP); ?>">Host PC IP</button>
                                         <script>(function(){ try{ var b=document.getElementById('btn_host_ip_xvasynth'); var inp=document.getElementById('tts_url'); if(b && inp){ b.addEventListener('click', function(){ var ip=(b.getAttribute('data-ip')||'').trim(); if(!ip){ try{ alert('Host IP not set. Configure Network/HOST_IP in Settings.'); }catch(_){} return; } var v='http://'+ip+':8008'; inp.value=v; try{ inp.dispatchEvent(new Event('input', { bubbles:true })); }catch(_){} try{ inp.dispatchEvent(new Event('change', { bubbles:true })); }catch(_){} }); } }catch(_e){} })();</script>
-                                    </div>
-                                <?php elseif ($ttsKeyCur==='XTTSFASTAPI' && strtolower($fname)==='endpoint'): ?>
-                                    <div style="margin-top:6px;">
+                                    <?php elseif ($ttsKeyCur==='XTTSFASTAPI' && strtolower($fname)==='endpoint'): ?>
                                         <button type="button" id="btn_host_ip_xtts" class="btn-primary" data-ip="<?php echo htmlspecialchars($HOST_IP); ?>">Host PC IP</button>
                                         <button type="button" id="btn_wsl_ip_xtts" class="btn-primary" data-ip="<?php echo htmlspecialchars($WSL_IP); ?>">WSL IP</button>
                                         <script>(function(){ try{ var bh=document.getElementById('btn_host_ip_xtts'); var bw=document.getElementById('btn_wsl_ip_xtts'); var inp=document.getElementById('tts_endpoint'); function setHost(ip){ if(!ip){ try{ alert('Host IP not set. Configure Network/HOST_IP in Settings.'); }catch(_){} return; } try{ var u = new URL(inp.value||('http://'+ip+':8020')); u.protocol = 'http:'; u.hostname = ip; u.port = '8020'; inp.value = u.toString(); } catch(e){ inp.value = 'http://'+ip+':8020'; } try{ inp.dispatchEvent(new Event('input', { bubbles:true })); }catch(_){} try{ inp.dispatchEvent(new Event('change', { bubbles:true })); }catch(_){} }
@@ -874,8 +882,8 @@ function current_value(string $flatName, array $currentConf) {
                                         if(bh && inp){ bh.addEventListener('click', function(){ setHost((bh.getAttribute('data-ip')||'').trim()); }); }
                                         if(bw && inp){ bw.addEventListener('click', function(){ setWsl((bw.getAttribute('data-ip')||'').trim()); }); }
                                         }catch(_e){} })();</script>
-                                    </div>
-                                <?php endif; ?>
+                                    <?php endif; ?>
+                                </div>
                             <?php elseif ($ftype==='select'): $values=$def['values']??[]; ?>
                                 <select id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>">
                                     <?php foreach ($values as $opt): ?>
@@ -902,10 +910,10 @@ function current_value(string $flatName, array $currentConf) {
                             <div>Player TTS</div>
                         </div>
                     </div>
-                        <?php $descTtsPlayer = (string)($rawSchema['TTSFUNCTION_PLAYER']['description'] ?? ''); $descPlayerVoice = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE']['description'] ?? ''); $descPlayerVoiceId = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE_ID']['description'] ?? ''); $descPlayerLang = (string)($rawSchema['TTSFUNCTION_PLAYER_LANGUAGE']['description'] ?? ''); $playerLangSupported = ['melotts','xtts-fastapi','xvasynth','piper-tts','zonos_gradio','cartesia']; $showPlayerLang = in_array(strtolower((string)$playerFunctionSaved), $playerLangSupported, true); ?>
+                        <?php $playerFunctionSaved = current_value('TTSFUNCTION_PLAYER',$currentConf); $descTtsPlayer = (string)($rawSchema['TTSFUNCTION_PLAYER']['description'] ?? ''); $descPlayerVoice = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE']['description'] ?? ''); $descPlayerVoiceId = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE_ID']['description'] ?? ''); $descPlayerLang = (string)($rawSchema['TTSFUNCTION_PLAYER_LANGUAGE']['description'] ?? ''); $playerLangSupported = ['melotts','xtts-fastapi','xvasynth','piper-tts','zonos_gradio','cartesia']; $showPlayerLang = in_array(strtolower((string)$playerFunctionSaved), $playerLangSupported, true); ?>
                     <div class="provider-body grid">
                         <label for="TTSFUNCTION_PLAYER">Player TTS Selection</label>
-                        <?php $playerTtsOptions = $rawSchema['TTSFUNCTION_PLAYER']['values'] ?? [ 'none','melotts','xtts-fastapi','xvasynth','mimic3','piper-tts','azure','11labs','openai','kokoro','zonos_gradio','cartesia' ]; $playerFunctionSaved = current_value('TTSFUNCTION_PLAYER',$currentConf); ?>
+                        <?php $playerTtsOptions = $rawSchema['TTSFUNCTION_PLAYER']['values'] ?? [ 'none','melotts','xtts-fastapi','xvasynth','mimic3','piper-tts','azure','11labs','openai','kokoro','zonos_gradio','cartesia' ]; ?>
                         <select name="TTSFUNCTION_PLAYER" id="TTSFUNCTION_PLAYER">
                             <?php foreach ($playerTtsOptions as $opt): ?>
                                 <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$playerFunctionSaved===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
@@ -1034,6 +1042,9 @@ function current_value(string $flatName, array $currentConf) {
                                 <textarea id="stt_<?php echo htmlspecialchars($fname); ?>" name="stt__<?php echo htmlspecialchars($fname); ?>" rows="3"><?php echo htmlspecialchars((string)$current); ?></textarea>
                             <?php elseif ($ftype==='url'): ?>
                                 <input type="url" id="stt_<?php echo htmlspecialchars($fname); ?>" name="stt__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                                <div style="margin-top:6px;">
+                                    <button type="button" class="btn-primary" style="padding: 6px 12px; background-color: rgba(37, 99, 235, 0.8); color: #ffffff; border: 1px solid rgba(138, 155, 182, 0.3); border-radius: 8px; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s ease-in-out; font-weight: 500; letter-spacing: 0.3px; backdrop-filter: blur(5px); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1);" onclick="checkUrlFromServer('stt__<?php echo htmlspecialchars($fname); ?>')" onmouseover="this.style.backgroundColor='rgba(47, 109, 245, 0.9)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.15)';" onmouseout="this.style.backgroundColor='rgba(37, 99, 235, 0.8)'; this.style.transform='none'; this.style.boxShadow='0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1)';">Check Connection</button>
+                                </div>
                             <?php elseif ($ftype==='select'): $values=$def['values']??[]; ?>
                                 <select id="stt_<?php echo htmlspecialchars($fname); ?>" name="stt__<?php echo htmlspecialchars($fname); ?>">
                                     <?php foreach ($values as $opt): ?>
@@ -1123,6 +1134,9 @@ function current_value(string $flatName, array $currentConf) {
                                 <textarea id="itt_<?php echo htmlspecialchars($fname); ?>" name="itt__<?php echo htmlspecialchars($fname); ?>" rows="3"><?php echo htmlspecialchars((string)$current); ?></textarea>
                             <?php elseif ($ftype==='url'): ?>
                                 <input type="url" id="itt_<?php echo htmlspecialchars($fname); ?>" name="itt__<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
+                                <div style="margin-top:6px;">
+                                    <button type="button" class="btn-primary" style="padding: 6px 12px; background-color: rgba(37, 99, 235, 0.8); color: #ffffff; border: 1px solid rgba(138, 155, 182, 0.3); border-radius: 8px; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s ease-in-out; font-weight: 500; letter-spacing: 0.3px; backdrop-filter: blur(5px); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1);" onclick="checkUrlFromServer('itt__<?php echo htmlspecialchars($fname); ?>')" onmouseover="this.style.backgroundColor='rgba(47, 109, 245, 0.9)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.15)';" onmouseout="this.style.backgroundColor='rgba(37, 99, 235, 0.8)'; this.style.transform='none'; this.style.boxShadow='0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1)';">Check Connection</button>
+                                </div>
                             <?php elseif ($ftype==='select'): $values=$def['values']??[]; ?>
                                 <select id="itt_<?php echo htmlspecialchars($fname); ?>" name="itt__<?php echo htmlspecialchars($fname); ?>">
                                     <?php foreach ($values as $opt): ?>
@@ -1155,6 +1169,68 @@ function current_value(string $flatName, array $currentConf) {
                 </div>
             </div>
         </div>
+        
+        <?php
+        // Show old conf.php prompt values for migration reference
+        $oldConfPrompts = [];
+        $promptKeysToCheck = [
+            'SUMMARY_PROMPT' => 'summary_prompt',
+            'DYNAMIC_PROMPT_PERSONALITY' => 'dynamic_prompt_personality',
+            'DYNAMIC_PROMPT_RELATIONSHIPS' => 'dynamic_prompt_relationships',
+            'DYNAMIC_PROMPT_OCCUPATION' => 'dynamic_prompt_occupation',
+            'DYNAMIC_PROMPT_SKILLS' => 'dynamic_prompt_skills',
+            'DYNAMIC_PROMPT_SPEECHSTYLE' => 'dynamic_prompt_speechstyle',
+            'DYNAMIC_PROMPT_GOALS' => 'dynamic_prompt_goals'
+        ];
+        
+        foreach ($promptKeysToCheck as $confKey => $dbKey) {
+            if (isset($GLOBALS[$confKey]) && !empty(trim($GLOBALS[$confKey]))) {
+                $oldConfPrompts[$confKey] = [
+                    'db_key' => $dbKey,
+                    'value' => $GLOBALS[$confKey]
+                ];
+            }
+        }
+        
+        if (!empty($oldConfPrompts)):
+        ?>
+        <div class="section-container" style="margin-top: 24px; border: 2px solid #ffb862; border-radius: 8px; padding: 20px; background: rgba(255, 184, 98, 0.05);">
+            <h3 style="margin: 0 0 12px 0; color: #ffb862; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                <span>Legacy conf.php Prompts</span>
+            </h3>
+            <div style="background: rgba(0,0,0,0.2); border-radius: 6px; padding: 16px; margin-bottom: 16px;">
+                <p style="margin: 0 0 12px 0; color: #cfd8e3; line-height: 1.6;">
+                    <strong>These prompts have been migrated to the new database-backed Prompts Manager.</strong><br>
+                    Your old <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px;">conf.php</code> values are shown below for reference. 
+                    You can ignore this if you never customized the memory or dynamic prompts in the past.
+                </p>
+                <ol style="margin: 8px 0 0 20px; color: #cfd8e3; line-height: 1.8;">
+                    <li>Copy your desired custom prompt value from below</li>
+                    <li>Go to <strong>Prompts Manager</strong> in Config Hub</li>
+                    <li>Find the corresponding prompt and click <strong>Edit</strong></li>
+                    <li>Paste your custom value and <strong>Save</strong></li>
+                </ol>
+            </div>
+            
+            <div style="max-height: 500px; overflow-y: auto; border: 1px solid rgba(138,155,182,0.2); border-radius: 6px; background: #0d1117;">
+                <?php foreach ($oldConfPrompts as $confKey => $promptInfo): ?>
+                <div style="border-bottom: 1px solid rgba(138,155,182,0.1); padding: 16px;">
+                    <div style="margin-bottom: 8px;">
+                        <strong style="color: #ffb862; font-size: 15px;"><?php echo htmlspecialchars($confKey); ?></strong>
+                        <div style="color: #8a9bb6; font-size: 12px; margin-top: 4px;">
+                            Database key: <code style="background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 3px;"><?php echo htmlspecialchars($promptInfo['db_key']); ?></code>
+                        </div>
+                    </div>
+                    <textarea 
+                        readonly 
+                        style="width: 100%; min-height: 100px; background: rgba(0,0,0,0.3); color: #cfd8e3; border: 1px solid rgba(138,155,182,0.2); border-radius: 4px; padding: 10px; font-family: monospace; font-size: 12px; resize: vertical;"
+                    ><?php echo htmlspecialchars($promptInfo['value']); ?></textarea>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        
         <div class="actions"></div>
     </form>
 </main>

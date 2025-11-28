@@ -116,12 +116,30 @@ if ($method === "POST") {
 
         // Get current personality value and prompt
         $currentPersonality = isset($jsonDataInput["HERIKA_PERSONALITY"]) ? $jsonDataInput["HERIKA_PERSONALITY"] : '';
-        $updatePrompt = isset($GLOBALS["DYNAMIC_PROMPT_PERSONALITY"]) ? $GLOBALS["DYNAMIC_PROMPT_PERSONALITY"] : '';
+        
+        // Load prompt from database with fallback to $GLOBALS
+        $updatePrompt = null;
+        try {
+            $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'dynamic_prompt_personality'");
+            if ($promptData) {
+                $updatePrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+            }
+        } catch (Exception $e) {
+            // Silent fallback to $GLOBALS
+        }
+        
+        // Fallback to $GLOBALS if database load failed
+        if (empty($updatePrompt)) {
+            $updatePrompt = isset($GLOBALS["DYNAMIC_PROMPT_PERSONALITY"]) ? $GLOBALS["DYNAMIC_PROMPT_PERSONALITY"] : '';
+        }
 
         if (empty($updatePrompt)) {
             echo json_encode(["status" => "error", "message" => "DYNAMIC_PROMPT_PERSONALITY not configured"]);
             exit;
         }
+        
+        // Replace placeholders in the prompt
+        $updatePrompt = str_replace('{HERIKA_NAME}', $jsonDataInput["HERIKA_NAME"], $updatePrompt);
 
         // Collect other profile fields for context
         $profileContext = [];

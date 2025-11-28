@@ -1,0 +1,142 @@
+<?php
+error_reporting(E_ERROR);
+session_start();
+
+// Define base paths
+define('BASE_PATH', dirname(dirname(__DIR__)));
+define('CONFIG_PATH', BASE_PATH . DIRECTORY_SEPARATOR . 'conf');
+define('LIB_PATH', BASE_PATH . DIRECTORY_SEPARATOR . 'lib');
+
+$configFilepath = CONFIG_PATH . DIRECTORY_SEPARATOR;
+
+if (!file_exists($configFilepath."conf.php")) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Configuration file not found']);
+    exit;
+}
+
+// Load profiles through the centralized profile loader
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."profile_loader.php");
+
+require_once(LIB_PATH .DIRECTORY_SEPARATOR."logger.php");
+require_once(LIB_PATH .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+require_once(LIB_PATH .DIRECTORY_SEPARATOR."utils_game_timestamp.php");
+
+$db = new sql();
+
+// Set JSON header
+header('Content-Type: application/json');
+
+$limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 100;
+$page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
+$offset = ($page - 1) * $limit;
+$sinceRowId = isset($_GET["since_rowid"]) ? intval($_GET["since_rowid"]) : 0;
+
+// If we're checking for new events since a specific ROWID
+if ($sinceRowId > 0) {
+    $results = $db->fetchAll(
+        "SELECT type, data, people, gamets, localts, ts, rowid
+         FROM eventlog a
+         WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import','backgroundaction','innerchat')
+         AND rowid > $sinceRowId
+         ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
+         LIMIT 50"
+    );
+} else {
+    // Normal paginated query
+    $results = $db->fetchAll(
+        "SELECT type, data, people, gamets, localts, ts, rowid
+         FROM eventlog a
+         WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import','backgroundaction','innerchat')
+         ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
+         LIMIT $limit OFFSET $offset"
+    );
+}
+
+$columnHeaders = [
+    'type' => 'Event',
+    'data' => 'Events',
+    'gamets' => '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrielic Time</a>',
+    'localts' => 'Time (UTC)',
+    'ts' => 'TS',
+];
+
+$mappedResults = array_map(function ($row) use ($columnHeaders) {
+    $mappedRow = [];
+    
+    // Derive People Present from JSON in data if people field is empty
+    $peoplePresent = trim((string)($row['people'] ?? ''));
+    $rawData = $row['data'] ?? '';
+    if ($peoplePresent === '' && is_string($rawData) && $rawData !== '') {
+        $decoded = json_decode($rawData, true);
+        if (is_array($decoded)) {
+            if (!empty($decoded['people'])) {
+                $peoplePresent = is_array($decoded['people']) ? implode(', ', $decoded['people']) : (string)$decoded['people'];
+            } else if (!empty($decoded['companions'])) {
+                $peoplePresent = is_array($decoded['companions']) ? implode(', ', $decoded['companions']) : (string)$decoded['companions'];
+            } else if (!empty($decoded['speaker'])) {
+                $peoplePresent = (string)$decoded['speaker'];
+            }
+        }
+    }
+    
+    foreach ($row as $key => $value) {
+        if ($key === 'gamets' && !empty($value)) {
+            // Convert gamets to Skyrim date format
+            $value = convert_gamets2skyrim_long_date2($value);
+        }
+        else if ($key === 'localts' && !empty($value)) {
+            // Format localts to match adventure log format
+            $dt = new DateTime("@$value");
+            $dt->setTimezone(new DateTimeZone('UTC'));
+            $value = $dt->format('d-m-Y H:i:s');
+        }
+        
+        // Special handling for chat events
+        if ($row['type'] === 'chat' && ($key === 'data' || $key === 'type')) {
+            $value = '<span style="color:rgb(255, 255, 255);">' . htmlspecialchars($value) . '</span>';
+        } else {
+            $value = htmlspecialchars($value);
+        }
+        
+        // Skip raw people field
+        if ($key === 'people') {
+            continue;
+        }
+        
+        // Map rowid to uppercase ROWID for consistency with frontend
+        $outputKey = ($key === 'rowid') ? 'ROWID' : ($columnHeaders[$key] ?? $key);
+        $mappedRow[$outputKey] = $value;
+    }
+    
+    // Add People Present field
+    $mappedRow['People Present'] = htmlspecialchars($peoplePresent);
+    
+    return $mappedRow;
+}, $results);
+
+// Get total count for pagination info
+$countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','backgroundaction','innerchat')";
+$countResult = $db->fetchAll($countQuery);
+$totalRecords = $countResult[0]['total'];
+$totalPages = ceil($totalRecords / $limit);
+
+$response = [
+    'success' => true,
+    'data' => $mappedResults,
+    'timestamp' => time(),
+    'new_count' => count($mappedResults)
+];
+
+// Only include pagination if not doing incremental update
+if ($sinceRowId === 0) {
+    $response['pagination'] = [
+        'current_page' => $page,
+        'total_pages' => $totalPages,
+        'total_records' => $totalRecords,
+        'limit' => $limit
+    ];
+}
+
+echo json_encode($response);
+

@@ -26,11 +26,18 @@
 
     // specify the available actions which will be made available in the context
     Function setActions() {
+        // Skip actions list for narration events (The Narrator doesn't need action options for atmospheric descriptions)
+        if (isset($GLOBALS["gameRequest"]) && $GLOBALS["gameRequest"][0] === "narration") {
+            $GLOBALS["FUNC_LIST"] = ["Talk"];  // Only Talk action for narration
+            return;
+        }
+        
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             // inject the prompt here with the actions (original flat format)
             $GLOBALS["COMMAND_PROMPT"].="\n<available_actions_list>\n";
             $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
-            foreach ($GLOBALS["FUNCTIONS"] as $function) {
+            
+            foreach ($GLOBALS["FUNCTIONS"] as $index => $function) {
                 if (!$function) {
                     continue;
                 }
@@ -38,7 +45,6 @@
                 $fname=getFunctionCodeName($function["name"]);
 
                 if (!in_array($fname,$GLOBALS["ENABLED_FUNCTIONS"])) {
-                    error_log("[ACTIONS] {$function["name"]} ($fname) not in ENABLED_FUNCTIONS");
                     continue;
                 }
 
@@ -52,6 +58,7 @@
                     $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                 }
             }
+            
             $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: Talk\n</available_actions_list>";
             $GLOBALS["FUNC_LIST"][]="Talk";
             shuffle($GLOBALS["FUNC_LIST"]);
@@ -82,6 +89,7 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem)",
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                 ];
             } else {
@@ -91,7 +99,8 @@
                     "message"=>"lines of dialogue",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor|action destination location name "
+                    "target"=>"action target actor|action destination location name",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem)"
                 ];
             }
         } else {
@@ -102,6 +111,7 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem)",
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                     "message"=>"lines of dialogue"
                 ];
@@ -112,6 +122,7 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem)",
                     "message"=>"lines of dialogue"
                 ];
             }
@@ -179,6 +190,10 @@
                         "target" => array(
                             "type" => "string",
                             "description" => "action target actor| action destination location name"
+                        ),
+                        "item" => array(
+                            "type" => "string",
+                            "description" => "item name (REQUIRED when action is GiveItemTo or PickupItem - use exact name from inventory or nearby_items)"
                         )
                     ),
                     "required" => [
@@ -187,7 +202,8 @@
                         "message",
                         "mood",
                         "action",
-                        "target"
+                        "target",
+                        "item"
                     ],
                     "additionalProperties" => false
                 ),

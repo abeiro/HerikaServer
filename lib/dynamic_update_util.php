@@ -682,12 +682,41 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     // Get current field value
     $currentValue = $npcData[$field] ?? '';
     
-    // Get field-specific prompt
-    $updatePrompt = $GLOBALS[$promptName] ?? '';
+    // Map to database prompt keys (lowercase with underscores)
+    $dbPromptKeyMapping = [
+        'DYNAMIC_PROMPT_PERSONALITY' => 'dynamic_prompt_personality',
+        'DYNAMIC_PROMPT_RELATIONSHIPS' => 'dynamic_prompt_relationships',
+        'DYNAMIC_PROMPT_OCCUPATION' => 'dynamic_prompt_occupation',
+        'DYNAMIC_PROMPT_SKILLS' => 'dynamic_prompt_skills',
+        'DYNAMIC_PROMPT_SPEECHSTYLE' => 'dynamic_prompt_speechstyle',
+        'DYNAMIC_PROMPT_GOALS' => 'dynamic_prompt_goals'
+    ];
+    
+    // Load prompt from database with fallback to $GLOBALS
+    $updatePrompt = null;
+    if (isset($dbPromptKeyMapping[$promptName])) {
+        try {
+            $promptData = $GLOBALS["db"]->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = '{$dbPromptKeyMapping[$promptName]}'");
+            if ($promptData) {
+                $updatePrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+            }
+        } catch (Exception $e) {
+            Logger::warn("Failed to load {$promptName} from database, using fallback: " . $e->getMessage());
+        }
+    }
+    
+    // Fallback to $GLOBALS if database load failed
+    if (empty($updatePrompt)) {
+        $updatePrompt = $GLOBALS[$promptName] ?? '';
+    }
+    
     if (empty($updatePrompt)) {
         Logger::warning("updateDynamicProfileField: No prompt configured for field '$field' ($promptName)");
         return false;
     }
+    
+    // Replace placeholders in the prompt
+    $updatePrompt = str_replace('{HERIKA_NAME}', $npcName, $updatePrompt);
     
     try {
         // Collect other profile fields for context (excluding the current field)

@@ -82,6 +82,19 @@ class TTSConnector {
 
             foreach ($metadata as $key => $value) {
                 if (!empty($value) || $value === 0 || $value === false) {
+                    // CRITICAL FIX: If language is an array (schema definition), use default value instead
+                    if ($key === "language" && is_array($value)) {
+                        // Use default language based on driver
+                        if ($driver === "XTTSFASTAPI") {
+                            $value = "en";
+                        } elseif ($driver === "MELOTTS") {
+                            $value = "EN";
+                        } else {
+                            $value = "en"; // Generic fallback
+                        }
+                        error_log("[CORE] TTS Connector language was schema array for {$driver}, set to default: {$value}");
+                    }
+                    
                     // Store in driver-specific TTS config
                     $GLOBALS["TTS"][$driver][$key] = $value;
                     

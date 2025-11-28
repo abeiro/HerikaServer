@@ -33,6 +33,9 @@ function shouldTriggerRPGComment($eventType) {
 }
 
 $PROMPTS=array(
+    "narration"=>[ 
+        "cue"=>[""] // Empty cue - actual prompt loaded from database in main.php
+    ],
     "location"=>[
             "cue"=>["(Chat as {$GLOBALS["HERIKA_NAME"]})"], // give way to
             "player_request"=>["{$gameRequest[3]} What do you know about this place?"]  //requirement

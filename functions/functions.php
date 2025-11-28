@@ -32,8 +32,9 @@ $ENABLED_FUNCTIONS_LOCAL=[
     'ComeCloser',
     'Brawl',
     'ReturnBackHome',
-    'GiveGoldTo',
+    //'GiveGoldTo', // Replaced by GiveItemTo system
     'GiveItemTo',
+    'PickupItem',
     'GoToSleep',
     'UseSoulGaze'
 //    'WaitHere'
@@ -93,7 +94,7 @@ $F_TRANSLATIONS_LOCAL["SearchDiary"]="Read {$GLOBALS["HERIKA_NAME"]}'s diary to 
 $F_TRANSLATIONS_LOCAL["SetCurrentTask"]="Set the current plan of action or task or quest";
 $F_TRANSLATIONS_LOCAL["ReadDiaryPage"]="Read {$GLOBALS["HERIKA_NAME"]}'s diary to access a specific topic";
 $F_TRANSLATIONS_LOCAL["StopWalk"]="Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
-$F_TRANSLATIONS_LOCAL["TravelTo"]="Only use if {$GLOBALS["PLAYER_NAME"]} explicitly orders it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. ";
+$F_TRANSLATIONS_LOCAL["TravelTo"]="Only use if {$GLOBALS["PLAYER_NAME"]} explicitly suggest it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. Also known as lead the way";
 $F_TRANSLATIONS_LOCAL["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tries to remember information. REPLY with hashtags";
 $F_TRANSLATIONS_LOCAL["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} waits and loiters at the current location";
 $F_TRANSLATIONS_LOCAL["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} gives item (property target) to {$GLOBALS["PLAYER_NAME"]} (property listener)";
@@ -102,8 +103,9 @@ $F_TRANSLATIONS_LOCAL["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} follows  {$GLOB
 $F_TRANSLATIONS_LOCAL["ComeCloser"]="{$GLOBALS["HERIKA_NAME"]} aproaches to {$GLOBALS["PLAYER_NAME"]}";
 $F_TRANSLATIONS_LOCAL["Brawl"]="{$GLOBALS["HERIKA_NAME"]} engages non lethtal combat with another actor, using weapons";
 $F_TRANSLATIONS_LOCAL["ReturnBackHome"]="{$GLOBALS["HERIKA_NAME"]} travels to home/origin place.Returns home.";
-$F_TRANSLATIONS_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives some gold/coins/septims to a single actor (target property is the actor). Amount will be infered from dialogue, so no need to specify";
-$F_TRANSLATIONS_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives item to a single actor (target property is the actor). Amount and item will be infered from dialogue, so no need to specify";
+//$F_TRANSLATIONS_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives gold/coins/septims to another actor. Specify the amount to give"; // Replaced by GiveItemTo system
+$F_TRANSLATIONS_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives a specific item from inventory to another actor. REQUIRED: Must include 'item' field with exact item name from <inventory> tag, and 'target' field with recipient name";
+$F_TRANSLATIONS_LOCAL["PickupItem"]="{$GLOBALS["HERIKA_NAME"]} picks up a specific item from the ground. Use the exact RefID:ItemName format from nearby_items (e.g. 0x12345:Iron Sword)";
 $F_TRANSLATIONS_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} takes a nap";
 $F_TRANSLATIONS_LOCAL["UseSoulGaze"]="Use the spell SoulGaze, a powerful incantation that allows {$GLOBALS["HERIKA_NAME"]} to perceive surroundings in vivid detail through {$GLOBALS["PLAYER_NAME"]}'s eyes. The spell, however, causes some disturbance to the caster.";
 
@@ -140,8 +142,9 @@ $F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["PLAYER_NAME"]} gave #T
 $F_RETURNMESSAGES_LOCAL["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} follows {$GLOBALS["PLAYER_NAME"]}";
 $F_RETURNMESSAGES_LOCAL["Brawl"]="{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES_LOCAL["ReturnBackHome"]="{$GLOBALS["HERIKA_NAME"]} goes back home";
-$F_RETURNMESSAGES_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives gold to #TARGET#";
-$F_RETURNMESSAGES_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives items to #TARGET#";
+//$F_RETURNMESSAGES_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives gold to #TARGET#"; // Replaced by GiveItemTo system
+$F_RETURNMESSAGES_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives #ITEM# to #TARGET#";
+$F_RETURNMESSAGES_LOCAL["PickupItem"]="{$GLOBALS["HERIKA_NAME"]} picks up #ITEM#";
 $F_RETURNMESSAGES_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} takes a nap";
 $F_RETURNMESSAGES_LOCAL["UseSoulGaze"]="{$GLOBALS["HERIKA_NAME"]} used soulgaze";
 
@@ -182,8 +185,9 @@ $F_NAMES_LOCAL["FollowPlayer"]="FollowPlayer";
 $F_NAMES_LOCAL["ComeCloser"]="ComeCloser";
 $F_NAMES_LOCAL["Brawl"]="Fight";
 $F_NAMES_LOCAL["ReturnBackHome"]="ExitLocation";
-$F_NAMES_LOCAL["GiveGoldTo"]="GiveCoinsTo";
-$F_NAMES_LOCAL["GiveItemTo"]="GiveItemToActor";
+//$F_NAMES_LOCAL["GiveGoldTo"]="GiveCoinsTo"; // Replaced by GiveItemTo system
+$F_NAMES_LOCAL["GiveItemTo"]="GiveItemTo";
+$F_NAMES_LOCAL["PickupItem"]="PickupItem";
 $F_NAMES_LOCAL["GoToSleep"]="GoToSleep";
 $F_NAMES_LOCAL["UseSoulGaze"]="UseSoulGaze";
 
@@ -629,7 +633,7 @@ $GLOBALS["FUNCTIONS"] = [
             "required" => [""],
         ]
     ],
-    [
+    /*[
     "name" => $F_NAMES_LOCAL["GiveGoldTo"],
         "description" => $F_TRANSLATIONS_LOCAL["GiveGoldTo"],
         "parameters" => [
@@ -637,12 +641,16 @@ $GLOBALS["FUNCTIONS"] = [
             "properties" => [
                 "target" => [
                     "type" => "string",
-                    "description" => "Target NPC, Actor, or being",
+                    "description" => "Target NPC, Actor, or being to receive gold",
+                ],
+                "amount" => [
+                    "type" => "integer",
+                    "description" => "Amount of gold to give",
                 ]
             ],
-            "required" => ["target"],
+            "required" => ["target", "amount"],
         ]
-    ],
+    ],*/ // Replaced by GiveItemTo system
     [
         "name" => $F_NAMES_LOCAL["GiveItemTo"],
         "description" => $F_TRANSLATIONS_LOCAL["GiveItemTo"],
@@ -651,10 +659,36 @@ $GLOBALS["FUNCTIONS"] = [
             "properties" => [
                 "target" => [
                     "type" => "string",
-                    "description" => "Target NPC, Actor, or being",
+                    "description" => "Target NPC, Actor, or being to receive the item",
+                ],
+                "item" => [
+                    "type" => "string",
+                    "description" => "REQUIRED: Exact name of item from <inventory> tag. Must match item name exactly.",
+                ],
+                "amount" => [
+                    "type" => "integer",
+                    "description" => "Number of items to give (default: 1). Cannot exceed quantity in <inventory>.",
                 ]
             ],
-            "required" => ["target"],
+            "required" => ["target", "item"],
+        ]
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["PickupItem"],
+        "description" => $F_TRANSLATIONS_LOCAL["PickupItem"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Target actor (leave empty for PickupItem)"
+                ],
+                "item" => [
+                    "type" => "string",
+                    "description" => "REQUIRED: Exact RefID:ItemName from <nearby_items> tag (e.g., 0x12345:Iron Sword). Must match format exactly.",
+                ]
+            ],
+            "required" => ["item"],
         ]
     ],
     [
@@ -787,7 +821,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'AttackHunt',
         'TravelTo',
         'Follow',
-        'CheckInventory',
+        //'CheckInventory', // Commented out - redundant since <inventory> tag already shows NPC's items. Could be repurposed to check OTHER NPCs' inventories later.
         //'SheatheWeapon',
         'Relax',
         //'LeadTheWayTo',
@@ -805,8 +839,9 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'TakeGoldFromPlayer',
         'FollowPlayer',
         'Brawl',
-        'GiveGoldTo',
+        //'GiveGoldTo', // Replaced by GiveItemTo system
         'GiveItemTo',
+        'PickupItem',
         'GoToSleep',
         'UseSoulGaze'
 
@@ -823,7 +858,7 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'AttackHunt',
         'TravelTo',
         'Follow',
-        'CheckInventory',
+        //'CheckInventory', // Commented out - redundant since <inventory> tag already shows NPC's items. Could be repurposed to check OTHER NPCs' inventories later.
         'SheatheWeapon',
         'Relax',
         //'LeadTheWayTo',
@@ -837,8 +872,9 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         //'GiveItemToPlayer',
         'TakeGoldFromPlayer',
         'Brawl',
-        'GiveGoldTo',
+        //'GiveGoldTo', // Replaced by GiveItemTo system
         'GiveItemTo',
+        'PickupItem',
         'GoToSleep',
         'UseSoulGaze'
         //'GetDateTime',

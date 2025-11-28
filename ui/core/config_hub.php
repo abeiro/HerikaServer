@@ -54,7 +54,9 @@ main { padding: 80px 10px 10px; height: 100vh; }
             <button class="tab-button" data-tab="keys">🔑API Keys</button>
             <button class="tab-button" data-tab="oghma">🐙Oghma Infinium</button>
             <button class="tab-button" data-tab="npcbio">🪪NPC Biographies</button>
+            <button class="tab-button" data-tab="items">📜 Descriptions</button>
             <button class="tab-button" data-tab="actions">⚔️Action Editor</button>
+            <button class="tab-button" data-tab="prompts">💬Prompts Manager</button>
             <button class="tab-button" data-tab="xtts">🗣️XTTS Management</button>
             <button class="tab-button" data-tab="serverplugins">🔌Server Plugins</button>
         </div>
@@ -84,6 +86,11 @@ main { padding: 80px 10px 10px; height: 100vh; }
         <div id="npcbio" class="tab-content">
             <div class="embed-wrap">
                 <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/npc_upload.php?embed=1"></iframe>
+            </div>
+        </div>
+        <div id="items" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/description_upload.php?embed=1"></iframe>
             </div>
         </div>
         <div id="actions" class="tab-content">
@@ -129,6 +136,11 @@ main { padding: 80px 10px 10px; height: 100vh; }
         <div id="globals" class="tab-content">
             <div class="embed-wrap">
                 <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/global_settings.php?embed=1"></iframe>
+            </div>
+        </div>
+        <div id="prompts" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/prompts_manager.php?embed=1"></iframe>
             </div>
         </div>
         <div id="serverplugins" class="tab-content">

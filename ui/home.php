@@ -998,7 +998,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                 <td>" . htmlspecialchars($chimContextMode) . "</td>
                             </tr>
                             <tr>
-                                <td>AI Quest Processor</td>
+                                <td>Background Processor</td>
                                 <td>" . ($helperServiceRunning?"Running":"Not running") . "</td>
                             </tr>
                         </table>

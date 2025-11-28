@@ -102,13 +102,29 @@ if ($method === "POST") {
         // Get current relationships value and prompt
         $currentRelationships = isset($jsonDataInput["HERIKA_RELATIONSHIPS"]) ? $jsonDataInput["HERIKA_RELATIONSHIPS"] : '';
         
-        // Use configured prompt or fallback to default
-        $updatePrompt = isset($GLOBALS["DYNAMIC_PROMPT_RELATIONSHIPS"]) ? $GLOBALS["DYNAMIC_PROMPT_RELATIONSHIPS"] : '';
+        // Load prompt from database with fallback to $GLOBALS
+        $updatePrompt = null;
+        try {
+            $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'dynamic_prompt_relationships'");
+            if ($promptData) {
+                $updatePrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+            }
+        } catch (Exception $e) {
+            // Silent fallback to $GLOBALS
+        }
+        
+        // Fallback to $GLOBALS if database load failed
+        if (empty($updatePrompt)) {
+            $updatePrompt = isset($GLOBALS["DYNAMIC_PROMPT_RELATIONSHIPS"]) ? $GLOBALS["DYNAMIC_PROMPT_RELATIONSHIPS"] : '';
+        }
         
         if (empty($updatePrompt)) {
             echo json_encode(["status" => "error", "message" => "DYNAMIC_PROMPT_RELATIONSHIPS not configured"]);
             exit;
         }
+        
+        // Replace placeholders in the prompt
+        $updatePrompt = str_replace('{HERIKA_NAME}', $jsonDataInput["HERIKA_NAME"], $updatePrompt);
 
         // Collect other profile fields for context
         $profileContext = [];

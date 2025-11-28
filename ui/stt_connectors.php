@@ -39,6 +39,7 @@ $sttMap = [
 	'localwhisper' => 'LOCALWHISPER',
 	'azure' => 'AZURE',
 	'deepgram' => 'DEEPGRAM',
+	'parakeet' => 'PARAKEET',
 ];
 
 // Selected provider

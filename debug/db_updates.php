@@ -866,7 +866,29 @@ if ($checkVersion("npc_templates_custom")<20250211001) {
 //  sql_gamets_convert_functions 20250218001
 //----------------------------------------------------
 
-if ($checkVersion("sql_gamets_convert_functions")<20250218001) {
+// Check if functions exist to force patch if they're missing
+$checkFunctionExists = function($functionName) {
+    global $db;
+    $query = "
+        SELECT 1 
+        FROM information_schema.routines 
+        WHERE routine_schema = 'public' 
+          AND routine_name = '$functionName'
+    ";
+    $result = $db->fetchAll($query);
+    return (sizeof($result) > 0);
+};
+
+$forceRecreate = false;
+if (!$checkFunctionExists('convert_gamets2skyrim_date') || 
+    !$checkFunctionExists('convert_gamets2days') ||
+    !$checkFunctionExists('convert_gamets2gregorian_date') ||
+    !$checkFunctionExists('convert_gamets2skyrim_long_date')) {
+    Logger::warn("Some gamets conversion functions are missing. Forcing recreation.");
+    $forceRecreate = true;
+}
+
+if ($checkVersion("sql_gamets_convert_functions")<20250218001 || $forceRecreate) {
     Logger::debug(" try patch: sql_gamets_convert_functions 20250218001");
 
     $db->execQuery("DROP VIEW IF EXISTS public.speech_view;");
@@ -1033,7 +1055,17 @@ if ($checkVersion("sql_gamets_convert_functions")<20250218001) {
     Logger::debug("Applied patch: sql_gamets_convert_functions 20250218001");
 }
 
-if ($checkVersion("sql_gamets_convert_functions")<20250226001) {
+// Check if additional functions exist to force patch if they're missing
+$forceRecreate2 = false;
+if (!$checkFunctionExists('convert_gamets2skyrim_date_fmt') || 
+    !$checkFunctionExists('convert_gamets2skyrim_long_date2_nt') ||
+    !$checkFunctionExists('convert_gamets2skyrim_long_date_nt') ||
+    !$checkFunctionExists('convert_gamets2skyrim_time_daypart')) {
+    Logger::warn("Some additional gamets conversion functions are missing. Forcing recreation.");
+    $forceRecreate2 = true;
+}
+
+if ($checkVersion("sql_gamets_convert_functions")<20250226001 || $forceRecreate2) {
     Logger::debug(" try patch: sql_gamets_convert_functions 2 20250226001");
 
     $db->execQuery("DROP FUNCTION IF EXISTS public.convert_gamets2skyrim_date_fmt(gamets bigint, s_format text) CASCADE;");
@@ -1213,67 +1245,81 @@ if ($checkVersion("sql_gamets_convert_functions")<20250226001) {
 
 
 // Views dependant on sql_gamets_convert_functions
-// Ensure speech_view exists
-$query = "
-    SELECT view_definition 
-    FROM information_schema.views 
-    WHERE table_name = 'speech_view'
-";
+// Only create views if the required functions exist
+$requiredFunctions = [
+    'convert_gamets2skyrim_date',
+    'convert_gamets2skyrim_long_date',
+    'convert_gamets2days',
+    'convert_gamets2gregorian_date'
+];
 
-
-$existsColumn=$db->fetchAll($query);
-if (!$existsColumn[0]["view_definition"]) {
-        $db->execQuery("CREATE OR REPLACE VIEW public.speech_view  AS
-  SELECT s.sess,
-    s.speaker,
-    s.speech,
-    s.location,
-    s.listener,
-    s.topic,
-    s.localts,
-    s.gamets,
-    s.ts,
-    s.rowid,
-    s.companions,
-    s.audios,
-    public.convert_gamets2skyrim_date(s.gamets) AS sk_date,
-    public.convert_gamets2skyrim_long_date(s.gamets) AS sk_long_date,
-    public.convert_gamets2days(s.gamets) AS sk_days,
-    public.convert_gamets2gregorian_date(s.gamets) AS gregorian_date
-   FROM public.speech s;
-");
-
+$allFunctionsExist = true;
+foreach ($requiredFunctions as $funcName) {
+    if (!$checkFunctionExists($funcName)) {
+        Logger::warn("Required function $funcName does not exist. Skipping view creation. Run database functions patch first.");
+        $allFunctionsExist = false;
+        break;
+    }
 }
 
+if ($allFunctionsExist) {
+    // Ensure speech_view exists
+    $query = "
+        SELECT view_definition 
+        FROM information_schema.views 
+        WHERE table_name = 'speech_view'
+    ";
 
-// Ensure eventlog_view exists
-$query = "
-    SELECT view_definition 
-    FROM information_schema.views 
-    WHERE table_name = 'eventlog_view'
-";
+    $existsColumn=$db->fetchAll($query);
+    if (!$existsColumn[0]["view_definition"]) {
+            $db->execQuery("CREATE OR REPLACE VIEW public.speech_view  AS
+      SELECT s.sess,
+        s.speaker,
+        s.speech,
+        s.location,
+        s.listener,
+        s.topic,
+        s.localts,
+        s.gamets,
+        s.ts,
+        s.rowid,
+        s.companions,
+        s.audios,
+        public.convert_gamets2skyrim_date(s.gamets) AS sk_date,
+        public.convert_gamets2skyrim_long_date(s.gamets) AS sk_long_date,
+        public.convert_gamets2days(s.gamets) AS sk_days,
+        public.convert_gamets2gregorian_date(s.gamets) AS gregorian_date
+       FROM public.speech s;
+    ");
+    }
 
+    // Ensure eventlog_view exists
+    $query = "
+        SELECT view_definition 
+        FROM information_schema.views 
+        WHERE table_name = 'eventlog_view'
+    ";
 
-$existsColumn=$db->fetchAll($query);
-if (!$existsColumn[0]["view_definition"]) {
-        $db->execQuery("CREATE OR REPLACE VIEW public.eventlog_view  AS
- SELECT e.type,
-    e.data,
-    e.sess,
-    e.gamets,
-    e.localts,
-    e.ts,
-    e.rowid,
-    e.people,
-    e.location,
-    e.party,
-    public.convert_gamets2skyrim_date(e.gamets) AS sk_date,
-    public.convert_gamets2skyrim_long_date(e.gamets) AS sk_long_date,
-    public.convert_gamets2days(e.gamets) AS sk_days,
-    public.convert_gamets2gregorian_date(e.gamets) AS gregorian_date
-   FROM public.eventlog e;
-");
-
+    $existsColumn=$db->fetchAll($query);
+    if (!$existsColumn[0]["view_definition"]) {
+            $db->execQuery("CREATE OR REPLACE VIEW public.eventlog_view  AS
+     SELECT e.type,
+        e.data,
+        e.sess,
+        e.gamets,
+        e.localts,
+        e.ts,
+        e.rowid,
+        e.people,
+        e.location,
+        e.party,
+        public.convert_gamets2skyrim_date(e.gamets) AS sk_date,
+        public.convert_gamets2skyrim_long_date(e.gamets) AS sk_long_date,
+        public.convert_gamets2days(e.gamets) AS sk_days,
+        public.convert_gamets2gregorian_date(e.gamets) AS gregorian_date
+       FROM public.eventlog e;
+    ");
+    }
 }
 
 //----------------------------------------------------
@@ -1993,6 +2039,122 @@ try {
     Logger::warn("DB trigger setup for narrator protection failed or already present: ".$e->getMessage());
 }
 
+//----------------------------------------------------
+// Item descriptions: new tables and combined view
+// Version 20241113001
+//----------------------------------------------------
+
+if ($checkVersion("descriptions")<20241114001) {
+    Logger::debug("Applying descriptions 20241114001");
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.descriptions (
+            baseid character varying(128) NOT NULL PRIMARY KEY,
+            name text,
+            description text
+        );
+    ");
+    $updateVersion("descriptions",20241114001);
+    Logger::info("Applied patch descriptions 20241114001");
+}
+
+if ($checkVersion("descriptions_custom")<20241114001) {
+    Logger::debug("Applying descriptions_custom 20241114001");
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.descriptions_custom (
+            baseid character varying(128) NOT NULL PRIMARY KEY,
+            name text,
+            description text
+        );
+    ");
+    $updateVersion("descriptions_custom",20241114001);
+    Logger::info("Applied patch descriptions_custom 20241114001");
+}
+
+if ($checkVersion("descriptions_defaults")<20241114001) {
+    Logger::debug("Applying descriptions_defaults 20241114001");
+    
+    $sqlFile = __DIR__ . '/../data/descriptions_20241114001.sql';
+    if (file_exists($sqlFile)) {
+        $sql = file_get_contents($sqlFile);
+        if ($sql !== false) {
+            $db->execQuery($sql);
+            Logger::info("Imported descriptions from descriptions_20241114001.sql");
+        } else {
+            Logger::warn("Could not read descriptions_20241114001.sql");
+        }
+    } else {
+        Logger::warn("descriptions_20241114001.sql not found at $sqlFile");
+    }
+    
+    $updateVersion("descriptions_defaults",20241114001);
+    Logger::info("Applied patch descriptions_defaults 20241114001");
+}
+
+// Always (re)create combined view once base tables exist
+try {
+    $db->execQuery("DROP VIEW IF EXISTS public.combined_descriptions CASCADE;");
+    $db->execQuery("
+        CREATE VIEW public.combined_descriptions AS
+        SELECT c.baseid,
+               c.name,
+               c.description
+          FROM public.descriptions_custom c
+        UNION ALL
+        SELECT i.baseid,
+               i.name,
+               i.description
+          FROM (public.descriptions i
+                LEFT JOIN public.descriptions_custom c
+                  ON ((i.baseid)::text = (c.baseid)::text))
+         WHERE c.baseid IS NULL;
+    ");
+    $updateVersion("combined_descriptions",20241114001);
+    Logger::info("Created view combined_descriptions 20241114001");
+} catch (Exception $e) {
+    Logger::error("Error creating combined_descriptions view: " . $e->getMessage());
+}
+
+try {
+    $db->execQuery("CREATE OR REPLACE VIEW \"public\".\"memory_v\" AS
+ SELECT message,
+    uid,
+    gamets,
+    speaker,
+    listener,
+    ts
+   FROM ( SELECT memory.message,
+            memory.uid,
+            memory.gamets,
+            '-'::text AS speaker,
+            '-'::text AS listener,
+            memory.ts
+           FROM memory
+          WHERE memory.message !~~ 'Dear Diary%'::text AND memory.message <> ''::text and event<>'backgroundlife_diary'::text
+        UNION
+         SELECT (((('(Context Location:'::text || speech.location) || ') '::text) || speech.speaker) || ': '::text) || speech.speech,
+            speech.rowid::integer AS rowid,
+            speech.gamets,
+            speech.speaker,
+            speech.listener,
+            speech.ts
+           FROM speech
+          WHERE speech.speech <> ''::text
+        UNION
+         SELECT eventlog.data,
+            eventlog.rowid::integer AS rowid,
+            eventlog.gamets,
+            '-'::text AS text,
+            '-'::text AS listener,
+            eventlog.ts
+           FROM eventlog
+          WHERE eventlog.type::text = ANY (ARRAY['death'::character varying::text, 'location'::character varying::text])) subquery
+  ORDER BY gamets, ts");
+    $updateVersion("memory_v",20251122001);
+    Logger::info("Updated memory_v BgL patch");
+} catch (Exception $e) {
+    Logger::error("Error creating memory_v BgL patch: " . $e->getMessage());
+}
+
 
 if ($checkTableExists("translations") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/translations_table.sql"));
@@ -2014,6 +2176,234 @@ if ($checkTableExists("rumors") == -1) {
 
 $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS region text");
 $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS hold text");
+
+if ($checkTableExists("master_packages") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/master_packages.sql"));
+} else
+    Logger::info(__FILE__." master_packages exists");
+
+//----------------------------------------------------
+// Prompts Table - System for managing default and custom prompts
+// Version 20251110001
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251110001) {
+    Logger::debug("Applying prompts table 20251110001");
+    
+    // Create prompts table
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.prompts (
+            prompt_key character varying(128) NOT NULL PRIMARY KEY,
+            default_prompt text NOT NULL,
+            custom_prompt text,
+            description text,
+            created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+            updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+    
+    // Seed initial middleterm narrative summarizer system prompt
+    $middletermPrompt = $db->escape(
+        "You are a long-term narrative continuity summarizer for an improvised Skyrim universe chronicle.\n".
+        "- Always read ALL provided materials.\n".
+        "- Treat any **Previous Context History Summary** as the canonical prior unless anything in the new Context History explicitly supersedes it.\n".
+        "- Maintain in-universe tone and correct chronology. Do not invent facts outside the supplied context.\n".
+        "- When combining prior and new histories, you may compress the earlier parts of the prior summary.\n".
+        "- Maintain roughly 20–25 bullet points total in **Notable Events**. Older portions should be condensed into broader, grouped statements unless they describe major quest milestones, major character life events (e.g., death, intimacy, severe injury, transformation), or other pivotal story turns.\n".
+        "- Preserve continuity and references to major quests even when compressing earlier material."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'middleterm_narrative_summarizer',
+            '$middletermPrompt',
+            'System prompt for long-term narrative continuity summarization in middleterm memory processing. Used in: service/processors/middleterm/cmd/generate.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Seed middleterm request/task prompt (uses {HERIKA_NAME} placeholder)
+    $middletermRequestPrompt = $db->escape(
+        "Main character in this logbook is {HERIKA_NAME}.\n".
+        "Task: Read **Context History** (newest session) and, if present, the **Previous Context History Summary** (prior canon). ".
+        "Integrate them to produce an updated broad narrative strokes summary that preserves continuity. Summary sections:\n\n".
+        "- **Notable Events in Chronological Order:**\n".
+        "  - Provide ~10 bullet points from earliest to latest, reflecting the story so far.\n".
+        "  - Prefer facts already established in the previous summary; only revise if the new context clearly changes them.\n\n".
+        "- **Current Quest Progression and background:**\n".
+        "  - Name questlines, stages/milestones if stated, objectives completed/active, and motivations.\n".
+        "When generating entries, ensure that {HERIKA_NAME} — the protagonist — is actively present in the scene. ".
+        "Any narrative content that occurs before {HERIKA_NAME}'s arrival or outside {HERIKA_NAME}'s perspective should be omitted, ".
+        "reflect only events {HERIKA_NAME} directly witness or participate in.\n".
+        "If the resulting summary would exceed roughly 25 bullet points, merge or generalise older entries into broader grouped events. ".
+        "Always retain explicit entries for major quest milestones, major character life events, or turning points."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'middleterm_narrative_request',
+            '$middletermRequestPrompt',
+            'User request/task instructions for middleterm narrative summarization (contains {HERIKA_NAME} placeholder). Used in: service/processors/middleterm/cmd/generate.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Seed character profile generation prompt (uses {HERIKA_NAME} and {CHARACTER_SEED} placeholders)
+    $profileGenPrompt = $db->escape(
+        "The main character in this logbook is {HERIKA_NAME}.{CHARACTER_SEED}\n".
+        "Read the context history (context_history) and the recent memories (middle_term_memory),\n".
+        " paying attention to notable events and the names of relevant characters.\n\n\n".
+        "Based on all this information, generate an character sheet for {HERIKA_NAME}.\n\n".
+        "This profile must be in XML format and have these fields.\n\n".
+        "<core>              Text. Core Identity, name,race an gender, and most remarkable job. Should be in the form of a sentence. e.g. 'Rose. Imperial female warrior.'\n".
+        "<npc_static_bio>    Text. Basic Summary, and bio. Create if not info available in <context_history>\n".
+        "<personality>       Text. Personality Traits. How the characters behave. Traumas. Likes.\n".
+        "<appearance>        Text. Physical Appearance. Infer from info available in <context_history>\n".
+        "<relationships>     Text. relationships with other actors.\n".
+        "<occupation>        Text. Main Occupation & Role\n".
+        "<skills>            Text. Skills & Abilities\n".
+        "<speechstyle>       Text. Speech Style\n".
+        "<goals>             Text. Long term Goals & Aspirations'\n"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'character_profile_generation',
+            '$profileGenPrompt',
+            'Prompt for AI-generated character profile/biography creation (contains {HERIKA_NAME} and {CHARACTER_SEED} placeholders). Used in: ui/cmd/action_ai_regen_profile.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Seed AI vision appearance description prompt (uses {HERIKA_NAME} placeholder)
+    $visionAppearancePrompt = $db->escape(
+        "Describe the character in the picture. Name is {HERIKA_NAME} .\n".
+        "Do not focus on clothing, focus on physical appearance (face, eyes, hair, figure, waist,legs,breast size, tattoos if any....). Be concise. \n".
+        "Start generation with this text:\n".
+        "{HERIKA_NAME} is "
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'ai_vision_appearance',
+            '$visionAppearancePrompt',
+            'AI vision prompt for describing character physical appearance from images (contains {HERIKA_NAME} placeholder). Used in: ui/cmd/action_ai_update_appearance.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Seed memory subsystem summary prompt (uses {PLAYER_NAME}, {COMPANIONS_LINE}, {SUMMARY_PROMPT} placeholders)
+    $memorySubsystemPrompt = $db->escape(
+        "{PLAYER_NAME} is the player.\n".
+        "{COMPANIONS_LINE}\n".
+        "You must write a memory summary from the narrator's point of view by analyzing the chat history. Focus only on roleplay elements: character behavior, feelings, relationships, decisions, dialogue, and locations relevant to the story. Ignore any references to game engine mechanics, menus, stats, or system messages.\n".
+        "Pay close attention to details that could influence a character's behavior or emotions, as well as tag names and locations. Include quotes from character dialogue in the summary if they are relevant to understanding actions, motivations, or relationships\n\n".
+        "Here are additional instructions: {SUMMARY_PROMPT}"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'memory_subsystem_summary',
+            '$memorySubsystemPrompt',
+            'Prompt for generating memory summaries from chat history (contains {PLAYER_NAME}, {COMPANIONS_LINE}, {SUMMARY_PROMPT} placeholders). Used in: debug/util_memory_subsystem.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Seed global dynamic prompts (migrated from conf schema)
+    
+    // SUMMARY_PROMPT - Memory summary instructions  
+    $summaryPrompt = $db->escape("Focus on key events, tagging characters, locations, and factions accurately. Ensure memories align and maintain chronological order while foreshadowing future arcs. Prioritize player agency, and use environmental cues to enhance storytelling and continuity.");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('summary_prompt', '$summaryPrompt', 'Additional instructions for memory summary generation. Used as {SUMMARY_PROMPT} placeholder in: debug/util_memory_subsystem.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    // DYNAMIC_PROMPT_PERSONALITY - Uses {HERIKA_NAME} placeholder
+    $dynPersonality = $db->escape("Based on the dialogue history and recent events, update {HERIKA_NAME} personality traits. Maintain all existing relevant personality traits and add new ones based on recent experiences. Focus on behavioral changes, emotional growth/regression, new traits that emerged, and changes in confidence or outlook. Emphasize any past traumas or new traumas caused by the death of companions, allies, or other known characters, and how these events shape the character's behavior and mindset. Return ONLY the updated personality description in 3-5 sentences. Do not include any introductory text, meta-commentary, or phrases like 'Here is the updated personality' or 'The character's personality is'. Start directly with the personality content.");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('dynamic_prompt_personality', '$dynPersonality', 'Instructions for updating NPC personality traits based on recent events (contains {HERIKA_NAME} placeholder). Used in: lib/dynamic_update_util.php, ui/cmd/action_dynamic_profile_*.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    // DYNAMIC_PROMPT_RELATIONSHIPS - Uses {HERIKA_NAME} placeholder
+    $dynRelationships = $db->escape("Based on recent interactions, update {HERIKA_NAME} relationships with other people and factions. Maintain all existing relevant relationships and add new ones or modify existing ones based on recent interactions. Focus on changed relationships, new relationships formed, evolved existing ones, and only remove relationships that are clearly no longer relevant. Return ONLY a bulleted list using * Name/Faction - Description format. Do not include any introductory text, meta-commentary, or phrases like 'Here are the updated relationships' or 'The character's relationships include'. Start directly with the first bullet point.");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('dynamic_prompt_relationships', '$dynRelationships', 'Instructions for updating NPC relationships based on interactions (contains {HERIKA_NAME} placeholder). Used in: lib/dynamic_update_util.php, ui/cmd/action_dynamic_profile_*.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    // DYNAMIC_PROMPT_OCCUPATION - Uses {HERIKA_NAME} placeholder
+    $dynOccupation = $db->escape("Based on story progression and events, update {HERIKA_NAME} occupation and role. Maintain the current occupation unless significant changes have occurred. Add new responsibilities, changes in social status, and professional affiliations. Focus on job changes, new duties, and evolving professional relationships. Return ONLY the updated occupation description in 2-3 sentences. Do not include any introductory text, meta-commentary, or phrases like 'The character's occupation is' or 'Here is the updated occupation'. Start directly with the occupation content.");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('dynamic_prompt_occupation', '$dynOccupation', 'Instructions for updating NPC occupation and role based on story progression (contains {HERIKA_NAME} placeholder). Used in: lib/dynamic_update_util.php, ui/cmd/action_dynamic_profile_*.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    // DYNAMIC_PROMPT_SKILLS - Uses {HERIKA_NAME} placeholder
+    $dynSkills = $db->escape("Based on experiences and training, update {HERIKA_NAME} skills and abilities. Maintain all existing relevant skills and add new ones based on recent experiences. Focus on new skills learned, existing skills improved, any skills that deteriorated, and combat/magical knowledge gained. Return ONLY a bulleted list using * Skill - Description format. Do not include any introductory text, meta-commentary, or phrases like 'Here are the updated skills' or 'The character's skills include'. Start directly with the first bullet point.");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('dynamic_prompt_skills', '$dynSkills', 'Instructions for updating NPC skills and abilities based on experiences (contains {HERIKA_NAME} placeholder). Used in: lib/dynamic_update_util.php, ui/cmd/action_dynamic_profile_*.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    // DYNAMIC_PROMPT_SPEECHSTYLE - Uses {HERIKA_NAME} placeholder
+    $dynSpeech = $db->escape("Based on recent interactions, update how {HERIKA_NAME} speaks and communicates. Maintain existing consistent speech patterns and add new ones based on recent interactions. Focus on changes in vocabulary, new mannerisms, accent changes, and confidence level in speech. Return ONLY the updated speech style description in 2-3 sentences. Do not include any introductory text, meta-commentary, or phrases like 'The character speaks' or 'Here is the updated speech style'. Start directly with the speech style content.");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('dynamic_prompt_speechstyle', '$dynSpeech', 'Instructions for updating NPC speech patterns and communication style (contains {HERIKA_NAME} placeholder). Used in: lib/dynamic_update_util.php, ui/cmd/action_dynamic_profile_*.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    // DYNAMIC_PROMPT_GOALS - Uses {HERIKA_NAME} placeholder
+    $dynGoals = $db->escape("Based on story developments and achievements, update the {HERIKA_NAME} goals and aspirations. Maintain existing relevant goals, compressing related goals, and add new ones. Remove goals that have been clearly completed or are no longer applicable. Focus on new aspirations that emerged, modified existing goals due to circumstances, and updated long-term objectives. Return ONLY a bulleted list using * Goal description as actionable aspiration format. Do not include any introductory text, meta-commentary, or phrases like 'Here are the updated goals' or 'The character's goals are'. Start directly with the first bullet point (maintain a maximum of 20 goals with reduction priority when required: 1- compress related goals, 2-eliminate 'study' related goals, 3- eliminate older goals).");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('dynamic_prompt_goals', '$dynGoals', 'Instructions for updating NPC goals and aspirations based on story developments (contains {HERIKA_NAME} placeholder). Used in: lib/dynamic_update_util.php, ui/cmd/action_dynamic_profile_*.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    // DIRECTOR_SYSTEM_PROMPT - Game director system prompt
+    $directorSystem = $db->escape("You are a game director, and we are roleplaying Skyrim in the Tamriel universe. You must create a instruction for an actor to generate new content/events on game.");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('director_system_prompt', '$directorSystem', 'Main system prompt defining the game director role. Used in: service/processors/rolemaster/cmd/instruction.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    // DIRECTOR_EXAMPLES_PROMPT - Examples of instruction formats
+    $directorExamples = $db->escape("# Examples\n\nuser request: actor \"a\" leaves the place \n{\"instructions\":[{\n  \"character\": \"actor a\",\n  \"instruction\": \"actor a should say goodbye to everyone, hinting that they may not return for a long time\",\n  \"action\": \"ExitLocation\",\n  \"target\": \"everyone\",\n  \"scene_note\": \"The mood is somber as actor a prepares to leave. Actor b watches in silence, perhaps with regret or longing.\"\n},\n{\n  \"character\": \"actor b\",\n  \"instruction\": \"actor b should say goodbye to b\",\n  \"action\": \"JustTalk\",\n  \"target\": \"Actor a\",\n  \"scene_note\": \"Is a sad moment, generally speaking.\"\n}\n]\n}\n\n(no user request, randomly generated content)\n{\"instructions\":[\n {\n  \"character\": \"actor a\",\n  \"instruction\": \"actor a should ask actor b for a few coins, claiming they desperately need a drink.\",\n  \"action\": \"Talk\",\n  \"target\": \"actor b\",\n  \"scene_note\": \"actor a looks disheveled but charming, half-joking and half-serious. Actor b is unsure whether to laugh, help, or walk away. Other actors watch this two guys with curiosity\"\n }\n]\n}");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('director_examples_prompt', '$directorExamples', 'Examples of instruction format for game director responses. Used in: service/processors/rolemaster/cmd/instruction.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    // DIRECTOR_INSTRUCTION_RULES - Rules for generating instructions (uses {PLAYER_NAME}, {FUNCTION_LIST} placeholders)
+    $directorRules = $db->escape("Just provide instructions! You can also provide more than one instruction, but one per actor (keep limit at  2 or 3 max actors)\nIn addition, follow these general scene rules as a game director:\n * Use any actor in NEARBY ACTORS/NPC IN THE SCENE list ({PLAYER_NAME},busy actors and far away actors are EXCLUDED!)\n * Continue the scene as naturally and fully as possible, unless the user explicitly requests a new one. You can specify actions to reinforce the actors' dialogue.\n * If there are more actors in the room, try to involve them in the conversation.\n * When dialogue becomes repetitive, make a plot twist.\n * If a character reuses the same argument too often, nudge the scene towards a new topic.\n * Occasionally introduce subtle foreshadowing or hint at future events, dangers, or quests.\n * Do not resolve everything neatly—keep room for ongoing tension or future continuation.\n * You must always provide dialogue instructions for the character, as every request requires a dialogue response.\n * Here are a list of actions that can be used: \n{FUNCTION_LIST}\n  ** JustTalk \n * Add a Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality. Other actors can see this to properly react.\n * If scene is getting boring/repetitive, add a plot twist");
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('director_instruction_rules', '$directorRules', 'Rules and guidelines for game director when generating instructions (contains {PLAYER_NAME}, {FUNCTION_LIST} placeholders). Used in: service/processors/rolemaster/cmd/instruction.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+    
+    $updateVersion("prompts", 20251110001);
+    Logger::info("Applied patch prompts 20251110001 - Added all dynamic prompts and director prompts");
+}
+
+//----------------------------------------------------
+// RANDOM NARRATION PROMPT
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251116001) {
+    Logger::debug("Applying prompts table 20251116001 - Adding random_narration_prompt");
+    
+    // Seed random narration prompt
+    $randomNarrationPrompt = $db->escape(
+        "Describe the current scene visually using ONLY details from the provided context. Focus on the characters present - their appearance, expressions, body language, and what they're wearing. Include environmental details like lighting and atmosphere. Keep it grounded and concise (2-3 sentences). Do not invent new information, advance the plot, or include dialogue."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'random_narration_prompt',
+            '$randomNarrationPrompt',
+            'Prompt for random Narrator interjections that add cinematic visual scene descriptions during conversations. Styled as atmospheric, present-tense narration (2-3 sentences). Used when RANDOM_NARATION is enabled in global settings.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251116001);
+    Logger::info("Applied patch prompts 20251116001 - Added random_narration_prompt");
+}
 
 //----------------------------------------------------
 

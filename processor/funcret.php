@@ -111,14 +111,27 @@
 			//$useFunctionsAgain=true;
 
 
-		} else if ($functionCodeName == "GiveItemToPlayer") {
-			$useFunctionsAgain=true;
-			$request="(use action '".getFunctionTrlName("TakeGoldFromPlayer")."' if needed) $request";
+	} else if ($functionCodeName == "GiveItemTo") {
+		// Parse item info from function arguments
+		$argName = "target";
+		$useFunctionsAgain=false;
+		
+		// Item transfer is logged separately, so we just acknowledge
+		// The actual inventory sync will happen via container events
+		
+	} else if ($functionCodeName == "GiveGoldTo") {
+		// Parse gold amount from function arguments
+		$argName = "target";
+		$useFunctionsAgain=false;
+		
+	} else if ($functionCodeName == "GiveItemToPlayer") {
+		$useFunctionsAgain=true;
+		$request="(use action '".getFunctionTrlName("TakeGoldFromPlayer")."' if needed) $request";
 
 
-		} else if ($functionCodeName == "TakeGoldFromPlayer") {
-			$useFunctionsAgain=true;
-			die();
+	} else if ($functionCodeName == "TakeGoldFromPlayer") {
+		$useFunctionsAgain=true;
+		die();
 
 		} else {
 			error_log("[CHIM] Checking <$functionCodeName> in external declarations");

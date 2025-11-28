@@ -3,7 +3,6 @@
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_functions.php");
 
-
 class player2json
 {
     public $primary_handler;
@@ -636,33 +635,64 @@ class player2json
                 if (!empty($parsedResponse["action"])) {
                     if (!isset($parsedResponse["target"]))    
                         $parsedResponse["target"] = "";
-                    if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
                         
-                        $functionDef=findFunctionByName($parsedResponse["action"]);
+                    // Build parameter string - use JSON for functions with multiple parameters
+                    $functionDef=findFunctionByName($parsedResponse["action"]);
+                    $paramString = "";
+                    $functionCodeName = "";
+                    if (isset($functionDef)) {
+                        $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
+                        $paramCount = count($functionDef["parameters"]["properties"] ?? []);
+                        
+                        // For functions with multiple parameters, send as JSON
+                        if ($paramCount > 1) {
+                            $params = [];
+                            foreach (array_keys($functionDef["parameters"]["properties"] ?? []) as $paramName) {
+                                if (isset($parsedResponse[$paramName])) {
+                                    $params[$paramName] = $parsedResponse[$paramName];
+                                }
+                            }
+                            
+                            // Check if required parameters are missing
+                            $requiredParams = $functionDef["parameters"]["required"] ?? [];
+                            foreach ($requiredParams as $reqParam) {
+                                if (!isset($params[$reqParam]) || $params[$reqParam] === "") {
+                                    Logger::warn("player2json: Missing required parameter '{$reqParam}' for function {$parsedResponse["action"]}");
+                                }
+                            }
+                            $paramString = json_encode($params);
+                        } else {
+                            // Legacy: single parameter as plain string
+                            $paramString = $parsedResponse["target"] ?? "";
+                        }
+                    } else {
+                        $paramString = $parsedResponse["target"] ?? "";
+                        $functionCodeName = $parsedResponse["action"] ?? "";
+                    }
+                    
+                    $commandStr = "{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$paramString}\r\n";
+                    if (!isset($alreadysent[md5($commandStr)])) {
+                        
                         if (isset($functionDef)) {
-                            $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
                             if (strlen($functionDef["parameters"]["required"][0] ?? '')>0) {
-                                if (!empty($parsedResponse["target"])) {
-                                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
+                                if (!empty($paramString)) {
+                                    $this->_commandBuffer[]=$commandStr;
                                 }
                                 else {
-                                    Logger::warn("openaijson: Missing required parameter: target");
+                                    Logger::warn("player2json: Missing required parameter: target");
                                     $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@\r\n";
                                     // Change. we allow this. Post filter maybe can fix.
 
                                 }
                                     
                             } else {
-                                $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
+                                $this->_commandBuffer[]=$commandStr;
                             }
                         } elseif ($parsedResponse["action"] != "Talk") {
-                            Logger::warn("openaijson: Function not found for {$parsedResponse["action"]}");
+                            Logger::warn("player2json: Function not found for {$parsedResponse["action"]}");
                         }
                         
-                        //$functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                        //$this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n";
-                        //echo "Herika|command|$functionCodeName@$parameter\r\n";
-                        $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")]=end($this->_commandBuffer);
+                        $alreadysent[md5($commandStr)]=end($this->_commandBuffer);
                     
                     } 
                         

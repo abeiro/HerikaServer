@@ -470,16 +470,55 @@ Note: Memories are stored in memory_summary table, which holds info from events/
                     // Database Prompt (Memory Compaction)
                     $companionsLine = ! empty($row["companions"]) ? "{$row["companions"]} are nearby characters.\n" : "";
 
+                    // Load memory subsystem summary prompt from database with fallback to hardcoded default
+                    $memoryPrompt = null;
+                    try {
+                        $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'memory_subsystem_summary'");
+                        if ($promptData) {
+                            // Use custom_prompt if set, otherwise use default_prompt
+                            $memoryPrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+                        }
+                    } catch (Exception $e) {
+                        Logger::warn("Failed to load memory subsystem prompt from database, using hardcoded fallback: " . $e->getMessage());
+                    }
+
+                    // Hardcoded fallback if database query failed or returned no results
+                    if (!$memoryPrompt) {
+                        $memoryPrompt = 
+                            "{PLAYER_NAME} is the player.\n".
+                            "{COMPANIONS_LINE}\n".
+                            "You must write a memory summary from the narrator's point of view by analyzing the chat history. Focus only on roleplay elements: character behavior, feelings, relationships, decisions, dialogue, and locations relevant to the story. Ignore any references to game engine mechanics, menus, stats, or system messages.\n".
+                            "Pay close attention to details that could influence a character's behavior or emotions, as well as tag names and locations. Include quotes from character dialogue in the summary if they are relevant to understanding actions, motivations, or relationships\n\n".
+                            "Here are additional instructions: {SUMMARY_PROMPT}";
+                    }
+
+                    // Load SUMMARY_PROMPT from database with fallback to $GLOBALS
+                    $summaryPromptValue = null;
+                    try {
+                        $summaryPromptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'summary_prompt'");
+                        if ($summaryPromptData) {
+                            $summaryPromptValue = (!empty($summaryPromptData['custom_prompt'])) ? $summaryPromptData['custom_prompt'] : $summaryPromptData['default_prompt'];
+                        }
+                    } catch (Exception $e) {
+                        // Silent fallback to $GLOBALS
+                    }
+                    
+                    // Fallback to $GLOBALS if database load failed
+                    if (empty($summaryPromptValue)) {
+                        $summaryPromptValue = $GLOBALS["SUMMARY_PROMPT"] ?? '';
+                    }
+                    
+                    // Replace placeholders with actual values
+                    $memoryPromptProcessed = str_replace(
+                        ['{PLAYER_NAME}', '{COMPANIONS_LINE}', '{SUMMARY_PROMPT}'],
+                        [$GLOBALS["PLAYER_NAME"], $companionsLine, $summaryPromptValue],
+                        $memoryPrompt
+                    );
+
                     $prompt   = [];
                     $prompt[] = ['role' => 'system',
-                        'content'           => "This is a playthrough in Skyrim.
-{$GLOBALS["PLAYER_NAME"]} is the player.
-{$companionsLine}
-You must write a memory summary from the narrator's point of view by analyzing the chat history. Focus only on roleplay elements: character behavior, feelings, relationships, decisions, dialogue, and locations relevant to the story. Ignore any references to game engine mechanics, menus, stats, or system messages.
-Pay close attention to details that could influence a character's behavior or emotions, as well as tag names and locations. Include quotes from character dialogue in the summary if they are relevant to understanding actions, motivations, or relationships
-
-Here are additional instructions: {$GLOBALS["SUMMARY_PROMPT"]}
-"];
+                        'content' => "This is a playthrough in Skyrim.\n" . $memoryPromptProcessed
+                    ];
                     if (! empty($prevMemory["summary"])) {
                         $prompt[] = ['role' => 'user', 'content' => "#PREVIOUS MEMORY (for reference only)#\n{$prevMemory["summary"]}\n#END OF PREVIOUS MEMORY#"];
                     }

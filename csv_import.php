@@ -31,7 +31,7 @@ $timestamp = $_GET['ts'] ?? time();
 $game_timestamp = $_GET['gamets'] ?? 0;
 $filename = $_GET['filename'] ?? '';
 
-if (!in_array($import_type, ['biography_import', 'oghma_import', 'dynamic_oghma_import'])) {
+if (!in_array($import_type, ['biography_import', 'oghma_import', 'dynamic_oghma_import', 'description_import'])) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Invalid import type']);
     exit;
@@ -81,7 +81,8 @@ if (!move_uploaded_file($_FILES['file']['tmp_name'], $storedFilePath)) {
 Logger::info("CSV file uploaded: $storedFilePath");
 
 try {
-    $db = new sql();
+    $GLOBALS['db'] = new sql();
+    $db = $GLOBALS['db'];
     
     // Set up environment for processor
     $_POST['csv_import'] = '1';
