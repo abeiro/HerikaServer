@@ -2114,6 +2114,47 @@ try {
     Logger::error("Error creating combined_descriptions view: " . $e->getMessage());
 }
 
+try {
+    $db->execQuery("CREATE OR REPLACE VIEW \"public\".\"memory_v\" AS
+ SELECT message,
+    uid,
+    gamets,
+    speaker,
+    listener,
+    ts
+   FROM ( SELECT memory.message,
+            memory.uid,
+            memory.gamets,
+            '-'::text AS speaker,
+            '-'::text AS listener,
+            memory.ts
+           FROM memory
+          WHERE memory.message !~~ 'Dear Diary%'::text AND memory.message <> ''::text and event<>'backgroundlife_diary'::text
+        UNION
+         SELECT (((('(Context Location:'::text || speech.location) || ') '::text) || speech.speaker) || ': '::text) || speech.speech,
+            speech.rowid::integer AS rowid,
+            speech.gamets,
+            speech.speaker,
+            speech.listener,
+            speech.ts
+           FROM speech
+          WHERE speech.speech <> ''::text
+        UNION
+         SELECT eventlog.data,
+            eventlog.rowid::integer AS rowid,
+            eventlog.gamets,
+            '-'::text AS text,
+            '-'::text AS listener,
+            eventlog.ts
+           FROM eventlog
+          WHERE eventlog.type::text = ANY (ARRAY['death'::character varying::text, 'location'::character varying::text])) subquery
+  ORDER BY gamets, ts");
+    $updateVersion("memory_v",20251122001);
+    Logger::info("Updated memory_v BgL patch");
+} catch (Exception $e) {
+    Logger::error("Error creating memory_v BgL patch: " . $e->getMessage());
+}
+
 
 if ($checkTableExists("translations") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/translations_table.sql"));

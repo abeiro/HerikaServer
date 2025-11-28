@@ -157,7 +157,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 $fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
     "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
-    "util_location_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace","combatbark","util_location_npc","enable_bg"];
+    "util_location_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace","combatbark","util_location_npc","enable_bg","region"];
 
 if (isset($GLOBALS["external_fast_commands"])) {
     $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
@@ -927,10 +927,13 @@ if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
 
 // Fake entry to mark time passing when bored event
 if (in_array($gameRequest[0],["bored"])) {
-    $localGameRequest=$gameRequest;
-    $localGameRequest[0]="infoaction";
-    $localGameRequest[3].=". (Time passes without anyone in the group talking) ";
-    logEvent($localGameRequest);
+    if (($localGameRequest[2]-GetLastSpeechTs())> (( 1 /0.0000024)) ) {
+        $localGameRequest=$gameRequest;
+        $localGameRequest[0]="infoaction";
+            $localGameRequest[3].=". (Time passes without anyone in the group talking) ";
+        logEvent($localGameRequest);
+    }
+    
     $GLOBALS["ADD_PLAYER_BIOS"]=false;
 
     if ((isset($GLOBALS["BORED_EVENT_SERVERSIDE"])&&($GLOBALS["BORED_EVENT_SERVERSIDE"]))) {
