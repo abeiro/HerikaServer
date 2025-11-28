@@ -534,6 +534,28 @@ function DataPosibleLocationsToGo()
     return array_values($retData);
 }
 
+function DataPosibleLocationsToGoWide()
+{
+    global $db;
+    $lastDialogFull = array();
+    $results = $db->fetchOne("select  a.data  as data  FROM  eventlog a 
+    WHERE type in ('region')  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+
+    if ($results) {
+        $regCn=$db->escape($results["data"]);
+        $locs = $db->fetchAll("select  name  FROM  locations where region='{$regCn}'");
+        $r=[];
+        foreach ($locs as $loc) {
+            $r[]=$loc["name"];
+
+        }
+        return $r;
+    }
+
+    return [];
+
+}
+
 function DataPosibleInspectTargets($pack=true)
 {
     global $db;
@@ -1099,7 +1121,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc' and type<>'infoitems'  
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
-    and type<>'request' and type<>'playerinfo' and type<>'im_alive'
+    and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region'
     ".(($actorEscaped)?" 
     and (
      people like '%|$actorEscaped|%' 
@@ -2182,6 +2204,19 @@ function DataLastRetFunc($actor, $lastNelements = -2)
 
 }
 
+function DataLastAction($actor)
+{
+    global $db;
+    
+    $lastDialogFull = array();
+    $cnActor = $db->escape($actor);
+    $results = $db->fetchOne("select  *  FROM public.actions_issued
+    WHERE actorname='$cnActor' order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+    
+    return $results;
+
+}
+
 function DataLastKnowDate() 
 {
 
@@ -2276,25 +2311,29 @@ function PackIntoSummary($onlyMissingDiary=false)
         Logger::info("Missing diary insert done");
 
     } else {
-        //$results = $GLOBALS["db"]->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary"); // 2.1ms
+        $lastGameTsRecord = $GLOBALS["db"]->fetchOne("select gamets as gamets from eventlog order by gamets desc LIMIT 1"); // 2.1ms
         $results = $GLOBALS["db"]->fetchAll("select gamets_truncated from memory_summary order by gamets_truncated desc LIMIT 1"); // 0.5ms, faster 
 
         $maxRow = intval($results[0]["gamets_truncated"]);
-
+        $minRow = intval($lastGameTsRecord["gamets"]);
+        $minRowTs = intval($lastGameTsRecord["gamets"] -  ( 1 /0.0000024));
+        
         $pfi = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] ?? 10) * 100000;
-
-        $results = $db->query("insert into memory_summary select * from ( 
+        $query="insert into memory_summary select * from ( 
                                     select max(gamets) as gamets_truncated,count(*) as n,
                                     STRING_AGG(message, chr(13) || chr(10) || chr(13) || chr(10)) AS packed_message,
                                     NULL as summary,'dialogue' as classifier,max(uid) as uid
                                     from memory_v
                                     where 
                                     message not ilike 'Dear Diary%'
+                                    and gamets>$maxRow 
                                     group by round(gamets/$pfi ,0)  HAVING count(*)>9 order by round(gamets/$pfi ,0) ASC
-                                ) as T where gamets_truncated>$maxRow 
-                                ");
+                                ) as T where gamets_truncated>$maxRow and gamets_truncated<$minRowTs";
+        //error_log($query);
+
+        $results = $db->query($query);
         
-        Logger::info("Main insert done. maxRow={$maxRow} pfi={$pfi} ");
+        Logger::info("Main insert done. maxRow={$maxRow} pfi={$pfi} , minRowTs=$minRowTs ");
         //$results = $db->query("delete from memory_summary  where classifier='dialogue' and packed_message not like '%Context%Location%'");
         
         $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
@@ -3716,6 +3755,7 @@ function call_llm() {
 
                             $destinationName=$GLOBALS["db"]->escape(trim($destination));
                             $dbDestination=$GLOBALS["db"]->fetchOne("SELECT name, similarity(name, '$destinationName') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
+                            $dbDestinationRegion=$GLOBALS["db"]->fetchOne("SELECT name, similarity(region, '$destinationName') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
 
                             $contextDestinations=DataPosibleLocationsToGo();
 
@@ -3741,6 +3781,12 @@ function call_llm() {
                                 if (is_array($dbDestination) && isset($dbDestination["formid"])) {
                                     $destination=$dbDestination["formid"];
                                     error_log("[ACTION POSTFILTER TravelTo] found database entry for $localtarget => $destination => {$dbDestination["name"]}, similarity ({$dbDestination["sim"]})");
+                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelToRaw@$destination";    
+                                
+                                } else if (is_array($dbDestinationRegion) && isset($dbDestinationRegion["formid"])) {
+
+                                    $destination=$dbDestinationRegion["formid"];
+                                    error_log("[ACTION POSTFILTER TravelTo] found database (searching by region) entry for $localtarget => $destination => {$dbDestinationRegion["name"]}, similarity ({$dbDestinationRegion["sim"]})");
                                     $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelToRaw@$destination";    
                                 } else if (stripos($destination,"outside")!==false) {
                                     $destination=DataLastKnownLocationHuman(true,false);
