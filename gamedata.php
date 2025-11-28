@@ -389,7 +389,8 @@ function handleStatsUpdate(array $data, NpcMaster $npcMaster): void {
                 'magicka' => isset($stats['magicka']) ? floatval($stats['magicka']) : 0,
                 'magicka_max' => isset($stats['magicka_max']) ? floatval($stats['magicka_max']) : 0,
                 'stamina' => isset($stats['stamina']) ? floatval($stats['stamina']) : 0,
-                'stamina_max' => isset($stats['stamina_max']) ? floatval($stats['stamina_max']) : 0
+                'stamina_max' => isset($stats['stamina_max']) ? floatval($stats['stamina_max']) : 0,
+                'scale' => isset($stats['scale']) ? floatval($stats['scale']) : 1.0
             ];
             
             $player->setJson('stats', $statsData);
@@ -416,7 +417,8 @@ function handleStatsUpdate(array $data, NpcMaster $npcMaster): void {
                 'magicka' => isset($stats['magicka']) ? floatval($stats['magicka']) : 0,
                 'magicka_max' => isset($stats['magicka_max']) ? floatval($stats['magicka_max']) : 0,
                 'stamina' => isset($stats['stamina']) ? floatval($stats['stamina']) : 0,
-                'stamina_max' => isset($stats['stamina_max']) ? floatval($stats['stamina_max']) : 0
+                'stamina_max' => isset($stats['stamina_max']) ? floatval($stats['stamina_max']) : 0,
+                'scale' => isset($stats['scale']) ? floatval($stats['scale']) : 1.0
             ];
             
             $currentData = $npcMaster->setMetadata($currentData, $meta);
@@ -452,7 +454,8 @@ function handleStatsUpdate(array $data, NpcMaster $npcMaster): void {
         'magicka' => isset($stats['magicka']) ? floatval($stats['magicka']) : 0,
         'magicka_max' => isset($stats['magicka_max']) ? floatval($stats['magicka_max']) : 0,
         'stamina' => isset($stats['stamina']) ? floatval($stats['stamina']) : 0,
-        'stamina_max' => isset($stats['stamina_max']) ? floatval($stats['stamina_max']) : 0
+        'stamina_max' => isset($stats['stamina_max']) ? floatval($stats['stamina_max']) : 0,
+        'scale' => isset($stats['scale']) ? floatval($stats['scale']) : 1.0
     ];
     
     // Save back to database

@@ -67,6 +67,57 @@ function isItemBlacklisted($itemName) {
     return false;
 }
 
+/**
+ * Get height description based on scale value
+ * Reads height descriptions from prompts table with hardcoded fallback
+ * 
+ * @param float $scale The NPC scale value (typically 0.6 to 1.4)
+ * @return string Height description or empty string if not found
+ */
+function getHeightDescription(float $scale): string {
+    static $heightDescriptions = null;
+    
+    // Hardcoded fallback in case database fails
+    $fallbackDescriptions = [
+        ['name' => 'VerySmall', 'min_scale' => 0.0, 'max_scale' => 0.60, 'description' => 'Very small and tiny in stature'],
+        ['name' => 'Small', 'min_scale' => 0.60, 'max_scale' => 0.80, 'description' => 'Smaller than most people'],
+        ['name' => 'ModestStature', 'min_scale' => 0.80, 'max_scale' => 0.95, 'description' => 'Slightly below average height'],
+        ['name' => 'Average', 'min_scale' => 0.95, 'max_scale' => 1.05, 'description' => 'Typical height'],
+        ['name' => 'Tall', 'min_scale' => 1.05, 'max_scale' => 1.20, 'description' => 'Tall, standing a head above most people'],
+        ['name' => 'VeryTall', 'min_scale' => 1.20, 'max_scale' => 1.40, 'description' => 'Very tall'],
+        ['name' => 'Giantlike', 'min_scale' => 1.40, 'max_scale' => 99.0, 'description' => 'Giant in height and stature']
+    ];
+    
+    // Load height descriptions from prompts table (cached)
+    if ($heightDescriptions === null) {
+        try {
+            global $db;
+            $result = $db->fetchOne("SELECT COALESCE(custom_prompt, default_prompt) as prompt FROM prompts WHERE prompt_key = 'height_descriptions'");
+            
+            if ($result && !empty($result['prompt'])) {
+                $data = json_decode($result['prompt'], true);
+                $heightDescriptions = $data['height_descriptions'] ?? $fallbackDescriptions;
+            } else {
+                // Database query succeeded but no data - use fallback
+                $heightDescriptions = $fallbackDescriptions;
+            }
+        } catch (Exception $e) {
+            // Database error - use fallback
+            Logger::debug("Using fallback height descriptions due to database error: " . $e->getMessage());
+            $heightDescriptions = $fallbackDescriptions;
+        }
+    }
+    
+    // Find matching height description
+    foreach ($heightDescriptions as $desc) {
+        if ($scale >= $desc['min_scale'] && $scale < $desc['max_scale']) {
+            return $desc['description'];
+        }
+    }
+    
+    return ''; // No description if out of range
+}
+
 
 function DataDequeue()
 {
@@ -260,8 +311,18 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $profileString .= ". Appearance: " . trim($currentNpcData["appearance"]);
                     }
                     
-                    // Add equipment if available
+                    // Get metadata once for both scale and equipment
                     $metaData = $npcMaster->getMetaData($currentNpcData);
+                    
+                    // Add height description based on scale
+                    if (isset($metaData["stats"]["scale"])) {
+                        $heightDesc = getHeightDescription(floatval($metaData["stats"]["scale"]));
+                        if (!empty($heightDesc)) {
+                            $profileString .= ". " . $heightDesc;
+                        }
+                    }
+                    
+                    // Add equipment if available
                     if (isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
                         $equipmentParts = [];
                         $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'left_hand', 'right_hand'];

@@ -2406,6 +2406,78 @@ if ($checkVersion("prompts")<20251116001) {
 }
 
 //----------------------------------------------------
+// HEIGHT DESCRIPTIONS PROMPT
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251128002) {
+    Logger::debug("Applying prompts table 20251128002 - Adding height_descriptions");
+    
+    // Seed height descriptions as JSON
+    $heightDescriptions = $db->escape(json_encode([
+        "height_descriptions" => [
+            [
+                "name" => "VerySmall",
+                "min_scale" => 0.0,
+                "max_scale" => 0.60,
+                "description" => "Very small and tiny in stature"
+            ],
+            [
+                "name" => "Small",
+                "min_scale" => 0.60,
+                "max_scale" => 0.80,
+                "description" => "Smaller than most people"
+            ],
+            [
+                "name" => "ModestStature",
+                "min_scale" => 0.80,
+                "max_scale" => 0.95,
+                "description" => "Slightly below average height"
+            ],
+            [
+                "name" => "Average",
+                "min_scale" => 0.95,
+                "max_scale" => 1.05,
+                "description" => "Typical height"
+            ],
+            [
+                "name" => "Tall",
+                "min_scale" => 1.05,
+                "max_scale" => 1.20,
+                "description" => "Tall, standing a head above most people"
+            ],
+            [
+                "name" => "VeryTall",
+                "min_scale" => 1.20,
+                "max_scale" => 1.40,
+                "description" => "Very tall"
+            ],
+            [
+                "name" => "Giantlike",
+                "min_scale" => 1.40,
+                "max_scale" => 99.0,
+                "description" => "Giant in height and stature"
+            ]
+        ]
+    ]));
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'height_descriptions',
+            '$heightDescriptions',
+            'JSON configuration for NPC height descriptions based on scale values. Used to generate natural language height descriptions from numeric scale values for NPC context.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251128002);
+    Logger::info("Applied patch prompts 20251128002 - Added height_descriptions");
+}
+
+//----------------------------------------------------
 // CORE_PLAYER DATA MIGRATION
 //----------------------------------------------------
 

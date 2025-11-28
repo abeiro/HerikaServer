@@ -1508,7 +1508,25 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                                     <?= isset($metadataStats['level']) ? intval($metadataStats['level']) : '—' ?>
                                 </div>
                             </div>
-                            <div></div>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <div style="color:#f39c12; min-width:100px; font-weight:700;">📏 Scale</div>
+                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; font-weight:700; background:#1a1a1a; font-size:16px;">
+                                    <?php 
+                                    $scale = isset($metadataStats['scale']) ? floatval($metadataStats['scale']) : null;
+                                    if ($scale !== null) {
+                                        echo number_format($scale, 2);
+                                        // Get height description if available
+                                        require_once(__DIR__ . "/../../lib/data_functions.php");
+                                        $heightDesc = getHeightDescription($scale);
+                                        if (!empty($heightDesc)) {
+                                            echo ' <span style="color:#999; font-size:12px; font-weight:400;">(' . htmlspecialchars($heightDesc) . ')</span>';
+                                        }
+                                    } else {
+                                        echo '—';
+                                    }
+                                    ?>
+                                </div>
+                            </div>
                             <div style="display:flex; gap:8px; align-items:center;">
                                 <div style="color:#e74c3c; min-width:100px;">❤️ Health</div>
                                 <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; background:#1a1a1a; flex:1;">
