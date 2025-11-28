@@ -123,5 +123,41 @@ class Player
     {
         return $this->db->escape($value);
     }
+
+    /**
+     * Get a value and decode it as JSON
+     * @param string $key The setting key
+     * @return array|null The decoded JSON data, or null if not found or invalid
+     */
+    public function getJson(string $key): ?array
+    {
+        $value = $this->get($key);
+        if ($value === null) {
+            return null;
+        }
+        
+        $decoded = json_decode($value, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return null;
+        }
+        
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    /**
+     * Encode data as JSON and store it
+     * @param string $key The setting key
+     * @param array $data The data to encode and store
+     * @return bool Success status
+     */
+    public function setJson(string $key, array $data): bool
+    {
+        $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($json === false) {
+            return false;
+        }
+        
+        return $this->set($key, $json);
+    }
 }
 

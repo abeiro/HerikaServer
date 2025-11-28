@@ -59,7 +59,10 @@ try {
             handleStatsUpdate($data, $npcMaster);
             break;
         case 'spells':
-            handleSpellsUpdate($data, $npcMaster);
+            // Only handle NPC spells, not player spells (deprecated for player)
+            if ($data['actor_type'] !== 'player') {
+                handleSpellsUpdate($data, $npcMaster);
+            }
             break;
         case 'skyrim_stats':
             handleSkyrimStatsUpdate($data);
@@ -92,14 +95,53 @@ function handleEquipmentUpdate(array $data, NpcMaster $npcMaster): void {
     
     $equipment = $data['equipment'];
     
-    // Get or create NPC/Player record
+    // If this is a player, save directly to core_player table (player doesn't need NPC record)
+    if ($actorType === 'player') {
+        try {
+            require_once(__DIR__ . "/lib/core/player.class.php");
+            $player = new Player();
+            
+            // Format equipment data for storage
+            $equipmentData = [];
+            foreach ($equipment as $slot => $item) {
+                $equipmentData[$slot] = isset($item['name']) ? $item['name'] : '';
+                $equipmentData[$slot . '_baseid'] = isset($item['baseid']) ? $item['baseid'] : '';
+            }
+            
+            $player->setJson('equipment', $equipmentData);
+            Logger::debug("[gamedata.php] Saved player equipment to core_player table");
+        } catch (Exception $e) {
+            Logger::warn("[gamedata.php] Could not save player equipment to core_player: " . $e->getMessage());
+        }
+        
+        // For backward compatibility, also try to update NPC record if it exists
+        $currentData = $npcMaster->getByName($actorName);
+        if ($currentData) {
+            $meta = [];
+            if (!empty($currentData['metadata'])) {
+                $meta = json_decode($currentData['metadata'], true);
+                if (!is_array($meta)) {
+                    $meta = [];
+                }
+            }
+            
+            $meta['equipment'] = [];
+            foreach ($equipment as $slot => $item) {
+                $meta['equipment'][$slot] = isset($item['name']) ? $item['name'] : '';
+                $meta['equipment'][$slot . '_baseid'] = isset($item['baseid']) ? $item['baseid'] : '';
+            }
+            
+            $currentData = $npcMaster->setMetadata($currentData, $meta);
+            $npcMaster->updateByArray($currentData);
+        }
+        
+        return; // Done with player, exit early
+    }
+    
+    // Handle NPC equipment
     $currentData = $npcMaster->getByName($actorName);
     
     if (!$currentData) {
-        // NPC/Player not in database yet - this is normal for NPCs not yet encountered
-        if ($actorType === 'player') {
-            Logger::warn("[gamedata.php] Player record not found, skipping equipment update for: {$actorName}");
-        }
         // NPC not in database yet - this is normal, they haven't been encountered
         return;
     }
@@ -141,14 +183,65 @@ function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void {
     
     $items = $data['items'];
     
-    // Get or create NPC/Player record
+    // If this is a player, save directly to core_player table (player doesn't need NPC record)
+    if ($actorType === 'player') {
+        try {
+            require_once(__DIR__ . "/lib/core/player.class.php");
+            $player = new Player();
+            
+            // Format inventory data for storage
+            $inventoryData = [];
+            foreach ($items as $item) {
+                if (isset($item['name']) && isset($item['baseid']) && isset($item['count'])) {
+                    $inventoryData[] = [
+                        'name' => $item['name'],
+                        'baseid' => $item['baseid'],
+                        'count' => intval($item['count'])
+                    ];
+                }
+            }
+            
+            $player->setJson('inventory', $inventoryData);
+            Logger::debug("[gamedata.php] Saved player inventory to core_player table");
+        } catch (Exception $e) {
+            Logger::warn("[gamedata.php] Could not save player inventory to core_player: " . $e->getMessage());
+        }
+        
+        // For backward compatibility, also try to update NPC record if it exists
+        $currentData = $npcMaster->getByName($actorName);
+        if ($currentData) {
+            $meta = [];
+            if (!empty($currentData['metadata'])) {
+                $meta = json_decode($currentData['metadata'], true);
+                if (!is_array($meta)) {
+                    $meta = [];
+                }
+            }
+            
+            $meta['inventory'] = [];
+            foreach ($items as $item) {
+                if (isset($item['name']) && isset($item['baseid']) && isset($item['count'])) {
+                    $meta['inventory'][] = [
+                        'name' => $item['name'],
+                        'baseid' => $item['baseid'],
+                        'count' => intval($item['count'])
+                    ];
+                }
+            }
+            
+            $currentData = $npcMaster->setMetadata($currentData, $meta);
+            $npcMaster->updateByArray($currentData);
+        }
+        
+        $itemCount = count($items);
+        Logger::debug("[gamedata.php] Updated inventory for player: {$actorName} ({$itemCount} items)");
+        return; // Done with player, exit early
+    }
+    
+    // Handle NPC inventory
     $currentData = $npcMaster->getByName($actorName);
     
     if (!$currentData) {
-        // NPC/Player not in database yet - this is normal for NPCs not yet encountered
-        if ($actorType === 'player') {
-            Logger::warn("[gamedata.php] Player record not found, skipping inventory update for: {$actorName}");
-        }
         // NPC not in database yet - this is normal, they haven't been encountered
         return;
     }
@@ -196,14 +289,52 @@ function handleSkillsUpdate(array $data, NpcMaster $npcMaster): void {
     
     $skills = $data['skills'];
     
-    // Get or create NPC/Player record
+    // If this is a player, save directly to core_player table (player doesn't need NPC record)
+    if ($actorType === 'player') {
+        try {
+            require_once(__DIR__ . "/lib/core/player.class.php");
+            $player = new Player();
+            
+            // Format skills data for storage
+            $skillsData = [];
+            foreach ($skills as $skillName => $skillValue) {
+                $skillsData[$skillName] = floatval($skillValue);
+            }
+            
+            $player->setJson('skills', $skillsData);
+            Logger::debug("[gamedata.php] Saved player skills to core_player table");
+        } catch (Exception $e) {
+            Logger::warn("[gamedata.php] Could not save player skills to core_player: " . $e->getMessage());
+        }
+        
+        // For backward compatibility, also try to update NPC record if it exists
+        $currentData = $npcMaster->getByName($actorName);
+        if ($currentData) {
+            $meta = [];
+            if (!empty($currentData['metadata'])) {
+                $meta = json_decode($currentData['metadata'], true);
+                if (!is_array($meta)) {
+                    $meta = [];
+                }
+            }
+            
+            $meta['skills'] = [];
+            foreach ($skills as $skillName => $skillValue) {
+                $meta['skills'][$skillName] = floatval($skillValue);
+            }
+            
+            $currentData = $npcMaster->setMetadata($currentData, $meta);
+            $npcMaster->updateByArray($currentData);
+        }
+        
+        Logger::debug("[gamedata.php] Updated skills for player: {$actorName}");
+        return; // Done with player, exit early
+    }
+    
+    // Handle NPC skills
     $currentData = $npcMaster->getByName($actorName);
     
     if (!$currentData) {
-        // NPC/Player not in database yet - this is normal for NPCs not yet encountered
-        if ($actorType === 'player') {
-            Logger::warn("[gamedata.php] Player record not found, skipping skills update for: {$actorName}");
-        }
         // NPC not in database yet - this is normal, they haven't been encountered
         return;
     }
@@ -244,14 +375,62 @@ function handleStatsUpdate(array $data, NpcMaster $npcMaster): void {
     
     $stats = $data['stats'];
     
-    // Get or create NPC/Player record
+    // If this is a player, save directly to core_player table (player doesn't need NPC record)
+    if ($actorType === 'player') {
+        try {
+            require_once(__DIR__ . "/lib/core/player.class.php");
+            $player = new Player();
+            
+            // Format stats data for storage
+            $statsData = [
+                'level' => isset($stats['level']) ? intval($stats['level']) : 1,
+                'health' => isset($stats['health']) ? floatval($stats['health']) : 0,
+                'health_max' => isset($stats['health_max']) ? floatval($stats['health_max']) : 0,
+                'magicka' => isset($stats['magicka']) ? floatval($stats['magicka']) : 0,
+                'magicka_max' => isset($stats['magicka_max']) ? floatval($stats['magicka_max']) : 0,
+                'stamina' => isset($stats['stamina']) ? floatval($stats['stamina']) : 0,
+                'stamina_max' => isset($stats['stamina_max']) ? floatval($stats['stamina_max']) : 0
+            ];
+            
+            $player->setJson('stats', $statsData);
+            Logger::debug("[gamedata.php] Saved player stats to core_player table");
+        } catch (Exception $e) {
+            Logger::warn("[gamedata.php] Could not save player stats to core_player: " . $e->getMessage());
+        }
+        
+        // For backward compatibility, also try to update NPC record if it exists
+        $currentData = $npcMaster->getByName($actorName);
+        if ($currentData) {
+            $meta = [];
+            if (!empty($currentData['metadata'])) {
+                $meta = json_decode($currentData['metadata'], true);
+                if (!is_array($meta)) {
+                    $meta = [];
+                }
+            }
+            
+            $meta['stats'] = [
+                'level' => isset($stats['level']) ? intval($stats['level']) : 1,
+                'health' => isset($stats['health']) ? floatval($stats['health']) : 0,
+                'health_max' => isset($stats['health_max']) ? floatval($stats['health_max']) : 0,
+                'magicka' => isset($stats['magicka']) ? floatval($stats['magicka']) : 0,
+                'magicka_max' => isset($stats['magicka_max']) ? floatval($stats['magicka_max']) : 0,
+                'stamina' => isset($stats['stamina']) ? floatval($stats['stamina']) : 0,
+                'stamina_max' => isset($stats['stamina_max']) ? floatval($stats['stamina_max']) : 0
+            ];
+            
+            $currentData = $npcMaster->setMetadata($currentData, $meta);
+            $npcMaster->updateByArray($currentData);
+        }
+        
+        Logger::debug("[gamedata.php] Updated stats for player: {$actorName}");
+        return; // Done with player, exit early
+    }
+    
+    // Handle NPC stats
     $currentData = $npcMaster->getByName($actorName);
     
     if (!$currentData) {
-        // NPC/Player not in database yet - this is normal for NPCs not yet encountered
-        if ($actorType === 'player') {
-            Logger::warn("[gamedata.php] Player record not found, skipping stats update for: {$actorName}");
-        }
         // NPC not in database yet - this is normal, they haven't been encountered
         return;
     }
@@ -276,23 +455,6 @@ function handleStatsUpdate(array $data, NpcMaster $npcMaster): void {
         'stamina_max' => isset($stats['stamina_max']) ? floatval($stats['stamina_max']) : 0
     ];
     
-    // If this is a player, also save to core_player table
-    if ($actorType === 'player') {
-        try {
-            require_once(__DIR__ . "/lib/core/player.class.php");
-            $player = new Player();
-            
-            // Save each stat to core_player
-            foreach ($meta['stats'] as $statKey => $statValue) {
-                $player->set($statKey, (string)$statValue);
-            }
-            
-            Logger::debug("[gamedata.php] Saved player stats to core_player table");
-        } catch (Exception $e) {
-            Logger::warn("[gamedata.php] Could not save player stats to core_player: " . $e->getMessage());
-        }
-    }
-    
     // Save back to database
     $currentData = $npcMaster->setMetadata($currentData, $meta);
     $npcMaster->updateByArray($currentData);
@@ -301,11 +463,17 @@ function handleStatsUpdate(array $data, NpcMaster $npcMaster): void {
 }
 
 /**
- * Handle spells update
+ * Handle spells update (NPCs only - player spells deprecated)
  */
 function handleSpellsUpdate(array $data, NpcMaster $npcMaster): void {
     $actorName = $data['actor_name'];
     $actorType = $data['actor_type'];
+    
+    // Player spells are deprecated - skip
+    if ($actorType === 'player') {
+        Logger::debug("[gamedata.php] Skipping player spells update (deprecated)");
+        return;
+    }
     
     if (!isset($data['spells'])) {
         Logger::error("[gamedata.php] Spells update missing spells data for {$actorName}");
@@ -314,14 +482,10 @@ function handleSpellsUpdate(array $data, NpcMaster $npcMaster): void {
     
     $spells = $data['spells'];
     
-    // Get or create NPC/Player record
+    // Handle NPC spells
     $currentData = $npcMaster->getByName($actorName);
     
     if (!$currentData) {
-        // NPC/Player not in database yet - this is normal for NPCs not yet encountered
-        if ($actorType === 'player') {
-            Logger::warn("[gamedata.php] Player record not found, skipping spells update for: {$actorName}");
-        }
         // NPC not in database yet - this is normal, they haven't been encountered
         return;
     }
@@ -352,6 +516,8 @@ function handleSpellsUpdate(array $data, NpcMaster $npcMaster): void {
     // Save back to database
     $currentData = $npcMaster->setMetadata($currentData, $meta);
     $npcMaster->updateByArray($currentData);
+    
+    Logger::debug("[gamedata.php] Updated spells for NPC: {$actorName}");
 }
 
 /**

@@ -63,6 +63,12 @@ $playerName = $allPlayerData['player_name'] ?? 'Unknown';
 $appearance = $allPlayerData['appearance'] ?? '';
 $speechStyle = $allPlayerData['speech_style'] ?? '';
 
+// Load JSON data (equipment, inventory, skills, stats)
+$equipment = $player->getJson('equipment') ?? [];
+$inventory = $player->getJson('inventory') ?? [];
+$skills = $player->getJson('skills') ?? [];
+$stats = $player->getJson('stats') ?? [];
+
 // Organize Skyrim stats into categories
 $statCategories = [
     'Core Stats' => [
@@ -188,6 +194,30 @@ main { padding: <?php echo $isEmbed ? '10px' : '80px 10px 10px'; ?>; }
     font-size: 13px; 
     color: #cfd8e3; 
 }
+.equipment-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.equipment-slot { padding: 8px; background: #1a1a1a; border-radius: 4px; }
+.equipment-slot-name { font-size: 11px; color: #999; text-transform: uppercase; margin-bottom: 4px; }
+.equipment-item-name { font-size: 13px; color: #fff; }
+.equipment-empty { font-size: 13px; color: #666; font-style: italic; }
+.inventory-list { max-height: 400px; overflow-y: auto; }
+.inventory-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: #1a1a1a; border-radius: 4px; margin-bottom: 4px; }
+.inventory-item-name { font-size: 13px; color: #fff; }
+.inventory-item-count { font-size: 12px; color: #8a9bb6; font-weight: 600; background: #2a2a2a; padding: 2px 8px; border-radius: 3px; }
+.skills-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.skill-item { padding: 6px 8px; background: #1a1a1a; border-radius: 4px; }
+.skill-name { font-size: 12px; color: #cfd8e3; margin-bottom: 2px; }
+.skill-value { font-size: 16px; color: #fff; font-weight: 600; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.stat-card { padding: 12px; background: #1a1a1a; border-radius: 4px; }
+.stat-card-title { font-size: 11px; color: #999; text-transform: uppercase; margin-bottom: 6px; }
+.stat-card-value { font-size: 20px; color: #fff; font-weight: 600; }
+.stat-bar-container { width: 100%; height: 6px; background: #2a2a2a; border-radius: 3px; margin-top: 6px; overflow: hidden; }
+.stat-bar { height: 100%; background: linear-gradient(90deg, #207a4a, #2aa65e); border-radius: 3px; transition: width 0.3s; }
+.stat-bar.health { background: linear-gradient(90deg, #c03, #e04); }
+.stat-bar.magicka { background: linear-gradient(90deg, #2070c0, #3090e0); }
+.stat-bar.stamina { background: linear-gradient(90deg, #20a020, #30c030); }
+.no-data { padding: 20px; text-align: center; color: #666; font-style: italic; }
+.full-width-card { grid-column: 1 / -1; }
 
 @media (max-width: 900px) {
     .provider-grid { grid-template-columns: 1fr; }
@@ -230,7 +260,7 @@ main { padding: <?php echo $isEmbed ? '10px' : '80px 10px 10px'; ?>; }
                 <div class="provider-body">
                     <label for="player_name">Player Name</label>
                     <input type="text" id="player_name" name="player_name" value="<?php echo htmlspecialchars($playerName); ?>">
-                    <div class="hint">Your character's name. This is automatically updated when you load a save in Skyrim, but you can also set it manually here.</div>
+                    <div class="hint">Your character's name.</div>
                 </div>
             </div>
 
@@ -264,9 +294,177 @@ main { padding: <?php echo $isEmbed ? '10px' : '80px 10px 10px'; ?>; }
                 </div>
             </div>
         </div>
-
-        <button type="submit" class="btn-save" name="save_player" value="1">💾 Save Player Settings</button>
     </form>
+
+    <!-- Read-only Game Data Section -->
+    <h2 style="margin: 32px 0 16px; font-size: 24px; color: #e9efff;">Player Info</h2>
+    </div>
+
+    <div class="provider-grid">
+        <!-- Stats Card -->
+        <?php if (!empty($stats)): ?>
+        <div class="provider-card">
+            <div class="provider-head">
+                <div class="provider-title">
+                    <div class="provider-icon">📈</div>
+                    <div>Character Stats</div>
+                </div>
+            </div>
+            <div class="provider-body">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-title">Level</div>
+                        <div class="stat-card-value"><?php echo intval($stats['level'] ?? 1); ?></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-title">Health</div>
+                        <div class="stat-card-value"><?php 
+                            $hp = floatval($stats['health'] ?? 0);
+                            $hpMax = floatval($stats['health_max'] ?? 1);
+                            echo round($hp) . ' / ' . round($hpMax);
+                        ?></div>
+                        <div class="stat-bar-container">
+                            <div class="stat-bar health" style="width: <?php echo min(100, ($hp / max(1, $hpMax)) * 100); ?>%"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-title">Magicka</div>
+                        <div class="stat-card-value"><?php 
+                            $mp = floatval($stats['magicka'] ?? 0);
+                            $mpMax = floatval($stats['magicka_max'] ?? 1);
+                            echo round($mp) . ' / ' . round($mpMax);
+                        ?></div>
+                        <div class="stat-bar-container">
+                            <div class="stat-bar magicka" style="width: <?php echo min(100, ($mp / max(1, $mpMax)) * 100); ?>%"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-title">Stamina</div>
+                        <div class="stat-card-value"><?php 
+                            $sp = floatval($stats['stamina'] ?? 0);
+                            $spMax = floatval($stats['stamina_max'] ?? 1);
+                            echo round($sp) . ' / ' . round($spMax);
+                        ?></div>
+                        <div class="stat-bar-container">
+                            <div class="stat-bar stamina" style="width: <?php echo min(100, ($sp / max(1, $spMax)) * 100); ?>%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Equipment Card -->
+        <?php if (!empty($equipment)): ?>
+        <div class="provider-card full-width-card">
+            <div class="provider-head">
+                <div class="provider-title">
+                    <div class="provider-icon">⚔️</div>
+                    <div>Equipment</div>
+                </div>
+            </div>
+            <div class="provider-body">
+                <div class="equipment-grid">
+                    <?php 
+                    $equipmentSlots = [
+                        'helmet' => '🪖 Helmet',
+                        'armor' => '🛡️ Armor',
+                        'boots' => '👢 Boots',
+                        'gloves' => '🧤 Gloves',
+                        'amulet' => '📿 Amulet',
+                        'ring' => '💍 Ring',
+                        'cape' => '🧥 Cape',
+                        'backpack' => '🎒 Backpack',
+                        'left_hand' => '🤚 Left Hand',
+                        'right_hand' => '✋ Right Hand'
+                    ];
+                    foreach ($equipmentSlots as $slot => $label):
+                        $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
+                    ?>
+                    <div class="equipment-slot">
+                        <div class="equipment-slot-name"><?php echo $label; ?></div>
+                        <?php if ($itemName): ?>
+                            <div class="equipment-item-name"><?php echo htmlspecialchars($itemName); ?></div>
+                        <?php else: ?>
+                            <div class="equipment-empty">Empty</div>
+                        <?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- Skills Section -->
+    <?php if (!empty($skills)): ?>
+    <div class="provider-card" style="margin-top: 16px;">
+        <div class="provider-head">
+            <div class="provider-title">
+                <div class="provider-icon">⭐</div>
+                <div>Skills</div>
+            </div>
+        </div>
+        <div class="provider-body">
+            <div class="skills-grid">
+                <?php 
+                // Sort skills by value descending
+                arsort($skills);
+                foreach ($skills as $skillName => $skillValue): 
+                    $displayName = ucwords(str_replace('_', ' ', $skillName));
+                ?>
+                <div class="skill-item">
+                    <div class="skill-name"><?php echo htmlspecialchars($displayName); ?></div>
+                    <div class="skill-value"><?php echo round($skillValue); ?></div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- Inventory Section -->
+    <div class="provider-grid" style="margin-top: 16px;">
+        <!-- Inventory Card -->
+        <?php if (!empty($inventory)): ?>
+        <div class="provider-card">
+            <div class="provider-head">
+                <div class="provider-title">
+                    <div class="provider-icon">🎒</div>
+                    <div>Inventory (<?php echo count($inventory); ?> items)</div>
+                </div>
+            </div>
+            <div class="provider-body">
+                <div class="inventory-list">
+                    <?php 
+                    // Sort inventory by name
+                    usort($inventory, function($a, $b) {
+                        return strcmp($a['name'] ?? '', $b['name'] ?? '');
+                    });
+                    foreach ($inventory as $item): 
+                    ?>
+                    <div class="inventory-item">
+                        <span class="inventory-item-name"><?php echo htmlspecialchars($item['name'] ?? 'Unknown Item'); ?></span>
+                        <span class="inventory-item-count">×<?php echo intval($item['count'] ?? 1); ?></span>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+        <?php else: ?>
+        <div class="provider-card">
+            <div class="provider-head">
+                <div class="provider-title">
+                    <div class="provider-icon">🎒</div>
+                    <div>Inventory</div>
+                </div>
+            </div>
+            <div class="provider-body">
+                <div class="no-data">No inventory data available. Play the game to sync your inventory.</div>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
 </main>
 
 <?php
