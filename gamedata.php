@@ -61,6 +61,9 @@ try {
         case 'spells':
             handleSpellsUpdate($data, $npcMaster);
             break;
+        case 'skyrim_stats':
+            handleSkyrimStatsUpdate($data);
+            break;
         default:
             http_response_code(400);
             echo "Bad Request: Unknown type";
@@ -273,6 +276,23 @@ function handleStatsUpdate(array $data, NpcMaster $npcMaster): void {
         'stamina_max' => isset($stats['stamina_max']) ? floatval($stats['stamina_max']) : 0
     ];
     
+    // If this is a player, also save to core_player table
+    if ($actorType === 'player') {
+        try {
+            require_once(__DIR__ . "/lib/core/player.class.php");
+            $player = new Player();
+            
+            // Save each stat to core_player
+            foreach ($meta['stats'] as $statKey => $statValue) {
+                $player->set($statKey, (string)$statValue);
+            }
+            
+            Logger::debug("[gamedata.php] Saved player stats to core_player table");
+        } catch (Exception $e) {
+            Logger::warn("[gamedata.php] Could not save player stats to core_player: " . $e->getMessage());
+        }
+    }
+    
     // Save back to database
     $currentData = $npcMaster->setMetadata($currentData, $meta);
     $npcMaster->updateByArray($currentData);
@@ -332,5 +352,45 @@ function handleSpellsUpdate(array $data, NpcMaster $npcMaster): void {
     // Save back to database
     $currentData = $npcMaster->setMetadata($currentData, $meta);
     $npcMaster->updateByArray($currentData);
+}
+
+/**
+ * Handle Skyrim statistics update (player only)
+ * This handles the ~40 Skyrim stats like Quests Completed, Days Passed, etc.
+ */
+function handleSkyrimStatsUpdate(array $data): void {
+    if (!isset($data['stats']) || !is_array($data['stats'])) {
+        Logger::error("[gamedata.php] Skyrim stats update missing stats data");
+        return;
+    }
+    
+    try {
+        require_once(__DIR__ . "/lib/core/player.class.php");
+        $player = new Player();
+        
+        $stats = $data['stats'];
+        
+        // Save each stat to core_player table
+        foreach ($stats as $statKey => $statValue) {
+            $player->set($statKey, (string)$statValue);
+        }
+        
+        // Also save to conf_opts for backward compatibility
+        $db = $GLOBALS["db"];
+        foreach ($stats as $statKey => $statValue) {
+            $escapedKey = $db->escape($statKey);
+            $escapedValue = $db->escape((string)$statValue);
+            $db->execQuery("
+                INSERT INTO public.conf_opts (id, value) 
+                VALUES ('{$escapedKey}', '{$escapedValue}')
+                ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+            ");
+        }
+        
+        Logger::debug("[gamedata.php] Updated " . count($stats) . " Skyrim stats to core_player and conf_opts");
+        
+    } catch (Exception $e) {
+        Logger::error("[gamedata.php] Failed to save Skyrim stats: " . $e->getMessage());
+    }
 }
 

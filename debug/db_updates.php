@@ -95,6 +95,10 @@ if ($checkTableExists("core_profiles") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master.sql"));
         $db->execQuery("SET search_path TO public");
     }
+    if ($checkTableExists("core_player") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_player.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
 } catch (Exception $e) {
     Logger::warn("Bootstrap core tables: " . $e->getMessage());
 }
@@ -2399,6 +2403,70 @@ if ($checkVersion("prompts")<20251116001) {
     
     $updateVersion("prompts", 20251116001);
     Logger::info("Applied patch prompts 20251116001 - Added random_narration_prompt");
+}
+
+//----------------------------------------------------
+// CORE_PLAYER DATA MIGRATION
+//----------------------------------------------------
+
+if ($checkVersion("core_player")<20241128001) {
+    Logger::debug("Applying core_player migration 20241128001 - Migrating player data from conf_opts");
+    
+    // List of keys to migrate from conf_opts to core_player
+    $keysToMigrate = [
+        'PLAYER_NAME' => 'player_name',
+        'PLAYER_BIOS' => 'appearance',  // Renamed
+        'PLAYER_SPEECH_STYLE' => 'speech_style',
+        // Skyrim stats
+        'Mauls', 'Werewolf Transformations', 'Days As Werewolf',
+        'Necks Bitten', 'Days As Vampire', 'Locations Discovered',
+        'Dungeons Cleared', 'Days Passed', 'Hours Slept',
+        'Hours Waited', 'Standing Stones Found', 'Gold Found',
+        'Most Gold Carried', 'Chests Looted', 'Skill Increases',
+        'Skill Books Read', 'Food Eaten', 'Training Sessions',
+        'Books Read', 'Horses Owned', 'Houses Owned',
+        'Stores Invested In', 'Barters', 'Persuasions',
+        'Bribes', 'Intimidations', 'Diseases Contracted',
+        'Dragonborn Quests Completed DB', 'Dawnguard Quests Completed DG',
+        'Quests Completed', 'Misc Objectives Completed',
+        'Main Quests Completed', 'Side Quests Completed',
+        'The Companions Quests Completed', 'College of Winterhold Quests Completed',
+        'Thieves\' Guild Quests Completed', 'The Dark Brotherhood Quests Completed',
+        'Civil War Quests Completed', 'Daedric Quests Completed',
+        'Questlines Completed', 'Bard\'s College Quests Completed',
+        'Blades Quests Completed', 'Forsworn Quests Completed',
+        'Imperial Legion Quests Completed', 'Stormcloaks Quests Completed',
+        'Thieves\' Guild Special Jobs Completed', 'Dark Brotherhood Contracts Completed'
+    ];
+    
+    foreach ($keysToMigrate as $confKey => $playerKey) {
+        // If confKey is numeric (index in array), use it as both source and dest
+        if (is_numeric($confKey)) {
+            $confKey = $playerKey;
+        }
+        
+        // Check if data exists in conf_opts
+        $escapedConfKey = $db->escape($confKey);
+        $result = $db->fetchAll("SELECT value FROM public.conf_opts WHERE id = '{$escapedConfKey}' LIMIT 1");
+        
+        if ($result && isset($result[0]['value'])) {
+            $value = $result[0]['value'];
+            $escapedPlayerKey = $db->escape($playerKey);
+            $escapedValue = $db->escape($value);
+            
+            // Insert or update in core_player
+            $db->execQuery("
+                INSERT INTO public.core_player (id, value) 
+                VALUES ('{$escapedPlayerKey}', '{$escapedValue}')
+                ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+            ");
+            
+            Logger::debug("Migrated {$confKey} -> core_player.{$playerKey}");
+        }
+    }
+    
+    $updateVersion("core_player", 20241128001);
+    Logger::info("Applied patch core_player 20241128001 - Migrated player data from conf_opts");
 }
 
 //----------------------------------------------------

@@ -2377,12 +2377,25 @@ function DataGetLastReadedBook() {
 
 function DataGetTrackedStat($stat) {
     global $db;
-
-    $results = $db->fetchAll("select * from conf_opts where id='$stat'");
     
-
+    // Try to get from core_player table first
+    try {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+        $player = new Player();
+        $value = $player->get($stat);
+        
+        if ($value !== null) {
+            return json_encode([['id' => $stat, 'value' => $value]]);
+        }
+    } catch (Exception $e) {
+        Logger::debug("Could not read stat from core_player: " . $e->getMessage());
+    }
+    
+    // Fallback to conf_opts
+    $escapedStat = $db->escape($stat);
+    $results = $db->fetchAll("select * from conf_opts where id='{$escapedStat}'");
+    
     return json_encode($results);
-    
 }
 
 function DataGetCurrentPartyConf() {
