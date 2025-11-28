@@ -339,7 +339,8 @@ function CheckNPCSpawn(
         $metaData["is_rolemastered"]        = true;
         $metaData["gps_track"]              = true;
         $extData["background_life_enabled"] = true;
-
+        $extData["background_life_last_updated"] = $GLOBALS["last_gamets"];
+        
         $npcLocalData = $npcMaster->setMetadata($npcLocalData, $metaData);
         $npcLocalData = $npcMaster->setExtendedData($npcLocalData, $extData);
         $npcMaster->updateByArray($npcLocalData);

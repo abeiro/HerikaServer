@@ -46,7 +46,7 @@ type (enum, required) – Lore, Item, Location.
 item (string, optional) – If type=Item, the item_ref this topic refers to.
 giver (string, required) – NPC reference or name giving the topic.
 info (string, required) – Topic the NPC should talk about. Use a few example phrases, but mainly describe the topic.
-target (string, required) – NPC reference (char_ref) or "player" who receives the topic.
+target (string, required) – NPC reference (char_ref) or "player" who receives the topic. *MAKE SURE NPC HAS BEEN CREATED*
 important (bool, required, default=true) – If true, topic delivery will be verified through multiple checks. If false, CheckTopicToPlayer returns success immediately on first call. On plot relevant topics should be true.
 
 2. Spawn Functions
