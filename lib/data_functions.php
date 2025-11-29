@@ -426,11 +426,8 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     continue;
                 }
                 
-                // Format for display: "RefID:ItemName" (hide BaseID from NPC, keep STEALING tag)
-                $displayItem = "{$refID}:{$itemName}";
-                $formattedItems[] = $displayItem;
-                
                 // Track unique base IDs for descriptions
+                $hasDescription = false;
                 if (!in_array($baseID, $seenBaseIDs)) {
                     $seenBaseIDs[] = $baseID;
                     
@@ -443,8 +440,18 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     if ($descRecord && !empty($descRecord['description'])) {
                         // Store description under clean name (without STEALING tag)
                         $itemDescriptions[$itemNameClean] = $descRecord['description'];
+                        $hasDescription = true;
                     }
                 }
+                
+                // If filter is enabled and item has no description, skip it
+                if (isset($GLOBALS["GROUND_ITEMS_DESCRIPTIONS_ONLY"]) && $GLOBALS["GROUND_ITEMS_DESCRIPTIONS_ONLY"] && !$hasDescription) {
+                    continue;
+                }
+                
+                // Format for display: "RefID:ItemName" (hide BaseID from NPC, keep STEALING tag)
+                $displayItem = "{$refID}:{$itemName}";
+                $formattedItems[] = $displayItem;
             } elseif (count($parts) == 2) {
                 // Old format without BaseID - just use as-is
                 $refID = $parts[0];
@@ -4984,6 +4991,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
                 $baseid = isset($item["baseid"]) ? $item["baseid"] : null;
                 
                 $itemLine = "{$itemCount} {$itemName}";
+                $hasDescription = false;
                 
                 // Try to add item description for notable items (limit descriptions to avoid clutter)
                 // Only if we haven't already described this baseid
@@ -4993,14 +5001,21 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
                         if ($description) {
                             $itemLine .= " ({$description})";
                             $describedBaseids[] = $baseid; // Mark this baseid as described
+                            $hasDescription = true;
                         }
                     } elseif (empty($baseid)) {
                         // No baseid, try name-based (won't dedupe without baseid)
                         $description = $getItemDescription($itemName, null);
                         if ($description) {
                             $itemLine .= " ({$description})";
+                            $hasDescription = true;
                         }
                     }
+                }
+                
+                // If filter is enabled and item has no description, skip it
+                if (isset($GLOBALS["INVENTORY_ITEMS_DESCRIPTIONS_ONLY"]) && $GLOBALS["INVENTORY_ITEMS_DESCRIPTIONS_ONLY"] && !$hasDescription) {
+                    continue;
                 }
                 
                 $equipmentParts[] = $itemLine;
