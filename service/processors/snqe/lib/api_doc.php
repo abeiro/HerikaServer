@@ -12,7 +12,7 @@ State is persisted per quest_id to allow quest scripts to resume execution acros
 1. Creation Functions
 
 * CreateNPC(quest_id, npc_ref, name, gender, class, race, location, appearance, background, speechStyle, disposition)
-Declares a new NPC for later spawning.
+Declares a new NPC for reference, and  - optionally - later spawning. Already spawned NPCs from previous sessions must be created.
 quest_id (string, required) – Quest identifier.
 npc_ref (string, required) – Internal NPC reference ID.
 name (string, required) – NPC display name.
@@ -25,8 +25,8 @@ background (string, optional) – Lore or backstory. Should be about 200 charact
 speechStyle (string, optional) – How NPC talks (formal, rustic, archaic, etc., cursed words, uses specific fillir words).
 disposition (enum, optional) – defiant, submissive, friendly, serious, sad, aggressive, cheerful, distrustful, furious, drunk, high.
 
-* CreateItem(quest_id, item_ref, name, type, location, description)
-Declares a new item for later spawning.
+* CreateItem(quest_id, item_ref, name, type, location, description, npc_ref)
+Declares a new item for later spawning. **Items in pockets should be spawned too**
 
 quest_id (string, required) – Quest identifier.
 item_ref (string, required) – Internal item reference ID.
@@ -34,8 +34,9 @@ name (string, required) – Item display name.
 type (enum, required) – sword, armor, helmet, ring, amulet, book, note, axe, long sword, staff, great axe, bow.
 location (enum, required) – "nearby", "major city".
 description (string) – Description, or content if item is book or note.
+npc_ref (string, optional) – NPC reference ID to place item in NPC's inventory. If omitted, item will be placed in the world.
 
-* CreateTopic(quest_id, topic_ref, name, type, item, giver, info, target)
+* CreateTopic(quest_id, topic_ref, name, type, item, giver, info, target, important)
 Declares a dialogue topic.
 
 quest_id (string, required) – Quest identifier.
@@ -45,7 +46,8 @@ type (enum, required) – Lore, Item, Location.
 item (string, optional) – If type=Item, the item_ref this topic refers to.
 giver (string, required) – NPC reference or name giving the topic.
 info (string, required) – Topic the NPC should talk about. Use a few example phrases, but mainly describe the topic.
-target (string, required) – NPC reference (char_ref) or "player" who receives the topic.
+target (string, required) – NPC reference (char_ref) or "player" who receives the topic. *MAKE SURE NPC HAS BEEN CREATED*
+important (bool, required, default=true) – If true, topic delivery will be verified through multiple checks. If false, CheckTopicToPlayer returns success immediately on first call. On plot relevant topics should be true.
 
 2. Spawn Functions
 
@@ -70,19 +72,18 @@ Returns: "done" | "pending" | "failed".
 
 * SpawnItem(quest_id, item_ref, location_or_char_ref)
 
-Spawns a declared item.
+Spawns a declared item. **Items in pockets should be spawned too**
 
 quest_id (string, required)
 item_ref (string, required)
 location_or_char_ref (string, optional) – If omitted → world spawn. If NPC ref → NPC inventory.
 
-* CheckItemSpawn(quest_id, item_ref, location_or_char_ref, maxAttempts)
+* CheckItemSpawn(quest_id, item_ref,  maxAttempts)
 
 Checks if item has spawned.
 
 quest_id (string, required)
 item_ref (string, required)
-location_or_char_ref (string, required)
 maxAttempts (int, optional, default=5)
 
 Returns: "done" | "pending" | "failed".
@@ -118,19 +119,30 @@ destination_ref (string, required)
 
 Quest fails if delivery does not occur within timeout.
 
-* ToGoAway(quest_id, npc_ref)
+* ToGoAway(quest_id, npc_ref, maxAttempts)
 
 Removes NPC from the world.
 
 quest_id (string, required)
 npc_ref (string, required)
+maxAttempts (int, optional, default=5) – Maximum retries before failure.
+
+Returns: "done" | "pending" | "failed".
 
 * CombatPlayer(quest_id, npc_ref)
 
-NPC attacks the player.
+Orders an NPC to engage the player in combat.
 
 quest_id (string, required)
 npc_ref (string, required)
+
+Returns: void
+
+Notes:
+
+Initiates combat between the NPC and the player.
+Use WaitforCombatEnd to monitor the outcome.
+Idempotent: if already ordered to combat, does nothing.
 
 4. Wait Functions
 
@@ -168,6 +180,24 @@ timeout (int, optional, default=10)
 
 Returns: "done" | "pending" | "failed".
 
+* WaitforCombatEnd(quest_id, npc_ref, maxAttempts)
+
+Waits until combat between an NPC and the player has ended.
+
+quest_id (string, required)
+npc_ref (string, required)
+maxAttempts (int, optional, default=100) – Maximum retries before failure.
+
+Returns: "done" | "pending" | "failed".
+
+Notes:
+
+Use this function after CombatPlayer to monitor combat resolution.
+Returns "done" when combat has ended (NPC defeated or fled).
+Returns "pending" while combat is still ongoing.
+Returns "failed" if combat does not end within maxAttempts checks.
+Tracks combat_attempts and combat state per NPC in quest data.
+
 * CheckTopicToPlayer(quest_id, topic_ref, maxAttempts)
 
 Checks whether an NPC has successfully delivered a declared topic to the player.
@@ -186,6 +216,32 @@ Notes:
 
 Function is idempotent. If the topic was already delivered, it returns "done".
 Tracks delivery_attempts per topic in quest state.
+
+* WaitAtLocation(quest_id, location, maxAttempts, npc_ref)
+
+Waits until the player reaches a specific location.
+
+quest_id (string, required) – Quest identifier.
+location (string, required) – Location name to wait for (e.g., "Whiterun", "Markarth", "Solitude").
+maxAttempts (int, optional, default=1000) – Maximum retries before failure. Set to 1000 for indefinite waiting.
+npc_ref (string, optional) – NPC reference ID. If provided, the NPC will travel to that location when the player arrives.
+
+Returns: "done" | "pending" | "failed"
+
+"done" → Player has reached the specified location.
+"pending" → Player has not yet reached the location; further checks required.
+"failed" → Maximum attempts exceeded without player reaching the location.
+
+Notes:
+
+Queries the eventlog for location events.
+Function is idempotent. If the player already reached the location, it returns "done".
+Tracks location_wait state per location in quest data.
+Useful for branching quest logic based on player location.
+If npc_ref is provided, sends a command to move the NPC to that location once the player arrives.
+Function is idempotent. If the player already reached the location, it returns "done".
+Tracks location_wait state per location in quest data.
+Useful for branching quest logic based on player location.
 
 * CompleteQuest(quest_id, result)
 
@@ -271,13 +327,12 @@ CreateTopic(
 
 
 
-// 4. Spawn the wizard in Winterhold
-SpawnNPC($quest_id, $npc_ref, "Raven Rock");
+// 4. Spawn the wizard nearby
+SpawnNPC($quest_id, $npc_ref, "nearby");
 if (CheckNPCSpawn($quest_id, $npc_ref)!="done") {
     error_log("NPC not spawned <SpawnItem($quest_id, $item_ref>".PHP_EOL);
     return;
 }
-
 
 // 5. Spawn the book somewhere nearby
 SpawnItem($quest_id, $item_ref, "nearby");
@@ -287,6 +342,12 @@ if (CheckItemSpawn($quest_id, $item_ref)!="done") {
 }
 
 
+// We could use WaitAtLocation here if we want the wizard to stay there until player finds him
+// This is prefered when spawning location is not nearby
+
+// WaitAtLocation($quest_id, "Remote Location", 10000);
+
+// If NPC was spawned nearby, just TellTopicToPlayer
 
 // 6. Wizard tells the player about the quest
 if (TellTopicToPlayer($quest_id, $npc_ref, "t_ask_ring") !="done") {
@@ -329,7 +390,8 @@ CreateTopic(
     null,
     $npc_ref,
     "Thank you for retrieving the ring. Your help is invaluable.",
-    "player"
+    "player",
+    false   // Not relevant for the quest, so important is false
 );
 
 TellTopicToPlayer($quest_id, $npc_ref, "t_thanks");
@@ -345,4 +407,5 @@ CompleteQuest($quest_id);
 return;
 
 */
+
 ?>

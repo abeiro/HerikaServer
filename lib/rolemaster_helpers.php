@@ -32,7 +32,7 @@ $GLOBALS["item_types"]=[    // From AIAgent.esp
     "amulet"=>[0x2481e],
     "ring"=>[0x242b9],
     "note"=>[0],// Will be changed. Generic Note From AIAgent.esp
-    "book"=>[0],// Will be changed. Generic Note From AIAgent.esp
+    "book"=>[0x000ce70b],// Will be changed. Generic Note From AIAgent.esp
 ];
 
 $GLOBALS["npc_templates"]=[
@@ -55,6 +55,9 @@ $GLOBALS["npc_templates"]=[
 
     "female_redguard"=>[0x000860c7,0x00013ba9,0x00079f67,0x00079ee1,0x00079e2f,0x00079e2c,0x00099d4e,0x0010ab99,0x0010ab9a,0x0010ab9b,0x0010ab9c,0x0010ab9d,0x0007514e,0x00048117,0x00103505,0x001034f5,0x000b85ab,0x0006cd5a,0x000d4ff9,0x00039cf8,0x0003de8c,0x0003de71,0x0003de53,0x00037c06,0x0003dee2,0x00039d04,0x0003de93,0x0003dea7,0x0003de58,0x00037c08,0x0003deeb,0x00039d0c,0x0003de9a,0x0003de76,0x0003de5d,0x00037c33,0x0003def6,0x00039d14,0x0003dea2,0x0003de7b,0x0003de62,0x00037c3a,0x0003df00,0x00039d1c,0x0003deae,0x0003de80,0x0003de67,0x00037c41,0x0003df0a,0x00039d24,0x0003deb5,0x0003de85,0x0003de6c,0x00037c48,0x000bfb47,0x0010c455,0x0010c476,0x0010c47c,0x0010c483,0x0010c489,0x000328d4],
     "male_redguard"=>[0x0006762e,0x00058b3f,0x0010f5a1,0x0010f5aa,0x00020071,0x00013baa,0x00019a2a,0x0004d8d4,0x0001b3b5,0x0005b4f8,0x00026904,0x000268fc,0x00026915,0x00024261,0x0010ab9e,0x0010ab9f,0x0010aba0,0x0010aba1,0x0010aba2,0x00048118,0x00103504,0x00013609,0x0002e11f,0x000215d5,0x00067631,0x00067642,0x00067641,0x00067645,0x00067643,0x00067646,0x00067644,0x00067647,0x0006762f,0x00067630,0x0006764b,0x00067648,0x0006764c,0x00067649,0x0006764d,0x0006764a,0x0006764e,0x00067632,0x00067633,0x00067634,0x0006764f,0x00067650,0x00067653,0x00067651,0x00067654,0x00067652,0x00067655,0x00067635,0x00067636,0x00067637,0x00067656,0x00067657,0x0006765a,0x00067658,0x0006765b,0x00067659,0x0006765c,0x00067638,0x00067639,0x0006763a,0x0006765d,0x0006765e,0x00067665,0x0006765f,0x00067666,0x00067660,0x00067667,0x0006763b,0x0006763c,0x0006763d,0x00067661,0x00067662,0x00067668,0x00067663,0x00067669,0x00067664,0x0006766a,0x0006763e,0x0006763f,0x00067640,0x00039cf9,0x0003de8d,0x0003de72,0x0003de54,0x00037c07,0x0003dee3,0x0003dee6,0x00039d05,0x0003de94,0x0003dea8,0x0003de59,0x00037c0c,0x0003deec,0x0003deef,0x00039d0d,0x0003de9b,0x0003de77,0x0003de5e,0x00037c34,0x0003def7,0x0003defa,0x00039d15,0x0003dea3,0x0003de7c,0x0003de63,0x00037c3b,0x0003df01,0x0003df04,0x00039d1d,0x0003deaf,0x0003de81,0x0003de68,0x00037c42,0x0003df0b,0x0003df0e,0x00039d25,0x0003deb6,0x0003de86,0x0003de6d,0x00037c49,0x00073fc0,0x000c6016,0x00017143,0x00017144,0x00032860,0x000c49dd,0x000b9285],
+
+    "male_draugr"=>[0x0005593b],
+    "female_draugr"=>[],
 
     
     
@@ -227,6 +230,7 @@ function askLLMForTopic($npc,$topic,$last_llm_call) {
 
 
     if ((time()-$last_llm_call)<60) {
+        error_log("Skipping askLLMForTopic: ".((time()-$last_llm_call)));
         Logger::info("Skipping askLLMForTopic: ".((time()-$last_llm_call)));
         return ["res"=>false,"missing"=>"skip"];
     }
@@ -273,9 +277,9 @@ function askLLMForTopic($npc,$topic,$last_llm_call) {
     $contextData       = array_merge($head, $prompt);
 
     $connectionHandler =$connector->getConnector($currentConnectorData);
-    $buffer=$connectionHandler->fast_request($contextData,["MAX_TOKENS"=>2048]);
+    $buffer=$connectionHandler->fast_request($contextData,["MAX_TOKENS"=>2048],'rolemaster_helper_asktopic');
     $parsedbuffer=__jpd_decode_lazy($buffer);
-    error_log(print_r($parsedbuffer,true));
+    error_log(print_r($buffer,true));
     $res=false;
     if (is_array($parsedbuffer)) {
         $score=$parsedbuffer[0]["score"];
@@ -431,6 +435,7 @@ function testSpawnRandomNPC() {
 
 
 }
+
 function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
 
     /*
@@ -468,7 +473,7 @@ function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
     $locations=$GLOBALS["masterDataLocations"];
     $addedLocs=$GLOBALS["db"]->fetchAll("SELECT * FROM locations where name ilike '%".$GLOBALS["db"]->escape($location)."%' LIMIT 1");
     if (sizeof($addedLocs)>0) {
-      $locations[$location][]=convertSignedToUnsignedHex($addedLocs[0]["formid"]);
+      $locations[$location][]=($addedLocs[0]["formid"]);
     }
 
 
@@ -477,17 +482,23 @@ function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
     if ($class=="priest")
         $dclass="mage";
     
-    
-    $parm1 = $masterData["{$gender}_{$race}_{$dclass}"][array_rand($masterData["{$gender}_{$race}_{$dclass}"])];
-
+    if (isset($masterData["{$gender}_{$race}_{$dclass}"]))
+        $parm1 = $masterData["{$gender}_{$race}_{$dclass}"][array_rand($masterData["{$gender}_{$race}_{$dclass}"])];
+    else
+        $parm1=$parm5;// Get frm npc templates
     if ($class=="priest")
         $dclass="bard";
 
-    $parm2=$outfit["{$dclass}"][array_rand($outfit["{$dclass}"])];
+    if (isset($outfit["{$dclass}"]))
+        $parm2=$outfit["{$dclass}"][array_rand($outfit["{$dclass}"])];
+    else
+        $parm2=0;
 
     //$parm3=$weapon["{$weapon}"][0];
     $rumors=false;
+    // TO-DO to have a list of weapons
     $parm3=$weapon["sword"][0];
+
     if ($location=="nearby")
         $parm4=0;
     else if ($location=="random") {
@@ -496,8 +507,10 @@ function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
         Logger::debug($location);
         $parm4 = $locations[$location][array_rand($locations[$location])];   
         $rumors=true;
-    } else 
+    } else  if (isset($locations[$location]))
         $parm4 = $locations[$location][array_rand($locations[$location])];
+    else    
+        $parm4=0;
 
     
     $GLOBALS["db"]->insert(
@@ -527,7 +540,7 @@ function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
 
 }
 
-function SkCreateItem($basetype,$name,$location,$content,$quest_id) {
+function SkCreateItem($basetype,$name,$location,$content,$quest_id, $npc_ref = null) {
 
     
     //echo "CreateItem($basetype,$name,$location,$content)";
@@ -541,16 +554,37 @@ function SkCreateItem($basetype,$name,$location,$content,$quest_id) {
         return;
     }
 
-    $localItemName=$GLOBALS["db"]->escape($name);
-    $localItemPlace=$GLOBALS["db"]->escape($location);
+    $localItemName=($name);
+    $localItemPlace=($location);
     
     $localItemType=$masterData[$basetype][array_rand($masterData[$basetype])];
 
     if ($localItemPlace=="nearby") {
         $localItemPlace=0;
+    } else if ($localItemPlace=="pocket") {
+        $localItemPlace=0;
+        $npcMaster = new NpcMaster();
+        $currentNpcData       = $npcMaster->getByName($npc_ref);
+        $unsignedInt = hexdec($currentNpcData["refid"]);
+        // Convert to 32-bit signed integer
+        if ($unsignedInt >= 0x80000000) {
+            $unsignedInt -= 0x100000000;
+        }
+        $localItemPlace=$unsignedInt;
+
     } else {
-        if (!is_numeric($localItemPlace))
-            $localItemPlace=$GLOBALS["masterDataLocations"][$location][array_rand($GLOBALS["masterDataLocations"][$location])];
+        if (!is_numeric($localItemPlace)) {
+            if (isset($GLOBALS["masterDataLocations"][$location])) {
+                $localItemPlace=$GLOBALS["masterDataLocations"][$location][array_rand($GLOBALS["masterDataLocations"][$location])];
+            } else {
+                $locationCn=$GLOBALS["db"]->escape($location);
+                $dbDestination=$GLOBALS["db"]->fetchOne("SELECT name, similarity(name, '$locationCn') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
+                if ($dbDestination) {
+                    $localItemPlace=$dbDestination["formid"];
+                }
+            }
+            
+        }
         else {
             ; // ref is gonna be an NPC
         }
@@ -898,7 +932,7 @@ function SkTopicCheck($character,$topic,$lastCall,$retries,$quest_id)
     }
 
     // To avoid call LLM all times
-    if ((time()-$lastCall)< 90)  {
+    if ((time()-$lastCall)< 60)  {
         if ($GLOBALS["NPCS_ARE_NOT_TALKING"]==1) {
           error_log("[SkTopicCheck]\t SHOULD DO LATER, but  NPCS_ARE_NOT_TALKING <$character>  <$retries> <$quest_id>, will call in ".((time()-$lastCall-90)));
         } else {
@@ -908,6 +942,12 @@ function SkTopicCheck($character,$topic,$lastCall,$retries,$quest_id)
     }
     
     error_log("[SkTopicCheck]\t <$character>  <$retries> <$quest_id>");
+
+    $characterCn=$GLOBALS["db"]->escape($character);
+    $checkDeath=$GLOBALS["db"]->fetchOne("SELECT 1 as n from eventlog where type='death' and data like '%defeated $characterCn%'");
+
+    if (isset($checkDeath["n"]) && $checkDeath["n"])
+        $contextDataHistoric=4;
 
     if (($contextDataHistoric) >= 4) {
         // But first, check if topic already has been covered
@@ -924,25 +964,33 @@ function SkTopicCheck($character,$topic,$lastCall,$retries,$quest_id)
             if ($topiCall["missing"]) {
               $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: {$topiCall["missing"]}}");
             }
-            $GLOBALS["db"]->insert(
-                'responselog',
-                [
-                    'localts' => time(),
-                    'sent'    => 0,
-                    'actor'   => "rolemaster",
-                    'text'    => "",
-                    'action'  => "rolecommand|Suggestion@{$character}@$sugggestionText@$quest_id",
-                    'tag'     => "",
-                ]
-            );
-            error_log("[SkTopicCheck] Topic enforced <$topic> <{$character}>");
-            return TOPIC_UNCOVERED;
+            if (isset($topiCall["missing"]) && $topiCall["missing"]!="skip") {
+                $GLOBALS["db"]->insert(
+                    'responselog',
+                    [
+                        'localts' => time(),
+                        'sent'    => 0,
+                        'actor'   => "rolemaster",
+                        'text'    => "",
+                        'action'  => "rolecommand|Suggestion@{$character}@$sugggestionText@$quest_id",
+                        'tag'     => "",
+                    ]
+                );
+                error_log("[SkTopicCheck] Topic enforced <$topic> <{$character}>");
+                return TOPIC_UNCOVERED;
+            } else {
+                error_log("[SkTopicCheck] WILL_DO_LATER <$topic> <{$character}>");
+                return WILL_DO_LATER;
+            }
+            
+            
         }
     } else {
         error_log("[SkTopicCheck]\tNot enough dialogue with NPC <$topic> <{$character}>");
         // Not enough dialogue with NPC
         if (($retries % 30)==0) {
           // Make suggestion, dialogue is too small
+
           $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: <$topic> (using its own words)");
           $GLOBALS["db"]->insert(
                   'responselog',

@@ -198,12 +198,14 @@ $reservedLabelsLower = array_values(array_unique(array_merge(
     array_map('strtolower', array_values($presetMap))
 )));
 
-// Seed presets if missing
+// Seed presets if missing (one-time check per label)
 $existing = $apiBadge->getAll();
 $existingLabelsLower = array_map(function($row){ return strtolower($row['label'] ?? ''); }, $existing);
 foreach ($presetMap as $key => $pretty) {
-    if (!in_array(strtolower($pretty), $existingLabelsLower)) {
+    $lowerPretty = strtolower($pretty);
+    if (!in_array($lowerPretty, $existingLabelsLower)) {
         $apiBadge->create([ 'label' => $pretty, 'api_key' => '' ]);
+        $existingLabelsLower[] = $lowerPretty; // Prevent duplicate creation in same request
     }
 }
 

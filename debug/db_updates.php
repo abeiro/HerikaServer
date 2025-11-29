@@ -95,6 +95,10 @@ if ($checkTableExists("core_profiles") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master.sql"));
         $db->execQuery("SET search_path TO public");
     }
+    if ($checkTableExists("core_player") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_player.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
 } catch (Exception $e) {
     Logger::warn("Bootstrap core tables: " . $e->getMessage());
 }
@@ -1761,6 +1765,43 @@ if ($checkTableExists("core_api_badge") == -1) {
 } else
     Logger::info(__FILE__." core_api_badge exists");
 
+// Add unique constraint on core_api_badge.label to prevent duplicates
+if ($checkTableExists("core_api_badge") > 0 && $checkVersion("core_api_badge") < 20251127001) {
+    try {
+        // Remove duplicates: keep row with highest id and non-empty key per label (case-insensitive)
+        $db->execQuery("
+            DELETE FROM public.core_api_badge a
+            WHERE a.id NOT IN (
+                SELECT DISTINCT ON (LOWER(label)) id
+                FROM public.core_api_badge
+                ORDER BY LOWER(label), CASE WHEN api_key = '' THEN 0 ELSE 1 END DESC, id DESC
+            )
+        ");
+        
+        // Normalize label casing to match preset expectations
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'OpenRouter' WHERE LOWER(label) = 'openrouter'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'OpenAI' WHERE LOWER(label) = 'openai'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Deepgram' WHERE LOWER(label) = 'deepgram'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Google' WHERE LOWER(label) = 'google'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Azure' WHERE LOWER(label) = 'azure'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'ElevenLabs' WHERE LOWER(label) = 'elevenlabs'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Cartesia' WHERE LOWER(label) = 'cartesia'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Replicate' WHERE LOWER(label) = 'replicate'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Nano-GPT' WHERE LOWER(label) = 'nano-gpt'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'DeepL' WHERE LOWER(label) = 'deepl'");
+        
+        // Add unique constraint
+        $db->execQuery("ALTER TABLE public.core_api_badge ADD CONSTRAINT core_api_badge_label_unique UNIQUE (label)");
+        
+        // Add case-insensitive index for faster lookups
+        $db->execQuery("CREATE INDEX IF NOT EXISTS idx_core_api_badge_label_lower ON public.core_api_badge (LOWER(label))");
+        
+        $updateVersion("core_api_badge", 20251127001);
+        Logger::info("Applied core_api_badge unique constraint 20251127001 (cleaned duplicates, normalized case, added UNIQUE constraint)");
+    } catch (Exception $e) {
+        Logger::warn("core_api_badge unique constraint update: " . $e->getMessage());
+    }
+}
 
 if ($checkTableExists("core_itt_connector") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_itt_connector.sql"));
@@ -2114,6 +2155,47 @@ try {
     Logger::error("Error creating combined_descriptions view: " . $e->getMessage());
 }
 
+try {
+    $db->execQuery("CREATE OR REPLACE VIEW \"public\".\"memory_v\" AS
+ SELECT message,
+    uid,
+    gamets,
+    speaker,
+    listener,
+    ts
+   FROM ( SELECT memory.message,
+            memory.uid,
+            memory.gamets,
+            '-'::text AS speaker,
+            '-'::text AS listener,
+            memory.ts
+           FROM memory
+          WHERE memory.message !~~ 'Dear Diary%'::text AND memory.message <> ''::text and event<>'backgroundlife_diary'::text
+        UNION
+         SELECT (((('(Context Location:'::text || speech.location) || ') '::text) || speech.speaker) || ': '::text) || speech.speech,
+            speech.rowid::integer AS rowid,
+            speech.gamets,
+            speech.speaker,
+            speech.listener,
+            speech.ts
+           FROM speech
+          WHERE speech.speech <> ''::text
+        UNION
+         SELECT eventlog.data,
+            eventlog.rowid::integer AS rowid,
+            eventlog.gamets,
+            '-'::text AS text,
+            '-'::text AS listener,
+            eventlog.ts
+           FROM eventlog
+          WHERE eventlog.type::text = ANY (ARRAY['death'::character varying::text, 'location'::character varying::text])) subquery
+  ORDER BY gamets, ts");
+    $updateVersion("memory_v",20251122001);
+    Logger::info("Updated memory_v BgL patch");
+} catch (Exception $e) {
+    Logger::error("Error creating memory_v BgL patch: " . $e->getMessage());
+}
+
 
 if ($checkTableExists("translations") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/translations_table.sql"));
@@ -2362,6 +2444,142 @@ if ($checkVersion("prompts")<20251116001) {
     
     $updateVersion("prompts", 20251116001);
     Logger::info("Applied patch prompts 20251116001 - Added random_narration_prompt");
+}
+
+//----------------------------------------------------
+// HEIGHT DESCRIPTIONS PROMPT
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251128002) {
+    Logger::debug("Applying prompts table 20251128002 - Adding height_descriptions");
+    
+    // Seed height descriptions as JSON
+    $heightDescriptions = $db->escape(json_encode([
+        "height_descriptions" => [
+            [
+                "name" => "VerySmall",
+                "min_scale" => 0.0,
+                "max_scale" => 0.60,
+                "description" => "Very small and tiny in stature"
+            ],
+            [
+                "name" => "Small",
+                "min_scale" => 0.60,
+                "max_scale" => 0.80,
+                "description" => "Smaller than most people"
+            ],
+            [
+                "name" => "ModestStature",
+                "min_scale" => 0.80,
+                "max_scale" => 0.95,
+                "description" => "Slightly below average height"
+            ],
+            [
+                "name" => "Average",
+                "min_scale" => 0.95,
+                "max_scale" => 1.05,
+                "description" => "Typical height"
+            ],
+            [
+                "name" => "Tall",
+                "min_scale" => 1.05,
+                "max_scale" => 1.20,
+                "description" => "Tall, standing a head above most people"
+            ],
+            [
+                "name" => "VeryTall",
+                "min_scale" => 1.20,
+                "max_scale" => 1.40,
+                "description" => "Very tall"
+            ],
+            [
+                "name" => "Giantlike",
+                "min_scale" => 1.40,
+                "max_scale" => 99.0,
+                "description" => "Giant in height and stature"
+            ]
+        ]
+    ]));
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'height_descriptions',
+            '$heightDescriptions',
+            'JSON configuration for NPC height descriptions based on scale values. Used to generate natural language height descriptions from numeric scale values for NPC context.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251128002);
+    Logger::info("Applied patch prompts 20251128002 - Added height_descriptions");
+}
+
+//----------------------------------------------------
+// CORE_PLAYER DATA MIGRATION
+//----------------------------------------------------
+
+if ($checkVersion("core_player")<20241128001) {
+    Logger::debug("Applying core_player migration 20241128001 - Migrating player data from conf_opts");
+    
+    // List of keys to migrate from conf_opts to core_player
+    $keysToMigrate = [
+        'PLAYER_NAME' => 'player_name',
+        'PLAYER_BIOS' => 'appearance',  // Renamed
+        'PLAYER_SPEECH_STYLE' => 'speech_style',
+        // Skyrim stats
+        'Mauls', 'Werewolf Transformations', 'Days As Werewolf',
+        'Necks Bitten', 'Days As Vampire', 'Locations Discovered',
+        'Dungeons Cleared', 'Days Passed', 'Hours Slept',
+        'Hours Waited', 'Standing Stones Found', 'Gold Found',
+        'Most Gold Carried', 'Chests Looted', 'Skill Increases',
+        'Skill Books Read', 'Food Eaten', 'Training Sessions',
+        'Books Read', 'Horses Owned', 'Houses Owned',
+        'Stores Invested In', 'Barters', 'Persuasions',
+        'Bribes', 'Intimidations', 'Diseases Contracted',
+        'Dragonborn Quests Completed DB', 'Dawnguard Quests Completed DG',
+        'Quests Completed', 'Misc Objectives Completed',
+        'Main Quests Completed', 'Side Quests Completed',
+        'The Companions Quests Completed', 'College of Winterhold Quests Completed',
+        'Thieves\' Guild Quests Completed', 'The Dark Brotherhood Quests Completed',
+        'Civil War Quests Completed', 'Daedric Quests Completed',
+        'Questlines Completed', 'Bard\'s College Quests Completed',
+        'Blades Quests Completed', 'Forsworn Quests Completed',
+        'Imperial Legion Quests Completed', 'Stormcloaks Quests Completed',
+        'Thieves\' Guild Special Jobs Completed', 'Dark Brotherhood Contracts Completed'
+    ];
+    
+    foreach ($keysToMigrate as $confKey => $playerKey) {
+        // If confKey is numeric (index in array), use it as both source and dest
+        if (is_numeric($confKey)) {
+            $confKey = $playerKey;
+        }
+        
+        // Check if data exists in conf_opts
+        $escapedConfKey = $db->escape($confKey);
+        $result = $db->fetchAll("SELECT value FROM public.conf_opts WHERE id = '{$escapedConfKey}' LIMIT 1");
+        
+        if ($result && isset($result[0]['value'])) {
+            $value = $result[0]['value'];
+            $escapedPlayerKey = $db->escape($playerKey);
+            $escapedValue = $db->escape($value);
+            
+            // Insert or update in core_player
+            $db->execQuery("
+                INSERT INTO public.core_player (id, value) 
+                VALUES ('{$escapedPlayerKey}', '{$escapedValue}')
+                ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+            ");
+            
+            Logger::debug("Migrated {$confKey} -> core_player.{$playerKey}");
+        }
+    }
+    
+    $updateVersion("core_player", 20241128001);
+    Logger::info("Applied patch core_player 20241128001 - Migrated player data from conf_opts");
 }
 
 //----------------------------------------------------

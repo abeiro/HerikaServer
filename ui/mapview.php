@@ -286,7 +286,6 @@ if (!function_exists('race_icon_web_path')) {
     $last_gamets = $res["last_gamets"];
     $currentDate=convert_gamets2skyrim_date($last_gamets);
 
-    // --- Query total cost grouped by request type ---
     $query = "
     select A.*,B.content FROM 
     (SELECT
@@ -673,7 +672,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         width: 100%;
         box-sizing: border-box;
         border-radius: 8px;
-        overflow: auto;
+        overflow: visible;
     }
 
     .map-container img {

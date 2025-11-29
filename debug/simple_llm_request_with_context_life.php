@@ -87,6 +87,17 @@ $query      = "SELECT max(gamets) as  gamets from speech where
 
 error_log($query);
 $lastIt       = $db->fetchOne($query);
+
+if (!$lastIt["gamets"]) {
+
+    $extdata                                 = $npcMaster->getExtendedData($currentNpcData);
+    $extdata["background_life_last_updated"] = $last_gamets;
+    $currentNpcData                          = $npcMaster->setExtendedData($currentNpcData, $extdata);
+    $npcMaster->updateByArray($currentNpcData);
+
+    error_log("NO LAST ITERATION, SKIPPING");
+    return;
+}
 $lastItNumber = $lastIt["gamets"] ?? 0;
 
 if (($last_gamets-$lastItNumber)< ((24 *3 )/0.0000024 )) {

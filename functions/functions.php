@@ -35,8 +35,9 @@ $ENABLED_FUNCTIONS_LOCAL=[
     //'GiveGoldTo', // Replaced by GiveItemTo system
     'GiveItemTo',
     'PickupItem',
+    'CastSpell',
     'GoToSleep',
-    'UseSoulGaze'
+    'UseSoulGaze',
 //    'WaitHere'
 ];
 
@@ -94,7 +95,7 @@ $F_TRANSLATIONS_LOCAL["SearchDiary"]="Read {$GLOBALS["HERIKA_NAME"]}'s diary to 
 $F_TRANSLATIONS_LOCAL["SetCurrentTask"]="Set the current plan of action or task or quest";
 $F_TRANSLATIONS_LOCAL["ReadDiaryPage"]="Read {$GLOBALS["HERIKA_NAME"]}'s diary to access a specific topic";
 $F_TRANSLATIONS_LOCAL["StopWalk"]="Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
-$F_TRANSLATIONS_LOCAL["TravelTo"]="Only use if {$GLOBALS["PLAYER_NAME"]} explicitly orders it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. ";
+$F_TRANSLATIONS_LOCAL["TravelTo"]="Only use if {$GLOBALS["PLAYER_NAME"]} explicitly suggest it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. Also known as lead the way";
 $F_TRANSLATIONS_LOCAL["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tries to remember information. REPLY with hashtags";
 $F_TRANSLATIONS_LOCAL["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} waits and loiters at the current location";
 $F_TRANSLATIONS_LOCAL["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} gives item (property target) to {$GLOBALS["PLAYER_NAME"]} (property listener)";
@@ -108,6 +109,7 @@ $F_TRANSLATIONS_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives a specific 
 $F_TRANSLATIONS_LOCAL["PickupItem"]="{$GLOBALS["HERIKA_NAME"]} picks up a specific item from the ground. Use the exact RefID:ItemName format from nearby_items (e.g. 0x12345:Iron Sword)";
 $F_TRANSLATIONS_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} takes a nap";
 $F_TRANSLATIONS_LOCAL["UseSoulGaze"]="Use the spell SoulGaze, a powerful incantation that allows {$GLOBALS["HERIKA_NAME"]} to perceive surroundings in vivid detail through {$GLOBALS["PLAYER_NAME"]}'s eyes. The spell, however, causes some disturbance to the caster.";
+$F_TRANSLATIONS_LOCAL["CastSpell"]="{$GLOBALS["HERIKA_NAME"]} casts a spell on target actor. Must specify spell name from <spells> and target actor name. Use 'self' as target for self-targeted spells.";
 
 
 
@@ -147,6 +149,7 @@ $F_RETURNMESSAGES_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gives #ITEM# to
 $F_RETURNMESSAGES_LOCAL["PickupItem"]="{$GLOBALS["HERIKA_NAME"]} picks up #ITEM#";
 $F_RETURNMESSAGES_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} takes a nap";
 $F_RETURNMESSAGES_LOCAL["UseSoulGaze"]="{$GLOBALS["HERIKA_NAME"]} used soulgaze";
+$F_RETURNMESSAGES_LOCAL["CastSpell"]="{$GLOBALS["HERIKA_NAME"]} casts #ITEM# on #TARGET#";
 
 
 
@@ -190,6 +193,7 @@ $F_NAMES_LOCAL["GiveItemTo"]="GiveItemTo";
 $F_NAMES_LOCAL["PickupItem"]="PickupItem";
 $F_NAMES_LOCAL["GoToSleep"]="GoToSleep";
 $F_NAMES_LOCAL["UseSoulGaze"]="UseSoulGaze";
+$F_NAMES_LOCAL["CastSpell"]="CastSpell";
 
 
 
@@ -718,6 +722,24 @@ $GLOBALS["FUNCTIONS"] = [
             ],
             "required" => []
         ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["CastSpell"],
+        "description" => $F_TRANSLATIONS_LOCAL["CastSpell"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Target actor name, or 'self' for self-cast spells",
+                ],
+                "item" => [
+                    "type" => "string",
+                    "description" => "REQUIRED: Spell name from <spells> tag (exact name)",
+                ]
+            ],
+            "required" => ["target", "item"],
+        ]
     ]
 ];
 
@@ -843,9 +865,11 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'GiveItemTo',
         'PickupItem',
         'GoToSleep',
-        'UseSoulGaze'
+        'UseSoulGaze',
+        'CastSpell'
 
     ];
+    error_log("[DEBUG functions.php] IS_NPC=true, CastSpell in ENABLED: " . (in_array('CastSpell', $GLOBALS["ENABLED_FUNCTIONS"]) ? "YES" : "NO"));
 } else {
     $GLOBALS["ENABLED_FUNCTIONS"]=[
         'Inspect',
@@ -876,7 +900,8 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'GiveItemTo',
         'PickupItem',
         'GoToSleep',
-        'UseSoulGaze'
+        'UseSoulGaze',
+        'CastSpell'
         //'GetDateTime',
         //'SearchDiary',
         //'SearchMemory',

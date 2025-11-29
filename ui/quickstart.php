@@ -102,6 +102,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
                 $allPairs[$k] = (string)$v;
             }
         }
+        
+        // Save PLAYER_NAME to core_player table
+        if (isset($_POST['PLAYER_NAME']) && $_POST['PLAYER_NAME'] !== '') {
+            try {
+                require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+                $player = new Player();
+                $player->set('player_name', $_POST['PLAYER_NAME']);
+            } catch (Exception $e) {
+                // Silently fail, will still save to conf.php
+            }
+        }
+        
         // Build and write conf.php
         $buffer = "<?php" . PHP_EOL;
         $oldGroup = '';
@@ -233,12 +245,26 @@ echo '<div class="container">
     </div>';
 
 // PLAYER_NAME at top
-$playerNameVal = isset($currentConf['PLAYER_NAME']['currentValue']) ? (string)$currentConf['PLAYER_NAME']['currentValue'] : '';
+$playerNameVal = 'Prisoner'; // Default value
+// Try to get from core_player table first
+try {
+    require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+    $player = new Player();
+    $nameFromPlayer = $player->get('player_name');
+    if ($nameFromPlayer !== null && $nameFromPlayer !== '') {
+        $playerNameVal = $nameFromPlayer;
+    }
+} catch (Exception $e) {
+    // Fall back to conf value if core_player fails
+    if (isset($currentConf['PLAYER_NAME']['currentValue']) && $currentConf['PLAYER_NAME']['currentValue'] !== '') {
+        $playerNameVal = (string)$currentConf['PLAYER_NAME']['currentValue'];
+    }
+}
 echo '<div class="container">
         <div class="form-group">
             <label for="PLAYER_NAME">Player Name</label>
             <input type="text" class="form-control" id="PLAYER_NAME" name="PLAYER_NAME" value="' . htmlspecialchars($playerNameVal) . '">
-            <small class="form-text">This is your in-game character name. Usually set automatically when you load a save.</small>
+            <small class="form-text">Your in-game character name. Defaults to "Prisoner" and is automatically updated when you load a save. You can also manage player settings in <a href="' . $webRoot . '/ui/core/config_hub.php?tab=player" target="_blank" style="color:#4a8ab6;">Player Management</a>.</small>
         </div>
       </div>';
 

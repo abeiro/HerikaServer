@@ -19,6 +19,7 @@ $F_TRANSLATIONS["SearchDiary"] = "Przeczytaj dziennik {$GLOBALS["HERIKA_NAME"]},
 $F_TRANSLATIONS["SetCurrentTask"] = "Ustaw aktualny plan działania, zadanie lub misję";
 $F_TRANSLATIONS["ReadDiaryPage"] = "Przeczytaj dziennik {$GLOBALS["HERIKA_NAME"]} w celu dostępu do konkretnego tematu";
 $F_TRANSLATIONS["StopWalk"] = "Natychmiast zatrzymaj wszystkie działania {$GLOBALS["HERIKA_NAME"]}";
+$F_TRANSLATIONS["CastSpell"] = "{$GLOBALS["HERIKA_NAME"]} rzuca zaklęcie na docelowego aktora. Musi określić nazwę zaklęcia z <spells> i nazwę docelowego aktora. Użyj 'self' jako celu dla zaklęć skierowanych na siebie.";
 
 // Co to jest?. Możemy przetłumaczyć funkcje lub nadać im własne nazwy.
 // Ten array będzie obsługiwał tłumaczenia. Wtyczka zawsze powinna otrzymywać kod.
@@ -42,5 +43,6 @@ $F_NAMES["SearchDiary"] = "SzukaćWDzienniku";
 $F_NAMES["SetCurrentTask"] = "UstawićAktualneZadanie";
 $F_NAMES["ReadDiaryPage"] = "CzytaćStronęDziennika";
 $F_NAMES["StopWalk"] = "ZatrzymaćChodzenie";
+$F_NAMES["CastSpell"] = "RzucićZaklęcie";
 
 ?>

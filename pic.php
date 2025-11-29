@@ -1,11 +1,12 @@
 <?php
 
 
-/* STT entry point */
 
 
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
 $GLOBALS["ENGINE_PATH"]=$path;
+
+$enginePath=$GLOBALS["ENGINE_PATH"];
 
 require_once($path . "conf/conf.php"); // API KEY must be there
 require_once($path . "lib/model_dynmodel.php");

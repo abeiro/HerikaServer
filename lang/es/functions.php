@@ -29,6 +29,7 @@ $F_TRANSLATIONS_LOCAL["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} espera y se mantien
 $F_TRANSLATIONS_LOCAL["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} da el objeto (propiedad target) a {$GLOBALS["PLAYER_NAME"]} (propiedad listener)";
 $F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["HERIKA_NAME"]} toma la cantidad (propiedad target) de oro de {$GLOBALS["PLAYER_NAME"]} (propiedad listener)";
 $F_TRANSLATIONS_LOCAL["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} sigue a {$GLOBALS["PLAYER_NAME"]}";
+$F_TRANSLATIONS_LOCAL["CastSpell"]="{$GLOBALS["HERIKA_NAME"]} lanza un hechizo sobre el actor objetivo. Debe especificar el nombre del hechizo desde <spells> y el nombre del actor objetivo. Usar 'self' como objetivo para hechizos auto-dirigidos.";
 
 $F_RETURNMESSAGES_LOCAL["Inspect"]="{$GLOBALS["HERIKA_NAME"]} inspecciona a #TARGET# y ve esto: #RESULT#";
 $F_RETURNMESSAGES_LOCAL["LookAt"]="MIRA o Inspecciona el EQUIPO y VESTIMENTA del PNJ, Actor o ser";
@@ -58,6 +59,7 @@ $F_RETURNMESSAGES_LOCAL["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} espera y se manti
 $F_RETURNMESSAGES_LOCAL["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} dio #TARGET# a {$GLOBALS["PLAYER_NAME"]}. Si esto es una transacción, tal vez se necesite TakeGoldFromPlayer";
 $F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["PLAYER_NAME"]} dio #TARGET# monedas a {$GLOBALS["HERIKA_NAME"]}. Si esto es una transacción, tal vez se necesite GiveItemToPlayer";
 $F_RETURNMESSAGES_LOCAL["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} sigue a {$GLOBALS["PLAYER_NAME"]}";
+$F_RETURNMESSAGES_LOCAL["CastSpell"]="{$GLOBALS["HERIKA_NAME"]} lanza #ITEM# sobre #TARGET#";
 
 // ¿Qué es esto? Podemos traducir funciones o darles un nombre personalizado.
 // Este array manejará las traducciones. El plugin debe recibir siempre el nombre código.
@@ -89,4 +91,5 @@ $F_NAMES_LOCAL["WaitHere"]="EsperarAqui";
 $F_NAMES_LOCAL["GiveItemToPlayer"]="DarObjetoAJugador";
 $F_NAMES_LOCAL["TakeGoldFromPlayer"]="TomarOroDeJugador";
 $F_NAMES_LOCAL["FollowPlayer"]="SeguirJugador";
+$F_NAMES_LOCAL["CastSpell"]="LanzarHechizo";
 

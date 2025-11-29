@@ -1508,7 +1508,25 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                                     <?= isset($metadataStats['level']) ? intval($metadataStats['level']) : '—' ?>
                                 </div>
                             </div>
-                            <div></div>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <div style="color:#f39c12; min-width:100px; font-weight:700;">📏 Scale</div>
+                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; font-weight:700; background:#1a1a1a; font-size:16px;">
+                                    <?php 
+                                    $scale = isset($metadataStats['scale']) ? floatval($metadataStats['scale']) : null;
+                                    if ($scale !== null) {
+                                        echo number_format($scale, 2);
+                                        // Get height description if available
+                                        require_once(__DIR__ . "/../../lib/data_functions.php");
+                                        $heightDesc = getHeightDescription($scale);
+                                        if (!empty($heightDesc)) {
+                                            echo ' <span style="color:#999; font-size:12px; font-weight:400;">(' . htmlspecialchars($heightDesc) . ')</span>';
+                                        }
+                                    } else {
+                                        echo '—';
+                                    }
+                                    ?>
+                                </div>
+                            </div>
                             <div style="display:flex; gap:8px; align-items:center;">
                                 <div style="color:#e74c3c; min-width:100px;">❤️ Health</div>
                                 <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; background:#1a1a1a; flex:1;">
@@ -1597,6 +1615,83 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                         </div>
                     <?php else: ?>
                         <div style="color:#9fb1c9;">No inventory data found in metadata.</div>
+                    <?php endif; ?>
+                </div>
+            </details>
+        </div>
+
+        <?php
+        // Spells
+        $metadataSpells = (isset($metaObj['spells']) && is_array($metaObj['spells'])) ? $metaObj['spells'] : [];
+        $spellsUpdated = isset($metaObj['spells_updated']) ? $metaObj['spells_updated'] : null;
+        ?>
+        <div class="form-item span-2">
+            <details class="metadata-spells-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;">
+                <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">
+                    Spells
+                    <?php if ($spellsUpdated): ?>
+                        <span style="color:#999; font-weight:400; font-size:12px;">
+                            Last updated: <?= date('Y-m-d H:i:s', $spellsUpdated) ?>
+                        </span>
+                    <?php endif; ?>
+                </summary>
+                <small class="hint">Magic spells this NPC knows. Note: Spells will only be placed into NPC context if it exists in the description database. This is to prevent
+                  system spells from custom mods from diluting the context.
+                </small>
+                <div style="margin-top:8px; color:#cfd9ea;">
+                    <?php if (!empty($metadataSpells)): ?>
+                        <div style="max-height:400px; overflow-y:auto;">
+                            <table style="width:100%; border-collapse:collapse;">
+                                <thead>
+                                    <tr style="border-bottom:2px solid #4a4a4a; color:rgb(242, 124, 17);">
+                                        <th style="text-align:left; padding:8px;">Spell Name</th>
+                                        <th style="text-align:center; padding:8px; width:130px;">Casting</th>
+                                        <th style="text-align:center; padding:8px; width:120px;">Delivery</th>
+                                        <th style="text-align:right; padding:8px; width:100px;">Base ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php 
+                                    // Casting type labels
+                                    $castingTypes = [
+                                        0 => 'Concentration',
+                                        1 => 'Fire & Forget',
+                                        2 => 'Constant'
+                                    ];
+                                    // Delivery type labels
+                                    $deliveryTypes = [
+                                        0 => 'Self',
+                                        1 => 'Contact',
+                                        2 => 'Aimed',
+                                        3 => 'Target Actor',
+                                        4 => 'Target Location'
+                                    ];
+                                    
+                                    usort($metadataSpells, function($a, $b){ return strcmp($a['name']??'', $b['name']??''); });
+                                    foreach ($metadataSpells as $spell): 
+                                        $spellName = isset($spell['name']) ? htmlspecialchars($spell['name']) : 'Unknown';
+                                        $spellID = isset($spell['baseid']) ? htmlspecialchars($spell['baseid']) : '—';
+                                        $castingType = isset($spell['casting_type']) ? intval($spell['casting_type']) : 0;
+                                        $deliveryType = isset($spell['delivery']) ? intval($spell['delivery']) : 0;
+                                        $castingLabel = $castingTypes[$castingType] ?? 'Unknown';
+                                        $deliveryLabel = $deliveryTypes[$deliveryType] ?? 'Unknown';
+                                    ?>
+                                        <tr style="border-bottom:1px solid #3a3a3a;">
+                                            <td style="padding:6px 8px; color:#cfd9ea;"><?= $spellName ?></td>
+                                            <td style="padding:6px 8px; text-align:center; color:#9fb1c9; font-size:12px;"><?= $castingLabel ?></td>
+                                            <td style="padding:6px 8px; text-align:center; color:#9fb1c9; font-size:12px;"><?= $deliveryLabel ?></td>
+                                            <td style="padding:6px 8px; text-align:right; color:#9fb1c9; font-family:monospace; font-size:11px;"><?= $spellID ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                            <div style="margin-top:12px; padding:8px; background:#1a1a1a; border-radius:6px; border:1px solid #4a4a4a;">
+                                <strong style="color:rgb(242, 124, 17);">Total Spells:</strong> 
+                                <span style="color:#cfd9ea;"><?= count($metadataSpells) ?> spells known</span>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <div style="color:#9fb1c9;">No spell data found in metadata.</div>
                     <?php endif; ?>
                 </div>
             </details>
