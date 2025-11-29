@@ -295,11 +295,12 @@ function icon_for_field(string $flatName): string {
 $gsSections = [
     'General' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
-        [ 'name' => 'PLAYER_RESPEECH', 'type' => 'boolean' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
         [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'ITEM_BLACKLIST', 'type' => 'longstring' ],
+        [ 'name' => 'GROUND_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
+        [ 'name' => 'INVENTORY_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
         [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
         [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
