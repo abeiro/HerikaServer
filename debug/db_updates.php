@@ -2131,6 +2131,26 @@ if ($checkVersion("descriptions_defaults")<20241114001) {
     Logger::info("Applied patch descriptions_defaults 20241114001");
 }
 
+if ($checkVersion("spell_descriptions")<20241129001) {
+    Logger::debug("Applying spell_descriptions 20241129001");
+    
+    $sqlFile = __DIR__ . '/../data/spell_descriptions.sql';
+    if (file_exists($sqlFile)) {
+        $sql = file_get_contents($sqlFile);
+        if ($sql !== false) {
+            $db->execQuery($sql);
+            Logger::info("Imported spell descriptions from spell_descriptions.sql");
+        } else {
+            Logger::warn("Could not read spell_descriptions.sql");
+        }
+    } else {
+        Logger::warn("spell_descriptions.sql not found at $sqlFile");
+    }
+    
+    $updateVersion("spell_descriptions",20241129001);
+    Logger::info("Applied patch spell_descriptions 20241129001");
+}
+
 // Always (re)create combined view once base tables exist
 try {
     $db->execQuery("DROP VIEW IF EXISTS public.combined_descriptions CASCADE;");
