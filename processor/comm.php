@@ -362,7 +362,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     if (!empty($updateData[0])) {
         $npcName = $updateData[0];
         
-        // Stats (level, health, magicka, stamina with current/max)
+        // Stats (level, health, magicka, stamina with current/max, and scale)
         $stats = [
             'level' => isset($updateData[1]) ? intval($updateData[1]) : 1,
             'health' => isset($updateData[2]) ? floatval($updateData[2]) : 0,
@@ -370,7 +370,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             'magicka' => isset($updateData[4]) ? floatval($updateData[4]) : 0,
             'magicka_max' => isset($updateData[5]) ? floatval($updateData[5]) : 0,
             'stamina' => isset($updateData[6]) ? floatval($updateData[6]) : 0,
-            'stamina_max' => isset($updateData[7]) ? floatval($updateData[7]) : 0
+            'stamina_max' => isset($updateData[7]) ? floatval($updateData[7]) : 0,
+            'scale' => isset($updateData[8]) ? floatval($updateData[8]) : 1.0
         ];
         
         $currentNpcData = $npcMaster->getByName($npcName);
