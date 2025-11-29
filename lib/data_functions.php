@@ -5108,6 +5108,9 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         
         if (!empty($spellParts)) {
             $SPELLS_ADD = "\n\n<spells>\n#Known Spells\nYou know the following spells:\n" . implode("\n", $spellParts) . "\n</spells>\n";
+        } else {
+            // NPC has spells in metadata, but none matched descriptions
+            $SPELLS_ADD = "\n\n<spells>\n#Known Spells\nYou know no spells.\n</spells>\n";
         }
     }
     
