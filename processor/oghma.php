@@ -2,7 +2,7 @@
 
 $GLOBALS["OGHMA_HINT"] = "";
 
-if ($GLOBALS["MINIME_T5"]) {
+if ($GLOBALS["MINIME_T5"] || (isset($GLOBALS["OGHMA_LLM"]) && $GLOBALS["OGHMA_LLM"])) {
     if (isset($GLOBALS["OGHMA_INFINIUM"]) && ($GLOBALS["OGHMA_INFINIUM"])) {
         if (in_array($gameRequest[0], ["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat", "instruction", "suggestion"])) {
             
@@ -87,7 +87,14 @@ if ($GLOBALS["MINIME_T5"]) {
 
             // Extract topics up to OGHMA_AMOUNT times
             for ($i = 0; $i < $oghmaAmount; $i++) {
-                $topic_req = minimeTopic($remainingText);
+                if ($GLOBALS["OGHMA_LLM"]) {
+                    require_once(__DIR__."/../lib/oghma_llm_service.php");
+                    $lang = isset($GLOBALS["CORE_LANG"]) && !empty($GLOBALS["CORE_LANG"]) ? $GLOBALS["CORE_LANG"] : 'en';
+                    $topic_req = LLMTopic($remainingText, $lang);
+                } else {
+                    $topic_req = minimeTopic($remainingText);
+                }
+                
                 if ($topic_req) {
                     $topic_res = json_decode($topic_req, true);
                     $currentInputTopic = getArrayKey($topic_res, "generated_tags");
@@ -342,6 +349,6 @@ if ($GLOBALS["MINIME_T5"]) {
         error_log("[OGHMA] OGHMA_INFINIUM disabled: {$GLOBALS["OGHMA_INFINIUM"]}");
     }
 }  else {
-        error_log("[OGHMA]  MINIME_T5 disabled: {$GLOBALS["MINIME_T5"]}");
+        error_log("[OGHMA] Both MINIME_T5 and OGHMA_LLM are disabled");
 }
 ?>
