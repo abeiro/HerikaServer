@@ -18,6 +18,7 @@ WHERE type IN ('request', 'infonpc_close', 'infonpc')
 
 
 // This isn't fast
+// Delete copies, which age more the one week in-game, and keep always last 25
 $db->execQuery("
 WITH ranked AS (
     SELECT
@@ -30,7 +31,12 @@ WITH ranked AS (
 DELETE FROM core_npc_master_history h
 USING ranked r
 WHERE h.history_id = r.history_id
-  AND r.rn > 5
+  AND r.rn > 25
+  AND gamets_last_updated < (
+    SELECT MAX(gamets) - (24 * 7  / 0.0000024)
+    FROM public.eventlog
+    WHERE type IN ('request', 'infonpc_close', 'infonpc','prechat')
+  )
 ");
 
 
