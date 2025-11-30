@@ -43,7 +43,7 @@ You are an expert at extracting important topics from text and translating them 
 Follow these rules strictly:
 
 1. Extract only ONE most important topic (person, place, item, concept, etc.) from the text
-2. Convert Skyrim proper nouns to English (e.g., ドラゴン→dragons, ホワイトラン→Whiterun)
+2. Convert Skyrim proper nouns to English and ensure the output is in the **singular form** (e.g., ドラゴン→dragon, ホワイトラン→Whiterun)
 3. Translate general concepts to English (e.g., 魔法→magic, 戦闘→combat)
 4. Return ONLY the English word or phrase (no explanations, no Japanese text)
 5. If multiple candidates exist, choose the most important one
@@ -51,19 +51,19 @@ Follow these rules strictly:
 
 Examples:
 Input: 「ドラゴンについて聞いた」
-Output: dragons
+Output: dragon
 
 Input: 「ホワイトランに行く予定だ」
 Output: Whiterun
 
 Input: 「グレイビアードに会いに行った」
-Output: Greybeards
+Output: Greybeard
 
 Input: 「魔法を使った」
 Output: magic
 
 Input: "I heard about dragons"
-Output: dragons
+Output: dragon
 
 Bad examples (DO NOT DO THIS):
 Input: 「魔法を使った」
