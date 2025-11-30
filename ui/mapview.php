@@ -1489,7 +1489,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                             <strong>Getting Started:</strong>
                             <ol>
                                 <li><b>Make sure you the game is running and that the NPC is not a current follower (dismiss them).</b></li>
-                                <li>Look at an NPC in-game and press the <strong>Roleplay Wheel Hotkey (CHIM MCM Menu)</strong> to add them to Background Life</li>
+                                <li>Look at an NPC in-game and press the <strong>Roleplay Wheel Hotkey (CHIM MCM Menu)</strong> to add them to Background Life <strong>You must save your game for changes to take effect</strong></li>
                                 <li>You can either:
                                     <ul>
                                         <li>Talk to the NPC and give commands like: <em>"Go to Riften and then to Whiterun to do X and Y"</em></li>
@@ -1533,9 +1533,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 <div class="npc-list-header">
                         <h3>📍 NPC Markers</h3>
                         <div style="color: #bbb; font-size: 13px; padding-bottom: 10px; border-bottom: 1px solid #4a4a4a;">
-                            <strong>Tracked NPCs:</strong> <?php echo sizeof($translatedMarkers); ?> | 
-                            <strong>Markers:</strong> <?php echo sizeof($passiveMarkers); ?><br/>
-                            <strong>Current Ingame Date:</strong> <?php echo $currentDate?>
+                            <strong>Tracked NPCs:</strong> <?php echo sizeof($translatedMarkers); ?><br/>
+                            <strong>Current Ingame Date:</strong> <?php echo $currentDate?><br/>
+                            <em style="color: #ffa500;">For traveling to work you must click "Send All Locations" in the CHIM MCM under Tools to add them to Background Life<br/></em>
                         </div>
                         <button onclick="updateAllCoords()" class="update-all-coords-btn">📍 Update All NPC Coords</button>
                 </div>
