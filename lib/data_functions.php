@@ -2314,7 +2314,7 @@ function PackIntoSummary($onlyMissingDiary=false)
         $lastGameTsRecord = $GLOBALS["db"]->fetchOne("select gamets as gamets from eventlog order by gamets desc LIMIT 1"); // 2.1ms
         $results = $GLOBALS["db"]->fetchAll("select gamets_truncated from memory_summary order by gamets_truncated desc LIMIT 1"); // 0.5ms, faster 
 
-        $maxRow = intval($results[0]["gamets_truncated"]);
+        $maxRow = isset($results[0]["gamets_truncated"]) ? intval($results[0]["gamets_truncated"]) : 0;
         $minRow = intval($lastGameTsRecord["gamets"]);
         $minRowTs = intval($lastGameTsRecord["gamets"] -  ( 1 /0.0000024));
         
