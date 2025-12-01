@@ -75,7 +75,7 @@ Returns: "done" | "pending" | "failed".
 Spawns a declared item. **Items in pockets should be spawned too**
 
 quest_id (string, required)
-item_ref (string, required)
+item_ref (string, required) (Maker sure item has been created)
 location_or_char_ref (string, optional) – If omitted → world spawn. If NPC ref → NPC inventory.
 
 * CheckItemSpawn(quest_id, item_ref,  maxAttempts)
@@ -103,8 +103,8 @@ follow (bool, optional, default=false) – Whether NPC follows the player.
 NPC delivers a topic to the player.
 
 quest_id (string, required)
-npc_ref (string, required)
-topic_ref (string, required)
+npc_ref (string, required) (Make sure NPC has been created or this function will fail)
+topic_ref (string, required) (Make sure topic has been created or this function will fail)
 
 Quest fails if NPC does not deliver topic within timeout.
 
@@ -144,16 +144,34 @@ Initiates combat between the NPC and the player.
 Use WaitforCombatEnd to monitor the outcome.
 Idempotent: if already ordered to combat, does nothing.
 
+* CombatNPC(quest_id, npc_ref_attacker, npc_ref_target)
+
+Orders one NPC to engage another NPC in combat.
+
+quest_id (string, required)
+npc_ref_attacker (string, required) – NPC reference that will initiate the attack.
+npc_ref_target (string, required) – NPC reference that will be attacked.
+
+Returns: void
+
+Notes:
+
+Initiates combat between two NPCs.
+Use WaitForNPCCombatEnd to monitor the outcome.
+Idempotent: if already ordered to combat, does nothing.
+Both NPCs must be created via CreateNPC first.
+Useful for PvP encounters, NPC duels, or NPC betrayals in quest sequences.
+
 4. Wait Functions
 
 Wait functions pause quest execution until a condition is met, fails, or times out.
 
 * WaitToItemBeRecovered(quest_id, item_ref, timeout)
 
-Waits until the player recovers an item.
+Waits until the player recovers an item. (make sure item has been spawned using SpawnItem and CheckItemSpawn)
 
 quest_id (string, required)
-item_ref (string, required)
+item_ref (string, required) (check if item has been spawned)
 timeout (int, optional, default=10)
 
 Returns: "done" | "pending" | "failed".
@@ -197,6 +215,26 @@ Returns "done" when combat has ended (NPC defeated or fled).
 Returns "pending" while combat is still ongoing.
 Returns "failed" if combat does not end within maxAttempts checks.
 Tracks combat_attempts and combat state per NPC in quest data.
+
+* WaitForNPCCombatEnd(quest_id, npc_ref_attacker, npc_ref_target, maxAttempts)
+
+Waits until combat between two NPCs has ended.
+
+quest_id (string, required)
+npc_ref_attacker (string, required) – NPC reference that initiated the attack.
+npc_ref_target (string, required) – NPC reference that was attacked.
+maxAttempts (int, optional, default=100) – Maximum retries before failure.
+
+Returns: "done" | "pending" | "failed".
+
+Notes:
+
+Use this function after CombatNPC to monitor combat resolution.
+Returns "done" when combat has ended (one NPC defeated or both fled).
+Returns "pending" while combat is still ongoing.
+Returns "failed" if combat does not end within maxAttempts checks.
+Tracks npc_combat_attempts and combat state for both NPCs in quest data.
+Monitors event log for death events involving either NPC.
 
 * CheckTopicToPlayer(quest_id, topic_ref, maxAttempts)
 
@@ -360,7 +398,7 @@ if (CheckTopicToPlayer($quest_id, "t_ask_ring") !="done") {
     return;
 }
 
-// 7. Wait for the player to recover the book
+// 7. Wait for the player to recover the book 
 if (WaitToItemBeRecovered($quest_id, $item_ref)  != "done") {
     error_log("Item not recovered ".PHP_EOL);
     return;

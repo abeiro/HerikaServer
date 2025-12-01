@@ -315,6 +315,7 @@ Este soliloquio deberia de contener lo que el personaje deberia de haber hecho e
 
 Nota importante: El personaje '{$GLOBALS["PLAYER_NAME"]}' y  {$GLOBALS["HERIKA_NAME"]} estan separados despues los hechos de <context_history>.
 Escribe en español en un par de parrafos un monologo, como si fueses {$GLOBALS["HERIKA_NAME"]} en primera persona hablandose a si misma/mismo.
+Genera 3 parrafos.
 ";
 
 $userprompt["en"] = "

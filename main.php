@@ -1662,12 +1662,21 @@ if ($GLOBALS["HERIKA_NAME"] !== "The Narrator" && isset($extended_data["middle_t
 // Rumors and breaking news
 $rumorsText="";
 $currentHold=trim(DataLastKnownLocationHuman(true,false));
+$currentLoc=trim(DataLastKnownLocationHuman(false,false));
 if ($currentHold) {
-    error_log("[RUMORS] Current hold {$currentHold}");
+    error_log("[RUMORS] Current hold {$currentHold}, currentLoc {$currentLoc}");
     $currentHoldEsc=$db->escape($currentHold);
-    $query="SELECT * FROM rumors WHERE hold like '%{$currentHoldEsc}%' and gamets>".round($gameRequest[2]- ( 2 * 24 /0.0000024));
+    $currentLocEsc=$db->escape($currentLoc);
+    $query="SELECT * FROM rumors WHERE hold like '{$currentLocEsc}%{$currentHoldEsc}%' and gamets>".round($gameRequest[2]- ( 7 * 24 /0.0000024));
     error_log($query);
     $rumors = $db->fetchAll($query);
+
+    if (empty($umors)) {
+        $query="SELECT * FROM rumors WHERE hold like '{$currentHoldEsc}%' and gamets>".round($gameRequest[2]- ( 7 * 24 /0.0000024));
+        error_log($query);
+        $rumors = $db->fetchAll($query);
+    }
+
 
     foreach ($rumors as $n=>$rumor) {
        if (isset($rumor["content"])) {

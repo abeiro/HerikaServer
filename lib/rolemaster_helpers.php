@@ -3,6 +3,7 @@
 define("TOPIC_COVERED",1);
 define("TOPIC_UNCOVERED",2);
 define("WILL_DO_LATER",3);
+define("TOPIC_TOOEARLY",4);
 
 $GLOBALS["masterDataLocations"]=[
     "helgen"=>[0x00055e4f],
@@ -493,6 +494,10 @@ function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
         $parm2=$outfit["{$dclass}"][array_rand($outfit["{$dclass}"])];
     else
         $parm2=0;
+
+    if ($race=="draugr") {
+        $parm2=0;
+    }
 
     //$parm3=$weapon["{$weapon}"][0];
     $rumors=false;
@@ -1006,7 +1011,7 @@ function SkTopicCheck($character,$topic,$lastCall,$retries,$quest_id)
               error_log("[SkTopicCheck]\tTopic enforced <$topic> <{$character}>");
          
         }
-        return TOPIC_UNCOVERED;
+        return TOPIC_TOOEARLY;
     }
 }
 

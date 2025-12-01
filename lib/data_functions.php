@@ -588,7 +588,7 @@ function DataPosibleLocationsToGo()
     global $db;
     $lastDialogFull = array();
     $results = $db->fetchAll("select  a.data  as data  FROM  eventlog a 
-    WHERE type in ('infoloc')  order by gamets desc,ts desc LIMIT 50 OFFSET 0");
+    WHERE type in ('infoloc')  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
     $lastData = "";
     $retData = [];
     foreach ($results as $row) {
@@ -2374,7 +2374,7 @@ function DataLastKnownLocationHuman($hold=false,$cached=false)
     if ($cached && isset($GLOBALS["LAST_KNOW_LOCATION_HUMAN"]))
         return $GLOBALS["LAST_KNOW_LOCATION_HUMAN"];
 
-    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc','location') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc','location','request') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
         return "";
     }
@@ -2639,10 +2639,41 @@ function DataBeingsInRangeExcluding($excludeNPC="", $excludePlayer=true)
         }
     }
     $beingsFormatted=implode("|",$beingsArrayNew);
-    
+    error_log("<{$lastLoc[0]["data"]}> $beingsFormatted");
     return "|".$beingsFormatted."|";
 }
 
+function DataBeingsOrDeathsInRangeExcluding($excludeNPC="", $excludePlayer=true)
+{
+
+    global $db;
+
+    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infonpc')  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+    if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        return "";
+    }
+    if (trim($excludeNPC) > "")
+        $exNPC = trim($excludeNPC);
+    else
+        $exNPC = "x_y_z";
+            
+    $beings=strtr($lastLoc[0]["data"],["(beings in range:"=>""]);
+    $beingsArray=explode(",",$beings);
+    $beingsArrayNew=[];
+    if (!$excludePlayer)
+        $beingsArrayNew[]="{$GLOBALS["PLAYER_NAME"]}";  // Add player to beings in range
+    foreach ($beingsArray as $k=>$v) {
+        if (strpos($v,")")!==0) {
+            if (strpos($v,"Horse")!==0) 
+                if (strpos($v,"Chicken")!==0) 
+                    if (strpos($v,$exNPC)!==0) 
+                        $beingsArrayNew[]=$v;
+        }
+    }
+    $beingsFormatted=implode("|",$beingsArrayNew);
+    error_log("<{$lastLoc[0]["data"]}> $beingsFormatted");
+    return "|".$beingsFormatted."|";
+}
 
 function DataBeingsInCloseRange($excludeFarAway=false)
 {
@@ -3951,7 +3982,7 @@ function call_llm() {
                             $mang2=explode(" and ",$mang1[0]);
                             $mang3=explode("(",$mang2[0]);
 
-                            $mang4=trim($mang3[0])+0;
+                            $mang4 = is_numeric(trim($mang3[0])) ? trim($mang3[0]) + 0 : null;
 
                             error_log("[ACTION POSTFILTER TakeGoldFromPlayer] $localtarget => {$mang3[0]} => $mang4");
 
@@ -3961,7 +3992,7 @@ function call_llm() {
                                 $qtyrecord=$GLOBALS["db"]->fetchOne("SELECT speech,(regexp_matches(speech, '\d+'))[1]::int AS quantity FROM public.speech 
                                 WHERE listener = '$localNpc' OR speaker = '$localNpc' order by rowid desc LIMIT 100");
                                 if (isset($qtyrecord["quantity"])) {
-                                    $qty=reim($qtyrecord["quantity"]);
+                                    $qty=trim($qtyrecord["quantity"]);
                                     error_log("[ACTION POSTFILTER TakeGoldFromPlayer] quantity found $qty");
                                     $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TakeGoldFromPlayer@$qty";
                                 } else
