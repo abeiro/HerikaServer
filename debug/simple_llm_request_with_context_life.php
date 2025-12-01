@@ -315,7 +315,8 @@ Este soliloquio deberia de contener lo que el personaje deberia de haber hecho e
 
 Nota importante: El personaje '{$GLOBALS["PLAYER_NAME"]}' y  {$GLOBALS["HERIKA_NAME"]} estan separados despues los hechos de <context_history>.
 Escribe en español en un par de parrafos un monologo, como si fueses {$GLOBALS["HERIKA_NAME"]} en primera persona hablandose a si misma/mismo.
-Genera 3 parrafos.
+
+IMPORTANTE: Mantén este pensamiento interno breve y conciso - máximo 2-3 párrafos cortos.
 ";
 
 $userprompt["en"] = "
@@ -331,11 +332,13 @@ This soliloquy should reflect what the character might have done over the last $
  * What possible events or encounters might have occurred.
  * Intimate thoughts.
 
-Always respect the character’s last known location. If the character is currently in a specific place, generated content should occur in that same area or its surroundings.
+Always respect the character's last known location. If the character is currently in a specific place, generated content should occur in that same area or its surroundings.
 The character may express the intention to travel elsewhere, but such travel should only be described as a future plan, not an immediate action.
 
 Important note: Character {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]} ARE NOT  IN THE SAME PLACE after <context_history> events.
 Write in english as if you were {$GLOBALS["HERIKA_NAME"]}, soliloquy, speaking to yourself in first person.
+
+IMPORTANT: Keep this inner thought short and concise - aim for 2-3 brief paragraphs maximum.
 ";
 
 $metadata   = json_decode($currentNpcData["metadata"], true);
@@ -397,7 +400,7 @@ Where:
 
 action: chosen action (e.g., StayAtPlace,TravelTo:<Place>,ReturnHome)
 rumor:  rumor spreaded or created. rumor should be located and related to current character's location ($LAST_REPORTED_LOCATION), e.g if character is at Dawnstar, rumor should be Dawnstar related.
-notification: Write it as a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["HERIKA_NAME"]}. Use same language as <text>.
+notification: Write it as a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["HERIKA_NAME"]}. Use same language as <text>. IMPORTANT: Keep the letter SHORT and CONCISE - maximum 2-3 brief paragraphs.
 
 "];
 } else {
@@ -425,7 +428,7 @@ Where:
 
 action: chosen action (StayAtPlace or SpreadRumor)
 rumor:  rumor spreaded or created. rumor should be located and related to current character's location ($LAST_REPORTED_LOCATION), e.g if character is at Dawnstar, rumor should be Dawnstar related.
-notification: Write it as a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["HERIKA_NAME"]}. Use same language as <text>.
+notification: Write it as a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["HERIKA_NAME"]}. Use same language as <text>. IMPORTANT: Keep the letter SHORT and CONCISE - maximum 2-3 brief paragraphs.
 
 
 "];

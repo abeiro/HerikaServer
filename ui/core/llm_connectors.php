@@ -997,7 +997,7 @@ if (isset($_GET["delete"])) {
         $inUse = 0;
     }
     if ($inUse > 0) {
-        $msg = "Cannot delete: connector is used by ${inUse} profile" . ($inUse>1? 's' : '') . ". Remove from all profiles first.";
+        $msg = "Cannot delete: connector is used by {$inUse} profile" . ($inUse>1? 's' : '') . ". Remove from all profiles first.";
         header("Location: llm_connectors.php?notice=" . urlencode($msg));
         exit;
     }

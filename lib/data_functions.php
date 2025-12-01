@@ -877,7 +877,7 @@ function DataLastDataExpandedForNPC($actor, $lastNelements = -10,$sqlfilter="") 
 
         ksort($lastDialogFull);
         
-        $results = $db->fetchAll("SELECT gamets,data,ts FROM eventlog where type in ('inputtext','inputtext_s','ginputtext','ginputtext_s')
+        $results = $db->fetchAll("SELECT gamets,data,ts FROM eventlog where type in ('inputtext','inputtext_s','ginputtext','ginputtext_s','narrator_inputtext')
             order by gamets desc LIMIT 1 OFFSET 0");    
         $rawData=[];
         foreach ($results as $row) {
@@ -1226,7 +1226,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc' and type<>'infoitems'  
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
-    and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region'
+    and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region' and type<>'narrator_inputtext'
     ".(($actorEscaped)?" 
     and (
      people like '%|$actorEscaped|%' 
@@ -2419,7 +2419,7 @@ function PackIntoSummary($onlyMissingDiary=false)
         $lastGameTsRecord = $GLOBALS["db"]->fetchOne("select gamets as gamets from eventlog order by gamets desc LIMIT 1"); // 2.1ms
         $results = $GLOBALS["db"]->fetchAll("select gamets_truncated from memory_summary order by gamets_truncated desc LIMIT 1"); // 0.5ms, faster 
 
-        $maxRow = intval($results[0]["gamets_truncated"]);
+        $maxRow = isset($results[0]["gamets_truncated"]) ? intval($results[0]["gamets_truncated"]) : 0;
         $minRow = intval($lastGameTsRecord["gamets"]);
         $minRowTs = intval($lastGameTsRecord["gamets"] -  ( 1 /0.0000024));
         
@@ -3502,7 +3502,7 @@ function call_llm() {
 
         Player TTS. We overwrite some confs an then restore them.
         */
-        if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && !Translation::isSavePlayerTranslationEnabled()) {
+        if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && !Translation::isSavePlayerTranslationEnabled()) {
             require(__DIR__."/../processor/player_tts.php");
         }
         $currentConnectorData=$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"];
@@ -3590,7 +3590,7 @@ function call_llm() {
 
         Player TTS. We overwrite some confs an then restore them.
         */
-        if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && !Translation::isSavePlayerTranslationEnabled()) {
+        if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && !Translation::isSavePlayerTranslationEnabled()) {
             require(__DIR__."/../processor/player_tts.php");
         }
 
