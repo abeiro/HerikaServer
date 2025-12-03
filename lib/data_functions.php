@@ -1242,6 +1242,20 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     // OR people LIKE '%|$actorEscaped (far away)|%') this can be confusing in whisper mode
     $results = $db->fetchAll($query);
 
+    // Filter blacklisted event types
+    if (isset($GLOBALS["EVENT_TYPE_FILTER"]) && !empty($GLOBALS["EVENT_TYPE_FILTER"])) {
+        $blacklistedEventTypes = array_map('trim', explode(',', strtolower($GLOBALS["EVENT_TYPE_FILTER"])));
+        $results = array_filter($results, function($row) use ($blacklistedEventTypes) {
+            $eventType = strtolower($row["type"] ?? '');
+            foreach ($blacklistedEventTypes as $blacklistedType) {
+                if (!empty($blacklistedType) && $eventType === $blacklistedType) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
+
     //error_log($query);
     $rawData=[];
     foreach ($results as $row) {
