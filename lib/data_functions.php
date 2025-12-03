@@ -3465,6 +3465,15 @@ function call_llm() {
     global $ERROR_TRIGGERED, $talkedSoFar, $alreadysent, $FUNCTIONS_ARE_ENABLED;
     global $overrideParameters, $request;
     
+    // Call the internal function (which now handles fallback itself)
+    return call_llm_internal();
+}
+
+function call_llm_internal() {
+    global $contextData, $gameRequest, $receivedData, $startTime, $db;
+    global $ERROR_TRIGGERED, $talkedSoFar, $alreadysent, $FUNCTIONS_ARE_ENABLED;
+    global $overrideParameters, $request;
+    
     $outputWasValid = true;
     
 
@@ -3485,7 +3494,8 @@ function call_llm() {
 
         Player TTS. We overwrite some confs an then restore them.
         */
-        if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && !Translation::isSavePlayerTranslationEnabled()) {
+        // Only process player TTS on the first attempt, not during fallback retry
+        if (!isset($GLOBALS["IN_FALLBACK_MODE"]) && in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && !Translation::isSavePlayerTranslationEnabled()) {
             require(__DIR__."/../processor/player_tts.php");
         }
         $currentConnectorData=$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"];
@@ -3573,7 +3583,8 @@ function call_llm() {
 
         Player TTS. We overwrite some confs an then restore them.
         */
-        if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && !Translation::isSavePlayerTranslationEnabled()) {
+        // Only process player TTS on the first attempt, not during fallback retry
+        if (!isset($GLOBALS["IN_FALLBACK_MODE"]) && in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && !Translation::isSavePlayerTranslationEnabled()) {
             require(__DIR__."/../processor/player_tts.php");
         }
 
@@ -3593,7 +3604,71 @@ function call_llm() {
     }
     ///// PATCH
 
+    error_log("[FALLBACK DEBUG] Checking primary_handler status: " . ($connectionHandler->primary_handler === false ? "FALSE" : "OK"));
+    
     if ($connectionHandler->primary_handler === false) {
+        error_log("[FALLBACK DEBUG] primary_handler is false, checking fallback conditions");
+        
+        // Check if we should try fallback BEFORE sending error message
+        if (!isset($GLOBALS["IN_FALLBACK_MODE"])) {
+            $shouldTryFallback = false;
+            $fallbackConnectorId = null;
+            
+            if (isset($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"])) {
+                $profileData = $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"];
+                $fallbackConnectorId = $profileData["llm_fallback_id"] ?? null;
+                error_log("[FALLBACK DEBUG] Fallback connector ID from profile: " . ($fallbackConnectorId ?? "NULL"));
+                
+                // Check if fallback is enabled in metadata
+                if (!empty($profileData["metadata"])) {
+                    $metadata = is_string($profileData["metadata"]) 
+                        ? json_decode($profileData["metadata"], true) 
+                        : $profileData["metadata"];
+                    if (is_array($metadata)) {
+                        $fallbackEnabled = !empty($metadata["LLM_FALLBACK_ENABLED"]);
+                        error_log("[FALLBACK DEBUG] Fallback enabled in metadata: " . ($fallbackEnabled ? "YES" : "NO"));
+                        $currentConnectorId = $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["id"] ?? null;
+                        error_log("[FALLBACK DEBUG] Current connector ID: " . ($currentConnectorId ?? "NULL"));
+                        $shouldTryFallback = $fallbackEnabled && $fallbackConnectorId && $fallbackConnectorId != $currentConnectorId;
+                        error_log("[FALLBACK DEBUG] Should try fallback: " . ($shouldTryFallback ? "YES" : "NO"));
+                    }
+                }
+            }
+            
+            if ($shouldTryFallback) {
+                error_log("[FALLBACK] Primary connector failed (connection error). Attempting fallback connector ID: {$fallbackConnectorId}");
+                
+                // Set fallback mode flag to prevent player TTS reprocessing
+                $GLOBALS["IN_FALLBACK_MODE"] = true;
+                
+                // Load and try fallback connector
+                $connector = new LLMConnector();
+                $fallbackConnectorData = $connector->getById($fallbackConnectorId);
+                
+                if ($fallbackConnectorData) {
+                    error_log("[FALLBACK] Loaded fallback connector: {$fallbackConnectorData["driver"]}/{$fallbackConnectorData["model"]}");
+                    $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $fallbackConnectorData;
+                    $connector->setOldGlobals($fallbackConnectorData);
+                    
+                    error_log("[FALLBACK] Recursively retrying with fallback connector");
+                    // Recursively retry with fallback (flag stays set throughout retry)
+                    $result = call_llm_internal();
+                    
+                    // Clear fallback mode flag after retry completes
+                    unset($GLOBALS["IN_FALLBACK_MODE"]);
+                    
+                    return $result;
+                } else {
+                    error_log("[FALLBACK] Fallback connector ID {$fallbackConnectorId} not found.");
+                    unset($GLOBALS["IN_FALLBACK_MODE"]);
+                }
+            }
+        } else {
+            error_log("[FALLBACK DEBUG] Already in fallback mode, not retrying");
+        }
+        
+        // No fallback or fallback also failed - send error message
+        error_log("[FALLBACK DEBUG] Sending ERROR_OPENAI message to user");
         $db->insert(
             'log',
             array(
@@ -3619,6 +3694,56 @@ function call_llm() {
     // Check for error response code
     $statusCode = method_exists($connectionHandler, 'getHttpStatusCode') ? $connectionHandler->getHttpStatusCode() : 200;
     if ($statusCode >= 300) {
+        // Check if we should try fallback BEFORE sending error message
+        if (!isset($GLOBALS["IN_FALLBACK_MODE"])) {
+            $shouldTryFallback = false;
+            $fallbackConnectorId = null;
+            
+            if (isset($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"])) {
+                $profileData = $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"];
+                $fallbackConnectorId = $profileData["llm_fallback_id"] ?? null;
+                
+                // Check if fallback is enabled in metadata
+                if (!empty($profileData["metadata"])) {
+                    $metadata = is_string($profileData["metadata"]) 
+                        ? json_decode($profileData["metadata"], true) 
+                        : $profileData["metadata"];
+                    if (is_array($metadata)) {
+                        $fallbackEnabled = !empty($metadata["LLM_FALLBACK_ENABLED"]);
+                        $currentConnectorId = $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["id"] ?? null;
+                        $shouldTryFallback = $fallbackEnabled && $fallbackConnectorId && $fallbackConnectorId != $currentConnectorId;
+                    }
+                }
+            }
+            
+            if ($shouldTryFallback) {
+                error_log("[FALLBACK] Primary connector failed (HTTP {$statusCode}). Attempting fallback connector ID: {$fallbackConnectorId}");
+                
+                // Set fallback mode flag to prevent player TTS reprocessing
+                $GLOBALS["IN_FALLBACK_MODE"] = true;
+                
+                // Load and try fallback connector
+                $connector = new LLMConnector();
+                $fallbackConnectorData = $connector->getById($fallbackConnectorId);
+                
+                if ($fallbackConnectorData) {
+                    $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $fallbackConnectorData;
+                    $connector->setOldGlobals($fallbackConnectorData);
+                    
+                    // Recursively retry with fallback (flag stays set throughout retry)
+                    $result = call_llm_internal();
+                    
+                    // Clear fallback mode flag after retry completes
+                    unset($GLOBALS["IN_FALLBACK_MODE"]);
+                    
+                    return $result;
+                } else {
+                    error_log("[FALLBACK] Fallback connector ID {$fallbackConnectorId} not found.");
+                    unset($GLOBALS["IN_FALLBACK_MODE"]);
+                }
+            }
+        }
+        
         Logger::error("LLM provider error response code: $statusCode");
         return false;
     }

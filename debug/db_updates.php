@@ -1920,6 +1920,41 @@ try {
     Logger::error("Error enforcing unique slot index: ".$e->getMessage());
 }
 
+// Add llm_fallback_id column to core_profiles for fallback connector support
+if ($checkVersion("core_profiles") < 20251203001) {
+    Logger::debug("Applying core_profiles 20251203001 - Adding llm_fallback_id for fallback support");
+    try {
+        // Add the column if it doesn't exist
+        $db->execQuery('ALTER TABLE public.core_profiles ADD COLUMN IF NOT EXISTS llm_fallback_id integer');
+        
+        // Add foreign key constraint if it doesn't exist
+        $fkExists = $db->fetchAll("
+            SELECT 1 FROM pg_constraint 
+            WHERE conname = 'profiles_llm_fallback_id_fkey'
+        ");
+        
+        if (!$fkExists || !isset($fkExists[0])) {
+            $db->execQuery("
+                ALTER TABLE public.core_profiles
+                ADD CONSTRAINT profiles_llm_fallback_id_fkey 
+                FOREIGN KEY (llm_fallback_id) REFERENCES public.core_llm_connector(id)
+            ");
+            Logger::info("Added foreign key constraint profiles_llm_fallback_id_fkey");
+        }
+        
+        // Add comment
+        $db->execQuery("
+            COMMENT ON COLUMN public.core_profiles.llm_fallback_id 
+            IS 'Fallback LLM connector used when primary connector fails with network error'
+        ");
+        
+        $updateVersion("core_profiles", 20251203001);
+        Logger::info("Applied patch core_profiles 20251203001 - Added llm_fallback_id for automatic fallback on network errors");
+    } catch (Exception $e) {
+        Logger::error("Error adding llm_fallback_id to core_profiles: " . $e->getMessage());
+    }
+}
+
 // Final repair pass: ensure critical core tables exist even if versions were bumped earlier
 try {
     $coreTables = [
