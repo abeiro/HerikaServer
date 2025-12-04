@@ -647,8 +647,9 @@ function DataPosibleLocationsToGoWide()
     WHERE type in ('region')  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
 
     if ($results) {
-        $regCn=$db->escape($results["data"]);
-        $locs = $db->fetchAll("select  name  FROM  locations where region='{$regCn}'");
+        $regCn=$db->escape(trim($results["data"]));
+        error_log("select  name  FROM  locations where region ilike'{$regCn}'");
+        $locs = $db->fetchAll("select  name  FROM  locations where region ilike '{$regCn}'");
         $r=[];
         foreach ($locs as $loc) {
             $r[]=$loc["name"];
@@ -2319,6 +2320,23 @@ function DataLastAction($actor)
     WHERE actorname='$cnActor' order by gamets desc,ts desc LIMIT 1 OFFSET 0");
     
     return $results;
+
+}
+
+function DataActorHasDied($actor)
+{
+    global $db;
+    
+    $lastDialogFull = array();
+    $cnActor = $db->escape($actor);
+    
+    $rows = $GLOBALS["db"]->fetchAll("select 1 as n,gamets from eventlog where type='death'
+        and (data like '%defeated $cnActor%' or data like '%killed $cnActor%')
+        order by gamets desc limit 1");
+    if ($rows)
+        return true;
+    
+    return false;
 
 }
 

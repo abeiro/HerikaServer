@@ -59,6 +59,12 @@ $GLOBALS["npc_templates"]=[
 
     "male_draugr"=>[0x0005593b],
     "female_draugr"=>[],
+    
+    "male_elk"=>[0x00023a91],
+    "female_elk"=>[0x00023a91],
+
+    "male_frost_troll"=>[0x00023abb],
+    "female_frost_troll"=>[],
 
     
     
@@ -437,7 +443,7 @@ function testSpawnRandomNPC() {
 
 }
 
-function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
+function npcProfileBase($name,$class,$race,$gender,$location,$taskId,$additionalData = []) {
 
     /*
     SELECT STRING_AGG(formid,',') FROM "public"."npc_skyrim_data" where gender ilike 'male%' and race ilike 'nord%' and name='' and class ilike '%bandit%' and edid like 'Enc%' and achr='' and (not formid ilike '%0xDG%')  and (not  edid ilike '%magic%') 
@@ -480,13 +486,15 @@ function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
 
     $parm5 = $masterDataTemplates["{$gender}_{$race}"][array_rand($masterDataTemplates["{$gender}_{$race}"])];
     $dclass=$class;
+
     if ($class=="priest")
         $dclass="mage";
     
     if (isset($masterData["{$gender}_{$race}_{$dclass}"]))
         $parm1 = $masterData["{$gender}_{$race}_{$dclass}"][array_rand($masterData["{$gender}_{$race}_{$dclass}"])];
     else
-        $parm1=$parm5;// Get frm npc templates
+        $parm1=$parm5;// Get from npc templates
+
     if ($class=="priest")
         $dclass="bard";
 
@@ -495,7 +503,7 @@ function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
     else
         $parm2=0;
 
-    if ($race=="draugr") {
+    if (in_array($race,["draugr","elk"])) {
         $parm2=0;
     }
 
@@ -517,7 +525,13 @@ function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
     else    
         $parm4=0;
 
-    
+    if (isset($additionalData["disposition"])) {
+        if (in_array($additionalData["disposition"],["aggressive"])) {
+            $patchedTaskid="1";
+        } else
+            $patchedTaskid=$taskId;
+    }
+
     $GLOBALS["db"]->insert(
         'responselog',
         array(
@@ -525,7 +539,7 @@ function npcProfileBase($name,$class,$race,$gender,$location,$taskId) {
             'sent' => 0,
             'actor' => "rolemaster",
             'text' => "",
-            'action' => "rolecommand|spawnCharacter@{$name}@$parm1@$parm2@$parm3@$parm4@$taskId@$parm5",
+            'action' => "rolecommand|spawnCharacter@{$name}@$parm1@$parm2@$parm3@$parm4@$patchedTaskid@$parm5",
             'tag' => ""
         )
     );
@@ -769,7 +783,7 @@ function createBook($title,$content,$location) {
     imagedestroy($background);
 
     echo "Image saved as $filename" . PHP_EOL;
-    $cn_name=$GLOBALS["db"]->escape($name);
+    
     $GLOBALS["db"]->insert(
         'responselog',
         array(
@@ -777,7 +791,7 @@ function createBook($title,$content,$location) {
             'sent' => 0,
             'actor' => "rolemaster",
             'text' => "",
-            'action' => "rolecommand|spawnBook@$cn_name@0@$localItemPlace@{$GLOBALS["taskId"]}@$cn_name",
+            'action' => "rolecommand|spawnBook@$name@0@$localItemPlace@{$GLOBALS["taskId"]}@$name",
             'tag' => ""
         )
     );

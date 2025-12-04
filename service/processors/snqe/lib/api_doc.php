@@ -129,9 +129,9 @@ maxAttempts (int, optional, default=5) – Maximum retries before failure.
 
 Returns: "done" | "pending" | "failed".
 
-* CombatPlayer(quest_id, npc_ref)
+* CombatPlayer(quest_id, npc_ref) (Make sure npc_ref has been created and spawned)
 
-Orders an NPC to engage the player in combat.
+Orders an NPC to engage the player in combat. NPC should have a good reason to combat AGAINST player, like being an enemy.
 
 quest_id (string, required)
 npc_ref (string, required)
@@ -140,8 +140,8 @@ Returns: void
 
 Notes:
 
-Initiates combat between the NPC and the player.
-Use WaitforCombatEnd to monitor the outcome.
+Initiates a combat between the NPC and the player.
+**YOU MUST USE WaitforCombatEnd to monitor the outcome.**
 Idempotent: if already ordered to combat, does nothing.
 
 * CombatNPC(quest_id, npc_ref_attacker, npc_ref_target)
@@ -158,6 +158,8 @@ Notes:
 
 Initiates combat between two NPCs.
 Use WaitForNPCCombatEnd to monitor the outcome.
+**YOU MUST USE WaitForNPCCombatEnd to monitor the outcome.**
+
 Idempotent: if already ordered to combat, does nothing.
 Both NPCs must be created via CreateNPC first.
 Useful for PvP encounters, NPC duels, or NPC betrayals in quest sequences.
@@ -168,7 +170,7 @@ Wait functions pause quest execution until a condition is met, fails, or times o
 
 * WaitToItemBeRecovered(quest_id, item_ref, timeout)
 
-Waits until the player recovers an item. (make sure item has been spawned using SpawnItem and CheckItemSpawn)
+Waits until the player recovers an item. (Make sure item has been spawned using SpawnItem and CheckItemSpawn)
 
 quest_id (string, required)
 item_ref (string, required) (check if item has been spawned)
@@ -262,7 +264,7 @@ Waits until the player reaches a specific location.
 quest_id (string, required) – Quest identifier.
 location (string, required) – Location name to wait for (e.g., "Whiterun", "Markarth", "Solitude").
 maxAttempts (int, optional, default=1000) – Maximum retries before failure. Set to 1000 for indefinite waiting.
-npc_ref (string, optional) – NPC reference ID. If provided, the NPC will travel to that location when the player arrives.
+npc_ref (string, optional) – NPC reference ID. If provided, the NPC will travel to that location and will wait for the player.
 
 Returns: "done" | "pending" | "failed"
 
@@ -310,9 +312,10 @@ Spawn functions trigger asynchronous events; use Check* to confirm.
 
 Wait functions allow branching: success → continue, timeout → alternate path, waiting → pause and retry on next run.
 
-
 Interaction functions (MoveToPlayer, TellTopic*, CombatPlayer) are executed once and persist state.
 
+1. Create functions should be at the top of the code.
+2. Respect instuctions order.
 
 Example quest:
 
@@ -383,11 +386,14 @@ if (CheckItemSpawn($quest_id, $item_ref)!="done") {
 // We could use WaitAtLocation here if we want the wizard to stay there until player finds him
 // This is prefered when spawning location is not nearby
 
-// WaitAtLocation($quest_id, "Remote Location", 10000);
+// if (WaitAtLocation($quest_id, "Remote Location", 10000,$ npc_ref) != "done") {
+//    error_log("NPC waiting at location".PHP_EOL);
+// }
 
 // If NPC was spawned nearby, just TellTopicToPlayer
 
-// 6. Wizard tells the player about the quest
+// 6. Wizard tells the player about the quest. We have ensured topic is created by CreateTopic, and NPC exists by CreateNPC
+
 if (TellTopicToPlayer($quest_id, $npc_ref, "t_ask_ring") !="done") {
     error_log("TellTopicToPlayer failed, will retry".PHP_EOL);
     return;
@@ -398,7 +404,7 @@ if (CheckTopicToPlayer($quest_id, "t_ask_ring") !="done") {
     return;
 }
 
-// 7. Wait for the player to recover the book 
+// 7. Wait for the player to recover the book . Yes, We have checked item has been spawned using SpawnItem and CheckItemSpawn.
 if (WaitToItemBeRecovered($quest_id, $item_ref)  != "done") {
     error_log("Item not recovered ".PHP_EOL);
     return;
@@ -437,7 +443,7 @@ if (CheckTopicToPlayer($quest_id, "t_thanks") !="done") {
     error_log("Topic not covered ".PHP_EOL);
     return;
 }
-// 10. Remove the wizard (optional, quest end)
+// 10. Remove the wizard (optional, NPC says farewell) and we are not going  to need NPC more in the future)
 ToGoAway($quest_id, $npc_ref);
 
 CompleteQuest($quest_id);

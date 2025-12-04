@@ -81,7 +81,9 @@ class SNQEQuestManager {
 
         $merged = array_merge($existing["quest_data"] ?? [], $data);
         $merged["lastgamets"]=$GLOBALS["last_gamets"];
-
+        if (isset($data["last_llm_call"]))
+             $merged["last_llm_call_topic"]=$GLOBALS["last_gamets"];
+            
         $GLOBALS["db"]->updateRow(self::TABLE_NAME, ["quest_data" => json_encode($merged)], "quest_id='$quest_id'");
     }
 

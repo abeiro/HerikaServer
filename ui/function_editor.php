@@ -49,6 +49,7 @@ $npcFunctions = [
     'GiveItemTo',
     'PickupItem',
     'CastSpell',
+    'MakeFollower'
 ];
 
 $playerFunctions = [
@@ -92,7 +93,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
 require_once($enginePath."lib/utils.php");
 require_once($enginePath."functions/functions.php");
 
-$currentList = $GLOBALS["ENABLED_FUNCTIONS"];
+$currentList = $GLOBALS["DEFINED_FUNCTIONS"];
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -345,7 +346,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="function-category">
                     <h3>🚶 Movement & Navigation</h3>
                     <?php
-                    $movementFunctions = ['TravelTo', 'Follow', 'FollowPlayer', 'ComeCloser', 'WaitHere', 'IncreaseWalkSpeed', 'DecreaseWalkSpeed'];
+                    $movementFunctions = ['TravelTo', 'Follow', 'FollowPlayer', 'ComeCloser', 'WaitHere', 'IncreaseWalkSpeed', 'DecreaseWalkSpeed','MakeFollower'];
                     foreach ($movementFunctions as $func):
                         if (in_array($func, $currentList)):
                     ?>

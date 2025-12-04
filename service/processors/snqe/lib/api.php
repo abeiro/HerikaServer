@@ -117,15 +117,15 @@ function CreateItem(
         "type"           => $type,
         "location"       => $location,
         "description"    => $description,
-        "npc_ref"        => $npc_ref,    // NPC inventory reference (optional)
-        "spawned"        => false,       // Track if SpawnItem has been called
-        "spawn_attempts" => 0,           // Count of spawn checks
+        "npc_ref"        => $npc_ref, // NPC inventory reference (optional)
+        "spawned"        => false,    // Track if SpawnItem has been called
+        "spawn_attempts" => 0,        // Count of spawn checks
     ];
 
     if ($npc_ref) {
-        $npcMaster = new NpcMaster();
-        $currentNpcData       = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
-        $currentNpcData["goals"].="\nNote that this actor has this item: $name in its inventory, which can be relevant to the current storyline\n";
+        $npcMaster      = new NpcMaster();
+        $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
+        $currentNpcData["goals"] .= "\nNote that this actor has this item: $name in its inventory, which can be relevant to the current storyline\n";
         $npcMaster->updateByArray($currentNpcData);
     }
 
@@ -186,9 +186,9 @@ function CreateTopic(
         "giver"             => $giver,
         "info"              => $info,
         "target"            => $target,
-        "important"         => $important,      // Whether topic requires verification checks
-        "delivered"         => false,           // Track if topic has been delivered
-        "delivery_attempts" => 0,               // Count attempts for delivery checks
+        "important"         => $important, // Whether topic requires verification checks
+        "delivered"         => false,      // Track if topic has been delivered
+        "delivery_attempts" => 0,          // Count attempts for delivery checks
     ];
 
     // Save updated quest state
@@ -220,6 +220,20 @@ function SpawnNPC(
         throw new Exception("NPC '$npc_ref' not declared. Use CreateNPC first.");
     }
 
+    $npc = $quest_data["npcs"][$npc_ref];
+    $cn  = $GLOBALS["db"]->escape($npc["name"]);
+    error_log("[CheckNPCSpawn]\tCheck if character $cn has spawned ");
+    error_log("select 1 as n,data from eventlog where type='status_msg'
+        and data like '%spawned@$cn%' order by localts desc");
+    $spawned = $GLOBALS["db"]->fetchOne("select 1 as n,data from eventlog where type='status_msg'
+        and data like '%spawned@$cn%' order by localts desc");
+
+    // Check if spawned in previous session
+    if (isset($spawned["n"])) {
+        error_log("Spawned in previous session");
+        return;
+    }
+
     // If already spawned, skip
     if (! empty($quest_data["npcs"][$npc_ref]["spawned"])) {
         error_log("[SpawnNPC]\tNPC <$npc_ref> already spawned");
@@ -241,7 +255,7 @@ function SpawnNPC(
         $quest_data["npcs"][$npc_ref]["race"],
         $quest_data["npcs"][$npc_ref]["gender"],
         $quest_data["npcs"][$npc_ref]["location"],
-        $quest_id);
+        $quest_id, $quest_data["npcs"][$npc_ref]);
 
     // Save state
     SNQEQuestManager::updateQuestData($quest_id, ["npcs" => $quest_data["npcs"]]);
@@ -343,24 +357,27 @@ function CheckNPCSpawn(
         $metaData = $npcMaster->getMetadata($npcLocalData);
         $extData  = $npcMaster->getExtendedData($npcLocalData);
 
-        $metaData["is_rolemastered"]        = true;
-        $metaData["gps_track"]              = true;
-        $extData["background_life_enabled"] = true;
+        $metaData["is_rolemastered"]             = true;
+        $metaData["gps_track"]                   = true;
+        $extData["background_life_enabled"]      = true;
         $extData["background_life_last_updated"] = $GLOBALS["last_gamets"];
-        
-        $npcLocalData = $npcMaster->setMetadata($npcLocalData, $metaData);
-        $npcLocalData = $npcMaster->setExtendedData($npcLocalData, $extData);
+        $npcLocalData["dynamic_profile"]         = 1;
+        $npcLocalData                            = $npcMaster->setMetadata($npcLocalData, $metaData);
+        $npcLocalData                            = $npcMaster->setExtendedData($npcLocalData, $extData);
         $npcMaster->updateByArray($npcLocalData);
 
         if (isset($npc["disposition"])) {
-            $skyrimCmd = new SkyrimCommandBuilder();
-            $json = $skyrimCmd->Actor->SetAlert("0x{$npc["refid"]}", 1);
-            $skyrimCmd->send($json); 
+            if (in_array($npc["disposition"], ["aggressive"])) {
+
+                $skyrimCmd = new SkyrimCommandBuilder();
+                $json      = $skyrimCmd->Actor->SetAlert("0x{$npcLocalData["refid"]}", 1);
+                $skyrimCmd->send($json);
+            }
         }
         error_log("[CheckNPCSpawn]\t{$npc["name"]} spawned");
 
         // Only move to player if location is nearby
-        if ($npc["location"] === "nearby") {
+        if ($npc["location"] == "nearby") {
             $GLOBALS["db"]->insert(
                 'responselog',
                 [
@@ -369,7 +386,7 @@ function CheckNPCSpawn(
                     'actor'   => "rolemaster",
                     'text'    => "",
                     'action'  => "rolecommand|moveToPlayer@{$npc["name"]}@$quest_id",
-                    'tag'     => "",
+                    'tag' => "",
                 ]
             );
         }
@@ -429,9 +446,25 @@ function SpawnItem(
 
     $item = $quest_data["items"][$item_ref];
 
+    // Check if spawned on previous session.
+    $cn = $GLOBALS["db"]->escape($item["name"]);
+    error_log("select count(*) as n from eventlog where type='status_msg'
+     and data like '%spawned%@$cn%success%'");
+    $spawned = $GLOBALS["db"]->fetchAll("select count(*) as n from eventlog where type='status_msg'
+     and data like '%spawned%@$cn%success%' ");
+
+    if (($spawned[0]["n"])) {
+        error_log("[CheckItemSpawn] Item <{$item["name"]}> already spawned");
+        $item["spawned"]                = "done";
+        $quest_data["items"][$item_ref] = $item;
+        SNQEQuestManager::updateQuestData($quest_id, ["items" => $quest_data["items"]]);
+
+        return "done";
+    }
+
     // If already spawned, skip
     if (! empty($item["spawned"])) {
-        error_log("[SpawnItem] Spawned: <{$item["spawned"]}> {$item["type"]} {$item["name"]}, {$item["location"]}, {$item["description"]}, $quest_id)");
+        error_log("[SpawnItem] Spawned: <{$item["spawned"]}> <{$item["type"]}> <{$item["name"]}>, <{$item["location"]}>, <{$item["description"]}>, $quest_id)");
         return;
     }
 
@@ -443,13 +476,13 @@ function SpawnItem(
     // Placeholder: call to Skyrim engine
     // SkyrimAPI::spawnItem($item_ref, $char_ref);
     error_log("[SpawnItem] {$item["type"]} {$item["name"]}, {$item["location"]}, {$item["description"]}, $quest_id)" . PHP_EOL);
-    
+
     // Get NPC name if npc_ref is set
     $npc_name = null;
     if ($item["npc_ref"] && isset($quest_data["npcs"][$item["npc_ref"]])) {
         $npc_name = $quest_data["npcs"][$item["npc_ref"]]["name"];
     }
-    
+
     SkCreateItem($item["type"], $item["name"], $item["location"], $item["description"], $quest_id, $npc_name);
 
     // Save
@@ -485,11 +518,11 @@ function CheckItemSpawn(
 
     $item = $quest_data["items"][$item_ref];
 
-    $cn      = $GLOBALS["db"]->escape($item["name"]);
+    $cn = $GLOBALS["db"]->escape($item["name"]);
     error_log("select count(*) as n from eventlog where type='status_msg'
-     and data like '%spawned_item%@$cn%success%'");
+     and data like '%spawned%@$cn%success%'");
     $spawned = $GLOBALS["db"]->fetchAll("select count(*) as n from eventlog where type='status_msg'
-     and data like '%spawned_item%@$cn%success%' ");
+     and data like '%spawned%@$cn%success%' ");
 
     $isSpawned = false; // <-- stub
 
@@ -586,7 +619,7 @@ function MoveToPlayer(
             'sent'    => 0,
             'actor'   => "rolemaster",
             'text'    => "",
-            'action'  => "rolecommand|moveToPlayer@{$npc["name"]}@$quest_id@$followStr",
+            'action'  => "rolecommand|moveToPlayer@{$npc["name"]}@$quest_id", //@$followStr?
             'tag' => "",
         ]
     );
@@ -600,7 +633,7 @@ function MoveToPlayer(
  * SNQE TellTopicToPlayer function
  *
  * @param string $quest_id Unique quest identifier
- * @param string $npc_ref NPC reference (char_ref) delivering the topic
+ * @param string $npc_ref NPC reference (char_ref) delivering the topic. **Make sure NPC has been declared**
  * @param string $topic_ref Topic reference ID
  */
 function TellTopicToPlayer(
@@ -633,19 +666,33 @@ function TellTopicToPlayer(
         return "done";
     }
 
+    $character = $quest_data["npcs"][$npc_ref]["name"];
+
+    //
+    $cnNpc = $GLOBALS["db"]->escape($character);
+    $rows  = $GLOBALS["db"]->fetchOne("select 1 as n,gamets from eventlog where type='death' and data like '%defeated $cnNpc%' order by gamets desc limit 1");
+
+    if (isset($rows["n"])) {
+        $topic["delivered"]               = "failed";
+        $quest_data["topics"][$topic_ref] = $topic;
+        SNQEQuestManager::updateQuestData($quest_id, ["topics" => $quest_data["topics"]]);
+        error_log("NPC $cnNpc is dead");
+        return "done";
+    }
+
     if (strpos($GLOBALS["actors_present"], $quest_data["npcs"][$npc_ref]["name"]) === false) {
         // NPC not present
         error_log("[TellTopicToPlayer] Topic <$topic_ref> NPC <{$quest_data["npcs"][$npc_ref]["name"]}>  not present, close npcs: {$GLOBALS["actors_present"]}, {$quest_data["topics"][$topic_ref]["attempts"]}");
         $quest_data["topics"][$topic_ref]["attempts"] = $quest_data["topics"][$topic_ref]["attempts"] + 1;
 
         if ($quest_data["topics"][$topic_ref]["attempts"] % 10 == 0) { // Will move to player every 10 attempts if actor still not present.
-            $npcMaster = new NpcMaster();
-            $currentNpcData       = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
-            $unsignedInt = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
-            $refHexString = "0x" . str_pad(dechex($unsignedInt),8,"0",STR_PAD_LEFT);
+            $npcMaster      = new NpcMaster();
+            $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
+            $unsignedInt    = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
+            $refHexString   = "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
 
             $GLOBALS["db"]->insert(
-               'responselog',
+                'responselog',
                 [
                     'localts' => time(),
                     'sent'    => 0,
@@ -660,7 +707,7 @@ function TellTopicToPlayer(
         SNQEQuestManager::updateQuestData($quest_id, $quest_data);
         return "pending";
 
-    } 
+    }
 
     // Mark as pending delivery
     $topic["delivered"]         = "pending";
@@ -761,6 +808,18 @@ function CheckTopicToPlayer(
 
     $character = $quest_data["npcs"][$topic["giver"]];
 
+    //
+    $cnNpc = $GLOBALS["db"]->escape($character["name"]);
+    $rows  = $GLOBALS["db"]->fetchOne("select 1 as n,gamets from eventlog where type='death' and data like '%defeated $cnNpc%' order by gamets desc limit 1");
+
+    if (isset($rows["n"])) {
+        $topic["delivered"]               = "failed";
+        $quest_data["topics"][$topic_ref] = $topic;
+        SNQEQuestManager::updateQuestData($quest_id, ["topics" => $quest_data["topics"]]);
+        error_log("NPC is dead");
+        return "done";
+    }
+
     if (! isset($quest_data["last_llm_call"])) {
         $quest_data["last_llm_call"] = 0;
     }
@@ -859,6 +918,34 @@ function WaitToItemBeRecovered(
         return "done";
     }
 
+    $sceneNoteDataEsc = $GLOBALS["db"]->escape("Storyline: {$GLOBALS["PLAYER_NAME"]} must recover item <{$item["name"]}>");
+    $sceneNoteData    = "Storyline: {$GLOBALS["PLAYER_NAME"]} must recover item <{$item["name"]}>";
+
+    // Check if row with same data already exists
+    $existingRow = $GLOBALS["db"]->fetchOne(
+        "SELECT rowid FROM rolemaster WHERE type = 'scenenote' AND data = '$sceneNoteDataEsc' LIMIT 1"
+    );
+    error_log("SELECT rowid FROM rolemaster WHERE type = 'scenenote' AND data = '$sceneNoteDataEsc' LIMIT 1");
+    if ($existingRow) {
+        // Update existing row's localts
+        $GLOBALS["db"]->update(
+            'rolemaster',
+            'localts=' . time(),
+            "rowid = {$existingRow["rowid"]}"
+        );
+    } else {
+        // Insert new row
+        $GLOBALS["db"]->insert(
+            'rolemaster',
+            [
+                'localts' => time(),
+                'ttl'     => 25,
+                'type'    => "scenenote",
+                'data'    => $sceneNoteData,
+            ]
+        );
+    }
+
     // Exceeded attempts → failure
     if ($item["recover_attempts"] >= $maxAttempts) {
         $item["recovered"]              = "failed";
@@ -946,6 +1033,34 @@ function WaitToItemBeTraded(
         return "done";
     }
 
+    $sceneNoteDataEsc = $GLOBALS["db"]->escape("Storyline: {$GLOBALS["PLAYER_NAME"]} must give item <{$item["name"]}> to {$npc["name"]}");
+    $sceneNoteData    = "Storyline: {$GLOBALS["PLAYER_NAME"]} must give item <{$item["name"]}> to {$npc["name"]}";
+
+    // Check if row with same data already exists
+    $existingRow = $GLOBALS["db"]->fetchOne(
+        "SELECT rowid FROM rolemaster WHERE type = 'scenenote' AND data = '$sceneNoteDataEsc' LIMIT 1"
+    );
+    error_log("SELECT rowid FROM rolemaster WHERE type = 'scenenote' AND data = '$sceneNoteDataEsc' LIMIT 1");
+    if ($existingRow) {
+        // Update existing row's localts
+        $GLOBALS["db"]->update(
+            'rolemaster',
+            'localts=' . time(),
+            "rowid = {$existingRow["rowid"]}"
+        );
+    } else {
+        // Insert new row
+        $GLOBALS["db"]->insert(
+            'rolemaster',
+            [
+                'localts' => time(),
+                'ttl'     => 25,
+                'type'    => "scenenote",
+                'data'    => $sceneNoteData,
+            ]
+        );
+    }
+
     // Exceeded attempts → failure
     if (($GLOBALS["last_gamets"] - $item["trade_start_gamets"]) > (_TRADE_TIMEOUT / 0.00864)) {
         $item["traded"]                 = "failed";
@@ -1028,6 +1143,19 @@ function ToGoAway(
                 'text'    => "",
                 'action'  => "rolecommand|TravelTo@{$npc["name"]}@WIDeadBodyCleanupCell@$quest_id",
                 'tag' => "",
+            ]
+        );
+
+        $GLOBALS["db"]->insert(
+            'actions_issued',
+            [
+                'action'    => "ToGoAway",
+                'fullcall'  => "ToGoAway:Unknown place",
+                'actorname' => $npc["name"],
+                'ts'        => $GLOBALS["last_ts"],
+                'gamets'    => $GLOBALS["gamets"],
+                'localts'   => time(),
+                'original'  => 'backgroundaction',
             ]
         );
     }
@@ -1172,6 +1300,21 @@ function CompleteQuest(
         throw new Exception("Quest '$quest_id' does not exist.");
     }
 
+    // Check if player has spoken after the last event was delivered
+    // Query the speech table to verify player has spoken after the quest's lastgamets timestamp
+    $quest_data       = $quest["quest_data"] ?? [];
+    $quest_lastgamets = $quest_data["last_llm_call_topic"] ?? 0;
+
+    $playerName        = $GLOBALS["db"]->escape($GLOBALS["PLAYER_NAME"]);
+    $playerSpokenAfter = $GLOBALS["db"]->fetchOne(
+        "SELECT gamets FROM speech WHERE speaker = '$playerName' AND gamets > $quest_lastgamets ORDER BY gamets DESC LIMIT 1"
+    );
+    error_log("SELECT gamets FROM speech WHERE speaker = '$playerName' AND gamets > $quest_lastgamets ORDER BY gamets DESC LIMIT 1");
+    if (! $playerSpokenAfter) {
+        error_log("[CompleteQuest]\tPlayer has not spoken yet after quest event. Deferring completion.");
+        return;
+    }
+
     if ($quest["quest_run_state"] == "finished") {
         error_log("[CompleteQuest]\t$quest_id is completed");
         return;
@@ -1289,15 +1432,13 @@ function CombatNPC(
     }
 
     $npc_attacker = $quest_data["npcs"][$npc_ref_attacker];
-    $npc_target = $quest_data["npcs"][$npc_ref_target];
+    $npc_target   = $quest_data["npcs"][$npc_ref_target];
 
     // If already in combat, skip (idempotent)
     if (! empty($npc_attacker["in_npc_combat"])) {
         error_log("[CombatNPC]\tNPC <{$npc_attacker["name"]}> already engaged in NPC combat");
         return;
     }
-
-   
 
     // Insert command to initiate combat between NPCs
     error_log("[CombatNPC]\tOrdering NPC <{$npc_attacker["name"]}> to engage NPC <{$npc_target["name"]}> in combat for quest $quest_id");
@@ -1306,7 +1447,7 @@ function CombatNPC(
 
     // Save state
     $quest_data["npcs"][$npc_ref_attacker] = $npc_attacker;
-    $quest_data["npcs"][$npc_ref_target] = $npc_target;
+    $quest_data["npcs"][$npc_ref_target]   = $npc_target;
     SNQEQuestManager::updateQuestData($quest_id, ["npcs" => $quest_data["npcs"]]);
 }
 
@@ -1351,7 +1492,7 @@ function WaitforCombatEnd(
 
     // Query event log to check if combat has ended
     $cnNpc = $GLOBALS["db"]->escape($npc["name"]);
-    $rows  = $GLOBALS["db"]->fetchAll("select 1 as n,gamets from eventlog where type='death' and data like '%defeated $cnNpc%' order by gamets desc limit 1");
+    $rows  = $GLOBALS["db"]->fetchAll("select 1 as n,gamets from eventlog where type='death' and (data like '%defeated $cnNpc%' or data  like '%killed $cnNpc%')  order by gamets desc limit 1");
 
     $combatEnded = false;
     if (is_array($rows) && isset($rows[0]) && $rows[0]["n"] > 0) {
@@ -1368,6 +1509,7 @@ function WaitforCombatEnd(
 
     // Exceeded attempts → failure
     if ($npc["combat_attempts"] >= $maxAttempts) {
+
         error_log("[WaitforCombatEnd] Combat for NPC <$cnNpc> did not end after $maxAttempts attempts");
         $npc["in_combat"]             = "failed";
         $quest_data["npcs"][$npc_ref] = $npc;
@@ -1375,10 +1517,117 @@ function WaitforCombatEnd(
         return "failed";
     }
 
+    if ($npc["combat_attempts"] % 10 == 0) {
+        $GLOBALS["db"]->insert(
+            'responselog',
+            [
+                'localts' => time(),
+                'sent'    => 0,
+                'actor'   => "rolemaster",
+                'text'    => "",
+                'action'  => "rolecommand|CombatPlayer@{$npc["name"]}@$quest_id",
+                'tag' => "",
+            ]
+        );
+        // If not present
+        $npcMaster    = new NpcMaster();
+        $npcLocalData = $npcMaster->GetByName($npc["name"]);
+        $skyrimCmd    = new SkyrimCommandBuilder();
+        $json         = $skyrimCmd->Actor->SetAlert("0x{$npcLocalData["refid"]}", 1);
+        $skyrimCmd->send($json);
+
+    }
+
     // Still pending
     error_log("[WaitforCombatEnd] Combat for NPC <$cnNpc> still ongoing (attempt {$npc["combat_attempts"]})");
     $npc["in_combat"]             = "pending";
     $quest_data["npcs"][$npc_ref] = $npc;
+    SNQEQuestManager::updateQuestData($quest_id, ["npcs" => $quest_data["npcs"]]);
+    return "pending";
+}
+
+/**
+ * SNQE WaitForNPCCombatEnd function
+ *
+ * Waits until combat between two NPCs has ended.
+ *
+ * @param string $quest_id Unique quest identifier
+ * @param string $npc_ref_attacker NPC reference ID (from CreateNPC) engaged in combat
+ * @param string $npc_ref_target NPC reference ID (from CreateNPC) target of combat
+ * @param int $maxAttempts Maximum retries before failure (default 100)
+ * @return string "done"|"failed"|"pending"
+ */
+function WaitForNPCCombatEnd(
+    string $quest_id,
+    string $npc_ref_attacker,
+    string $npc_ref_target,
+    int $maxAttempts = 100
+): string {
+    // Fetch quest state
+    $quest = SNQEQuestManager::getQuest($quest_id);
+
+    if (! $quest) {
+        throw new Exception("Quest '$quest_id' does not exist.");
+    }
+
+    $quest_data = $quest["quest_data"] ?? [];
+
+    if (! isset($quest_data["npcs"][$npc_ref_attacker])) {
+        throw new Exception("NPC '$npc_ref_attacker' not declared. Use CreateNPC first.");
+    }
+
+    if (! isset($quest_data["npcs"][$npc_ref_target])) {
+        throw new Exception("NPC '$npc_ref_target' not declared. Use CreateNPC first.");
+    }
+
+    $npc_attacker = $quest_data["npcs"][$npc_ref_attacker];
+    $npc_target   = $quest_data["npcs"][$npc_ref_target];
+
+    // If combat already ended, return success
+    if (! empty($npc_attacker["in_npc_combat"]) && $npc_attacker["in_npc_combat"] === "done") {
+        error_log("[WaitForNPCCombatEnd] Combat between <{$npc_attacker["name"]}> and <{$npc_target["name"]}> already ended");
+        return "done";
+    }
+
+    // Increment combat check attempts
+    $npc_attacker["npc_combat_attempts"] = ($npc_attacker["npc_combat_attempts"] ?? 0) + 1;
+
+    // Query event log to check if combat has ended
+    // Check if either NPC was defeated/died
+    $cnAttacker = $GLOBALS["db"]->escape($npc_attacker["name"]);
+    $cnTarget   = $GLOBALS["db"]->escape($npc_target["name"]);
+
+    // Check for death events for either combatant
+    $rows = $GLOBALS["db"]->fetchAll("select 1 as n,gamets from eventlog where type='death'
+        and (data like '%defeated $cnAttacker%' or data like '%defeated $cnTarget%'  or data like '%killed $cnTarget%' or data like '%killed $cnAttacker%')
+        order by gamets desc limit 1");
+
+    $combatEnded = false;
+    if (is_array($rows) && isset($rows[0]) && $rows[0]["n"] > 0) {
+        $combatEnded = true;
+    }
+
+    if ($combatEnded) {
+        error_log("[WaitForNPCCombatEnd] Combat between <$cnAttacker> and <$cnTarget> has ended");
+        $npc_attacker["in_npc_combat"]         = "done";
+        $quest_data["npcs"][$npc_ref_attacker] = $npc_attacker;
+        SNQEQuestManager::updateQuestData($quest_id, ["npcs" => $quest_data["npcs"]]);
+        return "done";
+    }
+
+    // Exceeded attempts → failure
+    if ($npc_attacker["npc_combat_attempts"] >= $maxAttempts) {
+        error_log("[WaitForNPCCombatEnd] Combat between <$cnAttacker> and <$cnTarget> did not end after $maxAttempts attempts");
+        $npc_attacker["in_npc_combat"]         = "failed";
+        $quest_data["npcs"][$npc_ref_attacker] = $npc_attacker;
+        SNQEQuestManager::updateQuestData($quest_id, ["npcs" => $quest_data["npcs"]]);
+        return "failed";
+    }
+
+    // Still pending
+    error_log("[WaitForNPCCombatEnd] Combat between <$cnAttacker> and <$cnTarget> still ongoing (attempt {$npc_attacker["npc_combat_attempts"]})");
+    $npc_attacker["in_npc_combat"]         = "pending";
+    $quest_data["npcs"][$npc_ref_attacker] = $npc_attacker;
     SNQEQuestManager::updateQuestData($quest_id, ["npcs" => $quest_data["npcs"]]);
     return "pending";
 }
@@ -1412,61 +1661,79 @@ function WaitAtLocation(
     // Initialize location tracking if not exists
     if (! isset($quest_data["location_wait"])) {
         $quest_data["location_wait"] = [];
+        error_log("[WaitAtLocation] first call");
+        if (strpos($GLOBALS["actors_present"], $quest_data["npcs"][$npc_ref]["name"]) === false) {
+            error_log("[WaitAtLocation] Using Background TravelTo");
+            // If NPC ref is provided, move NPC to location
+            if ($npc_ref && isset($quest_data["npcs"][$npc_ref])) {
+                $npcMaster      = new NpcMaster();
+                $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
+                $unsignedInt    = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
+                $refHexString   = "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
 
-         // If NPC ref is provided, move NPC to location
-        if ($npc_ref && isset($quest_data["npcs"][$npc_ref])) {
-            $npcMaster = new NpcMaster();
-            $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
-            $unsignedInt = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
-            $refHexString = "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
-            
-            $locs=$GLOBALS["db"]->fetchOne("SELECT * FROM locations where name='".$GLOBALS["db"]->escape($location)."' LIMIT 1");
+                $locs = $GLOBALS["db"]->fetchOne("SELECT * FROM locations where name='" . $GLOBALS["db"]->escape($location) . "' LIMIT 1");
 
-            if ($locs) {
-                $GLOBALS["db"]->insert(
-                    'responselog',
-                    [
-                        'localts' => time(),
-                        'sent'    => 0,
-                        'actor'   => "rolemaster",
-                        'text'    => "",
-                        'action'  => "rolecommand|BackgroundCmd@$refHexString@TravelTo/{$locs["formid"]}",
-                        'tag'     => '',
-                    ]
-                );
+                if ($locs) {
+                    $GLOBALS["db"]->insert(
+                        'responselog',
+                        [
+                            'localts' => time(),
+                            'sent'    => 0,
+                            'actor'   => "rolemaster",
+                            'text'    => "",
+                            'action'  => "rolecommand|BackgroundCmd@$refHexString@TravelTo/{$locs["formid"]}",
+                            'tag' => '',
+                        ]
+                    );
 
-                //$GLOBALS["last_gamets"]
+                    //$GLOBALS["last_gamets"]
 
-                $GLOBALS["db"]->insert(
-                    'eventlog',
-                    [
-                        'ts'       => $GLOBALS["last_ts"] ,
-                        'gamets'   => $GLOBALS["last_gamets"],
-                        'type'     => "infoaction",
-                        'data'     => "The Narrator: {$currentNpcData["npc_name"]} starts travelling to $location",
-                        'sess'     => time(),
-                        'localts'  => time(),
-                        'people'   => $GLOBALS["actors_present"] ,
-                        'location' => "",
-                        'party'    => "",
-                    ]
-                );
+                    $GLOBALS["db"]->insert(
+                        'eventlog',
+                        [
+                            'ts'     => $GLOBALS["last_ts"],
+                            'gamets' => $GLOBALS["last_gamets"],
+                            'type'   => "infoaction",
+                            'data'   => "The Narrator: {$currentNpcData["npc_name"]} starts travelling to $location",
+                            'sess'     => time(),
+                            'localts'  => time(),
+                            'people'   => $GLOBALS["actors_present"],
+                            'location' => "",
+                            'party'    => "",
+                        ]
+                    );
 
-                 // Insert actions_issued log entry
-                $GLOBALS["db"]->insert(
-                    'actions_issued',
-                    [
-                        'action'    => "TravelTo",
-                        'fullcall'  => "TravelTo:$location",
-                        'actorname' => $currentNpcData["npc_name"],
-                        'ts'        => $GLOBALS["last_ts"] ,
-                        'gamets'    => $GLOBALS["gamets"] ,
-                        'localts'   => time(),
-                        'original'  => 'backgroundaction',
-                    ]
-                );
+                    // Insert actions_issued log entry
+                    $GLOBALS["db"]->insert(
+                        'actions_issued',
+                        [
+                            'action'    => "TravelTo",
+                            'fullcall'  => "TravelTo:$location",
+                            'actorname' => $currentNpcData["npc_name"],
+                            'ts'        => $GLOBALS["last_ts"],
+                            'gamets'    => $GLOBALS["gamets"],
+                            'localts'   => time(),
+                            'original'  => 'backgroundaction',
+                        ]
+                    );
+                }
             }
+        } else {
+            error_log("Using Foreground TravelTo");
+            $suggestionText = "{$quest_data["npcs"][$npc_ref]["name"]} should travel to <$location>, (use TravelTo action) ";
+            $GLOBALS["db"]->insert(
+                'responselog',
+                [
+                    'localts' => time(),
+                    'sent'    => 0,
+                    'actor'   => "rolemaster",
+                    'text'    => "",
+                    'action'  => "rolecommand|Instruction@{$quest_data["npcs"][$npc_ref]["name"]}@$suggestionText@$quest_id",
+                    'tag' => "",
+                ]
+            );
         }
+
     }
 
     $wait_key = "wait_" . md5($location);
@@ -1499,18 +1766,61 @@ function WaitAtLocation(
         $atLocation = true;
     }
 
-    $locGuess=DataLastKnownLocationHuman(false,true);
+    $locGuess = DataLastKnownLocationHuman(false, true);
     error_log("<$locGuess> vs <$location>");
-    if (strpos($location,$locGuess)!== false) {
+    if (strpos($location, $locGuess) !== false) {
         $atLocation = true;
+    }
+
+    if (strpos($locGuess, $location) !== false) {
+        $atLocation = true;
+    }
+
+    // If npc_ref, also check NPC is present.
+
+    if (strpos($GLOBALS["actors_present"], $quest_data["npcs"][$npc_ref]["name"]) === false) {
+        error_log("[WaitAtLocation] Reference NPC <{$quest_data["npcs"][$npc_ref]["name"]}> not present  <$location>");
+
+        if (! DataActorHasDied($quest_data["npcs"][$npc_ref]["name"])) {
+            $atLocation = false;
+        }
+
     }
 
     if ($atLocation) {
         error_log("[WaitAtLocation] Player reached location <$location>");
         $quest_data["location_wait"][$wait_key]["status"] = "done";
-        
+
         SNQEQuestManager::updateQuestData($quest_id, ["location_wait" => $quest_data["location_wait"]]);
         return "done";
+    } else {
+
+        $sceneNoteData    = "Storyline: {$GLOBALS["PLAYER_NAME"]} should travel to <$location>, next scene will happen there";
+        $sceneNoteDataEsc = $GLOBALS["db"]->escape($sceneNoteData);
+        // Check if row with same data already exists
+        $existingRow = $GLOBALS["db"]->fetchOne(
+            "SELECT rowid FROM rolemaster WHERE type = 'scenenote' AND data = '$sceneNoteDataEsc' LIMIT 1"
+        );
+        error_log("SELECT rowid FROM rolemaster WHERE type = 'scenenote' AND data = '$sceneNoteDataEsc' LIMIT 1");
+        if ($existingRow) {
+            // Update existing row's localts
+            $GLOBALS["db"]->update(
+                'rolemaster',
+                'localts=' . time(),
+                "rowid = {$existingRow["rowid"]}"
+            );
+        } else {
+            // Insert new row
+            $GLOBALS["db"]->insert(
+                'rolemaster',
+                [
+                    'localts' => time(),
+                    'ttl'     => 25,
+                    'type'    => "scenenote",
+                    'data'    => $sceneNoteData,
+                ]
+            );
+        }
     }
 
                                                                                         // Exceeded attempts → failure
