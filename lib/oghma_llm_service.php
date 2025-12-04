@@ -9,8 +9,8 @@ function LLMTopic($text, $language = 'ja') {
     $startTime = microtime(true);
     
     // Check if we have a valid Oghma connector configured
-    if (!isset($GLOBALS["CORE_CONNECTOR_OGHMA_LLM"]) || empty($GLOBALS["CORE_CONNECTOR_OGHMA_LLM"])) {
-        error_log("[OGHMA LLM] CORE_CONNECTOR_OGHMA_LLM not configured");
+    if (!isset($GLOBALS["CORE_CONNECTOR_OGHMA_CUSTOM"]) || empty($GLOBALS["CORE_CONNECTOR_OGHMA_CUSTOM"])) {
+        error_log("[OGHMA LLM] CORE_CONNECTOR_OGHMA_CUSTOM not configured");
         return false;
     }
     
@@ -24,52 +24,62 @@ function LLMTopic($text, $language = 'ja') {
     try {
         // Get the Oghma-specific connector
         $connector = new LLMConnector();
-        $connectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_OGHMA_LLM"]);
+        $connectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_OGHMA_CUSTOM"]);
         
         if (!$connectorData) {
-            error_log("[OGHMA LLM] Failed to load connector ID: " . $GLOBALS["CORE_CONNECTOR_OGHMA_LLM"]);
+            error_log("[OGHMA LLM] Failed to load connector ID: " . $GLOBALS["CORE_CONNECTOR_OGHMA_CUSTOM"]);
             return false;
         }
         
         $connectionHandler = $connector->getConnector($connectorData);
         
-        // Use custom prompt from global settings if available
+        // Load prompt from database (with fallback to global setting for backward compatibility)
+        $systemPrompt = null;
+        
+        // First check if there's a custom prompt from global settings (backward compatibility)
         if (isset($GLOBALS["OGHMA_LLM_TOPIC_PROMPT"]) && !empty($GLOBALS["OGHMA_LLM_TOPIC_PROMPT"])) {
             $systemPrompt = $GLOBALS["OGHMA_LLM_TOPIC_PROMPT"];
+            error_log("[OGHMA LLM] Using prompt from OGHMA_LLM_TOPIC_PROMPT global setting");
         } else {
-            // Default prompt
+            // Load from prompts table
+            try {
+                global $db;
+                $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'custom_oghma'");
+                if ($promptData) {
+                    $systemPrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+                    error_log("[OGHMA LLM] Loaded prompt from database (custom: " . (!empty($promptData['custom_prompt']) ? 'yes' : 'no') . ")");
+                }
+            } catch (Exception $e) {
+                error_log("[OGHMA LLM] Failed to load prompt from database: " . $e->getMessage());
+            }
+        }
+        
+        // Final fallback to default prompt if nothing was loaded (matches database default)
+        if (empty($systemPrompt)) {
             $systemPrompt = <<<PROMPT
-You are an expert at extracting important topics from text and translating them to English.
+You are an expert at extracting important topics from text.
 Follow these rules strictly:
 
 1. Extract only ONE most important topic (person, place, item, concept, etc.) from the text
-2. Convert Skyrim proper nouns to English and ensure the output is in the **singular form** (e.g., ドラゴン→dragon, ホワイトラン→Whiterun)
-3. Translate general concepts to English (e.g., 魔法→magic, 戦闘→combat)
-4. Return ONLY the English word or phrase (no explanations, no Japanese text)
-5. If multiple candidates exist, choose the most important one
-6. **CRITICAL: Your output must be 100% in English. Never include any Japanese characters.**
+2. Ensure the output is in the **singular form** (e.g., dragons→dragon, cities→city)
+3. Return ONLY the word or phrase (no explanations, no extra text)
+4. If multiple candidates exist, choose the most important one
+5. Keep the topic in the same language as the input text
 
 Examples:
-Input: 「ドラゴンについて聞いた」
+Input: 'I heard about dragons'
 Output: dragon
 
-Input: 「ホワイトランに行く予定だ」
+Input: 'Going to Whiterun today'
 Output: Whiterun
 
-Input: 「グレイビアードに会いに行った」
+Input: 'Met with the Greybeards'
 Output: Greybeard
 
-Input: 「魔法を使った」
+Input: 'Used magic in combat'
 Output: magic
-
-Input: "I heard about dragons"
-Output: dragon
-
-Bad examples (DO NOT DO THIS):
-Input: 「魔法を使った」
-Output: 魔法 (magic) ← WRONG! Contains Japanese!
-Correct Output: magic
 PROMPT;
+            error_log("[OGHMA LLM] Using hardcoded fallback prompt (database unavailable)");
         }
         
         $userPrompt = "Text: " . $text;
@@ -134,13 +144,13 @@ PROMPT;
  * Uses the Oghma-specific connector with minimal overhead
  */
 function callLLMFast($contextData, $customParms = []) {
-    if (!isset($GLOBALS["CORE_CONNECTOR_OGHMA_LLM"]) || empty($GLOBALS["CORE_CONNECTOR_OGHMA_LLM"])) {
-        error_log("[OGHMA LLM] CORE_CONNECTOR_OGHMA_LLM not configured in callLLMFast");
+    if (!isset($GLOBALS["CORE_CONNECTOR_OGHMA_CUSTOM"]) || empty($GLOBALS["CORE_CONNECTOR_OGHMA_CUSTOM"])) {
+        error_log("[OGHMA LLM] CORE_CONNECTOR_OGHMA_CUSTOM not configured in callLLMFast");
         return false;
     }
     
     $connector = new LLMConnector();
-    $connectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_OGHMA_LLM"]);
+    $connectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_OGHMA_CUSTOM"]);
     
     if (!$connectorData) {
         error_log("[OGHMA LLM] Failed to load connector in callLLMFast");

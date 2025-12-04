@@ -2468,6 +2468,39 @@ if ($checkVersion("prompts")<20251110001) {
     $directorRules = $db->escape("Just provide instructions! You can also provide more than one instruction, but one per actor (keep limit at  2 or 3 max actors)\nIn addition, follow these general scene rules as a game director:\n * Use any actor in NEARBY ACTORS/NPC IN THE SCENE list ({PLAYER_NAME},busy actors and far away actors are EXCLUDED!)\n * Continue the scene as naturally and fully as possible, unless the user explicitly requests a new one. You can specify actions to reinforce the actors' dialogue.\n * If there are more actors in the room, try to involve them in the conversation.\n * When dialogue becomes repetitive, make a plot twist.\n * If a character reuses the same argument too often, nudge the scene towards a new topic.\n * Occasionally introduce subtle foreshadowing or hint at future events, dangers, or quests.\n * Do not resolve everything neatly—keep room for ongoing tension or future continuation.\n * You must always provide dialogue instructions for the character, as every request requires a dialogue response.\n * Here are a list of actions that can be used: \n{FUNCTION_LIST}\n  ** JustTalk \n * Add a Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality. Other actors can see this to properly react.\n * If scene is getting boring/repetitive, add a plot twist");
     $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('director_instruction_rules', '$directorRules', 'Rules and guidelines for game director when generating instructions (contains {PLAYER_NAME}, {FUNCTION_LIST} placeholders). Used in: service/processors/rolemaster/cmd/instruction.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
     
+    // Seed Oghma LLM topic extraction prompt
+    $oghmaTopicPrompt = $db->escape(
+        "You are an expert at extracting important topics from text.\n".
+        "Follow these rules strictly:\n\n".
+        "1. Extract only ONE most important topic (person, place, item, concept, etc.) from the text\n".
+        "2. Ensure the output is in the **singular form** (e.g., dragons→dragon, cities→city)\n".
+        "3. Return ONLY the word or phrase (no explanations, no extra text)\n".
+        "4. If multiple candidates exist, choose the most important one\n".
+        "5. Keep the topic in the same language as the input text\n\n".
+        "Examples:\n".
+        "Input: 'I heard about dragons'\n".
+        "Output: dragon\n\n".
+        "Input: 'Going to Whiterun today'\n".
+        "Output: Whiterun\n\n".
+        "Input: 'Met with the Greybeards'\n".
+        "Output: Greybeard\n\n".
+        "Input: 'Used magic in combat'\n".
+        "Output: magic"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'custom_oghma',
+            '$oghmaTopicPrompt',
+            'System prompt for Oghma LLM-based topic extraction from dialogue/text (does not apply to MiniMe T5 version). Used in: lib/oghma_llm_service.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
     $updateVersion("prompts", 20251110001);
     Logger::info("Applied patch prompts 20251110001 - Added all dynamic prompts and director prompts");
 }
