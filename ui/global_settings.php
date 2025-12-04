@@ -248,6 +248,7 @@ function pretty_label(string $flatName): string {
         'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory/Background Life',
         'CORE_CONNECTOR_PROFILES' => 'Dynamic Profiles',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
+        'CORE_CONNECTOR_OGHMA_LLM' => 'Oghma Infinium LLM',
     ];
     if (isset($connectorLabels[$flatName])) {
         return $connectorLabels[$flatName];
@@ -276,6 +277,7 @@ function icon_for_field(string $flatName): string {
         if ($u === 'CORE_CONNECTOR_MEDIUMTERM') return '🧠';
         if ($u === 'CORE_CONNECTOR_PROFILES') return '👥';
         if ($u === 'CORE_CONNECTOR_DIRECTOR') return '🎬';
+        if ($u === 'CORE_CONNECTOR_OGHMA_LLM') return '🐙';
         return '🔌';
     }
     // Respeech related
@@ -315,6 +317,10 @@ $gsSections = [
         [ 'name' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
+        [ 'name' => 'CORE_CONNECTOR_OGHMA_LLM', 'type' => 'foreign:core_llm_connector:id:label' ],
+    ],
+    'Oghma LLM' => [
+        [ 'name' => 'OGHMA_LLM_TOPIC_PROMPT', 'type' => 'longstring' ],
     ],
     // 'Dynamic Prompts' => [
     //     // All dynamic prompts have been migrated to Prompts Manager (⚙️Prompts Manager in Config Hub)

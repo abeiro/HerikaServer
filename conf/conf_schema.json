@@ -82,6 +82,8 @@
   "CORE_CONNECTOR_SUMMARY": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for creating memory summaries. Recommend to use a smaller LLM."},
   "CORE_CONNECTOR_MEDIUMTERM": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to generate longer memories summaries after every 10 memory summaries. Can be enabled in CHIM NPC page. Recommend to user a smaller LLM."},
   "CORE_CONNECTOR_PROFILES": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to update CHIM NPC Dynamic Profiles. Recommend to use a 🕹️Standard LLM.","scope":"global"},
+  "CORE_CONNECTOR_OGHMA_LLM": {"userlvl": "basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for Oghma Infinium topic extraction. Recommend to use a 🏃‍♀️‍➡️Fast LLM.","scope": "global"},
+  "OGHMA_LLM_TOPIC_PROMPT": {"userlvl": "pro","type": "longstring","description": "Custom prompt for Oghma LLM topic extraction. Leave empty to use default prompt.","scope": "global"},
   "CLEAN_CONTEXT_FOCUS_CHAT_HISTORY": {"userlvl":"basic","type": "integer","description": "Historic context to use when Focus on Chat mode. Should be lower than normal context.","scope":"global"},
   "BGL_TRIGGER_DAYS": {"userlvl":"basic","type": "integer","description": "RECOMMEND TO NOT GO BELOW 5 DAYS! Number of in-game days between Background Life events. NPCs will generate thoughts and take actions based on this interval. Default: 5 days. Range: 1-30 days.","scope":"global"},
   "CONNECTOR": {

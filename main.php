@@ -1042,7 +1042,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     $rndNumber = rand(1, 100);
     if ($rndNumber <= intval($GLOBALS["RECHAT_P"])) {
         // Process Oghma for rechat events using NPC's last dialogue
-        if ($GLOBALS["MINIME_T5"] && isset($FEATURES["MISC"]["OGHMA_INFINIUM"]) && ($FEATURES["MISC"]["OGHMA_INFINIUM"])) {
+        if (($GLOBALS["MINIME_T5"] || (isset($GLOBALS["OGHMA_LLM"]) && $GLOBALS["OGHMA_LLM"])) && isset($FEATURES["MISC"]["OGHMA_INFINIUM"]) && ($FEATURES["MISC"]["OGHMA_INFINIUM"])) {
                 require(__DIR__."/processor/oghma.php"); // Process Oghma
         }
     }
