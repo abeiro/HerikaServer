@@ -1047,7 +1047,11 @@ if (isset($_GET["edit"])) {
             function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
             function pass(_row){ return true; }
             function render(){
-                const rows=(RAW||[]).filter(pass);
+                const rows=(RAW||[]).filter(pass).sort((a, b) => {
+                    const labelA = (a.label || ('Connector #' + a.id)).toLowerCase();
+                    const labelB = (b.label || ('Connector #' + b.id)).toLowerCase();
+                    return labelA.localeCompare(labelB);
+                });
                 let html='';
                 rows.forEach(r=>{
                     const active = String(r.id)===String(ACTIVE_ID) ? ' active' : '';

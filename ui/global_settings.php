@@ -248,6 +248,7 @@ function pretty_label(string $flatName): string {
         'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory/Background Life',
         'CORE_CONNECTOR_PROFILES' => 'Dynamic Profiles',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
+        'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
     ];
     if (isset($connectorLabels[$flatName])) {
         return $connectorLabels[$flatName];
@@ -276,6 +277,7 @@ function icon_for_field(string $flatName): string {
         if ($u === 'CORE_CONNECTOR_MEDIUMTERM') return '🧠';
         if ($u === 'CORE_CONNECTOR_PROFILES') return '👥';
         if ($u === 'CORE_CONNECTOR_DIRECTOR') return '🎬';
+        if ($u === 'CORE_CONNECTOR_OGHMA_CUSTOM') return '🐙';
         return '🔌';
     }
     // Respeech related
@@ -299,6 +301,7 @@ $gsSections = [
         [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'ITEM_BLACKLIST', 'type' => 'longstring' ],
+        [ 'name' => 'EVENT_TYPE_FILTER', 'type' => 'longstring' ],
         [ 'name' => 'GROUND_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'INVENTORY_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
@@ -314,6 +317,8 @@ $gsSections = [
         [ 'name' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
+        [ 'name' => 'OGHMA_CUSTOM', 'type' => 'boolean' ],
+        [ 'name' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'foreign:core_llm_connector:id:label' ],
     ],
     // 'Dynamic Prompts' => [
     //     // All dynamic prompts have been migrated to Prompts Manager (⚙️Prompts Manager in Config Hub)

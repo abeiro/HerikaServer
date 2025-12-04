@@ -873,8 +873,7 @@ if (isset($_GET['bio_detail'])) {
     header('Content-Type: application/json');
     $name = trim((string)($_GET['name'] ?? ''));
     if ($name === '') { echo json_encode(['ok'=>false,'error'=>'Missing name']); exit; }
-    $codename=npcNameToCodename($name);
-    $esc = $GLOBALS['db']->escape($codename);
+    $esc = $GLOBALS['db']->escape($name);
     // Case-insensitive exact match on npc_name to tolerate capitalization differences
     $r = $GLOBALS['db']->fetchOne("select npc_name, core, voiceid, gender, race, refid, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags from combined_bio_templates where lower(npc_name) = lower('{$esc}') limit 1");
     if (!$r) { echo json_encode(['ok'=>false,'error'=>'Not found']); exit; }
@@ -2377,7 +2376,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         promptBox.style.justifyContent='center';
         promptBox.style.background='rgba(0,0,0,0.65)';
         promptBox.innerHTML = '<div style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:16px; max-width:600px; width:92%; color:#e9efff;">\
-          <div style="font-weight:700; color:rgb(242,124,17); margin-bottom:8px; font-size:18px;">AI Generate Profile for "' + npcName.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) + '"</div>\
+          <div style="font-weight:700; color:rgb(242,124,17); margin-bottom:8px; font-size:18px;">AI Generate Profile for "' + npcName.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) + '"</div>\
           <div style="font-size:13px; color:#cfd9ea; margin-bottom:12px;">Add any specific information or instructions for the AI to consider when generating this profile. Leave blank to use default generation.</div>\
           <label style="display:block; font-size:13px; margin:6px 0 4px; color:#cfd9ea; font-weight:600;">Custom Instructions (optional):</label>\
           <textarea id="ai_user_prompt" placeholder="Example: This NPC should be a merchant specializing in enchanted weapons, with a mysterious past..." style="width:100%; min-height:120px; padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; resize:vertical; font-family:inherit;"></textarea>\
@@ -2599,7 +2598,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       (j.items||[]).forEach(it=>{
         const div = document.createElement('div');
         div.style.border = '1px solid #4a4a4a'; div.style.borderRadius='8px'; div.style.padding='8px'; div.style.cursor='pointer';
-        div.innerHTML = `<div style="font-weight:700; color:#e9efff">${it.npc_name}</div>
+        div.innerHTML = `<div style="font-weight:700; color:#e9efff">${escapeHtml(it.npc_name)}</div>
           <div style="color:#9fb1c9; font-size:12px; margin:4px 0">${it.core_preview||''}</div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; font-size:12px; color:#cfd9ea;">
             ${it.voiceid?('<span>Voice: '+it.voiceid+'</span>'):''}
@@ -2629,7 +2628,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       if (!j.ok){ detail.innerHTML = '<div style="color:#ff6b6b">Failed to load detail</div>'; return; }
       const d = j.data||{};
       detail.innerHTML = `
-        <div style="font-size:18px; font-weight:700; color:#e9efff;">${d.npc_name||''}</div>
+        <div style="font-size:18px; font-weight:700; color:#e9efff;">${escapeHtml(d.npc_name||'')}</div>
         <div style="margin-top:8px; color:#cfd9ea;"><b style="color:rgb(242,124,17)">Core:</b><br>${escapeHtml(d.core||'')}</div>
         <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:10px; margin-top:8px;">
           ${kv('Static', d.npc_static_bio)}
@@ -2652,7 +2651,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     }
     function kv(title, val){ const v=(val||'').trim(); return `<div><div style="color:rgb(242,124,17); font-weight:700;">${title}</div><div style="white-space:pre-wrap;">${escapeHtml(v||'—')}</div></div>`; }
     function badge(k, v){ v=(v||'').trim(); if (!v) return ''; return `<span style="background:#3a3a3a; border:1px solid #4a4a4a; border-radius:999px; padding:3px 8px;">${k}: ${escapeHtml(v)}</span>`; }
-    function escapeHtml(s){ return String(s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     let deb = null; function refetch(){ if (deb) clearTimeout(deb); deb=setTimeout(()=>{ page=1; fetchList(); }, 250); }
     if (inp) inp.addEventListener('input', refetch);
     if (letter) letter.addEventListener('change', refetch);
