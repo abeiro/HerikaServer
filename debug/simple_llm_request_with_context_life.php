@@ -369,10 +369,15 @@ if (isset($argv[2]) && $argv[2] == "dryrun") {
     die();
 }
 
+// Check if letters are enabled for this NPC
+$extdata = $npcMaster->getExtendedData($currentNpcData);
+$lettersEnabled = isset($extdata['background_life_letters']) && $extdata['background_life_letters'] === true;
+
 // Step-2
 $prompt = [];
 if (isset($argv[2]) && $argv[2] == "full") {
-    $prompt[] = ['role' => 'system', 'content' => "
+    if ($lettersEnabled) {
+        $prompt[] = ['role' => 'system', 'content' => "
 Read the following text, which represents a mental note or inner monologue of a character within the Skyrim universe.
 Based on the content of the text, propose one of the following actions that would make sense for the development of the story:
 
@@ -403,8 +408,40 @@ rumor:  rumor spreaded or created. rumor should be located and related to curren
 notification: Write it as a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["HERIKA_NAME"]}. Use same language as <text>. IMPORTANT: Keep the letter SHORT and CONCISE - maximum 2-3 brief paragraphs.
 
 "];
+    } else {
+        $prompt[] = ['role' => 'system', 'content' => "
+Read the following text, which represents a mental note or inner monologue of a character within the Skyrim universe.
+Based on the content of the text, propose one of the following actions that would make sense for the development of the story:
+
+Character's name is {$GLOBALS["HERIKA_NAME"]}.
+$dynamicBiography
+
+<context_history>\nContext History\n$history\n$task\n</context_history>
+
+<text>
+$buffer
+</text>
+
+Possible actions (check character's goals section):
+StayAtPlace - The character remains in their current location, performing activities locally. Take into account how much time character has been at this location and is current task. If gathering info or spreading rumors, should stay at least 24 hours.
+TravelTo:<Place> - the character decides to travel to another location (replace <Place> with the chosen destination).The character should have a clear and logical reason for traveling.
+ReturnHome - Character returns to its base location, probably to meet {$GLOBALS["PLAYER_NAME"]} . Use when no further action is needed or all goals have been accomplished.
+Your answer must use markup - XML like - format, containing exactly 2 elements:
+
+<action> ... </action>
+<rumor> ... </rumor>
+
+
+Where:
+
+action: chosen action (e.g., StayAtPlace,TravelTo:<Place>,ReturnHome)
+rumor:  rumor spreaded or created. rumor should be located and related to current character's location ($LAST_REPORTED_LOCATION), e.g if character is at Dawnstar, rumor should be Dawnstar related.
+
+"];
+    }
 } else {
-    $prompt[] = ['role' => 'system', 'content' => "
+    if ($lettersEnabled) {
+        $prompt[] = ['role' => 'system', 'content' => "
 Read the following text, which represents a mental note or inner monologue of a character within the Skyrim universe.
 Based on the content of the text, propose one of the following actions that would make sense for the development of the story:
 
@@ -416,8 +453,9 @@ $buffer
 </text>
 
 Possible actions:
-StayAtPlace - The character remains in their current location, performing activities locally. Take into account how much time character has been at this location and is current task. If gathering info or spreading rumors, should stay at least 24 hours.Your answer must use markup - XML like - format, containing exactly two elements:
+StayAtPlace - The character remains in their current location, performing activities locally. Take into account how much time character has been at this location and is current task. If gathering info or spreading rumors, should stay at least 24 hours.
 SpreadRumor - Character activities generate rumors, also, character can explictly create a rumor. E.G. If character's goal or activity is to enforce local trade, create a rumor about local trading being enhaced.
+Your answer must use markup - XML like - format, containing exactly 3 elements:
 
 <action> ... </action>
 <rumor> ... </rumor>
@@ -432,6 +470,35 @@ notification: Write it as a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["
 
 
 "];
+    } else {
+        $prompt[] = ['role' => 'system', 'content' => "
+Read the following text, which represents a mental note or inner monologue of a character within the Skyrim universe.
+Based on the content of the text, propose one of the following actions that would make sense for the development of the story:
+
+Character's name is {$GLOBALS["HERIKA_NAME"]}.
+$dynamicBiography
+
+<text>
+$buffer
+</text>
+
+Possible actions:
+StayAtPlace - The character remains in their current location, performing activities locally. Take into account how much time character has been at this location and is current task. If gathering info or spreading rumors, should stay at least 24 hours.
+SpreadRumor - Character activities generate rumors, also, character can explictly create a rumor. E.G. If character's goal or activity is to enforce local trade, create a rumor about local trading being enhaced.
+Your answer must use markup - XML like - format, containing exactly 2 elements:
+
+<action> ... </action>
+<rumor> ... </rumor>
+
+
+Where:
+
+action: chosen action (StayAtPlace or SpreadRumor)
+rumor:  rumor spreaded or created. rumor should be located and related to current character's location ($LAST_REPORTED_LOCATION), e.g if character is at Dawnstar, rumor should be Dawnstar related.
+
+
+"];
+    }
 }
 $buffer2 = $connectionHandler->fast_request($prompt, ["MAX_TOKENS" => 2048], "backgroundlife");
 
@@ -466,7 +533,7 @@ if (is_array($parsed)) {
         }
     }
 
-    if ($parsed["notification"]) {
+    if ($parsed["notification"] && $lettersEnabled) {
         $dateStringSK = convert_gamets2skyrim_long_date(DataLastKnownGameTS());
         $fullTitle    = "A letter from {$GLOBALS["HERIKA_NAME"]} ($dateStringSK)";
 
@@ -499,6 +566,7 @@ if (is_array($parsed)) {
             ]
         );
 
+        // Log to diary/eventlog when letters are sent
         $db->insert(
             'eventlog',
             [
