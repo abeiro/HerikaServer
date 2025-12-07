@@ -334,7 +334,7 @@ if (isset($_POST["animation"])) {
                     WHERE rowid IN (
                         SELECT rowid
                         FROM eventlog
-                        WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close')
+                        WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','npc_reanimated')
                         ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
                         LIMIT $delCount
                     )
@@ -354,7 +354,7 @@ if (isset($_POST["animation"])) {
         $results = $db->fetchAll(
             "SELECT type, data, gamets, localts, ts, ROWID
              FROM eventlog a
-             WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import')
+             WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','npc_reanimated')
              ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
              LIMIT $limit OFFSET $offset"
         );
@@ -410,7 +410,7 @@ if (isset($_POST["animation"])) {
         $nextPage = $page + 1;
         
         // Get total count for pagination
-        $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init')";
+        $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','npc_reanimated')";
         $countResult = $db->fetchAll($countQuery);
         $totalRecords = $countResult[0]['total'];
         $totalPages = ceil($totalRecords / $limit);
