@@ -48,6 +48,8 @@ $npcFunctions = [
     'GiveGoldTo',
     'GiveItemTo',
     'PickupItem',
+    'CastSpell',
+    'MakeFollower'
 ];
 
 $playerFunctions = [
@@ -75,6 +77,7 @@ $playerFunctions = [
     'PickupItem',
     'GoToSleep',
     'UseSoulGaze',
+    'CastSpell',
 ];
 
 $currentList = array_unique(array_merge($npcFunctions, $playerFunctions));
@@ -90,7 +93,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
 require_once($enginePath."lib/utils.php");
 require_once($enginePath."functions/functions.php");
 
-$currentList = $GLOBALS["ENABLED_FUNCTIONS"];
+$currentList = $GLOBALS["DEFINED_FUNCTIONS"];
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -343,7 +346,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="function-category">
                     <h3>🚶 Movement & Navigation</h3>
                     <?php
-                    $movementFunctions = ['TravelTo', 'Follow', 'FollowPlayer', 'ComeCloser', 'WaitHere', 'IncreaseWalkSpeed', 'DecreaseWalkSpeed'];
+                    $movementFunctions = ['TravelTo', 'Follow', 'FollowPlayer', 'ComeCloser', 'WaitHere', 'IncreaseWalkSpeed', 'DecreaseWalkSpeed','MakeFollower'];
                     foreach ($movementFunctions as $func):
                         if (in_array($func, $currentList)):
                     ?>
@@ -443,7 +446,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="function-category">
                     <h3>🎒 Inventory & Items</h3>
                     <?php
-                    $inventoryFunctions = ['OpenInventory', 'OpenInventory2', 'CheckInventory', 'GiveGoldTo', 'GiveItemTo', 'PickupItem', 'TakeGoldFromPlayer'];
+                    $inventoryFunctions = ['OpenInventory', 'OpenInventory2', 'CheckInventory', 'GiveGoldTo', 'GiveItemTo', 'PickupItem', 'TakeGoldFromPlayer', 'CastSpell'];
                     foreach ($inventoryFunctions as $func):
                         if (in_array($func, $currentList)):
                     ?>
@@ -461,7 +464,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         'GiveGoldTo' => 'Give money to another character (no real money is transferred yet)',
                                         'GiveItemTo' => 'Give items to another character',
                                         'PickupItem' => 'Pick up items from the ground using RefID from nearby_items',
-                                        'TakeGoldFromPlayer' => 'Receive or take money from player (no real money is transferred yet)'
+                                        'TakeGoldFromPlayer' => 'Receive or take money from player (no real money is transferred yet)',
+                                        'CastSpell' => 'Cast a spell on a target actor (use spell names from known spells)'
                                     ];
                                     echo $descriptions[$func] ?? 'Inventory management function';
                                     ?>

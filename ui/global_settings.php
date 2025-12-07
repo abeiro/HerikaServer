@@ -248,6 +248,7 @@ function pretty_label(string $flatName): string {
         'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory/Background Life',
         'CORE_CONNECTOR_PROFILES' => 'Dynamic Profiles',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
+        'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
     ];
     if (isset($connectorLabels[$flatName])) {
         return $connectorLabels[$flatName];
@@ -276,6 +277,7 @@ function icon_for_field(string $flatName): string {
         if ($u === 'CORE_CONNECTOR_MEDIUMTERM') return '🧠';
         if ($u === 'CORE_CONNECTOR_PROFILES') return '👥';
         if ($u === 'CORE_CONNECTOR_DIRECTOR') return '🎬';
+        if ($u === 'CORE_CONNECTOR_OGHMA_CUSTOM') return '🐙';
         return '🔌';
     }
     // Respeech related
@@ -294,15 +296,14 @@ function icon_for_field(string $flatName): string {
 // Curated, manually-defined global settings (exclude TTS, STT, ITT)
 $gsSections = [
     'General' => [
-        [ 'name' => 'PLAYER_NAME', 'type' => 'string' ],
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
-        [ 'name' => 'PLAYER_BIOS', 'type' => 'longstring' ],
-        [ 'name' => 'PLAYER_RESPEECH', 'type' => 'boolean' ],
-        [ 'name' => 'PLAYER_SPEECH_STYLE', 'type' => 'longstring' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
         [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'ITEM_BLACKLIST', 'type' => 'longstring' ],
+        [ 'name' => 'EVENT_TYPE_FILTER', 'type' => 'longstring' ],
+        [ 'name' => 'GROUND_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
+        [ 'name' => 'INVENTORY_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
         [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
         [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
@@ -316,6 +317,8 @@ $gsSections = [
         [ 'name' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
+        [ 'name' => 'OGHMA_CUSTOM', 'type' => 'boolean' ],
+        [ 'name' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'foreign:core_llm_connector:id:label' ],
     ],
     // 'Dynamic Prompts' => [
     //     // All dynamic prompts have been migrated to Prompts Manager (⚙️Prompts Manager in Config Hub)
@@ -693,24 +696,6 @@ function current_value(string $flatName, array $currentConf) {
     <form method="post" action="" id="gs_form">
         <input type="hidden" name="gs_tab" id="gs_tab" value="<?php echo htmlspecialchars($activeTab); ?>">
         <div class="content-grid" id="tab-global">
-            <div class="content-section">
-                <h2>Player</h2>
-                <div class="provider-grid">
-                    <div class="provider-card">
-                        <div class="provider-head">
-                            <div class="provider-title">
-                                <div class="provider-icon">🏷️</div>
-                                <div>Player Name</div>
-                                <div class="provider-toggle"></div>
-                            </div>
-                        </div>
-                        <div class="provider-body">
-                            <input type="text" name="PLAYER_NAME" value="<?php echo htmlspecialchars((string)current_value('PLAYER_NAME', $currentConf)); ?>">
-                        </div>
-                        <div style="margin-top:6px; color:#bbb; font-size:12px;">This is your in-game character name. Usually set automatically when you load a save.</div>
-                    </div>
-                </div>
-            </div>
             <?php foreach ($gsSections as $sectionTitle => $fields): ?>
                 <div class="content-section">
                     <h2><?php echo htmlspecialchars($sectionTitle); ?></h2>
@@ -1225,6 +1210,62 @@ function current_value(string $flatName, array $currentConf) {
                         readonly 
                         style="width: 100%; min-height: 100px; background: rgba(0,0,0,0.3); color: #cfd8e3; border: 1px solid rgba(138,155,182,0.2); border-radius: 4px; padding: 10px; font-family: monospace; font-size: 12px; resize: vertical;"
                     ><?php echo htmlspecialchars($promptInfo['value']); ?></textarea>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        
+        <?php
+        // Show old conf.php player values for migration reference
+        $oldConfPlayer = [];
+        $playerKeysToCheck = [
+            'PLAYER_NAME' => 'Player Name',
+            'PLAYER_BIOS' => 'Player Appearance',
+            'PLAYER_SPEECH_STYLE' => 'Player Speech Style'
+        ];
+        
+        foreach ($playerKeysToCheck as $confKey => $label) {
+            if (isset($GLOBALS[$confKey]) && !empty(trim($GLOBALS[$confKey]))) {
+                $oldConfPlayer[$confKey] = [
+                    'label' => $label,
+                    'value' => $GLOBALS[$confKey]
+                ];
+            }
+        }
+        
+        if (!empty($oldConfPlayer)):
+        ?>
+        <div class="section-container" style="margin-top: 24px; border: 2px solid #4a8ab6; border-radius: 8px; padding: 20px; background: rgba(74, 138, 182, 0.05);">
+            <h3 style="margin: 0 0 12px 0; color: #4a8ab6; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                <span>Legacy conf.php Player Settings</span>
+            </h3>
+            <div style="background: rgba(0,0,0,0.2); border-radius: 6px; padding: 16px; margin-bottom: 16px;">
+                <p style="margin: 0 0 12px 0; color: #cfd8e3; line-height: 1.6;">
+                    <strong>These player settings have been migrated to the new Player Management system.</strong><br>
+                    Your old <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px;">conf.php</code> values are shown below for reference. 
+                    You can ignore this if you never customized player settings in conf.php.
+                </p>
+                <div style="margin: 12px 0;">
+                    <a href="<?php echo $webRoot; ?>/ui/core/config_hub.php?tab=player" style="display: inline-block; background: #207a4a; color: #fff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600;">
+                        👤 Go to Player Management
+                    </a>
+                </div>
+            </div>
+            
+            <div style="max-height: 500px; overflow-y: auto; border: 1px solid rgba(138,155,182,0.2); border-radius: 6px; background: #0d1117;">
+                <?php foreach ($oldConfPlayer as $confKey => $playerInfo): ?>
+                <div style="border-bottom: 1px solid rgba(138,155,182,0.1); padding: 16px;">
+                    <div style="margin-bottom: 8px;">
+                        <strong style="color: #4a8ab6; font-size: 15px;"><?php echo htmlspecialchars($confKey); ?></strong>
+                        <div style="color: #8a9bb6; font-size: 12px; margin-top: 4px;">
+                            New location: <strong><?php echo htmlspecialchars($playerInfo['label']); ?></strong> in Player Management
+                        </div>
+                    </div>
+                    <textarea 
+                        readonly 
+                        style="width: 100%; min-height: 80px; background: rgba(0,0,0,0.3); color: #cfd8e3; border: 1px solid rgba(138,155,182,0.2); border-radius: 4px; padding: 10px; font-family: monospace; font-size: 12px; resize: vertical;"
+                    ><?php echo htmlspecialchars($playerInfo['value']); ?></textarea>
                 </div>
                 <?php endforeach; ?>
             </div>

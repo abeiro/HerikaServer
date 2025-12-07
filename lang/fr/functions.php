@@ -27,7 +27,8 @@ $ENABLED_FUNCTIONS=[
     'SearchMemory',
     'GiveItemToPlayer',
     'TakeGoldFromPlayer',
-    'FollowPlayer'
+    'FollowPlayer',
+    'CastSpell'
 //    'WaitHere'
 ];
 
@@ -58,6 +59,7 @@ $F_TRANSLATIONS["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} attend et reste à l'endr
 $F_TRANSLATIONS["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} donne l'objet (propriété target) à {$GLOBALS["PLAYER_NAME"]} (propriété listener)";
 $F_TRANSLATIONS["TakeGoldFromPlayer"]="{$GLOBALS["HERIKA_NAME"]} prend la somme (propriété target) d'or de {$GLOBALS["PLAYER_NAME"]} (propriété listener)";
 $F_TRANSLATIONS["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} suit {$GLOBALS["PLAYER_NAME"]}";
+$F_TRANSLATIONS["CastSpell"]="{$GLOBALS["HERIKA_NAME"]} lance un sort sur un acteur cible. Doit spécifier le nom du sort depuis <spells> et le nom de l'acteur cible. Utiliser 'self' comme cible pour les sorts auto-dirigés.";
 
 $F_RETURNMESSAGES["Inspect"]="{$GLOBALS["HERIKA_NAME"]} inspecte #TARGET# et voit ceci : #RESULT#";
 $F_RETURNMESSAGES["LookAt"]="REGARDE ou inspecte l'ÉQUIPEMENT et les VÊTEMENTS du PNJ, de l'Acteur ou de l'être";
@@ -87,6 +89,7 @@ $F_RETURNMESSAGES["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} attend et reste sur pla
 $F_RETURNMESSAGES["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} a donné #TARGET# à {$GLOBALS["PLAYER_NAME"]}. Si c’est une transaction, il faudra peut-être utiliser TakeGoldFromPlayer";
 $F_RETURNMESSAGES["TakeGoldFromPlayer"]="{$GLOBALS["PLAYER_NAME"]} a donné #TARGET# pièces à {$GLOBALS["HERIKA_NAME"]}. Si c’est une transaction, il faudra peut-être utiliser GiveItemToPlayer";
 $F_RETURNMESSAGES["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} suit {$GLOBALS["PLAYER_NAME"]}";
+$F_RETURNMESSAGES["CastSpell"]="{$GLOBALS["HERIKA_NAME"]} lance #ITEM# sur #TARGET#";
 
 
 // Qu'est-ce que c'est? Nous pouvons traduire les fonctions ou leur donner un nom personnalisé.

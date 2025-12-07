@@ -305,7 +305,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_profile
         if ($id <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid id"]); exit; }
         $field = (string)($_POST['field'] ?? '');
         $allowed = [
-            'llm_primary_id','llm_secondary_id','llm_tertiary_id','llm_quaternary_id','llm_formatter_id',
+            'llm_primary_id','llm_secondary_id','llm_tertiary_id','llm_quaternary_id','llm_formatter_id','llm_fallback_id',
             'diary_connector_id','tts_connector_id','itt_connector_id'
         ];
         if (!in_array($field, $allowed, true)) { echo json_encode(["ok"=>false, "error"=>"Invalid field"]); exit; }
@@ -739,6 +739,25 @@ $ittById = $byId($ittRows);
         </label>
         <small class="hint">Randomly switches between the 4 LLM connectors for NPCs using this profile. Will roughly switch ever 2-3 responses per NPC. Is useful to add more variety to NPC responses and make them more dynamic.</small>
 
+        <div style="height:6px;"></div>
+        <?php
+            $fallbackEnabled = false;
+            try {
+                if (!empty($editItem["metadata"])) {
+                    $metaData = json_decode($editItem["metadata"], true);
+                    if (is_array($metaData)) {
+                        $fallbackEnabled = !empty($metaData['LLM_FALLBACK_ENABLED']);
+                    }
+                }
+            } catch (Throwable $e) {}
+        ?>
+        <label class="label-with-toggle">🔄 LLM Fallback
+            <input type="hidden" name="meta_vis[LLM_FALLBACK_ENABLED]" value="">
+            <input type="checkbox" name="meta_vis[LLM_FALLBACK_ENABLED]" value="1" <?= $fallbackEnabled ? "checked" : "" ?>>
+            <span class="toggle-text">Off</span>
+        </label>
+        <small class="hint">Automatically retry with fallback connector when primary connector fails. Please use a reliable, ideally cheaper connector. Response time will be longer when fallback is used.</small>
+
         <div style="margin-top:8px; display:flex; gap:8px;">
             <button type="button" id="btn_save_profile_settings" class="btn-save">Save Profile Settings</button>
         </div>
@@ -746,7 +765,7 @@ $ittById = $byId($ittRows);
 
     <script>
     document.addEventListener('DOMContentLoaded', function(){
-        const names = ['default_npc','default_narrator','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]'];
+        const names = ['default_npc','default_narrator','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
@@ -771,7 +790,7 @@ $ittById = $byId($ittRows);
         // Responsive iframe heights for embedded editors
         function sizeIframes(){
             try {
-                const panes = ['frame_llm_primary_id','frame_llm_secondary_id','frame_llm_tertiary_id','frame_llm_quaternary_id','frame_diary_connector_id','frame_llm_formatter_id'];
+                const panes = ['frame_llm_primary_id','frame_llm_secondary_id','frame_llm_tertiary_id','frame_llm_quaternary_id','frame_diary_connector_id','frame_llm_formatter_id','frame_llm_fallback_id'];
                 const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
                 const available = Math.max(400, vh - 260);
                 panes.forEach(id=>{ const f=document.getElementById(id); if (f) f.style.minHeight = available + 'px'; });
@@ -793,6 +812,7 @@ $ittById = $byId($ittRows);
             <button type="button" class="pf-tab" data-pane="pane_llm4">🧪 Experimental LLM</button>
             <button type="button" class="pf-tab" data-pane="pane_diary">📓 Diary LLM</button>
             <button type="button" class="pf-tab" data-pane="pane_llm_formatter">🧾 Formatter LLM</button>
+            <button type="button" class="pf-tab" data-pane="pane_llm_fallback">🔄 Fallback LLM</button>
             
         </div>
         <div class="pf-pane active" id="pane_llm1">
@@ -895,6 +915,21 @@ $ittById = $byId($ittRows);
             </div>
             <div style="margin-top:8px;">
                 <iframe id="frame_llm_formatter_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
+            </div>
+        </div>
+        <div class="pf-pane" id="pane_llm_fallback">
+            <div class="select-row">
+                <?= renderSelect($profiles, "llm_fallback_id", "🔄 Fallback LLM", $editItem["llm_fallback_id"] ?? "") ?>
+                <button type="button" class="btn-apply btn-primary" data-apply-select="llm_fallback_id">Set</button>
+            </div>
+            <div class="connector-help">
+                Backup connector used automatically when primary connectors fail due to network errors (connection failures, timeouts, HTTP errors). Must enable "🔄 LLM Fallback" toggle in Profile Core settings above.
+                <ul>
+                    <li>Choose a reliable, ideally cheaper connector</li>
+                </ul>
+            </div>
+            <div style="margin-top:8px;">
+                <iframe id="frame_llm_fallback_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
             </div>
         </div>
         
@@ -1197,7 +1232,7 @@ $ittById = $byId($ittRows);
         }
         // (Inline editors for TTS/ITT removed; now embedded full pages are used)
         // Attempt to trigger embedded LLM editor saves (if available)
-        const frameIds = ['frame_llm_primary_id','frame_llm_secondary_id','frame_llm_tertiary_id','frame_llm_quaternary_id','frame_diary_connector_id','frame_llm_formatter_id'];
+        const frameIds = ['frame_llm_primary_id','frame_llm_secondary_id','frame_llm_tertiary_id','frame_llm_quaternary_id','frame_diary_connector_id','frame_llm_formatter_id','frame_llm_fallback_id'];
         frameIds.forEach(fid => {
             const f = document.getElementById(fid);
             try {
@@ -1325,8 +1360,9 @@ $ittById = $byId($ittRows);
         refreshEmbeddedEditor('llm_tertiary_id','frame_llm_tertiary_id');
         refreshEmbeddedEditor('llm_quaternary_id','frame_llm_quaternary_id');
         refreshEmbeddedEditor('llm_formatter_id','frame_llm_formatter_id');
+        refreshEmbeddedEditor('llm_fallback_id','frame_llm_fallback_id');
 
-        ['diary_connector_id','llm_primary_id','llm_secondary_id','llm_tertiary_id','llm_quaternary_id','llm_formatter_id'].forEach(id=>{
+        ['diary_connector_id','llm_primary_id','llm_secondary_id','llm_tertiary_id','llm_quaternary_id','llm_formatter_id','llm_fallback_id'].forEach(id=>{
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', ()=>{
                 if (id==='diary_connector_id') refreshEmbeddedEditor(id,'frame_diary_connector_id');
@@ -1335,6 +1371,7 @@ $ittById = $byId($ittRows);
                 else if (id==='llm_tertiary_id') refreshEmbeddedEditor(id,'frame_llm_tertiary_id');
                 else if (id==='llm_quaternary_id') refreshEmbeddedEditor(id,'frame_llm_quaternary_id');
                 else if (id==='llm_formatter_id') refreshEmbeddedEditor(id,'frame_llm_formatter_id');
+                else if (id==='llm_fallback_id') refreshEmbeddedEditor(id,'frame_llm_fallback_id');
             });
         });
 
@@ -1385,6 +1422,7 @@ $ittById = $byId($ittRows);
                             else if (selId==='llm_quaternary_id') refreshEmbeddedEditor(selId,'frame_llm_quaternary_id');
                             else if (selId==='diary_connector_id') refreshEmbeddedEditor(selId,'frame_diary_connector_id');
                             else if (selId==='llm_formatter_id') refreshEmbeddedEditor(selId,'frame_llm_formatter_id');
+                            else if (selId==='llm_fallback_id') refreshEmbeddedEditor(selId,'frame_llm_fallback_id');
                         } else {
                             showToast('Update failed: ' + (json && json.error ? json.error : 'Unknown error'), true);
                         }

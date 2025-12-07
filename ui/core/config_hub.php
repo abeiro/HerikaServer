@@ -52,6 +52,7 @@ main { padding: 80px 10px 10px; height: 100vh; }
             <button class="tab-button" data-tab="profiles">🗃️Profiles</button>
             <button class="tab-button" data-tab="llm">🧠LLM Connectors</button>
             <button class="tab-button" data-tab="keys">🔑API Keys</button>
+            <button class="tab-button" data-tab="player">👤Player</button>
             <button class="tab-button" data-tab="oghma">🐙Oghma Infinium</button>
             <button class="tab-button" data-tab="npcbio">🪪NPC Biographies</button>
             <button class="tab-button" data-tab="items">📜 Descriptions</button>
@@ -66,6 +67,11 @@ main { padding: 80px 10px 10px; height: 100vh; }
         <div id="npc" class="tab-content active">
             <div class="embed-wrap">
                 <iframe class="embed" loading="eager" src="<?php echo $webRoot; ?>/ui/core/npc_master.php?embed=1"></iframe>
+            </div>
+        </div>
+        <div id="player" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/player_management.php?embed=1"></iframe>
             </div>
         </div>
         <div id="profiles" class="tab-content">

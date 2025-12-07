@@ -14,6 +14,7 @@ $GLOBALS["gameRequest"][2]        = $res[0]["gamets"] + 0;
 $GLOBALS["gameRequest"][0]        = "";
 $GLOBALS["last_localts"]          = $res[0]["localts"] + 0;
 $GLOBALS["last_gamets"]           = $res[0]["gamets"] + 0;
+$GLOBALS["last_ts"]               = $res[0]["ts"] + 0;
 $GLOBALS["last_instruction_sent"] = $res2[0]["localts"] + 0;
 $GLOBALS["actors_present"]        = DataBeingsInCloseRange(true);
 

@@ -692,7 +692,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <h1 id="page-title">
             <span id="title-text">Description Manager</span>
         </h1>
-        <p>The <b>Description System</b> allows you to create custom visual descriptions for items and equipment.</p>
+        <p>The <b>Description System</b> allows you to create custom descriptions for items and equipment.</p>
         <p>Upload descriptions individually or in bulk via CSV files. All custom entries override default templates.</p>
         <p>Descriptions are automatically injected into NPC equipment and inventory context when available.</p>
     </div>
@@ -869,8 +869,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <small>Display name for the entry (optional).</small>
                 <input type="text" name="name" id="edit_name">
 
-                <label for="edit_description">Visual Description:</label>
-                <small>Short visual description to be injected into AI context.</small>
+                <label for="edit_description">Description:</label>
+                <small>Short escription to be injected into AI context.</small>
                 <textarea name="description" id="edit_description" rows="6"></textarea>
 
                 <div class="modal-footer">
@@ -897,8 +897,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <small>Display name for the entry (optional).</small>
                 <input type="text" name="name" id="new_name">
 
-                <label for="new_description">Visual Description:</label>
-                <small>Short visual description to be injected into AI context.</small>
+                <label for="new_description">Description:</label>
+                <small>Short description to be injected into AI context.</small>
                 <textarea name="description" id="new_description" rows="6"></textarea>
 
                 <div class="modal-footer">
