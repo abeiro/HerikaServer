@@ -1265,21 +1265,46 @@ if (in_array($gameRequest[0],["inputtext_s"])) {    // I stealth and targetet fo
 
 /// LOG INTO DB. Will use this later.
 if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
-    $db->insert(
-        'eventlog',
-        array(
-            'ts' => $gameRequest[1],
-            'gamets' => $gameRequest[2],
-            'type' => $gameRequest[0],
-            'data' => ($gameRequest[3]),
-            'sess' => (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST'))?'cli':'web',
-            'localts' => time(),
-            'people'=> $GLOBALS["CACHE_PEOPLE"],
-            'location'=>$GLOBALS["CACHE_LOCATION"],
-            'party'=>$GLOBALS["CACHE_PARTY"],
-            
-        )
-    );
+    // Filter out combat grunts
+    $shouldLog = true;
+    $data = isset($gameRequest[3]) ? $gameRequest[3] : '';
+    
+    // List of combat grunts to filter
+    $combatGrunts = [
+        'Unff!', 'Argh!', 'Off!', 'Ugh!', 'Gah!', 'Oof!', 'Urgh!', 'Ngh!', 
+        'Aah!', 'Ouch!', 'Grr!', 'Hah!', 'Huh!', 'Hmm!', 'Oof', 'Argh', 
+        'Unff', 'Off', 'Ugh', 'Gah', 'Aah', 'Ouch', 'Hah',
+        'Arghhh!', 'Yarghhh!', 'Rrrghhh!', 'Uuuuhhhnnnn... aaarrrghhh...',
+        'Ooohhhh, ahhhrrrghhhh... uuuuggghhh.', 'Yrrrgh!', 'Weergh!', 'Yeagh!',
+        'Hyargh!', 'Nyyarrggh!', 'Yearrgh!', 'Ah...', 'Hmph.', 'Hhyyarargghhhh!',
+        'Aaaayyyaarrrrgghh!', 'Rrrraaaaarrggghhhh!', 'Ahhhhh!', 'Heh heh...',
+        'Grrargh!'
+    ];
+    
+    // Check if data is just a combat grunt
+    $trimmedData = trim($data);
+    if (in_array($trimmedData, $combatGrunts)) {
+        $shouldLog = false;
+        error_log("[FILTER] Blocked combat grunt from eventlog: {$trimmedData}");
+    }
+    
+    if ($shouldLog) {
+        $db->insert(
+            'eventlog',
+            array(
+                'ts' => $gameRequest[1],
+                'gamets' => $gameRequest[2],
+                'type' => $gameRequest[0],
+                'data' => ($gameRequest[3]),
+                'sess' => (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST'))?'cli':'web',
+                'localts' => time(),
+                'people'=> $GLOBALS["CACHE_PEOPLE"],
+                'location'=>$GLOBALS["CACHE_LOCATION"],
+                'party'=>$GLOBALS["CACHE_PARTY"],
+                
+            )
+        );
+    }
 
 }
 
