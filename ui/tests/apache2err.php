@@ -119,7 +119,32 @@ function tail($filepath, $lines = 2000) {
 
 // Function to read regular log files
 function readRegularLog($logPath, $logName) {
-    if (file_exists($logPath) && is_readable($logPath)) {
+    // Clear file stat cache to ensure fresh file status
+    clearstatcache(true, $logPath);
+    
+    // Attempt to create log file if it doesn't exist
+    if (!file_exists($logPath)) {
+        $logDir = dirname($logPath);
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0755, true);
+        }
+        @touch($logPath);
+        @chmod($logPath, 0644);
+        clearstatcache(true, $logPath);
+    }
+    
+    $fileExists = file_exists($logPath);
+    
+    // Attempt to fix permissions if file exists but isn't readable
+    if ($fileExists && !is_readable($logPath)) {
+        @chmod($logPath, 0644);
+        clearstatcache(true, $logPath);
+    }
+    
+    $fileReadable = $fileExists && is_readable($logPath);
+    $fileSize = $fileExists ? @filesize($logPath) : 0;
+    
+    if ($fileExists && $fileReadable) {
         $log = tail($logPath, 2000); // Get last 2000 lines
         $sanitizedId = sanitizeId($logName);
 
@@ -134,76 +159,119 @@ function readRegularLog($logPath, $logName) {
         echo '</div>';
         echo '<div class="log-container" id="' . $sanitizedId . 'Container">';
 
-        $entries = [];
-        foreach ($log as $line) {
-            if (preg_match('/^\[(.*?)\]\s+\[(.*?)\](.*)$/', $line, $matches)) {
-                $timestamp = $matches[1];
-                $level = strtolower(trim($matches[2]));
-                $message = trim($matches[3]);
+        if (empty($log)) {
+            echo '<p class="info-message" style="color: #888; padding: 20px;">Log file is empty (size: ' . $fileSize . ' bytes)</p>';
+        } else {
+            $entries = [];
+            foreach ($log as $line) {
+                if (preg_match('/^\[(.*?)\]\s+\[(.*?)\](.*)$/', $line, $matches)) {
+                    $timestamp = $matches[1];
+                    $level = strtolower(trim($matches[2]));
+                    $message = trim($matches[3]);
 
-                $entries[] = [
-                    'timestamp' => $timestamp,
-                    'level' => $level,
-                    'message' => $message,
-                    'raw_time' => strtotime($timestamp)
-                ];
-            } else {
-                // For lines that don't match the expected format
-                $entries[] = [
-                    'message' => $line,
-                    'raw_time' => 0  // Default timestamp for sorting
-                ];
-            }
-        }
-
-        // Sort entries by timestamp in descending order (newest first)
-        usort($entries, function($a, $b) {
-            return $b['raw_time'] - $a['raw_time'];
-        });
-
-        foreach ($entries as $entry) {
-            $levelClass = '';
-            if (isset($entry['level'])) {
-                switch ($entry['level']) {
-                    case 'error':
-                        $levelClass = 'error-level';
-                        break;
-                    case 'warn':
-                    case 'warning':
-                        $levelClass = 'warn-level';
-                        break;
-                    case 'info':
-                        $levelClass = 'info-level';
-                        break;
-                    case 'debug':
-                        $levelClass = 'debug-level';
-                        break;
-                    case 'trace':
-                        $levelClass = 'trace-level';
-                        break;
+                    $entries[] = [
+                        'timestamp' => $timestamp,
+                        'level' => $level,
+                        'message' => $message,
+                        'raw_time' => strtotime($timestamp)
+                    ];
+                } else {
+                    // For lines that don't match the expected format
+                    $entries[] = [
+                        'message' => $line,
+                        'raw_time' => 0  // Default timestamp for sorting
+                    ];
                 }
+            }
 
-                echo '<div class="log-entry ' . $levelClass . '">';
-                echo '<div class="timestamp">' . htmlspecialchars($entry['timestamp']) . '</div>';
-                echo '<div class="log-level">' . htmlspecialchars($entry['level']) . '</div>';
-                echo '<div class="log-message">' . htmlspecialchars($entry['message']) . '</div>';
-                echo '</div>';
-            } else {
-                echo '<div class="log-entry">';
-                echo '<div class="log-message">' . htmlspecialchars($entry['message']) . '</div>';
-                echo '</div>';
+            // Sort entries by timestamp in descending order (newest first)
+            usort($entries, function($a, $b) {
+                return $b['raw_time'] - $a['raw_time'];
+            });
+
+            foreach ($entries as $entry) {
+                $levelClass = '';
+                if (isset($entry['level'])) {
+                    switch ($entry['level']) {
+                        case 'error':
+                            $levelClass = 'error-level';
+                            break;
+                        case 'warn':
+                        case 'warning':
+                            $levelClass = 'warn-level';
+                            break;
+                        case 'info':
+                            $levelClass = 'info-level';
+                            break;
+                        case 'debug':
+                            $levelClass = 'debug-level';
+                            break;
+                        case 'trace':
+                            $levelClass = 'trace-level';
+                            break;
+                    }
+
+                    echo '<div class="log-entry ' . $levelClass . '">';
+                    echo '<div class="timestamp">' . htmlspecialchars($entry['timestamp']) . '</div>';
+                    echo '<div class="log-level">' . htmlspecialchars($entry['level']) . '</div>';
+                    echo '<div class="log-message">' . htmlspecialchars($entry['message']) . '</div>';
+                    echo '</div>';
+                } else {
+                    echo '<div class="log-entry">';
+                    echo '<div class="log-message">' . htmlspecialchars($entry['message']) . '</div>';
+                    echo '</div>';
+                }
             }
         }
 
         echo '</div>';
     } else {
-        echo '<p class="error-message">Log file not generated yet for: ' . htmlspecialchars($logPath) . '</p>';
+        // Detailed error message
+        $errorDetails = [];
+        if (!$fileExists) {
+            $errorDetails[] = 'File does not exist';
+        } else {
+            $errorDetails[] = 'File exists';
+            if (!$fileReadable) {
+                $perms = @fileperms($logPath);
+                $errorDetails[] = 'Not readable (permissions: ' . ($perms ? sprintf('%o', $perms & 0777) : 'unknown') . ')';
+                $errorDetails[] = 'Attempted automatic permission fix (0644)';
+            }
+        }
+        echo '<p class="error-message">Log file not accessible: ' . htmlspecialchars($logPath) . '<br>';
+        echo '<small style="color: #aaa;">Details: ' . implode(', ', $errorDetails) . '</small><br>';
+        echo '<small style="color: #ff9800;">Try refreshing the page. If the issue persists, manually run: <code>chmod 644 ' . htmlspecialchars($logPath) . '</code></small></p>';
     }
 }
 
 // Function to read LLM output logs with timestamp grouping
 function readLLMOutputLog($logPath, $logName) {
-    if (file_exists($logPath) && is_readable($logPath)) {
+    // Clear file stat cache to ensure fresh file status
+    clearstatcache(true, $logPath);
+    
+    // Attempt to create log file if it doesn't exist
+    if (!file_exists($logPath)) {
+        $logDir = dirname($logPath);
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0755, true);
+        }
+        @touch($logPath);
+        @chmod($logPath, 0644);
+        clearstatcache(true, $logPath);
+    }
+    
+    $fileExists = file_exists($logPath);
+    
+    // Attempt to fix permissions if file exists but isn't readable
+    if ($fileExists && !is_readable($logPath)) {
+        @chmod($logPath, 0644);
+        clearstatcache(true, $logPath);
+    }
+    
+    $fileReadable = $fileExists && is_readable($logPath);
+    $fileSize = $fileExists ? @filesize($logPath) : 0;
+    
+    if ($fileExists && $fileReadable) {
         $log = tail($logPath, 2000); // Ensure we're getting 2000 lines
         $sanitizedId = sanitizeId($logName);
 
@@ -218,58 +286,76 @@ function readLLMOutputLog($logPath, $logName) {
         echo '</div>';
         echo '<div class="log-container" id="' . $sanitizedId . 'Container">';
 
-        $currentBlock = [];
-        $inBlock = false;
-        $blocks = [];
+        if (empty($log)) {
+            echo '<p class="info-message" style="color: #888; padding: 20px;">Log file is empty (size: ' . $fileSize . ' bytes)</p>';
+        } else {
+            $currentBlock = [];
+            $inBlock = false;
+            $blocks = [];
 
-        foreach ($log as $line) {
-            $line = trim($line);
-            
-            // Check for timestamp block start
-            if (preg_match('/^(?:==\s+)?(\d{4}-\d{2}-\d{2}T[\d:]+\+\d{2}:\d{2})\s+START$/', $line, $matches)) {
-                if ($inBlock && !empty($currentBlock)) {
-                    $blocks[] = $currentBlock;
+            foreach ($log as $line) {
+                $line = trim($line);
+                
+                // Check for timestamp block start
+                if (preg_match('/^(?:==\s+)?(\d{4}-\d{2}-\d{2}T[\d:]+\+\d{2}:\d{2})\s+START$/', $line, $matches)) {
+                    if ($inBlock && !empty($currentBlock)) {
+                        $blocks[] = $currentBlock;
+                    }
+                    $currentBlock = ['start_time' => $matches[1], 'content' => []];
+                    $inBlock = true;
+                    continue;
                 }
-                $currentBlock = ['start_time' => $matches[1], 'content' => []];
-                $inBlock = true;
-                continue;
-            }
-            
-            // Check for end timestamp
-            if (preg_match('/^(\d{4}-\d{2}-\d{2}T[\d:]+\+\d{2}:\d{2})\s+END$/', $line, $matches)) {
-                if ($inBlock && !empty($currentBlock)) {
-                    $currentBlock['end_time'] = $matches[1];
-                    $blocks[] = $currentBlock;
+                
+                // Check for end timestamp
+                if (preg_match('/^(\d{4}-\d{2}-\d{2}T[\d:]+\+\d{2}:\d{2})\s+END$/', $line, $matches)) {
+                    if ($inBlock && !empty($currentBlock)) {
+                        $currentBlock['end_time'] = $matches[1];
+                        $blocks[] = $currentBlock;
+                    }
+                    $inBlock = false;
+                    $currentBlock = [];
+                    continue;
                 }
-                $inBlock = false;
-                $currentBlock = [];
-                continue;
+                
+                // Skip the == markers
+                if ($line === '==' || empty($line)) {
+                    continue;
+                }
+                
+                // Add content to current block
+                if ($inBlock && !empty($line)) {
+                    $currentBlock['content'][] = $line;
+                }
             }
             
-            // Skip the == markers
-            if ($line === '==' || empty($line)) {
-                continue;
+            // Add any remaining block
+            if ($inBlock && !empty($currentBlock)) {
+                $blocks[] = $currentBlock;
             }
-            
-            // Add content to current block
-            if ($inBlock && !empty($line)) {
-                $currentBlock['content'][] = $line;
-            }
-        }
-        
-        // Add any remaining block
-        if ($inBlock && !empty($currentBlock)) {
-            $blocks[] = $currentBlock;
-        }
 
-        // Output blocks in reverse order (newest first)
-        foreach (array_reverse($blocks) as $block) {
-            outputLLMBlock($block);
+            // Output blocks in reverse order (newest first)
+            foreach (array_reverse($blocks) as $block) {
+                outputLLMBlock($block);
+            }
         }
 
         echo '</div>';
     } else {
-        echo '<p class="error-message">Log file not generated yet for: ' . htmlspecialchars($logPath) . '</p>';
+        // Detailed error message
+        $errorDetails = [];
+        if (!$fileExists) {
+            $errorDetails[] = 'File does not exist';
+        } else {
+            $errorDetails[] = 'File exists';
+            if (!$fileReadable) {
+                $perms = @fileperms($logPath);
+                $errorDetails[] = 'Not readable (permissions: ' . ($perms ? sprintf('%o', $perms & 0777) : 'unknown') . ')';
+                $errorDetails[] = 'Attempted automatic permission fix (0644)';
+            }
+        }
+        echo '<p class="error-message">Log file not accessible: ' . htmlspecialchars($logPath) . '<br>';
+        echo '<small style="color: #aaa;">Details: ' . implode(', ', $errorDetails) . '</small><br>';
+        echo '<small style="color: #ff9800;">Try refreshing the page. If the issue persists, manually run: <code>chmod 644 ' . htmlspecialchars($logPath) . '</code></small></p>';
     }
 }
 

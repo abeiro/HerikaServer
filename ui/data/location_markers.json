@@ -1,0 +1,320 @@
+{
+    "locations": [
+        {
+            "name": "Whiterun",
+            "editorID": "WhiterunMapMarkerREF",
+            "formID": "90830",
+            "worldspace": "Tamriel",
+            "z": -3583,
+            "locationID": 351,
+            "coords": {
+                "x": 19855,
+                "y": -7423
+            },
+            "type": "city",
+            "icon": "SR-mapicon-Whiterun.png",
+            "description": "Major city in the plains of Whiterun Hold"
+        },
+        {
+            "name": "Windhelm",
+            "editorID": "WindhelmMapMarkerRef",
+            "formID": "230454",
+            "worldspace": "Tamriel",
+            "z": -12470,
+            "locationID": 353,
+            "coords": {
+                "x": 135026,
+                "y": 35597
+            },
+            "type": "city",
+            "icon": "SR-mapicon-Windhelm.png",
+            "description": "Ancient city and capital of Eastmarch"
+        },
+        {
+            "name": "Winterhold",
+            "editorID": "WinterholdMapMarker",
+            "formID": "96239",
+            "worldspace": "Tamriel",
+            "z": -9013,
+            "locationID": 355,
+            "coords": {
+                "x": 109208,
+                "y": 102864
+            },
+            "type": "city",
+            "icon": "SR-mapicon-Winterhold.png",
+            "description": "Northern city, home to the College of Winterhold"
+        },
+        {
+            "name": "Dawnstar",
+            "editorID": "DawnstarMapMarkerREF",
+            "formID": "96058",
+            "worldspace": "Tamriel",
+            "z": -13921,
+            "locationID": 82,
+            "coords": {
+                "x": 30808,
+                "y": 106138
+            },
+            "type": "city",
+            "icon": "SR-mapicon-Dawnstar.png",
+            "description": "Port city on the northern coast"
+        },
+        {
+            "name": "Morthal",
+            "editorID": "MorthalMapMarkerRef",
+            "formID": "96176",
+            "worldspace": "Tamriel",
+            "z": -13244,
+            "locationID": 213,
+            "coords": {
+                "x": -38640,
+                "y": 66734
+            },
+            "type": "city",
+            "icon": "SR-mapicon-Morthal.png",
+            "description": "Small city in the marshes of Hjaalmarch"
+        },
+        {
+            "name": "Falkreath",
+            "editorID": "FalkreathMapMarker",
+            "formID": "96096",
+            "worldspace": "Tamriel",
+            "z": -3107,
+            "locationID": 117,
+            "coords": {
+                "x": -30296,
+                "y": -86284
+            },
+            "type": "city",
+            "icon": "SR-mapicon-Falkreath.png",
+            "description": "Southern city near the border"
+        },
+        {
+            "name": "Riverwood",
+            "editorID": "RiverwoodMapMarker",
+            "formID": "90788",
+            "worldspace": "Tamriel",
+            "z": -140,
+            "locationID": 337,
+            "coords": {
+                "x": 21941,
+                "y": -44792
+            },
+            "type": "town",
+            "icon": "SR-mapicon-Town.png",
+            "description": "Small lumber town in Whiterun Hold"
+        },
+        {
+            "name": "Ivarstead",
+            "editorID": "IvarsteadMapMarker",
+            "formID": "96145",
+            "worldspace": "Tamriel",
+            "z": 10819,
+            "locationID": 341,
+            "coords": {
+                "x": 76375,
+                "y": -64263
+            },
+            "type": "town",
+            "icon": "SR-mapicon-Town.png",
+            "description": "Small settlement in the Rift"
+        },
+        {
+            "name": "Rorikstead",
+            "editorID": "RoriksteadMapMarker",
+            "formID": "96204",
+            "worldspace": "Tamriel",
+            "z": -4298,
+            "locationID": 339,
+            "coords": {
+                "x": -84302,
+                "y": 6952
+            },
+            "type": "town",
+            "icon": "SR-mapicon-Town.png",
+            "description": "Farming village in western Whiterun Hold"
+        },
+        {
+            "name": "Helgen",
+            "editorID": "HelgenMapMarker",
+            "formID": "96128",
+            "worldspace": "Tamriel",
+            "z": 9204,
+            "locationID": 342,
+            "coords": {
+                "x": 18350,
+                "y": -79481
+            },
+            "type": "town",
+            "icon": "SR-mapicon-Town.png",
+            "description": "Destroyed town near the southern border"
+        },
+        {
+            "name": "Karthwasten",
+            "editorID": "KarthwastenMapMarkerREF",
+            "formID": "96154",
+            "worldspace": "Tamriel",
+            "z": -6194,
+            "locationID": 340,
+            "coords": {
+                "x": -132748,
+                "y": 38549
+            },
+            "type": "town",
+            "icon": "SR-mapicon-Town.png",
+            "description": "Mining town in the Reach"
+        },
+        {
+            "name": "Dragon Bridge",
+            "editorID": "DragonBridgeMapMarker",
+            "formID": "96083",
+            "worldspace": "Tamriel",
+            "z": -12210,
+            "locationID": 343,
+            "coords": {
+                "x": -102148,
+                "y": 82900
+            },
+            "type": "town",
+            "icon": "SR-mapicon-Town.png",
+            "description": "Small village in Haafingar"
+        },
+        {
+            "name": "Shor's Stone",
+            "editorID": "ShorsStoneMapMarker",
+            "formID": "96215",
+            "worldspace": "Tamriel",
+            "z": 7162,
+            "locationID": 338,
+            "coords": {
+                "x": 162924,
+                "y": -60530
+            },
+            "type": "town",
+            "icon": "SR-mapicon-Town.png",
+            "description": "Mining village in the Rift"
+        },
+        {
+            "name": "Largashbur",
+            "editorID": "LargashburMapMarker",
+            "formID": "90735",
+            "worldspace": "Tamriel",
+            "z": 11142,
+            "locationID": 270,
+            "coords": {
+                "x": 135308,
+                "y": -110597
+            },
+            "type": "stronghold",
+            "icon": "SR-mapicon-Orc_Stronghold.png",
+            "description": "Orc stronghold in the Rift"
+        },
+        {
+            "name": "Narzulbur",
+            "editorID": "NarzulburMapMarker",
+            "formID": "90765",
+            "worldspace": "Tamriel",
+            "z": -3724,
+            "locationID": 268,
+            "coords": {
+                "x": 158054,
+                "y": 10036
+            },
+            "type": "stronghold",
+            "icon": "SR-mapicon-Orc_Stronghold.png",
+            "description": "Orc stronghold in Eastmarch"
+        },
+        {
+            "name": "Dushnikh Yal",
+            "editorID": "DushnikhYalMapMarkerREF",
+            "formID": "90686",
+            "worldspace": "Tamriel",
+            "z": -1052,
+            "locationID": 271,
+            "coords": {
+                "x": -145543,
+                "y": -22742
+            },
+            "type": "stronghold",
+            "icon": "SR-mapicon-Orc_Stronghold.png",
+            "description": "Orc stronghold in the Reach"
+        },
+        {
+            "name": "Mor Khazgur",
+            "editorID": "MorKhazgurMapMarkerREF",
+            "formID": "90759",
+            "worldspace": "Tamriel",
+            "z": -5581,
+            "locationID": 269,
+            "coords": {
+                "x": -151658,
+                "y": 81847
+            },
+            "type": "stronghold",
+            "icon": "SR-mapicon-Orc_Stronghold.png",
+            "description": "Orc stronghold in the Reach"
+        },
+        {
+            "name": "Nightgate Inn",
+            "editorID": "NightgateInnMapMarker",
+            "formID": "96133",
+            "worldspace": "Tamriel",
+            "z": -6135,
+            "locationID": 286,
+            "coords": {
+                "x": 73827,
+                "y": 46035
+            },
+            "type": "inn",
+            "icon": "SR-mapicon-Town.png",
+            "description": "Roadside inn in the Pale"
+        },
+        {
+            "name": "Markarth",
+            "editorID": "MarkarthMapMarker",
+            "formID": "115594",
+            "worldspace": "Tamriel",
+            "z": -3322,
+            "locationID": 201,
+            "coords": {
+                "x": -174024,
+                "y": 5255
+            },
+            "type": "city",
+            "icon": "SR-mapicon-Markarth.png",
+            "description": "Ancient Dwemer city carved into the mountainside"
+        },
+        {
+            "name": "Solitude",
+            "editorID": "SolitudeMapMarker",
+            "formID": "315636",
+            "worldspace": "Tamriel",
+            "z": -8426,
+            "locationID": 318,
+            "coords": {
+                "x": -64943,
+                "y": 104648
+            },
+            "type": "city",
+            "icon": "SR-mapicon-Solitude.png",
+            "description": "Capital of Skyrim and seat of the High King"
+        },
+        {
+            "name": "Riften",
+            "editorID": "RiftenMapMarkerREF",
+            "formID": "115600",
+            "worldspace": "Tamriel",
+            "z": 11104,
+            "locationID": 275,
+            "coords": {
+                "x": 173415,
+                "y": -96600
+            },
+            "type": "city",
+            "icon": "20111122181415!SR-mapicon-Riften.png",
+            "description": "Major city on the shores of Lake Honrich"
+        }
+    ]
+}
+

@@ -51,6 +51,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     video {object-fit: scale-down; max-height: 480px;}
     body {min-height:auto}
     .vthumb {position: relative;display: inline-block;}
+    .dropdown { position: relative; display: inline-block; }
+    .dropdown-content { display: none; position: absolute; background-color: #2a2a2a; min-width: 200px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); padding: 0; z-index: 1; border: 1px solid #4a4a4a; border-radius: 6px; top: 100%; right: 0; margin-top: 6px; }
+    .dropdown-content a { color: #e9efff; padding: 12px 16px; text-decoration: none; display: block; font-size: 12px; border: none; background: none; cursor: pointer; text-align: left; width: 100%; box-sizing: border-box; }
+    .dropdown-content a:hover { background-color: #3a3a3a; }
+    .dropdown-content a:first-child { border-radius: 5px 5px 0 0; }
+    .dropdown-content a:last-child { border-radius: 0 0 5px 5px; }
+    .dropdown-toggle:after { content: ' ▼'; font-size: 10px; }
  
 </style>
 <?php
@@ -185,10 +192,17 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
         <div class="tools">
             <a id="lb_open" href="#" target="_blank" rel="noopener">Open</a>
             <a id="lb_dl" href="#" download>Download</a>
-            <a id="lb_reimage1" href="#" title="Will send image to GPTImage to create a reimagined version, needs an OpenAI API kei">GPT Reimagine ($)</a>
-            <a id="lb_reimage2" href="#" title="Will send image to Replicate to create a reimagined version,needs a Replicate API key">Replicate Reimagine ($)</a>
-            <a id="lb_reimage3" href="#" title="Will send image to OpenRouter to create a reimagined version,needs a OpenRouter API key">OR-Gemini Reimagine ($)</a>
-            <a id="lb_reimage4" href="#" title="Will send image to Replicate to create a short video (7secs),needs a Replicate API key">Replicate animate ($)</a>
+            <div class="dropdown">
+                <button class="btn dropdown-toggle" id="lb_reimagine_toggle" type="button">Reimagine</button>
+                <div class="dropdown-content" id="lb_reimagine_menu">
+                    <a id="lb_reimage1" href="#" title="Will send image to GPTImage to create a reimagined version, needs an OpenAI API key">GPT Reimagine ($)</a>
+                    <a id="lb_reimage2" href="#" title="Will send image to Replicate to create a reimagined version, needs a Replicate API key">Replicate Reimagine ($)</a>
+                    <a id="lb_reimage3" href="#" title="Will send image to OpenRouter to create a reimagined version, needs a OpenRouter API key">OR-Gemini Reimagine ($)</a>
+                    <a id="lb_reimage4" href="#" title="Will send image to Replicate to create a short video (7secs), needs a Replicate API key">Replicate Animate ($)</a>
+                    <a id="lb_reimage5" href="#" title="Will send image to OpenRouter to create a reimagined version, needs a OpenRouter API key">OR FLUX-2 ($$)</a>
+                    <a id="lb_reimage6" href="#" title="Will send image to Replicate to create a reimagined version, needs a Replicate API key">Replicate Kontext NSFW ($)</a>
+                </div>
+            </div>
             <button id="lb_close" type="button">Close</button>
             <button id="lb_del" type="button">Delete</button>
         </div>
@@ -211,7 +225,25 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
   const lb_reimage2 = document.getElementById('lb_reimage2');
   const lb_reimage3 = document.getElementById('lb_reimage3');
   const lb_reimage4 = document.getElementById('lb_reimage4');
+  const lb_reimage5 = document.getElementById('lb_reimage5');
+  const lb_reimage6 = document.getElementById('lb_reimage6');
   const lb_del = document.getElementById('lb_del');
+  const lb_reimagine_toggle = document.getElementById('lb_reimagine_toggle');
+  const lb_reimagine_menu = document.getElementById('lb_reimagine_menu');
+  
+  // Dropdown toggle
+  if (lb_reimagine_toggle) {
+    lb_reimagine_toggle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      lb_reimagine_menu.style.display = lb_reimagine_menu.style.display === 'block' ? 'none' : 'block';
+    });
+  }
+  
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function() {
+    if (lb_reimagine_menu) lb_reimagine_menu.style.display = 'none';
+  });
+  
   function showProcessing() {
     processingMessage = document.createElement('div');
     processingMessage.textContent = 'Processing...';
@@ -273,6 +305,7 @@ function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribut
      if (e.target === lb) close(); 
      if (e.target === lb_reimage1) {
         showProcessing();
+        if (lb_reimagine_menu) lb_reimagine_menu.style.display = 'none';
         uHint=prompt('Hint');
         fetch('cmd/gallery_tool_convert_style_gpt.php', {
             method: 'POST',
@@ -298,7 +331,8 @@ function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribut
         });
      } else if (e.target === lb_reimage2) {
         showProcessing();
-        uHint=prompt('Hint');
+        if (lb_reimagine_menu) lb_reimagine_menu.style.display = 'none';
+        uHint=prompt('Hint','Convert image-0 to a semi-realistic style, like a high-quality CGI render. Reimagine the whole picture, while preserving  details like tattos, skin color, eye color, hair style, hair color, clothing, make-up , body proportions and environment.');
         fetch('cmd/gallery_tool_convert_style_replicate.php', {
             method: 'POST',
             headers: {
@@ -321,6 +355,7 @@ function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribut
         });
      } else if (e.target === lb_reimage3) {
         showProcessing();
+        if (lb_reimagine_menu) lb_reimagine_menu.style.display = 'none';
         uHint=prompt('Hint');
         fetch('cmd/gallery_tool_convert_style_or.php', {
             method: 'POST',
@@ -343,6 +378,7 @@ function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribut
         });
      } else if (e.target === lb_reimage4) {
         showProcessing();
+        if (lb_reimagine_menu) lb_reimagine_menu.style.display = 'none';
         uHint=prompt('Movement Hint');
 
         fetch('cmd/gallery_tool_animate_replicate.php', {
@@ -351,6 +387,52 @@ function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribut
             'Content-Type': 'application/json'
             },
             body: JSON.stringify({ source: lbImg.src,userhint:uHint })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            close()
+            // Reload the current document to reflect changes
+            window.location.reload();
+            // Handle the response data here
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+     } else if (e.target === lb_reimage5) {
+        showProcessing();
+        if (lb_reimagine_menu) lb_reimagine_menu.style.display = 'none';
+        uHint=prompt('Hint');
+        fetch('cmd/gallery_tool_convert_style_or_flux2.php', {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ source: lbImg.src,userhint:uHint })
+
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            close()
+            // Reload the current document to reflect changes
+            window.location.reload();
+            // Handle the response data here
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+     } else if (e.target === lb_reimage6) {
+        showProcessing();
+        if (lb_reimagine_menu) lb_reimagine_menu.style.display = 'none';
+        uHint=prompt('Hint','Convert image-0 to a semi-realistic style, like a high-quality CGI render. Reimagine the whole picture, while preserving  details like tattos, skin color, eye color, hair style, hair color, clothing, make-up , body proportions and environment.');
+        fetch('cmd/gallery_tool_convert_style_replicate_nsfw.php', {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ source: lbImg.src,userhint:uHint })
+
         })
         .then(response => response.json())
         .then(data => {

@@ -17,6 +17,7 @@ $GLOBALS["TASKS"]["snqe"]["fn"]=function() {
     require_once $enginePath . "lib/core/api_badge.class.php";
     require_once $enginePath . "lib/core/core_profiles.class.php";
     require_once $enginePath . "lib/core/llm_connector.class.php";
+    require_once $enginePath . "lib/scriptproxy_papyrus.php";
 
     if (isset($GLOBALS["argv"][2])) {
         if ($GLOBALS["argv"][2]=="create") {

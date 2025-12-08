@@ -483,7 +483,7 @@ class openrouterjson
         
         if (!$assistantAppearedInhistory) { // is this still needed?
             
-            if (isset($GLOBALS["CHIM_NO_EXAMPLES"]) && $GLOBALS["CHIM_NO_EXAMPLES"]) {
+            if (isset($GLOBALS["CHIM_LLM_EXAMPLES"]) && $GLOBALS["CHIM_LLM_EXAMPLES"]) {
                 $contextExamples=[];
             } else {
                 // EXAMPLES
@@ -601,6 +601,13 @@ class openrouterjson
             if (stripos($this->_model, "grok-3-mini") != false) {//grok-3-mini needs reasoning cand cannot be disabled
                 $data["reasoning"]["enabled"] = true;
             }            
+            if (stripos($this->_model, "qwen3-235b-a22b-thinking-2507") != false) {//qwen/qwen3-235b-a22b-thinking-2507 needs reasoning cand cannot be disabled
+                $data["reasoning"]["enabled"] = true;
+            }   
+            
+            if ($this->_model=="x-ai/grok-4") {//qwen/qwen3-235b-a22b-thinking-2507 needs reasoning cand cannot be disabled
+                $data["reasoning"]["enabled"] = true;
+            }         
         }
         
         if ($this->_is_openai) {
@@ -960,6 +967,9 @@ class openrouterjson
 
         $json_response=$this->_lastStreamedObject;
 
+        if (!isset($json_response["usage"]))
+            $json_response["usage"]=[];
+        
         if ($json_response) {
                 if ($GLOBALS["db"]) {
                     $GLOBALS["db"]->insert(

@@ -318,7 +318,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["bulk_delete_npcs"])) 
         $confirm = trim((string)($_POST['confirm'] ?? ''));
         if ($confirm !== 'Delete') { echo json_encode(["ok"=>false, "error"=>"Confirmation text mismatch"]); exit; }
         // Delete all unlocked NPCs except The Narrator (by name or id=1)
-        $sql = "with del as (delete from core_npc_master where coalesce(lock_profile,0)=0 and not (npc_name='The Narrator' or id=1) returning 1) select count(*) as c from del";
+        // Use trim and case-insensitive comparison for robustness, and ensure lock_profile is explicitly compared as integer
+        $sql = "with del as (delete from core_npc_master where (lock_profile is null or lock_profile = 0) and id <> 1 and trim(lower(npc_name)) <> 'the narrator' returning 1) select count(*) as c from del";
         $row = $GLOBALS['db']->fetchOne($sql);
         $deleted = intval($row['c'] ?? 0);
         echo json_encode(["ok"=>true, "deleted"=>$deleted]);
@@ -415,6 +416,9 @@ $profileIdFilter = isset($_GET['profile_id']) ? trim((string)$_GET['profile_id']
 $favOnly = (isset($_GET['fav']) && $_GET['fav'] === '1');
 $dynOnly = (isset($_GET['dyn']) && $_GET['dyn'] === '1');
 $mtmOnly = (isset($_GET['mtm']) && $_GET['mtm'] === '1');
+$salOnly = (isset($_GET['sal']) && $_GET['sal'] === '1');
+$blcOnly = (isset($_GET['blc']) && $_GET['blc'] === '1');
+$gpsOnly = (isset($_GET['gps']) && $_GET['gps'] === '1');
 
 // Preload profiles for filter dropdown
 $profileRows = $GLOBALS["db"]->fetchAll("SELECT id, label, metadata FROM core_profiles ORDER BY label ASC");
@@ -447,11 +451,17 @@ foreach (($profileConnRows ?? []) as $prow) {
     $dynVal = isset($pmeta['DYNAMIC_PROFILE_ENABLED']) ? $pmeta['DYNAMIC_PROFILE_ENABLED'] : null;
     $mtmVal = isset($pmeta['MIDDLE_TERM_MEMORY_ENABLED']) ? $pmeta['MIDDLE_TERM_MEMORY_ENABLED'] : null;
     $adVal = isset($pmeta['AUTO_DIARY_ENABLED']) ? $pmeta['AUTO_DIARY_ENABLED'] : null;
+    $salVal = isset($pmeta['SALUTATION_AFTER_A_WHILE']) ? $pmeta['SALUTATION_AFTER_A_WHILE'] : null;
+    $blcVal = isset($pmeta['BACKGROUND_LIFE_COMMANDS']) ? $pmeta['BACKGROUND_LIFE_COMMANDS'] : null;
+    $gpsVal = isset($pmeta['GPS_TRACK']) ? $pmeta['GPS_TRACK'] : null;
     
     $profileMetaById[$pid] = [
         'dyn' => ($dynVal === '1' || $dynVal === 1 || $dynVal === true),
         'mtm' => ($mtmVal === '1' || $mtmVal === 1 || $mtmVal === true),
-        'ad' => ($adVal === '1' || $adVal === 1 || $adVal === true)
+        'ad' => ($adVal === '1' || $adVal === 1 || $adVal === true),
+        'sal' => ($salVal === '1' || $salVal === 1 || $salVal === true),
+        'blc' => ($blcVal === '1' || $blcVal === 1 || $blcVal === true),
+        'gps' => ($gpsVal === '1' || $gpsVal === 1 || $gpsVal === true)
     ];
 }
 $profilesConnById = [];
@@ -483,7 +493,16 @@ if ($dynOnly) {
 }
 if ($mtmOnly) {
     // Robust match on JSON/text; tolerates whitespace and works for json/jsonb
-    $where .= " and coalesce(extended_data::text,'') ~ '\"middle_term_enabled\"\\s*:\\s*1'";
+    $where .= " and coalesce(extended_data::text,'') ~ '\"middle_term_enabled\"\\s*:\\s*(true|1)'";
+}
+if ($salOnly) {
+    $where .= " and coalesce(extended_data::text,'') ~ '\"salutation_after_a_while\"\\s*:\\s*(true|1)'";
+}
+if ($blcOnly) {
+    $where .= " and coalesce(extended_data::text,'') ~ '\"background_life_commands\"\\s*:\\s*(true|1)'";
+}
+if ($gpsOnly) {
+    $where .= " and coalesce(metadata::text,'') ~ '\"gps_track\"\\s*:\\s*(true|1)'";
 }
 
 // Default: favorites first, then alphabetical by name
@@ -517,6 +536,9 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_fav" <?= $favOnly?'checked':'' ?>> ⭐Favorites</label>
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_dyn" <?= $dynOnly?'checked':'' ?>> ♻️Dynamic profile</label>
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_mtm" <?= $mtmOnly?'checked':'' ?>> 📃Middle-term memory</label>
+            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_sal" <?= $salOnly?'checked':'' ?>> 👋Auto Salutations</label>
+            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_blc" <?= $blcOnly?'checked':'' ?>> 🎮BGL: Auto Actions</label>
+            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_gps" <?= $gpsOnly?'checked':'' ?>> 📍BGL: GPS track</label>
           </div>
         </div>
         <input id="npc_search" type="text" placeholder="Search..." value="<?= htmlspecialchars($q) ?>" />
@@ -578,6 +600,24 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
             $adEnabled = !empty($extTmp['auto_diary_enabled']);
         }
         
+        // Salutation After A While: check extended_data override, otherwise inherit from profile
+        $salEnabled = $profileMeta['sal']; // default to profile
+        if (array_key_exists('salutation_after_a_while', $extTmp) && $extTmp['salutation_after_a_while'] !== null && $extTmp['salutation_after_a_while'] !== '') {
+            $salEnabled = !empty($extTmp['salutation_after_a_while']);
+        }
+        
+        // Background Life Commands: check extended_data override, otherwise inherit from profile
+        $blcEnabled = $profileMeta['blc']; // default to profile
+        if (array_key_exists('background_life_commands', $extTmp) && $extTmp['background_life_commands'] !== null && $extTmp['background_life_commands'] !== '') {
+            $blcEnabled = !empty($extTmp['background_life_commands']);
+        }
+        
+        // GPS Track: check metadata override, otherwise inherit from profile
+        $gpsEnabled = $profileMeta['gps']; // default to profile
+        if (array_key_exists('gps_track', $metaTmp) && $metaTmp['gps_track'] !== null && $metaTmp['gps_track'] !== '') {
+            $gpsEnabled = !empty($metaTmp['gps_track']);
+        }
+        
         $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot,$row["refid"] ?? '', $row['md5'] ?? '', $row['npc_name'] ?? '', $portraitRel); 
         $tagsVal = trim((string)($row['tags'] ?? '')); 
         $tagsDisp = ($tagsVal === '') ? '' : $tagsVal; 
@@ -590,7 +630,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                     if (isset($metaTmp['stats']) && is_array($metaTmp['stats']) && isset($metaTmp['stats']['level'])) {
                         $levelDisp = ' ('.intval($metaTmp['stats']['level']).')';
                     }
-                ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($dynEnabled)): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?></div>
+                ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($dynEnabled)): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Salutation enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
             <div class="npc-title-actions">
                     <?php if ($tagsDisp !== ''): ?>
                     <span class="npc-tags-top" title="<?= htmlspecialchars($tagsDisp) ?>"><?= htmlspecialchars($tagsDisp) ?></span>
@@ -833,8 +873,7 @@ if (isset($_GET['bio_detail'])) {
     header('Content-Type: application/json');
     $name = trim((string)($_GET['name'] ?? ''));
     if ($name === '') { echo json_encode(['ok'=>false,'error'=>'Missing name']); exit; }
-    $codename=npcNameToCodename($name);
-    $esc = $GLOBALS['db']->escape($codename);
+    $esc = $GLOBALS['db']->escape($name);
     // Case-insensitive exact match on npc_name to tolerate capitalization differences
     $r = $GLOBALS['db']->fetchOne("select npc_name, core, voiceid, gender, race, refid, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags from combined_bio_templates where lower(npc_name) = lower('{$esc}') limit 1");
     if (!$r) { echo json_encode(['ok'=>false,'error'=>'Not found']); exit; }
@@ -1010,11 +1049,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             $dynVal = isset($meta['DYNAMIC_PROFILE_ENABLED']) ? $meta['DYNAMIC_PROFILE_ENABLED'] : null;
             $mtmVal = isset($meta['MIDDLE_TERM_MEMORY_ENABLED']) ? $meta['MIDDLE_TERM_MEMORY_ENABLED'] : null;
             $adVal = isset($meta['AUTO_DIARY_ENABLED']) ? $meta['AUTO_DIARY_ENABLED'] : null;
+            $salVal = isset($meta['SALUTATION_AFTER_A_WHILE']) ? $meta['SALUTATION_AFTER_A_WHILE'] : null;
+            $blcVal = isset($meta['BACKGROUND_LIFE_COMMANDS']) ? $meta['BACKGROUND_LIFE_COMMANDS'] : null;
+            $gpsVal = isset($meta['GPS_TRACK']) ? $meta['GPS_TRACK'] : null;
             return [
                 'id' => (string)($pr['id'] ?? ''),
                 'dyn' => ($dynVal === '1' || $dynVal === 1 || $dynVal === true),
                 'mtm' => ($mtmVal === '1' || $mtmVal === 1 || $mtmVal === true),
-                'ad' => ($adVal === '1' || $adVal === 1 || $adVal === true)
+                'ad' => ($adVal === '1' || $adVal === 1 || $adVal === true),
+                'sal' => ($salVal === '1' || $salVal === 1 || $salVal === true),
+                'blc' => ($blcVal === '1' || $blcVal === 1 || $blcVal === true),
+                'gps' => ($gpsVal === '1' || $gpsVal === 1 || $gpsVal === true)
             ];
         }, $profileConnRows ?? []), JSON_UNESCAPED_SLASHES) ?>;
         
@@ -1055,6 +1100,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 if (hint) {
                     const base = 'Automatically generate diary entries for this NPC when they are nearby during sleep/wait events.';
                     hint.innerHTML = base + (profile.ad ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '');
+                }
+            }
+            
+            // Update salutation_after_a_while
+            const salCb = document.getElementById('salutation_after_a_while');
+            if (salCb) {
+                salCb.checked = profile.sal;
+                salCb.setAttribute('data-profile-default', profile.sal ? '1' : '0');
+                const hint = salCb.closest('.form-item').querySelector('.hint');
+                if (hint) {
+                    const base = 'NPC will greet you after you have been away for a while.';
                 }
             }
         }
@@ -1201,6 +1257,42 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 $adFromProfile = true;
             }
         } catch (Throwable $e) { }
+        
+        // Read profile-level settings for the toggles
+        $profileSalEnabled = false;
+        if ($currentProfileId !== '') {
+            foreach (($profileConnRows ?? []) as $prow) {
+                if ((string)($prow['id'] ?? '') === $currentProfileId) {
+                    $pmeta = [];
+                    try {
+                        if (!empty($prow['metadata'])) {
+                            $tmp = json_decode((string)$prow['metadata'], true);
+                            if (is_array($tmp)) $pmeta = $tmp;
+                        }
+                    } catch (Throwable $e) {}
+                    $salVal = isset($pmeta['SALUTATION_AFTER_A_WHILE']) ? $pmeta['SALUTATION_AFTER_A_WHILE'] : null;
+                    $profileSalEnabled = ($salVal === '1' || $salVal === 1 || $salVal === true);
+                    break;
+                }
+            }
+        }
+        
+        // Salutation After A While: check extended_data override or fall back to profile default
+        $salChecked = $profileSalEnabled;
+        $salFromProfile = false;
+        try {
+            $hasNpcOverride = false;
+            if (is_array($editItem) && !empty($editItem['extended_data'])) {
+                $tmpEd = json_decode((string)$editItem['extended_data'], true);
+                if (is_array($tmpEd) && array_key_exists('salutation_after_a_while', $tmpEd) && $tmpEd['salutation_after_a_while'] !== null && $tmpEd['salutation_after_a_while'] !== '') {
+                    $salChecked = !empty($tmpEd['salutation_after_a_while']);
+                    $hasNpcOverride = true;
+                }
+            }
+            if (!$hasNpcOverride) {
+                $salFromProfile = true;
+            }
+        } catch (Throwable $e) { }
         ?>
         <div class="form-item">
             <label for="dynamic_profile" class="label-with-toggle">♻️Dynamic Profile
@@ -1222,6 +1314,13 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <input type="checkbox" id="auto_diary_enabled" name="auto_diary_enabled" value="1" <?= $adChecked ? "checked" : "" ?> data-profile-default="<?= $profileAutoDiaryEnabled ? '1' : '0' ?>">
             </label>
             <small class="hint">Automatically generate diary entries for this NPC when they are nearby during sleep/wait events.<?= $adFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
+        </div>
+
+        <div class="form-item">
+            <label for="salutation_after_a_while" class="label-with-toggle">👋Auto Salutations
+                <input type="checkbox" id="salutation_after_a_while" name="salutation_after_a_while" value="1" <?= $salChecked ? "checked" : "" ?> data-profile-default="<?= $profileSalEnabled ? '1' : '0' ?>">
+            </label>
+            <small class="hint">NPC will automatically greet you after a while.</small>
         </div>
 
         <div class="form-item span-2">
@@ -1369,6 +1468,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                             'gloves' => '🧤 Gloves',
                             'amulet' => '📿 Amulet',
                             'ring' => '💍 Ring',
+                            'cape' => '🧣 Cape',
+                            'backpack' => '🎒 Backpack',
                             'left_hand' => '🤚 Left Hand',
                             'right_hand' => '👉 Right Hand'
                         ];
@@ -1406,7 +1507,25 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                                     <?= isset($metadataStats['level']) ? intval($metadataStats['level']) : '—' ?>
                                 </div>
                             </div>
-                            <div></div>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <div style="color:#f39c12; min-width:100px; font-weight:700;">📏 Scale</div>
+                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; font-weight:700; background:#1a1a1a; font-size:16px;">
+                                    <?php 
+                                    $scale = isset($metadataStats['scale']) ? floatval($metadataStats['scale']) : null;
+                                    if ($scale !== null) {
+                                        echo number_format($scale, 2);
+                                        // Get height description if available
+                                        require_once(__DIR__ . "/../../lib/data_functions.php");
+                                        $heightDesc = getHeightDescription($scale);
+                                        if (!empty($heightDesc)) {
+                                            echo ' <span style="color:#999; font-size:12px; font-weight:400;">(' . htmlspecialchars($heightDesc) . ')</span>';
+                                        }
+                                    } else {
+                                        echo '—';
+                                    }
+                                    ?>
+                                </div>
+                            </div>
                             <div style="display:flex; gap:8px; align-items:center;">
                                 <div style="color:#e74c3c; min-width:100px;">❤️ Health</div>
                                 <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; background:#1a1a1a; flex:1;">
@@ -1500,6 +1619,83 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             </details>
         </div>
 
+        <?php
+        // Spells
+        $metadataSpells = (isset($metaObj['spells']) && is_array($metaObj['spells'])) ? $metaObj['spells'] : [];
+        $spellsUpdated = isset($metaObj['spells_updated']) ? $metaObj['spells_updated'] : null;
+        ?>
+        <div class="form-item span-2">
+            <details class="metadata-spells-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;">
+                <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">
+                    Spells
+                    <?php if ($spellsUpdated): ?>
+                        <span style="color:#999; font-weight:400; font-size:12px;">
+                            Last updated: <?= date('Y-m-d H:i:s', $spellsUpdated) ?>
+                        </span>
+                    <?php endif; ?>
+                </summary>
+                <small class="hint">Magic spells this NPC knows. Note: Spells will only be placed into NPC context if it exists in the description database. This is to prevent
+                  system spells from custom mods from diluting the context.
+                </small>
+                <div style="margin-top:8px; color:#cfd9ea;">
+                    <?php if (!empty($metadataSpells)): ?>
+                        <div style="max-height:400px; overflow-y:auto;">
+                            <table style="width:100%; border-collapse:collapse;">
+                                <thead>
+                                    <tr style="border-bottom:2px solid #4a4a4a; color:rgb(242, 124, 17);">
+                                        <th style="text-align:left; padding:8px;">Spell Name</th>
+                                        <th style="text-align:center; padding:8px; width:130px;">Casting</th>
+                                        <th style="text-align:center; padding:8px; width:120px;">Delivery</th>
+                                        <th style="text-align:right; padding:8px; width:100px;">Base ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php 
+                                    // Casting type labels
+                                    $castingTypes = [
+                                        0 => 'Concentration',
+                                        1 => 'Fire & Forget',
+                                        2 => 'Constant'
+                                    ];
+                                    // Delivery type labels
+                                    $deliveryTypes = [
+                                        0 => 'Self',
+                                        1 => 'Contact',
+                                        2 => 'Aimed',
+                                        3 => 'Target Actor',
+                                        4 => 'Target Location'
+                                    ];
+                                    
+                                    usort($metadataSpells, function($a, $b){ return strcmp($a['name']??'', $b['name']??''); });
+                                    foreach ($metadataSpells as $spell): 
+                                        $spellName = isset($spell['name']) ? htmlspecialchars($spell['name']) : 'Unknown';
+                                        $spellID = isset($spell['baseid']) ? htmlspecialchars($spell['baseid']) : '—';
+                                        $castingType = isset($spell['casting_type']) ? intval($spell['casting_type']) : 0;
+                                        $deliveryType = isset($spell['delivery']) ? intval($spell['delivery']) : 0;
+                                        $castingLabel = $castingTypes[$castingType] ?? 'Unknown';
+                                        $deliveryLabel = $deliveryTypes[$deliveryType] ?? 'Unknown';
+                                    ?>
+                                        <tr style="border-bottom:1px solid #3a3a3a;">
+                                            <td style="padding:6px 8px; color:#cfd9ea;"><?= $spellName ?></td>
+                                            <td style="padding:6px 8px; text-align:center; color:#9fb1c9; font-size:12px;"><?= $castingLabel ?></td>
+                                            <td style="padding:6px 8px; text-align:center; color:#9fb1c9; font-size:12px;"><?= $deliveryLabel ?></td>
+                                            <td style="padding:6px 8px; text-align:right; color:#9fb1c9; font-family:monospace; font-size:11px;"><?= $spellID ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                            <div style="margin-top:12px; padding:8px; background:#1a1a1a; border-radius:6px; border:1px solid #4a4a4a;">
+                                <strong style="color:rgb(242, 124, 17);">Total Spells:</strong> 
+                                <span style="color:#cfd9ea;"><?= count($metadataSpells) ?> spells known</span>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <div style="color:#9fb1c9;">No spell data found in metadata.</div>
+                    <?php endif; ?>
+                </div>
+            </details>
+        </div>
+
         <div class="form-item span-2">
             <label for="metadata">Metadata (JSON)</label>
             <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
@@ -1512,7 +1708,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Override global and profile settings for this specific NPC. Changes here take precedence over all other configurations.</small>
             <?php
             // Configure override editor for NPC mode
-            $reservedKeys = [ 'middle_term_enabled', 'auto_diary_enabled', 'chim_core_migrated'];
+            $reservedKeys = [ 'middle_term_enabled', 'auto_diary_enabled', 'chim_core_migrated', 'salutation_after_a_while'];
             $extendedDataRaw = isset($editItem["extended_data"]) ? $editItem["extended_data"] : '{}';
             $extendedDataObj = json_decode($extendedDataRaw, true) ?: [];
             $currentOverrides = [];
@@ -1558,6 +1754,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 try {
                   const mtm = form.querySelector('#middle_term_enabled');
                   const ad = form.querySelector('#auto_diary_enabled');
+                  const sal = form.querySelector('#salutation_after_a_while');
                   const dyn = form.querySelector('#dynamic_profile');
                   if (form.extended_data){
                     let obj = {};
@@ -1580,6 +1777,16 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                         obj.auto_diary_enabled = ad.checked ? 1 : 0;
                       } else {
                         delete obj.auto_diary_enabled; // Remove to inherit from profile
+                      }
+                    }
+                    
+                    // Salutation After A While: only save if differs from profile default
+                    if (sal) {
+                      const profileDefault = sal.getAttribute('data-profile-default') === '1';
+                      if (sal.checked !== profileDefault) {
+                        obj.salutation_after_a_while = sal.checked ? true : false;
+                      } else {
+                        delete obj.salutation_after_a_while; // Remove to inherit from profile
                       }
                     }
                     
@@ -1710,6 +1917,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-gender-icon.gender-nb { color:#ffd166; }
 .npc-dyn-icon { margin-left:6px; color:#65d46e; opacity:0.95; }
 .npc-mtm-icon { margin-left:6px; color:#9fb1ff; opacity:0.95; }
+.npc-ad-icon { margin-left:6px; color:#f4d03f; opacity:0.95; }
+.npc-sal-icon { margin-left:6px; color:#ffb347; opacity:0.95; }
+.npc-blc-icon { margin-left:6px; color:#8db4e2; opacity:0.95; }
+.npc-gps-icon { margin-left:6px; color:#ff6b6b; opacity:0.95; }
 .npc-divider { height:1px; background:#4a4a4a; margin:2px 0 6px; }
 .npc-fields { display:flex; flex-direction:column; gap:8px; }
 .npc-line { color:#e0e0e0; font-size:13px; line-height:1.35; }
@@ -1784,6 +1995,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_fav_top" <?= $favOnly?'checked':'' ?>> ⭐Favorites</label>
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_dyn_top" <?= $dynOnly?'checked':'' ?>> ♻️Dynamic profile</label>
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_mtm_top" <?= $mtmOnly?'checked':'' ?>> 📃Middle-term memory</label>
+        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_sal_top" <?= $salOnly?'checked':'' ?>> 👋Auto Salutations</label>
+        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_blc_top" <?= $blcOnly?'checked':'' ?>> 🎮Auto Actions</label>
+        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_gps_top" <?= $gpsOnly?'checked':'' ?>> 📍Hourly Tracking</label>
       </div>
     </div>
     <input id="npc_search" type="text" placeholder="Search..." value="<?= htmlspecialchars($q) ?>" />
@@ -1810,7 +2024,60 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 <?php endif; ?>
 <div class="npc-grid">
     <?php foreach ($data as $row): ?>
-    <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $oghmaVal = trim((string)($row['oghma_knowledge_tags'] ?? '')); $oghmaDisp = ($oghmaVal === '') ? 'none' : $oghmaVal; $tagsVal = trim((string)($row['tags'] ?? '')); $tagsDisp = ($tagsVal === '') ? 'none' : $tagsVal; $metaTmp = []; if (!empty($row['metadata'])) { $tmp = json_decode((string)$row['metadata'], true); if (is_array($tmp)) { $metaTmp = $tmp; } } $portraitRel = (string)($metaTmp['portrait'] ?? ''); $extTmp = []; if (!empty($row['extended_data'])) { $tmp2 = json_decode((string)$row['extended_data'], true); if (is_array($tmp2)) { $extTmp = $tmp2; } } $mtmEnabled = !empty($extTmp['middle_term_enabled']); $adEnabled = !empty($extTmp['auto_diary_enabled']); $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot,$row['refid'] ?? '', $row['md5'] ?? '', $row['npc_name'] ?? '', $portraitRel); ?>
+    <?php 
+    $pid = (string)($row['profile_id'] ?? ''); 
+    $profLabel = $profilesById[$pid] ?? ''; 
+    $oghmaVal = trim((string)($row['oghma_knowledge_tags'] ?? '')); 
+    $oghmaDisp = ($oghmaVal === '') ? 'none' : $oghmaVal; 
+    $tagsVal = trim((string)($row['tags'] ?? '')); 
+    $tagsDisp = ($tagsVal === '') ? 'none' : $tagsVal; 
+    $metaTmp = []; 
+    if (!empty($row['metadata'])) { 
+        $tmp = json_decode((string)$row['metadata'], true); 
+        if (is_array($tmp)) { $metaTmp = $tmp; } 
+    } 
+    $portraitRel = (string)($metaTmp['portrait'] ?? ''); 
+    $extTmp = []; 
+    if (!empty($row['extended_data'])) { 
+        $tmp2 = json_decode((string)$row['extended_data'], true); 
+        if (is_array($tmp2)) { $extTmp = $tmp2; } 
+    }
+    
+    // Check for inherited profile settings
+    $profileMeta = isset($profileMetaById[$pid]) ? $profileMetaById[$pid] : ['dyn'=>false,'mtm'=>false,'ad'=>false,'sal'=>false,'blc'=>false,'gps'=>false];
+    
+    // MTM: check extended_data override, otherwise inherit from profile
+    $mtmEnabled = $profileMeta['mtm']; // default to profile
+    if (array_key_exists('middle_term_enabled', $extTmp) && $extTmp['middle_term_enabled'] !== null && $extTmp['middle_term_enabled'] !== '') {
+        $mtmEnabled = !empty($extTmp['middle_term_enabled']);
+    }
+    
+    // Auto Diary: check extended_data override, otherwise inherit from profile
+    $adEnabled = $profileMeta['ad']; // default to profile
+    if (array_key_exists('auto_diary_enabled', $extTmp) && $extTmp['auto_diary_enabled'] !== null && $extTmp['auto_diary_enabled'] !== '') {
+        $adEnabled = !empty($extTmp['auto_diary_enabled']);
+    }
+    
+    // Salutation After A While: check extended_data override, otherwise inherit from profile
+    $salEnabled = $profileMeta['sal']; // default to profile
+    if (array_key_exists('salutation_after_a_while', $extTmp) && $extTmp['salutation_after_a_while'] !== null && $extTmp['salutation_after_a_while'] !== '') {
+        $salEnabled = !empty($extTmp['salutation_after_a_while']);
+    }
+    
+    // Background Life Commands: check extended_data override, otherwise inherit from profile
+    $blcEnabled = $profileMeta['blc']; // default to profile
+    if (array_key_exists('background_life_commands', $extTmp) && $extTmp['background_life_commands'] !== null && $extTmp['background_life_commands'] !== '') {
+        $blcEnabled = !empty($extTmp['background_life_commands']);
+    }
+    
+    // GPS Track: check metadata override, otherwise inherit from profile
+    $gpsEnabled = $profileMeta['gps']; // default to profile
+    if (array_key_exists('gps_track', $metaTmp) && $metaTmp['gps_track'] !== null && $metaTmp['gps_track'] !== '') {
+        $gpsEnabled = !empty($metaTmp['gps_track']);
+    }
+    
+    $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot,$row['refid'] ?? '', $row['md5'] ?? '', $row['npc_name'] ?? '', $portraitRel); 
+    ?>
     <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
             <div class="npc-title">
             <div class="npc-title-left"><?php 
@@ -1818,7 +2085,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 if (isset($metaTmp['stats']) && is_array($metaTmp['stats']) && isset($metaTmp['stats']['level'])) {
                     $levelDisp2 = ' ('.intval($metaTmp['stats']['level']).')';
                 }
-            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp2) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?></div>
+            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp2) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Salutation enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
             <div class="npc-title-actions">
                 <?php if ($tagsDisp !== ''): ?>
                 <span class="npc-tags-label">Tags:</span>
@@ -2109,7 +2376,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         promptBox.style.justifyContent='center';
         promptBox.style.background='rgba(0,0,0,0.65)';
         promptBox.innerHTML = '<div style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:16px; max-width:600px; width:92%; color:#e9efff;">\
-          <div style="font-weight:700; color:rgb(242,124,17); margin-bottom:8px; font-size:18px;">AI Generate Profile for "' + npcName.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) + '"</div>\
+          <div style="font-weight:700; color:rgb(242,124,17); margin-bottom:8px; font-size:18px;">AI Generate Profile for "' + npcName.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) + '"</div>\
           <div style="font-size:13px; color:#cfd9ea; margin-bottom:12px;">Add any specific information or instructions for the AI to consider when generating this profile. Leave blank to use default generation.</div>\
           <label style="display:block; font-size:13px; margin:6px 0 4px; color:#cfd9ea; font-weight:600;">Custom Instructions (optional):</label>\
           <textarea id="ai_user_prompt" placeholder="Example: This NPC should be a merchant specializing in enchanted weapons, with a mysterious past..." style="width:100%; min-height:120px; padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; resize:vertical; font-family:inherit;"></textarea>\
@@ -2331,7 +2598,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       (j.items||[]).forEach(it=>{
         const div = document.createElement('div');
         div.style.border = '1px solid #4a4a4a'; div.style.borderRadius='8px'; div.style.padding='8px'; div.style.cursor='pointer';
-        div.innerHTML = `<div style="font-weight:700; color:#e9efff">${it.npc_name}</div>
+        div.innerHTML = `<div style="font-weight:700; color:#e9efff">${escapeHtml(it.npc_name)}</div>
           <div style="color:#9fb1c9; font-size:12px; margin:4px 0">${it.core_preview||''}</div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; font-size:12px; color:#cfd9ea;">
             ${it.voiceid?('<span>Voice: '+it.voiceid+'</span>'):''}
@@ -2361,7 +2628,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       if (!j.ok){ detail.innerHTML = '<div style="color:#ff6b6b">Failed to load detail</div>'; return; }
       const d = j.data||{};
       detail.innerHTML = `
-        <div style="font-size:18px; font-weight:700; color:#e9efff;">${d.npc_name||''}</div>
+        <div style="font-size:18px; font-weight:700; color:#e9efff;">${escapeHtml(d.npc_name||'')}</div>
         <div style="margin-top:8px; color:#cfd9ea;"><b style="color:rgb(242,124,17)">Core:</b><br>${escapeHtml(d.core||'')}</div>
         <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:10px; margin-top:8px;">
           ${kv('Static', d.npc_static_bio)}
@@ -2384,7 +2651,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     }
     function kv(title, val){ const v=(val||'').trim(); return `<div><div style="color:rgb(242,124,17); font-weight:700;">${title}</div><div style="white-space:pre-wrap;">${escapeHtml(v||'—')}</div></div>`; }
     function badge(k, v){ v=(v||'').trim(); if (!v) return ''; return `<span style="background:#3a3a3a; border:1px solid #4a4a4a; border-radius:999px; padding:3px 8px;">${k}: ${escapeHtml(v)}</span>`; }
-    function escapeHtml(s){ return String(s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     let deb = null; function refetch(){ if (deb) clearTimeout(deb); deb=setTimeout(()=>{ page=1; fetchList(); }, 250); }
     if (inp) inp.addEventListener('input', refetch);
     if (letter) letter.addEventListener('change', refetch);
@@ -2569,9 +2836,15 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       const fav = (document.getElementById('npc_filter_fav_top')||document.getElementById('npc_filter_fav'));
       const dyn = (document.getElementById('npc_filter_dyn_top')||document.getElementById('npc_filter_dyn'));
       const mtm = (document.getElementById('npc_filter_mtm_top')||document.getElementById('npc_filter_mtm'));
+      const sal = (document.getElementById('npc_filter_sal_top')||document.getElementById('npc_filter_sal'));
+      const blc = (document.getElementById('npc_filter_blc_top')||document.getElementById('npc_filter_blc'));
+      const gps = (document.getElementById('npc_filter_gps_top')||document.getElementById('npc_filter_gps'));
       params.set('fav', fav && fav.checked ? '1' : '');
       params.set('dyn', dyn && dyn.checked ? '1' : '');
       params.set('mtm', mtm && mtm.checked ? '1' : '');
+      params.set('sal', sal && sal.checked ? '1' : '');
+      params.set('blc', blc && blc.checked ? '1' : '');
+      params.set('gps', gps && gps.checked ? '1' : '');
     } catch(_e){}
     params.set('alpha', 'asc');
     if (page) params.set('page', String(page));
@@ -2803,6 +3076,19 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           if (left){
             let icon = left.querySelector('.npc-ad-icon');
             if (ad){ if (!icon){ icon = document.createElement('span'); icon.className='npc-ad-icon'; icon.title='Auto diary enabled'; icon.textContent='📙'; left.appendChild(icon); } }
+            else { if (icon){ icon.remove(); } }
+          }
+        } catch(_e){}
+        // Toggle Salutation After A While icon (👋) based on extended_data.salutation_after_a_while
+        try {
+          const sal = (function(){
+            const raw = String(data.extended_data||'').trim(); if (!raw) return 0;
+            try { const o = JSON.parse(raw); return (o && Number(o.salutation_after_a_while||0)===1) ? 1 : 0; } catch(_e){ return 0; }
+          })();
+          const left = card.querySelector('.npc-title-left');
+          if (left){
+            let icon = left.querySelector('.npc-sal-icon');
+            if (sal){ if (!icon){ icon = document.createElement('span'); icon.className='npc-sal-icon'; icon.title='Auto Salutation enabled'; icon.textContent='👋'; left.appendChild(icon); } }
             else { if (icon){ icon.remove(); } }
           }
         } catch(_e){}

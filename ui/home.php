@@ -155,19 +155,37 @@ class sql {
 
 $db = new sql();
 
-// Load PLAYER_NAME from database (preferred) with fallback to global/conf.php
-// This ensures dashboard always shows the current in-game player name
+// Load PLAYER_NAME from core_player table 
 $PLAYER_NAME_DB = isset($GLOBALS['PLAYER_NAME']) ? (string)$GLOBALS['PLAYER_NAME'] : 'Player';
 try {
-    $resPlayer = pg_query($conn, "SELECT value FROM {$schema}.conf_opts WHERE id='PLAYER_NAME' LIMIT 1");
-    if ($resPlayer && pg_num_rows($resPlayer) > 0) {
-        $rowPlayer = pg_fetch_assoc($resPlayer);
-        if ($rowPlayer && isset($rowPlayer['value']) && $rowPlayer['value'] !== '') {
-            $PLAYER_NAME_DB = (string)$rowPlayer['value'];
+    require_once(__DIR__ . "/../lib/core/player.class.php");
+    $playerHelper = new Player();
+    $nameFromPlayerTable = $playerHelper->get('player_name');
+    if ($nameFromPlayerTable !== null && $nameFromPlayerTable !== '') {
+        $PLAYER_NAME_DB = $nameFromPlayerTable;
+    } else {
+        // Fallback to conf_opts
+        $resPlayer = pg_query($conn, "SELECT value FROM {$schema}.conf_opts WHERE id='PLAYER_NAME' LIMIT 1");
+        if ($resPlayer && pg_num_rows($resPlayer) > 0) {
+            $rowPlayer = pg_fetch_assoc($resPlayer);
+            if ($rowPlayer && isset($rowPlayer['value']) && $rowPlayer['value'] !== '') {
+                $PLAYER_NAME_DB = (string)$rowPlayer['value'];
+            }
         }
     }
 } catch (Throwable $_) {
-    // Fallback to existing $GLOBALS['PLAYER_NAME'] on any error
+    // Fallback to conf_opts on error
+    try {
+        $resPlayer = pg_query($conn, "SELECT value FROM {$schema}.conf_opts WHERE id='PLAYER_NAME' LIMIT 1");
+        if ($resPlayer && pg_num_rows($resPlayer) > 0) {
+            $rowPlayer = pg_fetch_assoc($resPlayer);
+            if ($rowPlayer && isset($rowPlayer['value']) && $rowPlayer['value'] !== '') {
+                $PLAYER_NAME_DB = (string)$rowPlayer['value'];
+            }
+        }
+    } catch (Throwable $_) {
+        // Final fallback to existing $GLOBALS['PLAYER_NAME']
+    }
 }
 
 /* Check for database updates only in index.php with no parms*/
@@ -998,7 +1016,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                 <td>" . htmlspecialchars($chimContextMode) . "</td>
                             </tr>
                             <tr>
-                                <td>AI Quest Processor</td>
+                                <td>Background Processor</td>
                                 <td>" . ($helperServiceRunning?"Running":"Not running") . "</td>
                             </tr>
                         </table>

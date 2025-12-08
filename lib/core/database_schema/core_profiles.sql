@@ -36,6 +36,7 @@ CREATE TABLE public.core_profiles (
     llm_tertiary_id integer,
     llm_quaternary_id integer,
     llm_formatter_id integer,
+    llm_fallback_id integer,
     metadata jsonb,
     diary_connector_id integer,
     slot integer,
@@ -97,6 +98,7 @@ INSERT INTO public.core_profiles (
     llm_tertiary_id,
     llm_quaternary_id,
     llm_formatter_id,
+    llm_fallback_id,
     metadata,
     diary_connector_id,
     slot,
@@ -113,6 +115,7 @@ INSERT INTO public.core_profiles (
     3,
     4,
     6,
+    NULL,
     '{"RECHAT_H": "4", "RECHAT_P": "100", "CORE_LANG": "", "MINIME_T5": false, "BORED_EVENT": "50", "CURRENT_TASK": true, "DIARY_PROMPT": "Please write a short summary of #PLAYER_NAME# and #HERIKA_NAME#''s last dialogues and events written above into #HERIKA_NAME#''s diary . WRITE AS IF YOU WERE #HERIKA_NAME#. Start the diary entry with the current date and time.", "OGHMA_AMOUNT": "1", "ALIVE_MESSAGE": true, "LANG_LLM_XTTS": true, "QUEST_COMMENT": false, "DIARY_COOLDOWN": "120", "OGHMA_INFINIUM": false, "TIME_AWARENESS": false, "AUTO_DIARY_WAIT": true, "CONTEXT_HISTORY": "75", "MAX_WORDS_LIMIT": "0", "HERIKA_ANIMATIONS": true, "QUEST_COMMENT_CHANCE": "10%", "RECHAT_ALLOW_ACTIONS": true, "CONTEXT_HISTORY_DIARY": "100", "BORED_EVENT_SERVERSIDE": true, "ENFORCE_ACTIONS_PROMPT": true, "REMOVE_ASTERISKS_FROM_OUTPUT": false, "CONTEXT_HISTORY_DYNAMIC_PROFILE": "50"}',
     1,
     1,
@@ -188,6 +191,14 @@ ALTER TABLE ONLY public.core_profiles
 
 ALTER TABLE ONLY public.core_profiles
     ADD CONSTRAINT profiles_llm_formatter_id_fkey FOREIGN KEY (llm_formatter_id) REFERENCES public.core_llm_connector(id);
+
+
+--
+-- Name: core_profiles profiles_llm_fallback_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: dwemer
+--
+
+ALTER TABLE ONLY public.core_profiles
+    ADD CONSTRAINT profiles_llm_fallback_id_fkey FOREIGN KEY (llm_fallback_id) REFERENCES public.core_llm_connector(id);
 
 
 --

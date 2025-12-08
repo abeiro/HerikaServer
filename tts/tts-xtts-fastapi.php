@@ -273,7 +273,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			
 		} else {
 			$textString.=PHP_EOL.print_r($options,true);
-			$textString.=PHP_EOL.print_r($http_response_header,true);
+			$textString.=PHP_EOL.print_r(isset($http_response_header) ? $http_response_header : 'No HTTP response headers available',true);
 			file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".err", trim($textString));
             return false;
 			

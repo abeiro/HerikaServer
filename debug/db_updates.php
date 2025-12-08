@@ -95,6 +95,10 @@ if ($checkTableExists("core_profiles") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master.sql"));
         $db->execQuery("SET search_path TO public");
     }
+    if ($checkTableExists("core_player") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_player.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
 } catch (Exception $e) {
     Logger::warn("Bootstrap core tables: " . $e->getMessage());
 }
@@ -866,7 +870,29 @@ if ($checkVersion("npc_templates_custom")<20250211001) {
 //  sql_gamets_convert_functions 20250218001
 //----------------------------------------------------
 
-if ($checkVersion("sql_gamets_convert_functions")<20250218001) {
+// Check if functions exist to force patch if they're missing
+$checkFunctionExists = function($functionName) {
+    global $db;
+    $query = "
+        SELECT 1 
+        FROM information_schema.routines 
+        WHERE routine_schema = 'public' 
+          AND routine_name = '$functionName'
+    ";
+    $result = $db->fetchAll($query);
+    return (sizeof($result) > 0);
+};
+
+$forceRecreate = false;
+if (!$checkFunctionExists('convert_gamets2skyrim_date') || 
+    !$checkFunctionExists('convert_gamets2days') ||
+    !$checkFunctionExists('convert_gamets2gregorian_date') ||
+    !$checkFunctionExists('convert_gamets2skyrim_long_date')) {
+    Logger::warn("Some gamets conversion functions are missing. Forcing recreation.");
+    $forceRecreate = true;
+}
+
+if ($checkVersion("sql_gamets_convert_functions")<20250218001 || $forceRecreate) {
     Logger::debug(" try patch: sql_gamets_convert_functions 20250218001");
 
     $db->execQuery("DROP VIEW IF EXISTS public.speech_view;");
@@ -1033,7 +1059,17 @@ if ($checkVersion("sql_gamets_convert_functions")<20250218001) {
     Logger::debug("Applied patch: sql_gamets_convert_functions 20250218001");
 }
 
-if ($checkVersion("sql_gamets_convert_functions")<20250226001) {
+// Check if additional functions exist to force patch if they're missing
+$forceRecreate2 = false;
+if (!$checkFunctionExists('convert_gamets2skyrim_date_fmt') || 
+    !$checkFunctionExists('convert_gamets2skyrim_long_date2_nt') ||
+    !$checkFunctionExists('convert_gamets2skyrim_long_date_nt') ||
+    !$checkFunctionExists('convert_gamets2skyrim_time_daypart')) {
+    Logger::warn("Some additional gamets conversion functions are missing. Forcing recreation.");
+    $forceRecreate2 = true;
+}
+
+if ($checkVersion("sql_gamets_convert_functions")<20250226001 || $forceRecreate2) {
     Logger::debug(" try patch: sql_gamets_convert_functions 2 20250226001");
 
     $db->execQuery("DROP FUNCTION IF EXISTS public.convert_gamets2skyrim_date_fmt(gamets bigint, s_format text) CASCADE;");
@@ -1213,67 +1249,81 @@ if ($checkVersion("sql_gamets_convert_functions")<20250226001) {
 
 
 // Views dependant on sql_gamets_convert_functions
-// Ensure speech_view exists
-$query = "
-    SELECT view_definition 
-    FROM information_schema.views 
-    WHERE table_name = 'speech_view'
-";
+// Only create views if the required functions exist
+$requiredFunctions = [
+    'convert_gamets2skyrim_date',
+    'convert_gamets2skyrim_long_date',
+    'convert_gamets2days',
+    'convert_gamets2gregorian_date'
+];
 
-
-$existsColumn=$db->fetchAll($query);
-if (!$existsColumn[0]["view_definition"]) {
-        $db->execQuery("CREATE OR REPLACE VIEW public.speech_view  AS
-  SELECT s.sess,
-    s.speaker,
-    s.speech,
-    s.location,
-    s.listener,
-    s.topic,
-    s.localts,
-    s.gamets,
-    s.ts,
-    s.rowid,
-    s.companions,
-    s.audios,
-    public.convert_gamets2skyrim_date(s.gamets) AS sk_date,
-    public.convert_gamets2skyrim_long_date(s.gamets) AS sk_long_date,
-    public.convert_gamets2days(s.gamets) AS sk_days,
-    public.convert_gamets2gregorian_date(s.gamets) AS gregorian_date
-   FROM public.speech s;
-");
-
+$allFunctionsExist = true;
+foreach ($requiredFunctions as $funcName) {
+    if (!$checkFunctionExists($funcName)) {
+        Logger::warn("Required function $funcName does not exist. Skipping view creation. Run database functions patch first.");
+        $allFunctionsExist = false;
+        break;
+    }
 }
 
+if ($allFunctionsExist) {
+    // Ensure speech_view exists
+    $query = "
+        SELECT view_definition 
+        FROM information_schema.views 
+        WHERE table_name = 'speech_view'
+    ";
 
-// Ensure eventlog_view exists
-$query = "
-    SELECT view_definition 
-    FROM information_schema.views 
-    WHERE table_name = 'eventlog_view'
-";
+    $existsColumn=$db->fetchAll($query);
+    if (!$existsColumn[0]["view_definition"]) {
+            $db->execQuery("CREATE OR REPLACE VIEW public.speech_view  AS
+      SELECT s.sess,
+        s.speaker,
+        s.speech,
+        s.location,
+        s.listener,
+        s.topic,
+        s.localts,
+        s.gamets,
+        s.ts,
+        s.rowid,
+        s.companions,
+        s.audios,
+        public.convert_gamets2skyrim_date(s.gamets) AS sk_date,
+        public.convert_gamets2skyrim_long_date(s.gamets) AS sk_long_date,
+        public.convert_gamets2days(s.gamets) AS sk_days,
+        public.convert_gamets2gregorian_date(s.gamets) AS gregorian_date
+       FROM public.speech s;
+    ");
+    }
 
+    // Ensure eventlog_view exists
+    $query = "
+        SELECT view_definition 
+        FROM information_schema.views 
+        WHERE table_name = 'eventlog_view'
+    ";
 
-$existsColumn=$db->fetchAll($query);
-if (!$existsColumn[0]["view_definition"]) {
-        $db->execQuery("CREATE OR REPLACE VIEW public.eventlog_view  AS
- SELECT e.type,
-    e.data,
-    e.sess,
-    e.gamets,
-    e.localts,
-    e.ts,
-    e.rowid,
-    e.people,
-    e.location,
-    e.party,
-    public.convert_gamets2skyrim_date(e.gamets) AS sk_date,
-    public.convert_gamets2skyrim_long_date(e.gamets) AS sk_long_date,
-    public.convert_gamets2days(e.gamets) AS sk_days,
-    public.convert_gamets2gregorian_date(e.gamets) AS gregorian_date
-   FROM public.eventlog e;
-");
-
+    $existsColumn=$db->fetchAll($query);
+    if (!$existsColumn[0]["view_definition"]) {
+            $db->execQuery("CREATE OR REPLACE VIEW public.eventlog_view  AS
+     SELECT e.type,
+        e.data,
+        e.sess,
+        e.gamets,
+        e.localts,
+        e.ts,
+        e.rowid,
+        e.people,
+        e.location,
+        e.party,
+        public.convert_gamets2skyrim_date(e.gamets) AS sk_date,
+        public.convert_gamets2skyrim_long_date(e.gamets) AS sk_long_date,
+        public.convert_gamets2days(e.gamets) AS sk_days,
+        public.convert_gamets2gregorian_date(e.gamets) AS gregorian_date
+       FROM public.eventlog e;
+    ");
+    }
 }
 
 //----------------------------------------------------
@@ -1715,6 +1765,43 @@ if ($checkTableExists("core_api_badge") == -1) {
 } else
     Logger::info(__FILE__." core_api_badge exists");
 
+// Add unique constraint on core_api_badge.label to prevent duplicates
+if ($checkTableExists("core_api_badge") > 0 && $checkVersion("core_api_badge") < 20251127001) {
+    try {
+        // Remove duplicates: keep row with highest id and non-empty key per label (case-insensitive)
+        $db->execQuery("
+            DELETE FROM public.core_api_badge a
+            WHERE a.id NOT IN (
+                SELECT DISTINCT ON (LOWER(label)) id
+                FROM public.core_api_badge
+                ORDER BY LOWER(label), CASE WHEN api_key = '' THEN 0 ELSE 1 END DESC, id DESC
+            )
+        ");
+        
+        // Normalize label casing to match preset expectations
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'OpenRouter' WHERE LOWER(label) = 'openrouter'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'OpenAI' WHERE LOWER(label) = 'openai'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Deepgram' WHERE LOWER(label) = 'deepgram'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Google' WHERE LOWER(label) = 'google'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Azure' WHERE LOWER(label) = 'azure'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'ElevenLabs' WHERE LOWER(label) = 'elevenlabs'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Cartesia' WHERE LOWER(label) = 'cartesia'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Replicate' WHERE LOWER(label) = 'replicate'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Nano-GPT' WHERE LOWER(label) = 'nano-gpt'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'DeepL' WHERE LOWER(label) = 'deepl'");
+        
+        // Add unique constraint
+        $db->execQuery("ALTER TABLE public.core_api_badge ADD CONSTRAINT core_api_badge_label_unique UNIQUE (label)");
+        
+        // Add case-insensitive index for faster lookups
+        $db->execQuery("CREATE INDEX IF NOT EXISTS idx_core_api_badge_label_lower ON public.core_api_badge (LOWER(label))");
+        
+        $updateVersion("core_api_badge", 20251127001);
+        Logger::info("Applied core_api_badge unique constraint 20251127001 (cleaned duplicates, normalized case, added UNIQUE constraint)");
+    } catch (Exception $e) {
+        Logger::warn("core_api_badge unique constraint update: " . $e->getMessage());
+    }
+}
 
 if ($checkTableExists("core_itt_connector") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_itt_connector.sql"));
@@ -1831,6 +1918,41 @@ try {
     }
 } catch (Exception $e) {
     Logger::error("Error enforcing unique slot index: ".$e->getMessage());
+}
+
+// Add llm_fallback_id column to core_profiles for fallback connector support
+if ($checkVersion("core_profiles") < 20251203001) {
+    Logger::debug("Applying core_profiles 20251203001 - Adding llm_fallback_id for fallback support");
+    try {
+        // Add the column if it doesn't exist
+        $db->execQuery('ALTER TABLE public.core_profiles ADD COLUMN IF NOT EXISTS llm_fallback_id integer');
+        
+        // Add foreign key constraint if it doesn't exist
+        $fkExists = $db->fetchAll("
+            SELECT 1 FROM pg_constraint 
+            WHERE conname = 'profiles_llm_fallback_id_fkey'
+        ");
+        
+        if (!$fkExists || !isset($fkExists[0])) {
+            $db->execQuery("
+                ALTER TABLE public.core_profiles
+                ADD CONSTRAINT profiles_llm_fallback_id_fkey 
+                FOREIGN KEY (llm_fallback_id) REFERENCES public.core_llm_connector(id)
+            ");
+            Logger::info("Added foreign key constraint profiles_llm_fallback_id_fkey");
+        }
+        
+        // Add comment
+        $db->execQuery("
+            COMMENT ON COLUMN public.core_profiles.llm_fallback_id 
+            IS 'Fallback LLM connector used when primary connector fails with network error'
+        ");
+        
+        $updateVersion("core_profiles", 20251203001);
+        Logger::info("Applied patch core_profiles 20251203001 - Added llm_fallback_id for automatic fallback on network errors");
+    } catch (Exception $e) {
+        Logger::error("Error adding llm_fallback_id to core_profiles: " . $e->getMessage());
+    }
 }
 
 // Final repair pass: ensure critical core tables exist even if versions were bumped earlier
@@ -1993,6 +2115,142 @@ try {
     Logger::warn("DB trigger setup for narrator protection failed or already present: ".$e->getMessage());
 }
 
+//----------------------------------------------------
+// Item descriptions: new tables and combined view
+// Version 20241113001
+//----------------------------------------------------
+
+if ($checkVersion("descriptions")<20241114001) {
+    Logger::debug("Applying descriptions 20241114001");
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.descriptions (
+            baseid character varying(128) NOT NULL PRIMARY KEY,
+            name text,
+            description text
+        );
+    ");
+    $updateVersion("descriptions",20241114001);
+    Logger::info("Applied patch descriptions 20241114001");
+}
+
+if ($checkVersion("descriptions_custom")<20241114001) {
+    Logger::debug("Applying descriptions_custom 20241114001");
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.descriptions_custom (
+            baseid character varying(128) NOT NULL PRIMARY KEY,
+            name text,
+            description text
+        );
+    ");
+    $updateVersion("descriptions_custom",20241114001);
+    Logger::info("Applied patch descriptions_custom 20241114001");
+}
+
+if ($checkVersion("descriptions_defaults")<20241114001) {
+    Logger::debug("Applying descriptions_defaults 20241114001");
+    
+    $sqlFile = __DIR__ . '/../data/descriptions_20241114001.sql';
+    if (file_exists($sqlFile)) {
+        $sql = file_get_contents($sqlFile);
+        if ($sql !== false) {
+            $db->execQuery($sql);
+            Logger::info("Imported descriptions from descriptions_20241114001.sql");
+        } else {
+            Logger::warn("Could not read descriptions_20241114001.sql");
+        }
+    } else {
+        Logger::warn("descriptions_20241114001.sql not found at $sqlFile");
+    }
+    
+    $updateVersion("descriptions_defaults",20241114001);
+    Logger::info("Applied patch descriptions_defaults 20241114001");
+}
+
+if ($checkVersion("spell_descriptions")<20241129001) {
+    Logger::debug("Applying spell_descriptions 20241129001");
+    
+    $sqlFile = __DIR__ . '/../data/spell_descriptions.sql';
+    if (file_exists($sqlFile)) {
+        $sql = file_get_contents($sqlFile);
+        if ($sql !== false) {
+            $db->execQuery($sql);
+            Logger::info("Imported spell descriptions from spell_descriptions.sql");
+        } else {
+            Logger::warn("Could not read spell_descriptions.sql");
+        }
+    } else {
+        Logger::warn("spell_descriptions.sql not found at $sqlFile");
+    }
+    
+    $updateVersion("spell_descriptions",20241129001);
+    Logger::info("Applied patch spell_descriptions 20241129001");
+}
+
+// Always (re)create combined view once base tables exist
+try {
+    $db->execQuery("DROP VIEW IF EXISTS public.combined_descriptions CASCADE;");
+    $db->execQuery("
+        CREATE VIEW public.combined_descriptions AS
+        SELECT c.baseid,
+               c.name,
+               c.description
+          FROM public.descriptions_custom c
+        UNION ALL
+        SELECT i.baseid,
+               i.name,
+               i.description
+          FROM (public.descriptions i
+                LEFT JOIN public.descriptions_custom c
+                  ON ((i.baseid)::text = (c.baseid)::text))
+         WHERE c.baseid IS NULL;
+    ");
+    $updateVersion("combined_descriptions",20241114001);
+    Logger::info("Created view combined_descriptions 20241114001");
+} catch (Exception $e) {
+    Logger::error("Error creating combined_descriptions view: " . $e->getMessage());
+}
+
+try {
+    $db->execQuery("CREATE OR REPLACE VIEW \"public\".\"memory_v\" AS
+ SELECT message,
+    uid,
+    gamets,
+    speaker,
+    listener,
+    ts
+   FROM ( SELECT memory.message,
+            memory.uid,
+            memory.gamets,
+            '-'::text AS speaker,
+            '-'::text AS listener,
+            memory.ts
+           FROM memory
+          WHERE memory.message !~~ 'Dear Diary%'::text AND memory.message <> ''::text and event<>'backgroundlife_diary'::text
+        UNION
+         SELECT (((('(Context Location:'::text || speech.location) || ') '::text) || speech.speaker) || ': '::text) || speech.speech,
+            speech.rowid::integer AS rowid,
+            speech.gamets,
+            speech.speaker,
+            speech.listener,
+            speech.ts
+           FROM speech
+          WHERE speech.speech <> ''::text
+        UNION
+         SELECT eventlog.data,
+            eventlog.rowid::integer AS rowid,
+            eventlog.gamets,
+            '-'::text AS text,
+            '-'::text AS listener,
+            eventlog.ts
+           FROM eventlog
+          WHERE eventlog.type::text = ANY (ARRAY['death'::character varying::text, 'location'::character varying::text])) subquery
+  ORDER BY gamets, ts");
+    $updateVersion("memory_v",20251122001);
+    Logger::info("Updated memory_v BgL patch");
+} catch (Exception $e) {
+    Logger::error("Error creating memory_v BgL patch: " . $e->getMessage());
+}
+
 
 if ($checkTableExists("translations") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/translations_table.sql"));
@@ -2014,6 +2272,11 @@ if ($checkTableExists("rumors") == -1) {
 
 $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS region text");
 $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS hold text");
+
+if ($checkTableExists("master_packages") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/master_packages.sql"));
+} else
+    Logger::info(__FILE__." master_packages exists");
 
 //----------------------------------------------------
 // Prompts Table - System for managing default and custom prompts
@@ -2205,8 +2468,255 @@ if ($checkVersion("prompts")<20251110001) {
     $directorRules = $db->escape("Just provide instructions! You can also provide more than one instruction, but one per actor (keep limit at  2 or 3 max actors)\nIn addition, follow these general scene rules as a game director:\n * Use any actor in NEARBY ACTORS/NPC IN THE SCENE list ({PLAYER_NAME},busy actors and far away actors are EXCLUDED!)\n * Continue the scene as naturally and fully as possible, unless the user explicitly requests a new one. You can specify actions to reinforce the actors' dialogue.\n * If there are more actors in the room, try to involve them in the conversation.\n * When dialogue becomes repetitive, make a plot twist.\n * If a character reuses the same argument too often, nudge the scene towards a new topic.\n * Occasionally introduce subtle foreshadowing or hint at future events, dangers, or quests.\n * Do not resolve everything neatly—keep room for ongoing tension or future continuation.\n * You must always provide dialogue instructions for the character, as every request requires a dialogue response.\n * Here are a list of actions that can be used: \n{FUNCTION_LIST}\n  ** JustTalk \n * Add a Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality. Other actors can see this to properly react.\n * If scene is getting boring/repetitive, add a plot twist");
     $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('director_instruction_rules', '$directorRules', 'Rules and guidelines for game director when generating instructions (contains {PLAYER_NAME}, {FUNCTION_LIST} placeholders). Used in: service/processors/rolemaster/cmd/instruction.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
     
+    // Seed Oghma LLM topic extraction prompt
+    $oghmaTopicPrompt = $db->escape(
+        "You are an expert at extracting important topics from text.\n".
+        "Follow these rules strictly:\n\n".
+        "1. Extract only ONE most important topic (person, place, item, concept, etc.) from the text\n".
+        "2. Ensure the output is in the **singular form** (e.g., dragons→dragon, cities→city)\n".
+        "3. Return ONLY the word or phrase (no explanations, no extra text)\n".
+        "4. If multiple candidates exist, choose the most important one\n".
+        "5. Keep the topic in the same language as the input text\n\n".
+        "Examples:\n".
+        "Input: 'I heard about dragons'\n".
+        "Output: dragon\n\n".
+        "Input: 'Going to Whiterun today'\n".
+        "Output: Whiterun\n\n".
+        "Input: 'Met with the Greybeards'\n".
+        "Output: Greybeard\n\n".
+        "Input: 'Used magic in combat'\n".
+        "Output: magic"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'custom_oghma',
+            '$oghmaTopicPrompt',
+            'System prompt for Oghma LLM-based topic extraction from dialogue/text (does not apply to MiniMe T5 version). Used in: lib/oghma_llm_service.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
     $updateVersion("prompts", 20251110001);
     Logger::info("Applied patch prompts 20251110001 - Added all dynamic prompts and director prompts");
+}
+
+//----------------------------------------------------
+// RANDOM NARRATION PROMPT
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251116001) {
+    Logger::debug("Applying prompts table 20251116001 - Adding random_narration_prompt");
+    
+    // Seed random narration prompt
+    $randomNarrationPrompt = $db->escape(
+        "Describe the current scene visually using ONLY details from the provided context. Focus on the characters present - their appearance, expressions, body language, and what they're wearing. Include environmental details like lighting and atmosphere. Keep it grounded and concise (2-3 sentences). Do not invent new information, advance the plot, or include dialogue."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'random_narration_prompt',
+            '$randomNarrationPrompt',
+            'Prompt for random Narrator interjections that add cinematic visual scene descriptions during conversations. Styled as atmospheric, present-tense narration (2-3 sentences). Used when RANDOM_NARATION is enabled in global settings.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251116001);
+    Logger::info("Applied patch prompts 20251116001 - Added random_narration_prompt");
+}
+
+//----------------------------------------------------
+// HEIGHT DESCRIPTIONS PROMPT
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251128002) {
+    Logger::debug("Applying prompts table 20251128002 - Adding height_descriptions");
+    
+    // Seed height descriptions as JSON
+    $heightDescriptions = $db->escape(json_encode([
+        "height_descriptions" => [
+            [
+                "name" => "VerySmall",
+                "min_scale" => 0.0,
+                "max_scale" => 0.60,
+                "description" => "Very small and tiny in stature"
+            ],
+            [
+                "name" => "Small",
+                "min_scale" => 0.60,
+                "max_scale" => 0.80,
+                "description" => "Smaller than most people"
+            ],
+            [
+                "name" => "ModestStature",
+                "min_scale" => 0.80,
+                "max_scale" => 0.95,
+                "description" => "Slightly below average height"
+            ],
+            [
+                "name" => "Average",
+                "min_scale" => 0.95,
+                "max_scale" => 1.05,
+                "description" => "Typical height"
+            ],
+            [
+                "name" => "Tall",
+                "min_scale" => 1.05,
+                "max_scale" => 1.20,
+                "description" => "Tall, standing a head above most people"
+            ],
+            [
+                "name" => "VeryTall",
+                "min_scale" => 1.20,
+                "max_scale" => 1.40,
+                "description" => "Very tall"
+            ],
+            [
+                "name" => "Giantlike",
+                "min_scale" => 1.40,
+                "max_scale" => 99.0,
+                "description" => "Giant in height and stature"
+            ]
+        ]
+    ]));
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'height_descriptions',
+            '$heightDescriptions',
+            'JSON configuration for NPC height descriptions based on scale values. Used to generate natural language height descriptions from numeric scale values for NPC context.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251128002);
+    Logger::info("Applied patch prompts 20251128002 - Added height_descriptions");
+}
+
+//----------------------------------------------------
+// CORE_PLAYER DATA MIGRATION
+//----------------------------------------------------
+
+if ($checkVersion("core_player")<20241128001) {
+    Logger::debug("Applying core_player migration 20241128001 - Migrating player data from conf_opts");
+    
+    // List of keys to migrate from conf_opts to core_player
+    $keysToMigrate = [
+        'PLAYER_NAME' => 'player_name',
+        'PLAYER_BIOS' => 'appearance',  // Renamed
+        'PLAYER_SPEECH_STYLE' => 'speech_style',
+        // Skyrim stats
+        'Mauls', 'Werewolf Transformations', 'Days As Werewolf',
+        'Necks Bitten', 'Days As Vampire', 'Locations Discovered',
+        'Dungeons Cleared', 'Days Passed', 'Hours Slept',
+        'Hours Waited', 'Standing Stones Found', 'Gold Found',
+        'Most Gold Carried', 'Chests Looted', 'Skill Increases',
+        'Skill Books Read', 'Food Eaten', 'Training Sessions',
+        'Books Read', 'Horses Owned', 'Houses Owned',
+        'Stores Invested In', 'Barters', 'Persuasions',
+        'Bribes', 'Intimidations', 'Diseases Contracted',
+        'Dragonborn Quests Completed DB', 'Dawnguard Quests Completed DG',
+        'Quests Completed', 'Misc Objectives Completed',
+        'Main Quests Completed', 'Side Quests Completed',
+        'The Companions Quests Completed', 'College of Winterhold Quests Completed',
+        'Thieves\' Guild Quests Completed', 'The Dark Brotherhood Quests Completed',
+        'Civil War Quests Completed', 'Daedric Quests Completed',
+        'Questlines Completed', 'Bard\'s College Quests Completed',
+        'Blades Quests Completed', 'Forsworn Quests Completed',
+        'Imperial Legion Quests Completed', 'Stormcloaks Quests Completed',
+        'Thieves\' Guild Special Jobs Completed', 'Dark Brotherhood Contracts Completed'
+    ];
+    
+    foreach ($keysToMigrate as $confKey => $playerKey) {
+        // If confKey is numeric (index in array), use it as both source and dest
+        if (is_numeric($confKey)) {
+            $confKey = $playerKey;
+        }
+        
+        // Check if data exists in conf_opts
+        $escapedConfKey = $db->escape($confKey);
+        $result = $db->fetchAll("SELECT value FROM public.conf_opts WHERE id = '{$escapedConfKey}' LIMIT 1");
+        
+        if ($result && isset($result[0]['value'])) {
+            $value = $result[0]['value'];
+            $escapedPlayerKey = $db->escape($playerKey);
+            $escapedValue = $db->escape($value);
+            
+            // Insert or update in core_player
+            $db->execQuery("
+                INSERT INTO public.core_player (id, value) 
+                VALUES ('{$escapedPlayerKey}', '{$escapedValue}')
+                ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+            ");
+            
+            Logger::debug("Migrated {$confKey} -> core_player.{$playerKey}");
+        }
+    }
+    
+    $updateVersion("core_player", 20241128001);
+    Logger::info("Applied patch core_player 20241128001 - Migrated player data from conf_opts");
+}
+
+//----------------------------------------------------
+// Background Life Prompts - Style prompts for letters and inner thoughts
+// Version 20251207001
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251207001) {
+    Logger::debug("Applying background life prompts 20251207001");
+    
+    // Prompt 1: Letter writing style
+    $bglLetterStyle = $db->escape(
+        "Write it as a letter to {PLAYER_NAME} from {HERIKA_NAME}. Use same language as <text>. IMPORTANT: Keep the letter SHORT and CONCISE - maximum 2-3 brief paragraphs."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'background_life_letter',
+            '$bglLetterStyle',
+            'Writing style instructions for background life letters/notifications. This is embedded into the notification field instructions. Contains placeholders: {HERIKA_NAME}, {PLAYER_NAME}. Used in: debug/simple_llm_request_with_context_life.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Prompt 2: Inner thought/monologue style
+    $bglInnerThoughtStyle = $db->escape(
+        "Read the following text, which represents a mental note or inner monologue of a character within the Skyrim universe.\n".
+        "Based on the content of the text, propose one of the following actions that would make sense for the development of the story:"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'background_life_innerthought',
+            '$bglInnerThoughtStyle',
+            'Introduction/framing style for processing background life inner thoughts and monologues. This appears at the start of the system prompt. Contains no placeholders. Used in: debug/simple_llm_request_with_context_life.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $db->execQuery("UPDATE versions SET version=20251207001 WHERE section='prompts'");
+    Logger::info("Applied patch prompts 20251207001 - Added background life style prompts to database");
 }
 
 //----------------------------------------------------

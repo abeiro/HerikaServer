@@ -58,24 +58,51 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFI
 // Initialize automatic backup system (after profiles are loaded)
 require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "automatic_backup.php");
 
-// Load PLAYER_NAME from database if available (overrides conf.php)
-// This ensures UI pages always show the current player name from the game
+// Load player data from core_player database table if available (overrides conf.php)
+// This ensures UI pages and scripts always show current player data from the game
 try {
     if (isset($GLOBALS["DBDRIVER"]) && !empty($GLOBALS["DBDRIVER"])) {
         $dbClassFile = $rootPath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
+        $playerClassFile = $rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php";
+        
         if (!class_exists('sql') && file_exists($dbClassFile)) {
             require_once($dbClassFile);
         }
-        if (class_exists('sql')) {
+        if (!class_exists('Player') && file_exists($playerClassFile)) {
+            require_once($playerClassFile);
+        }
+        
+        if (class_exists('sql') && class_exists('Player')) {
             $db_player = new sql();
-            $playerNameFromDb = $db_player->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
-            if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
-                $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
+            $player = new Player();
+            
+            // Load player name from core_player table
+            $playerNameFromTable = $player->get('player_name');
+            if ($playerNameFromTable !== null && $playerNameFromTable !== '') {
+                $GLOBALS["PLAYER_NAME"] = $playerNameFromTable;
+            } else {
+                // Fallback to conf_opts for backward compatibility
+                $playerNameFromDb = $db_player->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
+                if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
+                    $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
+                }
+            }
+            
+            // Load player appearance from core_player table (maps to PLAYER_BIOS for backward compatibility)
+            $playerAppearance = $player->get('appearance');
+            if ($playerAppearance !== null && $playerAppearance !== '') {
+                $GLOBALS["PLAYER_BIOS"] = $playerAppearance;
+            }
+            
+            // Load player speech style from core_player table
+            $playerSpeechStyle = $player->get('speech_style');
+            if ($playerSpeechStyle !== null && $playerSpeechStyle !== '') {
+                $GLOBALS["PLAYER_SPEECH_STYLE"] = $playerSpeechStyle;
             }
         }
     }
 } catch (Throwable $e) {
-    // Silently fail and use conf.php value if database query fails
+    // Silently fail and use conf.php values if database query fails
 }
 
     

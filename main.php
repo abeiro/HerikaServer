@@ -67,7 +67,7 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
     if (strpos($_SERVER["QUERY_STRING"],"&")===false)
         $receivedData = mb_scrub(base64_decode(substr($_SERVER["QUERY_STRING"],5)));
     else
-        $receivedData = mb_scrub(base64_decode(substr($_SERVER["QUERY_STRING"],5,strpos($_SERVER["QUERY_STRING"],"&")-4)));
+        $receivedData = mb_scrub(base64_decode(substr($_SERVER["QUERY_STRING"],5,strpos($_SERVER["QUERY_STRING"],"&")-5)));
 
     //error_log($receivedData." ".$_GET["profile"]);
 
@@ -118,21 +118,48 @@ $GLOBALS["AUDIT_RUNID_REQUEST"]=$gameRequest[0];
 
 $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
 
+// Handle deprecated events now processed by gamedata.php
+if (in_array($gameRequest[0], ['updateequipment', 'updateinventory', 'updateskills', 'updatestats'])) {
+    // These events are now handled by gamedata.php with JSON POST
+    // The C++ plugin has been updated to use the new endpoint
+    echo "DEPRECATED: This event is now handled by gamedata.php\n";
+    if (!getenv("PHPUNIT_TEST")) {
+        @ob_end_flush();
+        @flush();
+    }
+    exit;
+}
 
 // Database Connection
 $db = new sql();
 
-// Load PLAYER_NAME from database if available (overrides conf.php)
-$playerNameFromDb = $db->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
-if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
-    $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
+// Load PLAYER_NAME from core_player table
+try {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+    $player = new Player();
+    $playerNameFromTable = $player->get('player_name');
+    if ($playerNameFromTable !== null && $playerNameFromTable !== '') {
+        $GLOBALS["PLAYER_NAME"] = $playerNameFromTable;
+    } else {
+        // Fallback to conf_opts
+        $playerNameFromDb = $db->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
+        if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
+            $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
+        }
+    }
+} catch (Exception $e) {
+    // Fallback to conf_opts on error
+    $playerNameFromDb = $db->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
+    if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
+        $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
+    }
 }
 
 require_once($path . "processor" .DIRECTORY_SEPARATOR."chim_modes.php");
 
 
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"preprocessing.php");
-if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction","init"])) {
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext","instruction","init"])) {
     // This is just form mark that user has made an input request. We will check later when waiting for LLm response 
     // if use has made input after that request, so we can abort it.
     $GLOBALS["ADD_PLAYER_BIOS"]=true;
@@ -157,7 +184,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 $fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
     "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
-    "util_location_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace","combatbark","util_location_npc","enable_bg"];
+    "util_location_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace","combatbark","util_location_npc","enable_bg","region"];
 
 if (isset($GLOBALS["external_fast_commands"])) {
     $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
@@ -483,7 +510,7 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
 
 // Player rewrite
 
-if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && isset($GLOBALS["PLAYER_RESPEECH"]) && $GLOBALS["PLAYER_RESPEECH"]) {
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && isset($GLOBALS["PLAYER_RESPEECH"]) && $GLOBALS["PLAYER_RESPEECH"]) {
     // Use preg_replace to remove the name and colon before the dialogue
     $cleaned_player_dialogue = addcslashes(preg_replace('/^[^:]+:/', '', $gameRequest[3]),'"');
     error_log($cleaned_player_dialogue);
@@ -659,7 +686,7 @@ if (isset($_GET["profile"])) {
 
 
 
-if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) ) {
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) ) {
     // Empty request
     if (empty($gameRequest[3]) || trim($gameRequest[3])=="{$GLOBALS["PLAYER_NAME"]}:") {
         error_log("[MAIN] Empty request... aborting");
@@ -672,7 +699,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 
 $GLOBALS["CHEAT_MODE"]=true;
-if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && isset($GLOBALS["CHEAT_MODE"]) && $GLOBALS["CHEAT_MODE"]) {
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && isset($GLOBALS["CHEAT_MODE"]) && $GLOBALS["CHEAT_MODE"]) {
     // Use preg_replace to remove the name and colon before the dialogue
     if (isset($_GET["profile"])) {
         $cleaned_player_dialogue = addcslashes(preg_replace('/^[^:]+:/', '', $gameRequest[3]),'"');
@@ -693,7 +720,7 @@ Player TTS
 
 Player TTS. We overwrite some confs an then restore them.
 */
-if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"]) && Translation::isSavePlayerTranslationEnabled()) {
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && Translation::isSavePlayerTranslationEnabled()) {
    
     require(__DIR__."/processor/player_tts.php");
     
@@ -818,66 +845,49 @@ if ($gameRequest[0] == "npcspellcast") {
 
 // Exit if only a event info log.
 
-if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","chatme","chat","infoaction","death","itemfound",
-    "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast","backgroundaction","reanimate"])) {
+if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","infoitems","chatme","chat","infoaction","death","itemfound",
+    "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast","backgroundaction","reanimate","itempickup","npc_reanimated"])) {
     $gameRequest[3]=isset($gameRequest[3])?$gameRequest[3]:"";
     $lastInfoNpcData=$db->escape($gameRequest[3]);
-    if (in_array($gameRequest[0],['infonpc','infoloc','infonpc_close'])) {
+    if (in_array($gameRequest[0],['infonpc','infoloc','infonpc_close','infoitems'])) {
         // Special cases
-        $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
-        if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
-            //error_log("Skipping {$gameRequest[0]}");
-            terminate();
-        }
-    }
-    // Update player name from infoplayer event
-    if ($gameRequest[0] == 'infoplayer') {
-        // infoplayer format: level:{},name:"{}",race:"{}",gender:"{}"
-        if (preg_match('/name:"([^"]+)"/', $gameRequest[3], $matches)) {
-            $playerNameFromGame = $matches[1];
-            if (!empty($playerNameFromGame) && $playerNameFromGame !== $GLOBALS["PLAYER_NAME"]) {
-                $GLOBALS["PLAYER_NAME"] = $playerNameFromGame;
-                // Persist to database for future requests
-                $db->upsertRowOnConflict(
-                    'conf_opts',
-                    array(
-                        'id' => 'PLAYER_NAME',
-                        'value' => $db->escape($playerNameFromGame)
-                    ),
-                    'id'
-                );
-                Logger::info("Updated PLAYER_NAME from game: {$playerNameFromGame}");
+        if ($gameRequest[0] === 'infoitems') {
+            // For infoitems, use shorter duplicate window (2 seconds) to allow refreshes
+            $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type = 'infoitems' and data='$lastInfoNpcData' and localts>".(time()-2));
+            
+            if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
+                terminate();
+            }
+        } else {
+            // For other types, use normal 5 second window
+            $lastlogEqual=$db->fetchAll("select count(*) as n from eventlog where type in ('infonpc','infoloc','infonpc_close') and data='$lastInfoNpcData' and localts>".(time()-5));
+            if (is_array($lastlogEqual) && isset($lastlogEqual[0]) && ($lastlogEqual[0]["n"]>0)) {
+                //error_log("Skipping {$gameRequest[0]}");
+                terminate();
             }
         }
     }
-    if (in_array($gameRequest[0],['backgroundaction'])) {
+    // NOTE: Automatic player name detection from infoplayer event is disabled
+    // Player name is now managed through Player Management UI or quickstart menu
+    if ($gameRequest[0] == 'infoplayer') {
+        // infoplayer format: level:{},name:"{}",race:"{}",gender:"{}"
+        // Player name detection is disabled - manage through Player Management
+    }
+    if (in_array($gameRequest[0],['backgroundaction','npc_reanimated'])) {
         
         require_once($GLOBALS["ENGINE_PATH"]."/processor/background_event.php");
-    } else
+    } else {
         logEvent($gameRequest);
+    }
     terminate();
 }
 
 // Check if the gameRequest matches specific types
 if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
-    // Update player name from playerinfo event  
-    // playerinfo format: level:{},name:"{}",race:"{}"
-    if (isset($gameRequest[3]) && preg_match('/name:"([^"]+)"/', $gameRequest[3], $matches)) {
-        $playerNameFromGame = $matches[1];
-        if (!empty($playerNameFromGame) && $playerNameFromGame !== $GLOBALS["PLAYER_NAME"]) {
-            $GLOBALS["PLAYER_NAME"] = $playerNameFromGame;
-            // Persist to database for future requests
-            $db->upsertRowOnConflict(
-                'conf_opts',
-                array(
-                    'id' => 'PLAYER_NAME',
-                    'value' => $db->escape($playerNameFromGame)
-                ),
-                'id'
-            );
-            Logger::info("Updated PLAYER_NAME from game: {$playerNameFromGame}");
-        }
-    }
+    // NOTE: Automatic player name detection from game is disabled
+    // Player name is now managed through Player Management UI or quickstart menu
+    // This was formerly: Update player name from playerinfo event
+    
     if (!$GLOBALS["NARRATOR_WELCOME"]) {
         logEvent($gameRequest);
         terminate();
@@ -916,10 +926,13 @@ if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
 
 // Fake entry to mark time passing when bored event
 if (in_array($gameRequest[0],["bored"])) {
-    $localGameRequest=$gameRequest;
-    $localGameRequest[0]="infoaction";
-    $localGameRequest[3].=". (Time passes without anyone in the group talking) ";
-    logEvent($localGameRequest);
+    if (($localGameRequest[2]-GetLastSpeechTs())> (( 1 /0.0000024)) ) {
+        $localGameRequest=$gameRequest;
+        $localGameRequest[0]="infoaction";
+            $localGameRequest[3].=". (Time passes without anyone in the group talking) ";
+        logEvent($localGameRequest);
+    }
+    
     $GLOBALS["ADD_PLAYER_BIOS"]=false;
 
     if ((isset($GLOBALS["BORED_EVENT_SERVERSIDE"])&&($GLOBALS["BORED_EVENT_SERVERSIDE"]))) {
@@ -973,7 +986,7 @@ if (in_array($gameRequest[0],["combatbark"])) {
 
 
 // Only allow functions when explicit request
-if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction","welcome","cheatmode"])) {
+if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext","instruction","welcome","cheatmode"])) {
     $FUNCTIONS_ARE_ENABLED=false;
 }
 
@@ -1010,14 +1023,15 @@ if (is_array($currentParty)) {
 
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"prerequest.php");
 
-if (in_array($gameRequest[0],["rechat"]) ) {
+if (in_array($gameRequest[0],["rechat","narration"]) ) {
     
     //RECHAT. Must choose if we continue conversation or no.
+    // Note: narration is part of rechat system (random narrator interjections count as rechat rounds)
 
     $rechatHistory=DataRechatHistory();
     
-    if (sizeof($rechatHistory)>(intval($GLOBALS["RECHAT_H"])))    {   // TOO MUCH RECHAT
-        Logger::info("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">{$GLOBALS["RECHAT_H"]}");
+    if (sizeof($rechatHistory)>=(intval($GLOBALS["RECHAT_H"])))    {   // TOO MUCH RECHAT
+        Logger::info("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">={$GLOBALS["RECHAT_H"]}");
         // Lets try to summarize
         sem_release($semaphore);
         while(ob_get_length() && ob_end_clean());
@@ -1028,7 +1042,7 @@ if (in_array($gameRequest[0],["rechat"]) ) {
     $rndNumber = rand(1, 100);
     if ($rndNumber <= intval($GLOBALS["RECHAT_P"])) {
         // Process Oghma for rechat events using NPC's last dialogue
-        if ($GLOBALS["MINIME_T5"] && isset($FEATURES["MISC"]["OGHMA_INFINIUM"]) && ($FEATURES["MISC"]["OGHMA_INFINIUM"])) {
+        if (($GLOBALS["MINIME_T5"] || (isset($GLOBALS["OGHMA_CUSTOM"]) && $GLOBALS["OGHMA_CUSTOM"])) && isset($FEATURES["MISC"]["OGHMA_INFINIUM"]) && ($FEATURES["MISC"]["OGHMA_INFINIUM"])) {
                 require(__DIR__."/processor/oghma.php"); // Process Oghma
         }
     }
@@ -1053,6 +1067,120 @@ if (in_array($gameRequest[0],["rechat"]) ) {
                     }
 
             usleep(100);
+        }
+    }
+
+    // RANDOM NARRATION - Narrator visual scene descriptions
+    // Trigger after any NPC response (after first NPC responds to player)
+    // AND only on "rechat" events (not on events already converted to "narration")
+    // AND only if The Narrator wasn't the last speaker (prevent consecutive narrations)
+    if (!empty($GLOBALS["RANDOM_NARATION"]) && $GLOBALS["RANDOM_NARATION"] && $gameRequest[0] === "rechat" && sizeof($rechatHistory) >= 1) {
+        // Check if the last event was a narration event (if so, skip to prevent consecutive narrations)
+        $lastEvent = $db->fetchOne("SELECT type FROM eventlog WHERE type IN ('rechat', 'narration') ORDER BY gamets DESC, ts DESC LIMIT 1");
+        $wasLastNarration = ($lastEvent && $lastEvent['type'] === 'narration');
+        
+        // Check cooldown - ensure at least N non-narration events occurred since last narration
+        $cooldownRounds = isset($GLOBALS["RANDOM_NARRATION_COOLDOWN"]) ? intval($GLOBALS["RANDOM_NARRATION_COOLDOWN"]) : 2;
+        $eventsSinceNarration = $db->fetchOne("
+            SELECT COUNT(*) as count 
+            FROM eventlog 
+            WHERE type IN ('rechat', 'inputtext', 'inputtext_s') 
+            AND gamets > (
+                SELECT COALESCE(MAX(gamets), 0) 
+                FROM eventlog 
+                WHERE type = 'narration'
+            )
+        ");
+        
+        $eventCount = $eventsSinceNarration ? intval($eventsSinceNarration['count']) : 999;
+        
+        // Skip if cooldown hasn't passed
+        if ($eventCount < $cooldownRounds) {
+            Logger::info("[RANDOM_NARRATION] Skipped - Cooldown active (events since last: {$eventCount}, required: {$cooldownRounds})");
+        } else if ($wasLastNarration) {
+            Logger::info("[RANDOM_NARRATION] Skipped - Last event was narration, preventing consecutive narrations");
+        } else {
+            $randomChance = rand(1, 100);
+            $narrationChance = isset($GLOBALS["RANDOM_NARATION_CHANCE"]) ? intval($GLOBALS["RANDOM_NARATION_CHANCE"]) : 15;
+            
+            if ($randomChance <= $narrationChance) {
+                Logger::info("[RANDOM_NARRATION] Triggered (chance: $randomChance <= $narrationChance)");
+            
+            // Switch to The Narrator profile temporarily
+            $npcMaster = new NpcMaster();
+            $narratorData = $npcMaster->getByName("The Narrator");
+            
+            if ($narratorData) {
+                // Store current profile data
+                $originalHerikaName = $GLOBALS["HERIKA_NAME"];
+                
+                // Load Narrator profile - set connector and profile first, npc data last
+                $profile = new CoreProfile();
+                $currentProfileData = $profile->getById($narratorData["profile_id"]);
+                
+                $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] = $currentProfileData;
+                
+                $connector = new LLMConnector();
+                $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $narratorData, $npcMaster);
+                $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+                $currentConnectorData = $connector->getById($connectorId);
+                
+                $connector->setOldGlobals($currentConnectorData);
+                $profile->setOldGlobals($currentProfileData);
+                
+                // These will be re-populated by setOldGlobalsFromCurrentNpcData if The Narrator has them set
+                $GLOBALS['HERIKA_APPEARANCE'] = '';
+                $GLOBALS['HERIKA_SKILLS'] = '';
+                $GLOBALS['HERIKA_BACKGROUND'] = '';
+                $GLOBALS['HERIKA_OCCUPATION'] = '';
+                $GLOBALS['HERIKA_RELATIONSHIPS'] = '';
+                $GLOBALS['HERIKA_GOALS'] = '';
+                $GLOBALS['HERIKA_SPEECHSTYLE'] = '';
+                
+                $npcMaster->setOldGlobalsFromCurrentNpcData($narratorData);
+                
+                $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
+                
+                // Load random narration prompt from database with fallback
+                $narrationPrompt = null;
+                try {
+                    $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'random_narration_prompt'");
+                    if ($promptData) {
+                        // Use custom_prompt if set, otherwise use default_prompt
+                        $narrationPrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+                        Logger::info("[RANDOM_NARRATION] Loaded prompt from database (custom: " . (!empty($promptData['custom_prompt']) ? 'yes' : 'no') . ")");
+                    }
+                } catch (Exception $e) {
+                    Logger::warn("[RANDOM_NARRATION] Failed to load prompt from database, using hardcoded fallback: " . $e->getMessage());
+                }
+                
+                // Hardcoded fallback if database query failed or returned no results
+                if (!$narrationPrompt) {
+                    $narrationPrompt = 'Describe the current scene visually using ONLY details from the provided context. Focus on the characters present - their appearance, expressions, body language, and what they\'re wearing. Include environmental details like lighting and atmosphere. Keep it grounded and concise (2-3 sentences). Do not invent new information, advance the plot, or include dialogue.';
+                    Logger::info("[RANDOM_NARRATION] Using hardcoded fallback prompt");
+                }
+                
+                // Mark this as a narration event (not a regular rechat)
+                $gameRequest[0] = "narration";
+                
+                // Send event type header IMMEDIATELY before any output
+                // This must be done early so C++ plugin knows this is narration
+                header("X-Event-Type: narration");
+                Logger::info("[RANDOM_NARRATION] Sent X-Event-Type: narration header");
+                
+                // Store narration prompt for later injection (after prompts.php is loaded)
+                $GLOBALS["RANDOM_NARRATION_PROMPT"] = $narrationPrompt;
+                
+                Logger::info("[RANDOM_NARRATION] Executing as The Narrator with narration request");
+                
+                // Process will continue with Narrator profile loaded
+                // After response, it will send to game as normal narrator dialogue
+            } else {
+                Logger::warn("[RANDOM_NARRATION] Skipped - Narrator profile not found");
+            }
+            } else {
+                Logger::trace("[RANDOM_NARRATION] Not triggered (chance: $randomChance > $narrationChance)");
+            }
         }
     }
 
@@ -1095,6 +1223,14 @@ if ($EXECUTION_MODE=="INJECTION_LOG") {
 require(__DIR__.DIRECTORY_SEPARATOR."prompt.includes.php");
 $gameRequest[0] = strtolower($gameRequest[0]); // one more time in case it was changed by an extension
 
+// Inject random narration prompt if this is a narration event
+// This must happen AFTER prompts.php is loaded to avoid being overwritten
+// Inject as the "cue" so it appears as the penultimate user message (like section 81 for normal NPCs)
+if (isset($GLOBALS["RANDOM_NARRATION_PROMPT"]) && $gameRequest[0] == "narration") {
+    $PROMPTS["narration"]["cue"] = [$GLOBALS["RANDOM_NARRATION_PROMPT"]];
+    Logger::info("[RANDOM_NARRATION] Injected narration prompt as cue");
+}
+
 // Take care of override request if needed..
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php");
 
@@ -1105,7 +1241,7 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php
  Safe stop
 */
 Logger::info("Current STOPALL_MAGIC_WORD ".STOPALL_MAGIC_WORD);
-if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","instruction"]) && preg_match(STOPALL_MAGIC_WORD, $gameRequest[3]) === 1) {
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext","instruction"]) && preg_match(STOPALL_MAGIC_WORD, $gameRequest[3]) === 1) {
     echo "{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n";
     if (ob_get_level()) @ob_flush();
     $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|Halt@\r\n";
@@ -1129,21 +1265,46 @@ if (in_array($gameRequest[0],["inputtext_s"])) {    // I stealth and targetet fo
 
 /// LOG INTO DB. Will use this later.
 if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
-    $db->insert(
-        'eventlog',
-        array(
-            'ts' => $gameRequest[1],
-            'gamets' => $gameRequest[2],
-            'type' => $gameRequest[0],
-            'data' => ($gameRequest[3]),
-            'sess' => (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST'))?'cli':'web',
-            'localts' => time(),
-            'people'=> $GLOBALS["CACHE_PEOPLE"],
-            'location'=>$GLOBALS["CACHE_LOCATION"],
-            'party'=>$GLOBALS["CACHE_PARTY"],
-            
-        )
-    );
+    // Filter out combat grunts
+    $shouldLog = true;
+    $data = isset($gameRequest[3]) ? $gameRequest[3] : '';
+    
+    // List of combat grunts to filter
+    $combatGrunts = [
+        'Unff!', 'Argh!', 'Off!', 'Ugh!', 'Gah!', 'Oof!', 'Urgh!', 'Ngh!', 
+        'Aah!', 'Ouch!', 'Grr!', 'Hah!', 'Huh!', 'Hmm!', 'Oof', 'Argh', 
+        'Unff', 'Off', 'Ugh', 'Gah', 'Aah', 'Ouch', 'Hah',
+        'Arghhh!', 'Yarghhh!', 'Rrrghhh!', 'Uuuuhhhnnnn... aaarrrghhh...',
+        'Ooohhhh, ahhhrrrghhhh... uuuuggghhh.', 'Yrrrgh!', 'Weergh!', 'Yeagh!',
+        'Hyargh!', 'Nyyarrggh!', 'Yearrgh!', 'Ah...', 'Hmph.', 'Hhyyarargghhhh!',
+        'Aaaayyyaarrrrgghh!', 'Rrrraaaaarrggghhhh!', 'Ahhhhh!', 'Heh heh...',
+        'Grrargh!'
+    ];
+    
+    // Check if data is just a combat grunt
+    $trimmedData = trim($data);
+    if (in_array($trimmedData, $combatGrunts)) {
+        $shouldLog = false;
+        error_log("[FILTER] Blocked combat grunt from eventlog: {$trimmedData}");
+    }
+    
+    if ($shouldLog) {
+        $db->insert(
+            'eventlog',
+            array(
+                'ts' => $gameRequest[1],
+                'gamets' => $gameRequest[2],
+                'type' => $gameRequest[0],
+                'data' => ($gameRequest[3]),
+                'sess' => (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST'))?'cli':'web',
+                'localts' => time(),
+                'people'=> $GLOBALS["CACHE_PEOPLE"],
+                'location'=>$GLOBALS["CACHE_LOCATION"],
+                'party'=>$GLOBALS["CACHE_PARTY"],
+                
+            )
+        );
+    }
 
 }
 
@@ -1231,7 +1392,7 @@ if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[
 // Offer memory in CONTEXT 
 
 
-if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat"]) ) {
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext","rechat","narration"]) ) {
 
     $memoryInjection=offerMemory($gameRequest);
     //Logger::info("Memory injection:".json_encode($memoryInjection));
@@ -1256,7 +1417,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 
 // Rechat case
-if (in_array($gameRequest[0],["rechat"]) ) {
+if (in_array($gameRequest[0],["rechat","narration"]) ) {
     // CHAOS mode
     
     if (isset($GLOBALS["RECHAT_ALLOW_ACTIONS"]) && $GLOBALS["RECHAT_ALLOW_ACTIONS"]) {
@@ -1480,8 +1641,30 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
 
 
 if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
-    $GLOBALS["PROMPT_HEAD"].=PHP_EOL."<player_character>\n".$GLOBALS["PLAYER_BIOS"]."\n</player_character>\n";
+    // Load player appearance from core_player table
+    // Note: PLAYER_BIOS global is already loaded from core_player in profile_loader.php
+    // This ensures consistency across all files
+    $playerAppearance = '';
+    
+    // First try core_player table directly
+    try {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+        $player = new Player();
+        $playerAppearance = $player->get('appearance');
+    } catch (Exception $e) {
+        Logger::debug("Could not load player appearance from core_player: " . $e->getMessage());
+    }
+    
+    // Fallback to PLAYER_BIOS global (which profile_loader.php should have loaded from database)
+    if (empty($playerAppearance) && isset($GLOBALS["PLAYER_BIOS"]) && !empty($GLOBALS["PLAYER_BIOS"])) {
+        $playerAppearance = $GLOBALS["PLAYER_BIOS"];
+    }
+    
+    if (!empty($playerAppearance)) {
+        $GLOBALS["PROMPT_HEAD"].=PHP_EOL."<player_character>\n".$playerAppearance."\n</player_character>\n";
+    }
 }
+
 
 // Use centralized function from data_functions.php
 $dynamicBiography = buildDynamicBiography($GLOBALS);
@@ -1495,10 +1678,11 @@ if (isset($GLOBALS["PROFILE_PROMPT"])) {
 
 
 // Middle term memory experiment
+// Skip middle-term memory for The Narrator (atmospheric narration shouldn't include individual NPC memories)
 $npcMaster=new NpcMaster();
 $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
 $extended_data=$npcMaster->getExtendedData($currentNpcData);
-if (isset($extended_data["middle_term_memory"])&&is_array($extended_data["middle_term_memory"])) {
+if ($GLOBALS["HERIKA_NAME"] !== "The Narrator" && isset($extended_data["middle_term_memory"])&&is_array($extended_data["middle_term_memory"])) {
     $middle_term_memory = end($extended_data["middle_term_memory"]);
     $dynamicBiography.="\n<middle_term_memory>\n#Past events\n{$middle_term_memory}\n</middle_term_memory>";
 
@@ -1507,12 +1691,21 @@ if (isset($extended_data["middle_term_memory"])&&is_array($extended_data["middle
 // Rumors and breaking news
 $rumorsText="";
 $currentHold=trim(DataLastKnownLocationHuman(true,false));
+$currentLoc=trim(DataLastKnownLocationHuman(false,false));
 if ($currentHold) {
-    error_log("[RUMORS] Current hold {$currentHold}");
+    error_log("[RUMORS] Current hold {$currentHold}, currentLoc {$currentLoc}");
     $currentHoldEsc=$db->escape($currentHold);
-    $query="SELECT * FROM rumors WHERE hold like '%{$currentHoldEsc}%' and gamets>".round($gameRequest[2]- ( 2 * 24 /0.0000024));
+    $currentLocEsc=$db->escape($currentLoc);
+    $query="SELECT * FROM rumors WHERE hold like '{$currentLocEsc}%{$currentHoldEsc}%' and gamets>".round($gameRequest[2]- ( 7 * 24 /0.0000024));
     error_log($query);
     $rumors = $db->fetchAll($query);
+
+    if (empty($umors)) {
+        $query="SELECT * FROM rumors WHERE hold like '{$currentHoldEsc}%' and gamets>".round($gameRequest[2]- ( 7 * 24 /0.0000024));
+        error_log($query);
+        $rumors = $db->fetchAll($query);
+    }
+
 
     foreach ($rumors as $n=>$rumor) {
        if (isset($rumor["content"])) {
@@ -1527,6 +1720,11 @@ if ($currentHold) {
     error_log("[RUMORS] Current hold {$currentHold} empty");
 }
 
+// For narration events, simplify the command prompt (no actions needed for atmospheric descriptions)
+if ($gameRequest[0] === "narration") {
+    $GLOBALS["COMMAND_PROMPT"] = "Respond with atmospheric narration only. Use the Talk action.";
+}
+
 if (!empty($GLOBALS["OGHMA_HINT"])) {
 
     $head[] = array('role' => 'system', 'content' =>  
@@ -1538,7 +1736,7 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
     $GLOBALS["COMMAND_PROMPT"] = "";
 } else {
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>\n$rumors\n",
+        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>\n$rumorsText\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
     );
     //avoid reinjecting command prompt that we have already appended

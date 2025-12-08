@@ -980,7 +980,32 @@ function openEditModal(promptKey) {
     document.getElementById('modalPromptKey').textContent = promptKey;
     document.getElementById('modalDescription').innerHTML = data.description || 'No description available.';
     document.getElementById('modalDefaultPrompt').textContent = data.default_prompt;
-    document.getElementById('modalCustomPrompt').value = data.custom_prompt || '';
+    
+    // Check if this is a JSON prompt (like height_descriptions)
+    const isJsonPrompt = promptKey === 'height_descriptions';
+    const customPromptValue = data.custom_prompt || '';
+    
+    if (isJsonPrompt) {
+        // Pretty-print JSON for editing
+        try {
+            const defaultJson = JSON.parse(data.default_prompt);
+            document.getElementById('modalDefaultPrompt').textContent = JSON.stringify(defaultJson, null, 2);
+            
+            if (customPromptValue) {
+                const customJson = JSON.parse(customPromptValue);
+                document.getElementById('modalCustomPrompt').value = JSON.stringify(customJson, null, 2);
+            } else {
+                document.getElementById('modalCustomPrompt').value = '';
+            }
+        } catch (e) {
+            // If JSON parsing fails, display as-is
+            document.getElementById('modalDefaultPrompt').textContent = data.default_prompt;
+            document.getElementById('modalCustomPrompt').value = customPromptValue;
+        }
+    } else {
+        // Regular text prompt
+        document.getElementById('modalCustomPrompt').value = customPromptValue;
+    }
     
     document.getElementById('editModal').style.display = 'block';
     
@@ -994,7 +1019,20 @@ function closeEditModal() {
 
 function savePrompt() {
     const promptKey = document.getElementById('editModal').dataset.promptKey;
-    const customPrompt = document.getElementById('modalCustomPrompt').value;
+    let customPrompt = document.getElementById('modalCustomPrompt').value;
+    
+    // Validate JSON for height_descriptions
+    if (promptKey === 'height_descriptions' && customPrompt.trim() !== '') {
+        try {
+            // Validate that it's valid JSON
+            const parsed = JSON.parse(customPrompt);
+            // Minify JSON for storage (remove pretty-printing)
+            customPrompt = JSON.stringify(parsed);
+        } catch (e) {
+            showToast('Invalid JSON format. Please check your syntax.', 'error');
+            return;
+        }
+    }
     
     const formData = new FormData();
     formData.append('action', 'update_custom');

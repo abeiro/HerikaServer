@@ -42,6 +42,9 @@ if ($STTFUNCTION=="azure") {
     require_once($path."stt/stt-deepgram.php");
     $text= stt($finalName);
     
+} else if (file_exists($path . "stt" . DIRECTORY_SEPARATOR . "stt-{$STTFUNCTION}.php")){
+    require_once($path . "stt" . DIRECTORY_SEPARATOR . "stt-{$STTFUNCTION}.php");
+    $text= stt($finalName);
 } else {
     require_once($path."stt/stt-none.php");
     $text= stt($finalName);

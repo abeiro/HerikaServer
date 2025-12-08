@@ -267,136 +267,13 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
 
 } elseif ($gameRequest[0] == "updateequipment") {
-    // Live equipment update from TESEquipEvent
-    $updateData = explode("@",$gameRequest[3]);
-    
-    if (!empty($updateData[0])) {
-        $npcName = $updateData[0];
-        
-        // Parse equipment (8 slots)
-        $equipment = [
-            'helmet' => isset($updateData[1]) ? $updateData[1] : '',
-            'armor' => isset($updateData[2]) ? $updateData[2] : '',
-            'boots' => isset($updateData[3]) ? $updateData[3] : '',
-            'gloves' => isset($updateData[4]) ? $updateData[4] : '',
-            'amulet' => isset($updateData[5]) ? $updateData[5] : '',
-            'ring' => isset($updateData[6]) ? $updateData[6] : '',
-            'left_hand' => isset($updateData[7]) ? $updateData[7] : '',
-            'right_hand' => isset($updateData[8]) ? $updateData[8] : ''
-        ];
-        
-        // Get current NPC
-        $currentNpcData = $npcMaster->getByName($npcName);
-        
-        if ($currentNpcData) {
-            // Get existing metadata
-            $meta = [];
-            if (!empty($currentNpcData['metadata'])) {
-                $meta = json_decode($currentNpcData['metadata'], true);
-                if (!is_array($meta)) {
-                    $meta = [];
-                }
-            }
-            
-            // Update equipment section
-            $meta['equipment'] = $equipment;
-            
-            // Save back to database
-            $currentNpcData = $npcMaster->setMetadata($currentNpcData, $meta);
-            $npcMaster->updateByArray($currentNpcData);
-            
-            Logger::info("Updated equipment for {$npcName}");
-        }
-    }
+    // DEPRECATED: Equipment updates now handled by gamedata.php with JSON POST
+    Logger::warn("[DEPRECATED] updateequipment event - use gamedata.php endpoint instead");
     $MUST_END=true;
 
-
 } elseif ($gameRequest[0] == "updateinventory") {
-    // Live inventory update from TESContainerChangedEvent
-    Logger::info("RECEIVED updateinventory command: ".$gameRequest[3]);
-    
-    $updateData = explode("@",$gameRequest[3]);
-    
-    if (!empty($updateData[0])) {
-        $npcName = $updateData[0];
-        $inventoryRaw = isset($updateData[1]) ? $updateData[1] : '';
-        
-        Logger::info("Processing inventory for NPC: {$npcName}, Raw data length: ".strlen($inventoryRaw));
-        
-        // Parse inventory (format: ItemName::Count~ItemName2::Count2~...)
-        $inventory = [];
-        if (!empty($inventoryRaw)) {
-            $items = explode("~", $inventoryRaw); 
-            Logger::info("Found ".count($items)." items to process");
-            
-            foreach ($items as $itemData) {
-                $parts = explode("::", $itemData);
-                if (count($parts) === 2) {
-                    $itemName = $parts[0];
-                    $count = intval($parts[1]);
-                    if (!empty($itemName) && $count > 0) {
-                        $inventory[] = [
-                            'name' => $itemName,
-                            'count' => $count
-                        ];
-                    }
-                }
-            }
-        }
-        
-        Logger::info("Parsed ".count($inventory)." valid inventory items");
-        
-        if (count($inventory) > 0) {
-            Logger::info("Sample items: ".$inventory[0]['name']." x".$inventory[0]['count']);
-        }
-        
-        // Get current NPC
-        $currentNpcData = $npcMaster->getByName($npcName);
-        
-        if ($currentNpcData) {
-            Logger::info("Found NPC in database: {$npcName}, NPC ID: ".$currentNpcData['id']);
-            
-            // Get existing metadata
-            $meta = [];
-            if (!empty($currentNpcData['metadata'])) {
-                $meta = json_decode($currentNpcData['metadata'], true);
-                if (!is_array($meta)) {
-                    $meta = [];
-                }
-            }
-            
-            Logger::info("Existing metadata keys: ".implode(", ", array_keys($meta)));
-            
-            // Update inventory section
-            $meta['inventory'] = $inventory;
-            $meta['inventory_updated'] = time();
-            
-            Logger::info("Setting inventory with ".count($inventory)." items, timestamp: ".$meta['inventory_updated']);
-            
-            // Save back to database
-            $currentNpcData = $npcMaster->setMetadata($currentNpcData, $meta);
-            $updateResult = $npcMaster->updateByArray($currentNpcData);
-            
-            Logger::info("Database update result: ".var_export($updateResult, true));
-            
-            // Verify the update by reading it back
-            $verifyNpc = $npcMaster->getByName($npcName);
-            if ($verifyNpc && !empty($verifyNpc['metadata'])) {
-                $verifyMeta = json_decode($verifyNpc['metadata'], true);
-                if (isset($verifyMeta['inventory'])) {
-                    Logger::info("VERIFICATION: Inventory in database has ".count($verifyMeta['inventory'])." items");
-                } else {
-                    Logger::error("VERIFICATION: Inventory NOT FOUND in metadata after update!");
-                }
-            }
-            
-            Logger::info("Updated inventory for {$npcName} (".count($inventory)." items) - SUCCESS");
-        } else {
-            Logger::warn("NPC not found in database: {$npcName}");
-        }
-    } else {
-        Logger::warn("updateinventory: No NPC name in data");
-    }
+    // DEPRECATED: Inventory updates now handled by gamedata.php with JSON POST
+    Logger::warn("[DEPRECATED] updateinventory event - use gamedata.php endpoint instead");
     $MUST_END=true;
 
 } elseif ($gameRequest[0] == "itemtransfer") {
@@ -474,50 +351,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
 
 } elseif ($gameRequest[0] == "updateskills") {
-    // Live skills update (periodic, every 5 minutes)
-    $updateData = explode("@",$gameRequest[3]);
-    
-    if (!empty($updateData[0])) {
-        $npcName = $updateData[0];
-        
-        // Skills array (18 Skyrim skills)
-        $skills = [
-            'archery' => isset($updateData[1]) ? floatval($updateData[1]) : 0,
-            'block' => isset($updateData[2]) ? floatval($updateData[2]) : 0,
-            'onehanded' => isset($updateData[3]) ? floatval($updateData[3]) : 0,
-            'twohanded' => isset($updateData[4]) ? floatval($updateData[4]) : 0,
-            'conjuration' => isset($updateData[5]) ? floatval($updateData[5]) : 0,
-            'destruction' => isset($updateData[6]) ? floatval($updateData[6]) : 0,
-            'illusion' => isset($updateData[7]) ? floatval($updateData[7]) : 0,
-            'restoration' => isset($updateData[8]) ? floatval($updateData[8]) : 0,
-            'alteration' => isset($updateData[9]) ? floatval($updateData[9]) : 0,
-            'enchanting' => isset($updateData[10]) ? floatval($updateData[10]) : 0,
-            'smithing' => isset($updateData[11]) ? floatval($updateData[11]) : 0,
-            'heavyarmor' => isset($updateData[12]) ? floatval($updateData[12]) : 0,
-            'lightarmor' => isset($updateData[13]) ? floatval($updateData[13]) : 0,
-            'pickpocket' => isset($updateData[14]) ? floatval($updateData[14]) : 0,
-            'lockpicking' => isset($updateData[15]) ? floatval($updateData[15]) : 0,
-            'sneak' => isset($updateData[16]) ? floatval($updateData[16]) : 0,
-            'alchemy' => isset($updateData[17]) ? floatval($updateData[17]) : 0,
-            'speechcraft' => isset($updateData[18]) ? floatval($updateData[18]) : 0
-        ];
-        
-        $currentNpcData = $npcMaster->getByName($npcName);
-        if ($currentNpcData) {
-            $meta = [];
-            if (!empty($currentNpcData['metadata'])) {
-                $meta = json_decode($currentNpcData['metadata'], true);
-                if (!is_array($meta)) { $meta = []; }
-            }
-            
-            $meta['skills'] = $skills;
-            
-            $currentNpcData = $npcMaster->setMetadata($currentNpcData, $meta);
-            $npcMaster->updateByArray($currentNpcData);
-            
-            Logger::info("Updated skills for {$npcName}");
-        }
-    }
+    // DEPRECATED: Skills updates now handled by gamedata.php with JSON POST
+    Logger::warn("[DEPRECATED] updateskills event - use gamedata.php endpoint instead");
     $MUST_END=true;
 
 } elseif ($gameRequest[0] == "updatestats") {
@@ -527,7 +362,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     if (!empty($updateData[0])) {
         $npcName = $updateData[0];
         
-        // Stats (level, health, magicka, stamina with current/max)
+        // Stats (level, health, magicka, stamina with current/max, and scale)
         $stats = [
             'level' => isset($updateData[1]) ? intval($updateData[1]) : 1,
             'health' => isset($updateData[2]) ? floatval($updateData[2]) : 0,
@@ -535,7 +370,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             'magicka' => isset($updateData[4]) ? floatval($updateData[4]) : 0,
             'magicka_max' => isset($updateData[5]) ? floatval($updateData[5]) : 0,
             'stamina' => isset($updateData[6]) ? floatval($updateData[6]) : 0,
-            'stamina_max' => isset($updateData[7]) ? floatval($updateData[7]) : 0
+            'stamina_max' => isset($updateData[7]) ? floatval($updateData[7]) : 0,
+            'scale' => isset($updateData[8]) ? floatval($updateData[8]) : 1.0
         ];
         
         $currentNpcData = $npcMaster->getByName($npcName);
@@ -942,26 +778,43 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $meta["skills"]["alchemy"]=$splitNameBase[21];
         $meta["skills"]["enchanting"]=$splitNameBase[22];
         
-        // NPC equipment (8 slots from Skyrim)
-        $meta["equipment"]["helmet"]=isset($splitNameBase[23]) ? $splitNameBase[23] : '';
-        $meta["equipment"]["armor"]=isset($splitNameBase[24]) ? $splitNameBase[24] : '';
-        $meta["equipment"]["boots"]=isset($splitNameBase[25]) ? $splitNameBase[25] : '';
-        $meta["equipment"]["gloves"]=isset($splitNameBase[26]) ? $splitNameBase[26] : '';
-        $meta["equipment"]["amulet"]=isset($splitNameBase[27]) ? $splitNameBase[27] : '';
-        $meta["equipment"]["ring"]=isset($splitNameBase[28]) ? $splitNameBase[28] : '';
-        $meta["equipment"]["left_hand"]=isset($splitNameBase[29]) ? $splitNameBase[29] : '';
-        $meta["equipment"]["right_hand"]=isset($splitNameBase[30]) ? $splitNameBase[30] : '';
+        // NPC equipment (10 slots from Skyrim) - format: name^baseid
+        $equipmentSlots = [
+            23 => 'helmet',
+            24 => 'armor',
+            25 => 'boots',
+            26 => 'gloves',
+            27 => 'amulet',
+            28 => 'ring',
+            29 => 'cape',
+            30 => 'backpack',
+            31 => 'left_hand',
+            32 => 'right_hand'
+        ];
+        
+        foreach ($equipmentSlots as $index => $slotName) {
+            $slotData = isset($splitNameBase[$index]) ? $splitNameBase[$index] : '';
+            if (!empty($slotData)) {
+                $parts = explode("^", $slotData);
+                $meta["equipment"][$slotName] = isset($parts[0]) ? $parts[0] : '';
+                $meta["equipment"][$slotName . '_baseid'] = isset($parts[1]) ? $parts[1] : '';
+            } else {
+                $meta["equipment"][$slotName] = '';
+                $meta["equipment"][$slotName . '_baseid'] = '';
+            }
+        }
         
         // NPC stats (core attributes)
-        $meta["stats"]["level"]=isset($splitNameBase[31]) ? intval($splitNameBase[31]) : 1;
-        $meta["stats"]["health"]=isset($splitNameBase[32]) ? floatval($splitNameBase[32]) : 0;
-        $meta["stats"]["health_max"]=isset($splitNameBase[33]) ? floatval($splitNameBase[33]) : 0;
-        $meta["stats"]["magicka"]=isset($splitNameBase[34]) ? floatval($splitNameBase[34]) : 0;
-        $meta["stats"]["magicka_max"]=isset($splitNameBase[35]) ? floatval($splitNameBase[35]) : 0;
-        $meta["stats"]["stamina"]=isset($splitNameBase[36]) ? floatval($splitNameBase[36]) : 0;
-        $meta["stats"]["stamina_max"]=isset($splitNameBase[37]) ? floatval($splitNameBase[37]) : 0;
+        $meta["stats"]["level"]=isset($splitNameBase[33]) ? intval($splitNameBase[33]) : 1;
+        $meta["stats"]["health"]=isset($splitNameBase[34]) ? floatval($splitNameBase[34]) : 0;
+        $meta["stats"]["health_max"]=isset($splitNameBase[35]) ? floatval($splitNameBase[35]) : 0;
+        $meta["stats"]["magicka"]=isset($splitNameBase[36]) ? floatval($splitNameBase[36]) : 0;
+        $meta["stats"]["magicka_max"]=isset($splitNameBase[37]) ? floatval($splitNameBase[37]) : 0;
+        $meta["stats"]["stamina"]=isset($splitNameBase[38]) ? floatval($splitNameBase[38]) : 0;
+        $meta["stats"]["stamina_max"]=isset($splitNameBase[39]) ? floatval($splitNameBase[39]) : 0;
+        $meta["stats"]["scale"]=isset($splitNameBase[40]) ? floatval($splitNameBase[40]) : 1.0;
 
-        $meta["mods"]=isset($splitNameBase[38]) ?explode("#",$splitNameBase[38]):null;
+        $meta["mods"]=isset($splitNameBase[41]) ?explode("#",$splitNameBase[41]):null;
 
        
         // Importing rules
@@ -1094,6 +947,15 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             }
             
             // Update equipment section
+            if (isset($meta["last_coords"])) {
+                $meta["last_coords_history"][]=$meta['last_coords'];
+                // Keep only last 10 elements
+                if (count($meta["last_coords_history"]) > 10) {
+                    $meta["last_coords_history"] = array_slice($meta["last_coords_history"], -5);
+                }
+
+            }
+
             $meta['last_coords'] = [$splitNameBase[1],$splitNameBase[2],$splitNameBase[3],$splitNameBase[4],"last_updated"=>$gameRequest[2]];
             
             // Save back to database
@@ -1101,6 +963,24 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             $npcMaster->updateByArray($currentNpcData);
             
             Logger::info("Updated last_coords for {$currentNpcData["npc_name"]}");
+
+            // Experiment
+            if (false) {
+                try {
+                    $db->insert(
+                        'point_cloud',
+                        array(
+                            'x' => $splitNameBase[1],
+                            'y' => $splitNameBase[2],
+                            'z' => $splitNameBase[3],
+                            'tag' => $splitNameBase[4],
+                            'gamets'=>$gameRequest[2]
+                        )
+                    );
+                } catch (Exception $e) {
+                    Logger::warn("Failed to insert cloud point location data: " . $e->getMessage());
+                }
+            }
         }
     }
 
