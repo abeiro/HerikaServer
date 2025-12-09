@@ -2673,6 +2673,55 @@ if ($checkVersion("core_player")<20241128001) {
 }
 
 //----------------------------------------------------
+// Background Life Prompts - Style prompts for letters and inner thoughts
+// Version 20251207001
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251207001) {
+    Logger::debug("Applying background life prompts 20251207001");
+    
+    // Prompt 1: Letter writing style
+    $bglLetterStyle = $db->escape(
+        "Write it as a letter to {PLAYER_NAME} from {HERIKA_NAME}. Use same language as <text>. IMPORTANT: Keep the letter SHORT and CONCISE - maximum 2-3 brief paragraphs."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'background_life_letter',
+            '$bglLetterStyle',
+            'Writing style instructions for background life letters/notifications. This is embedded into the notification field instructions. Contains placeholders: {HERIKA_NAME}, {PLAYER_NAME}. Used in: debug/simple_llm_request_with_context_life.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Prompt 2: Inner thought/monologue style
+    $bglInnerThoughtStyle = $db->escape(
+        "Read the following text, which represents a mental note or inner monologue of a character within the Skyrim universe.\n".
+        "Based on the content of the text, propose one of the following actions that would make sense for the development of the story:"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'background_life_innerthought',
+            '$bglInnerThoughtStyle',
+            'Introduction/framing style for processing background life inner thoughts and monologues. This appears at the start of the system prompt. Contains no placeholders. Used in: debug/simple_llm_request_with_context_life.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $db->execQuery("UPDATE versions SET version=20251207001 WHERE section='prompts'");
+    Logger::info("Applied patch prompts 20251207001 - Added background life style prompts to database");
+}
+
+//----------------------------------------------------
 
 Logger::info(__FILE__." update file processed");
 

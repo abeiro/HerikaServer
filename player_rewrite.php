@@ -80,18 +80,35 @@ if (! isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
 
     // Build context for player character
     $playerContext = "";
-
-    // Ensure PLAYER_SPEECH_STYLE is available (it's a global config variable)
-    if (! isset($GLOBALS["PLAYER_SPEECH_STYLE"])) {
-        $GLOBALS["PLAYER_SPEECH_STYLE"] = "";
+    
+    // Load player data from core_player table
+    $playerAppearance = '';
+    $playerSpeechStyle = '';
+    try {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+        $player = new Player();
+        $playerAppearance = $player->get('appearance');
+        $playerSpeechStyle = $player->get('speech_style');
+    } catch (Exception $e) {
+        error_log("Could not load player data from core_player: " . $e->getMessage());
+    }
+    
+    // Fallback to PLAYER_BIOS if core_player is empty
+    if (empty($playerAppearance) && isset($GLOBALS["PLAYER_BIOS"]) && !empty($GLOBALS["PLAYER_BIOS"])) {
+        $playerAppearance = $GLOBALS["PLAYER_BIOS"];
+    }
+    
+    // Fallback to PLAYER_SPEECH_STYLE if core_player is empty
+    if (empty($playerSpeechStyle) && isset($GLOBALS["PLAYER_SPEECH_STYLE"]) && !empty($GLOBALS["PLAYER_SPEECH_STYLE"])) {
+        $playerSpeechStyle = $GLOBALS["PLAYER_SPEECH_STYLE"];
     }
 
-    if (! empty($GLOBALS["PLAYER_BIOS"])) {
-        $bio = strtr($GLOBALS["PLAYER_BIOS"], ["#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"]]);
+    if (!empty($playerAppearance)) {
+        $bio = strtr($playerAppearance, ["#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"]]);
         $playerContext .= "Player Character Background: " . $bio . "\n";
     }
-    if (! empty($GLOBALS["PLAYER_SPEECH_STYLE"])) {
-        $playerContext .= "Player Speech Style: " . $GLOBALS["PLAYER_SPEECH_STYLE"] . "\n";
+    if (!empty($playerSpeechStyle)) {
+        $playerContext .= "Player Speech Style: " . $playerSpeechStyle . "\n";
     }
 
     $commonprompt = '';

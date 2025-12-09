@@ -846,7 +846,7 @@ if ($gameRequest[0] == "npcspellcast") {
 // Exit if only a event info log.
 
 if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","infoitems","chatme","chat","infoaction","death","itemfound",
-    "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast","backgroundaction","reanimate","itempickup"])) {
+    "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast","backgroundaction","reanimate","itempickup","npc_reanimated"])) {
     $gameRequest[3]=isset($gameRequest[3])?$gameRequest[3]:"";
     $lastInfoNpcData=$db->escape($gameRequest[3]);
     if (in_array($gameRequest[0],['infonpc','infoloc','infonpc_close','infoitems'])) {
@@ -873,7 +873,7 @@ if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","infoit
         // infoplayer format: level:{},name:"{}",race:"{}",gender:"{}"
         // Player name detection is disabled - manage through Player Management
     }
-    if (in_array($gameRequest[0],['backgroundaction'])) {
+    if (in_array($gameRequest[0],['backgroundaction','npc_reanimated'])) {
         
         require_once($GLOBALS["ENGINE_PATH"]."/processor/background_event.php");
     } else {
@@ -1265,21 +1265,46 @@ if (in_array($gameRequest[0],["inputtext_s"])) {    // I stealth and targetet fo
 
 /// LOG INTO DB. Will use this later.
 if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
-    $db->insert(
-        'eventlog',
-        array(
-            'ts' => $gameRequest[1],
-            'gamets' => $gameRequest[2],
-            'type' => $gameRequest[0],
-            'data' => ($gameRequest[3]),
-            'sess' => (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST'))?'cli':'web',
-            'localts' => time(),
-            'people'=> $GLOBALS["CACHE_PEOPLE"],
-            'location'=>$GLOBALS["CACHE_LOCATION"],
-            'party'=>$GLOBALS["CACHE_PARTY"],
-            
-        )
-    );
+    // Filter out combat grunts
+    $shouldLog = true;
+    $data = isset($gameRequest[3]) ? $gameRequest[3] : '';
+    
+    // List of combat grunts to filter
+    $combatGrunts = [
+        'Unff!', 'Argh!', 'Off!', 'Ugh!', 'Gah!', 'Oof!', 'Urgh!', 'Ngh!', 
+        'Aah!', 'Ouch!', 'Grr!', 'Hah!', 'Huh!', 'Hmm!', 'Oof', 'Argh', 
+        'Unff', 'Off', 'Ugh', 'Gah', 'Aah', 'Ouch', 'Hah',
+        'Arghhh!', 'Yarghhh!', 'Rrrghhh!', 'Uuuuhhhnnnn... aaarrrghhh...',
+        'Ooohhhh, ahhhrrrghhhh... uuuuggghhh.', 'Yrrrgh!', 'Weergh!', 'Yeagh!',
+        'Hyargh!', 'Nyyarrggh!', 'Yearrgh!', 'Ah...', 'Hmph.', 'Hhyyarargghhhh!',
+        'Aaaayyyaarrrrgghh!', 'Rrrraaaaarrggghhhh!', 'Ahhhhh!', 'Heh heh...',
+        'Grrargh!'
+    ];
+    
+    // Check if data is just a combat grunt
+    $trimmedData = trim($data);
+    if (in_array($trimmedData, $combatGrunts)) {
+        $shouldLog = false;
+        error_log("[FILTER] Blocked combat grunt from eventlog: {$trimmedData}");
+    }
+    
+    if ($shouldLog) {
+        $db->insert(
+            'eventlog',
+            array(
+                'ts' => $gameRequest[1],
+                'gamets' => $gameRequest[2],
+                'type' => $gameRequest[0],
+                'data' => ($gameRequest[3]),
+                'sess' => (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST'))?'cli':'web',
+                'localts' => time(),
+                'people'=> $GLOBALS["CACHE_PEOPLE"],
+                'location'=>$GLOBALS["CACHE_LOCATION"],
+                'party'=>$GLOBALS["CACHE_PARTY"],
+                
+            )
+        );
+    }
 
 }
 
@@ -1616,8 +1641,12 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
 
 
 if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
-    // Try to get player appearance from core_player table first
+    // Load player appearance from core_player table
+    // Note: PLAYER_BIOS global is already loaded from core_player in profile_loader.php
+    // This ensures consistency across all files
     $playerAppearance = '';
+    
+    // First try core_player table directly
     try {
         require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
         $player = new Player();
@@ -1626,8 +1655,8 @@ if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
         Logger::debug("Could not load player appearance from core_player: " . $e->getMessage());
     }
     
-    // Fallback to PLAYER_BIOS if core_player is empty
-    if (empty($playerAppearance) && isset($GLOBALS["PLAYER_BIOS"])) {
+    // Fallback to PLAYER_BIOS global (which profile_loader.php should have loaded from database)
+    if (empty($playerAppearance) && isset($GLOBALS["PLAYER_BIOS"]) && !empty($GLOBALS["PLAYER_BIOS"])) {
         $playerAppearance = $GLOBALS["PLAYER_BIOS"];
     }
     

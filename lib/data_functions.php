@@ -301,7 +301,15 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 if (isset($currentNpcData["core"]) && !empty($currentNpcData["core"])) {
                     // NPC name should always be at core section.
                     $npcName = $currentNpcData["npc_name"];
-                    $profileString = trim("{$currentNpcData["core"]} {$currentNpcData["gender"]} {$currentNpcData["race"]}");
+                    
+                    // Check for reanimation status early to add to core
+                    $extendedData = $npcMaster->getExtendedData($currentNpcData);
+                    $reanimationText = "";
+                    if (isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
+                        $reanimationText = " This person has been reanimated from death as a zombie.";
+                    }
+                    
+                    $profileString = trim("{$currentNpcData["core"]}{$reanimationText} {$currentNpcData["gender"]} {$currentNpcData["race"]}");
                     if (stripos($profileString, $npcName) !== 0) {
                         $profileString = "{$npcName} {$profileString}";
                     }
@@ -309,6 +317,16 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     // Add appearance if available
                     if (!empty($currentNpcData["appearance"])) {
                         $profileString .= ". Appearance: " . trim($currentNpcData["appearance"]);
+                    }
+                    
+                    // Add zombie appearance if reanimated
+                    if (isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
+                        $zombieAppearance = "Their skin has a deathly pale, greyish pallor with a corpse-like appearance. Their eyes are glazed and lifeless, and their movements are stiff and unnatural";
+                        if (!empty($currentNpcData["appearance"])) {
+                            $profileString .= ". " . $zombieAppearance;
+                        } else {
+                            $profileString .= ". Appearance: " . $zombieAppearance;
+                        }
                     }
                     
                     // Get metadata once for both scale and equipment
@@ -5376,8 +5394,14 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
                 $dynamicBio.=!empty($SKILLS_ADD) ?"\n<rpg_skills>\n$SKILLS_ADD\n</rpg_skills>\n": "";
             }
             
-            // Add equipment right after HERIKA_APPEARANCE section
+            // Add equipment and reanimation status right after HERIKA_APPEARANCE section
             if ($fieldName=="HERIKA_APPEARANCE") {
+                // Check if this NPC is reanimated
+                $extendedData = $npcMaster->getExtendedData($currentNpcData);
+                if (isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
+                    $dynamicBio .= "\n<reanimation_status>\nYou have been reanimated from death as a zombie. Your skin has a deathly pale, greyish pallor with a corpse-like appearance. Your eyes are glazed and lifeless, and your movements are stiff and unnatural.\n</reanimation_status>";
+                }
+                
                 $dynamicBio.=$EQUIPMENT_ADD ?? "";
                 $dynamicBio.=$TARGET_EQUIPMENT_ADD ?? "";
                 $dynamicBio.=$INVENTORY_ADD ?? "";
