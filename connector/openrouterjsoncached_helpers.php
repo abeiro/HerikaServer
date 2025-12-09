@@ -403,6 +403,22 @@ function extract_specific_section(&$source, $sectionHeader)
 }
 
 /**
+ * Extract XML-style tag section from text
+ * Used to extract dynamic content like <equipment>, <inventory>, <current_condition>, <spells>
+ */
+function extract_xml_section(&$source, $tagName)
+{
+    $pattern = '/<' . preg_quote($tagName, '/') . '>\s*(.*?)\s*<\/' . preg_quote($tagName, '/') . '>/is';
+    
+    if (preg_match($pattern, $source, $matches)) {
+        $extracted = trim($matches[1]);
+        $source = preg_replace($pattern, '', $source, 1);
+        return $extracted;
+    }
+    return '';
+}
+
+/**
  * Extract JSON from text buffer
  */
 function extractJson($text)
@@ -481,7 +497,7 @@ function buildSimpleFormatInstruction($includeMood, $includeListener, $includeAc
     if ($includeTarget) $parts[] = 'target';
 
     if (empty($parts)) {
-        return $customInstruction . " Respond naturally with your dialogue.";
+        return $customInstruction . " Respond with your dialogue.";
     }
 
     $formatExample = '(' . implode(')(', $parts) . ')';
@@ -494,7 +510,7 @@ function buildSimpleFormatInstruction($includeMood, $includeListener, $includeAc
     if ($includeTarget) $descriptions[] = "action target";
 
     $instruction .= implode(", ", $descriptions);
-    $instruction .= " in parentheses like this: {$formatExample}, then provide your dialogue naturally. ";
+    $instruction .= " in parentheses like this: {$formatExample}, then provide your dialogue. ";
 
     if ($includeMood && isset($GLOBALS["EMOTEMOODS"]) && !empty($GLOBALS["EMOTEMOODS"])) {
         $instruction .= "Valid moods: " . $GLOBALS["EMOTEMOODS"] . ". ";
@@ -527,8 +543,6 @@ function extractSimpleFormatFromBuffer($buffer, $includeMood, $includeListener, 
     if ($includeTarget) $groupCount++;
 
     if ($groupCount === 0) {
-        // All format flags disabled - no format markers expected, return entire buffer as message
-        logMessage("[SimpleFormat] All format flags disabled (no mood, listener, actions, or target required), returning entire buffer as message");
         return [
             'mood' => '',
             'listener' => '',
@@ -539,7 +553,7 @@ function extractSimpleFormatFromBuffer($buffer, $includeMood, $includeListener, 
         ];
     }
 
-    $groupPattern = str_repeat('\(([^)]+)\)', $groupCount);
+    $groupPattern = str_repeat('\(?([^)]+)\)', $groupCount);
     $pattern = '/^\s*' . $groupPattern . '\s*(.*)$/s';
 
     if (preg_match($pattern, $buffer, $matches)) {
@@ -549,15 +563,19 @@ function extractSimpleFormatFromBuffer($buffer, $includeMood, $includeListener, 
         }
         $message = $matches[$groupCount + 1];
 
+        // Trim whitespace first
+        $message = trim($message);
+
         $result = [
             'mood' => '',
             'listener' => '',
             'action' => 'Talk',
             'target' => '',
-            'message' => trim($message),
+            'message' => $message,
             'found' => true
         ];
 
+        // Parse metadata fields FIRST so we know what the action is
         $groupIndex = 0;
         if ($includeMood && isset($groups[$groupIndex])) {
             $result['mood'] = trim($groups[$groupIndex]);
@@ -575,6 +593,11 @@ function extractSimpleFormatFromBuffer($buffer, $includeMood, $includeListener, 
             $result['target'] = trim($groups[$groupIndex]);
             $groupIndex++;
         }
+
+        // Do NOT strip leading colons - they are intentional formatting
+        // Format: (mood)(listener)(action)(target): message or action description
+        // The leading : is part of the simple format specification
+        // Preserved in all cases regardless of action type
 
         return $result;
     }
@@ -602,44 +625,4 @@ function validateActionName($action) {
 
     logMessage("Invalid action '$action' detected, defaulting to 'Talk'", null, 'ERROR');
     return 'Talk';
-}
-
-/**
- * Strip reasoning tokens from LLM response text
- * 
- * Removes common reasoning markers like <think>, <reasoning>, etc. that some models
- * include in their responses. This ensures clean output for the final user-facing text.
- * 
- * @param string $text The text to clean
- * @return string The cleaned text with reasoning tokens removed
- */
-function stripReasoningTokens($text) {
-    if (empty($text)) {
-        return $text;
-    }
-
-    // Common reasoning markers (case-insensitive)
-    $patterns = [
-        '/<think>.*?<\/think>/is',           // <think>...</think>
-        '/<thinking>.*?<\/thinking>/is',     // <thinking>...</thinking>
-        '/<reasoning>.*?<\/reasoning>/is',   // <reasoning>...</reasoning>
-        '/<thought>.*?<\/thought>/is',       // <thought>...</thought>
-        '/<reflection>.*?<\/reflection>/is', // <reflection>...</reflection>
-        '/<cot>.*?<\/cot>/is',               // <cot>...</cot> (chain of thought)
-        '/<scratchpad>.*?<\/scratchpad>/is', // <scratchpad>...</scratchpad>
-        '/\[THINK\].*?\[\/THINK\]/is',       // [THINK]...[/THINK]
-        '/\[THINKING\].*?\[\/THINKING\]/is', // [THINKING]...[/THINKING]
-    ];
-
-    $cleaned = $text;
-    foreach ($patterns as $pattern) {
-        $cleaned = preg_replace($pattern, '', $cleaned);
-    }
-
-    // Clean up any resulting extra whitespace
-    // Collapse ALL whitespace (including newlines) to single spaces for roleplay responses
-    $cleaned = preg_replace('/\s+/', ' ', $cleaned);
-    $cleaned = trim($cleaned);
-
-    return $cleaned;
 }

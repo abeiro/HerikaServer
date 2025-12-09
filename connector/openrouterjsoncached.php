@@ -2,14 +2,13 @@
 
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."tokenizer_helper_functions.php");
+require_once(__DIR__ . DIRECTORY_SEPARATOR . "cache_config.php");
 
 // Cached version of openrouterjson connector with Anthropic/OpenAI/Gemini cache support
 // Based on CHIM 2.0 architecture with additional caching and response format features
 
 class openrouterjsoncached
 {
-    // ⚠️ IMPORTANT: Please update version number, date, and CHIM version after making changes
-    const VERSION = 'OpenRouter Cache Connector v1.0.17 for CHIM 2.0.3 | 2025/11/10';
 
     public $primary_handler;
     public $name;
@@ -64,6 +63,14 @@ class openrouterjsoncached
     private $_lastReturnedLength;
     public $_jsonResponsesEncoded = array();
 
+    // New simple format parser state variables (per design document)
+    private $_reasoningState;
+    private $_reasoningTagType;
+    private $_metadataEnd;
+    private $_sentencesSent;
+    private $_metadataGroups;
+    private $_flushedPartial;  // Track if trailing partial was flushed at stream end
+
     public function __construct()
     {
         $this->name="openrouterjsoncached";
@@ -109,10 +116,26 @@ class openrouterjsoncached
         $this->_lastReturnedLength = 0;
         $this->_jsonResponsesEncoded = array();
 
+        // Initialize new simple format parser state
+        $this->_reasoningState = 'NORMAL';
+        $this->_reasoningTagType = '';
+        $this->_metadataEnd = -1;
+        $this->_sentencesSent = 0;
+        $this->_metadataGroups = [];
+        $this->_flushedPartial = false;
+
         require_once(__DIR__."/__jpd.php");
         require_once(__DIR__."/openrouterjsoncached_helpers.php");
 
-        logMessage("[{$this->name}] OpenRouter Cached Connector v" . self::VERSION . " initialized");
+        // Verify cache config is loaded
+        if (!isset($GLOBALS['EPHEMERAL_SECTIONS'])) {
+            error_log("[{$this->name}] CRITICAL ERROR: Cache config not loaded! EPHEMERAL_SECTIONS not found in GLOBALS");
+        } else {
+            $count = count($GLOBALS['EPHEMERAL_SECTIONS']);
+            logMessage("[{$this->name}] Cache config loaded successfully: {$count} ephemeral sections defined");
+        }
+        
+        logMessage("[{$this->name}] OpenRouter Cached Connector initialized");
     }
 
     // Utility methods
@@ -311,6 +334,10 @@ class openrouterjsoncached
             ? $GLOBALS["CONNECTOR"][$this->name]["response_format"]
             : 'json';
 
+        // DEBUG: Log what response format is being loaded
+        error_log("[{$this->name}] CRITICAL DEBUG - Response Format Setting: {$this->_responseFormat}");
+        error_log("[{$this->name}] CRITICAL DEBUG - Raw metadata value: " . ($GLOBALS["CONNECTOR"][$this->name]["response_format"] ?? 'NOT SET'));
+
         $this->_includeActions = (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"])
             && (isset($GLOBALS["CONNECTOR"][$this->name]["include_actions_list"])
                 ? (bool)$GLOBALS["CONNECTOR"][$this->name]["include_actions_list"]
@@ -328,32 +355,44 @@ class openrouterjsoncached
             ? (bool)$GLOBALS["CONNECTOR"][$this->name]["include_listener_requirement"]
             : true;
 
+        // Minimize quality prompt setting (defaults to true for advanced models)
+        $minimizeQualityPrompt = isset($GLOBALS["CONNECTOR"][$this->name]["minimize_quality_prompt"])
+            ? (bool)$GLOBALS["CONNECTOR"][$this->name]["minimize_quality_prompt"]
+            : true;
+
         // Enforce dependency: target required if actions enabled
         if ($this->_includeActions) {
             $this->_includeTarget = true;
         }
 
-        logMessage("Response Format Config: format={$this->_responseFormat}, actions={$this->_includeActions}, mood={$this->_includeMood}, target={$this->_includeTarget}, listener={$this->_includeListener}, uncached={$dialogue_cache_uncached_count}");
+        logMessage("Response Format Config: format={$this->_responseFormat}, actions={$this->_includeActions}, mood={$this->_includeMood}, target={$this->_includeTarget}, listener={$this->_includeListener}, uncached={$dialogue_cache_uncached_count}, minimizeQuality={$minimizeQualityPrompt}");
 
         // Continue to Part 2...
         return $this->_openPart2($contextData, $customParms, $herikaName, $MAX_TOKENS, $max_dialogue_cache_size,
                                   $customInstruction, $lastCustomInstruction, $toggleThinking, $thinkingTokens,
-                                  $effort_level, $CONTEXTHISTORY, $dialogue_cache_uncached_count, $start_time);
+                                  $effort_level, $CONTEXTHISTORY, $dialogue_cache_uncached_count, $start_time, $minimizeQualityPrompt);
     }
 
     // Part 2: System Prompt Processing with Caching
     private function _openPart2($contextData, $customParms, $herikaName, $MAX_TOKENS, $max_dialogue_cache_size,
                                  $customInstruction, $lastCustomInstruction, $toggleThinking, $thinkingTokens,
-                                 $effort_level, $CONTEXTHISTORY, $dialogue_cache_uncached_count, $start_time) {
+                                 $effort_level, $CONTEXTHISTORY, $dialogue_cache_uncached_count, $start_time, $minimizeQualityPrompt = true) {
 
         // BUG#2 FIX: Include response format in cache filename so different formats use different cache files
         $cacheSystemFile = "system_cache_{$this->_responseFormat}_{$herikaName}.tmp";
         $cacheCombinedDialogueFile = "combined_dialogue_cache_{$this->_responseFormat}_{$herikaName}.tmp";
-        $cacheControlType = ["type" => "ephemeral", "ttl" => "1h"];
+        $cacheControlType = ["type" => "ephemeral"];
 
         // Build actions and response format instruction
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
             $prefix = isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]) ? "{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}" : "";
+
+            // When minimize_quality_prompt is enabled (true/default), filter out quality instruction phrases
+            // that conflict with the minimized approach (COMMAND_PROMPT_ENFORCE_ACTIONS should be for actions, not quality)
+            if ($minimizeQualityPrompt && stripos($prefix, 'Provide variety') !== false) {
+                error_log("[{$this->name}] INFO: Filtering out 'Provide variety' phrase from COMMAND_PROMPT_ENFORCE_ACTIONS (minimize_quality_prompt is enabled)");
+                $prefix = "";
+            }
         } else {
             $prefix = "";
         }
@@ -374,6 +413,8 @@ class openrouterjsoncached
 
         // Build response format instruction based on format type
         $formatInstruction = "";
+        error_log("[{$this->name}] CRITICAL DEBUG - Building format instruction for: {$this->_responseFormat}");
+
         if ($this->_responseFormat === 'json') {
             $template = isset($GLOBALS["responseTemplate"]) ? $GLOBALS["responseTemplate"] : [];
 
@@ -390,10 +431,11 @@ class openrouterjsoncached
                 unset($template['listener']);
             }
 
-            $prefixPart = trim(implode(' ', array_filter([$prefix, $speechReinforcement, $customInstruction], 'strlen')));
+            $prefixPart = trim(implode(' ', array_filter([$prefix, $speechReinforcement], 'strlen')));
             $formatInstruction = "{$prefixPart} Use ONLY this JSON object to give your answer. Do not send any other characters outside of this JSON structure$zonosTones: " . json_encode($template);
+            error_log("[{$this->name}] CRITICAL DEBUG - JSON format instruction created");
         } else {
-            $prefixPart = trim(implode(' ', array_filter([$prefix, $speechReinforcement, $customInstruction], 'strlen')));
+            $prefixPart = trim(implode(' ', array_filter([$prefix, $speechReinforcement], 'strlen')));
             $formatInstruction = buildSimpleFormatInstruction(
                 $this->_includeMood,
                 $this->_includeListener,
@@ -401,13 +443,18 @@ class openrouterjsoncached
                 $this->_includeTarget,
                 $prefixPart
             );
+            error_log("[{$this->name}] CRITICAL DEBUG - Simple format instruction created");
         }
 
         $actionsText = "";
         if (!empty($availableActions)) {
             $actionsText .= "\n" . $availableActions . "\n";
         }
-        $actionsText .= $formatInstruction;
+        // For simple format, format instruction goes with user prompt, not system
+        // For JSON format, it stays in system message
+        if ($this->_responseFormat === 'json') {
+            $actionsText .= $formatInstruction;
+        }
 
         $dynamicEnvironment = "";
         $systemEntries = [];
@@ -425,21 +472,32 @@ class openrouterjsoncached
 
                 $systemContentCurrent = trim($systemContentString);
 
-                // Extract dynamic sections that change frequently
-                $environmental = extract_and_remove_section($systemContentCurrent, 'Environmental Context');
-                $additional = extract_and_remove_section($systemContentCurrent, 'Additional Information');
-                $equipment = extract_any_subsection($systemContentCurrent, 'Equipment', true);
-                $appearance = extract_any_subsection($systemContentCurrent, 'Physical Appearance', false);
-                $cleanliness = extract_any_subsection($systemContentCurrent, 'Cleanliness', true);
-                $additionalCharacter = extract_specific_section($systemContentCurrent, 'Additional Character Information');
-                $combatStatus = extract_specific_section($systemContentCurrent, 'Combat Vitals');
-                $arousal = extract_specific_section($systemContentCurrent, 'Arousal Status');
+                logMessage("[{$this->name}] System content length before extraction: " . strlen($systemContentCurrent));
 
-                $dynamicEnvironment = $environmental . "\n\n" . $additional . "\n\n" . $additionalCharacter . "\n\n" .
-                                     $combatStatus . "\n\n" . $arousal . "\n\n" . $equipment . "\n\n" .
-                                     $appearance . "\n\n" . $cleanliness;
+                // Extract ephemeral sections from system prompt using centralized config
+                $systemEphemeralSections = getEphemeralSectionsBySource('system');
+                $extractedSystemDynamic = [];
+                
+                logMessage("[{$this->name}] System ephemeral sections to extract: " . implode(", ", $systemEphemeralSections));
+                
+                foreach ($systemEphemeralSections as $sectionTag) {
+                    $extracted = extract_xml_section($systemContentCurrent, $sectionTag);
+                    if (!empty(trim($extracted))) {
+                        $extractedSystemDynamic[] = $extracted;
+                        logMessage("[{$this->name}] ✓ Extracted system ephemeral section: <{$sectionTag}> (" . strlen($extracted) . " chars)");
+                    } else {
+                        logMessage("[{$this->name}] ✗ Section <{$sectionTag}> not found or empty");
+                    }
+                }
+                
+                logMessage("[{$this->name}] System content length after extraction: " . strlen($systemContentCurrent));
+                logMessage("[{$this->name}] Total system ephemeral sections extracted: " . count($extractedSystemDynamic));
+                
+                $dynamicEnvironment = implode("\n\n", $extractedSystemDynamic);
 
-                $finalSend = $systemContentCurrent . "\n" . $actionsText;
+                // Add custom system instruction before actions and format instruction (but after main system content)
+                $customInstructionPart = !empty($customInstruction) ? "\n" . $customInstruction : '';
+                $finalSend = $systemContentCurrent . $customInstructionPart . "\n" . $actionsText;
 
                 $content = ['type' => 'text', 'text' => $finalSend];
                 if ($this->_provider_caching !== "OpenAI") {
@@ -449,23 +507,43 @@ class openrouterjsoncached
             }
         }
 
-        $finalMessagesToSend = writeArrayToFileWithCache($systemEntries, $cacheSystemFile);
+        // IMPORTANT: Don't use writeArrayToFileWithCache here because it would return the OLD cached version
+        // which still contains the ephemeral sections we just extracted!
+        // Instead, we always use the freshly built $systemEntries with extracted content
+        // and save it to cache for next time
+        $cacheFilePath = __DIR__ . "/../temp/" . $cacheSystemFile;
+        $directory = dirname($cacheFilePath);
+        
+        if (!is_dir($directory)) {
+            @mkdir($directory, 0755, true);
+        }
+        
+        // Save the cleaned system entries (with ephemeral sections removed) to cache
+        @file_put_contents($cacheFilePath, serialize($systemEntries));
+        logMessage("[{$this->name}] Saved cleaned system prompt to cache (ephemeral sections removed)");
+        
+        $finalMessagesToSend = $systemEntries;
 
         // Continue to Part 3...
         return $this->_openPart3($contextData, $customParms, $herikaName, $MAX_TOKENS, $max_dialogue_cache_size,
                                   $lastCustomInstruction, $toggleThinking, $thinkingTokens, $effort_level,
                                   $CONTEXTHISTORY, $dialogue_cache_uncached_count, $start_time,
-                                  $finalMessagesToSend, $cacheCombinedDialogueFile, $cacheControlType, $dynamicEnvironment);
+                                  $finalMessagesToSend, $cacheCombinedDialogueFile, $cacheControlType, $dynamicEnvironment, $formatInstruction);
     }
 
     // Part 3: Dialogue History Caching and Cache Control Placement
     private function _openPart3($contextData, $customParms, $herikaName, $MAX_TOKENS, $max_dialogue_cache_size,
                                  $lastCustomInstruction, $toggleThinking, $thinkingTokens, $effort_level,
                                  $CONTEXTHISTORY, $dialogue_cache_uncached_count, $start_time,
-                                 $finalMessagesToSend, $cacheCombinedDialogueFile, $cacheControlType, $dynamicEnvironment) {
+                                 $finalMessagesToSend, $cacheCombinedDialogueFile, $cacheControlType, $dynamicEnvironment, $formatInstruction) {
 
         // Process dialogue history
         $contentTextToSend = [];
+        $dialogueEphemeralSections = getEphemeralSectionsBySource('dialogue');
+        $extractedDialogueDynamic = [];
+        
+        logMessage("[{$this->name}] Processing " . count($contextData) . " context messages");
+        
         foreach ($contextData as $n => $element) {
             if (!isset($element))
                 continue;
@@ -483,11 +561,37 @@ class openrouterjsoncached
                     continue;
                 }
 
+                // Extract ephemeral dialogue sections using centralized config
+                $originalContentLength = strlen($contentString);
+                $foundEphemeral = false;
+                
+                foreach ($dialogueEphemeralSections as $sectionTag) {
+                    if (strpos($contentString, "<{$sectionTag}>") !== false) {
+                        $extracted = extract_xml_section($contentString, $sectionTag);
+                        if (!empty(trim($extracted))) {
+                            $extractedDialogueDynamic[] = $extracted;
+                            $foundEphemeral = true;
+                            logMessage("[{$this->name}] Extracted ephemeral dialogue section: <{$sectionTag}>");
+                        }
+                    }
+                }
+                
+                // If the entire message was ephemeral content, don't add to contentTextToSend
+                // This handles messages that are ONLY <nearby_actors>, <nearby_items>, etc.
+                $remainingContentLength = strlen(trim($contentString));
+                if ($foundEphemeral && $remainingContentLength < 10) {
+                    logMessage("[{$this->name}] Skipping message - was entirely ephemeral content");
+                    continue;
+                }
+
+                // Only add non-empty messages that have content beyond ephemeral sections
                 if (!empty(trim($contentString))) {
                     $contentTextToSend[] = array('type' => 'text', 'text' => "$contentString");
                 }
             }
         }
+        
+        logMessage("[{$this->name}] Processed dialogue: " . count($contentTextToSend) . " messages, " . count($extractedDialogueDynamic) . " ephemeral sections extracted");
 
         // Remove first few items if list is large (optimization)
         if (count($contentTextToSend) > 4) {
@@ -507,6 +611,15 @@ class openrouterjsoncached
         if (!empty($lastCustomInstruction)) {
             $addToIndex = 1;
             $completeEventList[] = ['type' => 'text', 'text' => $lastCustomInstruction];
+        }
+
+        // For simple format, append format instruction to the user instruction
+        // For JSON format, instruction is already in system message
+        if ($this->_responseFormat === 'simple' && !empty($formatInstruction)) {
+            // Append format instruction to the instruction text
+            $instructionText = is_array($instruction) && isset($instruction['text']) ? $instruction['text'] : $instruction;
+            $instructionText .= ' ' . $formatInstruction;
+            $instruction = is_array($instruction) ? ['type' => 'text', 'text' => $instructionText] : $instructionText;
         }
 
         $completeEventList[] = $instruction;
@@ -563,16 +676,48 @@ class openrouterjsoncached
         }
 
         // Add dynamic environment context if available
-        if (!containsOnlySymbols($dynamicEnvironment)) {
-            $text = preg_replace('/^\s*#+.*$/m', '', $dynamicEnvironment);
+        // Combine system-level dynamic content with dialogue-level ephemeral context
+        // $dynamicEnvironment is a string from Part 2 (system extraction)
+        // $extractedDialogueDynamic is an array from this function (dialogue extraction)
+        $allDynamicParts = [];
+        
+        logMessage("[{$this->name}] Dynamic environment param: " . (empty($dynamicEnvironment) ? "EMPTY" : strlen($dynamicEnvironment) . " chars"));
+        logMessage("[{$this->name}] Extracted dialogue dynamic count: " . (isset($extractedDialogueDynamic) ? count($extractedDialogueDynamic) : 0));
+        
+        // Add system dynamic content if present
+        if (!empty(trim($dynamicEnvironment)) && !containsOnlySymbols($dynamicEnvironment)) {
+            $allDynamicParts[] = $dynamicEnvironment;
+            logMessage("[{$this->name}] Added system dynamic content to allDynamicParts");
+        }
+        
+        // Add dialogue dynamic content
+        if (isset($extractedDialogueDynamic) && is_array($extractedDialogueDynamic)) {
+            foreach ($extractedDialogueDynamic as $idx => $part) {
+                if (!empty(trim($part)) && !containsOnlySymbols($part)) {
+                    $allDynamicParts[] = $part;
+                    logMessage("[{$this->name}] Added dialogue dynamic part #{$idx}: " . substr($part, 0, 50) . "...");
+                }
+            }
+        }
+        
+        logMessage("[{$this->name}] Total allDynamicParts count: " . count($allDynamicParts));
+        
+        if (!empty($allDynamicParts)) {
+            $combinedDynamic = implode("\n\n", $allDynamicParts);
+            $text = preg_replace('/^\s*#+.*$/m', '', $combinedDynamic);
             $text = preg_replace('/^\s*[-•]\s*/', '', $text);
             $text = preg_replace('/\s+/', ' ', $text);
             $text = preg_replace('/[.]{2,}/', '.', $text);
-            $dynamicEnvironment = trim("ASSISTANT: Environmental Context: $text");
+            $finalDynamicEnvironment = trim("ASSISTANT: Environmental Context: $text");
 
             // Insert before last 2 elements, or at the end if list is too short
             $insertPosition = max(0, count($completeEventList) - 2);
-            array_splice($completeEventList, $insertPosition, 0, [array('type' => 'text', 'text' => $dynamicEnvironment)]);
+            logMessage("[{$this->name}] Inserting dynamic environment at position {$insertPosition} (total list size: " . count($completeEventList) . ")");
+            array_splice($completeEventList, $insertPosition, 0, [array('type' => 'text', 'text' => $finalDynamicEnvironment)]);
+            
+            logMessage("[{$this->name}] Added " . count($allDynamicParts) . " ephemeral sections to dynamic environment");
+        } else {
+            logMessage("[{$this->name}] WARNING: No dynamic parts to add!");
         }
 
         $completeEventList = removeDuplicateMemories($completeEventList);
@@ -580,9 +725,16 @@ class openrouterjsoncached
         $tokenCount = countTokensByWords($completeEventList);
         logMessage("Estimated token count: $tokenCount");
 
+        // DEBUG: Log array structure before adding to final messages
+        logMessage("[{$this->name}] completeEventList count before adding to final: " . count($completeEventList));
+        logMessage("[{$this->name}] completeEventList structure sample (first 3): " . json_encode(array_slice($completeEventList, 0, 3), JSON_PRETTY_PRINT));
+        logMessage("[{$this->name}] completeEventList structure sample (last 3): " . json_encode(array_slice($completeEventList, -3), JSON_PRETTY_PRINT));
+        
         // NOW add to finalMessagesToSend after all modifications are complete
         // BUG#3 FIX: Enable prefill for all caching providers, not just Anthropic
-        if ($this->_responseFormat === 'simple') {
+        // CRITICAL: Prefill is incompatible with reasoning - only use prefill when thinking is disabled
+        if ($this->_responseFormat === 'simple' && !$toggleThinking) {
+            logMessage("[{$this->name}] Using simple format with prefill");
             $finalMessagesToSend[] = array('role' => 'user', 'content' => $completeEventList);
             $prefillText = '(';
             $finalMessagesToSend[] = array('role' => 'assistant', 'content' => array(
@@ -591,10 +743,14 @@ class openrouterjsoncached
             $this->_usedPrefill = true;
             $this->_prefillContent = $prefillText;
         } else {
+            logMessage("[{$this->name}] Using json format without prefill");
             $finalMessagesToSend[] = array('role' => 'user', 'content' => $completeEventList);
             $this->_usedPrefill = false;
             $this->_prefillContent = '';
         }
+        
+        logMessage("[{$this->name}] finalMessagesToSend now has " . count($finalMessagesToSend) . " messages");
+        logMessage("[{$this->name}] Last message content blocks: " . (isset($finalMessagesToSend[count($finalMessagesToSend)-1]['content']) ? count($finalMessagesToSend[count($finalMessagesToSend)-1]['content']) : 'N/A'));
 
         // Continue to Part 4 for final payload construction...
         return $this->_openPart4($customParms, $herikaName, $MAX_TOKENS, $toggleThinking, $thinkingTokens,
@@ -752,7 +908,7 @@ class openrouterjsoncached
 
         // Only send Anthropic-specific headers when using Anthropic provider
         if ($this->_provider_caching === "Anthropic") {
-            $headers[] = "anthropic-beta: extended-cache-ttl-2025-04-11";
+            $headers[] = "anthropic-beta: prompt-caching-2024-07-31";
         }
 
         $timeout = isset($GLOBALS["HTTP_TIMEOUT"]) ? (int) $GLOBALS["HTTP_TIMEOUT"] : 60;
@@ -810,6 +966,13 @@ class openrouterjsoncached
         $line = @fgets($this->primary_handler);
         if ($line === false) {
             if (feof($this->primary_handler)) {
+                // Stream ended - flush remaining simple format content if any
+                if ($this->_responseFormat === 'simple') {
+                    $flushed = $this->_flushRemainingSimpleFormat();
+                    if (!empty($flushed)) {
+                        return $flushed;
+                    }
+                }
                 return "";
             } else {
                 $error = error_get_last();
@@ -832,6 +995,13 @@ class openrouterjsoncached
         if (strpos($line, 'data: ') === 0) {
             $jsonData = trim(substr($line, 6));
             if ($jsonData === '[DONE]') {
+                // Stream ended with explicit DONE marker - flush remaining simple format content if any
+                if ($this->_responseFormat === 'simple') {
+                    $flushed = $this->_flushRemainingSimpleFormat();
+                    if (!empty($flushed)) {
+                        return $flushed;
+                    }
+                }
                 return "";
             }
 
@@ -887,6 +1057,19 @@ class openrouterjsoncached
                                     @file_put_contents(__DIR__ . DIRECTORY_SEPARATOR . "_cached_perf.log", $logPerfEntry, FILE_APPEND);
                                 }
 
+                                logMessage("[{$this->name}:{$herikaName}] Stop (delta): " . $data['delta']['stop_reason']);
+
+                                // Flush remaining simple format content before closing
+                                if ($this->_responseFormat === 'simple') {
+                                    $flushed = $this->_flushRemainingSimpleFormat();
+                                    if (!empty($flushed)) {
+                                        // Return flushed content immediately
+                                        // Don't set _forcedClose yet - flush might have more content
+                                        // Will be set on next call when flush returns empty
+                                        return $flushed;
+                                    }
+                                }
+
                                 $this->_forcedClose = true;
                                 break;
 
@@ -918,6 +1101,18 @@ class openrouterjsoncached
 
                         if (isset($data["choices"][0]["finish_reason"]) && $data["choices"][0]["finish_reason"] !== null) {
                             logMessage("[{$this->name}:{$herikaName}] Stop (choice): " . $data["choices"][0]["finish_reason"]);
+
+                            // Flush remaining simple format content before closing
+                            if ($this->_responseFormat === 'simple') {
+                                $flushed = $this->_flushRemainingSimpleFormat();
+                                if (!empty($flushed)) {
+                                    // Return flushed content immediately
+                                    // Don't set _forcedClose yet - flush might have more content
+                                    // Will be set on next call when flush returns empty
+                                    return $flushed;
+                                }
+                            }
+
                             $this->_forcedClose = true;
                         }
                     }
@@ -935,6 +1130,18 @@ class openrouterjsoncached
             }
         } elseif (trim($line) === "event: message_stop") {
             logMessage("[{$this->name}:{$herikaName}] Explicit stream end event received.");
+
+            // Flush remaining simple format content before closing
+            if ($this->_responseFormat === 'simple') {
+                $flushed = $this->_flushRemainingSimpleFormat();
+                if (!empty($flushed)) {
+                    // Return flushed content immediately
+                    // Don't set _forcedClose yet - flush might have more content
+                    // Will be set on next call when flush returns empty
+                    return $flushed;
+                }
+            }
+
             $this->_forcedClose = true;
         }
 
@@ -944,6 +1151,256 @@ class openrouterjsoncached
         }
 
         return "";
+    }
+
+    /**
+     * Preprocesses reasoning tags from buffer (Step 0 of algorithm)
+     * Handles <think>, <thinking>, and <answer> tags including orphaned closing tags
+     * Returns true if ready to continue, false if waiting for closing tag
+     */
+    private function _preprocessReasoningTags() {
+        // Check for orphaned closing tag (prefill case)
+        if ($this->_reasoningState === 'NORMAL') {
+            if (preg_match('/<\/(think|thinking)>/', $this->_buffer, $matches, PREG_OFFSET_CAPTURE)) {
+                $closePos = $matches[0][1];
+                $closeLen = strlen($matches[0][0]);
+                $this->_buffer = substr($this->_buffer, $closePos + $closeLen);
+                logMessage("[{$this->name}] Stripped orphaned closing tag (prefill case)");
+                // Continue to state machine check below
+            }
+        }
+
+        // State machine for reasoning tags
+        while (true) {
+            if ($this->_reasoningState === 'WAITING_FOR_REASONING_CLOSE') {
+                $closeTag = '</' . $this->_reasoningTagType . '>';
+                $closePos = strpos($this->_buffer, $closeTag);
+
+                if ($closePos !== false) {
+                    // Found closing tag - strip everything up to and including it
+                    $this->_buffer = substr($this->_buffer, $closePos + strlen($closeTag));
+                    logMessage("[{$this->name}] Stripped reasoning block: <{$this->_reasoningTagType}>...</{$this->_reasoningTagType}>");
+                    $this->_reasoningState = 'NORMAL';
+                    $this->_reasoningTagType = '';
+                    // Continue loop - might have more reasoning or answer tags
+                } else {
+                    // Still waiting for closing tag
+                    return false; // Signal: need more chunks
+                }
+            } else { // NORMAL state
+                // Check if buffer starts with reasoning tag
+                if (preg_match('/^<(think|thinking)>/i', $this->_buffer, $matches)) {
+                    $this->_reasoningTagType = strtolower($matches[1]);
+                    $this->_reasoningState = 'WAITING_FOR_REASONING_CLOSE';
+                    logMessage("[{$this->name}] Detected reasoning tag opening: <{$this->_reasoningTagType}>");
+                    // Continue loop - might complete in same iteration
+                } else {
+                    break; // No reasoning tag at start, exit loop
+                }
+            }
+        }
+
+        // Strip answer tags (preserve content)
+        $beforeAnswerStrip = $this->_buffer;
+        $this->_buffer = preg_replace('/<answer>(.*?)<\/answer>/is', '$1', $this->_buffer);
+        if ($beforeAnswerStrip !== $this->_buffer) {
+            logMessage("[{$this->name}] Stripped <answer> tags, preserved content");
+        }
+
+        return true; // Signal: ready to continue
+    }
+
+    /**
+     * Extracts metadata from normalized buffer (Step 4 of algorithm)
+     * Searches for metadata + complete sentence pattern
+     * Returns array with 'found', 'metadataEnd', and 'groups' keys
+     */
+    private function _extractMetadata($normalizedBuffer) {
+        // Check if all fields disabled
+        if (!$this->_includeMood && !$this->_includeListener &&
+            !$this->_includeActions && !$this->_includeTarget) {
+            return [
+                'found' => true,
+                'metadataEnd' => 0,
+                'groups' => []
+            ];
+        }
+
+        // Find consecutive (...) at start (start-anchored pattern)
+        if (!preg_match('/^\s*(?:\([^)]*\)\s*)+/', $normalizedBuffer, $match)) {
+            return ['found' => false];
+        }
+
+        $metadataSection = $match[0];
+        $metadataEnd = strlen($metadataSection);
+        $potentialMessage = substr($normalizedBuffer, $metadataEnd);
+
+        // Search for sentence in message (detection pattern with end-of-buffer support)
+        if (!preg_match('/\.\.\.(?:\s+|$)|[.!?](?:\s+|$)/', $potentialMessage)) {
+            return ['found' => false]; // No sentence yet, wait
+        }
+
+        // Extract groups from metadata section
+        preg_match_all('/\(([^)]*)\)/', $metadataSection, $matches);
+
+        return [
+            'found' => true,
+            'metadataEnd' => $metadataEnd,
+            'groups' => $matches[1]
+        ];
+    }
+
+    /**
+     * Maps extracted groups to global fields (mood, listener, action, target)
+     * Handles action command generation with deduplication
+     */
+    private function _mapGroupsToFields($groups) {
+        $idx = 0;
+
+        // Map mood
+        if ($this->_includeMood && isset($groups[$idx])) {
+            $mood = trim($groups[$idx++]);
+            if ($mood !== '') {
+                $GLOBALS["SCRIPTLINE_ANIMATION"] = function_exists('GetAnimationHex')
+                    ? GetAnimationHex($mood) : '';
+                $GLOBALS["SCRIPTLINE_EXPRESSION"] = function_exists('GetExpression')
+                    ? GetExpression($mood) : '';
+            }
+        }
+
+        // Map listener
+        if ($this->_includeListener && isset($groups[$idx])) {
+            $listener = trim($groups[$idx++]);
+            if ($listener !== '') {
+                $GLOBALS["SCRIPTLINE_LISTENER"] = $listener;
+            }
+        }
+
+        // Map action and target
+        if ($this->_includeActions && isset($groups[$idx])) {
+            $action = trim($groups[$idx++]);
+            if ($action !== '' && strcasecmp($action, 'Talk') !== 0) {
+                $action = validateActionName($action);
+                $target = $this->_includeTarget && isset($groups[$idx])
+                    ? trim($groups[$idx])
+                    : $this->_defaultTarget;
+                $character = $GLOBALS["HERIKA_NAME"] ?? 'Herika';
+                $commandKey = md5("{$character}|command|{$action}@{$target}\r\n");
+                if (!isset($GLOBALS['alreadysent'][$commandKey])) {
+                    $func = function_exists('getFunctionCodeName')
+                        ? getFunctionCodeName($action)
+                        : $action;
+                    $cmd = "{$character}|command|{$func}@{$target}\r\n";
+                    $this->_commandBuffer[] = $cmd;
+                    $GLOBALS['alreadysent'][$commandKey] = $cmd;
+                }
+            }
+        }
+    }
+
+    /**
+     * Flushes remaining content when stream ends (handles trailing partials)
+     * Based on design doc lines 280-310 close() algorithm
+     * Returns content incrementally across multiple calls
+     */
+    private function _flushRemainingSimpleFormat() {
+        // If metadata was never extracted, nothing to flush
+        if ($this->_metadataEnd === -1) {
+            logMessage("[{$this->name}] Flush: No metadata extracted, nothing to flush");
+            return "";
+        }
+
+        // Normalize buffer for prefill
+        $normalizedBuffer = $this->_buffer;
+        if ($this->_usedPrefill && !empty($normalizedBuffer) && $normalizedBuffer[0] !== '(') {
+            $normalizedBuffer = '(' . $normalizedBuffer;
+        }
+
+        // Extract message portion
+        $message = substr($normalizedBuffer, $this->_metadataEnd);
+        logMessage("[{$this->name}] Flush: Message length=" . strlen($message) . ", first 100 chars: " . substr($message, 0, 100));
+
+        // Split into sentences
+        $sentences = $this->_splitIntoSentences($message);
+        logMessage("[{$this->name}] Flush: Found " . count($sentences) . " complete sentences, already sent " . $this->_sentencesSent);
+
+        // First priority: Flush unsent complete sentences
+        if ($this->_sentencesSent < count($sentences)) {
+            $sentence = $sentences[$this->_sentencesSent];
+            $this->_sentencesSent++;
+            logMessage("[{$this->name}] Flushing complete sentence #{$this->_sentencesSent}: " . substr($sentence, 0, 80));
+            if (!empty($sentence) && $sentence[0] === ':') {
+                logMessage("[{$this->name}] Flush: ⚠️ FLUSHED SENTENCE STARTS WITH COLON");
+            }
+            return $sentence;
+        }
+
+        // Second priority: Flush trailing partial (once)
+        if (!$this->_flushedPartial) {
+            $this->_flushedPartial = true;
+
+            // Find trailing partial (text after last punctuation)
+            if (preg_match_all('/[.!?…]/', $message, $matches, PREG_OFFSET_CAPTURE)) {
+                $lastMatch = end($matches[0]);
+                $lastPunctPos = $lastMatch[1];
+                $partial = trim(substr($message, $lastPunctPos + 1));
+                logMessage("[{$this->name}] Flush: Last punctuation at position $lastPunctPos, partial length=" . strlen($partial));
+            } else {
+                // No punctuation at all - entire message is partial
+                $partial = trim($message);
+                logMessage("[{$this->name}] Flush: No punctuation found, entire message is partial, length=" . strlen($partial));
+            }
+
+            // Return partial with added period if non-empty and lacks punctuation
+            if (!empty($partial) && !preg_match('/[.!?…]$/', $partial)) {
+                $partial .= '.';
+                logMessage("[{$this->name}] Flushing trailing partial (" . strlen($partial) . " chars): \"" . substr($partial, 0, 100) . "...\"");
+                return $partial;
+            } else if (empty($partial)) {
+                logMessage("[{$this->name}] Flush: Partial is empty, nothing to return");
+            } else {
+                logMessage("[{$this->name}] Flush: Partial already ends with punctuation: \"" . substr($partial, 0, 50) . "\"");
+            }
+        } else {
+            logMessage("[{$this->name}] Flush: Already flushed partial");
+        }
+
+        // Nothing left to flush
+        logMessage("[{$this->name}] Flush: Nothing left to flush");
+        return "";
+    }
+
+    /**
+     * Splits message into complete sentences (Step 7 of algorithm)
+     * Uses splitting pattern (not detection pattern) and filters for completeness
+     */
+    private function _splitIntoSentences($text) {
+        // Split on sentence endings followed by space (no end-of-buffer here!)
+        $parts = preg_split('/(?<=\.\.\.)\s+|(?<=[.!?])\s+/', $text, -1, PREG_SPLIT_NO_EMPTY);
+
+        logMessage("[{$this->name}] _splitIntoSentences: Split into " . count($parts) . " parts");
+
+        // Filter: keep only sentences ending with punctuation
+        $sentences = [];
+        foreach ($parts as $i => $part) {
+            $beforeTrim = $part;
+            $part = trim($part);
+
+            // Log if trim removed colons
+            if ($beforeTrim !== $part && strpos($beforeTrim, ':') !== false) {
+                logMessage("[{$this->name}] _splitIntoSentences: Part $i BEFORE trim: " . substr($beforeTrim, 0, 80));
+                logMessage("[{$this->name}] _splitIntoSentences: Part $i AFTER trim: " . substr($part, 0, 80));
+            }
+
+            if (preg_match('/[.!?…]+$/', $part)) {
+                logMessage("[{$this->name}] _splitIntoSentences: Part $i kept (ends with punctuation): " . substr($part, 0, 80));
+                $sentences[] = $part;
+            } else {
+                logMessage("[{$this->name}] _splitIntoSentences: Part $i filtered out (no ending punctuation): " . substr($part, 0, 80));
+            }
+        }
+
+        return $sentences;
     }
 
     // Helper method to parse and return content based on format
@@ -966,81 +1423,83 @@ class openrouterjsoncached
                         $GLOBALS["SCRIPTLINE_LISTENER"] = $tempJson["listener"];
                     }
                 }
-                // Strip any reasoning tokens from final message before returning
-                return stripReasoningTokens($tempJson['message']);
+                // No stripReasoningTokens() call needed - already done in _preprocessReasoningTags()!
+                return $tempJson['message'];
             }
         } else {
-            // Simple format parsing
-            if (!$this->_simpleFormatParsed) {
-                // Prepend prefill content if used, since API doesn't return it in response
-                $bufferToParse = $this->_usedPrefill ? $this->_prefillContent . $this->_buffer : $this->_buffer;
+            // NEW SIMPLE FORMAT PARSER - Ultra-simple architecture
+            // Design: Wait when ambiguous, only process when certain. No offset math!
 
-                $parsed = extractSimpleFormatFromBuffer(
-                    $bufferToParse,
-                    $this->_includeMood,
-                    $this->_includeListener,
-                    $this->_includeActions,
-                    $this->_includeTarget
-                );
+            // Step 0: REASONING PREPROCESSING (runs every call)
+            if (!$this->_preprocessReasoningTags()) {
+                return ""; // Waiting for reasoning closing tag
+            }
 
-                if ($parsed['found']) {
-                    $this->_simpleFormatParsed = true;
+            // Step 3: Normalize for prefill
+            $normalizedBuffer = $this->_buffer;
+            if ($this->_usedPrefill && !empty($normalizedBuffer) && $normalizedBuffer[0] !== '(') {
+                $normalizedBuffer = '(' . $normalizedBuffer;
+            }
 
-                    // Calculate where the message starts in the buffer (after format markers)
-                    // Search in the same buffer used for parsing (with prefill if applicable)
-                    $messagePos = strpos($bufferToParse, $parsed['message']);
-                    if ($messagePos !== false) {
-                        // If prefill was used, adjust position to account for prefill length
-                        if ($this->_usedPrefill) {
-                            $messagePos = $messagePos - strlen($this->_prefillContent);
-                            if ($messagePos < 0) {
-                                $messagePos = 0;
+            // Step 4: Extract metadata section (one-time operation)
+            if ($this->_metadataEnd === -1) {
+                $result = $this->_extractMetadata($normalizedBuffer);
+
+                if (!$result['found']) {
+                    // Step 5: TIMEOUT FALLBACK
+                    if (strlen($normalizedBuffer) > 100) {
+                        logMessage("[{$this->name}] Simple format timeout - LLM didn't follow format (buffer > 100 chars)");
+                        // Split by punctuation and filter for complete sentences
+                        $parts = preg_split('/(?<=\.\.\.)\s+|(?<=[.!?])\s+/', $normalizedBuffer, -1, PREG_SPLIT_NO_EMPTY);
+                        $sentences = [];
+                        foreach ($parts as $part) {
+                            $part = trim($part);
+                            if (preg_match('/[.!?…]+$/', $part)) {
+                                $sentences[] = $part;
                             }
                         }
-                        $this->_simpleFormatMessageStart = $messagePos;
-                        $this->_lastReturnedLength = strlen($parsed['message']);
-                    } else {
-                        // Fallback: assume message starts at beginning
-                        logMessage("[{$this->name}] Warning: Could not find message position in buffer, using fallback (position 0)");
-                        $this->_simpleFormatMessageStart = 0;
-                        $this->_lastReturnedLength = strlen($parsed['message']);
+                        // Set metadata as not found, start from beginning
+                        $this->_metadataEnd = 0;
+                        $this->_sentencesSent = 0;
+
+                        // Return first sentence if any
+                        if (!empty($sentences)) {
+                            $this->_sentencesSent = 1;
+                            return $sentences[0];
+                        }
                     }
-
-                    if ($this->_includeMood && !empty($parsed['mood'])) {
-                        $GLOBALS["SCRIPTLINE_ANIMATION"] = function_exists('GetAnimationHex') ? GetAnimationHex($parsed["mood"]) : '';
-                        $GLOBALS["SCRIPTLINE_EXPRESSION"] = function_exists('GetExpression') ? GetExpression($parsed["mood"]) : '';
-                    }
-
-                    if ($this->_includeListener && !empty($parsed['listener'])) {
-                        $GLOBALS["SCRIPTLINE_LISTENER"] = $parsed['listener'];
-                    }
-
-                    // Strip any reasoning tokens from final message before returning
-                    return stripReasoningTokens($parsed['message']);
-                } else {
-                    // CRITICAL: Simple format parsing failed - use fallback to prevent lost messages
-                    logMessage("[{$this->name}] ERROR: Simple format parsing failed! LLM did not follow format instructions. Using raw buffer as fallback.");
-                    logMessage("[{$this->name}] Buffer content (first 200 chars): " . substr($this->_buffer, 0, 200));
-
-                    // Mark as parsed to prevent re-parsing
-                    $this->_simpleFormatParsed = true;
-                    $this->_simpleFormatMessageStart = 0;
-                    $this->_lastReturnedLength = strlen($this->_buffer);
-
-                    // Return the entire buffer as the message
-                    return stripReasoningTokens($this->_buffer);
+                    return ""; // Wait for more chunks
                 }
-            } else {
-                // Simple format already parsed, return only new content since last call
-                if ($this->_simpleFormatMessageStart >= 0) {
-                    $currentMessage = substr($this->_buffer, $this->_simpleFormatMessageStart);
-                    $newContent = substr($currentMessage, $this->_lastReturnedLength);
-                    $this->_lastReturnedLength = strlen($currentMessage);
-                    // Strip any reasoning tokens from incremental content before returning
-                    return stripReasoningTokens($newContent);
-                }
-                return "";
+
+                // Metadata found!
+                $this->_metadataEnd = $result['metadataEnd'];
+                $this->_metadataGroups = $result['groups'];
+                $this->_mapGroupsToFields($result['groups']);
+                logMessage("[{$this->name}] Metadata extracted: metadataEnd={$this->_metadataEnd}, groups=" . count($result['groups']));
             }
+
+            // Step 6: Extract message portion
+            $message = substr($normalizedBuffer, $this->_metadataEnd);
+
+            // Step 7: Split message into sentences
+            $sentences = $this->_splitIntoSentences($message);
+
+            // Step 8: Return next unsent sentence
+            if ($this->_sentencesSent < count($sentences)) {
+                $sentence = $sentences[$this->_sentencesSent];
+                $this->_sentencesSent++;
+
+                // Diagnostic logging to track what is being returned
+                logMessage("[{$this->name}] _parseAndReturnContent returning sentence #{$this->_sentencesSent}: " . substr($sentence, 0, 100));
+                if (!empty($sentence) && $sentence[0] === ':') {
+                    logMessage("[{$this->name}] _parseAndReturnContent: ⚠️ SENTENCE STARTS WITH COLON");
+                }
+
+                // No stripReasoningTokens() call - already done in Step 0!
+                return $sentence;
+            }
+
+            return "";
         }
 
         return "";
@@ -1076,7 +1535,7 @@ class openrouterjsoncached
         $this->_rawbuffer = "";
         $this->_forcedClose = false;
 
-        return $this->_buffer;
+        return "";
     }
 
     public function processActions() {
@@ -1177,6 +1636,36 @@ class openrouterjsoncached
         $this->_forcedClose=true;
     }
 
+    /**
+     * Compatibility wrapper for fast_request() - converts streaming to non-streaming
+     * This is needed for CLEAN_CONTEXT_FOCUS_CHAT mode in data_functions.php
+     * Note: Does not use full caching infrastructure due to simpler context format
+     */
+    public function fast_request($contextData, $customParms, $callName='') {
+        logMessage("[{$this->name}] fast_request() called - using streaming wrapper");
+        
+        // Use streaming open() method
+        $result = $this->open($contextData, $customParms);
+        if (!$result) {
+            error_log("[{$this->name}] fast_request: open() failed");
+            return "";
+        }
+        
+        // Collect full response from stream
+        $buffer = '';
+        while (!$this->isDone()) {
+            $chunk = $this->process();
+            if ($chunk !== false && $chunk !== '') {
+                $buffer .= $chunk;
+            }
+        }
+        
+        $this->close();
+        
+        logMessage("[{$this->name}] fast_request() completed, buffer length: " . strlen($buffer));
+        return $buffer;
+    }
+
     public function send($url, $context) {
         if (isset($GLOBALS['mockConnectorSend'])) {
             return call_user_func($GLOBALS['mockConnectorSend'], $url, $context);
@@ -1184,4 +1673,3 @@ class openrouterjsoncached
         return fopen($url, 'r', false, $context);
     }
 }
-

@@ -5017,6 +5017,13 @@ function getConfFileFor($npcname) {
 function buildDynamicBiography(array $FOLLOWER_CONF) {
     /**
      * Build dynamic biography from new HERIKA fields, with fallback to legacy HERIKA_DYNAMIC
+     * 
+     * ⚠️ IMPORTANT: When adding new XML-tagged sections to this function:
+     * 1. Add the section tag to connector/cache_config.php in either:
+     *    - $EPHEMERAL_SECTIONS (if content changes frequently)
+     *    - $STATIC_SECTIONS (if content rarely changes)
+     * 2. This ensures caching connectors automatically handle new sections correctly
+     * 
      * @return string The dynamic biography content
      */
     $dynamicBio = '';
