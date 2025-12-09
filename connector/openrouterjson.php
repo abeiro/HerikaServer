@@ -36,6 +36,7 @@ class openrouterjson
     private $_websearch_index=0;
     private $_webbackup_func=false;
     private $_remove_cot;
+    private $_disable_reasoning;
     private $_cot_tag_base;
     private $_output_buffer; 
     private $_timeout;
@@ -63,6 +64,7 @@ class openrouterjson
         $this->_is_streaming=true;
         $this->_is_reasoning=false;
         $this->_remove_cot=true;
+        $this->_disable_reasoning=true;
         $this->_cot_tag_base="think";
         $this->_output_buffer="";
         $this->_timeout=30;
@@ -136,6 +138,18 @@ class openrouterjson
                 $i_pos = stripos($s_model, "openai/o4");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "openai/o1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/gpt-oss-120b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/gpt-oss-20b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "gpt-5-mini");
+            //openai/gpt-5-nano ???
+            if ($i_pos === false) { //openai/gpt-5
+                if (($s_model == "openai/gpt-5")) {
+                    $i_pos = 9;
+                }
+            }
             $b_res = (!($i_pos === false));
         }
         return $b_res;
@@ -146,6 +160,12 @@ class openrouterjson
         if (strlen($s_model) > 0) {
             // OpenRouter models
             $i_pos = stripos($s_model, "openai/o1");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/gpt-5");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/gpt-oss-120b");
+            if ($i_pos === false) 
+                $i_pos = stripos($s_model, "openai/gpt-oss-20b");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "openai/o3");
             if ($i_pos === false) 
@@ -160,12 +180,12 @@ class openrouterjson
                 if (($s_model == "o1") || ($s_model == "o1-mini") || ($s_model == "o1-preview") || 
                     ($s_model == "o3") || (strpos($s_model, "o3-mini") === 0) || (strpos($s_model, "o3-pro") === 0) || 
                     (strpos($s_model, "o4-mini") === 0)) {
-                    $i_pos = 1;
+                    $i_pos = 9;
                 }
             }
             $b_res = (!($i_pos === false));
         }
-        // error_log("[OPENROUTER] is openai model: $b_res");
+        //Logger::debug("[OPENROUTER] is openai $s_model / $i_pos ". ($b_res ? "Y" : "N") ); //debug
         return $b_res;
     }
    
@@ -175,6 +195,7 @@ class openrouterjson
             Logger::error("{$this->name} connector - missing url!");
 
         $this->_remove_cot = (isset($GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"])) ? $GLOBALS["CONNECTOR"][$this->name]["remove_chain_of_thought"] : true;
+        $this->_disable_reasoning = ($GLOBALS["CONNECTOR"][$this->name]["disable_model_reasoning"] ?? true);
 
         $default_model = 'meta-llama/llama-3.3-70b-instruct';
 
@@ -266,7 +287,7 @@ class openrouterjson
             $prefix="";
         }
 
-        if (isset($GLOBALS["HERIKA_SPEECHSTYLE"])&&!empty($GLOBALS["HERIKA_SPEECHSTYLE"])) {
+        if (isset($GLOBALS["HERIKA_SPEECHSTYLE"]) && (!empty($GLOBALS["HERIKA_SPEECHSTYLE"]))) {
             $speechReinforcement="Use <speech_style> for reference.";
         } else
             $speechReinforcement="";
@@ -396,7 +417,7 @@ class openrouterjson
                             $contextDataCopy[]=[
                                     "role"=>"assistant",
                                     "content"=>json_encode($alreadyJs)
-                                ];
+                            ];
                             
                         } else {
                             //error_log("#### ".$element["content"]);
@@ -483,7 +504,7 @@ class openrouterjson
         
         if (!$assistantAppearedInhistory) { // is this still needed?
             
-            if (isset($GLOBALS["CHIM_LLM_EXAMPLES"]) && $GLOBALS["CHIM_LLM_EXAMPLES"]) {
+            if (isset($GLOBALS["CHIM_NO_EXAMPLES"]) && $GLOBALS["CHIM_NO_EXAMPLES"]) {
                 $contextExamples=[];
             } else {
                 // EXAMPLES
@@ -510,7 +531,7 @@ class openrouterjson
                 }
                
                 $contextData=$finalContextDataWithExamples;
-            }
+            }        
         }
 
         $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? : 0.7);
@@ -579,41 +600,41 @@ class openrouterjson
             }
         }
             
-        // Mistral AI API does not support penalty params
-        if ($this->_is_mistral_ai) {
-            unset($data["presence_penalty"]); 
-            unset($data["frequency_penalty"]);
-        } 
-        
-        if ($this->_is_grok) { //Argument not supported on this model: stop
-            unset($data["stop"]); 
-        }  
-
         if ($this->_is_reasoning) { // add parameter to hide <think> content
-            $data["reasoning"] = array ('exclude' => true,'enabled'=>false); // Use reasoning but don't include it in the response
-            error_log("[OPENROUTER]  Excluding reasoning");
+
+            if (!(stripos($this->_model, "x-ai/grok-4.1-fast") === false)) { //x-ai/grok-4.1-fast
+                $data["reasoning"] = array ('exclude' => true, 'enabled' => false); // disable reasoning by default, if _disable_reasoning = false, will be overwritten below
+            }
+            
+            //$data["reasoning"] = array ('exclude' => true, 'enabled' => true); // exclude = true - Use reasoning but don't include it in the response; enabled = false - do not use reasoning
+            if ($this->_disable_reasoning)
+                $data["reasoning"] = array ('exclude' => true, 'enabled' => false); // default value, CoT removed, resoning disabled, fast response
+            else
+                $data["reasoning"] = array ('exclude' => true, 'enabled' => true); // CoT removed, resoning enabled, slow
+            
+            //Logger::debug("[OPENROUTER]  Excluding reasoning");
             //$data["reasoning"] = array ('exclude' => true, 'effort' => 'low'); // reduce reasoning tokens - OpenAI
             //$data["reasoning"] = array ('exclude' => true, 'max_tokens' => 64 ); // reduce reasoning tokens - Anthropic 
             //Logger::debug("reasoning " . $this->_model);
             if (!(stripos($this->_model, "qwen3-") === false)) {//qwen3
                 $data["enable_thinking"] = false;
-            }            
-            if (stripos($this->_model, "grok-3-mini") != false) {//grok-3-mini needs reasoning cand cannot be disabled
+            } elseif (stripos($this->_model, "grok-3-mini") != false) {//grok-3-mini needs reasoning and cannot be disabled
                 $data["reasoning"]["enabled"] = true;
-            }            
-            if (stripos($this->_model, "qwen3-235b-a22b-thinking-2507") != false) {//qwen/qwen3-235b-a22b-thinking-2507 needs reasoning cand cannot be disabled
+            } elseif (stripos($this->_model, "qwen3-235b-a22b-thinking-2507") != false) {//qwen/qwen3-235b-a22b-thinking-2507 needs reasoning cand cannot be disabled
                 $data["reasoning"]["enabled"] = true;
-            }   
-            
-            if ($this->_model=="x-ai/grok-4") {//qwen/qwen3-235b-a22b-thinking-2507 needs reasoning cand cannot be disabled
+            } elseif ($this->_model=="x-ai/grok-4") {// needs reasoning and cannot be disabled 
                 $data["reasoning"]["enabled"] = true;
             }         
         }
         
-        if ($this->_is_openai) {
+        if ($this->_is_mistral_ai) { // Mistral AI API does not support penalty params
+            unset($data["presence_penalty"]); 
+            unset($data["frequency_penalty"]);
+        } elseif ($this->_is_grok) { //Argument not supported on this model: stop
+            unset($data["stop"]); 
+        } elseif ($this->_is_openai) {
             // OpenAI models use max_completion_tokens
-            error_log("[OPENROUTER] Excluding reasoning this->_is_openai");
-
+            //Logger::debug("[OPENROUTER] Excluding reasoning this->_is_openai");
             $data['max_completion_tokens'] = $MAX_TOKENS;
             unset($data['max_tokens']); 
             if ($this->_is_reasoning) {
@@ -634,7 +655,6 @@ class openrouterjson
         if (isset($this->_fallback_models) && (is_array($this->_fallback_models)) && (count($this->_fallback_models) > 0)) {
             $data['models'] = $this->_fallback_models;
         }
-
 
         if (isset($this->_providers_sort) && (in_array($this->_providers_sort,['price','throughput','latency']))) {
             $data['provider']['sort'] = $this->_providers_sort; 
