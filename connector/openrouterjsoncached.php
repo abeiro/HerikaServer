@@ -483,7 +483,9 @@ class openrouterjsoncached
                 foreach ($systemEphemeralSections as $sectionTag) {
                     $extracted = extract_xml_section($systemContentCurrent, $sectionTag);
                     if (!empty(trim($extracted))) {
-                        $extractedSystemDynamic[] = $extracted;
+                        // Keep original XML format with tags
+                        $wrappedSection = "<{$sectionTag}>\n{$extracted}\n</{$sectionTag}>";
+                        $extractedSystemDynamic[] = $wrappedSection;
                         logMessage("[{$this->name}] ✓ Extracted system ephemeral section: <{$sectionTag}> (" . strlen($extracted) . " chars)");
                     } else {
                         logMessage("[{$this->name}] ✗ Section <{$sectionTag}> not found or empty");
@@ -493,7 +495,8 @@ class openrouterjsoncached
                 logMessage("[{$this->name}] System content length after extraction: " . strlen($systemContentCurrent));
                 logMessage("[{$this->name}] Total system ephemeral sections extracted: " . count($extractedSystemDynamic));
                 
-                $dynamicEnvironment = implode("\n\n", $extractedSystemDynamic);
+                // Keep as array for Part 3 to use
+                $dynamicEnvironment = $extractedSystemDynamic;
 
                 // Add custom system instruction before actions and format instruction (but after main system content)
                 $customInstructionPart = !empty($customInstruction) ? "\n" . $customInstruction : '';
@@ -569,7 +572,9 @@ class openrouterjsoncached
                     if (strpos($contentString, "<{$sectionTag}>") !== false) {
                         $extracted = extract_xml_section($contentString, $sectionTag);
                         if (!empty(trim($extracted))) {
-                            $extractedDialogueDynamic[] = $extracted;
+                            // Keep original XML format with tags (matching non-cached behavior)
+                            $wrappedSection = "<{$sectionTag}>\n{$extracted}\n</{$sectionTag}>";
+                            $extractedDialogueDynamic[] = $wrappedSection;
                             $foundEphemeral = true;
                             logMessage("[{$this->name}] Extracted ephemeral dialogue section: <{$sectionTag}>");
                         }
@@ -675,50 +680,43 @@ class openrouterjsoncached
             logMessage("Warning: Calculated cache index is negative ($lastIndex), skipping cache control");
         }
 
-        // Add dynamic environment context if available
-        // Combine system-level dynamic content with dialogue-level ephemeral context
-        // $dynamicEnvironment is a string from Part 2 (system extraction)
+        // Prepare ephemeral sections to insert as separate user messages (matching non-cached behavior)
+        // $dynamicEnvironment is an array from Part 2 (system extraction)
         // $extractedDialogueDynamic is an array from this function (dialogue extraction)
-        $allDynamicParts = [];
         
-        logMessage("[{$this->name}] Dynamic environment param: " . (empty($dynamicEnvironment) ? "EMPTY" : strlen($dynamicEnvironment) . " chars"));
-        logMessage("[{$this->name}] Extracted dialogue dynamic count: " . (isset($extractedDialogueDynamic) ? count($extractedDialogueDynamic) : 0));
+        $allEphemeralSections = [];
         
-        // Add system dynamic content if present
-        if (!empty(trim($dynamicEnvironment)) && !containsOnlySymbols($dynamicEnvironment)) {
-            $allDynamicParts[] = $dynamicEnvironment;
-            logMessage("[{$this->name}] Added system dynamic content to allDynamicParts");
-        }
-        
-        // Add dialogue dynamic content
-        if (isset($extractedDialogueDynamic) && is_array($extractedDialogueDynamic)) {
-            foreach ($extractedDialogueDynamic as $idx => $part) {
-                if (!empty(trim($part)) && !containsOnlySymbols($part)) {
-                    $allDynamicParts[] = $part;
-                    logMessage("[{$this->name}] Added dialogue dynamic part #{$idx}: " . substr($part, 0, 50) . "...");
+        // Add system ephemeral sections
+        if (is_array($dynamicEnvironment) && !empty($dynamicEnvironment)) {
+            foreach ($dynamicEnvironment as $section) {
+                if (!empty(trim($section)) && !containsOnlySymbols($section)) {
+                    $allEphemeralSections[] = $section;
                 }
             }
-        }
-        
-        logMessage("[{$this->name}] Total allDynamicParts count: " . count($allDynamicParts));
-        
-        if (!empty($allDynamicParts)) {
-            $combinedDynamic = implode("\n\n", $allDynamicParts);
-            $text = preg_replace('/^\s*#+.*$/m', '', $combinedDynamic);
-            $text = preg_replace('/^\s*[-•]\s*/', '', $text);
-            $text = preg_replace('/\s+/', ' ', $text);
-            $text = preg_replace('/[.]{2,}/', '.', $text);
-            $finalDynamicEnvironment = trim("ASSISTANT: Environmental Context: $text");
-
-            // Insert before last 2 elements, or at the end if list is too short
-            $insertPosition = max(0, count($completeEventList) - 2);
-            logMessage("[{$this->name}] Inserting dynamic environment at position {$insertPosition} (total list size: " . count($completeEventList) . ")");
-            array_splice($completeEventList, $insertPosition, 0, [array('type' => 'text', 'text' => $finalDynamicEnvironment)]);
-            
-            logMessage("[{$this->name}] Added " . count($allDynamicParts) . " ephemeral sections to dynamic environment");
+            logMessage("[{$this->name}] Added " . count($dynamicEnvironment) . " system ephemeral sections");
         } else {
-            logMessage("[{$this->name}] WARNING: No dynamic parts to add!");
+            logMessage("[{$this->name}] No system ephemeral sections");
         }
+        
+        // Add dialogue ephemeral sections
+        if (isset($extractedDialogueDynamic) && is_array($extractedDialogueDynamic) && !empty($extractedDialogueDynamic)) {
+            foreach ($extractedDialogueDynamic as $section) {
+                if (!empty(trim($section)) && !containsOnlySymbols($section)) {
+                    // Re-wrap with XML tags if not already wrapped
+                    if (!preg_match('/^<[^>]+>/', $section)) {
+                        // This shouldn't happen, but handle it gracefully
+                        $allEphemeralSections[] = $section;
+                    } else {
+                        $allEphemeralSections[] = $section;
+                    }
+                }
+            }
+            logMessage("[{$this->name}] Added " . count($extractedDialogueDynamic) . " dialogue ephemeral sections");
+        } else {
+            logMessage("[{$this->name}] No dialogue ephemeral sections");
+        }
+        
+        logMessage("[{$this->name}] Total ephemeral sections to insert: " . count($allEphemeralSections));
 
         $completeEventList = removeDuplicateMemories($completeEventList);
 
@@ -730,7 +728,22 @@ class openrouterjsoncached
         logMessage("[{$this->name}] completeEventList structure sample (first 3): " . json_encode(array_slice($completeEventList, 0, 3), JSON_PRETTY_PRINT));
         logMessage("[{$this->name}] completeEventList structure sample (last 3): " . json_encode(array_slice($completeEventList, -3), JSON_PRETTY_PRINT));
         
-        // NOW add to finalMessagesToSend after all modifications are complete
+        // Insert ephemeral sections as separate user messages BEFORE dialogue history
+        // Position 1+ (after system message at position 0)
+        foreach ($allEphemeralSections as $ephemeralSection) {
+            $finalMessagesToSend[] = array(
+                'role' => 'user',
+                'content' => array(
+                    array('type' => 'text', 'text' => $ephemeralSection)
+                )
+            );
+        }
+        
+        if (!empty($allEphemeralSections)) {
+            logMessage("[{$this->name}] Inserted " . count($allEphemeralSections) . " ephemeral sections as separate user messages (positions 1-" . count($allEphemeralSections) . ")");
+        }
+        
+        // NOW add dialogue history to finalMessagesToSend after all modifications are complete
         // BUG#3 FIX: Enable prefill for all caching providers, not just Anthropic
         // CRITICAL: Prefill is incompatible with reasoning - only use prefill when thinking is disabled
         if ($this->_responseFormat === 'simple' && !$toggleThinking) {
