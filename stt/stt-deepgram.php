@@ -34,7 +34,10 @@ function stt($filePath)
         $url = "";
         foreach ($keywords as $keyword)
             $url .= "&keyterm=" . urlencode($keyword) . "%3A1";
-        if (stripos("|multi|en|en-US|de|nl|sv|sv-SE|da|da-DK|es|es-419|fr|fr-CA|pt|pt-BR|pt-PT|it|tr|no|id", $stt_lang) === false) { //es, es-419, fr, fr-CA, pt, pt-BR, pt-PT, it, tr, no, id
+        if (stripos("|multi|en|en-US|en-GB|en-IN|en-NZ|".
+            "bg|ca|cs|da|da-DK|de|de-CH|es|es-419|el|et|fi|fr|fr-CA|hi|hu|".
+            "id|it|ja|ko|ko-KR|lv|lt|ms|nl|nl-BE|no|pl|pt|pt-BR|pt-PT|".
+            "ro|ru|sk|sv|sv-SE|tr|uk|vi", $stt_lang) === false) { 
             $stt_lang = 'en';
         }
     } elseif (!(strpos($stt_model, "flux-general") === false)) {// flux-general-en !!! TODO: update web-ui with this new option
