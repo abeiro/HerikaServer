@@ -25,7 +25,34 @@ function terminate() {
         while (@ob_get_level() > 0) 
             @ob_end_flush();
         @flush();
-    }    
+    }
+    
+    if (isset($GLOBALS["SEMAPHORES"])) {
+        $i_level = error_reporting(0);
+        try {
+            $semaphore_main = $GLOBALS["SEMAPHORES"]["MAIN"] ?? null;
+            $semaphore_addnpc = $GLOBALS["SEMAPHORES"]["ADDNPC"] ?? null;
+            $semaphore_vsx = $GLOBALS["SEMAPHORES"]["VSX"] ?? null;
+
+            if (isset($semaphore_main) && $semaphore_main) {
+                @sem_release($semaphore_main);
+                //Logger::warn("[terminate] semaphore_main released - exec trace " .__FILE__ . " " . __LINE__);
+            }
+
+            if (isset($semaphore_addnpc) && $semaphore_addnpc) {
+                @sem_release($semaphore_addnpc);
+                //Logger::warn("[terminate] semaphore_addnpc released - exec trace " .__FILE__ . " " . __LINE__);
+            }
+
+            if (isset($semaphore_vsx) && $semaphore_vsx) {
+                @sem_release($semaphore_vsx);
+                //Logger::warn("[terminate] semaphore_vsx released - exec trace " .__FILE__ . " " . __LINE__);
+            }
+        } finally {
+            error_reporting($i_level);
+        }
+    }
+
     die();
 }
 
