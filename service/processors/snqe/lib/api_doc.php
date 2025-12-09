@@ -26,13 +26,13 @@ speechStyle (string, optional) – How NPC talks (formal, rustic, archaic, etc.,
 disposition (enum, optional) – defiant, submissive, friendly, serious, sad, aggressive, cheerful, distrustful, furious, drunk, high.
 
 * CreateItem(quest_id, item_ref, name, type, location, description, npc_ref)
-Declares a new item for later spawning. **Items in pockets should be spawned too**
+Declares a new item for later spawning or reference. **Items in pockets should be spawned too**
 
 quest_id (string, required) – Quest identifier.
 item_ref (string, required) – Internal item reference ID.
 name (string, required) – Item display name.
 type (enum, required) – sword, armor, helmet, ring, amulet, book, note, axe, long sword, staff, great axe, bow.
-location (enum, required) – "nearby", "major city".
+location (enum, required) – "nearby", "major city", or "location" (dungeons allowed).
 description (string) – Description, or content if item is book or note.
 npc_ref (string, optional) – NPC reference ID to place item in NPC's inventory. If omitted, item will be placed in the world.
 

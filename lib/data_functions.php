@@ -649,10 +649,13 @@ function DataPosibleLocationsToGoWide()
     if ($results) {
         $regCn=$db->escape(trim($results["data"]));
         error_log("select  name  FROM  locations where region ilike'{$regCn}'");
-        $locs = $db->fetchAll("select  name  FROM  locations where region ilike '{$regCn}'");
+        $locs = $db->fetchAll("select  name,tags  FROM  locations where region ilike '{$regCn}'");
         $r=[];
         foreach ($locs as $loc) {
-            $r[]=$loc["name"];
+            if ($loc["tags"])
+                $r[$loc["name"]]=$loc["tags"];
+            else
+                $r[$loc["name"]]="";
 
         }
         return $r;

@@ -921,7 +921,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 'name' => $splitNameBase[0],
                 'formid' => $splitNameBase[1],
                 'region' => $splitNameBase[2],
-                'hold' => $splitNameBase[3]
+                'hold' => $splitNameBase[3],
+                'tags' => $splitNameBase[4]
             )
         );
     }

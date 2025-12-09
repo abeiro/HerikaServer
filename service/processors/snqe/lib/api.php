@@ -366,29 +366,43 @@ function CheckNPCSpawn(
         $npcLocalData                            = $npcMaster->setExtendedData($npcLocalData, $extData);
         $npcMaster->updateByArray($npcLocalData);
 
-        if (isset($npc["disposition"])) {
-            if (in_array($npc["disposition"], ["aggressive"])) {
-
-                $skyrimCmd = new SkyrimCommandBuilder();
-                $json      = $skyrimCmd->Actor->SetAlert("0x{$npcLocalData["refid"]}", 1);
-                $skyrimCmd->send($json);
-            }
-        }
         error_log("[CheckNPCSpawn]\t{$npc["name"]} spawned");
 
         // Only move to player if location is nearby
         if ($npc["location"] == "nearby") {
-            $GLOBALS["db"]->insert(
-                'responselog',
-                [
-                    'localts' => time(),
-                    'sent'    => 0,
-                    'actor'   => "rolemaster",
-                    'text'    => "",
-                    'action'  => "rolecommand|moveToPlayer@{$npc["name"]}@$quest_id",
-                    'tag' => "",
-                ]
-            );
+            // Set Alerted if nearby
+            if (isset($npc["disposition"])) {
+                if (in_array($npc["disposition"], ["aggressive"])) {
+
+                    $skyrimCmd = new SkyrimCommandBuilder();
+                    $json      = $skyrimCmd->Actor->SetAlert("0x{$npcLocalData["refid"]}", 1);
+                    $skyrimCmd->send($json);
+
+                    $GLOBALS["db"]->insert(
+                        'responselog',
+                        [
+                            'localts' => time(),
+                            'sent'    => 0,
+                            'actor'   => "rolemaster",
+                            'text'    => "",
+                            'action'  => "rolecommand|moveToPlayer@{$npc["name"]}@$quest_id@9", // intent 9 = snqe s&d
+                            'tag' => "",
+                        ]
+                    );
+                } else {
+                    $GLOBALS["db"]->insert(
+                        'responselog',
+                        [
+                            'localts' => time(),
+                            'sent'    => 0,
+                            'actor'   => "rolemaster",
+                            'text'    => "",
+                            'action'  => "rolecommand|moveToPlayer@{$npc["name"]}@$quest_id@5", // intent 5 = snqe spawned.
+                            'tag' => "",
+                        ]
+                    );
+                }
+            }
         }
 
     } else {
@@ -450,12 +464,15 @@ function SpawnItem(
     $cn = $GLOBALS["db"]->escape($item["name"]);
     error_log("select count(*) as n from eventlog where type='status_msg'
      and data like '%spawned%@$cn%success%'");
-    $spawned = $GLOBALS["db"]->fetchAll("select count(*) as n from eventlog where type='status_msg'
-     and data like '%spawned%@$cn%success%' ");
+    $spawned = $GLOBALS["db"]->fetchAll("select count(*) as n ,data from eventlog where type='status_msg'
+     and data like '%spawned%@$cn%success%' group by data");
 
-    if (($spawned[0]["n"])) {
+    if ($spawned && ($spawned[0]["n"])) {
+        $msg = explode("@", $spawned[0]["data"]);
+
         error_log("[CheckItemSpawn] Item <{$item["name"]}> already spawned");
         $item["spawned"]                = "done";
+        $item["refid"]                  = $msg[3]; // Store refid
         $quest_data["items"][$item_ref] = $item;
         SNQEQuestManager::updateQuestData($quest_id, ["items" => $quest_data["items"]]);
 
@@ -481,6 +498,7 @@ function SpawnItem(
     $npc_name = null;
     if ($item["npc_ref"] && isset($quest_data["npcs"][$item["npc_ref"]])) {
         $npc_name = $quest_data["npcs"][$item["npc_ref"]]["name"];
+        $item["location"]="pocket";
     }
 
     SkCreateItem($item["type"], $item["name"], $item["location"], $item["description"], $quest_id, $npc_name);
@@ -619,7 +637,7 @@ function MoveToPlayer(
             'sent'    => 0,
             'actor'   => "rolemaster",
             'text'    => "",
-            'action'  => "rolecommand|moveToPlayer@{$npc["name"]}@$quest_id", //@$followStr?
+            'action'  => "rolecommand|moveToPlayer@{$npc["name"]}@$quest_id@" . ($follow ? 7 : 0), // intent 7 = follow player,0 none
             'tag' => "",
         ]
     );
@@ -953,6 +971,11 @@ function WaitToItemBeRecovered(
         SNQEQuestManager::updateQuestData($quest_id, ["items" => $quest_data["items"]]);
         error_log("[WaitToItemBeRecovered] Item <$cn> recovery failed after $maxAttempts attempts");
         return "failed";
+    }
+
+    if ($item["recover_attempts"] % 12 == 0) {
+        // Send hints here
+
     }
 
     // Still pending
@@ -1464,7 +1487,7 @@ function CombatNPC(
 function WaitforCombatEnd(
     string $quest_id,
     string $npc_ref,
-    int $maxAttempts = 100
+    int $maxAttempts = 200
 ): string {
     // Fetch quest state
     $quest = SNQEQuestManager::getQuest($quest_id);
@@ -1538,6 +1561,44 @@ function WaitforCombatEnd(
 
     }
 
+    if ($npc["combat_attempts"] % 15 === 0) {
+        error_log("[WaitforCombatEnd] {$GLOBALS["actors_present"]}");
+
+        if (strpos($GLOBALS["actors_present"], $npc["name"]) !== false) {
+            error_log("[WaitforCombatEnd] MOVING <$cnNpc> still ongoing (attempt {$npc["combat_attempts"]})");
+            $GLOBALS["db"]->insert(
+                'responselog',
+                [
+                    'localts' => time(),
+                    'sent'    => 0,
+                    'actor'   => "rolemaster",
+                    'text'    => "",
+                    'action'  => "rolecommand|moveToPlayer@{$npc["name"]}@$quest_id@0", // intent 5 = snqe spawned.
+                    'tag' => "",
+                ]
+            );
+        } else {
+
+            error_log("[WaitforCombatEnd] {$GLOBALS["actors_present"]}");
+            $npcMaster      = new NpcMaster();
+            $currentNpcData = $npcMaster->getByName($npc["name"]);
+            $unsignedInt    = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
+            $refHexString   = "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
+
+            $GLOBALS["db"]->insert(
+                'responselog',
+                [
+                    'localts' => time(),
+                    'sent'    => 0,
+                    'actor'   => "rolemaster",
+                    'text'    => "",
+                    'action'  => "rolecommand|BackgroundCmd@$refHexString@SeekAndKillPlayer",
+                    'tag'     => '',
+                ]
+            );
+
+        }
+    }
     // Still pending
     error_log("[WaitforCombatEnd] Combat for NPC <$cnNpc> still ongoing (attempt {$npc["combat_attempts"]})");
     $npc["in_combat"]             = "pending";
@@ -1615,6 +1676,71 @@ function WaitForNPCCombatEnd(
         return "done";
     }
 
+    $enemyNPC = $npc_attacker;
+
+    if ($npc_target["disposition"] == "aggressive") {
+        $enemyNPC = $npc_target;
+    }
+
+    if ($npc_attacker["npc_combat_attempts"] % 10 == 0) {
+        $GLOBALS["db"]->insert(
+            'responselog',
+            [
+                'localts' => time(),
+                'sent'    => 0,
+                'actor'   => "rolemaster",
+                'text'    => "",
+                'action'  => "rolecommand|CombatPlayer@{$enemyNPC["name"]}@$quest_id",
+                'tag' => "",
+            ]
+        );
+        // If not present
+        $npcMaster    = new NpcMaster();
+        $npcLocalData = $npcMaster->GetByName($enemyNPC["name"]);
+        $skyrimCmd    = new SkyrimCommandBuilder();
+        $json         = $skyrimCmd->Actor->SetAlert("0x{$npcLocalData["refid"]}", 1);
+        $skyrimCmd->send($json);
+
+    }
+
+    if ($npc_attacker["npc_combat_attempts"] % 15 === 0) {
+        error_log("[WaitforCombatEnd] {$GLOBALS["actors_present"]}");
+        $cnNpc = $npc_attacker["name"];
+        if (strpos($GLOBALS["actors_present"], $npc_attacker["name"]) !== false) {
+            error_log("[WaitforCombatEnd] MOVING <$cnNpc> still ongoing (attempt {$npc_attacker["npc_combat_attempts"]})");
+            $GLOBALS["db"]->insert(
+                'responselog',
+                [
+                    'localts' => time(),
+                    'sent'    => 0,
+                    'actor'   => "rolemaster",
+                    'text'    => "",
+                    'action'  => "rolecommand|moveToPlayer@{$enemyNPC["name"]}@$quest_id@9", // intent 9 = SeekAndDestroy
+                    'tag' => "",
+                ]
+            );
+        } else {
+
+            error_log("[WaitforCombatEnd] [SeekAndKillPlayer] {$GLOBALS["actors_present"]}");
+            $npcMaster      = new NpcMaster();
+            $currentNpcData = $npcMaster->getByName($enemyNPC["name"]);
+            $unsignedInt    = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
+            $refHexString   = "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
+
+            $GLOBALS["db"]->insert(
+                'responselog',
+                [
+                    'localts' => time(),
+                    'sent'    => 0,
+                    'actor'   => "rolemaster",
+                    'text'    => "",
+                    'action'  => "rolecommand|BackgroundCmd@$refHexString@SeekAndKillPlayer",
+                    'tag'     => '',
+                ]
+            );
+
+        }
+    }
     // Exceeded attempts → failure
     if ($npc_attacker["npc_combat_attempts"] >= $maxAttempts) {
         error_log("[WaitForNPCCombatEnd] Combat between <$cnAttacker> and <$cnTarget> did not end after $maxAttempts attempts");
@@ -1779,7 +1905,7 @@ function WaitAtLocation(
     // If npc_ref, also check NPC is present.
 
     if (strpos($GLOBALS["actors_present"], $quest_data["npcs"][$npc_ref]["name"]) === false) {
-        error_log("[WaitAtLocation] Reference NPC <{$quest_data["npcs"][$npc_ref]["name"]}> not present  <$location>");
+        error_log("[WaitAtLocation] Reference NPC <{$quest_data["npcs"][$npc_ref]["name"]}> not present  <$location>,{$GLOBALS["actors_present"]}");
 
         if (! DataActorHasDied($quest_data["npcs"][$npc_ref]["name"])) {
             $atLocation = false;

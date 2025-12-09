@@ -2272,6 +2272,8 @@ if ($checkTableExists("rumors") == -1) {
 
 $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS region text");
 $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS hold text");
+$db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS tags text");
+$db->execQuery("ALTER TABLE sneq_quests ADD COLUMN IF NOT EXISTS title text");
 
 if ($checkTableExists("master_packages") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/master_packages.sql"));

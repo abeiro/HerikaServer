@@ -284,7 +284,7 @@ function askLLMForTopic($npc,$topic,$last_llm_call) {
     $contextData       = array_merge($head, $prompt);
 
     $connectionHandler =$connector->getConnector($currentConnectorData);
-    $buffer=$connectionHandler->fast_request($contextData,["MAX_TOKENS"=>2048],'rolemaster_helper_asktopic');
+    $buffer=$connectionHandler->fast_request($contextData,["MAX_TOKENS"=>2048,"temperature"=>0.7],'rolemaster_helper_asktopic');
     $parsedbuffer=__jpd_decode_lazy($buffer);
     error_log(print_r($buffer,true));
     $res=false;
