@@ -285,7 +285,7 @@ Useful for branching quest logic based on player location.
 
 * CompleteQuest(quest_id, result)
 
-Marks a quest as finished and updates its state. This function is intended to be called as the final step in a quest sequence.
+MANDATORY. Marks a quest as finished and updates its state. This function is intended to be called as the final step in a quest sequence.
 
 quest_id (string, required) – Quest identifier.
 
@@ -446,6 +446,7 @@ if (CheckTopicToPlayer($quest_id, "t_thanks") !="done") {
 // 10. Remove the wizard (optional, NPC says farewell) and we are not going  to need NPC more in the future)
 ToGoAway($quest_id, $npc_ref);
 
+// Mandatory, always end with CompleteQuest
 CompleteQuest($quest_id);
 
 return;

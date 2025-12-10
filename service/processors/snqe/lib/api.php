@@ -21,10 +21,10 @@ function CreateNPC(
     string $quest_id,
     string $npc_ref,
     string $name,
-    string $gender,
-    string $class,
-    string $race,
-    string $location,
+    ?string $gender = '',
+    ?string $class = '',
+    ?string $race = '',
+    ?string $location = '',
     ?string $appearance = null,
     ?string $background = null,
     ?string $speechStyle = null,
@@ -224,9 +224,9 @@ function SpawnNPC(
     $cn  = $GLOBALS["db"]->escape($npc["name"]);
     error_log("[CheckNPCSpawn]\tCheck if character $cn has spawned ");
     error_log("select 1 as n,data from eventlog where type='status_msg'
-        and data like '%spawned@$cn%' order by localts desc");
+        and data like '%spawned@$cn@%' order by localts desc");
     $spawned = $GLOBALS["db"]->fetchOne("select 1 as n,data from eventlog where type='status_msg'
-        and data like '%spawned@$cn%' order by localts desc");
+        and data like '%spawned@$cn@%' order by localts desc");
 
     // Check if spawned in previous session
     if (isset($spawned["n"])) {
@@ -304,9 +304,9 @@ function CheckNPCSpawn(
     $cn = $GLOBALS["db"]->escape($npc["name"]);
     error_log("[CheckNPCSpawn]\tCheck if character $cn has spawned ");
     error_log("select 1 as n,data from eventlog where type='status_msg'
-        and data like '%spawned@$cn%' order by localts desc");
+        and data like '%spawned@$cn@%' order by localts desc");
     $spawned = $GLOBALS["db"]->fetchAll("select 1 as n,data from eventlog where type='status_msg'
-        and data like '%spawned@$cn%' order by localts desc");
+        and data like '%spawned@$cn@%' order by localts desc");
 
     // Pending, deal with timestamps
 
@@ -546,7 +546,22 @@ function CheckItemSpawn(
 
     // Pending, deal with timestamps
     if (! ($spawned[0]["n"])) {
-        error_log("[CheckItemSpawn] Item <{$item["name"]}> not spawned");
+        error_log("[CheckItemSpawn] Item <{$item["name"]}> not spawned after <{$item["spawn_attempts"]}>");
+        $item["spawn_attempts"] = ($item["spawn_attempts"] ?? 0) + 1;
+        $quest_data["items"][$item_ref] = $item;
+
+        SNQEQuestManager::updateQuestData($quest_id, ["items" => $quest_data["items"]]);
+
+        if ($item["spawn_attempts"] % 10 == 0) {
+            $npc_name = null;
+            if ($item["npc_ref"] && isset($quest_data["npcs"][$item["npc_ref"]])) {
+                $npc_name = $quest_data["npcs"][$item["npc_ref"]]["name"];
+                $item["location"]="pocket";
+            }
+            error_log("[CheckItemSpawn] SkCreateItem({$item["type"]}, {$item["name"]}, {$item["location"]}, {$item["description"]}, $quest_id, $npc_name);");
+            SkCreateItem($item["type"], $item["name"], $item["location"], $item["description"], $quest_id, $npc_name);
+        }
+
         return "pending";
     } else {
         $isSpawned = true;
@@ -578,6 +593,8 @@ function CheckItemSpawn(
         SNQEQuestManager::updateQuestData($quest_id, ["items" => $quest_data["items"]]);
         return "failed";
     }
+
+   
 
     // Still pending
     $quest_data["items"][$item_ref] = $item;
@@ -936,8 +953,8 @@ function WaitToItemBeRecovered(
         return "done";
     }
 
-    $sceneNoteDataEsc = $GLOBALS["db"]->escape("Storyline: {$GLOBALS["PLAYER_NAME"]} must recover item <{$item["name"]}>");
-    $sceneNoteData    = "Storyline: {$GLOBALS["PLAYER_NAME"]} must recover item <{$item["name"]}>";
+    $sceneNoteDataEsc = $GLOBALS["db"]->escape("#Storyline: {$GLOBALS["PLAYER_NAME"]} and companions must recover item <{$item["name"]}>");
+    $sceneNoteData    = "#Storyline: {$GLOBALS["PLAYER_NAME"]} and companions  must recover item <{$item["name"]}>";
 
     // Check if row with same data already exists
     $existingRow = $GLOBALS["db"]->fetchOne(
@@ -1056,8 +1073,8 @@ function WaitToItemBeTraded(
         return "done";
     }
 
-    $sceneNoteDataEsc = $GLOBALS["db"]->escape("Storyline: {$GLOBALS["PLAYER_NAME"]} must give item <{$item["name"]}> to {$npc["name"]}");
-    $sceneNoteData    = "Storyline: {$GLOBALS["PLAYER_NAME"]} must give item <{$item["name"]}> to {$npc["name"]}";
+    $sceneNoteDataEsc = $GLOBALS["db"]->escape("#Storyline: {$GLOBALS["PLAYER_NAME"]} must give item <{$item["name"]}> to {$npc["name"]}");
+    $sceneNoteData    = "#Storyline: {$GLOBALS["PLAYER_NAME"]} must give item <{$item["name"]}> to {$npc["name"]}";
 
     // Check if row with same data already exists
     $existingRow = $GLOBALS["db"]->fetchOne(
@@ -1396,7 +1413,12 @@ function CombatPlayer(
         error_log("[CombatPlayer]\tNPC <{$npc["name"]}> already engaged in combat");
         return;
     }
-
+    // Check if NPC is present, if not return early
+    if (strpos($GLOBALS["actors_present"], $npc["name"]) === false) {
+        error_log("[CombatPlayer]\tNPC <{$npc["name"]}> not currently present, deferring combat");
+        return;
+    }
+    
     // Mark as pending combat
     $npc["in_combat"]         = "pending";
     $npc["combat_attempts"]   = 0;
@@ -1846,7 +1868,7 @@ function WaitAtLocation(
             }
         } else {
             error_log("Using Foreground TravelTo");
-            $suggestionText = "{$quest_data["npcs"][$npc_ref]["name"]} should travel to <$location>, (use TravelTo action) ";
+            $suggestionText = "The following step  in the storyline requires {$quest_data["npcs"][$npc_ref]["name"]} to travel to a new location. {$quest_data["npcs"][$npc_ref]["name"]} must explain why this travel is needed.{$quest_data["npcs"][$npc_ref]["name"]} should travel to <$location>, (use TravelTo action). ";
             $GLOBALS["db"]->insert(
                 'responselog',
                 [
@@ -1907,6 +1929,64 @@ function WaitAtLocation(
     if (strpos($GLOBALS["actors_present"], $quest_data["npcs"][$npc_ref]["name"]) === false) {
         error_log("[WaitAtLocation] Reference NPC <{$quest_data["npcs"][$npc_ref]["name"]}> not present  <$location>,{$GLOBALS["actors_present"]}");
 
+         if ($quest_data["location_wait"][$wait_key]["attempts"] % 25 == 0 ) { // Background command if NPC is not around
+            
+             if ($npc_ref && isset($quest_data["npcs"][$npc_ref])) {
+                $npcMaster      = new NpcMaster();
+                $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
+                $unsignedInt    = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
+                $refHexString   = "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
+
+                $locs = $GLOBALS["db"]->fetchOne("SELECT * FROM locations where name='" . $GLOBALS["db"]->escape($location) . "' LIMIT 1");
+
+                if ($locs) {
+                    $GLOBALS["db"]->insert(
+                        'responselog',
+                        [
+                            'localts' => time(),
+                            'sent'    => 0,
+                            'actor'   => "rolemaster",
+                            'text'    => "",
+                            'action'  => "rolecommand|BackgroundCmd@$refHexString@TravelTo/{$locs["formid"]}",
+                            'tag' => '',
+                        ]
+                    );
+
+                    //$GLOBALS["last_gamets"]
+
+                    $GLOBALS["db"]->insert(
+                        'eventlog',
+                        [
+                            'ts'     => $GLOBALS["last_ts"],
+                            'gamets' => $GLOBALS["last_gamets"],
+                            'type'   => "infoaction",
+                            'data'   => "The Narrator: {$currentNpcData["npc_name"]} starts travelling to $location",
+                            'sess'     => time(),
+                            'localts'  => time(),
+                            'people'   => $GLOBALS["actors_present"],
+                            'location' => "",
+                            'party'    => "",
+                        ]
+                    );
+
+                    // Insert actions_issued log entry
+                    $GLOBALS["db"]->insert(
+                        'actions_issued',
+                        [
+                            'action'    => "TravelTo",
+                            'fullcall'  => "TravelTo:$location",
+                            'actorname' => $currentNpcData["npc_name"],
+                            'ts'        => $GLOBALS["last_ts"],
+                            'gamets'    => $GLOBALS["gamets"],
+                            'localts'   => time(),
+                            'original'  => 'backgroundaction',
+                        ]
+                    );
+                }
+            }
+            
+        }
+
         if (! DataActorHasDied($quest_data["npcs"][$npc_ref]["name"])) {
             $atLocation = false;
         }
@@ -1921,7 +2001,7 @@ function WaitAtLocation(
         return "done";
     } else {
 
-        $sceneNoteData    = "Storyline: {$GLOBALS["PLAYER_NAME"]} should travel to <$location>, next scene will happen there";
+        $sceneNoteData    = "#Storyline: {$GLOBALS["PLAYER_NAME"]} and companions should travel to <$location>, next scene will happen there";
         $sceneNoteDataEsc = $GLOBALS["db"]->escape($sceneNoteData);
         // Check if row with same data already exists
         $existingRow = $GLOBALS["db"]->fetchOne(

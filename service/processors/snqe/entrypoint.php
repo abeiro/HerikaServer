@@ -28,6 +28,8 @@ $GLOBALS["TASKS"]["snqe"]["fn"]=function() {
             require_once("cmd" . DIRECTORY_SEPARATOR . "main.php");
         } else if ($GLOBALS["argv"][2]=="reset") {
             $GLOBALS["db"]->execQuery("update sneq_quests set quest_data='{}',quest_run_state='not started'");
+        } else if ($GLOBALS["argv"][2]=="clean") {
+            $GLOBALS["db"]->execQuery("truncate sneq_quests");
         }
     }
 
