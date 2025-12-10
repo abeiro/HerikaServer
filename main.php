@@ -190,26 +190,52 @@ if (isset($GLOBALS["external_fast_commands"])) {
     $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
 }
 
+$GLOBALS["all_fast_commands"] = $fast_commands;
+
+$semaphore_timeout = $GLOBALS["SEMAPHORES_TIMEOUT"] ?? 300;
+$semaphoreKey = abs(crc32(__FILE__));
+$semaphore = sem_get($semaphoreKey); 
+$GLOBALS["SEMAPHORES"]["MAIN"] = $semaphore;
+
 if (!in_array($gameRequest[0],$fast_commands)) {
-    $semaphoreKey =abs(crc32(__FILE__));
-    $semaphore = sem_get($semaphoreKey);
-    
+    //$semaphoreKey = abs(crc32(__FILE__));
+    //$semaphore = sem_get($semaphoreKey); //if this semaphore is used elsewhere as it is now, better to be created outside if block
+    $ix = 0;  
+    $t0 = time();    
     while (sem_acquire($semaphore,true)!=true)  {
-        //error_log("Audit: Waiting for lock: {$gameRequest[0]}");
-        usleep(1000);
+        $ix++;
+        if ($ix > 2000) {
+            $dt = time() - $t0; 
+            if ($dt > $semaphore_timeout) {  
+                Logger::warn("[main] main semaphore loop break after {$dt} sec in " .__FILE__ . " " . __LINE__); // debug
+                terminate();
+            } else $ix = 0;
+        }
+        //Logger::info("Audit: Waiting for lock: {$gameRequest[0]}");
+        usleep(1003);
     }
     Logger::info("Audit:Lock acquired by {$gameRequest[0]}");
 } 
 
 // adnpc has its custom semaphore, as it write files
 if (in_array($gameRequest[0],["addnpc"])) {
-    $semaphoreKey2 =abs(crc32(__FILE__."_secondary"));
+    $semaphoreKey2 = abs(crc32(__FILE__."_secondary"));
     $semaphore2 = sem_get($semaphoreKey2);
+    $GLOBALS["SEMAPHORES"]["ADDNPC"] = $semaphore2;
+    $ix = 0;
+    $t0 = time();    
     while (sem_acquire($semaphore2,true)!=true)  {
-        usleep(100);
+        $ix++;
+        if ($ix > 20000) {
+            $dt = time() - $t0;
+            if ($dt > $semaphore_timeout) {
+                Logger::warn("[main] addnpc semaphore loop break after {$dt} sec in " .__FILE__ . " " . __LINE__); // debug
+                terminate();
+            } else $ix = 0;
+        }
+        usleep(101);
     }
 } 
-
 
 if (($gameRequest[0]=="playerinfo")||(($gameRequest[0]=="newgame"))) {
     sleep(1);   // Give time to populate data
@@ -897,7 +923,7 @@ if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
         
         // Check if the timestamp exists in the database
         if (!empty($narratorRecord)) {
-            $lastTrigger = (int) $narratorRecord[0]['value'];
+            $lastTrigger = intval($narratorRecord[0]['value'] ?? 0);
             $timeElapsed = time() - $lastTrigger;
 
             if ($timeElapsed < $cooldownPeriod) {
@@ -926,7 +952,8 @@ if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
 
 // Fake entry to mark time passing when bored event
 if (in_array($gameRequest[0],["bored"])) {
-    if (($localGameRequest[2]-GetLastSpeechTs())> (( 1 /0.0000024)) ) {
+    //Loggar::trace(" bored event - exec trace"); // debug
+    if ((($gameRequest[2] ?? 0)-GetLastSpeechTs()) > 416667) { // 1/0.0000024 = 416667 
         $localGameRequest=$gameRequest;
         $localGameRequest[0]="infoaction";
             $localGameRequest[3].=". (Time passes without anyone in the group talking) ";
@@ -1057,16 +1084,28 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         Logger::info("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
         // Check if this conflicts with smart rechat
         // Is this doing something?
-        while (sem_acquire($semaphore,true)!=true)  {
-            $user_input_after=$db->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]");
-            if (isset($user_input_after[0]))
+        $semaphore_timeout = $GLOBALS["SEMAPHORES_TIMEOUT"] ?? 300;
+        $ix = 0;
+        $t0 = time();
+        while (sem_acquire($semaphore,true) != true)  {
+            //$user_input_after=$db->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]"); // 72 ms 
+            $user_input_after=$db->fetchAll("SELECT rowid as N FROM eventlog WHERE type='user_input' AND ts>{$gameRequest[1]} ORDER BY rowid DESC LIMIT 1 "); // faster, 1.5 ms
+            if (isset($user_input_after[0])) {
                 if (isset($user_input_after[0]["N"]))
-                    if ($user_input_after[0]["N"]>0) {
-                        Logger::info("Generation stopped because user_input. ".__LINE__);
+                    if (intval($user_input_after[0]["N"])>0) {
+                        Logger::warn("[main] rechat event - generation stopped because user_input. " .__FILE__ . " " . __LINE__); // debug
                         terminate();
                     }
-
-            usleep(100);
+            }
+            $ix++; 
+            if ($ix > 1000) { 
+                $dt = time() - $t0; 
+                if ($dt > $semaphore_timeout) { // 
+                    Logger::warn("[main] rechat event - semaphore loop break after {$dt} sec in " .__FILE__ . " " . __LINE__); // debug
+                    terminate();
+                } else $ix = 0;
+            } 
+            usleep(1007);
         }
     }
 
@@ -1310,6 +1349,7 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
 
 // Check if this event  has been disabled 
 if (isset($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])) {
+    //Logger::warn(" event=".$gameRequest[0]." use=". (!($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"]) ? "Y" : "N") ." - exec trace"); // debug
     if ($GLOBALS["PROMPTS"][$gameRequest[0]]["extra"]["dontuse"])
         terminate();
 }
@@ -1958,9 +1998,14 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
 if (isset($semaphore) && $semaphore)
     sem_release($semaphore);
 
+if (isset($semaphore2) && $semaphore2)
+    sem_release($semaphore2);
+
+
 while(!getenv("PHPUNIT_TEST") && ob_get_length() && ob_end_flush());
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"prepostrequest.php");
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"postrequest.php");
+
 
 ?>
