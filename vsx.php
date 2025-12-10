@@ -34,9 +34,21 @@ $voicelogic = $GLOBALS["TTS"]["XTTSFASTAPI"]["voicelogic"];
 
 // Lock
 $semaphoreKey2 = abs(crc32(__FILE__));
-$semaphore     = sem_get($semaphoreKey2);
-while (sem_acquire($semaphore, true) != true) {
-    usleep(10);
+$semaphore = sem_get($semaphoreKey2);
+$GLOBALS["SEMAPHORES"]["VSX"] = $semaphore;
+$semaphore_timeout = $GLOBALS["SEMAPHORES_TIMEOUT"] ?? 300;
+$ix = 0;
+$t0 = time();    
+while (sem_acquire($semaphore,true) != true)  {
+    $ix++;
+    if ($ix > 20000) {
+        $dt = time() - $t0; 
+        if ($dt > $semaphore_timeout) {  
+            Logger::warn("[vsx] semaphore loop break after {$dt} sec in " .__FILE__ . " " . __LINE__); // debug
+            terminate();
+        } else $ix = 0;
+    }
+    usleep(47); 
 }
 
 if ($voicelogic === 'voicetype' || true) { // force 
