@@ -162,7 +162,22 @@ require_once(__DIR__ . DIRECTORY_SEPARATOR . "../../profile_loader.php");
                         echo '<li style="margin-bottom: 10px;"><strong>500 = Internal Server Error</strong><ul style="margin-left: 20px; list-style-type: disc;"><li>The server is experiencing issues.</li></ul></li>';
                         echo '<li style="margin-bottom: 10px;"><strong>LLM Response is Empty</strong><ul style="margin-left: 20px; list-style-type: disc;"><li>Ensure your account has credits.</li></ul></li>';
                         echo '<li style="margin-bottom: 10px;"><strong>Response fails in-game</strong><ul style="margin-left: 20px; list-style-type: disc;"><li>Check server logs for token limits.</li></ul></li>';
+                        echo '<li style="margin-bottom: 10px;"><strong>Cached Connector Empty Response</strong><ul style="margin-left: 20px; list-style-type: disc;"><li>Test prompts may be too short - Anthropic requires 1024+ tokens before cache markers.</li><li>Check Request Payload below for cache_control markers.</li><li>In-game usage has sufficient tokens and should work normally.</li></ul></li>';
                         echo '</ul>';
+                        
+                        // Display HTTP error details if available
+                        if (!empty($GLOBALS['DEBUG_DATA']['error'])) {
+                            echo '<div class="status"><span class="label">HTTP Error Details:</span></div>';
+                            echo '<pre>';
+                            $err = $GLOBALS['DEBUG_DATA']['error'];
+                            if (isset($err['http_status'])) echo 'HTTP Status: ' . htmlspecialchars($err['http_status']) . "\n";
+                            if (isset($err['message'])) echo 'Message: ' . htmlspecialchars($err['message']) . "\n";
+                            if (isset($err['http_body']) && !empty($err['http_body'])) {
+                                echo "\nResponse Body:\n" . htmlspecialchars($err['http_body']) . "\n";
+                            }
+                            echo '</pre>';
+                        }
+                        
                         if ($hasErrors) {
                             echo '<div class="status"><span class="label">Errors captured:</span></div>';
                             echo '<pre>';

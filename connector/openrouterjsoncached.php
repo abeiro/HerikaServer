@@ -502,9 +502,29 @@ class openrouterjsoncached
                 $customInstructionPart = !empty($customInstruction) ? "\n" . $customInstruction : '';
                 $finalSend = $systemContentCurrent . $customInstructionPart . "\n" . $actionsText;
 
+                // Estimate tokens for cache validation (rough estimate: 1 token ≈ 4 characters)
+                $estimatedTokens = intval(strlen($finalSend) / 4);
+                $minTokensForCache = ($this->_provider_caching === "Anthropic") ? 1024 : 
+                                    (($this->_provider_caching === "Gemini") ? 32 : 0);
+                
+                logMessage("[{$this->name}] System message estimated tokens: {$estimatedTokens}, min for caching: {$minTokensForCache}");
+                
                 $content = ['type' => 'text', 'text' => $finalSend];
+                
+                // Only apply cache_control if we meet minimum threshold
+                // For Anthropic, if below threshold, don't apply cache at all
+                $applyCacheControl = true;
                 if ($this->_provider_caching !== "OpenAI") {
-                    $content['cache_control'] = $cacheControlType;
+                    if ($this->_provider_caching === "Anthropic" && $estimatedTokens < $minTokensForCache) {
+                        $applyCacheControl = false;
+                        logMessage("[{$this->name}] ⚠️ WARNING: System message too short for Anthropic caching ({$estimatedTokens} < {$minTokensForCache} tokens). Skipping cache_control to avoid errors. This is normal for tests but should not happen in production.");
+                    } else if ($estimatedTokens >= $minTokensForCache || $minTokensForCache === 0) {
+                        logMessage("[{$this->name}] ✓ Cache control will be applied to system message");
+                    }
+                    
+                    if ($applyCacheControl) {
+                        $content['cache_control'] = $cacheControlType;
+                    }
                 }
                 $systemEntries[] = array("role" => "system", "content" => array($content));
             }
@@ -960,9 +980,78 @@ class openrouterjsoncached
             $error = error_get_last();
             $errMsg = isset($error['message']) ? $error['message'] : 'fopen returned false';
             logMessage("Stream Open Fail [{$this->name}:{$herikaName}]: {$errMsg}");
+            
+            // Try to extract HTTP response for better error reporting
+            $httpStatus = 'Unknown';
+            $httpBody = '';
             if (isset($http_response_header) && is_array($http_response_header)) {
                 logMessage("HTTP Headers on fail: " . implode("\n", $http_response_header));
+                
+                // Parse status code from first header
+                if (isset($http_response_header[0])) {
+                    preg_match('/HTTP\/\d\.\d\s+(\d+)/', $http_response_header[0], $matches);
+                    if (isset($matches[1])) {
+                        $httpStatus = $matches[1];
+                    }
+                }
+                
+                // Try to read error body if it's a 4xx or 5xx error
+                if ($httpStatus >= 400 && function_exists('curl_init')) {
+                    try {
+                        $ch = curl_init($this->_url);
+                        if ($ch !== false) {
+                            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                            curl_setopt($ch, CURLOPT_POST, true);
+                            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+                            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                            $httpBody = curl_exec($ch);
+                            curl_close($ch);
+                            if ($httpBody !== false && !empty($httpBody)) {
+                                logMessage("HTTP Error Body: " . $httpBody);
+                            }
+                        }
+                    } catch (Exception $e) {
+                        logMessage("Failed to fetch error body: " . $e->getMessage());
+                    }
+                }
             }
+            
+            // Store error for debugging
+            if (!isset($GLOBALS["DEBUG_DATA"])) {
+                $GLOBALS["DEBUG_DATA"] = array();
+            }
+            $GLOBALS["DEBUG_DATA"]["error"] = [
+                'message' => $errMsg,
+                'http_status' => $httpStatus,
+                'http_body' => $httpBody,
+                'http_headers' => $http_response_header ?? []
+            ];
+            
+            return null;
+        }
+
+        // Check HTTP status code - same as openrouterjson
+        $status_code = $this->getHttpStatusCode();
+        if ($status_code && $status_code >= 300) {
+            $response = stream_get_contents($this->primary_handler);
+            $error_message = "Request to {$this->name} connector failed with HTTP {$status_code}.\nResponse body: {$response}.\nModel: {$this->_model}";
+            logMessage($error_message);
+            trigger_error($error_message, E_USER_WARNING);
+            
+            // Store error for debugging
+            if (!isset($GLOBALS["DEBUG_DATA"])) {
+                $GLOBALS["DEBUG_DATA"] = array();
+            }
+            $GLOBALS["DEBUG_DATA"]["error"] = [
+                'message' => $error_message,
+                'http_status' => $status_code,
+                'http_body' => $response,
+                'model' => $this->_model
+            ];
+            
+            fclose($this->primary_handler);
+            $this->primary_handler = null;
             return null;
         }
 
@@ -1545,10 +1634,12 @@ class openrouterjsoncached
             logMessage("[{$this->name}:{$herikaName}] Close Log Err: " . $e->getMessage());
         }
 
+        $bufferToReturn = $this->_buffer;
         $this->_rawbuffer = "";
         $this->_forcedClose = false;
 
-        return "";
+        // Return the buffer like openrouterjson does
+        return $bufferToReturn;
     }
 
     public function processActions() {
