@@ -486,6 +486,17 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
 
                     <label for='dialogue_cache_uncached_count'><span class='tip-label' data-tip='Number of most recent dialogue entries to keep uncached (0-10)'>Uncached Dialogue Count</span></label><br>
                     <input type='number' name='metadata[dialogue_cache_uncached_count]' id='dialogue_cache_uncached_count' value='<?= htmlspecialchars($metadata['dialogue_cache_uncached_count'] ?? '4') ?>' min='0' max='10' step='1'><br>
+                    
+                    <label for='max_dialogue_cache_context_size'><span class='tip-label' data-tip='Maximum dialogue history items to include in cache (0-300). Lower values improve cache freshness.'>Max Cached Dialogue History</span></label><br>
+                    <input type='number' name='metadata[max_dialogue_cache_context_size]' id='max_dialogue_cache_context_size' value='<?= htmlspecialchars($metadata['max_dialogue_cache_context_size'] ?? '93') ?>' min='0' max='300' step='1'><br>
+                    
+                    <div style="margin-top:12px;">
+                        <label class="label-with-toggle"><span class='tip-label' data-tip='Force apply cache_control markers even if content is below token threshold. Use for testing or if you want to see cache markers in logs regardless of size.'>Force Cache Control (Debug)</span>
+                            <input type="hidden" name="metadata[force_cache_control]" value="0">
+                            <input type="checkbox" name="metadata[force_cache_control]" value="1" <?= ($metadata['force_cache_control'] ?? false) ? 'checked' : '' ?>>
+                            <span class="toggle-text">Off</span>
+                        </label>
+                    </div>
 
                     <div style="margin-top:12px;">
                         <label class="label-with-toggle"><span class='tip-label' data-tip='Recommended ON for advanced models (Claude 3.5, GPT-4, Gemini 2.0). Uses minimal quality instructions. Turn OFF for older/smaller models that benefit from explicit guidance.'>Minimize Quality Instructions (Recommended)</span>
@@ -1560,6 +1571,17 @@ if (typeof window.consolidation !== 'function') {
 
                 <label for='dialogue_cache_uncached_count_main'><span class='tip-label' data-tip='Number of most recent dialogue entries to keep uncached (0-10)'>Uncached Dialogue Count</span></label><br>
                 <input type='number' name='metadata[dialogue_cache_uncached_count]' id='dialogue_cache_uncached_count_main' value='<?= htmlspecialchars($metadata_main['dialogue_cache_uncached_count'] ?? '4') ?>' min='0' max='10' step='1'><br>
+                
+                <label for='max_dialogue_cache_context_size_main'><span class='tip-label' data-tip='Maximum dialogue history items to include in cache (0-300). Lower values improve cache freshness.'>Max Cached Dialogue History</span></label><br>
+                <input type='number' name='metadata[max_dialogue_cache_context_size]' id='max_dialogue_cache_context_size_main' value='<?= htmlspecialchars($metadata_main['max_dialogue_cache_context_size'] ?? '93') ?>' min='0' max='300' step='1'><br>
+                
+                <div style="margin-top:12px;">
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Force apply cache_control markers even if content is below token threshold. Use for testing or if you want to see cache markers in logs regardless of size.'>Force Cache Control (Debug)</span>
+                        <input type="hidden" name="metadata[force_cache_control]" value="0">
+                        <input type="checkbox" name="metadata[force_cache_control]" value="1" <?= ($metadata_main['force_cache_control'] ?? false) ? 'checked' : '' ?>>
+                        <span class="toggle-text">Off</span>
+                    </label>
+                </div>
 
                 <div style="margin-top:12px;">
                     <label class="label-with-toggle"><span class='tip-label' data-tip='Recommended ON for advanced models (Claude 3.5, GPT-4, Gemini 2.0). Uses minimal quality instructions. Turn OFF for older/smaller models that benefit from explicit guidance.'>Minimize Quality Instructions (Recommended)</span>

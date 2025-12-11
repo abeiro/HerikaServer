@@ -47,6 +47,7 @@ class openrouterjsoncached
     private $_timeout;
     private $_is_grok;
     private $_lastStreamedObject;
+    private $_finalUsageStats;
 
     // Caching-specific properties
     private $_provider_caching;
@@ -309,7 +310,10 @@ class openrouterjsoncached
         // Model can be overridden by custom params
         $this->_model = isset($customParms["model"]) ? $customParms["model"] : $this->_model;
 
-        $max_dialogue_cache_size = intval(isset($GLOBALS["CONNECTOR"][$this->name]["max_dialogue_cache_context_size"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_dialogue_cache_context_size"] : $n_ctxsize * 4);
+        // Max dialogue cache size - CHIM CACHE uses 93 as default for optimal cache freshness
+        $max_dialogue_cache_size = isset($GLOBALS["CONNECTOR"][$this->name]["max_dialogue_cache_context_size"]) 
+            ? intval($GLOBALS["CONNECTOR"][$this->name]["max_dialogue_cache_context_size"]) 
+            : 93;
         $customInstruction = isset($GLOBALS["CONNECTOR"][$this->name]["custom_system_instruction"]) ? $GLOBALS["CONNECTOR"][$this->name]["custom_system_instruction"] : '';
         $lastCustomInstruction = isset($GLOBALS["CONNECTOR"][$this->name]["custom_last_instruction"]) ? $GLOBALS["CONNECTOR"][$this->name]["custom_last_instruction"] : '';
 
@@ -405,16 +409,16 @@ class openrouterjsoncached
 
         $zonosTones = (isset($GLOBALS["TTSFUNCTION"]) && $GLOBALS["TTSFUNCTION"] == "zonos_gradio") ? " (Response tones are mandatory in the response)" : "";
 
-        // Build actions list if enabled
+        // Build actions list if enabled - wrap in XML tags for extraction
         $availableActions = "";
         if ($this->_includeActions && isset($GLOBALS["COMMAND_PROMPT"])) {
-            $availableActions = preg_replace('/\(available targets:[^\n]*/', '', $GLOBALS["COMMAND_PROMPT"]);
+            $actionsContent = preg_replace('/\(available targets:[^\n]*/', '', $GLOBALS["COMMAND_PROMPT"]);
+            // Wrap in XML tags so it can be extracted as ephemeral section
+            $availableActions = "<available_actions_list>\n" . $actionsContent . "\n</available_actions_list>";
         }
 
         // Build response format instruction based on format type
         $formatInstruction = "";
-        error_log("[{$this->name}] CRITICAL DEBUG - Building format instruction for: {$this->_responseFormat}");
-
         if ($this->_responseFormat === 'json') {
             $template = isset($GLOBALS["responseTemplate"]) ? $GLOBALS["responseTemplate"] : [];
 
@@ -446,14 +450,15 @@ class openrouterjsoncached
             error_log("[{$this->name}] CRITICAL DEBUG - Simple format instruction created");
         }
 
-        $actionsText = "";
-        if (!empty($availableActions)) {
-            $actionsText .= "\n" . $availableActions . "\n";
-        }
-        // For simple format, format instruction goes with user prompt, not system
-        // For JSON format, it stays in system message
+        // Actions and format instructions will be sent as separate user messages
+        // This prevents them from invalidating the system message cache
+        $actionsToSend = $availableActions; // Already wrapped in XML tags
+        $formatInstructionToSend = "";
+        
+        // For JSON format, format instruction will be sent separately
+        // For simple format, it goes with user prompt (handled in Part 3)
         if ($this->_responseFormat === 'json') {
-            $actionsText .= $formatInstruction;
+            $formatInstructionToSend = $formatInstruction;
         }
 
         $dynamicEnvironment = "";
@@ -471,14 +476,21 @@ class openrouterjsoncached
                 }
 
                 $systemContentCurrent = trim($systemContentString);
-
-                logMessage("[{$this->name}] System content length before extraction: " . strlen($systemContentCurrent));
+                
+                // CRITICAL: Normalize XML tag formatting for stable cache hash
+                // Issue: Sometimes tags are inline "text</tag>", sometimes separate "text\n</tag>"
+                // Solution: Force all closing tags to be on their own line
+                $systemContentCurrent = preg_replace('/([^\n>])(<\/[^>]+>)/', "$1\n$2", $systemContentCurrent); // Closing tags on own line
+                
+                // Normalize whitespace BEFORE extraction to ensure stability
+                $systemContentCurrent = preg_replace('/\r\n/', "\n", $systemContentCurrent);        // Unix line endings
+                $systemContentCurrent = preg_replace('/[ \t]+\n/', "\n", $systemContentCurrent);    // Remove trailing spaces
+                $systemContentCurrent = preg_replace('/\n{3,}/', "\n\n", $systemContentCurrent);    // Max 2 newlines
+                $systemContentCurrent = trim($systemContentCurrent);
 
                 // Extract ephemeral sections from system prompt using centralized config
                 $systemEphemeralSections = getEphemeralSectionsBySource('system');
                 $extractedSystemDynamic = [];
-                
-                logMessage("[{$this->name}] System ephemeral sections to extract: " . implode(", ", $systemEphemeralSections));
                 
                 foreach ($systemEphemeralSections as $sectionTag) {
                     $extracted = extract_xml_section($systemContentCurrent, $sectionTag);
@@ -486,9 +498,6 @@ class openrouterjsoncached
                         // Keep original XML format with tags
                         $wrappedSection = "<{$sectionTag}>\n{$extracted}\n</{$sectionTag}>";
                         $extractedSystemDynamic[] = $wrappedSection;
-                        logMessage("[{$this->name}] ✓ Extracted system ephemeral section: <{$sectionTag}> (" . strlen($extracted) . " chars)");
-                    } else {
-                        logMessage("[{$this->name}] ✗ Section <{$sectionTag}> not found or empty");
                     }
                 }
                 
@@ -498,33 +507,49 @@ class openrouterjsoncached
                 // Keep as array for Part 3 to use
                 $dynamicEnvironment = $extractedSystemDynamic;
 
-                // Add custom system instruction before actions and format instruction (but after main system content)
+                // Add custom system instruction (but NOT actions/format - those go separately)
                 $customInstructionPart = !empty($customInstruction) ? "\n" . $customInstruction : '';
-                $finalSend = $systemContentCurrent . $customInstructionPart . "\n" . $actionsText;
+                $finalSend = $systemContentCurrent . $customInstructionPart;
 
-                // Estimate tokens for cache validation (rough estimate: 1 token ≈ 4 characters)
-                $estimatedTokens = intval(strlen($finalSend) / 4);
+                // Apply same normalization rules to final combined message
+                $finalSend = preg_replace('/([^\n>])(<\/[^>]+>)/', "$1\n$2", $finalSend);    // Closing tags on own line
+                $finalSend = preg_replace('/\r\n/', "\n", $finalSend);                      // Unix line endings
+                $finalSend = preg_replace('/[ \t]+\n/', "\n", $finalSend);                  // Remove trailing spaces
+                $finalSend = preg_replace('/\n{3,}/', "\n\n", $finalSend);                  // Max 2 newlines
+                $finalSend = trim($finalSend);
+
+                // Improved token estimation using word count (1.3 words ≈ 1 token for English)
+                $words = preg_split('/\s+/', trim($finalSend), -1, PREG_SPLIT_NO_EMPTY);
+                $wordCount = count($words);
+                $estimatedTokens = intval($wordCount / 1.3); // More accurate than character-based estimate
+                $charBasedEstimate = intval(strlen($finalSend) / 4); // Keep for comparison
+                
                 $minTokensForCache = ($this->_provider_caching === "Anthropic") ? 1024 : 
                                     (($this->_provider_caching === "Gemini") ? 32 : 0);
                 
-                logMessage("[{$this->name}] System message estimated tokens: {$estimatedTokens}, min for caching: {$minTokensForCache}");
+                // Generate cache content hash for debugging
+                $cacheHash = substr(md5($finalSend), 0, 8);
+                
+                logMessage("[{$this->name}] ═══ SYSTEM MESSAGE CACHE STATS ═══");
+                logMessage("[{$this->name}] Character: {$herikaName}");
+                logMessage("[{$this->name}] Content Hash: {$cacheHash} (if this changes between requests, cache won't hit!)");
+                logMessage("[{$this->name}] Words: {$wordCount}, Estimated Tokens: {$estimatedTokens}, Chars: " . strlen($finalSend));
+                logMessage("[{$this->name}] Min for cache: {$minTokensForCache} tokens");
+                logMessage("[{$this->name}] ═══════════════════════════════════");
                 
                 $content = ['type' => 'text', 'text' => $finalSend];
                 
-                // Only apply cache_control if we meet minimum threshold
-                // For Anthropic, if below threshold, don't apply cache at all
+                // Check if force cache control is enabled (debug setting)
+                $forceCacheControl = isset($GLOBALS["CONNECTOR"][$this->name]["force_cache_control"]) && 
+                                    $GLOBALS["CONNECTOR"][$this->name]["force_cache_control"];
+                
                 $applyCacheControl = true;
+                $tokenThreshold = intval($minTokensForCache * 0.9); // 90% threshold for warnings
+                
                 if ($this->_provider_caching !== "OpenAI") {
-                    if ($this->_provider_caching === "Anthropic" && $estimatedTokens < $minTokensForCache) {
-                        $applyCacheControl = false;
-                        logMessage("[{$this->name}] ⚠️ WARNING: System message too short for Anthropic caching ({$estimatedTokens} < {$minTokensForCache} tokens). Skipping cache_control to avoid errors. This is normal for tests but should not happen in production.");
-                    } else if ($estimatedTokens >= $minTokensForCache || $minTokensForCache === 0) {
-                        logMessage("[{$this->name}] ✓ Cache control will be applied to system message");
-                    }
-                    
-                    if ($applyCacheControl) {
-                        $content['cache_control'] = $cacheControlType;
-                    }
+                    // Apply cache_control regardless of size - let provider decide
+                    $content['cache_control'] = $cacheControlType;
+                    logMessage("[{$this->name}] Applied cache_control to system message ({$estimatedTokens} tokens)");
                 }
                 $systemEntries[] = array("role" => "system", "content" => array($content));
             }
@@ -551,14 +576,16 @@ class openrouterjsoncached
         return $this->_openPart3($contextData, $customParms, $herikaName, $MAX_TOKENS, $max_dialogue_cache_size,
                                   $lastCustomInstruction, $toggleThinking, $thinkingTokens, $effort_level,
                                   $CONTEXTHISTORY, $dialogue_cache_uncached_count, $start_time,
-                                  $finalMessagesToSend, $cacheCombinedDialogueFile, $cacheControlType, $dynamicEnvironment, $formatInstruction);
+                                  $finalMessagesToSend, $cacheCombinedDialogueFile, $cacheControlType, $dynamicEnvironment, 
+                                  $formatInstructionToSend, $actionsToSend);
     }
 
     // Part 3: Dialogue History Caching and Cache Control Placement
     private function _openPart3($contextData, $customParms, $herikaName, $MAX_TOKENS, $max_dialogue_cache_size,
                                  $lastCustomInstruction, $toggleThinking, $thinkingTokens, $effort_level,
                                  $CONTEXTHISTORY, $dialogue_cache_uncached_count, $start_time,
-                                 $finalMessagesToSend, $cacheCombinedDialogueFile, $cacheControlType, $dynamicEnvironment, $formatInstruction) {
+                                 $finalMessagesToSend, $cacheCombinedDialogueFile, $cacheControlType, $dynamicEnvironment, 
+                                 $formatInstructionToSend, $actionsToSend) {
 
         // Process dialogue history
         $contentTextToSend = [];
@@ -596,7 +623,6 @@ class openrouterjsoncached
                             $wrappedSection = "<{$sectionTag}>\n{$extracted}\n</{$sectionTag}>";
                             $extractedDialogueDynamic[] = $wrappedSection;
                             $foundEphemeral = true;
-                            logMessage("[{$this->name}] Extracted ephemeral dialogue section: <{$sectionTag}>");
                         }
                     }
                 }
@@ -639,12 +665,14 @@ class openrouterjsoncached
         }
 
         // For simple format, append format instruction to the user instruction
-        // For JSON format, instruction is already in system message
-        if ($this->_responseFormat === 'simple' && !empty($formatInstruction)) {
+        // For JSON format, instruction is sent as separate message (handled later)
+        if ($this->_responseFormat === 'simple' && !empty($formatInstructionToSend)) {
             // Append format instruction to the instruction text
             $instructionText = is_array($instruction) && isset($instruction['text']) ? $instruction['text'] : $instruction;
-            $instructionText .= ' ' . $formatInstruction;
+            $instructionText .= ' ' . $formatInstructionToSend;
             $instruction = is_array($instruction) ? ['type' => 'text', 'text' => $instructionText] : $instructionText;
+            // Clear it so it doesn't get sent as separate message
+            $formatInstructionToSend = "";
         }
 
         $completeEventList[] = $instruction;
@@ -656,23 +684,16 @@ class openrouterjsoncached
         $totalElements = count($completeEventList);
         $lastIndex = $totalElements - $dialogue_cache_uncached_count - 1 - $addToIndex;
 
-        logMessage("Cache control calculation: totalElements=$totalElements, uncached=$dialogue_cache_uncached_count, addToIndex=$addToIndex, calculatedIndex=$lastIndex");
-
         // Place cache control marker
         if ($lastIndex >= 0) {
             if ($this->_provider_caching == "Gemini") {
-                logMessage("Using gemini caching (ignores dialogue_cache_uncached_count)");
                 $offset = 10;
                 $elements = count($completeEventList);
                 $batchSize = $CONTEXTHISTORY - $offset;
                 $batchNumber = floor($elements / $batchSize);
-
-                logMessage("elements: $elements, batchsize: $batchSize, batchnumber: $batchNumber");
-
                 $indexToCache = max(0, ($batchNumber * $CONTEXTHISTORY) - $offset);
 
                 if ($indexToCache >= $elements) {
-                    logMessage("index bigger or equal then elements size.");
                     $indexToCache = $elements - 1;
                 }
 
@@ -680,24 +701,14 @@ class openrouterjsoncached
                     $indexToCache = 33; // Gemini requires minimum 32 tokens for caching, use 33 to be safe
                 }
 
-                logMessage("Index to Cache: $indexToCache");
-
                 if (isset($completeEventList[$indexToCache]) && $this->_provider_caching != "OpenAI") {
                     $completeEventList[$indexToCache]["cache_control"] = $cacheControlType;
-                } else {
-                    logMessage("Warning: Index $indexToCache not found in array");
                 }
             } else {
-                logMessage("Using standard caching with dialogue_cache_uncached_count=$dialogue_cache_uncached_count");
                 if (isset($completeEventList[$lastIndex]) && $this->_provider_caching != "OpenAI") {
                     $completeEventList[$lastIndex]["cache_control"] = $cacheControlType;
-                    logMessage("Cache control placed at index $lastIndex");
-                } else {
-                    logMessage("Warning: Index $lastIndex not found in array for non gemini");
                 }
             }
-        } else {
-            logMessage("Warning: Calculated cache index is negative ($lastIndex), skipping cache control");
         }
 
         // Prepare ephemeral sections to insert as separate user messages (matching non-cached behavior)
@@ -713,77 +724,93 @@ class openrouterjsoncached
                     $allEphemeralSections[] = $section;
                 }
             }
-            logMessage("[{$this->name}] Added " . count($dynamicEnvironment) . " system ephemeral sections");
-        } else {
-            logMessage("[{$this->name}] No system ephemeral sections");
         }
         
         // Add dialogue ephemeral sections
         if (isset($extractedDialogueDynamic) && is_array($extractedDialogueDynamic) && !empty($extractedDialogueDynamic)) {
             foreach ($extractedDialogueDynamic as $section) {
                 if (!empty(trim($section)) && !containsOnlySymbols($section)) {
-                    // Re-wrap with XML tags if not already wrapped
-                    if (!preg_match('/^<[^>]+>/', $section)) {
-                        // This shouldn't happen, but handle it gracefully
-                        $allEphemeralSections[] = $section;
-                    } else {
-                        $allEphemeralSections[] = $section;
-                    }
+                    $allEphemeralSections[] = $section;
                 }
             }
-            logMessage("[{$this->name}] Added " . count($extractedDialogueDynamic) . " dialogue ephemeral sections");
-        } else {
-            logMessage("[{$this->name}] No dialogue ephemeral sections");
         }
-        
-        logMessage("[{$this->name}] Total ephemeral sections to insert: " . count($allEphemeralSections));
 
         $completeEventList = removeDuplicateMemories($completeEventList);
-
-        $tokenCount = countTokensByWords($completeEventList);
-        logMessage("Estimated token count: $tokenCount");
-
-        // DEBUG: Log array structure before adding to final messages
-        logMessage("[{$this->name}] completeEventList count before adding to final: " . count($completeEventList));
-        logMessage("[{$this->name}] completeEventList structure sample (first 3): " . json_encode(array_slice($completeEventList, 0, 3), JSON_PRETTY_PRINT));
-        logMessage("[{$this->name}] completeEventList structure sample (last 3): " . json_encode(array_slice($completeEventList, -3), JSON_PRETTY_PRINT));
+                
+        // Find where cache_control was placed
+        $cacheControlIndex = -1;
+        foreach ($completeEventList as $idx => $block) {
+            if (isset($block['cache_control'])) {
+                $cacheControlIndex = $idx;
+                break;
+            }
+        }
         
-        // Insert ephemeral sections as separate user messages BEFORE dialogue history
-        // Position 1+ (after system message at position 0)
-        foreach ($allEphemeralSections as $ephemeralSection) {
+        // Split dialogue: cached portion (up to and including cache_control) vs uncached portion (after)
+        $cachedDialogue = [];
+        $uncachedDialogue = [];
+        
+        if ($cacheControlIndex >= 0) {
+            // Include everything up to and including the cache_control marker
+            $cachedDialogue = array_slice($completeEventList, 0, $cacheControlIndex + 1);
+            // Everything after the marker is uncached
+            $uncachedDialogue = array_slice($completeEventList, $cacheControlIndex + 1);
+        } else {
+            // No cache marker found, treat all as uncached
+            $uncachedDialogue = $completeEventList;
+        }
+        
+        // Add cached dialogue FIRST (if any)
+        if (!empty($cachedDialogue)) {
+            $finalMessagesToSend[] = array('role' => 'user', 'content' => $cachedDialogue);
+        }
+        
+        // Add dynamic content SECOND (after cached dialogue, before uncached dialogue)
+        // This prevents dynamic content from invalidating the dialogue cache!
+        $dynamicContentParts = [];
+        
+        if (!empty($allEphemeralSections)) {
+            $dynamicContentParts = array_merge($dynamicContentParts, $allEphemeralSections);
+        }
+        
+        if (!empty($actionsToSend)) {
+            $dynamicContentParts[] = $actionsToSend;
+        }
+        
+        if (!empty($formatInstructionToSend)) {
+            $dynamicContentParts[] = $formatInstructionToSend;
+        }
+        
+        if (!empty($dynamicContentParts)) {
+            $combinedDynamic = implode("\n\n", $dynamicContentParts);
             $finalMessagesToSend[] = array(
                 'role' => 'user',
                 'content' => array(
-                    array('type' => 'text', 'text' => $ephemeralSection)
+                    array('type' => 'text', 'text' => $combinedDynamic)
                 )
             );
         }
         
-        if (!empty($allEphemeralSections)) {
-            logMessage("[{$this->name}] Inserted " . count($allEphemeralSections) . " ephemeral sections as separate user messages (positions 1-" . count($allEphemeralSections) . ")");
+        // Add uncached dialogue LAST (recent turns that aren't cached)
+        if (!empty($uncachedDialogue)) {
+            // BUG#3 FIX: Enable prefill for all caching providers, not just Anthropic
+            // CRITICAL: Prefill is incompatible with reasoning - only use prefill when thinking is disabled
+            if ($this->_responseFormat === 'simple' && !$toggleThinking) {
+                $finalMessagesToSend[] = array('role' => 'user', 'content' => $uncachedDialogue);
+                $prefillText = '(';
+                $finalMessagesToSend[] = array('role' => 'assistant', 'content' => array(
+                    array('type' => 'text', 'text' => $prefillText)
+                ));
+                $this->_usedPrefill = true;
+                $this->_prefillContent = $prefillText;
+            } else {
+                $finalMessagesToSend[] = array('role' => 'user', 'content' => $uncachedDialogue);
+                $this->_usedPrefill = false;
+                $this->_prefillContent = '';
+            }
         }
         
-        // NOW add dialogue history to finalMessagesToSend after all modifications are complete
-        // BUG#3 FIX: Enable prefill for all caching providers, not just Anthropic
-        // CRITICAL: Prefill is incompatible with reasoning - only use prefill when thinking is disabled
-        if ($this->_responseFormat === 'simple' && !$toggleThinking) {
-            logMessage("[{$this->name}] Using simple format with prefill");
-            $finalMessagesToSend[] = array('role' => 'user', 'content' => $completeEventList);
-            $prefillText = '(';
-            $finalMessagesToSend[] = array('role' => 'assistant', 'content' => array(
-                array('type' => 'text', 'text' => $prefillText)
-            ));
-            $this->_usedPrefill = true;
-            $this->_prefillContent = $prefillText;
-        } else {
-            logMessage("[{$this->name}] Using json format without prefill");
-            $finalMessagesToSend[] = array('role' => 'user', 'content' => $completeEventList);
-            $this->_usedPrefill = false;
-            $this->_prefillContent = '';
-        }
-        
-        logMessage("[{$this->name}] finalMessagesToSend now has " . count($finalMessagesToSend) . " messages");
-        logMessage("[{$this->name}] Last message content blocks: " . (isset($finalMessagesToSend[count($finalMessagesToSend)-1]['content']) ? count($finalMessagesToSend[count($finalMessagesToSend)-1]['content']) : 'N/A'));
+        logMessage("[{$this->name}] Built " . count($finalMessagesToSend) . " message(s): System(cached) + Dialogue(cached) + Dynamic + Recent");
 
         // Continue to Part 4 for final payload construction...
         return $this->_openPart4($customParms, $herikaName, $MAX_TOKENS, $toggleThinking, $thinkingTokens,
@@ -912,15 +939,50 @@ class openrouterjsoncached
 
         try {
             $finalMsgCount = isset($finalMessagesToSend) ? count($finalMessagesToSend) : 0;
+            
+            // Count cache_control markers in payload
+            $cacheMarkerCount = 0;
+            $jsonPayload = json_encode($data);
+            if (preg_match_all('/"cache_control"\s*:/', $jsonPayload, $matches)) {
+                $cacheMarkerCount = count($matches[0]);
+            }
+            
+            // Generate messages array preview for debugging
+            $systemContentHash = 'N/A';
+            if (isset($data['messages'][0]['content'][0]['text'])) {
+                $systemContentHash = substr(md5($data['messages'][0]['content'][0]['text']), 0, 8);
+            }
+            
+            $messagesPreview = "Messages Array Structure:\n";
+            if (isset($data['messages']) && is_array($data['messages'])) {
+                foreach ($data['messages'] as $idx => $msg) {
+                    $role = $msg['role'] ?? 'unknown';
+                    $hasCache = false;
+                    if (isset($msg['content']) && is_array($msg['content'])) {
+                        foreach ($msg['content'] as $contentBlock) {
+                            if (isset($contentBlock['cache_control'])) {
+                                $hasCache = true;
+                                break;
+                            }
+                        }
+                    }
+                    $cacheIndicator = $hasCache ? ' ✓ HAS cache_control' : '';
+                    $hashInfo = ($idx === 0) ? " (hash: {$systemContentHash})" : '';
+                    $messagesPreview .= "  [{$idx}] role={$role}{$cacheIndicator}{$hashInfo}\n";
+                }
+            }
+            
             $logEntry = sprintf(
-                "[%s] [%s:%s]\nPayload (%d msgs):\n%s\n---\n",
+                "[%s] [%s:%s] Cache Markers: %d\n%s\nFull Payload (%d msgs):\n%s\n---\n",
                 date(DATE_ATOM),
                 $this->name,
                 $herikaName,
+                $cacheMarkerCount,
+                $messagesPreview,
                 $finalMsgCount,
                 var_export($data, true)
             );
-            @file_put_contents(__DIR__ . "/../log/context_sent_to_llm.log", $logEntry, FILE_APPEND | LOCK_EX);
+            @file_put_contents($logDir . "/context_sent_to_llm.log", $logEntry, FILE_APPEND | LOCK_EX);
         } catch (Exception $e) {
             logMessage("Context Log Err: " . $e->getMessage());
         }
@@ -941,7 +1003,7 @@ class openrouterjsoncached
 
         // Only send Anthropic-specific headers when using Anthropic provider
         if ($this->_provider_caching === "Anthropic") {
-            $headers[] = "anthropic-beta: prompt-caching-2024-07-31";
+            $headers[] = "anthropic-beta: extended-cache-ttl-2025-04-11";
         }
 
         $timeout = isset($GLOBALS["HTTP_TIMEOUT"]) ? (int) $GLOBALS["HTTP_TIMEOUT"] : 60;
@@ -1135,31 +1197,52 @@ class openrouterjsoncached
                                 break;
 
                             case 'message_stop':
+                                // Store full final object for usage stats
+                                $this->_lastStreamedObject = $data;
+                                $this->_finalUsageStats = isset($data['message']['usage']) ? $data['message']['usage'] : null;
+                                
                                 logMessage("[{$this->name}:{$herikaName}] Stop (message_stop). Usage:" .
-                                    (isset($data['message']['usage']) ? json_encode($data['message']['usage']) : 'N/A'));
+                                    ($this->_finalUsageStats ? json_encode($this->_finalUsageStats) : 'N/A'));
 
-                                // Log cache efficiency
-                                if (isset($data['message']['usage'])) {
-                                    $usage = $data['message']['usage'];
+                                // Log cache efficiency from Anthropic's SSE stream data
+                                if ($this->_finalUsageStats) {
+                                    $usage = $this->_finalUsageStats;
                                     $cacheRead = isset($usage['cache_read_input_tokens']) ? $usage['cache_read_input_tokens'] : 0;
                                     $cacheCreate = isset($usage['cache_creation_input_tokens']) ? $usage['cache_creation_input_tokens'] : 0;
                                     $normalInput = isset($usage['input_tokens']) ? $usage['input_tokens'] : 0;
                                     $totalConsideredInput = $cacheRead + $cacheCreate + $normalInput;
                                     $efficiency = ($totalConsideredInput > 0) ? round(($cacheRead / $totalConsideredInput * 100), 1) : 0;
+                                    
+                                    // Enhanced log with all available metadata
                                     $logPerfEntry = sprintf(
-                                        "[%s] CACHE_PERF %s: Read:%d Create:%d New:%d Total:%d Efficiency:%.1f%%\n",
+                                        "[%s] CACHE_PERF [%s]\n" .
+                                        "  Anthropic Stream: cache_read=%d, cache_create=%d, input=%d, output=%d\n" .
+                                        "  Total Input: %d tokens, Cache Efficiency: %.1f%%\n" .
+                                        "  Stop Reason: %s\n",
                                         date(DATE_ATOM),
                                         $herikaName,
                                         $cacheRead,
                                         $cacheCreate,
                                         $normalInput,
+                                        isset($usage['output_tokens']) ? $usage['output_tokens'] : 0,
                                         $totalConsideredInput,
-                                        $efficiency
+                                        $efficiency,
+                                        isset($data['delta']['stop_reason']) ? $data['delta']['stop_reason'] : 'N/A'
                                     );
-                                    @file_put_contents(__DIR__ . DIRECTORY_SEPARATOR . "_cached_perf.log", $logPerfEntry, FILE_APPEND);
+                                    
+                                    // Ensure log directory exists
+                                    $logDir = __DIR__;
+                                    if (!is_dir($logDir)) {
+                                        @mkdir($logDir, 0755, true);
+                                    }
+                                    @file_put_contents($logDir . DIRECTORY_SEPARATOR . "_cached_perf.log", $logPerfEntry, FILE_APPEND);
+                                    
+                                    logMessage("[{$this->name}] Cache stats: read={$cacheRead}, create={$cacheCreate}, new={$normalInput}, efficiency={$efficiency}%");
                                 }
 
-                                logMessage("[{$this->name}:{$herikaName}] Stop (delta): " . $data['delta']['stop_reason']);
+                                if (isset($data['delta']['stop_reason'])) {
+                                    logMessage("[{$this->name}:{$herikaName}] Stop reason: " . $data['delta']['stop_reason']);
+                                }
 
                                 // Flush remaining simple format content before closing
                                 if ($this->_responseFormat === 'simple') {
@@ -1607,29 +1690,72 @@ class openrouterjsoncached
         return "";
     }
 
-    public function close() {
+    public function close($callName = '') {
         if ($this->primary_handler) {
             @fclose($this->primary_handler);
             $this->primary_handler = null;
         }
 
         $herikaName = isset($GLOBALS["HERIKA_NAME"]) ? $GLOBALS["HERIKA_NAME"] : 'default_herika';
+        
+        // Use callName for logging purposes (like openrouterjson)
+        if (empty($callName)) {
+            $callName = $this->name;
+        } else {
+            $callName = $this->name . "/" . $callName;
+        }
 
+        // Prepare usage stats for database
+        $usageStats = $this->_finalUsageStats ?? [];
+        if (!isset($usageStats['input_tokens'])) {
+            $usageStats['input_tokens'] = 0;
+        }
+        if (!isset($usageStats['output_tokens'])) {
+            $usageStats['output_tokens'] = 0;
+        }
+
+        // Database audit logging (matching openrouterjson pattern)
+        if (isset($GLOBALS["db"]) && $GLOBALS["db"]) {
+            try {
+                $hasBuffer = isset($this->_buffer) && !empty(trim($this->_buffer));
+                $GLOBALS["db"]->insert(
+                    'audit_request',
+                    array(
+                        'request' => isset($this->_dataSent) ? $this->_dataSent : json_encode([]),
+                        'result' => $hasBuffer ? "Ok" : "ERROR|NO RESPONSE",
+                        'usage' => json_encode($usageStats),
+                        'connector' => $callName,
+                        'url' => $this->_url
+                    )
+                );
+                logMessage("[{$this->name}] ✓ Audit entry saved to database");
+            } catch (Exception $e) {
+                logMessage("[{$this->name}] Database audit error: " . $e->getMessage());
+            }
+        }
+
+        // File logging
         try {
             $proc = isset($this->_buffer) ? $this->_buffer : '<empty>';
             $jsonResponses = isset($this->_jsonResponsesEncoded) && is_array($this->_jsonResponsesEncoded) ?
                 implode("\n", $this->_jsonResponsesEncoded) : "<no JSON responses>";
 
             $logContent = sprintf(
-                "Processed Text:\n%s\n\nJSON Responses:\n%s\n\n[%s] [%s:%s] END STREAM\n==\n",
+                "Processed Text:\n%s\n\nJSON Responses:\n%s\n\nUsage Stats:\n%s\n\n[%s] [%s:%s] END STREAM\n==\n",
                 $proc,
                 $jsonResponses,
+                json_encode($usageStats, JSON_PRETTY_PRINT),
                 date(DATE_ATOM),
                 $this->name,
                 $herikaName
             );
 
-            @file_put_contents(__DIR__ . "/../log/output_from_llm.log", $logContent, FILE_APPEND | LOCK_EX);
+            // Ensure log directory exists
+            $logDir = __DIR__ . "/../log";
+            if (!is_dir($logDir)) {
+                @mkdir($logDir, 0755, true);
+            }
+            @file_put_contents($logDir . "/output_from_llm.log", $logContent, FILE_APPEND | LOCK_EX);
         } catch (Exception $e) {
             logMessage("[{$this->name}:{$herikaName}] Close Log Err: " . $e->getMessage());
         }

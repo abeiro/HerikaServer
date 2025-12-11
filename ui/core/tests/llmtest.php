@@ -140,6 +140,32 @@ require_once(__DIR__ . DIRECTORY_SEPARATOR . "../../profile_loader.php");
                     echo '<div class="status"><span class="label">LLM Response:</span></div>';
                     $respStr = isset($buffer) ? (string)$buffer : '';
                     echo '<div class="response" style="font-size: 1.0em; color: #ffffff;">' . ($respStr !== '' ? nl2br(htmlspecialchars($respStr)) : '<span class="error">(empty)</span>') . '</div>';
+                    
+                    // Display cache statistics if available
+                    if ($driver === 'openrouterjsoncached' && !empty($GLOBALS['DEBUG_DATA']['full']['messages'])) {
+                        $cacheMarkers = 0;
+                        $jsonPayload = json_encode($GLOBALS['DEBUG_DATA']['full']);
+                        if (preg_match_all('/"cache_control"\s*:/', $jsonPayload, $matches)) {
+                            $cacheMarkers = count($matches[0]);
+                        }
+                        
+                        echo '<div class="status" style="margin-top:15px;"><span class="label">Cache Information:</span></div>';
+                        echo '<pre style="background:#1f1f1f; padding:10px;">';
+                        echo '<span style="color:#6fdc8c;">✓ Cache Markers Applied:</span> ' . $cacheMarkers . "\n";
+                        
+                        if ($cacheMarkers > 0) {
+                            echo '<span style="color:#ffcc00;">ℹ Cache Workflow:</span>' . "\n";
+                            echo '  • First request: Creates cache (native_tokens_cached = 0)' . "\n";
+                            echo '  • Subsequent requests: Use cache (native_tokens_cached > 0)' . "\n";
+                            echo '  • Check _cached_perf.log for detailed cache efficiency' . "\n";
+                        } else {
+                            echo '<span style="color:#ff6b6b;">⚠ No cache markers:</span>' . "\n";
+                            echo '  • System prompt may be too short (< 1024 tokens)' . "\n";
+                            echo '  • Check context_sent_to_llm.log for token estimates' . "\n";
+                        }
+                        echo '</pre>';
+                    }
+                    
                     // Styled timing similar to tests.php
                     $perf = 'TOO CHIMMING SLOW'; $color = '#dc3545';
                     if ($endTimeTrans < 2) { $perf='FAST!'; $color='#28a745'; }
