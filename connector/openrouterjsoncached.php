@@ -539,13 +539,6 @@ class openrouterjsoncached
                 
                 $content = ['type' => 'text', 'text' => $finalSend];
                 
-                // Check if force cache control is enabled (debug setting)
-                $forceCacheControl = isset($GLOBALS["CONNECTOR"][$this->name]["force_cache_control"]) && 
-                                    $GLOBALS["CONNECTOR"][$this->name]["force_cache_control"];
-                
-                $applyCacheControl = true;
-                $tokenThreshold = intval($minTokensForCache * 0.9); // 90% threshold for warnings
-                
                 if ($this->_provider_caching !== "OpenAI") {
                     // Apply cache_control regardless of size - let provider decide
                     $content['cache_control'] = $cacheControlType;
@@ -654,7 +647,7 @@ class openrouterjsoncached
 
         // Manage cached event list
         $completeEventList = manageCharacterEventList($contentTextToSend, $cacheCombinedDialogueFile, $max_dialogue_cache_size);
-        logMessage("New elements added to cache: {$completeEventList['new_count']}");
+        logMessage("[{$this->name}] Cache file: {$cacheCombinedDialogueFile}, New elements: {$completeEventList['new_count']}, Total: " . count($completeEventList['updated_list']));
         $completeEventList = $completeEventList['updated_list'];
 
         // Add custom instructions if present
@@ -684,8 +677,18 @@ class openrouterjsoncached
         $totalElements = count($completeEventList);
         $lastIndex = $totalElements - $dialogue_cache_uncached_count - 1 - $addToIndex;
 
-        // Place cache control marker
-        if ($lastIndex >= 0) {
+        // CRITICAL: Only cache dialogue if we have enough history to make it worthwhile
+        // Caching 1-2 turns creates cache churn (constantly writing new caches that get invalidated)
+        // Rule: Only cache if we have at least 30% of max_dialogue_cache_size
+        $minDialogueForCache = max(10, intval($max_dialogue_cache_size * 0.3)); // At least 10 turns, or 30% of max
+        $shouldCacheDialogue = ($totalElements >= $minDialogueForCache);
+        
+        if (!$shouldCacheDialogue) {
+            logMessage("[{$this->name}] Skipping dialogue cache_control: only {$totalElements} turns (need {$minDialogueForCache}+ for efficient caching)");
+        }
+
+        // Place cache control marker (only if we have enough dialogue history)
+        if ($lastIndex >= 0 && $shouldCacheDialogue) {
             if ($this->_provider_caching == "Gemini") {
                 $offset = 10;
                 $elements = count($completeEventList);
@@ -760,6 +763,40 @@ class openrouterjsoncached
             $uncachedDialogue = $completeEventList;
         }
         
+        // CRITICAL: Extract ephemeral-like content from cached dialogue
+        // Items like time passage, context messages that aren't wrapped in XML tags
+        // These should be dynamic, not cached!
+        // ONLY do this if we actually cached dialogue (otherwise $cachedDialogue is already empty)
+        $extractedFromCached = [];
+        $cleanCachedDialogue = [];
+        
+        if ($cacheControlIndex >= 0) {
+            foreach ($cachedDialogue as $block) {
+                if (isset($block['text'])) {
+                    $text = $block['text'];
+                    // Check if this is a time/context message (contains "hours have passed", "Current date", etc.)
+                    $isContextMessage = (
+                        stripos($text, 'hours have passed') !== false ||
+                        stripos($text, 'Current date') !== false ||
+                        stripos($text, 'minor timelapse') !== false ||
+                        stripos($text, 'Context new location') !== false
+                    );
+                    
+                    if ($isContextMessage) {
+                        // Move to dynamic content
+                        $extractedFromCached[] = $text;
+                    } else {
+                        // Keep in cached dialogue
+                        $cleanCachedDialogue[] = $block;
+                    }
+                } else {
+                    $cleanCachedDialogue[] = $block;
+                }
+            }
+            
+            $cachedDialogue = $cleanCachedDialogue;
+        }
+        
         // Add cached dialogue FIRST (if any)
         if (!empty($cachedDialogue)) {
             $finalMessagesToSend[] = array('role' => 'user', 'content' => $cachedDialogue);
@@ -769,6 +806,12 @@ class openrouterjsoncached
         // This prevents dynamic content from invalidating the dialogue cache!
         $dynamicContentParts = [];
         
+        // Add extracted context messages from cached dialogue (time passage, location changes)
+        if (!empty($extractedFromCached)) {
+            $dynamicContentParts = array_merge($dynamicContentParts, $extractedFromCached);
+        }
+        
+        // Add ephemeral sections (equipment, HP, nearby actors, etc.)
         if (!empty($allEphemeralSections)) {
             $dynamicContentParts = array_merge($dynamicContentParts, $allEphemeralSections);
         }
@@ -810,7 +853,8 @@ class openrouterjsoncached
             }
         }
         
-        logMessage("[{$this->name}] Built " . count($finalMessagesToSend) . " message(s): System(cached) + Dialogue(cached) + Dynamic + Recent");
+        $dialogueCacheStatus = $cacheControlIndex >= 0 ? "cached" : "not cached (insufficient history)";
+        logMessage("[{$this->name}] Built " . count($finalMessagesToSend) . " message(s): System(cached) + Dialogue({$dialogueCacheStatus}) + Dynamic + Recent");
 
         // Continue to Part 4 for final payload construction...
         return $this->_openPart4($customParms, $herikaName, $MAX_TOKENS, $toggleThinking, $thinkingTokens,
@@ -937,55 +981,76 @@ class openrouterjsoncached
         $GLOBALS["DEBUG_DATA"]["full"] = ($data);
         $this->_dataSent = json_encode($data, JSON_PRETTY_PRINT);
 
-        try {
-            $finalMsgCount = isset($finalMessagesToSend) ? count($finalMessagesToSend) : 0;
+        // Count cache_control markers in payload
+        $cacheMarkerCount = 0;
+        $jsonPayload = json_encode($data);
+        if (preg_match_all('/"cache_control"\s*:/', $jsonPayload, $matches)) {
+            $cacheMarkerCount = count($matches[0]);
+        }
+        
+        // Generate messages array preview with hashes for debugging cache stability
+        $systemContentHash = 'N/A';
+        if (isset($data['messages'][0]['content'][0]['text'])) {
+            $systemContentHash = substr(md5($data['messages'][0]['content'][0]['text']), 0, 8);
+        }
+        
+        $messagesPreview = "Messages Array Structure:\n";
+        if (isset($data['messages']) && is_array($data['messages'])) {
+            $cachePositions = []; // Track where cache_control markers are
             
-            // Count cache_control markers in payload
-            $cacheMarkerCount = 0;
-            $jsonPayload = json_encode($data);
-            if (preg_match_all('/"cache_control"\s*:/', $jsonPayload, $matches)) {
-                $cacheMarkerCount = count($matches[0]);
-            }
-            
-            // Generate messages array preview for debugging
-            $systemContentHash = 'N/A';
-            if (isset($data['messages'][0]['content'][0]['text'])) {
-                $systemContentHash = substr(md5($data['messages'][0]['content'][0]['text']), 0, 8);
-            }
-            
-            $messagesPreview = "Messages Array Structure:\n";
-            if (isset($data['messages']) && is_array($data['messages'])) {
-                foreach ($data['messages'] as $idx => $msg) {
-                    $role = $msg['role'] ?? 'unknown';
-                    $hasCache = false;
-                    if (isset($msg['content']) && is_array($msg['content'])) {
-                        foreach ($msg['content'] as $contentBlock) {
-                            if (isset($contentBlock['cache_control'])) {
-                                $hasCache = true;
-                                break;
-                            }
+            foreach ($data['messages'] as $idx => $msg) {
+                $role = $msg['role'] ?? 'unknown';
+                $hasCache = false;
+                $contentHash = '';
+                $cacheBlockIndex = -1;
+                
+                if (isset($msg['content']) && is_array($msg['content'])) {
+                    // Check for cache_control and calculate content hash
+                    foreach ($msg['content'] as $blockIdx => $contentBlock) {
+                        if (isset($contentBlock['cache_control'])) {
+                            $hasCache = true;
+                            $cacheBlockIndex = $blockIdx;
                         }
                     }
-                    $cacheIndicator = $hasCache ? ' ✓ HAS cache_control' : '';
-                    $hashInfo = ($idx === 0) ? " (hash: {$systemContentHash})" : '';
-                    $messagesPreview .= "  [{$idx}] role={$role}{$cacheIndicator}{$hashInfo}\n";
+                    
+                    // Calculate hash for cached user messages (dialogue history)
+                    if ($hasCache && $role === 'user' && $idx > 0) {
+                        // Concatenate all text content from this message
+                        $allText = '';
+                        foreach ($msg['content'] as $contentBlock) {
+                            if (isset($contentBlock['text'])) {
+                                $allText .= $contentBlock['text'];
+                            }
+                        }
+                        $contentHash = ' (hash: ' . substr(md5($allText), 0, 8) . ')';
+                    }
                 }
+                
+                $cacheIndicator = $hasCache ? ' ✓ HAS cache_control' : '';
+                if ($hasCache && $cacheBlockIndex >= 0) {
+                    $cacheIndicator .= " at block[{$cacheBlockIndex}]";
+                    $cachePositions[] = "msg[{$idx}].content[{$cacheBlockIndex}]";
+                }
+                $hashInfo = ($idx === 0) ? " (hash: {$systemContentHash})" : $contentHash;
+                $messagesPreview .= "  [{$idx}] role={$role}{$cacheIndicator}{$hashInfo}\n";
             }
             
-            $logEntry = sprintf(
-                "[%s] [%s:%s] Cache Markers: %d\n%s\nFull Payload (%d msgs):\n%s\n---\n",
-                date(DATE_ATOM),
-                $this->name,
-                $herikaName,
-                $cacheMarkerCount,
-                $messagesPreview,
-                $finalMsgCount,
-                var_export($data, true)
-            );
-            @file_put_contents($logDir . "/context_sent_to_llm.log", $logEntry, FILE_APPEND | LOCK_EX);
-        } catch (Exception $e) {
-            logMessage("Context Log Err: " . $e->getMessage());
+            if (!empty($cachePositions)) {
+                $messagesPreview .= "\nCache Control Positions: " . implode(", ", $cachePositions) . "\n";
+            }
         }
+        
+        // Log to context_sent_to_llm.log (same format as other connectors, but with cache info)
+        $logEntry = sprintf(
+            "[%s] [%s:%s] Cache Markers: %d\n%s\n%s\n---\n",
+            date(DATE_ATOM),
+            $this->name,
+            $herikaName,
+            $cacheMarkerCount,
+            $messagesPreview,
+            var_export($data, true)
+        );
+        file_put_contents(__DIR__."/../log/context_sent_to_llm.log", $logEntry, FILE_APPEND);
 
         // Prepare API request
         $apiKey = isset($GLOBALS["CONNECTOR"][$this->name]["API_KEY"]) ? $GLOBALS["CONNECTOR"][$this->name]["API_KEY"] : '';

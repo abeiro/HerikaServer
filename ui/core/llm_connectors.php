@@ -283,6 +283,32 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     Custom allows you to build your own connector setting using one of our API drivers to use non-supported services with CHIM. For advanced users only
                 </div>
 
+                <!-- Caching Settings (shown only for cached connectors) -->
+                <div id="caching_settings" style="display:none; margin-top:8px; margin-bottom:16px; padding:12px; border:1px solid #4a4a4a; border-radius:8px; background:#1a1a1a;">
+                    <div style="font-weight:600; color:#e9efff; margin-bottom:12px;">🔄 Caching Settings</div>
+
+                    <label for='provider_caching'>Provider Caching Type</label><br>
+                    <select name="metadata[provider_caching]" id="provider_caching">
+                        <option value="Anthropic" <?= ($metadata['provider_caching'] ?? 'Anthropic') === 'Anthropic' ? 'selected' : '' ?>>Anthropic</option>
+                        <option value="OpenAI" <?= ($metadata['provider_caching'] ?? 'Anthropic') === 'OpenAI' ? 'selected' : '' ?>>OpenAI</option>
+                        <option value="Gemini" <?= ($metadata['provider_caching'] ?? 'Anthropic') === 'Gemini' ? 'selected' : '' ?>>Gemini</option>
+                    </select><br>
+
+                    <label for='dialogue_cache_uncached_count'><span class='tip-label' data-tip='Number of most recent dialogue entries to keep uncached (0-10)'>Uncached Dialogue Count</span></label><br>
+                    <input type='number' name='metadata[dialogue_cache_uncached_count]' id='dialogue_cache_uncached_count' value='<?= htmlspecialchars($metadata['dialogue_cache_uncached_count'] ?? '4') ?>' min='0' max='10' step='1'><br>
+                    
+                    <label for='max_dialogue_cache_context_size'><span class='tip-label' data-tip='Maximum dialogue history items to include in cache (0-300). Lower values improve cache freshness. Recommended: 93'>Max Cached Dialogue History</span></label><br>
+                    <input type='number' name='metadata[max_dialogue_cache_context_size]' id='max_dialogue_cache_context_size' value='<?= htmlspecialchars($metadata['max_dialogue_cache_context_size'] ?? '93') ?>' min='0' max='300' step='1'><br>
+
+                    <div style="margin-top:12px;">
+                        <label class="label-with-toggle"><span class='tip-label' data-tip='Recommended ON for advanced models (Claude 3.5, GPT-4, Gemini 2.0). Uses minimal quality instructions. Turn OFF for older/smaller models that benefit from explicit guidance.'>Minimize Quality Instructions (Recommended)</span>
+                            <input type="hidden" name="metadata[minimize_quality_prompt]" value="0">
+                            <input type="checkbox" name="metadata[minimize_quality_prompt]" value="1" <?= (!isset($metadata['minimize_quality_prompt']) || $metadata['minimize_quality_prompt']) ? 'checked' : '' ?>>
+                            <span class="toggle-text">On</span>
+                        </label>
+                    </div>
+                </div>
+
                 <div id="url_row">
                     <label for='url'>URL</label><br>
                     <div style="display:flex; gap:8px; align-items:center;">
@@ -340,10 +366,10 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 ?>
                 </div>
                 <div id="reasoning_row">
-                    <label class="label-with-toggle"><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span>
-                        <input type="hidden" name="reasoning_model" value="0">
-                        <input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>>
-                        <span class="toggle-text">On</span>
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Enable reasoning LLMs that support reasoning models. Reasoning tokens are ALWAYS excluded from output (you only get the final answer). May be slower but improves complex tasks.'>Reasoning</span>
+                        <input type="hidden" name="metadata[toggle_thinking]" value="0">
+                        <input type="checkbox" name="metadata[toggle_thinking]" value="1" <?= isset($metadata["toggle_thinking"]) && $metadata["toggle_thinking"] == 1 ? "checked" : "" ?>>
+                        <span class="toggle-text">Off</span>
                     </label>
                 </div>
                 <div id="json_toggles" style="margin-top:8px;">
@@ -472,92 +498,6 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     }
                 }
                 ?>
-
-                <!-- Caching Settings (shown only for cached connectors) -->
-                <div id="caching_settings" style="display:none; margin-top:16px; padding:12px; border:1px solid #4a4a4a; border-radius:8px; background:#1a1a1a;">
-                    <div style="font-weight:600; color:#e9efff; margin-bottom:12px;">🔄 Caching Settings</div>
-
-                    <label for='provider_caching'>Provider Caching Type</label><br>
-                    <select name="metadata[provider_caching]" id="provider_caching">
-                        <option value="Anthropic" <?= ($metadata['provider_caching'] ?? 'Anthropic') === 'Anthropic' ? 'selected' : '' ?>>Anthropic</option>
-                        <option value="OpenAI" <?= ($metadata['provider_caching'] ?? '') === 'OpenAI' ? 'selected' : '' ?>>OpenAI</option>
-                        <option value="Gemini" <?= ($metadata['provider_caching'] ?? '') === 'Gemini' ? 'selected' : '' ?>>Gemini</option>
-                    </select><br>
-
-                    <label for='dialogue_cache_uncached_count'><span class='tip-label' data-tip='Number of most recent dialogue entries to keep uncached (0-10)'>Uncached Dialogue Count</span></label><br>
-                    <input type='number' name='metadata[dialogue_cache_uncached_count]' id='dialogue_cache_uncached_count' value='<?= htmlspecialchars($metadata['dialogue_cache_uncached_count'] ?? '4') ?>' min='0' max='10' step='1'><br>
-                    
-                    <label for='max_dialogue_cache_context_size'><span class='tip-label' data-tip='Maximum dialogue history items to include in cache (0-300). Lower values improve cache freshness.'>Max Cached Dialogue History</span></label><br>
-                    <input type='number' name='metadata[max_dialogue_cache_context_size]' id='max_dialogue_cache_context_size' value='<?= htmlspecialchars($metadata['max_dialogue_cache_context_size'] ?? '93') ?>' min='0' max='300' step='1'><br>
-                    
-                    <div style="margin-top:12px;">
-                        <label class="label-with-toggle"><span class='tip-label' data-tip='Force apply cache_control markers even if content is below token threshold. Use for testing or if you want to see cache markers in logs regardless of size.'>Force Cache Control (Debug)</span>
-                            <input type="hidden" name="metadata[force_cache_control]" value="0">
-                            <input type="checkbox" name="metadata[force_cache_control]" value="1" <?= ($metadata['force_cache_control'] ?? false) ? 'checked' : '' ?>>
-                            <span class="toggle-text">Off</span>
-                        </label>
-                    </div>
-
-                    <div style="margin-top:12px;">
-                        <label class="label-with-toggle"><span class='tip-label' data-tip='Recommended ON for advanced models (Claude 3.5, GPT-4, Gemini 2.0). Uses minimal quality instructions. Turn OFF for older/smaller models that benefit from explicit guidance.'>Minimize Quality Instructions (Recommended)</span>
-                            <input type="hidden" name="metadata[minimize_quality_prompt]" value="0">
-                            <input type="checkbox" name="metadata[minimize_quality_prompt]" value="1" <?= (!isset($metadata['minimize_quality_prompt']) || $metadata['minimize_quality_prompt']) ? 'checked' : '' ?>>
-                            <span class="toggle-text">On</span>
-                        </label>
-                    </div>
-
-                    <!-- Response Format Section (Collapsible) -->
-                    <div style="margin-top:16px; border:1px solid #4a4a4a; border-radius:8px; background:#252525;">
-                        <div class="collapsible-header" data-target="response_format_section" style="padding:10px; cursor:pointer; user-select:none; font-weight:600; color:#e9efff; display:flex; justify-content:space-between; align-items:center;">
-                            <span>📝 Response Format</span>
-                            <span class="collapse-arrow">▼</span>
-                        </div>
-                        <div id="response_format_section" class="collapsible-content" style="padding:10px; display:none;">
-                            <label for='response_format'>Response Format</label><br>
-                            <select name="metadata[response_format]" id="response_format">
-                                <option value="json" <?= ($metadata['response_format'] ?? 'json') === 'json' ? 'selected' : '' ?>>JSON (structured)</option>
-                                <option value="simple" <?= ($metadata['response_format'] ?? '') === 'simple' ? 'selected' : '' ?>>Simple (natural language)</option>
-                            </select><br>
-
-                            <div style="margin-top:12px;">
-                                <label class="label-with-toggle"><span class='tip-label' data-tip='Include action selection in response format. Required for NPCs to perform actions.'>Include Actions</span>
-                                    <input type="hidden" name="metadata[include_actions_list]" value="0">
-                                    <input type="checkbox" name="metadata[include_actions_list]" value="1" <?= (!isset($metadata['include_actions_list']) || $metadata['include_actions_list']) ? 'checked' : '' ?>>
-                                </label><br>
-                                <label class="label-with-toggle"><span class='tip-label' data-tip='Include mood/emotion in response. Used for NPC animations and expressions.'>Include Mood</span>
-                                    <input type="hidden" name="metadata[include_mood_requirement]" value="0">
-                                    <input type="checkbox" name="metadata[include_mood_requirement]" value="1" <?= (!isset($metadata['include_mood_requirement']) || $metadata['include_mood_requirement']) ? 'checked' : '' ?>>
-                                </label><br>
-                                <label class="label-with-toggle"><span class='tip-label' data-tip='Include action target (who/what the action is directed at).'>Include Target</span>
-                                    <input type="hidden" name="metadata[include_target_requirement]" value="0">
-                                    <input type="checkbox" name="metadata[include_target_requirement]" value="1" <?= (!isset($metadata['include_target_requirement']) || $metadata['include_target_requirement']) ? 'checked' : '' ?>>
-                                </label><br>
-                                <label class="label-with-toggle"><span class='tip-label' data-tip='Include listener field (who the NPC is talking to). Useful for multi-NPC conversations.'>Include Listener</span>
-                                    <input type="hidden" name="metadata[include_listener_requirement]" value="0">
-                                    <input type="checkbox" name="metadata[include_listener_requirement]" value="1" <?= (!isset($metadata['include_listener_requirement']) || $metadata['include_listener_requirement']) ? 'checked' : '' ?>>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Advanced Settings Section (Collapsible) -->
-                    <div style="margin-top:16px; border:1px solid #4a4a4a; border-radius:8px; background:#252525;">
-                        <div class="collapsible-header" data-target="advanced_settings_section" style="padding:10px; cursor:pointer; user-select:none; font-weight:600; color:#e9efff; display:flex; justify-content:space-between; align-items:center;">
-                            <span>⚙️ Advanced Settings</span>
-                            <span class="collapse-arrow">▼</span>
-                        </div>
-                        <div id="advanced_settings_section" class="collapsible-content" style="padding:10px; display:none;">
-                            <label for='max_dialogue_cache_context_size'><span class='tip-label' data-tip='Maximum number of dialogue entries to cache in temp files. Higher = more context but larger cache files. Recommended: 93'>Max Dialogue Cache Context Size</span></label><br>
-                            <input type='number' name='metadata[max_dialogue_cache_context_size]' id='max_dialogue_cache_context_size' value='<?= htmlspecialchars($metadata['max_dialogue_cache_context_size'] ?? '93') ?>' min='0' step='1'><br>
-
-                            <label for='custom_system_instruction'><span class='tip-label' data-tip='Additional instruction added to the system prompt (after character bio, before dialogue history). Does NOT replace other instructions.'>Custom System Instruction</span></label><br>
-                            <textarea name='metadata[custom_system_instruction]' id='custom_system_instruction' rows='3' style='width:100%; box-sizing:border-box;'><?= htmlspecialchars($metadata['custom_system_instruction'] ?? '') ?></textarea><br>
-
-                            <label for='custom_last_instruction'><span class='tip-label' data-tip='Custom text inserted as second-to-last element in dialogue history (current user message is always last). Appears right before user current request.'>Custom Last Instruction</span></label><br>
-                            <textarea name='metadata[custom_last_instruction]' id='custom_last_instruction' rows='3' style='width:100%; box-sizing:border-box;'><?= htmlspecialchars($metadata['custom_last_instruction'] ?? '') ?></textarea>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </form>
@@ -664,11 +604,50 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
 
             // Show caching settings only for cached driver
             const isCachedDriver = driver === 'openrouterjsoncached';
-            if (cachingSettings) cachingSettings.style.display = isCachedDriver ? '' : 'none';
+            // Use visibility instead of display to ensure fields are always submitted
+            if (cachingSettings) {
+                if (isCachedDriver) {
+                    cachingSettings.style.display = '';
+                    cachingSettings.style.visibility = 'visible';
+                    cachingSettings.style.height = 'auto';
+                } else {
+                    cachingSettings.style.display = 'none';
+                    cachingSettings.style.visibility = 'hidden';
+                    cachingSettings.style.height = '0';
+                }
+            }
         }
 
         // Initial call to set correct visibility
         updateCachingSettings();
+        
+        // Force set form values from server data after visibility changes
+        (function(){
+            const cachingSettings = document.getElementById('caching_settings');
+            if (!cachingSettings) return;
+            
+            const serverMetadata = <?= json_encode($metadata) ?>;
+            
+            const providerSelect = document.getElementById('provider_caching');
+            if (providerSelect && serverMetadata.provider_caching) {
+                providerSelect.value = serverMetadata.provider_caching;
+            }
+            
+            const uncachedInput = document.getElementById('dialogue_cache_uncached_count');
+            if (uncachedInput && serverMetadata.dialogue_cache_uncached_count) {
+                uncachedInput.value = serverMetadata.dialogue_cache_uncached_count;
+            }
+            
+            const maxCacheInput = document.getElementById('max_dialogue_cache_context_size');
+            if (maxCacheInput && serverMetadata.max_dialogue_cache_context_size) {
+                maxCacheInput.value = serverMetadata.max_dialogue_cache_context_size;
+            }
+            
+            const minimizeCheckbox = cachingSettings.querySelector('input[name="metadata[minimize_quality_prompt]"][type="checkbox"]');
+            if (minimizeCheckbox && serverMetadata.minimize_quality_prompt !== undefined) {
+                minimizeCheckbox.checked = (serverMetadata.minimize_quality_prompt === '1' || serverMetadata.minimize_quality_prompt === 1);
+            }
+        })();
 
         // Collapsible section handlers
         (function(){
@@ -706,8 +685,20 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     }
     // Sync On/Off labels for checkboxes
     (function(){
-        const names = ['reasoning_model','enforce_json','json_schema','prefill_json'];
+        const names = ['enforce_json','json_schema','prefill_json'];
+        const metadataNames = ['metadata[toggle_thinking]'];
+        
         names.forEach(n=>{
+            const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
+            if (!cb) return;
+            const label = cb.closest('label');
+            const span = label ? label.querySelector('.toggle-text') : null;
+            function sync(){ if (span) span.textContent = cb.checked ? 'On' : 'Off'; }
+            sync();
+            cb.addEventListener('change', sync);
+        });
+        
+        metadataNames.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
             const label = cb.closest('label');
@@ -1351,6 +1342,32 @@ if (typeof window.consolidation !== 'function') {
                 Custom allows you to build your own connector setting using one of our API drivers to use non-supported services with CHIM. Depending on the service you may not need to fill out all fields. For advanced users only
             </div>
 
+            <!-- Caching Settings (shown only for cached connectors) -->
+            <div id="caching_settings_main" style="display:none; margin-top:8px; margin-bottom:16px; padding:12px; border:1px solid #4a4a4a; border-radius:8px; background:#1a1a1a;">
+                <div style="font-weight:600; color:#e9efff; margin-bottom:12px;">🔄 Caching Settings</div>
+
+                <label for='provider_caching_main'>Provider Caching Type</label><br>
+                <select name="metadata[provider_caching]" id="provider_caching_main">
+                    <option value="Anthropic" <?= ($metadata_main['provider_caching'] ?? 'Anthropic') === 'Anthropic' ? 'selected' : '' ?>>Anthropic</option>
+                    <option value="OpenAI" <?= ($metadata_main['provider_caching'] ?? 'Anthropic') === 'OpenAI' ? 'selected' : '' ?>>OpenAI</option>
+                    <option value="Gemini" <?= ($metadata_main['provider_caching'] ?? 'Anthropic') === 'Gemini' ? 'selected' : '' ?>>Gemini</option>
+                </select><br>
+
+                <label for='dialogue_cache_uncached_count_main'><span class='tip-label' data-tip='Number of most recent dialogue entries to keep uncached (0-10)'>Uncached Dialogue Count</span></label><br>
+                <input type='number' name='metadata[dialogue_cache_uncached_count]' id='dialogue_cache_uncached_count_main' value='<?= htmlspecialchars($metadata_main['dialogue_cache_uncached_count'] ?? '4') ?>' min='0' max='10' step='1'><br>
+                
+                <label for='max_dialogue_cache_context_size_main'><span class='tip-label' data-tip='Maximum dialogue history items to include in cache (0-300). Lower values improve cache freshness. Recommended: 93'>Max Cached Dialogue History</span></label><br>
+                <input type='number' name='metadata[max_dialogue_cache_context_size]' id='max_dialogue_cache_context_size_main' value='<?= htmlspecialchars($metadata_main['max_dialogue_cache_context_size'] ?? '93') ?>' min='0' max='300' step='1'><br>
+
+                <div style="margin-top:12px;">
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Recommended ON for advanced models (Claude 3.5, GPT-4, Gemini 2.0). Uses minimal quality instructions. Turn OFF for older/smaller models that benefit from explicit guidance.'>Minimize Quality Instructions (Recommended)</span>
+                        <input type="hidden" name="metadata[minimize_quality_prompt]" value="0">
+                        <input type="checkbox" name="metadata[minimize_quality_prompt]" value="1" <?= (!isset($metadata_main['minimize_quality_prompt']) || $metadata_main['minimize_quality_prompt']) ? 'checked' : '' ?>>
+                        <span class="toggle-text">On</span>
+                    </label>
+                </div>
+            </div>
+
             <div id="url_row">
             <label for='url'>URL</label><br>
                 <div style="display:flex; gap:8px; align-items:center;">
@@ -1420,10 +1437,10 @@ if (typeof window.consolidation !== 'function') {
             ?>
             </div>
             <div id="reasoning_row">
-                <label class="label-with-toggle"><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span>
-                    <input type="hidden" name="reasoning_model" value="0">
-                    <input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>>
-                    <span class="toggle-text">On</span>
+                <label class="label-with-toggle"><span class='tip-label' data-tip='Enable reasoning for o1/o3/DeepSeek-R1 models. Reasoning tokens are ALWAYS excluded from output (you only get the final answer). May be slower but improves complex tasks.'>Enable Reasoning (Hidden)</span>
+                    <input type="hidden" name="metadata[toggle_thinking]" value="0">
+                    <input type="checkbox" name="metadata[toggle_thinking]" value="1" <?= isset($metadata_main["toggle_thinking"]) && $metadata_main["toggle_thinking"] == 1 ? "checked" : "" ?>>
+                    <span class="toggle-text">Off</span>
                 </label>
             </div>
             <div id="json_toggles" style="margin-top:8px;">
@@ -1559,90 +1576,6 @@ if (typeof window.consolidation !== 'function') {
             ?>
 
             <!-- Caching Settings (shown only for cached connectors) - MAIN EDITOR -->
-            <div id="caching_settings_main" style="display:none; margin-top:16px; padding:12px; border:1px solid #4a4a4a; border-radius:8px; background:#1a1a1a;">
-                <div style="font-weight:600; color:#e9efff; margin-bottom:12px;">🔄 Caching Settings</div>
-
-                <label for='provider_caching_main'>Provider Caching Type</label><br>
-                <select name="metadata[provider_caching]" id="provider_caching_main">
-                    <option value="Anthropic" <?= ($metadata_main['provider_caching'] ?? 'Anthropic') === 'Anthropic' ? 'selected' : '' ?>>Anthropic</option>
-                    <option value="OpenAI" <?= ($metadata_main['provider_caching'] ?? '') === 'OpenAI' ? 'selected' : '' ?>>OpenAI</option>
-                    <option value="Gemini" <?= ($metadata_main['provider_caching'] ?? '') === 'Gemini' ? 'selected' : '' ?>>Gemini</option>
-                </select><br>
-
-                <label for='dialogue_cache_uncached_count_main'><span class='tip-label' data-tip='Number of most recent dialogue entries to keep uncached (0-10)'>Uncached Dialogue Count</span></label><br>
-                <input type='number' name='metadata[dialogue_cache_uncached_count]' id='dialogue_cache_uncached_count_main' value='<?= htmlspecialchars($metadata_main['dialogue_cache_uncached_count'] ?? '4') ?>' min='0' max='10' step='1'><br>
-                
-                <label for='max_dialogue_cache_context_size_main'><span class='tip-label' data-tip='Maximum dialogue history items to include in cache (0-300). Lower values improve cache freshness.'>Max Cached Dialogue History</span></label><br>
-                <input type='number' name='metadata[max_dialogue_cache_context_size]' id='max_dialogue_cache_context_size_main' value='<?= htmlspecialchars($metadata_main['max_dialogue_cache_context_size'] ?? '93') ?>' min='0' max='300' step='1'><br>
-                
-                <div style="margin-top:12px;">
-                    <label class="label-with-toggle"><span class='tip-label' data-tip='Force apply cache_control markers even if content is below token threshold. Use for testing or if you want to see cache markers in logs regardless of size.'>Force Cache Control (Debug)</span>
-                        <input type="hidden" name="metadata[force_cache_control]" value="0">
-                        <input type="checkbox" name="metadata[force_cache_control]" value="1" <?= ($metadata_main['force_cache_control'] ?? false) ? 'checked' : '' ?>>
-                        <span class="toggle-text">Off</span>
-                    </label>
-                </div>
-
-                <div style="margin-top:12px;">
-                    <label class="label-with-toggle"><span class='tip-label' data-tip='Recommended ON for advanced models (Claude 3.5, GPT-4, Gemini 2.0). Uses minimal quality instructions. Turn OFF for older/smaller models that benefit from explicit guidance.'>Minimize Quality Instructions (Recommended)</span>
-                        <input type="hidden" name="metadata[minimize_quality_prompt]" value="0">
-                        <input type="checkbox" name="metadata[minimize_quality_prompt]" value="1" <?= (!isset($metadata_main['minimize_quality_prompt']) || $metadata_main['minimize_quality_prompt']) ? 'checked' : '' ?>>
-                        <span class="toggle-text">On</span>
-                    </label>
-                </div>
-
-                <!-- Response Format Section (Collapsible) -->
-                <div style="margin-top:16px; border:1px solid #4a4a4a; border-radius:8px; background:#252525;">
-                    <div class="collapsible-header" data-target="response_format_section_main" style="padding:10px; cursor:pointer; user-select:none; font-weight:600; color:#e9efff; display:flex; justify-content:space-between; align-items:center;">
-                        <span>📝 Response Format</span>
-                        <span class="collapse-arrow">▼</span>
-                    </div>
-                    <div id="response_format_section_main" class="collapsible-content" style="padding:10px; display:none;">
-                        <label for='response_format_main'>Response Format</label><br>
-                        <select name="metadata[response_format]" id="response_format_main">
-                            <option value="json" <?= ($metadata_main['response_format'] ?? 'json') === 'json' ? 'selected' : '' ?>>JSON (structured)</option>
-                            <option value="simple" <?= ($metadata_main['response_format'] ?? '') === 'simple' ? 'selected' : '' ?>>Simple (natural language)</option>
-                        </select><br>
-
-                        <div style="margin-top:12px;">
-                            <label class="label-with-toggle"><span class='tip-label' data-tip='Include action selection in response format. Required for NPCs to perform actions.'>Include Actions</span>
-                                <input type="hidden" name="metadata[include_actions_list]" value="0">
-                                <input type="checkbox" name="metadata[include_actions_list]" value="1" <?= (!isset($metadata_main['include_actions_list']) || $metadata_main['include_actions_list']) ? 'checked' : '' ?>>
-                            </label><br>
-                            <label class="label-with-toggle"><span class='tip-label' data-tip='Include mood/emotion in response. Used for NPC animations and expressions.'>Include Mood</span>
-                                <input type="hidden" name="metadata[include_mood_requirement]" value="0">
-                                <input type="checkbox" name="metadata[include_mood_requirement]" value="1" <?= (!isset($metadata_main['include_mood_requirement']) || $metadata_main['include_mood_requirement']) ? 'checked' : '' ?>>
-                            </label><br>
-                            <label class="label-with-toggle"><span class='tip-label' data-tip='Include action target (who/what the action is directed at).'>Include Target</span>
-                                <input type="hidden" name="metadata[include_target_requirement]" value="0">
-                                <input type="checkbox" name="metadata[include_target_requirement]" value="1" <?= (!isset($metadata_main['include_target_requirement']) || $metadata_main['include_target_requirement']) ? 'checked' : '' ?>>
-                            </label><br>
-                            <label class="label-with-toggle"><span class='tip-label' data-tip='Include listener field (who the NPC is talking to). Useful for multi-NPC conversations.'>Include Listener</span>
-                                <input type="hidden" name="metadata[include_listener_requirement]" value="0">
-                                <input type="checkbox" name="metadata[include_listener_requirement]" value="1" <?= (!isset($metadata_main['include_listener_requirement']) || $metadata_main['include_listener_requirement']) ? 'checked' : '' ?>>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Advanced Settings Section (Collapsible) -->
-                <div style="margin-top:16px; border:1px solid #4a4a4a; border-radius:8px; background:#252525;">
-                    <div class="collapsible-header" data-target="advanced_settings_section_main" style="padding:10px; cursor:pointer; user-select:none; font-weight:600; color:#e9efff; display:flex; justify-content:space-between; align-items:center;">
-                        <span>⚙️ Advanced Settings</span>
-                        <span class="collapse-arrow">▼</span>
-                    </div>
-                    <div id="advanced_settings_section_main" class="collapsible-content" style="padding:10px; display:none;">
-                        <label for='max_dialogue_cache_context_size_main'><span class='tip-label' data-tip='Maximum number of dialogue entries to cache in temp files. Higher = more context but larger cache files. Recommended: 93'>Max Dialogue Cache Context Size</span></label><br>
-                        <input type='number' name='metadata[max_dialogue_cache_context_size]' id='max_dialogue_cache_context_size_main' value='<?= htmlspecialchars($metadata_main['max_dialogue_cache_context_size'] ?? '93') ?>' min='0' step='1'><br>
-
-                        <label for='custom_system_instruction_main'><span class='tip-label' data-tip='Additional instruction added to the system prompt (after character bio, before dialogue history). Does NOT replace other instructions.'>Custom System Instruction</span></label><br>
-                        <textarea name='metadata[custom_system_instruction]' id='custom_system_instruction_main' rows='3' style='width:100%; box-sizing:border-box;'><?= htmlspecialchars($metadata_main['custom_system_instruction'] ?? '') ?></textarea><br>
-
-                        <label for='custom_last_instruction_main'><span class='tip-label' data-tip='Custom text inserted as second-to-last element in dialogue history (current user message is always last). Appears right before user current request.'>Custom Last Instruction</span></label><br>
-                        <textarea name='metadata[custom_last_instruction]' id='custom_last_instruction_main' rows='3' style='width:100%; box-sizing:border-box;'><?= htmlspecialchars($metadata_main['custom_last_instruction'] ?? '') ?></textarea>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -1655,8 +1588,20 @@ if (typeof window.consolidation !== 'function') {
 <script>
 // Sync On/Off labels for checkboxes
 (function(){
-    const names = ['reasoning_model','enforce_json','json_schema','prefill_json'];
+    const names = ['enforce_json','json_schema','prefill_json'];
+    const metadataNames = ['metadata[toggle_thinking]'];
+    
     names.forEach(n=>{
+        const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
+        if (!cb) return;
+        const label = cb.closest('label');
+        const span = label ? label.querySelector('.toggle-text') : null;
+        function sync(){ if (span) span.textContent = cb.checked ? 'On' : 'Off'; }
+        sync();
+        cb.addEventListener('change', sync);
+    });
+    
+    metadataNames.forEach(n=>{
         const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
         if (!cb) return;
         const label = cb.closest('label');
@@ -1728,7 +1673,18 @@ if (typeof window.consolidation !== 'function') {
 
         // Show caching settings only for cached driver
         const isCachedDriver = actualDriver === 'openrouterjsoncached';
-        if (cachingSettings) cachingSettings.style.display = isCachedDriver ? '' : 'none';
+        // Use visibility instead of display to ensure fields are always submitted
+        if (cachingSettings) {
+            if (isCachedDriver) {
+                cachingSettings.style.display = '';
+                cachingSettings.style.visibility = 'visible';
+                cachingSettings.style.height = 'auto';
+            } else {
+                cachingSettings.style.display = 'none';
+                cachingSettings.style.visibility = 'hidden';
+                cachingSettings.style.height = '0';
+            }
+        }
     }
 
     // Also listen to driver select changes
@@ -1742,6 +1698,34 @@ if (typeof window.consolidation !== 'function') {
 
     // Initial call to set correct visibility
     updateCachingSettingsMain();
+    
+    // Force set form values from server data after visibility changes
+    (function(){
+        const cachingSettings = document.getElementById('caching_settings_main');
+        if (!cachingSettings) return;
+        
+        const serverMetadata = <?= json_encode($metadata_main) ?>;
+        
+        const providerSelect = document.getElementById('provider_caching_main');
+        if (providerSelect && serverMetadata.provider_caching) {
+            providerSelect.value = serverMetadata.provider_caching;
+        }
+        
+        const uncachedInput = document.getElementById('dialogue_cache_uncached_count_main');
+        if (uncachedInput && serverMetadata.dialogue_cache_uncached_count) {
+            uncachedInput.value = serverMetadata.dialogue_cache_uncached_count;
+        }
+        
+        const maxCacheInput = document.getElementById('max_dialogue_cache_context_size_main');
+        if (maxCacheInput && serverMetadata.max_dialogue_cache_context_size) {
+            maxCacheInput.value = serverMetadata.max_dialogue_cache_context_size;
+        }
+        
+        const minimizeCheckbox = cachingSettings.querySelector('input[name="metadata[minimize_quality_prompt]"][type="checkbox"]');
+        if (minimizeCheckbox && serverMetadata.minimize_quality_prompt !== undefined) {
+            minimizeCheckbox.checked = (serverMetadata.minimize_quality_prompt === '1' || serverMetadata.minimize_quality_prompt === 1);
+        }
+    })();
 
     // Collapsible section handlers for main editor
     (function(){
