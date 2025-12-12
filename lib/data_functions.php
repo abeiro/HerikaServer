@@ -412,7 +412,11 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     $followers[]="{$GLOBALS["PLAYER_NAME"]}";
     $followersV2[]=$GLOBALS["PLAYER_NAME"];
 
-    $lastDialog[] = array('role' => 'user', 'content' => "<nearby_actors>\n# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange\n</nearby_actors>");
+    // Build all context sections into one combined system message
+    $contextParts = [];
+    
+    // Add nearby actors
+    $contextParts[] = "<nearby_actors>\n# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange\n</nearby_actors>";
     
     // Add nearby items to context if available
     $itemsInRange = DataItemsInCloseRange();
@@ -502,8 +506,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 $descriptionText = "\n\n# ITEM DESCRIPTIONS\n## " . implode("\n## ", $descParts);
             }
             
-            $contextContent = "<nearby_items>\n# NEARBY ITEMS (format: RefID:ItemName)\n## {$itemsText}{$descriptionText}\n</nearby_items>";
-            $lastDialog[] = array('role' => 'user', 'content' => $contextContent);
+            $contextParts[] = "<nearby_items>\n# NEARBY ITEMS (format: RefID:ItemName)\n## {$itemsText}{$descriptionText}\n</nearby_items>";
         }
     }
     
@@ -530,12 +533,12 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     }
 
 	if ($followersString!=$GLOBALS["PLAYER_NAME"] && !empty($followersString)) {
-	    $lastDialog[] = array('role' => 'user', 'content' => "<adventuring_party>
+	    $contextParts[] = "<adventuring_party>
         # ADVENTURING PARTY
 	     $followersString are together as an **adventuring party**, acting as close companions.
-	     - The others **can know each other**, but they are **not part** of {$followersString}’s group.
+	     - The others **can know each other**, but they are **not part** of {$followersString}'s group.
 	     - Generally speaking, any mention of **plans, missions, or objectives** refers **only to the adventuring party**, never to the other NPCs.
-	     </adventuring_party>");
+	     </adventuring_party>";
 	}
     $arr_poi = DataPosibleLocationsToGo();
     if (isset($arr_poi) && is_array($arr_poi) && (count($arr_poi) > 0)) {
@@ -554,7 +557,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         }
         
         if (count($arr_poi) > 0) {
-            $lastDialog[] = array('role' => 'user', 'content' => "<points_of_interest>\n# POIs - Points of Interest nearby \n## ". (implode("\n## ",$arr_poi))."\n</points_of_interest>");
+            $contextParts[] = "<points_of_interest>\n# POIs - Points of Interest nearby \n## ". (implode("\n## ",$arr_poi))."\n</points_of_interest>";
         }
     }
     
@@ -568,12 +571,12 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         $notes=[];
         foreach ($rolemasterNotes as $note)
             $notes[]= $note["data"];
-        $lastDialog[] = array('role' => 'user', 'content' => "<scene_notes>\n# SCENE NOTES \n## ".implode(".",$notes)."</scene_notes>");
+        $contextParts[] = "<scene_notes>\n# SCENE NOTES \n## ".implode(".",$notes)."</scene_notes>";
     }
         
 
-
-    return $lastDialog;
+    // Return context as string to be appended to main system prompt
+    return implode("\n\n", $contextParts);
 
 }
 
