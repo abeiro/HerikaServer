@@ -33,9 +33,8 @@
         }
         
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-            // inject the prompt here with the actions (original flat format)
-            $GLOBALS["COMMAND_PROMPT"].="\n<available_actions_list>\n";
-            $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
+            // Collect action prompts in array for randomization
+            $actionPrompts = [];
             
             foreach ($GLOBALS["FUNCTIONS"] as $index => $function) {
                 if (!$function) {
@@ -49,19 +48,34 @@
                 }
 
                 $GLOBALS["FUNC_LIST"][]=$function["name"];
+                
+                // Build action text
+                $actionText = "";
                 if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"] || $function["name"]==$GLOBALS["F_NAMES"]["Brawl"] || $function["name"]==$GLOBALS["F_NAMES"]["AttackHunt"]) {
-                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
-                    $GLOBALS["COMMAND_PROMPT"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
+                    $actionText = "AVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+                    $actionText .= "(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
                 } else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
-                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]}(keywords to search ({$function["description"]})";
+                    $actionText = "AVAILABLE ACTION: {$function["name"]}(keywords to search ({$function["description"]})";
                 } else {
-                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+                    $actionText = "AVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                 }
+                
+                $actionPrompts[] = $actionText;
             }
             
-            $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: Talk\n</available_actions_list>";
+            // Add Talk action
+            $actionPrompts[] = "AVAILABLE ACTION: Talk";
             $GLOBALS["FUNC_LIST"][]="Talk";
+            
+            // Randomize the order of actions
+            shuffle($actionPrompts);
             shuffle($GLOBALS["FUNC_LIST"]);
+            
+            // Build the final prompt with randomized actions
+            $GLOBALS["COMMAND_PROMPT"].="\n<available_actions_list>\n";
+            $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
+            $GLOBALS["COMMAND_PROMPT"].="\n" . implode("\n", $actionPrompts);
+            $GLOBALS["COMMAND_PROMPT"].="\n</available_actions_list>";
         }
     }
 
