@@ -423,6 +423,41 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     echo "</div>";
                 }
                 echo "</div>";
+                
+                // Caching settings
+                $cachingEnabled = false;
+                $cachingType = 'anthropic';
+                if (isset($editItem['metadata'])) {
+                    $metadata = is_string($editItem['metadata']) ? json_decode($editItem['metadata'], true) : $editItem['metadata'];
+                    if (is_array($metadata)) {
+                        $cachingEnabled = isset($metadata['caching_enabled']) && $metadata['caching_enabled'];
+                        $cachingType = isset($metadata['caching_type']) ? $metadata['caching_type'] : 'anthropic';
+                    }
+                }
+                
+                echo "<div style=\"border:1px solid #4a4a4a; border-radius:10px; padding:10px; margin-top:12px;\">";
+                echo "<div style=\"font-weight:600; color:#e9efff; margin-bottom:8px;\">Prompt Caching</div>";
+                
+                // Caching enabled checkbox
+                $tipCaching = 'Enable prompt caching to reduce API costs. Static character/instruction content is cached while dynamic sections (actors, items, actions) remain fresh.';
+                echo "<div style='margin-bottom:10px;'>";
+                echo "<label><span class='tip-label' data-tip='" . htmlspecialchars($tipCaching, ENT_QUOTES) . "'>Enable Caching</span></label><br>";
+                echo "<input type='hidden' name='caching_enabled' value='0'>";
+                echo "<input type='checkbox' name='caching_enabled' value='1' " . ($cachingEnabled ? "checked" : "") . " id='caching_enabled_chk' onchange=\"document.getElementById('caching_type_select').disabled = !this.checked\">";
+                echo "<label for='caching_enabled_chk' style='margin-left:8px; color:#aaa;'>Cache static prompt sections</label>";
+                echo "</div>";
+                
+                // Caching type dropdown
+                $tipCachingType = 'Select the caching strategy for your LLM provider. Anthropic uses ephemeral caching, Gemini has similar support, OpenAI has prompt caching support.';
+                echo "<div>";
+                echo "<label><span class='tip-label' data-tip='" . htmlspecialchars($tipCachingType, ENT_QUOTES) . "'>Caching Type</span></label><br>";
+                echo "<select name='caching_type' id='caching_type_select' " . (!$cachingEnabled ? "disabled" : "") . " style='width:100%; padding:8px; margin-top:4px;'>";
+                echo "<option value='anthropic'" . ($cachingType === 'anthropic' ? ' selected' : '') . ">Anthropic</option>";
+                echo "<option value='gemini'" . ($cachingType === 'gemini' ? ' selected' : '') . ">Gemini</option>";
+                echo "<option value='openai'" . ($cachingType === 'openai' ? ' selected' : '') . ">OpenAI</option>";
+                echo "</select>";
+                echo "</div>";
+                echo "</div>";
 
                 // Advanced block
                 echo "<div style=\"border:1px solid #4a4a4a; border-radius:10px; padding:10px; margin-top:12px;\">";
@@ -973,6 +1008,30 @@ if (isset($_GET["create_blank"])) {
 // Handle Save (update without leaving current connector)
 if ($_SERVER["REQUEST_METHOD"] === "POST" && (isset($_POST["save"]) || isset($_POST["update"])) ) {
     $id = $_POST["id"] ?? '';
+    
+    // Handle metadata for caching - only if caching fields are present in POST
+    $currentRow = $llm->getById($id);
+    $currentMetadata = [];
+    if ($currentRow && isset($currentRow['metadata'])) {
+        if (is_string($currentRow['metadata'])) {
+            $currentMetadata = json_decode($currentRow['metadata'], true) ?: [];
+        } elseif (is_array($currentRow['metadata'])) {
+            $currentMetadata = $currentRow['metadata'];
+        }
+    }
+    
+    // Only update caching settings if the form fields were present (user has the UI)
+    if (isset($_POST['caching_enabled']) || isset($_POST['caching_type'])) {
+        $currentMetadata['caching_enabled'] = isset($_POST['caching_enabled']) && $_POST['caching_enabled'] == '1';
+        $currentMetadata['caching_type'] = isset($_POST['caching_type']) ? $_POST['caching_type'] : 'anthropic';
+    }
+    // Otherwise leave existing caching settings unchanged (or absent if never set)
+    
+    // Merge metadata into POST data only if there's actually metadata to save
+    if (!empty($currentMetadata)) {
+        $_POST['metadata'] = json_encode($currentMetadata);
+    }
+    
     $llm->update($id, $_POST);
     $redir = 'llm_connectors.php' . ($id !== '' ? ('?edit=' . urlencode($id)) : '');
     if (isset($_POST['partial']) && $_POST['partial'] === 'editor') {
@@ -1360,6 +1419,41 @@ if (typeof window.consolidation !== 'function') {
                 echo "<div style='margin-top:6px;'><input type='number' class='inline-num' id='{$nid}' name='{$field}' min='{$min}' max='{$max}' step='{$step}' value='{$val}' oninput=\"llmClamp('{$rid}','{$nid}',{$min},{$max})\" data-null='" . (($raw === '' || $raw === null) ? '1' : '0') . "'></div>";
                 echo "</div>";
             }
+            echo "</div>";
+            
+            // Caching settings (for main page)
+            $cachingEnabled = false;
+            $cachingType = 'anthropic';
+            if (isset($editItem['metadata'])) {
+                $metadata = is_string($editItem['metadata']) ? json_decode($editItem['metadata'], true) : $editItem['metadata'];
+                if (is_array($metadata)) {
+                    $cachingEnabled = isset($metadata['caching_enabled']) && $metadata['caching_enabled'];
+                    $cachingType = isset($metadata['caching_type']) ? $metadata['caching_type'] : 'anthropic';
+                }
+            }
+            
+            echo "<div style=\"border:1px solid #4a4a4a; border-radius:10px; padding:10px; margin-top:12px;\">";
+            echo "<div style=\"font-weight:600; color:#e9efff; margin-bottom:8px;\">Prompt Caching</div>";
+            
+            // Caching enabled checkbox
+            $tipCaching = 'Enable prompt caching to reduce API costs. Static character/instruction content is cached while dynamic sections (actors, items, actions) remain fresh.';
+            echo "<div style='margin-bottom:10px;'>";
+            echo "<label><span class='tip-label' data-tip='" . htmlspecialchars($tipCaching, ENT_QUOTES) . "'>Enable Caching</span></label><br>";
+            echo "<input type='hidden' name='caching_enabled' value='0'>";
+            echo "<input type='checkbox' name='caching_enabled' value='1' " . ($cachingEnabled ? "checked" : "") . " id='caching_enabled_chk' onchange=\"document.getElementById('caching_type_select').disabled = !this.checked\">";
+            echo "<label for='caching_enabled_chk' style='margin-left:8px; color:#aaa;'>Cache static prompt sections</label>";
+            echo "</div>";
+            
+            // Caching type dropdown
+            $tipCachingType = 'Select the caching strategy for your LLM provider. Anthropic uses ephemeral caching, Gemini has similar support, OpenAI has prompt caching support.';
+            echo "<div>";
+            echo "<label><span class='tip-label' data-tip='" . htmlspecialchars($tipCachingType, ENT_QUOTES) . "'>Caching Type</span></label><br>";
+            echo "<select name='caching_type' id='caching_type_select' " . (!$cachingEnabled ? "disabled" : "") . " style='width:100%; padding:8px; margin-top:4px;'>";
+            echo "<option value='anthropic'" . ($cachingType === 'anthropic' ? ' selected' : '') . ">Anthropic</option>";
+            echo "<option value='gemini'" . ($cachingType === 'gemini' ? ' selected' : '') . ">Gemini</option>";
+            echo "<option value='openai'" . ($cachingType === 'openai' ? ' selected' : '') . ">OpenAI</option>";
+            echo "</select>";
+            echo "</div>";
             echo "</div>";
 
             // Advanced block

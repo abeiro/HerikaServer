@@ -41,6 +41,9 @@ class openrouterjson
     private $_timeout;
     private $_is_grok;
     private $_lastStreamedObject;
+    private $_caching_enabled;
+    private $_caching_type;
+    private $_provider_caching;
     
     
     public function __construct()
@@ -72,6 +75,9 @@ class openrouterjson
         $this->_websearch_text="";
         $this->_websearch_index=0;
         $this->_webbackup_func=false;
+        $this->_caching_enabled=false;
+        $this->_caching_type="";
+        $this->_provider_caching="";
         require_once(__DIR__."/__jpd.php");
     }
 
@@ -91,6 +97,43 @@ class openrouterjson
             $b_res = (!($i_pos === false));
         }
         return $b_res;
+    }
+
+    /**
+     * Extract dynamic sections from system prompt content for caching
+     * @param string $content The system prompt content
+     * @return array ['static_content' => string, 'dynamic_sections' => array of extracted sections]
+     */
+    private function extractDynamicSections($content) {
+        $dynamicSections = [];
+        $staticContent = $content;
+        
+        // Define dynamic section patterns in order they should appear
+        $patterns = [
+            'nearby_actors' => '/<nearby_actors>.*?<\/nearby_actors>/s',
+            'nearby_items' => '/<nearby_items>.*?<\/nearby_items>/s',
+            'points_of_interest' => '/<points_of_interest>.*?<\/points_of_interest>/s',
+            'current_condition' => '/<current_condition>.*?<\/current_condition>/s',
+            'available_actions_list' => '/<available_actions_list>.*?<\/available_actions_list>/s',
+            'knowledge' => '/<knowledge>.*?<\/knowledge>/s'
+        ];
+        
+        foreach ($patterns as $key => $pattern) {
+            if (preg_match($pattern, $staticContent, $matches)) {
+                $dynamicSections[$key] = $matches[0];
+                // Remove from static content
+                $staticContent = preg_replace($pattern, '', $staticContent);
+            }
+        }
+        
+        // Clean up extra whitespace
+        $staticContent = preg_replace('/\n{3,}/', "\n\n", $staticContent);
+        $staticContent = trim($staticContent);
+        
+        return [
+            'static_content' => $staticContent,
+            'dynamic_sections' => $dynamicSections
+        ];
     }
 
 
@@ -226,6 +269,31 @@ class openrouterjson
             $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model, use list of known reasoning models
         
         $this->_timeout = intval(($this->_is_reasoning) ? 90 : 30); // reasoning models could think more than 2 minutes
+        
+        // Read caching settings - they're set directly on GLOBALS["CONNECTOR"] by setOldGlobals()
+        $this->_caching_enabled = isset($GLOBALS["CONNECTOR"][$this->name]["caching_enabled"]) 
+            ? (bool)$GLOBALS["CONNECTOR"][$this->name]["caching_enabled"] 
+            : false;
+        $this->_caching_type = isset($GLOBALS["CONNECTOR"][$this->name]["caching_type"]) 
+            ? strtolower(trim($GLOBALS["CONNECTOR"][$this->name]["caching_type"])) 
+            : "anthropic";
+        
+        // Set provider caching based on type
+        if ($this->_caching_enabled) {
+            if ($this->_caching_type === "anthropic") {
+                $this->_provider_caching = "Anthropic";
+            } elseif ($this->_caching_type === "gemini") {
+                $this->_provider_caching = "Gemini";
+            } elseif ($this->_caching_type === "openai") {
+                $this->_provider_caching = "OpenAI";
+            } else {
+                $this->_provider_caching = "Anthropic"; // default
+            }
+            $ttlInfo = ($this->_provider_caching === "Anthropic") ? " (1-hour TTL)" : "";
+            Logger::info("[{$this->name}] ✓ Caching ENABLED - Type: {$this->_caching_type}, Provider: {$this->_provider_caching}{$ttlInfo}");
+        } else {
+            Logger::info("[{$this->name}] ✗ Caching DISABLED");
+        }
     }   
     
     public function open($contextData, $customParms)
@@ -481,6 +549,116 @@ class openrouterjson
         
         $contextData=$contextDataCopy;
         
+        // Apply prompt caching if enabled
+        if ($this->_caching_enabled && !empty($contextData)) {
+            Logger::info("[{$this->name}] ========== CACHING ACTIVE - RESTRUCTURING MESSAGES ==========");
+            Logger::info("[{$this->name}] Provider: {$this->_provider_caching}, Type: {$this->_caching_type}");
+            Logger::info("[{$this->name}] Original message count: " . count($contextData));
+            
+            $restructuredMessages = [];
+            $dynamicSectionsExtracted = [];
+            $dialogueHistory = [];
+            
+            // Process messages and extract dynamic sections from system prompts
+            foreach ($contextData as $idx => $msg) {
+                if (!is_array($msg) || !isset($msg['role'])) {
+                    continue;
+                }
+                
+                if ($msg['role'] === 'system') {
+                    Logger::info("[{$this->name}] Processing system message #{$idx}");
+                    
+                    // Extract dynamic sections from system prompt
+                    $extracted = $this->extractDynamicSections($msg['content']);
+                    
+                    $staticHash = substr(md5($extracted['static_content']), 0, 8);
+                    Logger::info("[{$this->name}] Static content hash: {$staticHash}, length: " . strlen($extracted['static_content']));
+                    Logger::info("[{$this->name}] Extracted " . count($extracted['dynamic_sections']) . " dynamic sections: " . implode(", ", array_keys($extracted['dynamic_sections'])));
+                    
+                    // Add static content with cache control marker
+                    // Anthropic: Use 1-hour TTL (extended cache) for better cost/performance
+                    $cacheControlType = ["type" => "ephemeral", "ttl" => "1h"];
+                    if ($this->_provider_caching === "OpenAI") {
+                        // OpenAI uses different caching structure
+                        $restructuredMessages[] = [
+                            'role' => 'system',
+                            'content' => $extracted['static_content']
+                        ];
+                        Logger::info("[{$this->name}] Added static system (OpenAI - no cache_control marker)");
+                    } elseif ($this->_provider_caching === "Anthropic") {
+                        // Anthropic requires cache_control within content blocks
+                        $restructuredMessages[] = [
+                            'role' => 'system',
+                            'content' => [
+                                [
+                                    'type' => 'text',
+                                    'text' => $extracted['static_content'],
+                                    'cache_control' => $cacheControlType
+                                ]
+                            ]
+                        ];
+                        Logger::info("[{$this->name}] Added static system WITH Anthropic cache_control (content block format): " . json_encode($cacheControlType));
+                    } else {
+                        // Gemini or other providers - use message-level cache_control
+                        $restructuredMessages[] = [
+                            'role' => 'system',
+                            'content' => $extracted['static_content'],
+                            'cache_control' => $cacheControlType
+                        ];
+                        Logger::info("[{$this->name}] Added static system WITH cache_control (message level): " . json_encode($cacheControlType));
+                    }
+                    
+                    // Store dynamic sections to add later
+                    $dynamicSectionsExtracted = array_merge($dynamicSectionsExtracted, $extracted['dynamic_sections']);
+                    
+                } else {
+                    // Store dialogue history (user/assistant/tool messages) to add after system
+                    $dialogueHistory[] = $msg;
+                }
+            }
+            
+            Logger::info("[{$this->name}] Dialogue history messages: " . count($dialogueHistory));
+            
+            // Rebuild message array: static system (cached) -> dialogue history -> dynamic sections -> final user
+            $finalMessages = $restructuredMessages;
+            
+            // Add dialogue history
+            $finalMessages = array_merge($finalMessages, $dialogueHistory);
+            
+            // Add dynamic sections as separate system messages before final user message
+            // Remove the last message (final user with JSON format) to re-add after dynamic sections
+            $finalUserMessage = array_pop($finalMessages);
+            
+            // Add dynamic sections in order
+            $sectionOrder = ['nearby_actors', 'nearby_items', 'points_of_interest', 'current_condition', 'available_actions_list', 'knowledge'];
+            foreach ($sectionOrder as $sectionKey) {
+                if (isset($dynamicSectionsExtracted[$sectionKey])) {
+                    $sectionHash = substr(md5($dynamicSectionsExtracted[$sectionKey]), 0, 8);
+                    $sectionLength = strlen($dynamicSectionsExtracted[$sectionKey]);
+                    Logger::info("[{$this->name}] Adding dynamic section '{$sectionKey}' (hash: {$sectionHash}, length: {$sectionLength})");
+                    $finalMessages[] = [
+                        'role' => 'system',
+                        'content' => $dynamicSectionsExtracted[$sectionKey]
+                    ];
+                }
+            }
+            
+            // Re-add final user message
+            if ($finalUserMessage) {
+                $finalMessages[] = $finalUserMessage;
+                Logger::info("[{$this->name}] Re-added final user message");
+            }
+            
+            $contextData = $finalMessages;
+            Logger::info("[{$this->name}] ========== CACHING RESTRUCTURE COMPLETE ==========");
+            Logger::info("[{$this->name}] Final message count: " . count($finalMessages));
+            Logger::info("[{$this->name}] Message structure: " . json_encode(array_map(function($m) { return ['role' => $m['role'], 'has_cache' => isset($m['cache_control'])]; }, $finalMessages)));
+        } else {
+            if (!$this->_caching_enabled) {
+                Logger::info("[{$this->name}] Caching disabled - using standard message structure");
+            }
+        }
+        
         if (!$assistantAppearedInhistory) { // is this still needed?
             
             if (isset($GLOBALS["CHIM_LLM_EXAMPLES"]) && $GLOBALS["CHIM_LLM_EXAMPLES"]) {
@@ -725,7 +903,86 @@ class openrouterjson
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
-        file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
+        // Log caching information (concise format)
+        $cachingInfo = "=== CACHING INFO ===\n";
+        $cachingInfo .= "Enabled: " . ($this->_caching_enabled ? "YES" : "NO");
+        if ($this->_caching_enabled) {
+            $ttlNote = "";
+            if ($this->_provider_caching === "Anthropic") {
+                $ttlNote = " (TTL: 1 hour)";
+            }
+            $cachingInfo .= " | Type: {$this->_caching_type} | Provider: {$this->_provider_caching}{$ttlNote}\n\n";
+            
+            // Track system prompts only
+            $cachedSystems = [];
+            $dynamicSystems = [];
+            $dialogueCount = 0;
+            
+            foreach ($data['messages'] as $idx => $msg) {
+                $role = $msg['role'] ?? 'unknown';
+                if ($role === 'system') {
+                    // Check for cache_control in content blocks (Anthropic format)
+                    $hasCacheControl = false;
+                    $contentHash = 'n/a';
+                    
+                    if (is_array($msg['content']) && isset($msg['content'][0]['text'])) {
+                        // Content block format (Anthropic)
+                        $contentHash = substr(md5($msg['content'][0]['text']), 0, 8);
+                        $hasCacheControl = isset($msg['content'][0]['cache_control']);
+                    } elseif (is_string($msg['content'])) {
+                        // String format
+                        $contentHash = substr(md5($msg['content']), 0, 8);
+                        $hasCacheControl = isset($msg['cache_control']);
+                    }
+                    
+                    if ($hasCacheControl) {
+                        $cachedSystems[] = "[{$idx}] hash:{$contentHash}";
+                    } else {
+                        // Try to identify which dynamic section this is
+                        $sectionType = 'unknown';
+                        if (is_string($msg['content'])) {
+                            if (strpos($msg['content'], '<nearby_actors>') !== false) $sectionType = 'nearby_actors';
+                            elseif (strpos($msg['content'], '<nearby_items>') !== false) $sectionType = 'nearby_items';
+                            elseif (strpos($msg['content'], '<points_of_interest>') !== false) $sectionType = 'points_of_interest';
+                            elseif (strpos($msg['content'], '<current_condition>') !== false) $sectionType = 'current_condition';
+                            elseif (strpos($msg['content'], '<available_actions_list>') !== false) $sectionType = 'available_actions';
+                            elseif (strpos($msg['content'], '<knowledge>') !== false) $sectionType = 'knowledge';
+                        }
+                        $dynamicSystems[] = "[{$idx}] hash:{$contentHash} ({$sectionType})";
+                    }
+                } else {
+                    $dialogueCount++;
+                }
+            }
+            
+            if (!empty($cachedSystems)) {
+                $cachingInfo .= "CACHED STATIC PROMPT:\n" . implode("\n", $cachedSystems) . "\n";
+                // Estimate token count (rough: 1 token ≈ 4 chars)
+                $firstSystemMsg = $data['messages'][0] ?? null;
+                if ($firstSystemMsg && $firstSystemMsg['role'] === 'system') {
+                    $textContent = '';
+                    if (is_array($firstSystemMsg['content']) && isset($firstSystemMsg['content'][0]['text'])) {
+                        $textContent = $firstSystemMsg['content'][0]['text'];
+                    } elseif (is_string($firstSystemMsg['content'])) {
+                        $textContent = $firstSystemMsg['content'];
+                    }
+                    $estimatedTokens = intval(strlen($textContent) / 4);
+                    $minTokens = ($this->_provider_caching === "Anthropic" && stripos($this->_model, 'haiku') !== false) ? 2048 : 1024;
+                    $sizeStatus = ($estimatedTokens >= $minTokens) ? "✓" : "⚠";
+                    $cachingInfo .= "Size: ~{$estimatedTokens} tokens (min: {$minTokens} for caching) {$sizeStatus}\n\n";
+                }
+            }
+            if (!empty($dynamicSystems)) {
+                $cachingInfo .= "DYNAMIC SECTIONS:\n" . implode("\n", $dynamicSystems) . "\n\n";
+            }
+            
+            $cachingInfo .= "SUMMARY: " . count($cachedSystems) . " cached | " . count($dynamicSystems) . " dynamic | {$dialogueCount} dialogue | " . count($data['messages']) . " total\n";
+        } else {
+            $cachingInfo .= "\n";
+        }
+        $cachingInfo .= "\n=== FULL DATA ===\n";
+        
+        file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n{$cachingInfo}\n".var_export($data,true)."\n=\n", FILE_APPEND);
 
         $headers = array(
             'Content-Type: application/json',

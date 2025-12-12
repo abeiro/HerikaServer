@@ -1640,6 +1640,9 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
 }
 
 
+// REMOVED: <player_character> section - player appearance is now included in nearby actors data
+// This eliminates redundancy since the player is already captured in the dynamic nearby_actors field
+/*
 if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
     // Load player appearance from core_player table
     // Note: PLAYER_BIOS global is already loaded from core_player in profile_loader.php
@@ -1664,6 +1667,7 @@ if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
         $GLOBALS["PROMPT_HEAD"].=PHP_EOL."<player_character>\n".$playerAppearance."\n</player_character>\n";
     }
 }
+*/
 
 
 // Use centralized function from data_functions.php
