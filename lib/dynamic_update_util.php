@@ -264,17 +264,44 @@ function processAutoDiary($gameRequest, $eventType) {
             continue;
         }
         
-        // Check if auto_diary_enabled is set for this NPC
+        // Load profile first so we can check profile defaults
+        $profile = new CoreProfile();
+        $currentProfileData = $profile->getById($currentNpcData["profile_id"]);
+        $profile->setOldGlobals($currentProfileData);
+        $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+        
+        // Check auto_diary_enabled with proper profile inheritance
         $autoDiaryEnabled = false;
+        
+        // First, get the profile default from metadata
+        try {
+            if (!empty($currentProfileData['metadata'])) {
+                $profileMeta = json_decode($currentProfileData['metadata'], true);
+                if (is_array($profileMeta) && isset($profileMeta['AUTO_DIARY_ENABLED'])) {
+                    $autoDiaryEnabled = ($profileMeta['AUTO_DIARY_ENABLED'] === '1' || 
+                                        $profileMeta['AUTO_DIARY_ENABLED'] === 1 || 
+                                        $profileMeta['AUTO_DIARY_ENABLED'] === true);
+                }
+            }
+        } catch (Throwable $e) {
+            Logger::debug("AUTO_DIARY: Error reading profile metadata for $npcName: " . $e->getMessage());
+        }
+        
+        // Then, check for NPC-specific override in extended_data
         if (!empty($currentNpcData['extended_data'])) {
             $extendedData = json_decode($currentNpcData['extended_data'], true);
-            if (is_array($extendedData) && !empty($extendedData['auto_diary_enabled'])) {
-                $autoDiaryEnabled = true;
+            if (is_array($extendedData) && 
+                array_key_exists('auto_diary_enabled', $extendedData) && 
+                $extendedData['auto_diary_enabled'] !== null && 
+                $extendedData['auto_diary_enabled'] !== '') {
+                // NPC has explicit override
+                $autoDiaryEnabled = !empty($extendedData['auto_diary_enabled']);
+                Logger::debug("AUTO_DIARY: NPC '$npcName' has explicit override: " . ($autoDiaryEnabled ? 'enabled' : 'disabled'));
             }
         }
         
         if (!$autoDiaryEnabled) {
-            Logger::debug("AUTO_DIARY: NPC '$npcName' does not have auto_diary_enabled, skipping");
+            Logger::debug("AUTO_DIARY: NPC '$npcName' does not have auto_diary_enabled (checked both NPC override and profile default), skipping");
             continue;
         }
         
@@ -295,19 +322,38 @@ function processAutoDiary($gameRequest, $eventType) {
                 continue;
             }
         }
-        
-        $profile = new CoreProfile();
-        $currentProfileData = $profile->getById($currentNpcData["profile_id"]);
-        $profile->setOldGlobals($currentProfileData);
-        $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
 
-        // Check AUTO_DIARY_WAIT after loading profile (so profile overrides apply)
-        // For goodnight events, always generate. For waitstart events, check the setting.
-        $shouldGenerate = ($eventType === "goodnight") || 
-                         (isset($GLOBALS["AUTO_DIARY_WAIT"]) && $GLOBALS["AUTO_DIARY_WAIT"]);
+        // Check AUTO_DIARY_WAIT with profile inheritance
+        $autoDiaryWait = false;
         
-        Logger::info("AUTO_DIARY: $npcName - eventType=$eventType, AUTO_DIARY_WAIT=" . 
-                    (isset($GLOBALS["AUTO_DIARY_WAIT"]) ? ($GLOBALS["AUTO_DIARY_WAIT"] ? 'true' : 'false') : 'not set') . 
+        // Get profile default for AUTO_DIARY_WAIT
+        try {
+            if (!empty($currentProfileData['metadata'])) {
+                $profileMeta = json_decode($currentProfileData['metadata'], true);
+                if (is_array($profileMeta) && isset($profileMeta['AUTO_DIARY_WAIT_ENABLED'])) {
+                    $autoDiaryWait = ($profileMeta['AUTO_DIARY_WAIT_ENABLED'] === '1' || 
+                                     $profileMeta['AUTO_DIARY_WAIT_ENABLED'] === 1 || 
+                                     $profileMeta['AUTO_DIARY_WAIT_ENABLED'] === true);
+                }
+            }
+        } catch (Throwable $e) {}
+        
+        // Check for NPC override
+        if (!empty($currentNpcData['extended_data'])) {
+            $extendedData = json_decode($currentNpcData['extended_data'], true);
+            if (is_array($extendedData) && 
+                array_key_exists('auto_diary_wait_enabled', $extendedData) && 
+                $extendedData['auto_diary_wait_enabled'] !== null && 
+                $extendedData['auto_diary_wait_enabled'] !== '') {
+                $autoDiaryWait = !empty($extendedData['auto_diary_wait_enabled']);
+            }
+        }
+        
+        // For goodnight events, always generate. For waitstart events, check the setting.
+        $shouldGenerate = ($eventType === "goodnight") || ($eventType === "waitstart" && $autoDiaryWait);
+        
+        Logger::info("AUTO_DIARY: $npcName - eventType=$eventType, autoDiaryWait=" . 
+                    ($autoDiaryWait ? 'true' : 'false') . 
                     ", shouldGenerate=" . ($shouldGenerate ? 'true' : 'false'));
 
         if ($shouldGenerate) {
