@@ -116,15 +116,8 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     $pfi = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] ?? 10) * 100000;
     
     if (($maxRow-$lastMemory)>($pfi)) {
-        //echo "[SUMMARY] memory creation maxRow-lastMemory > pfi  ($maxRow-$lastMemory)>($pfi) ";
-
-        $shellResult = shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 1 ");
-        if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
-            Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
-        }
-
-    } else {
-        //error_log("[SUMMARY] Skiping memory creation maxRow-lastMemory > pfi  ($maxRow-$lastMemory)>($pfi) ");
+        // Run memory compaction silently
+        $shellResult = shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 1 2>/dev/null");
     }
 
     //unset($GLOBALS["db"]);

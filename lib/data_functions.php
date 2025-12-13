@@ -2463,8 +2463,6 @@ function PackIntoSummary($onlyMissingDiary=false)
 
         $maxRow=0;
 
-        Logger::info("Missing diary insert done");
-
     } else {
         $lastGameTsRecord = $GLOBALS["db"]->fetchOne("select gamets as gamets from eventlog order by gamets desc LIMIT 1"); // 2.1ms
         $results = $GLOBALS["db"]->fetchAll("select gamets_truncated from memory_summary order by gamets_truncated desc LIMIT 1"); // 0.5ms, faster 
@@ -2488,9 +2486,6 @@ function PackIntoSummary($onlyMissingDiary=false)
 
         $results = $db->query($query);
         
-        Logger::info("Main insert done. maxRow={$maxRow} pfi={$pfi} , minRowTs=$minRowTs ");
-        //$results = $db->query("delete from memory_summary  where classifier='dialogue' and packed_message not like '%Context%Location%'");
-        
         $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
                                     select gamets,1,message,message,'diary',uid,speaker
                                     from memory
@@ -2498,8 +2493,6 @@ function PackIntoSummary($onlyMissingDiary=false)
                                     and gamets>$maxRow
                                 ");
 
-                                
-        Logger::info("Diary insert done. maxRow={$maxRow} ");
     }
 
     
