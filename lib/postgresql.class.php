@@ -79,14 +79,14 @@ class sql
                 Logger::debug("SQL: close connection [null]. " . $this->extract_caller() . $this->GetLastError() );
     }
 
-    private function set_debug_level($debug_lvl = 0) { // set debug level, 0=quiet 5=max verbosity, 0 doesn't suppress errors
+    public function set_debug_level($debug_lvl = 0) { // set debug level, 0=quiet 5=max verbosity, 0 doesn't suppress errors
         $this->debug_level = $debug_lvl;
     }
     
     private function extract_caller() { // format back trace output
         $s_res = "";
         if ($this->debug_level > 0) {
-            $arr_bkt = debug_backtrace(5);
+            $arr_bkt = debug_backtrace();
             if (isset($arr_bkt) && (count($arr_bkt)> 0)) {
                 $s_res .= " stack: ";
                 for ($i = 1; $i <= 4; $i++) {
@@ -94,7 +94,9 @@ class sql
                     $s_line = $arr_bkt[$i]['line'] ?? '';
                     $s_func = $arr_bkt[$i]['function'] ?? '';
                     $s_class = $arr_bkt[$i]['class'] ?? '';
-                    $s_arg = $arr_bkt[$i]['args'][0] ?? '';
+                    if (isset($arr_bkt[$i]['args']) && (count($arr_bkt[$i]['args']) > 0)) {
+                        $s_arg = json_encode($arr_bkt[$i]['args'],JSON_UNESCAPED_SLASHES); //"array[".count($arr_bkt[$i]['args'][0])."]";
+                    } else $s_arg = '';
                     $sx = $s_file.$s_line.$s_func;
                     if (strlen($sx) > 0) {
                         if ($s_line > '')

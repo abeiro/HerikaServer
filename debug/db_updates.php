@@ -2268,10 +2268,19 @@ $db->execQuery("ALTER TABLE audit_request ADD COLUMN IF NOT EXISTS usage jsonb")
 if ($checkTableExists("rumors") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/add_rumors.sql"));
 } else
-    Logger::info(__FILE__." import_rules exists");
+    Logger::info(__FILE__." rumors exists");
+
+if ($checkTableExists("named_cell") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/named_cell.sql"));
+} else
+    Logger::info(__FILE__." named_cell exists");
+
 
 $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS region text");
 $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS hold text");
+$db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS tags text");
+$db->execQuery("ALTER TABLE sneq_quests ADD COLUMN IF NOT EXISTS title text");
+$db->execQuery("ALTER TABLE sneq_quests ADD COLUMN IF NOT EXISTS stage text");
 
 if ($checkTableExists("master_packages") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/master_packages.sql"));
@@ -2604,6 +2613,35 @@ if ($checkVersion("prompts")<20251128002) {
     
     $updateVersion("prompts", 20251128002);
     Logger::info("Applied patch prompts 20251128002 - Added height_descriptions");
+}
+
+//----------------------------------------------------
+// Book Summary Prompt - Version 20251214001
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251214001) {
+    Logger::debug("Applying prompts table 20251214001 - Adding book_summary_prompt");
+    
+    // Seed book summary prompt (uses {HERIKA_NAME} and {TEMPLATE_DIALOG} placeholders)
+    $bookSummaryPrompt = $db->escape(
+        "({HERIKA_NAME} reads the book ) {TEMPLATE_DIALOG}"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'book_summary_prompt',
+            '$bookSummaryPrompt',
+            'Instruction prompt for book summary/reading events (contains {HERIKA_NAME} and {TEMPLATE_DIALOG} placeholders). Used in: processor/request.php for chatnf_book events'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251214001);
+    Logger::info("Applied patch prompts 20251214001 - Added book_summary_prompt");
 }
 
 //----------------------------------------------------

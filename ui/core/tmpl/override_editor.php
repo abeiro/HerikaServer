@@ -104,11 +104,6 @@ $fullSchema = [
         'description' => 'Cooldown in seconds between combat barks. Global across all NPCs in the party.',
         'category' => 'Combat'
     ],
-    'AUTO_DIARY_WAIT' => [
-        'type' => 'boolean',
-        'description' => 'When AUTO_DIARY is enabled, controls whether diary entries are created during wait events.',
-        'category' => 'Diary'
-    ],
     'OGHMA_INFINIUM' => [
         'type' => 'boolean',
         'description' => 'Enable Oghma knowledge lookups. Needs Minime-T5 enabled.',

@@ -667,10 +667,13 @@ function DataPosibleLocationsToGoWide()
     if ($results) {
         $regCn=$db->escape(trim($results["data"]));
         error_log("select  name  FROM  locations where region ilike'{$regCn}'");
-        $locs = $db->fetchAll("select  name  FROM  locations where region ilike '{$regCn}'");
+        $locs = $db->fetchAll("select  name,tags  FROM  locations where region ilike '{$regCn}'");
         $r=[];
         foreach ($locs as $loc) {
-            $r[]=$loc["name"];
+            if ($loc["tags"])
+                $r[$loc["name"]]=$loc["tags"];
+            else
+                $r[$loc["name"]]="";
 
         }
         return $r;
@@ -1245,7 +1248,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc' and type<>'infoitems'  
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
-    and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region' and type<>'narrator_inputtext'
+    and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region' and type<>'named_cell' and type<>'narrator_inputtext'
     ".(($actorEscaped)?" 
     and (
      people like '%|$actorEscaped|%' 
@@ -2463,8 +2466,6 @@ function PackIntoSummary($onlyMissingDiary=false)
 
         $maxRow=0;
 
-        Logger::info("Missing diary insert done");
-
     } else {
         $lastGameTsRecord = $GLOBALS["db"]->fetchOne("select gamets as gamets from eventlog order by gamets desc LIMIT 1"); // 2.1ms
         $results = $GLOBALS["db"]->fetchAll("select gamets_truncated from memory_summary order by gamets_truncated desc LIMIT 1"); // 0.5ms, faster 
@@ -2488,9 +2489,6 @@ function PackIntoSummary($onlyMissingDiary=false)
 
         $results = $db->query($query);
         
-        Logger::info("Main insert done. maxRow={$maxRow} pfi={$pfi} , minRowTs=$minRowTs ");
-        //$results = $db->query("delete from memory_summary  where classifier='dialogue' and packed_message not like '%Context%Location%'");
-        
         $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
                                     select gamets,1,message,message,'diary',uid,speaker
                                     from memory
@@ -2498,8 +2496,6 @@ function PackIntoSummary($onlyMissingDiary=false)
                                     and gamets>$maxRow
                                 ");
 
-                                
-        Logger::info("Diary insert done. maxRow={$maxRow} ");
     }
 
     

@@ -245,6 +245,7 @@ h1.stt-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 			</div>
 			<div class="actions">
 				<button type="button" id="btn_test_stt" class="btn-primary">Test</button>
+				<button type="button" id="btn_google_free_stt" class="btn-primary" style="margin-left:8px;">Google Free STT</button>
 				<button type="submit" class="btn-save" name="save_all" value="1" style="margin-left:8px;">Save</button>
 			</div>
 		</div>
@@ -296,6 +297,14 @@ echo $buffer;
             } catch(_e){}
             const cb = Date.now();
             openModal('<?php echo $webRoot; ?>/ui/tests/stt-test.php?cb='+cb);
+        });
+    }
+
+    const googleFreeBtn = document.getElementById('btn_google_free_stt');
+    if (googleFreeBtn){
+        googleFreeBtn.addEventListener('click', function(){
+            const cb = Date.now();
+            openModal('<?php echo $webRoot; ?>/ui/addons/pmstt/index.html?cb='+cb);
         });
     }
 })();

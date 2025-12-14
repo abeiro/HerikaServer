@@ -308,9 +308,7 @@ $gsSections = [
         [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
         [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
     ],
-    'Diary' => [
-        [ 'name' => 'AUTO_DIARY', 'type' => 'boolean' ],
-    ],
+    // NOTE: Diary section removed - AUTO_DIARY is now configured per-profile in Profile Settings
     'Global Connectors' => [
         [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'foreign:core_llm_connector:id:label' ],
@@ -972,7 +970,10 @@ function current_value(string $flatName, array $currentConf) {
         </div>
 
         <div class="content-section" id="tab-stt" style="display:none;">
-            <h2>Speech-to-Text</h2>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                <h2 style="margin: 0;">Speech-to-Text</h2>
+                <button type="button" id="btn_google_free_stt" class="btn-primary" style="padding: 8px 16px;">Google Free STT</button>
+            </div>
             <div class="provider-grid">
                 <div class="provider-card">
                     <div class="provider-head">
@@ -1448,4 +1449,15 @@ echo $buffer;
 })();
 </script>
 
+<script>
+// Google Free STT Button Handler
+(function(){
+  const googleFreeBtn = document.getElementById('btn_google_free_stt');
+  if (googleFreeBtn){
+    googleFreeBtn.addEventListener('click', function(){
+      window.open('<?php echo $webRoot; ?>/ui/addons/pmstt/index.html', '_blank', 'width=1100,height=800');
+    });
+  }
+})();
+</script>
 

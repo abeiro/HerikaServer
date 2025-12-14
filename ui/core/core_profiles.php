@@ -716,6 +716,25 @@ $ittById = $byId($ittRows);
         <small class="hint">Automatically generate diary entries when NPCs are nearby during sleep/wait events. NPCs using this profile will have auto diary enabled by default.</small>
 
         <div style="height:8px;"></div>
+        <?php
+            $autoDiaryWaitEnabled = false;
+            try {
+                if (!empty($editItem["metadata"])) {
+                    $metaData = json_decode($editItem["metadata"], true);
+                    if (is_array($metaData)) {
+                        $autoDiaryWaitEnabled = !empty($metaData['AUTO_DIARY_WAIT_ENABLED']);
+                    }
+                }
+            } catch (Throwable $e) {}
+        ?>
+        <label class="label-with-toggle">⏳ Auto Diary Wait
+            <input type="hidden" name="meta_vis[AUTO_DIARY_WAIT_ENABLED]" value="">
+            <input type="checkbox" name="meta_vis[AUTO_DIARY_WAIT_ENABLED]" value="1" <?= $autoDiaryWaitEnabled ? "checked" : "" ?>>
+            <span class="toggle-text">Off</span>
+        </label>
+        <small class="hint">When Auto Diary is enabled, this controls whether diary entries are created during wait events. If disabled, auto diary will only trigger on sleep events.</small>
+
+        <div style="height:8px;"></div>
         <label for="prompt">Profile Prompt</label>
         <textarea name="prompt" placeholder="<?= htmlspecialchars('') ?>"><?= htmlspecialchars($editItem["prompt"] ?? "") ?></textarea>
         <small class="hint">Optional: profile-specific system instructions appended to requests. Example is using this to hold specific instructions for followers and assigning the profile only to followers.</small>
@@ -765,7 +784,7 @@ $ittById = $byId($ittRows);
 
     <script>
     document.addEventListener('DOMContentLoaded', function(){
-        const names = ['default_npc','default_narrator','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]'];
+        const names = ['default_npc','default_narrator','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]','meta_vis[AUTO_DIARY_WAIT_ENABLED]'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
@@ -1069,7 +1088,7 @@ $ittById = $byId($ittRows);
                 'mode' => 'profile',
                 'fieldName' => 'metadata',
                 'allowedSettings' => ['TTSFUNCTION'],
-                'reservedKeys' => ['DYNAMIC_PROFILE_ENABLED', 'MIDDLE_TERM_MEMORY_ENABLED', 'AUTO_DIARY_ENABLED', 'LLM_RANDOMIZER_ENABLED', 'RPG_COMMENTS', 'RPG_COMMENTS_CHANCE', 'DYNAMIC_PROFILE_FIELDS'],
+                'reservedKeys' => ['DYNAMIC_PROFILE_ENABLED', 'MIDDLE_TERM_MEMORY_ENABLED', 'AUTO_DIARY_ENABLED', 'AUTO_DIARY_WAIT_ENABLED', 'LLM_RANDOMIZER_ENABLED', 'RPG_COMMENTS', 'RPG_COMMENTS_CHANCE', 'DYNAMIC_PROFILE_FIELDS'],
                 'currentData' => $currentProfileOverrides,
                 'systemFields' => [],
             ];
@@ -1818,7 +1837,7 @@ $ittById = $byId($ittRows);
                     ${renderField('Enabled', 'enabled', rule.enabled, isEditing, 'checkbox')}
                     ${renderField('Match Name (regex)', 'match_name', rule.match_name || '', isEditing, 'text')}
                     ${renderField('Match Race (regex)', 'match_race', rule.match_race || '', isEditing, 'text')}
-                    ${renderField('Match Gender', 'match_gender', rule.match_gender || '', isEditing, 'text')}
+                    ${renderField('Match Gender (regex)', 'match_gender', rule.match_gender || '', isEditing, 'text')}
                     ${renderField('Match Base (regex)', 'match_base', rule.match_base || '', isEditing, 'text')}
                     ${renderField('Match Mods (comma-separated)', 'match_mods', modsStr, isEditing, 'text')}
                     ${renderField('Action (JSON)', 'action', rule.action || '', isEditing, 'json')}
