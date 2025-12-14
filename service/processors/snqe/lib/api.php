@@ -564,6 +564,16 @@ function CheckItemSpawn(
 
         return "pending";
     } else {
+        // Store in-game refid
+        //spawned_item@Ancient Tome of Doomstone@success@Xalara of the Crimson Cloak@-16773743
+        
+        $spawnedDet = $GLOBALS["db"]->fetchOne("select data from eventlog where type='status_msg'
+        and data like '%spawned%@$cn%success%' order by gamets desc");
+        $details=explode("@",$spawnedDet["data"]);
+        $item["int_refid"]                = $details[4];
+        $quest_data["items"][$item_ref] = $item;
+        SNQEQuestManager::updateQuestData($quest_id, ["items" => $quest_data["items"]]);
+
         $isSpawned = true;
     }
 
@@ -980,7 +990,24 @@ function WaitToItemBeRecovered(
             ]
         );
     }
+    if ($item["recover_attempts"]==1) {
+        // First time, so we update Quest Tracker
+        // Convert signed int32 to HEX
+        $formId    = convertSignedToUnsignedHex($item["int_refid"]);
 
+        $GLOBALS["db"]->insert(
+        'responselog',
+            [
+                'localts' => time(),
+                'sent'    => 0,
+                'actor'   => "rolemaster",
+                'text'    => "",
+                'action'  => "rolecommand|QuestTrackReference@{$formId}",
+                'tag' => "",
+            ]
+        );
+        
+    }
     // Exceeded attempts → failure
     if ($item["recover_attempts"] >= $maxAttempts) {
         $item["recovered"]              = "failed";
@@ -1369,7 +1396,7 @@ function CompleteQuest(
             'sent'    => 0,
             'actor'   => "rolemaster",
             'text'    => "",
-            'action'  => "rolecommand|EndQuest@$quest_id@$quest_id",
+            'action'  => "rolecommand|EndQuest@{$quest["title"]}@$quest_id",
             'tag'     => "",
 
         ]
@@ -1537,7 +1564,7 @@ function WaitforCombatEnd(
 
     // Query event log to check if combat has ended
     $cnNpc = $GLOBALS["db"]->escape($npc["name"]);
-    $rows  = $GLOBALS["db"]->fetchAll("select 1 as n,gamets from eventlog where type='death' and (data like '%defeated $cnNpc%' or data  like '%killed $cnNpc%')  order by gamets desc limit 1");
+    $rows  = $GLOBALS["db"]->fetchAll("select 1 as n,gamets from eventlog where type='death' and (data like '%defeated $cnNpc%' or data  like '%killed $cnNpc%' or data  like '%$cnNpc died%')  order by gamets desc limit 1");
 
     $combatEnded = false;
     if (is_array($rows) && isset($rows[0]) && $rows[0]["n"] > 0) {
@@ -1583,6 +1610,26 @@ function WaitforCombatEnd(
 
     }
 
+    if ($npc["combat_attempts"] == 20) {
+        
+        
+        $npcMaster    = new NpcMaster();
+        $npcLocalData = $npcMaster->GetByName($npc["name"]);
+
+        $GLOBALS["db"]->insert(
+            'responselog',
+            [
+                'localts' => time(),
+                'sent'    => 0,
+                'actor'   => "rolemaster",
+                'text'    => "",
+                'action'  => "rolecommand|QuestTrackReference@0x{$npcLocalData["refid"]}",
+                'tag' => "",
+            ]
+        );
+
+    }
+
     if ($npc["combat_attempts"] % 15 === 0) {
         error_log("[WaitforCombatEnd] {$GLOBALS["actors_present"]}");
 
@@ -1595,7 +1642,7 @@ function WaitforCombatEnd(
                     'sent'    => 0,
                     'actor'   => "rolemaster",
                     'text'    => "",
-                    'action'  => "rolecommand|moveToPlayer@{$npc["name"]}@$quest_id@0", // intent 5 = snqe spawned.
+                    'action'  => "rolecommand|moveToPlayer@{$npc["name"]}@$quest_id@9", // intent 5 = snqe spawned.
                     'tag' => "",
                 ]
             );
@@ -1682,7 +1729,9 @@ function WaitForNPCCombatEnd(
 
     // Check for death events for either combatant
     $rows = $GLOBALS["db"]->fetchAll("select 1 as n,gamets from eventlog where type='death'
-        and (data like '%defeated $cnAttacker%' or data like '%defeated $cnTarget%'  or data like '%killed $cnTarget%' or data like '%killed $cnAttacker%')
+        and (data like '%defeated $cnAttacker%' or data like '%defeated $cnTarget%'  
+        or data like '%killed $cnTarget%' or data like '%killed $cnAttacker%' or data like '%$cnAttacker died%'
+         or data like '%$cnTarget died%')
         order by gamets desc limit 1");
 
     $combatEnded = false;
@@ -1787,7 +1836,7 @@ function WaitForNPCCombatEnd(
  *
  * @param string $quest_id Unique quest identifier
  * @param string $location Location name to wait for player to reach
- * @param int $maxAttempts Maximum retries before failure (default 1000)
+ * @param int $maxAttempts Maximum retries before failure (default 1000).
  * @param string|null $npc_ref Optional NPC reference to travel to that location
  * @return string "done"|"failed"|"pending"
  */
@@ -1876,7 +1925,7 @@ function WaitAtLocation(
                     'sent'    => 0,
                     'actor'   => "rolemaster",
                     'text'    => "",
-                    'action'  => "rolecommand|Instruction@{$quest_data["npcs"][$npc_ref]["name"]}@$suggestionText@$quest_id",
+                    'action'  => "rolecommand|Suggestion@{$quest_data["npcs"][$npc_ref]["name"]}@$suggestionText@$quest_id",
                     'tag' => "",
                 ]
             );
@@ -1916,11 +1965,11 @@ function WaitAtLocation(
 
     $locGuess = DataLastKnownLocationHuman(false, true);
     error_log("<$locGuess> vs <$location>");
-    if (strpos($location, $locGuess) !== false) {
+    if (stripos($location, $locGuess) !== false) {
         $atLocation = true;
     }
 
-    if (strpos($locGuess, $location) !== false) {
+    if (stripos($locGuess, $location) !== false) {
         $atLocation = true;
     }
 
@@ -1985,6 +2034,30 @@ function WaitAtLocation(
                 }
             }
             
+        }
+
+        // Check by GPS tracking
+        $cn=$GLOBALS["db"]->escape($quest_data["npcs"][$npc_ref]["name"]);
+        $q="SELECT
+            id,
+            metadata->'last_coords' AS last_coords,
+            metadata->'last_coords'->>'3' AS location
+        FROM core_npc_master
+        WHERE npc_name = 'Ethiny Quicksilver'
+        AND (metadata->'last_coords'->>'last_updated')::bigint > {$quest_data["started"]}
+        AND COALESCE(metadata->'last_coords'->>'3', '') <> ''";
+        $gpsloc=$GLOBALS["db"]->fetchOne($q);
+        if ($gpsloc) {
+            $location=$gpsloc["location"];
+
+            error_log("<$locGuess> vs <$location>");
+            if (strpos($location, $locGuess) !== false) {
+                $npcAtLocation = true;
+            }
+
+            if (strpos($locGuess, $location) !== false) {
+                $npcAtLocation = true;
+            }
         }
 
         if (! DataActorHasDied($quest_data["npcs"][$npc_ref]["name"])) {

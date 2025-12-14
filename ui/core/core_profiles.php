@@ -1818,7 +1818,7 @@ $ittById = $byId($ittRows);
                     ${renderField('Enabled', 'enabled', rule.enabled, isEditing, 'checkbox')}
                     ${renderField('Match Name (regex)', 'match_name', rule.match_name || '', isEditing, 'text')}
                     ${renderField('Match Race (regex)', 'match_race', rule.match_race || '', isEditing, 'text')}
-                    ${renderField('Match Gender', 'match_gender', rule.match_gender || '', isEditing, 'text')}
+                    ${renderField('Match Gender (regex)', 'match_gender', rule.match_gender || '', isEditing, 'text')}
                     ${renderField('Match Base (regex)', 'match_base', rule.match_base || '', isEditing, 'text')}
                     ${renderField('Match Mods (comma-separated)', 'match_mods', modsStr, isEditing, 'text')}
                     ${renderField('Action (JSON)', 'action', rule.action || '', isEditing, 'json')}

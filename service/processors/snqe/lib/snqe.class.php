@@ -23,20 +23,6 @@ class SNQEQuestManager {
 
         self::upsertQuest($quest_id, $code, $data, $state,$title,$stage);
        
-        $GLOBALS["db"]->insert(
-            'responselog',
-            [
-
-                'localts' => time(),
-                'sent'    => 0,
-                'actor'   => "rolemaster",
-                'text'    => "",
-                'action'  => "rolecommand|StartQuest@$title@$quest_id",
-                'tag'     => "",
-
-            ]
-        );
-
     }
 
     const TABLE_NAME = "sneq_quests";
