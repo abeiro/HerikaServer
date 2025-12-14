@@ -2616,6 +2616,35 @@ if ($checkVersion("prompts")<20251128002) {
 }
 
 //----------------------------------------------------
+// Book Summary Prompt - Version 20251214001
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251214001) {
+    Logger::debug("Applying prompts table 20251214001 - Adding book_summary_prompt");
+    
+    // Seed book summary prompt (uses {HERIKA_NAME} and {TEMPLATE_DIALOG} placeholders)
+    $bookSummaryPrompt = $db->escape(
+        "({HERIKA_NAME} reads the book ) {TEMPLATE_DIALOG}"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'book_summary_prompt',
+            '$bookSummaryPrompt',
+            'Instruction prompt for book summary/reading events (contains {HERIKA_NAME} and {TEMPLATE_DIALOG} placeholders). Used in: processor/request.php for chatnf_book events'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251214001);
+    Logger::info("Applied patch prompts 20251214001 - Added book_summary_prompt");
+}
+
+//----------------------------------------------------
 // CORE_PLAYER DATA MIGRATION
 //----------------------------------------------------
 
