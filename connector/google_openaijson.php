@@ -268,6 +268,16 @@ class google_openaijson
         if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
             $data["response_format"]=$GLOBALS["structuredOutputTemplate"];
         }  
+        
+        // Add Google safety settings if block_none is enabled in metadata
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["block_none"]) && $GLOBALS["CONNECTOR"][$this->name]["block_none"]) {
+            $data["safety_settings"] = [
+                ["category" => "HARM_CATEGORY_HARASSMENT", "threshold" => "BLOCK_NONE"],
+                ["category" => "HARM_CATEGORY_HATE_SPEECH", "threshold" => "BLOCK_NONE"],
+                ["category" => "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold" => "BLOCK_NONE"],
+                ["category" => "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold" => "BLOCK_NONE"]
+            ];
+        }
 
         if (isset($customParms["MAX_TOKENS"])) {
             if ($customParms["MAX_TOKENS"]==0) {
@@ -676,6 +686,15 @@ class google_openaijson
             $data[$parm]=$value;
         }
         
+        // Add Google safety settings if block_none is enabled in metadata
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["block_none"]) && $GLOBALS["CONNECTOR"][$this->name]["block_none"]) {
+            $data["safety_settings"] = [
+                ["category" => "HARM_CATEGORY_HARASSMENT", "threshold" => "BLOCK_NONE"],
+                ["category" => "HARM_CATEGORY_HATE_SPEECH", "threshold" => "BLOCK_NONE"],
+                ["category" => "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold" => "BLOCK_NONE"],
+                ["category" => "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold" => "BLOCK_NONE"]
+            ];
+        }
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
      
