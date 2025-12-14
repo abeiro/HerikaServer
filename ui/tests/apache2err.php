@@ -1061,11 +1061,11 @@ if (isset($_GET['download_logs'])) {
             font-style: italic;
         }
 
-        .highlight {
-            background-color: rgba(255, 255, 0, 0.3);
+        mark.highlight {
+            background-color: rgba(255, 193, 7, 0.5);
+            color: inherit;
             border-radius: 2px;
-            padding: 0 2px;
-            margin: 0 -2px;
+            padding: 1px 2px;
         }
 
         /* Grid layout controls */
@@ -1810,73 +1810,137 @@ document.getElementById('downloadLogs').addEventListener('click', function() {
     window.location.href = window.location.pathname + '?download_logs=1';
 });
 
-// Search functionality
+// Search functionality - non-destructive, just highlights and hides/shows
 document.querySelectorAll('.search-input, .modal-search-input').forEach(input => {
     const targetId = input.getAttribute('data-target');
     const container = document.getElementById(targetId);
-    let originalContent = '';
-    let originalEntries = [];
-
-    // Store original content when the page loads
-    if (container) {
-        originalContent = container.innerHTML;
-        // Handle different types of entries
-        if (targetId === 'requestErrorsContainer' || targetId === 'requestErrorsModalContent') {
-            originalEntries = Array.from(container.querySelectorAll('.error-entry'));
-        } else {
-            originalEntries = Array.from(container.querySelectorAll('.log-entry'));
-        }
-    }
 
     function performSearch() {
         if (!container) return;
 
-        const searchTerm = input.value.trim().toLowerCase();
+        const searchTerm = input.value.trim();
         
-        // If search is empty, restore original content
+        // Get all entries
+        const entries = container.querySelectorAll('.log-entry, .error-entry, .llm-block');
+        
+        // If search is empty, show all entries and remove highlights
         if (!searchTerm) {
-            container.innerHTML = originalContent;
+            entries.forEach(entry => {
+                entry.style.display = '';
+                // Remove all highlights
+                entry.querySelectorAll('.highlight').forEach(highlight => {
+                    const text = highlight.textContent;
+                    highlight.replaceWith(text);
+                });
+            });
             return;
         }
 
-        // Clear container but maintain original structure
-        container.innerHTML = '';
+        const searchLower = searchTerm.toLowerCase();
         let hasMatches = false;
 
-        originalEntries.forEach(entry => {
-            const clone = entry.cloneNode(true);
+        entries.forEach(entry => {
+            // Remove any existing highlights from this entry before checking/applying new ones
+            entry.querySelectorAll('.highlight').forEach(highlight => {
+                const text = highlight.textContent;
+                highlight.replaceWith(text);
+            });
+            
+            // Normalize the entry to merge adjacent text nodes back together
+            entry.normalize();
+            
             const entryText = entry.textContent.toLowerCase();
             
-            if (entryText.includes(searchTerm)) {
+            if (entryText.includes(searchLower)) {
+                entry.style.display = '';
                 hasMatches = true;
-                if (targetId === 'requestErrorsContainer' || targetId === 'requestErrorsModalContent') {
-                    // Special handling for request errors
-                    const elements = clone.querySelectorAll('.timestamp, .error-message');
-                    elements.forEach(element => {
-                        const text = element.textContent;
-                        if (text.toLowerCase().includes(searchTerm)) {
-                            const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-                            element.innerHTML = text.replace(regex, '<span class="highlight">$1</span>');
-                        }
-                    });
-                } else {
-                    // Regular log entries
-                    const elements = clone.querySelectorAll('.log-message, .timestamp, .log-level, .log-module');
-                    elements.forEach(element => {
-                        const text = element.textContent;
-                        if (text.toLowerCase().includes(searchTerm)) {
-                            const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-                            element.innerHTML = text.replace(regex, '<span class="highlight">$1</span>');
-                        }
-                    });
-                }
-                container.appendChild(clone);
+                
+                // Highlight matches in text nodes only, preserving structure
+                highlightInElement(entry, searchTerm);
+            } else {
+                entry.style.display = 'none';
             }
         });
 
+        // Show "no results" message if needed
+        const existingNoResults = container.querySelector('.no-results');
         if (!hasMatches) {
-            container.innerHTML = '<div class="no-results">No matches found</div>';
+            if (!existingNoResults) {
+                const noResults = document.createElement('div');
+                noResults.className = 'no-results';
+                noResults.textContent = 'No matches found';
+                container.appendChild(noResults);
+            }
+        } else {
+            if (existingNoResults) {
+                existingNoResults.remove();
+            }
         }
+    }
+
+    // Function to highlight text within an element without breaking structure
+    function highlightInElement(element, searchTerm) {
+        const escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp('(' + escapedTerm + ')', 'gi');
+        
+        // Get all text nodes
+        const walker = document.createTreeWalker(
+            element,
+            NodeFilter.SHOW_TEXT,
+            {
+                acceptNode: function(node) {
+                    // Skip if parent already has highlight or is a script/style
+                    if (node.parentElement.classList.contains('highlight') ||
+                        node.parentElement.tagName === 'SCRIPT' ||
+                        node.parentElement.tagName === 'STYLE') {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    // Only process nodes that contain the search term
+                    if (node.textContent.toLowerCase().includes(searchTerm.toLowerCase())) {
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                    return NodeFilter.FILTER_REJECT;
+                }
+            }
+        );
+
+        const textNodes = [];
+        let node;
+        while (node = walker.nextNode()) {
+            textNodes.push(node);
+        }
+
+        // Process each text node
+        textNodes.forEach(textNode => {
+            const text = textNode.textContent;
+            const fragment = document.createDocumentFragment();
+            let lastIndex = 0;
+            let hasMatch = false;
+            
+            text.replace(regex, (match, p1, offset) => {
+                hasMatch = true;
+                // Add text before match
+                if (offset > lastIndex) {
+                    fragment.appendChild(document.createTextNode(text.substring(lastIndex, offset)));
+                }
+                // Add highlighted match
+                const mark = document.createElement('mark');
+                mark.className = 'highlight';
+                mark.textContent = match;
+                fragment.appendChild(mark);
+                lastIndex = offset + match.length;
+                return match; // Return value doesn't matter, we're just iterating
+            });
+            
+            // Only replace the node if we found matches
+            if (hasMatch) {
+                // Add remaining text
+                if (lastIndex < text.length) {
+                    fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+                }
+                textNode.replaceWith(fragment);
+            }
+        });
     }
 
     // Add event listeners for both input and keyup events
@@ -1921,12 +1985,13 @@ function openModal(modalId, sourceId) {
                         if (blockText.includes(searchTerm.toLowerCase())) {
                             block.style.display = '';
                             // Highlight the matching text
-                            const regex = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+                            const escapedSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            const regex = new RegExp(escapedSearchTerm, 'gi');
                             const messages = block.querySelectorAll('.llm-content');
                             messages.forEach(msg => {
                                 const text = msg.textContent;
                                 if (text.match(regex)) {
-                                    msg.innerHTML = text.replace(regex, match => `<span class="highlight">${match}</span>`);
+                                    msg.innerHTML = text.replace(regex, match => '<span class="highlight">' + match + '</span>');
                                 }
                             });
                         } else {
@@ -1944,7 +2009,8 @@ function openModal(modalId, sourceId) {
                             const pattern = parts.slice(1).join('/');
                             regex = new RegExp(pattern, flags);
                         } else {
-                            regex = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+                            const escapedSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            regex = new RegExp(escapedSearchTerm, 'gi');
                         }
                     } catch (e) {
                         console.error('Invalid regex:', e);
@@ -1959,8 +2025,8 @@ function openModal(modalId, sourceId) {
                         return;
                     }
 
-                    const highlightedContent = textContent.replace(regex, match => `<span class="highlight">${match}</span>`);
-                    content.innerHTML = `<pre class="log-content">${highlightedContent}</pre>`;
+                    const highlightedContent = textContent.replace(regex, match => '<span class="highlight">' + match + '</span>');
+                    content.innerHTML = '<pre class="log-content">' + highlightedContent + '</pre>';
                 }
             });
         }
@@ -2000,11 +2066,11 @@ document.querySelectorAll('.log-container').forEach(container => {
 // Update the highlight style to be more subtle
 const style = document.createElement('style');
 style.textContent = `
-    .highlight {
-        background-color: rgba(255, 255, 0, 0.3);
+    mark.highlight {
+        background-color: rgba(255, 193, 7, 0.5);
+        color: inherit;
         border-radius: 2px;
-        padding: 0 2px;
-        margin: 0 -2px;
+        padding: 1px 2px;
     }
     .log-entry, .error-entry {
         width: 100%;
