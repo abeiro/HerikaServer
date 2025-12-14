@@ -2268,10 +2268,19 @@ $db->execQuery("ALTER TABLE audit_request ADD COLUMN IF NOT EXISTS usage jsonb")
 if ($checkTableExists("rumors") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/add_rumors.sql"));
 } else
-    Logger::info(__FILE__." import_rules exists");
+    Logger::info(__FILE__." rumors exists");
+
+if ($checkTableExists("named_cell") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/named_cell.sql"));
+} else
+    Logger::info(__FILE__." named_cell exists");
+
 
 $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS region text");
 $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS hold text");
+$db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS tags text");
+$db->execQuery("ALTER TABLE sneq_quests ADD COLUMN IF NOT EXISTS title text");
+$db->execQuery("ALTER TABLE sneq_quests ADD COLUMN IF NOT EXISTS stage text");
 
 if ($checkTableExists("master_packages") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/master_packages.sql"));

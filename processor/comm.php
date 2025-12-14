@@ -836,7 +836,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             WHERE r.enabled = TRUE
             AND (r.match_name IS NULL OR '$npcName' ~ r.match_name)
             AND (r.match_race IS NULL OR '$npcRace' ~ r.match_race)
-            AND (r.match_gender IS NULL OR '$npcGender' = r.match_gender)
+            AND (r.match_gender IS NULL OR '$npcGender' ~ r.match_gender)
             AND (r.match_base IS NULL OR '$npcBase' ~ r.match_base)
             AND (r.match_mods IS NULL OR r.match_mods <@ $modsArray)
             ORDER BY r.priority DESC
@@ -921,7 +921,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 'name' => $splitNameBase[0],
                 'formid' => $splitNameBase[1],
                 'region' => $splitNameBase[2],
-                'hold' => $splitNameBase[3]
+                'hold' => $splitNameBase[3],
+                'tags' => $splitNameBase[4]
             )
         );
     }
@@ -1467,6 +1468,24 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     } else {
         error_log("[CORE SYSTEM] No valid profile specified");
     }
+    
+    $MUST_END=true;
+    
+    
+} elseif (strpos($gameRequest[0], "named_cell")===0) {    // diary_nearby event - manual trigger for all NPCs in range
+    
+    // logEvent($gameRequest);
+
+    $localData=explode("@",$gameRequest[3]);
+    $db->upsertRowOnConflict(
+            'named_cell',
+            array(
+                'id' => intval($localData[0]),
+                'name' =>$localData[1],
+                'location'=>intval($localData[2]),
+            ),
+            "id"
+        );
     
     $MUST_END=true;
     

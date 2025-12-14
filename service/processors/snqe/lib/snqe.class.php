@@ -9,12 +9,20 @@ class SNQEQuestManager {
      * @param string $code     The PHP code of the quest
      * @param array  $data     Arbitrary quest state data (optional)
      * @param string $state    Quest run state: running|not_running|finished (optional)
+     * @param string $title    Quest title (optional)
+     * @param string $stage    Quest stage (optional)
      */
-    public static function createNewQuest(string $quest_id, string $code, array $data = [], string $state = "not_running") {
+    public static function createNewQuest(string $quest_id, string $code, array $data = [], string $state = "not_running",string $title = "", string $stage = "") {
         if (self::questExists($quest_id)) {
             throw new \Exception("Quest with id '$quest_id' already exists.");
         }
-        self::upsertQuest($quest_id, $code, $data, $state);
+
+        if (empty($title)) {
+            $title = $quest_id;
+        }
+
+        self::upsertQuest($quest_id, $code, $data, $state,$title,$stage);
+       
     }
 
     const TABLE_NAME = "sneq_quests";
@@ -26,14 +34,18 @@ class SNQEQuestManager {
      * @param string $code     The PHP code of the quest
      * @param array  $data     Arbitrary quest state data
      * @param string $state    Quest run state: running|not_running|finished
+     * @param string $title    Quest title (optional)
+     * @param string $stage    Quest stage (optional)
      */
-    public static function upsertQuest(string $quest_id, string $code, array $data = [], string $state = "not_running") {
+    public static function upsertQuest(string $quest_id, string $code, array $data = [], string $state = "not_running", string $title = "", string $stage = "") {
         $serializedData = json_encode($data);
         $row = [
             "quest_id" => $quest_id,
             "code" => $code,
             "quest_run_state" => $state,
-            "quest_data" => $serializedData
+            "quest_data" => $serializedData,
+            "title"=>$title,
+            "stage"=>$stage
         ];
         $GLOBALS["db"]->upsertRow(self::TABLE_NAME, $row, "quest_id='$quest_id'");
     }
