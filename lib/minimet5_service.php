@@ -53,4 +53,13 @@ function minimeTopic($text) {
     return file_get_contents($url);
 }
 
+function minimePostScene($text) {
+    if (isset($GLOBALS["mockMinimePostScene"])) {
+        return call_user_func($GLOBALS["mockMinimePostScene"], $text);
+    }
+
+    $url = "http://127.0.0.1:8082/ambient?text=" . urlencode($text);
+    return file_get_contents($url);
+}
+
 ?>

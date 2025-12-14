@@ -3106,6 +3106,8 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
             $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
             error_log("[DataSearchMemoryByVector start] minimeExtract : " . (microtime(true) - $localStartTime) . " seconds");
+            $TEST_TEXT = preg_replace('/[(),;:!?."\'-]/', ' ', $TEST_TEXT);
+            $TEST_TEXT = preg_replace('/\s+/', ' ', trim($TEST_TEXT));
             $TEST_TEXT=internalDumbTranslator($TEST_TEXT);
             
             if (isset($GLOBALS["PATCH_BYPASS_MINIME_EXTRACT"]) && $GLOBALS["PATCH_BYPASS_MINIME_EXTRACT"]) {

@@ -87,7 +87,7 @@ if ($GLOBALS["MINIME_T5"] || (isset($GLOBALS["OGHMA_CUSTOM"]) && $GLOBALS["OGHMA
 
             // Extract topics up to OGHMA_AMOUNT times
             for ($i = 0; $i < $oghmaAmount; $i++) {
-                if ($GLOBALS["OGHMA_CUSTOM"]) {
+                if ($GLOBALS["OGHMA_CUSTOM"] && $GLOBALS["OGHMA_CUSTOM"]!=="false") {
                     require_once(__DIR__."/../lib/oghma_llm_service.php");
                     $lang = isset($GLOBALS["CORE_LANG"]) && !empty($GLOBALS["CORE_LANG"]) ? $GLOBALS["CORE_LANG"] : 'en';
                     $topic_req = LLMTopic($remainingText, $lang);

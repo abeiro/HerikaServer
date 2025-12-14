@@ -855,7 +855,7 @@ function CheckTopicToPlayer(
 
     //
     $cnNpc = $GLOBALS["db"]->escape($character["name"]);
-    $rows  = $GLOBALS["db"]->fetchOne("select 1 as n,gamets from eventlog where type='death' and data like '%defeated $cnNpc%' order by gamets desc limit 1");
+    $rows  = $GLOBALS["db"]->fetchOne("select 1 as n,gamets from eventlog where type='death' and (data like '%defeated $cnNpc%' or data like '%killed $cnNpc%') order by gamets desc limit 1");
 
     if (isset($rows["n"])) {
         $topic["delivered"]               = "failed";
