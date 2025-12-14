@@ -208,6 +208,10 @@ class LLMConnector {
 
     public function getConnector($currentConnectorData) {
 
+        if (!isset($currentConnectorData["driver"]) || empty($currentConnectorData["driver"])) {
+            throw new \Exception("Invalid connector data: missing or empty 'driver' key");
+        }
+
         require_once($GLOBALS["ENGINE_PATH"]."/connector".DIRECTORY_SEPARATOR."{$currentConnectorData["driver"]}.php");
         $connector=new $currentConnectorData["driver"]();
         

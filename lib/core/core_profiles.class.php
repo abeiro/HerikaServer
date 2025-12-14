@@ -215,10 +215,6 @@ class CoreProfile
         // Decode and apply profile metadata
         $metadata = json_decode($currentProfileData['metadata'] ?? '{}', true);
         if (is_array($metadata)) {
-            // Ensure AUTO_DIARY is treated as global-only; ignore if present in profile metadata
-            if (array_key_exists('AUTO_DIARY', $metadata)) {
-                unset($metadata['AUTO_DIARY']);
-            }
             foreach ($metadata as $key => $value) {
                 if (! empty($value) || is_array($value)) {
                     $GLOBALS[$key] = $value;

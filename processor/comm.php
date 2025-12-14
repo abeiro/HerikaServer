@@ -1392,14 +1392,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     }
     
     // AUTO_DIARY functionality - trigger diary entries for nearby NPCs with auto_diary_enabled
-    Logger::info("WAITSTART event: AUTO_DIARY=" . (isset($GLOBALS["AUTO_DIARY"]) ? ($GLOBALS["AUTO_DIARY"] ? 'true' : 'false') : 'not set'));
-    
-    if (isset($GLOBALS["AUTO_DIARY"]) && $GLOBALS["AUTO_DIARY"]) {
-        // Process autodiary - AUTO_DIARY_WAIT will be checked per-NPC after loading their profile
-        processAutoDiary($gameRequest, "waitstart");
-    } else {
-        Logger::info("AUTO_DIARY: Skipping waitstart - AUTO_DIARY is disabled");
-    }
+    Logger::info("WAITSTART event: Processing auto-diary for nearby NPCs");
+    processAutoDiary($gameRequest, "waitstart");
     
     $MUST_END=true;
     
@@ -1420,13 +1414,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     );
     
     // AUTO_DIARY functionality - trigger diary entries for nearby NPCs with auto_diary_enabled
-    Logger::info("GOODNIGHT event: AUTO_DIARY=" . (isset($GLOBALS["AUTO_DIARY"]) ? ($GLOBALS["AUTO_DIARY"] ? 'true' : 'false') : 'not set'));
-    
-    if (isset($GLOBALS["AUTO_DIARY"]) && $GLOBALS["AUTO_DIARY"]) {
-        processAutoDiary($gameRequest, "goodnight");
-    } else {
-        Logger::info("AUTO_DIARY: Skipping goodnight - AUTO_DIARY is disabled");
-    }
+    Logger::info("GOODNIGHT event: Processing auto-diary for nearby NPCs");
+    processAutoDiary($gameRequest, "goodnight");
     
     $MUST_END=true;
     

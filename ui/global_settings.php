@@ -308,9 +308,7 @@ $gsSections = [
         [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
         [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
     ],
-    'Diary' => [
-        [ 'name' => 'AUTO_DIARY', 'type' => 'boolean' ],
-    ],
+    // NOTE: Diary section removed - AUTO_DIARY is now configured per-profile in Profile Settings
     'Global Connectors' => [
         [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'foreign:core_llm_connector:id:label' ],
