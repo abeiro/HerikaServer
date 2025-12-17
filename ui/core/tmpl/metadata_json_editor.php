@@ -26,10 +26,6 @@ $localSchemaOverrides = [
         'type' => 'boolean',
         'description' => "Enable Minime-T5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be installed in the CHIM Launcher. Only works for English!",
     ],
-    'AUTO_DIARY' => [
-        'type' => 'boolean',
-        'description' => 'Automatically create diary entries for all current followers when sleeping. Wait events are controlled by AUTO_DIARY_WAIT setting.',
-    ],
     'BORED_EVENT' => [
         'type' => 'integer',
         'description' => 'Bored Event Probability. Chance of an AI NPC starting a random conversation every couple of minutes.0 = Never | 50 = 50% | 100 = Always',
@@ -63,9 +59,9 @@ $localSchemaOverrides = [
         'type' => 'boolean',
         'description' => "Needs Minime-T5 enabled and running. Tamriel lore information will be added to the prompt, enhancing their understanding on specific topics.",
     ],
-    'AUTO_DIARY_WAIT' => [
+    'OGHMA_CUSTOM' => [
         'type' => 'boolean',
-        'description' => 'When AUTO_DIARY is enabled, this controls whether diary entries are created during wait events. If false, auto diary will only trigger on sleep events.',
+        'description' => 'Use custom LLM for Oghma keyword extraction instead of MiniMe T5. Customize prompt via Prompts Manager.',
     ],
     'CONTEXT_HISTORY' => [
         'type' => 'integer',
@@ -114,7 +110,7 @@ $localSchemaOverrides = [
 $visualKeys = [
   "RECHAT_H","RECHAT_P","CORE_LANG","MINIME_T5","BORED_EVENT",
   "DIARY_PROMPT","OGHMA_AMOUNT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN","COMBAT_BARK_COOLDOWN",
-  "OGHMA_INFINIUM","AUTO_DIARY_WAIT","CONTEXT_HISTORY","MAX_WORDS_LIMIT","HERIKA_ANIMATIONS",
+  "OGHMA_INFINIUM","OGHMA_CUSTOM","CONTEXT_HISTORY","MAX_WORDS_LIMIT","HERIKA_ANIMATIONS",
   "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE","ENFORCE_ACTIONS_PROMPT",
   "REMOVE_ASTERISKS_FROM_OUTPUT","CONTEXT_HISTORY_DYNAMIC_PROFILE"
 ];
@@ -123,9 +119,9 @@ $visualKeys = [
 $visualGroups = [
   'Core' => ["CORE_LANG","ENFORCE_ACTIONS_PROMPT","REMOVE_ASTERISKS_FROM_OUTPUT","MAX_WORDS_LIMIT"],
   'Rechat' => ["RECHAT_H","RECHAT_P","RECHAT_ALLOW_ACTIONS"],
-  'Diary' => ["DIARY_PROMPT","DIARY_COOLDOWN","AUTO_DIARY_WAIT"],
+  'Diary' => ["DIARY_PROMPT","DIARY_COOLDOWN"],
   'Combat' => ["COMBAT_BARK_COOLDOWN"],
-  'Oghma' => ["OGHMA_INFINIUM","OGHMA_AMOUNT","MINIME_T5"],
+  'Oghma' => ["OGHMA_INFINIUM","OGHMA_AMOUNT","MINIME_T5","OGHMA_CUSTOM"],
   'Context' => ["CONTEXT_HISTORY","CONTEXT_HISTORY_DIARY","CONTEXT_HISTORY_DYNAMIC_PROFILE"],
   'Quest' => ["QUEST_COMMENT","QUEST_COMMENT_CHANCE"],
   'Behavior' => ["BORED_EVENT","BORED_EVENT_SERVERSIDE","HERIKA_ANIMATIONS"],

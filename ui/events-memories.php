@@ -301,14 +301,14 @@ require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."uti
 $db = new sql();
 
 // Handle actions
-if ($_GET["clean"]) {
+if (isset($_GET["clean"]) && $_GET["clean"]) {
     $db->delete("responselog", "sent=1");
 }
-if ($_GET["reset"]) {
+if (isset($_GET["reset"]) && $_GET["reset"]) {
     $db->delete("eventlog", "true");
     header("Location: events-memories.php?tab=eventlog");
 }
-if ($_GET["cleanlog"]) {
+if (isset($_GET["cleanlog"]) && $_GET["cleanlog"]) {
     $db->delete("log", "true");
     header("Location: events-memories.php?tab=responselog");
 }
@@ -322,7 +322,7 @@ if (isset($_GET['delete_last'])) {
             WHERE rowid IN (
                 SELECT rowid
                 FROM eventlog
-                WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','infoitems','description_import','backgroundaction','innerchat')
+                WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','infoitems','description_import','backgroundaction','innerchat','npc_reanimated')
                 ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
                 LIMIT $delCount
             )
@@ -334,36 +334,61 @@ if (isset($_GET['delete_last'])) {
 
 // Handle bulk delete of selected events
 if (isset($_POST['delete_selected']) && !empty($_POST['rowids'])) {
+    // Debug logging
+    Logger::info("Bulk delete triggered. POST data: " . json_encode($_POST));
+    
     $rowids = $_POST['rowids'];
     if (is_array($rowids)) {
+        Logger::info("Rowids received as array: " . json_encode($rowids));
+        
         // Sanitize and validate row IDs
         $sanitizedRowids = array_map('intval', $rowids);
         $sanitizedRowids = array_filter($sanitizedRowids, function($id) { return $id > 0; });
         
+        Logger::info("Sanitized rowids: " . json_encode($sanitizedRowids));
+        
         if (count($sanitizedRowids) > 0) {
             $rowidsStr = implode(',', $sanitizedRowids);
             $query = "DELETE FROM eventlog WHERE rowid IN ($rowidsStr)";
-            $db->query($query);
+            Logger::info("Executing delete query: $query");
+            
+            $result = $db->query($query);
+            
+            // Log the deletion for debugging
+            Logger::info("Bulk delete executed: " . count($sanitizedRowids) . " events deleted.");
+            
             header("Location: events-memories.php?tab=eventlog&deleted=" . count($sanitizedRowids));
             exit;
+        } else {
+            Logger::warn("Bulk delete attempted but no valid rowids after sanitization");
+            header("Location: events-memories.php?tab=eventlog&error=invalid_ids");
+            exit;
         }
+    } else {
+        Logger::warn("Bulk delete attempted but rowids is not an array: " . json_encode($rowids));
+        header("Location: events-memories.php?tab=eventlog&error=invalid_format");
+        exit;
     }
+} else if (isset($_POST['delete_selected'])) {
+    Logger::warn("Bulk delete triggered but rowids empty or not set. POST: " . json_encode($_POST));
 }
 
 // Handle memory summary save edits
 if (isset($_POST['save_memory_edit'])) {
-    $rowid = intval($_POST['rowid']);
-    $summary = $_POST['summary'];
-    $tags = $_POST['tags'];
-    $companions = $_POST['companions'];
+    $rowid = isset($_POST['rowid']) ? intval($_POST['rowid']) : 0;
+    $summary = isset($_POST['summary']) ? $_POST['summary'] : '';
+    $tags = isset($_POST['tags']) ? $_POST['tags'] : '';
+    $companions = isset($_POST['companions']) ? $_POST['companions'] : '';
     
-    $db->update(
-        'memory_summary',
-        "summary = '" . $db->escape($summary) . "', 
-         tags = '" . $db->escape($tags) . "',
-         companions = '" . $db->escape($companions) . "'",
-        "rowid = " . $rowid
-    );
+    if ($rowid > 0) {
+        $db->update(
+            'memory_summary',
+            "summary = '" . $db->escape($summary) . "', 
+             tags = '" . $db->escape($tags) . "',
+             companions = '" . $db->escape($companions) . "'",
+            "rowid = " . $rowid
+        );
+    }
     
     header("Location: events-memories.php?tab=memory&updated=1");
     exit;
@@ -483,7 +508,7 @@ function getTimeColor($time) {
             $results = $db->fetchAll(
                 "SELECT type, data, people, gamets, localts, ts, ROWID
                  FROM eventlog a
-                 WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import','backgroundaction','innerchat')
+                 WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import','backgroundaction','innerchat','npc_reanimated')
                  ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
                  LIMIT $limit OFFSET $offset"
             );
@@ -498,8 +523,8 @@ function getTimeColor($time) {
             
             $mappedResults = array_map(function ($row) use ($columnHeaders) {
                 $mappedRow = [];
-                // Add checkbox column first
-                $mappedRow['☑'] = '<input type="checkbox" class="event-checkbox" data-rowid="' . htmlspecialchars($row['ROWID'] ?? '') . '" style="cursor: pointer; width: 18px; height: 18px;">';
+                // Add checkbox column first (PostgreSQL returns rowid in lowercase)
+                $mappedRow['☑'] = '<input type="checkbox" class="event-checkbox" data-rowid="' . htmlspecialchars($row['rowid'] ?? '') . '" style="cursor: pointer; width: 18px; height: 18px;">';
                 
                 foreach ($row as $key => $value) {
                     if ($key === 'gamets' && !empty($value)) {
@@ -518,10 +543,7 @@ function getTimeColor($time) {
                         $value = htmlspecialchars($value ?? '');
                     }
                     
-                    // Map ROWID to lowercase rowid for delete functionality
-                    if ($key === 'ROWID') {
-                        $mappedRow['rowid'] = $value;
-                    } else if ($key === 'data') {
+                    if ($key === 'data') {
                         // Assign Events value
                         $mappedRow[$columnHeaders[$key] ?? $key] = $value;
                         // Derive People Present from JSON in original data if available
@@ -560,7 +582,7 @@ function getTimeColor($time) {
             $nextPage = $page + 1;
             
             // Get total count for pagination
-            $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','infoitems','description_import','backgroundaction','innerchat')";
+            $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','infoitems','description_import','backgroundaction','innerchat','npc_reanimated')";
             $countResult = $db->fetchAll($countQuery);
             $totalRecords = $countResult[0]['total'];
             $totalPages = ceil($totalRecords / $limit);

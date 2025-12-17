@@ -90,6 +90,11 @@ class Logger {
     // write uncaught errors to the CHIM log in addition to the apache log
     public static function errorHandler(int $errno, string $errstr, string $errfile, int $errline): bool
     {
+        
+        if (error_reporting() === 0) {// when error reporting is suppressed
+            return false;
+        }
+
         switch ($errno) {
             case E_USER_ERROR:
             case E_ERROR:

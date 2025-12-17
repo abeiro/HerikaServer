@@ -451,6 +451,7 @@ foreach (($profileConnRows ?? []) as $prow) {
     $dynVal = isset($pmeta['DYNAMIC_PROFILE_ENABLED']) ? $pmeta['DYNAMIC_PROFILE_ENABLED'] : null;
     $mtmVal = isset($pmeta['MIDDLE_TERM_MEMORY_ENABLED']) ? $pmeta['MIDDLE_TERM_MEMORY_ENABLED'] : null;
     $adVal = isset($pmeta['AUTO_DIARY_ENABLED']) ? $pmeta['AUTO_DIARY_ENABLED'] : null;
+    $adWaitVal = isset($pmeta['AUTO_DIARY_WAIT_ENABLED']) ? $pmeta['AUTO_DIARY_WAIT_ENABLED'] : null;
     $salVal = isset($pmeta['SALUTATION_AFTER_A_WHILE']) ? $pmeta['SALUTATION_AFTER_A_WHILE'] : null;
     $blcVal = isset($pmeta['BACKGROUND_LIFE_COMMANDS']) ? $pmeta['BACKGROUND_LIFE_COMMANDS'] : null;
     $gpsVal = isset($pmeta['GPS_TRACK']) ? $pmeta['GPS_TRACK'] : null;
@@ -459,6 +460,7 @@ foreach (($profileConnRows ?? []) as $prow) {
         'dyn' => ($dynVal === '1' || $dynVal === 1 || $dynVal === true),
         'mtm' => ($mtmVal === '1' || $mtmVal === 1 || $mtmVal === true),
         'ad' => ($adVal === '1' || $adVal === 1 || $adVal === true),
+        'adWait' => ($adWaitVal === '1' || $adWaitVal === 1 || $adWaitVal === true),
         'sal' => ($salVal === '1' || $salVal === 1 || $salVal === true),
         'blc' => ($blcVal === '1' || $blcVal === 1 || $blcVal === true),
         'gps' => ($gpsVal === '1' || $gpsVal === 1 || $gpsVal === true)
@@ -873,8 +875,7 @@ if (isset($_GET['bio_detail'])) {
     header('Content-Type: application/json');
     $name = trim((string)($_GET['name'] ?? ''));
     if ($name === '') { echo json_encode(['ok'=>false,'error'=>'Missing name']); exit; }
-    $codename=npcNameToCodename($name);
-    $esc = $GLOBALS['db']->escape($codename);
+    $esc = $GLOBALS['db']->escape($name);
     // Case-insensitive exact match on npc_name to tolerate capitalization differences
     $r = $GLOBALS['db']->fetchOne("select npc_name, core, voiceid, gender, race, refid, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags from combined_bio_templates where lower(npc_name) = lower('{$esc}') limit 1");
     if (!$r) { echo json_encode(['ok'=>false,'error'=>'Not found']); exit; }
@@ -1050,6 +1051,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             $dynVal = isset($meta['DYNAMIC_PROFILE_ENABLED']) ? $meta['DYNAMIC_PROFILE_ENABLED'] : null;
             $mtmVal = isset($meta['MIDDLE_TERM_MEMORY_ENABLED']) ? $meta['MIDDLE_TERM_MEMORY_ENABLED'] : null;
             $adVal = isset($meta['AUTO_DIARY_ENABLED']) ? $meta['AUTO_DIARY_ENABLED'] : null;
+            $adWaitVal = isset($meta['AUTO_DIARY_WAIT_ENABLED']) ? $meta['AUTO_DIARY_WAIT_ENABLED'] : null;
             $salVal = isset($meta['SALUTATION_AFTER_A_WHILE']) ? $meta['SALUTATION_AFTER_A_WHILE'] : null;
             $blcVal = isset($meta['BACKGROUND_LIFE_COMMANDS']) ? $meta['BACKGROUND_LIFE_COMMANDS'] : null;
             $gpsVal = isset($meta['GPS_TRACK']) ? $meta['GPS_TRACK'] : null;
@@ -1058,6 +1060,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 'dyn' => ($dynVal === '1' || $dynVal === 1 || $dynVal === true),
                 'mtm' => ($mtmVal === '1' || $mtmVal === 1 || $mtmVal === true),
                 'ad' => ($adVal === '1' || $adVal === 1 || $adVal === true),
+                'adWait' => ($adWaitVal === '1' || $adWaitVal === 1 || $adWaitVal === true),
                 'sal' => ($salVal === '1' || $salVal === 1 || $salVal === true),
                 'blc' => ($blcVal === '1' || $blcVal === 1 || $blcVal === true),
                 'gps' => ($gpsVal === '1' || $gpsVal === 1 || $gpsVal === true)
@@ -1101,6 +1104,18 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 if (hint) {
                     const base = 'Automatically generate diary entries for this NPC when they are nearby during sleep/wait events.';
                     hint.innerHTML = base + (profile.ad ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '');
+                }
+            }
+            
+            // Update auto_diary_wait_enabled
+            const adWaitCb = document.getElementById('auto_diary_wait_enabled');
+            if (adWaitCb) {
+                adWaitCb.checked = profile.adWait;
+                adWaitCb.setAttribute('data-profile-default', profile.adWait ? '1' : '0');
+                const hint = adWaitCb.closest('.form-item').querySelector('.hint');
+                if (hint) {
+                    const base = 'When Auto Diary is enabled, this controls whether diary entries are created during wait events. If disabled, auto diary will only trigger on sleep events.';
+                    hint.innerHTML = base + (profile.adWait ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '');
                 }
             }
             
@@ -1192,6 +1207,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         $profileDynEnabled = false;
         $profileMtmEnabled = false;
         $profileAutoDiaryEnabled = false;
+        $profileAutoDiaryWaitEnabled = false;
         $currentProfileId = (string)(is_array($editItem) ? ($editItem['profile_id'] ?? '') : '');
         if ($currentProfileId !== '') {
             foreach (($profileConnRows ?? []) as $prow) {
@@ -1206,9 +1222,11 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                     $dynVal = isset($pmeta['DYNAMIC_PROFILE_ENABLED']) ? $pmeta['DYNAMIC_PROFILE_ENABLED'] : null;
                     $mtmVal = isset($pmeta['MIDDLE_TERM_MEMORY_ENABLED']) ? $pmeta['MIDDLE_TERM_MEMORY_ENABLED'] : null;
                     $adVal = isset($pmeta['AUTO_DIARY_ENABLED']) ? $pmeta['AUTO_DIARY_ENABLED'] : null;
+                    $adWaitVal = isset($pmeta['AUTO_DIARY_WAIT_ENABLED']) ? $pmeta['AUTO_DIARY_WAIT_ENABLED'] : null;
                     $profileDynEnabled = ($dynVal === '1' || $dynVal === 1 || $dynVal === true);
                     $profileMtmEnabled = ($mtmVal === '1' || $mtmVal === 1 || $mtmVal === true);
                     $profileAutoDiaryEnabled = ($adVal === '1' || $adVal === 1 || $adVal === true);
+                    $profileAutoDiaryWaitEnabled = ($adWaitVal === '1' || $adWaitVal === 1 || $adWaitVal === true);
                     break;
                 }
             }
@@ -1256,6 +1274,23 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             }
             if (!$hasNpcOverride) {
                 $adFromProfile = true;
+            }
+        } catch (Throwable $e) { }
+        
+        // Auto Diary Wait: check extended_data override or fall back to profile default
+        $adWaitChecked = $profileAutoDiaryWaitEnabled;
+        $adWaitFromProfile = false;
+        try {
+            $hasNpcOverride = false;
+            if (is_array($editItem) && !empty($editItem['extended_data'])) {
+                $tmpEd = json_decode((string)$editItem['extended_data'], true);
+                if (is_array($tmpEd) && array_key_exists('auto_diary_wait_enabled', $tmpEd) && $tmpEd['auto_diary_wait_enabled'] !== null && $tmpEd['auto_diary_wait_enabled'] !== '') {
+                    $adWaitChecked = !empty($tmpEd['auto_diary_wait_enabled']);
+                    $hasNpcOverride = true;
+                }
+            }
+            if (!$hasNpcOverride) {
+                $adWaitFromProfile = true;
             }
         } catch (Throwable $e) { }
         
@@ -1315,6 +1350,13 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <input type="checkbox" id="auto_diary_enabled" name="auto_diary_enabled" value="1" <?= $adChecked ? "checked" : "" ?> data-profile-default="<?= $profileAutoDiaryEnabled ? '1' : '0' ?>">
             </label>
             <small class="hint">Automatically generate diary entries for this NPC when they are nearby during sleep/wait events.<?= $adFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
+        </div>
+
+        <div class="form-item">
+            <label for="auto_diary_wait_enabled" class="label-with-toggle">⏳Auto Diary Wait
+                <input type="checkbox" id="auto_diary_wait_enabled" name="auto_diary_wait_enabled" value="1" <?= $adWaitChecked ? "checked" : "" ?> data-profile-default="<?= $profileAutoDiaryWaitEnabled ? '1' : '0' ?>">
+            </label>
+            <small class="hint">When Auto Diary is enabled, this controls whether diary entries are created during wait events. If disabled, auto diary will only trigger on sleep events.<?= $adWaitFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
         </div>
 
         <div class="form-item">
@@ -1508,7 +1550,25 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                                     <?= isset($metadataStats['level']) ? intval($metadataStats['level']) : '—' ?>
                                 </div>
                             </div>
-                            <div></div>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <div style="color:#f39c12; min-width:100px; font-weight:700;">📏 Scale</div>
+                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; font-weight:700; background:#1a1a1a; font-size:16px;">
+                                    <?php 
+                                    $scale = isset($metadataStats['scale']) ? floatval($metadataStats['scale']) : null;
+                                    if ($scale !== null) {
+                                        echo number_format($scale, 2);
+                                        // Get height description if available
+                                        require_once(__DIR__ . "/../../lib/data_functions.php");
+                                        $heightDesc = getHeightDescription($scale);
+                                        if (!empty($heightDesc)) {
+                                            echo ' <span style="color:#999; font-size:12px; font-weight:400;">(' . htmlspecialchars($heightDesc) . ')</span>';
+                                        }
+                                    } else {
+                                        echo '—';
+                                    }
+                                    ?>
+                                </div>
+                            </div>
                             <div style="display:flex; gap:8px; align-items:center;">
                                 <div style="color:#e74c3c; min-width:100px;">❤️ Health</div>
                                 <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; background:#1a1a1a; flex:1;">
@@ -1602,6 +1662,83 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             </details>
         </div>
 
+        <?php
+        // Spells
+        $metadataSpells = (isset($metaObj['spells']) && is_array($metaObj['spells'])) ? $metaObj['spells'] : [];
+        $spellsUpdated = isset($metaObj['spells_updated']) ? $metaObj['spells_updated'] : null;
+        ?>
+        <div class="form-item span-2">
+            <details class="metadata-spells-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;">
+                <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">
+                    Spells
+                    <?php if ($spellsUpdated): ?>
+                        <span style="color:#999; font-weight:400; font-size:12px;">
+                            Last updated: <?= date('Y-m-d H:i:s', $spellsUpdated) ?>
+                        </span>
+                    <?php endif; ?>
+                </summary>
+                <small class="hint">Magic spells this NPC knows. Note: Spells will only be placed into NPC context if it exists in the description database. This is to prevent
+                  system spells from custom mods from diluting the context.
+                </small>
+                <div style="margin-top:8px; color:#cfd9ea;">
+                    <?php if (!empty($metadataSpells)): ?>
+                        <div style="max-height:400px; overflow-y:auto;">
+                            <table style="width:100%; border-collapse:collapse;">
+                                <thead>
+                                    <tr style="border-bottom:2px solid #4a4a4a; color:rgb(242, 124, 17);">
+                                        <th style="text-align:left; padding:8px;">Spell Name</th>
+                                        <th style="text-align:center; padding:8px; width:130px;">Casting</th>
+                                        <th style="text-align:center; padding:8px; width:120px;">Delivery</th>
+                                        <th style="text-align:right; padding:8px; width:100px;">Base ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php 
+                                    // Casting type labels
+                                    $castingTypes = [
+                                        0 => 'Concentration',
+                                        1 => 'Fire & Forget',
+                                        2 => 'Constant'
+                                    ];
+                                    // Delivery type labels
+                                    $deliveryTypes = [
+                                        0 => 'Self',
+                                        1 => 'Contact',
+                                        2 => 'Aimed',
+                                        3 => 'Target Actor',
+                                        4 => 'Target Location'
+                                    ];
+                                    
+                                    usort($metadataSpells, function($a, $b){ return strcmp($a['name']??'', $b['name']??''); });
+                                    foreach ($metadataSpells as $spell): 
+                                        $spellName = isset($spell['name']) ? htmlspecialchars($spell['name']) : 'Unknown';
+                                        $spellID = isset($spell['baseid']) ? htmlspecialchars($spell['baseid']) : '—';
+                                        $castingType = isset($spell['casting_type']) ? intval($spell['casting_type']) : 0;
+                                        $deliveryType = isset($spell['delivery']) ? intval($spell['delivery']) : 0;
+                                        $castingLabel = $castingTypes[$castingType] ?? 'Unknown';
+                                        $deliveryLabel = $deliveryTypes[$deliveryType] ?? 'Unknown';
+                                    ?>
+                                        <tr style="border-bottom:1px solid #3a3a3a;">
+                                            <td style="padding:6px 8px; color:#cfd9ea;"><?= $spellName ?></td>
+                                            <td style="padding:6px 8px; text-align:center; color:#9fb1c9; font-size:12px;"><?= $castingLabel ?></td>
+                                            <td style="padding:6px 8px; text-align:center; color:#9fb1c9; font-size:12px;"><?= $deliveryLabel ?></td>
+                                            <td style="padding:6px 8px; text-align:right; color:#9fb1c9; font-family:monospace; font-size:11px;"><?= $spellID ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                            <div style="margin-top:12px; padding:8px; background:#1a1a1a; border-radius:6px; border:1px solid #4a4a4a;">
+                                <strong style="color:rgb(242, 124, 17);">Total Spells:</strong> 
+                                <span style="color:#cfd9ea;"><?= count($metadataSpells) ?> spells known</span>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <div style="color:#9fb1c9;">No spell data found in metadata.</div>
+                    <?php endif; ?>
+                </div>
+            </details>
+        </div>
+
         <div class="form-item span-2">
             <label for="metadata">Metadata (JSON)</label>
             <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
@@ -1614,7 +1751,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Override global and profile settings for this specific NPC. Changes here take precedence over all other configurations.</small>
             <?php
             // Configure override editor for NPC mode
-            $reservedKeys = [ 'middle_term_enabled', 'auto_diary_enabled', 'chim_core_migrated', 'salutation_after_a_while'];
+            $reservedKeys = [ 'middle_term_enabled', 'auto_diary_enabled', 'auto_diary_wait_enabled', 'chim_core_migrated', 'salutation_after_a_while'];
             $extendedDataRaw = isset($editItem["extended_data"]) ? $editItem["extended_data"] : '{}';
             $extendedDataObj = json_decode($extendedDataRaw, true) ?: [];
             $currentOverrides = [];
@@ -1629,7 +1766,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             $overrideEditorConfig = [
                 'mode' => 'npc',
                 'fieldName' => 'extended_data',
-                'allowedSettings' => ['TTSFUNCTION','RECHAT_H','RECHAT_P','RECHAT_ALLOW_ACTIONS','CORE_LANG','ENFORCE_ACTIONS_PROMPT','REMOVE_ASTERISKS_FROM_OUTPUT','MAX_WORDS_LIMIT','DIARY_PROMPT','DIARY_COOLDOWN','COMBAT_BARK_COOLDOWN','AUTO_DIARY_WAIT','OGHMA_INFINIUM','OGHMA_AMOUNT','MINIME_T5','CONTEXT_HISTORY','CONTEXT_HISTORY_DIARY','CONTEXT_HISTORY_DYNAMIC_PROFILE','QUEST_COMMENT','QUEST_COMMENT_CHANCE','BORED_EVENT','BORED_EVENT_SERVERSIDE','HERIKA_ANIMATIONS','LANG_LLM_XTTS'],
+                'allowedSettings' => ['TTSFUNCTION','RECHAT_H','RECHAT_P','RECHAT_ALLOW_ACTIONS','CORE_LANG','ENFORCE_ACTIONS_PROMPT','REMOVE_ASTERISKS_FROM_OUTPUT','MAX_WORDS_LIMIT','DIARY_PROMPT','DIARY_COOLDOWN','COMBAT_BARK_COOLDOWN','OGHMA_INFINIUM','OGHMA_AMOUNT','MINIME_T5','CONTEXT_HISTORY','CONTEXT_HISTORY_DIARY','CONTEXT_HISTORY_DYNAMIC_PROFILE','QUEST_COMMENT','QUEST_COMMENT_CHANCE','BORED_EVENT','BORED_EVENT_SERVERSIDE','HERIKA_ANIMATIONS','LANG_LLM_XTTS'],
                 'reservedKeys' => $reservedKeys,
                 'currentData' => $currentOverrides,
                 'systemFields' => $systemFields,
@@ -1660,6 +1797,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 try {
                   const mtm = form.querySelector('#middle_term_enabled');
                   const ad = form.querySelector('#auto_diary_enabled');
+                  const adWait = form.querySelector('#auto_diary_wait_enabled');
                   const sal = form.querySelector('#salutation_after_a_while');
                   const dyn = form.querySelector('#dynamic_profile');
                   if (form.extended_data){
@@ -1683,6 +1821,16 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                         obj.auto_diary_enabled = ad.checked ? 1 : 0;
                       } else {
                         delete obj.auto_diary_enabled; // Remove to inherit from profile
+                      }
+                    }
+                    
+                    // Auto Diary Wait: only save if differs from profile default
+                    if (adWait) {
+                      const profileDefault = adWait.getAttribute('data-profile-default') === '1';
+                      if (adWait.checked !== profileDefault) {
+                        obj.auto_diary_wait_enabled = adWait.checked ? 1 : 0;
+                      } else {
+                        delete obj.auto_diary_wait_enabled; // Remove to inherit from profile
                       }
                     }
                     
@@ -2282,7 +2430,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         promptBox.style.justifyContent='center';
         promptBox.style.background='rgba(0,0,0,0.65)';
         promptBox.innerHTML = '<div style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:16px; max-width:600px; width:92%; color:#e9efff;">\
-          <div style="font-weight:700; color:rgb(242,124,17); margin-bottom:8px; font-size:18px;">AI Generate Profile for "' + npcName.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) + '"</div>\
+          <div style="font-weight:700; color:rgb(242,124,17); margin-bottom:8px; font-size:18px;">AI Generate Profile for "' + npcName.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) + '"</div>\
           <div style="font-size:13px; color:#cfd9ea; margin-bottom:12px;">Add any specific information or instructions for the AI to consider when generating this profile. Leave blank to use default generation.</div>\
           <label style="display:block; font-size:13px; margin:6px 0 4px; color:#cfd9ea; font-weight:600;">Custom Instructions (optional):</label>\
           <textarea id="ai_user_prompt" placeholder="Example: This NPC should be a merchant specializing in enchanted weapons, with a mysterious past..." style="width:100%; min-height:120px; padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; resize:vertical; font-family:inherit;"></textarea>\
@@ -2504,7 +2652,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       (j.items||[]).forEach(it=>{
         const div = document.createElement('div');
         div.style.border = '1px solid #4a4a4a'; div.style.borderRadius='8px'; div.style.padding='8px'; div.style.cursor='pointer';
-        div.innerHTML = `<div style="font-weight:700; color:#e9efff">${it.npc_name}</div>
+        div.innerHTML = `<div style="font-weight:700; color:#e9efff">${escapeHtml(it.npc_name)}</div>
           <div style="color:#9fb1c9; font-size:12px; margin:4px 0">${it.core_preview||''}</div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; font-size:12px; color:#cfd9ea;">
             ${it.voiceid?('<span>Voice: '+it.voiceid+'</span>'):''}
@@ -2534,7 +2682,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       if (!j.ok){ detail.innerHTML = '<div style="color:#ff6b6b">Failed to load detail</div>'; return; }
       const d = j.data||{};
       detail.innerHTML = `
-        <div style="font-size:18px; font-weight:700; color:#e9efff;">${d.npc_name||''}</div>
+        <div style="font-size:18px; font-weight:700; color:#e9efff;">${escapeHtml(d.npc_name||'')}</div>
         <div style="margin-top:8px; color:#cfd9ea;"><b style="color:rgb(242,124,17)">Core:</b><br>${escapeHtml(d.core||'')}</div>
         <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:10px; margin-top:8px;">
           ${kv('Static', d.npc_static_bio)}
@@ -2557,7 +2705,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     }
     function kv(title, val){ const v=(val||'').trim(); return `<div><div style="color:rgb(242,124,17); font-weight:700;">${title}</div><div style="white-space:pre-wrap;">${escapeHtml(v||'—')}</div></div>`; }
     function badge(k, v){ v=(v||'').trim(); if (!v) return ''; return `<span style="background:#3a3a3a; border:1px solid #4a4a4a; border-radius:999px; padding:3px 8px;">${k}: ${escapeHtml(v)}</span>`; }
-    function escapeHtml(s){ return String(s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     let deb = null; function refetch(){ if (deb) clearTimeout(deb); deb=setTimeout(()=>{ page=1; fetchList(); }, 250); }
     if (inp) inp.addEventListener('input', refetch);
     if (letter) letter.addEventListener('change', refetch);

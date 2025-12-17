@@ -95,6 +95,10 @@ if ($checkTableExists("core_profiles") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master.sql"));
         $db->execQuery("SET search_path TO public");
     }
+    if ($checkTableExists("core_player") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_player.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
 } catch (Exception $e) {
     Logger::warn("Bootstrap core tables: " . $e->getMessage());
 }
@@ -1761,6 +1765,43 @@ if ($checkTableExists("core_api_badge") == -1) {
 } else
     Logger::info(__FILE__." core_api_badge exists");
 
+// Add unique constraint on core_api_badge.label to prevent duplicates
+if ($checkTableExists("core_api_badge") > 0 && $checkVersion("core_api_badge") < 20251127001) {
+    try {
+        // Remove duplicates: keep row with highest id and non-empty key per label (case-insensitive)
+        $db->execQuery("
+            DELETE FROM public.core_api_badge a
+            WHERE a.id NOT IN (
+                SELECT DISTINCT ON (LOWER(label)) id
+                FROM public.core_api_badge
+                ORDER BY LOWER(label), CASE WHEN api_key = '' THEN 0 ELSE 1 END DESC, id DESC
+            )
+        ");
+        
+        // Normalize label casing to match preset expectations
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'OpenRouter' WHERE LOWER(label) = 'openrouter'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'OpenAI' WHERE LOWER(label) = 'openai'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Deepgram' WHERE LOWER(label) = 'deepgram'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Google' WHERE LOWER(label) = 'google'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Azure' WHERE LOWER(label) = 'azure'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'ElevenLabs' WHERE LOWER(label) = 'elevenlabs'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Cartesia' WHERE LOWER(label) = 'cartesia'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Replicate' WHERE LOWER(label) = 'replicate'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Nano-GPT' WHERE LOWER(label) = 'nano-gpt'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'DeepL' WHERE LOWER(label) = 'deepl'");
+        
+        // Add unique constraint
+        $db->execQuery("ALTER TABLE public.core_api_badge ADD CONSTRAINT core_api_badge_label_unique UNIQUE (label)");
+        
+        // Add case-insensitive index for faster lookups
+        $db->execQuery("CREATE INDEX IF NOT EXISTS idx_core_api_badge_label_lower ON public.core_api_badge (LOWER(label))");
+        
+        $updateVersion("core_api_badge", 20251127001);
+        Logger::info("Applied core_api_badge unique constraint 20251127001 (cleaned duplicates, normalized case, added UNIQUE constraint)");
+    } catch (Exception $e) {
+        Logger::warn("core_api_badge unique constraint update: " . $e->getMessage());
+    }
+}
 
 if ($checkTableExists("core_itt_connector") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_itt_connector.sql"));
@@ -1877,6 +1918,41 @@ try {
     }
 } catch (Exception $e) {
     Logger::error("Error enforcing unique slot index: ".$e->getMessage());
+}
+
+// Add llm_fallback_id column to core_profiles for fallback connector support
+if ($checkVersion("core_profiles") < 20251203001) {
+    Logger::debug("Applying core_profiles 20251203001 - Adding llm_fallback_id for fallback support");
+    try {
+        // Add the column if it doesn't exist
+        $db->execQuery('ALTER TABLE public.core_profiles ADD COLUMN IF NOT EXISTS llm_fallback_id integer');
+        
+        // Add foreign key constraint if it doesn't exist
+        $fkExists = $db->fetchAll("
+            SELECT 1 FROM pg_constraint 
+            WHERE conname = 'profiles_llm_fallback_id_fkey'
+        ");
+        
+        if (!$fkExists || !isset($fkExists[0])) {
+            $db->execQuery("
+                ALTER TABLE public.core_profiles
+                ADD CONSTRAINT profiles_llm_fallback_id_fkey 
+                FOREIGN KEY (llm_fallback_id) REFERENCES public.core_llm_connector(id)
+            ");
+            Logger::info("Added foreign key constraint profiles_llm_fallback_id_fkey");
+        }
+        
+        // Add comment
+        $db->execQuery("
+            COMMENT ON COLUMN public.core_profiles.llm_fallback_id 
+            IS 'Fallback LLM connector used when primary connector fails with network error'
+        ");
+        
+        $updateVersion("core_profiles", 20251203001);
+        Logger::info("Applied patch core_profiles 20251203001 - Added llm_fallback_id for automatic fallback on network errors");
+    } catch (Exception $e) {
+        Logger::error("Error adding llm_fallback_id to core_profiles: " . $e->getMessage());
+    }
 }
 
 // Final repair pass: ensure critical core tables exist even if versions were bumped earlier
@@ -2090,6 +2166,26 @@ if ($checkVersion("descriptions_defaults")<20241114001) {
     Logger::info("Applied patch descriptions_defaults 20241114001");
 }
 
+if ($checkVersion("spell_descriptions")<20241129001) {
+    Logger::debug("Applying spell_descriptions 20241129001");
+    
+    $sqlFile = __DIR__ . '/../data/spell_descriptions.sql';
+    if (file_exists($sqlFile)) {
+        $sql = file_get_contents($sqlFile);
+        if ($sql !== false) {
+            $db->execQuery($sql);
+            Logger::info("Imported spell descriptions from spell_descriptions.sql");
+        } else {
+            Logger::warn("Could not read spell_descriptions.sql");
+        }
+    } else {
+        Logger::warn("spell_descriptions.sql not found at $sqlFile");
+    }
+    
+    $updateVersion("spell_descriptions",20241129001);
+    Logger::info("Applied patch spell_descriptions 20241129001");
+}
+
 // Always (re)create combined view once base tables exist
 try {
     $db->execQuery("DROP VIEW IF EXISTS public.combined_descriptions CASCADE;");
@@ -2172,10 +2268,19 @@ $db->execQuery("ALTER TABLE audit_request ADD COLUMN IF NOT EXISTS usage jsonb")
 if ($checkTableExists("rumors") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/add_rumors.sql"));
 } else
-    Logger::info(__FILE__." import_rules exists");
+    Logger::info(__FILE__." rumors exists");
+
+if ($checkTableExists("named_cell") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/named_cell.sql"));
+} else
+    Logger::info(__FILE__." named_cell exists");
+
 
 $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS region text");
 $db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS hold text");
+$db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS tags text");
+$db->execQuery("ALTER TABLE sneq_quests ADD COLUMN IF NOT EXISTS title text");
+$db->execQuery("ALTER TABLE sneq_quests ADD COLUMN IF NOT EXISTS stage text");
 
 if ($checkTableExists("master_packages") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/master_packages.sql"));
@@ -2372,6 +2477,39 @@ if ($checkVersion("prompts")<20251110001) {
     $directorRules = $db->escape("Just provide instructions! You can also provide more than one instruction, but one per actor (keep limit at  2 or 3 max actors)\nIn addition, follow these general scene rules as a game director:\n * Use any actor in NEARBY ACTORS/NPC IN THE SCENE list ({PLAYER_NAME},busy actors and far away actors are EXCLUDED!)\n * Continue the scene as naturally and fully as possible, unless the user explicitly requests a new one. You can specify actions to reinforce the actors' dialogue.\n * If there are more actors in the room, try to involve them in the conversation.\n * When dialogue becomes repetitive, make a plot twist.\n * If a character reuses the same argument too often, nudge the scene towards a new topic.\n * Occasionally introduce subtle foreshadowing or hint at future events, dangers, or quests.\n * Do not resolve everything neatly—keep room for ongoing tension or future continuation.\n * You must always provide dialogue instructions for the character, as every request requires a dialogue response.\n * Here are a list of actions that can be used: \n{FUNCTION_LIST}\n  ** JustTalk \n * Add a Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality. Other actors can see this to properly react.\n * If scene is getting boring/repetitive, add a plot twist");
     $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('director_instruction_rules', '$directorRules', 'Rules and guidelines for game director when generating instructions (contains {PLAYER_NAME}, {FUNCTION_LIST} placeholders). Used in: service/processors/rolemaster/cmd/instruction.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
     
+    // Seed Oghma LLM topic extraction prompt
+    $oghmaTopicPrompt = $db->escape(
+        "You are an expert at extracting important topics from text.\n".
+        "Follow these rules strictly:\n\n".
+        "1. Extract only ONE most important topic (person, place, item, concept, etc.) from the text\n".
+        "2. Ensure the output is in the **singular form** (e.g., dragons→dragon, cities→city)\n".
+        "3. Return ONLY the word or phrase (no explanations, no extra text)\n".
+        "4. If multiple candidates exist, choose the most important one\n".
+        "5. Keep the topic in the same language as the input text\n\n".
+        "Examples:\n".
+        "Input: 'I heard about dragons'\n".
+        "Output: dragon\n\n".
+        "Input: 'Going to Whiterun today'\n".
+        "Output: Whiterun\n\n".
+        "Input: 'Met with the Greybeards'\n".
+        "Output: Greybeard\n\n".
+        "Input: 'Used magic in combat'\n".
+        "Output: magic"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'custom_oghma',
+            '$oghmaTopicPrompt',
+            'System prompt for Oghma LLM-based topic extraction from dialogue/text (does not apply to MiniMe T5 version). Used in: lib/oghma_llm_service.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
     $updateVersion("prompts", 20251110001);
     Logger::info("Applied patch prompts 20251110001 - Added all dynamic prompts and director prompts");
 }
@@ -2403,6 +2541,220 @@ if ($checkVersion("prompts")<20251116001) {
     
     $updateVersion("prompts", 20251116001);
     Logger::info("Applied patch prompts 20251116001 - Added random_narration_prompt");
+}
+
+//----------------------------------------------------
+// HEIGHT DESCRIPTIONS PROMPT
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251128002) {
+    Logger::debug("Applying prompts table 20251128002 - Adding height_descriptions");
+    
+    // Seed height descriptions as JSON
+    $heightDescriptions = $db->escape(json_encode([
+        "height_descriptions" => [
+            [
+                "name" => "VerySmall",
+                "min_scale" => 0.0,
+                "max_scale" => 0.60,
+                "description" => "Very small and tiny in stature"
+            ],
+            [
+                "name" => "Small",
+                "min_scale" => 0.60,
+                "max_scale" => 0.80,
+                "description" => "Smaller than most people"
+            ],
+            [
+                "name" => "ModestStature",
+                "min_scale" => 0.80,
+                "max_scale" => 0.95,
+                "description" => "Slightly below average height"
+            ],
+            [
+                "name" => "Average",
+                "min_scale" => 0.95,
+                "max_scale" => 1.05,
+                "description" => "Typical height"
+            ],
+            [
+                "name" => "Tall",
+                "min_scale" => 1.05,
+                "max_scale" => 1.20,
+                "description" => "Tall, standing a head above most people"
+            ],
+            [
+                "name" => "VeryTall",
+                "min_scale" => 1.20,
+                "max_scale" => 1.40,
+                "description" => "Very tall"
+            ],
+            [
+                "name" => "Giantlike",
+                "min_scale" => 1.40,
+                "max_scale" => 99.0,
+                "description" => "Giant in height and stature"
+            ]
+        ]
+    ]));
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'height_descriptions',
+            '$heightDescriptions',
+            'JSON configuration for NPC height descriptions based on scale values. Used to generate natural language height descriptions from numeric scale values for NPC context.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251128002);
+    Logger::info("Applied patch prompts 20251128002 - Added height_descriptions");
+}
+
+//----------------------------------------------------
+// Book Summary Prompt - Version 20251214001
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251214001) {
+    Logger::debug("Applying prompts table 20251214001 - Adding book_summary_prompt");
+    
+    // Seed book summary prompt (uses {HERIKA_NAME} and {TEMPLATE_DIALOG} placeholders)
+    $bookSummaryPrompt = $db->escape(
+        "({HERIKA_NAME} reads the book ) {TEMPLATE_DIALOG}"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'book_summary_prompt',
+            '$bookSummaryPrompt',
+            'Instruction prompt for book summary/reading events (contains {HERIKA_NAME} and {TEMPLATE_DIALOG} placeholders). Used in: processor/request.php for chatnf_book events'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251214001);
+    Logger::info("Applied patch prompts 20251214001 - Added book_summary_prompt");
+}
+
+//----------------------------------------------------
+// CORE_PLAYER DATA MIGRATION
+//----------------------------------------------------
+
+if ($checkVersion("core_player")<20241128001) {
+    Logger::debug("Applying core_player migration 20241128001 - Migrating player data from conf_opts");
+    
+    // List of keys to migrate from conf_opts to core_player
+    $keysToMigrate = [
+        'PLAYER_NAME' => 'player_name',
+        'PLAYER_BIOS' => 'appearance',  // Renamed
+        'PLAYER_SPEECH_STYLE' => 'speech_style',
+        // Skyrim stats
+        'Mauls', 'Werewolf Transformations', 'Days As Werewolf',
+        'Necks Bitten', 'Days As Vampire', 'Locations Discovered',
+        'Dungeons Cleared', 'Days Passed', 'Hours Slept',
+        'Hours Waited', 'Standing Stones Found', 'Gold Found',
+        'Most Gold Carried', 'Chests Looted', 'Skill Increases',
+        'Skill Books Read', 'Food Eaten', 'Training Sessions',
+        'Books Read', 'Horses Owned', 'Houses Owned',
+        'Stores Invested In', 'Barters', 'Persuasions',
+        'Bribes', 'Intimidations', 'Diseases Contracted',
+        'Dragonborn Quests Completed DB', 'Dawnguard Quests Completed DG',
+        'Quests Completed', 'Misc Objectives Completed',
+        'Main Quests Completed', 'Side Quests Completed',
+        'The Companions Quests Completed', 'College of Winterhold Quests Completed',
+        'Thieves\' Guild Quests Completed', 'The Dark Brotherhood Quests Completed',
+        'Civil War Quests Completed', 'Daedric Quests Completed',
+        'Questlines Completed', 'Bard\'s College Quests Completed',
+        'Blades Quests Completed', 'Forsworn Quests Completed',
+        'Imperial Legion Quests Completed', 'Stormcloaks Quests Completed',
+        'Thieves\' Guild Special Jobs Completed', 'Dark Brotherhood Contracts Completed'
+    ];
+    
+    foreach ($keysToMigrate as $confKey => $playerKey) {
+        // If confKey is numeric (index in array), use it as both source and dest
+        if (is_numeric($confKey)) {
+            $confKey = $playerKey;
+        }
+        
+        // Check if data exists in conf_opts
+        $escapedConfKey = $db->escape($confKey);
+        $result = $db->fetchAll("SELECT value FROM public.conf_opts WHERE id = '{$escapedConfKey}' LIMIT 1");
+        
+        if ($result && isset($result[0]['value'])) {
+            $value = $result[0]['value'];
+            $escapedPlayerKey = $db->escape($playerKey);
+            $escapedValue = $db->escape($value);
+            
+            // Insert or update in core_player
+            $db->execQuery("
+                INSERT INTO public.core_player (id, value) 
+                VALUES ('{$escapedPlayerKey}', '{$escapedValue}')
+                ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+            ");
+            
+            Logger::debug("Migrated {$confKey} -> core_player.{$playerKey}");
+        }
+    }
+    
+    $updateVersion("core_player", 20241128001);
+    Logger::info("Applied patch core_player 20241128001 - Migrated player data from conf_opts");
+}
+
+//----------------------------------------------------
+// Background Life Prompts - Style prompts for letters and inner thoughts
+// Version 20251207001
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251207001) {
+    Logger::debug("Applying background life prompts 20251207001");
+    
+    // Prompt 1: Letter writing style
+    $bglLetterStyle = $db->escape(
+        "Write it as a letter to {PLAYER_NAME} from {HERIKA_NAME}. Use same language as <text>. IMPORTANT: Keep the letter SHORT and CONCISE - maximum 2-3 brief paragraphs."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'background_life_letter',
+            '$bglLetterStyle',
+            'Writing style instructions for background life letters/notifications. This is embedded into the notification field instructions. Contains placeholders: {HERIKA_NAME}, {PLAYER_NAME}. Used in: debug/simple_llm_request_with_context_life.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    // Prompt 2: Inner thought/monologue style
+    $bglInnerThoughtStyle = $db->escape(
+        "Read the following text, which represents a mental note or inner monologue of a character within the Skyrim universe.\n".
+        "Based on the content of the text, propose one of the following actions that would make sense for the development of the story:"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'background_life_innerthought',
+            '$bglInnerThoughtStyle',
+            'Introduction/framing style for processing background life inner thoughts and monologues. This appears at the start of the system prompt. Contains no placeholders. Used in: debug/simple_llm_request_with_context_life.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $db->execQuery("UPDATE versions SET version=20251207001 WHERE section='prompts'");
+    Logger::info("Applied patch prompts 20251207001 - Added background life style prompts to database");
 }
 
 //----------------------------------------------------

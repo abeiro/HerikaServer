@@ -17,6 +17,7 @@ $GLOBALS["TASKS"]["snqe"]["fn"]=function() {
     require_once $enginePath . "lib/core/api_badge.class.php";
     require_once $enginePath . "lib/core/core_profiles.class.php";
     require_once $enginePath . "lib/core/llm_connector.class.php";
+    require_once $enginePath . "lib/scriptproxy_papyrus.php";
 
     if (isset($GLOBALS["argv"][2])) {
         if ($GLOBALS["argv"][2]=="create") {
@@ -26,7 +27,9 @@ $GLOBALS["TASKS"]["snqe"]["fn"]=function() {
             Logger::info("Loading suggestion command");
             require_once("cmd" . DIRECTORY_SEPARATOR . "main.php");
         } else if ($GLOBALS["argv"][2]=="reset") {
-            $GLOBALS["db"]->execQuery("update sneq_quests set quest_data='{}',quest_run_state='not started'");
+            $GLOBALS["db"]->execQuery("update sneq_quests set quest_data='{}',quest_run_state='not started' where quest_run_state<>'finished'");
+        } else if ($GLOBALS["argv"][2]=="clean") {
+            $GLOBALS["db"]->execQuery("truncate sneq_quests");
         }
     }
 

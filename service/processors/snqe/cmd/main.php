@@ -14,6 +14,7 @@ $GLOBALS["gameRequest"][2]        = $res[0]["gamets"] + 0;
 $GLOBALS["gameRequest"][0]        = "";
 $GLOBALS["last_localts"]          = $res[0]["localts"] + 0;
 $GLOBALS["last_gamets"]           = $res[0]["gamets"] + 0;
+$GLOBALS["last_ts"]               = $res[0]["ts"] + 0;
 $GLOBALS["last_instruction_sent"] = $res2[0]["localts"] + 0;
 $GLOBALS["actors_present"]        = DataBeingsInCloseRange(true);
 
@@ -32,12 +33,30 @@ if (($lastEvent[0]["n"] - $lastChat[0]["m"]) > 20) { // 20 seconds of silence
     $GLOBALS["NPCS_ARE_NOT_TALKING"] = 0;
 }
 
-$quests = $GLOBALS["db"]->fetchAll("select * from sneq_quests where quest_run_state='not_running' or quest_run_state='not started'");
+$quests = $GLOBALS["db"]->fetchAll("select * from sneq_quests where quest_run_state IN ('not_running','not started','running')");
 
 foreach ($quests as $questRow) {
     $quest_id = $questRow["quest_id"];
     $quest    = SNQEQuestManager::getQuest($quest_id);
 
+    if ($questRow["quest_run_state"] != "running") {
+        $quest["quest_run_state"] = "running";
+        SNQEQuestManager::updateQuestState($quest_id, "running");
+
+        $GLOBALS["db"]->insert(
+            'responselog',
+            [
+
+                'localts' => time(),
+                'sent'    => 0,
+                'actor'   => "rolemaster",
+                'text'    => "",
+                'action'  => "rolecommand|StartQuest@{$quest["title"]}@{$quest["stage"]}",
+                'tag' => "",
+
+            ]
+        );
+    }
     if (! $quest) {
         SNQEQuestManager::createNewQuest($quest_id, '');
         $quest = SNQEQuestManager::getQuest($quest_id);

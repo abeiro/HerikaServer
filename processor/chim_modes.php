@@ -47,7 +47,7 @@ $EXECUTION_MODE=isset($EXECUTION_MODE_["value"])?$EXECUTION_MODE_["value"]:"STAN
 
 $EXECUTION_MODE=strtoupper($EXECUTION_MODE);
 
-if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s"])) {
+if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"])) {
     $EXECUTION_MODE="STANDARD";
 }
 

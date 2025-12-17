@@ -1788,3 +1788,25 @@ function prettyPrintJson($json )
 function startsWithUppercase($string) {
     return preg_match('/^[A-Z]/', $string);
 }
+
+/**
+ * Converts an array of strings into a bulleted list format.
+ *
+ * @param array $items Array of strings to convert into a bulleted list
+ * @param string $bulletChar Character to use as bullet (default: "•")
+ * @return string Formatted bulleted list with newlines
+ */
+function arrayToBulletedList($items, $bulletChar = " *") {
+    if (!is_array($items) || empty($items)) {
+        return null;
+    }
+    
+    $bulletedList = "";
+    foreach ($items as $item) {
+        if (trim($item))
+            $bulletedList .= $bulletChar . " " . trim($item) . "\n";
+    }
+    
+    return rtrim($bulletedList);
+}
+

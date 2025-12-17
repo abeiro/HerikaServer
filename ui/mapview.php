@@ -223,6 +223,20 @@ if (!function_exists('race_icon_web_path')) {
             } else {
                 echo json_encode(['ok' => false, 'message' => 'Update failed']);
             }
+        } elseif ($setting === 'bg_life_letters') {
+            // Update extended_data
+            $extData = json_decode($row['extended_data'], true) ?: [];
+            $extData['background_life_letters'] = $value;
+            $extDataJson = json_encode($extData);
+            
+            $updateQuery = "UPDATE core_npc_master SET extended_data = $1 WHERE id = $2";
+            $updateResult = pg_query_params($adminConn, $updateQuery, [$extDataJson, $npcId]);
+            
+            if ($updateResult) {
+                echo json_encode(['ok' => true, 'message' => 'Send Letters ' . ($value ? 'enabled' : 'disabled')]);
+            } else {
+                echo json_encode(['ok' => false, 'message' => 'Update failed']);
+            }
         } elseif ($setting === 'gps_track') {
             // Update metadata
             $metadata = json_decode($row['metadata'], true) ?: [];
@@ -352,6 +366,7 @@ if (!function_exists('race_icon_web_path')) {
             
             // Parse background life settings
             $bgLifeCommands = isset($extData['background_life_commands']) ? (bool)$extData['background_life_commands'] : false;
+            $bgLifeLetters = isset($extData['background_life_letters']) ? (bool)$extData['background_life_letters'] : false;
             $gpsTrack = isset($meta['gps_track']) ? (bool)$meta['gps_track'] : false;
             
             // Parse history coordinates
@@ -422,6 +437,7 @@ if (!function_exists('race_icon_web_path')) {
                 'last_report' => convert_gamets2skyrim_date($row["last_report"]).",hours ago:".round(($last_gamets-$row["last_report"]) *0.0000024,0),
                 'coords_history' => $coordsHistory,
                 'bg_life_commands' => $bgLifeCommands,
+                'bg_life_letters' => $bgLifeLetters,
                 'gps_track' => $gpsTrack,
                 'last_letter' => $row["content"],
                 'diary_letters' => $diaryLetters,
@@ -498,6 +514,7 @@ if (!function_exists('race_icon_web_path')) {
             'last_report' => $marker["last_report"],
             'coords_history' => $translatedHistory,
             'bg_life_commands' => $marker['bg_life_commands'],
+            'bg_life_letters' => $marker['bg_life_letters'],
             'gps_track' => $marker['gps_track'],
             'last_letter' => $marker['last_letter'],
             'diary_letters' => $marker['diary_letters'],
@@ -1489,7 +1506,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                             <strong>Getting Started:</strong>
                             <ol>
                                 <li><b>Make sure you the game is running and that the NPC is not a current follower (dismiss them).</b></li>
-                                <li>Look at an NPC in-game and press the <strong>Roleplay Wheel Hotkey (CHIM MCM Menu)</strong> to add them to Background Life</li>
+                                <li>Look at an NPC in-game and press the <strong>Roleplay Wheel Hotkey (CHIM MCM Menu)</strong> to add them to Background Life <strong>You must save your game for changes to take effect</strong></li>
                                 <li>You can either:
                                     <ul>
                                         <li>Talk to the NPC and give commands like: <em>"Go to Riften and then to Whiterun to do X and Y"</em></li>
@@ -1533,9 +1550,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 <div class="npc-list-header">
                         <h3>📍 NPC Markers</h3>
                         <div style="color: #bbb; font-size: 13px; padding-bottom: 10px; border-bottom: 1px solid #4a4a4a;">
-                            <strong>Tracked NPCs:</strong> <?php echo sizeof($translatedMarkers); ?> | 
-                            <strong>Markers:</strong> <?php echo sizeof($passiveMarkers); ?><br/>
-                            <strong>Current Ingame Date:</strong> <?php echo $currentDate?>
+                            <strong>Tracked NPCs:</strong> <?php echo sizeof($translatedMarkers); ?><br/>
+                            <strong>Current Ingame Date:</strong> <?php echo $currentDate?><br/>
+                            <em style="color: #ffa500;">For traveling to work you must click "Send All Locations" in the CHIM MCM under Tools to add them to Background Life<br/></em>
                         </div>
                         <button onclick="updateAllCoords()" class="update-all-coords-btn">📍 Update All NPC Coords</button>
                 </div>
@@ -1578,6 +1595,15 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                                <?php echo $marker['bg_life_commands'] ? 'checked' : ''; ?>
                                                onchange="toggleBgLifeSetting(this)">
                                         <span class="toggle-text">🎮 Auto Actions</span>
+                                    </label>
+                                    <label class="toggle-label-inline">
+                                        <input type="checkbox" 
+                                               class="toggle-checkbox" 
+                                               data-npc-id="<?php echo $marker['id']; ?>" 
+                                               data-setting="bg_life_letters" 
+                                               <?php echo $marker['bg_life_letters'] ? 'checked' : ''; ?>
+                                               onchange="toggleBgLifeSetting(this)">
+                                        <span class="toggle-text">✉️ Send Letters</span>
                                     </label>
                                     <label class="toggle-label-inline">
                                         <input type="checkbox" 

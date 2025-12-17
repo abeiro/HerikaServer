@@ -89,7 +89,7 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem)",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells)",
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                 ];
             } else {
@@ -100,7 +100,7 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem)"
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells)"
                 ];
             }
         } else {
@@ -111,7 +111,7 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem)",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells)",
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                     "message"=>"lines of dialogue"
                 ];
@@ -122,7 +122,7 @@
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem)",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells)",
                     "message"=>"lines of dialogue"
                 ];
             }
@@ -193,7 +193,7 @@
                         ),
                         "item" => array(
                             "type" => "string",
-                            "description" => "item name (REQUIRED when action is GiveItemTo or PickupItem - use exact name from inventory or nearby_items)"
+                            "description" => "item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact name from inventory, nearby_items, or spell name from spells)"
                         )
                     ),
                     "required" => [
