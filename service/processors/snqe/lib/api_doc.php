@@ -144,7 +144,7 @@ Returns: void
 Notes:
 
 Initiates a combat between the NPC and the player.
-**YOU MUST USE WaitforCombatEnd to monitor the outcome.**
+**YOU MUST USE WaitforCombatEnd to wait for completion.**
 Idempotent: if already ordered to combat, does nothing.
 
 * CombatNPC(quest_id, npc_ref_attacker, npc_ref_target)
@@ -161,7 +161,7 @@ Notes:
 
 Initiates combat between two NPCs.
 Use WaitForNPCCombatEnd to monitor the outcome.
-**YOU MUST USE WaitForNPCCombatEnd to monitor the outcome.**
+**YOU MUST USE WaitforCombatEnd to wait for completion.**
 
 Idempotent: if already ordered to combat, does nothing.
 Both NPCs must be created via CreateNPC first.
@@ -220,6 +220,7 @@ Returns "done" when combat has ended (NPC defeated or fled).
 Returns "pending" while combat is still ongoing.
 Returns "failed" if combat does not end within maxAttempts checks.
 Tracks combat_attempts and combat state per NPC in quest data.
+Function is idempotent. If the player already reached the location, it returns "done".
 
 * WaitForNPCCombatEnd(quest_id, npc_ref_attacker, npc_ref_target, maxAttempts)
 
@@ -240,6 +241,7 @@ Returns "pending" while combat is still ongoing.
 Returns "failed" if combat does not end within maxAttempts checks.
 Tracks npc_combat_attempts and combat state for both NPCs in quest data.
 Monitors event log for death events involving either NPC.
+Function is idempotent. If the player already reached the location, it returns "done".
 
 * CheckTopicToPlayer(quest_id, topic_ref, maxAttempts)
 
@@ -453,6 +455,46 @@ ToGoAway($quest_id, $npc_ref);
 CompleteQuest($quest_id);
 
 return;
+
+
+* Example Cmbat quest
+
+$quest_id = "bandit_camp_encounter_6941a5684e7b4";
+
+// Create and spawn bandits
+CreateNPC($quest_id, "grimvar", "Grimvar the Ruthless", "Male", "warrior", "Nord", "nearby", "Scarred face, heavy armor", "A seasoned bandit with a reputation for brutality.", "Gruff and menacing", "aggressive");
+SpawnNPC($quest_id, "grimvar", "nearby");
+if (CheckNPCSpawn($quest_id, "grimvar") != "done") return;
+
+CreateNPC($quest_id, "eira", "Eira Shadowglow", "Female", "assassin", "Nord", "nearby", "Dark cloak, dagger", "A stealthy bandit skilled in ambushes.", "Soft-spoken and sinister", "aggressive");
+SpawnNPC($quest_id, "eira", "nearby");
+if (CheckNPCSpawn($quest_id, "eira") != "done") return;
+
+CreateNPC($quest_id, "thoren", "Thoren Stonefist", "Male", "warrior", "Nord", "nearby", "Massive build, warhammer", "A burly bandit with immense strength.", "Loud and boastful", "aggressive");
+SpawnNPC($quest_id, "thoren", "nearby");
+if (CheckNPCSpawn($quest_id, "thoren") != "done") return;
+
+
+// Combat instructions
+CombatPlayer($quest_id, "grimvar");
+CombatPlayer($quest_id, "eira");
+CombatPlayer($quest_id, "thoren");
+
+if ( WaitforCombatEnd($quest_id,"eira") == "pending") {
+    error_log("Still in combat ".PHP_EOL);
+    return;
+):
+
+if ( WaitforCombatEnd($quest_id,"thoren") == "pending") {
+    error_log("Still in combat ".PHP_EOL);
+    return;
+):
+
+if ( WaitforCombatEnd($quest_id,"grimvar") == "pending") {
+    error_log("Still in combat ".PHP_EOL);
+    return;
+):
+
 
 */
 

@@ -1798,7 +1798,7 @@ function startsWithUppercase($string) {
  */
 function arrayToBulletedList($items, $bulletChar = " *") {
     if (!is_array($items) || empty($items)) {
-        return null;
+       return "(none)";
     }
     
     $bulletedList = "";
@@ -1807,6 +1807,9 @@ function arrayToBulletedList($items, $bulletChar = " *") {
             $bulletedList .= $bulletChar . " " . trim($item) . "\n";
     }
     
-    return rtrim($bulletedList);
+    if ($bulletedList)
+        return rtrim($bulletedList);
+    else    
+        return "(none)";
 }
 

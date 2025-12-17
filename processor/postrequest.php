@@ -45,7 +45,7 @@ if ($GLOBALS["MINIME_T5"]) {
         $lastListener = "";
         $lastDateTime = "";
 
-        foreach (json_decode(DataSpeechJournal($GLOBALS["HERIKA_NAME"], 5), true) as $element) {
+        foreach (json_decode(DataSpeechJournal($GLOBALS["HERIKA_NAME"], 6), true) as $element) {
             if ($element["listener"] == "The Narrator") {
                 continue;
             }
