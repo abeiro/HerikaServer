@@ -970,7 +970,10 @@ function current_value(string $flatName, array $currentConf) {
         </div>
 
         <div class="content-section" id="tab-stt" style="display:none;">
-            <h2>Speech-to-Text</h2>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                <h2 style="margin: 0;">Speech-to-Text</h2>
+                <button type="button" id="btn_google_free_stt" class="btn-primary" style="padding: 8px 16px;">Google Free STT</button>
+            </div>
             <div class="provider-grid">
                 <div class="provider-card">
                     <div class="provider-head">
@@ -1446,4 +1449,15 @@ echo $buffer;
 })();
 </script>
 
+<script>
+// Google Free STT Button Handler
+(function(){
+  const googleFreeBtn = document.getElementById('btn_google_free_stt');
+  if (googleFreeBtn){
+    googleFreeBtn.addEventListener('click', function(){
+      window.open('<?php echo $webRoot; ?>/ui/addons/pmstt/index.html', '_blank', 'width=1100,height=800');
+    });
+  }
+})();
+</script>
 
