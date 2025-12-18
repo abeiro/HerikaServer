@@ -212,7 +212,12 @@ function readRegularLog($logPath, $logName) {
                     }
 
                     echo '<div class="log-entry ' . $levelClass . '">';
-                    echo '<div class="timestamp">' . htmlspecialchars($entry['timestamp']) . '</div>';
+                    $isoTimestamp = timestampToISO8601($entry['timestamp']);
+                    if ($isoTimestamp !== null) {
+                        echo '<div class="timestamp" data-utc="' . htmlspecialchars($isoTimestamp) . '">' . htmlspecialchars($entry['timestamp']) . '</div>';
+                    } else {
+                        echo '<div class="timestamp">' . htmlspecialchars($entry['timestamp']) . '</div>';
+                    }
                     echo '<div class="log-level">' . htmlspecialchars($entry['level']) . '</div>';
                     echo '<div class="log-message">' . htmlspecialchars($entry['message']) . '</div>';
                     echo '</div>';
@@ -365,10 +370,10 @@ function outputLLMBlock($block) {
     
     echo '<div class="log-entry llm-block">';
     echo '<div class="timestamp">';
-    echo '<span class="time-label">Start:</span> ' . htmlspecialchars($block['start_time']);
+    echo '<span class="time-label">Start:</span> <span class="time-value" data-utc="' . htmlspecialchars($block['start_time']) . '">' . htmlspecialchars($block['start_time']) . '</span>';
     if (isset($block['end_time'])) {
         echo ' <span class="time-separator">→</span> ';
-        echo '<span class="time-label">End:</span> ' . htmlspecialchars($block['end_time']);
+        echo '<span class="time-label">End:</span> <span class="time-value" data-utc="' . htmlspecialchars($block['end_time']) . '">' . htmlspecialchars($block['end_time']) . '</span>';
     }
     echo '<span class="copy-llm-btn" title="Copy to clipboard">📋</span>';
     echo '</div>';
@@ -464,7 +469,7 @@ function outputLLMContextBlock($block) {
     
     echo '<div class="log-entry llm-block">';
     echo '<div class="timestamp">';
-    echo '<span class="time-label">Time:</span> ' . htmlspecialchars($block['timestamp']);
+    echo '<span class="time-label">Time:</span> <span class="time-value" data-utc="' . htmlspecialchars($block['timestamp']) . '">' . htmlspecialchars($block['timestamp']) . '</span>';
     echo '<span class="copy-llm-btn" title="Copy to clipboard">📋</span>';
     echo '</div>';
     echo '<div class="log-message">';
@@ -563,7 +568,12 @@ function readErrorLog($errorLogPath, $logType, $showAllEntries = false) {
 
         foreach ($entries as $entry) {
             echo '<div class="log-entry ' . $entry['level_class'] . '">';
-            echo '<div class="timestamp">' . htmlspecialchars($entry['timestamp']) . '</div>';
+            $isoTimestamp = timestampToISO8601($entry['timestamp']);
+            if ($isoTimestamp !== null) {
+                echo '<div class="timestamp" data-utc="' . htmlspecialchars($isoTimestamp) . '">' . htmlspecialchars($entry['timestamp']) . '</div>';
+            } else {
+                echo '<div class="timestamp">' . htmlspecialchars($entry['timestamp']) . '</div>';
+            }
             echo '<div class="log-level">' . strtoupper(htmlspecialchars($entry['level'])) . '</div>';
             echo '<div class="log-module">' . htmlspecialchars($entry['module']) . '</div>';
             echo '<div class="log-message">' . htmlspecialchars($entry['message']) . '</div>';
@@ -603,6 +613,30 @@ function parseApacheTimestamp($timestamp) {
     }
     
     return false;
+}
+
+// Helper function to convert timestamp string to ISO 8601 format for timezone conversion
+function timestampToISO8601($timestamp) {
+    // Try to parse the timestamp
+    $time = parseApacheTimestamp($timestamp);
+    if ($time !== false) {
+        // Create DateTime object from timestamp (assumes server timezone)
+        $date = new DateTime('@' . $time);
+        // Convert to UTC and return ISO 8601
+        $date->setTimezone(new DateTimeZone('UTC'));
+        return $date->format('c'); // ISO 8601 format
+    }
+    
+    // If parsing fails, try strtotime directly
+    $time = strtotime($timestamp);
+    if ($time !== false) {
+        $date = new DateTime('@' . $time);
+        $date->setTimezone(new DateTimeZone('UTC'));
+        return $date->format('c');
+    }
+    
+    // If all parsing fails, return null (won't add data-utc attribute)
+    return null;
 }
 
 // Helper function to create valid IDs from log names
@@ -1429,6 +1463,13 @@ if (isset($_GET['download_logs'])) {
             </svg>
             Download All Logs
         </button>
+        <button class="refresh-button" id="timezoneToggle" style="margin-left: 10px;" title="Toggle between UTC and local browser time">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right:6px;">
+                <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+            </svg>
+            Timezone: UTC
+        </button>
     </div>
     <h2>Last 2000 lines from each log are displayed here. The full logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">View the log folder.</a></h2>
 
@@ -1542,9 +1583,10 @@ if (isset($_GET['download_logs'])) {
                         $time = new DateTime($error['created_at']);
                         $time->setTimezone(new DateTimeZone('UTC'));
                         $timestamp = $time->format('Y-m-d H:i:s');
+                        $isoTimestamp = $time->format('c'); // ISO 8601 format for conversion
                         
                         echo '<div class="log-entry error-entry">';
-                        echo '<div class="timestamp">' . htmlspecialchars($timestamp) . ' UTC</div>';
+                        echo '<div class="timestamp" data-utc="' . htmlspecialchars($isoTimestamp) . '" data-timezone-label="UTC">' . htmlspecialchars($timestamp) . ' UTC</div>';
                         echo '<div class="error-message">';
                         echo '<strong>Request:</strong> ' . htmlspecialchars($error['request']) . '<br>';
                         echo '<strong>Result:</strong> ' . htmlspecialchars($error['result']);
@@ -1790,6 +1832,14 @@ function refreshLogs() {
                     container.innerHTML = newContainer.innerHTML;
                 }
             });
+            
+            // Re-apply timezone conversion if in local mode
+            const timezoneMode = localStorage.getItem('chim_logs_timezone') || 'utc';
+            if (timezoneMode === 'local' && typeof window.convertTimestamps === 'function') {
+                setTimeout(() => {
+                    window.convertTimestamps(true);
+                }, 100);
+            }
         })
         .catch(error => {
             console.error('Error refreshing logs:', error);
@@ -1965,6 +2015,14 @@ function openModal(modalId, sourceId) {
         }
         modal.style.display = 'block';
         
+        // Apply timezone conversion if in local mode
+        const timezoneMode = localStorage.getItem('chim_logs_timezone') || 'utc';
+        if (timezoneMode === 'local' && typeof window.convertTimestamps === 'function') {
+            setTimeout(() => {
+                window.convertTimestamps(true);
+            }, 50);
+        }
+        
         // Initialize search functionality for the modal
         const modalSearchInput = modal.querySelector('.modal-search-input');
         if (modalSearchInput) {
@@ -2134,6 +2192,193 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// Timezone conversion functionality
+(function() {
+    const TIMEZONE_KEY = 'chim_logs_timezone';
+    const UTC_MODE = 'utc';
+    const LOCAL_MODE = 'local';
+    
+    // Get current timezone preference from localStorage (default: UTC)
+    function getTimezoneMode() {
+        return localStorage.getItem(TIMEZONE_KEY) || UTC_MODE;
+    }
+    
+    // Save timezone preference to localStorage
+    function setTimezoneMode(mode) {
+        localStorage.setItem(TIMEZONE_KEY, mode);
+    }
+    
+    // Convert ISO 8601 timestamp to local time string
+    function toLocalTime(isoString) {
+        try {
+            const date = new Date(isoString);
+            if (isNaN(date.getTime())) {
+                return isoString; // Return original if parsing fails
+            }
+            // Format as: YYYY-MM-DD HH:MM:SS (local timezone)
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            const tzOffset = -date.getTimezoneOffset();
+            const tzHours = Math.floor(Math.abs(tzOffset) / 60);
+            const tzMinutes = Math.abs(tzOffset) % 60;
+            const tzSign = tzOffset >= 0 ? '+' : '-';
+            const tzString = `${tzSign}${String(tzHours).padStart(2, '0')}:${String(tzMinutes).padStart(2, '0')}`;
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} ${tzString}`;
+        } catch (e) {
+            return isoString;
+        }
+    }
+    
+    // Convert local time string back to UTC ISO 8601
+    function toUTC(isoString) {
+        try {
+            const date = new Date(isoString);
+            if (isNaN(date.getTime())) {
+                return isoString;
+            }
+            // Return ISO 8601 format in UTC
+            return date.toISOString();
+        } catch (e) {
+            return isoString;
+        }
+    }
+    
+    // Format UTC timestamp (YYYY-MM-DD HH:MM:SS format)
+    function formatUTCTimestamp(isoString) {
+        try {
+            const date = new Date(isoString);
+            if (isNaN(date.getTime())) {
+                return isoString;
+            }
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            const hours = String(date.getUTCHours()).padStart(2, '0');
+            const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+            const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        } catch (e) {
+            return isoString;
+        }
+    }
+    
+    // Store original timestamp text for restoration
+    const originalTimestamps = new Map();
+    
+    // Convert all timestamps on the page
+    function convertTimestamps(toLocal) {
+        // Handle all timestamps with data-utc attribute (database errors, regular logs, Apache logs)
+        document.querySelectorAll('.timestamp[data-utc]').forEach(el => {
+            const utcValue = el.getAttribute('data-utc');
+            const timezoneLabel = el.getAttribute('data-timezone-label') || '';
+            
+            // Store original text if not already stored
+            if (!originalTimestamps.has(el)) {
+                originalTimestamps.set(el, el.textContent);
+            }
+            
+            if (toLocal) {
+                const localTime = toLocalTime(utcValue);
+                // Only add (Local) label if it was a database error (has timezone-label attribute)
+                if (timezoneLabel) {
+                    el.textContent = localTime + ' (Local)';
+                } else {
+                    el.textContent = localTime;
+                }
+            } else {
+                // Restore original timestamp text
+                el.textContent = originalTimestamps.get(el);
+            }
+        });
+        
+        // Handle LLM block timestamps (time-value spans)
+        document.querySelectorAll('.time-value[data-utc]').forEach(el => {
+            const utcValue = el.getAttribute('data-utc');
+            
+            // Store original text if not already stored
+            if (!originalTimestamps.has(el)) {
+                originalTimestamps.set(el, el.textContent);
+            }
+            
+            if (toLocal) {
+                const localTime = toLocalTime(utcValue);
+                el.textContent = localTime;
+            } else {
+                // Restore original ISO 8601 format
+                el.textContent = originalTimestamps.get(el);
+            }
+        });
+    }
+    
+    // Expose convertTimestamps globally for refresh functionality
+    window.convertTimestamps = convertTimestamps;
+    
+    // Initialize timezone toggle
+    document.addEventListener('DOMContentLoaded', function() {
+        const timezoneToggle = document.getElementById('timezoneToggle');
+        if (!timezoneToggle) return;
+        
+        // Set initial state
+        const currentMode = getTimezoneMode();
+        const isLocal = currentMode === LOCAL_MODE;
+        
+        // Update button text
+        timezoneToggle.textContent = isLocal ? 'Timezone: Local' : 'Timezone: UTC';
+        if (isLocal) {
+            timezoneToggle.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right:6px;"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>Timezone: Local';
+        }
+        
+        // Store original timestamps before any conversion
+        document.querySelectorAll('.timestamp[data-utc], .time-value[data-utc]').forEach(el => {
+            if (!originalTimestamps.has(el)) {
+                originalTimestamps.set(el, el.textContent);
+            }
+        });
+        
+        // Convert timestamps on initial load if needed
+        if (isLocal) {
+            convertTimestamps(true);
+        }
+        
+        // Handle toggle click
+        timezoneToggle.addEventListener('click', function() {
+            const currentMode = getTimezoneMode();
+            const newMode = currentMode === UTC_MODE ? LOCAL_MODE : UTC_MODE;
+            const toLocal = newMode === LOCAL_MODE;
+            
+            setTimezoneMode(newMode);
+            convertTimestamps(toLocal);
+            
+            // Update button text
+            if (toLocal) {
+                this.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right:6px;"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>Timezone: Local';
+            } else {
+                this.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right:6px;"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>Timezone: UTC';
+            }
+        });
+        
+        // Re-convert timestamps when modals are opened (in case they were updated)
+        const originalOpenModal = window.openModal;
+        if (typeof originalOpenModal === 'function') {
+            window.openModal = function(modalId, sourceId) {
+                originalOpenModal(modalId, sourceId);
+                const currentMode = getTimezoneMode();
+                if (currentMode === LOCAL_MODE) {
+                    setTimeout(() => {
+                        if (typeof window.convertTimestamps === 'function') {
+                            window.convertTimestamps(true);
+                        }
+                    }, 100);
+                }
+            };
+        }
+    });
+})();
 
 // Apache log toggle functionality
 document.addEventListener('DOMContentLoaded', function() {
