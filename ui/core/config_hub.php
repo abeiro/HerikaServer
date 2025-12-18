@@ -59,7 +59,7 @@ main { padding: 80px 10px 10px; height: 100vh; }
             <button class="tab-button" data-tab="items">📜 Descriptions</button>
             <button class="tab-button" data-tab="actions">⚔️Action Editor</button>
             <button class="tab-button" data-tab="prompts">💬Prompts Manager</button>
-            <button class="tab-button" data-tab="xtts">📢 XTTS Management</button>
+            <button class="tab-button" data-tab="xtts">📢 TTS Studio</button>
             <button class="tab-button" data-tab="serverplugins">🔌Server Plugins</button>
         </div>
     </div>
