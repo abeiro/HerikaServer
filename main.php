@@ -1729,23 +1729,16 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
 
 
 if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
-    // Load player appearance from core_player table
-    // Note: PLAYER_BIOS global is already loaded from core_player in profile_loader.php
-    // This ensures consistency across all files
+    // Load player appearance from core_player table only
+    // Do not use PLAYER_BIOS from conf.php - it has been migrated to core_player.appearance
     $playerAppearance = '';
     
-    // First try core_player table directly
     try {
         require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
         $player = new Player();
         $playerAppearance = $player->get('appearance');
     } catch (Exception $e) {
         Logger::debug("Could not load player appearance from core_player: " . $e->getMessage());
-    }
-    
-    // Fallback to PLAYER_BIOS global (which profile_loader.php should have loaded from database)
-    if (empty($playerAppearance) && isset($GLOBALS["PLAYER_BIOS"]) && !empty($GLOBALS["PLAYER_BIOS"])) {
-        $playerAppearance = $GLOBALS["PLAYER_BIOS"];
     }
     
     if (!empty($playerAppearance)) {
