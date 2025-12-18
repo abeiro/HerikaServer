@@ -53,12 +53,13 @@ main { padding: 80px 10px 10px; height: 100vh; }
             <button class="tab-button" data-tab="llm">🧠LLM Connectors</button>
             <button class="tab-button" data-tab="keys">🔑API Keys</button>
             <button class="tab-button" data-tab="player">👤Player</button>
+            <button class="tab-button" data-tab="narrator">🗣️ Narrator</button>
             <button class="tab-button" data-tab="oghma">🐙Oghma Infinium</button>
             <button class="tab-button" data-tab="npcbio">🪪NPC Biographies</button>
             <button class="tab-button" data-tab="items">📜 Descriptions</button>
             <button class="tab-button" data-tab="actions">⚔️Action Editor</button>
             <button class="tab-button" data-tab="prompts">💬Prompts Manager</button>
-            <button class="tab-button" data-tab="xtts">🗣️XTTS Management</button>
+            <button class="tab-button" data-tab="xtts">📢 XTTS Management</button>
             <button class="tab-button" data-tab="serverplugins">🔌Server Plugins</button>
         </div>
     </div>
@@ -72,6 +73,11 @@ main { padding: 80px 10px 10px; height: 100vh; }
         <div id="player" class="tab-content">
             <div class="embed-wrap">
                 <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/player_management.php?embed=1"></iframe>
+            </div>
+        </div>
+        <div id="narrator" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/narrator_management.php?embed=1"></iframe>
             </div>
         </div>
         <div id="profiles" class="tab-content">

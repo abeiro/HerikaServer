@@ -328,15 +328,7 @@ $gsSections = [
     //     // [ 'name' => 'DYNAMIC_PROMPT_SPEECHSTYLE', 'type' => 'longstring' ],
     //     // [ 'name' => 'DYNAMIC_PROMPT_GOALS', 'type' => 'longstring' ],
     // ],
-    'Narrator' => [
-        [ 'name' => 'NARRATOR_TALKS', 'type' => 'boolean' ],
-        [ 'name' => 'RANDOM_NARATION', 'type' => 'boolean' ],
-        [ 'name' => 'RANDOM_NARATION_CHANCE', 'type' => 'integer', 'min' => 1, 'max' => 100 ],
-        [ 'name' => 'RANDOM_NARRATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 10 ],
-        [ 'name' => 'NARRATOR_WELCOME', 'type' => 'boolean' ],
-        [ 'name' => 'BOOK_EVENT_ALWAYS_NARRATOR', 'type' => 'boolean' ],
-        [ 'name' => 'HIDE_NARRATOR_DIALOGUE', 'type' => 'boolean' ]
-    ],
+    // 'Narrator' section removed - now managed via Narrator Management page (Config Hub > Narrator)
     'Memory' => [
         // SUMMARY_PROMPT moved to Prompts Manager
         // [ 'name' => 'SUMMARY_PROMPT', 'type' => 'longstring' ],
@@ -422,6 +414,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
 
     // Apply posted overrides for our curated settings
     foreach ($gsSections as $sec => $fields) {
+        // Skip Narrator section - it's now managed separately
+        if ($sec === 'Narrator') {
+            continue;
+        }
         foreach ($fields as $f) {
             $key = $f['name'];
             $postKey = $key;

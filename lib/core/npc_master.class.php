@@ -31,6 +31,11 @@ class NpcMaster
     // Create (Insert)
     public function create($data)
     {
+        // Prevent creating The Narrator - it's now managed via core_narrator table
+        if (isset($data["npc_name"]) && $data["npc_name"] === "The Narrator") {
+            throw new \Exception("The Narrator cannot be created via NpcMaster. Use the Narrator class and Narrator Management UI instead.");
+        }
+        
         $fields = [
             "npc_name",
             "npc_favorite",
@@ -82,15 +87,24 @@ class NpcMaster
     // Read NPC by unique name
     public function getByName($npcName)
     {
+        // The Narrator is now managed via core_narrator table, not core_npc_master
+        if ($npcName === "The Narrator") {
+            return null;
+        }
         $escaped = $this->escape($npcName);
         $query   = "SELECT * FROM {$this->table} WHERE npc_name = '{$escaped}' LIMIT 1";
         return $this->db->fetchOne($query);
     }
 
     // Read NPC by md5
-    public function getByMD5($npcName)
+    public function getByMD5($md5Hash)
     {
-        $escaped = $this->escape($npcName);
+        // The Narrator is now managed via core_narrator table, not core_npc_master
+        // Check if this MD5 corresponds to The Narrator
+        if ($md5Hash === md5('The Narrator')) {
+            return null;
+        }
+        $escaped = $this->escape($md5Hash);
         $query   = "SELECT * FROM {$this->table} WHERE md5 = '{$escaped}' LIMIT 1";
         return $this->db->fetchOne($query);
     }
