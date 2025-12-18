@@ -990,7 +990,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     
 }  elseif (strpos($gameRequest[0], "enable_bg")===0) {    // util_location_name 
     
-    
+    $npcMaster = new NpcMaster();
     $splitNameBase=explode("/",$gameRequest[3]);
     if ($splitNameBase[0] && $splitNameBase[1]) {
         $currentNpcData = $npcMaster->getByName($splitNameBase[0]);

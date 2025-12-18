@@ -1460,9 +1460,18 @@ else if ($GLOBALS["IS_NPC"]) {
     
 }
 
+// Ensure contextDataHistoric is an array
+if (!is_array($contextDataHistoric)) {
+    $contextDataHistoric = [];
+}
 
 // Info about location and npcs in first position
 $contextDataWorld = DataLastInfoFor("", -2,true);
+
+// Ensure contextDataWorld is an array
+if (!is_array($contextDataWorld)) {
+    $contextDataWorld = [];
+}
 
 // Add current motto to COMMAND_PROMPT
 if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[0] != "diary") {
@@ -1728,23 +1737,7 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
 }
 
 
-if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
-    // Load player appearance from core_player table only
-    // Do not use PLAYER_BIOS from conf.php - it has been migrated to core_player.appearance
-    $playerAppearance = '';
-    
-    try {
-        require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
-        $player = new Player();
-        $playerAppearance = $player->get('appearance');
-    } catch (Exception $e) {
-        Logger::debug("Could not load player appearance from core_player: " . $e->getMessage());
-    }
-    
-    if (!empty($playerAppearance)) {
-        $GLOBALS["PROMPT_HEAD"].=PHP_EOL."<player_character>\n".$playerAppearance."\n</player_character>\n";
-    }
-}
+// Player character section removed - player appearance now handled elsewhere
 
 
 // Use centralized function from data_functions.php
@@ -1810,10 +1803,25 @@ if ($gameRequest[0] === "narration") {
     $GLOBALS["COMMAND_PROMPT"] = "Respond with atmospheric narration only. Use the Talk action.";
 }
 
+// Ensure actions and nearby sections are added to PROMPT_HEAD before building system prompt
+require_once(__DIR__.DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+
+// Build nearby sections string
+$nearbySections = "";
+if (isset($GLOBALS["PROMPT_NEARBY_SECTIONS"]) && !empty($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
+    $nearbySections = $GLOBALS["PROMPT_NEARBY_SECTIONS"];
+}
+
+// Build actions list string
+$actionsList = "";
+if (isset($GLOBALS["PROMPT_ACTIONS_LIST"]) && !empty($GLOBALS["PROMPT_ACTIONS_LIST"])) {
+    $actionsList = $GLOBALS["PROMPT_ACTIONS_LIST"];
+}
+
 if (!empty($GLOBALS["OGHMA_HINT"])) {
 
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>\n$rumorsText\n",
+        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>".$actionsList.$nearbySections."\n$rumorsText\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
 
     );
@@ -1821,7 +1829,7 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
     $GLOBALS["COMMAND_PROMPT"] = "";
 } else {
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>\n$rumorsText\n",
+        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>".$actionsList.$nearbySections."\n$rumorsText\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
     );
     //avoid reinjecting command prompt that we have already appended

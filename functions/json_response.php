@@ -26,16 +26,19 @@
 
     // specify the available actions which will be made available in the context
     Function setActions() {
+        // Initialize actions list
+        $GLOBALS["PROMPT_ACTIONS_LIST"] = "";
+        
         // Skip actions list for narration events (The Narrator doesn't need action options for atmospheric descriptions)
         if (isset($GLOBALS["gameRequest"]) && $GLOBALS["gameRequest"][0] === "narration") {
             $GLOBALS["FUNC_LIST"] = ["Talk"];  // Only Talk action for narration
             return;
         }
         
+        // Build actions list separately (not in PROMPT_HEAD)
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-            // inject the prompt here with the actions (original flat format)
-            $GLOBALS["COMMAND_PROMPT"].="\n<available_actions_list>\n";
-            $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
+            $GLOBALS["PROMPT_ACTIONS_LIST"] = "\n<available_actions_list>\n";
+            $GLOBALS["PROMPT_ACTIONS_LIST"] .= $GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
             
             foreach ($GLOBALS["FUNCTIONS"] as $index => $function) {
                 if (!$function) {
@@ -50,20 +53,20 @@
 
                 $GLOBALS["FUNC_LIST"][]=$function["name"];
                 if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"] || $function["name"]==$GLOBALS["F_NAMES"]["Brawl"] || $function["name"]==$GLOBALS["F_NAMES"]["AttackHunt"]) {
-                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
-                    $GLOBALS["COMMAND_PROMPT"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
                 } else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
-                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]}(keywords to search ({$function["description"]})";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]}(keywords to search ({$function["description"]})";
                 } else if ($fname == "GiveGoldTo") {
-                    require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "data_functions.php"); // Ensure data_functions is loaded for getGoldFromMetadata
+                    require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
                     $goldAmount = getGoldFromMetadata();
-                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). You currently have {$goldAmount} gold. Put the amount in the 'item' field.";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). You currently have {$goldAmount} gold. Put the amount in the 'item' field.";
                 } else {
-                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                 }
             }
             
-            $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: Talk\n</available_actions_list>";
+            $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: Talk\n</available_actions_list>";
             $GLOBALS["FUNC_LIST"][]="Talk";
             shuffle($GLOBALS["FUNC_LIST"]);
         }
