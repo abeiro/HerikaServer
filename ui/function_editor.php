@@ -461,11 +461,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         'OpenInventory' => 'Regular menu trading',
                                         'OpenInventory2' => 'Gift Trading',
                                         'CheckInventory' => 'Check of inventory status',
-                                        'GiveGoldTo' => 'Give gold/coins/septims to another character. Gold is actually transferred from your inventory.',
-                                        'GiveItemTo' => 'Give items to another character',
+                                        'GiveGoldTo' => 'Give gold to another character.',
+                                        'GiveItemTo' => 'Give items to another character.',
                                         'PickupItem' => 'Pick up items from the ground using RefID from nearby_items',
-                                        'TakeGoldFromPlayer' => 'Receive or take gold from player. Requires player confirmation - gold is actually transferred if accepted.',
-                                        'CastSpell' => 'Cast a spell on a target actor (use spell names from known spells)'
+                                        'TakeGoldFromPlayer' => 'Receive or take gold from player. Requires player confirmation.',
+                                        'CastSpell' => 'Cast a spell on a target actor (use spell names from known spells).'
                                     ];
                                     echo $descriptions[$func] ?? 'Inventory management function';
                                     ?>
