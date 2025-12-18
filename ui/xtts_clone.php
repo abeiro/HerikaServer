@@ -42,7 +42,7 @@ if (isset($_GET['action']) && ($_GET['action'] === 'test_cartesia' || $_GET['act
         if (!isset($clonedVoices[$voice]) || empty($clonedVoices[$voice])) {
             header('Content-Type: application/json');
             http_response_code(400);
-            echo json_encode(['error' => 'Voice not cloned yet. Please sync this voice first.']);
+            echo json_encode(['error' => 'Voice not generated yet. Please sync this voice first.']);
             exit;
         }
         
@@ -84,7 +84,7 @@ if (isset($_GET['action']) && ($_GET['action'] === 'test_cartesia' || $_GET['act
         if (!isset($clonedVoices[$voice]) || empty($clonedVoices[$voice])) {
             header('Content-Type: application/json');
             http_response_code(400);
-            echo json_encode(['error' => 'Voice not cloned yet. Please sync this voice first.']);
+            echo json_encode(['error' => 'Voice not generated yet. Please sync this voice first.']);
             exit;
         }
         
@@ -243,11 +243,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $errorMsg = error_get_last();
                         if ($errorMsg && (strpos($errorMsg['message'], '429') !== false || strpos($errorMsg['message'], 'Too Many Requests') !== false)) {
                             $rateLimitCount++;
-                            $cartesiaMessage .= "<p style='color:orange;'>Rate limit hit while cloning voice: {$voice}. Please wait a moment and try syncing remaining voices.</p>";
+                            $cartesiaMessage .= "<p style='color:orange;'>Rate limit hit while generating voice: {$voice}. Please wait a moment and try syncing remaining voices.</p>";
                             // Stop syncing if we hit rate limit
                             break;
                         } else {
-                            $cartesiaMessage .= "<p>Error cloning voice: {$voice}</p>";
+                            $cartesiaMessage .= "<p>Error generating voice: {$voice}</p>";
                         }
                     }
                 }
@@ -279,7 +279,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: ' . $webRoot . '/ui/xtts_clone.php?tab=cartesia&synced=' . urlencode($voice));
                 exit;
             } else {
-                $cartesiaMessage .= "<p style='color:red;'><strong>Failed to clone voice '{$voice}' to Cartesia. Please check API configuration and logs.</strong></p>";
+                $cartesiaMessage .= "<p style='color:red;'><strong>Failed to generate voice '{$voice}' for Cartesia. Please check API configuration and logs.</strong></p>";
             }
         } else {
             $cartesiaMessage .= "<p style='color:red;'><strong>Voice file not found: {$voice}</strong></p>";
@@ -335,11 +335,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $uploadedCount++;
                     $voiceName = pathinfo($fileName, PATHINFO_FILENAME);
                     
-                    // Automatically clone the voice to Cartesia
+                    // Automatically generate the voice for Cartesia
                     $result = getOrCreateCartesiaVoice($voiceName);
                     if ($result !== false && !empty($result)) {
                         $clonedCount++;
-                        $cartesiaMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and cloned voice '{$voiceName}' to Cartesia.</strong></p>";
+                        $cartesiaMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and generated voice '{$voiceName}' for Cartesia.</strong></p>";
                     } else {
                         // Check if it's a rate limit error
                         $errorMsg = error_get_last();
@@ -347,7 +347,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $rateLimitHit = true;
                             $cartesiaMessage .= "<p style='color:orange;'>Voice '{$voiceName}' uploaded but rate limit reached. Please wait before uploading more.</p>";
                         } else {
-                            $cartesiaMessage .= "<p style='color:orange;'>Voice '{$voiceName}' uploaded but failed to clone. Please check API configuration and logs.</p>";
+                            $cartesiaMessage .= "<p style='color:orange;'>Voice '{$voiceName}' uploaded but failed to generate. Please check API configuration and logs.</p>";
                         }
                     }
                 } else {
@@ -359,9 +359,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Summary message
         if ($uploadedCount > 0 && $clonedCount === $uploadedCount) {
-            $cartesiaMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and cloned {$uploadedCount} voice(s) to Cartesia.</strong></p>";
+            $cartesiaMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and generated {$uploadedCount} voice(s) for Cartesia.</strong></p>";
         } elseif ($uploadedCount > 0 && $clonedCount < $uploadedCount) {
-            $cartesiaMessage .= "<p style='color:orange;'><strong>Uploaded {$uploadedCount} voice(s), but only {$clonedCount} were successfully cloned.</strong></p>";
+            $cartesiaMessage .= "<p style='color:orange;'><strong>Uploaded {$uploadedCount} voice(s), but only {$clonedCount} were successfully generated.</strong></p>";
         }
     }
     
@@ -393,11 +393,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $errorMsg = error_get_last();
                         if ($errorMsg && (strpos($errorMsg['message'], '429') !== false || strpos($errorMsg['message'], 'Too Many Requests') !== false)) {
                             $rateLimitCount++;
-                            $inworldMessage .= "<p style='color:orange;'>Rate limit hit while cloning voice: {$voice}. Please wait a moment and try syncing remaining voices.</p>";
+                            $inworldMessage .= "<p style='color:orange;'>Rate limit hit while generating voice: {$voice}. Please wait a moment and try syncing remaining voices.</p>";
                             // Stop syncing if we hit rate limit
                             break;
                         } else {
-                            $inworldMessage .= "<p>Error cloning voice: {$voice}</p>";
+                            $inworldMessage .= "<p>Error generating voice: {$voice}</p>";
                         }
                     }
                 }
@@ -429,7 +429,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: ' . $webRoot . '/ui/xtts_clone.php?tab=inworld&synced=' . urlencode($voice));
                 exit;
             } else {
-                $inworldMessage .= "<p style='color:red;'><strong>Failed to clone voice '{$voice}' to Inworld. Please check API configuration and logs.</strong></p>";
+                $inworldMessage .= "<p style='color:red;'><strong>Failed to generate voice '{$voice}' for Inworld. Please check API configuration and logs.</strong></p>";
             }
         } else {
             $inworldMessage .= "<p style='color:red;'><strong>Voice file not found: {$voice}</strong></p>";
@@ -485,11 +485,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $uploadedCount++;
                     $voiceName = pathinfo($fileName, PATHINFO_FILENAME);
                     
-                    // Automatically clone the voice to Inworld
+                    // Automatically generate the voice for Inworld
                     $result = getOrCreateInworldVoice($voiceName);
                     if ($result !== false && !empty($result)) {
                         $clonedCount++;
-                        $inworldMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and cloned voice '{$voiceName}' to Inworld.</strong></p>";
+                        $inworldMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and generated voice '{$voiceName}' for Inworld.</strong></p>";
                     } else {
                         // Check if it's a rate limit error
                         $errorMsg = error_get_last();
@@ -497,7 +497,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $rateLimitHit = true;
                             $inworldMessage .= "<p style='color:orange;'>Voice '{$voiceName}' uploaded but rate limit reached. Please wait before uploading more.</p>";
                         } else {
-                            $inworldMessage .= "<p style='color:orange;'>Voice '{$voiceName}' uploaded but failed to clone. Please check API configuration and logs.</p>";
+                            $inworldMessage .= "<p style='color:orange;'>Voice '{$voiceName}' uploaded but failed to generate. Please check API configuration and logs.</p>";
                         }
                     }
                 } else {
@@ -509,9 +509,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Summary message
         if ($uploadedCount > 0 && $clonedCount === $uploadedCount) {
-            $inworldMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and cloned {$uploadedCount} voice(s) to Inworld.</strong></p>";
+            $inworldMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and generated {$uploadedCount} voice(s) for Inworld.</strong></p>";
         } elseif ($uploadedCount > 0 && $clonedCount < $uploadedCount) {
-            $inworldMessage .= "<p style='color:orange;'><strong>Uploaded {$uploadedCount} voice(s), but only {$clonedCount} were successfully cloned.</strong></p>";
+            $inworldMessage .= "<p style='color:orange;'><strong>Uploaded {$uploadedCount} voice(s), but only {$clonedCount} were successfully generated.</strong></p>";
         }
     }
     
@@ -857,7 +857,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     function syncSingleVoice(provider, voiceName) {
-        const actionText = provider === 'xtts' ? 'Syncing voice to XTTS server' : 'Cloning voice to ' + provider;
+        const actionText = provider === 'xtts' ? 'Syncing voice to XTTS server' : 'Generating voice for ' + provider;
         showLoadingMessage(actionText + ', please wait...');
         const form = document.createElement('form');
         form.method = 'POST';
@@ -1338,12 +1338,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
     <?php if (isset($_GET['synced']) && $activeTab === 'cartesia'): ?>
         <div class="message">
-            <p style='color:rgb(247, 231, 16);'><strong>Successfully cloned voice '<?php echo htmlspecialchars($_GET['synced']); ?>' to Cartesia.</strong></p>
+            <p style='color:rgb(247, 231, 16);'><strong>Successfully generated voice '<?php echo htmlspecialchars($_GET['synced']); ?>' for Cartesia.</strong></p>
         </div>
     <?php endif; ?>
     <?php if (isset($_GET['synced']) && $activeTab === 'inworld'): ?>
         <div class="message">
-            <p style='color:rgb(247, 231, 16);'><strong>Successfully cloned voice '<?php echo htmlspecialchars($_GET['synced']); ?>' to Inworld.</strong></p>
+            <p style='color:rgb(247, 231, 16);'><strong>Successfully generated voice '<?php echo htmlspecialchars($_GET['synced']); ?>' for Inworld.</strong></p>
         </div>
     <?php endif; ?>
 
@@ -1375,7 +1375,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <div class="content-section full-width-section">
-            <h1>Voice Status</h1>
+            <h1>XTTS Voice Cache</h1>
             <p>Manage voice samples for XTTS. Voices are uploaded from local .wav files in <code>data/voices</code> to the XTTS server.</p>
             
             <?php
@@ -1488,9 +1488,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="tab-content <?php echo $activeTab === 'cartesia' ? 'active' : ''; ?>">
         <div class="content-section full-width-section">
             <h1>Voice Sample Upload</h1>
-            <p>Upload voice samples to <code>data/voices</code>. Files will be available for cloning to Cartesia.</p>
+            <p>Upload voice samples to <code>data/voices</code>. Files will be available for generating voices in Cartesia.</p>
             
-            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=cartesia" method="post" enctype="multipart/form-data" style="margin-top: 20px;" onsubmit="showLoadingMessage('Uploading and cloning voice to Cartesia, please wait...');">
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=cartesia" method="post" enctype="multipart/form-data" style="margin-top: 20px;" onsubmit="showLoadingMessage('Uploading and generating voice for Cartesia, please wait...');">
                 <div style="margin-bottom: 15px;">
                     <label for="file_cartesia" style="display: block; margin-bottom: 8px;">Select .wav file(s) to upload:</label>
                     <input type="file" name="file[]" id="file_cartesia" accept=".wav" multiple="multiple" required style="width: 100%; max-width: 500px; padding: 8px;">
@@ -1507,13 +1507,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <li>Size: 5MB or less</li>
                     <li>Filename: lowercase with underscores (e.g., "mjoll_the_lioness.wav")</li>
                 </ul>
-                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #aaa;"><b>Note:</b> Files will be saved to data/voices and automatically cloned to Cartesia.</p>
+                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #aaa;"><b>Note:</b> Files will be saved to data/voices and automatically generated for Cartesia.</p>
             </div>
         </div>
 
         <div class="content-section full-width-section">
-            <h1>Cartesia Voice Management</h1>
-            <p>Manage voice cloning for Cartesia TTS. Voices are cloned from local .wav files in <code>data/voices</code>.</p>
+            <h1>Cartesia Voice Cacje</h1>
+            <p>Manage voice generation for Cartesia TTS. Voices are generated from local .wav files in <code>data/voices</code>.</p>
             <p>For detailed information, see our <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options#cartesia" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cartesia TTS Guide</a>.</p>
             
             <?php
@@ -1531,8 +1531,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
             
             <div style="background: rgba(74, 138, 182, 0.1); border: 2px solid #4a8ab6; border-radius: 8px; padding: 16px; margin: 20px 0; color: #f8f9fa;">
-                <p style="margin: 0; font-weight: 600; color: #4a8ab6;">ℹ️ Automatic Voice Cloning</p>
-                <p style="margin: 8px 0 0 0;">Voices are automatically cloned when you speak to an NPC using that voice in-game, if Cartesia TTS is selected as your TTS provider. You don't need to manually sync all voices upfront.</p>
+                <p style="margin: 0; font-weight: 600; color: #4a8ab6;">ℹ️ Automatic Voice Generation</p>
+                <p style="margin: 8px 0 0 0;">Voices are automatically generated when you speak to an NPC using that voice in-game, if Cartesia TTS is selected as your TTS provider. You don't need to manually sync all voices upfront.</p>
             </div>
 
             <div class="voice-status-grid">
@@ -1570,9 +1570,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="tab-content <?php echo $activeTab === 'inworld' ? 'active' : ''; ?>">
         <div class="content-section full-width-section">
             <h1>Voice Sample Upload</h1>
-            <p>Upload voice samples to <code>data/voices</code>. Files will be available for cloning to Inworld.</p>
+            <p>Upload voice samples to <code>data/voices</code>. Files will be available for generating voices in Inworld.</p>
             
-            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=inworld" method="post" enctype="multipart/form-data" style="margin-top: 20px;" onsubmit="showLoadingMessage('Uploading and cloning voice to Inworld, please wait...');">
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=inworld" method="post" enctype="multipart/form-data" style="margin-top: 20px;" onsubmit="showLoadingMessage('Uploading and generating voice for Inworld, please wait...');">
                 <div style="margin-bottom: 15px;">
                     <label for="file_inworld" style="display: block; margin-bottom: 8px;">Select .wav file(s) to upload:</label>
                     <input type="file" name="file[]" id="file_inworld" accept=".wav" multiple="multiple" required style="width: 100%; max-width: 500px; padding: 8px;">
@@ -1589,13 +1589,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <li>Size: 5MB or less</li>
                     <li>Filename: lowercase with underscores (e.g., "mjoll_the_lioness.wav")</li>
                 </ul>
-                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #aaa;"><b>Note:</b> Files will be saved to data/voices and automatically cloned to Inworld.</p>
+                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #aaa;"><b>Note:</b> Files will be saved to data/voices and automatically generated for Inworld.</p>
             </div>
         </div>
 
         <div class="content-section full-width-section">
-            <h1>Inworld Voice Management</h1>
-            <p>Manage voice cloning for Inworld TTS. Voices are cloned from local .wav files in <code>data/voices</code>.</p>
+            <h1>Inworld Voice Cache</h1>
+            <p>Manage voice generation for Inworld TTS. Voices are generated from local .wav files in <code>data/voices</code>.</p>
             <p>For detailed information, see our <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options#inworld" style="color: yellow;" target="_blank" rel="noopener noreferrer">Inworld TTS Guide</a>.</p>
             
             <?php
@@ -1613,8 +1613,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
             
             <div style="background: rgba(74, 138, 182, 0.1); border: 2px solid #4a8ab6; border-radius: 8px; padding: 16px; margin: 20px 0; color: #f8f9fa;">
-                <p style="margin: 0; font-weight: 600; color: #4a8ab6;">ℹ️ Automatic Voice Cloning</p>
-                <p style="margin: 8px 0 0 0;">Voices are automatically cloned when you speak to an NPC using that voice in-game, if Inworld TTS is selected as your TTS provider. You don't need to manually sync all voices upfront.</p>
+                <p style="margin: 0; font-weight: 600; color: #4a8ab6;">ℹ️ Automatic Voice Generation</p>
+                <p style="margin: 8px 0 0 0;">Voices are automatically generated when you speak to an NPC using that voice in-game, if Inworld TTS is selected as your TTS provider. You don't need to manually sync all voices upfront.</p>
             </div>
 
             <div class="voice-status-grid">

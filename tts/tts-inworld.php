@@ -262,41 +262,38 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal') {
         'temperature' => $temperature
     );
     
-    // Prepare request with Basic Auth
+    // Prepare request with Basic Auth using curl for proper streaming support
     $authHeader = "Basic " . $apiCredential;
-    $options = array(
-        'http' => array(
-            'method' => 'POST',
-            'header' => "Authorization: {$authHeader}\r\n" .
-                       "Content-Type: application/json\r\n",
-            'content' => json_encode($data),
-            'timeout' => 30
-        )
-    );
     
-    $context = stream_context_create($options);
-    $response = @file_get_contents($url, false, $context);
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+        "Authorization: {$authHeader}",
+        "Content-Type: application/json"
+    ));
+    curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+    curl_setopt($ch, CURLOPT_BUFFERSIZE, 8192); // Read in chunks
     
-    if ($response === false) {
-        $error = error_get_last();
-        Logger::error("Failed to generate TTS from Inworld: " . ($error['message'] ?? 'Unknown error'));
-        
-        // Log request details for debugging
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+    
+    if ($response === false || !empty($curlError)) {
+        Logger::error("Failed to generate TTS from Inworld: " . ($curlError ?: 'Unknown error'));
         Logger::error("Request data: " . json_encode($data));
-        
-        // Check HTTP response headers for error details
-        if (isset($http_response_header)) {
-            foreach ($http_response_header as $header) {
-                if (stripos($header, 'HTTP/') === 0 || stripos($header, 'content-type') === 0) {
-                    Logger::error("Response header: " . $header);
-                }
-            }
-        }
-        
         return false;
     }
     
-    // Inworld streaming endpoint returns JSON chunks
+    if ($httpCode !== 200) {
+        Logger::error("Inworld API returned HTTP code {$httpCode}: " . substr($response, 0, 500));
+        return false;
+    }
+    
+    // Inworld streaming endpoint returns JSON chunks (SSE format)
     // Each chunk has either 'result' or 'error'
     // We need to concatenate all audio chunks
     $audioData = '';
@@ -305,6 +302,11 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal') {
     foreach ($lines as $line) {
         $line = trim($line);
         if (empty($line)) continue;
+        
+        // Skip SSE data prefix if present
+        if (strpos($line, 'data: ') === 0) {
+            $line = substr($line, 6);
+        }
         
         $chunk = json_decode($line, true);
         if (is_array($chunk)) {
@@ -323,7 +325,8 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal') {
     }
     
     if (empty($audioData)) {
-        Logger::error("No audio data received from Inworld TTS");
+        Logger::error("No audio data received from Inworld TTS. Response length: " . strlen($response));
+        Logger::error("Response preview: " . substr($response, 0, 500));
         return false;
     }
     
