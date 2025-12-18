@@ -797,7 +797,7 @@ function current_value(string $flatName, array $currentConf) {
                                 'piper-tts' => "[Skyrim Voices]Piper-TTS is a middle quality and fast TTS. Requires manual installation of voices though. Under 1GB of VRAM. https://dwemerdynamics.hostwiki.io/en/TTS-Options",
                                 'deepgram' => "Deepgram TTS is a cloud option aimed at simple, quick voice generation. Requires API key.",
                                 'cartesia' => "[Skyrim Voices] Cartesia TTS provides high-quality automatic voice generation. Supports emotions and multiple languages. Requires API key.",
-                                'inworld' => "[Skyrim Voices] Inworld TTS provides high-quality voice cloning and generation. Supports automatic voice cloning from samples. Requires API credential and workspace ID."
+                                'inworld' => "[Skyrim Voices] Inworld TTS provides high-quality automatic voice generation. Requires API credential (Base64) and workspace ID."
                             ];
                             $ttsLower = strtolower((string)$ttsSelRender);
                             echo htmlspecialchars($ttsDescMap[$ttsLower] ?? '');
