@@ -461,10 +461,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         'OpenInventory' => 'Regular menu trading',
                                         'OpenInventory2' => 'Gift Trading',
                                         'CheckInventory' => 'Check of inventory status',
-                                        'GiveGoldTo' => 'Give money to another character (no real money is transferred yet)',
+                                        'GiveGoldTo' => 'Give gold/coins/septims to another character. Gold is actually transferred from your inventory.',
                                         'GiveItemTo' => 'Give items to another character',
                                         'PickupItem' => 'Pick up items from the ground using RefID from nearby_items',
-                                        'TakeGoldFromPlayer' => 'Receive or take money from player (no real money is transferred yet)',
+                                        'TakeGoldFromPlayer' => 'Receive or take gold from player. Requires player confirmation - gold is actually transferred if accepted.',
                                         'CastSpell' => 'Cast a spell on a target actor (use spell names from known spells)'
                                     ];
                                     echo $descriptions[$func] ?? 'Inventory management function';
@@ -479,7 +479,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <!-- Player-Specific Functions -->
-                <?php if (!$GLOBALS["IS_NPC"]): ?>
+                <?php if (!isset($GLOBALS["IS_NPC"]) || !$GLOBALS["IS_NPC"]): ?>
                 <div class="function-category">
                     <h3>📖 Player-Specific</h3>
                     <?php

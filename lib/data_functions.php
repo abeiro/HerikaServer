@@ -50,6 +50,42 @@ function ReplacePlayerNamePlaceholder($s_input) {
     return $s_res;
 }
 
+function getGoldFromMetadata($npcName = null) {
+    if ($npcName === null) {
+        $npcName = isset($GLOBALS["HERIKA_NAME"]) ? $GLOBALS["HERIKA_NAME"] : "";
+    }
+    
+    if (empty($npcName)) {
+        return 0;
+    }
+    
+    try {
+        $npcMaster = new NpcMaster();
+        $npcData = $npcMaster->getByName($npcName);
+        
+        if (!$npcData) {
+            return 0;
+        }
+        
+        $metaData = $npcMaster->getMetaData($npcData);
+        
+        if (!isset($metaData["inventory"]) || !is_array($metaData["inventory"])) {
+            return 0;
+        }
+        
+        foreach ($metaData["inventory"] as $item) {
+            $itemName = isset($item["name"]) ? strtolower($item["name"]) : "";
+            if (stripos($itemName, "gold") !== false || stripos($itemName, "coin") !== false || stripos($itemName, "septim") !== false) {
+                return isset($item["count"]) ? intval($item["count"]) : 0;
+            }
+        }
+    } catch (Exception $e) {
+        // Silently fail and return 0
+    }
+    
+    return 0;
+}
+
 function isItemBlacklisted($itemName) {
     if (!isset($GLOBALS["ITEM_BLACKLIST"]) || empty($GLOBALS["ITEM_BLACKLIST"])) {
         return false;
@@ -4000,10 +4036,36 @@ function call_llm_internal() {
                             }
 
                         } else if ($actionParts2[0]=="GiveGoldTo") {
-                            // Check if parameter is JSON (multi-param) - skip post-filtering for JSON
+                            // Check if parameter is JSON (multi-param) - validate gold amount
                             if (isset($actionParts2[1]) && substr(trim($actionParts2[1]), 0, 1) === '{') {
-                                error_log("[ACTION POSTFILTER GiveGoldTo] JSON parameter detected, skipping post-filter");
-                                // Keep the action as-is for JSON parameters
+                                error_log("[ACTION POSTFILTER GiveGoldTo] JSON parameter detected, validating gold amount");
+                                
+                                // Parse JSON to extract amount
+                                $jsonStr = trim($actionParts2[1]);
+                                $requestedAmount = null;
+                                
+                                // Simple JSON parsing for amount
+                                if (preg_match('/"amount"\s*:\s*(\d+)/', $jsonStr, $matches)) {
+                                    $requestedAmount = intval($matches[1]);
+                                }
+                                
+                                // Get available gold from NPC metadata
+                                $availableGold = getGoldFromMetadata();
+                                
+                                if ($requestedAmount !== null && $requestedAmount > 0) {
+                                    if ($requestedAmount > $availableGold) {
+                                        // Cap the amount to available gold
+                                        error_log("[ACTION POSTFILTER GiveGoldTo] Requested {$requestedAmount} gold but only have {$availableGold}, capping amount");
+                                        $jsonStr = preg_replace('/"amount"\s*:\s*\d+/', '"amount":' . $availableGold, $jsonStr);
+                                        $actions[$n] = "{$actionParts[0]}|{$actionParts[1]}|GiveGoldTo@{$jsonStr}";
+                                    } else {
+                                        // Amount is valid, keep as-is
+                                        $actions[$n] = "{$actionParts[0]}|{$actionParts[1]}|GiveGoldTo@{$jsonStr}";
+                                    }
+                                } else {
+                                    // No amount specified or invalid, keep as-is (plugin will handle error)
+                                    $actions[$n] = "{$actionParts[0]}|{$actionParts[1]}|GiveGoldTo@{$jsonStr}";
+                                }
                             } else {
                                 // Legacy: polish the parameters for single-param format
                                 $localtarget=$actionParts2[1];

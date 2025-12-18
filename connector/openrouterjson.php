@@ -1087,15 +1087,22 @@ class openrouterjson
                         $params = [];
                         foreach (array_keys($functionDef["parameters"]["properties"] ?? []) as $paramName) {
                             if (isset($parsedResponse[$paramName])) {
-                                $params[$paramName] = $parsedResponse[$paramName];
+                                $paramValue = $parsedResponse[$paramName];
+                                // Convert to appropriate type based on function definition
+                                $paramType = $functionDef["parameters"]["properties"][$paramName]["type"] ?? "string";
+                                if ($paramType === "integer" && is_numeric($paramValue)) {
+                                    $paramValue = intval($paramValue);
+                                }
+                                $params[$paramName] = $paramValue;
                             }
                         }
                         
-                        // Check if required parameters are missing
+                        // Check if required parameters are missing (validate against original $parsedResponse)
                         $requiredParams = $functionDef["parameters"]["required"] ?? [];
                         $missingParams = [];
                         foreach ($requiredParams as $reqParam) {
-                            if (!isset($params[$reqParam]) || $params[$reqParam] === "") {
+                            // Check $parsedResponse for original params, not $params (which may be converted)
+                            if (!isset($parsedResponse[$reqParam]) || $parsedResponse[$reqParam] === "") {
                                 $missingParams[] = $reqParam;
                             }
                         }
