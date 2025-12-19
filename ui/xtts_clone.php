@@ -90,6 +90,8 @@ if (isset($_GET['action']) && ($_GET['action'] === 'test_cartesia' || $_GET['act
         
         require_once(__DIR__ . '/../tts/tts-inworld.php');
         $testText = 'CHIM has been described as the secret syllable of royalty, and can be considered a form of Apotheosis';
+        
+        // Generate raw PCM audio data (no output file = returns raw PCM)
         $audioData = generateInworldTTS($testText, $clonedVoices[$voice]);
         
         if ($audioData !== false && !empty($audioData)) {
@@ -99,18 +101,40 @@ if (isset($_GET['action']) && ($_GET['action'] === 'test_cartesia' || $_GET['act
                 mkdir($soundcacheDir, 0777, true);
             }
             $testHash = md5('test_inworld_' . $voice . '_' . $testText);
+            
+            // Write raw PCM to temporary file
+            $pcmFile = $soundcacheDir . $testHash . '_temp.pcm';
+            file_put_contents($pcmFile, $audioData);
+            
+            // Convert raw PCM to WAV using FFmpeg (Inworld returns LINEAR16 PCM at 22050 Hz, mono)
             $audioFile = $soundcacheDir . $testHash . '.wav';
-            file_put_contents($audioFile, $audioData);
+            $ffmpegCmd = "ffmpeg -y -f s16le -ar 22050 -ac 1 -i \"$pcmFile\" -c:a pcm_s16le -ar 22050 -ac 1 \"$audioFile\" 2>&1";
+            $ffmpegOutput = shell_exec($ffmpegCmd);
             
-            // Return URL to the audio file
-            $webRoot = dirname(dirname($_SERVER['SCRIPT_NAME']));
-            if ($webRoot == '/') $webRoot = '';
-            $webRoot = rtrim($webRoot, '/');
-            $audioUrl = $webRoot . '/soundcache/' . $testHash . '.wav?ts=' . time();
+            // Clean up temporary PCM file
+            if (file_exists($pcmFile)) {
+                unlink($pcmFile);
+            }
             
-            header('Content-Type: application/json');
-            echo json_encode(['url' => $audioUrl]);
-            exit;
+            // Check if WAV file was created successfully
+            if (file_exists($audioFile) && filesize($audioFile) > 0) {
+                // Return URL to the audio file
+                $webRoot = dirname(dirname($_SERVER['SCRIPT_NAME']));
+                if ($webRoot == '/') $webRoot = '';
+                $webRoot = rtrim($webRoot, '/');
+                $audioUrl = $webRoot . '/soundcache/' . $testHash . '.wav?ts=' . time();
+                
+                header('Content-Type: application/json');
+                echo json_encode(['url' => $audioUrl]);
+                exit;
+            } else {
+                // FFmpeg conversion failed
+                error_log("Inworld test audio FFmpeg conversion failed: " . substr($ffmpegOutput, 0, 500));
+                header('Content-Type: application/json');
+                http_response_code(500);
+                echo json_encode(['error' => 'Failed to convert audio to WAV format. Check server logs.']);
+                exit;
+            }
         }
         
         header('Content-Type: application/json');
