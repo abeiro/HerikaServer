@@ -41,10 +41,38 @@ function getOrCreateInworldVoice($voiceName) {
     // No cached voice ID, need to clone the voice
     Logger::info("No cached Inworld voice ID found for {$voiceName}, cloning voice...");
     
-    $voiceSamplePath = "/var/www/html/HerikaServer/data/voices/{$voiceName}.wav";
+    // Try multiple path formats
+    $baseDir = dirname(__FILE__);
+    $possiblePaths = array(
+        $baseDir . "/../data/voices/{$voiceName}.wav",
+        $baseDir . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . "voices" . DIRECTORY_SEPARATOR . "{$voiceName}.wav",
+        "/var/www/html/HerikaServer/data/voices/{$voiceName}.wav",
+        __DIR__ . "/../data/voices/{$voiceName}.wav"
+    );
     
-    if (!file_exists($voiceSamplePath)) {
-        Logger::error("Voice sample not found: {$voiceSamplePath}");
+    $voiceSamplePath = null;
+    foreach ($possiblePaths as $testPath) {
+        $normalized = realpath($testPath);
+        if ($normalized !== false && file_exists($normalized)) {
+            $voiceSamplePath = $normalized;
+            break;
+        }
+    }
+    
+    if ($voiceSamplePath === null || !file_exists($voiceSamplePath)) {
+        Logger::error("Voice sample not found: {$voiceName}.wav");
+        Logger::error("Searched paths:");
+        foreach ($possiblePaths as $testPath) {
+            $normalized = realpath($testPath);
+            Logger::error("  - {$testPath} " . ($normalized !== false && file_exists($normalized) ? "(found)" : "(not found)"));
+        }
+        // Check if voices directory exists
+        $voicesDir = dirname(__FILE__) . "/../data/voices";
+        if (!is_dir($voicesDir)) {
+            Logger::error("Voices directory does not exist: {$voicesDir}");
+        } else {
+            Logger::error("Voices directory exists but file not found. Available files: " . implode(", ", array_slice(scandir($voicesDir), 2)));
+        }
         return false;
     }
     
@@ -167,6 +195,11 @@ function cloneVoiceToInworld($voiceName, $voiceSamplePath) {
         $errorMsg = $error['message'] ?? 'Unknown error';
         Logger::error("Failed to clone voice to Inworld: " . $errorMsg);
         
+        // Log HTTP response headers for debugging
+        if (isset($http_response_header)) {
+            Logger::error("HTTP Response Headers: " . json_encode($http_response_header));
+        }
+        
         // Provide helpful message for common errors
         if (strpos($errorMsg, '401') !== false) {
             Logger::error("Inworld returned 401 Unauthorized. Your API credential may be invalid.");
@@ -195,9 +228,10 @@ function cloneVoiceToInworld($voiceName, $voiceSamplePath) {
  * @param string $text The text to synthesize
  * @param string $voiceId The Inworld voice ID
  * @param string $mood The mood/emotion for the voice (not used by Inworld currently)
+ * @param string|null $outputFile Optional file path to write streaming chunks directly
  * @return string|false The audio data or false on error
  */
-function generateInworldTTS($text, $voiceId, $mood = 'normal') {
+function generateInworldTTS($text, $voiceId, $mood = 'normal', $outputFile = null) {
     $apiCredential = '';
     
     // Try to get API credential from API badge first
@@ -246,10 +280,18 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal') {
     }
     
     // Prepare audio config
+    // Inworld returns LINEAR16 PCM (signed 16-bit little-endian) at 22050 Hz, mono
     $audioConfig = array(
         'audioEncoding' => 'LINEAR16',
         'sampleRateHertz' => 22050,
         'speakingRate' => $speed
+    );
+    
+    // Store audio format for FFmpeg processing
+    $GLOBALS['INWORLD_AUDIO_FORMAT'] = array(
+        'format' => 's16le',      // signed 16-bit little-endian
+        'sample_rate' => 22050,   // 22050 Hz
+        'channels' => 1           // mono
     );
     
     // Prepare request data
@@ -262,41 +304,49 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal') {
         'temperature' => $temperature
     );
     
-    // Prepare request with Basic Auth using curl for proper streaming support
+    // Prepare request with Basic Auth
     $authHeader = "Basic " . $apiCredential;
     
+    // Make a simple POST request and get the complete response
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Return the response
     curl_setopt($ch, CURLOPT_HTTPHEADER, array(
         "Authorization: {$authHeader}",
         "Content-Type: application/json"
     ));
-    curl_setopt($ch, CURLOPT_TIMEOUT, 60);
-    curl_setopt($ch, CURLOPT_BUFFERSIZE, 8192); // Read in chunks
+    curl_setopt($ch, CURLOPT_TIMEOUT, 120); // Timeout for longer audio
     
+    // Execute request
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlError = curl_error($ch);
     curl_close($ch);
     
-    if ($response === false || !empty($curlError)) {
-        Logger::error("Failed to generate TTS from Inworld: " . ($curlError ?: 'Unknown error'));
+    if (!empty($curlError)) {
+        Logger::error("Failed to generate TTS from Inworld: " . $curlError);
         Logger::error("Request data: " . json_encode($data));
         return false;
     }
     
     if ($httpCode !== 200) {
-        Logger::error("Inworld API returned HTTP code {$httpCode}: " . substr($response, 0, 500));
+        Logger::error("Inworld API returned HTTP code {$httpCode}");
+        Logger::error("Response: " . substr($response, 0, 500));
         return false;
     }
     
-    // Inworld streaming endpoint returns JSON chunks (SSE format)
-    // Each chunk has either 'result' or 'error'
-    // We need to concatenate all audio chunks
+    if (empty($response)) {
+        Logger::error("Empty response from Inworld TTS");
+        return false;
+    }
+    
+    Logger::info("Inworld TTS response received: " . number_format(strlen($response)) . " bytes");
+    
+    // Parse SSE response to extract audio chunks
     $audioData = '';
+    $chunkCount = 0;
     $lines = explode("\n", $response);
     
     foreach ($lines as $line) {
@@ -308,6 +358,12 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal') {
             $line = substr($line, 6);
         }
         
+        // Skip SSE event and comment lines
+        if (strpos($line, 'event:') === 0 || $line === ':') {
+            continue;
+        }
+        
+        // Try to decode as JSON
         $chunk = json_decode($line, true);
         if (is_array($chunk)) {
             if (isset($chunk['error'])) {
@@ -316,18 +372,47 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal') {
             }
             if (isset($chunk['result']['audioContent'])) {
                 // Decode base64 audio content
-                $chunkAudio = base64_decode($chunk['result']['audioContent']);
+                $chunkAudio = base64_decode($chunk['result']['audioContent'], true);
                 if ($chunkAudio !== false) {
+                    $chunkCount++;
+                    
+                    // IMPORTANT: Inworld returns each chunk with a WAV header
+                    // We need to strip the WAV header (first 44 bytes) from each chunk
+                    // and only keep the raw PCM data
+                    $wavHeaderSize = 44;
+                    if (strlen($chunkAudio) > $wavHeaderSize) {
+                        // Check if this chunk starts with a WAV header (RIFF signature)
+                        if (substr($chunkAudio, 0, 4) === 'RIFF') {
+                            Logger::debug("Chunk #{$chunkCount} has WAV header, stripping it");
+                            // Strip the WAV header, keep only raw PCM data
+                            $chunkAudio = substr($chunkAudio, $wavHeaderSize);
+                        }
+                    }
+                    
                     $audioData .= $chunkAudio;
+                } else {
+                    Logger::warn("Failed to decode base64 audio chunk #{$chunkCount}");
                 }
             }
         }
     }
     
+    Logger::info("Extracted {$chunkCount} audio chunks, total audio size: " . number_format(strlen($audioData)) . " bytes (WAV headers stripped)");
+    
     if (empty($audioData)) {
-        Logger::error("No audio data received from Inworld TTS. Response length: " . strlen($response));
-        Logger::error("Response preview: " . substr($response, 0, 500));
+        Logger::error("No audio data extracted from Inworld response");
         return false;
+    }
+    
+    // Write complete audio data to file
+    if ($outputFile !== null) {
+        $written = file_put_contents($outputFile, $audioData);
+        if ($written === false) {
+            Logger::error("Failed to write audio data to file: {$outputFile}");
+            return false;
+        }
+        Logger::info("Wrote " . number_format($written) . " bytes of audio data to file");
+        return $outputFile;
     }
     
     return $audioData;
@@ -491,8 +576,13 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
         }
     }
     
-    // Generate TTS
-    $response = generateInworldTTS($textString, $inworldVoiceId, $mood);
+    // Prepare output file paths
+    // Use .pcm extension for raw PCM data (no WAV header)
+    $oname = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . 
+            "soundcache/" . md5(trim($stringforhash)) . "_o.pcm";
+    
+    // Generate TTS with streaming directly to file
+    $response = generateInworldTTS($textString, $inworldVoiceId, $mood, $oname);
     
     if ($response === false) {
         Logger::error("Failed to generate TTS from Inworld for voice {$voiceName} (ID: {$inworldVoiceId})");
@@ -511,7 +601,7 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
                 $GLOBALS["db"]->execQuery("DELETE FROM conf_opts WHERE id = '{$optKeyEscaped}'");
                 $inworldVoiceId = getOrCreateInworldVoice($voiceName);
                 if ($inworldVoiceId !== false && !empty($inworldVoiceId)) {
-                    $response = generateInworldTTS($textString, $inworldVoiceId, $mood);
+                    $response = generateInworldTTS($textString, $inworldVoiceId, $mood, $oname);
                     if ($response === false) {
                         Logger::error("Failed to generate TTS from Inworld after retry for {$voiceName}");
                         return false;
@@ -530,6 +620,7 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
     }
     
     // Apply FFMPEG filters if configured
+    // Keep it simple - just add adelay like Cartesia does
     if (is_array($GLOBALS["TTS_FFMPEG_FILTERS"] ?? null)) {
         $GLOBALS["TTS_FFMPEG_FILTERS"]["adelay"] = "adelay=150|150";
         $FFMPEG_FILTER = '-af "' . implode(",", $GLOBALS["TTS_FFMPEG_FILTERS"]) . '"';
@@ -537,18 +628,63 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
         $FFMPEG_FILTER = '-filter:a "adelay=150|150"';
     }
     
-    // Save audio files
-    $size = strlen($response);
-    $oname = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . 
-            "soundcache/" . md5(trim($stringforhash)) . "_o.wav";
+    // Response is either file path (if streaming) or audio data
+    if ($response === $oname) {
+        // Streaming was used, file already exists
+        $size = filesize($oname);
+    } else {
+        // Fallback: write audio data to file
+        $size = strlen($response);
+        file_put_contents($oname, $response);
+    }
+    
     $fname = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . 
             "soundcache/" . md5(trim($stringforhash)) . ".wav";
     
-    file_put_contents($oname, $response);
+    // Inworld returns raw LINEAR16 PCM (s16le) at 22050 Hz, mono
+    // FFmpeg needs explicit format specification for raw PCM input
+    $audioFormat = $GLOBALS['INWORLD_AUDIO_FORMAT'] ?? array('format' => 's16le', 'sample_rate' => 22050, 'channels' => 1);
+    $ffmpegInputFormat = "-f {$audioFormat['format']} -ar {$audioFormat['sample_rate']} -ac {$audioFormat['channels']}";
+    
+    // Verify raw audio file exists and has content
+    if (!file_exists($oname) || filesize($oname) === 0) {
+        Logger::error("Raw audio file is missing or empty: {$oname}");
+        return false;
+    }
+    
+    $rawAudioSize = filesize($oname);
+    Logger::info("Raw audio file size: " . number_format($rawAudioSize) . " bytes before FFmpeg processing");
     
     $startTimeTrans = microtime(true);
-    shell_exec("ffmpeg -y -i $oname $FFMPEG_FILTER $fname 2>/dev/null >/dev/null");
+    // Specify input format for raw PCM
+    // Use careful processing to avoid artifacts
+    $ffmpegCmd = "ffmpeg -y {$ffmpegInputFormat} -i \"$oname\" ";
+    
+    // Apply audio filters
+    if (!empty($FFMPEG_FILTER)) {
+        $ffmpegCmd .= "{$FFMPEG_FILTER} ";
+    }
+    
+    // Output settings: pcm_s16le codec at 22050Hz, ensure no resampling artifacts
+    // Use same format as input to minimize processing
+    $ffmpegCmd .= "-c:a pcm_s16le -ar 22050 -ac 1 \"$fname\" 2>&1";
+    
+    Logger::info("FFmpeg command: {$ffmpegCmd}");
+    $ffmpegOutput = shell_exec($ffmpegCmd);
     $endTimeTrans = microtime(true) - $startTimeTrans;
+    
+    Logger::info("FFmpeg processing took " . number_format($endTimeTrans, 3) . " seconds");
+    
+    // Check if output file was created successfully
+    if (!file_exists($fname) || filesize($fname) === 0) {
+        Logger::error("FFmpeg failed to create output file: {$fname}");
+        Logger::error("FFmpeg command: {$ffmpegCmd}");
+        Logger::error("FFmpeg output: " . substr($ffmpegOutput, 0, 500));
+        return false;
+    }
+    
+    $finalAudioSize = filesize($fname);
+    Logger::info("Final audio file size: " . number_format($finalAudioSize) . " bytes after FFmpeg processing");
     
     // Save debug info
     file_put_contents(
