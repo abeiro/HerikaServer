@@ -19,6 +19,7 @@ require_once $path . "lib/core/api_badge.class.php";
 require_once $path . "lib/core/core_profiles.class.php";
 require_once $path . "lib/core/llm_connector.class.php";
 require_once $path . "lib/core/tts_connector.class.php";
+require_once $path . "lib/semaphore_manager.class.php";
 
 function normalize_endpoint_url($url)
 {
@@ -33,22 +34,10 @@ $GLOBALS["AUDIT_RUNID_REQUEST"] = "vsx";
 $voicelogic = $GLOBALS["TTS"]["XTTSFASTAPI"]["voicelogic"];
 
 // Lock
-$semaphoreKey2 = abs(crc32(__FILE__));
-$semaphore = sem_get($semaphoreKey2);
-$GLOBALS["SEMAPHORES"]["VSX"] = $semaphore;
 $semaphore_timeout = $GLOBALS["SEMAPHORES_TIMEOUT"] ?? 300;
-$ix = 0;
-$t0 = time();    
-while (sem_acquire($semaphore,true) != true)  {
-    $ix++;
-    if ($ix > 20000) {
-        $dt = time() - $t0; 
-        if ($dt > $semaphore_timeout) {  
-            Logger::warn("[vsx] semaphore loop break after {$dt} sec in " .__FILE__ . " " . __LINE__); // debug
-            terminate();
-        } else $ix = 0;
-    }
-    usleep(47); 
+if (!SemaphoreWait("VSX", $semaphore_timeout, 47, null)) {
+    Logger::warn("[vsx] semaphore wait failed in " . __FILE__ . " " . __LINE__);
+    terminate();
 }
 
 if ($voicelogic === 'voicetype' || true) { // force 

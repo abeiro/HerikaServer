@@ -194,49 +194,25 @@ if (isset($GLOBALS["external_fast_commands"])) {
 $GLOBALS["all_fast_commands"] = $fast_commands;
 
 $semaphore_timeout = $GLOBALS["SEMAPHORES_TIMEOUT"] ?? 300;
-$semaphoreKey = abs(crc32(__FILE__));
-$semaphore = sem_get($semaphoreKey); 
-$GLOBALS["SEMAPHORES"]["MAIN"] = $semaphore;
 
+require_once($path . "lib/semaphore_manager.class.php");
+
+// Use logical id "MAIN" so other code can still find $GLOBALS["SEMAPHORES"]["MAIN"]
 if (!in_array($gameRequest[0],$fast_commands)) {
-    //$semaphoreKey = abs(crc32(__FILE__));
-    //$semaphore = sem_get($semaphoreKey); //if this semaphore is used elsewhere as it is now, better to be created outside if block
-    $ix = 0;  
-    $t0 = time();    
-    while (sem_acquire($semaphore,true)!=true)  {
-        $ix++;
-        if ($ix > 2000) {
-            $dt = time() - $t0; 
-            if ($dt > $semaphore_timeout) {  
-                Logger::warn("[main] main semaphore loop break after {$dt} sec in " .__FILE__ . " " . __LINE__); // debug
-                terminate();
-            } else $ix = 0;
-        }
-        //Logger::info("Audit: Waiting for lock: {$gameRequest[0]}");
-        usleep(1003);
+    if (!SemaphoreWait("MAIN", $semaphore_timeout, 1003, null)) {
+        Logger::warn("[main] main semaphore wait failed for {$gameRequest[0]}");
+        terminate();
     }
     Logger::info("Audit:Lock acquired by {$gameRequest[0]}");
 } 
 
 // adnpc has its custom semaphore, as it write files
 if (in_array($gameRequest[0],["addnpc"])) {
-    $semaphoreKey2 = abs(crc32(__FILE__."_secondary"));
-    $semaphore2 = sem_get($semaphoreKey2);
-    $GLOBALS["SEMAPHORES"]["ADDNPC"] = $semaphore2;
-    $ix = 0;
-    $t0 = time();    
-    while (sem_acquire($semaphore2,true)!=true)  {
-        $ix++;
-        if ($ix > 20000) {
-            $dt = time() - $t0;
-            if ($dt > $semaphore_timeout) {
-                Logger::warn("[main] addnpc semaphore loop break after {$dt} sec in " .__FILE__ . " " . __LINE__); // debug
-                terminate();
-            } else $ix = 0;
-        }
-        usleep(101);
+    if (!SemaphoreWait("ADDNPC", $semaphore_timeout, 101, null)) {
+        Logger::warn("[main] addnpc semaphore wait failed for {$gameRequest[0]}");
+        terminate();
     }
-} 
+}
 
 if (($gameRequest[0]=="playerinfo")||(($gameRequest[0]=="newgame"))) {
     sleep(1);   // Give time to populate data
@@ -1442,7 +1418,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
         
         //$memoryInjectionCtx[]= array('role' => 'user', 'content' => $gameRequest[3]);
         $memoryInjectionCtx[]= array('role' => 'user', 'content' => "<memory> {$GLOBALS["HERIKA_NAME"]} remembers this: [$memoryInjection] </memory>");
-        //$GLOBALS["COMMAND_PROMPT"].="'{$gameRequest[3]}'\n{$GLOBALS["HERIKA_NAME"]}):$memoryInjection\n";
+        //$GLOBALS["COMMAND_PROMPT"].="'{$gameRequest[3]}'\n{$GLOBALS["HERIKA_NAME"]}:$memoryInjection\n";
         
     } else {
         $memoryInjectionCtx=[];
