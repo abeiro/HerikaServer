@@ -39,6 +39,7 @@ require_once($path . "lib/core/llm_connector.class.php");
 require_once($path . "lib/core/tts_connector.class.php");
 require_once($path . "lib/core/npc_master.class.php");
 require_once($path . "lib/core/core_profiles.class.php");
+require_once($path . "lib/semaphore_manager.class.php");
 
 // PARSE GET RESPONSE into $gameRequest
 $cooldownPeriod = 600;
@@ -207,7 +208,6 @@ $GLOBALS["all_fast_commands"] = $fast_commands;
 
 $semaphore_timeout = $GLOBALS["SEMAPHORES_TIMEOUT"] ?? 300;
 
-require_once($path . "lib/semaphore_manager.class.php");
 
 // Use logical id "MAIN" so other code can still find $GLOBALS["SEMAPHORES"]["MAIN"]
 if (!in_array($gameRequest[0],$fast_commands)) {
