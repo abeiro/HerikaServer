@@ -1090,7 +1090,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     if (sizeof($rechatHistory)>=(intval($GLOBALS["RECHAT_H"])))    {   // TOO MUCH RECHAT
         Logger::info("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">={$GLOBALS["RECHAT_H"]}");
         // Lets try to summarize
-        sem_release($semaphore);
+        SemaphoreManager::release("MAIN");
         while(ob_get_length() && ob_end_clean());
         require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
         terminate();
@@ -1110,14 +1110,12 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     
     if (sizeof($rechatHistory)>1) {
         // Lets make rechat wait a bit, so events while NPCs are speaking get into context// disabled if using new rechat fire event
-        sem_release($semaphore);
+        SemaphoreManager::release("MAIN");
         Logger::info("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
         // Check if this conflicts with smart rechat
         // Is this doing something?
         $semaphore_timeout = $GLOBALS["SEMAPHORES_TIMEOUT"] ?? 300;
-        $ix = 0;
-        $t0 = time();
-        while (sem_acquire($semaphore,true) != true)  {
+        if (!SemaphoreWait("MAIN", $semaphore_timeout, 1007, function() use ($db, $gameRequest) {
             //$user_input_after=$db->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]"); // 72 ms 
             $user_input_after=$db->fetchAll("SELECT rowid as N FROM eventlog WHERE type='user_input' AND ts>{$gameRequest[1]} ORDER BY rowid DESC LIMIT 1 "); // faster, 1.5 ms
             if (isset($user_input_after[0])) {
@@ -1127,15 +1125,10 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
                         terminate();
                     }
             }
-            $ix++; 
-            if ($ix > 1000) { 
-                $dt = time() - $t0; 
-                if ($dt > $semaphore_timeout) { // 
-                    Logger::warn("[main] rechat event - semaphore loop break after {$dt} sec in " .__FILE__ . " " . __LINE__); // debug
-                    terminate();
-                } else $ix = 0;
-            } 
-            usleep(1007);
+            return true;
+        })) {
+            Logger::warn("[main] rechat event - semaphore wait failed in " .__FILE__ . " " . __LINE__);
+            terminate();
         }
     }
 
@@ -2024,11 +2017,8 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
 
 
 // POST PROCESS TASKS
-if (isset($semaphore) && $semaphore)
-    sem_release($semaphore);
-
-if (isset($semaphore2) && $semaphore2)
-    sem_release($semaphore2);
+SemaphoreManager::release("MAIN");
+SemaphoreManager::release("ADDNPC");
 
 
 while(!getenv("PHPUNIT_TEST") && ob_get_length() && ob_end_flush());

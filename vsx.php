@@ -99,9 +99,7 @@ if ($voicelogic === 'voicetype' || true) { // force
 
 audit_log("vsx.php data available for $codename");
 
-if ($semaphore) {
-    sem_release($semaphore);
-}
+SemaphoreManager::release("VSX");
 
 if (strpos($_GET["oname"], ".fuz")) {
     $ext = "fuz";
