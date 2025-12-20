@@ -935,6 +935,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     
     $splitNameBase=explode("/",$gameRequest[3]);
     if ($splitNameBase[0] && $splitNameBase[1]) {
+        $npcMaster=new NpcMaster();
         $currentNpcData = $npcMaster->getByName($splitNameBase[0]);
         
         if ($currentNpcData) {
