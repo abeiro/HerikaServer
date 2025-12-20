@@ -99,75 +99,16 @@ if ($checkTableExists("core_profiles") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_player.sql"));
         $db->execQuery("SET search_path TO public");
     }
+    if ($checkTableExists("core_narrator") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_narrator.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
 } catch (Exception $e) {
     Logger::warn("Bootstrap core tables: " . $e->getMessage());
 }
 
-$__seed_narrator_done = false;
-try {
-    // Seed default Narrator (ID = 1) only on truly fresh installs
-    // Conditions: table exists AND is empty
-    if ($checkTableExists("core_npc_master") == 1) {
-        $cntRows = $db->fetchAll("SELECT COUNT(*) AS c FROM public.core_npc_master");
-        if ($cntRows && intval($cntRows[0]["c"]) === 0) {
-            Logger::info("Seeding core_npc_master with ID 1 'The Narrator' (fresh install)");
-            $db->execQuery(
-                "INSERT INTO public.core_npc_master (
-                    id,
-                    npc_name,
-                    profile_id,
-                    npc_favorite,
-                    lock_profile,
-                    core,
-                    npc_static_bio,
-                    oghma_knowledge_tags,
-                    personality,
-                    occupation,
-                    speechstyle,
-                    goals,
-                    md5,
-                    voiceid,
-                    metadata,
-                    gender,
-                    extended_data,
-                    tags
-                ) VALUES (
-                    1,
-                    'The Narrator',
-                    1,
-                    1,
-                    1,
-                    ".$db->escapeLiteral("The Narrator is a male voice within the player's mind. His job is to help the player as they navigate the world of Tamriel. Provide unique insight and descriptions of what is going on in the world.").",
-                    ".$db->escapeLiteral("A guiding voice that describes the world, events, and transitions. He is not a character, but a voice within the player's mind.").",
-                    'knowall',
-                    'Detached, descriptive, witty, helpful.',
-                    'Narrator',
-                    '',
-                    '',
-                    md5('The Narrator'),
-                    'TheNarrator',
-                    '{}'::jsonb,
-                    'male',
-                    '{}'::jsonb,
-                    'system'
-                )"
-            );
-            $__seed_narrator_done = true;
-            // Optional safety: make sure id sequence remains valid
-            try { $db->execQuery("SELECT setval('public.npc_master_id_seq', GREATEST((SELECT MAX(id) FROM public.core_npc_master), 1), true)"); } catch (Exception $e2) {}
-        }
-    }
-} catch (Exception $e) {
-    Logger::warn("Narrator seed skipped: ".$e->getMessage());
-}
-
-// Defensive repair: ensure The Narrator exists and is bound to profile 1
-try {
-    $db->execQuery("UPDATE public.core_npc_master SET profile_id = 1 WHERE npc_name = 'The Narrator' AND (profile_id IS NULL OR profile_id <> 1)");
-    $db->execQuery("UPDATE public.core_profiles SET default_npc = '1', default_narrator = '1' WHERE id = 1 AND (default_npc IS NULL OR default_npc = '' OR default_narrator IS NULL OR default_narrator = '')");
-} catch (Exception $e) {
-    Logger::warn("Narrator/profile binding repair skipped: ".$e->getMessage());
-}
+// Narrator is now managed via core_narrator table, not core_npc_master
+// Seeding of narrator data happens in the core_narrator migration blocks
 
 $query = "
     SELECT column_name 
@@ -2706,6 +2647,190 @@ if ($checkVersion("core_player")<20241128001) {
     
     $updateVersion("core_player", 20241128001);
     Logger::info("Applied patch core_player 20241128001 - Migrated player data from conf_opts");
+}
+
+//----------------------------------------------------
+// CORE_NARRATOR DATA MIGRATION
+//----------------------------------------------------
+
+if ($checkVersion("core_narrator")<20250101001) {
+    Logger::debug("Applying core_narrator migration 20250101001 - Migrating narrator settings from conf_opts");
+    
+    // Map conf_opts keys to core_narrator keys
+    $keysToMigrate = [
+        'NARRATOR_TALKS' => 'enabled',
+        'NARRATOR_WELCOME' => 'welcome_enabled',
+        'RANDOM_NARATION' => 'random_enabled',
+        'RANDOM_NARATION_CHANCE' => 'random_chance',
+        'RANDOM_NARRATION_COOLDOWN' => 'random_cooldown',
+        'BOOK_EVENT_ALWAYS_NARRATOR' => 'books_only_narrator',
+        'HIDE_NARRATOR_DIALOGUE' => 'hide_from_context',
+    ];
+    
+    foreach ($keysToMigrate as $confKey => $narratorKey) {
+        // Check if data exists in conf_opts
+        $escapedConfKey = $db->escape($confKey);
+        $result = $db->fetchAll("SELECT value FROM public.conf_opts WHERE id = '{$escapedConfKey}' LIMIT 1");
+        
+        if ($result && isset($result[0]['value'])) {
+            $value = $result[0]['value'];
+            $escapedNarratorKey = $db->escape($narratorKey);
+            $escapedValue = $db->escape($value);
+            
+            // Insert or update in core_narrator
+            $db->execQuery("
+                INSERT INTO public.core_narrator (id, value) 
+                VALUES ('{$escapedNarratorKey}', '{$escapedValue}')
+                ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+            ");
+            
+            Logger::debug("Migrated {$confKey} -> core_narrator.{$narratorKey}");
+        }
+    }
+    
+    // Seed defaults if no values exist (only if table is empty)
+    $countResult = $db->fetchAll("SELECT COUNT(*) AS c FROM public.core_narrator");
+    $count = $countResult && isset($countResult[0]['c']) ? intval($countResult[0]['c']) : 0;
+    
+    if ($count === 0) {
+        // Seed with defaults from conf.php if available, otherwise use hardcoded defaults
+        $defaults = [
+            'enabled' => isset($GLOBALS["NARRATOR_TALKS"]) ? ($GLOBALS["NARRATOR_TALKS"] ? '1' : '0') : '1',
+            'welcome_enabled' => isset($GLOBALS["NARRATOR_WELCOME"]) ? ($GLOBALS["NARRATOR_WELCOME"] ? '1' : '0') : '0',
+            'random_enabled' => isset($GLOBALS["RANDOM_NARATION"]) ? ($GLOBALS["RANDOM_NARATION"] ? '1' : '0') : '0',
+            'random_chance' => isset($GLOBALS["RANDOM_NARATION_CHANCE"]) ? (string)intval($GLOBALS["RANDOM_NARATION_CHANCE"]) : '15',
+            'random_cooldown' => isset($GLOBALS["RANDOM_NARRATION_COOLDOWN"]) ? (string)intval($GLOBALS["RANDOM_NARRATION_COOLDOWN"]) : '2',
+            'books_only_narrator' => isset($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"]) ? ($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"] ? '1' : '0') : '0',
+            'hide_from_context' => isset($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) ? ($GLOBALS["HIDE_NARRATOR_DIALOGUE"] ? '1' : '0') : '0',
+        ];
+        
+        foreach ($defaults as $key => $value) {
+            $escapedKey = $db->escape($key);
+            $escapedValue = $db->escape($value);
+            $db->execQuery("
+                INSERT INTO public.core_narrator (id, value) 
+                VALUES ('{$escapedKey}', '{$escapedValue}')
+                ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+            ");
+        }
+        
+        Logger::debug("Seeded core_narrator with default values");
+    }
+    
+    $updateVersion("core_narrator", 20250101001);
+    Logger::info("Applied patch core_narrator 20250101001 - Migrated narrator settings from conf_opts");
+}
+
+//----------------------------------------------------
+// CORE_NARRATOR CHARACTER DATA MIGRATION FROM CORE_NPC_MASTER
+//----------------------------------------------------
+
+if ($checkVersion("core_narrator")<20250101002) {
+    Logger::debug("Applying core_narrator migration 20250101002 - Migrating narrator character data from core_npc_master");
+    
+    // Check if The Narrator exists in core_npc_master
+    $narratorNpc = $db->fetchOne("SELECT * FROM public.core_npc_master WHERE npc_name = 'The Narrator' LIMIT 1");
+    
+    if ($narratorNpc) {
+        // Copy character data to core_narrator
+        $migrationData = [];
+        
+        if (isset($narratorNpc['profile_id']) && $narratorNpc['profile_id'] !== null) {
+            $migrationData['profile_id'] = (string)intval($narratorNpc['profile_id']);
+        }
+        
+        if (isset($narratorNpc['voiceid']) && $narratorNpc['voiceid'] !== null && $narratorNpc['voiceid'] !== '') {
+            $migrationData['voiceid'] = $narratorNpc['voiceid'];
+        }
+        
+        if (isset($narratorNpc['core']) && $narratorNpc['core'] !== null && $narratorNpc['core'] !== '') {
+            $migrationData['core'] = $narratorNpc['core'];
+        }
+        
+        if (isset($narratorNpc['npc_static_bio']) && $narratorNpc['npc_static_bio'] !== null && $narratorNpc['npc_static_bio'] !== '') {
+            $migrationData['background'] = $narratorNpc['npc_static_bio'];
+        }
+        
+        if (isset($narratorNpc['personality']) && $narratorNpc['personality'] !== null && $narratorNpc['personality'] !== '') {
+            $migrationData['personality'] = $narratorNpc['personality'];
+        }
+        
+        if (isset($narratorNpc['speechstyle']) && $narratorNpc['speechstyle'] !== null && $narratorNpc['speechstyle'] !== '') {
+            $migrationData['speechstyle'] = $narratorNpc['speechstyle'];
+        }
+        
+        if (isset($narratorNpc['goals']) && $narratorNpc['goals'] !== null && $narratorNpc['goals'] !== '') {
+            $migrationData['goals'] = $narratorNpc['goals'];
+        }
+        
+        if (isset($narratorNpc['oghma_knowledge_tags']) && $narratorNpc['oghma_knowledge_tags'] !== null && $narratorNpc['oghma_knowledge_tags'] !== '') {
+            $migrationData['oghma_knowledge'] = $narratorNpc['oghma_knowledge_tags'];
+        }
+        
+        if (isset($narratorNpc['gender']) && $narratorNpc['gender'] !== null && $narratorNpc['gender'] !== '') {
+            $migrationData['gender'] = $narratorNpc['gender'];
+        }
+        
+        if (isset($narratorNpc['prompt_head']) && $narratorNpc['prompt_head'] !== null && $narratorNpc['prompt_head'] !== '') {
+            $migrationData['prompt_head'] = $narratorNpc['prompt_head'];
+        }
+        
+        // Insert/update in core_narrator (only if not already set)
+        foreach ($migrationData as $key => $value) {
+            $existing = $db->fetchOne("SELECT value FROM public.core_narrator WHERE id = '{$db->escape($key)}' LIMIT 1");
+            if (!$existing || !isset($existing['value']) || $existing['value'] === '') {
+                $escapedKey = $db->escape($key);
+                $escapedValue = $db->escape($value);
+                $db->execQuery("
+                    INSERT INTO public.core_narrator (id, value) 
+                    VALUES ('{$escapedKey}', '{$escapedValue}')
+                    ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+                ");
+                Logger::debug("Migrated narrator.{$key} from core_npc_master");
+            }
+        }
+        
+    // Delete The Narrator from core_npc_master
+    $db->execQuery("DELETE FROM public.core_npc_master WHERE npc_name = 'The Narrator'");
+    Logger::info("Deleted The Narrator from core_npc_master");
+    } else {
+        // No narrator in core_npc_master - check if we need to seed defaults in core_narrator
+        $narratorCount = $db->fetchAll("SELECT COUNT(*) AS c FROM public.core_narrator");
+        $count = $narratorCount && isset($narratorCount[0]['c']) ? intval($narratorCount[0]['c']) : 0;
+        
+        if ($count === 0) {
+            // Fresh install - seed narrator character data with defaults
+            $defaultProfile = $db->fetchOne("SELECT id FROM public.core_profiles WHERE default_narrator = '1' LIMIT 1");
+            $profileId = $defaultProfile && isset($defaultProfile['id']) ? (string)intval($defaultProfile['id']) : '1';
+            
+            $defaults = [
+                'profile_id' => $profileId,
+                'voiceid' => 'TheNarrator',
+                'core' => "The Narrator is a male voice within the player's mind. His job is to help the player as they navigate the world of Tamriel. Provide unique insight and descriptions of what is going on in the world.",
+                'background' => "A guiding voice that describes the world, events, and transitions. He is not a character, but a voice within the player's mind.",
+                'personality' => 'Detached, descriptive, witty, helpful.',
+                'speechstyle' => '',
+                'goals' => '',
+                'oghma_knowledge' => 'knowall',
+                'gender' => 'male',
+            ];
+            
+            foreach ($defaults as $key => $value) {
+                $escapedKey = $db->escape($key);
+                $escapedValue = $db->escape($value);
+                $db->execQuery("
+                    INSERT INTO public.core_narrator (id, value) 
+                    VALUES ('{$escapedKey}', '{$escapedValue}')
+                    ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+                ");
+            }
+            
+            Logger::info("Seeded narrator character data with defaults for fresh install");
+        }
+    }
+    
+    $updateVersion("core_narrator", 20250101002);
+    Logger::info("Applied patch core_narrator 20250101002 - Migrated narrator character data from core_npc_master and removed from NPC list");
 }
 
 //----------------------------------------------------

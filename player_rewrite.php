@@ -93,10 +93,8 @@ if (! isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
         error_log("Could not load player data from core_player: " . $e->getMessage());
     }
     
-    // Fallback to PLAYER_BIOS if core_player is empty
-    if (empty($playerAppearance) && isset($GLOBALS["PLAYER_BIOS"]) && !empty($GLOBALS["PLAYER_BIOS"])) {
-        $playerAppearance = $GLOBALS["PLAYER_BIOS"];
-    }
+    // Do not use PLAYER_BIOS from conf.php - it has been migrated to core_player.appearance
+    // Only use appearance from core_player table
     
     // Fallback to PLAYER_SPEECH_STYLE if core_player is empty
     if (empty($playerSpeechStyle) && isset($GLOBALS["PLAYER_SPEECH_STYLE"]) && !empty($GLOBALS["PLAYER_SPEECH_STYLE"])) {

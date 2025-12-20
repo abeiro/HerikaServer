@@ -155,6 +155,18 @@ try {
     }
 }
 
+// Load narrator settings from core_narrator table
+try {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+    $narrator = new Narrator();
+    // Load all narrator settings into GLOBALS with proper type conversion
+    // Falls back to existing GLOBALS values (from conf.php) if not found in database
+    $narrator->loadIntoGlobals();
+} catch (Exception $e) {
+    // Fallback to conf.php values already loaded
+    // Settings will use defaults or values from conf.php
+}
+
 require_once($path . "processor" .DIRECTORY_SEPARATOR."chim_modes.php");
 
 
@@ -530,47 +542,84 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 
 
-// Profile selection and migration The Narrator
-
-$npcMaster=new NpcMaster();
-$profileMgr=new CoreProfile();
-$currentNpcData=$npcMaster->getByname("The Narrator");
-if (!$currentNpcData) {
-            
-    $npcMaster->create(["npc_name"=>"The Narrator"]);
-    $currentNpcData=$npcMaster->getByname("The Narrator");
-
-    if ($currentNpcData) {
-        $newNpcData=$npcMaster->migrateFromOldProfile($currentNpcData,$GLOBALS);
-
-
-        $ingameDataRef=getBaseDataForNpcFromLog("The Narrator");
-        $newNpcData=array_merge($newNpcData,$ingameDataRef??[]);
-        $defProfile=$profileMgr->getDefaultNarrator();
-        $newNpcData["profile_id"]=$defProfile["id"];
-        $newNpcData["voiceid"]= $newNpcData["voiceid"] ?: "malenord"; //migrate || default it
-        if ($newNpcData) {
-            $npcMaster->updateByArray($newNpcData);
+// Narrator initialization - ensure narrator data exists
+// Narrator is now managed via core_narrator table, not core_npc_master
+try {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+    $narrator = new Narrator();
+    
+    // Ensure narrator has a profile_id set (default to profile 1 if not set)
+    $profileId = $narrator->getProfileId();
+    if ($profileId === null) {
+        $profileMgr = new CoreProfile();
+        $defProfile = $profileMgr->getDefaultNarrator();
+        if ($defProfile) {
+            $narrator->set('profile_id', (string)$defProfile['id']);
+        } else {
+            // Fallback to profile 1
+            $narrator->set('profile_id', '1');
         }
-        
     }
-
+    
+    // Ensure voiceid is set
+    if (!$narrator->get('voiceid')) {
+        $narrator->set('voiceid', 'TheNarrator');
+    }
+} catch (Exception $e) {
+    // Narrator initialization failed, will use defaults
+    Logger::warn("Narrator initialization failed: " . $e->getMessage());
 } 
 
 
 // Profile loading
 if (isset($_GET["profile"])) {
     
+    // Initialize OVERRIDES array for all profile types
     $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"]=$GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"];
     $OVERRIDES["MINIME_T5"]=$GLOBALS["MINIME_T5"];
     $OVERRIDES["STTFUNCTION"]=$GLOBALS["STTFUNCTION"];
     $OVERRIDES["TTSFUNCTION_PLAYER"]=$GLOBALS["TTSFUNCTION_PLAYER"];
     $OVERRIDES["TTSFUNCTION_PLAYER_VOICE"]=$GLOBALS["TTSFUNCTION_PLAYER_VOICE"];
     $OVERRIDES["TTSFUNCTION_PLAYER_LANGUAGE"]=$GLOBALS["TTSFUNCTION_PLAYER_LANGUAGE"];
-
-    //$OVERRIDES["PROMPT_HEAD"]=$GLOBALS["PROMPT_HEAD"];
     
-    if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php")) {
+    // Check if this is The Narrator (by MD5)
+    $isNarratorProfile = ($_GET["profile"] === md5('The Narrator'));
+    
+    // If this is The Narrator, use Narrator class instead of NpcMaster
+    if ($isNarratorProfile) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+        $narrator = new Narrator();
+        $narratorData = $narrator->getNarratorData();
+        
+        if ($narratorData && isset($narratorData["profile_id"])) {
+            $profile = new CoreProfile();
+            $currentProfileData = $profile->getById($narratorData["profile_id"]);
+            
+            $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] = $currentProfileData;
+            
+            $connector = new LLMConnector();
+            $npcMaster = new NpcMaster(); // Still needed for LLMRandomizer compatibility
+            $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $narratorData, $npcMaster);
+            $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+            $currentConnectorData = $connector->getById($connectorId);
+            
+            $connector->setOldGlobals($currentConnectorData);
+            $profile->setOldGlobals($currentProfileData);
+            
+            // Load narrator character data into GLOBALS (this sets PROMPT_HEAD and all character fields)
+            $narrator->loadCharacterIntoGlobals();
+            
+            $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
+            
+            error_log("[CORE SYSTEM] Using Narrator profile from core_narrator table, profile: {$currentProfileData["label"]}");
+        } else {
+            error_log("[CORE SYSTEM] Narrator profile not found, using defaults");
+        }
+    } else {
+        // Regular NPC profile loading
+        //$OVERRIDES["PROMPT_HEAD"]=$GLOBALS["PROMPT_HEAD"];
+        
+        if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php")) {
         // error_log("PROFILE: {$_GET["profile"]}");
         // Migration here to new system
         error_log("[CHIM CORE] MIGRATING PROFILE {$_GET["profile"]}}");
@@ -671,6 +720,7 @@ if (isset($_GET["profile"])) {
             error_log("[CORE SYSTEM] GLOBALS['LLM_LANG']:{$debugLang} GLOBALS['PATCH_OVERRIDE_TTS_LANGUAGE']:{$debugOverrideTtsLang}");
         }
     }
+    }
     
     $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"]=$OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
     //$GLOBALS["MINIME_T5"]=$OVERRIDES["MINIME_T5"];
@@ -739,21 +789,25 @@ $GLOBALS["active_profile"]=md5($GLOBALS["HERIKA_NAME"]);
 
 if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"])) {
 
-    $npcMaster=new NpcMaster();
-    $currentNpcData=$npcMaster->getByName("The Narrator");
-    error_log("[CHIM CORE] [BOOK OVERRIDE] USING CORE PROFILE {$currentNpcData["npc_name"]}")    ;
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+    $narrator = new Narrator();
+    $narratorData = $narrator->getNarratorData();
+    error_log("[CHIM CORE] [BOOK OVERRIDE] USING CORE PROFILE {$narratorData["npc_name"]}");
 
-    $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+    // Load narrator character data into GLOBALS
+    $narrator->loadCharacterIntoGlobals();
 
     $profile=new CoreProfile();
-    $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
+    $currentProfileData=$profile->getById($narratorData["profile_id"]);
 
     $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]=$currentProfileData;
 
     $connector=new LLMConnector();
     
     // Use randomizer to determine which connector slot to use
-    $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $currentNpcData, $npcMaster);
+    // getConnectorSlot expects npc data format, so we pass the narrator data array
+    $npcMaster = new NpcMaster(); // Still needed for LLMRandomizer compatibility
+    $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $narratorData, $npcMaster);
     $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
     
     $currentConnectorData = $connector->getById($connectorId); 
@@ -761,7 +815,6 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"])) 
 
     $connector->setOldGlobals($currentConnectorData);
     $profile->setOldGlobals($currentProfileData);
-    $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
 
     $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
 
@@ -1123,20 +1176,22 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
                 Logger::info("[RANDOM_NARRATION] Triggered (chance: $randomChance <= $narrationChance)");
             
             // Switch to The Narrator profile temporarily
-            $npcMaster = new NpcMaster();
-            $narratorData = $npcMaster->getByName("The Narrator");
+            require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+            $narrator = new Narrator();
+            $narratorData = $narrator->getNarratorData();
             
-            if ($narratorData) {
+            if ($narratorData && isset($narratorData["profile_id"])) {
                 // Store current profile data
                 $originalHerikaName = $GLOBALS["HERIKA_NAME"];
                 
-                // Load Narrator profile - set connector and profile first, npc data last
+                // Load Narrator profile - set connector and profile first, character data last
                 $profile = new CoreProfile();
                 $currentProfileData = $profile->getById($narratorData["profile_id"]);
                 
                 $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] = $currentProfileData;
                 
                 $connector = new LLMConnector();
+                $npcMaster = new NpcMaster(); // Still needed for LLMRandomizer compatibility
                 $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $narratorData, $npcMaster);
                 $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
                 $currentConnectorData = $connector->getById($connectorId);
@@ -1144,16 +1199,8 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
                 $connector->setOldGlobals($currentConnectorData);
                 $profile->setOldGlobals($currentProfileData);
                 
-                // These will be re-populated by setOldGlobalsFromCurrentNpcData if The Narrator has them set
-                $GLOBALS['HERIKA_APPEARANCE'] = '';
-                $GLOBALS['HERIKA_SKILLS'] = '';
-                $GLOBALS['HERIKA_BACKGROUND'] = '';
-                $GLOBALS['HERIKA_OCCUPATION'] = '';
-                $GLOBALS['HERIKA_RELATIONSHIPS'] = '';
-                $GLOBALS['HERIKA_GOALS'] = '';
-                $GLOBALS['HERIKA_SPEECHSTYLE'] = '';
-                
-                $npcMaster->setOldGlobalsFromCurrentNpcData($narratorData);
+                // Load narrator character data into GLOBALS
+                $narrator->loadCharacterIntoGlobals();
                 
                 $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
                 
@@ -1389,9 +1436,18 @@ else if ($GLOBALS["IS_NPC"]) {
     
 }
 
+// Ensure contextDataHistoric is an array
+if (!is_array($contextDataHistoric)) {
+    $contextDataHistoric = [];
+}
 
 // Info about location and npcs in first position
 $contextDataWorld = DataLastInfoFor("", -2,true);
+
+// Ensure contextDataWorld is an array
+if (!is_array($contextDataWorld)) {
+    $contextDataWorld = [];
+}
 
 // Add current motto to COMMAND_PROMPT
 if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[0] != "diary") {
@@ -1657,30 +1713,7 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
 }
 
 
-if (isset($GLOBALS["ADD_PLAYER_BIOS"])&&($GLOBALS["ADD_PLAYER_BIOS"])) {
-    // Load player appearance from core_player table
-    // Note: PLAYER_BIOS global is already loaded from core_player in profile_loader.php
-    // This ensures consistency across all files
-    $playerAppearance = '';
-    
-    // First try core_player table directly
-    try {
-        require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
-        $player = new Player();
-        $playerAppearance = $player->get('appearance');
-    } catch (Exception $e) {
-        Logger::debug("Could not load player appearance from core_player: " . $e->getMessage());
-    }
-    
-    // Fallback to PLAYER_BIOS global (which profile_loader.php should have loaded from database)
-    if (empty($playerAppearance) && isset($GLOBALS["PLAYER_BIOS"]) && !empty($GLOBALS["PLAYER_BIOS"])) {
-        $playerAppearance = $GLOBALS["PLAYER_BIOS"];
-    }
-    
-    if (!empty($playerAppearance)) {
-        $GLOBALS["PROMPT_HEAD"].=PHP_EOL."<player_character>\n".$playerAppearance."\n</player_character>\n";
-    }
-}
+// Player character section removed - player appearance now handled elsewhere
 
 
 // Use centralized function from data_functions.php
@@ -1696,13 +1729,17 @@ if (isset($GLOBALS["PROFILE_PROMPT"])) {
 
 // Middle term memory experiment
 // Skip middle-term memory for The Narrator (atmospheric narration shouldn't include individual NPC memories)
-$npcMaster=new NpcMaster();
-$currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
-$extended_data=$npcMaster->getExtendedData($currentNpcData);
-if ($GLOBALS["HERIKA_NAME"] !== "The Narrator" && isset($extended_data["middle_term_memory"])&&is_array($extended_data["middle_term_memory"])) {
-    $middle_term_memory = end($extended_data["middle_term_memory"]);
-    $dynamicBiography.="\n<middle_term_memory>\n#Past events\n{$middle_term_memory}\n</middle_term_memory>";
-
+if ($GLOBALS["HERIKA_NAME"] !== "The Narrator" && isset($_GET["profile"])) {
+    $npcMaster=new NpcMaster();
+    $currentNpcData=$npcMaster->getByMD5($_GET["profile"]);
+    // Only process if we got valid NPC data (not The Narrator)
+    if ($currentNpcData && $currentNpcData["npc_name"] !== "The Narrator") {
+        $extended_data=$npcMaster->getExtendedData($currentNpcData);
+        if (isset($extended_data["middle_term_memory"])&&is_array($extended_data["middle_term_memory"])) {
+            $middle_term_memory = end($extended_data["middle_term_memory"]);
+            $dynamicBiography.="\n<middle_term_memory>\n#Past events\n{$middle_term_memory}\n</middle_term_memory>";
+        }
+    }
 }
 
 // Rumors and breaking news
@@ -1742,10 +1779,25 @@ if ($gameRequest[0] === "narration") {
     $GLOBALS["COMMAND_PROMPT"] = "Respond with atmospheric narration only. Use the Talk action.";
 }
 
+// Ensure actions and nearby sections are added to PROMPT_HEAD before building system prompt
+require_once(__DIR__.DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+
+// Build nearby sections string
+$nearbySections = "";
+if (isset($GLOBALS["PROMPT_NEARBY_SECTIONS"]) && !empty($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
+    $nearbySections = $GLOBALS["PROMPT_NEARBY_SECTIONS"];
+}
+
+// Build actions list string
+$actionsList = "";
+if (isset($GLOBALS["PROMPT_ACTIONS_LIST"]) && !empty($GLOBALS["PROMPT_ACTIONS_LIST"])) {
+    $actionsList = $GLOBALS["PROMPT_ACTIONS_LIST"];
+}
+
 if (!empty($GLOBALS["OGHMA_HINT"])) {
 
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>\n$rumorsText\n",
+        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>".$actionsList.$nearbySections."\n$rumorsText\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
 
     );
@@ -1753,7 +1805,7 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
     $GLOBALS["COMMAND_PROMPT"] = "";
 } else {
     $head[] = array('role' => 'system', 'content' =>  
-        strtr($GLOBALS["PROMPT_HEAD"] . "\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>\n$rumorsText\n",
+        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>".$actionsList.$nearbySections."\n$rumorsText\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
     );
     //avoid reinjecting command prompt that we have already appended

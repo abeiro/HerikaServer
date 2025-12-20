@@ -7,7 +7,144 @@ $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
-$TITLE = "🔊 CHIM XTTS Voice Management";
+// Handle test voice requests (GET) - MUST be before any output buffering
+if (isset($_GET['action']) && ($_GET['action'] === 'test_cartesia' || $_GET['action'] === 'test_inworld') && isset($_GET['voice'])) {
+    // Initialize database connection for test handlers
+    if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
+        require_once(__DIR__ . "/../lib/{$GLOBALS["DBDRIVER"]}.class.php");
+    }
+    if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
+        $GLOBALS["db"] = new sql();
+    }
+    
+    // Helper function for test handlers
+    function getClonedVoicesForTest($provider) {
+        global $db;
+        if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
+            return [];
+        }
+        $db = $GLOBALS["db"];
+        $prefix = $provider . '_voice_id_';
+        $prefixEscaped = $db->escape($prefix);
+        $rows = $db->fetchAll("SELECT id, value FROM conf_opts WHERE id LIKE '{$prefixEscaped}%'");
+        $cloned = [];
+        foreach ($rows as $row) {
+            $voiceName = str_replace($prefix, '', $row['id']);
+            $cloned[$voiceName] = $row['value'];
+        }
+        return $cloned;
+    }
+    
+    if ($_GET['action'] === 'test_cartesia') {
+        $voice = $_GET['voice'];
+        $clonedVoices = getClonedVoicesForTest('cartesia');
+        
+        if (!isset($clonedVoices[$voice]) || empty($clonedVoices[$voice])) {
+            header('Content-Type: application/json');
+            http_response_code(400);
+            echo json_encode(['error' => 'Voice not generated yet. Please sync this voice first.']);
+            exit;
+        }
+        
+        require_once(__DIR__ . '/../tts/tts-cartesia.php');
+        $testText = 'CHIM has been described as the secret syllable of royalty, and can be considered a form of Apotheosis';
+        $audioData = generateCartesiaTTS($testText, $clonedVoices[$voice]);
+        
+        if ($audioData !== false && !empty($audioData)) {
+            // Save to soundcache like other TTS functions
+            $soundcacheDir = __DIR__ . '/../soundcache/';
+            if (!is_dir($soundcacheDir)) {
+                mkdir($soundcacheDir, 0777, true);
+            }
+            $testHash = md5('test_cartesia_' . $voice . '_' . $testText);
+            $audioFile = $soundcacheDir . $testHash . '.wav';
+            file_put_contents($audioFile, $audioData);
+            
+            // Return URL to the audio file
+            $webRoot = dirname(dirname($_SERVER['SCRIPT_NAME']));
+            if ($webRoot == '/') $webRoot = '';
+            $webRoot = rtrim($webRoot, '/');
+            $audioUrl = $webRoot . '/soundcache/' . $testHash . '.wav?ts=' . time();
+            
+            header('Content-Type: application/json');
+            echo json_encode(['url' => $audioUrl]);
+            exit;
+        }
+        
+        header('Content-Type: application/json');
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to generate test audio. The voice ID may be invalid or expired.']);
+        exit;
+    }
+    
+    if ($_GET['action'] === 'test_inworld') {
+        $voice = $_GET['voice'];
+        $clonedVoices = getClonedVoicesForTest('inworld');
+        
+        if (!isset($clonedVoices[$voice]) || empty($clonedVoices[$voice])) {
+            header('Content-Type: application/json');
+            http_response_code(400);
+            echo json_encode(['error' => 'Voice not generated yet. Please sync this voice first.']);
+            exit;
+        }
+        
+        require_once(__DIR__ . '/../tts/tts-inworld.php');
+        $testText = 'CHIM has been described as the secret syllable of royalty, and can be considered a form of Apotheosis';
+        
+        // Generate raw PCM audio data (no output file = returns raw PCM)
+        $audioData = generateInworldTTS($testText, $clonedVoices[$voice]);
+        
+        if ($audioData !== false && !empty($audioData)) {
+            // Save to soundcache like other TTS functions
+            $soundcacheDir = __DIR__ . '/../soundcache/';
+            if (!is_dir($soundcacheDir)) {
+                mkdir($soundcacheDir, 0777, true);
+            }
+            $testHash = md5('test_inworld_' . $voice . '_' . $testText);
+            
+            // Write raw PCM to temporary file
+            $pcmFile = $soundcacheDir . $testHash . '_temp.pcm';
+            file_put_contents($pcmFile, $audioData);
+            
+            // Convert raw PCM to WAV using FFmpeg (Inworld returns LINEAR16 PCM at 22050 Hz, mono)
+            $audioFile = $soundcacheDir . $testHash . '.wav';
+            $ffmpegCmd = "ffmpeg -y -f s16le -ar 22050 -ac 1 -i \"$pcmFile\" -c:a pcm_s16le -ar 22050 -ac 1 \"$audioFile\" 2>&1";
+            $ffmpegOutput = shell_exec($ffmpegCmd);
+            
+            // Clean up temporary PCM file
+            if (file_exists($pcmFile)) {
+                unlink($pcmFile);
+            }
+            
+            // Check if WAV file was created successfully
+            if (file_exists($audioFile) && filesize($audioFile) > 0) {
+                // Return URL to the audio file
+                $webRoot = dirname(dirname($_SERVER['SCRIPT_NAME']));
+                if ($webRoot == '/') $webRoot = '';
+                $webRoot = rtrim($webRoot, '/');
+                $audioUrl = $webRoot . '/soundcache/' . $testHash . '.wav?ts=' . time();
+                
+                header('Content-Type: application/json');
+                echo json_encode(['url' => $audioUrl]);
+                exit;
+            } else {
+                // FFmpeg conversion failed
+                error_log("Inworld test audio FFmpeg conversion failed: " . substr($ffmpegOutput, 0, 500));
+                header('Content-Type: application/json');
+                http_response_code(500);
+                echo json_encode(['error' => 'Failed to convert audio to WAV format. Check server logs.']);
+                exit;
+            }
+        }
+        
+        header('Content-Type: application/json');
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to generate test audio. The voice ID may be invalid or expired.']);
+        exit;
+    }
+}
+
+$TITLE = "🔊 Voice Management";
 
 ob_start();
 
@@ -25,6 +162,62 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+// Tab state from URL parameter
+$activeTab = $_GET['tab'] ?? 'xtts';
+
+// Initialize database connection
+if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
+    require_once(__DIR__ . "/../lib/{$GLOBALS["DBDRIVER"]}.class.php");
+}
+if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
+    $GLOBALS["db"] = new sql();
+}
+
+// Load TTS functions for Cartesia and Inworld
+require_once(__DIR__ . '/../tts/tts-cartesia.php');
+require_once(__DIR__ . '/../tts/tts-inworld.php');
+
+// Helper functions
+function getLocalVoices() {
+    $voiceDir = __DIR__ . '/../data/voices/';
+    $voices = [];
+    if (is_dir($voiceDir)) {
+        foreach (glob($voiceDir . '*.wav') as $file) {
+            $voices[] = pathinfo($file, PATHINFO_FILENAME);
+        }
+    }
+    sort($voices);
+    return $voices;
+}
+
+function getClonedVoices($provider) {
+    global $db;
+    if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
+        return [];
+    }
+    $db = $GLOBALS["db"];
+    $prefix = $provider . '_voice_id_';
+    $prefixEscaped = $db->escape($prefix);
+    $rows = $db->fetchAll("SELECT id, value FROM conf_opts WHERE id LIKE '{$prefixEscaped}%'");
+    $cloned = [];
+    foreach ($rows as $row) {
+        $voiceName = str_replace($prefix, '', $row['id']);
+        $cloned[$voiceName] = $row['value'];
+    }
+    return $cloned;
+}
+
+function isProviderConfigured($provider) {
+    global $db;
+    if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
+        return false;
+    }
+    $db = $GLOBALS["db"];
+    $providerLower = strtolower($provider);
+    $row = $db->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='{$providerLower}' LIMIT 1");
+    return (is_array($row) && !empty($row['api_key']));
+}
+
 function normalize_endpoint_url($url) {
     // Remove trailing slashes
     $url = rtrim($url, '/');
@@ -41,15 +234,387 @@ $GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"] = normalize_endpoint_url($GLOBALS["TT
 // Initialize message variables
 $message = '';
 $speakersMessage = '';
-
-// Get speakers list for POST request
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST["get_speakers"])) {
-    // Remove this entire first handler as it's duplicated
-    $speakersMessage = '';
-}
+$cartesiaMessage = '';
+$inworldMessage = '';
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Cartesia sync handler (all missing)
+    if (isset($_POST['action']) && $_POST['action'] === 'sync_cartesia') {
+        $localVoices = getLocalVoices();
+        $clonedVoices = getClonedVoices('cartesia');
+        $syncedCount = 0;
+        $errorCount = 0;
+        $rateLimitCount = 0;
+        $firstVoice = true;
+        
+        foreach ($localVoices as $voice) {
+            if (!isset($clonedVoices[$voice])) {
+                $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
+                if (file_exists($voiceSamplePath)) {
+                    // Add delay between requests to avoid rate limiting (2 seconds)
+                    if (!$firstVoice) {
+                        sleep(2);
+                    }
+                    $firstVoice = false;
+                    
+                    $result = getOrCreateCartesiaVoice($voice);
+                    if ($result !== false) {
+                        $syncedCount++;
+                    } else {
+                        $errorCount++;
+                        // Check if it's a rate limit error by checking error logs
+                        $errorMsg = error_get_last();
+                        if ($errorMsg && (strpos($errorMsg['message'], '429') !== false || strpos($errorMsg['message'], 'Too Many Requests') !== false)) {
+                            $rateLimitCount++;
+                            $cartesiaMessage .= "<p style='color:orange;'>Rate limit hit while generating voice: {$voice}. Please wait a moment and try syncing remaining voices.</p>";
+                            // Stop syncing if we hit rate limit
+                            break;
+                        } else {
+                            $cartesiaMessage .= "<p>Error generating voice: {$voice}</p>";
+                        }
+                    }
+                }
+            }
+        }
+        
+        if ($syncedCount > 0) {
+            $cartesiaMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully synced {$syncedCount} voice(s) to Cartesia.</strong></p>";
+        }
+        if ($rateLimitCount > 0) {
+            $cartesiaMessage .= "<p style='color:orange;'><strong>Hit rate limit after {$syncedCount} voices. Please wait a few minutes before syncing remaining voices.</strong></p>";
+        }
+        if ($errorCount > 0 && $rateLimitCount === 0) {
+            $cartesiaMessage .= "<p style='color:red;'><strong>Failed to sync {$errorCount} voice(s).</strong></p>";
+        }
+        if ($syncedCount === 0 && $errorCount === 0 && $rateLimitCount === 0) {
+            $cartesiaMessage .= "<p>All voices are already synced to Cartesia.</p>";
+        }
+    }
+    
+    // Cartesia single voice sync handler
+    if (isset($_POST['action']) && $_POST['action'] === 'sync_cartesia_single' && isset($_POST['voice'])) {
+        $voice = $_POST['voice'];
+        $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
+        if (file_exists($voiceSamplePath)) {
+            $result = getOrCreateCartesiaVoice($voice);
+            if ($result !== false && !empty($result)) {
+                // Redirect to refresh the page and show updated status
+                header('Location: ' . $webRoot . '/ui/xtts_clone.php?tab=cartesia&synced=' . urlencode($voice));
+                exit;
+            } else {
+                $cartesiaMessage .= "<p style='color:red;'><strong>Failed to generate voice '{$voice}' for Cartesia. Please check API configuration and logs.</strong></p>";
+            }
+        } else {
+            $cartesiaMessage .= "<p style='color:red;'><strong>Voice file not found: {$voice}</strong></p>";
+        }
+    }
+    
+    // Cartesia clear cache handler
+    if (isset($_POST['action']) && $_POST['action'] === 'clear_cartesia_cache') {
+        $db = $GLOBALS["db"];
+        $prefixEscaped = $db->escape('cartesia_voice_id_');
+        $db->execQuery("DELETE FROM conf_opts WHERE id LIKE '{$prefixEscaped}%'");
+        $cartesiaMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Cartesia voice cache cleared.</strong></p>";
+    }
+    
+    // Cartesia upload handler
+    if (isset($_POST["submit_cartesia"])) {
+        $total = count($_FILES['file']['name']);
+        $uploadedCount = 0;
+        $clonedCount = 0;
+        $errorCount = 0;
+        $rateLimitHit = false;
+        
+        for ($i = 0; $i < $total; $i++) {
+            if ($_FILES['file']['error'][$i] !== UPLOAD_ERR_OK) {
+                $cartesiaMessage .= '<p style="color:red;">Error: File upload error code ' . $_FILES['file']['error'][$i] . '</p>';
+                $errorCount++;
+                continue;
+            }
+
+            // Get the uploaded file details
+            $fileTmpPath = $_FILES["file"]["tmp_name"][$i];
+            $fileName = $_FILES["file"]["name"][$i];
+            $fileType = mime_content_type($fileTmpPath);
+            $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+            // Directory where you want to save the uploaded file
+            $saveDir = __DIR__ . '/../data/voices/';
+
+            // Ensure the directory exists
+            if (!is_dir($saveDir)) {
+                mkdir($saveDir, 0777, true);
+            }
+
+            // Ensure the file is a .wav file
+            if ($fileExtension !== 'wav' || ($fileType !== 'audio/wav' && $fileType !== 'audio/x-wav')) {
+                $cartesiaMessage .= "<p style='color:red;'>Error: Please upload a valid .wav file. ($fileName)</p>";
+                $errorCount++;
+            } else {
+                // Save the file to the specified directory
+                $destinationPath = $saveDir . $fileName;
+
+                if (move_uploaded_file($fileTmpPath, $destinationPath)) {
+                    $uploadedCount++;
+                    $voiceName = pathinfo($fileName, PATHINFO_FILENAME);
+                    
+                    // Automatically generate the voice for Cartesia
+                    $result = getOrCreateCartesiaVoice($voiceName);
+                    if ($result !== false && !empty($result)) {
+                        $clonedCount++;
+                        $cartesiaMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and generated voice '{$voiceName}' for Cartesia.</strong></p>";
+                    } else {
+                        // Check if it's a rate limit error
+                        $errorMsg = error_get_last();
+                        if ($errorMsg && (strpos($errorMsg['message'], '429') !== false || strpos($errorMsg['message'], 'Too Many Requests') !== false)) {
+                            $rateLimitHit = true;
+                            $cartesiaMessage .= "<p style='color:orange;'>Voice '{$voiceName}' uploaded but rate limit reached. Please wait before uploading more.</p>";
+                        } else {
+                            $cartesiaMessage .= "<p style='color:orange;'>Voice '{$voiceName}' uploaded but failed to generate. Please check API configuration and logs.</p>";
+                        }
+                    }
+                } else {
+                    $cartesiaMessage .= "<p style='color:red;'>Error: File could not be saved to $destinationPath.</p>";
+                    $errorCount++;
+                }
+            }
+        }
+        
+        // Summary message
+        if ($uploadedCount > 0 && $clonedCount === $uploadedCount) {
+            $cartesiaMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and generated {$uploadedCount} voice(s) for Cartesia.</strong></p>";
+        } elseif ($uploadedCount > 0 && $clonedCount < $uploadedCount) {
+            $cartesiaMessage .= "<p style='color:orange;'><strong>Uploaded {$uploadedCount} voice(s), but only {$clonedCount} were successfully generated.</strong></p>";
+        }
+    }
+    
+    // Inworld sync handler (all missing)
+    if (isset($_POST['action']) && $_POST['action'] === 'sync_inworld') {
+        $localVoices = getLocalVoices();
+        $clonedVoices = getClonedVoices('inworld');
+        $syncedCount = 0;
+        $errorCount = 0;
+        $rateLimitCount = 0;
+        $firstVoice = true;
+        
+        foreach ($localVoices as $voice) {
+            if (!isset($clonedVoices[$voice])) {
+                $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
+                if (file_exists($voiceSamplePath)) {
+                    // Add delay between requests to avoid rate limiting (3 seconds for Inworld)
+                    if (!$firstVoice) {
+                        sleep(3);
+                    }
+                    $firstVoice = false;
+                    
+                    $result = getOrCreateInworldVoice($voice);
+                    if ($result !== false) {
+                        $syncedCount++;
+                    } else {
+                        $errorCount++;
+                        // Check if it's a rate limit error
+                        $errorMsg = error_get_last();
+                        if ($errorMsg && (strpos($errorMsg['message'], '429') !== false || strpos($errorMsg['message'], 'Too Many Requests') !== false)) {
+                            $rateLimitCount++;
+                            $inworldMessage .= "<p style='color:orange;'>Rate limit hit while generating voice: {$voice}. Please wait a moment and try syncing remaining voices.</p>";
+                            // Stop syncing if we hit rate limit
+                            break;
+                        } else {
+                            $inworldMessage .= "<p>Error generating voice: {$voice}</p>";
+                        }
+                    }
+                }
+            }
+        }
+        
+        if ($syncedCount > 0) {
+            $inworldMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully synced {$syncedCount} voice(s) to Inworld.</strong></p>";
+        }
+        if ($rateLimitCount > 0) {
+            $inworldMessage .= "<p style='color:orange;'><strong>Hit rate limit after {$syncedCount} voices. Please wait a few minutes before syncing remaining voices.</strong></p>";
+        }
+        if ($errorCount > 0 && $rateLimitCount === 0) {
+            $inworldMessage .= "<p style='color:red;'><strong>Failed to sync {$errorCount} voice(s).</strong></p>";
+        }
+        if ($syncedCount === 0 && $errorCount === 0 && $rateLimitCount === 0) {
+            $inworldMessage .= "<p>All voices are already synced to Inworld.</p>";
+        }
+    }
+    
+    // Inworld single voice sync handler
+    if (isset($_POST['action']) && $_POST['action'] === 'sync_inworld_single' && isset($_POST['voice'])) {
+        $voice = $_POST['voice'];
+        $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
+        if (file_exists($voiceSamplePath)) {
+            $result = getOrCreateInworldVoice($voice);
+            if ($result !== false && !empty($result)) {
+                // Redirect to refresh the page and show updated status
+                header('Location: ' . $webRoot . '/ui/xtts_clone.php?tab=inworld&synced=' . urlencode($voice));
+                exit;
+            } else {
+                $inworldMessage .= "<p style='color:red;'><strong>Failed to generate voice '{$voice}' for Inworld. Please check API configuration and logs.</strong></p>";
+            }
+        } else {
+            $inworldMessage .= "<p style='color:red;'><strong>Voice file not found: {$voice}</strong></p>";
+        }
+    }
+    
+    // Inworld clear cache handler
+    if (isset($_POST['action']) && $_POST['action'] === 'clear_inworld_cache') {
+        $db = $GLOBALS["db"];
+        $prefixEscaped = $db->escape('inworld_voice_id_');
+        $db->execQuery("DELETE FROM conf_opts WHERE id LIKE '{$prefixEscaped}%'");
+        $inworldMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Inworld voice cache cleared.</strong></p>";
+    }
+    
+    // Inworld upload handler
+    if (isset($_POST["submit_inworld"])) {
+        $total = count($_FILES['file']['name']);
+        $uploadedCount = 0;
+        $clonedCount = 0;
+        $errorCount = 0;
+        $rateLimitHit = false;
+        
+        for ($i = 0; $i < $total; $i++) {
+            if ($_FILES['file']['error'][$i] !== UPLOAD_ERR_OK) {
+                $inworldMessage .= '<p style="color:red;">Error: File upload error code ' . $_FILES['file']['error'][$i] . '</p>';
+                $errorCount++;
+                continue;
+            }
+
+            // Get the uploaded file details
+            $fileTmpPath = $_FILES["file"]["tmp_name"][$i];
+            $fileName = $_FILES["file"]["name"][$i];
+            $fileType = mime_content_type($fileTmpPath);
+            $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+            // Directory where you want to save the uploaded file
+            $saveDir = __DIR__ . '/../data/voices/';
+
+            // Ensure the directory exists
+            if (!is_dir($saveDir)) {
+                mkdir($saveDir, 0777, true);
+            }
+
+            // Ensure the file is a .wav file
+            if ($fileExtension !== 'wav' || ($fileType !== 'audio/wav' && $fileType !== 'audio/x-wav')) {
+                $inworldMessage .= "<p style='color:red;'>Error: Please upload a valid .wav file. ($fileName)</p>";
+                $errorCount++;
+            } else {
+                // Save the file to the specified directory
+                $destinationPath = $saveDir . $fileName;
+
+                if (move_uploaded_file($fileTmpPath, $destinationPath)) {
+                    $uploadedCount++;
+                    $voiceName = pathinfo($fileName, PATHINFO_FILENAME);
+                    
+                    // Automatically generate the voice for Inworld
+                    $result = getOrCreateInworldVoice($voiceName);
+                    if ($result !== false && !empty($result)) {
+                        $clonedCount++;
+                        $inworldMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and generated voice '{$voiceName}' for Inworld.</strong></p>";
+                    } else {
+                        // Check if it's a rate limit error
+                        $errorMsg = error_get_last();
+                        if ($errorMsg && (strpos($errorMsg['message'], '429') !== false || strpos($errorMsg['message'], 'Too Many Requests') !== false)) {
+                            $rateLimitHit = true;
+                            $inworldMessage .= "<p style='color:orange;'>Voice '{$voiceName}' uploaded but rate limit reached. Please wait before uploading more.</p>";
+                        } else {
+                            $inworldMessage .= "<p style='color:orange;'>Voice '{$voiceName}' uploaded but failed to generate. Please check API configuration and logs.</p>";
+                        }
+                    }
+                } else {
+                    $inworldMessage .= "<p style='color:red;'>Error: File could not be saved to $destinationPath.</p>";
+                    $errorCount++;
+                }
+            }
+        }
+        
+        // Summary message
+        if ($uploadedCount > 0 && $clonedCount === $uploadedCount) {
+            $inworldMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and generated {$uploadedCount} voice(s) for Inworld.</strong></p>";
+        } elseif ($uploadedCount > 0 && $clonedCount < $uploadedCount) {
+            $inworldMessage .= "<p style='color:orange;'><strong>Uploaded {$uploadedCount} voice(s), but only {$clonedCount} were successfully generated.</strong></p>";
+        }
+    }
+    
+    // XTTS single voice sync handler
+    if (isset($_POST['action']) && $_POST['action'] === 'sync_xtts_single' && isset($_POST['voice'])) {
+        $voice = $_POST['voice'];
+        $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
+        if (file_exists($voiceSamplePath)) {
+            $fileName = $voice . '.wav';
+            $fileType = mime_content_type($voiceSamplePath);
+            
+            // Prepare the cURL request
+            $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/upload_sample';
+            $cfile = new CURLFile($voiceSamplePath, $fileType, $fileName);
+            
+            $postFields = array('wavFile' => $cfile);
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                'accept: application/json',
+                'Content-Type: multipart/form-data'
+            ));
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            
+            if (curl_errno($ch)) {
+                $message .= '<p style="color:red;">Error syncing voice to XTTS server: ' . curl_error($ch) . '</p>';
+            } else {
+                if ($httpCode == 200) {
+                    // Refresh speakers list and redirect to show updated status
+                    $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/speakers_list';
+                    $ch2 = curl_init();
+                    curl_setopt($ch2, CURLOPT_URL, $url);
+                    curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch2, CURLOPT_HTTPHEADER, array('accept: application/json'));
+                    $response2 = curl_exec($ch2);
+                    
+                    if (!curl_errno($ch2) && curl_getinfo($ch2, CURLINFO_HTTP_CODE) == 200) {
+                        $speakersList = json_decode($response2, true);
+                        if (json_last_error() === JSON_ERROR_NONE && is_array($speakersList)) {
+                            $_SESSION['xtts_speakers_list'] = $speakersList;
+                        }
+                    }
+                    curl_close($ch2);
+                    
+                    header('Location: ' . $webRoot . '/ui/xtts_clone.php?tab=xtts&synced=' . urlencode($voice));
+                    exit;
+                } else {
+                    $message .= '<p style="color:red;">Error syncing voice to XTTS server (HTTP code ' . $httpCode . '): ' . htmlspecialchars($response) . '</p>';
+                }
+            }
+            curl_close($ch);
+        } else {
+            $message .= "<p style='color:red;'><strong>Voice file not found: {$voice}</strong></p>";
+        }
+    }
+    
+    // Get speakers list for POST request - store in session for display
+    if (isset($_POST["get_speakers"])) {
+        $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/speakers_list';
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('accept: application/json'));
+        $response = curl_exec($ch);
+        
+        if (!curl_errno($ch) && curl_getinfo($ch, CURLINFO_HTTP_CODE) == 200) {
+            $speakersList = json_decode($response, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($speakersList)) {
+                $_SESSION['xtts_speakers_list'] = $speakersList;
+            }
+        }
+        curl_close($ch);
+    }
     if (isset($_POST["submit"])) {
         $total = count($_FILES['file']['name']);
         for( $i=0 ; $i < $total ; $i++ ) {
@@ -116,65 +681,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
-    } elseif (isset($_POST["get_speakers"])) {
-        // Prepare the cURL request for getting the speakers list
-        $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/speakers_list';
-
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-            'accept: application/json'
-        ));
-
-        $response = curl_exec($ch);
-
-        // Debug: Check for cURL errors
-        if (curl_errno($ch)) {
-            $speakersMessage .= '<p>cURL Error: ' . curl_error($ch) . '</p>';
-        } else {
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-            if ($httpCode == 200) {
-                // Decode the JSON response
-                $speakersList = json_decode($response, true);
-
-                // Debug: Check for JSON errors
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    $speakersMessage .= '<p>JSON Error: ' . json_last_error_msg() . '</p>';
-                } else {
-                    // Sort the speakers list alphabetically
-                    sort($speakersList);
-                    $totalVoices = count($speakersList);
-
-                    // Display the speakers list in a 6-column grid with header
-                    $speakersMessage .= '<div class="voice-list-container">';
-                    $speakersMessage .= '<div class="voice-list-header">';
-                    $speakersMessage .= '<h3 style="color: #fff; margin: 0 0 15px 0;">Available Voices (' . $totalVoices . ' total)</h3>';
-                    $speakersMessage .= '</div>';
-                    $speakersMessage .= '<div class="voice-grid">';
-                    foreach ($speakersList as $speaker) {
-                        $displayName = basename($speaker, '.wav');
-                        $speakersMessage .= '<div class="voice-item">' . 
-                            '<span title="' . htmlspecialchars($speaker) . '">' . htmlspecialchars($displayName) . '</span>' .
-                            '<div class="button-container">' .
-                            '<button onclick="copyToClipboard(\'' . htmlspecialchars($displayName) . '\')" ' .
-                            'class="copy-btn" title="Copy voice name">⎘</button>' .
-                            '<button onclick="testVoice(\'' . htmlspecialchars($displayName) . '\')" ' .
-                            'class="play-btn" title="Test voice">▶</button>' .
-                            '</div>' .
-                        '</div>';
-                    }
-                    $speakersMessage .= '</div>';
-                    $speakersMessage .= '</div>';
-                }
-            } else {
-                $speakersMessage .= '<p>Error: Received HTTP code ' . $httpCode . '</p>';
-                $speakersMessage .= '<p>Response: ' . htmlspecialchars($response) . '</p>';
-            }
-        }
-
-        curl_close($ch);
     } elseif (isset($_POST["upload_all"])) {
         // Upload all .wav files in ../data/voices
         $saveDir = __DIR__ . '/../data/voices/';
@@ -236,8 +742,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         return url.replace(/\/+$/, '');
     }
 
-    function showLoadingMessage() {
-        document.getElementById('loading-overlay').style.display = 'block';
+    function showLoadingMessage(customMessage) {
+        const overlay = document.getElementById('loading-overlay');
+        const messageEl = document.getElementById('loading-message');
+        if (customMessage && messageEl) {
+            messageEl.innerHTML = customMessage + ' <br><b>Do not refresh the page<span id="ellipsis"></span></b>';
+        }
+        overlay.style.display = 'block';
         animateEllipsis();
     }
 
@@ -252,31 +763,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             ellipsis.innerHTML = dotStr;
         }, 500);
-    }
-
-    function toggleVoiceList() {
-        const voiceList = document.getElementById('voiceList');
-        const toggleBtn = document.getElementById('toggleVoices');
-        const isHidden = voiceList.style.display === 'none' || !voiceList.style.display;
-        
-        if (isHidden) {
-            // Create and submit form to get speakers
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = WEB_ROOT + '/ui/xtts_clone.php#voiceList';
-            
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'get_speakers';
-            input.value = '1';
-            
-            form.appendChild(input);
-            document.body.appendChild(form);
-            form.submit();
-        } else {
-            voiceList.style.display = 'none';
-            toggleBtn.textContent = 'Show Available Voices';
-        }
     }
 
     function showToast(message, duration = 1500) {
@@ -330,20 +816,92 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
     }
 
-    // Initialize voice list state
-    document.addEventListener('DOMContentLoaded', function() {
-        const voiceList = document.getElementById('voiceList');
-        const toggleBtn = document.getElementById('toggleVoices');
+    function switchTab(tabName) {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('tab', tabName);
+        window.location.href = currentUrl.toString();
+    }
+
+    function testCartesiaVoice(voiceName) {
+        const testUrl = WEB_ROOT + '/ui/xtts_clone.php?action=test_cartesia&voice=' + encodeURIComponent(voiceName);
         
-        // Set initial state
-        if (!voiceList.innerHTML.trim()) {
-            voiceList.style.display = 'none';
-            toggleBtn.textContent = 'Show Available Voices';
-        } else {
-            voiceList.style.display = 'block';
-            toggleBtn.textContent = 'Hide Available Voices';
-        }
-    });
+        fetch(testUrl)
+            .then(function(response) {
+                if (!response.ok) {
+                    return response.json().then(function(data) {
+                        throw new Error(data.error || 'Failed to generate test audio');
+                    });
+                }
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.url) {
+                    const audio = new Audio(data.url);
+                    audio.play().catch(function(err) {
+                        console.error('Error playing audio:', err);
+                        alert('Error playing test audio. Please check the console for details.');
+                    });
+                } else {
+                    throw new Error(data.error || 'No audio URL returned');
+                }
+            })
+            .catch(function(err) {
+                console.error('Error testing voice:', err);
+                alert('Error: ' + err.message);
+            });
+    }
+
+    function testInworldVoice(voiceName) {
+        const testUrl = WEB_ROOT + '/ui/xtts_clone.php?action=test_inworld&voice=' + encodeURIComponent(voiceName);
+        
+        fetch(testUrl)
+            .then(function(response) {
+                if (!response.ok) {
+                    return response.json().then(function(data) {
+                        throw new Error(data.error || 'Failed to generate test audio');
+                    });
+                }
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.url) {
+                    const audio = new Audio(data.url);
+                    audio.play().catch(function(err) {
+                        console.error('Error playing audio:', err);
+                        alert('Error playing test audio. Please check the console for details.');
+                    });
+                } else {
+                    throw new Error(data.error || 'No audio URL returned');
+                }
+            })
+            .catch(function(err) {
+                console.error('Error testing voice:', err);
+                alert('Error: ' + err.message);
+            });
+    }
+
+    function syncSingleVoice(provider, voiceName) {
+        const actionText = provider === 'xtts' ? 'Syncing voice to XTTS server' : 'Generating voice for ' + provider;
+        showLoadingMessage(actionText + ', please wait...');
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = WEB_ROOT + '/ui/xtts_clone.php?tab=' + provider;
+        
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = 'sync_' + provider + '_single';
+        
+        const voiceInput = document.createElement('input');
+        voiceInput.type = 'hidden';
+        voiceInput.name = 'voice';
+        voiceInput.value = voiceName;
+        
+        form.appendChild(actionInput);
+        form.appendChild(voiceInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
 </script>
 <?php
 
@@ -528,6 +1086,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         transform: scale(1.1);
     }
 
+    .sync-btn {
+        opacity: 0.4;
+        background: none;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        padding: 4px;
+        font-size: 14px;
+        transition: all 0.2s ease;
+    }
+
+    .voice-status-item:hover .sync-btn {
+        opacity: 0.8;
+    }
+
+    .sync-btn:hover:not(:disabled) {
+        opacity: 1 !important;
+        transform: scale(1.1);
+        color: rgb(242, 124, 17);
+    }
+
+    .sync-btn:disabled {
+        opacity: 0.2;
+        cursor: not-allowed;
+    }
+
     /* Voice list container styling */
     .voice-list-container {
         background: #1a1a1a;
@@ -560,6 +1144,104 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .voice-item:hover {
         background-color: #4a4a4a;
         border-color: rgb(242, 124, 17);
+    }
+
+    /* Tab Navigation */
+    .tab-nav {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 30px;
+        border-bottom: 2px solid #4a4a4a;
+        padding-bottom: 10px;
+    }
+
+    .tab-btn {
+        padding: 12px 24px;
+        background: #2a2a2a;
+        border: 2px solid #4a4a4a;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        color: #cfd8e3;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        margin-bottom: -2px;
+    }
+
+    .tab-btn:hover {
+        background: #3a3a3a;
+        color: rgb(242, 124, 17);
+    }
+
+    .tab-btn.active {
+        background: #2a2a2a;
+        border-color: rgb(242, 124, 17);
+        border-bottom: 2px solid #2a2a2a;
+        color: rgb(242, 124, 17);
+        position: relative;
+        z-index: 1;
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .voice-status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .voice-status-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background-color: #3a3a3a;
+        cursor: pointer;
+        border: 1px solid #555555;
+        border-radius: 6px;
+        color: #f8f9fa;
+        transition: all 0.2s ease;
+    }
+
+    .voice-status-item:hover {
+        background-color: #4a4a4a;
+        border-color: rgb(242, 124, 17);
+    }
+
+    .voice-status-item .voice-name {
+        flex: 1;
+        font-weight: 500;
+    }
+
+    .voice-status-item .status-icon {
+        margin: 0 12px;
+        font-size: 18px;
+    }
+
+    .voice-status-item .status-icon.cloned {
+        color: #4caf50;
+    }
+
+    .voice-status-item .status-icon.not-cloned {
+        color: #f44336;
+    }
+
+    .voice-status-item .voice-id {
+        font-size: 11px;
+        color: #aaa;
+        margin-right: 8px;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     /* Responsive Design */
@@ -636,7 +1318,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <main>
     <div id="loading-overlay">
-        <p>Syncing voice cache to CHIM XTTS server, this can take a couple minutes. <br><b>Do not refresh the page<span id="ellipsis"></span></b></p>
+        <p id="loading-message">Processing, please wait... <br><b>Do not refresh the page<span id="ellipsis"></span></b></p>
     </div>
 
     <div id="toast" class="toast-notification">
@@ -644,73 +1326,350 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <div class="page-header">
-        <h1>CHIM XTTS Voice Management 
+        <h1>Voice Management 
             <a href="https://dwemerdynamics.hostwiki.io/en/Auto-TTS-Voices" target="_blank" rel="noopener" 
                style="display: inline-block; margin-left: 15px; color: rgb(242, 124, 17); text-decoration: none; font-size: 0.7em; vertical-align: top; border: 2px solid rgb(242, 124, 17); border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 20px; transition: all 0.3s ease;" 
                title="View detailed documentation about TTS Voice Configuration"
                onmouseover="this.style.background='rgb(242, 124, 17)'; this.style.color='white';" 
                onmouseout="this.style.background='transparent'; this.style.color='rgb(242, 124, 17)';">ℹ</a>
         </h1>
-        <p>The <b>CHIM XTTS Voice Management</b> system allows you to manage custom voice samples for NPCs using the CHIM XTTS Server.</p>
-        <p>This works differently from other TTS services - it requires voice samples to be uploaded and cached on the server.</p>
-        <p>For detailed information on how it works, please read our <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options#chim-xtts" style="color: yellow;" target="_blank" rel="noopener noreferrer">CHIM XTTS Voice Guide</a>.</p>
-        <h3><strong>Ensure all voice sample filenames are lowercase and spaces are replaced with underscores (_).</strong></h3>
-        <h4>Example: "Mjoll the Lioness" becomes "mjoll_the_lioness.wav"</h4>
+        <p>Manage voice samples across multiple TTS providers: XTTS, Cartesia, and Inworld.</p>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+        <button class="tab-btn <?php echo $activeTab === 'xtts' ? 'active' : ''; ?>" 
+                onclick="switchTab('xtts')">XTTS</button>
+        <button class="tab-btn <?php echo $activeTab === 'cartesia' ? 'active' : ''; ?>" 
+                onclick="switchTab('cartesia')">Cartesia</button>
+        <button class="tab-btn <?php echo $activeTab === 'inworld' ? 'active' : ''; ?>" 
+                onclick="switchTab('inworld')">Inworld</button>
     </div>
 
     <?php if (!empty($message)): ?>
         <div class="message"><?php echo $message; ?></div>
     <?php endif; ?>
+    <?php if (!empty($cartesiaMessage)): ?>
+        <div class="message"><?php echo $cartesiaMessage; ?></div>
+    <?php endif; ?>
+    <?php if (!empty($inworldMessage)): ?>
+        <div class="message"><?php echo $inworldMessage; ?></div>
+    <?php endif; ?>
+    <?php if (isset($_GET['synced']) && $activeTab === 'xtts'): ?>
+        <div class="message">
+            <p style='color:rgb(247, 231, 16);'><strong>Successfully synced voice '<?php echo htmlspecialchars($_GET['synced']); ?>' to XTTS server.</strong></p>
+        </div>
+    <?php endif; ?>
+    <?php if (isset($_GET['synced']) && $activeTab === 'cartesia'): ?>
+        <div class="message">
+            <p style='color:rgb(247, 231, 16);'><strong>Successfully generated voice '<?php echo htmlspecialchars($_GET['synced']); ?>' for Cartesia.</strong></p>
+        </div>
+    <?php endif; ?>
+    <?php if (isset($_GET['synced']) && $activeTab === 'inworld'): ?>
+        <div class="message">
+            <p style='color:rgb(247, 231, 16);'><strong>Successfully generated voice '<?php echo htmlspecialchars($_GET['synced']); ?>' for Inworld.</strong></p>
+        </div>
+    <?php endif; ?>
 
-    <div class="content-grid">
-        <div class="content-section">
+    <!-- XTTS Tab Content -->
+    <div class="tab-content <?php echo $activeTab === 'xtts' ? 'active' : ''; ?>">
+        <div class="content-section full-width-section">
             <h1>Voice Sample Upload</h1>
-            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php" method="post" enctype="multipart/form-data">
-                <div>
-                    <label for="file">Select .wav file(s) to upload:</label>
-                    <br>
-                    <input type="file" name="file[]" id="file" accept=".wav" multiple="multiple" required>
+            <p>Upload voice samples to <code>data/voices</code>. Files will be cached and uploaded to the XTTS server.</p>
+            
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=xtts" method="post" enctype="multipart/form-data" style="margin-top: 20px;">
+                <div style="margin-bottom: 15px;">
+                    <label for="file" style="display: block; margin-bottom: 8px;">Select .wav file(s) to upload:</label>
+                    <input type="file" name="file[]" id="file" accept=".wav" multiple="multiple" required style="width: 100%; max-width: 500px; padding: 8px;">
                 </div>
                 <div class="button-group">
                     <input type="submit" name="submit" value="Upload Voice Sample" class="action-button upload-csv">
                 </div>
             </form>
-            <p>Voice samples will be cached in the CHIM server and uploaded to the running CHIM XTTS server.</p>
-            <p><b>Note: If you are replacing an existing voice, you will need to restart the CHIM XTTS server.</b></p>
-            <p>Recommended .wav file specifications:</p>
-            <ul>
-                <li>Format: WAV (PCM)</li>
-                <li>Bit Depth: 16-bit</li>
-                <li>Channels: Mono</li>
-                <li>Sample Rate: 20500Hz</li>
-                <li>Size: 5MB or less</li>
-            </ul>
+            
+            <div style="margin-top: 20px; padding: 15px; background: rgba(74, 138, 182, 0.1); border: 1px solid #4a8ab6; border-radius: 6px;">
+                <p style="margin: 0 0 10px 0; font-weight: 600; color: #4a8ab6;">📋 File Requirements:</p>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>Format: WAV (PCM), 16-bit, Mono, 20500Hz</li>
+                    <li>Size: 5MB or less</li>
+                    <li>Filename: lowercase with underscores (e.g., "mjoll_the_lioness.wav")</li>
+                </ul>
+                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #aaa;"><b>Note:</b> If replacing an existing voice, restart the XTTS server after upload.</p>
+            </div>
         </div>
 
-        <div class="content-section">
-            <h1>Current Voice List</h1>
-            <div class="button-group">
-                <button onclick="toggleVoiceList()" id="toggleVoices" class="action-button download-csv">Show Available Voices</button>
+        <div class="content-section full-width-section">
+            <h1>XTTS Voice Cache</h1>
+            <p>Manage voice samples for XTTS. Voices are uploaded from local .wav files in <code>data/voices</code> to the XTTS server.</p>
+            
+            <?php
+            $localVoices = getLocalVoices();
+            $xttsVoices = [];
+            if (isset($_SESSION['xtts_speakers_list']) && is_array($_SESSION['xtts_speakers_list'])) {
+                foreach ($_SESSION['xtts_speakers_list'] as $speaker) {
+                    $displayName = basename($speaker, '.wav');
+                    $xttsVoices[$displayName] = true;
+                }
+            }
+            ?>
+            
+            <div class="button-group" style="margin-top: 20px;">
+                <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=xtts" method="post" style="display: inline;">
+                    <input type="hidden" name="get_speakers" value="1">
+                    <input type="submit" value="Refresh XTTS Server Voices" class="action-button download-csv">
+                </form>
             </div>
-            <div id="voiceList" style="display: none; margin-top: 15px;">
-                <?php echo $speakersMessage; ?>
+
+            <div class="voice-status-grid" style="margin-top: 20px;">
+                <?php foreach ($localVoices as $voice): ?>
+                    <?php $isOnServer = isset($xttsVoices[$voice]); ?>
+                    <div class="voice-status-item" onclick="copyToClipboard('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" title="Click to copy voice name">
+                        <span class="voice-name"><?php echo htmlspecialchars($voice); ?></span>
+                        <span class="status-icon <?php echo $isOnServer ? 'cloned' : 'not-cloned'; ?>">
+                            <?php echo $isOnServer ? '✓' : '✗'; ?>
+                        </span>
+                        <div class="button-container">
+                            <?php if ($isOnServer): ?>
+                                <button onclick="event.stopPropagation(); testVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
+                                        class="play-btn" title="Test voice">▶</button>
+                            <?php else: ?>
+                                <button onclick="event.stopPropagation(); syncSingleVoice('xtts', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
+                                        class="sync-btn" title="Sync this voice to XTTS server">↻</button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+                <?php if (empty($localVoices)): ?>
+                    <p>No voice files found in <code>data/voices</code>. Upload voice samples above first.</p>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <div class="content-section full-width-section">
+            <h1>Voice Status</h1>
+            <p>Manage voice samples for XTTS. Voices are uploaded from local .wav files in <code>data/voices</code> to the XTTS server.</p>
+            
+            <?php
+            $localVoices = getLocalVoices();
+            $xttsVoices = [];
+            if (isset($_SESSION['xtts_speakers_list']) && is_array($_SESSION['xtts_speakers_list'])) {
+                foreach ($_SESSION['xtts_speakers_list'] as $speaker) {
+                    $displayName = basename($speaker, '.wav');
+                    $xttsVoices[$displayName] = true;
+                }
+            }
+            ?>
+            
+            <div class="button-group" style="margin-top: 20px;">
+                <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=xtts" method="post" style="display: inline;">
+                    <input type="hidden" name="get_speakers" value="1">
+                    <input type="submit" value="Refresh XTTS Server Voices" class="action-button download-csv">
+                </form>
+            </div>
+
+            <div class="voice-status-grid" style="margin-top: 20px;">
+                <?php foreach ($localVoices as $voice): ?>
+                    <?php $isOnServer = isset($xttsVoices[$voice]); ?>
+                    <div class="voice-status-item" onclick="copyToClipboard('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" title="Click to copy voice name">
+                        <span class="voice-name"><?php echo htmlspecialchars($voice); ?></span>
+                        <span class="status-icon <?php echo $isOnServer ? 'cloned' : 'not-cloned'; ?>">
+                            <?php echo $isOnServer ? '✓' : '✗'; ?>
+                        </span>
+                        <div class="button-container">
+                            <?php if ($isOnServer): ?>
+                                <button onclick="event.stopPropagation(); testVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
+                                        class="play-btn" title="Test voice">▶</button>
+                            <?php else: ?>
+                                <button onclick="event.stopPropagation(); syncSingleVoice('xtts', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
+                                        class="sync-btn" title="Sync this voice to XTTS server">↻</button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+                <?php if (empty($localVoices)): ?>
+                    <p>No voice files found in <code>data/voices</code>. Upload voice samples above first.</p>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <div class="content-section full-width-section">
+            <h1>Cloud XTTS Sync</h1>
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=xtts" method="post" onsubmit="showLoadingMessage('Syncing voice cache to CHIM XTTS server, this can take a couple minutes...');">
+                <p><strong>Only required for online CHIM XTTS instances.</strong></p>
+                <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
+                <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
+                <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.hostwiki.io/en/Vast-AI" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
+                <p>Cached voices are stored in <code>data/voices</code>. <a href="<?php echo $webRoot; ?>/data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>
+                <div class="button-group">
+                    <input type="submit" name="upload_all" value="Sync Voice Cache" class="action-button edit">
+                </div>
+            </form>
+            <p>Advanced XTTS configuration: <a href="<?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs" style="color: yellow;" target="_blank"><?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs</a></p>
+        </div>
+    </div>
+
+    <!-- Cartesia Tab Content -->
+    <div class="tab-content <?php echo $activeTab === 'cartesia' ? 'active' : ''; ?>">
+        <div class="content-section full-width-section">
+            <h1>Voice Sample Upload</h1>
+            <p>Upload voice samples to <code>data/voices</code>. Files will be available for generating voices in Cartesia.</p>
+            
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=cartesia" method="post" enctype="multipart/form-data" style="margin-top: 20px;" onsubmit="showLoadingMessage('Uploading and generating voice for Cartesia, please wait...');">
+                <div style="margin-bottom: 15px;">
+                    <label for="file_cartesia" style="display: block; margin-bottom: 8px;">Select .wav file(s) to upload:</label>
+                    <input type="file" name="file[]" id="file_cartesia" accept=".wav" multiple="multiple" required style="width: 100%; max-width: 500px; padding: 8px;">
+                </div>
+                <div class="button-group">
+                    <input type="submit" name="submit_cartesia" value="Upload Voice Sample" class="action-button upload-csv">
+                </div>
+            </form>
+            
+            <div style="margin-top: 20px; padding: 15px; background: rgba(74, 138, 182, 0.1); border: 1px solid #4a8ab6; border-radius: 6px;">
+                <p style="margin: 0 0 10px 0; font-weight: 600; color: #4a8ab6;">📋 File Requirements:</p>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>Format: WAV (PCM), 16-bit, Mono, 20500Hz</li>
+                    <li>Size: 5MB or less</li>
+                    <li>Filename: lowercase with underscores (e.g., "mjoll_the_lioness.wav")</li>
+                </ul>
+                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #aaa;"><b>Note:</b> Files will be saved to data/voices and automatically generated for Cartesia.</p>
+            </div>
+        </div>
+
+        <div class="content-section full-width-section">
+            <h1>Cartesia Voice Cacje</h1>
+            <p>Manage voice generation for Cartesia TTS. Voices are generated from local .wav files in <code>data/voices</code>.</p>
+            <p>For detailed information, see our <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options#cartesia" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cartesia TTS Guide</a>.</p>
+            
+            <?php
+            $cartesiaConfigured = isProviderConfigured('cartesia');
+            $localVoices = getLocalVoices();
+            $clonedVoices = getClonedVoices('cartesia');
+            $missingVoices = array_diff($localVoices, array_keys($clonedVoices));
+            ?>
+            
+            <?php if (!$cartesiaConfigured): ?>
+                <div style="background: rgba(244, 67, 54, 0.1); border: 2px solid #f44336; border-radius: 8px; padding: 16px; margin: 20px 0; color: #f8f9fa;">
+                    <p style="margin: 0; font-weight: 600; color: #f44336;">⚠️ Cartesia API not configured</p>
+                    <p style="margin: 8px 0 0 0;">Please configure your Cartesia API key in the <a href="<?php echo $webRoot; ?>/ui/core/api_badge.php" style="color: yellow;">API Badge</a> page before syncing voices.</p>
+                </div>
+            <?php endif; ?>
+            
+            <div style="background: rgba(74, 138, 182, 0.1); border: 2px solid #4a8ab6; border-radius: 8px; padding: 16px; margin: 20px 0; color: #f8f9fa;">
+                <p style="margin: 0; font-weight: 600; color: #4a8ab6;">ℹ️ Automatic Voice Generation</p>
+                <p style="margin: 8px 0 0 0;">Voices are automatically generated when you speak to an NPC using that voice in-game, if Cartesia TTS is selected as your TTS provider. You don't need to manually sync all voices upfront.</p>
+            </div>
+
+            <div class="voice-status-grid">
+                <?php foreach ($localVoices as $voice): ?>
+                    <?php $isCloned = isset($clonedVoices[$voice]); ?>
+                    <div class="voice-status-item" onclick="copyToClipboard('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" title="Click to copy voice name">
+                        <span class="voice-name"><?php echo htmlspecialchars($voice); ?></span>
+                        <span class="status-icon <?php echo $isCloned ? 'cloned' : 'not-cloned'; ?>">
+                            <?php echo $isCloned ? '✓' : '✗'; ?>
+                        </span>
+                        <?php if ($isCloned): ?>
+                            <span class="voice-id" title="<?php echo htmlspecialchars($clonedVoices[$voice]); ?>">
+                                <?php echo htmlspecialchars(substr($clonedVoices[$voice], 0, 15)) . (strlen($clonedVoices[$voice]) > 15 ? '...' : ''); ?>
+                            </span>
+                        <?php endif; ?>
+                        <div class="button-container">
+                            <?php if ($isCloned): ?>
+                                <button onclick="event.stopPropagation(); testCartesiaVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
+                                        class="play-btn" title="Test voice">▶</button>
+                            <?php else: ?>
+                                <button onclick="event.stopPropagation(); syncSingleVoice('cartesia', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
+                                        class="sync-btn" title="Sync this voice" <?php echo !$cartesiaConfigured ? 'disabled' : ''; ?>>↻</button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+                <?php if (empty($localVoices)): ?>
+                    <p>No voice files found in <code>data/voices</code>. Upload voice samples in the XTTS tab first.</p>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 
-    <div class="content-section full-width-section">
-        <h1>Cloud XTTS Sync</h1>
-        <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php" method="post" onsubmit="showLoadingMessage();">
-            <p><strong>Only required for online CHIM XTTS instances.</strong></p>
-            <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
-            <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
-            <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.hostwiki.io/en/Vast-AI" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
-            <p>Cached voices are stored in <code>data/voices</code>. <a href="<?php echo $webRoot; ?>/data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>
-            <div class="button-group">
-                <input type="submit" name="upload_all" value="Sync Voice Cache" class="action-button edit">
+    <!-- Inworld Tab Content -->
+    <div class="tab-content <?php echo $activeTab === 'inworld' ? 'active' : ''; ?>">
+        <div class="content-section full-width-section">
+            <h1>Voice Sample Upload</h1>
+            <p>Upload voice samples to <code>data/voices</code>. Files will be available for generating voices in Inworld.</p>
+            
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=inworld" method="post" enctype="multipart/form-data" style="margin-top: 20px;" onsubmit="showLoadingMessage('Uploading and generating voice for Inworld, please wait...');">
+                <div style="margin-bottom: 15px;">
+                    <label for="file_inworld" style="display: block; margin-bottom: 8px;">Select .wav file(s) to upload:</label>
+                    <input type="file" name="file[]" id="file_inworld" accept=".wav" multiple="multiple" required style="width: 100%; max-width: 500px; padding: 8px;">
+                </div>
+                <div class="button-group">
+                    <input type="submit" name="submit_inworld" value="Upload Voice Sample" class="action-button upload-csv">
+                </div>
+            </form>
+            
+            <div style="margin-top: 20px; padding: 15px; background: rgba(74, 138, 182, 0.1); border: 1px solid #4a8ab6; border-radius: 6px;">
+                <p style="margin: 0 0 10px 0; font-weight: 600; color: #4a8ab6;">📋 File Requirements:</p>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>Format: WAV (PCM), 16-bit, Mono, 20500Hz</li>
+                    <li>Size: 5MB or less</li>
+                    <li>Filename: lowercase with underscores (e.g., "mjoll_the_lioness.wav")</li>
+                </ul>
+                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #aaa;"><b>Note:</b> Files will be saved to data/voices and automatically generated for Inworld.</p>
             </div>
-        </form>
-        <p>Advanced XTTS configuration: <a href="<?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs" style="color: yellow;" target="_blank"><?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs</a></p>
+        </div>
+
+        <div class="content-section full-width-section">
+            <h1>Inworld Voice Cache</h1>
+            <p>Manage voice generation for Inworld TTS. Voices are generated from local .wav files in <code>data/voices</code>.</p>
+            <p>For detailed information, see our <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options#inworld" style="color: yellow;" target="_blank" rel="noopener noreferrer">Inworld TTS Guide</a>.</p>
+            
+            <?php
+            $inworldConfigured = isProviderConfigured('inworld');
+            $localVoices = getLocalVoices();
+            $clonedVoices = getClonedVoices('inworld');
+            $missingVoices = array_diff($localVoices, array_keys($clonedVoices));
+            ?>
+            
+            <?php if (!$inworldConfigured): ?>
+                <div style="background: rgba(244, 67, 54, 0.1); border: 2px solid #f44336; border-radius: 8px; padding: 16px; margin: 20px 0; color: #f8f9fa;">
+                    <p style="margin: 0; font-weight: 600; color: #f44336;">⚠️ Inworld API not configured</p>
+                    <p style="margin: 8px 0 0 0;">Please configure your Inworld API credential in the <a href="<?php echo $webRoot; ?>/ui/core/api_badge.php" style="color: yellow;">API Badge</a> page before syncing voices.</p>
+                </div>
+            <?php endif; ?>
+            
+            <div style="background: rgba(74, 138, 182, 0.1); border: 2px solid #4a8ab6; border-radius: 8px; padding: 16px; margin: 20px 0; color: #f8f9fa;">
+                <p style="margin: 0; font-weight: 600; color: #4a8ab6;">ℹ️ Automatic Voice Generation</p>
+                <p style="margin: 8px 0 0 0;">Voices are automatically generated when you speak to an NPC using that voice in-game, if Inworld TTS is selected as your TTS provider. You don't need to manually sync all voices upfront.</p>
+            </div>
+
+            <div class="voice-status-grid">
+                <?php foreach ($localVoices as $voice): ?>
+                    <?php $isCloned = isset($clonedVoices[$voice]); ?>
+                    <div class="voice-status-item" onclick="copyToClipboard('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" title="Click to copy voice name">
+                        <span class="voice-name"><?php echo htmlspecialchars($voice); ?></span>
+                        <span class="status-icon <?php echo $isCloned ? 'cloned' : 'not-cloned'; ?>">
+                            <?php echo $isCloned ? '✓' : '✗'; ?>
+                        </span>
+                        <?php if ($isCloned): ?>
+                            <span class="voice-id" title="<?php echo htmlspecialchars($clonedVoices[$voice]); ?>">
+                                <?php echo htmlspecialchars(substr($clonedVoices[$voice], 0, 15)) . (strlen($clonedVoices[$voice]) > 15 ? '...' : ''); ?>
+                            </span>
+                        <?php endif; ?>
+                        <div class="button-container">
+                            <?php if ($isCloned): ?>
+                                <button onclick="event.stopPropagation(); testInworldVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
+                                        class="play-btn" title="Test voice">▶</button>
+                            <?php else: ?>
+                                <button onclick="event.stopPropagation(); syncSingleVoice('inworld', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
+                                        class="sync-btn" title="Sync this voice" <?php echo !$inworldConfigured ? 'disabled' : ''; ?>>↻</button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+                <?php if (empty($localVoices)): ?>
+                    <p>No voice files found in <code>data/voices</code>. Upload voice samples in the XTTS tab first.</p>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 </main>
 

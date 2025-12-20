@@ -227,7 +227,7 @@
       "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro! Will connect automatically so do not change the URL. Does not currently support Chat Assist/Creation.","helpurl":"https://dwemerdynamics.hostwiki.io/en/Online-LLMs#player2"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","piper-tts","mimic3","deepgram","cartesia"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","piper-tts","mimic3","deepgram","cartesia","inworld"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
 
   "TTS": {
     "_title":"Text-to-Speech Service",
@@ -356,9 +356,18 @@
       "language": {"type":"select","values":["en","fr","de","es","pt","zh","ja","hi","it","ko","nl","pl","ru","sv","tr","tl","bg","ro","ar","cs","el","fi","hr","ms","sk","da","ta","uk","hu","no","vi","bn","th","he","ka","id","te","gu","kn","ml","mr","pa"],"description":"Language to use for TTS generation. Sonic 3 supports 42 languages."},
       "model_id": {"type":"select","values":["sonic-3","sonic-english","sonic-multilingual"],"description":"Cartesia model to use. sonic-3 is the latest model with 42 languages, volume/speed/emotion controls. Use sonic-3-2025-10-27 to pin a specific snapshot.","helpurl":"https://docs.cartesia.ai/"},
       "speed": {"type":"select","values":["slowest","slow","normal","fast","fastest"],"description":"Speaking speed for the voice"}
+    },
+    "INWORLD": {
+      "_title": "Inworld TTS",
+      "workspace": {"type":"string","description":"Inworld workspace ID (required for voice cloning). Format: workspaces/{workspace} or just the workspace ID.","helpurl":"https://docs.inworld.ai/"},
+      "voiceid": {"type":"string","description":"Voice file name. Works the same as CHIM-XTTS voiceid. Will only work with voices in your Voice Cache. Voice will be automatically cloned to Inworld when first used.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
+      "language": {"type":"select","values":["EN_US","ZH_CN","KO_KR","JA_JP","RU_RU","IT_IT","ES_ES","PT_BR","DE_DE","FR_FR","AR_SA","PL_PL","NL_NL","HI_IN","HE_IL"],"description":"Language to use for TTS generation. Uses regional language codes."},
+      "model_id": {"type":"select","values":["inworld-tts-1","inworld-tts-1-max"],"description":"Inworld model to use. inworld-tts-1 is the standard model, inworld-tts-1-max is the higher quality model.","helpurl":"https://docs.inworld.ai/docs/tts/tts-models"},
+      "temperature": {"type":"number","description":"Sampling temperature (0-2). Higher values make output more random. Default: 1.1"},
+      "speed": {"type":"number","description":"Speaking rate/speed (0.5-1.5). Default: 1.0"}
     }
 },
-  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","piper-tts","azure","11labs","openai","kokoro","zonos_gradio","cartesia"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
+  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","piper-tts","azure","11labs","openai","kokoro","zonos_gradio","cartesia","inworld"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
   "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
   "TTSFUNCTION_PLAYER_VOICE_ID": {"type":"integer","userlvl":"pro","scope":"global","description":"Speaker ID to select a voice from multi-voice model."},
   "TTSFUNCTION_PLAYER_LANGUAGE": {"type":"string","userlvl":"basic","scope":"global","description":"Overrides the TTS language for the player character."},

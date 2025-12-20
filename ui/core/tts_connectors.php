@@ -121,6 +121,7 @@ $ttsMap = [
 	'piper-tts' => 'PIPERTTS',
 	'deepgram' => 'deepgram',
 	'cartesia' => 'CARTESIA',
+	'inworld' => 'INWORLD',
 ];
 
 // Values for TTSFUNCTION select from schema

@@ -561,19 +561,63 @@ function mapSpeedToCartesia($speed) {
 
 /**
  * Get voice name to use for TTS
+ * Uses voicetype from database instead of NPC name
  * 
  * @return string The voice name
  */
 function getCartesiaVoiceName() {
+    require_once(__DIR__ . "/../lib/utils.php");
+    
     $voice = isset($GLOBALS["TTS"]["FORCED_VOICE_DEV"]) 
         ? $GLOBALS["TTS"]["FORCED_VOICE_DEV"] 
         : ($GLOBALS["TTS"]["CARTESIA"]["voiceid"] ?? '');
     
-    // Fallback to herika_name if voiceid is blank
+    // If voiceid is blank, try to get voicetype from database
     if (empty($voice)) {
-        $voice = str_replace(" ", "_", mb_strtolower($GLOBALS["HERIKA_NAME"], 'UTF-8'));
-        $voice = str_replace("'", "+", $voice);
-        $voice = preg_replace('/[^a-zA-Z0-9_+]/u', '', $voice);
+        // Get codename from HERIKA_NAME (NPC name)
+        $codename = npcNameToCodename($GLOBALS["HERIKA_NAME"] ?? '');
+        
+        if (!empty($codename)) {
+            // Try to get voiceid from NPC profile first
+            try {
+                if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
+                    require_once(__DIR__ . "/../lib/{$GLOBALS["DBDRIVER"]}.class.php");
+                    $GLOBALS["db"] = new sql();
+                }
+                $npcRow = $GLOBALS["db"]->fetchOne(
+                    "SELECT voiceid FROM core_npc_master WHERE lower(npc_name) = lower('" . $GLOBALS["db"]->escape($GLOBALS["HERIKA_NAME"] ?? '') . "') LIMIT 1"
+                );
+                if (is_array($npcRow) && !empty($npcRow['voiceid'])) {
+                    $voice = trim($npcRow['voiceid']);
+                }
+            } catch (Throwable $_e) {}
+            
+            // If still empty, get voicetype from conf_opts
+            if (empty($voice)) {
+                try {
+                    if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
+                        require_once(__DIR__ . "/../lib/{$GLOBALS["DBDRIVER"]}.class.php");
+                        $GLOBALS["db"] = new sql();
+                    }
+                    $cn = $GLOBALS["db"]->escape("Voicetype/$codename");
+                    $vtype = $GLOBALS["db"]->fetchAll("SELECT value FROM conf_opts WHERE id = '$cn' LIMIT 1");
+                    if (is_array($vtype) && !empty($vtype[0]["value"])) {
+                        $voicetypeString = $vtype[0]["value"];
+                        $voicetype = explode("\\", $voicetypeString);
+                        if (isset($voicetype[3]) && !empty($voicetype[3])) {
+                            $voice = strtolower($voicetype[3]);
+                        }
+                    }
+                } catch (Throwable $_e) {}
+            }
+        }
+        
+        // Final fallback to herika_name if voicetype not found
+        if (empty($voice)) {
+            $voice = str_replace(" ", "_", mb_strtolower($GLOBALS["HERIKA_NAME"] ?? '', 'UTF-8'));
+            $voice = str_replace("'", "+", $voice);
+            $voice = preg_replace('/[^a-zA-Z0-9_+]/u', '', $voice);
+        }
     }
     
     if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"])) {

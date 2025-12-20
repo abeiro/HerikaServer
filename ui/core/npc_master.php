@@ -59,6 +59,15 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
 $GLOBALS["db"] = new sql();
 $npc = new NpcMaster();
 
+// Check if The Narrator exists in core_npc_master (for informational note)
+$narratorExistsInNpcMaster = false;
+try {
+    $narratorCheck = $GLOBALS["db"]->fetchOne("SELECT 1 FROM core_npc_master WHERE npc_name = 'The Narrator' LIMIT 1");
+    $narratorExistsInNpcMaster = ($narratorCheck !== null && $narratorCheck !== false);
+} catch (Exception $e) {
+    // Ignore errors
+}
+
 $lastInfoRow=$GLOBALS["db"]->fetchOne("select max(gamets) as gamets from eventlog where type='infosave'");
 $LAST_INFOSAVE_EVENT=$lastInfoRow["gamets"];
 
@@ -507,9 +516,8 @@ if ($gpsOnly) {
     $where .= " and coalesce(metadata::text,'') ~ '\"gps_track\"\\s*:\\s*(true|1)'";
 }
 
-// Default: favorites first, then alphabetical by name
-// Ensure The Narrator is always first, then favorites, then alpha
-$order = "order by (case when npc_name='The Narrator' then 0 else 1 end) asc, coalesce(npc_favorite,0) desc, coalesce(gamets_last_updated,0) desc,lower(npc_name) ".$alpha.", id asc";
+// Default: The Narrator first, then favorites, then alphabetical by name
+$order = "order by (case when npc_name = 'The Narrator' then 0 else 1 end), coalesce(npc_favorite,0) desc, coalesce(gamets_last_updated,0) desc, lower(npc_name) ".$alpha.", id asc";
 
 // Count with filters
 $rowCountRow = $GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM core_npc_master where {$where}");
@@ -2075,6 +2083,11 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
   <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
 </div>
+<?php if ($narratorExistsInNpcMaster && !isset($_GET['list'])): ?>
+<p style="margin: 12px 0; color: #cfd8e3; font-size: 13px;">
+    ℹ️ The narrator has been moved to the <a href="<?php echo $webRoot; ?>/ui/core/config_hub.php?tab=narrator" style="color: #4a8ab6; text-decoration: underline;">Narrator menu</a>. You can copy over the values from the CHIM NPC narrator profile to here manually. We recommend you delete the NPC entry of the narrator.
+</p>
+<?php endif; ?>
 <?php endif; ?>
 <div class="npc-grid">
     <?php foreach ($data as $row): ?>

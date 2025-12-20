@@ -31,7 +31,7 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'ComeCloser',
     'Brawl',
     'ReturnBackHome',
-    //'GiveGoldTo', // Replaced by GiveItemTo system
+    'GiveGoldTo',
     'GiveItemTo',
     'PickupItem',
     'CastSpell',
@@ -104,7 +104,7 @@ $F_TRANSLATIONS_LOCAL["FollowPlayer"]        = "{$GLOBALS["HERIKA_NAME"]} follow
 $F_TRANSLATIONS_LOCAL["ComeCloser"]          = "{$GLOBALS["HERIKA_NAME"]} aproaches to {$GLOBALS["PLAYER_NAME"]}";
 $F_TRANSLATIONS_LOCAL["Brawl"]               = "{$GLOBALS["HERIKA_NAME"]} engages non lethtal combat with another actor, using weapons";
 $F_TRANSLATIONS_LOCAL["ReturnBackHome"]      = "{$GLOBALS["HERIKA_NAME"]} travels to home/origin place.Returns home.";
-//$F_TRANSLATIONS_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives gold/coins/septims to another actor. Specify the amount to give"; // Replaced by GiveItemTo system
+$F_TRANSLATIONS_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives gold/coins/septims to another actor. Specify the amount to give";
 $F_TRANSLATIONS_LOCAL["GiveItemTo"]   = "{$GLOBALS["HERIKA_NAME"]} gives a specific item from inventory to another actor. REQUIRED: Must include 'item' field with exact item name from <inventory> tag, and 'target' field with recipient name";
 $F_TRANSLATIONS_LOCAL["PickupItem"]   = "{$GLOBALS["HERIKA_NAME"]} picks up a specific item from the ground. Use the exact RefID:ItemName format from nearby_items (e.g. 0x12345:Iron Sword)";
 $F_TRANSLATIONS_LOCAL["GoToSleep"]    = "{$GLOBALS["HERIKA_NAME"]} takes a nap";
@@ -142,7 +142,7 @@ $F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"]  = "{$GLOBALS["PLAYER_NAME"]} gave
 $F_RETURNMESSAGES_LOCAL["FollowPlayer"]        = "{$GLOBALS["HERIKA_NAME"]} follows {$GLOBALS["PLAYER_NAME"]}";
 $F_RETURNMESSAGES_LOCAL["Brawl"]               = "{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES_LOCAL["ReturnBackHome"]      = "{$GLOBALS["HERIKA_NAME"]} goes back home";
-//$F_RETURNMESSAGES_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives gold to #TARGET#"; // Replaced by GiveItemTo system
+$F_RETURNMESSAGES_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives #TARGET# gold";
 $F_RETURNMESSAGES_LOCAL["GiveItemTo"]   = "{$GLOBALS["HERIKA_NAME"]} gives #ITEM# to #TARGET#";
 $F_RETURNMESSAGES_LOCAL["PickupItem"]   = "{$GLOBALS["HERIKA_NAME"]} picks up #ITEM#";
 $F_RETURNMESSAGES_LOCAL["GoToSleep"]    = "{$GLOBALS["HERIKA_NAME"]} takes a nap";
@@ -184,7 +184,7 @@ $F_NAMES_LOCAL["FollowPlayer"]       = "FollowPlayer";
 $F_NAMES_LOCAL["ComeCloser"]         = "ComeCloser";
 $F_NAMES_LOCAL["Brawl"]              = "Fight";
 $F_NAMES_LOCAL["ReturnBackHome"]     = "ExitLocation";
-//$F_NAMES_LOCAL["GiveGoldTo"]="GiveCoinsTo"; // Replaced by GiveItemTo system
+$F_NAMES_LOCAL["GiveGoldTo"]="GiveGoldTo";
 $F_NAMES_LOCAL["GiveItemTo"]   = "GiveItemTo";
 $F_NAMES_LOCAL["PickupItem"]   = "PickupItem";
 $F_NAMES_LOCAL["GoToSleep"]    = "GoToSleep";
@@ -212,7 +212,7 @@ $GLOBALS["FUNCTIONS"] = [
                 "target" => [
                     "type"        => "string",
                     "description" => "Target NPC, Actor, or being",
-                    "enum"        => $GLOBALS['FUNCTION_PARM_INSPECT'],
+                    "enum"        => isset($GLOBALS['FUNCTION_PARM_INSPECT']) ? $GLOBALS['FUNCTION_PARM_INSPECT'] : [],
 
                 ],
             ],
@@ -242,7 +242,7 @@ $GLOBALS["FUNCTIONS"] = [
                 "target" => [
                     "type"        => "string",
                     "description" => "Target NPC, Actor, or being",
-                    "enum"        => $GLOBALS['FUNCTION_PARM_INSPECT'],
+                    "enum"        => isset($GLOBALS['FUNCTION_PARM_INSPECT']) ? $GLOBALS['FUNCTION_PARM_INSPECT'] : [],
 
                 ],
             ],
@@ -258,7 +258,7 @@ $GLOBALS["FUNCTIONS"] = [
                 "target" => [
                     "type"        => "string",
                     "description" => "Visible Target NPC, Actor, or being, or building.",
-                    "enum"        => $GLOBALS['FUNCTION_PARM_MOVETO'],
+                    "enum"        => isset($GLOBALS['FUNCTION_PARM_MOVETO']) ? $GLOBALS['FUNCTION_PARM_MOVETO'] : [],
                 ],
             ],
             "required"   => ["target"],
@@ -632,8 +632,8 @@ $GLOBALS["FUNCTIONS"] = [
             "required"   => [""],
         ],
     ],
-    /*[
-    "name" => $F_NAMES_LOCAL["GiveGoldTo"],
+    [
+        "name" => $F_NAMES_LOCAL["GiveGoldTo"],
         "description" => $F_TRANSLATIONS_LOCAL["GiveGoldTo"],
         "parameters" => [
             "type" => "object",
@@ -642,14 +642,14 @@ $GLOBALS["FUNCTIONS"] = [
                     "type" => "string",
                     "description" => "Target NPC, Actor, or being to receive gold",
                 ],
-                "amount" => [
-                    "type" => "integer",
-                    "description" => "Amount of gold to give",
+                "item" => [
+                    "type" => "string",
+                    "description" => "Amount of gold to give (number as string)",
                 ]
             ],
-            "required" => ["target", "amount"],
+            "required" => ["target", "item"],
         ]
-    ],*/// Replaced by GiveItemTo system
+    ],
     [
         "name"        => $F_NAMES_LOCAL["GiveItemTo"],
         "description" => $F_TRANSLATIONS_LOCAL["GiveItemTo"],
@@ -778,10 +778,14 @@ $GLOBALS["FUNCTIONS_GHOSTED"] = $FUNCTIONS_GHOSTED_LOCAL;
 
 function getFunctionCodeName($key)
 {
-
+    if (!isset($GLOBALS["F_NAMES"]) || !is_array($GLOBALS["F_NAMES"])) {
+        return false;
+    }
+    
     $functionCode = array_search($key, $GLOBALS["F_NAMES"]);
-    return $functionCode;
-
+    
+    // If not found, return false (function will be filtered out)
+    return $functionCode !== false ? $functionCode : false;
 }
 
 function getFunctionTrlName($key)
@@ -880,7 +884,7 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         'TakeGoldFromPlayer',
         'FollowPlayer',
         'Brawl',
-        //'GiveGoldTo', // Replaced by GiveItemTo system
+        'GiveGoldTo',
         'GiveItemTo',
         'PickupItem',
         'GoToSleep',
@@ -916,7 +920,7 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         //'GiveItemToPlayer',
         'TakeGoldFromPlayer',
         'Brawl',
-        //'GiveGoldTo', // Replaced by GiveItemTo system
+        'GiveGoldTo',
         'GiveItemTo',
         'PickupItem',
         'GoToSleep',
@@ -944,11 +948,17 @@ if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . "../prompts/prompts_custom.php")
 // Delete non wanted functions
 
 foreach ($GLOBALS["FUNCTIONS"] as $n => $v) {
-    if (! in_array(getFunctionCodeName($v["name"]), $GLOBALS["ENABLED_FUNCTIONS"])) {
-        // error_log("[FUNCTION] Removing $n {$v["name"]}:".getFunctionCodeName($v["name"]));
-        unset($GLOBALS["FUNCTIONS"][$n]);
+    $codeName = getFunctionCodeName($v["name"]);
+    if ($codeName === false) {
+        error_log("[FUNCTION] Warning: Could not get code name for function: {$v["name"]}");
+        continue;
     }
-    $GLOBALS["DEFINED_FUNCTIONS"][]=getFunctionCodeName($v["name"]);
+    if (! in_array($codeName, $GLOBALS["ENABLED_FUNCTIONS"])) {
+        // error_log("[FUNCTION] Removing $n {$v["name"]}:".$codeName);
+        unset($GLOBALS["FUNCTIONS"][$n]);
+    } else {
+        $GLOBALS["DEFINED_FUNCTIONS"][]=$codeName;
+    }
 }
 
 file_put_contents(__DIR__ . "/../log/bug_func.txt", print_r($GLOBALS["FUNCTIONS"], true));

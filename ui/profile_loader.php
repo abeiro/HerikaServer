@@ -105,4 +105,30 @@ try {
     // Silently fail and use conf.php values if database query fails
 }
 
+// Load narrator settings from core_narrator database table if available (overrides conf.php)
+// This ensures UI pages and scripts always show current narrator settings from the database
+try {
+    if (isset($GLOBALS["DBDRIVER"]) && !empty($GLOBALS["DBDRIVER"])) {
+        $dbClassFile = $rootPath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
+        $narratorClassFile = $rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php";
+        
+        if (!class_exists('sql') && file_exists($dbClassFile)) {
+            require_once($dbClassFile);
+        }
+        if (!class_exists('Narrator') && file_exists($narratorClassFile)) {
+            require_once($narratorClassFile);
+        }
+        
+        if (class_exists('sql') && class_exists('Narrator')) {
+            $db_narrator = new sql();
+            $narrator = new Narrator();
+            
+            // Load all narrator settings into GLOBALS with proper type conversion
+            $narrator->loadIntoGlobals();
+        }
+    }
+} catch (Throwable $e) {
+    // Silently fail and use conf.php values if database query fails
+}
+
     
