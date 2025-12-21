@@ -305,7 +305,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     // Check for reanimation status early to add to core
                     $extendedData = $npcMaster->getExtendedData($currentNpcData);
                     $reanimationText = "";
-                    if (isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
+                    if (empty($GLOBALS["DISABLE_REANIMATION_TRACKING"]) && isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
                         $reanimationText = " This person has been reanimated from death as a zombie.";
                     }
                     
@@ -320,7 +320,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     }
                     
                     // Add zombie appearance if reanimated
-                    if (isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
+                    if (empty($GLOBALS["DISABLE_REANIMATION_TRACKING"]) && isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
                         $zombieAppearance = "Their skin has a deathly pale, greyish pallor with a corpse-like appearance. Their eyes are glazed and lifeless, and their movements are stiff and unnatural";
                         if (!empty($currentNpcData["appearance"])) {
                             $profileString .= ". " . $zombieAppearance;
@@ -5391,7 +5391,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
             if ($fieldName=="HERIKA_APPEARANCE") {
                 // Check if this NPC is reanimated
                 $extendedData = $npcMaster->getExtendedData($currentNpcData);
-                if (isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
+                if (empty($GLOBALS["DISABLE_REANIMATION_TRACKING"]) && isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
                     $dynamicBio .= "\n<reanimation_status>\nYou have been reanimated from death as a zombie. Your skin has a deathly pale, greyish pallor with a corpse-like appearance. Your eyes are glazed and lifeless, and your movements are stiff and unnatural.\n</reanimation_status>";
                 }
                 
