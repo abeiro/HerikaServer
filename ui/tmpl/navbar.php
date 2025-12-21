@@ -247,8 +247,15 @@ $currentPageName = basename($_SERVER['PHP_SELF'] ?? '');
 $SHOW_STATUS_NAV = in_array($currentPageName, ['conf_wizard.php','configuration_wizard.php']);
 
 // Server version and dev-build detection
-// Note: Keep raw version string here; if it contains 'dev', we'll switch logo and hide the text suffix
-$serverVersionRaw = '2.2.2';
+// Read version from .version_number.txt
+$versionFile = dirname(__DIR__, 2) . '/.version_number.txt';
+$serverVersionRaw = '2.2.2'; // fallback
+if (file_exists($versionFile)) {
+    $versionContent = trim(file_get_contents($versionFile));
+    if ($versionContent !== '') {
+        $serverVersionRaw = $versionContent;
+    }
+}
 $isDevBuild = (stripos($serverVersionRaw, 'dev') !== false);
 $serverVersionDisplay = trim(str_ireplace('dev', '', $serverVersionRaw));
 $serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
