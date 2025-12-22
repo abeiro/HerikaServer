@@ -398,6 +398,7 @@ class NpcMaster
             $currentNpcData['voiceid'] = $OLD_GLOBALS_ARRAY['TTS']['XTTSFASTAPI']['voiceid'];
         }
 
+        $overrides=[];
         /*
         foreach ($OLD_GLOBALS_ARRAY as $k=>$v) {
             if (!is_array($v)) {

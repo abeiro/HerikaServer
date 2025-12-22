@@ -275,7 +275,7 @@ function getEndOfSentencePunctuation() {
 
 function remove_between($marker, $s_input) {
     $s_res = $s_input;
-    
+    $p_start=null;
     $i_mk_len = strlen($marker);
     if ($i_mk_len > 0) {
         $i_str_len = strlen($s_input);
@@ -1404,6 +1404,7 @@ function ExtractKeywords($sourceText) {
     $matches=[];
     preg_match_all($pattern,  $sourceText,$matches);
     $uppercaseWords = array_merge($uppercaseWords1, $matches[0]);
+    $words=[];
     foreach ($uppercaseWords as $n=>$e) {
         if (stripos($e, $GLOBALS["PLAYER_NAME"])!==false) {
           
@@ -1438,7 +1439,8 @@ function ExtractKeywords($sourceText) {
     unset($words["Looks"]);
     unset($words["Just"]);
     
-    
+    $uniqueArray=[];
+
     foreach ($words as $n=>$e) {
         if ($e>1)
            if (startsWithUppercase($n))
@@ -1604,6 +1606,7 @@ function offerMemoryNew($gameRequest, $DIALOGUE_TARGET)
 
             $memory=array();
             $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 1 offset 0");
+            $pattern = '/\([^)]+\)/';
 
             $textToEmbed=str_replace($DIALOGUE_TARGET, "", $lastPlayerLine[0]["data"]);
             $textToEmbedFinal = preg_replace($pattern, '', $textToEmbed);
