@@ -660,9 +660,9 @@ function CreateItemNpc($basetype, $name, $npc)
     ];
 
     $localItemName = $GLOBALS["db"]->escape($name);
-    $$localItemNPC = $GLOBALS["db"]->escape($npc);
+    $localItemNPC = $GLOBALS["db"]->escape($npc);
     $localItemType = $masterData["type"][0];
-
+    $taskId="";
     $GLOBALS["db"]->insert(
         'responselog',
         [
@@ -742,6 +742,9 @@ function createBook($title, $content, $location, $quest_id, $npc_ref = null)
 
     $text = $content;
     $name = $title;
+
+    // Ensure $localItemPlace is initialized from the provided $location parameter
+    $localItemPlace = $location;
 
     if ($localItemPlace == "nearby") {
         $localItemPlace = 0;
@@ -1030,10 +1033,12 @@ function SkTopicCheck($character, $topic, $lastCall, $retries, $quest_id)
 
         } else {
             // Make suggestion, topic not covered
-            $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: $topic");
+            $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: $topic. but using own words and speech style, and following current dialogue context. If topic already said, just follow up");
+            //$hintData = ("{$quest_data["npcs"][$npc_ref]["name"]} should talk to {$GLOBALS["PLAYER_NAME"]} about this topic: \"{$quest_data["topics"][$topic_ref]["info"]}\", but using own words and speech style, and following current dialogue context. If topic already said, just follow up");
             if ($topiCall["missing"]) {
-                $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: {$topiCall["missing"]}}");
+                $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: {$topiCall["missing"]}. but using own words and speech style, and following current dialogue context. If topic already said, just follow up");
             }
+
             if (isset($topiCall["missing"]) && $topiCall["missing"] != "skip") {
                 $GLOBALS["db"]->insert(
                     'responselog',
