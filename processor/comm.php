@@ -1478,22 +1478,65 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     // logEvent($gameRequest);
 
     $localData=explode("@",$gameRequest[3]);
-    $db->upsertRowOnConflict(
-            'named_cell',
-            array(
-                'id' => intval($localData[0]),
-                'name' =>$localData[1],
-                'location'=>intval($localData[2]),
-            ),
-            "id"
-        );
-    
+    if ($localData) {
+        $db->upsertRowOnConflict(
+                'named_cell',
+                array(
+                    'id' => intval($localData[0]),
+                    'name' =>$localData[1],
+                    'location'=>intval($localData[2]),
+                ),
+                "id"
+            );
+    }
     $MUST_END=true;
     
     
 } elseif (strpos($gameRequest[0], "switchrace")===0) {    // diary_nearby event - manual trigger for all NPCs in range
     
     logEvent($gameRequest);
+    
+    $MUST_END=true;
+    
+    
+} elseif (strpos($gameRequest[0], "snqe")===0) {    // Quest event - SNEQ related event
+    
+    $localData=explode("@",$gameRequest[3]);
+    if (strtoupper($localData[0]) == "START") {
+        // Execute background SNQE agent processing with proper error handling
+        $enginePath = escapeshellarg($GLOBALS["ENGINE_PATH"]);
+        $cmd = "php {$enginePath}/service/processors/snqe/run_agents.php full > {$enginePath}/log/log_run_agent.log 2>&1 &";
+        $output = shell_exec($cmd);
+        $output = trim($output);    
+        if ($output === null) {
+            Logger::error("[SNQE] Failed to start background agent processing");
+        } else {
+            Logger::info("[SNQE] Background agent processing started successfully");
+        }
+    } else if (strtoupper($localData[0]) == "CLEAN") {
+        // Execute SNQE manager clean command
+        $enginePath = escapeshellarg($GLOBALS["ENGINE_PATH"]);
+        $cmd = "php {$enginePath}/service/manager.php snqe clean 2>&1";
+        
+        try {
+            $output = shell_exec($cmd);
+            Logger::info("[SNQE] Clean command executed: " . trim($output ?? ""));
+        } catch (Exception $e) {
+            Logger::error("[SNQE] Clean command failed: " . $e->getMessage());
+        }
+        
+        // Remove state file if it exists
+        $stateFile = "{$GLOBALS["ENGINE_PATH"]}/log/snqe_state.json";
+        if (file_exists($stateFile)) {
+            if (!unlink($stateFile)) {
+                Logger::warn("[SNQE] Failed to delete state file: {$stateFile}");
+            } else {
+                Logger::info("[SNQE] State file deleted successfully");
+            }
+        }
+    } else {
+        Logger::warn("[SNQE] Unknown action: " . ($localData[0] ?? "unknown"));
+    }
     
     $MUST_END=true;
     

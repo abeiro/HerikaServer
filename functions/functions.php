@@ -192,7 +192,7 @@ $F_NAMES_LOCAL["TakeGoldFromPlayer"] = "TakeMoneyFrom{$GLOBALS["PLAYER_NAME"]}";
 $F_NAMES_LOCAL["FollowPlayer"] = "FollowPlayer";
 $F_NAMES_LOCAL["ComeCloser"] = "ComeCloser";
 $F_NAMES_LOCAL["Brawl"] = "Fight";
-$F_NAMES_LOCAL["ReturnBackHome"] = "ExitLocation";
+$F_NAMES_LOCAL["ReturnBackHome"] = "ReturnBackHome";
 $F_NAMES_LOCAL["GiveGoldTo"] = "GiveGoldTo";
 $F_NAMES_LOCAL["GiveItemTo"] = "GiveItemTo";
 $F_NAMES_LOCAL["PickupItem"] = "PickupItem";
@@ -998,11 +998,12 @@ foreach ($GLOBALS["FUNCTIONS"] as $n => $v) {
         continue;
     }
     if (!in_array($codeName, $GLOBALS["ENABLED_FUNCTIONS"])) {
-        // error_log("[FUNCTION] Removing $n {$v["name"]}:".$codeName);
+        error_log("[FUNCTION] Removing $n {$v["name"]}:".$codeName);
         unset($GLOBALS["FUNCTIONS"][$n]);
-    } else {
-        $GLOBALS["DEFINED_FUNCTIONS"][] = $codeName;
-    }
+    } 
+    
+    $GLOBALS["DEFINED_FUNCTIONS"][] = $codeName;
+    
 }
 
 file_put_contents(__DIR__ . "/../log/bug_func.txt", print_r($GLOBALS["FUNCTIONS"], true));
