@@ -1092,6 +1092,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     if (sizeof($rechatHistory)>=(intval($GLOBALS["RECHAT_H"])))    {   // TOO MUCH RECHAT
         Logger::info("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">={$GLOBALS["RECHAT_H"]}");
         // Lets try to summarize
+        $semaphore = $GLOBALS["SEMAPHORES"]["MAIN"]; // SemaphoreWait("MAIN", $semaphore_timeout, 1003, null)) 
         sem_release($semaphore);
         while(ob_get_length() && ob_end_clean());
         require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
@@ -1112,6 +1113,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     
     if (sizeof($rechatHistory)>1) {
         // Lets make rechat wait a bit, so events while NPCs are speaking get into context// disabled if using new rechat fire event
+        $semaphore = $GLOBALS["SEMAPHORES"]["MAIN"]; // SemaphoreWait("MAIN", $semaphore_timeout, 1003, null)) 
         sem_release($semaphore);
         Logger::info("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
         // Check if this conflicts with smart rechat
