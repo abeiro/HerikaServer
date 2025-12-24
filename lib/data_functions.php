@@ -256,6 +256,11 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     // Not always the same order
     shuffle($actorDetailedList);
     // error_log("[DataLastInfoFor] $actorsInRangeList");
+    
+    // Track seen faction descriptions to avoid duplicates
+    $seenFactionFormIDs = [];
+    $factionDescriptions = []; // Store unique faction descriptions
+    
     // Actors
     if ($actorsInRange && $addNPCDescriptions) {
         $actorDetailedListWithProfile=[];
@@ -404,6 +409,42 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         }
                     }
                     
+                    // Add faction information after equipment
+                    $extendedData = $npcMaster->getExtendedData($currentNpcData);
+                    if (isset($extendedData['factions']) && is_array($extendedData['factions']) && count($extendedData['factions']) > 0) {
+                        $factionNames = [];
+                        foreach ($extendedData['factions'] as $faction) {
+                            if (isset($faction['formid'])) {
+                                // Ensure FormID is properly formatted (8 hex digits)
+                                $formId = strtoupper(str_replace('0x', '', $faction['formid']));
+                                $formId = str_pad($formId, 8, '0', STR_PAD_LEFT);
+                                $escapedFormId = $GLOBALS["db"]->escape($formId);
+                                
+                                // Lookup faction name and description from descriptions table
+                                $factionRecord = $GLOBALS["db"]->fetchOne(
+                                    "SELECT name, description FROM descriptions WHERE baseid = '{$escapedFormId}' LIMIT 1"
+                                );
+                                
+                                // Only add if found in descriptions table
+                                if ($factionRecord && !empty($factionRecord['name'])) {
+                                    $factionNames[] = $factionRecord['name'];
+                                    
+                                    // Track faction description (only once)
+                                    if (!in_array($faction['formid'], $seenFactionFormIDs)) {
+                                        $seenFactionFormIDs[] = $faction['formid'];
+                                        if (!empty($factionRecord['description'])) {
+                                            $factionDescriptions[$factionRecord['name']] = $factionRecord['description'];
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (!empty($factionNames)) {
+                            $profileString .= ". Groups " . implode(", ", $factionNames);
+                        }
+                    }
+                    
                     $actorDetailedListWithProfile[] = $profileString;
 
                 }
@@ -452,6 +493,15 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
     }
     $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<nearby_actors>\n# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange\n</nearby_actors>";
+    
+    // Add faction descriptions section if any factions were found
+    if (!empty($factionDescriptions)) {
+        $factionDescText = "";
+        foreach ($factionDescriptions as $name => $desc) {
+            $factionDescText .= "## {$name}: {$desc}\n";
+        }
+        $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<group_descriptions>\n# GROUP/FACTION DESCRIPTIONS\n{$factionDescText}</group_descriptions>";
+    }
     
     // Add nearby items to context if available
     $itemsInRange = DataItemsInCloseRange();
@@ -5461,20 +5511,9 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
             $xmlLabel=strtr(strtolower($label),[" "=>"_"]);
             $dynamicBio .= "\n<$xmlLabel>\n" . trim($FOLLOWER_CONF[$fieldName])."\n</$xmlLabel>";
             
-            // Add skills right after HERIKA_SKILLS section
-            if ($fieldName=="HERIKA_SKILLS") {
-                $dynamicBio.=!empty($SKILLS_ADD) ?"\n<rpg_skills>\n$SKILLS_ADD\n</rpg_skills>\n": "";
-            }
-            
-            // Add equipment and reanimation status right after HERIKA_APPEARANCE section
-            if ($fieldName=="HERIKA_APPEARANCE") {
-                // Check if this NPC is reanimated
+            // Add groups (factions) right after HERIKA_BACKGROUND (basic_summary) section
+            if ($fieldName=="HERIKA_BACKGROUND") {
                 $extendedData = $npcMaster->getExtendedData($currentNpcData);
-                if (empty($GLOBALS["DISABLE_REANIMATION_TRACKING"]) && isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
-                    $dynamicBio .= "\n<reanimation_status>\nYou have been reanimated from death as a zombie. Your skin has a deathly pale, greyish pallor with a corpse-like appearance. Your eyes are glazed and lifeless, and your movements are stiff and unnatural.\n</reanimation_status>";
-                }
-                
-                // Add faction information
                 if (isset($extendedData['factions']) && is_array($extendedData['factions']) && count($extendedData['factions']) > 0) {
                     $factionLines = [];
                     foreach ($extendedData['factions'] as $faction) {
@@ -5499,8 +5538,22 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
                     }
                     
                     if (count($factionLines) > 0) {
-                        $dynamicBio .= "\nGroups: " . implode(". ", $factionLines) . ".";
+                        $dynamicBio .= "\n<groups>\nYou belong to these factions:\n" . implode("\n", $factionLines) . "\n</groups>";
                     }
+                }
+            }
+            
+            // Add skills right after HERIKA_SKILLS section
+            if ($fieldName=="HERIKA_SKILLS") {
+                $dynamicBio.=!empty($SKILLS_ADD) ?"\n<rpg_skills>\n$SKILLS_ADD\n</rpg_skills>\n": "";
+            }
+            
+            // Add equipment and reanimation status right after HERIKA_APPEARANCE section
+            if ($fieldName=="HERIKA_APPEARANCE") {
+                // Check if this NPC is reanimated
+                $extendedData = $npcMaster->getExtendedData($currentNpcData);
+                if (empty($GLOBALS["DISABLE_REANIMATION_TRACKING"]) && isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
+                    $dynamicBio .= "\n<reanimation_status>\nYou have been reanimated from death as a zombie. Your skin has a deathly pale, greyish pallor with a corpse-like appearance. Your eyes are glazed and lifeless, and your movements are stiff and unnatural.\n</reanimation_status>";
                 }
                 
                 $dynamicBio.=$EQUIPMENT_ADD ?? "";
