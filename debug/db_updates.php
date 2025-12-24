@@ -2144,11 +2144,10 @@ if ($checkVersion("spell_descriptions")<20241129001) {
     Logger::info("Applied patch spell_descriptions 20241129001");
 }
 
-if ($checkVersion("faction_descriptions")<20250115001) {
-    Logger::debug("Applying faction_descriptions 20250115001");
+if ($checkVersion("descriptions")<20250115001) {
+    Logger::debug("Applying descriptions faction data 20250115001");
     
     // Insert faction descriptions into descriptions table
-    // FormIDs converted from hex to decimal for baseid field
     $db->execQuery("
         INSERT INTO public.descriptions (baseid, name, description) VALUES
         ('00029DA9', $$Thieves Guild$$, $$A secretive organization of skilled thieves and rogues operating throughout Skyrim, known for their expertise in stealth, lockpicking, and acquiring valuable items through illicit means.$$),
@@ -2171,8 +2170,8 @@ if ($checkVersion("faction_descriptions")<20250115001) {
             description = EXCLUDED.description;
     ");
     
-    $updateVersion("faction_descriptions",20250115001);
-    Logger::info("Applied patch faction_descriptions 20250115001");
+    $updateVersion("descriptions",20250115001);
+    Logger::info("Applied patch descriptions faction data 20250115001");
 }
 
 // Always (re)create combined view once base tables exist
