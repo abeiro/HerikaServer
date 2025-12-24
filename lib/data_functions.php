@@ -3529,7 +3529,7 @@ function DataSearchOghmaByVector($rawstring,$currentOghmaTopic,$locationCtx,$con
                     'rank_any'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
                     'rank_all'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
                     'memory'=>$memory[0]["topic"],
-                    'time'=>isset($vector["timing"])?$vector["timing"]["generation_time_seconds"]:"0 secs (text2vec)"
+                    'time'=>isset($vector1["timing"])?$vector1["timing"]["generation_time_seconds"]:"0 secs (text2vec)"
                 )
             );
         
@@ -4637,7 +4637,7 @@ function DataRetrieveLastTimeTalk($s_player_name, $s_npc_name) {
 function GetAnimationHex($mood)
 {
 
-    
+    error_log("Getting animation for mood: $mood");
     $ANIMATIONS=[
         "ArmsCrossed"=>"IdleExamine",        // Arms crossed
         "PointClose"=>"IdlePointClose",
@@ -4770,7 +4770,7 @@ function GetAnimationHex($mood)
     } 
                       
     
-    
+    error_log("Getting animation for mood: $mood, no result found");
     return "";
 
 }

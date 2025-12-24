@@ -41,6 +41,7 @@ require_once($path . "lib/core/llm_connector.class.php");
 require_once($path . "lib/core/tts_connector.class.php");
 require_once($path . "lib/core/npc_master.class.php");
 require_once($path . "lib/core/core_profiles.class.php");
+require_once($path . "lib/semaphore_manager.class.php");
 
 // PARSE GET RESPONSE into $gameRequest
 $cooldownPeriod = 600;
@@ -199,7 +200,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 $fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
     "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
     "util_location_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace","combatbark",
-    "util_location_npc","enable_bg","region","named_cell"];
+    "util_location_npc","enable_bg","region","named_cell","snqe"];
 
 if (isset($GLOBALS["external_fast_commands"])) {
     $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
@@ -209,7 +210,6 @@ $GLOBALS["all_fast_commands"] = $fast_commands;
 
 $semaphore_timeout = $GLOBALS["SEMAPHORES_TIMEOUT"] ?? 300;
 
-require_once($path . "lib/semaphore_manager.class.php");
 
 // Use logical id "MAIN" so other code can still find $GLOBALS["SEMAPHORES"]["MAIN"]
 if (!in_array($gameRequest[0],$fast_commands)) {
@@ -1092,7 +1092,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     if (sizeof($rechatHistory)>=(intval($GLOBALS["RECHAT_H"])))    {   // TOO MUCH RECHAT
         Logger::info("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">={$GLOBALS["RECHAT_H"]}");
         // Lets try to summarize
-        sem_release($semaphore);
+        SemaphoreManager::release("MAIN");
         while(ob_get_length() && ob_end_clean());
         require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
         terminate();
@@ -1112,14 +1112,12 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     
     if (sizeof($rechatHistory)>1) {
         // Lets make rechat wait a bit, so events while NPCs are speaking get into context// disabled if using new rechat fire event
-        sem_release($semaphore);
+        SemaphoreManager::release("MAIN");
         Logger::info("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
         // Check if this conflicts with smart rechat
         // Is this doing something?
         $semaphore_timeout = $GLOBALS["SEMAPHORES_TIMEOUT"] ?? 300;
-        $ix = 0;
-        $t0 = time();
-        while (sem_acquire($semaphore,true) != true)  {
+        if (!SemaphoreWait("MAIN", $semaphore_timeout, 1007, function() use ($db, $gameRequest) {
             //$user_input_after=$db->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]"); // 72 ms 
             $user_input_after=$db->fetchAll("SELECT rowid as N FROM eventlog WHERE type='user_input' AND ts>{$gameRequest[1]} ORDER BY rowid DESC LIMIT 1 "); // faster, 1.5 ms
             if (isset($user_input_after[0])) {
@@ -1129,15 +1127,10 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
                         terminate();
                     }
             }
-            $ix++; 
-            if ($ix > 1000) { 
-                $dt = time() - $t0; 
-                if ($dt > $semaphore_timeout) { // 
-                    Logger::warn("[main] rechat event - semaphore loop break after {$dt} sec in " .__FILE__ . " " . __LINE__); // debug
-                    terminate();
-                } else $ix = 0;
-            } 
-            usleep(1007);
+            return true;
+        })) {
+            Logger::warn("[main] rechat event - semaphore wait failed in " .__FILE__ . " " . __LINE__);
+            terminate();
         }
     }
 
@@ -1574,7 +1567,8 @@ $COOLDOWNMAP["UseSoulGaze"]=300/0.00864;
 $COOLDOWNMAP["InspectSurroundings"]=100/0.00864;
 $COOLDOWNMAP["Inspect"]=300/0.00864;
 $COOLDOWNMAP["Relax"]=180/0.00864;
-
+$COOLDOWNMAP["MakeAToast"]=60/0.00864;
+$COOLDOWNMAP["Toast"]=60/0.00864;
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     $localActorName=$GLOBALS["db"]->escape($GLOBALS["HERIKA_NAME"]);
@@ -2026,11 +2020,8 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
 
 
 // POST PROCESS TASKS
-if (isset($semaphore) && $semaphore)
-    sem_release($semaphore);
-
-if (isset($semaphore2) && $semaphore2)
-    sem_release($semaphore2);
+SemaphoreManager::release("MAIN");
+SemaphoreManager::release("ADDNPC");
 
 
 while(!getenv("PHPUNIT_TEST") && ob_get_length() && ob_end_flush());

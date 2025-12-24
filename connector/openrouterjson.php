@@ -1437,7 +1437,7 @@ class openrouterjson
                             'url'=>$this->_url
                         ));
                 }
-                error_log("Error in openrouter request '$url':$json_response", 3);
+                error_log("Error in openrouter request '{$this->_url}':$json_response", 3);
                 return "";
                 
             }

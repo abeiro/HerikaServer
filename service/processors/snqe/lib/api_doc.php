@@ -72,7 +72,7 @@ Returns: "done" | "pending" | "failed".
 
 * SpawnItem(quest_id, item_ref, location_or_char_ref)
 
-Spawns a declared item. **Items in pockets should be spawned too**
+Spawns a declared item. **Items in pockets should be spawned too** 
 
 quest_id (string, required)
 item_ref (string, required) (Maker sure item has been created)
@@ -288,6 +288,56 @@ Function is idempotent. If the player already reached the location, it returns "
 Tracks location_wait state per location in quest data.
 Useful for branching quest logic based on player location.
 
+* TravelTo(quest_id, location, npc_ref)
+
+Issues a travel instruction to move to a specific location and returns "done" immediately.
+Uses the same instruction mechanism as WaitAtLocation but completes on first call without waiting for confirmation.
+
+quest_id (string, required) – Quest identifier.
+location (string, required) – Location name to travel to (e.g., "Whiterun", "Markarth", "Solitude").
+npc_ref (string, optional) – NPC reference ID. If provided, the NPC will travel to that location. If omitted, the player receives the instruction.
+
+Returns: "done"
+
+"done" → Travel instruction has been issued successfully.
+
+Notes:
+
+Always returns "done" on first call after issuing the instruction.
+Subsequent calls for the same location return "done" without re-issuing instructions (idempotent).
+Issues background command for NPC travel if NPC is not present.
+Issues foreground suggestion for NPC travel if NPC is present in the scene.
+Issues generic scene note for player travel if no npc_ref is provided.
+Does not wait for the travel to be completed; use WaitAtLocation if you need to verify player arrival.
+Useful for quest steps where you want to initiate travel without blocking on completion.
+Tracks travel state per location in quest data to prevent duplicate instructions.
+Function is idempotent. If the player or NPC has already been instructed to travel to the location, it returns "done".
+
+* StationAtLocation(quest_id, location, npc_ref)
+
+Non-blocking version of WaitAtLocation. Issues an instruction to station an NPC at a location and returns true immediately.
+Does not wait for confirmation that the NPC has arrived; completes on first call without blocking.
+
+quest_id (string, required) – Quest identifier.
+location (string, required) – Location name to station NPC at (e.g., "Whiterun", "Markarth", "Solitude").
+npc_ref (string, optional) – NPC reference ID. If provided, the NPC will be stationed at that location.
+
+Returns: bool (always true after first execution)
+
+true → Station instruction has been issued successfully.
+
+Notes:
+
+Always returns true on first call after issuing the instruction.
+Subsequent calls for the same location and NPC return true without re-issuing instructions (idempotent).
+Issues background command for NPC travel if NPC is not present.
+Issues foreground suggestion for NPC travel if NPC is present in the scene.
+Does not wait for the NPC to reach the location; completes immediately upon instruction issue.
+Non-blocking: execution continues immediately without waiting for NPC arrival confirmation.
+Useful for quest steps where you want to position an NPC at a location as part of scene setup without blocking progression.
+Tracks station state per location and NPC in quest data to prevent duplicate instructions.
+Function is idempotent. If the NPC has already been instructed to station at the location, it returns true.
+
 * CompleteQuest(quest_id, result)
 
 MANDATORY. Marks a quest as finished and updates its state. This function is intended to be called as the final step in a quest sequence.
@@ -322,7 +372,7 @@ Interaction functions (MoveToPlayer, TellTopic*, CombatPlayer) are executed once
 1. Create functions should be at the top of the code.
 2. Respect instuctions order.
 
-Example quest:
+Example quest #1:
 
 // Quest: Find the Lost Tome
 
@@ -457,7 +507,7 @@ CompleteQuest($quest_id);
 return;
 
 
-* Example Cmbat quest
+* Example Quest #2: Combat quest
 
 $quest_id = "bandit_camp_encounter_6941a5684e7b4";
 
@@ -495,7 +545,85 @@ if ( WaitforCombatEnd($quest_id,"grimvar") == "pending") {
     return;
 ):
 
+* Example Quest #3 : Recover Ring from Necromancer
 
+$quest_id = "darkshade_copse_investigation_694af5596a1ea";
+
+// 1. Create and spawn Xaren the Necromancer (from <spawn> element)
+CreateNPC(
+    $quest_id,
+    "xaren",
+    "Xaren the Necromancer",
+    "Male",
+    "mage",
+    "Breton",
+    "nearby",
+    "Dark robes, glowing staff",
+    "A dark sorcerer specializing in necromancy, feared for his mastery over the undead.",
+    "Speaks in a cold, calculated tone, often whispering incantations.",
+    "aggressive"
+);
+SpawnNPC($quest_id, "xaren", "nearby");
+if (CheckNPCSpawn($quest_id, "xaren") != "done") return;
+
+// 2. Create Zara Quill (from <instruction> element - already spawned)
+CreateNPC(
+    $quest_id,
+    "zara",
+    "Zara Quill",
+    "Female",
+    "warrior",
+    "Nord",
+    "nearby",
+    "Leather armor, bow",
+    "A skilled ranger and investigator.",
+    "Direct and practical",
+    "serious"
+);
+
+// 3. Create and spawn Roric's Ring (from <item> element)
+CreateItem(
+    $quest_id,
+    "roric_ring",
+    "Roric's Ring",
+    "ring",
+    "pocket",
+    "A simple silver ring with a small engraving of a scouting compass, a family heirloom passed down through Roric's family.",
+    "xaren"
+);
+SpawnItem($quest_id, "roric_ring", "xaren");
+if (CheckItemSpawn($quest_id, "roric_ring") != "done") return;
+
+// 4. Travel to Darkshade Copse
+TravelTo($quest_id, "Darkshade Copse", "zara");
+
+// 5. Combat between Xaren and Zara
+CombatNPC($quest_id, "xaren", "zara");
+CombatNPC($quest_id, "zara", "xaren");
+
+// Wait for combat to end
+if (WaitForNPCCombatEnd($quest_id, "xaren", "zara") != "done") return;
+
+// 6. Wait for ring recovery
+if (WaitToItemBeRecovered($quest_id, "roric_ring") != "done") return;
+
+// 7. Zara tells player about the ring
+CreateTopic(
+    $quest_id,
+    "t_roric_ring",
+    "Roric's Ring Discovery",
+    "Item",
+    "roric_ring",
+    "zara",
+    "This is Roric's ring... I knew something terrible had happened to him.",
+    "player",
+    true
+);
+TellTopicToPlayer($quest_id, "zara", "t_roric_ring");
+if (CheckTopicToPlayer($quest_id, "t_roric_ring") != "done") return;
+
+// Complete quest
+CompleteQuest($quest_id);
 */
 
 ?>

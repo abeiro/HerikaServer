@@ -235,9 +235,30 @@ class Narrator
             $GLOBALS['OGHMA_KNOWLEDGE'] = $allSettings['oghma_knowledge'];
         }
         
+        if (isset($allSettings['voiceid'])) {
+            $GLOBALS['OGHMA_KNOWLEDGE'] = $allSettings['oghma_knowledge'];
+        }
+
         // Override PROMPT_HEAD if narrator has a custom prompt_head (like NPCs do)
         if (isset($allSettings['prompt_head']) && $allSettings['prompt_head'] !== null && $allSettings['prompt_head'] !== '') {
             $GLOBALS['PROMPT_HEAD'] = $allSettings['prompt_head'];
+        }
+
+        if (isset($allSettings['voiceid']) && $allSettings['voiceid']) {
+
+            $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']  = $allSettings['voiceid'];
+            $GLOBALS['TTS']['MELOTTS']['voiceid']      = $allSettings['voiceid'];
+            $GLOBALS['TTS']['MIMIC3']['voice']         = $allSettings['voiceid'];
+            $GLOBALS['TTS']['XVASYNTH']['model']       = $allSettings['voiceid'];
+            $GLOBALS['TTS']['ZONOS_GRADIO']['voiceid'] = $allSettings['voiceid'];
+            $GLOBALS['TTS']['PIPERTTS']['voiceid']     = $allSettings['voiceid'];
+            $GLOBALS['TTS']['ELEVEN_LABS']['voice_id'] = $allSettings['voiceid'];
+            $GLOBALS['TTS']['AZURE']['voice']          = $allSettings['voiceid'];
+            $GLOBALS['TTS']['KOKORO']['voiceid']       = $allSettings['voiceid'];
+            $GLOBALS['TTS']['openai']['voice']         = $allSettings['voiceid'];
+            $GLOBALS['TTS']['deepgram']['model']       = $allSettings['voiceid'];
+            $GLOBALS['TTS']['CARTESIA']['voiceid']     = $allSettings['voiceid'];
+
         }
     }
     

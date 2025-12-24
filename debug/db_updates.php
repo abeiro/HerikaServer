@@ -38,6 +38,23 @@ $checkTableExists = function($tablename) {
     return ($result[0]["exists"] == "1")?1:-1;
 };
 
+$checkColumnExists = function($tablename, $columnname) {
+    global $db;
+    $query = "
+        SELECT 1 AS exists 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' AND table_name = '{$tablename}' AND column_name = '{$columnname }'
+    ";
+
+    $result = $db->fetchAll($query);
+
+    if (sizeof($result) == 0) {
+        return -1;
+    }
+
+    return ($result[0]["exists"] == "1") ? 1 : -1;
+};
+
 $updateVersion = function($tablename,$version) {
     global $db;
     $db->execQuery("INSERT INTO public.database_versioning SELECT '$tablename',$version where not exists (SELECT 1 from public.database_versioning where tablename='$tablename')");
@@ -1474,8 +1491,8 @@ if ($checkVersion("audit_request")<20250616001) {
 // - autovacuum / table
 //----------------------------------------------------
 
-if ($checkVersion("db_maintenance")<20250528002) {
-    Logger::debug(" try patch: db_maintenance 20250528002");
+if ($checkVersion("db_maintenance")<20251208001) {
+    Logger::debug(" try patch: db_maintenance 20251208001");
 
     $db->execQuery("DROP FUNCTION IF EXISTS public.sql_exec2(text) CASCADE");
 
@@ -1497,8 +1514,8 @@ if ($checkVersion("db_maintenance")<20250528002) {
         WHERE (pgc.relkind ='r')
         AND (pgn.nspname='public'); ");
 
-    $updateVersion("db_maintenance",20250528002);
-    Logger::info("Applied patch db_maintenance 20250528002");
+    $updateVersion("db_maintenance",20251208001);
+    Logger::info("Applied patch db_maintenance 20251208001");
 }
 
 //----------------------------------------------------
@@ -1804,7 +1821,7 @@ if ($checkTableExists("core_npc_master") == -1) {
     Logger::info(__FILE__." core_npc_master exists");
 
 
-if ($checkTableExists("core_profiles") > 0 && $checkVersion("core_profiles") < 20250904005) {
+if (($checkTableExists("core_profiles") > 0) && ($checkVersion("core_profiles") < 20250904005)) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles_2.sql"));
     $db->execQuery("SET search_path TO public");
     // ensure slot column exists for existing installs
@@ -2236,7 +2253,7 @@ if ($checkTableExists("import_rules") == -1) {
     Logger::info(__FILE__." import_rules exists");
 
 // Usage column
-$db->execQuery("ALTER TABLE audit_request ADD COLUMN IF NOT EXISTS usage jsonb");
+$db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS usage jsonb");
 
 if ($checkTableExists("rumors") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/add_rumors.sql"));
@@ -2249,11 +2266,11 @@ if ($checkTableExists("named_cell") == -1) {
     Logger::info(__FILE__." named_cell exists");
 
 
-$db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS region text");
-$db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS hold text");
-$db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS tags text");
-$db->execQuery("ALTER TABLE sneq_quests ADD COLUMN IF NOT EXISTS title text");
-$db->execQuery("ALTER TABLE sneq_quests ADD COLUMN IF NOT EXISTS stage text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS region text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS hold text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS tags text");
+$db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS title text");
+$db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS stage text");
 
 if ($checkTableExists("master_packages") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/master_packages.sql"));
@@ -2910,8 +2927,46 @@ if ($checkVersion("prompts")<20251207001) {
             updated_at = CURRENT_TIMESTAMP
     ");
     
-    $db->execQuery("UPDATE versions SET version=20251207001 WHERE section='prompts'");
+    //$db->execQuery("UPDATE versions SET version=20251207001 WHERE section='prompts'"); // ???
+    $updateVersion("prompts",20251207001);
+    
     Logger::info("Applied patch prompts 20251207001 - Added background life style prompts to database");
+}
+
+
+//----------------------------------------------------
+// emotions expression
+//----------------------------------------------------
+
+if ($checkVersion("emotions_expression")<20251130003) {
+    Logger::debug(" try patch: emotions_expression 20251130003");
+    $b_ok = true;
+    try {
+        $query = " ALTER TABLE public.speech ADD COLUMN IF NOT EXISTS mood TEXT; ";
+        $db->execQuery($query);        
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'speech' table: " . $e->getMessage());
+    }
+    try {
+        $query = " ALTER TABLE public.speech ADD COLUMN IF NOT EXISTS emotion TEXT; ";
+        $db->execQuery($query);        
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'speech' table: " . $e->getMessage());
+    }
+    try {
+        $query = " ALTER TABLE public.speech ADD COLUMN IF NOT EXISTS emotion_intensity TEXT; ";
+        $db->execQuery($query);        
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'speech' table: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("emotions_expression",20251130003);
+        Logger::info("Applied patch emotions_expression 20251130003");
+    }
 }
 
 //----------------------------------------------------

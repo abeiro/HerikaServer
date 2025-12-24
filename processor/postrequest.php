@@ -45,7 +45,7 @@ if ($GLOBALS["MINIME_T5"]) {
         $lastListener = "";
         $lastDateTime = "";
 
-        foreach (json_decode(DataSpeechJournal($GLOBALS["HERIKA_NAME"], 6), true) as $element) {
+        foreach (json_decode(DataSpeechJournal($GLOBALS["HERIKA_NAME"], 10), true) as $element) {
             if ($element["listener"] == "The Narrator") {
                 continue;
             }
@@ -76,8 +76,40 @@ if ($GLOBALS["MINIME_T5"]) {
         }
 
         $status = "default";
-        $topic  = json_decode(minimePostScene($historyData), true);
-        error_log("[minimePostScene] {$topic["generated_tags"]}");
+        //$topic  = json_decode(minimePostScene($historyData), true);// Not working well for now.
+
+        $connector            = new LLMConnector();
+        $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
+        $connector->setOldGlobals($currentConnectorData);
+        $connectionHandler = $connector->getConnector($currentConnectorData);
+        
+        $allowedGenres = ["horror", "action", "thriller", "mystery", "romance", "comedy", "drama","nsfw"];
+
+        $prompt[] = ['role' => 'system', 'content' => "Classify the following dialogue into one of these genres: ".
+            implode(", ", $allowedGenres)];
+        
+        $prompt[] = ['role' => 'user', 'content' => "Dialogue:\n$historyData"];
+        $prompt[] = ['role' => 'user', 'content' => "Respond only with the genre name."];
+
+
+        $buffer = $connectionHandler->fast_request($prompt,                                                                                               
+            ["MAX_TOKENS" => 64, "model" => "google/gemma-3-4b-it", "temperature" => 0.7], 
+            "sceneclassifier"
+        );
+
+        // Parse LLM output to find matching genre
+        $detectedGenre = "default";
+        $bufferLower = strtolower(trim($buffer));
+        foreach ($allowedGenres as $genre) {
+            if (stripos($bufferLower, strtolower($genre)) !== false) {
+                $detectedGenre = $genre;
+                break;
+            }
+        }
+        
+        $topic = ["generated_tags" => $detectedGenre];
+
+        error_log("[minimePostScene] Detected genre: {$topic["generated_tags"]} from buffer $buffer");
         if ($topic["generated_tags"] == "relax") {
             $GLOBALS["db"]->insert(
                 'rolemaster',
@@ -91,7 +123,7 @@ if ($GLOBALS["MINIME_T5"]) {
 
             $status = "relax";
 
-        } else if ($topic["generated_tags"] == "intimate") {
+        } else if ($topic["generated_tags"] == "romance") {
             $GLOBALS["db"]->insert(
                 'rolemaster',
                 [

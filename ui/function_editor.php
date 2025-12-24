@@ -49,7 +49,9 @@ $npcFunctions = [
     'GiveItemTo',
     'PickupItem',
     'CastSpell',
-    'MakeFollower'
+    'MakeFollower',
+    'Toast',
+    'Drink',
 ];
 
 $playerFunctions = [
@@ -78,7 +80,16 @@ $playerFunctions = [
     'GoToSleep',
     'UseSoulGaze',
     'CastSpell',
+    'Toast',
+    'Drink',
 ];
+
+$socialFunctions = ['Inspect', 'InspectSurroundings', 'Relax', 'TakeASeat', 'UseSoulGaze','Toast', 'Drink'];
+$movementFunctions = ['TravelTo', 'Follow', 'FollowPlayer', 'ComeCloser', 'WaitHere', 'IncreaseWalkSpeed', 'DecreaseWalkSpeed','MakeFollower'];
+$combatFunctions = ['Attack', 'AttackHunt', 'Brawl', 'SheatheWeapon'];
+$inventoryFunctions = ['OpenInventory', 'OpenInventory2', 'CheckInventory', 'GiveGoldTo', 'GiveItemTo', 'PickupItem', 'TakeGoldFromPlayer', 'CastSpell'];
+$playerOnlyFunctions = ['ReadQuestJournal', 'SetCurrentTask', 'GoToSleep'];
+
 
 $currentList = array_unique(array_merge($npcFunctions, $playerFunctions));
 
@@ -346,7 +357,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="function-category">
                     <h3>🚶 Movement & Navigation</h3>
                     <?php
-                    $movementFunctions = ['TravelTo', 'Follow', 'FollowPlayer', 'ComeCloser', 'WaitHere', 'IncreaseWalkSpeed', 'DecreaseWalkSpeed','MakeFollower'];
+                    
                     foreach ($movementFunctions as $func):
                         if (in_array($func, $currentList)):
                     ?>
@@ -381,7 +392,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="function-category">
                     <h3>⚔️ Combat & Actions</h3>
                     <?php
-                    $combatFunctions = ['Attack', 'AttackHunt', 'Brawl', 'SheatheWeapon'];
+
                     foreach ($combatFunctions as $func):
                         if (in_array($func, $currentList)):
                     ?>
@@ -413,7 +424,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="function-category">
                     <h3>👥 Interaction & Social</h3>
                     <?php
-                    $socialFunctions = ['Inspect', 'InspectSurroundings', 'Relax', 'TakeASeat', 'UseSoulGaze'];
+                    
                     foreach ($socialFunctions as $func):
                         if (in_array($func, $currentList)):
                     ?>
@@ -446,7 +457,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="function-category">
                     <h3>🎒 Inventory & Items</h3>
                     <?php
-                    $inventoryFunctions = ['OpenInventory', 'OpenInventory2', 'CheckInventory', 'GiveGoldTo', 'GiveItemTo', 'PickupItem', 'TakeGoldFromPlayer', 'CastSpell'];
+                    
                     foreach ($inventoryFunctions as $func):
                         if (in_array($func, $currentList)):
                     ?>
@@ -483,7 +494,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="function-category">
                     <h3>📖 Player-Specific</h3>
                     <?php
-                    $playerOnlyFunctions = ['ReadQuestJournal', 'SetCurrentTask', 'GoToSleep'];
                     foreach ($playerOnlyFunctions as $func):
                         if (in_array($func, $currentList)):
                     ?>

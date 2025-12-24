@@ -1007,7 +1007,7 @@ function WaitToItemBeRecovered(
 
     }
 
-    if ($item["recover_attempts"] == 25) {
+    if ($item["recover_attempts"] % 25  == 0) {
         // Updating time, so we update Quest Tracker
         // Convert signed int32 to HEX
         $formId = convertSignedToUnsignedHex($item["int_refid"]);
@@ -1871,6 +1871,15 @@ function WaitAtLocation(
 
     $quest_data = $quest["quest_data"] ?? [];
 
+    if ($npc_ref && isset($quest_data["npcs"][$npc_ref])) {
+        $npc = $quest_data["npcs"][$npc_ref];
+        if ($quest_data["npcs"][$npc_ref]["name"]==$GLOBALS["PLAYER_NAME"]) {
+            // If waiting for self, bypass travel
+            error_log("[WaitAtLocation] Player is the NPC, bypassing travel to <$location>");
+            return "done";
+        }
+    } 
+
     // Initialize location tracking if not exists
     if (! isset($quest_data["location_wait"])) {
         $quest_data["location_wait"] = [];
@@ -2164,4 +2173,277 @@ function WaitAtLocation(
     error_log("[WaitAtLocation] Waiting for player to reach <$location> (attempt {$quest_data["location_wait"][$wait_key]["attempts"]})");
     SNQEQuestManager::updateQuestData($quest_id, ["location_wait" => $quest_data["location_wait"]]);
     return "pending";
+}
+
+/**
+ * SNQE TravelTo function
+ *
+ * Issues instruction to travel to a location and returns "done" after first call.
+ * Uses the same instruction mechanism as WaitAtLocation but completes immediately.
+ *
+ * @param string $quest_id Unique quest identifier
+ * @param string $location Location name to travel to
+ * @param string|null $npc_ref Optional NPC reference to travel to that location
+ * @return string Always returns "done"
+ */
+function TravelTo(
+    string $quest_id,
+    string $location,
+    ?string $npc_ref = null
+): string {
+    // Fetch quest state
+    $quest = SNQEQuestManager::getQuest($quest_id);
+
+    if (! $quest) {
+        throw new Exception("Quest '$quest_id' does not exist.");
+    }
+
+    $quest_data = $quest["quest_data"] ?? [];
+
+    // Initialize travel tracking if not exists
+    if (! isset($quest_data["travels"])) {
+        $quest_data["travels"] = [];
+    }
+
+    $travel_key = "travel_" . md5($location);
+
+    // If already issued, return done
+    if (! empty($quest_data["travels"][$travel_key]) && $quest_data["travels"][$travel_key]["issued"] === true) {
+        error_log("[TravelTo] Already issued instruction to travel to <$location>");
+        return "done";
+    }
+
+    // Initialize travel tracking for this location
+    if (! isset($quest_data["travels"][$travel_key])) {
+        $quest_data["travels"][$travel_key] = [
+            "location" => $location,
+            "issued"   => false,
+        ];
+    }
+
+    error_log("[TravelTo] Issuing instruction to travel to <$location>");
+
+    // Issue the travel instruction using same mechanism as WaitAtLocation
+    if ($npc_ref && isset($quest_data["npcs"][$npc_ref])) {
+        // NPC travel instruction
+        if (strpos($GLOBALS["actors_present"], $quest_data["npcs"][$npc_ref]["name"]) === false) {
+            error_log("[TravelTo] Using Background TravelTo");
+            // Background command
+            $npcMaster      = new NpcMaster();
+            $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
+            $unsignedInt    = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
+            $refHexString   = "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
+
+            $locs = $GLOBALS["db"]->fetchOne("SELECT * FROM locations where name='" . $GLOBALS["db"]->escape($location) . "' LIMIT 1");
+
+            if ($locs) {
+                $GLOBALS["db"]->insert(
+                    'responselog',
+                    [
+                        'localts' => time(),
+                        'sent'    => 0,
+                        'actor'   => "rolemaster",
+                        'text'    => "",
+                        'action'  => "rolecommand|BackgroundCmd@$refHexString@TravelTo/{$locs["formid"]}",
+                        'tag' => '',
+                    ]
+                );
+
+                $GLOBALS["db"]->insert(
+                    'eventlog',
+                    [
+                        'ts'     => $GLOBALS["last_ts"],
+                        'gamets' => $GLOBALS["last_gamets"],
+                        'type'   => "infoaction",
+                        'data'   => "The Narrator: {$currentNpcData["npc_name"]} starts travelling to $location",
+                        'sess'     => time(),
+                        'localts'  => time(),
+                        'people'   => $GLOBALS["actors_present"],
+                        'location' => "",
+                        'party'    => "",
+                    ]
+                );
+
+                // Insert actions_issued log entry
+                $GLOBALS["db"]->insert(
+                    'actions_issued',
+                    [
+                        'action'    => "TravelTo",
+                        'fullcall'  => "TravelTo:$location",
+                        'actorname' => $currentNpcData["npc_name"],
+                        'ts'        => $GLOBALS["last_ts"],
+                        'gamets'    => $GLOBALS["gamets"],
+                        'localts'   => time(),
+                        'original'  => 'backgroundaction',
+                    ]
+                );
+            }
+        } else {
+            error_log("[TravelTo] Using Foreground TravelTo");
+            // Foreground suggestion
+            $suggestionText = "The following step in the storyline requires {$quest_data["npcs"][$npc_ref]["name"]} to travel to a new location. {$quest_data["npcs"][$npc_ref]["name"]} must explain why this travel is needed. {$quest_data["npcs"][$npc_ref]["name"]} should travel to <$location>, (use TravelTo action).";
+            $GLOBALS["db"]->insert(
+                'responselog',
+                [
+                    'localts' => time(),
+                    'sent'    => 0,
+                    'actor'   => "rolemaster",
+                    'text'    => "",
+                    'action'  => "rolecommand|Suggestion@{$quest_data["npcs"][$npc_ref]["name"]}@$suggestionText@$quest_id",
+                    'tag' => "",
+                ]
+            );
+        }
+    } else {
+        // Player travel instruction (generic)
+        $sceneNoteData    = "#Storyline: {$GLOBALS["PLAYER_NAME"]} should travel to <$location>";
+        $sceneNoteDataEsc = $GLOBALS["db"]->escape($sceneNoteData);
+        
+        $GLOBALS["db"]->insert(
+            'rolemaster',
+            [
+                'localts' => time(),
+                'ttl'     => 25,
+                'type'    => "scenenote",
+                'data'    => $sceneNoteData,
+            ]
+        );
+    }
+
+    // Mark as issued and save
+    $quest_data["travels"][$travel_key]["issued"] = true;
+    SNQEQuestManager::updateQuestData($quest_id, ["travels" => $quest_data["travels"]]);
+
+    error_log("[TravelTo] Travel instruction issued for <$location>, returning done");
+    return "done";
+}
+
+/**
+ * SNQE StationAtLocation function
+ *
+ * Non-blocking version of WaitAtLocation. Stations an NPC at a location and returns true after first execution.
+ * Does not wait for confirmation that the NPC has arrived, immediately marks as complete.
+ *
+ * @param string $quest_id Unique quest identifier
+ * @param string $location Location name to station NPC at
+ * @param string|null $npc_ref NPC reference to station at the location
+ * @return bool Always returns true after first execution
+ */
+function StationAtLocation(
+    string $quest_id,
+    string $location,
+    ?string $npc_ref = null
+): bool {
+    // Fetch quest state
+    $quest = SNQEQuestManager::getQuest($quest_id);
+
+    if (! $quest) {
+        throw new Exception("Quest '$quest_id' does not exist.");
+    }
+
+    $quest_data = $quest["quest_data"] ?? [];
+
+    // Initialize station tracking if not exists
+    if (! isset($quest_data["station_at_location"])) {
+        $quest_data["station_at_location"] = [];
+    }
+
+    $station_key = "station_" . md5($location . ($npc_ref ?? ""));
+
+    // If already stationed, return true
+    if (! empty($quest_data["station_at_location"][$station_key]) && $quest_data["station_at_location"][$station_key]["stationed"] === true) {
+        error_log("[StationAtLocation] NPC already stationed at <$location>");
+        return true;
+    }
+
+    // Initialize station tracking for this location
+    if (! isset($quest_data["station_at_location"][$station_key])) {
+        $quest_data["station_at_location"][$station_key] = [
+            "location"   => $location,
+            "npc_ref"    => $npc_ref,
+            "stationed"  => false,
+        ];
+    }
+
+    error_log("[StationAtLocation] Issuing station instruction for NPC at <$location>");
+
+    // Issue the station instruction
+    if ($npc_ref && isset($quest_data["npcs"][$npc_ref])) {
+        // NPC station instruction
+        if (strpos($GLOBALS["actors_present"], $quest_data["npcs"][$npc_ref]["name"]) === false) {
+            error_log("[StationAtLocation] Using Background TravelTo");
+            // Background command
+            $npcMaster      = new NpcMaster();
+            $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
+            $unsignedInt    = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
+            $refHexString   = "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
+
+            $locs = $GLOBALS["db"]->fetchOne("SELECT * FROM locations where name='" . $GLOBALS["db"]->escape($location) . "' LIMIT 1");
+
+            if ($locs) {
+                $GLOBALS["db"]->insert(
+                    'responselog',
+                    [
+                        'localts' => time(),
+                        'sent'    => 0,
+                        'actor'   => "rolemaster",
+                        'text'    => "",
+                        'action'  => "rolecommand|BackgroundCmd@$refHexString@TravelTo/{$locs["formid"]}",
+                        'tag' => '',
+                    ]
+                );
+
+                $GLOBALS["db"]->insert(
+                    'eventlog',
+                    [
+                        'ts'     => $GLOBALS["last_ts"],
+                        'gamets' => $GLOBALS["last_gamets"],
+                        'type'   => "infoaction",
+                        'data'   => "The Narrator: {$currentNpcData["npc_name"]} takes position at $location",
+                        'sess'     => time(),
+                        'localts'  => time(),
+                        'people'   => $GLOBALS["actors_present"],
+                        'location' => "",
+                        'party'    => "",
+                    ]
+                );
+
+                // Insert actions_issued log entry
+                $GLOBALS["db"]->insert(
+                    'actions_issued',
+                    [
+                        'action'    => "StationAtLocation",
+                        'fullcall'  => "StationAtLocation:$location",
+                        'actorname' => $currentNpcData["npc_name"],
+                        'ts'        => $GLOBALS["last_ts"],
+                        'gamets'    => $GLOBALS["gamets"],
+                        'localts'   => time(),
+                        'original'  => 'backgroundaction',
+                    ]
+                );
+            }
+        } else {
+            error_log("[StationAtLocation] Using Foreground suggestion");
+            // Foreground suggestion
+            $suggestionText = "The following step in the storyline requires {$quest_data["npcs"][$npc_ref]["name"]} to station at a location. {$quest_data["npcs"][$npc_ref]["name"]} should move to and stay at <$location>.";
+            $GLOBALS["db"]->insert(
+                'responselog',
+                [
+                    'localts' => time(),
+                    'sent'    => 0,
+                    'actor'   => "rolemaster",
+                    'text'    => "",
+                    'action'  => "rolecommand|Suggestion@{$quest_data["npcs"][$npc_ref]["name"]}@$suggestionText@$quest_id",
+                    'tag' => "",
+                ]
+            );
+        }
+    }
+
+    // Mark as stationed and save (non-blocking, return true immediately)
+    $quest_data["station_at_location"][$station_key]["stationed"] = true;
+    SNQEQuestManager::updateQuestData($quest_id, ["station_at_location" => $quest_data["station_at_location"]]);
+
+    error_log("[StationAtLocation] Station instruction issued for <$location>, returning true immediately");
+    return true;
 }

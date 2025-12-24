@@ -38,21 +38,23 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'GoToSleep',
     'UseSoulGaze',
     'MakeFollower',
-//    'WaitHere'
+    'Toast',
+    'Drink'
+    //    'WaitHere'
 ];
 
 $GLOBALS["ENABLED_FUNCTIONS"] = $ENABLED_FUNCTIONS_LOCAL;
 
 // Ensure PLAYER_NAME is defined before use in string templates below.
 // Prefer database (conf_opts) value; fallback to existing global or 'Player'.
-if (! isset($GLOBALS["PLAYER_NAME"]) || $GLOBALS["PLAYER_NAME"] === '') {
+if (!isset($GLOBALS["PLAYER_NAME"]) || $GLOBALS["PLAYER_NAME"] === '') {
     $safePlayerName = 'Player';
     try {
         $rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
         @include_once $rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
         if (isset($GLOBALS["DBDRIVER"]) && $GLOBALS["DBDRIVER"] !== '') {
             $dbClassFile = $rootPath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php";
-            if (! class_exists('sql') && file_exists($dbClassFile)) {
+            if (!class_exists('sql') && file_exists($dbClassFile)) {
                 require_once $dbClassFile;
             }
             if (class_exists('sql')) {
@@ -73,124 +75,134 @@ if (! isset($GLOBALS["PLAYER_NAME"]) || $GLOBALS["PLAYER_NAME"] === '') {
 
 // We must use internal keys here.
 
-$F_TRANSLATIONS_LOCAL["Inspect"]             = "Inspects ONLY an ACTOR/NPC. Wait for result to give a dialogue message.";
-$F_TRANSLATIONS_LOCAL["LookAt"]              = "Inspects ONLY an ACTOR/NPC. Wait for result to give a dialogue message.";
+$F_TRANSLATIONS_LOCAL["Inspect"] = "Inspects ONLY an ACTOR/NPC. Wait for result to give a dialogue message.";
+$F_TRANSLATIONS_LOCAL["LookAt"] = "Inspects ONLY an ACTOR/NPC. Wait for result to give a dialogue message.";
 $F_TRANSLATIONS_LOCAL["InspectSurroundings"] = "Looks for actors around.Wait for result to give a dialogue message";
-$F_TRANSLATIONS_LOCAL["MoveTo"]              = "Move to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
-$F_TRANSLATIONS_LOCAL["OpenInventory"]       = "Initiates trading or exchange ITEMS with {$GLOBALS["PLAYER_NAME"]}.";
-$F_TRANSLATIONS_LOCAL["OpenInventory2"]      = "Initiates trading, {$GLOBALS["PLAYER_NAME"]} must give ITEMS to {$GLOBALS["HERIKA_NAME"]}";
-$F_TRANSLATIONS_LOCAL["Attack"]              = "Attack with intention to kill an Actor, NPC or entity.";
-$F_TRANSLATIONS_LOCAL["AttackHunt"]          = "Hunt with intention to kill an Actor, NPC or entity.";
-$F_TRANSLATIONS_LOCAL["Follow"]              = "Move to and follow the specified target actor";
-$F_TRANSLATIONS_LOCAL["CheckInventory"]      = "Search in {$GLOBALS["HERIKA_NAME"]}'s inventory, backpack or pocket. List their inventory contents";
-$F_TRANSLATIONS_LOCAL["SheatheWeapon"]       = "Sheathes/put away current weapon";
-$F_TRANSLATIONS_LOCAL["Relax"]               = "Stop whatever you are doing and relax at the current location.Used to Unwind,Loosen Up,Enjoy Moment,Chill";
-$F_TRANSLATIONS_LOCAL["TravelTo"]            = "Use it to move to major locations and landmarks and POIs.";
-$F_TRANSLATIONS_LOCAL["TakeASeat"]           = "{$GLOBALS["HERIKA_NAME"]} take a seat at seating location nearby.";
-$F_TRANSLATIONS_LOCAL["ReadQuestJournal"]    = "Only use if {$GLOBALS["PLAYER_NAME"]} explicitly ask for a quest. Get info about current quests";
-$F_TRANSLATIONS_LOCAL["IncreaseWalkSpeed"]   = "Increase {$GLOBALS["HERIKA_NAME"]} speed when moving or travelling";
-$F_TRANSLATIONS_LOCAL["DecreaseWalkSpeed"]   = "Decrease {$GLOBALS["HERIKA_NAME"]} speed when moving or travelling";
-$F_TRANSLATIONS_LOCAL["GetDateTime"]         = "Get Current Date and Time";
-$F_TRANSLATIONS_LOCAL["SearchDiary"]         = "Read {$GLOBALS["HERIKA_NAME"]}'s diary to make her remember something. Search in diary index";
-$F_TRANSLATIONS_LOCAL["SetCurrentTask"]      = "Set the current plan of action or task or quest";
-$F_TRANSLATIONS_LOCAL["ReadDiaryPage"]       = "Read {$GLOBALS["HERIKA_NAME"]}'s diary to access a specific topic";
-$F_TRANSLATIONS_LOCAL["StopWalk"]            = "Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
-$F_TRANSLATIONS_LOCAL["TravelTo"]            = "Only use if {$GLOBALS["PLAYER_NAME"]} explicitly suggest it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. Also known as lead the way";
-$F_TRANSLATIONS_LOCAL["SearchMemory"]        = "{$GLOBALS["HERIKA_NAME"]} tries to remember information. REPLY with hashtags";
-$F_TRANSLATIONS_LOCAL["WaitHere"]            = "{$GLOBALS["HERIKA_NAME"]} waits and loiters at the current location";
-$F_TRANSLATIONS_LOCAL["GiveItemToPlayer"]    = "{$GLOBALS["HERIKA_NAME"]} gives item (property target) to {$GLOBALS["PLAYER_NAME"]} (property listener)";
-$F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"]  = "{$GLOBALS["HERIKA_NAME"]} takes amount (property target) of gold from {$GLOBALS["PLAYER_NAME"]}, once {$GLOBALS["PLAYER_NAME"]} is agree. infer amount from context.";
-$F_TRANSLATIONS_LOCAL["FollowPlayer"]        = "{$GLOBALS["HERIKA_NAME"]} follows  {$GLOBALS["PLAYER_NAME"]}";
-$F_TRANSLATIONS_LOCAL["ComeCloser"]          = "{$GLOBALS["HERIKA_NAME"]} aproaches to {$GLOBALS["PLAYER_NAME"]}";
-$F_TRANSLATIONS_LOCAL["Brawl"]               = "{$GLOBALS["HERIKA_NAME"]} engages non lethtal combat with another actor, using weapons";
-$F_TRANSLATIONS_LOCAL["ReturnBackHome"]      = "{$GLOBALS["HERIKA_NAME"]} travels to home/origin place.Returns home.";
-$F_TRANSLATIONS_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives gold/coins/septims to another actor. Specify the amount to give";
-$F_TRANSLATIONS_LOCAL["GiveItemTo"]   = "{$GLOBALS["HERIKA_NAME"]} gives a specific item from inventory to another actor. REQUIRED: Must include 'item' field with exact item name from <inventory> tag, and 'target' field with recipient name";
-$F_TRANSLATIONS_LOCAL["PickupItem"]   = "{$GLOBALS["HERIKA_NAME"]} picks up a specific item from the ground. Use the exact RefID:ItemName format from nearby_items (e.g. 0x12345:Iron Sword)";
-$F_TRANSLATIONS_LOCAL["GoToSleep"]    = "{$GLOBALS["HERIKA_NAME"]} takes a nap";
-$F_TRANSLATIONS_LOCAL["UseSoulGaze"]  = "Use the spell SoulGaze, a powerful incantation that allows {$GLOBALS["HERIKA_NAME"]} to perceive surroundings in vivid detail through {$GLOBALS["PLAYER_NAME"]}'s eyes. The spell, however, causes some disturbance to the caster.";
-$F_TRANSLATIONS_LOCAL["CastSpell"]    = "{$GLOBALS["HERIKA_NAME"]} casts a spell on target actor. Must specify spell name from <spells> and target actor name. Use 'self' as target for self-targeted spells.";
+$F_TRANSLATIONS_LOCAL["MoveTo"] = "Move to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
+$F_TRANSLATIONS_LOCAL["OpenInventory"] = "Initiates trading or exchange ITEMS with {$GLOBALS["PLAYER_NAME"]}.";
+$F_TRANSLATIONS_LOCAL["OpenInventory2"] = "Initiates trading, {$GLOBALS["PLAYER_NAME"]} must give ITEMS to {$GLOBALS["HERIKA_NAME"]}";
+$F_TRANSLATIONS_LOCAL["Attack"] = "Attack with intention to kill an Actor, NPC or entity.";
+$F_TRANSLATIONS_LOCAL["AttackHunt"] = "Hunt with intention to kill an Actor, NPC or entity.";
+$F_TRANSLATIONS_LOCAL["Follow"] = "Move to and follow the specified target actor";
+$F_TRANSLATIONS_LOCAL["CheckInventory"] = "Search in {$GLOBALS["HERIKA_NAME"]}'s inventory, backpack or pocket. List their inventory contents";
+$F_TRANSLATIONS_LOCAL["SheatheWeapon"] = "Sheathes/put away current weapon";
+$F_TRANSLATIONS_LOCAL["Relax"] = "Stop whatever you are doing and relax at the current location.Used to Unwind,Loosen Up,Enjoy Moment,Chill";
+$F_TRANSLATIONS_LOCAL["TravelTo"] = "Use it to move to major locations and landmarks and POIs.";
+$F_TRANSLATIONS_LOCAL["TakeASeat"] = "{$GLOBALS["HERIKA_NAME"]} take a seat at seating location nearby.";
+$F_TRANSLATIONS_LOCAL["ReadQuestJournal"] = "Only use if {$GLOBALS["PLAYER_NAME"]} explicitly ask for a quest. Get info about current quests";
+$F_TRANSLATIONS_LOCAL["IncreaseWalkSpeed"] = "Increase {$GLOBALS["HERIKA_NAME"]} speed when moving or travelling";
+$F_TRANSLATIONS_LOCAL["DecreaseWalkSpeed"] = "Decrease {$GLOBALS["HERIKA_NAME"]} speed when moving or travelling";
+$F_TRANSLATIONS_LOCAL["GetDateTime"] = "Get Current Date and Time";
+$F_TRANSLATIONS_LOCAL["SearchDiary"] = "Read {$GLOBALS["HERIKA_NAME"]}'s diary to make her remember something. Search in diary index";
+$F_TRANSLATIONS_LOCAL["SetCurrentTask"] = "Set the current plan of action or task or quest";
+$F_TRANSLATIONS_LOCAL["ReadDiaryPage"] = "Read {$GLOBALS["HERIKA_NAME"]}'s diary to access a specific topic";
+$F_TRANSLATIONS_LOCAL["StopWalk"] = "Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
+$F_TRANSLATIONS_LOCAL["TravelTo"] = "Only use if {$GLOBALS["PLAYER_NAME"]} explicitly suggest it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. Also known as lead the way";
+$F_TRANSLATIONS_LOCAL["SearchMemory"] = "{$GLOBALS["HERIKA_NAME"]} tries to remember information. REPLY with hashtags";
+$F_TRANSLATIONS_LOCAL["WaitHere"] = "{$GLOBALS["HERIKA_NAME"]} waits and loiters at the current location";
+$F_TRANSLATIONS_LOCAL["GiveItemToPlayer"] = "{$GLOBALS["HERIKA_NAME"]} gives item (property target) to {$GLOBALS["PLAYER_NAME"]} (property listener)";
+$F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"] = "{$GLOBALS["HERIKA_NAME"]} takes amount (property target) of gold from {$GLOBALS["PLAYER_NAME"]}, once {$GLOBALS["PLAYER_NAME"]} is agree. infer amount from context.";
+$F_TRANSLATIONS_LOCAL["FollowPlayer"] = "{$GLOBALS["HERIKA_NAME"]} follows  {$GLOBALS["PLAYER_NAME"]}";
+$F_TRANSLATIONS_LOCAL["ComeCloser"] = "{$GLOBALS["HERIKA_NAME"]} aproaches to {$GLOBALS["PLAYER_NAME"]}";
+$F_TRANSLATIONS_LOCAL["Brawl"] = "{$GLOBALS["HERIKA_NAME"]} engages non lethtal combat with another actor, using weapons";
+$F_TRANSLATIONS_LOCAL["ReturnBackHome"] = "{$GLOBALS["HERIKA_NAME"]} travels to home/origin place.Returns home.";
+$F_TRANSLATIONS_LOCAL["GiveGoldTo"] = "{$GLOBALS["HERIKA_NAME"]} gives gold/coins/septims to another actor. Specify the amount to give";
+$F_TRANSLATIONS_LOCAL["GiveItemTo"] = "{$GLOBALS["HERIKA_NAME"]} gives a specific item from inventory to another actor. REQUIRED: Must include 'item' field with exact item name from <inventory> tag, and 'target' field with recipient name";
+$F_TRANSLATIONS_LOCAL["PickupItem"] = "{$GLOBALS["HERIKA_NAME"]} picks up a specific item from the ground. Use the exact RefID:ItemName format from nearby_items (e.g. 0x12345:Iron Sword)";
+$F_TRANSLATIONS_LOCAL["GoToSleep"] = "{$GLOBALS["HERIKA_NAME"]} takes a nap";
+$F_TRANSLATIONS_LOCAL["UseSoulGaze"] = "Use the spell SoulGaze, a powerful incantation that allows {$GLOBALS["HERIKA_NAME"]} to perceive surroundings in vivid detail through {$GLOBALS["PLAYER_NAME"]}'s eyes. The spell, however, causes some disturbance to the caster.";
+$F_TRANSLATIONS_LOCAL["CastSpell"] = "{$GLOBALS["HERIKA_NAME"]} casts a spell on target actor. Must specify spell name from <spells> and target actor name. Use 'self' as target for self-targeted spells.";
 $F_TRANSLATIONS_LOCAL["MakeFollower"] = "{$GLOBALS["HERIKA_NAME"]} joins to {$GLOBALS["PLAYER_NAME"]}, forming a squad or adventuring party";
 
-$F_RETURNMESSAGES_LOCAL["Inspect"]             = "{$GLOBALS["HERIKA_NAME"]} inspects #TARGET# and see this: #RESULT#";
-$F_RETURNMESSAGES_LOCAL["LookAt"]              = "LOOK at or Inspects NPC, Actor, or being OUTFIT and GEAR";
+$F_TRANSLATIONS_LOCAL["Toast"] = "Raises a glass in celebration or honor.";
+$F_TRANSLATIONS_LOCAL["Drink"] = "Drinks a beverage to quench thirst or enjoy flavor.";
+
+
+$F_RETURNMESSAGES_LOCAL["Inspect"] = "{$GLOBALS["HERIKA_NAME"]} inspects #TARGET# and see this: #RESULT#";
+$F_RETURNMESSAGES_LOCAL["LookAt"] = "LOOK at or Inspects NPC, Actor, or being OUTFIT and GEAR";
 $F_RETURNMESSAGES_LOCAL["InspectSurroundings"] = "{$GLOBALS["HERIKA_NAME"]} takes a look around and see this: #RESULT#";
-$F_RETURNMESSAGES_LOCAL["MoveTo"]              = "Walk to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
-$F_RETURNMESSAGES_LOCAL["OpenInventory"]       = "Initiates trading or exchange items with {$GLOBALS["PLAYER_NAME"]}.";
-$F_RETURNMESSAGES_LOCAL["OpenInventory2"]      = "{$GLOBALS["PLAYER_NAME"]} give items to {$GLOBALS["HERIKA_NAME"]}. Accept gift.";
-$F_RETURNMESSAGES_LOCAL["Attack"]              = "{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
-$F_RETURNMESSAGES_LOCAL["AttackHunt"]          = "{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
-$F_RETURNMESSAGES_LOCAL["Follow"]              = "{$GLOBALS["HERIKA_NAME"]} follows #TARGET# ";
-$F_RETURNMESSAGES_LOCAL["CheckInventory"]      = "{$GLOBALS["HERIKA_NAME"]}'s INVENTORY:#RESULT#";
-$F_RETURNMESSAGES_LOCAL["SheatheWeapon"]       = "Sheathes/put away current weapon";
-$F_RETURNMESSAGES_LOCAL["Relax"]               = "{$GLOBALS["HERIKA_NAME"]} is relaxed. Time to enjoy life.";
-$F_RETURNMESSAGES_LOCAL["LeadTheWayTo"]        = "Only use if {$GLOBALS["PLAYER_NAME"]} explicitly orders it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. ";
-$F_RETURNMESSAGES_LOCAL["TakeASeat"]           = "{$GLOBALS["HERIKA_NAME"]} seats in nearby chair or furniture ";
-$F_RETURNMESSAGES_LOCAL["ReadQuestJournal"]    = "";
-$F_RETURNMESSAGES_LOCAL["IncreaseWalkSpeed"]   = "Increases {$GLOBALS["HERIKA_NAME"]} speed/pace when moving or travelling";
-$F_RETURNMESSAGES_LOCAL["DecreaseWalkSpeed"]   = "Decreases {$GLOBALS["HERIKA_NAME"]} speed/pace when moving or travelling";
-$F_RETURNMESSAGES_LOCAL["GetDateTime"]         = "Get Current Date and Time";
-$F_RETURNMESSAGES_LOCAL["SearchDiary"]         = "Read {$GLOBALS["HERIKA_NAME"]}'s diary to make her remember something. Search in diary index";
-$F_RETURNMESSAGES_LOCAL["SetCurrentTask"]      = "Set the current plan of action or task or quest";
-$F_RETURNMESSAGES_LOCAL["ReadDiaryPage"]       = "Read {$GLOBALS["HERIKA_NAME"]}'s diary to access a specific topic";
-$F_RETURNMESSAGES_LOCAL["StopWalk"]            = "Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
-$F_RETURNMESSAGES_LOCAL["TravelTo"]            = "{$GLOBALS["HERIKA_NAME"]} begins travelling to #TARGET#";
-$F_RETURNMESSAGES_LOCAL["SearchMemory"]        = "{$GLOBALS["HERIKA_NAME"]} tries to remember information. JUST REPLY something like 'Let me think' and wait";
-$F_RETURNMESSAGES_LOCAL["WaitHere"]            = "{$GLOBALS["HERIKA_NAME"]} waits and stands at the place";
-$F_RETURNMESSAGES_LOCAL["GiveItemToPlayer"]    = "{$GLOBALS["HERIKA_NAME"]} gave #TARGET# to {$GLOBALS["PLAYER_NAME"]}.If this a transaction, maybe TakeGoldFromPlayer is needed.";
-$F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"]  = "{$GLOBALS["PLAYER_NAME"]} gave #TARGET# coins to {$GLOBALS["HERIKA_NAME"]}. If this a transaction, maybe GiveItemToPlayer is needed.";
-$F_RETURNMESSAGES_LOCAL["FollowPlayer"]        = "{$GLOBALS["HERIKA_NAME"]} follows {$GLOBALS["PLAYER_NAME"]}";
-$F_RETURNMESSAGES_LOCAL["Brawl"]               = "{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
-$F_RETURNMESSAGES_LOCAL["ReturnBackHome"]      = "{$GLOBALS["HERIKA_NAME"]} goes back home";
-$F_RETURNMESSAGES_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gives #TARGET# gold";
-$F_RETURNMESSAGES_LOCAL["GiveItemTo"]   = "{$GLOBALS["HERIKA_NAME"]} gives #ITEM# to #TARGET#";
-$F_RETURNMESSAGES_LOCAL["PickupItem"]   = "{$GLOBALS["HERIKA_NAME"]} picks up #ITEM#";
-$F_RETURNMESSAGES_LOCAL["GoToSleep"]    = "{$GLOBALS["HERIKA_NAME"]} takes a nap";
-$F_RETURNMESSAGES_LOCAL["UseSoulGaze"]  = "{$GLOBALS["HERIKA_NAME"]} used soulgaze";
-$F_RETURNMESSAGES_LOCAL["CastSpell"]    = "{$GLOBALS["HERIKA_NAME"]} casts #ITEM# on #TARGET#";
+$F_RETURNMESSAGES_LOCAL["MoveTo"] = "Walk to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
+$F_RETURNMESSAGES_LOCAL["OpenInventory"] = "Initiates trading or exchange items with {$GLOBALS["PLAYER_NAME"]}.";
+$F_RETURNMESSAGES_LOCAL["OpenInventory2"] = "{$GLOBALS["PLAYER_NAME"]} give items to {$GLOBALS["HERIKA_NAME"]}. Accept gift.";
+$F_RETURNMESSAGES_LOCAL["Attack"] = "{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
+$F_RETURNMESSAGES_LOCAL["AttackHunt"] = "{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
+$F_RETURNMESSAGES_LOCAL["Follow"] = "{$GLOBALS["HERIKA_NAME"]} follows #TARGET# ";
+$F_RETURNMESSAGES_LOCAL["CheckInventory"] = "{$GLOBALS["HERIKA_NAME"]}'s INVENTORY:#RESULT#";
+$F_RETURNMESSAGES_LOCAL["SheatheWeapon"] = "Sheathes/put away current weapon";
+$F_RETURNMESSAGES_LOCAL["Relax"] = "{$GLOBALS["HERIKA_NAME"]} is relaxed. Time to enjoy life.";
+$F_RETURNMESSAGES_LOCAL["LeadTheWayTo"] = "Only use if {$GLOBALS["PLAYER_NAME"]} explicitly orders it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. ";
+$F_RETURNMESSAGES_LOCAL["TakeASeat"] = "{$GLOBALS["HERIKA_NAME"]} seats in nearby chair or furniture ";
+$F_RETURNMESSAGES_LOCAL["ReadQuestJournal"] = "";
+$F_RETURNMESSAGES_LOCAL["IncreaseWalkSpeed"] = "Increases {$GLOBALS["HERIKA_NAME"]} speed/pace when moving or travelling";
+$F_RETURNMESSAGES_LOCAL["DecreaseWalkSpeed"] = "Decreases {$GLOBALS["HERIKA_NAME"]} speed/pace when moving or travelling";
+$F_RETURNMESSAGES_LOCAL["GetDateTime"] = "Get Current Date and Time";
+$F_RETURNMESSAGES_LOCAL["SearchDiary"] = "Read {$GLOBALS["HERIKA_NAME"]}'s diary to make her remember something. Search in diary index";
+$F_RETURNMESSAGES_LOCAL["SetCurrentTask"] = "Set the current plan of action or task or quest";
+$F_RETURNMESSAGES_LOCAL["ReadDiaryPage"] = "Read {$GLOBALS["HERIKA_NAME"]}'s diary to access a specific topic";
+$F_RETURNMESSAGES_LOCAL["StopWalk"] = "Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
+$F_RETURNMESSAGES_LOCAL["TravelTo"] = "{$GLOBALS["HERIKA_NAME"]} begins travelling to #TARGET#";
+$F_RETURNMESSAGES_LOCAL["SearchMemory"] = "{$GLOBALS["HERIKA_NAME"]} tries to remember information. JUST REPLY something like 'Let me think' and wait";
+$F_RETURNMESSAGES_LOCAL["WaitHere"] = "{$GLOBALS["HERIKA_NAME"]} waits and stands at the place";
+$F_RETURNMESSAGES_LOCAL["GiveItemToPlayer"] = "{$GLOBALS["HERIKA_NAME"]} gave #TARGET# to {$GLOBALS["PLAYER_NAME"]}.If this a transaction, maybe TakeGoldFromPlayer is needed.";
+$F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"] = "{$GLOBALS["PLAYER_NAME"]} gave #TARGET# coins to {$GLOBALS["HERIKA_NAME"]}. If this a transaction, maybe GiveItemToPlayer is needed.";
+$F_RETURNMESSAGES_LOCAL["FollowPlayer"] = "{$GLOBALS["HERIKA_NAME"]} follows {$GLOBALS["PLAYER_NAME"]}";
+$F_RETURNMESSAGES_LOCAL["Brawl"] = "{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
+$F_RETURNMESSAGES_LOCAL["ReturnBackHome"] = "{$GLOBALS["HERIKA_NAME"]} goes back home";
+$F_RETURNMESSAGES_LOCAL["GiveGoldTo"] = "{$GLOBALS["HERIKA_NAME"]} gives #TARGET# gold";
+$F_RETURNMESSAGES_LOCAL["GiveItemTo"] = "{$GLOBALS["HERIKA_NAME"]} gives #ITEM# to #TARGET#";
+$F_RETURNMESSAGES_LOCAL["PickupItem"] = "{$GLOBALS["HERIKA_NAME"]} picks up #ITEM#";
+$F_RETURNMESSAGES_LOCAL["GoToSleep"] = "{$GLOBALS["HERIKA_NAME"]} takes a nap";
+$F_RETURNMESSAGES_LOCAL["UseSoulGaze"] = "{$GLOBALS["HERIKA_NAME"]} used soulgaze";
+$F_RETURNMESSAGES_LOCAL["CastSpell"] = "{$GLOBALS["HERIKA_NAME"]} casts #ITEM# on #TARGET#";
 $F_RETURNMESSAGES_LOCAL["MakeFollower"] = "{$GLOBALS["HERIKA_NAME"]} is now part of the adventuring party";
+
+$F_RETURNMESSAGES_LOCAL["Toast"] = "{$GLOBALS["HERIKA_NAME"]} raises a glass in celebration or honor.";      
+$F_RETURNMESSAGES_LOCAL["Drink"] = "{$GLOBALS["HERIKA_NAME"]} drinks a beverage to quench thirst or enjoy flavor.";
 
 // What is this?. We can translate functions or give them a custom name.
 // This array will handle translations. Plugin must receive the codename always.
 
-$F_NAMES_LOCAL["Inspect"]             = "Inspect";
-$F_NAMES_LOCAL["LookAt"]              = "LookAt";
+$F_NAMES_LOCAL["Inspect"] = "Inspect";
+$F_NAMES_LOCAL["LookAt"] = "LookAt";
 $F_NAMES_LOCAL["InspectSurroundings"] = "InspectSurroundings";
-$F_NAMES_LOCAL["MoveTo"]              = "MoveTo";
-$F_NAMES_LOCAL["OpenInventory"]       = "ExchangeItems";
-$F_NAMES_LOCAL["OpenInventory2"]      = "AcceptGift";
-$F_NAMES_LOCAL["Attack"]              = "Attack";
-$F_NAMES_LOCAL["AttackHunt"]          = "Hunt";
-$F_NAMES_LOCAL["Follow"]              = "Follow";
-$F_NAMES_LOCAL["CheckInventory"]      = "ListInventory";
-$F_NAMES_LOCAL["SheatheWeapon"]       = "SheatheWeapon";
-$F_NAMES_LOCAL["Relax"]               = "LetsRelax";
+$F_NAMES_LOCAL["MoveTo"] = "MoveTo";
+$F_NAMES_LOCAL["OpenInventory"] = "ExchangeItems";
+$F_NAMES_LOCAL["OpenInventory2"] = "AcceptGift";
+$F_NAMES_LOCAL["Attack"] = "Attack";
+$F_NAMES_LOCAL["AttackHunt"] = "Hunt";
+$F_NAMES_LOCAL["Follow"] = "Follow";
+$F_NAMES_LOCAL["CheckInventory"] = "ListInventory";
+$F_NAMES_LOCAL["SheatheWeapon"] = "SheatheWeapon";
+$F_NAMES_LOCAL["Relax"] = "LetsRelax";
 //$F_NAMES_LOCAL["LeadTheWayTo"]="LeadTheWayTo";
-$F_NAMES_LOCAL["TakeASeat"]          = "TakeASeat";
-$F_NAMES_LOCAL["ReadQuestJournal"]   = "ReadQuestJournal";
-$F_NAMES_LOCAL["IncreaseWalkSpeed"]  = "IncreaseWalkSpeed";
-$F_NAMES_LOCAL["DecreaseWalkSpeed"]  = "DecreaseWalkSpeed";
-$F_NAMES_LOCAL["GetDateTime"]        = "GetDateTime";
-$F_NAMES_LOCAL["SearchDiary"]        = "SearchDiary";
-$F_NAMES_LOCAL["SetCurrentTask"]     = "SetCurrentTask";
-$F_NAMES_LOCAL["ReadDiaryPage"]      = "ReadDiaryPage";
-$F_NAMES_LOCAL["StopWalk"]           = "StopWalk";
-$F_NAMES_LOCAL["TravelTo"]           = "TravelTo";
-$F_NAMES_LOCAL["SearchMemory"]       = "TryToRemember";
-$F_NAMES_LOCAL["WaitHere"]           = "WaitHere";
-$F_NAMES_LOCAL["GiveItemToPlayer"]   = "GiveItemToPlayer";
+$F_NAMES_LOCAL["TakeASeat"] = "TakeASeat";
+$F_NAMES_LOCAL["ReadQuestJournal"] = "ReadQuestJournal";
+$F_NAMES_LOCAL["IncreaseWalkSpeed"] = "IncreaseWalkSpeed";
+$F_NAMES_LOCAL["DecreaseWalkSpeed"] = "DecreaseWalkSpeed";
+$F_NAMES_LOCAL["GetDateTime"] = "GetDateTime";
+$F_NAMES_LOCAL["SearchDiary"] = "SearchDiary";
+$F_NAMES_LOCAL["SetCurrentTask"] = "SetCurrentTask";
+$F_NAMES_LOCAL["ReadDiaryPage"] = "ReadDiaryPage";
+$F_NAMES_LOCAL["StopWalk"] = "StopWalk";
+$F_NAMES_LOCAL["TravelTo"] = "TravelTo";
+$F_NAMES_LOCAL["SearchMemory"] = "TryToRemember";
+$F_NAMES_LOCAL["WaitHere"] = "WaitHere";
+$F_NAMES_LOCAL["GiveItemToPlayer"] = "GiveItemToPlayer";
 $F_NAMES_LOCAL["TakeGoldFromPlayer"] = "TakeMoneyFrom{$GLOBALS["PLAYER_NAME"]}"; // Mmm
-$F_NAMES_LOCAL["FollowPlayer"]       = "FollowPlayer";
-$F_NAMES_LOCAL["ComeCloser"]         = "ComeCloser";
-$F_NAMES_LOCAL["Brawl"]              = "Fight";
-$F_NAMES_LOCAL["ReturnBackHome"]     = "ExitLocation";
-$F_NAMES_LOCAL["GiveGoldTo"]="GiveGoldTo";
-$F_NAMES_LOCAL["GiveItemTo"]   = "GiveItemTo";
-$F_NAMES_LOCAL["PickupItem"]   = "PickupItem";
-$F_NAMES_LOCAL["GoToSleep"]    = "GoToSleep";
-$F_NAMES_LOCAL["UseSoulGaze"]  = "UseSoulGaze";
-$F_NAMES_LOCAL["CastSpell"]    = "CastSpell";
+$F_NAMES_LOCAL["FollowPlayer"] = "FollowPlayer";
+$F_NAMES_LOCAL["ComeCloser"] = "ComeCloser";
+$F_NAMES_LOCAL["Brawl"] = "Fight";
+$F_NAMES_LOCAL["ReturnBackHome"] = "ReturnBackHome";
+$F_NAMES_LOCAL["GiveGoldTo"] = "GiveGoldTo";
+$F_NAMES_LOCAL["GiveItemTo"] = "GiveItemTo";
+$F_NAMES_LOCAL["PickupItem"] = "PickupItem";
+$F_NAMES_LOCAL["GoToSleep"] = "GoToSleep";
+$F_NAMES_LOCAL["UseSoulGaze"] = "UseSoulGaze";
+$F_NAMES_LOCAL["CastSpell"] = "CastSpell";
 $F_NAMES_LOCAL["MakeFollower"] = "JoinTo{$GLOBALS["PLAYER_NAME"]}Squad";
+
+$F_NAMES_LOCAL["Toast"] = "MakeAToast";
+$F_NAMES_LOCAL["Drink"] = "Drink";
 
 if (isset($GLOBALS["CORE_LANG"])) {
     if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lang" . DIRECTORY_SEPARATOR . $GLOBALS["CORE_LANG"] . DIRECTORY_SEPARATOR . "functions.php")) {
@@ -198,182 +210,182 @@ if (isset($GLOBALS["CORE_LANG"])) {
     }
 }
 
-$GLOBALS["F_TRANSLATIONS"]   = $F_TRANSLATIONS_LOCAL;
+$GLOBALS["F_TRANSLATIONS"] = $F_TRANSLATIONS_LOCAL;
 $GLOBALS["F_RETURNMESSAGES"] = $F_RETURNMESSAGES_LOCAL;
-$GLOBALS["F_NAMES"]          = $F_NAMES_LOCAL;
+$GLOBALS["F_NAMES"] = $F_NAMES_LOCAL;
 
 $GLOBALS["FUNCTIONS"] = [
     [
-        "name"        => $F_NAMES_LOCAL["Inspect"],
+        "name" => $F_NAMES_LOCAL["Inspect"],
         "description" => $F_TRANSLATIONS_LOCAL["Inspect"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Target NPC, Actor, or being",
-                    "enum"        => isset($GLOBALS['FUNCTION_PARM_INSPECT']) ? $GLOBALS['FUNCTION_PARM_INSPECT'] : [],
+                    "enum" => isset($GLOBALS['FUNCTION_PARM_INSPECT']) ? $GLOBALS['FUNCTION_PARM_INSPECT'] : [],
 
                 ],
             ],
-            "required"   => ["target"],
+            "required" => ["target"],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["InspectSurroundings"],
+        "name" => $F_NAMES_LOCAL["InspectSurroundings"],
         "description" => $F_TRANSLATIONS_LOCAL["InspectSurroundings"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Keep it blank",
                 ],
             ],
-            "required"   => [],
+            "required" => [],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["LookAt"],
+        "name" => $F_NAMES_LOCAL["LookAt"],
         "description" => $F_TRANSLATIONS_LOCAL["Inspect"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Target NPC, Actor, or being",
-                    "enum"        => isset($GLOBALS['FUNCTION_PARM_INSPECT']) ? $GLOBALS['FUNCTION_PARM_INSPECT'] : [],
+                    "enum" => isset($GLOBALS['FUNCTION_PARM_INSPECT']) ? $GLOBALS['FUNCTION_PARM_INSPECT'] : [],
 
                 ],
             ],
-            "required"   => ["target"],
+            "required" => ["target"],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["MoveTo"],
+        "name" => $F_NAMES_LOCAL["MoveTo"],
         "description" => $F_TRANSLATIONS_LOCAL["MoveTo"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Visible Target NPC, Actor, or being, or building.",
-                    "enum"        => isset($GLOBALS['FUNCTION_PARM_MOVETO']) ? $GLOBALS['FUNCTION_PARM_MOVETO'] : [],
+                    "enum" => isset($GLOBALS['FUNCTION_PARM_MOVETO']) ? $GLOBALS['FUNCTION_PARM_MOVETO'] : [],
                 ],
             ],
-            "required"   => ["target"],
+            "required" => ["target"],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["OpenInventory"],
+        "name" => $F_NAMES_LOCAL["OpenInventory"],
         "description" => $F_TRANSLATIONS_LOCAL["OpenInventory"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Keep it blank",
                 ],
             ],
-            "required"   => [],
+            "required" => [],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["OpenInventory2"],
+        "name" => $F_NAMES_LOCAL["OpenInventory2"],
         "description" => $F_TRANSLATIONS_LOCAL["OpenInventory2"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Keep it blank",
                 ],
             ],
-            "required"   => [],
+            "required" => [],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["Attack"],
+        "name" => $F_NAMES_LOCAL["Attack"],
         "description" => $F_TRANSLATIONS_LOCAL["Attack"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Target NPC, Actor, or being",
                 ],
             ],
-            "required"   => ["target"],
+            "required" => ["target"],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["AttackHunt"],
+        "name" => $F_NAMES_LOCAL["AttackHunt"],
         "description" => $F_TRANSLATIONS_LOCAL["AttackHunt"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Target animal",
                 ],
             ],
-            "required"   => ["target"],
+            "required" => ["target"],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["Follow"],
+        "name" => $F_NAMES_LOCAL["Follow"],
         "description" => $F_TRANSLATIONS_LOCAL["Follow"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Target NPC, Actor, or being",
                 ],
             ],
-            "required"   => ["target"],
+            "required" => ["target"],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["CheckInventory"],
+        "name" => $F_NAMES_LOCAL["CheckInventory"],
         "description" => $F_TRANSLATIONS_LOCAL["CheckInventory"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "item to look for, if empty all items will be returned",
                 ],
             ],
-            "required"   => [],
+            "required" => [],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["SheatheWeapon"],
+        "name" => $F_NAMES_LOCAL["SheatheWeapon"],
         "description" => $F_TRANSLATIONS_LOCAL["SheatheWeapon"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Keep it blank",
                 ],
             ],
-            "required"   => [],
+            "required" => [],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["Relax"],
+        "name" => $F_NAMES_LOCAL["Relax"],
         "description" => $F_TRANSLATIONS_LOCAL["Relax"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Keep it blank",
                 ],
             ],
-            "required"   => [],
+            "required" => [],
         ],
     ],
     /*[
@@ -392,244 +404,244 @@ $GLOBALS["FUNCTIONS"] = [
         ]
     ],*/
     [
-        "name"        => $F_NAMES_LOCAL["TravelTo"],
+        "name" => $F_NAMES_LOCAL["TravelTo"],
         "description" => $F_TRANSLATIONS_LOCAL["TravelTo"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "location" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Town or City to travel to, only if {$GLOBALS["PLAYER_NAME"]} explicitly orders it",
 
                 ],
             ],
-            "required"    => ["location"],
+            "required" => ["location"],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["TakeASeat"],
+        "name" => $F_NAMES_LOCAL["TakeASeat"],
         "description" => $F_TRANSLATIONS_LOCAL["TakeASeat"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Keep it blank",
                 ],
             ],
-            "required"   => [""],
+            "required" => [""],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["ReadQuestJournal"],
+        "name" => $F_NAMES_LOCAL["ReadQuestJournal"],
         "description" => $F_TRANSLATIONS_LOCAL["ReadQuestJournal"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "id_quest" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Specific quest to get info for, or blank to get all",
                 ],
             ],
-            "required"   => [""],
+            "required" => [""],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["IncreaseWalkSpeed"],
+        "name" => $F_NAMES_LOCAL["IncreaseWalkSpeed"],
         "description" => $F_TRANSLATIONS_LOCAL["IncreaseWalkSpeed"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "speed" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Speed",
-                    "enum"        => ["run", "jog"],
+                    "enum" => ["run", "jog"],
                 ],
 
             ],
-            "required"   => [],
+            "required" => [],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["DecreaseWalkSpeed"],
+        "name" => $F_NAMES_LOCAL["DecreaseWalkSpeed"],
         "description" => $F_TRANSLATIONS_LOCAL["DecreaseWalkSpeed"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "speed" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Speed",
-                    "enum"        => ["jog", "walk"],
+                    "enum" => ["jog", "walk"],
                 ],
 
             ],
-            "required"   => [],
+            "required" => [],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["GetDateTime"],
+        "name" => $F_NAMES_LOCAL["GetDateTime"],
         "description" => $F_TRANSLATIONS_LOCAL["GetDateTime"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "datestring" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Formatted date and time",
                 ],
 
             ],
-            "required"   => [],
+            "required" => [],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["SearchDiary"],
+        "name" => $F_NAMES_LOCAL["SearchDiary"],
         "description" => $F_TRANSLATIONS_LOCAL["SearchDiary"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "keyword" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "keyword to search in full-text query syntax",
                 ],
             ],
-            "required"   => [""],
+            "required" => [""],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["SetCurrentTask"],
+        "name" => $F_NAMES_LOCAL["SetCurrentTask"],
         "description" => $F_TRANSLATIONS_LOCAL["SetCurrentTask"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "description" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Short description of current task talked by the party",
                 ],
             ],
-            "required"   => ["description"],
+            "required" => ["description"],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["StopWalk"],
+        "name" => $F_NAMES_LOCAL["StopWalk"],
         "description" => $F_TRANSLATIONS_LOCAL["StopWalk"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "action",
                 ],
             ],
-            "required"   => [""],
+            "required" => [""],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["SearchMemory"],
+        "name" => $F_NAMES_LOCAL["SearchMemory"],
         "description" => $F_TRANSLATIONS_LOCAL["SearchMemory"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "",
                 ],
             ],
-            "required"   => [""],
+            "required" => [""],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["WaitHere"],
+        "name" => $F_NAMES_LOCAL["WaitHere"],
         "description" => $F_TRANSLATIONS_LOCAL["WaitHere"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "",
                 ],
             ],
-            "required"   => [""],
+            "required" => [""],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["GiveItemToPlayer"],
+        "name" => $F_NAMES_LOCAL["GiveItemToPlayer"],
         "description" => $F_TRANSLATIONS_LOCAL["GiveItemToPlayer"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "",
                 ],
             ],
-            "required"   => ["target"],
+            "required" => ["target"],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["TakeGoldFromPlayer"],
+        "name" => $F_NAMES_LOCAL["TakeGoldFromPlayer"],
         "description" => $F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "",
                 ],
             ],
-            "required"   => ["target"],
+            "required" => ["target"],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["FollowPlayer"],
+        "name" => $F_NAMES_LOCAL["FollowPlayer"],
         "description" => $F_TRANSLATIONS_LOCAL["FollowPlayer"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "",
                 ],
             ],
-            "required"   => [""],
+            "required" => [""],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["ComeCloser"],
+        "name" => $F_NAMES_LOCAL["ComeCloser"],
         "description" => $F_TRANSLATIONS_LOCAL["ComeCloser"],
-        "properties"  => [
+        "properties" => [
             "target" => [
-                "type"        => "string",
+                "type" => "string",
                 "description" => "Keep it blank",
             ],
         ],
-        "required"    => [""],
+        "required" => [""],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["Brawl"],
+        "name" => $F_NAMES_LOCAL["Brawl"],
         "description" => $F_TRANSLATIONS_LOCAL["Brawl"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Target NPC, Actor, or being",
                 ],
             ],
-            "required"   => ["target"],
+            "required" => ["target"],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["ReturnBackHome"],
+        "name" => $F_NAMES_LOCAL["ReturnBackHome"],
         "description" => $F_TRANSLATIONS_LOCAL["ReturnBackHome"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Keep it blank",
                 ],
             ],
-            "required"   => [""],
+            "required" => [""],
         ],
     ],
     [
@@ -651,103 +663,131 @@ $GLOBALS["FUNCTIONS"] = [
         ]
     ],
     [
-        "name"        => $F_NAMES_LOCAL["GiveItemTo"],
+        "name" => $F_NAMES_LOCAL["GiveItemTo"],
         "description" => $F_TRANSLATIONS_LOCAL["GiveItemTo"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Target NPC, Actor, or being to receive the item",
                 ],
-                "item"   => [
-                    "type"        => "string",
+                "item" => [
+                    "type" => "string",
                     "description" => "REQUIRED: Exact name of item from <inventory> tag. Must match item name exactly.",
                 ],
                 "amount" => [
-                    "type"        => "integer",
+                    "type" => "integer",
                     "description" => "Number of items to give (default: 1). Cannot exceed quantity in <inventory>.",
                 ],
             ],
-            "required"   => ["target", "item"],
+            "required" => ["target", "item"],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["PickupItem"],
+        "name" => $F_NAMES_LOCAL["PickupItem"],
         "description" => $F_TRANSLATIONS_LOCAL["PickupItem"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Target actor (leave empty for PickupItem)",
                 ],
-                "item"   => [
-                    "type"        => "string",
+                "item" => [
+                    "type" => "string",
                     "description" => "REQUIRED: Exact RefID:ItemName from <nearby_items> tag (e.g., 0x12345:Iron Sword). Must match format exactly.",
                 ],
             ],
-            "required"   => ["item"],
+            "required" => ["item"],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["GoToSleep"],
+        "name" => $F_NAMES_LOCAL["GoToSleep"],
         "description" => $F_TRANSLATIONS_LOCAL["GoToSleep"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Keep it blank",
                 ],
             ],
-            "required"   => [""],
+            "required" => [""],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["UseSoulGaze"],
+        "name" => $F_NAMES_LOCAL["UseSoulGaze"],
         "description" => $F_TRANSLATIONS_LOCAL["UseSoulGaze"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Keep it blank",
                 ],
             ],
-            "required"   => [],
+            "required" => [],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["CastSpell"],
+        "name" => $F_NAMES_LOCAL["CastSpell"],
         "description" => $F_TRANSLATIONS_LOCAL["CastSpell"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Target actor name, or 'self' for self-cast spells",
                 ],
-                "item"   => [
-                    "type"        => "string",
+                "item" => [
+                    "type" => "string",
                     "description" => "REQUIRED: Spell name from <spells> tag (exact name)",
                 ],
             ],
-            "required"   => ["target", "item"],
+            "required" => ["target", "item"],
         ],
     ],
     [
-        "name"        => $F_NAMES_LOCAL["MakeFollower"],
+        "name" => $F_NAMES_LOCAL["MakeFollower"],
         "description" => $F_TRANSLATIONS_LOCAL["MakeFollower"],
-        "parameters"  => [
-            "type"       => "object",
+        "parameters" => [
+            "type" => "object",
             "properties" => [
                 "target" => [
-                    "type"        => "string",
+                    "type" => "string",
                     "description" => "Keep it blank",
                 ],
             ],
-            "required"   => [""],
+            "required" => [""],
+        ],
+    ],
+     [
+        "name" => $F_NAMES_LOCAL["Toast"],
+        "description" => $F_TRANSLATIONS_LOCAL["Toast"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ],
+            ],
+            "required" => [""],
+        ],
+    ],
+     [
+        "name" => $F_NAMES_LOCAL["Drink"],
+        "description" => $F_TRANSLATIONS_LOCAL["Drink"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ],
+            ],
+            "required" => [""],
         ],
     ],
 ];
@@ -759,17 +799,17 @@ foreach ($GLOBALS["FUNCTIONS"] as $n => $functionEntry) {
 
 // This function only is offered when SearchDiary
 $FUNCTIONS_GHOSTED_LOCAL = [
-    "name"        => $F_NAMES_LOCAL["ReadDiaryPage"],
+    "name" => $F_NAMES_LOCAL["ReadDiaryPage"],
     "description" => $F_TRANSLATIONS_LOCAL["ReadDiaryPage"],
-    "parameters"  => [
-        "type"       => "object",
+    "parameters" => [
+        "type" => "object",
         "properties" => [
             "page" => [
-                "type"        => "string",
+                "type" => "string",
                 "description" => "topic to search in full-text query syntax",
             ],
         ],
-        "required"   => ["topic"],
+        "required" => ["topic"],
     ],
 ]
 ;
@@ -781,16 +821,16 @@ function getFunctionCodeName($key)
     if (!isset($GLOBALS["F_NAMES"]) || !is_array($GLOBALS["F_NAMES"])) {
         return false;
     }
-    
+
     $functionCode = array_search($key, $GLOBALS["F_NAMES"]);
-    
+
     // If not found, return false (function will be filtered out)
     return $functionCode !== false ? $functionCode : false;
 }
 
 function getFunctionTrlName($key)
 {
-    if (isset($GLOBALS["F_NAMES"][$key]) && ! empty($GLOBALS["F_NAMES"][$key])) {
+    if (isset($GLOBALS["F_NAMES"][$key]) && !empty($GLOBALS["F_NAMES"][$key])) {
         return $GLOBALS["F_NAMES"][$key];
     } else {
         return $key;
@@ -846,7 +886,7 @@ function unsetFunction($functionCodename)
     }
 
     foreach ($GLOBALS["FUNCTIONS"] as $n => $v) {
-        if (! in_array(getFunctionCodeName($v["name"]), $GLOBALS["ENABLED_FUNCTIONS"])) {
+        if (!in_array(getFunctionCodeName($v["name"]), $GLOBALS["ENABLED_FUNCTIONS"])) {
             // error_log("Removing {$GLOBALS["FUNCTIONS"][$n]["name"]}");
             unset($GLOBALS["FUNCTIONS"][$n]);
         }
@@ -891,6 +931,8 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         'UseSoulGaze',
         'CastSpell',
         'MakeFollower',
+        'Drink',
+        'Toast'
 
     ];
     error_log("[DEBUG functions.php] IS_NPC=true, CastSpell in ENABLED: " . (in_array('CastSpell', $GLOBALS["ENABLED_FUNCTIONS"]) ? "YES" : "NO"));
@@ -926,6 +968,8 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         'GoToSleep',
         'UseSoulGaze',
         'CastSpell',
+        'Drink',
+        'Toast'
         //'GetDateTime',
         //'SearchDiary',
         //'SearchMemory',
@@ -953,12 +997,13 @@ foreach ($GLOBALS["FUNCTIONS"] as $n => $v) {
         error_log("[FUNCTION] Warning: Could not get code name for function: {$v["name"]}");
         continue;
     }
-    if (! in_array($codeName, $GLOBALS["ENABLED_FUNCTIONS"])) {
-        // error_log("[FUNCTION] Removing $n {$v["name"]}:".$codeName);
+    if (!in_array($codeName, $GLOBALS["ENABLED_FUNCTIONS"])) {
+        error_log("[FUNCTION] Removing $n {$v["name"]}:".$codeName);
         unset($GLOBALS["FUNCTIONS"][$n]);
-    } else {
-        $GLOBALS["DEFINED_FUNCTIONS"][]=$codeName;
-    }
+    } 
+    
+    $GLOBALS["DEFINED_FUNCTIONS"][] = $codeName;
+    
 }
 
 file_put_contents(__DIR__ . "/../log/bug_func.txt", print_r($GLOBALS["FUNCTIONS"], true));
@@ -966,3 +1011,80 @@ file_put_contents(__DIR__ . "/../log/bug_func.txt", print_r($GLOBALS["ENABLED_FU
 file_put_contents(__DIR__ . "/../log/bug_func.txt", print_r($GLOBALS["ENABLED_FUNCTIONS"], true), FILE_APPEND);
 
 $GLOBALS["FUNCTIONS"] = array_values($GLOBALS["FUNCTIONS"]); //Get rid of array keys
+
+
+// POST FILTER HOOK. Used for cleaning actions returned by LLM
+// We are putting this here because we want this actions to be executed serverside via ScriptProxy
+
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "scriptproxy_papyrus.php";
+
+$GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
+    
+    global $gameRequest;
+
+    $actionsCopy=$actions;
+    foreach ($actions as $n=>$action) {
+        
+        $actionParts=explode("|",$action);
+        $actionParts2=explode("@",$actionParts[2]);
+        
+        if (isset($actionParts2[1])) {
+            // Parameter part 
+            if ($actionParts2[0]=="Drink") {
+               
+                // Make NPC to toast
+                $npcMaster = new Npcmaster();
+                $npcData   = $npcMaster->getByName($actionParts[0]);
+
+                $skyrimCmd = new SkyrimCommandBuilder();
+                $json      = $skyrimCmd->Actor->PlayIdle("0x{$npcData["refid"]}", "0x00103656");// DrinkIdle Start                $skyrimCmd->send($json);
+                $skyrimCmd->send(cmd: $json);
+
+                unset($actionsCopy[$n]);// Remove action from list, so client does not execute it
+                
+                $GLOBALS["db"]->insert(
+                    'actions_issued',
+                    array(
+                        'action' => "Drink",
+                        'fullcall' =>$actionParts[0]."|".$actionParts[1]."|".$actionParts[2],
+                        'actorname'=> $actionParts[0],
+                        'ts' => $gameRequest[1],
+                        'gamets' => $gameRequest[2],
+                        'localts'=>time(),
+                        'original'=>''
+                    )
+                );
+
+                error_log("[ACTION POSTFILTER Drink] Executed server-side");
+
+            } else  if ($actionParts2[0]=="Toast") {
+                
+                $npcMaster = new Npcmaster();
+                $npcData   = $npcMaster->getByName($actionParts[0]);
+
+                $skyrimCmd = new SkyrimCommandBuilder();
+                $json      = $skyrimCmd->Actor->PlayIdle("0x{$npcData["refid"]}", "0x0010528a");// Toast Start                $skyrimCmd->send($json);
+                $skyrimCmd->send(cmd: $json);
+
+                unset($actionsCopy[$n]);// Remove action from list, so client does not execute it
+
+                $GLOBALS["db"]->insert(
+                    'actions_issued',
+                    array(
+                        'action' => "Toast",
+                        'fullcall' =>$actionParts[0]."|".$actionParts[1]."|".$actionParts[2],
+                        'actorname'=> $actionParts[0],
+                        'ts' => $gameRequest[1],
+                        'gamets' => $gameRequest[2],
+                        'localts'=>time(),
+                        'original'=>''
+                    )
+                );
+
+                error_log("[ACTION POSTFILTER Toast] Executed server-side");
+            } 
+        }
+    }
+
+    return $actionsCopy;
+};

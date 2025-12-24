@@ -778,6 +778,28 @@ function DataLastKnownGameTS() {
     return 0;
 }
 
+
+
+function DataLastKnownTS() {
+// retrieve gamets from eventlog
+    global $db;
+
+    $lastLoc=$db->fetchAll("SELECT MAX(ts) AS m_gts FROM eventlog WHERE (gamets > 0)");
+    if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        Logger::warn("DataLastKnownTS: NO record found");
+    } else { // ok 
+        if (isset($lastLoc[0]["m_gts"]) && (strlen($lastLoc[0]["m_gts"])>0)) {
+            $i_gamets = intval($lastLoc[0]["m_gts"]);
+            if ($i_gamets > 0) {
+                return $i_gamets;
+            }
+        } else {
+            Logger::error("DataLastKnownTS: NO game timestamp value found");
+        }
+    }
+    return 0;
+}
+
 function DataLastKnownGameTS_record() {
 // retrieve gamets and date in variuos formats from most recent record in eventlog
 // require convert_gamets SQL functions in database
