@@ -343,6 +343,18 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     // NPC name should always be at core section.
                     $npcName = $currentNpcData["npc_name"];
                     
+                    // Format gender (capitalize first letter)
+                    $gender = !empty($currentNpcData["gender"]) ? ucfirst(strtolower(trim($currentNpcData["gender"]))) : "";
+                    $race = !empty($currentNpcData["race"]) ? trim($currentNpcData["race"]) : "";
+                    
+                    // Build name with race/gender in parentheses
+                    $nameWithRaceGender = $npcName;
+                    if (!empty($gender) && !empty($race)) {
+                        $nameWithRaceGender .= " ({$gender} {$race})";
+                    } elseif (!empty($race)) {
+                        $nameWithRaceGender .= " ({$race})";
+                    }
+                    
                     // Check for reanimation status early to add to core
                     $extendedData = $npcMaster->getExtendedData($currentNpcData);
                     $reanimationText = "";
@@ -350,10 +362,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $reanimationText = " This person has been reanimated from death as a zombie.";
                     }
                     
-                    $profileString = trim("{$currentNpcData["core"]}{$reanimationText} {$currentNpcData["gender"]} {$currentNpcData["race"]}");
-                    if (stripos($profileString, $npcName) !== 0) {
-                        $profileString = "{$npcName} {$profileString}";
-                    }
+                    $profileString = "{$nameWithRaceGender}: " . trim("{$currentNpcData["core"]}{$reanimationText}");
                     
                     // Add appearance if available
                     if (!empty($currentNpcData["appearance"])) {
