@@ -1406,7 +1406,6 @@ $gameRequest[0] = strtolower($gameRequest[0]); // one more time in case it was c
 if (in_array('Training', $GLOBALS["ENABLED_FUNCTIONS"]) && isset($currentNpcData) && $currentNpcData && $GLOBALS["HERIKA_NAME"] != "The Narrator") {
     $npcMaster = new NpcMaster();
     $extended = $npcMaster->getExtendedData($currentNpcData);
-    error_log("[TRAINING INJECT] Checking training for {$GLOBALS["HERIKA_NAME"]}, extended data: " . json_encode($extended['class'] ?? 'no class'));
     if (isset($extended['class']['teaches']) && !empty($extended['class']['teaches'])) {
         $skill = $extended['class']['teaches'];
         $maxLevel = isset($extended['class']['max_training_level']) ? intval($extended['class']['max_training_level']) : 0;
@@ -1424,7 +1423,6 @@ if (in_array('Training', $GLOBALS["ENABLED_FUNCTIONS"]) && isset($currentNpcData
         }
         
         $functionName = "Train" . ucfirst($skill);
-        error_log("[TRAINING INJECT] Injecting function: {$functionName} for {$GLOBALS["HERIKA_NAME"]} ({$tier} {$skill}, level {$maxLevel})");
         $GLOBALS["FUNCTIONS"][] = [
             "name" => $functionName,
             "description" => "{$GLOBALS["HERIKA_NAME"]} offers {$tier} {$skill} training.",

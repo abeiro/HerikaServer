@@ -1048,9 +1048,6 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
         $actionParts=explode("|",$action);
         $actionParts2=explode("@",$actionParts[2]);
         
-        error_log("[ACTION POSTFILTER] Processing action: $action");
-        error_log("[ACTION POSTFILTER] actionParts2[0]: " . ($actionParts2[0] ?? 'not set'));
-        
         if (isset($actionParts2[0])) {
             // Parameter part 
             if ($actionParts2[0]=="Drink") {
@@ -1107,9 +1104,6 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 error_log("[ACTION POSTFILTER Toast] Executed server-side");
             } else if (preg_match('/^Train(.+)$/', $actionParts2[0], $matches)) {
                 // Training function called - send rolecommand to open training menu
-                error_log("[ACTION POSTFILTER Training] Detected training action: {$actionParts2[0]} for actor {$actionParts[0]}");
-                error_log("[ACTION POSTFILTER Training] Full action parts: " . print_r($actionParts, true));
-                
                 $GLOBALS["db"]->insert(
                     'responselog',
                     array(
@@ -1136,8 +1130,6 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 );
                 
                 unset($actionsCopy[$n]);// Remove action from list, so client does not execute it
-                
-                error_log("[ACTION POSTFILTER Training] Executed server-side, rolecommand inserted");
             } 
         }
     }
