@@ -2144,8 +2144,8 @@ if ($checkVersion("spell_descriptions")<20241129001) {
     Logger::info("Applied patch spell_descriptions 20241129001");
 }
 
-if ($checkVersion("descriptions")<20250115001) {
-    Logger::debug("Applying descriptions faction data 20250115001");
+if ($checkVersion("faction_descriptions")<20250115001) {
+    Logger::debug("Applying faction_descriptions 20250115001");
     
     // Insert faction descriptions into descriptions table
     $db->execQuery("
@@ -2170,8 +2170,8 @@ if ($checkVersion("descriptions")<20250115001) {
             description = EXCLUDED.description;
     ");
     
-    $updateVersion("descriptions",20250115001);
-    Logger::info("Applied patch descriptions faction data 20250115001");
+    $updateVersion("faction_descriptions",20250115001);
+    Logger::info("Applied patch faction_descriptions 20250115001");
 }
 
 // Always (re)create combined view once base tables exist
