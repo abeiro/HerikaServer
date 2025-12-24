@@ -585,17 +585,73 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         if ($GLOBALS["FEATURES"]["MISC"]["QUEST_COMMENT"]===false)
             $MUST_END=true;
     */
-    if (isset($GLOBALS["QUEST_COMMENT"])) {
-        // Remove the '%' from the value and convert it to an integer
-        $questCommentChance = (int)str_replace('%', '', $GLOBALS["QUEST_COMMENT_CHANCE"]);
-    
-        // Generate a random integer between 1 and 100 (inclusive).
-        $randomChance = random_int(1, 100);
-    
-        // Adjust the logic to reverse the chance
-        if ($randomChance > $questCommentChance || $GLOBALS["QUEST_COMMENT"] === false) {
+    // Check if quest comments are enabled for narrator
+    try {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+        $narrator = new Narrator();
+        
+        if ($narrator->getBool('enabled', true) && $narrator->getBool('quest_comment_enabled', false)) {
+            $questCommentChance = $narrator->getInt('quest_comment_chance', 10);
+            $randomChance = random_int(1, 100);
+            
+            if ($randomChance > $questCommentChance) {
+                $MUST_END = true;
+            } else {
+                // Chance check passed, now check cooldown
+                $cooldownMinutes = $narrator->getInt('quest_comment_cooldown', 3);
+                $cooldownSeconds = $cooldownMinutes * 60;
+                
+                // Fetch last quest comment timestamp
+                $lastQuestCommentTs = $db->fetchOne("SELECT value FROM conf_opts WHERE id='QUEST_COMMENT_LAST_TIMESTAMP'");
+                $currentTime = time();
+                
+                $canTrigger = true;
+                if ($lastQuestCommentTs && isset($lastQuestCommentTs['value'])) {
+                    $timeSinceLastComment = $currentTime - intval($lastQuestCommentTs['value']);
+                    if ($timeSinceLastComment < $cooldownSeconds) {
+                        $canTrigger = false;
+                        Logger::info("Quest comment on cooldown. {$timeSinceLastComment}s since last, need {$cooldownSeconds}s");
+                    }
+                }
+                
+                if (!$canTrigger) {
+                    $MUST_END = true;
+                } else {
+                    // Queue the event in eventlog so it shows up in context
+                    $db->insert(
+                        'eventlog',
+                        array(
+                            'ts' => $gameRequest[1],
+                            'gamets' => $gameRequest[2],
+                            'type' => 'narrator_quest_comment',
+                            'data' => $gameRequest[3],
+                            'sess' => 'complete', // Mark as complete so it doesn't get processed again
+                            'localts' => $currentTime
+                        )
+                    );
+                    
+                    // Update timestamp for successful quest comment
+                    $db->upsertRowOnConflict(
+                        "conf_opts",
+                        array(
+                            "id"    => "QUEST_COMMENT_LAST_TIMESTAMP",
+                            "value" => $currentTime
+                        ),
+                        'id'
+                    );
+                    
+                    // Store flag to trigger narrator after init processing
+                    $GLOBALS["TRIGGER_NARRATOR_QUEST_COMMENT"] = true;
+                    
+                    Logger::info("Narrator quest comment will be triggered");
+                }
+            }
+        } else {
             $MUST_END = true;
         }
+    } catch (Exception $e) {
+        Logger::warn("Could not check narrator quest comment settings: " . $e->getMessage());
+        $MUST_END = true;
     }
 } elseif ($gameRequest[0] == "location") {
     $GLOBALS["CACHE_LOCATION"]=$gameRequest[3];
@@ -1649,6 +1705,34 @@ if (isset($GLOBALS["TRIGGER_NARRATOR_WELCOME"]) && $GLOBALS["TRIGGER_NARRATOR_WE
         $_GET["profile"] = $narratorProfileId;
     } else {
         Logger::warn("[NARRATOR_WELCOME] Could not find narrator profile, welcome message cancelled");
+        $MUST_END = true;
+    }
+}
+
+// Trigger narrator quest comment if flagged during quest event
+if (isset($GLOBALS["TRIGGER_NARRATOR_QUEST_COMMENT"]) && $GLOBALS["TRIGGER_NARRATOR_QUEST_COMMENT"]) {
+    // Change the request type to narrator_quest_comment so main.php processes it
+    $gameRequest[0] = "narrator_quest_comment";
+    $MUST_END = false; // Don't end, continue to main.php
+    
+    // Load narrator profile
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+    $narrator = new Narrator();
+    
+    // Get narrator profile ID
+    $narratorProfileId = $narrator->getProfileId();
+    if (!$narratorProfileId) {
+        // Try to find The Narrator profile
+        $narratorProfile = $db->fetchOne("SELECT id FROM core_profiles WHERE name = 'The Narrator' LIMIT 1");
+        if ($narratorProfile && isset($narratorProfile['id'])) {
+            $narratorProfileId = $narratorProfile['id'];
+        }
+    }
+    
+    if ($narratorProfileId) {
+        $_GET["profile"] = $narratorProfileId;
+    } else {
+        Logger::warn("[NARRATOR_QUEST_COMMENT] Could not find narrator profile, quest comment cancelled");
         $MUST_END = true;
     }
 }

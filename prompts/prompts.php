@@ -75,11 +75,15 @@ $PROMPTS=array(
         ],
         "extra" => shouldTriggerRPGComment("combat_end") ? [] : ["dontuse" => true]
     ],
-    // Database Prompt (Quest)
+    // Database Prompt (Quest) - player_request loaded from database in request.php
     "quest"=>[
         "cue"=>["{$GLOBALS["TEMPLATE_DIALOG"]}"],
         //"player_request"=>"{$GLOBALS["HERIKA_NAME"]}, what should we do about this quest '{$questName}'?"
-        "player_request"=>["{$GLOBALS["HERIKA_NAME"]}, what should we do about this new quest?"]
+        "player_request"=>["{$GLOBALS["HERIKA_NAME"]}, what should we do about this new quest?"] // Fallback - will be overridden in request.php if database prompt exists
+    ],
+    "narrator_quest_comment"=>[
+        "cue"=>["{$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "player_request"=>["{$GLOBALS["HERIKA_NAME"]}, what should we do about this new quest?"] // Fallback - will be overridden in request.php if database prompt exists
     ],
 
     "bleedout"=>[

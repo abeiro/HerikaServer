@@ -1312,6 +1312,72 @@ if ($gameRequest[0] == "narrator_welcome") {
     }
 }
 
+// Handle narrator_quest_comment events (must be AFTER comm.php which converts quest to narrator_quest_comment)
+if ($gameRequest[0] == "narrator_quest_comment") {
+    // Load narrator profile with full connector configuration
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+    $narrator = new Narrator();
+    $narratorData = $narrator->getNarratorData();
+    
+    if ($narratorData && isset($narratorData["profile_id"])) {
+        // Load Narrator profile - set connector and profile first, character data last
+        $profile = new CoreProfile();
+        $currentProfileData = $profile->getById($narratorData["profile_id"]);
+        
+        if (!$currentProfileData) {
+            Logger::error("[NARRATOR_QUEST_COMMENT] Profile ID {$narratorData['profile_id']} not found in core_profiles table");
+            Logger::error("[NARRATOR_QUEST_COMMENT] Please ensure The Narrator has a valid profile assigned");
+            terminate();
+        }
+        
+        $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] = $currentProfileData;
+        
+        $connector = new LLMConnector();
+        
+        // Get global connector slot (respects in-game mode)
+        $db = $GLOBALS['db'];
+        $result = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_profile_model'");
+        $connectorSlot = (isset($result['value']) && $result['value'] >= 1 && $result['value'] <= 4) 
+            ? (int)$result['value'] 
+            : 1;
+        
+        $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+        
+        $slotName = LLMRandomizer::getSlotName($connectorSlot);
+        
+        if (!$connectorId) {
+            Logger::error("[NARRATOR_QUEST_COMMENT] No connector assigned to {$slotName} slot (slot {$connectorSlot}) for profile '{$currentProfileData['label']}'");
+            Logger::error("[NARRATOR_QUEST_COMMENT] Please configure connectors for The Narrator's profile:");
+            Logger::error("[NARRATOR_QUEST_COMMENT]   - Go to Profile Management > Edit The Narrator's profile");
+            Logger::error("[NARRATOR_QUEST_COMMENT]   - Assign connectors to: Standard (slot 1), Fast (slot 2), Powerful (slot 3), Experimental (slot 4)");
+            Logger::error("[NARRATOR_QUEST_COMMENT]   - The system uses the ingame mode setting to pick which connector to use");
+            terminate();
+        }
+        
+        $currentConnectorData = $connector->getById($connectorId);
+        
+        if (!$currentConnectorData) {
+            Logger::error("[NARRATOR_QUEST_COMMENT] Connector ID {$connectorId} not found in core_connectors table");
+            terminate();
+        }
+        
+        $connector->setOldGlobals($currentConnectorData);
+        $profile->setOldGlobals($currentProfileData);
+        
+        // Load narrator character data into GLOBALS
+        $narrator->loadCharacterIntoGlobals();
+        
+        $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
+        
+        // Set CURRENT_CONNECTOR for compatibility with old code paths
+        $GLOBALS["CURRENT_CONNECTOR"] = $currentConnectorData['driver'];
+    } else {
+        Logger::error("[NARRATOR_QUEST_COMMENT] Narrator profile_id not found in core_narrator table");
+        Logger::error("[NARRATOR_QUEST_COMMENT] Please configure The Narrator in Narrator Management");
+        terminate();
+    }
+}
+
 if ($MUST_END) {  // Shorthand for non LLM processing
     echo 'X-CUSTOM-CLOSE'.PHP_EOL;
     if (!getenv("PHPUNIT_TEST")) {

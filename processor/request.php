@@ -157,6 +157,43 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 		$request = "Give a brief (2-3 sentence) recap of recent events and adventures. Welcome the player back to their journey.";
 	}
 
+} else if ($gameRequest[0] == "quest" || $gameRequest[0] == "narrator_quest_comment") {
+	// Load quest comment prompt from database with fallback
+	$questPromptText = null;
+	try {
+		$questPromptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'quest_comment_prompt'");
+		if ($questPromptData) {
+			$questPromptText = (!empty($questPromptData['custom_prompt'])) 
+				? $questPromptData['custom_prompt'] 
+				: $questPromptData['default_prompt'];
+		}
+	} catch (Exception $e) {
+		Logger::warn("[QUEST] Failed to load prompt from database: " . $e->getMessage());
+	}
+	
+	// Hardcoded fallback
+	if (!$questPromptText) {
+		$questPromptText = "{$GLOBALS["HERIKA_NAME"]}, what should we do about this new quest?";
+	}
+	
+	// Replace {HERIKA_NAME} placeholder if present
+	$questPromptText = str_replace('{HERIKA_NAME}', $GLOBALS["HERIKA_NAME"], $questPromptText);
+	
+	// Override the player_request in PROMPTS array
+	$promptKey = $gameRequest[0];
+	if (!isset($PROMPTS[$promptKey])) {
+		$PROMPTS[$promptKey] = [];
+	}
+	$PROMPTS[$promptKey]["player_request"] = [$questPromptText];
+	
+	// Also set for "quest" key if this is narrator_quest_comment (for compatibility)
+	if ($gameRequest[0] == "narrator_quest_comment") {
+		if (!isset($PROMPTS["quest"])) {
+			$PROMPTS["quest"] = [];
+		}
+		$PROMPTS["quest"]["player_request"] = [$questPromptText];
+	}
+
 } else {
 
 	if ($gameRequest[0] == "instruction" || $gameRequest[0] == "suggestion") {

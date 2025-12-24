@@ -51,6 +51,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
             $cooldown = max(1, min(1440, $cooldown)); // Clamp to 1-1440 (24 hours)
             $narrator->set('welcome_cooldown', (string)$cooldown);
         }
+        if (isset($_POST['quest_comment_enabled'])) {
+            $narrator->set('quest_comment_enabled', $_POST['quest_comment_enabled'] === '1' ? '1' : '0');
+        }
+        if (isset($_POST['quest_comment_chance'])) {
+            $chance = intval($_POST['quest_comment_chance']);
+            $chance = max(1, min(100, $chance)); // Clamp to 1-100
+            $narrator->set('quest_comment_chance', (string)$chance);
+        }
+        if (isset($_POST['quest_comment_cooldown'])) {
+            $cooldown = intval($_POST['quest_comment_cooldown']);
+            $cooldown = max(1, min(60, $cooldown)); // Clamp to 1-60 minutes
+            $narrator->set('quest_comment_cooldown', (string)$cooldown);
+        }
         
         // Save profile_id
         if (isset($_POST['profile_id'])) {
@@ -104,6 +117,9 @@ $randomEnabled = $narrator->getBool('random_enabled', false);
 $randomChance = $narrator->getInt('random_chance', 15);
 $randomCooldown = $narrator->getInt('random_cooldown', 2);
 $welcomeCooldown = $narrator->getInt('welcome_cooldown', 10);
+$questCommentEnabled = $narrator->getBool('quest_comment_enabled', false);
+$questCommentChance = $narrator->getInt('quest_comment_chance', 10);
+$questCommentCooldown = $narrator->getInt('quest_comment_cooldown', 3);
 $booksOnlyNarrator = $narrator->getBool('books_only_narrator', false);
 $hideFromContext = $narrator->getBool('hide_from_context', false);
 
@@ -452,6 +468,25 @@ if (!$isEmbed) {
                     <label for="random_cooldown" style="margin-top: 16px;">Random Narration Cooldown</label>
                     <input type="number" id="random_cooldown" name="random_cooldown" value="<?php echo htmlspecialchars((string)$randomCooldown); ?>" min="0" max="10">
                     <span class="hint">Minimum number of conversation rounds between Narrator interjections. Prevents narration spam. Range: 0-10, Default: 2</span>
+                </div>
+
+                <!-- Quest Comments Section -->
+                <div class="content-section">
+                    <h2>Quest Comments</h2>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="quest_comment_enabled" name="quest_comment_enabled" value="1" <?php echo $questCommentEnabled ? 'checked' : ''; ?>>
+                        <label for="quest_comment_enabled">Enable Quest Comments</label>
+                    </div>
+                    <span class="hint">Narrator will comment on quest objective updates.</span>
+                    
+                    <label for="quest_comment_chance" style="margin-top: 16px;">Quest Comment Chance (%)</label>
+                    <input type="number" id="quest_comment_chance" name="quest_comment_chance" value="<?php echo htmlspecialchars((string)$questCommentChance); ?>" min="1" max="100">
+                    <span class="hint">Probability (1-100) that Narrator will comment on quest updates. Default: 10%</span>
+                    
+                    <label for="quest_comment_cooldown" style="margin-top: 16px;">Quest Comment Cooldown (minutes)</label>
+                    <input type="number" id="quest_comment_cooldown" name="quest_comment_cooldown" value="<?php echo htmlspecialchars((string)$questCommentCooldown); ?>" min="1" max="60">
+                    <span class="hint">Minimum time in minutes between quest comments. Prevents spam. Range: 1-60 minutes, Default: 3 minutes</span>
                 </div>
             </div>
             

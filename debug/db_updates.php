@@ -2672,6 +2672,35 @@ if ($checkVersion("prompts")<20251224001) {
 }
 
 //----------------------------------------------------
+// Add quest_comment_prompt to prompts table
+// Version 20251224002
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251224002) {
+    Logger::debug("Applying prompts table 20251224002 - Adding quest_comment_prompt");
+    
+    $questPrompt = $db->escape(
+        "{HERIKA_NAME}, what should we do about this new quest?"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'quest_comment_prompt',
+            '$questPrompt',
+            'Prompt for narrator/NPC comments on quest objective updates (contains {HERIKA_NAME} placeholder). Used in: prompts/prompts.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251224002);
+    Logger::info("Applied patch prompts 20251224002 - Added quest_comment_prompt");
+}
+
+//----------------------------------------------------
 // CORE_PLAYER DATA MIGRATION
 //----------------------------------------------------
 
