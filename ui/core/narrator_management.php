@@ -429,16 +429,6 @@ if (!$isEmbed) {
                     <span class="hint">Enable or disable the narrator system entirely.</span>
                     
                     <div class="checkbox-group" style="margin-top: 16px;">
-                        <input type="checkbox" id="welcome_enabled" name="welcome_enabled" value="1" <?php echo $welcomeEnabled ? 'checked' : ''; ?>>
-                        <label for="welcome_enabled">Welcome Message on Load</label>
-                    </div>
-                    <span class="hint">The Narrator will give you a quick recap of what happened previously after you have loaded a save game.</span>
-                    
-                    <label for="welcome_cooldown" style="margin-top: 16px;">Welcome Message Cooldown (minutes)</label>
-                    <input type="number" id="welcome_cooldown" name="welcome_cooldown" value="<?php echo htmlspecialchars((string)$welcomeCooldown); ?>" min="1" max="1440">
-                    <span class="hint">Minimum time in minutes between welcome messages. Range: 1-1440 (24 hours), Default: 10 minutes</span>
-                    
-                    <div class="checkbox-group" style="margin-top: 16px;">
                         <input type="checkbox" id="books_only_narrator" name="books_only_narrator" value="1" <?php echo $booksOnlyNarrator ? 'checked' : ''; ?>>
                         <label for="books_only_narrator">Only Narrator Summarizes Books</label>
                     </div>
@@ -449,6 +439,21 @@ if (!$isEmbed) {
                         <label for="hide_from_context">Hide Narrator Dialogue from NPC Context</label>
                     </div>
                     <span class="hint">Hide Narrator-spoken dialogue lines from NPC context.</span>
+                </div>
+
+                <!-- Welcome Message Section -->
+                <div class="content-section">
+                    <h2>Welcome Message</h2>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="welcome_enabled" name="welcome_enabled" value="1" <?php echo $welcomeEnabled ? 'checked' : ''; ?>>
+                        <label for="welcome_enabled">Enable Welcome Message on Load</label>
+                    </div>
+                    <span class="hint">The Narrator will give you a quick recap of what happened previously after you have loaded a save game.</span>
+                    
+                    <label for="welcome_cooldown" style="margin-top: 16px;">Welcome Message Cooldown (minutes)</label>
+                    <input type="number" id="welcome_cooldown" name="welcome_cooldown" value="<?php echo htmlspecialchars((string)$welcomeCooldown); ?>" min="1" max="1440">
+                    <span class="hint">Minimum time in minutes between welcome messages. Range: 1-1440 (24 hours), Default: 10 minutes</span>
                 </div>
 
                 <!-- Random Narration Section -->
