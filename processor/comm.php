@@ -1010,7 +1010,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $extended = $npcMaster->getExtendedData($currentNpcData);
         $extended['factions'] = $factionList;
         
-        // NPC class - format: className:formID
+        // NPC class - format: className:formID:trainSkill:trainLevel
         $classString = isset($splitNameBase[43]) ? $splitNameBase[43] : '';
         $classData = null;
         if (!empty($classString)) {
@@ -1020,6 +1020,11 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     'name' => $parts[0],
                     'formid' => $parts[1]
                 ];
+                // Add training data if present
+                if (count($parts) >= 4 && !empty($parts[2])) {
+                    $classData['teaches'] = $parts[2];
+                    $classData['max_training_level'] = intval($parts[3]);
+                }
             }
         }
         $extended['class'] = $classData;
