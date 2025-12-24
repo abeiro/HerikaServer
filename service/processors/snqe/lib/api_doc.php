@@ -72,7 +72,7 @@ Returns: "done" | "pending" | "failed".
 
 * SpawnItem(quest_id, item_ref, location_or_char_ref)
 
-Spawns a declared item. **Items in pockets should be spawned too**
+Spawns a declared item. **Items in pockets should be spawned too** 
 
 quest_id (string, required)
 item_ref (string, required) (Maker sure item has been created)
@@ -372,7 +372,7 @@ Interaction functions (MoveToPlayer, TellTopic*, CombatPlayer) are executed once
 1. Create functions should be at the top of the code.
 2. Respect instuctions order.
 
-Example quest:
+Example quest #1:
 
 // Quest: Find the Lost Tome
 
@@ -507,7 +507,7 @@ CompleteQuest($quest_id);
 return;
 
 
-* Example Cmbat quest
+* Example Quest #2: Combat quest
 
 $quest_id = "bandit_camp_encounter_6941a5684e7b4";
 
@@ -545,7 +545,85 @@ if ( WaitforCombatEnd($quest_id,"grimvar") == "pending") {
     return;
 ):
 
+* Example Quest #3 : Recover Ring from Necromancer
 
+$quest_id = "darkshade_copse_investigation_694af5596a1ea";
+
+// 1. Create and spawn Xaren the Necromancer (from <spawn> element)
+CreateNPC(
+    $quest_id,
+    "xaren",
+    "Xaren the Necromancer",
+    "Male",
+    "mage",
+    "Breton",
+    "nearby",
+    "Dark robes, glowing staff",
+    "A dark sorcerer specializing in necromancy, feared for his mastery over the undead.",
+    "Speaks in a cold, calculated tone, often whispering incantations.",
+    "aggressive"
+);
+SpawnNPC($quest_id, "xaren", "nearby");
+if (CheckNPCSpawn($quest_id, "xaren") != "done") return;
+
+// 2. Create Zara Quill (from <instruction> element - already spawned)
+CreateNPC(
+    $quest_id,
+    "zara",
+    "Zara Quill",
+    "Female",
+    "warrior",
+    "Nord",
+    "nearby",
+    "Leather armor, bow",
+    "A skilled ranger and investigator.",
+    "Direct and practical",
+    "serious"
+);
+
+// 3. Create and spawn Roric's Ring (from <item> element)
+CreateItem(
+    $quest_id,
+    "roric_ring",
+    "Roric's Ring",
+    "ring",
+    "pocket",
+    "A simple silver ring with a small engraving of a scouting compass, a family heirloom passed down through Roric's family.",
+    "xaren"
+);
+SpawnItem($quest_id, "roric_ring", "xaren");
+if (CheckItemSpawn($quest_id, "roric_ring") != "done") return;
+
+// 4. Travel to Darkshade Copse
+TravelTo($quest_id, "Darkshade Copse", "zara");
+
+// 5. Combat between Xaren and Zara
+CombatNPC($quest_id, "xaren", "zara");
+CombatNPC($quest_id, "zara", "xaren");
+
+// Wait for combat to end
+if (WaitForNPCCombatEnd($quest_id, "xaren", "zara") != "done") return;
+
+// 6. Wait for ring recovery
+if (WaitToItemBeRecovered($quest_id, "roric_ring") != "done") return;
+
+// 7. Zara tells player about the ring
+CreateTopic(
+    $quest_id,
+    "t_roric_ring",
+    "Roric's Ring Discovery",
+    "Item",
+    "roric_ring",
+    "zara",
+    "This is Roric's ring... I knew something terrible had happened to him.",
+    "player",
+    true
+);
+TellTopicToPlayer($quest_id, "zara", "t_roric_ring");
+if (CheckTopicToPlayer($quest_id, "t_roric_ring") != "done") return;
+
+// Complete quest
+CompleteQuest($quest_id);
 */
 
 ?>
