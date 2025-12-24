@@ -258,6 +258,7 @@ class Narrator
             $GLOBALS['TTS']['openai']['voice']         = $allSettings['voiceid'];
             $GLOBALS['TTS']['deepgram']['model']       = $allSettings['voiceid'];
             $GLOBALS['TTS']['CARTESIA']['voiceid']     = $allSettings['voiceid'];
+            $GLOBALS['TTS']['INWORLD']['voiceid']      = $allSettings['voiceid'];
 
         }
     }

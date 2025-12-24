@@ -116,6 +116,62 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $npcMaster=new NpcMaster();
     $npcMaster->restoreNPC($gameRequest[2]);
     Logger::trace("POST INIT PROCESSING ".(time()-$now));
+    
+    // Narrator Welcome Message on Load
+    try {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+        $narrator = new Narrator();
+        
+        // Check if narrator is enabled and welcome message is enabled
+        if ($narrator->getBool('enabled', true) && $narrator->getBool('welcome_enabled', false)) {
+            // Check cooldown (10 minutes IRL = 600 seconds)
+            $lastWelcomeTs = $db->fetchOne("SELECT value FROM conf_opts WHERE id='last_narrator_welcome'");
+            $currentTime = time();
+            $cooldownSeconds = 10 * 60; // 10 minutes
+            
+            $canTrigger = true;
+            if ($lastWelcomeTs && isset($lastWelcomeTs['value'])) {
+                $timeSinceLastWelcome = $currentTime - intval($lastWelcomeTs['value']);
+                if ($timeSinceLastWelcome < $cooldownSeconds) {
+                    $canTrigger = false;
+                    Logger::debug("Narrator welcome message on cooldown. {$timeSinceLastWelcome}s since last, need {$cooldownSeconds}s");
+                }
+            }
+            
+            if ($canTrigger) {
+                // Queue the event in eventlog so it shows up in context
+                $db->insert(
+                    'eventlog',
+                    array(
+                        'ts' => $gameRequest[1],
+                        'gamets' => $gameRequest[2],
+                        'type' => 'narrator_welcome',
+                        'data' => 'Narrator welcome message triggered on game load',
+                        'sess' => 'complete', // Mark as complete so it doesn't get processed again
+                        'localts' => $currentTime
+                    )
+                );
+                
+                // Update last welcome timestamp
+                $db->upsertRowOnConflict(
+                    'conf_opts',
+                    array(
+                        'id' => 'last_narrator_welcome',
+                        'value' => (string)$currentTime
+                    ),
+                    'id'
+                );
+                
+                // Store flag to trigger narrator after init processing
+                $GLOBALS["TRIGGER_NARRATOR_WELCOME"] = true;
+                
+                Logger::info("Narrator welcome message will be triggered");
+            }
+        }
+    } catch (Exception $e) {
+        Logger::warn("Could not trigger narrator welcome message: " . $e->getMessage());
+    }
+    
     $MUST_END=true;
 
 
@@ -1565,5 +1621,36 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     
     
 } 
+
+// Trigger narrator welcome message if flagged during init
+if (isset($GLOBALS["TRIGGER_NARRATOR_WELCOME"]) && $GLOBALS["TRIGGER_NARRATOR_WELCOME"]) {
+    Logger::info("[NARRATOR_WELCOME] Converting init to narrator_welcome event");
+    
+    // Change the request type to narrator_welcome so main.php processes it
+    $gameRequest[0] = "narrator_welcome";
+    $MUST_END = false; // Don't end, continue to main.php
+    
+    // Load narrator profile
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+    $narrator = new Narrator();
+    
+    // Get narrator profile ID
+    $narratorProfileId = $narrator->getProfileId();
+    if (!$narratorProfileId) {
+        // Try to find The Narrator profile
+        $narratorProfile = $db->fetchOne("SELECT id FROM core_profiles WHERE name = 'The Narrator' LIMIT 1");
+        if ($narratorProfile && isset($narratorProfile['id'])) {
+            $narratorProfileId = $narratorProfile['id'];
+        }
+    }
+    
+    if ($narratorProfileId) {
+        $_GET["profile"] = $narratorProfileId;
+        Logger::info("[NARRATOR_WELCOME] Profile set to {$narratorProfileId}, will continue to main.php");
+    } else {
+        Logger::warn("[NARRATOR_WELCOME] Could not find narrator profile, welcome message cancelled");
+        $MUST_END = true;
+    }
+}
 
 ?>

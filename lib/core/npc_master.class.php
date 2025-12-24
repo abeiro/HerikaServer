@@ -199,11 +199,6 @@ class NpcMaster
     {
         $id    = (int) $id;
         $where = "id = $id";
-        // Disallow deleting The Narrator profile (by id or name)
-        $row = $this->getById($id);
-        if ($row && (intval($row['id']) === 1 || ($row['npc_name'] ?? '') === 'The Narrator')) {
-            return false;
-        }
         return $this->db->delete($this->table, $where);
     }
 

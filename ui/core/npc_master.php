@@ -401,12 +401,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["set_portrait"])) {
 
 // Handle Delete
 if (isset($_GET["delete"])) {
-    // Prevent deleting The Narrator from UI
     $toDel = intval($_GET["delete"]);
-    if ($toDel === 1) { header("Location: npc_master.php"); exit; }
     $rowCheck = $npc->getById($toDel);
-    if ($rowCheck && (($rowCheck['npc_name'] ?? '') === 'The Narrator' || !empty($rowCheck['lock_profile']))) { header("Location: npc_master.php"); exit; }
-    $npc->delete($toDel);
+    
+    // Debug logging
+    error_log("[NPC_DELETE] Attempting to delete ID: {$toDel}");
+    error_log("[NPC_DELETE] Row check: " . print_r($rowCheck, true));
+    
+    if ($rowCheck && !empty($rowCheck['lock_profile'])) {
+        error_log("[NPC_DELETE] Cannot delete - NPC is locked");
+        header("Location: npc_master.php"); 
+        exit; 
+    }
+    
+    error_log("[NPC_DELETE] Calling delete method");
+    $result = $npc->delete($toDel);
+    error_log("[NPC_DELETE] Delete result: " . ($result ? 'success' : 'failed'));
+    
     header("Location: npc_master.php");
     exit;
 }
@@ -648,9 +659,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                     <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                 <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
                 <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
-                <?php if ((int)$row['id'] !== 1 && ($row['npc_name'] ?? '') !== 'The Narrator'): ?>
                 <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : "return confirm('Delete this NPC?');" ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">🗑️</a>
-                <?php endif; ?>
                 </div>
             </div>
             <div class="npc-divider"></div>
@@ -2161,9 +2170,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                 <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
                 <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
-                <?php if ((int)$row['id'] !== 1 && ($row['npc_name'] ?? '') !== 'The Narrator'): ?>
                 <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : "return confirm('Delete this NPC?');" ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">🗑️</a>
-                <?php endif; ?>
             </div>
         </div>
         <div class="npc-divider"></div>

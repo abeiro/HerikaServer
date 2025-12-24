@@ -2058,7 +2058,25 @@ try {
     Logger::error("Error creating combined_bio_templates view: " . $e->getMessage());
 }
 
+// Remove DB-layer protection for The Narrator to allow deletion via UI
+// Version 20250124001
+if ($checkVersion("narrator_protection")<20250124001) {
+    Logger::debug("Removing narrator delete/rename protection triggers");
+    try {
+        $db->execQuery("DROP TRIGGER IF EXISTS trg_protect_narrator_delete ON public.core_npc_master");
+        $db->execQuery("DROP FUNCTION IF EXISTS public.protect_narrator_delete() CASCADE");
+        $db->execQuery("DROP TRIGGER IF EXISTS trg_protect_narrator_rename ON public.core_npc_master");
+        $db->execQuery("DROP FUNCTION IF EXISTS public.protect_narrator_rename() CASCADE");
+        $updateVersion("narrator_protection",20250124001);
+        Logger::info("Removed narrator protection triggers");
+    } catch (Exception $e) {
+        Logger::error("Error removing narrator protection triggers: " . $e->getMessage());
+    }
+}
+
 // Enforce DB-layer protection for The Narrator: prevent delete or rename
+// NOTE: This is now commented out to allow narrator deletion from UI
+/*
 try {
     $db->execQuery("DROP FUNCTION IF EXISTS public.protect_narrator_delete() CASCADE");
     $db->execQuery("CREATE OR REPLACE FUNCTION public.protect_narrator_delete() RETURNS trigger AS $$\nBEGIN\n    IF OLD.id = 1 OR OLD.npc_name = 'The Narrator' THEN\n        RAISE EXCEPTION 'Deletion of The Narrator is not allowed';\n    END IF;\n    RETURN OLD;\nEND;\n$$ LANGUAGE plpgsql;");
@@ -2072,6 +2090,7 @@ try {
 } catch (Exception $e) {
     Logger::warn("DB trigger setup for narrator protection failed or already present: ".$e->getMessage());
 }
+*/
 
 //----------------------------------------------------
 // Item descriptions: new tables and combined view
