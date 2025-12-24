@@ -1402,6 +1402,37 @@ if ($EXECUTION_MODE=="INJECTION_LOG") {
 require(__DIR__.DIRECTORY_SEPARATOR."prompt.includes.php");
 $gameRequest[0] = strtolower($gameRequest[0]); // one more time in case it was changed by an extension
 
+// Inject training function for trainer NPCs
+if (isset($currentNpcData) && $currentNpcData && $GLOBALS["HERIKA_NAME"] != "The Narrator") {
+    $npcMaster = new NpcMaster();
+    $extended = $npcMaster->getExtendedData($currentNpcData);
+    if (isset($extended['class']['teaches']) && !empty($extended['class']['teaches'])) {
+        $skill = $extended['class']['teaches'];
+        $maxLevel = isset($extended['class']['max_training_level']) ? intval($extended['class']['max_training_level']) : 0;
+        
+        // Convert level to tier name
+        $tier = 'Novice';
+        if ($maxLevel >= 100) {
+            $tier = 'Master';
+        } elseif ($maxLevel >= 75) {
+            $tier = 'Expert';
+        } elseif ($maxLevel >= 50) {
+            $tier = 'Adept';
+        } elseif ($maxLevel >= 25) {
+            $tier = 'Apprentice';
+        }
+        
+        $functionName = "Train" . ucfirst($skill);
+        $GLOBALS["FUNCTIONS"][] = [
+            "name" => $functionName,
+            "description" => "{$GLOBALS["HERIKA_NAME"]} offers {$tier} {$skill} training (up to level {$maxLevel})",
+            "parameters" => ["type" => "object", "properties" => new stdClass()]
+        ];
+        $GLOBALS["ENABLED_FUNCTIONS"][] = $functionName;
+        $GLOBALS["F_NAMES"][$functionName] = $functionName;
+    }
+}
+
 // Inject random narration prompt if this is a narration event
 // This must happen AFTER prompts.php is loaded to avoid being overwritten
 // Inject as the "cue" so it appears as the penultimate user message (like section 81 for normal NPCs)
