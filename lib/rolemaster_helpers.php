@@ -846,6 +846,20 @@ function createBook($title, $content, $location, $quest_id, $npc_ref = null)
             'tag' => "",
         ]
     );
+
+    $GLOBALS["db"]->insert(
+        'books',
+        array(
+            'ts' => DataLastKnownTS(),
+            'gamets' => DataLastKnownGameTS(),
+            'content' => $content,
+            'sess' => 'generated',
+            'localts' => time(),
+            'title'=>$title
+            )
+        );
+
+    
 }
 
 function createLetter($title, $content)

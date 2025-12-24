@@ -6,12 +6,12 @@ define("MAXIMUM_SENTENCE_SIZE", 125);
 define("MINIMUM_SENTENCE_SIZE", 15);
 
 $GLOBALS["SCRIPTLINE_EXPRESSION"] = "";
-$GLOBALS["SCRIPTLINE_LISTENER"]   = "";
-$GLOBALS["SCRIPTLINE_ANIMATION"]  = "";
+$GLOBALS["SCRIPTLINE_LISTENER"] = "";
+$GLOBALS["SCRIPTLINE_ANIMATION"] = "";
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-$file       = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . 'CurrentModel_.json';
+$file = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . 'CurrentModel_.json';
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
@@ -43,12 +43,13 @@ require_once $enginePath . "debug" . DIRECTORY_SEPARATOR . "background_action_ha
  * @param array $replacements Associative array of placeholder => value pairs
  * @return string The prompt content with replacements
  */
-function loadBGLStylePrompt($promptKey, $replacements = []) {
+function loadBGLStylePrompt($promptKey, $replacements = [])
+{
     global $db;
-    
+
     try {
         $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = '$promptKey'");
-        
+
         if (!$promptData) {
             error_log("[BGL] Style prompt not found: $promptKey - using fallback");
             // Fallback defaults
@@ -58,15 +59,15 @@ function loadBGLStylePrompt($promptKey, $replacements = []) {
                 return "Read the following text, which represents a mental note or inner monologue of a character within the Skyrim universe.\nBased on the content of the text, propose one of the following actions that would make sense for the development of the story:";
             }
         }
-        
+
         // Use custom_prompt if set, otherwise use default_prompt
         $prompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
-        
+
         // Replace placeholders
         foreach ($replacements as $key => $value) {
             $prompt = str_replace($key, $value, $prompt);
         }
-        
+
         return $prompt;
     } catch (Exception $e) {
         error_log("[BGL] Exception loading style prompt $promptKey: " . $e->getMessage());
@@ -81,11 +82,11 @@ function loadBGLStylePrompt($promptKey, $replacements = []) {
 
 $npcMaster = new NpcMaster();
 
-$connector            = new LLMConnector();
+$connector = new LLMConnector();
 $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
-$currentNpcData       = $npcMaster->getByName($argv[1]);
+$currentNpcData = $npcMaster->getByName($argv[1]);
 
-$profile            = new CoreProfile();
+$profile = new CoreProfile();
 $currentProfileData = $profile->getById($currentNpcData["profile_id"]);
 $connector->setOldGlobals($currentConnectorData);
 $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
@@ -95,26 +96,26 @@ $CLEAN_CONTEXT_FOCUS_CHAT = false;
 $COMMAND_PROMPT = '';
 
 $dbNpcName = $db->escape($argv[1]);
-$limit     = 100;
-$momentum  = time();
+$limit = 100;
+$momentum = time();
 
 $GLOBALS["HERIKA_NAME"] = $argv[1];
 
-$res  = $db->fetchAll("select max(gamets) as last_gamets from eventlog");
+$res = $db->fetchAll("select max(gamets) as last_gamets from eventlog");
 $res2 = $db->fetchAll("select max(ts) as ts from eventlog where gamets='{$res[0]["last_gamets"]}'");
 
 $last_gamets = $res[0]["last_gamets"] + 1;
-$last_ts     = $res2[0]["ts"];
+$last_ts = $res2[0]["ts"];
 
 $gameRequest = ["inputtext", "0", $last_gamets, $argv[1]];
 
 $request = $argv[1];
 
 $dynamicBiography = buildDynamicBiography($GLOBALS);
-$npcMaster        = new NpcMaster();
-$currentNpcData   = $npcMaster->getByName($argv[1]);
-$extended_data    = $npcMaster->getExtendedData($currentNpcData);
-$metadata         = $npcMaster->getMetadata($currentNpcData);
+$npcMaster = new NpcMaster();
+$currentNpcData = $npcMaster->getByName($argv[1]);
+$extended_data = $npcMaster->getExtendedData($currentNpcData);
+$metadata = $npcMaster->getMetadata($currentNpcData);
 
 if (isset($extended_data["middle_term_memory"])) {
     $middle_term_memory = end($extended_data["middle_term_memory"]);
@@ -124,18 +125,18 @@ if (isset($extended_data["middle_term_memory"])) {
 
 // Things that happened after last iteration
 $npcNameEsc = $db->escape($GLOBALS["HERIKA_NAME"]);
-$query      = "SELECT max(gamets) as  gamets from speech where
+$query = "SELECT max(gamets) as  gamets from speech where
     (speaker='$npcNameEsc' or listener='$npcNameEsc' or companions like '%|$npcNameEsc|%')
     ";
 
 error_log($query);
-$lastIt       = $db->fetchOne($query);
+$lastIt = $db->fetchOne($query);
 
 if (!$lastIt["gamets"]) {
 
-    $extdata                                 = $npcMaster->getExtendedData($currentNpcData);
+    $extdata = $npcMaster->getExtendedData($currentNpcData);
     $extdata["background_life_last_updated"] = $last_gamets;
-    $currentNpcData                          = $npcMaster->setExtendedData($currentNpcData, $extdata);
+    $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extdata);
     $npcMaster->updateByArray($currentNpcData);
 
     error_log("NO LAST ITERATION, SKIPPING");
@@ -143,21 +144,26 @@ if (!$lastIt["gamets"]) {
 }
 $lastItNumber = $lastIt["gamets"] ?? 0;
 
-if (($last_gamets-$lastItNumber)< ((24 *3 )/0.0000024 )) {
+if (($last_gamets - $lastItNumber) < ((24 * 3) / 0.0000024)) {
     Logger::info("[BACKGROUND LIFE] $npcNameEsc Last iteration less than 3 days ago");
-    $extdata                                 = $npcMaster->getExtendedData($currentNpcData);
+    $extdata = $npcMaster->getExtendedData($currentNpcData);
     $extdata["background_life_last_updated"] = $last_gamets;
-    $currentNpcData                          = $npcMaster->setExtendedData($currentNpcData, $extdata);
+    $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extdata);
     $npcMaster->updateByArray($currentNpcData);
-    return;
+    error_log("[BACKGROUND LIFE] $npcNameEsc Last iteration less than 3 days ago");
+    
+    if (isset($argv[2]) && $argv[2] == "forceletter") 
+        error_log("[BACKGROUND LIFE] $npcNameEsc Last iteration less than 3 days ago...bypassing by forceletter");
+    else
+        return;
 }
 
-$task                = "";
-$history             = "\n<last_dialogue>\n";
-$sqlfilter           = " and gamets<$lastItNumber and type<>'prechat' and type<>'itemfound' and type<>'infoaction' and type<>'npcspellcast' and data not like '%inner thoughts%' ";
+$task = "";
+$history = "\n<last_dialogue>\n";
+$sqlfilter = " and gamets<$lastItNumber and type<>'prechat' and type<>'itemfound' and type<>'infoaction' and type<>'npcspellcast' and data not like '%inner thoughts%' ";
 $contextDataHistoric = DataLastDataExpandedFor("{$GLOBALS["HERIKA_NAME"]}", 50 * -1, $sqlfilter);
 
-if (! empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) && $GLOBALS["HERIKA_NAME"] !== "The Narrator") {
+if (!empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) && $GLOBALS["HERIKA_NAME"] !== "The Narrator") {
     $isContextNarratorLine = function (string $content): bool {
         if (strpos($content, 'The Narrator:') !== 0) {
             return false;
@@ -186,7 +192,7 @@ if (! empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) && $GLOBALS["HERIKA_NAME"] !== "
         return false;
     };
     $contextDataHistoric = array_values(array_filter($contextDataHistoric, function ($entry) use ($isContextNarratorLine) {
-        if (! is_array($entry)) {
+        if (!is_array($entry)) {
             return true;
         }
 
@@ -201,6 +207,8 @@ if (! empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) && $GLOBALS["HERIKA_NAME"] !== "
         return true;
     }));
 }
+
+
 foreach ($contextDataHistoric as $element) {
     if ($element["role"] != "assistant") {
         $history .= trim("{$element["content"]}") . PHP_EOL . PHP_EOL;
@@ -221,19 +229,20 @@ error_log($query);
 
 // Diary entries after last iteration
 
-$cn     = $db->escape($GLOBALS["HERIKA_NAME"]);
+$cn = $db->escape($GLOBALS["HERIKA_NAME"]);
 $query2 = "SELECT content,gamets,topic FROM diarylog
  where people='$cn' and gamets>{$lastIt["gamets"]} and (topic='Sent Letter' or topic='Journal Note')
  order by gamets desc ,ts desc limit 16 offset 0";
 error_log($query2);
-$diaryEntry   = [];
+$diaryEntry = [];
 $diaryEntries = $db->fetchAll($query2);
 foreach (array_reverse($diaryEntries) as $dentry) {
     //$history .= "\n<diary_entry>\n{$dentry["content"]}\n</diary_entry>\n";
     $diaryEntry[] = [
-        "gamets"  => $dentry["gamets"],
+        "gamets" => $dentry["gamets"],
         "content" => number_format(($last_gamets - $dentry["gamets"]) * 0.0000024, 2) . " hours ago...\n" . $dentry["content"],
-        "type"    => $dentry["topic"] == "Sent Letter" ? "sent_letter" : "diary_entry"];
+        "type" => $dentry["topic"] == "Sent Letter" ? "sent_letter" : "diary_entry"
+    ];
 
 }
 
@@ -245,12 +254,12 @@ if (isset($lastIt["gamets"])) {
     $backgroundEvents = $db->fetchAll($query2);
     foreach ($backgroundEvents as $event) {
         $eventParsed = json_decode($event["data"], true);
-        if (! $eventParsed["source"] || $eventParsed["source"] != "AIAgent.esp") // Only AIAgent.esp for now.
+        if (!$eventParsed["source"] || $eventParsed["source"] != "AIAgent.esp") // Only AIAgent.esp for now.
         {
             continue;
         }
 
-        if (! $eventParsed["description"]) {
+        if (!$eventParsed["description"]) {
             continue;
         } else if ($eventParsed["description"] == "unknown") {
             continue;
@@ -258,7 +267,7 @@ if (isset($lastIt["gamets"])) {
             continue;
         }
 
-        $hours      = ($event["gamets"] - $lastIt["gamets"]) * 0.0000024;
+        $hours = ($event["gamets"] - $lastIt["gamets"]) * 0.0000024;
         $bgEvents[] = ["gamets" => $event["gamets"], "content" => "{$eventParsed["description"]}", "type" => "event"];
 
     }
@@ -270,27 +279,29 @@ $bgEvents[] = ["gamets" => $lastLoc["gamets"], "content" => "{$lastLoc["location
 
 if (isset($metadata["last_coords"]) && $metadata["last_coords"][3]) {
     $bgEvents[] = [
-        "gamets"  => $metadata["last_coords"]["last_updated"],
+        "gamets" => $metadata["last_coords"]["last_updated"],
         "content" => "{$metadata["last_coords"][3]}, " .
-        number_format(($last_gamets - $metadata["last_coords"]["last_updated"]) * 0.0000024, 2) .
-        " hours ago",
-        "type" => "last_reported_location"];
+            number_format(($last_gamets - $metadata["last_coords"]["last_updated"]) * 0.0000024, 2) .
+            " hours ago",
+        "type" => "last_reported_location"
+    ];
     $LAST_REPORTED_LOCATION = $metadata["last_coords"][3];
 }
 
 if (isset($metadata['last_coords_history'])) {
-    $localLast="";
+    $localLast = "";
     foreach ($metadata['last_coords_history'] as $historicalCoord) {
         if (!empty($historicalCoord[3])) {
-            if ($localLast==$historicalCoord[3]) 
+            if ($localLast == $historicalCoord[3])
                 continue;
             $bgEvents[] = [
-                "gamets"  => $historicalCoord["last_updated"],
+                "gamets" => $historicalCoord["last_updated"],
                 "content" => "{$historicalCoord[3]}, " .
-                number_format(($last_gamets - $historicalCoord["last_updated"]) * 0.0000024, 2) .
-                " hours ago",
-                "type" => "reported_location"];
-            $localLast=$historicalCoord[3];
+                    number_format(($last_gamets - $historicalCoord["last_updated"]) * 0.0000024, 2) .
+                    " hours ago",
+                "type" => "reported_location"
+            ];
+            $localLast = $historicalCoord[3];
         }
     }
 }
@@ -322,8 +333,8 @@ print_r($combinedEvents);
 $previous = 0;
 foreach ($combinedEvents as $dentry) {
     if ($dentry["type"] == "event" && $previous) {
-        $hours             = ($dentry["gamets"] - $previous) * 0.0000024;
-        $hoursAgo          = ($last_gamets - $dentry["gamets"]) * 0.0000024;
+        $hours = ($dentry["gamets"] - $previous) * 0.0000024;
+        $hoursAgo = ($last_gamets - $dentry["gamets"]) * 0.0000024;
         $dentry["content"] = "* $hours hours after last entry: {$dentry["content"]}, $hoursAgo hours ago";
     }
     $previous = $dentry["gamets"];
@@ -384,7 +395,7 @@ Write in english as if you were {$GLOBALS["HERIKA_NAME"]}, soliloquy, speaking t
 IMPORTANT: Keep this inner thought short and concise - aim for 2-3 brief paragraphs maximum.
 ";
 
-$metadata   = json_decode($currentNpcData["metadata"], true);
+$metadata = json_decode($currentNpcData["metadata"], true);
 $metadata_p = json_decode($currentProfileData["metadata"], true);
 
 if ($metadata["CORE_LANG"] == "es" || $metadata_p["CORE_LANG"] == "es") {
@@ -403,12 +414,12 @@ $contextData = array_merge($head[$LANG], $prompt);
 Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
 
 $connectionHandler = $connector->getConnector($currentConnectorData);
-$buffer            = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 2048], "backgroundlife");
+$buffer = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 2048], "backgroundlife");
 Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
 
 print_r($buffer . PHP_EOL);
 
-if (isset($argv[2]) && $argv[2] == "dryrun") {
+if (isset($argv[2]) && ($argv[2] == "dryrun"  )) {
     die();
 }
 
@@ -478,15 +489,15 @@ $buffer2 = $connectionHandler->fast_request($prompt, ["MAX_TOKENS" => 2048], "ba
 print_r($buffer2);
 //$parsed = parse_xml_fragment($buffer2);
 
-$extdata                                 = $npcMaster->getExtendedData($currentNpcData);
+$extdata = $npcMaster->getExtendedData($currentNpcData);
 $extdata["background_life_last_updated"] = $last_gamets;
-$currentNpcData                          = $npcMaster->setExtendedData($currentNpcData, $extdata);
+$currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extdata);
 $npcMaster->updateByArray($currentNpcData);
 
-$parsed                 = [];
-$parsed["action"]       = manual_get_tag_content($buffer2, "action");
+$parsed = [];
+$parsed["action"] = manual_get_tag_content($buffer2, "action");
 $parsed["notification"] = manual_get_tag_content($buffer2, "notification");
-$parsed["rumor"]        = manual_get_tag_content($buffer2, "rumor");
+$parsed["rumor"] = manual_get_tag_content($buffer2, "rumor");
 
 print_r($parsed);
 
@@ -500,7 +511,7 @@ if (is_array($parsed)) {
             handleTravelToAction($cmds[1], $currentNpcData, $GLOBALS["HERIKA_NAME"], $last_ts, $last_gamets, $momentum, $eventParsed, $db);
 
         } else if ($cmds[0] == "StayAtPlace") {
-            handleStayAtPlaceAction($cmds[1], $currentNpcData, $GLOBALS["HERIKA_NAME"], $last_ts, $last_gamets, $momentum, $db);
+            handleStayAtPlaceAction($LAST_REPORTED_LOCATION, $currentNpcData, $GLOBALS["HERIKA_NAME"], $last_ts, $last_gamets, $momentum, $db);
         } else if ($cmds[0] == "ReturnHome") {
             handleReturnHome($cmds[1], $currentNpcData, $GLOBALS["HERIKA_NAME"], $last_ts, $last_gamets, $momentum, $db);
         }
@@ -508,7 +519,7 @@ if (is_array($parsed)) {
 
     if ($parsed["notification"] && $lettersEnabled) {
         $dateStringSK = convert_gamets2skyrim_long_date(DataLastKnownGameTS());
-        $fullTitle    = "A letter from {$GLOBALS["HERIKA_NAME"]} ($dateStringSK)";
+        $fullTitle = "A letter from {$GLOBALS["HERIKA_NAME"]} ($dateStringSK)";
 
         // This is going to create a picture with the letter.
         createLetter($fullTitle, $parsed["notification"]);
@@ -518,11 +529,11 @@ if (is_array($parsed)) {
             'responselog',
             [
                 'localts' => time(),
-                'sent'    => 0,
-                'actor'   => "rolemaster",
-                'text'    => "",
-                'action'  => "rolecommand|generateLetter@$fullTitle",
-                'tag'     => '',
+                'sent' => 0,
+                'actor' => "rolemaster",
+                'text' => "",
+                'action' => "rolecommand|generateLetter@$fullTitle",
+                'tag' => '',
             ]
         );
         // Will make plugin to generate formid for letter, and will send vanilla courier
@@ -531,11 +542,11 @@ if (is_array($parsed)) {
             'responselog',
             [
                 'localts' => time(),
-                'sent'    => 0,
-                'actor'   => "rolemaster",
-                'text'    => "",
-                'action'  => "rolecommand|BackgroundCmd@$refHexString@SendNote/" . $fullTitle,
-                'tag'     => '',
+                'sent' => 0,
+                'actor' => "rolemaster",
+                'text' => "",
+                'action' => "rolecommand|BackgroundCmd@$refHexString@SendNote/" . $fullTitle,
+                'tag' => '',
             ]
         );
 
@@ -543,10 +554,10 @@ if (is_array($parsed)) {
         $db->insert(
             'eventlog',
             [
-                'ts'     => $last_ts,
+                'ts' => $last_ts,
                 'gamets' => $last_gamets + 1,
-                'type'   => "innerchat",
-                'data'   => "The Narrator:{$GLOBALS["HERIKA_NAME"]} sent this letter to {$GLOBALS["PLAYER_NAME"]} " . "\n{$parsed["notification"]} )",
+                'type' => "innerchat",
+                'data' => "The Narrator:{$GLOBALS["HERIKA_NAME"]} sent this letter to {$GLOBALS["PLAYER_NAME"]} " . "\n{$parsed["notification"]} )",
                 'sess' => $momentum,
                 'localts' => time(),
                 'people' => $GLOBALS["HERIKA_NAME"],
@@ -557,16 +568,28 @@ if (is_array($parsed)) {
         $db->insert(
             'diarylog',
             [
-                'ts'       => $last_ts,
-                'gamets'   => $last_gamets + 5,
-                'topic'    => "Sent Letter",
-                'content'  => $parsed["notification"],
-                'tags'     => "backgroundlife",
-                'people'   => $GLOBALS["HERIKA_NAME"],
+                'ts' => $last_ts,
+                'gamets' => $last_gamets + 5,
+                'topic' => "Sent Letter",
+                'content' => $parsed["notification"],
+                'tags' => "backgroundlife",
+                'people' => $GLOBALS["HERIKA_NAME"],
                 'location' => $LAST_REPORTED_LOCATION ?? null,
-                'sess'     => $momentum,
-                'localts'  => time(),
+                'sess' => $momentum,
+                'localts' => time(),
             ]
+        );
+        // Write into books table, books.php entrypoint will pickup and create new book entry when readed by player
+        $GLOBALS["db"]->insert(
+            'books',
+            array(
+                'ts' => 0,
+                'gamets' => 0,
+                'content' => $parsed["notification"],
+                'sess' => 'generated',
+                'localts' => time(),
+                'title' => $fullTitle
+            )
         );
     }
 
@@ -579,40 +602,40 @@ if (is_array($parsed)) {
 $db->insert(
     'eventlog',
     [
-        'ts'     => $last_ts,
+        'ts' => $last_ts,
         'gamets' => $last_gamets,
-        'type'   => "innerchat",
-        'data'   => "{$GLOBALS["HERIKA_NAME"]}'s inner thoughts: " . $buffer . " )",
-        'sess'     => $momentum,
-        'localts'  => time(),
-        'people'   => $GLOBALS["HERIKA_NAME"],
+        'type' => "innerchat",
+        'data' => "{$GLOBALS["HERIKA_NAME"]}'s inner thoughts: " . $buffer . " )",
+        'sess' => $momentum,
+        'localts' => time(),
+        'people' => $GLOBALS["HERIKA_NAME"],
         'location' => $eventParsed["location"] ?? null,
-        'party'    => "",
+        'party' => "",
     ]
 );
 
 $db->insert(
     'diarylog',
     [
-        'ts'       => $last_ts,
-        'gamets'   => $last_gamets,
-        'topic'    => "Journal Note",
-        'content'  => convert_gamets2skyrim_long_date($last_gamets) . "\n" . trim($buffer),
-        'tags'     => "Auto-diary, backgroundlife",
-        'people'   => $GLOBALS["HERIKA_NAME"],
+        'ts' => $last_ts,
+        'gamets' => $last_gamets,
+        'topic' => "Journal Note",
+        'content' => convert_gamets2skyrim_long_date($last_gamets) . "\n" . trim($buffer),
+        'tags' => "Auto-diary, backgroundlife",
+        'people' => $GLOBALS["HERIKA_NAME"],
         'location' => $eventParsed["location"] ?? null,
-        'sess'     => $momentum,
-        'localts'  => time(),
+        'sess' => $momentum,
+        'localts' => time(),
     ]
 );
 
 logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"], trim($buffer), $momentum, $last_gamets, 'backgroundlife_diary', $last_ts);
 // Mark NPC as background_life_enabled
-$npcManager                          = new NpcMaster();
-$npcData                             = $npcManager->getByName($GLOBALS["HERIKA_NAME"]);
-$extended                            = json_decode($npcData["extended_data"], true);
+$npcManager = new NpcMaster();
+$npcData = $npcManager->getByName($GLOBALS["HERIKA_NAME"]);
+$extended = json_decode($npcData["extended_data"], true);
 $extended["background_life_enabled"] = true;
-$npcData["extended_data"]            = json_encode($extended);
+$npcData["extended_data"] = json_encode($extended);
 $npcManager->updateByArray($npcData);
 
 die();
