@@ -46,6 +46,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
             $cooldown = max(0, min(10, $cooldown)); // Clamp to 0-10
             $narrator->set('random_cooldown', (string)$cooldown);
         }
+        if (isset($_POST['welcome_cooldown'])) {
+            $cooldown = intval($_POST['welcome_cooldown']);
+            $cooldown = max(1, min(1440, $cooldown)); // Clamp to 1-1440 (24 hours)
+            $narrator->set('welcome_cooldown', (string)$cooldown);
+        }
         
         // Save profile_id
         if (isset($_POST['profile_id'])) {
@@ -98,6 +103,7 @@ $welcomeEnabled = $narrator->getBool('welcome_enabled', false);
 $randomEnabled = $narrator->getBool('random_enabled', false);
 $randomChance = $narrator->getInt('random_chance', 15);
 $randomCooldown = $narrator->getInt('random_cooldown', 2);
+$welcomeCooldown = $narrator->getInt('welcome_cooldown', 10);
 $booksOnlyNarrator = $narrator->getBool('books_only_narrator', false);
 $hideFromContext = $narrator->getBool('hide_from_context', false);
 
@@ -410,7 +416,11 @@ if (!$isEmbed) {
                         <input type="checkbox" id="welcome_enabled" name="welcome_enabled" value="1" <?php echo $welcomeEnabled ? 'checked' : ''; ?>>
                         <label for="welcome_enabled">Welcome Message on Load</label>
                     </div>
-                    <span class="hint">The Narrator will give you a quick recap of what happened previously after you have loaded a save game. Has a 10 minute IRL cooldown so it's not annoying.</span>
+                    <span class="hint">The Narrator will give you a quick recap of what happened previously after you have loaded a save game.</span>
+                    
+                    <label for="welcome_cooldown" style="margin-top: 16px;">Welcome Message Cooldown (minutes)</label>
+                    <input type="number" id="welcome_cooldown" name="welcome_cooldown" value="<?php echo htmlspecialchars((string)$welcomeCooldown); ?>" min="1" max="1440">
+                    <span class="hint">Minimum time in minutes between welcome messages. Range: 1-1440 (24 hours), Default: 10 minutes</span>
                     
                     <div class="checkbox-group" style="margin-top: 16px;">
                         <input type="checkbox" id="books_only_narrator" name="books_only_narrator" value="1" <?php echo $booksOnlyNarrator ? 'checked' : ''; ?>>

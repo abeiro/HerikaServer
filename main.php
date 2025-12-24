@@ -1286,8 +1286,25 @@ if ($gameRequest[0] == "narrator_welcome") {
         // Set CURRENT_CONNECTOR for compatibility with old code paths
         $GLOBALS["CURRENT_CONNECTOR"] = $currentConnectorData['driver'];
         
-        // Set a prompt for the narrator to give a recap
-        $GLOBALS["NARRATOR_WELCOME_PROMPT"] = "Give a brief (2-3 sentence) recap of recent events and adventures. Welcome the player back to their journey.";
+        // Load welcome prompt from prompts table with hardcoded fallback
+        $welcomePrompt = null;
+        try {
+            $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'narrator_welcome_prompt'");
+            if ($promptData) {
+                $welcomePrompt = (!empty($promptData['custom_prompt'])) 
+                    ? $promptData['custom_prompt'] 
+                    : $promptData['default_prompt'];
+            }
+        } catch (Exception $e) {
+            Logger::warn("[NARRATOR_WELCOME] Failed to load prompt from database: " . $e->getMessage());
+        }
+        
+        // Hardcoded fallback if database query failed
+        if (!$welcomePrompt) {
+            $welcomePrompt = "Give a brief (2-3 sentence) recap of recent events and adventures. Welcome the player back to their journey.";
+        }
+        
+        $GLOBALS["NARRATOR_WELCOME_PROMPT"] = $welcomePrompt;
     } else {
         Logger::error("[NARRATOR_WELCOME] Narrator profile_id not found in core_narrator table");
         Logger::error("[NARRATOR_WELCOME] Please configure The Narrator in Narrator Management");

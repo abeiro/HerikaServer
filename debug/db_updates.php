@@ -2642,6 +2642,36 @@ if ($checkVersion("prompts")<20251214001) {
 }
 
 //----------------------------------------------------
+// Add narrator_welcome_prompt to prompts table
+// Version 20251224001
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251224001) {
+    Logger::debug("Applying prompts table 20251224001 - Adding narrator_welcome_prompt");
+    
+    $welcomePrompt = $db->escape(
+        "Give a brief (2-3 sentence) recap of recent events and adventures. ".
+        "Welcome the player back to their journey."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'narrator_welcome_prompt',
+            '$welcomePrompt',
+            'Prompt for narrator welcome message when loading a save game. Used in: main.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251224001);
+    Logger::info("Applied patch prompts 20251224001 - Added narrator_welcome_prompt");
+}
+
+//----------------------------------------------------
 // CORE_PLAYER DATA MIGRATION
 //----------------------------------------------------
 

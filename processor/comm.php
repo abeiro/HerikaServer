@@ -124,10 +124,13 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         
         // Check if narrator is enabled and welcome message is enabled
         if ($narrator->getBool('enabled', true) && $narrator->getBool('welcome_enabled', false)) {
-            // Check cooldown (10 minutes IRL = 600 seconds)
+            // Get cooldown from narrator settings (in minutes, default 10)
+            $cooldownMinutes = $narrator->getInt('welcome_cooldown', 10);
+            $cooldownSeconds = $cooldownMinutes * 60;
+            
+            // Check cooldown
             $lastWelcomeTs = $db->fetchOne("SELECT value FROM conf_opts WHERE id='last_narrator_welcome'");
             $currentTime = time();
-            $cooldownSeconds = 10 * 60; // 10 minutes
             
             $canTrigger = true;
             if ($lastWelcomeTs && isset($lastWelcomeTs['value'])) {
