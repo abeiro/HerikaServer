@@ -5474,6 +5474,35 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
                     $dynamicBio .= "\n<reanimation_status>\nYou have been reanimated from death as a zombie. Your skin has a deathly pale, greyish pallor with a corpse-like appearance. Your eyes are glazed and lifeless, and your movements are stiff and unnatural.\n</reanimation_status>";
                 }
                 
+                // Add faction information
+                if (isset($extendedData['factions']) && is_array($extendedData['factions']) && count($extendedData['factions']) > 0) {
+                    $factionLines = [];
+                    foreach ($extendedData['factions'] as $faction) {
+                        if (isset($faction['formid'])) {
+                            // Ensure FormID is properly formatted (8 hex digits)
+                            $formId = strtoupper(str_replace('0x', '', $faction['formid']));
+                            $formId = str_pad($formId, 8, '0', STR_PAD_LEFT);
+                            $escapedFormId = $GLOBALS["db"]->escape($formId);
+                            
+                            // Lookup faction name and description from descriptions table
+                            $factionRecord = $GLOBALS["db"]->fetchOne(
+                                "SELECT name, description FROM descriptions WHERE baseid = '{$escapedFormId}' LIMIT 1"
+                            );
+                            
+                            // Only add to prompt if found in descriptions table
+                            if ($factionRecord && !empty($factionRecord['name'])) {
+                                $factionName = $factionRecord['name'];
+                                $factionDesc = !empty($factionRecord['description']) ? $factionRecord['description'] : '';
+                                $factionLines[] = "{$factionName} - {$factionDesc}";
+                            }
+                        }
+                    }
+                    
+                    if (count($factionLines) > 0) {
+                        $dynamicBio .= "\nGroups: " . implode(". ", $factionLines) . ".";
+                    }
+                }
+                
                 $dynamicBio.=$EQUIPMENT_ADD ?? "";
                 $dynamicBio.=$TARGET_EQUIPMENT_ADD ?? "";
                 $dynamicBio.=$INVENTORY_ADD ?? "";
