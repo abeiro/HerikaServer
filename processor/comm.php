@@ -816,6 +816,35 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
         $meta["mods"]=isset($splitNameBase[41]) ?explode("#",$splitNameBase[41]):null;
 
+        // NPC factions - format: formID1:rank1#formID2:rank2#...
+        $factionString = isset($splitNameBase[42]) ? $splitNameBase[42] : '';
+        $factionList = [];
+        if (!empty($factionString)) {
+            $factionPairs = explode("#", $factionString);
+            foreach ($factionPairs as $pair) {
+                $parts = explode(":", $pair);
+                if (count($parts) >= 2) {
+                    $formId = $parts[0];
+                    $rank = intval($parts[1]);
+                    // Lookup faction name from descriptions table
+                    $factionName = null;
+                    $formIdDec = hexdec(str_replace('0x', '', $formId));
+                    $escapedFormId = $GLOBALS["db"]->escape($formIdDec);
+                    $descRecord = $db->fetchOne(
+                        "SELECT name FROM descriptions WHERE baseid = '{$escapedFormId}' LIMIT 1"
+                    );
+                    if ($descRecord && !empty($descRecord['name'])) {
+                        $factionName = $descRecord['name'];
+                    }
+                    $factionList[] = [
+                        'formid' => $formId,
+                        'rank' => $rank,
+                        'name' => $factionName
+                    ];
+                }
+            }
+        }
+
        
         // Importing rules
         $npcName = $GLOBALS["db"]->escape($localName);
@@ -872,6 +901,11 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         }
 
         $currentNpcData=$npcMaster->setMetadata($currentNpcData,$meta);
+
+        // Store factions in extended_data
+        $extended = $npcMaster->getExtendedData($currentNpcData);
+        $extended['factions'] = $factionList;
+        $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extended);
 
         $npcMaster->updateByArray($currentNpcData);
         

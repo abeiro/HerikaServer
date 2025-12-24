@@ -2127,6 +2127,38 @@ if ($checkVersion("spell_descriptions")<20241129001) {
     Logger::info("Applied patch spell_descriptions 20241129001");
 }
 
+if ($checkVersion("faction_descriptions")<20250115001) {
+    Logger::debug("Applying faction_descriptions 20250115001");
+    
+    // Insert faction descriptions into descriptions table
+    // FormIDs converted from hex to decimal for baseid field
+    $db->execQuery("
+        INSERT INTO public.descriptions (baseid, name, description) VALUES
+        ('171433', 'Thieves Guild', 'A secretive organization of skilled thieves and rogues operating throughout Skyrim, known for their expertise in stealth, lockpicking, and acquiring valuable items through illicit means.'),
+        ('176357', 'Daedra', 'Supernatural entities from the realm of Oblivion, including Daedric Princes and their followers, who often meddle in mortal affairs and grant powerful artifacts to those who serve them.'),
+        ('179769', 'Whiterun Guard', 'The city guard of Whiterun, responsible for maintaining order and protecting the citizens of this central trading hub in Skyrim.'),
+        ('180122', 'Imperial Legion', 'The military force of the Empire, fighting to maintain Imperial control over Skyrim during the civil war against the Stormcloak rebellion.'),
+        ('180123', 'Stormcloaks', 'The rebel army led by Ulfric Stormcloak, fighting for Skyrim''s independence from the Empire and the right to worship Talos freely.'),
+        ('181448', 'Greybeards', 'Ancient masters of the Thu''um who live in seclusion at High Hrothgar, serving as mentors to those who can use the power of the Voice.'),
+        ('237350', 'Thalmor', 'The ruling faction of the Aldmeri Dominion, an elven supremacist organization that enforces the White-Gold Concordat and hunts down Talos worshippers.'),
+        ('267099', 'Dark Brotherhood', 'A secretive assassins'' guild that worships Sithis and carries out contracts to eliminate targets for gold, operating from hidden sanctuaries.'),
+        ('275865', 'Forsworn', 'A group of Reachmen rebels who seek to reclaim the Reach from Nord control, using guerrilla tactics and ancient magic in their fight for independence.'),
+        ('295778', 'The Companions', 'A prestigious warrior guild based in Whiterun, following the traditions of Ysgramor and his Five Hundred Companions, known for their honor and combat prowess.'),
+        ('4647110', 'Penitus Oculatus', 'The elite intelligence and security force of the Empire, responsible for protecting the Emperor and conducting covert operations throughout Tamriel.'),
+        ('879301', 'East Empire Company', 'A powerful trading company that controls much of Skyrim''s commerce, operating warehouses and shipping routes throughout the province.'),
+        ('127577', 'College of Winterhold', 'The premier institution for magical study in Skyrim, where mages learn and practice various schools of magic, despite the general Nord distrust of magic.'),
+        ('33584193', 'Dawnguard', 'An order of vampire hunters dedicated to protecting Skyrim from the undead threat, operating from Fort Dawnguard with specialized weapons and tactics.'),
+        ('67280828', 'Cultist Faction', 'Followers of various Daedric Princes and dark powers, often found in remote locations performing rituals and spreading their influence across Skyrim.'),
+        ('67280858', 'Morag Tong Faction', 'An ancient assassins'' guild from Morrowind, following the traditions of the Dark Elves and operating with legal sanction in their homeland.')
+        ON CONFLICT (baseid) DO UPDATE SET 
+            name = EXCLUDED.name,
+            description = EXCLUDED.description;
+    ");
+    
+    $updateVersion("faction_descriptions",20250115001);
+    Logger::info("Applied patch faction_descriptions 20250115001");
+}
+
 // Always (re)create combined view once base tables exist
 try {
     $db->execQuery("DROP VIEW IF EXISTS public.combined_descriptions CASCADE;");
