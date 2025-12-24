@@ -104,6 +104,48 @@ function isItemBlacklisted($itemName) {
 }
 
 /**
+ * Lookup description from descriptions table, supporting mod FormIDs (XX prefix)
+ * Tries exact FormID first, then falls back to XX-prefixed version for mod items
+ * 
+ * @param string $formId The FormID to lookup (hex format, e.g., "0303572F")
+ * @return array|null Array with 'name' and 'description' keys, or null if not found
+ */
+function lookupDescriptionByFormID(string $formId): ?array {
+    global $db;
+    
+    // Ensure FormID is properly formatted (8 hex digits, uppercase)
+    $formId = strtoupper(str_replace('0x', '', $formId));
+    $formId = str_pad($formId, 8, '0', STR_PAD_LEFT);
+    
+    // Try exact FormID first
+    $escapedFormId = $db->escape($formId);
+    $record = $db->fetchOne(
+        "SELECT name, description FROM descriptions WHERE baseid = '{$escapedFormId}' LIMIT 1"
+    );
+    
+    if ($record && !empty($record['name'])) {
+        return $record;
+    }
+    
+    // If not found and FormID starts with a mod index (first 2 digits not 00-03), try XX prefix
+    $modIndex = substr($formId, 0, 2);
+    if ($modIndex !== '00' && $modIndex !== '01' && $modIndex !== '02' && $modIndex !== '03') {
+        // Replace first 2 digits with XX for mod item lookup
+        $xxFormId = 'XX' . substr($formId, 2);
+        $escapedXXFormId = $db->escape($xxFormId);
+        $record = $db->fetchOne(
+            "SELECT name, description FROM descriptions WHERE baseid = '{$escapedXXFormId}' LIMIT 1"
+        );
+        
+        if ($record && !empty($record['name'])) {
+            return $record;
+        }
+    }
+    
+    return null;
+}
+
+/**
  * Get height description based on scale value
  * Reads height descriptions from prompts table with hardcoded fallback
  * 
@@ -424,15 +466,8 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $factionNames = [];
                         foreach ($extendedData['factions'] as $faction) {
                             if (isset($faction['formid'])) {
-                                // Ensure FormID is properly formatted (8 hex digits)
-                                $formId = strtoupper(str_replace('0x', '', $faction['formid']));
-                                $formId = str_pad($formId, 8, '0', STR_PAD_LEFT);
-                                $escapedFormId = $GLOBALS["db"]->escape($formId);
-                                
-                                // Lookup faction name and description from descriptions table
-                                $factionRecord = $GLOBALS["db"]->fetchOne(
-                                    "SELECT name, description FROM descriptions WHERE baseid = '{$escapedFormId}' LIMIT 1"
-                                );
+                                // Lookup faction using helper function (supports XX prefix)
+                                $factionRecord = lookupDescriptionByFormID($faction['formid']);
                                 
                                 // Only add if found in descriptions table
                                 if ($factionRecord && !empty($factionRecord['name'])) {
@@ -5527,15 +5562,8 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
                     $factionLines = [];
                     foreach ($extendedData['factions'] as $faction) {
                         if (isset($faction['formid'])) {
-                            // Ensure FormID is properly formatted (8 hex digits)
-                            $formId = strtoupper(str_replace('0x', '', $faction['formid']));
-                            $formId = str_pad($formId, 8, '0', STR_PAD_LEFT);
-                            $escapedFormId = $GLOBALS["db"]->escape($formId);
-                            
-                            // Lookup faction name and description from descriptions table
-                            $factionRecord = $GLOBALS["db"]->fetchOne(
-                                "SELECT name, description FROM descriptions WHERE baseid = '{$escapedFormId}' LIMIT 1"
-                            );
+                            // Lookup faction using helper function (supports XX prefix)
+                            $factionRecord = lookupDescriptionByFormID($faction['formid']);
                             
                             // Only add to prompt if found in descriptions table
                             if ($factionRecord && !empty($factionRecord['name'])) {
