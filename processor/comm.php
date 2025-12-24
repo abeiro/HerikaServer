@@ -826,20 +826,9 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 if (count($parts) >= 2) {
                     $formId = $parts[0];
                     $rank = intval($parts[1]);
-                    // Lookup faction name from descriptions table
-                    $factionName = null;
-                    $formIdDec = hexdec(str_replace('0x', '', $formId));
-                    $escapedFormId = $GLOBALS["db"]->escape($formIdDec);
-                    $descRecord = $db->fetchOne(
-                        "SELECT name FROM descriptions WHERE baseid = '{$escapedFormId}' LIMIT 1"
-                    );
-                    if ($descRecord && !empty($descRecord['name'])) {
-                        $factionName = $descRecord['name'];
-                    }
                     $factionList[] = [
                         'formid' => $formId,
-                        'rank' => $rank,
-                        'name' => $factionName
+                        'rank' => $rank
                     ];
                 }
             }
