@@ -1624,8 +1624,6 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
 // Trigger narrator welcome message if flagged during init
 if (isset($GLOBALS["TRIGGER_NARRATOR_WELCOME"]) && $GLOBALS["TRIGGER_NARRATOR_WELCOME"]) {
-    Logger::info("[NARRATOR_WELCOME] Converting init to narrator_welcome event");
-    
     // Change the request type to narrator_welcome so main.php processes it
     $gameRequest[0] = "narrator_welcome";
     $MUST_END = false; // Don't end, continue to main.php
@@ -1646,7 +1644,6 @@ if (isset($GLOBALS["TRIGGER_NARRATOR_WELCOME"]) && $GLOBALS["TRIGGER_NARRATOR_WE
     
     if ($narratorProfileId) {
         $_GET["profile"] = $narratorProfileId;
-        Logger::info("[NARRATOR_WELCOME] Profile set to {$narratorProfileId}, will continue to main.php");
     } else {
         Logger::warn("[NARRATOR_WELCOME] Could not find narrator profile, welcome message cancelled");
         $MUST_END = true;

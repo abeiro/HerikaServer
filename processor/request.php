@@ -148,6 +148,15 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
         "(Important note: Something important happened here for {$GLOBALS["PLAYER_NAME"]} on {$sk_date}. You should use the tag #PlotRelevantEvent)",
         $momentum, $gameRequest[2],'diary_intent',$gameRequest[1]);
 
+} else if ($gameRequest[0] == "narrator_welcome") {
+	// Handle narrator welcome message
+	if (isset($PROMPTS["narrator_welcome"]["cue"]) && is_array($PROMPTS["narrator_welcome"]["cue"]) && count($PROMPTS["narrator_welcome"]["cue"]) > 0) {
+		$request = selectRandomInArray($PROMPTS["narrator_welcome"]["cue"]);
+	} else {
+		Logger::error("[NARRATOR_WELCOME] Cue not found or empty in request.php!");
+		$request = "Give a brief (2-3 sentence) recap of recent events and adventures. Welcome the player back to their journey.";
+	}
+
 } else {
 
 	if ($gameRequest[0] == "instruction" || $gameRequest[0] == "suggestion") {

@@ -404,20 +404,12 @@ if (isset($_GET["delete"])) {
     $toDel = intval($_GET["delete"]);
     $rowCheck = $npc->getById($toDel);
     
-    // Debug logging
-    error_log("[NPC_DELETE] Attempting to delete ID: {$toDel}");
-    error_log("[NPC_DELETE] Row check: " . print_r($rowCheck, true));
-    
     if ($rowCheck && !empty($rowCheck['lock_profile'])) {
-        error_log("[NPC_DELETE] Cannot delete - NPC is locked");
         header("Location: npc_master.php"); 
         exit; 
     }
     
-    error_log("[NPC_DELETE] Calling delete method");
-    $result = $npc->delete($toDel);
-    error_log("[NPC_DELETE] Delete result: " . ($result ? 'success' : 'failed'));
-    
+    $npc->delete($toDel);
     header("Location: npc_master.php");
     exit;
 }
