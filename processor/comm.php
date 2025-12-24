@@ -1010,16 +1010,15 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $extended = $npcMaster->getExtendedData($currentNpcData);
         $extended['factions'] = $factionList;
         
-        // NPC class - format: className:editorID:formID
+        // NPC class - format: className:formID
         $classString = isset($splitNameBase[43]) ? $splitNameBase[43] : '';
         $classData = null;
         if (!empty($classString)) {
             $parts = explode(":", $classString);
-            if (count($parts) >= 3) {
+            if (count($parts) >= 2) {
                 $classData = [
                     'name' => $parts[0],
-                    'editor_id' => $parts[1],
-                    'formid' => $parts[2]
+                    'formid' => $parts[1]
                 ];
             }
         }
