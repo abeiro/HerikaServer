@@ -90,22 +90,6 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 			Logger::info("Request function again {$returnFunction[3]}");
 		}
 		
-	} else if (preg_match('/^Train(.+)$/', $functionCodeName, $matches)) {
-		// Training function called - send rolecommand to open training menu
-		$roleMasterAction = "rolecommand|ShowTrainingMenu@{$GLOBALS["HERIKA_NAME"]}";
-		
-		// Insert into database
-		$GLOBALS["db"]->insert(
-			'responselog',
-			array(
-				'localts' => time(),
-				'sent' => 0,
-				'actor' => "rolemaster",
-				'text' => '',
-				'action' => $roleMasterAction,
-				'tag' => ""
-			)
-		);
 	} else {
 		if (isset($GLOBALS["FUNCSERV"][$functionCodeName])) {
 			call_user_func_array($GLOBALS["FUNCSERV"][$functionCodeName],[]);

@@ -1402,10 +1402,11 @@ if ($EXECUTION_MODE=="INJECTION_LOG") {
 require(__DIR__.DIRECTORY_SEPARATOR."prompt.includes.php");
 $gameRequest[0] = strtolower($gameRequest[0]); // one more time in case it was changed by an extension
 
-// Inject training function for trainer NPCs
-if (isset($currentNpcData) && $currentNpcData && $GLOBALS["HERIKA_NAME"] != "The Narrator") {
+// Inject training function for trainer NPCs (only if Training is enabled)
+if (in_array('Training', $GLOBALS["ENABLED_FUNCTIONS"]) && isset($currentNpcData) && $currentNpcData && $GLOBALS["HERIKA_NAME"] != "The Narrator") {
     $npcMaster = new NpcMaster();
     $extended = $npcMaster->getExtendedData($currentNpcData);
+    error_log("[TRAINING INJECT] Checking training for {$GLOBALS["HERIKA_NAME"]}, extended data: " . json_encode($extended['class'] ?? 'no class'));
     if (isset($extended['class']['teaches']) && !empty($extended['class']['teaches'])) {
         $skill = $extended['class']['teaches'];
         $maxLevel = isset($extended['class']['max_training_level']) ? intval($extended['class']['max_training_level']) : 0;
@@ -1423,10 +1424,20 @@ if (isset($currentNpcData) && $currentNpcData && $GLOBALS["HERIKA_NAME"] != "The
         }
         
         $functionName = "Train" . ucfirst($skill);
+        error_log("[TRAINING INJECT] Injecting function: {$functionName} for {$GLOBALS["HERIKA_NAME"]} ({$tier} {$skill}, level {$maxLevel})");
         $GLOBALS["FUNCTIONS"][] = [
             "name" => $functionName,
-            "description" => "{$GLOBALS["HERIKA_NAME"]} offers {$tier} {$skill} training (up to level {$maxLevel})",
-            "parameters" => ["type" => "object", "properties" => new stdClass()]
+            "description" => "{$GLOBALS["HERIKA_NAME"]} offers {$tier} {$skill} training.",
+            "parameters" => [
+                "type" => "object",
+                "properties" => [
+                    "target" => [
+                        "type" => "string",
+                        "description" => "Keep it blank",
+                    ],
+                ],
+                "required" => [""],
+            ],
         ];
         $GLOBALS["ENABLED_FUNCTIONS"][] = $functionName;
         $GLOBALS["F_NAMES"][$functionName] = $functionName;
