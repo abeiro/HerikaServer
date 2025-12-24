@@ -352,8 +352,8 @@ if (sizeof($combinedEvents) == 0) {
 }
 
 //$head[] = ['role' => 'system', 'content' => "You're an AI writer. Examine this character's logbook from a story in the Skyrim universe."];
-$head["en"][] = ['role' => 'system', 'content' => "Eres un asistente de escritor. Examina este texto con hechos ocurridos en el universo ficticio de Skyrim (The Elder Scrolls)"];
-$head["es"][] = ['role' => 'system', 'content' => "You are a writing assistant. Examine this text containing events that occurred in the fictional universe of Skyrim (The Elder Scrolls)."];
+$head["es"][] = ['role' => 'system', 'content' => "Eres un asistente de escritor. Examina este texto con hechos ocurridos en el universo ficticio de Skyrim (The Elder Scrolls)"];
+$head["ee"][] = ['role' => 'system', 'content' => "You are a writing assistant. Examine this text containing events that occurred in the fictional universe of Skyrim (The Elder Scrolls)."];
 
 $userprompt["es"] = "El personaje principal en este cuaderno de bitácora es {$GLOBALS["HERIKA_NAME"]}.
 Lee el historial de contexto (context_history), las memorias recientes (middle_term_memory) , prestando atención a los eventos notables y a los nombres de personajes relevantes.
