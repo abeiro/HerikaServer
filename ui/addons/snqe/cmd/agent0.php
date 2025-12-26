@@ -410,7 +410,7 @@ Creation rules:
 * Try to involve only “Already spawned NPCs”; create one new NPC ONLY if absolutely needed.
 * You may include enemies and an item to recover.
 * You MAY NOT use or reference furniture or unspawned elements.
-$
+
 
 E.G:
   * Player must travel to location Y

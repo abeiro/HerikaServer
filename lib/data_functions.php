@@ -197,16 +197,21 @@ function getHeightDescription(float $scale): string {
 }
 
 
-function DataDequeue()
+function DataDequeue($timestamp = 0)
 {
     global $db;
+    if ($timestamp !== 0) {
+        $clause="and localts<={$timestamp} ";
+    } else {
+        $clause="";
+    }
     // Use atomic UPDATE...RETURNING to prevent race conditions where multiple concurrent
     // requests could fetch the same dialogue before it's marked as sent
     $results = $db->fetchAll(
         "UPDATE responselog 
          SET sent=1 
          WHERE rowid IN (
-             SELECT rowid FROM responselog WHERE sent=0 ORDER BY rowid ASC
+             SELECT rowid FROM responselog WHERE sent=0 $clause ORDER BY rowid ASC
          )
          RETURNING *, rowid"
     );

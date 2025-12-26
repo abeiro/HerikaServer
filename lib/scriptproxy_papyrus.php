@@ -630,14 +630,14 @@ class SkyrimCommandBuilder
         return array_merge(['cmdID' => $cmdID], $params);
     }
 
-    public function send($cmd) {
+    public function send($cmd,$localts = null) {
 
         $strJson=json_encode($cmd);
 
         $GLOBALS["db"]->insert(
             'responselog',
             [
-                'localts' => time(),
+                'localts' => $localts??time(),
                 'sent'    => 0,
                 'actor'   => "rolemaster",
                 'text'    => "",
