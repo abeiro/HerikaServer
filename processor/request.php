@@ -90,7 +90,7 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 			Logger::info("Request function again {$returnFunction[3]}");
 		}
 		
-	}  else {
+	} else {
 		if (isset($GLOBALS["FUNCSERV"][$functionCodeName])) {
 			call_user_func_array($GLOBALS["FUNCSERV"][$functionCodeName],[]);
 		}
@@ -147,6 +147,52 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	logMemory($GLOBALS["PLAYER_NAME"], $GLOBALS["HERIKA_NAME"],
         "(Important note: Something important happened here for {$GLOBALS["PLAYER_NAME"]} on {$sk_date}. You should use the tag #PlotRelevantEvent)",
         $momentum, $gameRequest[2],'diary_intent',$gameRequest[1]);
+
+} else if ($gameRequest[0] == "narrator_welcome") {
+	// Handle narrator welcome message
+	if (isset($PROMPTS["narrator_welcome"]["cue"]) && is_array($PROMPTS["narrator_welcome"]["cue"]) && count($PROMPTS["narrator_welcome"]["cue"]) > 0) {
+		$request = selectRandomInArray($PROMPTS["narrator_welcome"]["cue"]);
+	} else {
+		Logger::error("[NARRATOR_WELCOME] Cue not found or empty in request.php!");
+		$request = "Give a brief (2-3 sentence) recap of recent events and adventures. Welcome the player back to their journey.";
+	}
+
+} else if ($gameRequest[0] == "quest" || $gameRequest[0] == "narrator_quest_comment") {
+	// Load quest comment prompt from database with fallback
+	$questPromptText = null;
+	try {
+		$questPromptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'quest_comment_prompt'");
+		if ($questPromptData) {
+			$questPromptText = (!empty($questPromptData['custom_prompt'])) 
+				? $questPromptData['custom_prompt'] 
+				: $questPromptData['default_prompt'];
+		}
+	} catch (Exception $e) {
+		Logger::warn("[QUEST] Failed to load prompt from database: " . $e->getMessage());
+	}
+	
+	// Hardcoded fallback
+	if (!$questPromptText) {
+		$questPromptText = "{$GLOBALS["HERIKA_NAME"]}, what should we do about this new quest?";
+	}
+	
+	// Replace {HERIKA_NAME} placeholder if present
+	$questPromptText = str_replace('{HERIKA_NAME}', $GLOBALS["HERIKA_NAME"], $questPromptText);
+	
+	// Override the player_request in PROMPTS array
+	$promptKey = $gameRequest[0];
+	if (!isset($PROMPTS[$promptKey])) {
+		$PROMPTS[$promptKey] = [];
+	}
+	$PROMPTS[$promptKey]["player_request"] = [$questPromptText];
+	
+	// Also set for "quest" key if this is narrator_quest_comment (for compatibility)
+	if ($gameRequest[0] == "narrator_quest_comment") {
+		if (!isset($PROMPTS["quest"])) {
+			$PROMPTS["quest"] = [];
+		}
+		$PROMPTS["quest"]["player_request"] = [$questPromptText];
+	}
 
 } else {
 

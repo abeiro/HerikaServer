@@ -39,7 +39,8 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'UseSoulGaze',
     'MakeFollower',
     'Toast',
-    'Drink'
+    'Drink',
+    'Training'
     //    'WaitHere'
 ];
 
@@ -116,6 +117,7 @@ $F_TRANSLATIONS_LOCAL["MakeFollower"] = "{$GLOBALS["HERIKA_NAME"]} joins to {$GL
 
 $F_TRANSLATIONS_LOCAL["Toast"] = "Raises a glass in celebration or honor.";
 $F_TRANSLATIONS_LOCAL["Drink"] = "Drinks a beverage to quench thirst or enjoy flavor.";
+$F_TRANSLATIONS_LOCAL["Training"] = "Opens training menu to improve skills with a trainer.";
 
 
 $F_RETURNMESSAGES_LOCAL["Inspect"] = "{$GLOBALS["HERIKA_NAME"]} inspects #TARGET# and see this: #RESULT#";
@@ -158,6 +160,7 @@ $F_RETURNMESSAGES_LOCAL["MakeFollower"] = "{$GLOBALS["HERIKA_NAME"]} is now part
 
 $F_RETURNMESSAGES_LOCAL["Toast"] = "{$GLOBALS["HERIKA_NAME"]} raises a glass in celebration or honor.";      
 $F_RETURNMESSAGES_LOCAL["Drink"] = "{$GLOBALS["HERIKA_NAME"]} drinks a beverage to quench thirst or enjoy flavor.";
+$F_RETURNMESSAGES_LOCAL["Training"] = "{$GLOBALS["HERIKA_NAME"]} opens the training menu.";
 
 // What is this?. We can translate functions or give them a custom name.
 // This array will handle translations. Plugin must receive the codename always.
@@ -203,6 +206,7 @@ $F_NAMES_LOCAL["MakeFollower"] = "JoinTo{$GLOBALS["PLAYER_NAME"]}Squad";
 
 $F_NAMES_LOCAL["Toast"] = "MakeAToast";
 $F_NAMES_LOCAL["Drink"] = "Drink";
+$F_NAMES_LOCAL["Training"] = "Training";
 
 if (isset($GLOBALS["CORE_LANG"])) {
     if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lang" . DIRECTORY_SEPARATOR . $GLOBALS["CORE_LANG"] . DIRECTORY_SEPARATOR . "functions.php")) {
@@ -790,6 +794,20 @@ $GLOBALS["FUNCTIONS"] = [
             "required" => [""],
         ],
     ],
+    [
+        "name" => $F_NAMES_LOCAL["Training"],
+        "description" => $F_TRANSLATIONS_LOCAL["Training"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ],
+            ],
+            "required" => [""],
+        ],
+    ],
 ];
 
 // Mantain a copy of all functions defined here
@@ -932,7 +950,8 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         'CastSpell',
         'MakeFollower',
         'Drink',
-        'Toast'
+        'Toast',
+        'Training'
 
     ];
     error_log("[DEBUG functions.php] IS_NPC=true, CastSpell in ENABLED: " . (in_array('CastSpell', $GLOBALS["ENABLED_FUNCTIONS"]) ? "YES" : "NO"));
@@ -969,7 +988,8 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         'UseSoulGaze',
         'CastSpell',
         'Drink',
-        'Toast'
+        'Toast',
+        'Training'
         //'GetDateTime',
         //'SearchDiary',
         //'SearchMemory',
@@ -1028,7 +1048,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
         $actionParts=explode("|",$action);
         $actionParts2=explode("@",$actionParts[2]);
         
-        if (isset($actionParts2[1])) {
+        if (isset($actionParts2[0])) {
             // Parameter part 
             if ($actionParts2[0]=="Drink") {
                
@@ -1082,6 +1102,34 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 );
 
                 error_log("[ACTION POSTFILTER Toast] Executed server-side");
+            } else if (preg_match('/^Train(.+)$/', $actionParts2[0], $matches)) {
+                // Training function called - send rolecommand to open training menu
+                $GLOBALS["db"]->insert(
+                    'responselog',
+                    array(
+                        'localts' => time(),
+                        'sent' => 0,
+                        'actor' => "rolemaster",
+                        'text' => '',
+                        'action' => "rolecommand|ShowTrainingMenu@{$actionParts[0]}",
+                        'tag' => ""
+                    )
+                );
+                
+                $GLOBALS["db"]->insert(
+                    'actions_issued',
+                    array(
+                        'action' => "Training",
+                        'fullcall' =>$actionParts[0]."|".$actionParts[1]."|".$actionParts[2],
+                        'actorname'=> $actionParts[0],
+                        'ts' => $gameRequest[1],
+                        'gamets' => $gameRequest[2],
+                        'localts'=>time(),
+                        'original'=>''
+                    )
+                );
+                
+                unset($actionsCopy[$n]);// Remove action from list, so client does not execute it
             } 
         }
     }

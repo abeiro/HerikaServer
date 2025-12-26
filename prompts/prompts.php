@@ -36,6 +36,9 @@ $PROMPTS=array(
     "narration"=>[ 
         "cue"=>[""] // Empty cue - actual prompt loaded from database in main.php
     ],
+    "narrator_welcome"=>[ 
+        "cue"=>[""] // Empty cue - actual prompt loaded in main.php
+    ],
     "location"=>[
             "cue"=>["(Chat as {$GLOBALS["HERIKA_NAME"]})"], // give way to
             "player_request"=>["{$gameRequest[3]} What do you know about this place?"]  //requirement
@@ -72,11 +75,15 @@ $PROMPTS=array(
         ],
         "extra" => shouldTriggerRPGComment("combat_end") ? [] : ["dontuse" => true]
     ],
-    // Database Prompt (Quest)
+    // Database Prompt (Quest) - player_request loaded from database in request.php
     "quest"=>[
         "cue"=>["{$GLOBALS["TEMPLATE_DIALOG"]}"],
         //"player_request"=>"{$GLOBALS["HERIKA_NAME"]}, what should we do about this quest '{$questName}'?"
-        "player_request"=>["{$GLOBALS["HERIKA_NAME"]}, what should we do about this new quest?"]
+        "player_request"=>["{$GLOBALS["HERIKA_NAME"]}, what should we do about this new quest?"] // Fallback - will be overridden in request.php if database prompt exists
+    ],
+    "narrator_quest_comment"=>[
+        "cue"=>["{$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "player_request"=>["{$GLOBALS["HERIKA_NAME"]}, what should we do about this new quest?"] // Fallback - will be overridden in request.php if database prompt exists
     ],
 
     "bleedout"=>[

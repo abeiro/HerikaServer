@@ -2058,7 +2058,25 @@ try {
     Logger::error("Error creating combined_bio_templates view: " . $e->getMessage());
 }
 
+// Remove DB-layer protection for The Narrator to allow deletion via UI
+// Version 20250124001
+if ($checkVersion("narrator_protection")<20250124001) {
+    Logger::debug("Removing narrator delete/rename protection triggers");
+    try {
+        $db->execQuery("DROP TRIGGER IF EXISTS trg_protect_narrator_delete ON public.core_npc_master");
+        $db->execQuery("DROP FUNCTION IF EXISTS public.protect_narrator_delete() CASCADE");
+        $db->execQuery("DROP TRIGGER IF EXISTS trg_protect_narrator_rename ON public.core_npc_master");
+        $db->execQuery("DROP FUNCTION IF EXISTS public.protect_narrator_rename() CASCADE");
+        $updateVersion("narrator_protection",20250124001);
+        Logger::info("Removed narrator protection triggers");
+    } catch (Exception $e) {
+        Logger::error("Error removing narrator protection triggers: " . $e->getMessage());
+    }
+}
+
 // Enforce DB-layer protection for The Narrator: prevent delete or rename
+// NOTE: This is now commented out to allow narrator deletion from UI
+/*
 try {
     $db->execQuery("DROP FUNCTION IF EXISTS public.protect_narrator_delete() CASCADE");
     $db->execQuery("CREATE OR REPLACE FUNCTION public.protect_narrator_delete() RETURNS trigger AS $$\nBEGIN\n    IF OLD.id = 1 OR OLD.npc_name = 'The Narrator' THEN\n        RAISE EXCEPTION 'Deletion of The Narrator is not allowed';\n    END IF;\n    RETURN OLD;\nEND;\n$$ LANGUAGE plpgsql;");
@@ -2072,6 +2090,7 @@ try {
 } catch (Exception $e) {
     Logger::warn("DB trigger setup for narrator protection failed or already present: ".$e->getMessage());
 }
+*/
 
 //----------------------------------------------------
 // Item descriptions: new tables and combined view
@@ -2142,6 +2161,26 @@ if ($checkVersion("spell_descriptions")<20241129001) {
     
     $updateVersion("spell_descriptions",20241129001);
     Logger::info("Applied patch spell_descriptions 20241129001");
+}
+
+if ($checkVersion("faction_descriptions")<20250115001) {
+    Logger::debug("Applying faction_descriptions 20250115001");
+    
+    $sqlFile = __DIR__ . '/../data/faction_descriptions.sql';
+    if (file_exists($sqlFile)) {
+        $sql = file_get_contents($sqlFile);
+        if ($sql !== false) {
+            $db->execQuery($sql);
+            Logger::info("Imported faction descriptions from faction_descriptions.sql");
+        } else {
+            Logger::warn("Could not read faction_descriptions.sql");
+        }
+    } else {
+        Logger::warn("faction_descriptions.sql not found at $sqlFile");
+    }
+    
+    $updateVersion("faction_descriptions",20250115001);
+    Logger::info("Applied patch faction_descriptions 20250115001");
 }
 
 // Always (re)create combined view once base tables exist
@@ -2600,6 +2639,65 @@ if ($checkVersion("prompts")<20251214001) {
     
     $updateVersion("prompts", 20251214001);
     Logger::info("Applied patch prompts 20251214001 - Added book_summary_prompt");
+}
+
+//----------------------------------------------------
+// Add narrator_welcome_prompt to prompts table
+// Version 20251224001
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251224001) {
+    Logger::debug("Applying prompts table 20251224001 - Adding narrator_welcome_prompt");
+    
+    $welcomePrompt = $db->escape(
+        "Give a brief (2-3 sentence) recap of recent events and adventures. ".
+        "Welcome the player back to their journey."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'narrator_welcome_prompt',
+            '$welcomePrompt',
+            'Prompt for narrator welcome message when loading a save game. Used in: main.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251224001);
+    Logger::info("Applied patch prompts 20251224001 - Added narrator_welcome_prompt");
+}
+
+//----------------------------------------------------
+// Add quest_comment_prompt to prompts table
+// Version 20251224002
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251224002) {
+    Logger::debug("Applying prompts table 20251224002 - Adding quest_comment_prompt");
+    
+    $questPrompt = $db->escape(
+        "{HERIKA_NAME}, what should we do about this new quest?"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'quest_comment_prompt',
+            '$questPrompt',
+            'Prompt for narrator/NPC comments on quest objective updates (contains {HERIKA_NAME} placeholder). Used in: prompts/prompts.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251224002);
+    Logger::info("Applied patch prompts 20251224002 - Added quest_comment_prompt");
 }
 
 //----------------------------------------------------

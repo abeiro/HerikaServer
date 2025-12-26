@@ -52,6 +52,7 @@ $npcFunctions = [
     'MakeFollower',
     'Toast',
     'Drink',
+    'Training',
 ];
 
 $playerFunctions = [
@@ -84,7 +85,7 @@ $playerFunctions = [
     'Drink',
 ];
 
-$socialFunctions = ['Inspect', 'InspectSurroundings', 'Relax', 'TakeASeat', 'UseSoulGaze','Toast', 'Drink'];
+$socialFunctions = ['Inspect', 'InspectSurroundings', 'Relax', 'TakeASeat', 'UseSoulGaze','Toast', 'Drink', 'Training'];
 $movementFunctions = ['TravelTo', 'Follow', 'FollowPlayer', 'ComeCloser', 'WaitHere', 'IncreaseWalkSpeed', 'DecreaseWalkSpeed','MakeFollower'];
 $combatFunctions = ['Attack', 'AttackHunt', 'Brawl', 'SheatheWeapon'];
 $inventoryFunctions = ['OpenInventory', 'OpenInventory2', 'CheckInventory', 'GiveGoldTo', 'GiveItemTo', 'PickupItem', 'TakeGoldFromPlayer', 'CastSpell'];
@@ -440,7 +441,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         'InspectSurroundings' => 'Look around and observe the environment',
                                         'Relax' => 'Take a break and sandbox',
                                         'TakeASeat' => 'Sit down at nearest chair',
-                                        'UseSoulGaze' => 'Use ITT to visualize and describe the current scene'
+                                        'UseSoulGaze' => 'Use ITT to visualize and describe the current scene',
+                                        'Toast' => 'Raise a glass in celebration or honor',
+                                        'Drink' => 'Drink a beverage to quench thirst',
+                                        'Training' => 'Opens training menu for skill improvement (only available for trainer NPCs)'
                                     ];
                                     echo $descriptions[$func] ?? 'Social interaction function';
                                     ?>
@@ -534,6 +538,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <div class="function-description">
                                     <?php
                                     echo $GLOBALS["F_TRANSLATIONS"][$func] ?? 'Player-specific function';
+                                    ?>
+                                </div>
+                            </label>
+                        </div>
+                    <?php 
+                        endif;
+                    endforeach; 
+                    ?>
+                </div>
+                <?php endif; ?>
+
+                <!-- NPC-Specific Functions -->
+                <?php if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]): ?>
+                <div class="function-category">
+                    <h3>🎓 NPC-Specific</h3>
+                    <?php
+                    foreach ($npcOnlyFunctions as $func):
+                        if (in_array($func, $currentList)):
+                    ?>
+                        <div class="function-item">
+                            <input type="checkbox" name="functions[]" value="<?= htmlspecialchars($func) ?>" id="func_<?= $func ?>"
+                                <?= in_array($func, $currentOnes ?? []) ? 'checked' : '' ?>>
+                            <label for="func_<?= $func ?>">
+                                <?= htmlspecialchars($func) ?>
+                                <div class="function-description">
+                                    <?php
+                                    $descriptions = [
+                                        'Training' => 'Opens training menu for skill improvement (only for trainer NPCs)'
+                                    ];
+                                    echo $descriptions[$func] ?? 'NPC-specific function';
                                     ?>
                                 </div>
                             </label>

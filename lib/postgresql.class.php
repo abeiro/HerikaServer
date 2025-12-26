@@ -161,7 +161,12 @@ class sql
     {
         $this->re_connect();
         $query = "DELETE FROM $table WHERE $where";
-        pg_query(self::$link, $query);
+        $result = pg_query(self::$link, $query);
+        if ($result === false) {
+            $error = pg_last_error(self::$link);
+            error_log("[DB_DELETE] Failed to delete from {$table} WHERE {$where}. Error: {$error}");
+        }
+        return $result !== false;
     }
 
     public function truncate($table, $restart = false, $cascade = false)

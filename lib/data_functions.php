@@ -104,6 +104,48 @@ function isItemBlacklisted($itemName) {
 }
 
 /**
+ * Lookup description from descriptions table, supporting mod FormIDs (XX prefix)
+ * Tries exact FormID first, then falls back to XX-prefixed version for mod items
+ * 
+ * @param string $formId The FormID to lookup (hex format, e.g., "0303572F")
+ * @return array|null Array with 'name' and 'description' keys, or null if not found
+ */
+function lookupDescriptionByFormID(string $formId): ?array {
+    global $db;
+    
+    // Ensure FormID is properly formatted (8 hex digits, uppercase)
+    $formId = strtoupper(str_replace('0x', '', $formId));
+    $formId = str_pad($formId, 8, '0', STR_PAD_LEFT);
+    
+    // Try exact FormID first
+    $escapedFormId = $db->escape($formId);
+    $record = $db->fetchOne(
+        "SELECT name, description FROM descriptions WHERE baseid = '{$escapedFormId}' LIMIT 1"
+    );
+    
+    if ($record && !empty($record['name'])) {
+        return $record;
+    }
+    
+    // If not found and FormID starts with a mod index (first 2 digits not 00-03), try XX prefix
+    $modIndex = substr($formId, 0, 2);
+    if ($modIndex !== '00' && $modIndex !== '01' && $modIndex !== '02' && $modIndex !== '03') {
+        // Replace first 2 digits with XX for mod item lookup
+        $xxFormId = 'XX' . substr($formId, 2);
+        $escapedXXFormId = $db->escape($xxFormId);
+        $record = $db->fetchOne(
+            "SELECT name, description FROM descriptions WHERE baseid = '{$escapedXXFormId}' LIMIT 1"
+        );
+        
+        if ($record && !empty($record['name'])) {
+            return $record;
+        }
+    }
+    
+    return null;
+}
+
+/**
  * Get height description based on scale value
  * Reads height descriptions from prompts table with hardcoded fallback
  * 
@@ -256,6 +298,11 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     // Not always the same order
     shuffle($actorDetailedList);
     // error_log("[DataLastInfoFor] $actorsInRangeList");
+    
+    // Track seen faction descriptions to avoid duplicates
+    $seenFactionFormIDs = [];
+    $factionDescriptions = []; // Store unique faction descriptions
+    
     // Actors
     if ($actorsInRange && $addNPCDescriptions) {
         $actorDetailedListWithProfile=[];
@@ -338,6 +385,18 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     // NPC name should always be at core section.
                     $npcName = $currentNpcData["npc_name"];
                     
+                    // Format gender (capitalize first letter)
+                    $gender = !empty($currentNpcData["gender"]) ? ucfirst(strtolower(trim($currentNpcData["gender"]))) : "";
+                    $race = !empty($currentNpcData["race"]) ? trim($currentNpcData["race"]) : "";
+                    
+                    // Build name with race/gender in parentheses
+                    $nameWithRaceGender = $npcName;
+                    if (!empty($gender) && !empty($race)) {
+                        $nameWithRaceGender .= " ({$gender} {$race})";
+                    } elseif (!empty($race)) {
+                        $nameWithRaceGender .= " ({$race})";
+                    }
+                    
                     // Check for reanimation status early to add to core
                     $extendedData = $npcMaster->getExtendedData($currentNpcData);
                     $reanimationText = "";
@@ -345,10 +404,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $reanimationText = " This person has been reanimated from death as a zombie.";
                     }
                     
-                    $profileString = trim("{$currentNpcData["core"]}{$reanimationText} {$currentNpcData["gender"]} {$currentNpcData["race"]}");
-                    if (stripos($profileString, $npcName) !== 0) {
-                        $profileString = "{$npcName} {$profileString}";
-                    }
+                    $profileString = "{$nameWithRaceGender}: " . trim("{$currentNpcData["core"]}{$reanimationText}");
                     
                     // Add appearance if available
                     if (!empty($currentNpcData["appearance"])) {
@@ -404,6 +460,35 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         }
                     }
                     
+                    // Add faction information after equipment
+                    $extendedData = $npcMaster->getExtendedData($currentNpcData);
+                    if (isset($extendedData['factions']) && is_array($extendedData['factions']) && count($extendedData['factions']) > 0) {
+                        $factionNames = [];
+                        foreach ($extendedData['factions'] as $faction) {
+                            if (isset($faction['formid'])) {
+                                // Lookup faction using helper function (supports XX prefix)
+                                $factionRecord = lookupDescriptionByFormID($faction['formid']);
+                                
+                                // Only add if found in descriptions table
+                                if ($factionRecord && !empty($factionRecord['name'])) {
+                                    $factionNames[] = $factionRecord['name'];
+                                    
+                                    // Track faction description (only once)
+                                    if (!in_array($faction['formid'], $seenFactionFormIDs)) {
+                                        $seenFactionFormIDs[] = $faction['formid'];
+                                        if (!empty($factionRecord['description'])) {
+                                            $factionDescriptions[$factionRecord['name']] = $factionRecord['description'];
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (!empty($factionNames)) {
+                            $profileString .= ". Groups " . implode(", ", $factionNames);
+                        }
+                    }
+                    
                     $actorDetailedListWithProfile[] = $profileString;
 
                 }
@@ -452,6 +537,15 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
     }
     $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<nearby_actors>\n# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange\n</nearby_actors>";
+    
+    // Add faction descriptions section if any factions were found
+    if (!empty($factionDescriptions)) {
+        $factionDescText = "";
+        foreach ($factionDescriptions as $name => $desc) {
+            $factionDescText .= "## {$name}: {$desc}\n";
+        }
+        $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<group_descriptions>\n# GROUP/FACTION DESCRIPTIONS\n{$factionDescText}</group_descriptions>";
+    }
     
     // Add nearby items to context if available
     $itemsInRange = DataItemsInCloseRange();
@@ -5460,6 +5554,31 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         if (isset($FOLLOWER_CONF[$fieldName]) && !empty(trim($FOLLOWER_CONF[$fieldName]))) {
             $xmlLabel=strtr(strtolower($label),[" "=>"_"]);
             $dynamicBio .= "\n<$xmlLabel>\n" . trim($FOLLOWER_CONF[$fieldName])."\n</$xmlLabel>";
+            
+            // Add groups (factions) right after HERIKA_BACKGROUND (basic_summary) section
+            if ($fieldName=="HERIKA_BACKGROUND") {
+                $extendedData = $npcMaster->getExtendedData($currentNpcData);
+                if (isset($extendedData['factions']) && is_array($extendedData['factions']) && count($extendedData['factions']) > 0) {
+                    $factionLines = [];
+                    foreach ($extendedData['factions'] as $faction) {
+                        if (isset($faction['formid'])) {
+                            // Lookup faction using helper function (supports XX prefix)
+                            $factionRecord = lookupDescriptionByFormID($faction['formid']);
+                            
+                            // Only add to prompt if found in descriptions table
+                            if ($factionRecord && !empty($factionRecord['name'])) {
+                                $factionName = $factionRecord['name'];
+                                $factionDesc = !empty($factionRecord['description']) ? $factionRecord['description'] : '';
+                                $factionLines[] = "{$factionName} - {$factionDesc}";
+                            }
+                        }
+                    }
+                    
+                    if (count($factionLines) > 0) {
+                        $dynamicBio .= "\n<groups>\nYou belong to these factions:\n" . implode("\n", $factionLines) . "\n</groups>";
+                    }
+                }
+            }
             
             // Add skills right after HERIKA_SKILLS section
             if ($fieldName=="HERIKA_SKILLS") {

@@ -172,6 +172,7 @@ class Narrator
             'random_enabled' => ['RANDOM_NARATION', 'bool', false],
             'random_chance' => ['RANDOM_NARATION_CHANCE', 'int', 15],
             'random_cooldown' => ['RANDOM_NARRATION_COOLDOWN', 'int', 2],
+            'quest_comment_cooldown' => ['QUEST_COMMENT_COOLDOWN', 'int', 3],
             'books_only_narrator' => ['BOOK_EVENT_ALWAYS_NARRATOR', 'bool', false],
             'hide_from_context' => ['HIDE_NARRATOR_DIALOGUE', 'bool', false],
         ];
@@ -258,6 +259,7 @@ class Narrator
             $GLOBALS['TTS']['openai']['voice']         = $allSettings['voiceid'];
             $GLOBALS['TTS']['deepgram']['model']       = $allSettings['voiceid'];
             $GLOBALS['TTS']['CARTESIA']['voiceid']     = $allSettings['voiceid'];
+            $GLOBALS['TTS']['INWORLD']['voiceid']      = $allSettings['voiceid'];
 
         }
     }

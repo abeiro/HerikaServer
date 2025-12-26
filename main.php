@@ -832,6 +832,7 @@ foreach ($gameRequest as $i => $ele) {
 
 // $gameRequest = type of message|localts|gamets|data
 
+
 if ($gameRequest[0]=="diary") {
     $GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
     
@@ -945,40 +946,8 @@ if (in_array($gameRequest[0], ["playerinfo", "newgame"])) {
     // NOTE: Automatic player name detection from game is disabled
     // Player name is now managed through Player Management UI or quickstart menu
     // This was formerly: Update player name from playerinfo event
-    
-    if (!$GLOBALS["NARRATOR_WELCOME"]) {
-        logEvent($gameRequest);
-        terminate();
-    } else {
-        // Fetch the last trigger timestamp from the database
-        $narratorRecord = $GLOBALS["db"]->fetchAll("SELECT value FROM conf_opts WHERE id='NARRATOR_WELCOME_TIMESTAMP'");
-        
-        // Check if the timestamp exists in the database
-        if (!empty($narratorRecord)) {
-            $lastTrigger = intval($narratorRecord[0]['value'] ?? 0);
-            $timeElapsed = time() - $lastTrigger;
-
-            if ($timeElapsed < $cooldownPeriod) {
-                // Cooldown is still active, exit
-                Logger::info("NARRATOR_WELCOME is on cooldown. Try again in " . ($cooldownPeriod - $timeElapsed) . " seconds.");
-                terminate();
-            }
-        }
-
-        // Update the timestamp in the database to the current time
-        $currentTimestamp = time();
-        $GLOBALS["db"]->upsertRowOnConflict(
-            "conf_opts",
-            array(
-                "id"    => "NARRATOR_WELCOME_TIMESTAMP",
-                "value" => $currentTimestamp
-            ),
-            'id'
-        );
-
-        // If cooldown has passed, allow execution and disable functions
-        $FUNCTIONS_ARE_ENABLED = false;
-    }
+    logEvent($gameRequest);
+    terminate();
 }
 
 
@@ -1257,6 +1226,158 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
 
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
 
+// Handle narrator_welcome events (must be AFTER comm.php which converts init to narrator_welcome)
+if ($gameRequest[0] == "narrator_welcome") {
+    // Load narrator profile with full connector configuration
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+    $narrator = new Narrator();
+    $narratorData = $narrator->getNarratorData();
+    
+    if ($narratorData && isset($narratorData["profile_id"])) {
+        // Load Narrator profile - set connector and profile first, character data last
+        $profile = new CoreProfile();
+        $currentProfileData = $profile->getById($narratorData["profile_id"]);
+        
+        if (!$currentProfileData) {
+            Logger::error("[NARRATOR_WELCOME] Profile ID {$narratorData['profile_id']} not found in core_profiles table");
+            Logger::error("[NARRATOR_WELCOME] Please ensure The Narrator has a valid profile assigned");
+            terminate();
+        }
+        
+        $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] = $currentProfileData;
+        
+        $connector = new LLMConnector();
+        
+        // Get global connector slot (respects in-game mode)
+        $db = $GLOBALS['db'];
+        $result = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_profile_model'");
+        $connectorSlot = (isset($result['value']) && $result['value'] >= 1 && $result['value'] <= 4) 
+            ? (int)$result['value'] 
+            : 1;
+        
+        $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+        
+        $slotName = LLMRandomizer::getSlotName($connectorSlot);
+        
+        if (!$connectorId) {
+            Logger::error("[NARRATOR_WELCOME] No connector assigned to {$slotName} slot (slot {$connectorSlot}) for profile '{$currentProfileData['label']}'");
+            Logger::error("[NARRATOR_WELCOME] Please configure connectors for The Narrator's profile:");
+            Logger::error("[NARRATOR_WELCOME]   - Go to Profile Management > Edit The Narrator's profile");
+            Logger::error("[NARRATOR_WELCOME]   - Assign connectors to: Standard (slot 1), Fast (slot 2), Powerful (slot 3), Experimental (slot 4)");
+            Logger::error("[NARRATOR_WELCOME]   - The system uses the ingame mode setting to pick which connector to use");
+            terminate();
+        }
+        
+        $currentConnectorData = $connector->getById($connectorId);
+        
+        if (!$currentConnectorData) {
+            Logger::error("[NARRATOR_WELCOME] Connector ID {$connectorId} not found in core_connectors table");
+            terminate();
+        }
+        
+        $connector->setOldGlobals($currentConnectorData);
+        $profile->setOldGlobals($currentProfileData);
+        
+        // Load narrator character data into GLOBALS
+        $narrator->loadCharacterIntoGlobals();
+        
+        $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
+        
+        // Set CURRENT_CONNECTOR for compatibility with old code paths
+        $GLOBALS["CURRENT_CONNECTOR"] = $currentConnectorData['driver'];
+        
+        // Load welcome prompt from prompts table with hardcoded fallback
+        $welcomePrompt = null;
+        try {
+            $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'narrator_welcome_prompt'");
+            if ($promptData) {
+                $welcomePrompt = (!empty($promptData['custom_prompt'])) 
+                    ? $promptData['custom_prompt'] 
+                    : $promptData['default_prompt'];
+            }
+        } catch (Exception $e) {
+            Logger::warn("[NARRATOR_WELCOME] Failed to load prompt from database: " . $e->getMessage());
+        }
+        
+        // Hardcoded fallback if database query failed
+        if (!$welcomePrompt) {
+            $welcomePrompt = "Give a brief (2-3 sentence) recap of recent events and adventures. Welcome the player back to their journey.";
+        }
+        
+        $GLOBALS["NARRATOR_WELCOME_PROMPT"] = $welcomePrompt;
+    } else {
+        Logger::error("[NARRATOR_WELCOME] Narrator profile_id not found in core_narrator table");
+        Logger::error("[NARRATOR_WELCOME] Please configure The Narrator in Narrator Management");
+        terminate();
+    }
+}
+
+// Handle narrator_quest_comment events (must be AFTER comm.php which converts quest to narrator_quest_comment)
+if ($gameRequest[0] == "narrator_quest_comment") {
+    // Load narrator profile with full connector configuration
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+    $narrator = new Narrator();
+    $narratorData = $narrator->getNarratorData();
+    
+    if ($narratorData && isset($narratorData["profile_id"])) {
+        // Load Narrator profile - set connector and profile first, character data last
+        $profile = new CoreProfile();
+        $currentProfileData = $profile->getById($narratorData["profile_id"]);
+        
+        if (!$currentProfileData) {
+            Logger::error("[NARRATOR_QUEST_COMMENT] Profile ID {$narratorData['profile_id']} not found in core_profiles table");
+            Logger::error("[NARRATOR_QUEST_COMMENT] Please ensure The Narrator has a valid profile assigned");
+            terminate();
+        }
+        
+        $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] = $currentProfileData;
+        
+        $connector = new LLMConnector();
+        
+        // Get global connector slot (respects in-game mode)
+        $db = $GLOBALS['db'];
+        $result = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_profile_model'");
+        $connectorSlot = (isset($result['value']) && $result['value'] >= 1 && $result['value'] <= 4) 
+            ? (int)$result['value'] 
+            : 1;
+        
+        $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+        
+        $slotName = LLMRandomizer::getSlotName($connectorSlot);
+        
+        if (!$connectorId) {
+            Logger::error("[NARRATOR_QUEST_COMMENT] No connector assigned to {$slotName} slot (slot {$connectorSlot}) for profile '{$currentProfileData['label']}'");
+            Logger::error("[NARRATOR_QUEST_COMMENT] Please configure connectors for The Narrator's profile:");
+            Logger::error("[NARRATOR_QUEST_COMMENT]   - Go to Profile Management > Edit The Narrator's profile");
+            Logger::error("[NARRATOR_QUEST_COMMENT]   - Assign connectors to: Standard (slot 1), Fast (slot 2), Powerful (slot 3), Experimental (slot 4)");
+            Logger::error("[NARRATOR_QUEST_COMMENT]   - The system uses the ingame mode setting to pick which connector to use");
+            terminate();
+        }
+        
+        $currentConnectorData = $connector->getById($connectorId);
+        
+        if (!$currentConnectorData) {
+            Logger::error("[NARRATOR_QUEST_COMMENT] Connector ID {$connectorId} not found in core_connectors table");
+            terminate();
+        }
+        
+        $connector->setOldGlobals($currentConnectorData);
+        $profile->setOldGlobals($currentProfileData);
+        
+        // Load narrator character data into GLOBALS
+        $narrator->loadCharacterIntoGlobals();
+        
+        $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
+        
+        // Set CURRENT_CONNECTOR for compatibility with old code paths
+        $GLOBALS["CURRENT_CONNECTOR"] = $currentConnectorData['driver'];
+    } else {
+        Logger::error("[NARRATOR_QUEST_COMMENT] Narrator profile_id not found in core_narrator table");
+        Logger::error("[NARRATOR_QUEST_COMMENT] Please configure The Narrator in Narrator Management");
+        terminate();
+    }
+}
+
 if ($MUST_END) {  // Shorthand for non LLM processing
     echo 'X-CUSTOM-CLOSE'.PHP_EOL;
     if (!getenv("PHPUNIT_TEST")) {
@@ -1281,12 +1402,61 @@ if ($EXECUTION_MODE=="INJECTION_LOG") {
 require(__DIR__.DIRECTORY_SEPARATOR."prompt.includes.php");
 $gameRequest[0] = strtolower($gameRequest[0]); // one more time in case it was changed by an extension
 
+// Inject training function for trainer NPCs (only if Training is enabled)
+if (in_array('Training', $GLOBALS["ENABLED_FUNCTIONS"]) && isset($currentNpcData) && $currentNpcData && $GLOBALS["HERIKA_NAME"] != "The Narrator") {
+    $npcMaster = new NpcMaster();
+    $extended = $npcMaster->getExtendedData($currentNpcData);
+    if (isset($extended['class']['teaches']) && !empty($extended['class']['teaches'])) {
+        $skill = $extended['class']['teaches'];
+        $maxLevel = isset($extended['class']['max_training_level']) ? intval($extended['class']['max_training_level']) : 0;
+        
+        // Convert level to tier name
+        $tier = 'Novice';
+        if ($maxLevel >= 100) {
+            $tier = 'Master';
+        } elseif ($maxLevel >= 75) {
+            $tier = 'Expert';
+        } elseif ($maxLevel >= 50) {
+            $tier = 'Adept';
+        } elseif ($maxLevel >= 25) {
+            $tier = 'Apprentice';
+        }
+        
+        $functionName = "Train" . ucfirst($skill);
+        $GLOBALS["FUNCTIONS"][] = [
+            "name" => $functionName,
+            "description" => "{$GLOBALS["HERIKA_NAME"]} offers {$tier} {$skill} training.",
+            "parameters" => [
+                "type" => "object",
+                "properties" => [
+                    "target" => [
+                        "type" => "string",
+                        "description" => "Keep it blank",
+                    ],
+                ],
+                "required" => [""],
+            ],
+        ];
+        $GLOBALS["ENABLED_FUNCTIONS"][] = $functionName;
+        $GLOBALS["F_NAMES"][$functionName] = $functionName;
+    }
+}
+
 // Inject random narration prompt if this is a narration event
 // This must happen AFTER prompts.php is loaded to avoid being overwritten
 // Inject as the "cue" so it appears as the penultimate user message (like section 81 for normal NPCs)
 if (isset($GLOBALS["RANDOM_NARRATION_PROMPT"]) && $gameRequest[0] == "narration") {
     $PROMPTS["narration"]["cue"] = [$GLOBALS["RANDOM_NARRATION_PROMPT"]];
     Logger::info("[RANDOM_NARRATION] Injected narration prompt as cue");
+}
+
+// Inject narrator welcome prompt if this is a narrator_welcome event
+if ($gameRequest[0] == "narrator_welcome") {
+    $welcomePrompt = isset($GLOBALS["NARRATOR_WELCOME_PROMPT"]) && !empty($GLOBALS["NARRATOR_WELCOME_PROMPT"]) 
+        ? $GLOBALS["NARRATOR_WELCOME_PROMPT"]
+        : "Give a brief (2-3 sentence) recap of recent events and adventures. Welcome the player back to their journey.";
+    
+    $PROMPTS["narrator_welcome"]["cue"] = [$welcomePrompt];
 }
 
 // Take care of override request if needed..
@@ -1771,7 +1941,7 @@ if ($currentHold) {
 }
 
 // For narration events, simplify the command prompt (no actions needed for atmospheric descriptions)
-if ($gameRequest[0] === "narration") {
+if ($gameRequest[0] === "narration" || $gameRequest[0] === "narrator_welcome") {
     $GLOBALS["COMMAND_PROMPT"] = "Respond with atmospheric narration only. Use the Talk action.";
 }
 
@@ -1857,6 +2027,16 @@ if ($gameRequest[0] == "funcret") {
 
 
 }  else {
+    // Ensure CURRENT_CONNECTOR is set
+    if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || empty($GLOBALS["CURRENT_CONNECTOR"])) {
+        if (isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["driver"])) {
+            $GLOBALS["CURRENT_CONNECTOR"] = $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["driver"];
+        } else {
+            Logger::error("CURRENT_CONNECTOR not set and CHIM_CORE_CURRENT_CONNECTOR_DATA not available!");
+            $GLOBALS["CURRENT_CONNECTOR"] = "unknown";
+        }
+    }
+    
     if (in_array($GLOBALS["CURRENT_CONNECTOR"],["koboldcpp","openai","google_openai","openrouter"]) && false ) {  // OLD SCHEMA
         if (!empty($request)) {
             if (sizeof($memoryInjectionCtx)>0) {
@@ -1889,7 +2069,8 @@ if ($gameRequest[0] == "funcret") {
             }
             
         } else {
-            Logger::error("CRITICAL? :: Empty request, prompt empty. Type: {$gameRequest[0]} Connector: {$GLOBALS["CURRENT_CONNECTOR"]} ");
+            $connectorName = isset($GLOBALS["CURRENT_CONNECTOR"]) ? $GLOBALS["CURRENT_CONNECTOR"] : "unknown";
+            Logger::error("CRITICAL? :: Empty request, prompt empty. Type: {$gameRequest[0]} Connector: {$connectorName}");
             $prompt=[];
         }
     }
