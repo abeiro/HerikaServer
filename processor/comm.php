@@ -1513,6 +1513,17 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         } else {
             Logger::info("[SNQE] Background agent processing started successfully");
         }
+    } else  if (strtoupper($localData[0]) == "END") {
+        // Execute background SNQE agent processing with proper error handling
+        $enginePath = escapeshellarg($GLOBALS["ENGINE_PATH"]);
+        $cmd = "php {$enginePath}/service/processors/snqe/run_agents.php full end> {$enginePath}/log/log_run_agent.log 2>&1 &";
+        $output = shell_exec($cmd);
+        $output = trim($output);    
+        if ($output === null) {
+            Logger::error("[SNQE] Failed to start background agent processing");
+        } else {
+            Logger::info("[SNQE] Background agent processing started successfully");
+        }
     } else if (strtoupper($localData[0]) == "CLEAN") {
         // Execute SNQE manager clean command
         $enginePath = escapeshellarg($GLOBALS["ENGINE_PATH"]);
