@@ -590,8 +590,42 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
 
     $masterData = $GLOBALS["item_types"];
 
-    if ($basetype == "note") {
-        createBook($name, $content, $location, $quest_id, $npc_ref);
+    if ($basetype == "note" || $basetype == "book") {
+
+        // Generate content for the book/note
+        $connector            = new LLMConnector();
+        $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
+        $connector->setOldGlobals($currentConnectorData);
+
+        $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+        $questData=json_decode(file_get_contents($enginePath . "log" . DIRECTORY_SEPARATOR . "snqe_state.json"), true);
+
+        $CONTEXT_INFO_SKYRIM_LORE="
+        == Quest Data ==
+{$questData["questtitle"]}
+{$questData["briefing"]}
+    
+Quest Journal:
+".implode("\n",$questData["nextlist"])."
+We found \"$name\"  book: $content
+== End of Quest Data ==
+";
+
+        $head[]   = ["role" => "system", "content" => "You're an AI writer. Your must write a book involved in a storyline."];
+        $prompt[] = ["role" => "user", "content" => $CONTEXT_INFO_SKYRIM_LORE];
+        $prompt[] = ["role" => "user", "content" => "
+Read the context info and write the content for \"$name\" book.
+
+* Write in first person as the one who authored the book.
+* Write the book's title and then generate the content of the book (3 paragraphs).
+* The book must be at least 100 words long.
+* Use Skyrim's lore if needed."];
+
+        $contextData = array_merge($head, $prompt);
+        $connectionHandler = $connector->getConnector($currentConnectorData);
+        $buffer            = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 2048, "temperature" => 0.7], 'rolemaster_helper_bookwriter');
+
+        createBook($name, $buffer, $location, $quest_id, $npc_ref);
         return;
     }
 
@@ -776,64 +810,9 @@ function createBook($title, $content, $location, $quest_id, $npc_ref = null)
         }
     }
 
-    $fontPath = __DIR__ . '/../data/fonts/GloriaHallelujah-Regular.ttf'; // Path to your TTF font file
-    $fontSize = 15;                                                      // Initial font size (we'll adjust if needed)
 
-    $backgroundPath = __DIR__ . '/../data/textures/chim.png';
-
-    $background = imagecreatefrompng($backgroundPath);
-
-    // Ensure the background has alpha transparency
-    imagesavealpha($background, true);
-
-                                                           // Define the text color
-    $textColor = imagecolorallocate($background, 0, 0, 0); // Black color
-
-    // Split text into paragraphs based on newlines
-    $paragraphs = explode("\n", $text);
-
-             // Initialize variables for drawing
-    $x = 10; // Small left margin
-    $y = 20; // Small top margin, adjusted for font size
-
-    foreach ($paragraphs as $paragraph) {
-        // Split each paragraph into lines that fit within image width
-        $words = explode(" ", $paragraph);
-        $line  = "";
-
-        foreach ($words as $word) {
-            $testLine  = $line . $word . " ";
-            $bbox      = imagettfbbox($fontSize, 0, $fontPath, $testLine);
-            $lineWidth = abs($bbox[4] - $bbox[0]);
-
-            if ($lineWidth > $width * 0.9) {
-                // Draw the current line and start a new line if it exceeds the boundary
-                imagettftext($background, $fontSize, 0, $x, $y, $textColor, $fontPath, trim($line));
-                $line = $word . " ";
-                $y += $fontSize * 2; // Move down for the next line
-            } else {
-                $line = $testLine;
-            }
-        }
-
-        // Draw the last line of the paragraph
-        if (trim($line) !== "") {
-            imagettftext($background, $fontSize, 0, $x, $y, $textColor, $fontPath, trim($line));
-            $y += $fontSize * 1.8;
-        }
-
-        // Add extra space between paragraphs
-        $y += $fontSize * 0.8;
-    }
-
-    // Output the final image with text overlay
-    $filename = __DIR__ . "/../soundcache/" . md5($name) . ".png";
-    imagepng($background, $filename);
-
-    // Free up memory
-    imagedestroy($background);
-
-    echo "Image saved as $filename" . PHP_EOL;
+    createLetter($title, $content);
+    
 
     $GLOBALS["db"]->insert(
         'responselog',
@@ -974,7 +953,7 @@ function createLetter($title, $content)
 
     // Output the final image with text overlay
     @mkdir(__DIR__ . "/../data/books");
-    $filename = __DIR__ . "/../data/books/" . md5(strtolower($name)) . ".png";
+    $filename = __DIR__ . "/../data/books/" . md5(string: strtolower(string: $name)) . ".png";
     imagepng($background, $filename);
 
     // Free up memory

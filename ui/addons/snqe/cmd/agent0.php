@@ -372,34 +372,13 @@ $prevSteps
 
 # Current Location: $lastLocation
 ";
-
-    $finishSteps = 0;
-    if (sizeof($formInput["journallist"]) > 15) {
-        $considerFinish =
-            "**This quest has more than seven journal entries, its long enough, conclude it.
-        Spawned actors should say farewell TO {$GLOBALS["PLAYER_NAME"]} and go away**";
-        $considerFinish .= "\nAI turn: end the storyline.
-        Final Output Format:
-→ ONE PARAGRAPH describing the final end, and a final sentence in new line,  the classical - THE END -.";
-        $finishSteps = 2;
-    } else if (sizeof($formInput["journallist"]) >= 9) {
-        $considerFinish =
-            "**This quest has more than five journal entries, its long enough, create steps towards the final ending.**";
-        $considerFinish .= "\nAI turn: end the storyline.
-        Final Output Format:
-→ ONE PARAGRAPH describing how the scene should be.";
-        $finishSteps = 1;
-    } else {
-        $considerFinish = "
-        Final Output Format:
-* Bulleted point list describing how the scene should be.";
-    }
-
-    if ($finishSteps > 0) {
-        $finishInstruction = " * Next step should be oriented to finish storyline. Celebrations after completing the quest";
-    }
-
     $finishInstruction = "";
+    
+    if (isset($formInput["needs_end"]) && $formInput["needs_end"] ) {
+        $finishInstruction = " Important: * Next steps should be oriented to finish storyline. Conclude all plots. ";
+        
+    } 
+    
     $considerFinish = "Output format:
 Output must be a bulleted list of single tasks that a rolemaster should do to achieve the next step, and a brief explanation after all elements.";
 
@@ -420,7 +399,7 @@ Restrictions:
 
 Task:
 Given this context, generate the next quest steps. (just generate 4/5 steps)
-
+$finishInstruction
 Creation rules:
 
 * The next step must follow the quest logically. Read “Previous quest steps” and all dialogue + events history to determine the natural continuation.
@@ -431,7 +410,7 @@ Creation rules:
 * Try to involve only “Already spawned NPCs”; create one new NPC ONLY if absolutely needed.
 * You may include enemies and an item to recover.
 * You MAY NOT use or reference furniture or unspawned elements.
-$finishInstruction
+$
 
 E.G:
   * Player must travel to location Y

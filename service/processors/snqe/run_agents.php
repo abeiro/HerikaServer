@@ -104,6 +104,7 @@ function updateList(&$list, $newItems)
 
 // Determine execution mode
 $mode = isset($argv[1]) ? $argv[1] : 'full';
+$needsEnd = isset($argv[2]) ? $argv[2] : 'end';
 $baseUrl = "http://localhost/HerikaServer/ui/addons/snqe/cmd"; // Adjust base URL as needed, assuming localhost for internal calls or file inclusion if possible.
 // However, the user asked to use fopen calls using set_stream_context to mimic fetch calls.
 // Since this is running on the server, we might need the full URL.
@@ -136,6 +137,9 @@ if ($mode === 'full' || $mode === '1') {
             'briefing' => $state['briefing'],
         ];
 
+        if ($needsEnd) {
+            $payload['needs_end'] = true;
+        }
         $data = callAgent($serverUrl . "/agent0.php", $payload);
 
         if ($data) {

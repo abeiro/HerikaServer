@@ -316,7 +316,7 @@ if ($currentHoldEsc) {
     $rumors = $db->fetchAll($query2);
     foreach ($rumors as $event) {
         $bgEvents[] = ["gamets" => $event["gamets"], "content" => "{$event["content"]}", "type" => "rumor"];
-        error_log("[BACKGROUNDLIFE] Adding rumor {$event["content"]}");
+        // error_log("[BACKGROUNDLIFE] Adding rumor {$event["content"]}");
     }
 
 }
