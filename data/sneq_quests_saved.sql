@@ -7,7 +7,7 @@ CREATE TABLE public.sneq_quests_saved (
     updated_at timestamp with time zone,
     title text,
     stage text,
-    gamets integer,
+    gamets BIGINT,
     state text,
     history_id integer NOT NULL
 );

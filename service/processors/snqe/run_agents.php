@@ -164,6 +164,8 @@ if ($mode === 'full' || $mode === '1') {
             file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
             chmod($stateFile, 0777);
             print_r($data);
+            echo date("d/M/y H:i:s") .PHP_EOL;
+            
         } else {
             echo "FATAL: Agent 0 failed. Interrupting process.\n";
             exit(1);
@@ -223,6 +225,7 @@ if ($mode === 'full' || $mode === '2') {
         file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
         chmod($stateFile, 0777);
         print_r($data);
+        echo date("d/M/y H:i:s") .PHP_EOL;
 
     } else {
         echo "FATAL: Agent 1 failed. Interrupting process.\n";
@@ -266,6 +269,7 @@ if ($mode === 'full' || $mode === '3') {
         file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
         chmod($stateFile, permissions: 0777);
         print_r($data);
+        echo date("d/M/y H:i:s") .PHP_EOL;
 
     } else {
         echo "FATAL: Agent 2 failed. Interrupting process.\n";
