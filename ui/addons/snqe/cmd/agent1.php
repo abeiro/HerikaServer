@@ -33,7 +33,7 @@ $sysprompt_content = file_get_contents(__DIR__ . "/../prompts/agent1.txt");
 
 if (strpos($formInput["userprompt"], "Quest Title") !== false) {
     // First Quest iteration
-    $formInput["userprompt"] .= "\nNote: this is the first step of the quest, so first topic should be a salutation, and then another topic to follow instruction";
+    $formInput["userprompt"] .= "\nNote: this is the first step of the quest, so first topic should be a salutation, and then generate the quest steps.";
 
 }
 $prompt = [];
@@ -43,7 +43,7 @@ $fquestTitle = $formInput["questTitle"];
 
 $prompt[] = ['role' => 'system', 'content' => $sysprompt_content];
 $prompt[] = ['role' => 'user', 'content' => $formInput["userprompt"]];
-$prompt[] = ['role' => 'user', 'content' => "Write XML to acomplish above instructions"];
+$prompt[] = ['role' => 'user', 'content' => "Write XML to acomplish the quest steps"];
 
 
 $allowedLocationList = $formInput["locations"];
@@ -54,11 +54,11 @@ $contextData = $prompt;
 
 $connectionHandler = $connector->getConnector($currentConnectorData);
 
-$MODEL = "meta-llama/llama-4-maverick";
+$MODEL = "google/gemma-3-27b-it:free";
 
 $buffer = $connectionHandler->fast_request(
     $contextData,
-    ["MAX_TOKENS" => 4096, "model" => $MODEL, "temperature" => 0.7],
+    ["MAX_TOKENS" => 4096, "model" => $MODEL],
     "questplanner"
 );
 
@@ -73,7 +73,7 @@ if (preg_match('/```xml\n(.*?)\n```/s', $buffer, $matches)) {
 // Validation Rules
 $allowedRaces = ['nord', 'imperial', 'redguard', 'breton', 'argonian', 'orc', 'draugr', 'elk', 'frost_troll', 'frostbite_spider', 'dwarven_sphere_guardian', 'falmer', 'giant'];
 $allowedClasses = ['beggar', 'warrior', 'assassin', 'mage', 'farmer', 'soldier', 'merchant', 'noble', 'creature'];
-$allowedItemTypes = ['potion', 'necklace', 'amulet', 'ring', 'book', 'axe'];
+$allowedItemTypes = ['potion', 'necklace', 'amulet', 'ring', 'book', 'axe','note','dagger'];
 $allowedItemLocations = ['nearby', 'pocket'];
 
 // Helper function to extract multiple tag values
@@ -225,6 +225,7 @@ function validate_instructions($xmlString, $playerName = null, $npclist = [])
     foreach ($instructions as $instruction) {
         $npc = extract_tag_content($instruction, 'npc');
         $action = strtolower(extract_tag_content($instruction, 'action') ?? '');
+        $actionOriginal = (extract_tag_content($instruction, 'action') ?? '');
         $target = extract_tag_content($instruction, 'target');
 
         if (!$npc) {
@@ -238,7 +239,10 @@ function validate_instructions($xmlString, $playerName = null, $npclist = [])
         // Allow player name only for WaitToItemBeRecovered action
         if ($playerName && strtolower(trim($playerName)) === $npcLower) {
             if ($action !== 'waittoitemberecovered' && $action !== 'travelto') {
-                $errors[] = "Instruction references player as NPC: '$npc'. Instructions can only reference spawned NPCs, not the player.";
+                if ($action == "telltopictonpc" )
+                    $errors[] = "Instruction '$actionOriginal' references player as NPC: '$npc'. Instructions can only reference spawned NPCs, not the player. Change the sense of the topic and use TellTopicToPlayer";
+                else
+                    $errors[] = "Instruction '$actionOriginal' references player as NPC: '$npc'. Instructions can only reference spawned NPCs, not the player.";
                 continue;
             }
         }
@@ -294,7 +298,7 @@ function validate_spawned_items_recovery($xmlString)
         if ($name) {
             $nameLower = strtolower(trim($name));
             if (!in_array($nameLower, $recoveryTargets)) {
-                $errors[] = "Item '$name' is spawned but no 'WaitItemToBeRecovered' instruction found for it. Should be a WaitItemToBeRecovered instruction somewhere after <spawn>, in a logical place";
+                $errors[] = "Item '$name' is spawned but no 'WaitItemToBeRecovered' instruction found for it. Add a WaitItemToBeRecovered instruction somewhere after <item>, in a logical order";
             }
         }
     }

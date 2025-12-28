@@ -40,6 +40,8 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'MakeFollower',
     'Toast',
     'Drink',
+    'StartRitualCeremony',
+    'EndRitualCeremony',
     'Training'
     //    'WaitHere'
 ];
@@ -117,6 +119,9 @@ $F_TRANSLATIONS_LOCAL["MakeFollower"] = "{$GLOBALS["HERIKA_NAME"]} joins to {$GL
 
 $F_TRANSLATIONS_LOCAL["Toast"] = "Raises a glass in celebration or honor.";
 $F_TRANSLATIONS_LOCAL["Drink"] = "Drinks a beverage to quench thirst or enjoy flavor.";
+$F_TRANSLATIONS_LOCAL["StartRitualCeremony"] = "Participates in a ritual or ceremony, following its customs and practices.";
+$F_TRANSLATIONS_LOCAL["EndRitualCeremony"] = "Concludes a ritual or ceremony, marking its completion.";
+    
 $F_TRANSLATIONS_LOCAL["Training"] = "Opens training menu to improve skills with a trainer.";
 
 
@@ -160,6 +165,8 @@ $F_RETURNMESSAGES_LOCAL["MakeFollower"] = "{$GLOBALS["HERIKA_NAME"]} is now part
 
 $F_RETURNMESSAGES_LOCAL["Toast"] = "{$GLOBALS["HERIKA_NAME"]} raises a glass in celebration or honor.";      
 $F_RETURNMESSAGES_LOCAL["Drink"] = "{$GLOBALS["HERIKA_NAME"]} drinks a beverage to quench thirst or enjoy flavor.";
+$F_RETURNMESSAGES_LOCAL["StartRitualCeremony"] = "{$GLOBALS["HERIKA_NAME"]} begins a ritual or ceremony, following its customs and practices.";
+$F_RETURNMESSAGES_LOCAL["EndRitualCeremony"] = "{$GLOBALS["HERIKA_NAME"]} concludes a ritual or ceremony, marking its completion.";
 $F_RETURNMESSAGES_LOCAL["Training"] = "{$GLOBALS["HERIKA_NAME"]} opens the training menu.";
 
 // What is this?. We can translate functions or give them a custom name.
@@ -206,6 +213,9 @@ $F_NAMES_LOCAL["MakeFollower"] = "JoinTo{$GLOBALS["PLAYER_NAME"]}Squad";
 
 $F_NAMES_LOCAL["Toast"] = "MakeAToast";
 $F_NAMES_LOCAL["Drink"] = "Drink";
+$F_NAMES_LOCAL["StartRitualCeremony"] = "StartRitualCeremony";
+$F_NAMES_LOCAL["EndRitualCeremony"] = "EndRitualCeremony";
+
 $F_NAMES_LOCAL["Training"] = "Training";
 
 if (isset($GLOBALS["CORE_LANG"])) {
@@ -808,6 +818,35 @@ $GLOBALS["FUNCTIONS"] = [
             "required" => [""],
         ],
     ],
+
+    [
+        "name" => $F_NAMES_LOCAL["StartRitualCeremony"],
+        "description" => $F_TRANSLATIONS_LOCAL["StartRitualCeremony"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ],
+            ],
+            "required" => [""],
+        ],
+    ],
+     [
+        "name" => $F_NAMES_LOCAL["EndRitualCeremony"],
+        "description" => $F_TRANSLATIONS_LOCAL["EndRitualCeremony"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ],
+            ],
+            "required" => [""],
+        ],
+    ],
 ];
 
 // Mantain a copy of all functions defined here
@@ -951,6 +990,8 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         'MakeFollower',
         'Drink',
         'Toast',
+        'StartRitualCeremony',
+        'EndRitualCeremony',
         'Training'
 
     ];
@@ -989,7 +1030,9 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         'CastSpell',
         'Drink',
         'Toast',
-        'Training'
+        'Training',
+        'StartRitualCeremony',
+        'EndRitualCeremony',
         //'GetDateTime',
         //'SearchDiary',
         //'SearchMemory',
@@ -1058,8 +1101,15 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 $npcMaster = new Npcmaster();
                 $npcData   = $npcMaster->getByName($actionParts[0]);
 
+                $metadata=$npcMaster->getMetadata($npcData);
+
+                if (isset($metadata["furniture"]) && $metadata["furniture"]=="Chair") {
+                    $animation="0x00065d07";//ChairDrinkingStart (0x00065d07)
+                }  else 
+                    $animation="0x00103656";//DrinkIdle (0x00065d07)
+
                 $skyrimCmd = new SkyrimCommandBuilder();
-                $json      = $skyrimCmd->Actor->PlayIdle("0x{$npcData["refid"]}", "0x00103656");// DrinkIdle Start                $skyrimCmd->send($json);
+                $json      = $skyrimCmd->Actor->PlayIdle("0x{$npcData["refid"]}", $animation);// DrinkIdle Start                $skyrimCmd->send($json);
                 $skyrimCmd->send(cmd: $json);
 
                 unset($actionsCopy[$n]);// Remove action from list, so client does not execute it
@@ -1118,6 +1168,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 );
 
                 error_log("[ACTION POSTFILTER Toast] Executed server-side");
+
             } else if (preg_match('/^Train(.+)$/', $actionParts2[0], $matches)) {
                 // Training function called - send rolecommand to open training menu
                 $GLOBALS["db"]->insert(
@@ -1146,7 +1197,77 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 );
                 
                 unset($actionsCopy[$n]);// Remove action from list, so client does not execute it
-            } 
+
+            } else if ($actionParts2[0]=="StartRitualCeremony") {
+                
+                $npcMaster = new Npcmaster();
+                $npcData   = $npcMaster->getByName($actionParts[0]);
+
+                $skyrimCmd = new SkyrimCommandBuilder();
+                $json      = $skyrimCmd->Actor->PlayIdle("0x{$npcData["refid"]}", "0x000f11e1");// IdleRitualSkull1
+                $skyrimCmd->send(cmd: $json);
+
+                $GLOBALS["db"]->insert(
+                    'rolemaster',
+                    [
+                        'localts' => time(),
+                        'ttl' => 60,
+                        'type' => "scenenote",
+                        'data' => "{$actionParts[0]} is celebrating a ritual",
+                    ]
+                );
+                unset($actionsCopy[$n]);// Remove action from list, so client does not execute it
+
+                $GLOBALS["db"]->insert(
+                    'actions_issued',
+                    array(
+                        'action' => "StartRitualCeremony",
+                        'fullcall' =>$actionParts[0]."|".$actionParts[1]."|".$actionParts[2],
+                        'actorname'=> $actionParts[0],
+                        'ts' => $gameRequest[1],
+                        'gamets' => $gameRequest[2],
+                        'localts'=>time(),
+                        'original'=>''
+                    )
+                );
+
+                error_log("[ACTION POSTFILTER Toast] Executed server-side");
+
+            } else if ($actionParts2[0]=="EndRitualCeremony") {
+                
+                $npcMaster = new Npcmaster();
+                $npcData   = $npcMaster->getByName($actionParts[0]);
+
+                $skyrimCmd = new SkyrimCommandBuilder();
+                $json      = $skyrimCmd->Actor->PlayIdle("0x{$npcData["refid"]}", "0x000f11e3");// IdleRitualSkull3
+                $skyrimCmd->send(cmd: $json);
+
+                $GLOBALS["db"]->insert(
+                    'rolemaster',
+                    [
+                        'localts' => time(),
+                        'ttl' => 30,
+                        'type' => "scenenote",
+                        'data' => "{$actionParts[0]} just ended the ritual celebration",
+                    ]
+                );
+                unset($actionsCopy[$n]);// Remove action from list, so client does not execute it
+
+                $GLOBALS["db"]->insert(
+                    'actions_issued',
+                    array(
+                        'action' => "EndRitualCeremony",
+                        'fullcall' =>$actionParts[0]."|".$actionParts[1]."|".$actionParts[2],
+                        'actorname'=> $actionParts[0],
+                        'ts' => $gameRequest[1],
+                        'gamets' => $gameRequest[2],
+                        'localts'=>time(),
+                        'original'=>''
+                    )
+                );
+
+                error_log("[ACTION POSTFILTER Toast] Executed server-side");
+            }
         }
     }
 

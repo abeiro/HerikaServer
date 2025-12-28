@@ -63,7 +63,11 @@ $EMOTEMOODS="sassy,"
     . "playful,"
     . "neutral,"
     . "teasing,"
-    . "mocking"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
+    . "mocking"
+    . "desperate"
+    . "distressed"
+    . "pleading"
+    . "sad"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 
 $REMOVE_ASTERISKS_FROM_OUTPUT=true;
 $ENFORCE_ACTIONS_PROMPT=false;

@@ -41,12 +41,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $userprompt = isset($_POST['userprompt']) ? ($_POST['userprompt']) : '';
     $questtitle = isset($_POST['questtitle']) ? ($_POST['questtitle']) : '';
     $briefing = isset($_POST['briefing']) ? ($_POST['briefing']) : '';
+    $suggested = isset($_POST['suggested']) ? ($_POST['suggested']) : '';
     $locations = isset($_POST['locationlist']) ? json_decode($_POST['locationlist'], true) : [];
 
 
     $state['userprompt'] = $userprompt;
     $state['briefing'] = $briefing;
     $state['questtitle'] = $questtitle;
+    $state['suggested'] = $suggested;
     $state['locationlist'] = $locations;
 
 
@@ -62,7 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         'data' => array(
             'userprompt' => $userprompt,
             'questtitle' => $questtitle,
-            'briefing' => $briefing
+            'briefing' => $briefing,
+            'suggested' => $suggested
         ),
         'timestamp' => date('Y-m-d H:i:s')
     );
@@ -355,6 +358,11 @@ function sanitize_input($input)
 
             <form>
                 <div class="form-group">
+                    <label for="suggested">Suggested</label>
+                    <textarea name="suggested" id="suggested" placeholder="Enter suggestions here..."></textarea>
+                </div>
+
+                <div class="form-group">
                     <label for="userprompt">User Prompt</label>
                     <textarea name="userprompt" id="userprompt"
                         placeholder="Enter your quest scenario prompt here..."></textarea>
@@ -379,7 +387,7 @@ function sanitize_input($input)
                 <div class="button-group">
                     <button type="button" class="btn-primary" onclick="generateScenario()">Generate Scenario</button>
                     <button type="button" class="btn-primary" onclick="submitFormData()"
-                        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">Submit Form</button>
+                        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">Create 1st step</button>
                     <button type="button" class="btn-clear" onclick="clearAllData()">Clear Data</button>
                 </div>
 
@@ -502,6 +510,7 @@ function sanitize_input($input)
             const userprompt = document.querySelector('textarea[name="userprompt"]').value;
             const questTitle = document.querySelector('input[name="questtitle"]').value;
             const briefing = document.querySelector('input[name="briefing"]').value;
+            const suggested = document.querySelector('textarea[name="suggested"]').value;
 
             const loadingEl = document.getElementById('loading');
 
@@ -521,7 +530,8 @@ function sanitize_input($input)
                     rumorlist: [],
                     nextlist: [],
                     questtitle: questTitle,
-                    briefing: briefing
+                    briefing: briefing,
+                    suggested: suggested
                 })
             })
                 .then(response => response.json())
@@ -560,6 +570,7 @@ function sanitize_input($input)
             const userprompt = document.querySelector('textarea[name="userprompt"]').value;
             const questTitle = document.querySelector('input[name="questtitle"]').value;
             const briefing = document.querySelector('input[name="briefing"]').value;
+            const suggested = document.querySelector('textarea[name="suggested"]').value;
             const locationListItems = Array.from(document.getElementById('locationlist').options).map(opt => opt.textContent);
 
             const loadingEl = document.getElementById('loading');
@@ -571,6 +582,7 @@ function sanitize_input($input)
             formData.append('userprompt', userprompt);
             formData.append('questtitle', questTitle);
             formData.append('briefing', briefing);
+            formData.append('suggested', suggested);
             formData.append('locationlist', JSON.stringify(locationListItems));
 
             fetch('<?php echo $_SERVER['PHP_SELF']; ?>', {

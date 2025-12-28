@@ -13,14 +13,18 @@ define("PLAYER_REFID","0x00000014");
 
 class SkyrimCommandBuilder
 {
-    // === Actor Commands (cmdID 199) ===
+    // === Actor Commands (cmdID 1-199) ===
     public $Actor;
 
-    // === ObjectReference Commands (cmdID 100199) ===
+    // === ObjectReference Commands (cmdID 100-199) ===
     public $ObjectReference;
 
-    // === FormList Commands (cmdID 200299) ===
+    // === FormList Commands (cmdID 200-299) ===
     public $FormList;
+
+    // === FormList Commands (cmdID 300-399) ===
+    public $EffectShader;
+
 
     public function __construct()
     {
@@ -623,6 +627,25 @@ class SkyrimCommandBuilder
             public function Revert(string $targetObjectFormId): array {
                 return $this->builder->build(202, compact('targetObjectFormId'));
             }
+        };
+
+        $this->EffectShader = new class($this) {
+            private $builder;
+
+            public function __construct($builder) {
+                $this->builder = $builder;
+            }
+
+            // 300
+            public function Play(string $targetObjectFormId, string $akObject, float $afDuration): array {
+                return $this->builder->build(300, compact('targetObjectFormId', 'akObject','afDuration'));
+            }
+
+            // 301
+            public function Stop(string $targetObjectFormId, string $akObject): array {
+                return $this->builder->build(301, compact('targetObjectFormId','akObject'));
+            }
+
         };
     }
 

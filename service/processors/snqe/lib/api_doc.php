@@ -24,6 +24,7 @@ appearance (string, optional) – Hair, clothes, scars, visual description.
 background (string, optional) – Lore or backstory. Should be about 200 character long for good roleplay. 
 speechStyle (string, optional) – How NPC talks (formal, rustic, archaic, etc., cursed words, uses specific fillir words).
 disposition (enum, optional) – defiant, submissive, friendly, serious, sad, aggressive, cheerful, distrustful, furious, drunk, high.
+goal (string, optional) – defiant, submissive, friendly, serious, sad, aggressive, cheerful, distrustful, furious, drunk, high.
 
 * CreateItem(quest_id, item_ref, name, type, location, description, npc_ref)
 Declares a new item for later spawning or reference. **Items in pockets should be spawned too**
@@ -392,8 +393,9 @@ CreateNPC(
     "Raven Rock",
     "Long white beard, blue robes, staff",
     "A reclusive scholar seeking lost knowledge.",
-    "formal",
-    "serious"
+    "formal",   //speech style
+    "serious",  //disposition
+    "Wants to recover the Ancient Ring to unlock hidden powers."
 );
 
 

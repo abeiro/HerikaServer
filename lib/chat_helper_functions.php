@@ -1821,3 +1821,33 @@ function arrayToBulletedList($items, $bulletChar = " *") {
         return "(none)";
 }
 
+/**
+ * Replace bracketed placeholder tokens in a string with runtime values.
+ *
+ * Scans the given text for the following placeholders and replaces them using
+ * the current runtime values:
+ *  - "{LOCATION}"       => DataLastKnownLocationHuman()
+ *  - "{PLAYER_NAME}"    => $GLOBALS['PLAYER_NAME']
+ *  - "{HERIKA_NAME}"    => $GLOBALS['HERIKA_NAME']
+ *  - "{TEMPLATE_DIALOG}"=> $GLOBALS['TEMPLATE_DIALOG']
+ *
+ * The replacement is performed by strtr and returns the resulting string.
+ * Non-string inputs will be converted to string before replacement.
+ *
+ * Note: replacements are performed in a single pass (no recursive expansion),
+ * and values are inserted verbatim — sanitize or escape the result as needed
+ * before output (e.g., to prevent XSS in HTML contexts).
+ *
+ * @param mixed $text The input text to process (will be cast to string).
+ * @return string The text with bracketed placeholders replaced by their values.
+ */
+function make_replacements_bracketed($text)
+{
+
+    return strtr($text, [
+        "{LOCATION}" => DataLastKnownLocationHuman(),
+        "{PLAYER_NAME}"   => $GLOBALS["PLAYER_NAME"],
+        "{HERIKA_NAME}"   => $GLOBALS["HERIKA_NAME"],
+        "{TEMPLATE_DIALOG}"   => $GLOBALS["TEMPLATE_DIALOG"],
+    ]);
+}

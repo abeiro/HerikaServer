@@ -60,7 +60,7 @@ if (sizeof($formInput["npclist"]) == 0) { // Initial case
 
     $locListArray = array_keys($locListArrayRaw);
 
-    // Filter out locations containing "millitary" (case-insensitive) and "Duskglow Crevice"
+    // Filter out locations containing "military" (case-insensitive) and "Duskglow Crevice"
     $filteredLocArray = array_filter($locListArray, function ($location) {
         return stripos($location, "military") === false && $location !== "Duskglow Crevice";
     });
@@ -114,6 +114,7 @@ As a rolemaster you can:
 Restrictions:
  * Use available locations
  * Scenarios are static so you CAN NOT spawn furniture/new locations or static elements,immovables, or non-interactive objects.
+ * You cannot instruct player ({$GLOBALS["PLAYER_NAME"]}) directly, only give hints through NPCs.
 
 Task:
 Given this context, generate the next quest steps. (just generate 4/5 steps)
@@ -171,6 +172,12 @@ Short briefing:{$formInput["briefing"]}
 
     } else {
         // Initial quest title NOT provided, from blank state
+        if ($formInput["suggested"]) {
+            $suggested = " Suggested ideas or themes for the quest: " . $formInput["suggested"];
+        } else {
+            $suggested = "";
+        }
+
         $result["response"] = "
 
 Player: {$GLOBALS["PLAYER_NAME"]}
@@ -186,7 +193,7 @@ $nearByLoc
 Current Location: $lastLocation
 
 
-Ideas for initial NPC name: a woman, which name must start with $randomLettersA, and surname/nick by $randomLettersB.
+Ideas for initial NPC name: a woman, which name must start with $randomLettersA, and surname/nick by $randomLettersB. Never use \" or ' in the name.
 ";
         $result["locations"] = $locListArray;
 
@@ -225,7 +232,9 @@ Use this format:
 Quest Title:
 Quest Short brief (one paragraph):
 Starter character. name (fantasy-style compound name consisting of a first name and a descriptive surname.) a female|male breton|nord warrior|mage|...
-Starter character should aproach Player to init the quest.",
+Starter character should aproach Player to init the quest.
+
+$suggested",
         ];
 
         $contextData = $prompt;

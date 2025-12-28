@@ -1739,6 +1739,7 @@ $COOLDOWNMAP["Inspect"]=300/0.00864;
 $COOLDOWNMAP["Relax"]=180/0.00864;
 $COOLDOWNMAP["MakeAToast"]=60/0.00864;
 $COOLDOWNMAP["Toast"]=60/0.00864;
+$COOLDOWNMAP["StartRitualCeremony"]=60/0.00864;
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     $localActorName=$GLOBALS["db"]->escape($GLOBALS["HERIKA_NAME"]);
@@ -2010,7 +2011,8 @@ if ($gameRequest[0] == "funcret") {
 
 } elseif ((strpos($gameRequest[0], "chatnf_book")!==false)) {
 
-    $contextData = array_merge($head, ($contextDataFull));
+    $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
+    $contextData = array_merge($head, $contextDataFull, $prompt);
 
 
 } elseif ((strpos($gameRequest[0], "chatnf")!==false)) {
