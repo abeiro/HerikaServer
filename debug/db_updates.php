@@ -2282,7 +2282,18 @@ $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS hold text"
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS tags text");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS title text");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS stage text");
-
+$db->execQuery("DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'sneq_quests_saved_id'
+    ) THEN
+        ALTER TABLE public.sneq_quests_saved
+        ADD CONSTRAINT sneq_quests_saved_id
+        PRIMARY KEY (history_id);
+    END IF;
+END $$;");
 
 if ($checkTableExists("master_packages") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/master_packages.sql"));
