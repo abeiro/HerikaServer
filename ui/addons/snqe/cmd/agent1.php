@@ -72,7 +72,7 @@ if (preg_match('/```xml\n(.*?)\n```/s', $buffer, $matches)) {
 
 // Validation Rules
 $allowedRaces = ['nord', 'imperial', 'redguard', 'breton', 'argonian', 'orc', 'draugr', 'elk', 'frost_troll', 'frostbite_spider', 'dwarven_sphere_guardian', 'falmer', 'giant'];
-$allowedClasses = ['beggar', 'warrior', 'assassin', 'mage', 'farmer', 'soldier', 'merchant', 'noble', 'creature'];
+$allowedClasses = ['beggar', 'warrior', 'assassin', 'mage', 'farmer', 'soldier', 'merchant', 'noble', 'creature','forsworn'];
 $allowedItemTypes = ['potion', 'necklace', 'amulet', 'ring', 'book', 'axe','note','dagger'];
 $allowedItemLocations = ['nearby', 'pocket'];
 
@@ -125,6 +125,11 @@ function validate_spawns($xmlString, $allowedRaces, $allowedClasses, $allowedLoc
         // Validate class
         if (!in_array($class, $allowedClasses)) {
             $errors[] = "NPC '$name': Invalid class '$class'. Allowed: " . implode(', ', $allowedClasses);
+        }
+
+        // Validate fornswor-breton relationship
+        if ($class === 'forsworn' && $race !== 'breton') {
+            $errors[] = "NPC '$name': Class 'forsworn' requires race 'breton', but got '$race'";
         }
 
         // Validate location (case-insensitive)

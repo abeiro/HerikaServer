@@ -9,7 +9,7 @@ define("_TRADE_TIMEOUT", 120);
  * @param string $npc_ref Internal NPC reference ID
  * @param string $name NPC display name
  * @param string $gender "Male" | "Female"
- * @param string $class "beggar"|"warrior"|"assassin"|"mage"|"farmer"|"soldier"|"merchant"|"noble"
+ * @param string $class "beggar"|"warrior"|"assassin"|"mage"|"farmer"|"soldier"|"merchant"|"noble"|"creature"||"forsworn"
  * @param string $race "Nord"|"Imperial"|"Argonian"|"RedGuard"|"Orc"|"Breton"
  * @param string $location Initial placement (e.g., "Whiterun" or "nearby")
  * @param string|null $appearance Visual description (optional)

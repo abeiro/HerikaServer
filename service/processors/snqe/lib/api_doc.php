@@ -17,7 +17,7 @@ quest_id (string, required) – Quest identifier.
 npc_ref (string, required) – Internal NPC reference ID.
 name (string, required) – NPC display name.
 gender (string, required) – "Male" or "Female".
-class (enum, required) – beggar, warrior, assassin, mage, farmer, soldier, merchant, noble,creature.
+class (enum, required) – beggar, warrior, assassin, mage, farmer, soldier, merchant, noble,creature,forsworn.
 race (enum, required) – Nord, Imperial, Argonian, RedGuard, Orc, Breton.draugr,elk,frost_troll,frostbite_spider,dwarven_sphere_guardian,falmer,giant
 location (string, required) – Default placement, e.g., "Whiterun" or "nearby".
 appearance (string, optional) – Hair, clothes, scars, visual description.

@@ -93,6 +93,10 @@ $GLOBALS["npc_own_templates"] = [
     "female_breton_farmer"     => [0x25848], // AIAgentTemplateBretonFemalePoor
     "female_breton_bard"       => [0x25849], // AIAgentTemplateBretonFemaleBard
     "female_breton_soldier"    => [0x2584a], // AIAgentTemplateBretonFemaleSoldier
+
+    "female_breton_forsworn"    => [0x00043be1], // AIAgentTemplateBretonFemaleSoldier
+
+
     "male_breton_noble"        => [0x25daf], // AIAgentTemplateBretonMaleCivil
     "male_breton_merchant"     => [0x25daf], // AIAgentTemplateBretonMaleCivil
     "male_breton_warrior"      => [0x25db0], // AIAgentTemplateBretonMaleWarrior
@@ -102,6 +106,8 @@ $GLOBALS["npc_own_templates"] = [
     "male_breton_farmer"       => [0x25db2], // AIAgentTemplateBretonMalePoor
     "male_breton_bard"         => [0x25db4], // AIAgentTemplateBretonMaleBard
     "male_breton_soldier"      => [0x25db5], // AIAgentTemplateBretonMaleSoldier
+
+    "male_breton_forsworn"    => [0x00044262], // AIAgentTemplateBretonFemaleSoldier
 
     "male_nord_noble"          => [0x25db6], // AIAgentTemplateNordMaleCivil
     "male_nord_merchant"       => [0x25db6], // AIAgentTemplateNordMaleCivil
@@ -485,6 +491,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
         "bard"      => [0x0009d5e0, 0x000e40dd, 0x000dab74, 0x000dab75, 0x000f8716, 0x000f8717, 0x000f871a, 0x000f8718],
         "noble"     => [0x0009d5e0, 0x000e40dd, 0x000dab74, 0x000dab75, 0x000f8716, 0x000f8717, 0x000f871a, 0x000f8718],
         "merchant"  => [0x0009d5e0, 0x000e40dd, 0x000dab74, 0x000dab75, 0x000f8716, 0x000f8717, 0x000f871a, 0x000f8718],
+        "forsworn"  => [0x00043bdd],
     ];
 
     $weapon = [
