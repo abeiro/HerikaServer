@@ -26,6 +26,7 @@ if (!file_exists($stateFile)) {
         'sysprompt' => file_exists($uiPath . "/prompts/agent1.txt") ? file_get_contents($uiPath . "/prompts/agent1.txt") : "",
     ];
     file_put_contents($stateFile, json_encode($initialState, JSON_PRETTY_PRINT));
+    chmod($stateFile, permissions: 0777);
 }
 
 // Load state
@@ -161,6 +162,7 @@ if ($mode === 'full' || $mode === '1') {
 
             echo "Agent 0 complete.\n";
             file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
+            chmod($stateFile, 0777);
             print_r($data);
         } else {
             echo "FATAL: Agent 0 failed. Interrupting process.\n";
@@ -219,6 +221,7 @@ if ($mode === 'full' || $mode === '2') {
 
         echo "Agent 1 complete.\n";
         file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
+        chmod($stateFile, 0777);
         print_r($data);
 
     } else {
@@ -261,6 +264,7 @@ if ($mode === 'full' || $mode === '3') {
 
         echo "Agent 2 complete.\n";
         file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
+        chmod($stateFile, permissions: 0777);
         print_r($data);
 
     } else {

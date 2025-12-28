@@ -32,7 +32,7 @@ $GLOBALS["item_types"] = [
     "amulet"   => [0x2481e],    // From AIAgent.esp
     "ring"     => [0x242b9],    // From AIAgent.esp
     "note"     => [0],          // Will be changed. Generic Note From AIAgent.esp
-    "book"     => [0x000ce70b], // Vanilla
+    "book"     => [0x000ce70b], // Should be changed. Generic Book From AIAgent.esp (pending)
     "armor"    => [0x000c8861], // Vanilla
     "axe"      => [0x000e72a6], // Vanilla
     "dagger"      => [0x000aebf7], // Vanilla
@@ -58,8 +58,8 @@ $GLOBALS["npc_templates"] = [
     "male_redguard"                  => [0x0006762e, 0x00058b3f, 0x0010f5a1, 0x0010f5aa, 0x00020071, 0x00013baa, 0x00019a2a, 0x0004d8d4, 0x0001b3b5, 0x0005b4f8, 0x00026904, 0x000268fc, 0x00026915, 0x00024261, 0x0010ab9e, 0x0010ab9f, 0x0010aba0, 0x0010aba1, 0x0010aba2, 0x00048118, 0x00103504, 0x00013609, 0x0002e11f, 0x000215d5, 0x00067631, 0x00067642, 0x00067641, 0x00067645, 0x00067643, 0x00067646, 0x00067644, 0x00067647, 0x0006762f, 0x00067630, 0x0006764b, 0x00067648, 0x0006764c, 0x00067649, 0x0006764d, 0x0006764a, 0x0006764e, 0x00067632, 0x00067633, 0x00067634, 0x0006764f, 0x00067650, 0x00067653, 0x00067651, 0x00067654, 0x00067652, 0x00067655, 0x00067635, 0x00067636, 0x00067637, 0x00067656, 0x00067657, 0x0006765a, 0x00067658, 0x0006765b, 0x00067659, 0x0006765c, 0x00067638, 0x00067639, 0x0006763a, 0x0006765d, 0x0006765e, 0x00067665, 0x0006765f, 0x00067666, 0x00067660, 0x00067667, 0x0006763b, 0x0006763c, 0x0006763d, 0x00067661, 0x00067662, 0x00067668, 0x00067663, 0x00067669, 0x00067664, 0x0006766a, 0x0006763e, 0x0006763f, 0x00067640, 0x00039cf9, 0x0003de8d, 0x0003de72, 0x0003de54, 0x00037c07, 0x0003dee3, 0x0003dee6, 0x00039d05, 0x0003de94, 0x0003dea8, 0x0003de59, 0x00037c0c, 0x0003deec, 0x0003deef, 0x00039d0d, 0x0003de9b, 0x0003de77, 0x0003de5e, 0x00037c34, 0x0003def7, 0x0003defa, 0x00039d15, 0x0003dea3, 0x0003de7c, 0x0003de63, 0x00037c3b, 0x0003df01, 0x0003df04, 0x00039d1d, 0x0003deaf, 0x0003de81, 0x0003de68, 0x00037c42, 0x0003df0b, 0x0003df0e, 0x00039d25, 0x0003deb6, 0x0003de86, 0x0003de6d, 0x00037c49, 0x00073fc0, 0x000c6016, 0x00017143, 0x00017144, 0x00032860, 0x000c49dd, 0x000b9285],
 
     // Creatures
-    "male_draugr"                    => [0x0005593b],
-    "female_draugr"                  => [0x0003891d],
+    "male_draugr"                    => [0x0005593b,0x0003b549,0x0005593d],
+    "female_draugr"                  => [0x0003891d,0x00055937],
 
     "male_elk"                       => [0x00023a91],
     "female_elk"                     => [0x00023a91],
@@ -1036,10 +1036,10 @@ function SkTopicCheck($character, $topic, $lastCall, $retries, $quest_id)
 
         } else {
             // Make suggestion, topic not covered
-            $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: $topic. but using own words and speech style, and following current dialogue context. If topic already said, just follow up");
+            $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: $topic. but using own words and speech style, and following current dialogue context. If topic already said, rephrase and just follow up");
             //$hintData = ("{$quest_data["npcs"][$npc_ref]["name"]} should talk to {$GLOBALS["PLAYER_NAME"]} about this topic: \"{$quest_data["topics"][$topic_ref]["info"]}\", but using own words and speech style, and following current dialogue context. If topic already said, just follow up");
             if ($topiCall["missing"]) {
-                $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: {$topiCall["missing"]}. but using own words and speech style, and following current dialogue context. If topic already said, just follow up");
+                $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: {$topiCall["missing"]}. but using own words and speech style, and following current dialogue context. If topic already said, rephrase and just follow up");
             }
 
             if (isset($topiCall["missing"]) && $topiCall["missing"] != "skip") {

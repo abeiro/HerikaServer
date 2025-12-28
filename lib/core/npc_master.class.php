@@ -647,27 +647,32 @@ class NpcMaster
         date_default_timezone_set('UTC');
 
         $startTime = time();
-        // Fetch all current NPCs
-        $npcs = $this->getAll();
         error_log("[NPC BACKUP] " . date('Y-m-d H:i:s'));
 
-        foreach ($npcs as $npc) {
-            // Remove original ID
-            $npc_id                     = $npc['id'];
-            $npc['gamets_last_updated'] = $timestamp;
+        // Update all NPCs with new gamets_last_updated timestamp
+        $updateQuery = "UPDATE {$this->table} SET gamets_last_updated = $timestamp";
+        $GLOBALS["db"]->execQuery($updateQuery);
 
-            $this->update($npc_id, $npc);
+        // Insert all NPCs into history table in a single query
+        $createdTimestamp = date('Y-m-d H:i:s');
+        $insertQuery = "
+            INSERT INTO core_npc_master_history (
+                npc_id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
+                oghma_knowledge_tags, emote_moods, personality, relationships,
+                occupation, skills, speechstyle, goals, voiceid, metadata,
+                gender, race, refid, profile_id, dynamic_profile, extended_data,
+                md5, gamets_last_updated, core, base, tags, appearance, created
+            )
+            SELECT
+                id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
+                oghma_knowledge_tags, emote_moods, personality, relationships,
+                occupation, skills, speechstyle, goals, voiceid, metadata,
+                gender, race, refid, profile_id, dynamic_profile, extended_data,
+                md5, $timestamp, core, base, tags, appearance, '{$createdTimestamp}'
+            FROM core_npc_master
+        ";
+        $GLOBALS["db"]->execQuery($insertQuery);
 
-            unset($npc['id']);
-
-            // Set the reference and override timestamps
-            $npc['npc_id']              = $npc_id;
-            $npc['gamets_last_updated'] = $timestamp;
-            $npc['created']             = date('Y-m-d H:i:s'); // Current timestamp
-
-            // Insert into history
-            $this->db->insert('core_npc_master_history', $npc);
-        }
         error_log("[NPC BACKUP] " . date('Y-m-d H:i:s') . ", NPCs backup made in " . (time() - $startTime) . " secs ");
         return true;
     }

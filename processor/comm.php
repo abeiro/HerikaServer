@@ -117,6 +117,9 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $npcMaster->restoreNPC($gameRequest[2]);
     Logger::trace("POST INIT PROCESSING ".(time()-$now));
     
+    require_once __DIR__ . "/../service/processors/snqe/lib/snqe.class.php";
+    SNQEQuestManager::load_quests($gameRequest[2]);
+    
     // Narrator Welcome Message on Load
     try {
         require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
@@ -574,7 +577,11 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         if (strpos($gameRequest[3],'New quest ""')) {
           // plugin couldn't get quest name  
             $MUST_END=true;
-        } else {
+        } else if (stripos($gameRequest[3],'Storyline Tracker')!==false) {
+            // AIAgent quests - ignore
+            $MUST_END=true;
+
+    } else {
             logEvent($gameRequest);
             
         }
@@ -810,6 +817,9 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
     $npcMaster=new NpcMaster();
     $npcMaster->backupAllNpcs($gameRequest[2]);
+    require_once __DIR__ . "/../service/processors/snqe/lib/snqe.class.php";
+    SNQEQuestManager::save_quests($gameRequest[2]);
+
     $MUST_END=true;
     
 } elseif (strpos($gameRequest[0], "info")===0) {    // info_whatever requests

@@ -54,7 +54,7 @@ $contextData = $prompt;
 
 $connectionHandler = $connector->getConnector($currentConnectorData);
 
-$MODEL = "google/gemma-3-27b-it:free";
+$MODEL = "nex-agi/deepseek-v3.1-nex-n1:free";
 
 $buffer = $connectionHandler->fast_request(
     $contextData,
@@ -497,5 +497,6 @@ try {
 if ($fquestTitle) {
     $result["title"] = $fquestTitle;
 }
-
+//Patch 
+$result["journallist"]=$result["journal"];
 echo json_encode($result);

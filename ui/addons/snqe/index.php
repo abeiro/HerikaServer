@@ -14,6 +14,25 @@ $stateFile = "{$ENGINE_PATH}/log/snqe_state.json";
 
 $db = new sql();
 
+// Function to read last N lines from a file
+function getTailOfFile($filepath, $lines = 100) {
+    if (!file_exists($filepath)) {
+        return "File not found: " . htmlspecialchars($filepath);
+    }
+    
+    $content = file_get_contents($filepath);
+    if ($content === false) {
+        return "Cannot read file: " . htmlspecialchars($filepath);
+    }
+    
+    $allLines = explode("\n", $content);
+    $lastLines = array_slice($allLines, -$lines);
+    return implode("\n", $lastLines);
+}
+
+$logRunAgent = getTailOfFile("{$ENGINE_PATH}/log/log_run_agent.log", 100);
+$serviceLog = getTailOfFile("{$ENGINE_PATH}/log/service.log", 100);
+
 // Fetch running quests
 function getRunningQuests($db) {
     try {
@@ -32,6 +51,16 @@ $runningQuests = getRunningQuests($db);
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_running_quests') {
     header('Content-Type: application/json');
     echo json_encode(['quests' => $runningQuests]);
+    exit;
+}
+
+// Handle AJAX request for logs
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_logs') {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'agentLog' => getTailOfFile("{$ENGINE_PATH}/log/log_run_agent.log", 100),
+        'serviceLog' => getTailOfFile("{$ENGINE_PATH}/log/service.log", 100)
+    ]);
     exit;
 }
 
@@ -280,6 +309,23 @@ function sanitize_input($input)
             cursor: default;
         }
 
+        .log-box {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #16213e;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            background-color: #000000;
+            color: #00ff00;
+            overflow-y: auto;
+            max-height: 300px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.4;
+            resize: vertical;
+        }
+
         .button-group {
             display: flex;
             gap: 15px;
@@ -370,13 +416,22 @@ function sanitize_input($input)
 
                 <div class="form-group">
                     <label for="questtitle">Quest Title</label>
-                    <input type="text" name="questtitle" id="questtitle" placeholder="Quest title will appear here..."
-                        readonly />
+                    <input type="text" name="questtitle" id="questtitle" placeholder="Quest title will appear here..."/>
                 </div>
 
                 <div class="form-group">
                     <label for="briefing">Quest Briefing</label>
                     <input type="text" name="briefing" id="briefing" placeholder="Briefing will appear here..." readonly />
+                </div>
+
+                <div class="form-group">
+                    <label>Agent Log (last 100 lines)</label>
+                    <div class="log-box" id="agentLog"><?php echo htmlspecialchars($logRunAgent); ?></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Service Log (last 100 lines)</label>
+                    <div class="log-box" id="serviceLog"><?php echo htmlspecialchars($serviceLog); ?></div>
                 </div>
 
                 <div class="form-group" style="display:none;">
@@ -453,6 +508,30 @@ function sanitize_input($input)
                 });
         }
 
+        // Auto-refresh logs every 10 seconds
+        function refreshLogs() {
+            fetch('<?php echo $_SERVER['PHP_SELF']; ?>?action=get_logs', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.agentLog) {
+                        document.getElementById('agentLog').textContent = data.agentLog;
+                        document.getElementById('agentLog').scrollTop = document.getElementById('agentLog').scrollHeight;
+                    }
+                    if (data.serviceLog) {
+                        document.getElementById('serviceLog').textContent = data.serviceLog;
+                        document.getElementById('serviceLog').scrollTop = document.getElementById('serviceLog').scrollHeight;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error refreshing logs:', error);
+                });
+        }
+
         // Escape HTML to prevent XSS
         function escapeHtml(text) {
             const map = {
@@ -471,8 +550,25 @@ function sanitize_input($input)
             return date.toLocaleTimeString('en-US', { hour12: false });
         }
 
+        // Load quest title from localStorage
+        function loadQuestTitleFromStorage() {
+            const savedTitle = localStorage.getItem('snqe_questtitle');
+            if (savedTitle) {
+                document.querySelector('input[name="questtitle"]').value = savedTitle;
+            }
+        }
+
+        // Load briefing from localStorage
+        function loadBriefingFromStorage() {
+            const savedBriefing = localStorage.getItem('snqe_briefing');
+            if (savedBriefing) {
+                document.querySelector('input[name="briefing"]').value = savedBriefing;
+            }
+        }
+
         // Start auto-refresh interval
         let refreshInterval;
+        let logsRefreshInterval;
         window.addEventListener('DOMContentLoaded', function () {
             loadQuestTitleFromStorage();
             loadBriefingFromStorage();
@@ -480,12 +576,19 @@ function sanitize_input($input)
             // Refresh immediately on load, then every 5 seconds
             refreshRunningQuests();
             refreshInterval = setInterval(refreshRunningQuests, 5000);
+            
+            // Refresh logs immediately on load, then every 10 seconds
+            refreshLogs();
+            logsRefreshInterval = setInterval(refreshLogs, 10000);
         });
 
         // Clean up interval on page unload
         window.addEventListener('beforeunload', function () {
             if (refreshInterval) {
                 clearInterval(refreshInterval);
+            }
+            if (logsRefreshInterval) {
+                clearInterval(logsRefreshInterval);
             }
         });
 
@@ -592,6 +695,10 @@ function sanitize_input($input)
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
+                        // Save to localStorage
+                        localStorage.setItem('snqe_questtitle', questTitle);
+                        localStorage.setItem('snqe_briefing', briefing);
+                        
                         alert('Form submitted successfully!\n\nQuest Title: ' + data.data.questtitle + '\nBriefing: ' + data.data.briefing + '\n\nTimestamp: ' + data.timestamp);
                     } else {
                         alert('Error: ' + data.message);

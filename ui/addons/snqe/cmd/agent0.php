@@ -38,8 +38,28 @@ if (sizeof($formInput["npclist"]) == 0) { // Initial case
         $history .= trim("{$element["content"]}") . PHP_EOL . PHP_EOL;
     }
 
-    $randomLettersA = chr(rand(65, 90));
-    $randomLettersB = chr(rand(65, 90));
+    // Weighted random selection of nord-like initials. TO-DO: expand per race
+    $nordInitials =
+        str_repeat('A', 4) .
+        str_repeat('B', 3) .
+        str_repeat('E', 4) .
+        str_repeat('F', 3) .
+        str_repeat('G', 4) .
+        str_repeat('H', 5) .
+        str_repeat('I', 3) .
+        str_repeat('J', 2) .
+        str_repeat('K', 4) .
+        str_repeat('L', 4) .
+        str_repeat('M', 4) .
+        str_repeat('N', 3) .
+        str_repeat('R', 6) .
+        str_repeat('S', 5) .
+        str_repeat('T', 5) .
+        str_repeat('U', 2) .
+        str_repeat('V', 2);
+
+    $randomLettersA = $nordInitials[rand(0, strlen($nordInitials) - 1)];
+    $randomLettersB = $nordInitials[rand(0, strlen($nordInitials) - 1)];
 
     $lastLocation = DataLastKnownLocation();
 
@@ -74,7 +94,9 @@ if (sizeof($formInput["npclist"]) == 0) { // Initial case
 
     $nearByLoc = "\nLocations where new events/action can happen: \n$wideLocList";
 
-    $nearByLoc .= "\n\nSuggested location for new quest: " . $locListArray[array_rand($locListArray)];
+    $nearByLoc .= "\n\nNote: locations for adventuring must be chosen from the list above. 
+    * 'Dungeon' tagged locations are preferred for quest generation as they have interiors (classical D&D dungeon).
+    * You can use other locations, but pay attention to tags.";
 
     $connector = new LLMConnector();
     $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
@@ -173,7 +195,7 @@ Short briefing:{$formInput["briefing"]}
     } else {
         // Initial quest title NOT provided, from blank state
         if ($formInput["suggested"]) {
-            $suggested = " Suggested ideas or themes for the quest: " . $formInput["suggested"];
+            $suggested = "Preferenced idea and starter NPC for the quest: " . $formInput["suggested"];
         } else {
             $suggested = "";
         }
@@ -382,12 +404,12 @@ $prevSteps
 # Current Location: $lastLocation
 ";
     $finishInstruction = "";
-    
-    if (isset($formInput["needs_end"]) && $formInput["needs_end"] ) {
+
+    if (isset($formInput["needs_end"]) && $formInput["needs_end"]) {
         $finishInstruction = " Important: * Next steps should be oriented to finish storyline. Conclude all plots. ";
-        
-    } 
-    
+
+    }
+
     $considerFinish = "Output format:
 Output must be a bulleted list of single tasks that a rolemaster should do to achieve the next step, and a brief explanation after all elements.";
 

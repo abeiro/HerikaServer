@@ -22,8 +22,13 @@ class SkyrimCommandBuilder
     // === FormList Commands (cmdID 200-299) ===
     public $FormList;
 
-    // === FormList Commands (cmdID 300-399) ===
+    // === EffectShader Commands (cmdID 300-399) ===
     public $EffectShader;
+
+    
+    // === ActorUtil Commands (cmdID 400-499) ===
+    public $ActorUtil;
+
 
 
     public function __construct()
@@ -407,6 +412,10 @@ class SkyrimCommandBuilder
             public function RemoveFromAllFactions(string $targetObjectFormId): array {
                 return $this->builder->build(80, compact('targetObjectFormId'));
             }
+
+            public function EvaluatePackage(string $targetObjectFormId): array {
+                return $this->builder->build(81, compact('targetObjectFormId'));
+            }
         };
 
         $this->ObjectReference = new class($this) {
@@ -647,10 +656,40 @@ class SkyrimCommandBuilder
             }
 
         };
+
+
+        $this->ActorUtil = new class($this) {
+            private $builder;
+
+            public function __construct($builder) {
+                $this->builder = $builder;
+            }
+
+            // 400
+            public function AddPackageOverride(string $targetObjectFormId, string $akActor, string $apForm,int $aiPriority): array {
+                return $this->builder->build(400, compact('targetObjectFormId', 'akActor','apForm','aiPriority'));
+            }
+
+             // 401
+            public function SetLinkedRef(string $targetObjectFormId, string $akActor, string $asRef): array {
+                return $this->builder->build(401, compact('targetObjectFormId', 'akActor','asRef'));
+            }
+
+        };
     }
 
     public function build(int $cmdID, array $params): array {
         return array_merge(['cmdID' => $cmdID], $params);
+    }
+
+    public function getLoadOrderESP(): string{
+        $hexFormId = $GLOBALS["db"]->fetchOne("select value from conf_opts where id='aiagent_rolemastered_faction'");
+        if (!$hexFormId ) {
+            throw new Exception("Configuration 'aiagent_rolemastered_faction' not set.");
+        }
+        //Extract ESP index from FormID
+        $espIndexHex = substr($hexFormId["value"], 0, 2);
+        return $espIndexHex;
     }
 
     public function send($cmd,$localts = null) {
