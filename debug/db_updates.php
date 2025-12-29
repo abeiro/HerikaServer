@@ -3053,6 +3053,20 @@ if ($checkVersion("emotions_expression")<20251130003) {
 
 //----------------------------------------------------
 
+// Relationship Evaluation and Initialization Queues
+ $db->execQuery("CREATE TABLE IF NOT EXISTS relationship_eval_queue (
+                id SERIAL PRIMARY KEY,
+                npc_id INTEGER NOT NULL UNIQUE,
+                eval_data JSONB NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()  )");
+
+$db->execQuery("CREATE TABLE IF NOT EXISTS relationship_init_queue (
+                id SERIAL PRIMARY KEY,
+                npc_id INTEGER NOT NULL UNIQUE,
+                init_data JSONB NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()  )");
+
+
 Logger::info(__FILE__." update file processed");
 
 ?>
