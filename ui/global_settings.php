@@ -300,9 +300,6 @@ function icon_for_field(string $flatName): string {
 $gsSections = [
     'General' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
-        [ 'name' => 'PLAYER_BIOS', 'type' => 'longstring' ],
-        [ 'name' => 'PLAYER_RESPEECH', 'type' => 'boolean' ],
-        [ 'name' => 'PLAYER_SPEECH_STYLE', 'type' => 'longstring' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
         [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
@@ -698,24 +695,6 @@ function current_value(string $flatName, array $currentConf) {
     <form method="post" action="" id="gs_form">
         <input type="hidden" name="gs_tab" id="gs_tab" value="<?php echo htmlspecialchars($activeTab); ?>">
         <div class="content-grid" id="tab-global">
-            <div class="content-section">
-                <h2>Player</h2>
-                <div class="provider-grid">
-                    <div class="provider-card">
-                        <div class="provider-head">
-                            <div class="provider-title">
-                                <div class="provider-icon">🏷️</div>
-                                <div>Player Name</div>
-                                <div class="provider-toggle"></div>
-                            </div>
-                        </div>
-                        <div class="provider-body">
-                            <input type="text" name="PLAYER_NAME" value="<?php echo htmlspecialchars((string)current_value('PLAYER_NAME', $currentConf)); ?>">
-                        </div>
-                        <div style="margin-top:6px; color:#bbb; font-size:12px;">This is your in-game character name. Usually set automatically when you load a save.</div>
-                    </div>
-                </div>
-            </div>
             <?php foreach ($gsSections as $sectionTitle => $fields): ?>
                 <div class="content-section">
                     <h2><?php echo htmlspecialchars($sectionTitle); ?></h2>
