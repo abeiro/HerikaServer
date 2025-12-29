@@ -300,8 +300,8 @@ $PROMPTS=array(
         "cue"=>["{$gameRequest[3]}. {$GLOBALS["HERIKA_NAME"]} should Inspect surroundings to see who is in scene. Write {$GLOBALS["HERIKA_NAME"]}'s dialogue lines without narrations."],
         "player_request"=>["The Narrator: {$gameRequest[3]}"],
     ],
-    "cheatmode"=>[ 
-        "cue"=>["PRIORITY INSTRUCTION -  {$currentNpcData["npc_name"]} must do this, even if breaks character's roleplay: $gameRequest[3]}"],
+    "cheatmode"=>[
+        "cue"=>["PRIORITY INSTRUCTION -  " . ($currentNpcData["npc_name"] ?? $GLOBALS["HERIKA_NAME"] ?? "NPC") . " must do this, even if breaks character's roleplay: $gameRequest[3]}"],
         "player_request"=>[""],
     ],
 );
