@@ -30,6 +30,39 @@ class RelationshipLLM {
     }
 
     /**
+     * Acquire advisory lock for NPC relationship updates
+     * Prevents race conditions when multiple requests update the same NPC
+     *
+     * @param int $npcId The NPC ID to lock
+     * @return bool True if lock acquired
+     */
+    private function acquireNpcLock($npcId) {
+        try {
+            // Use pg_advisory_lock with a namespace (1001) + npc_id to avoid collisions
+            $lockId = 1001000000 + intval($npcId);
+            $this->db->execQuery("SELECT pg_advisory_lock({$lockId})");
+            return true;
+        } catch (Exception $e) {
+            error_log("[REL-LLM] Failed to acquire advisory lock for NPC {$npcId}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Release advisory lock for NPC relationship updates
+     *
+     * @param int $npcId The NPC ID to unlock
+     */
+    private function releaseNpcLock($npcId) {
+        try {
+            $lockId = 1001000000 + intval($npcId);
+            $this->db->execQuery("SELECT pg_advisory_unlock({$lockId})");
+        } catch (Exception $e) {
+            error_log("[REL-LLM] Failed to release advisory lock for NPC {$npcId}: " . $e->getMessage());
+        }
+    }
+
+    /**
      * Load a prompt from the database prompts table
      * Falls back to hardcoded default if not found
      *
@@ -352,20 +385,34 @@ PROMPT;
     private function saveRelationships($npcId, $relationships) {
         require_once $GLOBALS['ENGINE_PATH'] . "lib/core/npc_master.class.php";
 
-        $npcMaster = new NpcMaster();
-        $npc = $npcMaster->getById($npcId);
+        // Advisory lock to prevent race conditions
+        $this->acquireNpcLock($npcId);
 
-        if (!$npc) return false;
+        try {
+            $npcMaster = new NpcMaster();
+            $npc = $npcMaster->getById($npcId);
 
-        $extended = json_decode($npc['extended_data'] ?? '{}', true) ?: [];
-        $extended['relationships'] = $relationships;
-        $extended['relationships_analyzed'] = date('Y-m-d H:i:s');
-        $extended['relationships_model'] = $this->modelName;
+            if (!$npc) {
+                $this->releaseNpcLock($npcId);
+                return false;
+            }
 
-        return $npcMaster->updateByArray([
-            'id' => $npcId,
-            'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
-        ]);
+            $extended = json_decode($npc['extended_data'] ?? '{}', true) ?: [];
+            $extended['relationships'] = $relationships;
+            $extended['relationships_analyzed'] = date('Y-m-d H:i:s');
+            $extended['relationships_model'] = $this->modelName;
+
+            $result = $npcMaster->updateByArray([
+                'id' => $npcId,
+                'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+            ]);
+
+            $this->releaseNpcLock($npcId);
+            return $result;
+        } catch (Exception $e) {
+            $this->releaseNpcLock($npcId);
+            throw $e;
+        }
     }
 
     /**
@@ -489,22 +536,36 @@ PROMPT;
         }
 
         if (!empty($inferred)) {
-            // Merge with existing (don't overwrite explicit relationships)
-            foreach ($inferred as $target => $data) {
-                if (!isset($myRels[$target])) {
-                    $myRels[$target] = $data;
+            // Advisory lock to prevent race conditions
+            $this->acquireNpcLock($npcId);
+
+            try {
+                // Re-fetch to get latest state after acquiring lock
+                $npc = $npcMaster->getById($npcId);
+                $extended = json_decode($npc['extended_data'] ?? '{}', true) ?: [];
+                $myRels = $extended['relationships'] ?? [];
+
+                // Merge with existing (don't overwrite explicit relationships)
+                foreach ($inferred as $target => $data) {
+                    if (!isset($myRels[$target])) {
+                        $myRels[$target] = $data;
+                    }
                 }
+
+                $extended['relationships'] = $myRels;
+                $extended['relationships_inferred'] = date('Y-m-d H:i:s');
+
+                $npcMaster->updateByArray([
+                    'id' => $npcId,
+                    'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+                ]);
+
+                $this->releaseNpcLock($npcId);
+                error_log("[REL-LLM] Inferred " . count($inferred) . " relationships for " . $npc['npc_name']);
+            } catch (Exception $e) {
+                $this->releaseNpcLock($npcId);
+                throw $e;
             }
-
-            $extended['relationships'] = $myRels;
-            $extended['relationships_inferred'] = date('Y-m-d H:i:s');
-
-            $npcMaster->updateByArray([
-                'id' => $npcId,
-                'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
-            ]);
-
-            error_log("[REL-LLM] Inferred " . count($inferred) . " relationships for " . $npc['npc_name']);
         }
 
         return [
@@ -1127,18 +1188,36 @@ PROMPT;
         }
 
         if (!empty($applied)) {
-            $extended = json_decode($npc['extended_data'] ?? '{}', true) ?: [];
-            $extended['relationships'] = $currentRels;
-            $extended['relationships_last_eval'] = date('Y-m-d H:i:s');
+            // Advisory lock to prevent race conditions
+            $this->acquireNpcLock($npcId);
 
-            $jsonData = json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            try {
+                // Re-fetch to get latest state after acquiring lock
+                $npc = $npcMaster->getById($npcId);
+                $extended = json_decode($npc['extended_data'] ?? '{}', true) ?: [];
 
-            $result = $npcMaster->updateByArray([
-                'id' => $npcId,
-                'extended_data' => $jsonData
-            ]);
+                // Merge our changes with latest state
+                $existingRels = $extended['relationships'] ?? [];
+                foreach ($currentRels as $target => $data) {
+                    $existingRels[$target] = $data;
+                }
 
-            error_log("[REL-LLM] Database update for NPC {$npcId}: " . ($result ? "SUCCESS" : "FAILED") . " - relationships: " . json_encode($currentRels));
+                $extended['relationships'] = $existingRels;
+                $extended['relationships_last_eval'] = date('Y-m-d H:i:s');
+
+                $jsonData = json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+                $result = $npcMaster->updateByArray([
+                    'id' => $npcId,
+                    'extended_data' => $jsonData
+                ]);
+
+                $this->releaseNpcLock($npcId);
+                error_log("[REL-LLM] Database update for NPC {$npcId}: " . ($result ? "SUCCESS" : "FAILED") . " - relationships: " . json_encode($existingRels));
+            } catch (Exception $e) {
+                $this->releaseNpcLock($npcId);
+                throw $e;
+            }
         }
 
         return $applied;
