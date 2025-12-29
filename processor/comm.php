@@ -117,6 +117,16 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $npcMaster->restoreNPC($gameRequest[2]);
     Logger::trace("POST INIT PROCESSING ".(time()-$now));
     
+    // RELATIONSHIP SYSTEM: Clear async queues on game load (Paradox Prevention)
+    // Stale evaluations from a previous session could corrupt the restored state
+    try {
+        $db->execQuery("DELETE FROM relationship_eval_queue WHERE 1=1");
+        $db->execQuery("DELETE FROM relationship_init_queue WHERE 1=1");
+        error_log("[INIT] Cleared relationship async queues for paradox prevention");
+    } catch (Exception $e) {
+        // Tables may not exist yet - that's fine
+    }
+
     require_once __DIR__ . "/../service/processors/snqe/lib/snqe.class.php";
     SNQEQuestManager::load_quests($gameRequest[2]);
     
@@ -1072,6 +1082,18 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             }
         } else {
             error_log("[salutation_after_a_while] disabled for {$currentNpcData["npc_name"]}");
+        }
+    }
+
+    // RELATIONSHIP SYSTEM: Queue NPC for relationship initialization
+    // This parses TEXT relationships into JSONB without blocking map load
+    if ($currentNpcData && !empty($currentNpcData['id'])) {
+        $relAsyncFile = $GLOBALS["ENGINE_PATH"] . "ext/relationship_system/async_queue.php";
+        if (file_exists($relAsyncFile)) {
+            require_once $relAsyncFile;
+            if (function_exists('_relQueueNpcInit')) {
+                _relQueueNpcInit($currentNpcData['id'], $localName);
+            }
         }
     }
 
