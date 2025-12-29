@@ -49,6 +49,153 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 }
 main { padding-top: 40px; padding-bottom: 40px; }
 h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacing: 8px; font-size: 2.2em; color: rgb(242, 124, 17); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); text-align: center; }
+
+/* Relationship Build Button - Gray/Orange theme to match UI */
+.btn-rel-build {
+    background: #3a3a4a;
+    color: rgb(242, 124, 17);
+    border: 1px solid rgb(242, 124, 17);
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.btn-rel-build:hover {
+    background: #4a4a5a;
+}
+
+/* Relationship Build Modal - Gray/Orange theme */
+.rel-build-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+.rel-build-modal-overlay.show { display: flex; }
+.rel-build-modal {
+    background: #2a2a2a;
+    border: 2px solid #ffffff;
+    border-radius: 16px;
+    padding: 30px;
+    max-width: 600px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 30px rgba(255, 255, 255, 0.15);
+}
+.rel-build-modal h2 {
+    margin: 0 0 20px 0;
+    color: rgb(242, 124, 17);
+    font-family: 'MagicCards', serif;
+    font-size: 1.8em;
+    text-align: center;
+    text-shadow: 0 0 15px rgba(242, 124, 17, 0.4);
+}
+.rel-build-modal .modal-body {
+    color: #e0e0e0;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    text-align: center;
+}
+.rel-build-modal .modal-body p { margin: 10px 0; }
+.rel-build-modal .modal-body strong { color: rgb(242, 124, 17); }
+.rel-build-modal .stats-box {
+    background: #1a1a1a;
+    border: 1px solid #555;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 15px 0;
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+}
+.rel-build-modal .stat-item { }
+.rel-build-modal .stat-value { font-size: 2em; color: rgb(242, 124, 17); font-weight: bold; }
+.rel-build-modal .stat-label { font-size: 0.85em; color: #888; }
+.rel-build-modal .progress-section { display: none; margin: 20px 0; }
+.rel-build-modal .progress-section.show { display: block; }
+.rel-build-modal .progress-bar-wrap {
+    background: #1a1a1a;
+    border-radius: 8px;
+    height: 24px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+.rel-build-modal .progress-bar {
+    background: linear-gradient(90deg, rgb(200, 100, 10), rgb(242, 124, 17));
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 8px;
+}
+.rel-build-modal .progress-text {
+    text-align: center;
+    color: rgb(242, 124, 17);
+    font-size: 0.9em;
+}
+.rel-build-modal .progress-log {
+    background: #0a0a0a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 10px;
+    max-height: 150px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 0.8em;
+    color: #888;
+    margin-top: 10px;
+}
+.rel-build-modal .progress-log .success { color: #4ade80; }
+.rel-build-modal .progress-log .error { color: #f87171; }
+.rel-build-modal .progress-log .skip { color: rgb(242, 124, 17); }
+.rel-build-modal .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 20px;
+}
+.rel-build-modal .btn-start {
+    background: #3a3a3a;
+    color: rgb(242, 124, 17);
+    border: 1px solid rgb(242, 124, 17);
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.rel-build-modal .btn-start:hover { background: #4a4a4a; }
+.rel-build-modal .btn-start:disabled { background: #222; color: #555; border-color: #444; cursor: not-allowed; }
+.rel-build-modal .btn-cancel {
+    background: #3a3a3a;
+    color: rgb(242, 124, 17);
+    border: 1px solid rgb(242, 124, 17);
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.rel-build-modal .btn-cancel:hover { background: #4a4a4a; }
+.rel-build-modal .connector-info {
+    background: rgba(242, 124, 17, 0.1);
+    border: 1px solid rgb(242, 124, 17);
+    border-radius: 8px;
+    padding: 10px;
+    margin: 10px 0;
+    font-size: 0.9em;
+    text-align: center;
+    color: #34d399;
+}
+.rel-build-modal .connector-info .connector-model {
+    color: #aaa;
+    font-size: 0.9em;
+}
+.rel-build-modal .no-connector {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+    color: #f87171;
+}
 </style>
 
 <main>
@@ -193,6 +340,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
     header('Content-Type: application/json');
     try {
         $id = intval($_POST['id'] ?? 0);
+
+        // Merge relationship editor data into extended_data BEFORE processing
+        if (file_exists(__DIR__."/../../ext/relationship_system/npc_save_handler.php")) {
+            include(__DIR__."/../../ext/relationship_system/npc_save_handler.php");
+        }
+
         // Server-side: extended_data already has feature toggles synced by JS, just ensure it's valid JSON
         // The client-side JS only includes values that differ from profile defaults
         try {
@@ -201,11 +354,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
                 $tmp = json_decode($postedExt, true);
                 if (!is_array($tmp)) {
                     $_POST['extended_data'] = '{}'; // Ensure valid JSON
-                } else {
-                  if ($_POST["middle_term_enabled"]) { // If enabled on NPC form,  but not present in extended_data
-                    $tmp["middle_term_enabled"]=1;
-                    $_POST['extended_data']=json_encode($tmp);
-                  }
                 }
             } else {
                 $_POST['extended_data'] = '{}';
@@ -318,8 +466,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["bulk_delete_npcs"])) 
         $confirm = trim((string)($_POST['confirm'] ?? ''));
         if ($confirm !== 'Delete') { echo json_encode(["ok"=>false, "error"=>"Confirmation text mismatch"]); exit; }
         // Delete all unlocked NPCs except The Narrator (by name or id=1)
-        // Use trim and case-insensitive comparison for robustness, and ensure lock_profile is explicitly compared as integer
-        $sql = "with del as (delete from core_npc_master where (lock_profile is null or lock_profile = 0) and id <> 1 and trim(lower(npc_name)) <> 'the narrator' returning 1) select count(*) as c from del";
+        $sql = "with del as (delete from core_npc_master where coalesce(lock_profile,0)=0 and not (npc_name='The Narrator' or id=1) returning 1) select count(*) as c from del";
         $row = $GLOBALS['db']->fetchOne($sql);
         $deleted = intval($row['c'] ?? 0);
         echo json_encode(["ok"=>true, "deleted"=>$deleted]);
@@ -416,9 +563,6 @@ $profileIdFilter = isset($_GET['profile_id']) ? trim((string)$_GET['profile_id']
 $favOnly = (isset($_GET['fav']) && $_GET['fav'] === '1');
 $dynOnly = (isset($_GET['dyn']) && $_GET['dyn'] === '1');
 $mtmOnly = (isset($_GET['mtm']) && $_GET['mtm'] === '1');
-$salOnly = (isset($_GET['sal']) && $_GET['sal'] === '1');
-$blcOnly = (isset($_GET['blc']) && $_GET['blc'] === '1');
-$gpsOnly = (isset($_GET['gps']) && $_GET['gps'] === '1');
 
 // Preload profiles for filter dropdown
 $profileRows = $GLOBALS["db"]->fetchAll("SELECT id, label, metadata FROM core_profiles ORDER BY label ASC");
@@ -451,19 +595,11 @@ foreach (($profileConnRows ?? []) as $prow) {
     $dynVal = isset($pmeta['DYNAMIC_PROFILE_ENABLED']) ? $pmeta['DYNAMIC_PROFILE_ENABLED'] : null;
     $mtmVal = isset($pmeta['MIDDLE_TERM_MEMORY_ENABLED']) ? $pmeta['MIDDLE_TERM_MEMORY_ENABLED'] : null;
     $adVal = isset($pmeta['AUTO_DIARY_ENABLED']) ? $pmeta['AUTO_DIARY_ENABLED'] : null;
-    $adWaitVal = isset($pmeta['AUTO_DIARY_WAIT_ENABLED']) ? $pmeta['AUTO_DIARY_WAIT_ENABLED'] : null;
-    $salVal = isset($pmeta['SALUTATION_AFTER_A_WHILE']) ? $pmeta['SALUTATION_AFTER_A_WHILE'] : null;
-    $blcVal = isset($pmeta['BACKGROUND_LIFE_COMMANDS']) ? $pmeta['BACKGROUND_LIFE_COMMANDS'] : null;
-    $gpsVal = isset($pmeta['GPS_TRACK']) ? $pmeta['GPS_TRACK'] : null;
     
     $profileMetaById[$pid] = [
         'dyn' => ($dynVal === '1' || $dynVal === 1 || $dynVal === true),
         'mtm' => ($mtmVal === '1' || $mtmVal === 1 || $mtmVal === true),
-        'ad' => ($adVal === '1' || $adVal === 1 || $adVal === true),
-        'adWait' => ($adWaitVal === '1' || $adWaitVal === 1 || $adWaitVal === true),
-        'sal' => ($salVal === '1' || $salVal === 1 || $salVal === true),
-        'blc' => ($blcVal === '1' || $blcVal === 1 || $blcVal === true),
-        'gps' => ($gpsVal === '1' || $gpsVal === 1 || $gpsVal === true)
+        'ad' => ($adVal === '1' || $adVal === 1 || $adVal === true)
     ];
 }
 $profilesConnById = [];
@@ -495,16 +631,7 @@ if ($dynOnly) {
 }
 if ($mtmOnly) {
     // Robust match on JSON/text; tolerates whitespace and works for json/jsonb
-    $where .= " and coalesce(extended_data::text,'') ~ '\"middle_term_enabled\"\\s*:\\s*(true|1)'";
-}
-if ($salOnly) {
-    $where .= " and coalesce(extended_data::text,'') ~ '\"salutation_after_a_while\"\\s*:\\s*(true|1)'";
-}
-if ($blcOnly) {
-    $where .= " and coalesce(extended_data::text,'') ~ '\"background_life_commands\"\\s*:\\s*(true|1)'";
-}
-if ($gpsOnly) {
-    $where .= " and coalesce(metadata::text,'') ~ '\"gps_track\"\\s*:\\s*(true|1)'";
+    $where .= " and coalesce(extended_data::text,'') ~ '\"middle_term_enabled\"\\s*:\\s*1'";
 }
 
 // Default: favorites first, then alphabetical by name
@@ -538,9 +665,6 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_fav" <?= $favOnly?'checked':'' ?>> ⭐Favorites</label>
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_dyn" <?= $dynOnly?'checked':'' ?>> ♻️Dynamic profile</label>
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_mtm" <?= $mtmOnly?'checked':'' ?>> 📃Middle-term memory</label>
-            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_sal" <?= $salOnly?'checked':'' ?>> 👋Auto Salutations</label>
-            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_blc" <?= $blcOnly?'checked':'' ?>> 🎮BGL: Auto Actions</label>
-            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_gps" <?= $gpsOnly?'checked':'' ?>> 📍BGL: GPS track</label>
           </div>
         </div>
         <input id="npc_search" type="text" placeholder="Search..." value="<?= htmlspecialchars($q) ?>" />
@@ -562,6 +686,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Page <?= $page ?> / <?= $totalPages ?></span>
       <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Total <?= $totalRows ?></span>
       <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
+      <button id="rel_bulk_build_btn" type="button" class="btn-rel-build" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
       <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
     </div>
     <div class="npc-grid">
@@ -602,24 +727,6 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
             $adEnabled = !empty($extTmp['auto_diary_enabled']);
         }
         
-        // Salutation After A While: check extended_data override, otherwise inherit from profile
-        $salEnabled = $profileMeta['sal']; // default to profile
-        if (array_key_exists('salutation_after_a_while', $extTmp) && $extTmp['salutation_after_a_while'] !== null && $extTmp['salutation_after_a_while'] !== '') {
-            $salEnabled = !empty($extTmp['salutation_after_a_while']);
-        }
-        
-        // Background Life Commands: check extended_data override, otherwise inherit from profile
-        $blcEnabled = $profileMeta['blc']; // default to profile
-        if (array_key_exists('background_life_commands', $extTmp) && $extTmp['background_life_commands'] !== null && $extTmp['background_life_commands'] !== '') {
-            $blcEnabled = !empty($extTmp['background_life_commands']);
-        }
-        
-        // GPS Track: check metadata override, otherwise inherit from profile
-        $gpsEnabled = $profileMeta['gps']; // default to profile
-        if (array_key_exists('gps_track', $metaTmp) && $metaTmp['gps_track'] !== null && $metaTmp['gps_track'] !== '') {
-            $gpsEnabled = !empty($metaTmp['gps_track']);
-        }
-        
         $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot,$row["refid"] ?? '', $row['md5'] ?? '', $row['npc_name'] ?? '', $portraitRel); 
         $tagsVal = trim((string)($row['tags'] ?? '')); 
         $tagsDisp = ($tagsVal === '') ? '' : $tagsVal; 
@@ -632,7 +739,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                     if (isset($metaTmp['stats']) && is_array($metaTmp['stats']) && isset($metaTmp['stats']['level'])) {
                         $levelDisp = ' ('.intval($metaTmp['stats']['level']).')';
                     }
-                ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($dynEnabled)): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Salutation enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
+                ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($dynEnabled)): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?></div>
             <div class="npc-title-actions">
                     <?php if ($tagsDisp !== ''): ?>
                     <span class="npc-tags-top" title="<?= htmlspecialchars($tagsDisp) ?>"><?= htmlspecialchars($tagsDisp) ?></span>
@@ -875,7 +982,8 @@ if (isset($_GET['bio_detail'])) {
     header('Content-Type: application/json');
     $name = trim((string)($_GET['name'] ?? ''));
     if ($name === '') { echo json_encode(['ok'=>false,'error'=>'Missing name']); exit; }
-    $esc = $GLOBALS['db']->escape($name);
+    $codename=npcNameToCodename($name);
+    $esc = $GLOBALS['db']->escape($codename);
     // Case-insensitive exact match on npc_name to tolerate capitalization differences
     $r = $GLOBALS['db']->fetchOne("select npc_name, core, voiceid, gender, race, refid, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags from combined_bio_templates where lower(npc_name) = lower('{$esc}') limit 1");
     if (!$r) { echo json_encode(['ok'=>false,'error'=>'Not found']); exit; }
@@ -1051,19 +1159,11 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             $dynVal = isset($meta['DYNAMIC_PROFILE_ENABLED']) ? $meta['DYNAMIC_PROFILE_ENABLED'] : null;
             $mtmVal = isset($meta['MIDDLE_TERM_MEMORY_ENABLED']) ? $meta['MIDDLE_TERM_MEMORY_ENABLED'] : null;
             $adVal = isset($meta['AUTO_DIARY_ENABLED']) ? $meta['AUTO_DIARY_ENABLED'] : null;
-            $adWaitVal = isset($meta['AUTO_DIARY_WAIT_ENABLED']) ? $meta['AUTO_DIARY_WAIT_ENABLED'] : null;
-            $salVal = isset($meta['SALUTATION_AFTER_A_WHILE']) ? $meta['SALUTATION_AFTER_A_WHILE'] : null;
-            $blcVal = isset($meta['BACKGROUND_LIFE_COMMANDS']) ? $meta['BACKGROUND_LIFE_COMMANDS'] : null;
-            $gpsVal = isset($meta['GPS_TRACK']) ? $meta['GPS_TRACK'] : null;
             return [
                 'id' => (string)($pr['id'] ?? ''),
                 'dyn' => ($dynVal === '1' || $dynVal === 1 || $dynVal === true),
                 'mtm' => ($mtmVal === '1' || $mtmVal === 1 || $mtmVal === true),
-                'ad' => ($adVal === '1' || $adVal === 1 || $adVal === true),
-                'adWait' => ($adWaitVal === '1' || $adWaitVal === 1 || $adWaitVal === true),
-                'sal' => ($salVal === '1' || $salVal === 1 || $salVal === true),
-                'blc' => ($blcVal === '1' || $blcVal === 1 || $blcVal === true),
-                'gps' => ($gpsVal === '1' || $gpsVal === 1 || $gpsVal === true)
+                'ad' => ($adVal === '1' || $adVal === 1 || $adVal === true)
             ];
         }, $profileConnRows ?? []), JSON_UNESCAPED_SLASHES) ?>;
         
@@ -1104,29 +1204,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 if (hint) {
                     const base = 'Automatically generate diary entries for this NPC when they are nearby during sleep/wait events.';
                     hint.innerHTML = base + (profile.ad ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '');
-                }
-            }
-            
-            // Update auto_diary_wait_enabled
-            const adWaitCb = document.getElementById('auto_diary_wait_enabled');
-            if (adWaitCb) {
-                adWaitCb.checked = profile.adWait;
-                adWaitCb.setAttribute('data-profile-default', profile.adWait ? '1' : '0');
-                const hint = adWaitCb.closest('.form-item').querySelector('.hint');
-                if (hint) {
-                    const base = 'When Auto Diary is enabled, this controls whether diary entries are created during wait events. If disabled, auto diary will only trigger on sleep events.';
-                    hint.innerHTML = base + (profile.adWait ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '');
-                }
-            }
-            
-            // Update salutation_after_a_while
-            const salCb = document.getElementById('salutation_after_a_while');
-            if (salCb) {
-                salCb.checked = profile.sal;
-                salCb.setAttribute('data-profile-default', profile.sal ? '1' : '0');
-                const hint = salCb.closest('.form-item').querySelector('.hint');
-                if (hint) {
-                    const base = 'NPC will greet you after you have been away for a while.';
                 }
             }
         }
@@ -1207,7 +1284,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         $profileDynEnabled = false;
         $profileMtmEnabled = false;
         $profileAutoDiaryEnabled = false;
-        $profileAutoDiaryWaitEnabled = false;
         $currentProfileId = (string)(is_array($editItem) ? ($editItem['profile_id'] ?? '') : '');
         if ($currentProfileId !== '') {
             foreach (($profileConnRows ?? []) as $prow) {
@@ -1222,11 +1298,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                     $dynVal = isset($pmeta['DYNAMIC_PROFILE_ENABLED']) ? $pmeta['DYNAMIC_PROFILE_ENABLED'] : null;
                     $mtmVal = isset($pmeta['MIDDLE_TERM_MEMORY_ENABLED']) ? $pmeta['MIDDLE_TERM_MEMORY_ENABLED'] : null;
                     $adVal = isset($pmeta['AUTO_DIARY_ENABLED']) ? $pmeta['AUTO_DIARY_ENABLED'] : null;
-                    $adWaitVal = isset($pmeta['AUTO_DIARY_WAIT_ENABLED']) ? $pmeta['AUTO_DIARY_WAIT_ENABLED'] : null;
                     $profileDynEnabled = ($dynVal === '1' || $dynVal === 1 || $dynVal === true);
                     $profileMtmEnabled = ($mtmVal === '1' || $mtmVal === 1 || $mtmVal === true);
                     $profileAutoDiaryEnabled = ($adVal === '1' || $adVal === 1 || $adVal === true);
-                    $profileAutoDiaryWaitEnabled = ($adWaitVal === '1' || $adWaitVal === 1 || $adWaitVal === true);
                     break;
                 }
             }
@@ -1276,59 +1350,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 $adFromProfile = true;
             }
         } catch (Throwable $e) { }
-        
-        // Auto Diary Wait: check extended_data override or fall back to profile default
-        $adWaitChecked = $profileAutoDiaryWaitEnabled;
-        $adWaitFromProfile = false;
-        try {
-            $hasNpcOverride = false;
-            if (is_array($editItem) && !empty($editItem['extended_data'])) {
-                $tmpEd = json_decode((string)$editItem['extended_data'], true);
-                if (is_array($tmpEd) && array_key_exists('auto_diary_wait_enabled', $tmpEd) && $tmpEd['auto_diary_wait_enabled'] !== null && $tmpEd['auto_diary_wait_enabled'] !== '') {
-                    $adWaitChecked = !empty($tmpEd['auto_diary_wait_enabled']);
-                    $hasNpcOverride = true;
-                }
-            }
-            if (!$hasNpcOverride) {
-                $adWaitFromProfile = true;
-            }
-        } catch (Throwable $e) { }
-        
-        // Read profile-level settings for the toggles
-        $profileSalEnabled = false;
-        if ($currentProfileId !== '') {
-            foreach (($profileConnRows ?? []) as $prow) {
-                if ((string)($prow['id'] ?? '') === $currentProfileId) {
-                    $pmeta = [];
-                    try {
-                        if (!empty($prow['metadata'])) {
-                            $tmp = json_decode((string)$prow['metadata'], true);
-                            if (is_array($tmp)) $pmeta = $tmp;
-                        }
-                    } catch (Throwable $e) {}
-                    $salVal = isset($pmeta['SALUTATION_AFTER_A_WHILE']) ? $pmeta['SALUTATION_AFTER_A_WHILE'] : null;
-                    $profileSalEnabled = ($salVal === '1' || $salVal === 1 || $salVal === true);
-                    break;
-                }
-            }
-        }
-        
-        // Salutation After A While: check extended_data override or fall back to profile default
-        $salChecked = $profileSalEnabled;
-        $salFromProfile = false;
-        try {
-            $hasNpcOverride = false;
-            if (is_array($editItem) && !empty($editItem['extended_data'])) {
-                $tmpEd = json_decode((string)$editItem['extended_data'], true);
-                if (is_array($tmpEd) && array_key_exists('salutation_after_a_while', $tmpEd) && $tmpEd['salutation_after_a_while'] !== null && $tmpEd['salutation_after_a_while'] !== '') {
-                    $salChecked = !empty($tmpEd['salutation_after_a_while']);
-                    $hasNpcOverride = true;
-                }
-            }
-            if (!$hasNpcOverride) {
-                $salFromProfile = true;
-            }
-        } catch (Throwable $e) { }
         ?>
         <div class="form-item">
             <label for="dynamic_profile" class="label-with-toggle">♻️Dynamic Profile
@@ -1350,20 +1371,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <input type="checkbox" id="auto_diary_enabled" name="auto_diary_enabled" value="1" <?= $adChecked ? "checked" : "" ?> data-profile-default="<?= $profileAutoDiaryEnabled ? '1' : '0' ?>">
             </label>
             <small class="hint">Automatically generate diary entries for this NPC when they are nearby during sleep/wait events.<?= $adFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
-        </div>
-
-        <div class="form-item">
-            <label for="auto_diary_wait_enabled" class="label-with-toggle">⏳Auto Diary Wait
-                <input type="checkbox" id="auto_diary_wait_enabled" name="auto_diary_wait_enabled" value="1" <?= $adWaitChecked ? "checked" : "" ?> data-profile-default="<?= $profileAutoDiaryWaitEnabled ? '1' : '0' ?>">
-            </label>
-            <small class="hint">When Auto Diary is enabled, this controls whether diary entries are created during wait events. If disabled, auto diary will only trigger on sleep events.<?= $adWaitFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
-        </div>
-
-        <div class="form-item">
-            <label for="salutation_after_a_while" class="label-with-toggle">👋Auto Salutations
-                <input type="checkbox" id="salutation_after_a_while" name="salutation_after_a_while" value="1" <?= $salChecked ? "checked" : "" ?> data-profile-default="<?= $profileSalEnabled ? '1' : '0' ?>">
-            </label>
-            <small class="hint">NPC will automatically greet you after a while.</small>
         </div>
 
         <div class="form-item span-2">
@@ -1405,6 +1412,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <textarea id="relationships" name="relationships" placeholder="Key allies, rivals, factions, and opinions."><?= htmlspecialchars($editItem["relationships"] ?? "") ?></textarea>
             <small class="hint">Named entities the NPC knows and how they feel about them.</small>
         </div>
+
+        <?php if (file_exists(__DIR__."/../../ext/relationship_system/relationship_editor.php")) {
+            include(__DIR__."/../../ext/relationship_system/relationship_editor.php");
+        } ?>
 
         <div class="form-item">
             <label for="occupation">Occupation</label>
@@ -1511,8 +1522,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                             'gloves' => '🧤 Gloves',
                             'amulet' => '📿 Amulet',
                             'ring' => '💍 Ring',
-                            'cape' => '🧣 Cape',
-                            'backpack' => '🎒 Backpack',
                             'left_hand' => '🤚 Left Hand',
                             'right_hand' => '👉 Right Hand'
                         ];
@@ -1550,25 +1559,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                                     <?= isset($metadataStats['level']) ? intval($metadataStats['level']) : '—' ?>
                                 </div>
                             </div>
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <div style="color:#f39c12; min-width:100px; font-weight:700;">📏 Scale</div>
-                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; font-weight:700; background:#1a1a1a; font-size:16px;">
-                                    <?php 
-                                    $scale = isset($metadataStats['scale']) ? floatval($metadataStats['scale']) : null;
-                                    if ($scale !== null) {
-                                        echo number_format($scale, 2);
-                                        // Get height description if available
-                                        require_once(__DIR__ . "/../../lib/data_functions.php");
-                                        $heightDesc = getHeightDescription($scale);
-                                        if (!empty($heightDesc)) {
-                                            echo ' <span style="color:#999; font-size:12px; font-weight:400;">(' . htmlspecialchars($heightDesc) . ')</span>';
-                                        }
-                                    } else {
-                                        echo '—';
-                                    }
-                                    ?>
-                                </div>
-                            </div>
+                            <div></div>
                             <div style="display:flex; gap:8px; align-items:center;">
                                 <div style="color:#e74c3c; min-width:100px;">❤️ Health</div>
                                 <div style="border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; background:#1a1a1a; flex:1;">
@@ -1662,83 +1653,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             </details>
         </div>
 
-        <?php
-        // Spells
-        $metadataSpells = (isset($metaObj['spells']) && is_array($metaObj['spells'])) ? $metaObj['spells'] : [];
-        $spellsUpdated = isset($metaObj['spells_updated']) ? $metaObj['spells_updated'] : null;
-        ?>
-        <div class="form-item span-2">
-            <details class="metadata-spells-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;">
-                <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">
-                    Spells
-                    <?php if ($spellsUpdated): ?>
-                        <span style="color:#999; font-weight:400; font-size:12px;">
-                            Last updated: <?= date('Y-m-d H:i:s', $spellsUpdated) ?>
-                        </span>
-                    <?php endif; ?>
-                </summary>
-                <small class="hint">Magic spells this NPC knows. Note: Spells will only be placed into NPC context if it exists in the description database. This is to prevent
-                  system spells from custom mods from diluting the context.
-                </small>
-                <div style="margin-top:8px; color:#cfd9ea;">
-                    <?php if (!empty($metadataSpells)): ?>
-                        <div style="max-height:400px; overflow-y:auto;">
-                            <table style="width:100%; border-collapse:collapse;">
-                                <thead>
-                                    <tr style="border-bottom:2px solid #4a4a4a; color:rgb(242, 124, 17);">
-                                        <th style="text-align:left; padding:8px;">Spell Name</th>
-                                        <th style="text-align:center; padding:8px; width:130px;">Casting</th>
-                                        <th style="text-align:center; padding:8px; width:120px;">Delivery</th>
-                                        <th style="text-align:right; padding:8px; width:100px;">Base ID</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php 
-                                    // Casting type labels
-                                    $castingTypes = [
-                                        0 => 'Concentration',
-                                        1 => 'Fire & Forget',
-                                        2 => 'Constant'
-                                    ];
-                                    // Delivery type labels
-                                    $deliveryTypes = [
-                                        0 => 'Self',
-                                        1 => 'Contact',
-                                        2 => 'Aimed',
-                                        3 => 'Target Actor',
-                                        4 => 'Target Location'
-                                    ];
-                                    
-                                    usort($metadataSpells, function($a, $b){ return strcmp($a['name']??'', $b['name']??''); });
-                                    foreach ($metadataSpells as $spell): 
-                                        $spellName = isset($spell['name']) ? htmlspecialchars($spell['name']) : 'Unknown';
-                                        $spellID = isset($spell['baseid']) ? htmlspecialchars($spell['baseid']) : '—';
-                                        $castingType = isset($spell['casting_type']) ? intval($spell['casting_type']) : 0;
-                                        $deliveryType = isset($spell['delivery']) ? intval($spell['delivery']) : 0;
-                                        $castingLabel = $castingTypes[$castingType] ?? 'Unknown';
-                                        $deliveryLabel = $deliveryTypes[$deliveryType] ?? 'Unknown';
-                                    ?>
-                                        <tr style="border-bottom:1px solid #3a3a3a;">
-                                            <td style="padding:6px 8px; color:#cfd9ea;"><?= $spellName ?></td>
-                                            <td style="padding:6px 8px; text-align:center; color:#9fb1c9; font-size:12px;"><?= $castingLabel ?></td>
-                                            <td style="padding:6px 8px; text-align:center; color:#9fb1c9; font-size:12px;"><?= $deliveryLabel ?></td>
-                                            <td style="padding:6px 8px; text-align:right; color:#9fb1c9; font-family:monospace; font-size:11px;"><?= $spellID ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                            <div style="margin-top:12px; padding:8px; background:#1a1a1a; border-radius:6px; border:1px solid #4a4a4a;">
-                                <strong style="color:rgb(242, 124, 17);">Total Spells:</strong> 
-                                <span style="color:#cfd9ea;"><?= count($metadataSpells) ?> spells known</span>
-                            </div>
-                        </div>
-                    <?php else: ?>
-                        <div style="color:#9fb1c9;">No spell data found in metadata.</div>
-                    <?php endif; ?>
-                </div>
-            </details>
-        </div>
-
         <div class="form-item span-2">
             <label for="metadata">Metadata (JSON)</label>
             <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
@@ -1751,7 +1665,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Override global and profile settings for this specific NPC. Changes here take precedence over all other configurations.</small>
             <?php
             // Configure override editor for NPC mode
-            $reservedKeys = [ 'middle_term_enabled', 'auto_diary_enabled', 'auto_diary_wait_enabled', 'chim_core_migrated', 'salutation_after_a_while'];
+            $reservedKeys = ['middle_term_memory', 'middle_term_enabled', 'auto_diary_enabled', 'chim_core_migrated'];
             $extendedDataRaw = isset($editItem["extended_data"]) ? $editItem["extended_data"] : '{}';
             $extendedDataObj = json_decode($extendedDataRaw, true) ?: [];
             $currentOverrides = [];
@@ -1766,7 +1680,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             $overrideEditorConfig = [
                 'mode' => 'npc',
                 'fieldName' => 'extended_data',
-                'allowedSettings' => ['TTSFUNCTION','RECHAT_H','RECHAT_P','RECHAT_ALLOW_ACTIONS','CORE_LANG','ENFORCE_ACTIONS_PROMPT','REMOVE_ASTERISKS_FROM_OUTPUT','MAX_WORDS_LIMIT','DIARY_PROMPT','DIARY_COOLDOWN','COMBAT_BARK_COOLDOWN','OGHMA_INFINIUM','OGHMA_AMOUNT','MINIME_T5','CONTEXT_HISTORY','CONTEXT_HISTORY_DIARY','CONTEXT_HISTORY_DYNAMIC_PROFILE','QUEST_COMMENT','QUEST_COMMENT_CHANCE','BORED_EVENT','BORED_EVENT_SERVERSIDE','HERIKA_ANIMATIONS','LANG_LLM_XTTS'],
+                'allowedSettings' => ['TTSFUNCTION','RECHAT_H','RECHAT_P','RECHAT_ALLOW_ACTIONS','CORE_LANG','ENFORCE_ACTIONS_PROMPT','REMOVE_ASTERISKS_FROM_OUTPUT','MAX_WORDS_LIMIT','DIARY_PROMPT','DIARY_COOLDOWN','COMBAT_BARK_COOLDOWN','AUTO_DIARY_WAIT','OGHMA_INFINIUM','OGHMA_AMOUNT','MINIME_T5','CONTEXT_HISTORY','CONTEXT_HISTORY_DIARY','CONTEXT_HISTORY_DYNAMIC_PROFILE','QUEST_COMMENT','QUEST_COMMENT_CHANCE','BORED_EVENT','BORED_EVENT_SERVERSIDE','HERIKA_ANIMATIONS','LANG_LLM_XTTS'],
                 'reservedKeys' => $reservedKeys,
                 'currentData' => $currentOverrides,
                 'systemFields' => $systemFields,
@@ -1797,8 +1711,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 try {
                   const mtm = form.querySelector('#middle_term_enabled');
                   const ad = form.querySelector('#auto_diary_enabled');
-                  const adWait = form.querySelector('#auto_diary_wait_enabled');
-                  const sal = form.querySelector('#salutation_after_a_while');
                   const dyn = form.querySelector('#dynamic_profile');
                   if (form.extended_data){
                     let obj = {};
@@ -1821,26 +1733,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                         obj.auto_diary_enabled = ad.checked ? 1 : 0;
                       } else {
                         delete obj.auto_diary_enabled; // Remove to inherit from profile
-                      }
-                    }
-                    
-                    // Auto Diary Wait: only save if differs from profile default
-                    if (adWait) {
-                      const profileDefault = adWait.getAttribute('data-profile-default') === '1';
-                      if (adWait.checked !== profileDefault) {
-                        obj.auto_diary_wait_enabled = adWait.checked ? 1 : 0;
-                      } else {
-                        delete obj.auto_diary_wait_enabled; // Remove to inherit from profile
-                      }
-                    }
-                    
-                    // Salutation After A While: only save if differs from profile default
-                    if (sal) {
-                      const profileDefault = sal.getAttribute('data-profile-default') === '1';
-                      if (sal.checked !== profileDefault) {
-                        obj.salutation_after_a_while = sal.checked ? true : false;
-                      } else {
-                        delete obj.salutation_after_a_while; // Remove to inherit from profile
                       }
                     }
                     
@@ -1971,10 +1863,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-gender-icon.gender-nb { color:#ffd166; }
 .npc-dyn-icon { margin-left:6px; color:#65d46e; opacity:0.95; }
 .npc-mtm-icon { margin-left:6px; color:#9fb1ff; opacity:0.95; }
-.npc-ad-icon { margin-left:6px; color:#f4d03f; opacity:0.95; }
-.npc-sal-icon { margin-left:6px; color:#ffb347; opacity:0.95; }
-.npc-blc-icon { margin-left:6px; color:#8db4e2; opacity:0.95; }
-.npc-gps-icon { margin-left:6px; color:#ff6b6b; opacity:0.95; }
 .npc-divider { height:1px; background:#4a4a4a; margin:2px 0 6px; }
 .npc-fields { display:flex; flex-direction:column; gap:8px; }
 .npc-line { color:#e0e0e0; font-size:13px; line-height:1.35; }
@@ -2049,9 +1937,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_fav_top" <?= $favOnly?'checked':'' ?>> ⭐Favorites</label>
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_dyn_top" <?= $dynOnly?'checked':'' ?>> ♻️Dynamic profile</label>
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_mtm_top" <?= $mtmOnly?'checked':'' ?>> 📃Middle-term memory</label>
-        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_sal_top" <?= $salOnly?'checked':'' ?>> 👋Auto Salutations</label>
-        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_blc_top" <?= $blcOnly?'checked':'' ?>> 🎮Auto Actions</label>
-        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_gps_top" <?= $gpsOnly?'checked':'' ?>> 📍Hourly Tracking</label>
       </div>
     </div>
     <input id="npc_search" type="text" placeholder="Search..." value="<?= htmlspecialchars($q) ?>" />
@@ -2073,65 +1958,13 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Page <?= $page ?> / <?= $totalPages ?></span>
   <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Total <?= $totalRows ?></span>
   <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
+  <button id="rel_bulk_build_btn" type="button" class="btn-rel-build" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
   <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
 </div>
 <?php endif; ?>
 <div class="npc-grid">
     <?php foreach ($data as $row): ?>
-    <?php 
-    $pid = (string)($row['profile_id'] ?? ''); 
-    $profLabel = $profilesById[$pid] ?? ''; 
-    $oghmaVal = trim((string)($row['oghma_knowledge_tags'] ?? '')); 
-    $oghmaDisp = ($oghmaVal === '') ? 'none' : $oghmaVal; 
-    $tagsVal = trim((string)($row['tags'] ?? '')); 
-    $tagsDisp = ($tagsVal === '') ? 'none' : $tagsVal; 
-    $metaTmp = []; 
-    if (!empty($row['metadata'])) { 
-        $tmp = json_decode((string)$row['metadata'], true); 
-        if (is_array($tmp)) { $metaTmp = $tmp; } 
-    } 
-    $portraitRel = (string)($metaTmp['portrait'] ?? ''); 
-    $extTmp = []; 
-    if (!empty($row['extended_data'])) { 
-        $tmp2 = json_decode((string)$row['extended_data'], true); 
-        if (is_array($tmp2)) { $extTmp = $tmp2; } 
-    }
-    
-    // Check for inherited profile settings
-    $profileMeta = isset($profileMetaById[$pid]) ? $profileMetaById[$pid] : ['dyn'=>false,'mtm'=>false,'ad'=>false,'sal'=>false,'blc'=>false,'gps'=>false];
-    
-    // MTM: check extended_data override, otherwise inherit from profile
-    $mtmEnabled = $profileMeta['mtm']; // default to profile
-    if (array_key_exists('middle_term_enabled', $extTmp) && $extTmp['middle_term_enabled'] !== null && $extTmp['middle_term_enabled'] !== '') {
-        $mtmEnabled = !empty($extTmp['middle_term_enabled']);
-    }
-    
-    // Auto Diary: check extended_data override, otherwise inherit from profile
-    $adEnabled = $profileMeta['ad']; // default to profile
-    if (array_key_exists('auto_diary_enabled', $extTmp) && $extTmp['auto_diary_enabled'] !== null && $extTmp['auto_diary_enabled'] !== '') {
-        $adEnabled = !empty($extTmp['auto_diary_enabled']);
-    }
-    
-    // Salutation After A While: check extended_data override, otherwise inherit from profile
-    $salEnabled = $profileMeta['sal']; // default to profile
-    if (array_key_exists('salutation_after_a_while', $extTmp) && $extTmp['salutation_after_a_while'] !== null && $extTmp['salutation_after_a_while'] !== '') {
-        $salEnabled = !empty($extTmp['salutation_after_a_while']);
-    }
-    
-    // Background Life Commands: check extended_data override, otherwise inherit from profile
-    $blcEnabled = $profileMeta['blc']; // default to profile
-    if (array_key_exists('background_life_commands', $extTmp) && $extTmp['background_life_commands'] !== null && $extTmp['background_life_commands'] !== '') {
-        $blcEnabled = !empty($extTmp['background_life_commands']);
-    }
-    
-    // GPS Track: check metadata override, otherwise inherit from profile
-    $gpsEnabled = $profileMeta['gps']; // default to profile
-    if (array_key_exists('gps_track', $metaTmp) && $metaTmp['gps_track'] !== null && $metaTmp['gps_track'] !== '') {
-        $gpsEnabled = !empty($metaTmp['gps_track']);
-    }
-    
-    $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot,$row['refid'] ?? '', $row['md5'] ?? '', $row['npc_name'] ?? '', $portraitRel); 
-    ?>
+    <?php $pid = (string)($row['profile_id'] ?? ''); $profLabel = $profilesById[$pid] ?? ''; $oghmaVal = trim((string)($row['oghma_knowledge_tags'] ?? '')); $oghmaDisp = ($oghmaVal === '') ? 'none' : $oghmaVal; $tagsVal = trim((string)($row['tags'] ?? '')); $tagsDisp = ($tagsVal === '') ? 'none' : $tagsVal; $metaTmp = []; if (!empty($row['metadata'])) { $tmp = json_decode((string)$row['metadata'], true); if (is_array($tmp)) { $metaTmp = $tmp; } } $portraitRel = (string)($metaTmp['portrait'] ?? ''); $extTmp = []; if (!empty($row['extended_data'])) { $tmp2 = json_decode((string)$row['extended_data'], true); if (is_array($tmp2)) { $extTmp = $tmp2; } } $mtmEnabled = !empty($extTmp['middle_term_enabled']); $adEnabled = !empty($extTmp['auto_diary_enabled']); $raceIcon = race_icon_web_path($row['race'] ?? '', $webRoot,$row['refid'] ?? '', $row['md5'] ?? '', $row['npc_name'] ?? '', $portraitRel); ?>
     <div class="npc-card" id="npc_card_<?= htmlspecialchars($row["id"]) ?>" data-id="<?= htmlspecialchars($row["id"]) ?>">
             <div class="npc-title">
             <div class="npc-title-left"><?php 
@@ -2139,7 +1972,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 if (isset($metaTmp['stats']) && is_array($metaTmp['stats']) && isset($metaTmp['stats']['level'])) {
                     $levelDisp2 = ' ('.intval($metaTmp['stats']['level']).')';
                 }
-            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp2) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Salutation enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
+            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp2) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?></div>
             <div class="npc-title-actions">
                 <?php if ($tagsDisp !== ''): ?>
                 <span class="npc-tags-label">Tags:</span>
@@ -2275,7 +2108,90 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   </div>
 </div>
 
- 
+<!-- Build Relationships Modal -->
+<div id="rel_build_modal" class="modal-backdrop" style="z-index:10003; display:none;">
+  <div class="modal-container rel-build-modal-container" style="max-width:500px;">
+    <div class="modal-header" style="border-bottom:1px solid rgb(242, 124, 17); text-align:center; justify-content:center;">
+      <h2 class="modal-title" style="color:rgb(242, 124, 17); margin:0; width:100%; text-align:center;">🔗 Build Relationships</h2>
+    </div>
+    <div class="modal-body" style="padding:24px; text-align:center;">
+      <div id="rel_build_content">
+        <!-- Info Box -->
+        <div style="background:#2a2a3a; border:1px solid #5a5a6a; border-radius:8px; padding:12px; margin-bottom:16px; text-align:left;">
+          <div style="color:#9fb1c9; font-size:0.85em; line-height:1.4;">
+            💡 Building runs in the background while you play. You can adjust any NPC individually by clicking their profile and editing <strong>Relationship Affinities</strong>.
+          </div>
+        </div>
+
+        <!-- Model Info -->
+        <div style="background:#1a1a2a; border:1px solid #4a4a4a; border-radius:8px; padding:16px; margin-bottom:20px;">
+          <div style="color:#9fb1c9; font-size:0.9em; margin-bottom:4px;">Relationship Model</div>
+          <div id="rel_build_model" style="color:rgb(242, 124, 17); font-size:1.1em; font-weight:bold;">Loading...</div>
+        </div>
+
+        <!-- NPC Counts -->
+        <div style="display:flex; gap:16px; justify-content:center; margin-bottom:20px;">
+          <div style="background:#1e3f1e; border:1px solid #2d5a2d; border-radius:8px; padding:16px; min-width:120px;">
+            <div style="color:#4ade80; font-size:2em; font-weight:bold;" id="rel_count_built">--</div>
+            <div style="color:#9fb1c9; font-size:0.85em;">Already Built</div>
+          </div>
+          <div style="background:#3f2f1e; border:1px solid #5a4a2d; border-radius:8px; padding:16px; min-width:120px;">
+            <div style="color:rgb(242, 124, 17); font-size:2em; font-weight:bold;" id="rel_count_pending">--</div>
+            <div style="color:#9fb1c9; font-size:0.85em;">Need Building</div>
+          </div>
+        </div>
+
+        <!-- Options -->
+        <div style="text-align:left; background:#2a2a3a; border-radius:8px; padding:16px; margin-bottom:20px;">
+          <label style="display:flex; align-items:flex-start; gap:10px; color:#cfd9ea; margin-bottom:12px; cursor:pointer;">
+            <input type="checkbox" id="rel_build_force" style="width:16px; height:16px; min-width:16px; min-height:16px; accent-color:rgb(242, 124, 17); margin-top:2px;">
+            <span>Include NPCs that were already built</span>
+          </label>
+          <label style="display:flex; align-items:flex-start; gap:10px; color:#cfd9ea; cursor:pointer;">
+            <input type="checkbox" id="rel_build_infer" checked style="width:16px; height:16px; min-width:16px; min-height:16px; accent-color:rgb(242, 124, 17); margin-top:2px;">
+            <div>
+              <span>Build advanced relationship connections</span>
+              <div style="font-size:0.75em; color:#7a8a9a; margin-top:4px; line-height:1.4;">
+                Creates indirect opinions based on social networks.<br>
+                <em>Example: If Eris loves Vivienne (+80) and Vivienne hates a bandit (-70), Eris becomes wary of that bandit too.</em>
+              </div>
+            </div>
+          </label>
+        </div>
+
+        <!-- Buttons -->
+        <div style="display:flex; gap:12px; justify-content:center;">
+          <button id="rel_build_start" style="background:#1e3f1e; color:#fff; border:none; padding:12px 32px; border-radius:8px; font-size:1.1em; font-weight:bold; cursor:pointer; transition:background 0.2s;">
+            Start Building
+          </button>
+          <button id="rel_build_close" style="background:#7a1e1e; color:#fff; border:none; padding:12px 32px; border-radius:8px; font-size:1.1em; font-weight:bold; cursor:pointer; transition:background 0.2s;">
+            Cancel
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress View -->
+      <div id="rel_build_progress" style="display:none;">
+        <div style="margin-bottom:20px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span id="rel_build_status" style="color:rgb(242, 124, 17); font-weight:bold;">Processing...</span>
+            <span id="rel_build_count" style="color:#9fb1c9;">0 / 0</span>
+          </div>
+          <div style="background:#1a1a2a; border-radius:8px; height:28px; overflow:hidden; border:1px solid #4a4a4a;">
+            <div id="rel_build_bar" style="background:linear-gradient(90deg, rgb(242, 124, 17), #f59e0b); height:100%; width:0%; transition:width 0.3s;"></div>
+          </div>
+        </div>
+        <div id="rel_build_log" style="background:#1a1a2a; border:1px solid #4a4a4a; border-radius:8px; padding:12px; height:200px; overflow-y:auto; font-family:monospace; font-size:12px; color:#9fb1c9; text-align:left;">
+        </div>
+        <div style="margin-top:16px;">
+          <button id="rel_build_done" style="display:none; background:#3a3a4a; color:rgb(242, 124, 17); border:1px solid rgb(242, 124, 17); padding:12px 32px; border-radius:8px; font-size:1.1em; font-weight:bold; cursor:pointer;">
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -2418,66 +2334,27 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         const nameEl = doc ? doc.getElementById('npc_name') : null;
         const npcName = nameEl ? String(nameEl.value||'').trim() : '';
         
-        if (!npcName) { alert('Enter NPC Name to generate profile.'); return; }
+        document.getElementById("npc_modal").style.cursor="wait"
         
-        // Show prompt dialog for user to add custom instructions
-        const promptBox = document.createElement('div');
-        promptBox.style.position='fixed';
-        promptBox.style.inset='0';
-        promptBox.style.zIndex='10050';
-        promptBox.style.display='flex';
-        promptBox.style.alignItems='center';
-        promptBox.style.justifyContent='center';
-        promptBox.style.background='rgba(0,0,0,0.65)';
-        promptBox.innerHTML = '<div style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:16px; max-width:600px; width:92%; color:#e9efff;">\
-          <div style="font-weight:700; color:rgb(242,124,17); margin-bottom:8px; font-size:18px;">AI Generate Profile for "' + npcName.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) + '"</div>\
-          <div style="font-size:13px; color:#cfd9ea; margin-bottom:12px;">Add any specific information or instructions for the AI to consider when generating this profile. Leave blank to use default generation.</div>\
-          <label style="display:block; font-size:13px; margin:6px 0 4px; color:#cfd9ea; font-weight:600;">Custom Instructions (optional):</label>\
-          <textarea id="ai_user_prompt" placeholder="Example: This NPC should be a merchant specializing in enchanted weapons, with a mysterious past..." style="width:100%; min-height:120px; padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; resize:vertical; font-family:inherit;"></textarea>\
-          <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">\
-            <button id="ai_prompt_cancel" class="btn-cancel">Cancel</button>\
-            <button id="ai_prompt_ok" class="btn-save">Generate Profile</button>\
-          </div></div>';
-        document.body.appendChild(promptBox);
-        
-        const promptInput = promptBox.querySelector('#ai_user_prompt');
-        const okBtn = promptBox.querySelector('#ai_prompt_ok');
-        const cancelBtn = promptBox.querySelector('#ai_prompt_cancel');
-        
-        promptInput.focus();
-        
-        cancelBtn.addEventListener('click', function(){
-          document.body.removeChild(promptBox);
-        });
-        
-        okBtn.addEventListener('click', async function(){
-          const userPrompt = String(promptInput.value||'').trim();
-          document.body.removeChild(promptBox);
-          
-          document.getElementById("npc_modal").style.cursor="wait";
-          
-          const processingMessage = document.createElement('div');
-          processingMessage.textContent = 'Processing...';
-          processingMessage.style.position = 'fixed';
-          processingMessage.style.top = '50%';
-          processingMessage.style.left = '50%';
-          processingMessage.style.transform = 'translate(-50%, -50%)';
-          processingMessage.style.backgroundColor = '#000';
-          processingMessage.style.color = '#fff';
-          processingMessage.style.padding = '10px 20px';
-          processingMessage.style.borderRadius = '8px';
-          processingMessage.style.zIndex = '10001';
-          processingMessage.id="processing_wheel";
-          document.body.appendChild(processingMessage);
+        processingMessage = document.createElement('div');
+        processingMessage.textContent = 'Processing...';
+        processingMessage.style.position = 'fixed';
+        processingMessage.style.top = '50%';
+        processingMessage.style.left = '50%';
+        processingMessage.style.transform = 'translate(-50%, -50%)';
+        processingMessage.style.backgroundColor = '#000';
+        processingMessage.style.color = '#fff';
+        processingMessage.style.padding = '10px 20px';
+        processingMessage.style.borderRadius = '8px';
+        processingMessage.style.zIndex = '10001';
+        processingMessage.id="processing_wheel"
+        document.body.appendChild(processingMessage);
 
-          const params = new URLSearchParams({ name: npcName });
-          if (userPrompt) params.append('user_prompt', userPrompt);
-          
-          const res = await fetch('../cmd/action_ai_regen_profile.php?' + params.toString());
-          let j={}; try { j = await res.json(); } catch(_e) { j={ok:false}; }
-          
-          document.location.reload();
-        });
+        const res = await fetch('../cmd/action_ai_regen_profile.php?name='+encodeURIComponent(npcName));
+        let j={}; try { j = await res.json(); } catch(_e) { j={ok:false}; }
+        
+        document.location.reload()
+        
 
       } catch(_e){console.log(_e)}
     });
@@ -2652,7 +2529,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       (j.items||[]).forEach(it=>{
         const div = document.createElement('div');
         div.style.border = '1px solid #4a4a4a'; div.style.borderRadius='8px'; div.style.padding='8px'; div.style.cursor='pointer';
-        div.innerHTML = `<div style="font-weight:700; color:#e9efff">${escapeHtml(it.npc_name)}</div>
+        div.innerHTML = `<div style="font-weight:700; color:#e9efff">${it.npc_name}</div>
           <div style="color:#9fb1c9; font-size:12px; margin:4px 0">${it.core_preview||''}</div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; font-size:12px; color:#cfd9ea;">
             ${it.voiceid?('<span>Voice: '+it.voiceid+'</span>'):''}
@@ -2682,7 +2559,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       if (!j.ok){ detail.innerHTML = '<div style="color:#ff6b6b">Failed to load detail</div>'; return; }
       const d = j.data||{};
       detail.innerHTML = `
-        <div style="font-size:18px; font-weight:700; color:#e9efff;">${escapeHtml(d.npc_name||'')}</div>
+        <div style="font-size:18px; font-weight:700; color:#e9efff;">${d.npc_name||''}</div>
         <div style="margin-top:8px; color:#cfd9ea;"><b style="color:rgb(242,124,17)">Core:</b><br>${escapeHtml(d.core||'')}</div>
         <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:10px; margin-top:8px;">
           ${kv('Static', d.npc_static_bio)}
@@ -2705,7 +2582,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     }
     function kv(title, val){ const v=(val||'').trim(); return `<div><div style="color:rgb(242,124,17); font-weight:700;">${title}</div><div style="white-space:pre-wrap;">${escapeHtml(v||'—')}</div></div>`; }
     function badge(k, v){ v=(v||'').trim(); if (!v) return ''; return `<span style="background:#3a3a3a; border:1px solid #4a4a4a; border-radius:999px; padding:3px 8px;">${k}: ${escapeHtml(v)}</span>`; }
-    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function escapeHtml(s){ return String(s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
     let deb = null; function refetch(){ if (deb) clearTimeout(deb); deb=setTimeout(()=>{ page=1; fetchList(); }, 250); }
     if (inp) inp.addEventListener('input', refetch);
     if (letter) letter.addEventListener('change', refetch);
@@ -2890,15 +2767,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       const fav = (document.getElementById('npc_filter_fav_top')||document.getElementById('npc_filter_fav'));
       const dyn = (document.getElementById('npc_filter_dyn_top')||document.getElementById('npc_filter_dyn'));
       const mtm = (document.getElementById('npc_filter_mtm_top')||document.getElementById('npc_filter_mtm'));
-      const sal = (document.getElementById('npc_filter_sal_top')||document.getElementById('npc_filter_sal'));
-      const blc = (document.getElementById('npc_filter_blc_top')||document.getElementById('npc_filter_blc'));
-      const gps = (document.getElementById('npc_filter_gps_top')||document.getElementById('npc_filter_gps'));
       params.set('fav', fav && fav.checked ? '1' : '');
       params.set('dyn', dyn && dyn.checked ? '1' : '');
       params.set('mtm', mtm && mtm.checked ? '1' : '');
-      params.set('sal', sal && sal.checked ? '1' : '');
-      params.set('blc', blc && blc.checked ? '1' : '');
-      params.set('gps', gps && gps.checked ? '1' : '');
     } catch(_e){}
     params.set('alpha', 'asc');
     if (page) params.set('page', String(page));
@@ -2958,6 +2829,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       if (newCreate){ newCreate.addEventListener('click', function(){ openModal('npc_master.php?partial=1'); }); }
       // rebind bulk delete in refreshed DOM
       try { if (window.bindNpcBulkDelete) window.bindNpcBulkDelete(document.getElementById('npc_bulk_delete_btn')); } catch(_){}
+      // rebind Build Relationships button in refreshed DOM
+      try { if (window.bindRelBuildButton) window.bindRelBuildButton(document.getElementById('rel_bulk_build_btn')); } catch(_){}
       // Hook pagination links to AJAX
       // Bind pick-picture buttons after refresh
       document.querySelectorAll('[data-pick-picture-id]').forEach(btn=>{
@@ -3133,19 +3006,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             else { if (icon){ icon.remove(); } }
           }
         } catch(_e){}
-        // Toggle Salutation After A While icon (👋) based on extended_data.salutation_after_a_while
-        try {
-          const sal = (function(){
-            const raw = String(data.extended_data||'').trim(); if (!raw) return 0;
-            try { const o = JSON.parse(raw); return (o && Number(o.salutation_after_a_while||0)===1) ? 1 : 0; } catch(_e){ return 0; }
-          })();
-          const left = card.querySelector('.npc-title-left');
-          if (left){
-            let icon = left.querySelector('.npc-sal-icon');
-            if (sal){ if (!icon){ icon = document.createElement('span'); icon.className='npc-sal-icon'; icon.title='Auto Salutation enabled'; icon.textContent='👋'; left.appendChild(icon); } }
-            else { if (icon){ icon.remove(); } }
-          }
-        } catch(_e){}
         // Fetch and render race icon into the right container
         try {
           const race = (data.race||'');
@@ -3164,7 +3024,191 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   });
 })();
 
+// Build Relationships Modal functionality
+(function(){
+  async function loadModalStats(){
+    // Load model info and NPC counts
+    try {
+      const res = await fetch('../../ext/relationship_system/batch_build.php?action=stats');
+      const data = await res.json();
+      if (data.ok){
+        document.getElementById('rel_build_model').textContent = data.model || 'Not configured';
+        document.getElementById('rel_count_built').textContent = data.built || 0;
+        document.getElementById('rel_count_pending').textContent = data.pending || 0;
+      }
+    } catch(e){
+      document.getElementById('rel_build_model').textContent = 'Error loading';
+    }
+  }
 
+  function bindRelBuildButton(btn){
+    if (!btn) return;
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      const modal = document.getElementById('rel_build_modal');
+      if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        // Reset state
+        document.getElementById('rel_build_content').style.display = 'block';
+        document.getElementById('rel_build_progress').style.display = 'none';
+        document.getElementById('rel_build_log').innerHTML = '';
+        document.getElementById('rel_build_bar').style.width = '0%';
+        document.getElementById('rel_build_count').textContent = '0 / 0';
+        document.getElementById('rel_build_status').textContent = 'Ready';
+        const doneBtn = document.getElementById('rel_build_done');
+        if (doneBtn) doneBtn.style.display = 'none';
+        // Load stats
+        loadModalStats();
+      }
+    });
+  }
+
+  // Bind both buttons (AJAX partial and main page)
+  bindRelBuildButton(document.getElementById('rel_bulk_build_btn'));
+
+  // Make it available for rebinding after AJAX refresh
+  window.bindRelBuildButton = bindRelBuildButton;
+
+  // Close button
+  const closeBtn = document.getElementById('rel_build_close');
+  if (closeBtn){
+    closeBtn.addEventListener('click', function(){
+      const modal = document.getElementById('rel_build_modal');
+      if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+      }
+    });
+  }
+
+  // Start button
+  const startBtn = document.getElementById('rel_build_start');
+  if (startBtn){
+    startBtn.addEventListener('click', async function(){
+      const force = document.getElementById('rel_build_force').checked ? 1 : 0;
+      const infer = document.getElementById('rel_build_infer').checked ? 1 : 0;
+
+      // Show progress
+      document.getElementById('rel_build_content').style.display = 'none';
+      document.getElementById('rel_build_progress').style.display = 'block';
+
+      const logEl = document.getElementById('rel_build_log');
+      const barEl = document.getElementById('rel_build_bar');
+      const countEl = document.getElementById('rel_build_count');
+      const statusEl = document.getElementById('rel_build_status');
+
+      function log(msg, type){
+        const line = document.createElement('div');
+        line.textContent = msg;
+        if (type === 'error') line.style.color = '#ff6b6b';
+        else if (type === 'success') line.style.color = '#69db7c';
+        else if (type === 'info') line.style.color = 'rgb(242, 124, 17)';
+        logEl.appendChild(line);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      try {
+        log('Starting relationship build...', 'info');
+        statusEl.textContent = 'Fetching NPC list...';
+
+        // Fetch list of NPCs to process
+        const listRes = await fetch('../../ext/relationship_system/batch_build.php?action=list&force=' + force);
+        const listData = await listRes.json();
+
+        if (!listData.ok){
+          log('Error: ' + (listData.error || 'Failed to get NPC list'), 'error');
+          statusEl.textContent = 'Failed';
+          return;
+        }
+
+        const npcs = listData.npcs || [];
+        const total = npcs.length;
+
+        if (total === 0){
+          log('No NPCs need processing.', 'info');
+          statusEl.textContent = 'Complete';
+          barEl.style.width = '100%';
+          return;
+        }
+
+        log('Found ' + total + ' NPCs to process.', 'info');
+        countEl.textContent = '0 / ' + total;
+
+        let processed = 0;
+        let success = 0;
+        let failed = 0;
+
+        // Process each NPC
+        for (const npc of npcs){
+          statusEl.textContent = 'Processing: ' + npc.name;
+
+          try {
+            const res = await fetch('../../ext/relationship_system/batch_build.php?action=process&id=' + npc.id + '&force=' + force);
+            const data = await res.json();
+
+            if (data.ok){
+              success++;
+              log('✓ ' + npc.name + ': ' + (data.count || 0) + ' relationships', 'success');
+            } else {
+              failed++;
+              log('✗ ' + npc.name + ': ' + (data.error || 'Failed'), 'error');
+            }
+          } catch(e){
+            failed++;
+            log('✗ ' + npc.name + ': Network error', 'error');
+          }
+
+          processed++;
+          countEl.textContent = processed + ' / ' + total;
+          barEl.style.width = Math.round((processed / total) * 100) + '%';
+        }
+
+        // Run inference if requested
+        if (infer && success > 0){
+          statusEl.textContent = 'Running transitive inference...';
+          log('Running transitive inference...', 'info');
+
+          try {
+            const infRes = await fetch('../../ext/relationship_system/batch_build.php?action=infer');
+            const infData = await infRes.json();
+            if (infData.ok){
+              log('✓ Inference complete: ' + (infData.count || 0) + ' relationships updated', 'success');
+            }
+          } catch(e){
+            log('Inference skipped due to error', 'error');
+          }
+        }
+
+        statusEl.textContent = 'Complete';
+        log('Done! ' + success + ' succeeded, ' + failed + ' failed.', 'info');
+
+        // Show Done button
+        const doneBtn = document.getElementById('rel_build_done');
+        if (doneBtn) doneBtn.style.display = 'inline-block';
+
+      } catch(e){
+        log('Error: ' + e.message, 'error');
+        statusEl.textContent = 'Failed';
+        // Show Done button even on error
+        const doneBtn = document.getElementById('rel_build_done');
+        if (doneBtn) doneBtn.style.display = 'inline-block';
+      }
+    });
+  }
+
+  // Done button handler
+  const doneBtn = document.getElementById('rel_build_done');
+  if (doneBtn){
+    doneBtn.addEventListener('click', function(){
+      const modal = document.getElementById('rel_build_modal');
+      if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+      }
+    });
+  }
+})();
 
 </script>
 

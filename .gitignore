@@ -4,6 +4,7 @@
 !/ext/time_awareness
 !/ext/xLifeLink_plugin
 !/ext/generic_installer.php
+!/ext/relationship_system
 /log
 /soundcache
 data/CurrentModel_*.json
