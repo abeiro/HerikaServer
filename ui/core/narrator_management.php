@@ -165,7 +165,7 @@ if (!$isEmbed) {
         padding-bottom: 40px;
         padding-left: 5%;
         padding-right: 5%;
-        width: 100%;
+        /*width: 100%;*/
         margin: 0;
         display: flex;
         justify-content: center;
