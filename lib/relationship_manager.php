@@ -183,6 +183,49 @@ class RelationshipManager {
     }
 
     /**
+     * Get tier reference prompt from database (custom or default)
+     * This is injected into NPC context to help the conversation model
+     * understand how to adjust behavior based on relationship tiers.
+     */
+    public static function getTierReferencePrompt() {
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        // Default fallback if database unavailable
+        $default = "[TIER REFERENCE - Adjust behavior toward NPCs based on tier]\n" .
+            "HOSTILE: Wants them dead, attack on sight\n" .
+            "HATEFUL: Despises, refuses cooperation, threatens\n" .
+            "RESENTFUL: Deep grudge, bitter, may sabotage\n" .
+            "COLD: Dismissive, unhelpful, curt\n" .
+            "WARY: Suspicious, guarded, reluctant\n" .
+            "NEUTRAL: Polite stranger, no special treatment\n" .
+            "ACQUAINTANCE: Recognizes, mildly helpful\n" .
+            "FRIENDLY: Pleasant, helpful, enjoys company\n" .
+            "FOND: Warm, protective, prioritizes them\n" .
+            "DEVOTED: Deep loyalty, would sacrifice\n" .
+            "BONDED: Absolute trust, would die for them";
+
+        try {
+            // Query the prompts table for custom or default tier reference
+            $row = $GLOBALS["db"]->fetchOne(
+                "SELECT COALESCE(custom_prompt, default_prompt) as prompt " .
+                "FROM prompts WHERE prompt_key = 'rel_tier_reference'"
+            );
+            if ($row && !empty($row['prompt'])) {
+                $cached = $row['prompt'];
+                return $cached;
+            }
+        } catch (Exception $e) {
+            error_log("[REL] Failed to load tier reference prompt: " . $e->getMessage());
+        }
+
+        $cached = $default;
+        return $cached;
+    }
+
+    /**
      * Get emoji for tier
      */
     public static function getTierEmoji($tier) {
@@ -289,15 +332,14 @@ class RelationshipManager {
 
         // Add behavioral instructions so the conversation model knows how to use these tiers
         if ($tierOnly) {
-            $lines[] = "[RELATIONSHIPS - Adjust your behavior based on these tiers]";
-            $lines[] = "HOSTILE/HATEFUL: Attack on sight, refuse all cooperation, openly threaten";
-            $lines[] = "RESENTFUL/COLD: Dismissive, unhelpful, curt replies, refuse requests";
-            $lines[] = "WARY: Suspicious, guarded, reluctant to share info or help";
-            $lines[] = "NEUTRAL: Polite but distant stranger, no special treatment";
-            $lines[] = "ACQUAINTANCE/FRIENDLY: Helpful, pleasant, willing to assist";
-            $lines[] = "FOND/DEVOTED: Warm, protective, prioritize their wellbeing, go out of your way";
-            $lines[] = "BONDED: Unbreakable loyalty, would die for them, confide everything";
+            // Get tier reference prompt from database (custom or default)
+            $tierPrompt = self::getTierReferencePrompt();
+            $tierLines = explode("\n", $tierPrompt);
+            foreach ($tierLines as $tierLine) {
+                $lines[] = trim($tierLine);
+            }
             $lines[] = "";
+            $lines[] = "[CURRENT RELATIONSHIPS]";
         } else {
             $lines[] = "[RELATIONSHIPS]";
         }
