@@ -8,6 +8,7 @@ require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/api_badge.class.php");
 require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/llm_connector.class.php");
 require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/npc_master.class.php");
 require_once($GLOBALS["ENGINE_ROOT"] . "/lib/core/core_profiles.class.php");
+require_once($GLOBALS["ENGINE_ROOT"] . "/lib/relationship_manager.php");
 
 $GLOBALS["ENGINE_PATH"]=$GLOBALS["ENGINE_ROOT"]; // Todo, make this uniform
 
@@ -60,8 +61,18 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
 
         }
 
-        
-        // Function stuff      
+        // Inject relationship context for director awareness
+        // Get nearby NPCs from DataBeingsInCloseRange (same source as DataLastInfoFor uses)
+        $nearbyNpcsRaw = DataBeingsInCloseRange();
+        $nearbyNpcsList = array_filter(array_map('trim', explode('|', $nearbyNpcsRaw)));
+
+        // Build relationship context for these NPCs
+        $relContext = RelationshipManager::buildDirectorContext($nearbyNpcsList);
+        if (!empty($relContext)) {
+            $historyData .= "\n" . $relContext . "\n";
+        }
+
+        // Function stuff
         require($enginePath . "functions/functions_instruction.php");
 
         $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
@@ -234,7 +245,7 @@ user request: actor \"a\" leaves the place
             
             $characterName = trim($response["character"] ?? 'Unknown');
             $instructionText = trim($response["instruction"] ?? 'No instruction text');
-            $action = $response["action"]?"{$response["action"]} {$response["target"]}":"";
+            $action = !empty($response["action"]) ? "{$response["action"]} " . ($response["target"] ?? "") : "";
         
             if (!$characterName || !$instructionText) {
                 return false;
