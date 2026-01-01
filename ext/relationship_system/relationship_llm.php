@@ -30,6 +30,35 @@ class RelationshipLLM {
     }
 
     /**
+     * Safely decode JSON with proper error handling
+     * CRITICAL: Prevents data loss if extended_data is corrupted
+     *
+     * If JSON decode fails, logs the error and returns null (NOT empty array).
+     * Callers must check for null before proceeding with writes.
+     *
+     * @param string|null $json The JSON string to decode
+     * @param string $context Description for error logging
+     * @return array|null Decoded array, or null if decode failed
+     */
+    private function safeJsonDecode($json, $context = 'unknown') {
+        if ($json === null || $json === '') {
+            return []; // Empty/null is valid - start fresh
+        }
+
+        $decoded = json_decode($json, true);
+
+        if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+            // JSON was present but corrupted - DO NOT return empty array!
+            $error = json_last_error_msg();
+            error_log("[REL-LLM] CRITICAL: JSON decode failed for {$context}: {$error}");
+            error_log("[REL-LLM] Corrupted JSON (first 200 chars): " . substr($json, 0, 200));
+            return null; // Return null to signal failure - caller must abort write
+        }
+
+        return $decoded ?: [];
+    }
+
+    /**
      * Acquire advisory lock for NPC relationship updates
      * Prevents race conditions when multiple requests update the same NPC
      *
@@ -169,7 +198,10 @@ class RelationshipLLM {
         }
 
         // Check if already has JSONB relationships
-        $extended = json_decode($npc['extended_data'] ?? '{}', true) ?: [];
+        $extended = $this->safeJsonDecode($npc['extended_data'] ?? null, "analyzeNpc:{$npc['npc_name']}");
+        if ($extended === null) {
+            return ['ok' => false, 'error' => 'Corrupted extended_data - refusing to overwrite'];
+        }
         if (!empty($extended['relationships']) && !$forceReanalyze) {
             return ['ok' => true, 'skipped' => true, 'reason' => 'Already has relationships'];
         }
@@ -397,7 +429,14 @@ PROMPT;
                 return false;
             }
 
-            $extended = json_decode($npc['extended_data'] ?? '{}', true) ?: [];
+            $extended = $this->safeJsonDecode($npc['extended_data'] ?? null, "saveRelationships:{$npc['npc_name']}");
+            if ($extended === null) {
+                // CRITICAL: Corrupted data - abort to prevent data loss
+                error_log("[REL-LLM] ABORT: saveRelationships for {$npc['npc_name']} - corrupted extended_data");
+                $this->releaseNpcLock($npcId);
+                return false;
+            }
+
             $extended['relationships'] = $relationships;
             $extended['relationships_analyzed'] = date('Y-m-d H:i:s');
             $extended['relationships_model'] = $this->modelName;
@@ -437,7 +476,15 @@ PROMPT;
 
         foreach ($npcs as $npc) {
             // Check if already processed
-            $extended = json_decode($npc['extended_data'] ?? '{}', true) ?: [];
+            $extended = $this->safeJsonDecode($npc['extended_data'] ?? null, "batchAnalyze:{$npc['npc_name']}");
+            if ($extended === null) {
+                $results['errors']++;
+                $results['details'][] = [
+                    'npc' => $npc['npc_name'],
+                    'error' => 'Corrupted extended_data'
+                ];
+                continue;
+            }
             if (!empty($extended['relationships']) && !$forceReanalyze) {
                 $results['skipped']++;
                 continue;
@@ -480,7 +527,10 @@ PROMPT;
 
         if (!$npc) return ['ok' => false, 'error' => 'NPC not found'];
 
-        $extended = json_decode($npc['extended_data'] ?? '{}', true) ?: [];
+        $extended = $this->safeJsonDecode($npc['extended_data'] ?? null, "inferTransitive:{$npc['npc_name']}");
+        if ($extended === null) {
+            return ['ok' => false, 'error' => 'Corrupted extended_data'];
+        }
         $myRels = $extended['relationships'] ?? [];
 
         if (empty($myRels)) {
@@ -504,7 +554,8 @@ PROMPT;
 
             if (!$targetNpc) continue;
 
-            $targetExtended = json_decode($targetNpc['extended_data'] ?? '{}', true) ?: [];
+            $targetExtended = $this->safeJsonDecode($targetNpc['extended_data'] ?? null, "inferTransitive:target:{$targetName}");
+            if ($targetExtended === null) continue; // Skip corrupted target, don't abort
             $targetRels = $targetExtended['relationships'] ?? [];
 
             // Check target's relationships
@@ -542,7 +593,13 @@ PROMPT;
             try {
                 // Re-fetch to get latest state after acquiring lock
                 $npc = $npcMaster->getById($npcId);
-                $extended = json_decode($npc['extended_data'] ?? '{}', true) ?: [];
+                $extended = $this->safeJsonDecode($npc['extended_data'] ?? null, "inferTransitive:save:{$npc['npc_name']}");
+                if ($extended === null) {
+                    // CRITICAL: Corrupted data - abort to prevent data loss
+                    error_log("[REL-LLM] ABORT: inferTransitive save for {$npc['npc_name']} - corrupted extended_data");
+                    $this->releaseNpcLock($npcId);
+                    return ['ok' => false, 'error' => 'Corrupted extended_data during save'];
+                }
                 $myRels = $extended['relationships'] ?? [];
 
                 // Merge with existing (don't overwrite explicit relationships)
@@ -606,7 +663,10 @@ PROMPT;
         $npcName = $npc['npc_name'];
 
         // Get current relationships
-        $extended = json_decode($npc['extended_data'] ?? '{}', true) ?: [];
+        $extended = $this->safeJsonDecode($npc['extended_data'] ?? null, "evaluateContext:{$npcName}");
+        if ($extended === null) {
+            return ['ok' => false, 'error' => 'Corrupted extended_data'];
+        }
         $currentRels = $extended['relationships'] ?? [];
 
         // Build context string
@@ -791,8 +851,19 @@ PROMPT;
         $listenerName = $listener['npc_name'];
 
         // Get current relationships for both NPCs
-        $speakerExtended = json_decode($speaker['extended_data'] ?? '{}', true) ?: [];
-        $listenerExtended = json_decode($listener['extended_data'] ?? '{}', true) ?: [];
+        $speakerExtended = $this->safeJsonDecode($speaker['extended_data'] ?? null, "npc2npc:speaker:{$speakerName}");
+        $listenerExtended = $this->safeJsonDecode($listener['extended_data'] ?? null, "npc2npc:listener:{$listenerName}");
+
+        // If either is corrupted, skip them but don't abort completely
+        if ($speakerExtended === null) {
+            error_log("[REL-LLM] Skipping speaker {$speakerName} - corrupted extended_data");
+            $speakerExtended = [];
+        }
+        if ($listenerExtended === null) {
+            error_log("[REL-LLM] Skipping listener {$listenerName} - corrupted extended_data");
+            $listenerExtended = [];
+        }
+
         $speakerRels = $speakerExtended['relationships'] ?? [];
         $listenerRels = $listenerExtended['relationships'] ?? [];
 
@@ -1194,7 +1265,13 @@ PROMPT;
             try {
                 // Re-fetch to get latest state after acquiring lock
                 $npc = $npcMaster->getById($npcId);
-                $extended = json_decode($npc['extended_data'] ?? '{}', true) ?: [];
+                $extended = $this->safeJsonDecode($npc['extended_data'] ?? null, "applyChanges:{$npc['npc_name']}");
+                if ($extended === null) {
+                    // CRITICAL: Corrupted data - abort to prevent data loss
+                    error_log("[REL-LLM] ABORT: applyChanges for {$npc['npc_name']} - corrupted extended_data");
+                    $this->releaseNpcLock($npcId);
+                    return []; // Return empty - changes not saved
+                }
 
                 // Merge our changes with latest state
                 $existingRels = $extended['relationships'] ?? [];

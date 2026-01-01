@@ -95,13 +95,15 @@ function _relProcessQueue($limit = 5) {
         return ['processed' => 0, 'error' => 'no database'];
     }
 
-    $results = ['processed' => 0, 'errors' => []];
+    $results = ['processed' => 0, 'errors' => [], 'retried' => 0, 'abandoned' => 0];
 
     try {
-        // Get pending evaluations (oldest first)
+        // Get pending evaluations (oldest first, prioritize items with fewer retries)
         $rows = $GLOBALS['db']->fetchAll(
-            "SELECT id, npc_id, eval_data FROM relationship_eval_queue
-             ORDER BY created_at ASC LIMIT {$limit}"
+            "SELECT id, npc_id, eval_data, COALESCE(retry_count, 0) as retry_count
+             FROM relationship_eval_queue
+             ORDER BY COALESCE(retry_count, 0) ASC, created_at ASC
+             LIMIT {$limit}"
         );
 
         if (empty($rows)) {
@@ -116,15 +118,19 @@ function _relProcessQueue($limit = 5) {
             return ['processed' => 0, 'error' => 'LLM not available'];
         }
 
-        $processedIds = [];
+        $successIds = [];      // Fully processed - delete
+        $retryIds = [];        // Failed but will retry - increment retry_count
+        $abandonIds = [];      // Exceeded max retries - delete with warning
 
         // Track which NPCs we've already lazy-initialized this session
         static $lazyInitChecked = [];
 
         foreach ($rows as $row) {
             $data = json_decode($row['eval_data'], true);
+            $retryCount = intval($row['retry_count']);
+
             if (!$data) {
-                $processedIds[] = $row['id'];
+                $successIds[] = $row['id']; // Invalid data, just delete
                 continue;
             }
 
@@ -192,20 +198,54 @@ function _relProcessQueue($limit = 5) {
                     }
                 }
 
-                $processedIds[] = $row['id'];
+                // Success! Delete from queue
+                $successIds[] = $row['id'];
                 $results['processed']++;
 
             } catch (Exception $e) {
-                $results['errors'][] = "NPC {$data['npc_id']}: " . $e->getMessage();
-                // Still mark as processed to avoid infinite retry
-                $processedIds[] = $row['id'];
+                $errorMsg = $e->getMessage();
+                $results['errors'][] = "NPC {$data['npc_id']}: " . $errorMsg;
+
+                // RETRY LOGIC: Don't delete on first error!
+                // Only delete after REL_QUEUE_MAX_RETRIES attempts
+                $maxRetries = defined('REL_QUEUE_MAX_RETRIES') ? REL_QUEUE_MAX_RETRIES : 3;
+
+                if ($retryCount >= $maxRetries) {
+                    // Exceeded max retries - log critical event and abandon
+                    error_log("[REL-ASYNC] ABANDONED after {$retryCount} retries: NPC {$data['npc_name']} - {$errorMsg}");
+                    $abandonIds[] = $row['id'];
+                    $results['abandoned']++;
+                } else {
+                    // Increment retry count for next attempt
+                    $retryIds[] = ['id' => $row['id'], 'error' => substr($errorMsg, 0, 500)];
+                    $results['retried']++;
+                    error_log("[REL-ASYNC] Retry {$retryCount}/" . $maxRetries . " for NPC {$data['npc_name']}: {$errorMsg}");
+                }
             }
         }
 
-        // Delete processed entries
-        if (!empty($processedIds)) {
-            $idList = implode(',', array_map('intval', $processedIds));
+        // Delete successfully processed entries
+        if (!empty($successIds)) {
+            $idList = implode(',', array_map('intval', $successIds));
             $GLOBALS['db']->query("DELETE FROM relationship_eval_queue WHERE id IN ({$idList})");
+        }
+
+        // Delete abandoned entries (exceeded max retries)
+        if (!empty($abandonIds)) {
+            $idList = implode(',', array_map('intval', $abandonIds));
+            $GLOBALS['db']->query("DELETE FROM relationship_eval_queue WHERE id IN ({$idList})");
+        }
+
+        // Increment retry count for failed entries (will try again later)
+        foreach ($retryIds as $retry) {
+            $id = intval($retry['id']);
+            $escapedError = $GLOBALS['db']->escape($retry['error']);
+            $GLOBALS['db']->query(
+                "UPDATE relationship_eval_queue
+                 SET retry_count = COALESCE(retry_count, 0) + 1,
+                     last_error = '{$escapedError}'
+                 WHERE id = {$id}"
+            );
         }
 
     } catch (Exception $e) {
@@ -220,6 +260,7 @@ function _relProcessQueue($limit = 5) {
 
 /**
  * Create the queue table if it doesn't exist
+ * Includes retry_count for retry logic (prevents Alzheimer's bug)
  */
 function _relCreateQueueTable() {
     try {
@@ -228,14 +269,29 @@ function _relCreateQueueTable() {
                 id SERIAL PRIMARY KEY,
                 npc_id INTEGER NOT NULL UNIQUE,
                 eval_data JSONB NOT NULL,
-                created_at TIMESTAMP DEFAULT NOW()
+                created_at TIMESTAMP DEFAULT NOW(),
+                retry_count INTEGER DEFAULT 0,
+                last_error TEXT
             )
         ");
         error_log("[REL-ASYNC] Created relationship_eval_queue table");
+
+        // Add columns if table exists but is missing them (migration)
+        $GLOBALS['db']->query("
+            ALTER TABLE relationship_eval_queue
+            ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0
+        ");
+        $GLOBALS['db']->query("
+            ALTER TABLE relationship_eval_queue
+            ADD COLUMN IF NOT EXISTS last_error TEXT
+        ");
     } catch (Exception $e) {
         error_log("[REL-ASYNC] Failed to create queue table: " . $e->getMessage());
     }
 }
+
+// Maximum retries before deleting a failed queue item
+define('REL_QUEUE_MAX_RETRIES', 3);
 
 /**
  * Get queue status (for debugging)
@@ -315,12 +371,14 @@ function _relProcessInitQueue($limit = 5) {
         return ['processed' => 0];
     }
 
-    $results = ['processed' => 0];
+    $results = ['processed' => 0, 'retried' => 0, 'abandoned' => 0];
 
     try {
         $rows = $GLOBALS['db']->fetchAll(
-            "SELECT id, npc_id, init_data FROM relationship_init_queue
-             ORDER BY created_at ASC LIMIT {$limit}"
+            "SELECT id, npc_id, init_data, COALESCE(retry_count, 0) as retry_count
+             FROM relationship_init_queue
+             ORDER BY COALESCE(retry_count, 0) ASC, created_at ASC
+             LIMIT {$limit}"
         );
 
         if (empty($rows)) {
@@ -334,12 +392,16 @@ function _relProcessInitQueue($limit = 5) {
             return ['processed' => 0, 'error' => 'LLM not available'];
         }
 
-        $processedIds = [];
+        $successIds = [];
+        $retryIds = [];
+        $abandonIds = [];
 
         foreach ($rows as $row) {
             $data = json_decode($row['init_data'], true);
+            $retryCount = intval($row['retry_count']);
+
             if (!$data) {
-                $processedIds[] = $row['id'];
+                $successIds[] = $row['id'];
                 continue;
             }
 
@@ -349,17 +411,43 @@ function _relProcessInitQueue($limit = 5) {
                 if (!empty($initResult['ok']) && empty($initResult['skipped'])) {
                     error_log("[REL-ASYNC] Initialized relationships for {$data['npc_name']}");
                 }
-                $processedIds[] = $row['id'];
+                $successIds[] = $row['id'];
                 $results['processed']++;
             } catch (Exception $e) {
-                // Still mark as processed to avoid infinite retry
-                $processedIds[] = $row['id'];
+                $errorMsg = $e->getMessage();
+                $maxRetries = defined('REL_QUEUE_MAX_RETRIES') ? REL_QUEUE_MAX_RETRIES : 3;
+
+                if ($retryCount >= $maxRetries) {
+                    error_log("[REL-ASYNC] ABANDONED init after {$retryCount} retries: {$data['npc_name']} - {$errorMsg}");
+                    $abandonIds[] = $row['id'];
+                    $results['abandoned']++;
+                } else {
+                    $retryIds[] = ['id' => $row['id'], 'error' => substr($errorMsg, 0, 500)];
+                    $results['retried']++;
+                    error_log("[REL-ASYNC] Init retry {$retryCount}/" . $maxRetries . " for {$data['npc_name']}: {$errorMsg}");
+                }
             }
         }
 
-        if (!empty($processedIds)) {
-            $idList = implode(',', array_map('intval', $processedIds));
+        if (!empty($successIds)) {
+            $idList = implode(',', array_map('intval', $successIds));
             $GLOBALS['db']->query("DELETE FROM relationship_init_queue WHERE id IN ({$idList})");
+        }
+
+        if (!empty($abandonIds)) {
+            $idList = implode(',', array_map('intval', $abandonIds));
+            $GLOBALS['db']->query("DELETE FROM relationship_init_queue WHERE id IN ({$idList})");
+        }
+
+        foreach ($retryIds as $retry) {
+            $id = intval($retry['id']);
+            $escapedError = $GLOBALS['db']->escape($retry['error']);
+            $GLOBALS['db']->query(
+                "UPDATE relationship_init_queue
+                 SET retry_count = COALESCE(retry_count, 0) + 1,
+                     last_error = '{$escapedError}'
+                 WHERE id = {$id}"
+            );
         }
 
     } catch (Exception $e) {
@@ -374,6 +462,7 @@ function _relProcessInitQueue($limit = 5) {
 
 /**
  * Create the init queue table
+ * Includes retry_count for retry logic (prevents Alzheimer's bug)
  */
 function _relCreateInitQueueTable() {
     try {
@@ -382,8 +471,20 @@ function _relCreateInitQueueTable() {
                 id SERIAL PRIMARY KEY,
                 npc_id INTEGER NOT NULL UNIQUE,
                 init_data JSONB NOT NULL,
-                created_at TIMESTAMP DEFAULT NOW()
+                created_at TIMESTAMP DEFAULT NOW(),
+                retry_count INTEGER DEFAULT 0,
+                last_error TEXT
             )
+        ");
+
+        // Add columns if table exists but is missing them (migration)
+        $GLOBALS['db']->query("
+            ALTER TABLE relationship_init_queue
+            ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0
+        ");
+        $GLOBALS['db']->query("
+            ALTER TABLE relationship_init_queue
+            ADD COLUMN IF NOT EXISTS last_error TEXT
         ");
     } catch (Exception $e) {
         error_log("[REL-ASYNC] Failed to create init queue table: " . $e->getMessage());
