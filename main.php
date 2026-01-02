@@ -200,7 +200,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 $fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
     "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
     "util_location_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace","combatbark",
-    "util_location_npc","enable_bg","region","named_cell","snqe"];
+    "util_location_npc","enable_bg","region","named_cell","snqe","named_cell_static"];
 
 if (isset($GLOBALS["external_fast_commands"])) {
     $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
@@ -1607,6 +1607,7 @@ if (!is_array($contextDataHistoric)) {
 }
 
 // Info about location and npcs in first position
+// Check $nearbySections
 $contextDataWorld = DataLastInfoFor("", -2,true);
 
 // Ensure contextDataWorld is an array
@@ -1740,6 +1741,8 @@ $COOLDOWNMAP["Relax"]=180/0.00864;
 $COOLDOWNMAP["MakeAToast"]=60/0.00864;
 $COOLDOWNMAP["Toast"]=60/0.00864;
 $COOLDOWNMAP["StartRitualCeremony"]=60/0.00864;
+$COOLDOWNMAP["Follow"]=60/0.00864;
+$COOLDOWNMAP["FollowPlayer"]=60/0.00864;
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     $localActorName=$GLOBALS["db"]->escape($GLOBALS["HERIKA_NAME"]);
@@ -1772,7 +1775,7 @@ if (isset($GLOBALS["is_rolemastered"])) {
     $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
     $GLOBALS["FUNCTIONS"][]=$GLOBALS["BASE_FUNCTIONS"]["ReturnBackHome"];
     error_log("{$GLOBALS["HERIKA_NAME"]} is_rolemastered");
-    if ((rand(0,5)!==0)){ // Remeber goal from time to time
+    if ((rand(0,5)!==0)){ // Remember goal from time to time
         $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
         $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
         $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"].="(consider character's goal and traits, check #Storyline as this actor is part of a storyline)";

@@ -2272,6 +2272,10 @@ if ($checkTableExists("named_cell") == -1) {
 } else
     Logger::info(__FILE__." named_cell exists");
 
+if ($checkColumnExists("named_cell","vanilla_cell") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/named_cell.sql"));
+}
+
 if ($checkTableExists("sneq_quests_saved") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/sneq_quests_saved.sql"));
 } else
@@ -2280,6 +2284,9 @@ if ($checkTableExists("sneq_quests_saved") == -1) {
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS region text");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS hold text");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS tags text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS factions text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS is_interior int");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS vanilla_location boolean");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS title text");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS stage text");
 $db->execQuery("DO $$

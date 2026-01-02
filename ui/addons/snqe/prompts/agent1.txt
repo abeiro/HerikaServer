@@ -99,7 +99,7 @@ Main Rules:
 * Output format MUST BE THE PROPOSED XML STRUCTURE with NO ROOT ELEMENT
 * Keep each turn focused: try to use less instructions as possible, but fulfill the request.  spawn characters if needed, create items if referenced in the plot.
 * Player cannot accept instructions
-* Add a journal entry on each iteration, so we can track quest progression. 
+* Add a journal entry on each iteration, so we can track quest progression. Very short and without spoilers. Timeline should be prior the quest steps.
 * Last element should be the next section, where you will specify which goals to be accomplished in this step
 
 Available elements:
@@ -141,6 +141,15 @@ Available elements (you MUST use only the values listed below—no exceptions):
   <topic important="true|false">Full dialogue or narrative content. Set attribute important to true if it's a plot relevant topic</topic>
 </instruction>
 
+* Wait for player do something, so we can advance the quest.
+<instruction>
+  <npc>Player name</npc>
+  <action>Must be exactly one of: 
+    WaitToItemBeRecovered: Waits until player finds and recover an item 
+  </action>
+  <item>If used, must match the <name> of a defined item</item>
+</instruction>
+
 * Create a rumor.
 <rumor>
   <location>Must be a user-provided location name (e.g., Dawnstar, Anga's Mill)</location>
@@ -160,12 +169,14 @@ Available elements (you MUST use only the values listed below—no exceptions):
 
 **Usually, an item needs also WaitToItemBeRecovered action afterwards to make the player actually recover it**.
 
-* Journal Entry. Brief. Write the entry as a short hint about what the player must do, **without spoilers** and it should appear before any action actually happens. For example, if you spawn an NPC in Riverwood, the journal entry should say something like: “Travel to Riverwood to meet someone.”
+* Journal Entry. Brief and short. Write the entry as a short hint about what the player must do, **without spoilers** and it should appear before any action actually happens.
+ For example, if you spawn an NPC in Riverwood, the journal entry should say something like: “Travel to Riverwood to meet someone.”
+ Use the first steps data to generate this journal content to not spoil the later steps.
 <journal>
   e.g.: I should talk to Ulfgar Stonevein
 </journal>
 
-* Next steps (Goals that must be acomplished in this step). brief description
+* Next steps (Goals that must be acomplished after all steps). brief description
 <next>
     e.g. Player must find the amulet.
 </next>

@@ -675,6 +675,11 @@ class SkyrimCommandBuilder
                 return $this->builder->build(401, compact('targetObjectFormId', 'akActor','asRef'));
             }
 
+            // 490
+            public function SpawnDoor(string $targetObjectFormId, string $akTargetRef, string $asName): array {
+                return $this->builder->build(490, compact('targetObjectFormId', 'akTargetRef', 'asName'));
+            }
+
         };
     }
 

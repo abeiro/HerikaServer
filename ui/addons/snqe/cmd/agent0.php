@@ -24,9 +24,21 @@ $connector->setOldGlobals($currentConnectorData);
 
 $method = $_SERVER['REQUEST_METHOD'];
 
+$MODEL_1="bytedance-seed/seed-1.6-flash"; // Initial quest generator
+$MODEL_2="google/gemini-2.0-flash-001";   // Quest steps generator
+
 $formInput = json_decode(file_get_contents("php://input"), true) ?? ["npclist" => []];
 
 header('Content-Type: application/json');
+
+$awaredCell =$db->fetchOne("SELECT A.gamets,A.localts,cell_name,name as location_name,statics_list
+FROM public.eventlog A
+LEFT JOIN public.named_cell B ON B.id = A.sess::BIGINT
+LEFT JOIN public.locations C ON C.formid=B.location_id
+WHERE A.sess ~ '^[0-9]+$' and type='request'
+and A.sess<>'pending'
+order by A.gamets desc,A.localts desc
+");
 
 if (sizeof($formInput["npclist"]) == 0) { // Initial case
 
@@ -185,7 +197,7 @@ Short briefing:{$formInput["briefing"]}
         $buffer = $connectionHandler->fast_request(
             $contextData,
             //["MAX_TOKENS" => 4096, "model" => "x-ai/grok-4-fast", "temperature" => 0.7],// Builds classical quest, find relic stuff.
-            ["MAX_TOKENS" => 2048, "model" => "google/gemini-2.0-flash-001", "temperature" => 0.7], // Builds classical quest, find relic stuff.
+            ["MAX_TOKENS" => 2048, "model" =>$MODEL_2, "temperature" => 0.7], // Builds classical quest, find relic stuff.
             "questpreplanner"
         );
 
@@ -195,7 +207,7 @@ Short briefing:{$formInput["briefing"]}
     } else {
         // Initial quest title NOT provided, from blank state
         if ($formInput["suggested"]) {
-            $suggested = "Preferenced idea and starter NPC for the quest: " . $formInput["suggested"];
+            $suggested = "**You MUST use this idea and starter NPC for the quest: {$formInput["suggested"]}**";
         } else {
             $suggested = "";
         }
@@ -267,16 +279,19 @@ $suggested",
             $contextData,
             //["MAX_TOKENS" => 4096, "model" => "x-ai/grok-4-fast", "temperature" => 0.7],// Builds classical quest, find relic stuff.
             //["MAX_TOKENS" => 2048, "model" => "google/gemini-2.0-flash-001", "temperature" => 0.7], // Builds classical quest, find relic stuff.
-            ["MAX_TOKENS" => 2048, "model" => "bytedance-seed/seed-1.6-flash", "temperature" => 0.3], // Builds classical quest, find relic stuff.
+            ["MAX_TOKENS" => 2048, "model" => $MODEL_1, "temperature" => 0.3], // Builds classical quest, find relic stuff.
             "questpreplanner"
         );
 
         preg_match('/Quest Title:\s*(.+?)(?:\n|$)/i', $buffer, $titleMatch);
         preg_match('/Quest Short brief\s*(?:\(.+?\))?\s*:\s*(.+?)(?:\nStarter character|$)/is', $buffer, $briefMatch);
+        
 
         $result["questtitle"] = trim($titleMatch[1] ?? "");
         $result["briefing"] = trim($briefMatch[1] ?? "");
-        $result["response"] .= "\n$buffer";
+        $result["response"] = $buffer;
+        $result["response"].= "\nPlayer Name: {$GLOBALS["PLAYER_NAME"]}";
+        $result["response"].= "\nCurrent location: $lastLocation";
     }
 
 } else {
@@ -284,8 +299,21 @@ $suggested",
     $sqlfilter = " and data not like '%inner thoughts%' and type<>'innerchat' and type<>'backgroundaction' and type<>'quest'";
     $contextDataHistoric = DataLastDataExpandedFor("", 25 * -1, $sqlfilter);
     $history = "";
+    $bookPattern = '/check this book:\s*<([^>]+)>/i';
+
     foreach ($contextDataHistoric as $element) {
         $history .= trim("{$element["content"]}") . PHP_EOL . PHP_EOL;
+        // Book 
+
+        if (preg_match($bookPattern, $element["content"], $matches)) {
+            $bookTitle = $matches[1];
+            $cnTitle = $GLOBALS["db"]->escape(trim($bookTitle));
+            $results = $db->fetchOne("select content from books where title='$cnTitle' and content is not null order by gamets desc limit 1");
+            if (empty($results)) {
+                error_log("". $bookTitle ."". $cnTitle ." not found in database.");
+            } else
+                $history .= trim($results["content"]) . PHP_EOL . PHP_EOL;
+        }
     }
 
     $lastLocation = DataLastKnownLocationHuman();
@@ -382,10 +410,7 @@ $history
 
 == end of dialogue and events history
 
-# Nearby entrances (these are entrances to another building/cave/scenario)
-$locList
-
-# Locations/entrances available for adventuring:
+# Other locations/entrances available for adventuring:
 $wideLocList
 
 # Spawned items in previous session
@@ -402,64 +427,114 @@ $npcListFinal
 $prevSteps
 
 # Current Location: $lastLocation
+# Static elements known in current location (you cannot spawn new static elements): {$awaredCell["statics_list"]}
+
+Nearby entrances (these are entrances/exits to a building/cave/scenario/room)
+$locList
+If no nearby entrances, this means current location has no passages/doors .
 ";
+
     $finishInstruction = "";
 
     if (isset($formInput["needs_end"]) && $formInput["needs_end"]) {
-        $finishInstruction = " Important: * Next steps should be oriented to finish storyline. Conclude all plots. ";
+        $finishInstruction = " Important: ** Storyline must end. Next steps should be oriented to finish storyline. Conclude all plots. ** ";
 
     }
 
-    $considerFinish = "Output format:
-Output must be a bulleted list of single tasks that a rolemaster should do to achieve the next step, and a brief explanation after all elements.";
+    $considerFinish = "";
 
     $prompt[] = ['role' => 'system', 'content' => "You are a rolemaster , your job is to generate quests in the Skyrim universe."];
     $prompt[] = ['role' => 'user', 'content' => $result["response"]];
     $prompt[] = [
         'role' => 'user',
-        'content' => "
-As a rolemaster you can:
- * Spawm small items (amulets, rings, books, notes,...)
- * Spawn NEW Actors.
- * Spawn NEW enemies
- * Instruct Actors/enemies to tell topics, fight, travel.
+        'content' => "You may:
+- Spawn **small portable items** (amulets, rings, books, notes, keys).
+- Spawn **new NPC actors**.
+- Spawn **new enemies**.
+- Instruct NPCs or enemies to **speak, fight, move, or travel**.
 
-Restrictions:
- * Use available locations
- * Scenarios are static so you CAN NOT spawn furniture/new locations or static elements,immovables, or non-interactive objects.
+---
 
-Task:
-Given this context, generate the next quest steps. (just generate 4/5 steps)
+## World Constraints (Strict)
+- The world is **static**.
+- You **cannot** spawn or reference:
+  - Furniture
+  - New locations
+  - Static scenery
+  - Immovable or non-interactive objects
+  - Chests, doors, levers, or mechanisms not already present in the world
+- You **cannot** directly instruct the player character (**{$GLOBALS["PLAYER_NAME"]}**).
+  - All guidance must be delivered indirectly via NPC dialogue or events.
+
+---
+
+## Location Rules
+- Use **only** the provided:
+  - **Current Location**
+  - **Nearby Entrances**
+  - **Locations / Entrances Available for Adventuring**
+- You **may not invent** hidden passages, secret rooms, or new entrances.
+- If a different location is required:
+  - The quest step **must be a travel step**
+  - The destination **must exist in the provided lists**
+- If **Nearby Entrances** is empty:
+  - The current location has **no exits**.
+
+---
+
+## NPC & Entity Rules
+- Prefer using **already spawned NPCs**.
+- Create **at most ONE new NPC**, and only if absolutely necessary.
+- You may:
+  - Spawn enemies
+  - Spawn one recoverable item
+- You may **NOT** reference:
+  - Unspawned objects
+  - Furniture
+  - Environmental storytelling elements that do not already exist
+---
+
+## Task
+Using the provided context, generate **4–5 next quest steps**.
+
+Each quest step must:
+1. Follow logically from **Previous Quest Steps**
+2. Be consistent with **all dialogue and event history**
+3. Take place in the **Current Location** or valid connected locations
+4. Respect all world, location, and NPC constraints above
+
+---
+
+## Output Format
+- Bullet-point list of **4–5 steps**
+- Each step must describe:
+  - What happens
+  - Who is involved
+  - Where it occurs
+- Keep steps **concrete and actionable**
+
+---
+
+## Example Steps (Illustrative Only)
+- Player must travel to **Location Y**
+- Spawn **Item X** at **Location Y**
+- Spawn **Enemy NPC A** at **Location Y**
+- Enemy NPC A attacks nearby NPCs
+- NPC B explains the importance of Item X and leaves the area
+
+**Explanation:**  
+The player encounters Enemy NPC A at Location Y, defeats them, and recovers Item X needed by NPC B.
+
+---
+
+## Hard Rules (Do Not Break)
+- Output must be **fully grounded** in the provided context.
+- Do **not** invent factions, locations, lore, or events.
+- Do **not** contradict prior quest history.
+- Do **not** use standard vanilla Skyrim NPCs.
+- Do **not** include out-of-context elements.
+
 $finishInstruction
-Creation rules:
-
-* The next step must follow the quest logically. Read “Previous quest steps” and all dialogue + events history to determine the natural continuation.
-* The next step must use the “Current Location” and “Nearby entrances” to determine where the next action occurs.
-* If the story requires a different location, you may only choose one from “Locations/entrances available for adventuring” and quest step must be start travel to that location.
-* Use only locations from lists (no hidden passages, no hidden entrances, no hidden chambers). If plot needs a hidden place, use the closest available location.
-* If available nearby locations is none, this means current location has no passages to another locations, so no hidden caverns or places to enter.
-* Try to involve only “Already spawned NPCs”; create one new NPC ONLY if absolutely needed.
-* You may include enemies and an item to recover.
-* You MAY NOT use or reference furniture or unspawned elements.
-
-
-E.G:
-  * Player must travel to location Y
-  * Spawn item X at Y or NPC A's pocket
-  * Spawn enemy NPC A at Y
-  * Player must defeat NPC A
-  * Player must find and recover item X
-  * NPC B must talk to player about
-  * NPC B must leave the scene
-
-Explanation: Player fights with NPC A ay Y, to recover item X for NPC B
-
-
-Output must be fully grounded in the provided context. Do NOT invent unrelated factions, locations, or events, and do not contradict the history.
-
-Do NOT use standard vanilla Skyrim NPCs.
-
-No out-of-context elements; keep everything consistent with events so far.
 
 $considerFinish
 
@@ -472,7 +547,7 @@ $considerFinish
 
     $buffer = $connectionHandler->fast_request(
         $contextData,
-        ["MAX_TOKENS" => 2048, "model" => "google/gemini-2.0-flash-001", "temperature" => 0.7],
+        ["MAX_TOKENS" => 2048, "model" => $MODEL_2, "temperature" => 0.7],
         "questpreplanner"
     );
 

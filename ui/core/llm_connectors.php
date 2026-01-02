@@ -380,6 +380,20 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                         <span class="toggle-text">On</span>
                     </label>
                 </div>
+                <div id="remove_action_prompt" style="margin-top:12px;">
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Option to disable the action enforcement prompt. Some models like gemini-3-flash tend to use actions a lot.'>Remove Action Prompt</span>
+                        <input type="hidden" name="remove_action_prompt" value="0">
+                        <input type="checkbox" name="remove_action_prompt" value="1" <?php 
+                            $metadata = [];
+                            if (isset($editItem["metadata"]) && !empty($editItem["metadata"])) {
+                                $metadata = is_string($editItem["metadata"]) ? json_decode($editItem["metadata"], true) : $editItem["metadata"];
+                                if (!is_array($metadata)) $metadata = [];
+                            }
+                            echo (isset($metadata["remove_action_prompt"]) && $metadata["remove_action_prompt"]) ? "checked" : "";
+                        ?>>
+                        <span class="toggle-text">On</span>
+                    </label>
+                </div>
             </div>
             <div>
                 <?php
@@ -606,7 +620,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     }
     // Sync On/Off labels for checkboxes
     (function(){
-        const names = ['reasoning_model','enforce_json','json_schema','prefill_json','block_none'];
+        const names = ['reasoning_model','enforce_json','json_schema','prefill_json','block_none','remove_action_prompt'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
@@ -1027,6 +1041,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && (isset($_POST["save"]) || isset($_P
         // If checkbox not present, remove from metadata
         unset($metadata["block_none"]);
     }
+
+     // Add remove_action_prompt to metadata (checkbox with hidden field pattern)
+    if (isset($_POST["remove_action_prompt"])) {
+        $metadata["remove_action_prompt"] = ($_POST["remove_action_prompt"] === "1" || $_POST["remove_action_prompt"] === 1);
+    } else {
+        // If checkbox not present, remove from metadata
+        unset($metadata["remove_action_prompt"]);
+    }
     
     $_POST["metadata"] = json_encode($metadata);
     
@@ -1370,6 +1392,21 @@ if (typeof window.consolidation !== 'function') {
                             if (!is_array($metadataMain)) $metadataMain = [];
                         }
                         echo (isset($metadataMain["block_none"]) && $metadataMain["block_none"]) ? "checked" : "";
+                    ?>>
+                    <span class="toggle-text">On</span>
+                </label>
+            </div>
+             <div id="remove_action_prompt_main" style="margin-top:12px;">
+                <div style="font-weight:600; color:#e9efff; margin-bottom:8px;">Remove Action Prompt</div>
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Option to disable the action enforcement prompt. Some models like gemini-3-flash tend to use actions a lot.'>Remove Action Prompt</span>
+                    <input type="hidden" name="remove_action_prompt" value="0">
+                    <input type="checkbox" name="remove_action_prompt" value="1" <?php 
+                        $metadataMain = [];
+                        if (isset($editItem["metadata"]) && !empty($editItem["metadata"])) {
+                            $metadataMain = is_string($editItem["metadata"]) ? json_decode($editItem["metadata"], true) : $editItem["metadata"];
+                            if (!is_array($metadataMain)) $metadataMain = [];
+                        }
+                        echo (isset($metadataMain["remove_action_prompt"]) && $metadataMain["remove_action_prompt"]) ? "checked" : "";
                     ?>>
                     <span class="toggle-text">On</span>
                 </label>

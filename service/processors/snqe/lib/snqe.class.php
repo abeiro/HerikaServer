@@ -140,7 +140,7 @@ class SNQEQuestManager {
         if ($runningQuest) {
             $state=json_decode($runningQuest["state"],true);
             file_put_contents($GLOBALS["ENGINE_PATH"]."/log/snqe_state.json",json_encode($state));   
-            chmod($GLOBALS["ENGINE_PATH"]."/log/snqe_state.json", permissions: 0777);
+            chmod(filename: $GLOBALS["ENGINE_PATH"]."/log/snqe_state.json", permissions: 0777);
             $GLOBALS["db"]->insert(
                 'sneq_quests',
                 [

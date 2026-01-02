@@ -43,7 +43,7 @@ $fquestTitle = $formInput["questTitle"];
 
 $prompt[] = ['role' => 'system', 'content' => $sysprompt_content];
 $prompt[] = ['role' => 'user', 'content' => $formInput["userprompt"]];
-$prompt[] = ['role' => 'user', 'content' => "Write XML to acomplish the quest steps"];
+$prompt[] = ['role' => 'user', 'content' => "Write XML to acomplish all the quest steps"];
 
 
 $allowedLocationList = $formInput["locations"];
@@ -54,7 +54,8 @@ $contextData = $prompt;
 
 $connectionHandler = $connector->getConnector($currentConnectorData);
 
-$MODEL = "nex-agi/deepseek-v3.1-nex-n1:free";
+$MODEL = "google/gemini-2.5-flash-lite";
+//$MODEL = "nex-agi/deepseek-v3.1-nex-n1:free";
 
 $buffer = $connectionHandler->fast_request(
     $contextData,
@@ -282,7 +283,7 @@ function validate_spawned_items_recovery($xmlString)
     $items = extract_all_tags($xmlWithoutInstructions, 'item');
 
     $allItems = array_merge($spawnedItems, $items);
-
+    $allItems=$items;
     // Extract all instructions and find WaitItemToBeRecovered actions
     $instructions = extract_all_tags($xmlString, 'instruction');
     $recoveryTargets = [];
@@ -290,7 +291,7 @@ function validate_spawned_items_recovery($xmlString)
     foreach ($instructions as $instruction) {
         $action = strtolower(extract_tag_content($instruction, 'action') ?? '');
         if ($action === 'waittoitemberecovered') {
-            $target = extract_tag_content($instruction, 'target');
+            $target = extract_tag_content($instruction, 'item');
             if ($target) {
                 $recoveryTargets[] = strtolower(trim($target));
             }
@@ -303,7 +304,8 @@ function validate_spawned_items_recovery($xmlString)
         if ($name) {
             $nameLower = strtolower(trim($name));
             if (!in_array($nameLower, $recoveryTargets)) {
-                $errors[] = "Item '$name' is spawned but no 'WaitItemToBeRecovered' instruction found for it. Add a WaitItemToBeRecovered instruction somewhere after <item>, in a logical order";
+                $errors[] = "Item '$name' is spawned but no 'WaitToItemBeRecovered' instruction found for it. Add a WaitToItemBeRecovered instruction somewhere after <item>, in a logical order";
+                error_log("Item '$name' is spawned but no 'WaitToItemBeRecovered' instruction found for it.".print_r($recoveryTargets,true  ));
             }
         }
     }
@@ -397,7 +399,7 @@ while ($retryCount < $maxRetries && !$validationPassed) {
                 ];
                 $retryPrompt[] = [
                     'role' => 'user',
-                    'content' => "The XML you generated has validation errors:\n\n$errorMessage\nPlease fix these errors and regenerate the XML."
+                    'content' => "The XML you generated has validation errors:\n\n$errorMessage\nPlease fix these errors, and generate the full XML again, ensuring all previous content is preserved and only the necessary corrections are made."
                 ];
 
                 // Make retry request
