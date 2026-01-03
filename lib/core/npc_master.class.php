@@ -31,11 +31,6 @@ class NpcMaster
     // Create (Insert)
     public function create($data)
     {
-        // Prevent creating The Narrator - it's now managed via core_narrator table
-        if (isset($data["npc_name"]) && $data["npc_name"] === "The Narrator") {
-            throw new \Exception("The Narrator cannot be created via NpcMaster. Use the Narrator class and Narrator Management UI instead.");
-        }
-        
         $fields = [
             "npc_name",
             "npc_favorite",
@@ -87,24 +82,15 @@ class NpcMaster
     // Read NPC by unique name
     public function getByName($npcName)
     {
-        // The Narrator is now managed via core_narrator table, not core_npc_master
-        if ($npcName === "The Narrator") {
-            return null;
-        }
         $escaped = $this->escape($npcName);
         $query   = "SELECT * FROM {$this->table} WHERE npc_name = '{$escaped}' LIMIT 1";
         return $this->db->fetchOne($query);
     }
 
     // Read NPC by md5
-    public function getByMD5($md5Hash)
+    public function getByMD5($npcName)
     {
-        // The Narrator is now managed via core_narrator table, not core_npc_master
-        // Check if this MD5 corresponds to The Narrator
-        if ($md5Hash === md5('The Narrator')) {
-            return null;
-        }
-        $escaped = $this->escape($md5Hash);
+        $escaped = $this->escape($npcName);
         $query   = "SELECT * FROM {$this->table} WHERE md5 = '{$escaped}' LIMIT 1";
         return $this->db->fetchOne($query);
     }
@@ -199,6 +185,11 @@ class NpcMaster
     {
         $id    = (int) $id;
         $where = "id = $id";
+        // Disallow deleting The Narrator profile (by id or name)
+        $row = $this->getById($id);
+        if ($row && (intval($row['id']) === 1 || ($row['npc_name'] ?? '') === 'The Narrator')) {
+            return false;
+        }
         return $this->db->delete($this->table, $where);
     }
 
@@ -245,7 +236,28 @@ class NpcMaster
         $existing = $this->getByName($npcname);
 
         if ($existing && ! $overwrite) {
-            // Profile exists, and no overwrite requested — bail
+            // Profile exists, and no overwrite requested
+            // BUT still update race/gender/refid if they're empty and FORCE_PARMS has them
+            $needsUpdate = false;
+            $updateFields = [];
+
+            if (empty($existing['race']) && !empty($FORCE_PARMS['race'])) {
+                $updateFields['race'] = $FORCE_PARMS['race'];
+                $needsUpdate = true;
+            }
+            if (empty($existing['gender']) && !empty($FORCE_PARMS['gender'])) {
+                $updateFields['gender'] = $FORCE_PARMS['gender'];
+                $needsUpdate = true;
+            }
+            if (empty($existing['refid']) && !empty($FORCE_PARMS['refid'])) {
+                $updateFields['refid'] = $FORCE_PARMS['refid'];
+                $needsUpdate = true;
+            }
+
+            if ($needsUpdate) {
+                $this->update($existing['id'], $updateFields);
+                Logger::info("NPC '{$npcname}' updated with game data (race/gender/refid).");
+            }
             return;
         }
 
@@ -393,7 +405,6 @@ class NpcMaster
             $currentNpcData['voiceid'] = $OLD_GLOBALS_ARRAY['TTS']['XTTSFASTAPI']['voiceid'];
         }
 
-        $overrides=[];
         /*
         foreach ($OLD_GLOBALS_ARRAY as $k=>$v) {
             if (!is_array($v)) {
@@ -513,7 +524,6 @@ class NpcMaster
             $GLOBALS['TTS']['openai']['voice']         = $currentNpcData['voiceid'];
             $GLOBALS['TTS']['deepgram']['model']       = $currentNpcData['voiceid'];
             $GLOBALS['TTS']['CARTESIA']['voiceid']     = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['INWORLD']['voiceid']      = $currentNpcData['voiceid'];
 
         }
 
@@ -647,32 +657,27 @@ class NpcMaster
         date_default_timezone_set('UTC');
 
         $startTime = time();
+        // Fetch all current NPCs
+        $npcs = $this->getAll();
         error_log("[NPC BACKUP] " . date('Y-m-d H:i:s'));
 
-        // Update all NPCs with new gamets_last_updated timestamp
-        $updateQuery = "UPDATE {$this->table} SET gamets_last_updated = $timestamp";
-        $GLOBALS["db"]->execQuery($updateQuery);
+        foreach ($npcs as $npc) {
+            // Remove original ID
+            $npc_id                     = $npc['id'];
+            $npc['gamets_last_updated'] = $timestamp;
 
-        // Insert all NPCs into history table in a single query
-        $createdTimestamp = date('Y-m-d H:i:s');
-        $insertQuery = "
-            INSERT INTO core_npc_master_history (
-                npc_id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
-                oghma_knowledge_tags, emote_moods, personality, relationships,
-                occupation, skills, speechstyle, goals, voiceid, metadata,
-                gender, race, refid, profile_id, dynamic_profile, extended_data,
-                md5, gamets_last_updated, core, base, tags, appearance, created
-            )
-            SELECT
-                id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
-                oghma_knowledge_tags, emote_moods, personality, relationships,
-                occupation, skills, speechstyle, goals, voiceid, metadata,
-                gender, race, refid, profile_id, dynamic_profile, extended_data,
-                md5, $timestamp, core, base, tags, appearance, '{$createdTimestamp}'
-            FROM core_npc_master
-        ";
-        $GLOBALS["db"]->execQuery($insertQuery);
+            $this->update($npc_id, $npc);
 
+            unset($npc['id']);
+
+            // Set the reference and override timestamps
+            $npc['npc_id']              = $npc_id;
+            $npc['gamets_last_updated'] = $timestamp;
+            $npc['created']             = date('Y-m-d H:i:s'); // Current timestamp
+
+            // Insert into history
+            $this->db->insert('core_npc_master_history', $npc);
+        }
         error_log("[NPC BACKUP] " . date('Y-m-d H:i:s') . ", NPCs backup made in " . (time() - $startTime) . " secs ");
         return true;
     }
@@ -745,16 +750,23 @@ FROM restore
         error_log("[NPC RESTORE] using gamets: $timestamp.. " . date('Y-m-d H:i:s'));
         $GLOBALS["db"]->query($query);
 
-        $bglife_q="UPDATE public.core_npc_master
-SET extended_data = jsonb_set(
-    extended_data,
-    '{background_life_enabled}',   -- JSON path
-    'false'::jsonb,                -- new value
-    true                           -- create if missing (optional)
-)
-WHERE (extended_data ->> 'background_life_enabled')::boolean = true";
+        // RELATIONSHIP SYSTEM: Clear "future" relationship data from NPCs that weren't restored
+        // NPCs added AFTER the save timestamp don't have history entries, so they keep their
+        // current (future) state. We need to clear their relationship data to prevent paradoxes.
+        $rel_reset_q = "UPDATE public.core_npc_master
+            SET extended_data = extended_data - 'relationships' - 'relationships_updated' - 'relationships_model' - 'relationships_inferred'
+            WHERE npc_name <> 'The Narrator'
+              AND (gamets_last_updated > $timestamp OR gamets_last_updated IS NULL)
+              AND extended_data IS NOT NULL
+              AND extended_data ? 'relationships'";
 
-        $GLOBALS["db"]->execQuery($bglife_q);
+        try {
+            $GLOBALS["db"]->execQuery($rel_reset_q);
+            error_log("[NPC RESTORE] Cleared future relationship data for NPCs with gamets > $timestamp");
+        } catch (Exception $e) {
+            error_log("[NPC RESTORE] Failed to clear future relationships: " . $e->getMessage());
+        }
+
         error_log("[NPC RESTORE] " . date('Y-m-d H:i:s') . ", NPCs restore made in " . (time() - $startTime) . " secs ");
         return true;
     }
