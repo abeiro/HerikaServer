@@ -1457,6 +1457,13 @@ if ($checkVersion("dynamic_bio")<20250710001) {
     Logger::info("Applied patch oghma 20250903001");
 //}
 
+if ($checkVersion("oghma")<20250104001) {
+    $query = "DELETE FROM public.oghma WHERE topic = 'dragon_tongue'";
+    $db->execQuery($query);
+    $updateVersion("oghma",20250104001);
+    Logger::info("Applied patch oghma 20250104001 - Removed dragon_tongue entry");
+}
+
 if ($checkVersion("locations")<20250526001) {
     Logger::debug(" try patch: locations 20250526001");
     $db->execQuery("CREATE EXTENSION IF NOT EXISTS pg_trgm;");
