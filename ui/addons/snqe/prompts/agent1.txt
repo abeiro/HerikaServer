@@ -110,7 +110,7 @@ Available elements (you MUST use only the values listed below—no exceptions):
 <spawn>
   <name>[NPC's full name] (fantasy-style compound name consisting of a first name and a descriptive surname, even for creatures or enemies)</name>
   <race>Must be exactly one of: nord, imperial, redguard, breton, argonian, orc, draugr,elk,frost_troll,frostbite_spider,dwarven_sphere_guardian,falmer,giant</race>
-  <location>Must be either: "nearby" OR one of the user-provided location names (e.g., Heljarchen Hall, Dawnstar, Nightcaller Temple, etc.)</location>
+  <location>Must be either: "nearby" OR one of the user-provided location names (e.g., Heljarchen Hall, Dawnstar, Nightcaller Temple, etc.),or a reference in the format <name@formid></location>
   <gender>Must be exactly: male or female</gender>
   <class>Must be exactly one of: beggar, warrior, assassin, mage, farmer, soldier, merchant, noble, creature,forsworn</class>
   <background>Brief lore (~200 characters). Must fit Elder Scrolls tone.</background>
@@ -133,7 +133,8 @@ Available elements (you MUST use only the values listed below—no exceptions):
     TravelTo:NPC travels to a location , or NPC enters into a location thru passage/door. Also used if NPC wants to lead player to a location
     WaitToItemBeRecovered: Waits until player finds and recover an item 
     WaitAtLocation: Blocking wait, NPC will wait at location. UNTIL player reaches location, and then will continue with the following instruction. Location should be in the 'Locations/entrances available for adventuring' list
-    StationAtLocation: : Non-Blocking wait. NPC will wait location, quests advances to next step. Location should be in the 'Locations/entrances available for adventuring' list
+    StationAtLocation: Non-Blocking wait. NPC will wait location, quests advances to next step. Location should be in the 'Locations/entrances available for adventuring' list
+    WaitForActivation: Blocking wait. Quest execution will pause until activator is activated
   </action>
   <target>Only required if action involves another NPC</target>
   <location>If used, must be "nearby" or a user-provided location name</location>
@@ -162,7 +163,7 @@ Available elements (you MUST use only the values listed below—no exceptions):
 <item>
   <name>Unique item name (must be an unique name, e.g Amulet Fragment #1, Crown Piece #1, The Rotten Shield, Potion of divine Health.</name>
   <type>Must be exactly one of: potion, necklace, amulet, ring, book, note</type>
-  <location>Must be one of this: "nearby" or a user-provided location name, or "pocket" (owner will have this item in its inventory/possession)</location>
+  <location>Must be one of this: "nearby" or a user-provided location name, or "pocket" (owner will have this item in its inventory/possession), or a reference in the format "name:formid"</location>
   <owner>Name of an NPC (can be newly spawned)</owner>
   <description>Atmospheric, concise description</description>
 </item>
@@ -334,3 +335,16 @@ Spawns NPC , palyer's friend assis int combat
   <topic important="true">This is Roric's ring... I knew something terrible had happened to him.</topic>
 </instruction>
 
+* Wait for player activate an activator
+<instruction>
+  <npc>Player name</npc>
+  <action>WaitForActivation</action>
+  <item>Pedestal:0x00112233</item>
+</instruction>
+<item>
+  <name>Roric's Ring</name>
+  <type>ring</type>
+  <location>Pedestal:0x00112233</location>
+  <owner>Xaren the Necromancer</owner>
+  <description>A simple silver ring with a small engraving of a scouting compass, a family heirloom passed down through Roric's family.</description>
+</item>

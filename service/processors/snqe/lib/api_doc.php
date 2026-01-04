@@ -33,7 +33,7 @@ quest_id (string, required) – Quest identifier.
 item_ref (string, required) – Internal item reference ID.
 name (string, required) – Item display name.
 type (enum, required) – sword, armor, helmet, ring, amulet, book, note, axe, long sword, staff, great axe, bow.
-location (enum, required) – "nearby", "major city", or "location" (dungeons allowed).
+location (enum, required) – "nearby", "major city", or "location" (dungeons allowed), or near and element reference (e.g., "Pedestal:0x00027f92").
 description (string) – Description, or content if item is book or note.
 npc_ref (string, optional) – NPC reference ID to place item in NPC's inventory. If omitted, item will be placed in the world.
 
@@ -131,6 +131,7 @@ quest_id (string, required)
 npc_ref (string, required)
 maxAttempts (int, optional, default=5) – Maximum retries before failure.
 
+This function does not need to be waited on. It issues the command and returns immediately.
 Returns: "done" | "pending" | "failed".
 
 * CombatPlayer(quest_id, npc_ref) (Make sure npc_ref has been created and spawned)
@@ -243,6 +244,30 @@ Returns "failed" if combat does not end within maxAttempts checks.
 Tracks npc_combat_attempts and combat state for both NPCs in quest data.
 Monitors event log for death events involving either NPC.
 Function is idempotent. If the player already reached the location, it returns "done".
+
+* WaitForActivation(quest_id, activator_ref, maxAttempts)
+
+Waits until the player activates a specified activator object (e.g., furniture, switch, lever, pedestal).
+This is a blocking wait that pauses quest execution until the activator is activated.
+
+quest_id (string, required) – Quest identifier.
+activator_ref (string, required) – Activator reference in format "Name:0xHEXID" or "0xHEXID".
+  Examples: "Pedestal:0x00027f92" or "0x00027f92"
+maxAttempts (int, optional, default=1000) – Maximum retries before failure.
+
+Returns: "done" | "waiting"
+
+"done" → Activator has been successfully activated by the player.
+"waiting" → Activator has not yet been activated; further checks required.
+
+Notes:
+
+Queries the eventlog for activation events matching the pattern "X activates Y".
+Tracks activation state per activator (by form ID) in quest data.
+Function is idempotent. If the activator was already activated, it returns "done".
+Creates/updates a scenenote to guide the player on what needs to be activated.
+Useful for puzzle elements, door/gate activation, furniture interaction requirements, etc.
+Tracks activation_attempts in quest data for debugging purposes.
 
 * CheckTopicToPlayer(quest_id, topic_ref, maxAttempts)
 
@@ -371,7 +396,8 @@ Wait functions allow branching: success → continue, timeout → alternate path
 Interaction functions (MoveToPlayer, TellTopic*, CombatPlayer) are executed once and persist state.
 
 1. Create functions should be at the top of the code.
-2. Respect instuctions order.
+2. Besides create functions, code should follow original instructions order. **very important**.
+3. Respect instructions order.
 
 Example quest #1:
 
@@ -432,13 +458,6 @@ if (CheckNPCSpawn($quest_id, $npc_ref)!="done") {
     return;
 }
 
-// 5. Spawn the book somewhere nearby
-SpawnItem($quest_id, $item_ref, "nearby");
-if (CheckItemSpawn($quest_id, $item_ref)!="done") {
-    error_log("Item not spawned <SpawnItem($quest_id, $item_ref>".PHP_EOL);
-    return;
-}
-
 
 // We could use WaitAtLocation here if we want the wizard to stay there until player finds him
 // This is prefered when spawning location is not nearby
@@ -449,7 +468,7 @@ if (CheckItemSpawn($quest_id, $item_ref)!="done") {
 
 // If NPC was spawned nearby, just TellTopicToPlayer
 
-// 6. Wizard tells the player about the quest. We have ensured topic is created by CreateTopic, and NPC exists by CreateNPC
+// 5. Wizard tells the player about the quest. We have ensured topic is created by CreateTopic, and NPC exists by CreateNPC
 
 if (TellTopicToPlayer($quest_id, $npc_ref, "t_ask_ring") !="done") {
     error_log("TellTopicToPlayer failed, will retry".PHP_EOL);
@@ -458,6 +477,13 @@ if (TellTopicToPlayer($quest_id, $npc_ref, "t_ask_ring") !="done") {
 
 if (CheckTopicToPlayer($quest_id, "t_ask_ring") !="done") {
     error_log("Topic not covered ".PHP_EOL);
+    return;
+}
+
+// 6. Spawn the book somewhere nearby, note this is done after the wizard talks to player
+SpawnItem($quest_id, $item_ref, "nearby");
+if (CheckItemSpawn($quest_id, $item_ref)!="done") {
+    error_log("Item not spawned <SpawnItem($quest_id, $item_ref>".PHP_EOL);
     return;
 }
 
@@ -583,7 +609,7 @@ CreateNPC(
     "serious"
 );
 
-// 3. Create and spawn Roric's Ring (from <item> element)
+// 3. Create Roric's Ring (from <item> element)
 CreateItem(
     $quest_id,
     "roric_ring",
@@ -593,8 +619,7 @@ CreateItem(
     "A simple silver ring with a small engraving of a scouting compass, a family heirloom passed down through Roric's family.",
     "xaren"
 );
-SpawnItem($quest_id, "roric_ring", "xaren");
-if (CheckItemSpawn($quest_id, "roric_ring") != "done") return;
+
 
 // 4. Travel to Darkshade Copse
 TravelTo($quest_id, "Darkshade Copse", "zara");
@@ -607,6 +632,10 @@ CombatNPC($quest_id, "zara", "xaren");
 if (WaitForNPCCombatEnd($quest_id, "xaren", "zara") != "done") return;
 
 // 6. Wait for ring recovery
+
+// Now we spawn the item, after combat ends
+SpawnItem($quest_id, "roric_ring", "xaren");
+if (CheckItemSpawn($quest_id, "roric_ring") != "done") return;
 if (WaitToItemBeRecovered($quest_id, "roric_ring") != "done") return;
 
 // 7. Zara tells player about the ring

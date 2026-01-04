@@ -139,7 +139,7 @@ class SNQEQuestManager {
         $runningQuest=$GLOBALS["db"]->fetchOne("SELECT * FROM sneq_quests_saved where gamets<=$gamets order by gamets desc,updated_at desc limit 1");
         if ($runningQuest) {
             $state=json_decode($runningQuest["state"],true);
-            file_put_contents($GLOBALS["ENGINE_PATH"]."/log/snqe_state.json",json_encode($state));   
+            file_put_contents($GLOBALS["ENGINE_PATH"]."/log/snqe_state.json",json_encode($state,JSON_PRETTY_PRINT));   
             chmod(filename: $GLOBALS["ENGINE_PATH"]."/log/snqe_state.json", permissions: 0777);
             $GLOBALS["db"]->insert(
                 'sneq_quests',

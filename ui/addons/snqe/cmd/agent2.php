@@ -26,8 +26,9 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 $formInput = json_decode(file_get_contents("php://input"), true);
 
-
+$MODEL="google/gemini-3-flash-preview";
 $questType = $formInput["questType"] ?? "miniquest";
+
 
 $prompt[] = ['role' => 'system', 'content' => file_get_contents("{$enginePath}/service/processors/snqe/lib/api_doc.php")];
 $prompt[] = ['role' => 'user', 'content' => "
@@ -36,13 +37,18 @@ Using api, create a miniquest to accomplish this xml instructions, AND ONLY this
 
 Player Name: {$GLOBALS["PLAYER_NAME"]}
 
-* CRITICAL: Instruction order in XML source can be incorrect. Use API guidelines to write the code in correct order.
 After SPAWN, you must decided wether to move the NPC or make it stay at it's location.
 
 Important notes about XML elements.
-<spawn></spawn> this element at root level involves BOTH creating and spawning the NPC.  <spawn> = CreateNPC and need to SpawnNPC
+<spawn></spawn> this element at root level involves BOTH creating and spawning the NPC.  <spawn> = CreateNPC and need to SpawnNPC 
 <instruction></instruction> element at root level denotes NPC is already spawned, just create it for reference, but DO NOT SPAWN IT. <instruction> = only CreateNPC for reference, NPC is already spawned from previous session, or previously in the code
 <item></item>this element at root level involves BOTH creating and spawning the item.  <item> = CreateItem and SpawnItem.
+
+* Notes about order of operations:
+1. Create functions (CreateNPC, CreateItem, CreateTopic) must be at the top of the code.
+2. Besides create functions, (Spawn*, Wait*,TellTopic,*..) functions should appear following original instructions order. **very important**.
+3. Respect instructions order.
+
 
 Write very short comments on code. Code should finish with CompleteQuest call.
 "];
@@ -52,7 +58,7 @@ $contextData = $prompt;
 
 $connectionHandler = $connector->getConnector($currentConnectorData);
 $buffer            = $connectionHandler->fast_request($contextData,
-    ["MAX_TOKENS" => 4096, "model" => "mistralai/devstral-2512","temperature"=>0.3],
+    ["MAX_TOKENS" => 4096, "model" => $MODEL,"temperature"=>0.3],
     "questcoder");
 
 header('Content-Type: application/json');
@@ -63,7 +69,7 @@ if (preg_match('/```php\n(.*?)\n```/s', $buffer, $matches)) {
     $phpCode = $matches[1];
 }
 $first_code=$phpCode;
-
+/*
 // simple line-based diff: '  ' = same, '- ' = removed (first_code), '+ ' = added (second_code)
 function line_diff($a, $b) {
     $A = explode("\n", str_replace(["\r\n","\r"], "\n", $a));
@@ -97,7 +103,7 @@ $contextData[]=['role' => 'user', 'content' => "Please confirm the quest code is
 If there are any errors, fix them. Return the full corrected PHP code inside a single markdown code block with php syntax."];
 
 $buffer            = $connectionHandler->fast_request($contextData,
-    ["MAX_TOKENS" => 4096, "model" => "mistralai/devstral-2512","temperature"=>0.3],
+    ["MAX_TOKENS" => 4096, "model" => $MODEL,"temperature"=>0.3],
     "questcoder_fixer");
 
 // Extract PHP code from markdown code block
@@ -111,7 +117,7 @@ if (isset($first_code) && isset($second_code)) {
     $corrected_errors=line_diff($first_code, $second_code);
 }
 
-
+*/
 // The AI-generated code ($phpCode) contains a line like: $quest_id = "merchant_request";
 // Extract the original quest_id from the PHP code
 $questName = "";

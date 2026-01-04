@@ -36,8 +36,9 @@ FROM public.eventlog A
 LEFT JOIN public.named_cell B ON B.id = A.sess::BIGINT
 LEFT JOIN public.locations C ON C.formid=B.location_id
 WHERE A.sess ~ '^[0-9]+$' and type='request'
-and A.sess<>'pending'
+and A.sess<>'pending' AND B.statics_list IS NOT NULL
 order by A.gamets desc,A.localts desc
+limit 1
 ");
 
 if (sizeof($formInput["npclist"]) == 0) { // Initial case
@@ -143,12 +144,17 @@ As a rolemaster you can:
  * Spawm small items (amulets, rings, books, notes,...)
  * Spawn NEW Actors.
  * Spawn NEW enemies
+ * Spawn teleport doors to known locations.
  * Instruct Actors/enemies to tell topics, fight, travel.
 
 Restrictions:
  * Use available locations
- * Scenarios are static so you CAN NOT spawn furniture/new locations or static elements,immovables, or non-interactive objects.
+ * Scenarios are static so you CAN NOT spawn furniture/new locations or static elements,immovables.
  * You cannot instruct player ({$GLOBALS["PLAYER_NAME"]}) directly, only give hints through NPCs.
+ * If you need a hidden chamber/passage, spawn a teleport door to closest available location.
+ * AVOID referring to not spawned objects.
+ * Avoid 'hidden doors','opened passages','small alcove'. Use a teleport door to closest available location instead.
+ * Avoid conditionals/branchs. Things must be direct and concrete.
 
 Task:
 Given this context, generate the next quest steps. (just generate 4/5 steps)
@@ -427,11 +433,11 @@ $npcListFinal
 $prevSteps
 
 # Current Location: $lastLocation
-# Static elements known in current location (you cannot spawn new static elements): {$awaredCell["statics_list"]}
-
-Nearby entrances (these are entrances/exits to a building/cave/scenario/room)
+# Available activators in current location. (specify id to use them for triggering, e.g. wait for Pedestal:0x00112233 to be activated)
+{$awaredCell["statics_list"]}
+# Nearby entrances (these are entrances/exits to a building/cave/scenario/room)
 $locList
-If no nearby entrances, this means current location has no passages/doors .
+If no nearby entrances, this means current location has no passages/doors/chambers .
 ";
 
     $finishInstruction = "";

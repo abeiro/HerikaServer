@@ -1674,21 +1674,30 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     // logEvent($gameRequest);
 
     $localData=explode("/",$gameRequest[3]);
-    if ($localData) {
-        // Lets check first if already exists a record with same id, same door_id and dest_door_cell_id is not 0, in that case, don't update as we already have better info on the database
-        $existingRecord = $db->fetchOne("SELECT * FROM named_cell WHERE id = " . intval($localData[0]) . " AND door_id = 0");
-        if ($existingRecord) {
-            $db->upsertRowOnConflict(
-                    'named_cell',
-                    array(
-                        'id' => intval($localData[0]),
-                        'door_id'=>0,
-                        'statics_list'=> $localData[1],
-                    ),
-                    "id,door_id"
-                );
+    $staticListRaw=explode(",",$localData[1]);
+    foreach ($staticListRaw as $key => $value) {
+        if ($value) {
+            $nameRefIdPair = explode("@",$value);
+            if (!empty($nameRefIdPair[0])) {
+                $unsignedInt = (intval($nameRefIdPair[1]) + 0) & 0xFFFFFFFF;
+                $hexRefId = '0x' . strtoupper(str_pad(dechex($unsignedInt), 8, '0', STR_PAD_LEFT));
+                $nameRefIdPair[1] = $hexRefId;
+                $inCellItems[]=implode(":",$nameRefIdPair);
+            }
         }
     }
+    $static_list=implode("\n",$inCellItems);
+    $db->upsertRowOnConflict(
+            'named_cell',
+            array(
+                'id' => intval($localData[0]),
+                'door_id'=>0,
+                'statics_list'=> $static_list,
+            ),
+            "id,door_id"
+        );
+
+
     $MUST_END=true;
     
     
@@ -1712,7 +1721,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                         'dest_door_cell_id'=>intval($localData[4]),
                         'dest_door_exterior'=>intval($localData[5]),
                         'door_id'=>intval($localData[6]),
-                        'vanilla_cell'=>intval(value: $localData[1])<77175193 ? true : false,// IDs below 77175193 are vanilla cells 0x04999999
+                        'vanilla_cell'=>(intval($localData[1])<77175193) ? true : false,// IDs below 77175193 are vanilla cells 0x04999999
                     ),
                     "id,door_id"
                 );

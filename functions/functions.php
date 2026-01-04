@@ -1196,7 +1196,8 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                         'original'=>''
                     )
                 );
-                
+
+                error_log("[ACTION POSTFILTER Train] Executed server-side");
                 unset($actionsCopy[$n]);// Remove action from list, so client does not execute it
 
             } else if ($actionParts2[0]=="StartRitualCeremony") {
@@ -1266,7 +1267,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                     )
                 );
 
-                error_log("[ACTION POSTFILTER Toast] Executed server-side");
+                error_log("[ACTION POSTFILTER StartRitualCeremony] Executed server-side");
 
             } else if ($actionParts2[0]=="EndRitualCeremony") {
                 

@@ -704,7 +704,11 @@ function TellTopicToPlayer(
     $quest_data = $quest["quest_data"] ?? [];
 
     if (!isset($quest_data["npcs"][$npc_ref])) {
-        throw new Exception("NPC '$npc_ref' not declared. Use CreateNPC first.");
+        if  ($npc_ref=="player") {
+            error_log("[TellTopicToPlayer] WARNING, topic teller is player Marking Topic delivered <$topic_ref>");
+            return "done";
+        } else
+            throw new Exception("NPC '$npc_ref' not declared. Use CreateNPC first.");
     }
 
     if (!isset($quest_data["topics"][$topic_ref])) {
@@ -1391,6 +1395,7 @@ function CompleteQuest(
     $quest = SNQEQuestManager::getQuest($quest_id);
 
     if (!$quest) {
+        error_log("[CompleteQuest]\t$quest_id  does not exist.");
         throw new Exception("Quest '$quest_id' does not exist.");
     }
 
@@ -2471,4 +2476,145 @@ function StationAtLocation(
 
     error_log("[StationAtLocation] Station instruction issued for <$location>, returning true immediately");
     return true;
+}
+
+/**
+ * SNQE WaitForActivation function
+ *
+ * Waits until an activator is activated by the player.
+ * Blocks quest execution until the activator is activated.
+ *
+ * @param string $quest_id Unique quest identifier
+ * @param string $activator_ref Activator reference in format "Name:0xHEXID" or "0xHEXID"
+ * @param int $maxAttempts Maximum retries before failure (default 1000)
+ * @return string "done" if activator was activated, "waiting" if still waiting
+ */
+function WaitForActivation(
+    string $quest_id,
+    string $activator_ref,
+    int $maxAttempts = 1000
+): string {
+    // Fetch quest state
+    $quest = SNQEQuestManager::getQuest($quest_id);
+
+    if (!$quest) {
+        throw new Exception("Quest '$quest_id' does not exist.");
+    }
+
+    $quest_data = $quest["quest_data"] ?? [];
+
+    // Initialize activation tracking if not present
+    if (!isset($quest_data["activation_tracking"])) {
+        $quest_data["activation_tracking"] = [];
+    }
+
+    // Parse activator reference
+    // Format: "Name:0xHEXID" or "0xHEXID"
+    $activator_name = null;
+    $activator_id = null;
+
+    if (strpos($activator_ref, ':') !== false) {
+        // Format: "Name:0xHEXID"
+        list($activator_name, $activator_id) = explode(':', $activator_ref, 2);
+    } else {
+        // Format: "0xHEXID"
+        $activator_id = $activator_ref;
+    }
+
+ 
+    // Use the form ID as the tracking key
+    $tracking_key = $activator_id;
+
+    // If already activated, return success
+    if (
+        !empty($quest_data["activation_tracking"][$tracking_key]) &&
+        $quest_data["activation_tracking"][$tracking_key] === "done"
+    ) {
+        error_log("[WaitForActivation] Activator <$activator_ref> already activated");
+        return "done";
+    }
+
+    // Increment activation check attempts
+    $quest_data["activation_tracking"][$tracking_key] = $quest_data["activation_tracking"][$tracking_key] ?? [];
+    if (is_array($quest_data["activation_tracking"][$tracking_key])) {
+        $attempts = 0;
+        $GLOBALS["db"]->insert(
+            'responselog',
+            [
+                'localts' => time(),
+                'sent' => 0,
+                'actor' => "rolemaster",
+                'text' => "",
+                'action' => "rolecommand|QuestTrackReference@{$activator_id}",
+                'tag' => "",
+            ]
+        );
+
+    } else {
+        $attempts = (int) $quest_data["activation_tracking"][$tracking_key];
+    }
+    $attempts++;
+
+    $activator_id=strtoupper(dechex(hexdec($activator_id)));
+    // Query event log to check if activator was activated
+    // Pattern: "X activates Y" where Y contains the form ID or activator name
+    $searchPattern = "%$activator_id%activated";
+
+    $rows = $GLOBALS["db"]->fetchAll(
+        "SELECT count(*) as n FROM eventlog WHERE type='status_msg' AND data LIKE '" .
+        $GLOBALS["db"]->escape($searchPattern) . "'"
+    );
+    error_log("SELECT count(*) as n FROM eventlog WHERE type='status_msg' AND data LIKE '" .
+        $GLOBALS["db"]->escape($searchPattern) . "'");
+    $wasActivated = false;
+    if (is_array($rows) && isset($rows[0]) && $rows[0]["n"] > 0) {
+        $wasActivated = true;
+    }
+
+    if ($wasActivated) {
+        error_log("[WaitForActivation] Activator <$activator_ref> has been activated");
+        $quest_data["activation_tracking"][$tracking_key] = "done";
+        SNQEQuestManager::updateQuestData($quest_id, ["activation_tracking" => $quest_data["activation_tracking"]]);
+        return "done";
+    }
+
+    // Store attempt count
+    $quest_data["activation_tracking"][$tracking_key] = $attempts;
+
+    // Insert or update a scenenote to guide the player
+    $activator_display = $activator_name ? "$activator_name ($activator_id)" : $activator_id;
+    $sceneNoteData = "#Storyline: {$GLOBALS["PLAYER_NAME"]} must activate <$activator_display>";
+    $sceneNoteDataEsc = $GLOBALS["db"]->escape($sceneNoteData);
+
+    // Check if row with same data already exists
+    $existingRow = $GLOBALS["db"]->fetchOne(
+        "SELECT rowid FROM rolemaster WHERE type = 'scenenote' AND data = '$sceneNoteDataEsc' LIMIT 1"
+    );
+    error_log("SELECT rowid FROM rolemaster WHERE type = 'scenenote' AND data = '$sceneNoteDataEsc' LIMIT 1");
+
+    if ($existingRow) {
+        // Update existing row's localts to keep it active
+        $GLOBALS["db"]->update(
+            'rolemaster',
+            'localts=' . time(),
+            "rowid = {$existingRow["rowid"]}"
+        );
+    } else {
+        // Insert new row
+        $GLOBALS["db"]->insert(
+            'rolemaster',
+            [
+                'localts' => time(),
+                'ttl' => 25,
+                'type' => "scenenote",
+                'data' => $sceneNoteData,
+            ]
+        );
+    }
+
+    // Save updated quest state
+    SNQEQuestManager::updateQuestData($quest_id, ["activation_tracking" => $quest_data["activation_tracking"]]);
+
+    error_log("[WaitForActivation] Waiting for activator <$activator_ref> activation (attempt $attempts/$maxAttempts)");
+    return "waiting";
 }
