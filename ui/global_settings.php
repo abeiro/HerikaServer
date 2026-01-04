@@ -247,7 +247,7 @@ function pretty_label(string $flatName): string {
         'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
         'CORE_CONNECTOR_SUMMARY' => 'Summaries',
         'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory/Background Life',
-        'CORE_CONNECTOR_PROFILES' => 'Dynamic Profiles',
+        'CORE_CONNECTOR_PROFILES' => 'Dynamic Profiles/Relationships',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
         'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
         'RELLLM_CONNECTOR' => 'Relationship Management',
