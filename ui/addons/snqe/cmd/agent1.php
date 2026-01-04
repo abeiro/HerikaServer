@@ -43,7 +43,7 @@ $fquestTitle = $formInput["questTitle"];
 
 $prompt[] = ['role' => 'system', 'content' => $sysprompt_content];
 $prompt[] = ['role' => 'user', 'content' => $formInput["userprompt"]];
-$prompt[] = ['role' => 'user', 'content' => "Write XML to acomplish the quest steps"];
+$prompt[] = ['role' => 'user', 'content' => "Write XML to acomplish all the quest steps"];
 
 
 $allowedLocationList = $formInput["locations"];
@@ -54,7 +54,8 @@ $contextData = $prompt;
 
 $connectionHandler = $connector->getConnector($currentConnectorData);
 
-$MODEL = "nex-agi/deepseek-v3.1-nex-n1:free";
+$MODEL = "google/gemini-2.5-flash-lite";
+//$MODEL = "nex-agi/deepseek-v3.1-nex-n1:free";
 
 $buffer = $connectionHandler->fast_request(
     $contextData,
@@ -72,8 +73,8 @@ if (preg_match('/```xml\n(.*?)\n```/s', $buffer, $matches)) {
 
 // Validation Rules
 $allowedRaces = ['nord', 'imperial', 'redguard', 'breton', 'argonian', 'orc', 'draugr', 'elk', 'frost_troll', 'frostbite_spider', 'dwarven_sphere_guardian', 'falmer', 'giant'];
-$allowedClasses = ['beggar', 'warrior', 'assassin', 'mage', 'farmer', 'soldier', 'merchant', 'noble', 'creature','forsworn'];
-$allowedItemTypes = ['potion', 'necklace', 'amulet', 'ring', 'book', 'axe','note','dagger'];
+$allowedClasses = ['beggar', 'warrior', 'assassin', 'mage', 'farmer', 'soldier', 'merchant', 'noble', 'creature', 'forsworn'];
+$allowedItemTypes = ['potion', 'necklace', 'amulet', 'ring', 'book', 'axe', 'note', 'dagger'];
 $allowedItemLocations = ['nearby', 'pocket'];
 
 // Helper function to extract multiple tag values
@@ -104,7 +105,9 @@ function validate_spawns($xmlString, $allowedRaces, $allowedClasses, $allowedLoc
     $errors = [];
 
     // Convert allowed locations to lowercase for case-insensitive comparison
-    $allowedLocationsLower = array_map('strtolower', $allowedLocationList);
+    $allowedLocationsLower = array_map(function ($location) {
+        return strtolower(str_replace(' (door/passage)', '', $location));
+    }, $allowedLocationList);
 
     foreach ($spawns as $spawn) {
         $name = extract_tag_content($spawn, 'name');
@@ -134,7 +137,10 @@ function validate_spawns($xmlString, $allowedRaces, $allowedClasses, $allowedLoc
 
         // Validate location (case-insensitive)
         if ($location !== 'nearby' && !in_array($location, $allowedLocationsLower)) {
-            $errors[] = "NPC '$name': Invalid location '$location'. Allowed: nearby or " . implode(', ', $allowedLocationList);
+            if (preg_match('/^[a-zA-Z0-9\s\'-]+@[0-9]+$/', $location)) {
+                continue; // Valid reference format
+            } else
+                $errors[] = "NPC '$name': Invalid location '$location'. Allowed: nearby or " . implode(', ', $allowedLocationList);
         }
     }
 
@@ -160,7 +166,9 @@ function validate_spawned_items($xmlString, $allowedItemTypes, $allowedLocationL
     $spawnedItemsLower = array_map('strtolower', array_map('trim', $spawneditemslist ?? []));
 
     // Convert allowed locations to lowercase for case-insensitive comparison
-    $allowedLocationsLower = array_map('strtolower', $allowedLocationList);
+    $allowedLocationsLower = array_map(function ($location) {
+        return strtolower(str_replace(' (door/passage)', '', $location));
+    }, $allowedLocationList);
 
     // If specific item locations provided, use those; otherwise use general locations
     if ($allowedItemLocations !== null) {
@@ -185,7 +193,11 @@ function validate_spawned_items($xmlString, $allowedItemTypes, $allowedLocationL
 
         // Validate location (case-insensitive)
         if (!in_array($location, $allowedLocationsLower)) {
-            $errors[] = "Item '$name': Invalid location '$location'. Allowed: " . implode(', ', array_merge($allowedLocationList, $allowedItemLocations ?? []));
+            // Check first if location is a reference in the format name:0xHEXID, pattern should be like "pedestal:0x00027f92"
+            if (preg_match('/^[a-zA-Z0-9\s\'-]+:0x[0-9a-fA-F]+$/', $location)) {
+                continue; // Valid reference format
+            } else
+                $errors[] = "Item '$name': Invalid location '$location'. Allowed: " . implode(', ', [...$allowedLocationList, ...$allowedItemLocations ?? []]);
         }
 
         // Check if item is already in spawneditemslist and add <spawned>true</spawned> if it is
@@ -234,7 +246,7 @@ function validate_instructions($xmlString, $playerName = null, $npclist = [])
         $target = extract_tag_content($instruction, 'target');
 
         if (!$npc) {
-            $errors[] = "Instruction missing NPC name";
+            $errors[] = "Instruction missing NPC name (action '$actionOriginal')";
             continue;
         }
 
@@ -243,8 +255,8 @@ function validate_instructions($xmlString, $playerName = null, $npclist = [])
         // Check if instruction NPC is the player
         // Allow player name only for WaitToItemBeRecovered action
         if ($playerName && strtolower(trim($playerName)) === $npcLower) {
-            if ($action !== 'waittoitemberecovered' && $action !== 'travelto') {
-                if ($action == "telltopictonpc" )
+            if ($action !== 'waittoitemberecovered' && $action !== 'travelto' && $action !== 'waitforactivation') {
+                if ($action == "telltopictonpc")
                     $errors[] = "Instruction '$actionOriginal' references player as NPC: '$npc'. Instructions can only reference spawned NPCs, not the player. Change the sense of the topic and use TellTopicToPlayer";
                 else
                     $errors[] = "Instruction '$actionOriginal' references player as NPC: '$npc'. Instructions can only reference spawned NPCs, not the player.";
@@ -253,9 +265,9 @@ function validate_instructions($xmlString, $playerName = null, $npclist = [])
         }
 
         // Validate NPC is in the provided npclist or spawned by <spawn> tags (if list is provided)
-        if ($action !== 'waittoitemberecovered' && $action !== 'travelto') {
+        if ($action !== 'waittoitemberecovered' && $action !== 'travelto' && $action !== 'waitforactivation') {
             if (!empty($npclistLower) && !in_array($npcLower, $npclistLower) && !in_array($npcLower, $spawnedNpcNames)) {
-                $errors[] = "Instruction references NPC '$npc' which is not in the NPC list. Allowed NPCs: " . implode(', ', $npclist);
+                $errors[] = "Instruction '$actionOriginal' references NPC '$npc' which is not in the NPC list. Allowed NPCs: " . implode(', ', $npclist);
             }
         }
 
@@ -282,7 +294,7 @@ function validate_spawned_items_recovery($xmlString)
     $items = extract_all_tags($xmlWithoutInstructions, 'item');
 
     $allItems = array_merge($spawnedItems, $items);
-
+    $allItems = $items;
     // Extract all instructions and find WaitItemToBeRecovered actions
     $instructions = extract_all_tags($xmlString, 'instruction');
     $recoveryTargets = [];
@@ -290,7 +302,7 @@ function validate_spawned_items_recovery($xmlString)
     foreach ($instructions as $instruction) {
         $action = strtolower(extract_tag_content($instruction, 'action') ?? '');
         if ($action === 'waittoitemberecovered') {
-            $target = extract_tag_content($instruction, 'target');
+            $target = extract_tag_content($instruction, 'item');
             if ($target) {
                 $recoveryTargets[] = strtolower(trim($target));
             }
@@ -303,7 +315,8 @@ function validate_spawned_items_recovery($xmlString)
         if ($name) {
             $nameLower = strtolower(trim($name));
             if (!in_array($nameLower, $recoveryTargets)) {
-                $errors[] = "Item '$name' is spawned but no 'WaitItemToBeRecovered' instruction found for it. Add a WaitItemToBeRecovered instruction somewhere after <item>, in a logical order";
+                $errors[] = "Item '$name' is spawned but no 'WaitToItemBeRecovered' instruction found for it. Add a WaitToItemBeRecovered instruction somewhere after <item>, in a logical order";
+                error_log("Item '$name' is spawned but no 'WaitToItemBeRecovered' instruction found for it." . print_r($recoveryTargets, true));
             }
         }
     }
@@ -367,7 +380,7 @@ while ($retryCount < $maxRetries && !$validationPassed) {
         if (empty($xmlString)) {
             $allErrors[] = "Generated XML is empty.";
         }
-        
+
         if (empty($allErrors)) {
             // Validation passed
             $validationPassed = true;
@@ -397,7 +410,7 @@ while ($retryCount < $maxRetries && !$validationPassed) {
                 ];
                 $retryPrompt[] = [
                     'role' => 'user',
-                    'content' => "The XML you generated has validation errors:\n\n$errorMessage\nPlease fix these errors and regenerate the XML."
+                    'content' => "The XML you generated has validation errors:\n\n$errorMessage\nPlease fix these errors, and generate the full XML again, ensuring all previous content is preserved and only the necessary corrections are made."
                 ];
 
                 // Make retry request
@@ -503,5 +516,5 @@ if ($fquestTitle) {
     $result["title"] = $fquestTitle;
 }
 //Patch 
-$result["journallist"]=$result["journal"];
+$result["journallist"] = $result["journal"];
 echo json_encode($result);

@@ -38,8 +38,9 @@ $GLOBALS["item_types"] = [
     "dagger"      => [0x000aebf7], // Vanilla
 ];
 
+// Review this, this are used to copy appearance.
+
 $GLOBALS["npc_templates"] = [
-    // Review this, this are used to copy appearance.
     "male_nord"                      => [0x0003de8a, 0x0003de6f, 0x0003cf5d, 0x00039cfd, 0x0003dee1, 0x0003dee4, 0x00039d01, 0x0003de91, 0x0003dea5, 0x0003de56, 0x0003deea, 0x0003deed, 0x00039d09, 0x0003de98, 0x0003de74, 0x0003de5b, 0x0003def5, 0x0003def8, 0x00039d11, 0x0003dea0, 0x0003de79, 0x0003de60, 0x0003deff, 0x0003df02, 0x00039d19, 0x0003deac, 0x0003de7e, 0x0003de65, 0x0003df09, 0x0003df0c, 0x00039d21, 0x0003deb3, 0x0003de83, 0x0003de6a, 0x00073fbf, 0x00037c00, 0x00037c2c, 0x00037c05, 0x00037c32, 0x00037c39, 0x00037c40, 0x00037c47],
     "female_nord"                    => [0x000955b6, 0x00039d36, 0x00039cf5, 0x0003de89, 0x0003de6e, 0x0003cf5c, 0x00037bff, 0x0003dee0, 0x00039d3d, 0x00039d00, 0x0003de90, 0x0003dea4, 0x0003de55, 0x00037c03, 0x0003dee9, 0x00039d48, 0x00039d08, 0x0003de97, 0x0003de73, 0x0003de5a, 0x00037c31, 0x0003def4, 0x00039d4f, 0x00039d10, 0x0003de9f, 0x0003de78, 0x0003de5f, 0x00037c38, 0x0003defe, 0x00039d56, 0x00039d18, 0x0003deab, 0x0003de7d, 0x0003de64, 0x00037c3f, 0x0003df08, 0x00039d5d, 0x00039d20, 0x0003deb2, 0x0003de82, 0x0003de69, 0x00037c46, 0x000bfb48, 0x00017167, 0x00017168, 0x00017169, 0x00107a9f, 0x00033424, 0x0003386f, 0x0003387d, 0x00033882, 0x00033887, 0x0003392f, 0x0010c453, 0x0010c470, 0x0010c478, 0x0010c47e, 0x0010c484, 0x00045c75, 0x000e1019, 0x00045c77, 0x000e101f, 0x00045c8b, 0x000e1023, 0x00045cb1, 0x000e1027, 0x00045cd6, 0x000e102b, 0x00045cdf, 0x001091c1, 0x00074f7e, 0x00074f8d, 0x000fe512, 0x000edf6d, 0x000328d6, 0x0001a772, 0x000cd644, 0x000cd642],
     "male_orc"                       => [0x00039cfa, 0x0003de8b, 0x0003de70, 0x0003cf5e, 0x0003dee5, 0x00039d03, 0x0003de92, 0x0003dea6, 0x0003de57, 0x0003deee, 0x00039d0b, 0x0003de99, 0x0003de75, 0x0003de5c, 0x0003def9, 0x00039d13, 0x0003dea1, 0x0003de7a, 0x0003de61, 0x0003df03, 0x00039d1b, 0x0003dead, 0x0003de7f, 0x0003de66, 0x0003df0d, 0x00039d23, 0x0003deb4, 0x0003de84, 0x0003de6b, 0x000d9448, 0x000d9449, 0x000d944a, 0x000d944b, 0x000d944d, 0x000d9448, 0x000d9449, 0x000d944a, 0x000d944b, 0x000d944d],
@@ -94,7 +95,7 @@ $GLOBALS["npc_own_templates"] = [
     "female_breton_bard"       => [0x25849], // AIAgentTemplateBretonFemaleBard
     "female_breton_soldier"    => [0x2584a], // AIAgentTemplateBretonFemaleSoldier
 
-    "female_breton_forsworn"    => [0x00043be1], // AIAgentTemplateBretonFemaleSoldier
+    "female_breton_forsworn"    => [0x25848], // AIAgentTemplateBretonFemaleSoldier
 
 
     "male_breton_noble"        => [0x25daf], // AIAgentTemplateBretonMaleCivil
@@ -107,7 +108,7 @@ $GLOBALS["npc_own_templates"] = [
     "male_breton_bard"         => [0x25db4], // AIAgentTemplateBretonMaleBard
     "male_breton_soldier"      => [0x25db5], // AIAgentTemplateBretonMaleSoldier
 
-    "male_breton_forsworn"    => [0x00044262], // AIAgentTemplateBretonFemaleSoldier
+    "male_breton_forsworn"    => [0x25db2], // AIAgentTemplateBretonFemaleSoldier
 
     "male_nord_noble"          => [0x25db6], // AIAgentTemplateNordMaleCivil
     "male_nord_merchant"       => [0x25db6], // AIAgentTemplateNordMaleCivil
@@ -206,7 +207,22 @@ $GLOBALS["npc_own_templates"] = [
 
 ];
 
-function checkHistory($npc)
+   $GLOBALS["outfit"] = [
+        "beggar"    => [0x000a1983],
+        "mage"      => [0x0006e26f, 0x001034ef, 0x000a199c, 0x000d504c, 0x0007eab5, 0x0001703a, 0x000f3e7d, 0x00106114, 0x000fba59, 0x000e9ac4, 0x000b7a3e, 0x000b7a3f],
+        "barbarian" => [0x00057a26],
+        "warrior"   => [0x00028b44],
+        "soldier"   => [0x000fd82b, 0x000abf55, 0x000abf57, 0x000e108f, 0x000964df, 0x000abf44, 0x000abf56, 0x000abf58, 0x000d29a0, 0x000abf45, 0x000abf46, 0x000cd6dd, 0x000d29a1],
+        "assassin"  => [0x000e1ec2, 0x0010350b, 0x00065c53],
+        "rogue"     => [0x000e1ec2, 0x0010350b, 0x00065c53],
+        "farmer"    => [0x0002d75e],
+        "citizen"   => [0x000a1983],
+        "bard"      => [0x0009d5e0, 0x000e40dd, 0x000dab74, 0x000dab75, 0x000f8716, 0x000f8717, 0x000f871a, 0x000f8718],
+        "noble"     => [0x0009d5e0, 0x000e40dd, 0x000dab74, 0x000dab75, 0x000f8716, 0x000f8717, 0x000f871a, 0x000f8718],
+        "merchant"  => [0x0009d5e0, 0x000e40dd, 0x000dab74, 0x000dab75, 0x000f8716, 0x000f8717, 0x000f871a, 0x000f8718],
+        "forsworn"  => [0x00043bd9],
+    ];
+    function checkHistory($npc)
 {
 
     $historyData  = "";
@@ -469,6 +485,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
     /*
     SELECT STRING_AGG(formid,',') FROM "public"."npc_skyrim_data" where gender ilike 'male%' and race ilike 'nord%' and name='' and class ilike '%bandit%' and edid like 'Enc%' and achr='' and (not formid ilike '%0xDG%')  and (not  edid ilike '%magic%')
     */
+    global $outfit;
 
     $class    = strtolower($class);
     $race     = strtolower($race);
@@ -478,22 +495,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
     $masterDataTemplates = $GLOBALS["npc_templates"];
     $masterData          = $GLOBALS["npc_own_templates"];
 
-    $outfit = [
-        "beggar"    => [0x000a1983],
-        "mage"      => [0x0006e26f, 0x001034ef, 0x000a199c, 0x000d504c, 0x0007eab5, 0x0001703a, 0x000f3e7d, 0x00106114, 0x000fba59, 0x000e9ac4, 0x000b7a3e, 0x000b7a3f],
-        "barbarian" => [0x00057a26],
-        "warrior"   => [0x00028b44],
-        "soldier"   => [0x000fd82b, 0x000abf55, 0x000abf57, 0x000e108f, 0x000964df, 0x000abf44, 0x000abf56, 0x000abf58, 0x000d29a0, 0x000abf45, 0x000abf46, 0x000cd6dd, 0x000d29a1],
-        "assassin"  => [0x000e1ec2, 0x0010350b, 0x00065c53],
-        "rogue"     => [0x000e1ec2, 0x0010350b, 0x00065c53],
-        "farmer"    => [0x0002d75e],
-        "citizen"   => [0x000a1983],
-        "bard"      => [0x0009d5e0, 0x000e40dd, 0x000dab74, 0x000dab75, 0x000f8716, 0x000f8717, 0x000f871a, 0x000f8718],
-        "noble"     => [0x0009d5e0, 0x000e40dd, 0x000dab74, 0x000dab75, 0x000f8716, 0x000f8717, 0x000f871a, 0x000f8718],
-        "merchant"  => [0x0009d5e0, 0x000e40dd, 0x000dab74, 0x000dab75, 0x000f8716, 0x000f8717, 0x000f871a, 0x000f8718],
-        "forsworn"  => [0x00043bdd],
-    ];
-
+ 
     $weapon = [
         "sword" => [0x00013989],
     ];
@@ -619,7 +621,7 @@ Quest Journal:
 == End of Quest Data ==
 ";
 
-        $head[]   = ["role" => "system", "content" => "You're an AI writer. Your must write a book/note involved in a storyline."];
+        $head[]   = ["role" => "system", "content" => "## You're an AI writer. Your must write a book/note involved in a storyline."];
         $prompt[] = ["role" => "user", "content" => $CONTEXT_INFO_SKYRIM_LORE];
         $prompt[] = ["role" => "user", "content" => "
 Read the quest context info and write the content for \"$name\" book/note.
@@ -633,6 +635,36 @@ Format:
 * Write in first person as the one who authored the book.
 * Write the book's/note's title (\"$name\") and then generate the content of the book/note (up to 3 paragraphs).
 * The book must be no more than 75 words long.
+
+
+## Writing Task
+
+Read the quest context above and write the content of the in-game book/note titled **$name**.
+
+### Content Requirements
+- $content
+- Curent Owner: $npc_ref 
+
+### Lore & Timeline
+- The book was written **before the current quest events**.
+- It should subtly foreshadow the quest’s mystery and dangers.
+- You may reference **Skyrim lore** (vampires, curses, old ruins), but do **not** reference known vanilla NPCs or events directly.
+
+### Writing Style
+- Write in **first person**, as the original author (you must infere the autor given the quest context, can be anonymous, or someone related to the book owner).
+
+### Format
+- Begin with the title on its own line:  
+  **$name**
+- Follow with **up to 3 short paragraphs**.
+- Total length must be **100 words or fewer**.
+- Sign it (last paragraph)
+
+### Hard Rules
+- Do not describe current quest events or the player.
+- Do not resolve the mystery completely—only provide hints.
+- Keep everything grounded in the provided quest context.
+
 "];
 
         $contextData = array_merge($head, $prompt);
@@ -661,14 +693,24 @@ Format:
         }
         $localItemPlace = $unsignedInt;
 
-    } else {
+    } else if (preg_match('/^[a-zA-Z0-9\s\'-]+:0x[0-9a-fA-F]+$/', $location)){
+        $localItemPlace = 0;
+        list($itemName, $refidHex) = explode(":", $location);
+        $unsignedInt    = hexdec($refidHex);
+        // Convert to 32-bit signed integer
+        if ($unsignedInt >= 0x80000000) {
+            $unsignedInt -= 0x100000000;
+        }
+        $localItemPlace = $unsignedInt;
+
+    }  else {
         if (! is_numeric($localItemPlace)) {
             if (isset($GLOBALS["masterDataLocations"][$location])) {
                 $localItemPlace = $GLOBALS["masterDataLocations"][$location][array_rand($GLOBALS["masterDataLocations"][$location])];
             } else {
                 // Cells
                 $locationCn    = $GLOBALS["db"]->escape($location);
-                $dbDestination = $GLOBALS["db"]->fetchOne("SELECT id FROM named_cell where name='$location'");
+                $dbDestination = $GLOBALS["db"]->fetchOne("SELECT id FROM named_cell where cell_name='$location'");
                 if ($dbDestination) {
                     $localItemPlace = $dbDestination["id"];
                 } else {

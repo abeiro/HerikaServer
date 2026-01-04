@@ -262,8 +262,9 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         echo "{$responseData["actor"]}|{$responseData["action"]}|{$responseData["text"]}\r\n";
     }
     
-    if (time()%5==0)
+    if (time()%5==0) {
         logEvent($gameRequest);
+    }
     
     $MUST_END=true;
 
@@ -1102,21 +1103,26 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     
 } elseif (strpos($gameRequest[0], "util_location_name")===0) {    // util_location_name 
     
-    
     $splitNameBase=explode("/",$gameRequest[3]);
-    if ($splitNameBase[0] && $splitNameBase[1]) {
-        $db->insert(
-            'locations',
-            array(
-                'name' => $splitNameBase[0],
-                'formid' => $splitNameBase[1],
-                'region' => $splitNameBase[2],
-                'hold' => $splitNameBase[3],
-                'tags' => $splitNameBase[4]
-            )
-        );
+    if (strtoupper($splitNameBase[0])=="__CLEAR_ALL__")
+        $db->query("truncate table locations");
+    else {
+        
+        if ($splitNameBase[0] && $splitNameBase[1]) {
+            $db->insert(
+                'locations',
+                array(
+                    'name' => $splitNameBase[0],
+                    'formid' => $splitNameBase[1],
+                    'region' => $splitNameBase[2],
+                    'hold' => $splitNameBase[3],
+                    'tags' => $splitNameBase[4],
+                    'is_interior' => intval($splitNameBase[5]),
+                    'vanilla_location'=>intval(value: $splitNameBase[1])<77175193 ? true : false,// IDs below 77175193 are vanilla cells 0x04999999
+                )
+            );
+        }
     }
-
     $MUST_END=true;
     
     
@@ -1663,26 +1669,72 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
+} elseif (strpos($gameRequest[0], "named_cell_static")===0) {    // diary_nearby event - manual trigger for all NPCs in range
+    
+    // logEvent($gameRequest);
+
+    $localData=explode("/",$gameRequest[3]);
+    $staticListRaw=explode(",",$localData[1]);
+    foreach ($staticListRaw as $key => $value) {
+        if ($value) {
+            $nameRefIdPair = explode("@",$value);
+            if (!empty($nameRefIdPair[0])) {
+                $unsignedInt = (intval($nameRefIdPair[1]) + 0) & 0xFFFFFFFF;
+                $hexRefId = '0x' . strtoupper(str_pad(dechex($unsignedInt), 8, '0', STR_PAD_LEFT));
+                $nameRefIdPair[1] = $hexRefId;
+                $inCellItems[]=implode(":",$nameRefIdPair);
+            }
+        }
+    }
+    $static_list=implode("\n",$inCellItems);
+    $db->upsertRowOnConflict(
+            'named_cell',
+            array(
+                'id' => intval($localData[0]),
+                'door_id'=>0,
+                'statics_list'=> $static_list,
+            ),
+            "id,door_id"
+        );
+
+
+    $MUST_END=true;
+    
+    
 } elseif (strpos($gameRequest[0], "named_cell")===0) {    // diary_nearby event - manual trigger for all NPCs in range
     
     // logEvent($gameRequest);
 
-    $localData=explode("@",$gameRequest[3]);
+    $localData=explode("/",$gameRequest[3]);
     if ($localData) {
-        $db->upsertRowOnConflict(
-                'named_cell',
-                array(
-                    'id' => intval($localData[0]),
-                    'name' =>$localData[1],
-                    'location'=>intval($localData[2]),
-                ),
-                "id"
-            );
+        // Lets check first if already exists a record with same id, same door_id and dest_door_cell_id is not 0, in that case, don't update as we already have better info on the database
+        $existingRecord = $db->fetchOne("SELECT * FROM named_cell WHERE id = " . intval($localData[1]) . " AND door_id = " . intval($localData[6]) . " AND dest_door_cell_id != 0");
+        
+        if (!$existingRecord) {
+            $db->upsertRowOnConflict(
+                    'named_cell',
+                    array(
+                        'id' => intval($localData[1]),
+                        'cell_name' =>$localData[0],
+                        'location_id'=>intval($localData[2]),
+                        'interior'=>intval($localData[3]),
+                        'dest_door_cell_id'=>intval($localData[4]),
+                        'dest_door_exterior'=>intval($localData[5]),
+                        'door_id'=>intval($localData[6]),
+                        'vanilla_cell'=>(intval($localData[1])<77175193) ? true : false,// IDs below 77175193 are vanilla cells 0x04999999
+                    ),
+                    "id,door_id"
+                );
+        } else {
+            error_log("Skipping named_cell update for id:{$localData[1]} door_id:{$localData[6]} as better data already exists.");
+        }
+    } else {
+        error_log("named_cell: No data provided");
     }
     $MUST_END=true;
     
     
-} elseif (strpos($gameRequest[0], "switchrace")===0) {    // diary_nearby event - manual trigger for all NPCs in range
+}  elseif (strpos($gameRequest[0], "switchrace")===0) {    // diary_nearby event - manual trigger for all NPCs in range
     
     logEvent($gameRequest);
     

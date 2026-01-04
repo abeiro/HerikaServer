@@ -722,7 +722,8 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     }
         
 
-    $lastDialog[]=array('role' => 'user', 'content' => $GLOBALS["PROMPT_NEARBY_SECTIONS"]);
+    //$lastDialog[]=array('role' => 'user', 'content' => $GLOBALS["PROMPT_NEARBY_SECTIONS"]);
+    // this is going to return nothing
     return $lastDialog;
 
 }
@@ -772,6 +773,24 @@ function DataPosibleLocationsToGo()
         break;
     }
 
+    // Location blacklist // $LOCATION_BLACKLIST
+    $LOCATION_BLACKLIST_ARRAY=explode(",", $GLOBALS["LOCATION_BLACKLIST"] ?: []);
+    if (count($LOCATION_BLACKLIST_ARRAY) > 0) {
+        foreach ($retData as $k => $v) {
+            foreach ($LOCATION_BLACKLIST_ARRAY as $blacklistedLocation) {
+                $blacklistedLocationTrimmed = trim($blacklistedLocation);
+                if (!empty($blacklistedLocationTrimmed) && (stripos($v, $blacklistedLocationTrimmed) !== false)) {
+                    unset($retData[$k]);
+                    break; // No need to check other blacklisted locations
+                }
+            }
+        }
+    }
+    foreach ($retData as $k => $v) {
+        if ($v=="Skyrim") {
+            $retData[$k].=" (exit)";
+        }
+    }
     //print_r($matches);
     // ? this part with 'Herika can see this beings in range:' seems outdated 
     /* $results = $db->fetchAll("select  a.data  as data  FROM  eventlog a 

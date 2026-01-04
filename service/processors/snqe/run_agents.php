@@ -105,7 +105,7 @@ function updateList(&$list, $newItems)
 
 // Determine execution mode
 $mode = isset($argv[1]) ? $argv[1] : 'full';
-$needsEnd = isset($argv[2]) ? $argv[2] : 'end';
+$needsEnd = isset($argv[2]) ? $argv[2]=="end": false;
 $baseUrl = "http://localhost/HerikaServer/ui/addons/snqe/cmd"; // Adjust base URL as needed, assuming localhost for internal calls or file inclusion if possible.
 // However, the user asked to use fopen calls using set_stream_context to mimic fetch calls.
 // Since this is running on the server, we might need the full URL.
@@ -124,7 +124,7 @@ if ($mode === 'full' || $mode === '1') {
     if (isset($state['questtitle']) && !empty($state['questtitle']) && !isset($state['npclist'])) { 
         echo "Using existing quest title: {$state['questtitle']}. Skipping Agent 0.\n";
     } else {
-        echo "No existing quest title found.\n";
+        echo "Running Agent 0... at least 1 NPCs spawned.\n";
 
         $payload = [
             'prompt' => $state['userprompt'],

@@ -183,6 +183,49 @@ class RelationshipManager {
     }
 
     /**
+     * Get tier reference prompt from database (custom or default)
+     * This is injected into NPC context to help the conversation model
+     * understand how to adjust behavior based on relationship tiers.
+     */
+    public static function getTierReferencePrompt() {
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        // Default fallback if database unavailable
+        $default = "[TIER REFERENCE - Adjust behavior toward NPCs based on tier]\n" .
+            "HOSTILE: Wants them dead, attack on sight\n" .
+            "HATEFUL: Despises, refuses cooperation, threatens\n" .
+            "RESENTFUL: Deep grudge, bitter, may sabotage\n" .
+            "COLD: Dismissive, unhelpful, curt\n" .
+            "WARY: Suspicious, guarded, reluctant\n" .
+            "NEUTRAL: Polite stranger, no special treatment\n" .
+            "ACQUAINTANCE: Recognizes, mildly helpful\n" .
+            "FRIENDLY: Pleasant, helpful, enjoys company\n" .
+            "FOND: Warm, protective, prioritizes them\n" .
+            "DEVOTED: Deep loyalty, would sacrifice\n" .
+            "BONDED: Absolute trust, would die for them";
+
+        try {
+            // Query the prompts table for custom or default tier reference
+            $row = $GLOBALS["db"]->fetchOne(
+                "SELECT COALESCE(custom_prompt, default_prompt) as prompt " .
+                "FROM prompts WHERE prompt_key = 'rel_tier_reference'"
+            );
+            if ($row && !empty($row['prompt'])) {
+                $cached = $row['prompt'];
+                return $cached;
+            }
+        } catch (Exception $e) {
+            error_log("[REL] Failed to load tier reference prompt: " . $e->getMessage());
+        }
+
+        $cached = $default;
+        return $cached;
+    }
+
+    /**
      * Get emoji for tier
      */
     public static function getTierEmoji($tier) {
@@ -289,15 +332,14 @@ class RelationshipManager {
 
         // Add behavioral instructions so the conversation model knows how to use these tiers
         if ($tierOnly) {
-            $lines[] = "[RELATIONSHIPS - Adjust your behavior based on these tiers]";
-            $lines[] = "HOSTILE/HATEFUL: Attack on sight, refuse all cooperation, openly threaten";
-            $lines[] = "RESENTFUL/COLD: Dismissive, unhelpful, curt replies, refuse requests";
-            $lines[] = "WARY: Suspicious, guarded, reluctant to share info or help";
-            $lines[] = "NEUTRAL: Polite but distant stranger, no special treatment";
-            $lines[] = "ACQUAINTANCE/FRIENDLY: Helpful, pleasant, willing to assist";
-            $lines[] = "FOND/DEVOTED: Warm, protective, prioritize their wellbeing, go out of your way";
-            $lines[] = "BONDED: Unbreakable loyalty, would die for them, confide everything";
+            // Get tier reference prompt from database (custom or default)
+            $tierPrompt = self::getTierReferencePrompt();
+            $tierLines = explode("\n", $tierPrompt);
+            foreach ($tierLines as $tierLine) {
+                $lines[] = trim($tierLine);
+            }
             $lines[] = "";
+            $lines[] = "[CURRENT RELATIONSHIPS]";
         } else {
             $lines[] = "[RELATIONSHIPS]";
         }
@@ -571,6 +613,226 @@ Saved your life: "You... you saved me! I won't forget this." #REL:Player=+40#
 Attacked you: "You dare strike me?!" #REL:Player=-35# #TYPE:Player=Rival#
 Killed your friend: "MURDERER! I will NEVER forgive you!" #REL:Player=-70#
 PROMPT;
+    }
+
+    /**
+     * Build relationship context for the Rolemaster/Director
+     * Called when rolemaster activates to provide relationship awareness
+     *
+     * Returns prose descriptions of how characters feel about each other -
+     * no scores, just narrative the director can use to guide the scene.
+     *
+     * @param array $npcsInScene Names of NPCs currently in scene
+     * @param array $mentionedNpcs Names of NPCs mentioned in dialogue (optional)
+     * @return string Prose context block for director
+     */
+    public static function buildDirectorContext($npcsInScene = [], $mentionedNpcs = []) {
+        // Combine and dedupe NPC lists
+        $allNpcs = array_unique(array_merge($npcsInScene, $mentionedNpcs));
+        $allNpcs = array_filter($allNpcs, function($n) {
+            $n = trim($n);
+            return !empty($n) && strtolower($n) !== 'player';
+        });
+
+        if (empty($allNpcs)) {
+            return "";
+        }
+
+        $descriptions = [];
+
+        // Clean NPC names (remove status tags)
+        $cleanNpcs = [];
+        foreach ($allNpcs as $npc) {
+            $clean = trim(preg_replace('/\s*\([^)]+\)/', '', $npc));
+            if (!empty($clean)) {
+                $cleanNpcs[] = $clean;
+            }
+        }
+
+        // For each NPC, describe their feelings
+        foreach ($cleanNpcs as $npc) {
+            $rels = self::getRelationships($npc);
+            if (empty($rels)) continue;
+
+            $npcDescriptions = [];
+
+            // How this NPC feels about the Player
+            if (isset($rels['Player'])) {
+                $desc = self::describeFeeling($npc, 'Player', $rels['Player']);
+                if ($desc) $npcDescriptions[] = $desc;
+            }
+
+            // How this NPC feels about other NPCs in scene
+            foreach ($cleanNpcs as $otherNpc) {
+                if ($otherNpc === $npc) continue;
+                if (isset($rels[$otherNpc])) {
+                    $desc = self::describeFeeling($npc, $otherNpc, $rels[$otherNpc]);
+                    if ($desc) $npcDescriptions[] = $desc;
+                }
+            }
+
+            // Subject/topic affinities (anything that's not an NPC name or Player)
+            $knownNames = array_map('strtolower', $cleanNpcs);
+            $knownNames[] = 'player';
+
+            foreach ($rels as $target => $r) {
+                if (in_array(strtolower($target), $knownNames)) continue;
+                // This is a subject/topic affinity
+                $desc = self::describeSubjectFeeling($npc, $target, $r);
+                if ($desc) $npcDescriptions[] = $desc;
+            }
+
+            if (!empty($npcDescriptions)) {
+                $descriptions = array_merge($descriptions, $npcDescriptions);
+            }
+        }
+
+        if (empty($descriptions)) {
+            return "";
+        }
+
+        $lines = [];
+        $lines[] = "[HOW CHARACTERS FEEL]";
+        $lines = array_merge($lines, $descriptions);
+        $lines[] = "";
+        $lines[] = "Director: Ensure your instructions respect these feelings. Don't direct characters to act against their strong emotions.";
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * Describe how one character feels about another in prose
+     */
+    private static function describeFeeling($npc, $target, $relData) {
+        $aff = $relData['aff'] ?? 0;
+        $type = $relData['type'] ?? 'neutral';
+        $worst = $relData['worst'] ?? '';
+        $best = $relData['best'] ?? '';
+
+        // Skip truly neutral relationships
+        if ($aff >= -5 && $aff <= 5 && $type === 'neutral') {
+            return null;
+        }
+
+        // Build the feeling description based on affinity AND type
+        $feeling = self::getEmotionalDescription($aff, $type);
+
+        $desc = "- {$npc} {$feeling} {$target}";
+
+        // Add the WHY - the significant events that shaped this feeling
+        $reasons = [];
+        if (!empty($worst)) $reasons[] = $worst;
+        if (!empty($best)) $reasons[] = $best;
+
+        if (!empty($reasons)) {
+            $desc .= " because " . implode(" and ", $reasons);
+        }
+
+        return $desc;
+    }
+
+    /**
+     * Get emotional description based on affinity and relationship type
+     */
+    private static function getEmotionalDescription($aff, $type) {
+        // High positive affinity
+        if ($aff >= 76) {
+            switch ($type) {
+                case 'romantic': return "is deeply in love with";
+                case 'familial': return "has an unbreakable family bond with";
+                case 'nemesis':
+                case 'enemy': return "is completely obsessed with - can't stop thinking about";
+                case 'rival': return "has immense respect for as a worthy opponent -";
+                case 'fearful': return "is utterly dependent on despite fearing";
+                default: return "is utterly devoted to";
+            }
+        }
+        // Moderate-high positive
+        elseif ($aff >= 56) {
+            switch ($type) {
+                case 'romantic': return "has strong romantic feelings for";
+                case 'familial': return "deeply loves and protects";
+                case 'enemy':
+                case 'nemesis': return "has a complex obsession with";
+                case 'rival': return "genuinely respects and enjoys competing with";
+                default: return "is genuinely fond of";
+            }
+        }
+        // Positive
+        elseif ($aff >= 31) {
+            switch ($type) {
+                case 'romantic': return "is attracted to";
+                case 'rival': return "enjoys friendly competition with";
+                default: return "is friendly toward";
+            }
+        }
+        // Slight positive
+        elseif ($aff >= 6) {
+            return "is slightly positive toward";
+        }
+        // Neutral
+        elseif ($aff >= -5) {
+            return "is indifferent to";
+        }
+        // Slight negative
+        elseif ($aff >= -30) {
+            switch ($type) {
+                case 'suspicious': return "doesn't trust";
+                case 'fearful': return "is nervous around";
+                default: return "is wary of";
+            }
+        }
+        // Moderate negative
+        elseif ($aff >= -55) {
+            switch ($type) {
+                case 'contempt': return "looks down on";
+                case 'jealous': return "is bitterly jealous of";
+                default: return "is cold and unfriendly toward";
+            }
+        }
+        // Strong negative
+        elseif ($aff >= -75) {
+            switch ($type) {
+                case 'betrayed': return "feels deeply betrayed by";
+                default: return "resents and holds grudges against";
+            }
+        }
+        // Very strong negative
+        elseif ($aff >= -90) {
+            return "actively hates";
+        }
+        // Extreme negative
+        else {
+            return "is hostile toward and would attack";
+        }
+    }
+
+    /**
+     * Describe how a character feels about a subject/topic
+     */
+    private static function describeSubjectFeeling($npc, $subject, $relData) {
+        $aff = $relData['aff'] ?? 0;
+
+        // Skip neutral
+        if ($aff >= -5 && $aff <= 5) {
+            return null;
+        }
+
+        if ($aff >= 60) {
+            $feeling = "strongly values and supports";
+        } elseif ($aff >= 30) {
+            $feeling = "favors";
+        } elseif ($aff >= 6) {
+            $feeling = "is somewhat positive toward";
+        } elseif ($aff >= -30) {
+            $feeling = "dislikes";
+        } elseif ($aff >= -60) {
+            $feeling = "strongly opposes";
+        } else {
+            $feeling = "despises and would act against";
+        }
+
+        return "- {$npc} {$feeling} \"{$subject}\"";
     }
 
     /**

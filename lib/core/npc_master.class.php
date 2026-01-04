@@ -91,6 +91,7 @@ class NpcMaster
         if ($npcName === "The Narrator") {
             return null;
         }
+
         $escaped = $this->escape($npcName);
         $query   = "SELECT * FROM {$this->table} WHERE npc_name = '{$escaped}' LIMIT 1";
         return $this->db->fetchOne($query);
@@ -104,6 +105,7 @@ class NpcMaster
         if ($md5Hash === md5('The Narrator')) {
             return null;
         }
+
         $escaped = $this->escape($md5Hash);
         $query   = "SELECT * FROM {$this->table} WHERE md5 = '{$escaped}' LIMIT 1";
         return $this->db->fetchOne($query);
@@ -199,6 +201,11 @@ class NpcMaster
     {
         $id    = (int) $id;
         $where = "id = $id";
+        // Disallow deleting The Narrator profile (by id or name)
+        $row = $this->getById($id);
+        if ($row && (intval($row['id']) === 1 || ($row['npc_name'] ?? '') === 'The Narrator')) {
+            return false;
+        }
         return $this->db->delete($this->table, $where);
     }
 
@@ -245,7 +252,28 @@ class NpcMaster
         $existing = $this->getByName($npcname);
 
         if ($existing && ! $overwrite) {
-            // Profile exists, and no overwrite requested — bail
+            // Profile exists, and no overwrite requested
+            // BUT still update race/gender/refid if they're empty and FORCE_PARMS has them
+            $needsUpdate = false;
+            $updateFields = [];
+
+            if (empty($existing['race']) && !empty($FORCE_PARMS['race'])) {
+                $updateFields['race'] = $FORCE_PARMS['race'];
+                $needsUpdate = true;
+            }
+            if (empty($existing['gender']) && !empty($FORCE_PARMS['gender'])) {
+                $updateFields['gender'] = $FORCE_PARMS['gender'];
+                $needsUpdate = true;
+            }
+            if (empty($existing['refid']) && !empty($FORCE_PARMS['refid'])) {
+                $updateFields['refid'] = $FORCE_PARMS['refid'];
+                $needsUpdate = true;
+            }
+
+            if ($needsUpdate) {
+                $this->update($existing['id'], $updateFields);
+                Logger::info("NPC '{$npcname}' updated with game data (race/gender/refid).");
+            }
             return;
         }
 
@@ -647,9 +675,6 @@ class NpcMaster
         date_default_timezone_set('UTC');
 
         $startTime = time();
-        error_log("[NPC BACKUP] " . date('Y-m-d H:i:s'));
-
-        // Update all NPCs with new gamets_last_updated timestamp
         $updateQuery = "UPDATE {$this->table} SET gamets_last_updated = $timestamp";
         $GLOBALS["db"]->execQuery($updateQuery);
 
@@ -672,7 +697,6 @@ class NpcMaster
             FROM core_npc_master
         ";
         $GLOBALS["db"]->execQuery($insertQuery);
-
         error_log("[NPC BACKUP] " . date('Y-m-d H:i:s') . ", NPCs backup made in " . (time() - $startTime) . " secs ");
         return true;
     }
@@ -746,15 +770,33 @@ FROM restore
         $GLOBALS["db"]->query($query);
 
         $bglife_q="UPDATE public.core_npc_master
-SET extended_data = jsonb_set(
-    extended_data,
-    '{background_life_enabled}',   -- JSON path
-    'false'::jsonb,                -- new value
-    true                           -- create if missing (optional)
-)
-WHERE (extended_data ->> 'background_life_enabled')::boolean = true";
+        SET extended_data = jsonb_set(
+            extended_data,
+            '{background_life_enabled}',   -- JSON path
+            'false'::jsonb,                -- new value
+            true                           -- create if missing (optional)
+        )
+        WHERE (extended_data ->> 'background_life_enabled')::boolean = true";
 
         $GLOBALS["db"]->execQuery($bglife_q);
+
+        // RELATIONSHIP SYSTEM: Clear "future" relationship data from NPCs that weren't restored
+        // NPCs added AFTER the save timestamp don't have history entries, so they keep their
+        // current (future) state. We need to clear their relationship data to prevent paradoxes.
+        $rel_reset_q = "UPDATE public.core_npc_master
+            SET extended_data = extended_data - 'relationships' - 'relationships_updated' - 'relationships_model' - 'relationships_inferred'
+            WHERE npc_name <> 'The Narrator'
+              AND (gamets_last_updated > $timestamp OR gamets_last_updated IS NULL)
+              AND extended_data IS NOT NULL
+              AND extended_data ? 'relationships'";
+
+        try {
+            $GLOBALS["db"]->execQuery($rel_reset_q);
+            error_log("[NPC RESTORE] Cleared future relationship data for NPCs with gamets > $timestamp");
+        } catch (Exception $e) {
+            error_log("[NPC RESTORE] Failed to clear future relationships: " . $e->getMessage());
+        }
+
         error_log("[NPC RESTORE] " . date('Y-m-d H:i:s') . ", NPCs restore made in " . (time() - $startTime) . " secs ");
         return true;
     }

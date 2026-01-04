@@ -83,6 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 
     file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
+    chmod($stateFile, permissions: 0777);
+
     // Log the submission
     error_log("[SNQE Handler] Form submitted - Title: " . $questtitle . ", Briefing: " . $briefing);
 

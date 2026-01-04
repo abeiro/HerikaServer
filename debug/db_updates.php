@@ -2272,6 +2272,10 @@ if ($checkTableExists("named_cell") == -1) {
 } else
     Logger::info(__FILE__." named_cell exists");
 
+if ($checkColumnExists("named_cell","vanilla_cell") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/named_cell.sql"));
+}
+
 if ($checkTableExists("sneq_quests_saved") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/sneq_quests_saved.sql"));
 } else
@@ -2280,6 +2284,9 @@ if ($checkTableExists("sneq_quests_saved") == -1) {
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS region text");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS hold text");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS tags text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS factions text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS is_interior int");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS vanilla_location boolean");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS title text");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS stage text");
 $db->execQuery("DO $$
@@ -3053,6 +3060,27 @@ if ($checkVersion("emotions_expression")<20251130003) {
 
 //----------------------------------------------------
 
+// Relationship Evaluation and Initialization Queues
+$db->execQuery("CREATE TABLE IF NOT EXISTS relationship_eval_queue (
+                id SERIAL PRIMARY KEY,
+                npc_id INTEGER NOT NULL UNIQUE,
+                eval_data JSONB NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()  )");
+
+$db->execQuery("CREATE TABLE IF NOT EXISTS relationship_init_queue (
+                id SERIAL PRIMARY KEY,
+                npc_id INTEGER NOT NULL UNIQUE,
+                init_data JSONB NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()  )");
+
+$db->execQuery("
+            ALTER TABLE relationship_init_queue
+            ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0
+        ");
+$db->execQuery("
+            ALTER TABLE relationship_init_queue
+            ADD COLUMN IF NOT EXISTS last_error TEXT
+        ");
 Logger::info(__FILE__." update file processed");
 
 ?>
