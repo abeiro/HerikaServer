@@ -49,8 +49,9 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
         <button class="tab-button active" data-tab="srvlogs">🌲Server Logs</button>
         <button class="tab-button" data-tab="cache">🎼Audio & Image Cache</button>
         <button class="tab-button" data-tab="requests">🔍Request Logs</button>
-        <button class="tab-button" data-tab="audit">📋Audit Log</button>
+        <button class="tab-button" data-tab="audit">📊Cost Breakdown</button>
         <button class="tab-button" data-tab="responses">💬Response Queue</button>
+        <button class="tab-button" data-tab="rellogs">🔗Relationship Logs</button>
         <button class="tab-button" data-tab="playthrough">🎮Playthrough Manager</button>
         <button class="tab-button" data-tab="dbmgr">🗄️Database Manager</button>
     </div>
@@ -78,6 +79,11 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
     <div id="responses" class="tab-content">
         <div class="embed-wrap">
             <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/index.php?table=responselog&embed=1"></iframe>
+        </div>
+    </div>
+    <div id="rellogs" class="tab-content">
+        <div class="embed-wrap">
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/relationship_logs.php?embed=1"></iframe>
         </div>
     </div>
     <div id="playthrough" class="tab-content">

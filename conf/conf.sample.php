@@ -63,7 +63,11 @@ $EMOTEMOODS="sassy,"
     . "playful,"
     . "neutral,"
     . "teasing,"
-    . "mocking"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
+    . "mocking"
+    . "desperate"
+    . "distressed"
+    . "pleading"
+    . "sad"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 
 $REMOVE_ASTERISKS_FROM_OUTPUT=true;
 $ENFORCE_ACTIONS_PROMPT=false;
@@ -405,6 +409,14 @@ $TTS["CARTESIA"]["language"]='en'; //Language (en, fr, de, es, etc.).
 $TTS["CARTESIA"]["model_id"]='sonic-3'; //Model (sonic-3, sonic-english, sonic-multilingual).
 $TTS["CARTESIA"]["speed"]='normal'; //Speed (slowest, slow, normal, fast, fastest).
 
+//Inworld TTS
+$TTS["INWORLD"]["workspace"]=''; //Workspace ID (required for voice cloning). Format: workspaces/{workspace} or just the workspace ID.
+$TTS["INWORLD"]["voiceid"]=''; //Voice file name. Works like XTTS voiceid. Voice will be automatically cloned to Inworld when first used.
+$TTS["INWORLD"]["language"]='EN_US'; //Language code (EN_US, ZH_CN, KO_KR, JA_JP, RU_RU, IT_IT, ES_ES, PT_BR, DE_DE, FR_FR, AR_SA, PL_PL, NL_NL, HI_IN, HE_IL).
+$TTS["INWORLD"]["model_id"]='inworld-tts-1'; //Model (inworld-tts-1, inworld-tts-1-max).
+$TTS["INWORLD"]["temperature"]=1.1; //Sampling temperature (0-2). Higher values make output more random. Default: 1.1.
+$TTS["INWORLD"]["speed"]=1.0; //Speaking rate/speed (0.5-1.5). Default: 1.0.
+
 //[Player TTS]
 $TTSFUNCTION_PLAYER="none";
 $TTSFUNCTION_PLAYER_VOICE="malenord";
@@ -522,5 +534,6 @@ $RANDOM_NARATION=false;
 $RANDOM_NARATION_CHANCE=15;
 $RANDOM_NARRATION_COOLDOWN=2;
 
+$OGHMA_CUSTOM=false;
 ?>
 

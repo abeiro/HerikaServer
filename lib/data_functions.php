@@ -50,6 +50,42 @@ function ReplacePlayerNamePlaceholder($s_input) {
     return $s_res;
 }
 
+function getGoldFromMetadata($npcName = null) {
+    if ($npcName === null) {
+        $npcName = isset($GLOBALS["HERIKA_NAME"]) ? $GLOBALS["HERIKA_NAME"] : "";
+    }
+    
+    if (empty($npcName)) {
+        return 0;
+    }
+    
+    try {
+        $npcMaster = new NpcMaster();
+        $npcData = $npcMaster->getByName($npcName);
+        
+        if (!$npcData) {
+            return 0;
+        }
+        
+        $metaData = $npcMaster->getMetaData($npcData);
+        
+        if (!isset($metaData["inventory"]) || !is_array($metaData["inventory"])) {
+            return 0;
+        }
+        
+        foreach ($metaData["inventory"] as $item) {
+            $itemName = isset($item["name"]) ? strtolower($item["name"]) : "";
+            if (stripos($itemName, "gold") !== false || stripos($itemName, "coin") !== false || stripos($itemName, "septim") !== false) {
+                return isset($item["count"]) ? intval($item["count"]) : 0;
+            }
+        }
+    } catch (Exception $e) {
+        // Silently fail and return 0
+    }
+    
+    return 0;
+}
+
 function isItemBlacklisted($itemName) {
     if (!isset($GLOBALS["ITEM_BLACKLIST"]) || empty($GLOBALS["ITEM_BLACKLIST"])) {
         return false;
@@ -65,6 +101,48 @@ function isItemBlacklisted($itemName) {
     }
     
     return false;
+}
+
+/**
+ * Lookup description from descriptions table, supporting mod FormIDs (XX prefix)
+ * Tries exact FormID first, then falls back to XX-prefixed version for mod items
+ * 
+ * @param string $formId The FormID to lookup (hex format, e.g., "0303572F")
+ * @return array|null Array with 'name' and 'description' keys, or null if not found
+ */
+function lookupDescriptionByFormID(string $formId): ?array {
+    global $db;
+    
+    // Ensure FormID is properly formatted (8 hex digits, uppercase)
+    $formId = strtoupper(str_replace('0x', '', $formId));
+    $formId = str_pad($formId, 8, '0', STR_PAD_LEFT);
+    
+    // Try exact FormID first
+    $escapedFormId = $db->escape($formId);
+    $record = $db->fetchOne(
+        "SELECT name, description FROM descriptions WHERE baseid = '{$escapedFormId}' LIMIT 1"
+    );
+    
+    if ($record && !empty($record['name'])) {
+        return $record;
+    }
+    
+    // If not found and FormID starts with a mod index (first 2 digits not 00-03), try XX prefix
+    $modIndex = substr($formId, 0, 2);
+    if ($modIndex !== '00' && $modIndex !== '01' && $modIndex !== '02' && $modIndex !== '03') {
+        // Replace first 2 digits with XX for mod item lookup
+        $xxFormId = 'XX' . substr($formId, 2);
+        $escapedXXFormId = $db->escape($xxFormId);
+        $record = $db->fetchOne(
+            "SELECT name, description FROM descriptions WHERE baseid = '{$escapedXXFormId}' LIMIT 1"
+        );
+        
+        if ($record && !empty($record['name'])) {
+            return $record;
+        }
+    }
+    
+    return null;
 }
 
 /**
@@ -119,16 +197,21 @@ function getHeightDescription(float $scale): string {
 }
 
 
-function DataDequeue()
+function DataDequeue($timestamp = 0)
 {
     global $db;
+    if ($timestamp !== 0) {
+        $clause="and localts<={$timestamp} ";
+    } else {
+        $clause="";
+    }
     // Use atomic UPDATE...RETURNING to prevent race conditions where multiple concurrent
     // requests could fetch the same dialogue before it's marked as sent
     $results = $db->fetchAll(
         "UPDATE responselog 
          SET sent=1 
          WHERE rowid IN (
-             SELECT rowid FROM responselog WHERE sent=0 ORDER BY rowid ASC
+             SELECT rowid FROM responselog WHERE sent=0 $clause ORDER BY rowid ASC
          )
          RETURNING *, rowid"
     );
@@ -220,6 +303,11 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     // Not always the same order
     shuffle($actorDetailedList);
     // error_log("[DataLastInfoFor] $actorsInRangeList");
+    
+    // Track seen faction descriptions to avoid duplicates
+    $seenFactionFormIDs = [];
+    $factionDescriptions = []; // Store unique faction descriptions
+    
     // Actors
     if ($actorsInRange && $addNPCDescriptions) {
         $actorDetailedListWithProfile=[];
@@ -302,6 +390,18 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     // NPC name should always be at core section.
                     $npcName = $currentNpcData["npc_name"];
                     
+                    // Format gender (capitalize first letter)
+                    $gender = !empty($currentNpcData["gender"]) ? ucfirst(strtolower(trim($currentNpcData["gender"]))) : "";
+                    $race = !empty($currentNpcData["race"]) ? trim($currentNpcData["race"]) : "";
+                    
+                    // Build name with race/gender in parentheses
+                    $nameWithRaceGender = $npcName;
+                    if (!empty($gender) && !empty($race)) {
+                        $nameWithRaceGender .= " ({$gender} {$race})";
+                    } elseif (!empty($race)) {
+                        $nameWithRaceGender .= " ({$race})";
+                    }
+                    
                     // Check for reanimation status early to add to core
                     $extendedData = $npcMaster->getExtendedData($currentNpcData);
                     $reanimationText = "";
@@ -309,10 +409,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $reanimationText = " This person has been reanimated from death as a zombie.";
                     }
                     
-                    $profileString = trim("{$currentNpcData["core"]}{$reanimationText} {$currentNpcData["gender"]} {$currentNpcData["race"]}");
-                    if (stripos($profileString, $npcName) !== 0) {
-                        $profileString = "{$npcName} {$profileString}";
-                    }
+                    $profileString = "{$nameWithRaceGender}: " . trim("{$currentNpcData["core"]}{$reanimationText}");
                     
                     // Add appearance if available
                     if (!empty($currentNpcData["appearance"])) {
@@ -368,6 +465,35 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         }
                     }
                     
+                    // Add faction information after equipment
+                    $extendedData = $npcMaster->getExtendedData($currentNpcData);
+                    if (isset($extendedData['factions']) && is_array($extendedData['factions']) && count($extendedData['factions']) > 0) {
+                        $factionNames = [];
+                        foreach ($extendedData['factions'] as $faction) {
+                            if (isset($faction['formid'])) {
+                                // Lookup faction using helper function (supports XX prefix)
+                                $factionRecord = lookupDescriptionByFormID($faction['formid']);
+                                
+                                // Only add if found in descriptions table
+                                if ($factionRecord && !empty($factionRecord['name'])) {
+                                    $factionNames[] = $factionRecord['name'];
+                                    
+                                    // Track faction description (only once)
+                                    if (!in_array($faction['formid'], $seenFactionFormIDs)) {
+                                        $seenFactionFormIDs[] = $faction['formid'];
+                                        if (!empty($factionRecord['description'])) {
+                                            $factionDescriptions[$factionRecord['name']] = $factionRecord['description'];
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (!empty($factionNames)) {
+                            $profileString .= ". Groups " . implode(", ", $factionNames);
+                        }
+                    }
+                    
                     $actorDetailedListWithProfile[] = $profileString;
 
                 }
@@ -412,7 +538,19 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     $followers[]="{$GLOBALS["PLAYER_NAME"]}";
     $followersV2[]=$GLOBALS["PLAYER_NAME"];
 
-    $lastDialog[] = array('role' => 'user', 'content' => "<nearby_actors>\n# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange\n</nearby_actors>");
+    if (!isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
+        $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
+    }
+    $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<nearby_actors>\n# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange\n</nearby_actors>";
+    
+    // Add faction descriptions section if any factions were found
+    if (!empty($factionDescriptions)) {
+        $factionDescText = "";
+        foreach ($factionDescriptions as $name => $desc) {
+            $factionDescText .= "## {$name}: {$desc}\n";
+        }
+        $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<group_descriptions>\n# GROUP/FACTION DESCRIPTIONS\n{$factionDescText}</group_descriptions>";
+    }
     
     // Add nearby items to context if available
     $itemsInRange = DataItemsInCloseRange();
@@ -503,7 +641,10 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
             }
             
             $contextContent = "<nearby_items>\n# NEARBY ITEMS (format: RefID:ItemName)\n## {$itemsText}{$descriptionText}\n</nearby_items>";
-            $lastDialog[] = array('role' => 'user', 'content' => $contextContent);
+            if (!isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
+                $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
+            }
+            $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n" . $contextContent;
         }
     }
     
@@ -530,12 +671,15 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     }
 
 	if ($followersString!=$GLOBALS["PLAYER_NAME"] && !empty($followersString)) {
-	    $lastDialog[] = array('role' => 'user', 'content' => "<adventuring_party>
+	    if (!isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
+	        $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
+	    }
+	    $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<adventuring_party>
         # ADVENTURING PARTY
 	     $followersString are together as an **adventuring party**, acting as close companions.
-	     - The others **can know each other**, but they are **not part** of {$followersString}’s group.
+	     - The others **can know each other**, but they are **not part** of {$followersString}'s group.
 	     - Generally speaking, any mention of **plans, missions, or objectives** refers **only to the adventuring party**, never to the other NPCs.
-	     </adventuring_party>");
+	     </adventuring_party>";
 	}
     $arr_poi = DataPosibleLocationsToGo();
     if (isset($arr_poi) && is_array($arr_poi) && (count($arr_poi) > 0)) {
@@ -554,7 +698,10 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         }
         
         if (count($arr_poi) > 0) {
-            $lastDialog[] = array('role' => 'user', 'content' => "<points_of_interest>\n# POIs - Points of Interest nearby \n## ". (implode("\n## ",$arr_poi))."\n</points_of_interest>");
+            if (!isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
+                $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
+            }
+            $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<points_of_interest>\n# POIs - Points of Interest nearby \n## ". (implode("\n## ",$arr_poi))."\n</points_of_interest>";
         }
     }
     
@@ -568,11 +715,15 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         $notes=[];
         foreach ($rolemasterNotes as $note)
             $notes[]= $note["data"];
-        $lastDialog[] = array('role' => 'user', 'content' => "<scene_notes>\n# SCENE NOTES \n## ".implode(".",$notes)."</scene_notes>");
+        if (!isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
+            $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
+        }
+        $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<scene_notes>\n# SCENE NOTES \n## ".implode(".",$notes)."</scene_notes>";
     }
         
 
-
+    //$lastDialog[]=array('role' => 'user', 'content' => $GLOBALS["PROMPT_NEARBY_SECTIONS"]);
+    // this is going to return nothing
     return $lastDialog;
 
 }
@@ -622,6 +773,24 @@ function DataPosibleLocationsToGo()
         break;
     }
 
+    // Location blacklist // $LOCATION_BLACKLIST
+    $LOCATION_BLACKLIST_ARRAY=explode(",", $GLOBALS["LOCATION_BLACKLIST"] ?: []);
+    if (count($LOCATION_BLACKLIST_ARRAY) > 0) {
+        foreach ($retData as $k => $v) {
+            foreach ($LOCATION_BLACKLIST_ARRAY as $blacklistedLocation) {
+                $blacklistedLocationTrimmed = trim($blacklistedLocation);
+                if (!empty($blacklistedLocationTrimmed) && (stripos($v, $blacklistedLocationTrimmed) !== false)) {
+                    unset($retData[$k]);
+                    break; // No need to check other blacklisted locations
+                }
+            }
+        }
+    }
+    foreach ($retData as $k => $v) {
+        if ($v=="Skyrim") {
+            $retData[$k].=" (exit)";
+        }
+    }
     //print_r($matches);
     // ? this part with 'Herika can see this beings in range:' seems outdated 
     /* $results = $db->fetchAll("select  a.data  as data  FROM  eventlog a 
@@ -3106,6 +3275,8 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
             $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
             error_log("[DataSearchMemoryByVector start] minimeExtract : " . (microtime(true) - $localStartTime) . " seconds");
+            $TEST_TEXT = preg_replace('/[(),;:!?."\'-]/', ' ', $TEST_TEXT);
+            $TEST_TEXT = preg_replace('/\s+/', ' ', trim($TEST_TEXT));
             $TEST_TEXT=internalDumbTranslator($TEST_TEXT);
             
             if (isset($GLOBALS["PATCH_BYPASS_MINIME_EXTRACT"]) && $GLOBALS["PATCH_BYPASS_MINIME_EXTRACT"]) {
@@ -3476,7 +3647,7 @@ function DataSearchOghmaByVector($rawstring,$currentOghmaTopic,$locationCtx,$con
                     'rank_any'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
                     'rank_all'=> (1.40-$memory[0]["distance"]),// Try to mimic FTS query rank
                     'memory'=>$memory[0]["topic"],
-                    'time'=>isset($vector["timing"])?$vector["timing"]["generation_time_seconds"]:"0 secs (text2vec)"
+                    'time'=>isset($vector1["timing"])?$vector1["timing"]["generation_time_seconds"]:"0 secs (text2vec)"
                 )
             );
         
@@ -3998,10 +4169,36 @@ function call_llm_internal() {
                             }
 
                         } else if ($actionParts2[0]=="GiveGoldTo") {
-                            // Check if parameter is JSON (multi-param) - skip post-filtering for JSON
+                            // Check if parameter is JSON (multi-param) - validate gold amount
                             if (isset($actionParts2[1]) && substr(trim($actionParts2[1]), 0, 1) === '{') {
-                                error_log("[ACTION POSTFILTER GiveGoldTo] JSON parameter detected, skipping post-filter");
-                                // Keep the action as-is for JSON parameters
+                                error_log("[ACTION POSTFILTER GiveGoldTo] JSON parameter detected, validating gold amount");
+                                
+                                // Parse JSON to extract amount
+                                $jsonStr = trim($actionParts2[1]);
+                                $requestedAmount = null;
+                                
+                                // Simple JSON parsing for amount
+                                if (preg_match('/"amount"\s*:\s*(\d+)/', $jsonStr, $matches)) {
+                                    $requestedAmount = intval($matches[1]);
+                                }
+                                
+                                // Get available gold from NPC metadata
+                                $availableGold = getGoldFromMetadata();
+                                
+                                if ($requestedAmount !== null && $requestedAmount > 0) {
+                                    if ($requestedAmount > $availableGold) {
+                                        // Cap the amount to available gold
+                                        error_log("[ACTION POSTFILTER GiveGoldTo] Requested {$requestedAmount} gold but only have {$availableGold}, capping amount");
+                                        $jsonStr = preg_replace('/"amount"\s*:\s*\d+/', '"amount":' . $availableGold, $jsonStr);
+                                        $actions[$n] = "{$actionParts[0]}|{$actionParts[1]}|GiveGoldTo@{$jsonStr}";
+                                    } else {
+                                        // Amount is valid, keep as-is
+                                        $actions[$n] = "{$actionParts[0]}|{$actionParts[1]}|GiveGoldTo@{$jsonStr}";
+                                    }
+                                } else {
+                                    // No amount specified or invalid, keep as-is (plugin will handle error)
+                                    $actions[$n] = "{$actionParts[0]}|{$actionParts[1]}|GiveGoldTo@{$jsonStr}";
+                                }
                             } else {
                                 // Legacy: polish the parameters for single-param format
                                 $localtarget=$actionParts2[1];
@@ -4558,7 +4755,7 @@ function DataRetrieveLastTimeTalk($s_player_name, $s_npc_name) {
 function GetAnimationHex($mood)
 {
 
-    
+    error_log("Getting animation for mood: $mood");
     $ANIMATIONS=[
         "ArmsCrossed"=>"IdleExamine",        // Arms crossed
         "PointClose"=>"IdlePointClose",
@@ -4691,7 +4888,7 @@ function GetAnimationHex($mood)
     } 
                       
     
-    
+    error_log("Getting animation for mood: $mood, no result found");
     return "";
 
 }
@@ -5381,6 +5578,31 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         if (isset($FOLLOWER_CONF[$fieldName]) && !empty(trim($FOLLOWER_CONF[$fieldName]))) {
             $xmlLabel=strtr(strtolower($label),[" "=>"_"]);
             $dynamicBio .= "\n<$xmlLabel>\n" . trim($FOLLOWER_CONF[$fieldName])."\n</$xmlLabel>";
+            
+            // Add groups (factions) right after HERIKA_BACKGROUND (basic_summary) section
+            if ($fieldName=="HERIKA_BACKGROUND") {
+                $extendedData = $npcMaster->getExtendedData($currentNpcData);
+                if (isset($extendedData['factions']) && is_array($extendedData['factions']) && count($extendedData['factions']) > 0) {
+                    $factionLines = [];
+                    foreach ($extendedData['factions'] as $faction) {
+                        if (isset($faction['formid'])) {
+                            // Lookup faction using helper function (supports XX prefix)
+                            $factionRecord = lookupDescriptionByFormID($faction['formid']);
+                            
+                            // Only add to prompt if found in descriptions table
+                            if ($factionRecord && !empty($factionRecord['name'])) {
+                                $factionName = $factionRecord['name'];
+                                $factionDesc = !empty($factionRecord['description']) ? $factionRecord['description'] : '';
+                                $factionLines[] = "{$factionName} - {$factionDesc}";
+                            }
+                        }
+                    }
+                    
+                    if (count($factionLines) > 0) {
+                        $dynamicBio .= "\n<groups>\nYou belong to these factions:\n" . implode("\n", $factionLines) . "\n</groups>";
+                    }
+                }
+            }
             
             // Add skills right after HERIKA_SKILLS section
             if ($fieldName=="HERIKA_SKILLS") {

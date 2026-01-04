@@ -48,7 +48,9 @@ $ttsTestVoice = '';
 $__selLower = strtolower($selectedFunction);
 $__defaultVoice = ($__selLower === 'xtts-fastapi') ? 'TheNarrator' : (in_array($__selLower, ['melotts','piper-tts','xvasynth'], true) ? 'malenord' : '');
 if ($ttsTestVoice === '') { $ttsTestVoice = $__defaultVoice; }
+
 try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) $GLOBALS['db'] = new sql(); } catch (Throwable $_) {}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test'])) {
     $ttsTestText = isset($_POST['tts_text']) ? (string)$_POST['tts_text'] : '';
     if (trim($ttsTestText) === '') {
@@ -125,6 +127,8 @@ $ttsMap = [
 	'koboldcpp' => 'koboldcpp',
 	'zonos_gradio' => 'ZONOS_GRADIO',
 	'piper-tts' => 'PIPERTTS',
+	'cartesia' => 'CARTESIA',
+	'inworld' => 'INWORLD',
 	'deepgram' => 'deepgram',
 ];
 

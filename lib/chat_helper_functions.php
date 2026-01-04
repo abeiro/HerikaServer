@@ -275,7 +275,7 @@ function getEndOfSentencePunctuation() {
 
 function remove_between($marker, $s_input) {
     $s_res = $s_input;
-    
+    $p_start=null;
     $i_mk_len = strlen($marker);
     if ($i_mk_len > 0) {
         $i_str_len = strlen($s_input);
@@ -632,6 +632,11 @@ function returnLines($lines,$writeOutput=true)
             } else if ($GLOBALS["TTSFUNCTION"] == "cartesia") {
 
                 require_once(__DIR__."/../tts/tts-cartesia.php");
+                $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
+
+            } else if ($GLOBALS["TTSFUNCTION"] == "inworld") {
+
+                require_once(__DIR__."/../tts/tts-inworld.php");
                 $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
             } 
@@ -1399,6 +1404,7 @@ function ExtractKeywords($sourceText) {
     $matches=[];
     preg_match_all($pattern,  $sourceText,$matches);
     $uppercaseWords = array_merge($uppercaseWords1, $matches[0]);
+    $words=[];
     foreach ($uppercaseWords as $n=>$e) {
         if (stripos($e, $GLOBALS["PLAYER_NAME"])!==false) {
           
@@ -1433,7 +1439,8 @@ function ExtractKeywords($sourceText) {
     unset($words["Looks"]);
     unset($words["Just"]);
     
-    
+    $uniqueArray=[];
+
     foreach ($words as $n=>$e) {
         if ($e>1)
            if (startsWithUppercase($n))
@@ -1599,6 +1606,7 @@ function offerMemoryNew($gameRequest, $DIALOGUE_TARGET)
 
             $memory=array();
             $lastPlayerLine=$db->fetchAll("SELECT data from eventlog where type in ('inputtext','inputtext_s') order by gamets desc limit 1 offset 0");
+            $pattern = '/\([^)]+\)/';
 
             $textToEmbed=str_replace($DIALOGUE_TARGET, "", $lastPlayerLine[0]["data"]);
             $textToEmbedFinal = preg_replace($pattern, '', $textToEmbed);
@@ -1733,7 +1741,7 @@ function logEvent($dataArray,$forcePeople='')
                 'gamets' => $dataArray[2],
                 'type' => $dataArray[0],
                 'data' => $dataArray[3],
-                'sess' => 'pending',
+                'sess' => $dataArray[4]??'pending',
                 'localts' => time(),
                 'people'=> ($forcePeople)?$forcePeople:$GLOBALS["CACHE_PEOPLE_LIMITED"],
                 'location'=>$GLOBALS["CACHE_LOCATION"],
@@ -1798,7 +1806,7 @@ function startsWithUppercase($string) {
  */
 function arrayToBulletedList($items, $bulletChar = " *") {
     if (!is_array($items) || empty($items)) {
-        return null;
+       return "(none)";
     }
     
     $bulletedList = "";
@@ -1807,6 +1815,39 @@ function arrayToBulletedList($items, $bulletChar = " *") {
             $bulletedList .= $bulletChar . " " . trim($item) . "\n";
     }
     
-    return rtrim($bulletedList);
+    if ($bulletedList)
+        return rtrim($bulletedList);
+    else    
+        return "(none)";
 }
 
+/**
+ * Replace bracketed placeholder tokens in a string with runtime values.
+ *
+ * Scans the given text for the following placeholders and replaces them using
+ * the current runtime values:
+ *  - "{LOCATION}"       => DataLastKnownLocationHuman()
+ *  - "{PLAYER_NAME}"    => $GLOBALS['PLAYER_NAME']
+ *  - "{HERIKA_NAME}"    => $GLOBALS['HERIKA_NAME']
+ *  - "{TEMPLATE_DIALOG}"=> $GLOBALS['TEMPLATE_DIALOG']
+ *
+ * The replacement is performed by strtr and returns the resulting string.
+ * Non-string inputs will be converted to string before replacement.
+ *
+ * Note: replacements are performed in a single pass (no recursive expansion),
+ * and values are inserted verbatim — sanitize or escape the result as needed
+ * before output (e.g., to prevent XSS in HTML contexts).
+ *
+ * @param mixed $text The input text to process (will be cast to string).
+ * @return string The text with bracketed placeholders replaced by their values.
+ */
+function make_replacements_bracketed($text)
+{
+
+    return strtr($text, [
+        "{LOCATION}" => DataLastKnownLocationHuman(),
+        "{PLAYER_NAME}"   => $GLOBALS["PLAYER_NAME"],
+        "{HERIKA_NAME}"   => $GLOBALS["HERIKA_NAME"],
+        "{TEMPLATE_DIALOG}"   => $GLOBALS["TEMPLATE_DIALOG"],
+    ]);
+}

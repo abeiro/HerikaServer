@@ -32,13 +32,15 @@ $GLOBALS["item_types"] = [
     "amulet"   => [0x2481e],    // From AIAgent.esp
     "ring"     => [0x242b9],    // From AIAgent.esp
     "note"     => [0],          // Will be changed. Generic Note From AIAgent.esp
-    "book"     => [0x000ce70b], // Vanilla
+    "book"     => [0x000ce70b], // Should be changed. Generic Book From AIAgent.esp (pending)
     "armor"    => [0x000c8861], // Vanilla
     "axe"      => [0x000e72a6], // Vanilla
+    "dagger"      => [0x000aebf7], // Vanilla
 ];
 
+// Review this, this are used to copy appearance.
+
 $GLOBALS["npc_templates"] = [
-    // Review this, this are used to copy appearance.
     "male_nord"                      => [0x0003de8a, 0x0003de6f, 0x0003cf5d, 0x00039cfd, 0x0003dee1, 0x0003dee4, 0x00039d01, 0x0003de91, 0x0003dea5, 0x0003de56, 0x0003deea, 0x0003deed, 0x00039d09, 0x0003de98, 0x0003de74, 0x0003de5b, 0x0003def5, 0x0003def8, 0x00039d11, 0x0003dea0, 0x0003de79, 0x0003de60, 0x0003deff, 0x0003df02, 0x00039d19, 0x0003deac, 0x0003de7e, 0x0003de65, 0x0003df09, 0x0003df0c, 0x00039d21, 0x0003deb3, 0x0003de83, 0x0003de6a, 0x00073fbf, 0x00037c00, 0x00037c2c, 0x00037c05, 0x00037c32, 0x00037c39, 0x00037c40, 0x00037c47],
     "female_nord"                    => [0x000955b6, 0x00039d36, 0x00039cf5, 0x0003de89, 0x0003de6e, 0x0003cf5c, 0x00037bff, 0x0003dee0, 0x00039d3d, 0x00039d00, 0x0003de90, 0x0003dea4, 0x0003de55, 0x00037c03, 0x0003dee9, 0x00039d48, 0x00039d08, 0x0003de97, 0x0003de73, 0x0003de5a, 0x00037c31, 0x0003def4, 0x00039d4f, 0x00039d10, 0x0003de9f, 0x0003de78, 0x0003de5f, 0x00037c38, 0x0003defe, 0x00039d56, 0x00039d18, 0x0003deab, 0x0003de7d, 0x0003de64, 0x00037c3f, 0x0003df08, 0x00039d5d, 0x00039d20, 0x0003deb2, 0x0003de82, 0x0003de69, 0x00037c46, 0x000bfb48, 0x00017167, 0x00017168, 0x00017169, 0x00107a9f, 0x00033424, 0x0003386f, 0x0003387d, 0x00033882, 0x00033887, 0x0003392f, 0x0010c453, 0x0010c470, 0x0010c478, 0x0010c47e, 0x0010c484, 0x00045c75, 0x000e1019, 0x00045c77, 0x000e101f, 0x00045c8b, 0x000e1023, 0x00045cb1, 0x000e1027, 0x00045cd6, 0x000e102b, 0x00045cdf, 0x001091c1, 0x00074f7e, 0x00074f8d, 0x000fe512, 0x000edf6d, 0x000328d6, 0x0001a772, 0x000cd644, 0x000cd642],
     "male_orc"                       => [0x00039cfa, 0x0003de8b, 0x0003de70, 0x0003cf5e, 0x0003dee5, 0x00039d03, 0x0003de92, 0x0003dea6, 0x0003de57, 0x0003deee, 0x00039d0b, 0x0003de99, 0x0003de75, 0x0003de5c, 0x0003def9, 0x00039d13, 0x0003dea1, 0x0003de7a, 0x0003de61, 0x0003df03, 0x00039d1b, 0x0003dead, 0x0003de7f, 0x0003de66, 0x0003df0d, 0x00039d23, 0x0003deb4, 0x0003de84, 0x0003de6b, 0x000d9448, 0x000d9449, 0x000d944a, 0x000d944b, 0x000d944d, 0x000d9448, 0x000d9449, 0x000d944a, 0x000d944b, 0x000d944d],
@@ -47,7 +49,7 @@ $GLOBALS["npc_templates"] = [
     "male_argonian"                  => [0x00103512],
     "female_argonian"                => [0x000457fb, 0x000b2e11, 0x000b2e12, 0x000b2e13, 0x000b2e14, 0x000b2e15, 0x000b2e16, 0x0010d3be, 0x0010d3bf, 0x0010d3c0, 0x0010d3c1, 0x00103511],
 
-    "female_breton"                  => [0x00064a77, 0x00064a75, 0x00064a3f, 0x00064a3d, 0x00064a8c, 0x00064a8a, 0x00064ac3, 0x00064ab2, 0x00064a7b, 0x00064a79, 0x00064a46, 0x00064a44, 0x00064aa0, 0x00064a96, 0x00064ac6, 0x00064ab4, 0x00064a7f, 0x00064a7d, 0x00064a4b, 0x00064a49, 0x00064aa2, 0x00064a98, 0x00064ac7, 0x00064abb, 0x00064a83, 0x00064a81, 0x00064a4e, 0x00064aa4, 0x00064a9a, 0x00064acd, 0x00064abd, 0x00064a87, 0x00064a85, 0x00064a55, 0x00064a53, 0x00064aa6, 0x00064a9c, 0x00064ac9, 0x00064abf, 0x00064a5a, 0x00064a58, 0x00064aa8, 0x00064a9e, 0x00064acb, 0x00064ac1, 0x000e36da, 0x00064a50, 0x00039d32, 0x00039d44, 0x00039d4b, 0x00039d52, 0x00039d59, 0x00043beb, 0x00043bec, 0x00043bed, 0x00043be1, 0x00043be0, 0x00043be2, 0x00043be4, 0x00043be5, 0x00043be6, 0x00043bf1, 0x00043bf2, 0x00043bf3, 0x00044256, 0x00044257, 0x00044258, 0x0004425c, 0x0004425d, 0x0004425e, 0x00044265, 0x00044266, 0x00044267, 0x00044268, 0x00044269, 0x0004426a, 0x0004426e, 0x0004426f, 0x00044270, 0x00044277, 0x00044278, 0x00044279, 0x0004427a, 0x0004427b, 0x0004427c, 0x00044280, 0x00044281, 0x00044282, 0x00044289, 0x0004428a, 0x0004428b, 0x0004428c, 0x0004428d, 0x0004428e, 0x00044292, 0x00044293, 0x00044294, 0x0004429b, 0x0004429c, 0x0004429d, 0x0004429e, 0x0004429f, 0x000442a0, 0x000442a4, 0x000442a5, 0x000442a6, 0x00107a9b, 0x0003300e, 0x00033853, 0x00033870, 0x0003387e, 0x00033883, 0x00033888, 0x0006d234, 0x000e0fe4, 0x0006d23b, 0x000e0fe8, 0x0006d243, 0x000e0fec, 0x0006d24b, 0x000e0ff0, 0x0006d253, 0x000e0ff4, 0x0006d25b, 0x001091b7, 0x001091b8, 0x00044cdc, 0x00045c62, 0x00045c7d, 0x00045ca3, 0x00045cc1, 0x00045cc8, 0x001091b9, 0x00045c51, 0x00045c6a, 0x00045c85, 0x00045cab, 0x00045cd1, 0x00045cd9, 0x001091ba, 0x000551b0, 0x000e1035, 0x000551b8, 0x000e1039, 0x000551c0, 0x000e103d, 0x000551c8, 0x000e1041, 0x000551d0, 0x000e1045, 0x000551d8, 0x001091c3, 0x001091bb, 0x00045c57, 0x000e1051, 0x00045c70, 0x000e1055, 0x00045c8d, 0x000e1059, 0x00045cb3, 0x000e105d, 0x00045ce1, 0x000e1061, 0x00045ce9, 0x001091c5, 0x001091bc, 0x00074f77, 0x00074f86, 0x00074f7b, 0x00074f8a, 0x00074f7f, 0x00074f8e, 0x000328e0, 0x0001a76e, 0x000b125f],
+    "female_breton"                  => [0x00064a77, 0x00064a75, 0x00064a3f, 0x00064a3d, 0x00064a8c, 0x00064a8a, 0x00064ac3, 0x00064ab2, 0x00064a7b, 0x00064a79, 0x00064a46, 0x00064a44, 0x00064aa0, 0x00064a96, 0x00064ac6, 0x00064ab4, 0x00064a7f, 0x00064a7d, 0x00064a4b, 0x00064a49, 0x00064aa2, 0x00064a98, 0x00064ac7, 0x00064abb, 0x00064a83, 0x00064a81, 0x00064a4e, 0x00064aa4, 0x00064a9a, 0x00064acd, 0x00064abd, 0x00064a87, 0x00064a85, 0x00064a55, 0x00064a53, 0x00064aa6, 0x00064a9c, 0x00064ac9, 0x00064abf, 0x00064a5a, 0x00064a58, 0x00064aa8, 0x00064a9e, 0x00064acb, 0x00064ac1, 0x000e36da, 0x00064a50, 0x00039d32, 0x00039d44, 0x00039d4b, 0x00039d52, 0x00039d59, 0x00043beb, 0x00043bec, 0x00043bed, 0x00043be1, 0x00043be0, 0x00043be2, 0x00043be4, 0x00043be5, 0x00043be6, 0x00043bf1, 0x00043bf2, 0x00043bf3, 0x00044256, 0x00044257, 0x00044258, 0x0004425c, 0x0004425d, 0x0004425e, 0x00044265, 0x00044266, 0x00044267, 0x00044268, 0x00044269, 0x0004426a, 0x0004426e, 0x0004426f, 0x00044270, 0x00044277, 0x00044278, 0x00044279, 0x0004427a, 0x0004427b, 0x0004427c, 0x00044280, 0x00044281, 0x00044282, 0x00044289, 0x0004428a, 0x0004428b, 0x0004428c, 0x0004428d, 0x0004428e, 0x00044292, 0x00044293, 0x00044294, 0x0004429b, 0x0004429c, 0x0004429d, 0x0004429e, 0x0004429f, 0x000442a0, 0x000442a4, 0x000442a5, 0x000442a6, 0x00107a9b, 0x0003300e, 0x00033853, 0x00033870, 0x0003387e, 0x00033883, 0x00033888, 0x0006d234, 0x000e0fe4, 0x0006d23b, 0x000e0fe8, 0x0006d243, 0x000e0fec, 0x0006d24b, 0x000e0ff0, 0x0006d253, 0x000e0ff4, 0x0006d25b, 0x001091b7, 0x001091b8, 0x00044cdc, 0x00045c62, 0x00045c7d, 0x00045ca3, 0x00045cc1, 0x00045cc8, 0x001091b9, 0x00045c51, 0x00045c6a, 0x00045c85, 0x00045cab, 0x00045cd1, 0x00045cd9, 0x001091ba, 0x000551b0, 0x000e1035, 0x000551b8, 0x000e1039, 0x000551c0, 0x000e103d, 0x000551c8, 0x000e1041, 0x000551d0, 0x000e1045, 0x000551d8, 0x001091c3, 0x001091bb, 0x00045c57, 0x000e1051, 0x00045c70, 0x000e1055, 0x00045c8d, 0x000e1059, 0x00045cb3, 0x000e105d, 0x00045ce1, 0x000e1061, 0x00045ce9, 0x001091c5, 0x001091bc, 0x00074f77, 0x00074f86, 0x00074f7b, 0x00074f8a, 0x00074f7f, 0x00074f8e, 0x000328e0, 0x0001a76e, 0x000b125f,0x0004428d, 0x0004428e, 0x00044292, 0x00044293, 0x00044294, 0x0004429b, 0x0004429c, 0x0004429d, 0x0004429e, 0x0004429f, 0x000442a0, 0x000442a4, 0x000442a5, 0x000442a6, 0x0006d234, 0x000e0fe4, 0x0006d23b, 0x000e0fe8, 0x0006d243, 0x000e0fec, 0x0006d24b, 0x000e0ff0, 0x0006d253, 0x000e0ff4, 0x0006d25b, 0x001091b7, 0x001091b8, 0x00044cdc, 0x00045c62, 0x00045c7d, 0x00045ca3, 0x00045cc1, 0x00045cc8, 0x001091b9, 0x00045c51, 0x00045c6a, 0x00045c85, 0x00045cab, 0x00045cd1, 0x00045cd9, 0x001091ba, 0x000551b0, 0x000e1035, 0x000551b8, 0x000e1039, 0x000551c0, 0x000e103d, 0x000551c8, 0x000e1041, 0x000551d0, 0x000e1045, 0x000551d8, 0x001091c3, 0x001091bb, 0x00045c57, 0x000e1051, 0x00045c70, 0x000e1055, 0x00045c8d, 0x000e1059, 0x00045cb3, 0x000e105d, 0x00045ce1, 0x000e1061, 0x00045ce9, 0x001091c5, 0x001091bc, 0x00074f77, 0x00074f86, 0x00074f7b, 0x00074f8a, 0x00074f7f, 0x00074f8e, 0x0009655b, 0x000328e0, 0x0001b152, 0x0001a763, 0x000b125f, 0x000a9154, 0x000d80b4],
     "male_breton"                    => [0x00064a42, 0x00043ab8, 0x000bede5, 0x0006d22f, 0x000548ff, 0x001091ad, 0x001091a8, 0x001091b0, 0x001091ab, 0x0006a152, 0x000e0fcd, 0x0006d232, 0x000e0fd0, 0x000551ae, 0x0002bce8, 0x0004d8d5, 0x000457f6, 0x001034f3, 0x001034fc, 0x0009f844, 0x000e0fc8, 0x0006d231, 0x0006d230, 0x00043bdc, 0x0004430a, 0x0004430b, 0x0004430c, 0x0004430d, 0x0004430e, 0x0004430f, 0x00044310, 0x00044311, 0x00044312, 0x00044313, 0x00043bf0, 0x00043bee, 0x00043bef, 0x00044262, 0x00044263, 0x00044264, 0x00044274, 0x00044275, 0x00044276, 0x00044287, 0x00044288, 0x00044298, 0x00044299, 0x0004429a, 0x000844d0, 0x00013368, 0x000e0fd3, 0x0006d233, 0x000e0fd5, 0x000551af, 0x000e0fcb, 0x000551ad, 0x000e0fc6, 0x000551ac, 0x0006d22e, 0x000548fe, 0x00079f6a, 0x00079f64, 0x00079f60, 0x00079f5f, 0x00099d22, 0x0010ab67, 0x0010ab68, 0x0010ab69, 0x0010ab6a, 0x0010ab6b, 0x00074bd8, 0x0009f847, 0x0006f214, 0x000c3b25, 0x00064a78, 0x00064a76, 0x00064a40, 0x00064a3e, 0x00064a8d, 0x00064a8b, 0x00064ac4, 0x00064ab3, 0x00064a69, 0x00064a41, 0x00064aab, 0x00064a7c, 0x00064a7a, 0x00064a47, 0x00064a45, 0x00064aa1, 0x00064a97, 0x00064ac5, 0x00064ab5, 0x00064a6e, 0x00064a43, 0x00064ab7, 0x00064a80, 0x00064a7e, 0x00064a4c, 0x00064a4a, 0x00064aa3, 0x00064a99, 0x00064ace, 0x00064abc, 0x00064a6d, 0x00064a48, 0x00064ab6, 0x00064a84, 0x00064a82, 0x00064a51, 0x00064aa5, 0x00064a9b, 0x00064ac8, 0x00064abe, 0x00064a6c, 0x00064a4d, 0x00064ab8, 0x00064a86, 0x00064a56, 0x00064a54, 0x00064aa7, 0x00064a9d, 0x00064aca, 0x00064ac0, 0x00064a6b, 0x00064a52, 0x00064ab9, 0x00064a5b, 0x00064a59, 0x00064aa9, 0x00064a9f, 0x00064acc, 0x00064ac2, 0x00064a57, 0x00064aba, 0x0008443d, 0x000e16d4, 0x00064a4f, 0x00039d33, 0x00039d3a, 0x00039d45, 0x00039d4c, 0x00039d53, 0x00039d5a, 0x000f9616, 0x00043bdd, 0x00043bde, 0x00043bdf, 0x000ad7b4, 0x00043be7, 0x00043be8, 0x00043be9, 0x000ad7b5, 0x00023aa9, 0x00043be3, 0x000442d4, 0x000442d5, 0x000ad7bb, 0x000442d7, 0x000442d8, 0x000442d9, 0x000f9617, 0x00044259, 0x0004425a, 0x0004425b, 0x000ad7b6, 0x0004425f, 0x00044260, 0x00044261, 0x000ad7b7, 0x000442da, 0x000442db, 0x000ad7ba, 0x000442dd, 0x000442de, 0x000442df, 0x000f9618, 0x0004426b, 0x0004426c, 0x0004426d, 0x000ad7b8, 0x00044271, 0x00044272, 0x00044273, 0x000ad7b9, 0x000442e0, 0x000442e1, 0x000ad7bc, 0x000442e3, 0x000442e4, 0x000442e5, 0x000f9619, 0x0004427d, 0x0004427e, 0x0004427f, 0x000ad7bd, 0x00044283, 0x00044284, 0x00044285, 0x000ad7be, 0x000442e6, 0x000442e7, 0x000442e9, 0x000442ea, 0x000442eb, 0x000f961a, 0x0004428f, 0x00044290, 0x00044291, 0x000ad7bf, 0x00044295, 0x00044296, 0x00044297, 0x000ad7c0, 0x000442ec, 0x000442ed, 0x000ad7c1, 0x000442ef, 0x000442f0, 0x000442f1, 0x000f961b, 0x000442a1, 0x000442a2, 0x000442a3, 0x000ad7c2, 0x000442a7, 0x000442a8, 0x000442a9, 0x000ad7c3, 0x00017145, 0x00017146, 0x0002e1dc, 0x0002e1f1, 0x0002e509, 0x0002ea9b, 0x0002eabe, 0x0006d235, 0x000e0fe5, 0x0006d23c, 0x000e0fe9, 0x0006d244, 0x000e0fed, 0x0006d24c, 0x000e0ff1, 0x0006d254, 0x000e0ff5, 0x0006d25c, 0x00044cda, 0x00045c63, 0x00045c7e, 0x00045ca4, 0x00045cc2, 0x00045cc9, 0x00045c52, 0x00045c6b, 0x00045c86, 0x00045cac, 0x00045cd2, 0x00045cda, 0x000551b1, 0x000e1036, 0x000551b9, 0x000e103a, 0x000551c1, 0x000e103e, 0x000551c9, 0x000e1042, 0x000551d1, 0x000e1046, 0x000551d9, 0x00045c58, 0x000e1052, 0x00045c71, 0x000e1056, 0x00045c8e, 0x000e105a, 0x00045cb4, 0x000e105e, 0x00045ce2, 0x000e1062, 0x00045cea, 0x000328df, 0x0001b153, 0x0001a777, 0x0010611f, 0x00106120, 0x00106121, 0x000684cd, 0x000b3b95],
 
     "female_imperial"                => [0x00013350, 0x0008a89d, 0x0008a89f, 0x00045802, 0x00103501, 0x00105ee2, 0x000dbd11, 0x000deedf, 0x00102d63, 0x000b5d5a, 0x00107572, 0x00079f66, 0x00079f57, 0x00079f56, 0x00079f55, 0x00099d4f, 0x0010ab80, 0x0010ab81, 0x0010ab82, 0x0010ab83, 0x0010ab84, 0x0007515e, 0x000b8149, 0x000c0401, 0x000b114f, 0x00039cf7, 0x0003de87, 0x00037bfc, 0x0003dede, 0x00039cfe, 0x0003de8e, 0x00037c01, 0x0003dee7, 0x00039d06, 0x0003de95, 0x00037c2f, 0x0003def2, 0x00039d0e, 0x0003de9d, 0x00037c36, 0x0003defc, 0x00039d16, 0x0003dea9, 0x00037c3d, 0x0003df06, 0x00039d1e, 0x0003deb0, 0x00037c44, 0x000bfb45, 0x000e0cdf, 0x000e0ce0, 0x00107a9e, 0x000332c4, 0x0003386e, 0x0003387c, 0x00033881, 0x00033886, 0x0003392e, 0x0006d238, 0x0006d241, 0x0006d249, 0x0006d252, 0x0006d259, 0x0006d261, 0x00044cea, 0x00045c68, 0x00045c83, 0x00045ca9, 0x00045cc6, 0x00045ccf, 0x00045c55, 0x00045c6e, 0x00045c89, 0x00045caf, 0x00045cd5, 0x00045cdd, 0x000551b6, 0x000551be, 0x000551c6, 0x000551ce, 0x000551d6, 0x000551de, 0x00045c5d, 0x00045c74, 0x00045c95, 0x00045cb9, 0x00045ce7, 0x00045cef, 0x00074f7a, 0x00074f89, 0x00074f7d, 0x00074f8c, 0x00074f82, 0x00074f91, 0x0001a766, 0x0001a771, 0x0001a76b, 0x000e77e7, 0x000e77e6],
@@ -56,8 +58,9 @@ $GLOBALS["npc_templates"] = [
     "female_redguard"                => [0x000860c7, 0x00013ba9, 0x00079f67, 0x00079ee1, 0x00079e2f, 0x00079e2c, 0x00099d4e, 0x0010ab99, 0x0010ab9a, 0x0010ab9b, 0x0010ab9c, 0x0010ab9d, 0x0007514e, 0x00048117, 0x00103505, 0x001034f5, 0x000b85ab, 0x0006cd5a, 0x000d4ff9, 0x00039cf8, 0x0003de8c, 0x0003de71, 0x0003de53, 0x00037c06, 0x0003dee2, 0x00039d04, 0x0003de93, 0x0003dea7, 0x0003de58, 0x00037c08, 0x0003deeb, 0x00039d0c, 0x0003de9a, 0x0003de76, 0x0003de5d, 0x00037c33, 0x0003def6, 0x00039d14, 0x0003dea2, 0x0003de7b, 0x0003de62, 0x00037c3a, 0x0003df00, 0x00039d1c, 0x0003deae, 0x0003de80, 0x0003de67, 0x00037c41, 0x0003df0a, 0x00039d24, 0x0003deb5, 0x0003de85, 0x0003de6c, 0x00037c48, 0x000bfb47, 0x0010c455, 0x0010c476, 0x0010c47c, 0x0010c483, 0x0010c489, 0x000328d4],
     "male_redguard"                  => [0x0006762e, 0x00058b3f, 0x0010f5a1, 0x0010f5aa, 0x00020071, 0x00013baa, 0x00019a2a, 0x0004d8d4, 0x0001b3b5, 0x0005b4f8, 0x00026904, 0x000268fc, 0x00026915, 0x00024261, 0x0010ab9e, 0x0010ab9f, 0x0010aba0, 0x0010aba1, 0x0010aba2, 0x00048118, 0x00103504, 0x00013609, 0x0002e11f, 0x000215d5, 0x00067631, 0x00067642, 0x00067641, 0x00067645, 0x00067643, 0x00067646, 0x00067644, 0x00067647, 0x0006762f, 0x00067630, 0x0006764b, 0x00067648, 0x0006764c, 0x00067649, 0x0006764d, 0x0006764a, 0x0006764e, 0x00067632, 0x00067633, 0x00067634, 0x0006764f, 0x00067650, 0x00067653, 0x00067651, 0x00067654, 0x00067652, 0x00067655, 0x00067635, 0x00067636, 0x00067637, 0x00067656, 0x00067657, 0x0006765a, 0x00067658, 0x0006765b, 0x00067659, 0x0006765c, 0x00067638, 0x00067639, 0x0006763a, 0x0006765d, 0x0006765e, 0x00067665, 0x0006765f, 0x00067666, 0x00067660, 0x00067667, 0x0006763b, 0x0006763c, 0x0006763d, 0x00067661, 0x00067662, 0x00067668, 0x00067663, 0x00067669, 0x00067664, 0x0006766a, 0x0006763e, 0x0006763f, 0x00067640, 0x00039cf9, 0x0003de8d, 0x0003de72, 0x0003de54, 0x00037c07, 0x0003dee3, 0x0003dee6, 0x00039d05, 0x0003de94, 0x0003dea8, 0x0003de59, 0x00037c0c, 0x0003deec, 0x0003deef, 0x00039d0d, 0x0003de9b, 0x0003de77, 0x0003de5e, 0x00037c34, 0x0003def7, 0x0003defa, 0x00039d15, 0x0003dea3, 0x0003de7c, 0x0003de63, 0x00037c3b, 0x0003df01, 0x0003df04, 0x00039d1d, 0x0003deaf, 0x0003de81, 0x0003de68, 0x00037c42, 0x0003df0b, 0x0003df0e, 0x00039d25, 0x0003deb6, 0x0003de86, 0x0003de6d, 0x00037c49, 0x00073fc0, 0x000c6016, 0x00017143, 0x00017144, 0x00032860, 0x000c49dd, 0x000b9285],
 
-    "male_draugr"                    => [0x0005593b],
-    "female_draugr"                  => [0x0003891d],
+    // Creatures
+    "male_draugr"                    => [0x0005593b,0x0003b549,0x0005593d],
+    "female_draugr"                  => [0x0003891d,0x00055937],
 
     "male_elk"                       => [0x00023a91],
     "female_elk"                     => [0x00023a91],
@@ -91,6 +94,10 @@ $GLOBALS["npc_own_templates"] = [
     "female_breton_farmer"     => [0x25848], // AIAgentTemplateBretonFemalePoor
     "female_breton_bard"       => [0x25849], // AIAgentTemplateBretonFemaleBard
     "female_breton_soldier"    => [0x2584a], // AIAgentTemplateBretonFemaleSoldier
+
+    "female_breton_forsworn"    => [0x25848], // AIAgentTemplateBretonFemaleSoldier
+
+
     "male_breton_noble"        => [0x25daf], // AIAgentTemplateBretonMaleCivil
     "male_breton_merchant"     => [0x25daf], // AIAgentTemplateBretonMaleCivil
     "male_breton_warrior"      => [0x25db0], // AIAgentTemplateBretonMaleWarrior
@@ -100,6 +107,8 @@ $GLOBALS["npc_own_templates"] = [
     "male_breton_farmer"       => [0x25db2], // AIAgentTemplateBretonMalePoor
     "male_breton_bard"         => [0x25db4], // AIAgentTemplateBretonMaleBard
     "male_breton_soldier"      => [0x25db5], // AIAgentTemplateBretonMaleSoldier
+
+    "male_breton_forsworn"    => [0x25db2], // AIAgentTemplateBretonFemaleSoldier
 
     "male_nord_noble"          => [0x25db6], // AIAgentTemplateNordMaleCivil
     "male_nord_merchant"       => [0x25db6], // AIAgentTemplateNordMaleCivil
@@ -198,7 +207,22 @@ $GLOBALS["npc_own_templates"] = [
 
 ];
 
-function checkHistory($npc)
+   $GLOBALS["outfit"] = [
+        "beggar"    => [0x000a1983],
+        "mage"      => [0x0006e26f, 0x001034ef, 0x000a199c, 0x000d504c, 0x0007eab5, 0x0001703a, 0x000f3e7d, 0x00106114, 0x000fba59, 0x000e9ac4, 0x000b7a3e, 0x000b7a3f],
+        "barbarian" => [0x00057a26],
+        "warrior"   => [0x00028b44],
+        "soldier"   => [0x000fd82b, 0x000abf55, 0x000abf57, 0x000e108f, 0x000964df, 0x000abf44, 0x000abf56, 0x000abf58, 0x000d29a0, 0x000abf45, 0x000abf46, 0x000cd6dd, 0x000d29a1],
+        "assassin"  => [0x000e1ec2, 0x0010350b, 0x00065c53],
+        "rogue"     => [0x000e1ec2, 0x0010350b, 0x00065c53],
+        "farmer"    => [0x0002d75e],
+        "citizen"   => [0x000a1983],
+        "bard"      => [0x0009d5e0, 0x000e40dd, 0x000dab74, 0x000dab75, 0x000f8716, 0x000f8717, 0x000f871a, 0x000f8718],
+        "noble"     => [0x0009d5e0, 0x000e40dd, 0x000dab74, 0x000dab75, 0x000f8716, 0x000f8717, 0x000f871a, 0x000f8718],
+        "merchant"  => [0x0009d5e0, 0x000e40dd, 0x000dab74, 0x000dab75, 0x000f8716, 0x000f8717, 0x000f871a, 0x000f8718],
+        "forsworn"  => [0x00043bd9],
+    ];
+    function checkHistory($npc)
 {
 
     $historyData  = "";
@@ -291,7 +315,7 @@ function askLLMForTopic($npc, $topic, $last_llm_call)
     $contextData = array_merge($head, $prompt);
 
     $connectionHandler = $connector->getConnector($currentConnectorData);
-    $buffer            = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 2048, "temperature" => 0.7], 'rolemaster_helper_asktopic');
+    $buffer            = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 1024, "temperature" => 0.7], 'rolemaster_helper_asktopic');
     $parsedbuffer      = __jpd_decode_lazy($buffer);
     error_log(print_r($buffer, true));
     $res = false;
@@ -461,6 +485,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
     /*
     SELECT STRING_AGG(formid,',') FROM "public"."npc_skyrim_data" where gender ilike 'male%' and race ilike 'nord%' and name='' and class ilike '%bandit%' and edid like 'Enc%' and achr='' and (not formid ilike '%0xDG%')  and (not  edid ilike '%magic%')
     */
+    global $outfit;
 
     $class    = strtolower($class);
     $race     = strtolower($race);
@@ -470,21 +495,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
     $masterDataTemplates = $GLOBALS["npc_templates"];
     $masterData          = $GLOBALS["npc_own_templates"];
 
-    $outfit = [
-        "beggar"    => [0x000a1983],
-        "mage"      => [0x0006e26f, 0x001034ef, 0x000a199c, 0x000d504c, 0x0007eab5, 0x0001703a, 0x000f3e7d, 0x00106114, 0x000fba59, 0x000e9ac4, 0x000b7a3e, 0x000b7a3f],
-        "barbarian" => [0x00057a26],
-        "warrior"   => [0x00028b44],
-        "soldier"   => [0x000fd82b, 0x000abf55, 0x000abf57, 0x000e108f, 0x000964df, 0x000abf44, 0x000abf56, 0x000abf58, 0x000d29a0, 0x000abf45, 0x000abf46, 0x000cd6dd, 0x000d29a1],
-        "assassin"  => [0x000e1ec2, 0x0010350b, 0x00065c53],
-        "rogue"     => [0x000e1ec2, 0x0010350b, 0x00065c53],
-        "farmer"    => [0x0002d75e],
-        "citizen"   => [0x000a1983],
-        "bard"      => [0x0009d5e0, 0x000e40dd, 0x000dab74, 0x000dab75, 0x000f8716, 0x000f8717, 0x000f871a, 0x000f8718],
-        "noble"     => [0x0009d5e0, 0x000e40dd, 0x000dab74, 0x000dab75, 0x000f8716, 0x000f8717, 0x000f871a, 0x000f8718],
-        "merchant"  => [0x0009d5e0, 0x000e40dd, 0x000dab74, 0x000dab75, 0x000f8716, 0x000f8717, 0x000f871a, 0x000f8718],
-    ];
-
+ 
     $weapon = [
         "sword" => [0x00013989],
     ];
@@ -504,7 +515,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
     }
 
     $parm5 = $masterDataTemplates["{$gender}_{$race}"][array_rand($masterDataTemplates["{$gender}_{$race}"])];
-
+    error_log("Using masterData[{$gender}_{$race}_{$dclass}] => $parm5");
     if (isset($masterData["{$gender}_{$race}_{$dclass}"])) {
         $parm1 = $masterData["{$gender}_{$race}_{$dclass}"][array_rand($masterData["{$gender}_{$race}_{$dclass}"])];
     } else {
@@ -590,8 +601,77 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
 
     $masterData = $GLOBALS["item_types"];
 
-    if ($basetype == "note") {
-        createBook($name, $content, $location, $quest_id, $npc_ref);
+    if ($basetype == "note" || $basetype == "book") {
+
+        // Generate content for the book/note
+        $connector            = new LLMConnector();
+        $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
+        $connector->setOldGlobals($currentConnectorData);
+
+        $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+        $questData=json_decode(file_get_contents($enginePath . "log" . DIRECTORY_SEPARATOR . "snqe_state.json"), true);
+
+        $CONTEXT_INFO_SKYRIM_LORE="
+        == Quest Data ==
+{$questData["questtitle"]}
+{$questData["briefing"]}
+    
+Quest Journal:
+".implode("\n",$questData["nextlist"])."
+== End of Quest Data ==
+";
+
+        $head[]   = ["role" => "system", "content" => "## You're an AI writer. Your must write a book/note involved in a storyline."];
+        $prompt[] = ["role" => "user", "content" => $CONTEXT_INFO_SKYRIM_LORE];
+        $prompt[] = ["role" => "user", "content" => "
+Read the quest context info and write the content for \"$name\" book/note.
+
+Book/Note content topic:$content
+
+* Note that the book/note was found during a quest. It's timeline should be prior to the current events of the quest.
+* Note/Book should give a hint about the current quest/storyline
+* Use Skyrim's lore if needed.
+Format: 
+* Write in first person as the one who authored the book.
+* Write the book's/note's title (\"$name\") and then generate the content of the book/note (up to 3 paragraphs).
+* The book must be no more than 75 words long.
+
+
+## Writing Task
+
+Read the quest context above and write the content of the in-game book/note titled **$name**.
+
+### Content Requirements
+- $content
+- Curent Owner: $npc_ref 
+
+### Lore & Timeline
+- The book was written **before the current quest events**.
+- It should subtly foreshadow the quest’s mystery and dangers.
+- You may reference **Skyrim lore** (vampires, curses, old ruins), but do **not** reference known vanilla NPCs or events directly.
+
+### Writing Style
+- Write in **first person**, as the original author (you must infere the autor given the quest context, can be anonymous, or someone related to the book owner).
+
+### Format
+- Begin with the title on its own line:  
+  **$name**
+- Follow with **up to 3 short paragraphs**.
+- Total length must be **100 words or fewer**.
+- Sign it (last paragraph)
+
+### Hard Rules
+- Do not describe current quest events or the player.
+- Do not resolve the mystery completely—only provide hints.
+- Keep everything grounded in the provided quest context.
+
+"];
+
+        $contextData = array_merge($head, $prompt);
+        $connectionHandler = $connector->getConnector($currentConnectorData);
+        $buffer            = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 2048, "temperature" => 0.7], 'rolemaster_helper_bookwriter');
+
+        createBook($name, $buffer, $location, $quest_id, $npc_ref);
         return;
     }
 
@@ -613,14 +693,24 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
         }
         $localItemPlace = $unsignedInt;
 
-    } else {
+    } else if (preg_match('/^[a-zA-Z0-9\s\'-]+:0x[0-9a-fA-F]+$/', $location)){
+        $localItemPlace = 0;
+        list($itemName, $refidHex) = explode(":", $location);
+        $unsignedInt    = hexdec($refidHex);
+        // Convert to 32-bit signed integer
+        if ($unsignedInt >= 0x80000000) {
+            $unsignedInt -= 0x100000000;
+        }
+        $localItemPlace = $unsignedInt;
+
+    }  else {
         if (! is_numeric($localItemPlace)) {
             if (isset($GLOBALS["masterDataLocations"][$location])) {
                 $localItemPlace = $GLOBALS["masterDataLocations"][$location][array_rand($GLOBALS["masterDataLocations"][$location])];
             } else {
                 // Cells
                 $locationCn    = $GLOBALS["db"]->escape($location);
-                $dbDestination = $GLOBALS["db"]->fetchOne("SELECT id FROM named_cell where name='$location'");
+                $dbDestination = $GLOBALS["db"]->fetchOne("SELECT id FROM named_cell where cell_name='$location'");
                 if ($dbDestination) {
                     $localItemPlace = $dbDestination["id"];
                 } else {
@@ -660,9 +750,9 @@ function CreateItemNpc($basetype, $name, $npc)
     ];
 
     $localItemName = $GLOBALS["db"]->escape($name);
-    $$localItemNPC = $GLOBALS["db"]->escape($npc);
+    $localItemNPC = $GLOBALS["db"]->escape($npc);
     $localItemType = $masterData["type"][0];
-
+    $taskId="";
     $GLOBALS["db"]->insert(
         'responselog',
         [
@@ -743,6 +833,9 @@ function createBook($title, $content, $location, $quest_id, $npc_ref = null)
     $text = $content;
     $name = $title;
 
+    // Ensure $localItemPlace is initialized from the provided $location parameter
+    $localItemPlace = $location;
+
     if ($localItemPlace == "nearby") {
         $localItemPlace = 0;
     } else if ($localItemPlace == "pocket") {
@@ -773,64 +866,9 @@ function createBook($title, $content, $location, $quest_id, $npc_ref = null)
         }
     }
 
-    $fontPath = __DIR__ . '/../data/fonts/GloriaHallelujah-Regular.ttf'; // Path to your TTF font file
-    $fontSize = 15;                                                      // Initial font size (we'll adjust if needed)
 
-    $backgroundPath = __DIR__ . '/../data/textures/chim.png';
-
-    $background = imagecreatefrompng($backgroundPath);
-
-    // Ensure the background has alpha transparency
-    imagesavealpha($background, true);
-
-                                                           // Define the text color
-    $textColor = imagecolorallocate($background, 0, 0, 0); // Black color
-
-    // Split text into paragraphs based on newlines
-    $paragraphs = explode("\n", $text);
-
-             // Initialize variables for drawing
-    $x = 10; // Small left margin
-    $y = 20; // Small top margin, adjusted for font size
-
-    foreach ($paragraphs as $paragraph) {
-        // Split each paragraph into lines that fit within image width
-        $words = explode(" ", $paragraph);
-        $line  = "";
-
-        foreach ($words as $word) {
-            $testLine  = $line . $word . " ";
-            $bbox      = imagettfbbox($fontSize, 0, $fontPath, $testLine);
-            $lineWidth = abs($bbox[4] - $bbox[0]);
-
-            if ($lineWidth > $width * 0.9) {
-                // Draw the current line and start a new line if it exceeds the boundary
-                imagettftext($background, $fontSize, 0, $x, $y, $textColor, $fontPath, trim($line));
-                $line = $word . " ";
-                $y += $fontSize * 2; // Move down for the next line
-            } else {
-                $line = $testLine;
-            }
-        }
-
-        // Draw the last line of the paragraph
-        if (trim($line) !== "") {
-            imagettftext($background, $fontSize, 0, $x, $y, $textColor, $fontPath, trim($line));
-            $y += $fontSize * 1.8;
-        }
-
-        // Add extra space between paragraphs
-        $y += $fontSize * 0.8;
-    }
-
-    // Output the final image with text overlay
-    $filename = __DIR__ . "/../soundcache/" . md5($name) . ".png";
-    imagepng($background, $filename);
-
-    // Free up memory
-    imagedestroy($background);
-
-    echo "Image saved as $filename" . PHP_EOL;
+    createLetter($title, $content);
+    
 
     $GLOBALS["db"]->insert(
         'responselog',
@@ -843,6 +881,20 @@ function createBook($title, $content, $location, $quest_id, $npc_ref = null)
             'tag' => "",
         ]
     );
+
+    $GLOBALS["db"]->insert(
+        'books',
+        array(
+            'ts' => DataLastKnownTS(),
+            'gamets' => DataLastKnownGameTS(),
+            'content' => $content,
+            'sess' => 'generated',
+            'localts' => time(),
+            'title'=>$title
+            )
+        );
+
+    
 }
 
 function createLetter($title, $content)
@@ -957,7 +1009,7 @@ function createLetter($title, $content)
 
     // Output the final image with text overlay
     @mkdir(__DIR__ . "/../data/books");
-    $filename = __DIR__ . "/../data/books/" . md5(strtolower($name)) . ".png";
+    $filename = __DIR__ . "/../data/books/" . md5(string: strtolower(string: $name)) . ".png";
     imagepng($background, $filename);
 
     // Free up memory
@@ -975,6 +1027,8 @@ function make_replacements($text)
         "#PLAYER#"   => $GLOBALS["PLAYER_NAME"],
     ]);
 }
+
+
 
 function convertSignedToUnsignedHex($signedInt)
 {
@@ -1017,6 +1071,7 @@ function SkTopicCheck($character, $topic, $lastCall, $retries, $quest_id)
 
     if (isset($checkDeath["n"]) && $checkDeath["n"]) {
         $contextDataHistoric = 4;
+        error_log("[SkTopicCheck]\t NPC is dead <$character>  <$retries> <$quest_id>");
     }
 
     if (($contextDataHistoric) >= 4) {
@@ -1030,10 +1085,12 @@ function SkTopicCheck($character, $topic, $lastCall, $retries, $quest_id)
 
         } else {
             // Make suggestion, topic not covered
-            $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: $topic");
+            $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: $topic. but using own words and speech style, and following current dialogue context. If topic already said, rephrase and just follow up");
+            //$hintData = ("{$quest_data["npcs"][$npc_ref]["name"]} should talk to {$GLOBALS["PLAYER_NAME"]} about this topic: \"{$quest_data["topics"][$topic_ref]["info"]}\", but using own words and speech style, and following current dialogue context. If topic already said, just follow up");
             if ($topiCall["missing"]) {
-                $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: {$topiCall["missing"]}}");
+                $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: {$topiCall["missing"]}. but using own words and speech style, and following current dialogue context. If topic already said, rephrase and just follow up");
             }
+
             if (isset($topiCall["missing"]) && $topiCall["missing"] != "skip") {
                 $GLOBALS["db"]->insert(
                     'responselog',
@@ -1055,7 +1112,7 @@ function SkTopicCheck($character, $topic, $lastCall, $retries, $quest_id)
 
         }
     } else {
-        error_log("[SkTopicCheck]\tNot enough dialogue with NPC <$topic> <{$character}>");
+        error_log("[SkTopicCheck]\tNot enough dialogue with NPC <$topic> <{$character}> n:{$contextDataHistoric}");
         // Not enough dialogue with NPC
         if (($retries % 30) == 0) {
             // Make suggestion, dialogue is too small

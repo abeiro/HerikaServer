@@ -74,7 +74,7 @@ function internalDumbTranslator($inputSentence)
 
         // Split sentence into words and clean them
         $words = array_map(function($word) {
-            return str_replace(['?', '!', '.', '-', '¿', '¡', "'", ',', '_'], ' ', $word);
+            return str_replace(['?', '!', '.', '-', '¿', '¡', "'", ',', '_',',',')','('], ' ', $word);
         }, explode(" ", $inputSentence));
 
         if (empty($words)) {

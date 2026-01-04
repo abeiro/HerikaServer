@@ -12,7 +12,7 @@ function stt($file)
     $startTime = microtime(true);
     $GLOBALS["db"] = new sql();
     error_log("TRACE");
-    $additionalKeywords = lastKeyWords(30, ["chat","chatme","DRO-VAH!"]);    
+    $additionalKeywords = lastKeyWords(30, ["chat","chatme","DRO-VAH!"]);
     $url = "http://localhost:8022/v1/audio/transcriptions";
 
     $lang = isset($GLOBALS["STT"]["PARAKEET"]["LANG"]) ? $GLOBALS["STT"]["PARAKEET"]["LANG"] : "en";
@@ -25,7 +25,7 @@ function stt($file)
     $fileContent = file_get_contents($filePath);
     $filename = basename($filePath);
 
-    if (!$GLOBALS["STT"]["PARAKEET"]["TRANSLATE"]) {
+    if (empty($GLOBALS["STT"]["PARAKEET"]["TRANSLATE"])) {
         $multipartBody = "--{$boundary}\r\n"
             ."Content-Disposition: form-data; name=\"file\"; filename=\"{$filename}\"\r\n"
             ."Content-Type: audio/wav\r\n"
