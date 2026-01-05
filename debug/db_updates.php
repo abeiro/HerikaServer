@@ -3088,6 +3088,10 @@ $db->execQuery("
             ALTER TABLE relationship_init_queue
             ADD COLUMN IF NOT EXISTS last_error TEXT
         ");
+$db->execQuery("
+            ALTER TABLE relationship_eval_queue
+            ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0
+        ");
 Logger::info(__FILE__." update file processed");
 
 ?>
