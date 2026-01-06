@@ -100,8 +100,9 @@ class TTSConnector {
                     
                     // If language is set, also set LLM_LANG for language-aware responses
                     if ($key === "language" && isset($GLOBALS["LANG_LLM_XTTS"]) && $GLOBALS["LANG_LLM_XTTS"]) {
-                        $GLOBALS["LLM_LANG"] = $value;
-                        error_log("[CORE] TTS Connector set GLOBALS[LLM_LANG] = {$value}");
+                        // Sanitize language code
+                        $GLOBALS["LLM_LANG"] = preg_replace('/[^a-z\-]/i', '', strtolower(trim($value)));
+                        error_log("[CORE] TTS Connector set GLOBALS[LLM_LANG] = {$GLOBALS["LLM_LANG"]}");
                     }
                 }
             }

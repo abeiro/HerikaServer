@@ -967,7 +967,8 @@ class openrouterjson
                         }
                         
                         if (isset($finalData["lang"])) {
-                            $GLOBALS["LLM_LANG"]=$finalData["lang"];
+                            // Sanitize language code - remove extra chars from LLM parsing artifacts
+                            $GLOBALS["LLM_LANG"]=preg_replace('/[^a-z\-]/i', '', strtolower(trim($finalData["lang"])));
                         }
                         
                         if (isset($finalData["mood"])) {

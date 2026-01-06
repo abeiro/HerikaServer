@@ -155,6 +155,15 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		if (empty($lang))
 			$lang=$GLOBALS["TTS"]["XTTSFASTAPI"]["language"];
 
+		// Sanitize language code - remove any extra characters from LLM parsing
+		// Valid XTTS language codes
+		$validLangs = ['en', 'es', 'fr', 'de', 'it', 'pt', 'pl', 'tr', 'ru', 'nl', 'cs', 'ar', 'zh-cn', 'ja', 'hu', 'ko', 'hi'];
+		$lang = preg_replace('/[^a-z\-]/i', '', strtolower(trim($lang ?? '')));
+		if (!in_array($lang, $validLangs)) {
+			Logger::warn("Invalid TTS language code '{$lang}', defaulting to 'en'");
+			$lang = 'en';
+		}
+
 		// xtts has trouble reading numbers when lang is Japanese
 		// PATCH it by converting numbers into kanji, which it can read
 		if ($lang == 'ja') {
