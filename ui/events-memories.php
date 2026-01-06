@@ -1012,7 +1012,7 @@ function getTimeColor($time) {
                         }
                         
                         // Store formatted prompt in a hidden div and reference it by ID
-                        $promptId = 'prompt_' . $row['ROWID'];
+                        $promptId = 'prompt_' . ($row['ROWID'] ?? $row['rowid'] ?? md5($value));
                         $hiddenPrompt = '<div id="' . $promptId . '" style="display:none;">' . $formattedPrompt . '</div>';
                         $mappedRow[$columnHeaders[$key] ?? $key] = $hiddenPrompt . '<button class="view-contents-btn" data-prompt-id="' . $promptId . '">🧾 View Prompt</button>';
                     } else if ($key === 'response') {
