@@ -43,7 +43,7 @@ $checkColumnExists = function($tablename, $columnname) {
     $query = "
         SELECT 1 AS exists 
         FROM information_schema.columns 
-        WHERE table_schema = 'public' AND table_name = '{$tablename}' AND column_name = '{$columnname }'
+        WHERE table_schema = 'public' AND table_name = '{$tablename}' AND column_name = '{$columnname}'
     ";
 
     $result = $db->fetchAll($query);
@@ -1457,11 +1457,11 @@ if ($checkVersion("dynamic_bio")<20250710001) {
     Logger::info("Applied patch oghma 20250903001");
 //}
 
-if ($checkVersion("oghma")<20250104001) {
+if ($checkVersion("oghma")<20260104001) {
     $query = "DELETE FROM public.oghma WHERE topic = 'dragon_tongue'";
     $db->execQuery($query);
-    $updateVersion("oghma",20250104001);
-    Logger::info("Applied patch oghma 20250104001 - Removed dragon_tongue entry");
+    $updateVersion("oghma",20260104001);
+    Logger::info("Applied patch oghma 20260104001 - Removed dragon_tongue entry");
 }
 
 if ($checkVersion("locations")<20250526001) {
@@ -2281,6 +2281,14 @@ if ($checkTableExists("named_cell") == -1) {
 
 if ($checkColumnExists("named_cell","vanilla_cell") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/named_cell.sql"));
+    Logger::info(__FILE__." named_cell - vanilla_cell not found! ");
+} else {
+    Logger::info(__FILE__." named_cell - vanilla_cell exists");
+    if ($checkColumnExists("named_cell","door_id") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../data/named_cell.sql"));
+        Logger::info(__FILE__." named_cell - door_id not found! ");
+    } else
+        Logger::info(__FILE__." named_cell - door_id exists");
 }
 
 if ($checkTableExists("sneq_quests_saved") == -1) {
@@ -3065,6 +3073,30 @@ if ($checkVersion("emotions_expression")<20251130003) {
     }
 }
 
+if ($checkVersion("emotions_expression")<20251230001) {
+    Logger::debug(" try patch: emotions_expression 20251230001");
+    $b_ok = true;
+    try {
+        $query = " ALTER TABLE public.moods_issued ADD COLUMN IF NOT EXISTS emotion TEXT; ";
+        $db->execQuery($query);        
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'moods_issued' table: " . $e->getMessage());
+    }
+    try {
+        $query = " ALTER TABLE public.moods_issued ADD COLUMN IF NOT EXISTS emotion_intensity TEXT; ";
+        $db->execQuery($query);        
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'moods_issued' table: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("emotions_expression",20251230001);
+        Logger::info("Applied patch emotions_expression 20251230001");
+    }
+}
+
 //----------------------------------------------------
 
 // Relationship Evaluation and Initialization Queues
@@ -3088,6 +3120,13 @@ $db->execQuery("
             ALTER TABLE relationship_init_queue
             ADD COLUMN IF NOT EXISTS last_error TEXT
         ");
+$db->execQuery("
+            ALTER TABLE relationship_eval_queue
+            ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0
+        ");
 Logger::info(__FILE__." update file processed");
 
+//----------------------------------------------------
+        
+Logger::info(__FILE__." update file processed. This file has ".__LINE__." lines.");
 ?>
