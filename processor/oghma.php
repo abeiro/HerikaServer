@@ -2,8 +2,28 @@
 
 $GLOBALS["OGHMA_HINT"] = "";
 
-if ($GLOBALS["MINIME_T5"] || (isset($GLOBALS["OGHMA_CUSTOM"]) && $GLOBALS["OGHMA_CUSTOM"])) {
-    if (isset($GLOBALS["OGHMA_INFINIUM"]) && ($GLOBALS["OGHMA_INFINIUM"])) {
+// Helper function to properly check boolean values (handles string "false" from form submissions)
+function isOghmaEnabled($value) {
+    if ($value === null) return false;
+    if ($value === false || $value === 'false' || $value === '0' || $value === 0) return false;
+    if ($value === true || $value === 'true' || $value === '1' || $value === 1) return true;
+    return (bool)$value;
+}
+
+$minimeEnabled = isOghmaEnabled($GLOBALS["MINIME_T5"] ?? false);
+$oghmaCustomEnabled = isOghmaEnabled($GLOBALS["OGHMA_CUSTOM"] ?? false);
+$oghmaInfiniumEnabled = isOghmaEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
+
+// Debug: Log the actual values being checked
+error_log("[OGHMA DEBUG] MINIME_T5=" . var_export($GLOBALS["MINIME_T5"] ?? 'NOT SET', true) 
+    . " (enabled=" . ($minimeEnabled ? 'Y' : 'N') . ")"
+    . " | OGHMA_CUSTOM=" . var_export($GLOBALS["OGHMA_CUSTOM"] ?? 'NOT SET', true)
+    . " (enabled=" . ($oghmaCustomEnabled ? 'Y' : 'N') . ")"
+    . " | OGHMA_INFINIUM=" . var_export($GLOBALS["OGHMA_INFINIUM"] ?? 'NOT SET', true)
+    . " (enabled=" . ($oghmaInfiniumEnabled ? 'Y' : 'N') . ")");
+
+if ($minimeEnabled || $oghmaCustomEnabled) {
+    if ($oghmaInfiniumEnabled) {
         if (in_array($gameRequest[0], ["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat", "instruction", "suggestion"])) {
             
             if ($gameRequest[0] === "rechat") {

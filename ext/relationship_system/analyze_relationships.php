@@ -29,6 +29,7 @@ require_once $enginePath . "lib/core/llm_connector.class.php";
 require_once $enginePath . "lib/core/api_badge.class.php";
 require_once $enginePath . "lib/core/npc_master.class.php";
 require_once $enginePath . "lib/core/core_profiles.class.php";
+require_once $enginePath . "lib/logger.php";
 
 $GLOBALS["db"] = new sql();
 
@@ -87,7 +88,7 @@ try {
             exit;
         }
         $connectorData = $connectors[0];
-        error_log("[REL-AI] Warning: RELLLM_CONNECTOR not set, using first available connector");
+        Logger::warn("[REL-AI] Warning: RELLLM_CONNECTOR not set, using first available connector");
     }
 
     if (!$connectorData) {
@@ -195,7 +196,7 @@ PROMPT;
 
     // Log what we're doing
     $modelName = $connectorData['model'] ?? $connectorData['driver'] ?? 'unknown';
-    error_log("[REL-AI] Analyzing relationships for {$npcName} using connector #{$connectorData['id']} ({$modelName})");
+    Logger::info("[REL-AI] Analyzing relationships for {$npcName} using connector #{$connectorData['id']} ({$modelName})");
 
     // Make the LLM request - uses connector's configured temperature
     $response = $driver->fast_request(
@@ -206,7 +207,7 @@ PROMPT;
         "relationship_analysis"
     );
 
-    error_log("[REL-AI] Raw response: " . substr($response, 0, 500));
+    Logger::debug("[REL-AI] Raw response: " . substr($response, 0, 500));
 
     // Try to parse the JSON response
     // Handle potential markdown code blocks
@@ -236,7 +237,7 @@ PROMPT;
     }
 
     if ($parsed === null || !isset($parsed['relationships'])) {
-        error_log("[REL-AI] Failed to parse response: " . $response);
+        Logger::warn("[REL-AI] Failed to parse response: " . $response);
         echo json_encode([
             'ok' => false,
             'error' => 'Failed to parse AI response',
@@ -298,7 +299,7 @@ PROMPT;
         if (!empty($data['relation'])) $logExtra .= ", relation={$data['relation']}";
         if (!empty($data['best'])) $logExtra .= ", best={$data['best']}";
         if (!empty($data['worst'])) $logExtra .= ", worst={$data['worst']}";
-        error_log("[REL-AI] {$npcName} -> {$target}: aff={$aff}, type={$type}{$logExtra}");
+        Logger::info("[REL-AI] {$npcName} -> {$target}: aff={$aff}, type={$type}{$logExtra}");
     }
 
     echo json_encode([
@@ -310,7 +311,7 @@ PROMPT;
     ]);
 
 } catch (Exception $e) {
-    error_log("[REL-AI] Error: " . $e->getMessage());
+    Logger::error("[REL-AI] Error: " . $e->getMessage());
     echo json_encode([
         'ok' => false,
         'error' => $e->getMessage()

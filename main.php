@@ -670,6 +670,7 @@ if (isset($_GET["profile"])) {
         $connector->setOldGlobals($currentConnectorData);
         $profile->setOldGlobals($currentProfileData);
         $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+        $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $currentNpcData;
 
         $npcMaster->updateByArray($currentNpcData);
         
@@ -695,6 +696,7 @@ if (isset($_GET["profile"])) {
 
             // Profile has been migrated
             $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+            $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $currentNpcData;
 
             $profile=new CoreProfile();
             $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
@@ -713,6 +715,7 @@ if (isset($_GET["profile"])) {
             $connector->setOldGlobals($currentConnectorData);
             $profile->setOldGlobals($currentProfileData);
             $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+            $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $currentNpcData;
 
             $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
 
@@ -1070,7 +1073,21 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     $rndNumber = rand(1, 100);
     if ($rndNumber <= intval($GLOBALS["RECHAT_P"])) {
         // Process Oghma for rechat events using NPC's last dialogue
-        if (($GLOBALS["MINIME_T5"] || (isset($GLOBALS["OGHMA_CUSTOM"]) && $GLOBALS["OGHMA_CUSTOM"])) && isset($FEATURES["MISC"]["OGHMA_INFINIUM"]) && ($FEATURES["MISC"]["OGHMA_INFINIUM"])) {
+        // Use profile-based OGHMA_INFINIUM setting (not legacy conf.php $FEATURES["MISC"]["OGHMA_INFINIUM"])
+        // Use helper function to handle string "false" values from form submissions
+        if (!function_exists('isOghmaSettingEnabled')) {
+            function isOghmaSettingEnabled($value) {
+                if ($value === null) return false;
+                if ($value === false || $value === 'false' || $value === '0' || $value === 0) return false;
+                if ($value === true || $value === 'true' || $value === '1' || $value === 1) return true;
+                return (bool)$value;
+            }
+        }
+        $minimeEnabled = isOghmaSettingEnabled($GLOBALS["MINIME_T5"] ?? false);
+        $oghmaCustomEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_CUSTOM"] ?? false);
+        $oghmaInfiniumEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
+        
+        if (($minimeEnabled || $oghmaCustomEnabled) && $oghmaInfiniumEnabled) {
                 require(__DIR__."/processor/oghma.php"); // Process Oghma
         }
     }
@@ -1833,9 +1850,32 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
 
 // audit_log(__FILE__." [MINIME]  ".__LINE__);
 
-// OGHMA STUFF
+// OGHMA STUFF - Only run if Oghma is enabled in profile
+// Helper function to properly check boolean values (handles string "false" from form submissions)
+if (!function_exists('isOghmaSettingEnabled')) {
+    function isOghmaSettingEnabled($value) {
+        if ($value === null) return false;
+        if ($value === false || $value === 'false' || $value === '0' || $value === 0) return false;
+        if ($value === true || $value === 'true' || $value === '1' || $value === 1) return true;
+        return (bool)$value;
+    }
+}
 
-require(__DIR__."/processor/oghma.php");
+$minimeEnabled = isOghmaSettingEnabled($GLOBALS["MINIME_T5"] ?? false);
+$oghmaCustomEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_CUSTOM"] ?? false);
+$oghmaInfiniumEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
+
+// Debug: Log the actual values being checked BEFORE the conditional
+error_log("[OGHMA CHECK] MINIME_T5=" . var_export($GLOBALS["MINIME_T5"] ?? null, true) 
+    . " (enabled=" . ($minimeEnabled ? 'Y' : 'N') . ")"
+    . " | OGHMA_CUSTOM=" . var_export($GLOBALS["OGHMA_CUSTOM"] ?? null, true)
+    . " (enabled=" . ($oghmaCustomEnabled ? 'Y' : 'N') . ")"
+    . " | OGHMA_INFINIUM=" . var_export($GLOBALS["OGHMA_INFINIUM"] ?? null, true)
+    . " (enabled=" . ($oghmaInfiniumEnabled ? 'Y' : 'N') . ")");
+
+if (($minimeEnabled || $oghmaCustomEnabled) && $oghmaInfiniumEnabled) {
+    require(__DIR__."/processor/oghma.php");
+}
 
 if (sizeof($memoryInjectionCtx)>0) {
     // Persist memory injection

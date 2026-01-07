@@ -77,6 +77,7 @@ INSERT INTO public.core_api_badge VALUES (8, 'Cartesia', '');
 INSERT INTO public.core_api_badge VALUES (9, 'Nano-GPT', '');
 INSERT INTO public.core_api_badge VALUES (10, 'DeepL', '');
 INSERT INTO public.core_api_badge VALUES (11, 'Inworld', '');
+INSERT INTO public.core_api_badge VALUES (12, 'Groq', '');
 
 
 --

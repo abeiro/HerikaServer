@@ -670,12 +670,12 @@ $ittById = $byId($ittRows);
                 }
             } catch (Throwable $e) {}
         ?>
-        <label class="label-with-toggle">♻️ Dynamic Profile/Relationships
+        <label class="label-with-toggle">♻️ Dynamic Profile
             <input type="hidden" name="meta_vis[DYNAMIC_PROFILE_ENABLED]" value="">
             <input type="checkbox" name="meta_vis[DYNAMIC_PROFILE_ENABLED]" value="1" <?= $dynamicProfileEnabled ? "checked" : "" ?>>
             <span class="toggle-text">Off</span>
         </label>
-        <small class="hint">Allow systems to evolve NPC profiles and relationships based on gameplay events. NPCs using this profile will have dynamic profile/relationships enabled by default.</small>
+        <small class="hint">Allow systems to evolve NPC profiles based on gameplay events. NPCs using this profile will have dynamic profile enabled by default.</small>
 
         <div style="height:6px;"></div>
         <?php

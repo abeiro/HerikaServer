@@ -549,7 +549,14 @@ class NpcMaster
         $metadata = json_decode($currentNpcData['metadata'] ?? '{}', true);
         if (is_array($metadata)) {
             foreach ($metadata as $key => $value) {
-                if (! empty($value)) {
+                // Handle boolean false and numeric 0 properly - empty() would skip these
+                if (! empty($value) || is_numeric($value) || is_bool($value)) {
+                    // Convert string "true"/"false" to actual booleans for proper PHP evaluation
+                    if ($value === 'true') {
+                        $value = true;
+                    } elseif ($value === 'false') {
+                        $value = false;
+                    }
                     $GLOBALS[$key] = $value;
                     //error_log("[CORE] NPC  GLOBALS[$key] = ".print_r($value,true));
                 }
