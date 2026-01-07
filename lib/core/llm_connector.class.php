@@ -250,6 +250,36 @@ class LLMConnector
                 }
             }
 
+        } else if ($currentConnectorData["driver"] == "groqjson") {
+
+            $apiBadge = new ApiBadge();
+            $apiKeyData = $apiBadge->getById($currentConnectorData["api_badge_id"]);
+            // error_log("[CORE SYSTEM] Using new profile system CONNECTOR groqjson {$currentConnectorData["id"]} {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
+            $GLOBALS["CONNECTOR"]["groqjson"]["url"] = $currentConnectorData["url"] ?? 'https://api.groq.com/openai/v1/chat/completions';
+            $GLOBALS["CONNECTOR"]["groqjson"]["model"] = $currentConnectorData["model"] ?? 'llama-3.3-70b-versatile';
+            $GLOBALS["CONNECTOR"]["groqjson"]["reasoning_model"] = $currentConnectorData["reasoning_model"] ?? false;
+            $GLOBALS["CONNECTOR"]["groqjson"]["max_tokens"] = $currentConnectorData["max_tokens"] ?? '1024';
+            $GLOBALS["CONNECTOR"]["groqjson"]["temperature"] = $currentConnectorData["temperature"] ?? 1.0;
+            $GLOBALS["CONNECTOR"]["groqjson"]["presence_penalty"] = $currentConnectorData["presence_penalty"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["groqjson"]["frequency_penalty"] = $currentConnectorData["frequency_penalty"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["groqjson"]["repetition_penalty"] = $currentConnectorData["repetition_penalty"] ?? 1.0;
+            $GLOBALS["CONNECTOR"]["groqjson"]["top_p"] = $currentConnectorData["top_p"] ?? 1.0;
+            $GLOBALS["CONNECTOR"]["groqjson"]["top_k"] = $currentConnectorData["top_k"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["groqjson"]["min_p"] = $currentConnectorData["min_p"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["groqjson"]["top_a"] = $currentConnectorData["top_a"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["groqjson"]["ENFORCE_JSON"] = $currentConnectorData["enforce_json"] ?? true;
+            $GLOBALS["CONNECTOR"]["groqjson"]["PREFILL_JSON"] = $currentConnectorData["prefill_json"] ?? false;
+            $GLOBALS["CONNECTOR"]["groqjson"]["API_KEY"] = $apiKeyData["api_key"] ?? '';
+            $GLOBALS["CONNECTOR"]["groqjson"]["json_schema"] = false; // Force disabled for Groq - not supported on most models
+
+            // Decode metadata and extended_data if available
+            $metadata = json_decode($currentConnectorData['metadata'] ?? '{}', true);
+            if (is_array($metadata)) {
+                foreach ($metadata as $key => $value) {
+                    $GLOBALS["CONNECTOR"]["groqjson"][$key] = $value;
+                }
+            }
+
         }
 
     }
