@@ -181,6 +181,7 @@ function _relProcessQueue($limit = 5) {
                     Logger::debug("[REL-ASYNC] Skipping Player eval for NPC-to-NPC: {$data['npc_name']} -> {$data['listener_name']}");
                 } else if (!$playerActed) {
                     Logger::debug("[REL-ASYNC] Skipping Player eval - no player action: {$data['npc_name']}");
+                }
 
                 // NPC-to-NPC evaluation
                 if ($isNpcToNpc) {
