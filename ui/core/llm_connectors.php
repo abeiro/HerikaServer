@@ -280,6 +280,10 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 </div>
                 <input type="hidden" id="service_input" name="service" value="<?= htmlspecialchars($editItem["service"] ?? "") ?>">
 
+                <div id="service_signup_link" class="orm-note" style="font-size:12px; margin:-6px 0 8px 0; display:none;">
+                    <a id="signup_link" href="#" target="_blank" rel="noopener noreferrer" style="color:#ffb862; text-decoration:underline;">Sign up here</a> to get your API key for this service.
+                </div>
+
                 <div id="custom_note" class="orm-muted" style="font-size:12px; display:none; margin:-6px 0 8px 0;">
                     Custom allows you to build your own connector setting using one of our API drivers to use non-supported services with CHIM. For advanced users only
                 </div>
@@ -664,6 +668,41 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service)); });
         if (driverInput){ driverInput.addEventListener('input', ()=> applyService(detectService())); driverInput.addEventListener('change', ()=> applyService(detectService())); }
         if (urlInput){ urlInput.addEventListener('change', ()=> { const sEl=document.getElementById('service_input'); const sVal = sEl ? String(sEl.value||'').toLowerCase() : ''; if (sVal==='custom') return; applyService(detectService()); }); }
+    })();
+    // Show signup links for online services
+    (function(){
+        const signupLinkDiv = document.getElementById('service_signup_link');
+        const signupLink = document.getElementById('signup_link');
+        const customNote = document.getElementById('custom_note');
+        const signupUrls = {
+            openrouter: 'https://openrouter.ai/keys',
+            openai: 'https://platform.openai.com/signup',
+            google: 'https://ai.google.dev/',
+            groq: 'https://console.groq.com/keys',
+            nanogpt: 'https://nano-gpt.com/'
+        };
+        function updateSignupLink(){
+            const serviceInput = document.getElementById('service_input');
+            const service = serviceInput ? String(serviceInput.value || '').toLowerCase() : '';
+            if (service === 'custom') {
+                if (signupLinkDiv) signupLinkDiv.style.display = 'none';
+                if (customNote) customNote.style.display = '';
+            } else if (signupUrls[service]) {
+                if (signupLink) signupLink.href = signupUrls[service];
+                if (signupLinkDiv) signupLinkDiv.style.display = '';
+                if (customNote) customNote.style.display = 'none';
+            } else {
+                if (signupLinkDiv) signupLinkDiv.style.display = 'none';
+                if (customNote) customNote.style.display = 'none';
+            }
+        }
+        const icons = document.querySelectorAll('.service-icon');
+        icons.forEach(ic=>{ ic.addEventListener('click', ()=> setTimeout(updateSignupLink, 50)); });
+        const urlInput = document.querySelector('input[name="url"]');
+        if (urlInput){ urlInput.addEventListener('change', ()=> setTimeout(updateSignupLink, 50)); }
+        const driverInput = document.getElementById('driver_input');
+        if (driverInput){ driverInput.addEventListener('change', ()=> setTimeout(updateSignupLink, 50)); }
+        updateSignupLink(); // Initial check
     })();
     // Hide JSON Schema for Groq (not supported on most models)
     (function(){
@@ -1304,6 +1343,10 @@ if (typeof window.consolidation !== 'function') {
                 </div>
             <input type="hidden" id="service_input" name="service" value="<?= htmlspecialchars($editItem["service"] ?? "") ?>">
 
+            <div id="service_signup_link" class="orm-note" style="font-size:12px; margin:-6px 0 8px 0; display:none;">
+                <a id="signup_link" href="#" target="_blank" rel="noopener noreferrer" style="color:#ffb862; text-decoration:underline;">Sign up here</a> to get your API key for this service.
+            </div>
+
             <div id="custom_note" class="orm-muted" style="font-size:12px; display:none; margin:-6px 0 8px 0;">
                 Custom allows you to build your own connector setting using one of our API drivers to use non-supported services with CHIM. Depending on the service you may not need to fill out all fields. For advanced users only
             </div>
@@ -1608,6 +1651,42 @@ if (typeof window.consolidation !== 'function') {
     icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service, true)); });
     if (driverInput){ driverInput.addEventListener('input', ()=> applyService(detectService(), false)); driverInput.addEventListener('change', ()=> applyService(detectService(), false)); }
     if (urlInput){ urlInput.addEventListener('change', ()=> { const sEl=document.getElementById('service_input'); const sVal = sEl ? String(sEl.value||'').toLowerCase() : ''; if (sVal==='custom') return; applyService(detectService(), false); }); }
+    
+    // Show signup links for online services
+    (function(){
+        const signupLinkDiv = document.getElementById('service_signup_link');
+        const signupLink = document.getElementById('signup_link');
+        const customNote = document.getElementById('custom_note');
+        const signupUrls = {
+            openrouter: 'https://openrouter.ai/keys',
+            openai: 'https://platform.openai.com/signup',
+            google: 'https://ai.google.dev/',
+            groq: 'https://console.groq.com/keys',
+            nanogpt: 'https://nano-gpt.com/'
+        };
+        function updateSignupLink(){
+            const serviceInput = document.getElementById('service_input');
+            const service = serviceInput ? String(serviceInput.value || '').toLowerCase() : '';
+            if (service === 'custom') {
+                if (signupLinkDiv) signupLinkDiv.style.display = 'none';
+                if (customNote) customNote.style.display = '';
+            } else if (signupUrls[service]) {
+                if (signupLink) signupLink.href = signupUrls[service];
+                if (signupLinkDiv) signupLinkDiv.style.display = '';
+                if (customNote) customNote.style.display = 'none';
+            } else {
+                if (signupLinkDiv) signupLinkDiv.style.display = 'none';
+                if (customNote) customNote.style.display = 'none';
+            }
+        }
+        const icons = document.querySelectorAll('.service-icon');
+        icons.forEach(ic=>{ ic.addEventListener('click', ()=> setTimeout(updateSignupLink, 50)); });
+        const urlInput = document.querySelector('input[name="url"]');
+        if (urlInput){ urlInput.addEventListener('change', ()=> setTimeout(updateSignupLink, 50)); }
+        const driverInput = document.getElementById('driver_input');
+        if (driverInput){ driverInput.addEventListener('change', ()=> setTimeout(updateSignupLink, 50)); }
+        updateSignupLink(); // Initial check
+    })();
     
     // Update Google settings visibility when model changes (for OpenRouter with Google models)
     const modelInputMain = document.querySelector('input[name="model"]');
