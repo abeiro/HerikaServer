@@ -14,6 +14,11 @@
  *   }
  */
 
+// Ensure Logger is available (parent may have already loaded it)
+if (!class_exists('Logger')) {
+    require_once $GLOBALS["ENGINE_PATH"] . "lib/logger.php";
+}
+
 // Only process if relationships_jsonb was submitted
 if (isset($_POST['relationships_jsonb']) && $_POST['relationships_jsonb'] !== '') {
     $relJsonbRaw = $_POST['relationships_jsonb'];
@@ -42,13 +47,13 @@ if (isset($_POST['relationships_jsonb']) && $_POST['relationships_jsonb'] !== ''
 
             if ($oldData === null) {
                 // New relationship
-                error_log("[REL-UI] {$npcName}: Added relationship -> {$target}: aff={$newData['aff']}, type={$newData['type']}");
+                Logger::info("[REL-UI] {$npcName}: Added relationship -> {$target}: aff={$newData['aff']}, type={$newData['type']}");
                 $changeCount++;
             } elseif ($oldData['aff'] !== $newData['aff'] || $oldData['type'] !== $newData['type']) {
                 // Modified relationship
                 $oldAff = $oldData['aff'] ?? 0;
                 $oldType = $oldData['type'] ?? 'neutral';
-                error_log("[REL-UI] {$npcName}: Updated {$target}: aff {$oldAff} -> {$newData['aff']}, type {$oldType} -> {$newData['type']}");
+                Logger::info("[REL-UI] {$npcName}: Updated {$target}: aff {$oldAff} -> {$newData['aff']}, type {$oldType} -> {$newData['type']}");
                 $changeCount++;
             }
         }
@@ -56,13 +61,13 @@ if (isset($_POST['relationships_jsonb']) && $_POST['relationships_jsonb'] !== ''
         // Log removed relationships
         foreach ($oldRels as $target => $oldData) {
             if (!isset($relData[$target])) {
-                error_log("[REL-UI] {$npcName}: Removed relationship -> {$target}");
+                Logger::info("[REL-UI] {$npcName}: Removed relationship -> {$target}");
                 $changeCount++;
             }
         }
 
         if ($changeCount > 0) {
-            error_log("[REL-UI] {$npcName}: {$changeCount} relationship change(s) saved via UI");
+            Logger::info("[REL-UI] {$npcName}: {$changeCount} relationship change(s) saved via UI");
         }
 
         // Update extended_data in POST

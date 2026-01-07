@@ -36,6 +36,9 @@
  *   require_once(__DIR__."/../ext/relationship_system/postrequest.php");
  */
 
+// Ensure Logger is available
+require_once $GLOBALS["ENGINE_PATH"] . "lib/logger.php";
+
 /**
  * Helper: Get the listener from the most recent speech entry for this NPC
  * Returns the listener name, or null if not found/not applicable
@@ -137,7 +140,7 @@ if (isset($GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"]["npc_name"])) {
     $npcNameSource = 'HERIKA_NAME';
 }
 
-error_log("[REL-DEBUG] NPC name resolution: '{$npcName}' from {$npcNameSource}");
+Logger::debug("[REL-DEBUG] NPC name resolution: '{$npcName}' from {$npcNameSource}");
 
 if (!$npcName) {
     return; // No NPC context
@@ -164,18 +167,18 @@ if (!$isNpcToNpcConversation && !empty($GLOBALS["talkedSoFar"])) {
     if (!empty($mentionedNpcs)) {
         $listenerName = $mentionedNpcs[0];
         $isNpcToNpcConversation = true;
-        error_log("[REL-DEBUG] Fallback: Found NPC mentioned in dialogue: " . implode(", ", $mentionedNpcs));
+        Logger::debug("[REL-DEBUG] Fallback: Found NPC mentioned in dialogue: " . implode(", ", $mentionedNpcs));
     }
 }
 
 // Debug: Always log listener detection
-error_log("[REL-DEBUG] Speaker: {$npcName}, Listener from speech table: " . ($listenerName ?? 'NULL') . ", IsNpcToNpc: " . ($isNpcToNpcConversation ? 'YES' : 'NO'));
+Logger::debug("[REL-DEBUG] Speaker: {$npcName}, Listener from speech table: " . ($listenerName ?? 'NULL') . ", IsNpcToNpc: " . ($isNpcToNpcConversation ? 'YES' : 'NO'));
 
 if ($isNpcToNpcConversation) {
-    error_log("[REL] NPC-to-NPC conversation detected: {$npcName} -> {$listenerName}");
+    Logger::info("[REL] NPC-to-NPC conversation detected: {$npcName} -> {$listenerName}");
 }
 
-error_log("[REL] Processing relationship evaluation for NPC: {$npcName}");
+Logger::info("[REL] Processing relationship evaluation for NPC: {$npcName}");
 
 // Get NPC ID
 $npcId = null;
@@ -237,7 +240,7 @@ if ($useRelLLM && $npcId) {
     // this was directed behavior, not the NPC's natural disposition
     if (isset($gameRequest[0]) && $gameRequest[0] === "instruction" && !empty($gameRequest[3])) {
         $context['director_instruction'] = $gameRequest[3];
-        error_log("[REL-DEBUG] Captured director instruction: " . substr($gameRequest[3], 0, 100));
+        Logger::debug("[REL-DEBUG] Captured director instruction: " . substr($gameRequest[3], 0, 100));
     }
 
     // Nearby NPCs (loaded AI agents) - for filtering relationship context
@@ -260,7 +263,7 @@ if ($useRelLLM && $npcId) {
             $playerLen = strlen($playerText);
             if (strlen($npcResponse) > $playerLen) {
                 $npcResponse = trim(substr($npcResponse, $playerLen));
-                error_log("[REL-DEBUG] Stripped echoed player text from NPC response");
+                Logger::debug("[REL-DEBUG] Stripped echoed player text from NPC response");
             }
         }
     }
@@ -270,14 +273,14 @@ if ($useRelLLM && $npcId) {
     if ($isNpcToNpcConversation) {
         $listenerNpcId = _relGetNpcIdByName($listenerName);
         if (!$listenerNpcId) {
-            error_log("[REL] NPC-to-NPC: Could not find NPC ID for listener '{$listenerName}'");
+            Logger::warn("[REL] NPC-to-NPC: Could not find NPC ID for listener '{$listenerName}'");
         }
     }
 
     // Debug: Log what we're queueing
     $requestType = $gameRequest[0] ?? 'unknown';
     $hasPlayerAction = !empty($context['player_action']);
-    error_log("[REL-QUEUE] Queuing {$npcName}: request_type={$requestType}, has_player_action=" . ($hasPlayerAction ? 'YES' : 'NO') . ", is_npc2npc=" . ($isNpcToNpcConversation ? 'YES' : 'NO'));
+    Logger::info("[REL-QUEUE] Queuing {$npcName}: request_type={$requestType}, has_player_action=" . ($hasPlayerAction ? 'YES' : 'NO') . ", is_npc2npc=" . ($isNpcToNpcConversation ? 'YES' : 'NO'));
 
     // Queue the evaluation - this is non-blocking (just a DB insert)
     // Actual LLM evaluation happens at the start of the NEXT request
