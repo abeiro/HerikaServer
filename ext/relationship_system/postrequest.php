@@ -39,6 +39,10 @@
 // Ensure Logger is available
 require_once $GLOBALS["ENGINE_PATH"] . "lib/logger.php";
 
+// Entry-level logging - track when this file is loaded and for which NPC
+$_relEntryNpcName = $GLOBALS["HERIKA_NAME"] ?? 'NULL';
+Logger::debug("[REL-ENTRY] postrequest.php loaded for HERIKA_NAME='{$_relEntryNpcName}'");
+
 /**
  * Helper: Get the listener from the most recent speech entry for this NPC
  * Returns the listener name, or null if not found/not applicable

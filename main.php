@@ -670,6 +670,7 @@ if (isset($_GET["profile"])) {
         $connector->setOldGlobals($currentConnectorData);
         $profile->setOldGlobals($currentProfileData);
         $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+        $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $currentNpcData;
 
         $npcMaster->updateByArray($currentNpcData);
         
@@ -695,6 +696,7 @@ if (isset($_GET["profile"])) {
 
             // Profile has been migrated
             $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+            $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $currentNpcData;
 
             $profile=new CoreProfile();
             $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
@@ -713,6 +715,7 @@ if (isset($_GET["profile"])) {
             $connector->setOldGlobals($currentConnectorData);
             $profile->setOldGlobals($currentProfileData);
             $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+            $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $currentNpcData;
 
             $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
 
