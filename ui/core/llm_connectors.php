@@ -306,9 +306,10 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     <input type="text" id="driver_input" name="driver" value="<?= htmlspecialchars($editItem["driver"] ?? "") ?>" style="display:none"><br>
                     <select id="driver_select" style="display:none">
                         <option value="openrouterjson">OpenRouter JSON</option>
-                        <option value="openaijson">OpenAI JSON</option>
-                        <option value="google_openaijson">Google OpenAI JSON</option>
-                    </select>
+                    <option value="openaijson">OpenAI JSON</option>
+                    <option value="google_openaijson">Google OpenAI JSON</option>
+                    <option value="groqjson">Groq JSON</option>
+                </select>
                 </div>
 
                 <div id="api_key_row">

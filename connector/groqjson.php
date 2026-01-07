@@ -675,6 +675,7 @@ class groqjson
         $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 512));
 
         $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ? : 0.7);
+        // Groq requirement: temperature must be > 1e-8
         if ($temperature < 0.000001) $temperature = 0.000001;
         else if ($temperature > 2.0) $temperature = 2.0; 
 
