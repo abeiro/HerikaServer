@@ -25,18 +25,19 @@ $connector->setOldGlobals($currentConnectorData);
 $method = $_SERVER['REQUEST_METHOD'];
 
 $MODEL_1="bytedance-seed/seed-1.6-flash"; // Initial quest generator
-$MODEL_2="google/gemini-2.0-flash-001";   // Quest steps generator
+$MODEL_2="google/gemini-3-flash-preview";   // Quest steps generator
+
 
 $formInput = json_decode(file_get_contents("php://input"), true) ?? ["npclist" => []];
 
 header('Content-Type: application/json');
 
-$awaredCell =$db->fetchOne("SELECT A.gamets,A.localts,cell_name,name as location_name,statics_list
+$awaredCell =$db->fetchOne("SELECT A.gamets,A.localts,cell_name,name as location_name,statics_list,A.sess::BIGINT
 FROM public.eventlog A
-LEFT JOIN public.named_cell B ON B.id = A.sess::BIGINT
-LEFT JOIN public.locations C ON C.formid=B.location_id
+LEFT JOIN public.named_cell B ON (B.id = A.sess::BIGINT AND B.statics_list IS NOT NULL)
+LEFT JOIN public.locations C ON (C.formid=B.location_id  )
 WHERE A.sess ~ '^[0-9]+$' and type='request'
-and A.sess<>'pending' AND B.statics_list IS NOT NULL
+and A.sess<>'pending'
 order by A.gamets desc,A.localts desc
 limit 1
 ");
@@ -74,7 +75,7 @@ if (sizeof($formInput["npclist"]) == 0) { // Initial case
     $randomLettersA = $nordInitials[rand(0, strlen($nordInitials) - 1)];
     $randomLettersB = $nordInitials[rand(0, strlen($nordInitials) - 1)];
 
-    $lastLocation = DataLastKnownLocation();
+    $lastLocation = getLastLocationNamedCell();
 
     $closeNpc = explode("|", DataBeingsInRange());
     $closeNpcText = implode("\n", $closeNpc);
@@ -263,10 +264,10 @@ Ideas for initial NPC name: a woman, which name must start with $randomLettersA,
 
 Be creative but keep focus. Just write :
 * The quest title
-* A Short Brief — Keep it very general, avoid any spoilers or future revelations, and focus strictly on the moment the quest begins, and mention the starter character. 
+* A Short Brief — Keep it very general, avoid any spoilers or future revelations, and focus strictly on the moment the quest begins, and mention the starter character and the choosed location for adventuring. 
 * A new (not present) starter character.
 
-Try to use new locations form location list.
+Try to use new locations from location list.
 
 Use this format:
 Quest Title:
@@ -322,8 +323,24 @@ $suggested",
         }
     }
 
-    $lastLocation = DataLastKnownLocationHuman();
-    $journals = arrayToBulletedList($formInput["journallist"]);
+    $lastLocation = getLastLocationNamedCell();
+    //$formInput["journallist"] and $formInput["nextlist"] are arrays of strings. We should mix them resptecting order, 
+    //$formInput["journallist"][0]
+    //$formInput["nextlist"][0]
+    //$formInput["journallist"][1]
+    //$formInput["nextlist"][1]
+    $journalsMixed = [];
+    $maxItems = max(count($formInput["journallist"]), count($formInput["nextlist"]));
+    for ($i = 0; $i < $maxItems; $i++) {
+        if (isset($formInput["journallist"][$i])) {
+            $journalsMixed[] = $formInput["journallist"][$i];
+        }
+        if (isset($formInput["nextlist"][$i])) {
+            $journalsMixed[] = $formInput["nextlist"][$i];
+        }
+    }
+    $journals = arrayToBulletedList($journalsMixed);
+    
 
     $npcList = [];
     foreach ($formInput["npclist"] as $npc) {
@@ -383,6 +400,14 @@ $suggested",
     $wideLocListArray = array_merge(array_keys($locListArrayRaw), DataPosibleLocationsToGo());
     $prevSteps = arrayToBulletedList($formInput["nextlist"], " * [done]");
 
+    $activatorsText = "";
+    $activators = $awaredCell["statics_list"]??"";
+    if (!empty($activators)) {
+        $activatorsText = "# Available activators in current location. (specify id to use them for triggering, e.g. wait for Pedestal:0x00112233 to be activated)".PHP_EOL;
+        $activatorsText .= $activators . PHP_EOL;
+        
+    } 
+    
     $spawnedItemArray = $formInput["spawneditemslist"];
 
     foreach ($spawnedItemArray as $n => $itemName) {
@@ -397,6 +422,7 @@ $suggested",
 
     $spawnedItemList = arrayToBulletedList($spawnedItemArray);
 
+    $situationalMapDescription = buildSituationalMapDescription();
     $result["questtitle"] = $formInput["questtitle"];
     $result["briefing"] = $formInput["briefing"];
 
@@ -406,9 +432,6 @@ Briefing:
 {$result["briefing"]}
 
 Player: {$GLOBALS["PLAYER_NAME"]}
-
-# Journal Entry:
-$journals
 
 # Dialogue and events history:
 
@@ -430,17 +453,18 @@ $closeNpcText
 $npcListFinal
 
 # Previous quest steps:
-$prevSteps
+$journals
 
 # Current Location: $lastLocation
-# Available activators in current location. (specify id to use them for triggering, e.g. wait for Pedestal:0x00112233 to be activated)
-{$awaredCell["statics_list"]}
+
+$activatorsText
+
 # Nearby entrances (these are entrances/exits to a building/cave/scenario/room)
-$locList
+$situationalMapDescription
 If no nearby entrances, this means current location has no passages/doors/chambers .
 ";
 
-    $finishInstruction = "";
+    $finishInstruction = "Create 4-5 new SIMPLE quest steps continuing the storyline, formatted as a bulleted list.";
 
     if (isset($formInput["needs_end"]) && $formInput["needs_end"]) {
         $finishInstruction = " Important: ** Storyline must end. Next steps should be oriented to finish storyline. Conclude all plots. ** ";
@@ -477,7 +501,7 @@ If no nearby entrances, this means current location has no passages/doors/chambe
 ## Location Rules
 - Use **only** the provided:
   - **Current Location**
-  - **Nearby Entrances**
+  - **Nearby door/passages** (try to specify ref id)
   - **Locations / Entrances Available for Adventuring**
 - You **may not invent** hidden passages, secret rooms, or new entrances.
 - If a different location is required:
@@ -539,6 +563,7 @@ The player encounters Enemy NPC A at Location Y, defeats them, and recovers Item
 - Do **not** contradict prior quest history.
 - Do **not** use standard vanilla Skyrim NPCs.
 - Do **not** include out-of-context elements.
+- Spawn single items (not sets of items, or items inside items).
 
 $finishInstruction
 
@@ -550,16 +575,17 @@ $considerFinish
     $contextData = $prompt;
 
     $connectionHandler = $connector->getConnector($currentConnectorData);
-
+    
     $buffer = $connectionHandler->fast_request(
         $contextData,
         ["MAX_TOKENS" => 2048, "model" => $MODEL_2, "temperature" => 0.7],
         "questpreplanner"
     );
 
-    $result["response"] .= "\nInstruction:\n$buffer";
 
+    $result["last_step"] = $buffer;
     $result["locations"] = $wideLocListArray;
+    $result["response"] .= "\nInstruction:\n$buffer";
 
 }
 

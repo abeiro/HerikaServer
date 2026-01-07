@@ -2304,6 +2304,12 @@ $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS is_interio
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS vanilla_location boolean");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS title text");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS stage text");
+$db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS worldspace text");
+$db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS closed int");
+$db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS door_name text");
+$db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS door_x numeric");
+$db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS door_y numeric");
+$db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS gamets bigint");
 $db->execQuery("DO $$
 BEGIN
     IF NOT EXISTS (

@@ -64,7 +64,7 @@ Concrete commands for NPCs to carry out this turn. NPCs must be present. Remembe
 
 4. Quest Journal Entry (Skyrim-style)
 
-Short, clear objective or update.
+Short and clear. Timeline prior to all instructions/steps.
 
 Example:
 
@@ -106,7 +106,7 @@ Available elements:
 
 Available elements (you MUST use only the values listed below—no exceptions):
 
-* Spawn an NPC.
+* Spawn an NPC. (Dead NPC/corpses must also be spawned if instructed in steps)
 <spawn>
   <name>[NPC's full name] (fantasy-style compound name consisting of a first name and a descriptive surname, even for creatures or enemies)</name>
   <race>Must be exactly one of: nord, imperial, redguard, breton, argonian, orc, draugr,elk,frost_troll,frostbite_spider,dwarven_sphere_guardian,falmer,giant</race>
@@ -115,7 +115,7 @@ Available elements (you MUST use only the values listed below—no exceptions):
   <class>Must be exactly one of: beggar, warrior, assassin, mage, farmer, soldier, merchant, noble, creature,forsworn</class>
   <background>Brief lore (~200 characters). Must fit Elder Scrolls tone.</background>
   <speechStyle>Description of speech (e.g., "gruff and terse", "whispers in riddles")</speechStyle>
-  <disposition>Must be exactly one of: defiant, submissive, friendly, serious, sad, aggressive, cheerful, distrustful, furious, drunk, high</disposition>
+  <disposition>Must be exactly one of: defiant, submissive, friendly, serious, sad, aggressive, cheerful, distrustful, furious, drunk, high,dead</disposition>
   <goal>Clear, active short-term goal for the NPC</goal>
 </<spawn>
 
@@ -134,7 +134,8 @@ Available elements (you MUST use only the values listed below—no exceptions):
     WaitToItemBeRecovered: Waits until player finds and recover an item 
     WaitAtLocation: Blocking wait, NPC will wait at location. UNTIL player reaches location, and then will continue with the following instruction. Location should be in the 'Locations/entrances available for adventuring' list
     StationAtLocation: Non-Blocking wait. NPC will wait location, quests advances to next step. Location should be in the 'Locations/entrances available for adventuring' list
-    WaitForActivation: Blocking wait. Quest execution will pause until activator is activated
+    WaitForActivation: Blocking wait. Quest execution will pause until activator is activated. Needs a provided activator ref id.
+    WaitForPickUpItem: NPC will pick up a spawned item
   </action>
   <target>Only required if action involves another NPC</target>
   <location>If used, must be "nearby" or a user-provided location name</location>
@@ -144,11 +145,21 @@ Available elements (you MUST use only the values listed below—no exceptions):
 
 * Wait for player do something, so we can advance the quest.
 <instruction>
-  <npc>Player name</npc>
-  <action>Must be exactly one of: 
+  <npc>{Player name}</npc>
+  <action>
     WaitToItemBeRecovered: Waits until player finds and recover an item 
   </action>
   <item>If used, must match the <name> of a defined item</item>
+</instruction>
+
+
+* Wait for NPC do recover item
+<instruction>
+  <npc>NPC</npc>
+  <action>Must be exactly one of: 
+    WaitForPickUpItem: Waits until NPC picks the item
+  </action>
+  <item>must match the <name> of a defined item</item>
 </instruction>
 
 * Create a rumor.
@@ -162,10 +173,10 @@ Available elements (you MUST use only the values listed below—no exceptions):
   If NPC has item in possesion, use pocket as location
 <item>
   <name>Unique item name (must be an unique name, e.g Amulet Fragment #1, Crown Piece #1, The Rotten Shield, Potion of divine Health.</name>
-  <type>Must be exactly one of: potion, necklace, amulet, ring, book, note</type>
+  <type>Must be exactly one of:  'potion', 'necklace', 'amulet', 'ring', 'book', 'axe', 'note', 'dagger','armor'</type>
   <location>Must be one of this: "nearby" or a user-provided location name, or "pocket" (owner will have this item in its inventory/possession), or a reference in the format "name:formid"</location>
   <owner>Name of an NPC (can be newly spawned)</owner>
-  <description>Atmospheric, concise description</description>
+  <description>Atmospheric, concise description. If book, metion the book's author (can be anonymous)</description>
 </item>
 
 **Usually, an item needs also WaitToItemBeRecovered action afterwards to make the player actually recover it**.
@@ -289,7 +300,7 @@ Spawns NPC , palyer's friend assis int combat
   <action>ToGoAway</action>
 </instruction>
 
-* Example: Recover Ring from Necromancer
+* Example: Recover Ring from Necromancer. It is important issue instruction WaitToItemBeRecovered before TellTopicToPlayer about it.
 <instruction>
   <npc>Zara Quill</npc>
   <action>TravelTo</action>
@@ -335,7 +346,7 @@ Spawns NPC , palyer's friend assis int combat
   <topic important="true">This is Roric's ring... I knew something terrible had happened to him.</topic>
 </instruction>
 
-* Wait for player activate an activator
+* Wait for player activate an activator (Pedestal:0x00112233 is on provided activator list)
 <instruction>
   <npc>Player name</npc>
   <action>WaitForActivation</action>

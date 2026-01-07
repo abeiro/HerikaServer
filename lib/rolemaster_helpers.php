@@ -619,31 +619,23 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
 Quest Journal:
 ".implode("\n",$questData["nextlist"])."
 == End of Quest Data ==
+
+What is happening in the quest right now
+
+{$questData["last_step"]}
 ";
 
         $head[]   = ["role" => "system", "content" => "## You're an AI writer. Your must write a book/note involved in a storyline."];
         $prompt[] = ["role" => "user", "content" => $CONTEXT_INFO_SKYRIM_LORE];
         $prompt[] = ["role" => "user", "content" => "
-Read the quest context info and write the content for \"$name\" book/note.
-
-Book/Note content topic:$content
-
-* Note that the book/note was found during a quest. It's timeline should be prior to the current events of the quest.
-* Note/Book should give a hint about the current quest/storyline
-* Use Skyrim's lore if needed.
-Format: 
-* Write in first person as the one who authored the book.
-* Write the book's/note's title (\"$name\") and then generate the content of the book/note (up to 3 paragraphs).
-* The book must be no more than 75 words long.
-
-
 ## Writing Task
 
 Read the quest context above and write the content of the in-game book/note titled **$name**.
 
 ### Content Requirements
 - $content
-- Curent Owner: $npc_ref 
+- Current Owner: $npc_ref 
+- Author: Full name. Infere from the quest context who could be the author (can be anonymous, or someone related to the book owner).
 
 ### Lore & Timeline
 - The book was written **before the current quest events**.
@@ -669,7 +661,7 @@ Read the quest context above and write the content of the in-game book/note titl
 
         $contextData = array_merge($head, $prompt);
         $connectionHandler = $connector->getConnector($currentConnectorData);
-        $buffer            = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 2048, "temperature" => 0.7], 'rolemaster_helper_bookwriter');
+        $buffer            = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 2048, "temperature" => 0.7,"model"=>"google/gemini-2.5-flash-lite"], 'rolemaster_helper_bookwriter');
 
         createBook($name, $buffer, $location, $quest_id, $npc_ref);
         return;
@@ -1134,4 +1126,306 @@ function SkTopicCheck($character, $topic, $lastCall, $retries, $quest_id)
         }
         return TOPIC_TOOEARLY;
     }
+}
+
+
+function speechStyleRandomizer($race,$class) {
+
+    $styles = [
+        "nord" => [
+            "beggar" => [
+                "description" => "Simple, blunt, and weather-beaten. Speaks plainly with no patience for flowery words. Often bitter, sometimes angry, always tired of the cold and hunger.",
+                "examples" => [
+                    "Spare a coin, will you? Haven't eaten worth a damn in days.",
+                    "Life don't care if you're strong or weak. It just kicks you anyway."
+                ]
+            ],
+            "mage" => [
+                "description" => "Wise and thoughtful, but grounded. Avoids pretension. Sounds like a scholar who’s seen battle and frostbite alike.",
+                "examples" => [
+                    "Magic is a tool, same as steel. Respect it, or it will gut you.",
+                    "Knowledge without restraint is just another way to die."
+                ]
+            ],
+            "barbarian" => [
+                "description" => "Gruff, blunt, and unapologetically savage. Short sentences. Little patience. Swears freely.",
+                "examples" => [
+                    "Talk less. Fight more.",
+                    "If it bleeds, I can kill the bastard."
+                ]
+            ],
+            "warrior" => [
+                "description" => "Honorable and straightforward. Speaks with pride, discipline, and a deep respect for combat and oaths.",
+                "examples" => [
+                    "I gave my word. That’s the end of it.",
+                    "Stand your ground or die on your feet."
+                ]
+            ],
+            "soldier" => [
+                "description" => "Precise, disciplined, and efficient. No wasted words. Sounds like someone used to orders and chain of command.",
+                "examples" => [
+                    "State your business. Quickly.",
+                    "We hold the line. No excuses."
+                ]
+            ],
+            "assassin" => [
+                "description" => "Cold, quiet, and efficient. Speaks only when necessary. Threats are subtle but unmistakable.",
+                "examples" => [
+                    "You won’t hear me when it matters.",
+                    "This ends clean. For me."
+                ]
+            ],
+            "rogue" => [
+                "description" => "Cunning and sharp-tongued. Dry humor, casual lies, and playful mockery.",
+                "examples" => [
+                    "Relax. If I wanted you dead, you'd already be bleeding.",
+                    "Trust me — or don’t. Either way, I get paid."
+                ]
+            ],
+            "farmer" => [
+                "description" => "Practical and no-nonsense. Talks about work, weather, and survival. Hates bullshit.",
+                "examples" => [
+                    "If the soil’s frozen, nothing grows. Same with people.",
+                    "Hard work don’t care how you feel."
+                ]
+            ],
+            "citizen" => [
+                "description" => "Friendly but guarded. Polite, plain speech, avoids trouble when possible.",
+                "examples" => [
+                    "Good day to you. Cold one, isn’t it?",
+                    "Best keep your head down around here."
+                ]
+            ],
+            "bard" => [
+                "description" => "Poetic, dramatic, and loud. Loves metaphor, drink, and exaggerated heroics.",
+                "examples" => [
+                    "Steel sang, blood fell, and legends were born that night!",
+                    "Ah, but every hero bleeds eventually."
+                ]
+            ],
+            "noble" => [
+                "description" => "Refined but stern. Speaks with authority and restrained arrogance.",
+                "examples" => [
+                    "Mind your tone when addressing your betters.",
+                    "Honor is not a luxury. It is a duty."
+                ]
+            ],
+            "merchant" => [
+                "description" => "Persuasive, sharp, and calculating. Friendly on the surface, ruthless underneath.",
+                "examples" => [
+                    "Fair price — for someone like you.",
+                    "Gold talks. Everything else is noise."
+                ]
+            ],
+            "forsworn" => [
+                "description" => "Fierce, hateful, and unhinged. Filled with rage, resentment, and rebellion.",
+                "examples" => [
+                    "The cities will burn, stone by stone!",
+                    "Your laws mean nothing in our hills!"
+                ]
+            ],
+        ],
+
+        "breton" => [
+            "beggar" => [
+                "description" => "Humble and polite, even when desperate. Soft voice, apologetic tone.",
+                "examples" => [
+                    "Forgive me for asking, but could you spare a coin?",
+                    "I wouldn’t beg if I had any other choice."
+                ]
+            ],
+            "mage" => [
+                "description" => "Highly erudite and mystical. Uses academic language and arcane references.",
+                "examples" => [
+                    "The weave responds to discipline, not brute force.",
+                    "Ignorance is the most dangerous spell of all."
+                ]
+            ],
+            "barbarian" => [
+                "description" => "Unrefined but passionate. Less savage than Nords, more emotional and reckless.",
+                "examples" => [
+                    "I don’t need fancy words to crack your skull.",
+                    "Magic or muscle — pain is pain."
+                ]
+            ],
+            "warrior" => [
+                "description" => "Chivalrous and idealistic. Talks of honor, valor, and duty.",
+                "examples" => [
+                    "By my blade and my oath, I will see this done.",
+                    "Courage defines us."
+                ]
+            ],
+            "soldier" => [
+                "description" => "Orderly, loyal, and procedural. Speaks like a trained professional.",
+                "examples" => [
+                    "Follow protocol and no one gets hurt.",
+                    "Orders are orders."
+                ]
+            ],
+            "assassin" => [
+                "description" => "Soft-spoken, elegant, and deadly. Almost polite — which makes it worse.",
+                "examples" => [
+                    "You’ll feel nothing. I promise.",
+                    "This is merely business."
+                ]
+            ],
+            "rogue" => [
+                "description" => "Charming, sly, and silver-tongued. Lies smoothly and smiles while doing it.",
+                "examples" => [
+                    "Now, now — let’s not make this unpleasant.",
+                    "Trust is such a fragile thing."
+                ]
+            ],
+            "farmer" => [
+                "description" => "Honest and hardworking. Calm, plain, and focused on daily life.",
+                "examples" => [
+                    "Sun comes up, work gets done.",
+                    "Land rewards those who respect it."
+                ]
+            ],
+            "citizen" => [
+                "description" => "Polite and sociable. Mild manners, avoids confrontation.",
+                "examples" => [
+                    "Good evening. How may I help you?",
+                    "Let’s all stay civil, yes?"
+                ]
+            ],
+            "bard" => [
+                "description" => "Imaginative and romantic. Loves tales of love, tragedy, and magic.",
+                "examples" => [
+                    "Ah, love cuts deeper than any blade!",
+                    "Every story deserves a beautiful ending."
+                ]
+            ],
+            "noble" => [
+                "description" => "Sophisticated, educated, and subtly condescending.",
+                "examples" => [
+                    "You may speak, but choose your words carefully.",
+                    "Lineage matters more than you realize."
+                ]
+            ],
+            "merchant" => [
+                "description" => "Smooth, logical, and persuasive. Uses reason and charm interchangeably.",
+                "examples" => [
+                    "An investment, not an expense.",
+                    "Think of the long-term gains."
+                ]
+            ],
+            "forsworn" => [
+                "description" => "Emotionally charged and defiant. Speaks with bitterness and revolutionary fire.",
+                "examples" => [
+                    "Your kingdoms rot from the inside!",
+                    "We will take back what was stolen!"
+                ]
+            ],
+        ],
+    ];
+
+    return $styles[$race][$class] ?? null;
+}
+
+function getSpeechStyleText($race, $class) {
+    $style = speechStyleRandomizer($race, $class);
+
+    if (
+        !$style ||
+        !is_array($style) ||
+        empty($style['description'])
+    ) {
+        return null;
+    }
+
+    $text = $style['description'];
+
+    if (!empty($style['examples']) && is_array($style['examples'])) {
+        
+        $text .= PHP_EOL." \"".implode("\",\"",$style['examples'])."\"";
+        
+    }
+
+    return $text;
+}
+
+function speechFillerRandomizer() {
+
+    $fillers = [
+        "common" => [
+            "you know",
+            "I mean",
+            "listen",
+            "look",
+            "well",
+            "right",
+            "anyway",
+            "so"
+        ],
+
+        "hesitation" => [
+            "uh",
+            "um",
+            "erm",
+            "hmm"
+        ],
+
+        "affirmation" => [
+            "yeah",
+            "aye",
+            "mm-hm",
+            "that’s right"
+        ],
+
+        "rough" => [
+            "damn it",
+            "bloody hell",
+            "for fuck’s sake",
+            "by the gods",
+            "hells"
+        ],
+
+        "folk" => [
+            "if you ask me",
+            "mark my words",
+            "as sure as rain",
+            "truth be told"
+        ],
+
+        "ending" => [
+            "if you catch my drift",
+            "you get me",
+            "that’s how it is",
+            "so there you have it"
+        ],
+    ];
+
+    return $fillers;
+}
+
+function getRandomSpeechFillers(
+    int $min = 1,
+    int $max = 3
+) {
+    $data = speechFillerRandomizer();
+
+    if (!$data || !is_array($data)) {
+        return null;
+    }
+
+    $all = [];
+
+    foreach ($data as $group) {
+        if (is_array($group)) {
+            $all = array_merge($all, $group);
+        }
+    }
+
+    if (empty($all)) {
+        return null;
+    }
+
+    shuffle($all);
+
+    $count = rand($min, min($max, count($all)));
+    $selected = array_slice($all, 0, $count);
+
+    return PHP_EOL."Usual expressions & filler words: ".implode(", ", $selected).PHP_EOL;
 }

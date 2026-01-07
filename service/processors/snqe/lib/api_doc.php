@@ -23,7 +23,7 @@ location (string, required) – Default placement, e.g., "Whiterun" or "nearby".
 appearance (string, optional) – Hair, clothes, scars, visual description.
 background (string, optional) – Lore or backstory. Should be about 200 character long for good roleplay. 
 speechStyle (string, optional) – How NPC talks (formal, rustic, archaic, etc., cursed words, uses specific fillir words).
-disposition (enum, optional) – defiant, submissive, friendly, serious, sad, aggressive, cheerful, distrustful, furious, drunk, high.
+disposition (enum, optional) – defiant, submissive, friendly, serious, sad, aggressive, cheerful, distrustful, furious, drunk, high,dead.
 goal (string, optional) – defiant, submissive, friendly, serious, sad, aggressive, cheerful, distrustful, furious, drunk, high.
 
 * CreateItem(quest_id, item_ref, name, type, location, description, npc_ref)
@@ -32,9 +32,9 @@ Declares a new item for later spawning or reference. **Items in pockets should b
 quest_id (string, required) – Quest identifier.
 item_ref (string, required) – Internal item reference ID.
 name (string, required) – Item display name.
-type (enum, required) – sword, armor, helmet, ring, amulet, book, note, axe, long sword, staff, great axe, bow.
+type (enum, required) –  potion, necklace, amulet, ring, book, axe, note, dagger,armor.
 location (enum, required) – "nearby", "major city", or "location" (dungeons allowed), or near and element reference (e.g., "Pedestal:0x00027f92").
-description (string) – Description, or content if item is book or note.
+description (string) – Description, or **full** content if item is book or note.
 npc_ref (string, optional) – NPC reference ID to place item in NPC's inventory. If omitted, item will be placed in the world.
 
 * CreateTopic(quest_id, topic_ref, name, type, item, giver, info, target, important)
@@ -63,7 +63,7 @@ npc_ref (string, required) – NPC reference created via CreateNPC.
 location (string, required) – Placement location. eg: "Whiterun" or "nearby".
 
 * CheckNPCSpawn(quest_id, npc_ref, maxAttempts)
-Checks if NPC has successfully spawned.
+Checks if NPC has successfully spawned. *This function must be called after SpawnNPC to confirm placement.*
 
 quest_id (string, required)
 npc_ref (string, required)
@@ -204,6 +204,41 @@ npc_ref (string, required)
 timeout (int, optional, default=10)
 
 Returns: "done" | "pending" | "failed".
+
+* PickUpItem(quest_id, npc_ref, item_ref)
+
+Immediately marks an item as picked up by an NPC. Used to command an NPC to pick up an item.
+
+quest_id (string, required)
+npc_ref (string, required) – NPC reference created via CreateNPC.
+item_ref (string, required) – Item reference created via CreateItem.
+
+Returns: void. Updates quest state to track item pickup.
+
+Notes:
+
+This is an action function that directly marks an item as picked up by the NPC.
+Updates internal inventory tracking in quest data.
+Use before WaitForPickUpItem to initiate the pickup action.
+
+* WaitForPickUpItem(quest_id, npc_ref, item_ref, maxAttempts)
+
+Waits until an NPC picks up a specific item. Monitors event log for pickup confirmation.
+
+quest_id (string, required)
+npc_ref (string, required) – NPC reference created via CreateNPC.
+item_ref (string, required) – Item reference created via CreateItem.
+maxAttempts (int, optional, default=1000) – Maximum retries before failure.
+
+Returns: "done" | "waiting" | "failed".
+
+Notes:
+
+Make sure item has been spawned using SpawnItem and CheckItemSpawn before calling this.
+Tracks pickup_attempts per NPC-item combination.
+Creates scenenotes to guide the player on what the NPC should do.
+Queries eventlog for 'itempickup' events matching NPC and item names.
+Function is idempotent; if the item is already picked up, it returns "done".
 
 * WaitforCombatEnd(quest_id, npc_ref, maxAttempts)
 

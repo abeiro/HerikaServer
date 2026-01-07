@@ -46,6 +46,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $db->delete("actions_issued", "gamets>={$gameRequest[2]}  ");
     $db->delete("moods_issued", "gamets>={$gameRequest[2]}  ");
     $db->delete("rumors", "gamets>={$gameRequest[2]}  ");
+    $db->delete("named_cell", "gamets>={$gameRequest[2]}  ");
 
     /* This is obsolete */
     /*
@@ -1693,6 +1694,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 'id' => intval($localData[0]),
                 'door_id'=>0,
                 'statics_list'=> $static_list,
+                'gamets'=> intval($gameRequest[2]),
             ),
             "id,door_id"
         );
@@ -1708,7 +1710,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $localData=explode("/",$gameRequest[3]);
     if ($localData) {
         // Lets check first if already exists a record with same id, same door_id and dest_door_cell_id is not 0, in that case, don't update as we already have better info on the database
-        $existingRecord = $db->fetchOne("SELECT * FROM named_cell WHERE id = " . intval($localData[1]) . " AND door_id = " . intval($localData[6]) . " AND dest_door_cell_id != 0");
+        $existingRecord = $db->fetchOne("SELECT * FROM named_cell WHERE id = " . intval($localData[1]) . " AND door_id = " . intval($localData[6]) . " AND dest_door_cell_id != 0 and door_id<>0 and location_id<>0");
         
         if (!$existingRecord) {
             $db->upsertRowOnConflict(
@@ -1722,6 +1724,12 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                         'dest_door_exterior'=>intval($localData[5]),
                         'door_id'=>intval($localData[6]),
                         'vanilla_cell'=>(intval($localData[1])<77175193) ? true : false,// IDs below 77175193 are vanilla cells 0x04999999
+                        'worldspace'=> $localData[7],
+                        'closed'=>intval($localData[8]),
+                        'door_name'=> $localData[9],
+                        'door_x'=> floatval($localData[10]),
+                        'door_y'=> floatval($localData[11]),
+                        'gamets'=> intval($gameRequest[2]),
                     ),
                     "id,door_id"
                 );

@@ -261,6 +261,9 @@ function validate_instructions($xmlString, $playerName = null, $npclist = [])
                 else
                     $errors[] = "Instruction '$actionOriginal' references player as NPC: '$npc'. Instructions can only reference spawned NPCs, not the player.";
                 continue;
+            } else  if ($action == 'travelto' ) {
+                $errors[] = "Instruction '$actionOriginal' references player as NPC: '$npc'. Change to WaitAtLocation without npc_ref, so quest will pause until that location is reached.";
+                continue;
             }
         }
 
@@ -271,9 +274,21 @@ function validate_instructions($xmlString, $playerName = null, $npclist = [])
             }
         }
 
+         // Validate NPC is in the provided npclist or spawned by <spawn> tags (if list is provided)
+        if ($action === 'waittoitemberecovered' ) {
+            if ($npcLower !== "player" && $npcLower !== strtolower($GLOBALS["PLAYER_NAME"] ?? "")) {
+                $errors[] = "Instruction '$actionOriginal' references NPC '$npc', not the player, change action to WaitForPickUpItem";
+            }
+            
+        }
+
         // Validate CombatPlayer instruction
         if ($action === 'combatplayer' && $target) {
             $errors[] = "Instruction action 'CombatPlayer' should not have a target. CombatNPC should be used to assist player in combat.";
+        }
+
+        if ($action === 'combatnpc' && ($target=="player" || $target==($GLOBALS["PLAYER_NAME"]))) {
+            $errors[] = "Instruction action 'CombatNPC' references player, use CombatPlayer instead with no target.";
         }
 
     }
@@ -301,7 +316,7 @@ function validate_spawned_items_recovery($xmlString)
 
     foreach ($instructions as $instruction) {
         $action = strtolower(extract_tag_content($instruction, 'action') ?? '');
-        if ($action === 'waittoitemberecovered') {
+        if ($action === 'waittoitemberecovered' || $action === 'waitforpickupitem') {
             $target = extract_tag_content($instruction, 'item');
             if ($target) {
                 $recoveryTargets[] = strtolower(trim($target));
@@ -315,8 +330,8 @@ function validate_spawned_items_recovery($xmlString)
         if ($name) {
             $nameLower = strtolower(trim($name));
             if (!in_array($nameLower, $recoveryTargets)) {
-                $errors[] = "Item '$name' is spawned but no 'WaitToItemBeRecovered' instruction found for it. Add a WaitToItemBeRecovered instruction somewhere after <item>, in a logical order";
-                error_log("Item '$name' is spawned but no 'WaitToItemBeRecovered' instruction found for it." . print_r($recoveryTargets, true));
+                $errors[] = "Item '$name' is spawned but no 'WaitToItemBeRecovered' or 'WaitForPickUpItem' instruction found for it. Add a WaitToItemBeRecovered or WaitForPickUpItem instruction somewhere after <item>, in a logical order";
+                error_log("Item '$name' is spawned but no 'WaitToItemBeRecovered' or WaitForPickUpItem  instruction found for it." . print_r($recoveryTargets, true));
             }
         }
     }
