@@ -1120,7 +1120,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     <style>
     .form-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px 16px; }
     @media (max-width: 900px){ .form-grid { grid-template-columns: 1fr; } }
-    .form-item { display:flex; flex-direction:column; gap:6px; }
+    .form-item { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
     .form-item label { font-weight:700; color:rgb(242, 124, 17); }
     .form-item .hint { color:#e9efff; font-size:12px; line-height:1.35; }
     .form-item textarea { min-height:96px; }
@@ -1132,7 +1132,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     /* Header-style checkbox next to label title */
     .label-with-toggle { display:flex; align-items:center; gap:10px; }
     .label-with-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; }
-    .span-2 { grid-column: 1 / -1; }
+    .span-2 { grid-column: 1 / -1; margin-bottom:12px; }
     .checkbox-inline { display:flex; align-items:center; gap:8px; }
     </style>
     <?php if ($editItem): ?>

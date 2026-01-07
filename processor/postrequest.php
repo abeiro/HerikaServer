@@ -5,8 +5,22 @@ Post tasks.
 
 */
 
-if ($GLOBALS["MINIME_T5"]) {
-    if (isset($FEATURES["MISC"]["OGHMA_INFINIUM"]) && ($FEATURES["MISC"]["OGHMA_INFINIUM"])) {
+// Helper function to properly check boolean values (handles string "false" from form submissions)
+if (!function_exists('isOghmaSettingEnabled')) {
+    function isOghmaSettingEnabled($value) {
+        if ($value === null) return false;
+        if ($value === false || $value === 'false' || $value === '0' || $value === 0) return false;
+        if ($value === true || $value === 'true' || $value === '1' || $value === 1) return true;
+        return (bool)$value;
+    }
+}
+
+$minimeEnabled = isOghmaSettingEnabled($GLOBALS["MINIME_T5"] ?? false);
+$oghmaInfiniumEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
+
+if ($minimeEnabled) {
+    // Use profile-based OGHMA_INFINIUM setting (not legacy conf.php $FEATURES["MISC"]["OGHMA_INFINIUM"])
+    if ($oghmaInfiniumEnabled) {
         if (in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "rechat"])) {
 
             //$TEST_TEXT=lastSpeech($GLOBALS["HERIKA_NAME"]);

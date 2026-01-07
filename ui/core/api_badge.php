@@ -161,6 +161,7 @@ $presetMap = [
     'cartesia'    => 'Cartesia',
     'inworld'     => 'Inworld',
     'replicate'   => 'Replicate',
+    'groq'        => 'Groq',
     'nano-gpt'    => 'Nano-GPT',
     'deepl'       => 'DeepL'
 ];
@@ -176,6 +177,7 @@ $providerLinks = [
     'cartesia' => 'https://play.cartesia.ai/console',
     'inworld' => 'https://studio.inworld.ai/',
     'replicate' => 'https://replicate.com/account/api-tokens',
+    'groq' => 'https://console.groq.com/keys',
     'nano-gpt' => 'https://nano-gpt.com/',
     'deepl' => 'https://www.deepl.com/en/pro-api'
 ];
@@ -191,6 +193,7 @@ $providerSubtext = [
     'cartesia' => ['TTS'],
     'inworld' => ['TTS'],
     'replicate' => ['Soulgaze Gallery Processor'],
+    'groq' => ['LLM'],
     'nano-gpt' => ['LLM'],
     'deepl' => ['Translation'],
 ];

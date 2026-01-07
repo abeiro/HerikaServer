@@ -1752,6 +1752,7 @@ if ($checkTableExists("core_api_badge") > 0 && $checkVersion("core_api_badge") <
         $db->execQuery("UPDATE public.core_api_badge SET label = 'ElevenLabs' WHERE LOWER(label) = 'elevenlabs'");
         $db->execQuery("UPDATE public.core_api_badge SET label = 'Cartesia' WHERE LOWER(label) = 'cartesia'");
         $db->execQuery("UPDATE public.core_api_badge SET label = 'Replicate' WHERE LOWER(label) = 'replicate'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Groq' WHERE LOWER(label) = 'groq'");
         $db->execQuery("UPDATE public.core_api_badge SET label = 'Nano-GPT' WHERE LOWER(label) = 'nano-gpt'");
         $db->execQuery("UPDATE public.core_api_badge SET label = 'DeepL' WHERE LOWER(label) = 'deepl'");
         

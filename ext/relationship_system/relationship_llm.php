@@ -16,6 +16,9 @@
  * Falls back to the profile's LLM connector if not configured.
  */
 
+// Ensure Logger is available
+require_once $GLOBALS["ENGINE_PATH"] . "lib/logger.php";
+
 class RelationshipLLM {
 
     private $db;
@@ -50,8 +53,8 @@ class RelationshipLLM {
         if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
             // JSON was present but corrupted - DO NOT return empty array!
             $error = json_last_error_msg();
-            error_log("[REL-LLM] CRITICAL: JSON decode failed for {$context}: {$error}");
-            error_log("[REL-LLM] Corrupted JSON (first 200 chars): " . substr($json, 0, 200));
+            Logger::error("[REL-LLM] CRITICAL: JSON decode failed for {$context}: {$error}");
+            Logger::error("[REL-LLM] Corrupted JSON (first 200 chars): " . substr($json, 0, 200));
             return null; // Return null to signal failure - caller must abort write
         }
 
@@ -72,7 +75,7 @@ class RelationshipLLM {
             $this->db->execQuery("SELECT pg_advisory_lock({$lockId})");
             return true;
         } catch (Exception $e) {
-            error_log("[REL-LLM] Failed to acquire advisory lock for NPC {$npcId}: " . $e->getMessage());
+            Logger::error("[REL-LLM] Failed to acquire advisory lock for NPC {$npcId}: " . $e->getMessage());
             return false;
         }
     }
@@ -87,7 +90,7 @@ class RelationshipLLM {
             $lockId = 1001000000 + intval($npcId);
             $this->db->execQuery("SELECT pg_advisory_unlock({$lockId})");
         } catch (Exception $e) {
-            error_log("[REL-LLM] Failed to release advisory lock for NPC {$npcId}: " . $e->getMessage());
+            Logger::error("[REL-LLM] Failed to release advisory lock for NPC {$npcId}: " . $e->getMessage());
         }
     }
 
@@ -119,7 +122,7 @@ class RelationshipLLM {
                 }
             }
         } catch (Exception $e) {
-            error_log("[REL-LLM] Failed to load prompt '{$promptKey}': " . $e->getMessage());
+            Logger::warn("[REL-LLM] Failed to load prompt '{$promptKey}': " . $e->getMessage());
         }
 
         // Fallback to hardcoded
@@ -268,7 +271,7 @@ class RelationshipLLM {
             ['role' => 'user', 'content' => $userPrompt]
         ];
 
-        error_log("[REL-LLM] Analyzing {$npcName} using {$this->modelName}");
+        Logger::info("[REL-LLM] Analyzing {$npcName} using {$this->modelName}");
 
         // Make LLM request - uses connector's temperature from Config Hub
         // User should configure low temp (0.1-0.3) for consistent JSON output
@@ -287,14 +290,14 @@ class RelationshipLLM {
         $relationships = $this->parseResponse($response);
 
         if ($relationships === null) {
-            error_log("[REL-LLM] Failed to parse response for {$npcName}: " . substr($response, 0, 200));
+            Logger::warn("[REL-LLM] Failed to parse response for {$npcName}: " . substr($response, 0, 200));
             return ['ok' => false, 'error' => 'Failed to parse response', 'raw' => $response];
         }
 
         // Save to NPC
         $this->saveRelationships($npc['id'], $relationships);
 
-        error_log("[REL-LLM] Saved " . count($relationships) . " relationships for {$npcName}");
+        Logger::info("[REL-LLM] Saved " . count($relationships) . " relationships for {$npcName}");
 
         return [
             'ok' => true,
@@ -432,7 +435,7 @@ PROMPT;
             $extended = $this->safeJsonDecode($npc['extended_data'] ?? null, "saveRelationships:{$npc['npc_name']}");
             if ($extended === null) {
                 // CRITICAL: Corrupted data - abort to prevent data loss
-                error_log("[REL-LLM] ABORT: saveRelationships for {$npc['npc_name']} - corrupted extended_data");
+                Logger::error("[REL-LLM] ABORT: saveRelationships for {$npc['npc_name']} - corrupted extended_data");
                 $this->releaseNpcLock($npcId);
                 return false;
             }
@@ -596,7 +599,7 @@ PROMPT;
                 $extended = $this->safeJsonDecode($npc['extended_data'] ?? null, "inferTransitive:save:{$npc['npc_name']}");
                 if ($extended === null) {
                     // CRITICAL: Corrupted data - abort to prevent data loss
-                    error_log("[REL-LLM] ABORT: inferTransitive save for {$npc['npc_name']} - corrupted extended_data");
+                    Logger::error("[REL-LLM] ABORT: inferTransitive save for {$npc['npc_name']} - corrupted extended_data");
                     $this->releaseNpcLock($npcId);
                     return ['ok' => false, 'error' => 'Corrupted extended_data during save'];
                 }
@@ -618,7 +621,7 @@ PROMPT;
                 ]);
 
                 $this->releaseNpcLock($npcId);
-                error_log("[REL-LLM] Inferred " . count($inferred) . " relationships for " . $npc['npc_name']);
+                Logger::info("[REL-LLM] Inferred " . count($inferred) . " relationships for " . $npc['npc_name']);
             } catch (Exception $e) {
                 $this->releaseNpcLock($npcId);
                 throw $e;
@@ -786,7 +789,7 @@ PROMPT;
             ['role' => 'user', 'content' => $userPrompt]
         ];
 
-        error_log("[REL-LLM] Evaluating context for {$npcName}");
+        Logger::info("[REL-LLM] Evaluating context for {$npcName}");
 
         // Uses connector's temperature from Config Hub
         $response = $this->driver->fast_request(
@@ -810,7 +813,7 @@ PROMPT;
         // Apply the changes
         $applied = $this->applyChanges($npcId, $changes, $currentRels);
 
-        error_log("[REL-LLM] Applied " . count($applied) . " changes for {$npcName}");
+        Logger::info("[REL-LLM] Applied " . count($applied) . " changes for {$npcName}");
 
         return [
             'ok' => true,
@@ -856,11 +859,11 @@ PROMPT;
 
         // If either is corrupted, skip them but don't abort completely
         if ($speakerExtended === null) {
-            error_log("[REL-LLM] Skipping speaker {$speakerName} - corrupted extended_data");
+            Logger::warn("[REL-LLM] Skipping speaker {$speakerName} - corrupted extended_data");
             $speakerExtended = [];
         }
         if ($listenerExtended === null) {
-            error_log("[REL-LLM] Skipping listener {$listenerName} - corrupted extended_data");
+            Logger::warn("[REL-LLM] Skipping listener {$listenerName} - corrupted extended_data");
             $listenerExtended = [];
         }
 
@@ -913,7 +916,7 @@ PROMPT;
             ['role' => 'user', 'content' => $userPrompt]
         ];
 
-        error_log("[REL-LLM] Evaluating NPC-to-NPC: {$speakerName} <-> {$listenerName}");
+        Logger::info("[REL-LLM] Evaluating NPC-to-NPC: {$speakerName} <-> {$listenerName}");
 
         // Uses connector's temperature from Config Hub
         $response = $this->driver->fast_request(
@@ -931,8 +934,8 @@ PROMPT;
         $parsed = $this->parseNpcToNpcResponse($response, $speakerName, $listenerName);
 
         // Debug: Log parsed response
-        error_log("[REL-LLM] NPC-to-NPC raw response: " . substr($response, 0, 500));
-        error_log("[REL-LLM] NPC-to-NPC parsed: speaker=" . json_encode($parsed['speaker']) . " listener=" . json_encode($parsed['listener']));
+        Logger::debug("[REL-LLM] NPC-to-NPC raw response: " . substr($response, 0, 500));
+        Logger::debug("[REL-LLM] NPC-to-NPC parsed: speaker=" . json_encode($parsed['speaker']) . " listener=" . json_encode($parsed['listener']));
 
         $results = [
             'ok' => true,
@@ -954,7 +957,7 @@ PROMPT;
         }
 
         $totalChanges = count($results['speaker']['changes']) + count($results['listener']['changes']);
-        error_log("[REL-LLM] NPC-to-NPC: Applied {$totalChanges} changes ({$speakerName} <-> {$listenerName})");
+        Logger::info("[REL-LLM] NPC-to-NPC: Applied {$totalChanges} changes ({$speakerName} <-> {$listenerName})");
 
         return $results;
     }
@@ -1148,7 +1151,7 @@ PROMPT;
 
             // Skip titles/roles (but allow factions/groups)
             if (in_array(strtolower(trim($target)), $blockedTitles)) {
-                error_log("[REL-LLM] Skipping title/role as relationship target: {$target}");
+                Logger::debug("[REL-LLM] Skipping title/role as relationship target: {$target}");
                 continue;
             }
 
@@ -1177,7 +1180,7 @@ PROMPT;
                 // LLM explicitly set a type
                 $newTypeLower = strtolower($newType);
                 if ($oldType !== $newTypeLower) {
-                    error_log("[REL-LLM] TYPE CHANGE: {$npc['npc_name']} -> {$target}: {$oldType} => {$newTypeLower}");
+                    Logger::info("[REL-LLM] TYPE CHANGE: {$npc['npc_name']} -> {$target}: {$oldType} => {$newTypeLower}");
                     $typeChanged = true;
                 }
                 $currentRels[$target]['type'] = $newTypeLower;
@@ -1189,7 +1192,7 @@ PROMPT;
                 if ($currentType === 'neutral') {
                     $inferredType = $this->inferTypeFromAffinity($newAff);
                     if ($inferredType !== 'neutral') {
-                        error_log("[REL-LLM] AUTO TYPE CHANGE: {$npc['npc_name']} -> {$target}: neutral => {$inferredType} (affinity: {$newAff})");
+                        Logger::info("[REL-LLM] AUTO TYPE CHANGE: {$npc['npc_name']} -> {$target}: neutral => {$inferredType} (affinity: {$newAff})");
                         $currentRels[$target]['type'] = $inferredType;
                         $finalType = $inferredType;
                         $typeChanged = true;
@@ -1254,7 +1257,7 @@ PROMPT;
                 $applied[$target]['type_changed'] = true;
             }
 
-            error_log("[REL-LLM] {$npc['npc_name']} -> {$target}: " . sprintf("%+d", $delta) .
+            Logger::info("[REL-LLM] {$npc['npc_name']} -> {$target}: " . sprintf("%+d", $delta) .
                       " (was {$oldAff}, now {$newAff})" . ($reason ? " - {$reason}" : ""));
         }
 
@@ -1268,7 +1271,7 @@ PROMPT;
                 $extended = $this->safeJsonDecode($npc['extended_data'] ?? null, "applyChanges:{$npc['npc_name']}");
                 if ($extended === null) {
                     // CRITICAL: Corrupted data - abort to prevent data loss
-                    error_log("[REL-LLM] ABORT: applyChanges for {$npc['npc_name']} - corrupted extended_data");
+                    Logger::error("[REL-LLM] ABORT: applyChanges for {$npc['npc_name']} - corrupted extended_data");
                     $this->releaseNpcLock($npcId);
                     return []; // Return empty - changes not saved
                 }
@@ -1290,7 +1293,7 @@ PROMPT;
                 ]);
 
                 $this->releaseNpcLock($npcId);
-                error_log("[REL-LLM] Database update for NPC {$npcId}: " . ($result ? "SUCCESS" : "FAILED") . " - relationships: " . json_encode($existingRels));
+                Logger::debug("[REL-LLM] Database update for NPC {$npcId}: " . ($result ? "SUCCESS" : "FAILED") . " - relationships: " . json_encode($existingRels));
             } catch (Exception $e) {
                 $this->releaseNpcLock($npcId);
                 throw $e;

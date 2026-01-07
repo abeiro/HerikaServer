@@ -23,6 +23,7 @@
  */
 
 require_once $GLOBALS["ENGINE_PATH"] . "lib/relationship_manager.php";
+require_once $GLOBALS["ENGINE_PATH"] . "lib/logger.php";
 
 // Process any pending relationship work from previous requests
 // This runs the LLM calls NOW (at start of request) instead of blocking at end of previous request
@@ -34,13 +35,13 @@ if ($_relUseRelLLM) {
     // Process pending NPC inits (TEXT->JSONB parsing from addnpc events)
     $_relInitResult = _relProcessInitQueue(3);
     if ($_relInitResult['processed'] > 0) {
-        error_log("[REL-ASYNC] Processed {$_relInitResult['processed']} queued NPC inits at context injection");
+        Logger::info("[REL-ASYNC] Processed {$_relInitResult['processed']} queued NPC inits at context injection");
     }
 
     // Process pending conversation evaluations
     $_relQueueResult = _relProcessQueue(3);
     if ($_relQueueResult['processed'] > 0) {
-        error_log("[REL-ASYNC] Processed {$_relQueueResult['processed']} queued evaluations at context injection");
+        Logger::info("[REL-ASYNC] Processed {$_relQueueResult['processed']} queued evaluations at context injection");
     }
 }
 
@@ -85,7 +86,7 @@ if ($npcName) {
     if (!empty($relationshipContext)) {
         $GLOBALS["HERIKA_PERS"] .= "\n\n" . $relationshipContext;
         // Debug: Log what we're injecting (truncated for log readability)
-        error_log("[REL-CONTEXT] Injected for {$npcName}: " . substr(str_replace("\n", " | ", $relationshipContext), 0, 200));
+        Logger::debug("[REL-CONTEXT] Injected for {$npcName}: " . substr(str_replace("\n", " | ", $relationshipContext), 0, 200));
     }
 
     // Only add #REL: command instructions if NOT using dedicated RelationshipLLM
