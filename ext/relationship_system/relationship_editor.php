@@ -108,7 +108,7 @@ $typeIcons = array_merge($defaultTypes, $customTypes);
 ?>
 
 <div class="form-item span-2" id="relationship-editor-section">
-    <details class="metadata-skills-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626;" <?= !empty($jsonbRelationships) ? 'open' : '' ?>>
+    <details class="metadata-skills-view" style="border:1px solid #4a4a4a; border-radius:8px; padding:8px; background:#262626; margin-top:16px;" open>
         <summary style="cursor:pointer; font-weight:700; color:rgb(242, 124, 17);">
             Relationship Affinities
         </summary>
