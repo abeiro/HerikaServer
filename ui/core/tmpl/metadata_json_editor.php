@@ -59,10 +59,7 @@ $localSchemaOverrides = [
         'type' => 'boolean',
         'description' => "Needs Minime-T5 enabled and running. Tamriel lore information will be added to the prompt, enhancing their understanding on specific topics.",
     ],
-    'OGHMA_CUSTOM' => [
-        'type' => 'boolean',
-        'description' => 'Use custom LLM for Oghma keyword extraction instead of MiniMe T5. Customize prompt via Prompts Manager.',
-    ],
+    // OGHMA_CUSTOM removed - now only in Global Settings
     'CONTEXT_HISTORY' => [
         'type' => 'integer',
         'description' => 'Amount of context history (dialogue and events) that will be sent to LLM. Improves short term memory.Higher Context = more tokens used and slower response time.We recommend you do not go over 100',
@@ -110,7 +107,7 @@ $localSchemaOverrides = [
 $visualKeys = [
   "RECHAT_H","RECHAT_P","CORE_LANG","MINIME_T5","BORED_EVENT",
   "DIARY_PROMPT","OGHMA_AMOUNT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN","COMBAT_BARK_COOLDOWN",
-  "OGHMA_INFINIUM","OGHMA_CUSTOM","CONTEXT_HISTORY","MAX_WORDS_LIMIT","HERIKA_ANIMATIONS",
+  "OGHMA_INFINIUM","CONTEXT_HISTORY","MAX_WORDS_LIMIT","HERIKA_ANIMATIONS",
   "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE","ENFORCE_ACTIONS_PROMPT",
   "REMOVE_ASTERISKS_FROM_OUTPUT","CONTEXT_HISTORY_DYNAMIC_PROFILE"
 ];
@@ -121,7 +118,7 @@ $visualGroups = [
   'Rechat' => ["RECHAT_H","RECHAT_P","RECHAT_ALLOW_ACTIONS"],
   'Diary' => ["DIARY_PROMPT","DIARY_COOLDOWN"],
   'Combat' => ["COMBAT_BARK_COOLDOWN"],
-  'Oghma' => ["OGHMA_INFINIUM","OGHMA_AMOUNT","MINIME_T5","OGHMA_CUSTOM"],
+  'Oghma' => ["OGHMA_INFINIUM","OGHMA_AMOUNT","MINIME_T5"],
   'Context' => ["CONTEXT_HISTORY","CONTEXT_HISTORY_DIARY","CONTEXT_HISTORY_DYNAMIC_PROFILE"],
   'Quest' => ["QUEST_COMMENT","QUEST_COMMENT_CHANCE"],
   'Behavior' => ["BORED_EVENT","BORED_EVENT_SERVERSIDE","HERIKA_ANIMATIONS"],
