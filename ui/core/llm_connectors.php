@@ -848,6 +848,81 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             document.querySelector('input[name="driver"]').addEventListener('change', update);
         })();
     })();
+    // Groq model dropdown
+    (function(){
+        const modelInput = document.querySelector('input[name="model"]');
+        if (!modelInput) return;
+        let groqCache = null, groqDropdown = null, groqIsOpen = false;
+        function ensureGroqDropdown(){ if (groqDropdown) return groqDropdown; groqDropdown = document.createElement('div'); groqDropdown.className = 'orm-dropdown'; document.body.appendChild(groqDropdown); groqDropdown.addEventListener('mousedown', (e)=>{ e.preventDefault(); }); return groqDropdown; }
+        function positionGroqDropdown(){ const rect = modelInput.getBoundingClientRect(); const style = groqDropdown.style; style.left = (rect.left + window.scrollX) + 'px'; style.top = (rect.bottom + window.scrollY + 4) + 'px'; style.minWidth = Math.max(rect.width, 420) + 'px'; style.display = 'block'; groqIsOpen = true; }
+        function closeGroqDropdown(){ if (!groqDropdown) return; groqDropdown.style.display = 'none'; groqIsOpen = false; }
+        function escapeHtml(s){ return (s==null? '': String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+        function encodeHtmlAttr(s){ return (s==null? '': String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+        function formatContext(val){ const num = Number(val); return isFinite(num) ? num.toLocaleString('en-US') : (val||''); }
+        function renderGroqList(models, filterText){
+            ensureGroqDropdown();
+            const q = (filterText || '').toLowerCase();
+            const list = (models || []).filter(m => { if (!q) return true; const id = (m.id || '').toLowerCase(); return id.includes(q); });
+            let html = '';
+            html += '<div class="orm-head">Groq Models</div>';
+            html += '<div class="orm-note">Click to select a model.</div>';
+            if (list.length === 0){ html += '<div class="orm-muted" style="padding:8px 10px;">No matches</div>'; }
+            else { list.forEach(m => { const ctx = m.context_window ? formatContext(m.context_window) : ''; const owner = m.owned_by || 'Groq'; const sub = owner + (ctx ? ` • context ${ctx}` : ''); html += `<div class=\"orm-item\" data-id=\"${encodeHtmlAttr(m.id)}\" title=\"${encodeHtmlAttr(m.id)}\"><div>${escapeHtml(m.id)}</div><div class=\"orm-muted\" style=\"font-size:12px; margin-top:2px;\">${sub}</div></div>`; }); }
+            groqDropdown.innerHTML = html;
+            groqDropdown.querySelectorAll('.orm-item').forEach(el => { el.addEventListener('click', () => { const id = el.getAttribute('data-id') || ''; modelInput.value = id; try { modelInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {} try { modelInput.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} closeGroqDropdown(); }); });
+            positionGroqDropdown();
+        }
+        async function loadGroqModels(){
+            if (groqCache) return groqCache;
+            const apiBadgeSelect = document.getElementById('api_badge_id');
+            const apiBadgeId = apiBadgeSelect ? apiBadgeSelect.value : '';
+            if (!apiBadgeId) {
+                ensureGroqDropdown();
+                groqDropdown.innerHTML = '<div class="orm-head">Groq Models</div><div class="orm-err">Please select an API Key first.</div>';
+                positionGroqDropdown();
+                throw new Error('No API badge selected');
+            }
+            ensureGroqDropdown();
+            groqDropdown.innerHTML = '<div class="orm-head">Groq Models</div><div class="orm-note">Loading…</div>';
+            positionGroqDropdown();
+            try {
+                const res = await fetch('<?= $webRoot; ?>/ui/cmd/action_groq_get_models.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_badge_id: apiBadgeId })
+                });
+                if (!res.ok) throw new Error('HTTP '+res.status);
+                const json = await res.json();
+                if (json.error) {
+                    groqDropdown.innerHTML = '<div class="orm-head">Groq Models</div><div class="orm-err">' + escapeHtml(json.error) + '</div>';
+                    positionGroqDropdown();
+                    throw new Error(json.error);
+                }
+                groqCache = Array.isArray(json) ? json : [];
+                groqCache.sort((a,b)=> (a.id||'').localeCompare(b.id||''));
+                return groqCache;
+            } catch (e) {
+                if (!groqDropdown.innerHTML.includes('orm-err')) {
+                    groqDropdown.innerHTML = '<div class="orm-head">Groq Models</div><div class="orm-err">Failed to load models. Check API key.</div>';
+                    positionGroqDropdown();
+                }
+                throw e;
+            }
+        }
+        function isGroq(){ const svc = ((document.getElementById('service_input')||{}).value||'').toLowerCase(); if (svc !== 'groq') return false; const url = (document.querySelector('input[name="url"]').value||''); const driver = (document.querySelector('input[name="driver"]').value||''); return url.includes('groq.com') || /groq/.test(driver); }
+        async function maybeOpenGroqDropdown(){ if (!isGroq()) return; try { const models = await loadGroqModels(); renderGroqList(models, modelInput.value); } catch (_e) {} }
+        modelInput.addEventListener('focus', () => { if (isGroq()) maybeOpenGroqDropdown(); });
+        modelInput.addEventListener('click', () => { if (isGroq()) maybeOpenGroqDropdown(); });
+        modelInput.addEventListener('input', () => { if (groqIsOpen && groqCache) renderGroqList(groqCache, modelInput.value); });
+        modelInput.addEventListener('blur', () => { setTimeout(closeGroqDropdown, 120); });
+        window.addEventListener('resize', () => { if (groqIsOpen) positionGroqDropdown(); });
+        window.addEventListener('scroll', () => { if (groqIsOpen) positionGroqDropdown(); }, true);
+        document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeGroqDropdown(); });
+        document.querySelector('input[name="url"]').addEventListener('change', () => { groqCache = null; closeGroqDropdown(); });
+        document.querySelector('input[name="driver"]').addEventListener('change', () => { groqCache = null; closeGroqDropdown(); });
+        const apiBadgeSel = document.getElementById('api_badge_id');
+        if (apiBadgeSel) apiBadgeSel.addEventListener('change', () => { groqCache = null; });
+    })();
     // Providers dropdown
     (function(){
         const providerInput = document.querySelector('input[name="provider"]');
@@ -1867,6 +1942,81 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
         document.querySelector('input[name="url"]').addEventListener('change', update);
         document.querySelector('input[name="driver"]').addEventListener('change', update);
     })();
+})();
+// Groq model dropdown (standalone editor)
+(function(){
+    const modelInput = document.querySelector('input[name="model"]');
+    if (!modelInput) return;
+    let groqCache = null, groqDropdown = null, groqIsOpen = false;
+    function ensureGroqDropdown(){ if (groqDropdown) return groqDropdown; groqDropdown = document.createElement('div'); groqDropdown.className = 'orm-dropdown'; document.body.appendChild(groqDropdown); groqDropdown.addEventListener('mousedown', (e)=>{ e.preventDefault(); }); return groqDropdown; }
+    function positionGroqDropdown(){ const rect = modelInput.getBoundingClientRect(); const style = groqDropdown.style; style.left = (rect.left + window.scrollX) + 'px'; style.top = (rect.bottom + window.scrollY + 4) + 'px'; style.minWidth = Math.max(rect.width, 420) + 'px'; style.display = 'block'; groqIsOpen = true; }
+    function closeGroqDropdown(){ if (!groqDropdown) return; groqDropdown.style.display = 'none'; groqIsOpen = false; }
+    function escapeHtml(s){ return (s==null? '': String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    function encodeHtmlAttr(s){ return (s==null? '': String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    function formatContext(val){ const num = Number(val); return isFinite(num) ? num.toLocaleString('en-US') : (val||''); }
+    function renderGroqList(models, filterText){
+        ensureGroqDropdown();
+        const q = (filterText || '').toLowerCase();
+        const list = (models || []).filter(m => { if (!q) return true; const id = (m.id || '').toLowerCase(); return id.includes(q); });
+        let html = '';
+        html += '<div class="orm-head">Groq Models</div>';
+        html += '<div class="orm-note">Click to select a model.</div>';
+        if (list.length === 0){ html += '<div class="orm-muted" style="padding:8px 10px;">No matches</div>'; }
+        else { list.forEach(m => { const ctx = m.context_window ? formatContext(m.context_window) : ''; const owner = m.owned_by || 'Groq'; const sub = owner + (ctx ? ` • context ${ctx}` : ''); html += `<div class=\"orm-item\" data-id=\"${encodeHtmlAttr(m.id)}\" title=\"${encodeHtmlAttr(m.id)}\"><div>${escapeHtml(m.id)}</div><div class=\"orm-muted\" style=\"font-size:12px; margin-top:2px;\">${sub}</div></div>`; }); }
+        groqDropdown.innerHTML = html;
+        groqDropdown.querySelectorAll('.orm-item').forEach(el => { el.addEventListener('click', () => { const id = el.getAttribute('data-id') || ''; modelInput.value = id; try { modelInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {} try { modelInput.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} closeGroqDropdown(); }); });
+        positionGroqDropdown();
+    }
+    async function loadGroqModels(){
+        if (groqCache) return groqCache;
+        const apiBadgeSelect = document.getElementById('api_badge_id');
+        const apiBadgeId = apiBadgeSelect ? apiBadgeSelect.value : '';
+        if (!apiBadgeId) {
+            ensureGroqDropdown();
+            groqDropdown.innerHTML = '<div class="orm-head">Groq Models</div><div class="orm-err">Please select an API Key first.</div>';
+            positionGroqDropdown();
+            throw new Error('No API badge selected');
+        }
+        ensureGroqDropdown();
+        groqDropdown.innerHTML = '<div class="orm-head">Groq Models</div><div class="orm-note">Loading…</div>';
+        positionGroqDropdown();
+        try {
+            const res = await fetch('<?= $webRoot; ?>/ui/cmd/action_groq_get_models.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ api_badge_id: apiBadgeId })
+            });
+            if (!res.ok) throw new Error('HTTP '+res.status);
+            const json = await res.json();
+            if (json.error) {
+                groqDropdown.innerHTML = '<div class="orm-head">Groq Models</div><div class="orm-err">' + escapeHtml(json.error) + '</div>';
+                positionGroqDropdown();
+                throw new Error(json.error);
+            }
+            groqCache = Array.isArray(json) ? json : [];
+            groqCache.sort((a,b)=> (a.id||'').localeCompare(b.id||''));
+            return groqCache;
+        } catch (e) {
+            if (!groqDropdown.innerHTML.includes('orm-err')) {
+                groqDropdown.innerHTML = '<div class="orm-head">Groq Models</div><div class="orm-err">Failed to load models. Check API key.</div>';
+                positionGroqDropdown();
+            }
+            throw e;
+        }
+    }
+    function isGroq(){ const svc = ((document.getElementById('service_input')||{}).value||'').toLowerCase(); if (svc !== 'groq') return false; const url = (document.querySelector('input[name="url"]').value||''); const driver = (document.querySelector('input[name="driver"]').value||''); return url.includes('groq.com') || /groq/.test(driver); }
+    async function maybeOpenGroqDropdown(){ if (!isGroq()) return; try { const models = await loadGroqModels(); renderGroqList(models, modelInput.value); } catch (_e) {} }
+    modelInput.addEventListener('focus', () => { if (isGroq()) maybeOpenGroqDropdown(); });
+    modelInput.addEventListener('click', () => { if (isGroq()) maybeOpenGroqDropdown(); });
+    modelInput.addEventListener('input', () => { if (groqIsOpen && groqCache) renderGroqList(groqCache, modelInput.value); });
+    modelInput.addEventListener('blur', () => { setTimeout(closeGroqDropdown, 120); });
+    window.addEventListener('resize', () => { if (groqIsOpen) positionGroqDropdown(); });
+    window.addEventListener('scroll', () => { if (groqIsOpen) positionGroqDropdown(); }, true);
+    document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeGroqDropdown(); });
+    document.querySelector('input[name="url"]').addEventListener('change', () => { groqCache = null; closeGroqDropdown(); });
+    document.querySelector('input[name="driver"]').addEventListener('change', () => { groqCache = null; closeGroqDropdown(); });
+    const apiBadgeSel = document.getElementById('api_badge_id');
+    if (apiBadgeSel) apiBadgeSel.addEventListener('change', () => { groqCache = null; });
 })();
 // Providers dropdown
 (function(){
