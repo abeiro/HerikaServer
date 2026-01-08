@@ -2292,10 +2292,19 @@ if ($checkColumnExists("named_cell","vanilla_cell") == -1) {
         Logger::info(__FILE__." named_cell - door_id exists");
 }
 
+
+if ($checkTableExists("sneq_quests") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/sneq_quests.sql"));
+} else
+    Logger::info(__FILE__." sneq_quests exists");
+
+    
 if ($checkTableExists("sneq_quests_saved") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/sneq_quests_saved.sql"));
 } else
     Logger::info(__FILE__." sneq_quests_saved exists");
+
+
 
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS region text");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS hold text");
