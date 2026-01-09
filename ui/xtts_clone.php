@@ -567,7 +567,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             
             if (curl_errno($ch)) {
-                $message .= '<p style="color:red;">Error syncing voice to XTTS server: ' . curl_error($ch) . '</p>';
+                $message .= '<p style="color:red;">Error syncing voice to XTTS/Chatterbox server: ' . curl_error($ch) . '</p>';
             } else {
                 if ($httpCode == 200) {
                     // Refresh speakers list and redirect to show updated status
@@ -589,7 +589,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     header('Location: ' . $webRoot . '/ui/xtts_clone.php?tab=xtts&synced=' . urlencode($voice));
                     exit;
                 } else {
-                    $message .= '<p style="color:red;">Error syncing voice to XTTS server (HTTP code ' . $httpCode . '): ' . htmlspecialchars($response) . '</p>';
+                    $message .= '<p style="color:red;">Error syncing voice to XTTS/Chatterbox server (HTTP code ' . $httpCode . '): ' . htmlspecialchars($response) . '</p>';
                 }
             }
             curl_close($ch);
@@ -1375,7 +1375,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="tab-content <?php echo $activeTab === 'xtts' ? 'active' : ''; ?>">
         <div class="content-section full-width-section">
             <h1>Voice Sample Upload</h1>
-            <p>Upload voice samples to <code>data/voices</code>. Files will be cached and uploaded to the XTTS server.</p>
+            <p>Upload voice samples to <code>data/voices</code>. Files will be cached and uploaded to the XTTS/Chatterbox server.</p>
             
             <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=xtts" method="post" enctype="multipart/form-data" style="margin-top: 20px;">
                 <div style="margin-bottom: 15px;">
@@ -1399,8 +1399,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <div class="content-section full-width-section">
-            <h1>XTTS Voice Cache</h1>
-            <p>Manage voice samples for XTTS. Voices are uploaded from local .wav files in <code>data/voices</code> to the XTTS server.</p>
+            <h1>XTTS/Chatterbox Voice Cache</h1>
+            <p>Manage voice samples for XTTS/Chatterbox. Voices are uploaded from local .wav files in <code>data/voices</code> to the XTTS/Chatterbox server.</p>
             
             <?php
             $localVoices = getLocalVoices();
@@ -1447,7 +1447,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="content-section full-width-section">
             <h1>Voice Status</h1>
-            <p>Manage voice samples for XTTS. Voices are uploaded from local .wav files in <code>data/voices</code> to the XTTS server.</p>
+            <p>Manage voice samples for XTTS/Chatterbox. Voices are uploaded from local .wav files in <code>data/voices</code> to the XTTS/Chatterbox server.</p>
             
             <?php
             $localVoices = getLocalVoices();
@@ -1493,9 +1493,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <div class="content-section full-width-section">
-            <h1>Cloud XTTS Sync</h1>
-            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=xtts" method="post" onsubmit="showLoadingMessage('Syncing voice cache to CHIM XTTS server, this can take a couple minutes...');">
-                <p><strong>Only required for online CHIM XTTS instances.</strong></p>
+            <h1>Cloud XTTS/Chatterbox Sync</h1>
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=xtts" method="post" onsubmit="showLoadingMessage('Syncing voice cache to XTTS/Chatterbox server, this can take a couple minutes...');">
+                <p><strong>Only required for online XTTS/Chatterbox instances.</strong></p>
                 <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
                 <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
                 <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.hostwiki.io/en/Vast-AI" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>

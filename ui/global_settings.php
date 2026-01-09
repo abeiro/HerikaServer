@@ -790,7 +790,7 @@ function current_value(string $flatName, array $currentConf) {
                             <?php
                             $ttsDescMap = [
                                 'melotts' => "[Skyrim Voices] MeloTTS runs locally installed via DwemerDistro. It's fast and free, but low quality voices. Under 1GB of VRAM.",
-                                'xtts-fastapi' => "[Skyrim Voices] CHIM XTTS runs locally and generates cloned voices from samples. Great for immersive, consistent character voices. Uses roughly 4GB of VRAM.",
+                                'xtts-fastapi' => "[Skyrim Voices] XTTS/Chatterbox runs locally and generates cloned voices from samples. Great for immersive, consistent character voices. Uses roughly 4GB of VRAM.",
                                 'mimic3' => "Mimic3 is a very basic LLM installed in DwemerDistro. It's fast and free, but low quality custom voices. Under 1GB of VRAM.",
                                 'xvasynth' => "[Skyrim Voices] xVASynth uses pre-trained game voices. Good fit for Skyrim-style character voices and mod voicepacks.",
                                 'azure' => "Azure TTS offers decent voices with emotion control. Requires Azure subscription and API key.",

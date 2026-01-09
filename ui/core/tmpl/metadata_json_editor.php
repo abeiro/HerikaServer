@@ -41,7 +41,7 @@ $localSchemaOverrides = [
     ],
     'LANG_LLM_XTTS' => [
         'type' => 'boolean',
-        'description' => 'XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language.',
+        'description' => 'XTTS/Chatterbox Only! Will offer a language field to LLM, and will try match to XTTSv2 language.',
     ],
     'QUEST_COMMENT' => [
         'type' => 'boolean',
