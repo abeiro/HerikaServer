@@ -330,7 +330,7 @@ h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 						<div class="provider-head">
 							<div class="provider-title">
 								<div class="provider-icon">⚙️</div>
-								<div><?php echo htmlspecialchars($providerKey); ?> Settings</div>
+								<div><?php $providerDisplayName = ($providerKey === 'XTTSFASTAPI') ? 'XTTS/Chatterbox API' : $providerKey; echo htmlspecialchars($providerDisplayName); ?> Settings</div>
 							</div>
 						</div>
 						<div class="provider-body">

@@ -818,7 +818,7 @@ function current_value(string $flatName, array $currentConf) {
                     <div class="provider-head">
                         <div class="provider-title">
                             <div class="provider-icon">⚙️</div>
-                            <div><?php echo htmlspecialchars($ttsKeyCur); ?> Settings</div>
+                            <div><?php $ttsProviderDisplayName = ($ttsKeyCur === 'XTTSFASTAPI') ? 'XTTS/Chatterbox API' : $ttsKeyCur; echo htmlspecialchars($ttsProviderDisplayName); ?> Settings</div>
                         </div>
                     </div>
                     <div class="provider-body grid">
