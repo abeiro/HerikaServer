@@ -1504,8 +1504,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <li>Format: WAV (PCM), 16-bit, Mono, 20500Hz</li>
                     <li>Size: 5MB or less</li>
                     <li>Filename: lowercase with underscores (e.g., "mjoll_the_lioness.wav")</li>
+                    <li><b>Chatterbox:</b> Audio clips must be at least <b>5 seconds</b> long for voice generation</li>
                 </ul>
-                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #aaa;"><b>Note:</b> If replacing an existing voice, restart the XTTS server after upload.</p>
+                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #aaa;"><b>Note:</b> If replacing an existing voice, restart the XTTS/Chatterbox server after upload.</p>
             </div>
         </div>
 
