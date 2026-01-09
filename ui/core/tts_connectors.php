@@ -123,6 +123,8 @@ $ttsMap = [
 	'cartesia' => 'CARTESIA',
 	'inworld' => 'INWORLD',
 ];
+// Display name mappings for UI labels
+$ttsDisplayNames = [ 'xtts-fastapi' => 'xtts/chatterbox' ];
 
 // Values for TTSFUNCTION select from schema
 $ttsFunctionValues = $confSchema['TTSFUNCTION']['values'] ?? array_keys($ttsMap);
@@ -277,7 +279,7 @@ h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 						<label for="TTSFUNCTION">TTS Selection</label>
 						<select name="TTSFUNCTION" id="TTSFUNCTION" onchange="this.form.submit()">
 							<?php foreach ($ttsFunctionValues as $opt): ?>
-								<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$selectedFunction===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
+								<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$selectedFunction===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($ttsDisplayNames[$opt] ?? $opt); ?></option>
 							<?php endforeach; ?>
 						</select>
 						<div class="help">Will be saved as <code>TTSFUNCTION</code> in <code>conf.php</code>.</div>

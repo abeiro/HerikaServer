@@ -394,6 +394,8 @@ foreach ($quickstartConf as $pname => $parms) {
         echo "</div></div>";
 
     } else if ($parms["type"] == "select") {
+        // Display name mappings for UI labels
+        $selectDisplayNames = [ 'xtts-fastapi' => 'xtts/chatterbox' ];
         if ($pname == "TTSFUNCTION") {
             $parms["values"] = ["melotts","xtts-fastapi"];
             $parms["description"] = "Select the TTS service you wish to use. <br>You can install MeloTTS and XTTS/Chatterbox in the CHIM Launcher under <b>Install Components.</b>";
@@ -404,7 +406,8 @@ foreach ($quickstartConf as $pname => $parms) {
         echo "<select class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' $FORCE_DISABLED>";
         foreach ($parms["values"] as $item) {
             $selected = ($item == $parms["currentValue"]) ? "selected" : "";
-            echo "<option value='" . htmlspecialchars($item) . "' $selected>" . htmlspecialchars($item) . "</option>";
+            $displayName = $selectDisplayNames[$item] ?? $item;
+            echo "<option value='" . htmlspecialchars($item) . "' $selected>" . htmlspecialchars($displayName) . "</option>";
         }
         echo "</select>";
         

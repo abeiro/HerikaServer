@@ -1333,7 +1333,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                onmouseover="this.style.background='rgb(242, 124, 17)'; this.style.color='white';" 
                onmouseout="this.style.background='transparent'; this.style.color='rgb(242, 124, 17)';">ℹ</a>
         </h1>
-        <p>Manage voice samples across multiple TTS providers: XTTS, Cartesia, and Inworld.</p>
+        <p>Manage voice samples across multiple TTS providers: XTTS/Chatterbox, Cartesia, and Inworld.</p>
+        <p style="color: #f0ad4e; font-size: 0.9em; margin-top: 10px;"><strong>Note:</strong> If you switch between XTTS and Chatterbox, you must resync your voices by clicking "Sync All Voices" below.</p>
     </div>
 
     <!-- Tab Navigation -->
@@ -1497,6 +1498,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=xtts" method="post" onsubmit="showLoadingMessage('Syncing voice cache to XTTS/Chatterbox server, this can take a couple minutes...');">
                 <p><strong>Only required for online XTTS/Chatterbox instances.</strong></p>
                 <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
+                <p style="color: #f0ad4e;"><strong>Important:</strong> If you switch between XTTS and Chatterbox, run "Sync All Voices" to resync your voice cache.</p>
                 <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
                 <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.hostwiki.io/en/Vast-AI" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
                 <p>Cached voices are stored in <code>data/voices</code>. <a href="<?php echo $webRoot; ?>/data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>

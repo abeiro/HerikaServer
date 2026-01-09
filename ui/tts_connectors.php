@@ -131,6 +131,8 @@ $ttsMap = [
 	'inworld' => 'INWORLD',
 	'deepgram' => 'deepgram',
 ];
+// Display name mappings for UI labels
+$ttsDisplayNames = [ 'xtts-fastapi' => 'xtts/chatterbox' ];
 
 // Selected provider: prefer saved value; only use POST for preview unless saving
 $selectedFunction = tts_current_value('TTSFUNCTION', $currentConf);
@@ -315,7 +317,7 @@ h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 						<label for="TTSFUNCTION">TTS Selection</label>
                         <select name="TTSFUNCTION" id="TTSFUNCTION" onchange="this.form.submit()">
 							<?php foreach ($ttsOptions as $opt): ?>
-								<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$selectedFunction===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
+								<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$selectedFunction===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($ttsDisplayNames[$opt] ?? $opt); ?></option>
 							<?php endforeach; ?>
 						</select>
 						<div></div>
@@ -392,7 +394,7 @@ h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 						<label for="TTSFUNCTION_PLAYER">Player TTS Selection</label>
 						<select name="TTSFUNCTION_PLAYER" id="TTSFUNCTION_PLAYER">
 							<?php foreach ($playerTtsOptions as $opt): ?>
-								<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$playerFunctionSaved===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
+								<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$playerFunctionSaved===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($ttsDisplayNames[$opt] ?? $opt); ?></option>
 							<?php endforeach; ?>
 						</select>
 						<?php if (!empty($descTtsPlayer)): ?><div class="help"><?php echo $descTtsPlayer; ?></div><?php endif; ?>
