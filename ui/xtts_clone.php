@@ -5,7 +5,107 @@ $webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script lo
 if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
+// Load necessary files for returnLines() function
+$enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
+require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_loader.php");
+@include_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
+@include_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "online_translation.php");
+@include_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php");
+
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+
+// XTTS voice test handler - MUST be before output buffering starts
+if (isset($_GET['action']) && $_GET['action'] === 'test_xtts' && isset($_GET['voice'])) {
+    // Set up logging
+    $logFile = $enginePath . 'log.txt';
+    $logMsg = "\n=== XTTS Test Handler Started at " . date('Y-m-d H:i:s') . " ===\n";
+    @file_put_contents($logFile, $logMsg, FILE_APPEND);
+    
+    $voice = $_GET['voice'];
+    @file_put_contents($logFile, "Voice requested: " . $voice . "\n", FILE_APPEND);
+    
+    // Set up TTS test environment (same as global_settings)
+    try { @set_time_limit(30); } catch (Throwable $_) {}
+    try { @ini_set('default_socket_timeout', '20'); } catch (Throwable $_) {}
+    
+    // Initialize database if needed
+    try {
+        if (!isset($GLOBALS['db']) || !$GLOBALS['db']) {
+            @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+            if (isset($GLOBALS["DBDRIVER"])) {
+                @require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php");
+            }
+            $GLOBALS['db'] = new sql();
+        }
+        @file_put_contents($logFile, "Database initialized\n", FILE_APPEND);
+    } catch (Throwable $e) {
+        @file_put_contents($logFile, "Database init error: " . $e->getMessage() . "\n", FILE_APPEND);
+    }
+    
+    $GLOBALS["TTSFUNCTION"] = 'xtts-fastapi';
+    $GLOBALS["HERIKA_NAME"] = "The Narrator";
+    $GLOBALS["AVOID_TTS_CACHE"] = true;
+    $GLOBALS["TTS_FFMPEG_FILTERS"] = [];
+    $GLOBALS["HERIKA_ANIMATIONS"] = false;
+    $GLOBALS["SCRIPTLINE_LISTENER"] = '';
+    $GLOBALS["SCRIPTLINE_EXPRESSION"] = '';
+    $GLOBALS["DEBUG_DATA"] = [];
+    if (!isset($GLOBALS["HTTP_TIMEOUT"]) || (int)$GLOBALS["HTTP_TIMEOUT"] <= 0) { $GLOBALS["HTTP_TIMEOUT"] = 20; }
+    $GLOBALS["FEATURES"] = $GLOBALS["FEATURES"] ?? [];
+    if (!isset($GLOBALS["FEATURES"]["MISC"])) $GLOBALS["FEATURES"]["MISC"] = [];
+    if (!isset($GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"])) $GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"] = false;
+    if (!isset($GLOBALS["PLAYER_NAME"])) $GLOBALS["PLAYER_NAME"] = 'Player';
+    $GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"] = true;
+    $GLOBALS["PATCH_OVERRIDE_VOICE"] = $voice;
+    
+    @file_put_contents($logFile, "Globals configured\n", FILE_APPEND);
+    
+    $testText = "CHIM has been described as the secret syllable of royalty, and can be considered a form of Apotheosis";
+    
+    header('Content-Type: application/json');
+    @file_put_contents($logFile, "Headers sent\n", FILE_APPEND);
+    
+    try {
+        @file_put_contents($logFile, "Calling returnLines...\n", FILE_APPEND);
+        
+        // Check if returnLines exists
+        if (!function_exists('returnLines')) {
+            @file_put_contents($logFile, "ERROR: returnLines function not found!\n", FILE_APPEND);
+            http_response_code(500);
+            echo json_encode(['error' => 'returnLines function not available']);
+            exit;
+        }
+        
+        returnLines([$testText], false);
+        @file_put_contents($logFile, "returnLines completed\n", FILE_APPEND);
+        
+        $file = isset($GLOBALS["TRACK"]["FILES_GENERATED"][0]) ? basename((string)$GLOBALS["TRACK"]["FILES_GENERATED"][0]) : '';
+        @file_put_contents($logFile, "Generated file: " . ($file ?: 'NONE') . "\n", FILE_APPEND);
+        
+        if ($file !== '') {
+            $url = $webRoot . '/soundcache/' . $file . '?ts=' . time();
+            @file_put_contents($logFile, "URL: " . $url . "\n", FILE_APPEND);
+            @file_put_contents($logFile, "Sending JSON response...\n", FILE_APPEND);
+            echo json_encode(['url' => $url]);
+            @file_put_contents($logFile, "JSON sent successfully\n", FILE_APPEND);
+        } else {
+            @file_put_contents($logFile, "ERROR: No file generated\n", FILE_APPEND);
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to generate audio file']);
+        }
+    } catch (Throwable $e) {
+        $errMsg = "EXCEPTION: " . $e->getMessage() . "\nTrace: " . $e->getTraceAsString() . "\n";
+        @file_put_contents($logFile, $errMsg, FILE_APPEND);
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+    
+    @file_put_contents($logFile, "=== Test Handler Complete ===\n\n", FILE_APPEND);
+    unset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
+    exit;
+}
 
 // Handle test voice requests (GET) - MUST be before any output buffering
 if (isset($_GET['action']) && ($_GET['action'] === 'test_cartesia' || $_GET['action'] === 'test_inworld') && isset($_GET['voice'])) {
@@ -218,10 +318,12 @@ function isProviderConfigured($provider) {
     return (is_array($row) && !empty($row['api_key']));
 }
 
-function normalize_endpoint_url($url) {
-    // Remove trailing slashes
-    $url = rtrim($url, '/');
-    return $url;
+if (!function_exists('normalize_endpoint_url')) {
+    function normalize_endpoint_url($url) {
+        // Remove trailing slashes
+        $url = rtrim($url, '/');
+        return $url;
+    }
 }
 
 // Define the endpoint for the XTTS API
@@ -539,6 +641,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
+    
     // XTTS single voice sync handler
     if (isset($_POST['action']) && $_POST['action'] === 'sync_xtts_single' && isset($_POST['voice'])) {
         $voice = $_POST['voice'];
@@ -738,6 +841,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     const API_ENDPOINT = <?php echo json_encode(normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"])); ?>;
     const WEB_ROOT = <?php echo json_encode($webRoot); ?>;
 
+    // Clean up URL after showing success message
+    window.addEventListener('DOMContentLoaded', function() {
+        const url = new URL(window.location);
+        if (url.searchParams.has('synced')) {
+            // Remove the 'synced' parameter from URL without refreshing
+            url.searchParams.delete('synced');
+            window.history.replaceState({}, '', url);
+        }
+    });
+
     function normalizeUrl(url) {
         return url.replace(/\/+$/, '');
     }
@@ -785,35 +898,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     function testVoice(voiceName) {
-        const url = `${normalizeUrl(API_ENDPOINT)}/tts_to_audio`;
-        const data = {
-            text: 'CHIM has been described as the secret syllable of royalty, and can be considered a form of Apotheosis',
-            speaker_wav: voiceName,
-            language: 'en'
-        };
-
-        fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'audio/wav'
-            },
-            body: JSON.stringify(data)
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.blob();
-        })
-        .then(blob => {
-            const audio = new Audio(URL.createObjectURL(blob));
-            audio.play();
-        })
-        .catch(error => {
-            console.error('Error testing voice:', error);
-            alert('Error testing voice. Please check the console for details.');
-        });
+        const testUrl = WEB_ROOT + '/ui/xtts_clone.php?action=test_xtts&voice=' + encodeURIComponent(voiceName);
+        
+        fetch(testUrl)
+            .then(function(response) {
+                if (!response.ok) {
+                    return response.json().then(function(data) {
+                        throw new Error(data.error || 'Failed to generate test audio');
+                    });
+                }
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.url) {
+                    const audio = new Audio(data.url);
+                    audio.play().catch(function(err) {
+                        console.error('Error playing audio:', err);
+                        alert('Error playing audio: ' + err.message);
+                    });
+                } else {
+                    throw new Error(data.error || 'No audio URL returned');
+                }
+            })
+            .catch(function(err) {
+                console.error('Error testing voice:', err);
+                alert('Error: ' + err.message);
+            });
     }
 
     function switchTab(tabName) {
@@ -1401,53 +1511,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="content-section full-width-section">
             <h1>XTTS/Chatterbox Voice Cache</h1>
-            <p>Manage voice samples for XTTS/Chatterbox. Voices are uploaded from local .wav files in <code>data/voices</code> to the XTTS/Chatterbox server.</p>
-            
-            <?php
-            $localVoices = getLocalVoices();
-            $xttsVoices = [];
-            if (isset($_SESSION['xtts_speakers_list']) && is_array($_SESSION['xtts_speakers_list'])) {
-                foreach ($_SESSION['xtts_speakers_list'] as $speaker) {
-                    $displayName = basename($speaker, '.wav');
-                    $xttsVoices[$displayName] = true;
-                }
-            }
-            ?>
-            
-            <div class="button-group" style="margin-top: 20px;">
-                <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=xtts" method="post" style="display: inline;">
-                    <input type="hidden" name="get_speakers" value="1">
-                    <input type="submit" value="Refresh XTTS Server Voices" class="action-button download-csv">
-                </form>
-            </div>
-
-            <div class="voice-status-grid" style="margin-top: 20px;">
-                <?php foreach ($localVoices as $voice): ?>
-                    <?php $isOnServer = isset($xttsVoices[$voice]); ?>
-                    <div class="voice-status-item" onclick="copyToClipboard('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" title="Click to copy voice name">
-                        <span class="voice-name"><?php echo htmlspecialchars($voice); ?></span>
-                        <span class="status-icon <?php echo $isOnServer ? 'cloned' : 'not-cloned'; ?>">
-                            <?php echo $isOnServer ? '✓' : '✗'; ?>
-                        </span>
-                        <div class="button-container">
-                            <?php if ($isOnServer): ?>
-                                <button onclick="event.stopPropagation(); testVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
-                                        class="play-btn" title="Test voice">▶</button>
-                            <?php else: ?>
-                                <button onclick="event.stopPropagation(); syncSingleVoice('xtts', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
-                                        class="sync-btn" title="Sync this voice to XTTS server">↻</button>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-                <?php if (empty($localVoices)): ?>
-                    <p>No voice files found in <code>data/voices</code>. Upload voice samples above first.</p>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <div class="content-section full-width-section">
-            <h1>Voice Status</h1>
             <p>Manage voice samples for XTTS/Chatterbox. Voices are uploaded from local .wav files in <code>data/voices</code> to the XTTS/Chatterbox server.</p>
             
             <?php
