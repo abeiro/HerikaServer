@@ -6135,4 +6135,221 @@ function getBaseDataForNpcFromLog($npcname) {
     return $currentNpcData;
 }
 
+function getLastLocationNamedCell() {
+    $q="SELECT A.gamets,A.localts,cell_name,C.name as location_name,statics_list,A.sess::BIGINT,interior,worldspace,B.location_id
+FROM public.eventlog A
+LEFT JOIN public.named_cell B ON (B.id = A.sess::BIGINT )
+LEFT JOIN public.locations C ON (C.formid=B.location_id  )
+WHERE A.sess ~ '^[0-9]+$' and type='request'
+and A.sess<>'pending'
+order by A.gamets desc,A.localts desc
+limit 1";
+
+    $locData=$GLOBALS["db"]->fetchOne($q);
+    $locationDetailedName = null;
+    if ($locData && isset($locData['location_name']) && !empty($locData['location_name'])) {
+        $locData['worldspace']=trim($locData['worldspace'] ?? '');
+        if ($locData['worldspace']=="Skyrim") {
+            $locationDetailedName = $locData['location_name'] . " (outdoors)";
+        } else {
+            $locationDetailedName = $locData['location_name'] . " (inside " . $locData['worldspace'] . ")";
+        }
+        if ($locData['interior']==1) {
+            $locationDetailedName.=" (interior)";
+        } 
+        
+    }
+
+    return $locationDetailedName;
+}
+
+/**
+ * Build a situational map description with doors/passages and their directions
+ * 
+ * Retrieves the current cell from the eventlog, finds all doors in the same worldspace,
+ * and generates a description of available passages with compass directions based on
+ * relative door positions.
+ * 
+ * @return string Situational map description with doors and their directions
+ */
+function buildSituationalMapDescription() {
+    // Get current cell from eventlog
+    $current_cell_result = $GLOBALS["db"]->fetchOne(
+        "SELECT A.sess::BIGINT as current_cell
+         FROM public.eventlog A
+         WHERE A.sess ~ '^[0-9]+$' and type='request'
+         and A.sess<>'pending'
+         order by A.gamets desc, A.localts desc
+         limit 1"
+    );
+    
+    if (!$current_cell_result || !isset($current_cell_result['current_cell'])) {
+        error_log("buildSituationalMapDescription: No current cell found in eventlog.");
+        return "";
+    }
+    
+    $current_cell_id = $current_cell_result['current_cell'];
+    
+    // Get the worldspace of the current cell
+    $current_cell_data = $GLOBALS["db"]->fetchOne(
+        "SELECT worldspace,cell_name,location_id FROM named_cell WHERE id = {$current_cell_id} LIMIT 1"
+    );
+    
+    if (!$current_cell_data) {
+        error_log("buildSituationalMapDescription: Current cell ID {$current_cell_id} not found in named_cell.");
+        return "";
+    }
+    
+    $current_worldspace = trim($current_cell_data['worldspace'] ?? '');
+    $current_cell_name = trim($current_cell_data['cell_name'] ?? '');
+    
+    $current_player_cell_data = $GLOBALS["db"]->fetchOne(
+        "SELECT worldspace,cell_name,location_id,door_x,door_y FROM named_cell WHERE id = 0 LIMIT 1"
+    );
+
+    $player_x=$current_player_cell_data['door_x'] ?? 0;
+    $player_y=$current_player_cell_data['door_y'] ?? 0;
+
+    // If worldspace is Skyrim, just return base description
+    if ($current_worldspace === 'Skyrim') {
+       
+        // Get all doors in the worldspace Skyrim, with valid coordinates and (distance< 1024 *10), door_x,door_y is relative to player position
+        $doors_result = $GLOBALS["db"]->fetchAll(
+            "SELECT id, cell_name, door_name, door_id,door_x, door_y, dest_door_exterior, interior,location_id, sqrt((door_x-({$player_x}))*(door_x-({$player_x})) + (door_y-({$player_y}))*(door_y-({$player_y}))) as distance
+            FROM named_cell 
+            WHERE worldspace = '{$current_worldspace}' and location_id={$current_cell_data['location_id']}
+            AND door_name <> ''
+            AND id<>dest_door_cell_id
+            ORDER BY id"
+        );
+        
+    } else {
+    
+        // Get all doors in the same worldspace 
+        $doors_result = $GLOBALS["db"]->fetchAll(
+            "SELECT id, cell_name, door_name, door_id,door_x, door_y, dest_door_exterior, interior,location_id, sqrt((door_x-({$player_x}))*(door_x-({$player_x})) + (door_y-({$player_y}))*(door_y-({$player_y}))) as distance
+            FROM named_cell 
+            WHERE worldspace = '{$current_worldspace}' and location_id={$current_cell_data['location_id']}
+            AND door_name <> ''
+            AND id<>dest_door_cell_id
+            ORDER BY id"
+        );
+    }
+    
+    if (empty($doors_result)) {
+        if ($current_worldspace != $current_cell_name)
+            return "You are in {$current_worldspace}, {$current_cell_name}. No other exits found.";
+        else
+            return "You are in {$current_worldspace}. No other exits found.";
+    }
+    
+    $directional_doors = array();
+    
+    // Categorize doors by direction
+    foreach ($doors_result as $door) {
+        $door_x = floatval($door['door_x']);
+        $door_y = floatval($door['door_y']);
+        $door_name = trim($door['door_name'] ?? 'Unknown');
+        $dest_worldspace = trim($door['dest_door_exterior'] ?? '');
+        $interior = intval($door['interior'] ?? 0);
+        $distance = round(floatval($door['distance'] ?? 0)/70);// Convert to approximate meters (assuming 70 units = 1 meter)
+
+        $unsignedInt = $door['door_id'] & 0xFFFFFFFF;
+        $doorHexid=  "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
+
+        
+        if ($distance > 1000) {
+            // Ignore doors farther than 1000 meters
+            continue;
+        }
+        // Calculate relative position
+        $delta_x = $door_x - $player_x;
+        $delta_y = $door_y - $player_y;
+        // error_log("Door '{$door_name}' at ({$door_x}, {$door_y}), delta ({$delta_x}, {$delta_y})");
+        // Determine cardinal direction
+        $direction = getCardinalDirection($delta_x, $delta_y);
+        
+        
+        $passage_type = "Door/Passage to {$door_name} ({$distance} meters) [door id:{$doorHexid}]";
+                
+        if (!isset($directional_doors[$direction])) {
+            $directional_doors[$direction] = array();
+        }
+        if ($current_cell_id == $door['id']) {
+            // We're at this cell
+            if ($interior==1) {
+                $current_worldspace = $door["cell_name"];
+            } else {
+                
+            }
+        }
+        $directional_doors[$direction][] = $passage_type;
+    }
+    
+    // Build the map description
+    
+    if ($current_worldspace != $current_cell_name)
+        $map_description = "You are in {$current_worldspace}, {$current_cell_name}. ";
+    else
+        $map_description = "You are in {$current_cell_name}. ";
+
+    $passages = array();
+    
+    $cardinal_order = array('North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest');
+    
+    foreach ($cardinal_order as $direction) {
+        if (isset($directional_doors[$direction])) {
+            foreach ($directional_doors[$direction] as $passage) {
+                $passages[] = "{$passage} at {$direction}";
+            }
+        }
+    }
+    
+    if (!empty($passages)) {
+        $map_description .= implode(", ", $passages) . ".";
+    } else {
+        $map_description .= "No other exits found.";
+    }
+    
+    return $map_description;
+}
+
+/**
+ * Helper function to determine cardinal direction from relative coordinates
+ * 
+ * @param float $delta_x Change in X coordinate
+ * @param float $delta_y Change in Y coordinate
+ * @return string Cardinal direction (N, NE, E, SE, S, SW, W, NW)
+ */
+function getCardinalDirection($delta_x, $delta_y) {
+    // Normalize to get angle
+    $angle = atan2($delta_y, $delta_x) * 180 / M_PI;
+    
+    // Adjust angle to 0-360 range
+    if ($angle < 0) {
+        $angle += 360;
+    }
+    
+    // Map angle to cardinal direction
+    // Using 22.5 degree boundaries for 8-point compass
+    if ($angle >= 337.5 || $angle < 22.5) {
+        return 'East';
+    } elseif ($angle >= 22.5 && $angle < 67.5) {
+        return 'Northeast';
+    } elseif ($angle >= 67.5 && $angle < 112.5) {
+        return 'North';
+    } elseif ($angle >= 112.5 && $angle < 157.5) {
+        return 'Northwest';
+    } elseif ($angle >= 157.5 && $angle < 202.5) {
+        return 'West';
+    } elseif ($angle >= 202.5 && $angle < 247.5) {
+        return 'Southwest';
+    } elseif ($angle >= 247.5 && $angle < 292.5) {
+        return 'South';
+    } else {
+        return 'Southeast';
+    }
+}
+
+
 ?>
