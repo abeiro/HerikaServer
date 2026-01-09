@@ -1340,7 +1340,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <!-- Tab Navigation -->
     <div class="tab-nav">
         <button class="tab-btn <?php echo $activeTab === 'xtts' ? 'active' : ''; ?>" 
-                onclick="switchTab('xtts')">XTTS</button>
+                onclick="switchTab('xtts')">XTTS/Chatterbox</button>
         <button class="tab-btn <?php echo $activeTab === 'cartesia' ? 'active' : ''; ?>" 
                 onclick="switchTab('cartesia')">Cartesia</button>
         <button class="tab-btn <?php echo $activeTab === 'inworld' ? 'active' : ''; ?>" 
