@@ -2,22 +2,21 @@
 /**
  * RELATIONSHIP SYSTEM - Post-Request Processing
  *
- * This file is automatically loaded after the AI response.
- * It QUEUES relationship evaluations for async processing.
+ * This file is automatically loaded AFTER the AI response has been sent.
+ * Processes relationship evaluations DIRECTLY here - no queue, no delay.
  *
- * ASYNC STRATEGY (non-blocking):
- * - This file runs after AI response, just queues the evaluation data
- * - Actual LLM evaluation happens at the START of the NEXT request
- * - This prevents relationship processing from blocking voice responses
- * - Evaluations are processed in context.php before prompt injection
+ * WHY DIRECT PROCESSING WORKS:
+ * - This runs AFTER voice/TTS response is already sent to the game
+ * - No input lag because player already got their response
+ * - Uses scoped global swapping in RelationshipLLM to avoid connector corruption
  *
  * INITIALIZATION STRATEGY:
  * - NEW NPCs: Proactive init in comm.php when addnpc event fires
- * - EXISTING SAVES: Lazy init here on first conversation (cached per session)
+ * - EXISTING SAVES: Lazy init here on first conversation
  *
  * TWO MODES:
  * 1. RELLLM_CONNECTOR set: Uses dedicated Relationship LLM for dynamic evaluation
- *    - Queues evaluation for async processing (non-blocking)
+ *    - Processes directly after response (no blocking because response already sent)
  *    - No #REL: commands needed from conversation model
  *    - More token-efficient for the main conversation
  *
@@ -281,21 +280,36 @@ if ($useRelLLM && $npcId) {
         }
     }
 
-    // Debug: Log what we're queueing
+    // Debug: Log what we're processing
     $requestType = $gameRequest[0] ?? 'unknown';
     $hasPlayerAction = !empty($context['player_action']);
-    Logger::info("[REL-QUEUE] Queuing {$npcName}: request_type={$requestType}, has_player_action=" . ($hasPlayerAction ? 'YES' : 'NO') . ", is_npc2npc=" . ($isNpcToNpcConversation ? 'YES' : 'NO'));
+    Logger::info("[REL] Processing {$npcName}: request_type={$requestType}, has_player_action=" . ($hasPlayerAction ? 'YES' : 'NO') . ", is_npc2npc=" . ($isNpcToNpcConversation ? 'YES' : 'NO'));
 
-    // Queue the evaluation - this is non-blocking (just a DB insert)
-    // Actual LLM evaluation happens at the start of the NEXT request
-    _relQueueEvaluation(
-        $npcId,
-        $npcName,
-        $npcResponse,
-        $context,
-        $listenerNpcId,
-        $listenerName
-    );
+    // Process evaluation directly - response is already sent, no input lag
+    // RelationshipLLM uses scoped global swapping to avoid corrupting main connector
+    require_once __DIR__ . "/relationship_llm.php";
+    $relLLM = new RelationshipLLM();
+
+    if ($relLLM->isAvailable()) {
+        // Lazy init for speaker
+        $relLLM->analyzeNpc($npcId, false);
+
+        // Lazy init for listener if NPC-to-NPC
+        if ($listenerNpcId) {
+            $relLLM->analyzeNpc($listenerNpcId, false);
+        }
+
+        // Evaluate based on conversation type
+        if ($isNpcToNpcConversation && $listenerNpcId) {
+            $relLLM->evaluateNpcToNpcContext($npcId, $listenerNpcId, $npcResponse, $context);
+        } elseif (!empty($context['player_action'])) {
+            $relLLM->evaluateContext($npcId, $npcResponse, $context);
+        }
+
+        // Process any pending NPC inits from cell loading
+        require_once __DIR__ . "/async_queue.php";
+        _relProcessInitQueue(5);
+    }
 }
 
 if (!$useRelLLM && !empty($GLOBALS["talkedSoFar"])) {

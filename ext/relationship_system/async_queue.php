@@ -21,24 +21,32 @@ require_once $GLOBALS["ENGINE_PATH"] . "lib/logger.php";
 /**
  * Queue a relationship evaluation for async processing
  *
- * @param int $npcId The NPC ID
- * @param string $npcName The NPC name
- * @param string $dialogue What was said
- * @param array $context Additional context (events, player action, etc)
- * @param int|null $listenerNpcId For NPC-to-NPC conversations
- * @param string|null $listenerName For NPC-to-NPC conversations
+ * @param array $evalData Array containing:
+ *   - npc_id: The NPC ID
+ *   - npc_name: The NPC name
+ *   - npc_response: What the NPC said
+ *   - context: Additional context (events, player action, etc)
+ *   - is_npc2npc: Whether this is NPC-to-NPC conversation
+ *   - listener_npc_id: For NPC-to-NPC conversations
+ *   - listener_name: For NPC-to-NPC conversations
  */
-function _relQueueEvaluation($npcId, $npcName, $dialogue, $context = [], $listenerNpcId = null, $listenerName = null) {
+function _relQueueEvaluation($evalData) {
     if (!isset($GLOBALS['db']) || !$GLOBALS['db']) {
         Logger::warn("[REL-ASYNC] Cannot queue: no database connection");
         return false;
     }
 
+    $npcId = $evalData['npc_id'] ?? 0;
+    $npcName = $evalData['npc_name'] ?? 'Unknown';
+    $listenerNpcId = $evalData['listener_npc_id'] ?? null;
+    $listenerName = $evalData['listener_name'] ?? null;
+
     $queueData = [
         'npc_id' => $npcId,
         'npc_name' => $npcName,
-        'dialogue' => $dialogue,
-        'context' => $context,
+        'dialogue' => $evalData['npc_response'] ?? '',
+        'context' => $evalData['context'] ?? [],
+        'is_npc2npc' => $evalData['is_npc2npc'] ?? false,
         'listener_npc_id' => $listenerNpcId,
         'listener_name' => $listenerName,
         'queued_at' => date('Y-m-d H:i:s')
@@ -157,7 +165,7 @@ function _relProcessQueue($limit = 5) {
                 }
 
                 // Check if this is NPC-to-NPC conversation
-                $isNpcToNpc = !empty($data['listener_npc_id']);
+                $isNpcToNpc = !empty($data['is_npc2npc']) || !empty($data['listener_npc_id']);
 
                 // Check if Player actually did something in this context
                 // If there's no player_action, the Player wasn't involved - skip Player eval
