@@ -132,6 +132,8 @@ class RelationshipLLM {
 
     /**
      * Initialize the LLM connector
+     * NOTE: Does NOT call setOldGlobals() here - that happens in makeSafeRequest()
+     * to avoid corrupting the main chat connector's globals
      */
     private function initConnector() {
         require_once $GLOBALS['ENGINE_PATH'] . "lib/core/llm_connector.class.php";
@@ -152,9 +154,51 @@ class RelationshipLLM {
         }
 
         if ($this->connector) {
-            $llmConnector->setOldGlobals($this->connector);
             $this->driver = $llmConnector->getConnector($this->connector);
             $this->modelName = $this->connector['model'] ?? $this->connector['driver'] ?? 'unknown';
+        }
+    }
+
+    /**
+     * Make a safe LLM request with scoped global swapping
+     *
+     * CRITICAL: This prevents the relationship connector from corrupting
+     * the main chat connector's globals. We:
+     * 1. Save the current $GLOBALS["CONNECTOR"]
+     * 2. Call setOldGlobals() to configure for relationship LLM
+     * 3. Make the request
+     * 4. Restore the original $GLOBALS["CONNECTOR"] in finally block
+     *
+     * @param array $messages The messages to send
+     * @param array $params Request parameters (MAX_TOKENS, etc)
+     * @param string $context Context identifier for logging
+     * @return string|null The response, or null on failure
+     */
+    private function makeSafeRequest($messages, $params, $context) {
+        if (!$this->driver || !$this->connector) {
+            return null;
+        }
+
+        require_once $GLOBALS['ENGINE_PATH'] . "lib/core/llm_connector.class.php";
+        $llmConnector = new LLMConnector();
+
+        // Save current connector globals (the main chat connector's settings)
+        $savedGlobals = isset($GLOBALS["CONNECTOR"]) ? $GLOBALS["CONNECTOR"] : null;
+
+        try {
+            // SWAP IN: Configure globals for relationship LLM
+            $llmConnector->setOldGlobals($this->connector);
+
+            // Make the request
+            return $this->driver->fast_request($messages, $params, $context);
+        } catch (Exception $e) {
+            Logger::error("[REL-LLM] Request failed ({$context}): " . $e->getMessage());
+            return null;
+        } finally {
+            // SWAP BACK: Restore main chat connector's globals
+            if ($savedGlobals !== null) {
+                $GLOBALS["CONNECTOR"] = $savedGlobals;
+            }
         }
     }
 
@@ -273,13 +317,11 @@ class RelationshipLLM {
 
         Logger::info("[REL-LLM] Analyzing {$npcName} using {$this->modelName}");
 
-        // Make LLM request - uses connector's temperature from Config Hub
-        // User should configure low temp (0.1-0.3) for consistent JSON output
-        $response = $this->driver->fast_request(
+        // Make LLM request with scoped global swapping
+        // This prevents corrupting the main chat connector's globals
+        $response = $this->makeSafeRequest(
             $contextData,
-            [
-                "MAX_TOKENS" => 1024
-            ],
+            ["MAX_TOKENS" => 1024],
             "relationship_llm"
         );
 
@@ -791,12 +833,10 @@ PROMPT;
 
         Logger::info("[REL-LLM] Evaluating context for {$npcName}");
 
-        // Uses connector's temperature from Config Hub
-        $response = $this->driver->fast_request(
+        // Make LLM request with scoped global swapping
+        $response = $this->makeSafeRequest(
             $contextData,
-            [
-                "MAX_TOKENS" => 512
-            ],
+            ["MAX_TOKENS" => 512],
             "relationship_eval"
         );
 
@@ -918,12 +958,10 @@ PROMPT;
 
         Logger::info("[REL-LLM] Evaluating NPC-to-NPC: {$speakerName} <-> {$listenerName}");
 
-        // Uses connector's temperature from Config Hub
-        $response = $this->driver->fast_request(
+        // Make LLM request with scoped global swapping
+        $response = $this->makeSafeRequest(
             $contextData,
-            [
-                "MAX_TOKENS" => 512
-            ],
+            ["MAX_TOKENS" => 512],
             "relationship_npc_to_npc"
         );
 
