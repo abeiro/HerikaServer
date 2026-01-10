@@ -25,26 +25,6 @@
 require_once $GLOBALS["ENGINE_PATH"] . "lib/relationship_manager.php";
 require_once $GLOBALS["ENGINE_PATH"] . "lib/logger.php";
 
-// Process any pending relationship work from previous requests
-// This runs the LLM calls NOW (at start of request) instead of blocking at end of previous request
-// The tradeoff: 1-turn delay in relationship updates, but zero blocking on voice response
-$_relUseRelLLM = !empty($GLOBALS['RELLLM_CONNECTOR']) && $GLOBALS['RELLLM_CONNECTOR'] > 0;
-if ($_relUseRelLLM) {
-    require_once __DIR__ . "/async_queue.php";
-
-    // Process pending NPC inits (TEXT->JSONB parsing from addnpc events)
-    $_relInitResult = _relProcessInitQueue(3);
-    if ($_relInitResult['processed'] > 0) {
-        Logger::info("[REL-ASYNC] Processed {$_relInitResult['processed']} queued NPC inits at context injection");
-    }
-
-    // Process pending conversation evaluations
-    $_relQueueResult = _relProcessQueue(3);
-    if ($_relQueueResult['processed'] > 0) {
-        Logger::info("[REL-ASYNC] Processed {$_relQueueResult['processed']} queued evaluations at context injection");
-    }
-}
-
 // Get the current NPC name
 $npcName = $GLOBALS["HERIKA_NAME"] ?? null;
 

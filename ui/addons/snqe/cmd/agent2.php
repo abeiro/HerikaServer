@@ -18,7 +18,7 @@ require_once $enginePath . "lib/core/core_profiles.class.php";
 require_once $enginePath . "lib/core/llm_connector.class.php";
 require_once $enginePath . "service/processors/snqe/lib/snqe.class.php";
 
-$connector            = new LLMConnector();
+$connector = new LLMConnector();
 $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
 $connector->setOldGlobals($currentConnectorData);
 
@@ -26,14 +26,53 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 $formInput = json_decode(file_get_contents("php://input"), true);
 
-$MODEL="google/gemini-3-flash-preview";
+$MODEL = "google/gemini-3-flash-preview";
 $questType = $formInput["questType"] ?? "miniquest";
 
+$spawnedItemArray = $formInput["spawneditemslist"];
+
+foreach ($spawnedItemArray as $n => $itemName) {
+    $cn = $GLOBALS["db"]->escape($itemName);
+    $rows = $GLOBALS["db"]->fetchAll("select count(*) as n from eventlog where type='itemfound' and data like '%$cn%'");
+    if ($rows && $rows[0]["n"]) {
+        $spawnedItemArray[$n] = "$itemName (already recovered)";
+    } else {
+        continue;
+        
+    }
+}
+
+$spawnedItemList = arrayToBulletedList($spawnedItemArray);
+
+$npcList = [];
+foreach ($formInput["npclist"] as $npc) {
+    
+    $isDead = DataActorHasDied($npc);
+    if ($isDead) {
+        $npcList[] = " * $npc (dead)";
+    } else {
+        if (strpos(DataBeingsOrDeathsInRangeExcluding(), $npc) == false) {
+            $outofscene = "(out of scene)";
+            continue;
+        } else {
+            $outofscene = "";
+        }
+    }
+}
+
+$npcListFinal = implode("\n", $npcList);
 
 $prompt[] = ['role' => 'system', 'content' => file_get_contents("{$enginePath}/service/processors/snqe/lib/api_doc.php")];
-$prompt[] = ['role' => 'user', 'content' => "
+$prompt[] = [
+    'role' => 'user',
+    'content' => "
 Using api, create a miniquest to accomplish this xml instructions, AND ONLY this instructions:
 {$formInput["airesponse"]}
+
+Notes, Already spawned items in previous sessions.
+$spawnedItemList
+Already spawned NPCs in previous sessions:
+$npcListFinal
 
 Player Name: {$GLOBALS["PLAYER_NAME"]}
 
@@ -51,15 +90,18 @@ Important notes about XML elements.
 
 
 Write very short comments on code. Code should finish with CompleteQuest call.
-"];
+"
+];
 
 
 $contextData = $prompt;
 
 $connectionHandler = $connector->getConnector($currentConnectorData);
-$buffer            = $connectionHandler->fast_request($contextData,
-    ["MAX_TOKENS" => 4096, "model" => $MODEL,"temperature"=>0.3],
-    "questcoder");
+$buffer = $connectionHandler->fast_request(
+    $contextData,
+    ["MAX_TOKENS" => 4096, "model" => $MODEL, "temperature" => 0.3],
+    "questcoder"
+);
 
 header('Content-Type: application/json');
 
@@ -68,7 +110,7 @@ $phpCode = $buffer;
 if (preg_match('/```php\n(.*?)\n```/s', $buffer, $matches)) {
     $phpCode = $matches[1];
 }
-$first_code=$phpCode;
+$first_code = $phpCode;
 /*
 // simple line-based diff: '  ' = same, '- ' = removed (first_code), '+ ' = added (second_code)
 function line_diff($a, $b) {
@@ -134,17 +176,17 @@ $result = [
     'questId' => $questId,
     'success' => false,
     'message' => '',
-    'lastJournalEntry'=>$formInput["lastJournalEntry"]
+    'lastJournalEntry' => $formInput["lastJournalEntry"]
 ];
 //  Include corrected errors in the result
-$result["errors"]=$corrected_errors;
+$result["errors"] = $corrected_errors;
 
 try {
     // The AI-generated code contains a line like: $quest_id = "merchant_request";
     // We need to replace it with the dynamically calculated questId before inserting into database
     $phpCode = preg_replace('/\$quest_id\s*=\s*["\'].*?["\'];/', "\$quest_id = \"{$questId}\";", $phpCode);
-    
-    SNQEQuestManager::createNewQuest($questId, $phpCode,[],"not_running",$formInput["questTitle"],$formInput["lastJournalEntry"]);
+
+    SNQEQuestManager::createNewQuest($questId, $phpCode, [], "not_running", $formInput["questTitle"], $formInput["lastJournalEntry"]);
     $result['success'] = true;
     $result['message'] = "Quest created successfully with ID: " . $questId;
 } catch (\Exception $e) {

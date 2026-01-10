@@ -567,6 +567,144 @@ if (isset($_GET["delete"])) {
     exit;
 }
 
+// Handle Export NPC (download JSON)
+if (isset($_GET["export"]) && is_numeric($_GET["export"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    
+    $exportId = intval($_GET["export"]);
+    $exportRow = $npc->getById($exportId);
+    
+    if (!$exportRow) {
+        header("HTTP/1.1 404 Not Found");
+        echo "NPC not found";
+        exit;
+    }
+    
+    // Build export data
+    $exportData = [
+        'export_version' => '1.0',
+        'export_date' => date('c'),
+        'npc_name' => $exportRow['npc_name'] ?? '',
+        'npc_favorite' => !empty($exportRow['npc_favorite']) ? 1 : 0,
+        'lock_profile' => !empty($exportRow['lock_profile']) ? 1 : 0,
+        'prompt_head' => $exportRow['prompt_head'] ?? '',
+        'npc_static_bio' => $exportRow['npc_static_bio'] ?? '',
+        'oghma_knowledge_tags' => $exportRow['oghma_knowledge_tags'] ?? '',
+        'emote_moods' => $exportRow['emote_moods'] ?? '',
+        'personality' => $exportRow['personality'] ?? '',
+        'relationships' => $exportRow['relationships'] ?? '',
+        'occupation' => $exportRow['occupation'] ?? '',
+        'appearance' => $exportRow['appearance'] ?? '',
+        'skills' => $exportRow['skills'] ?? '',
+        'speechstyle' => $exportRow['speechstyle'] ?? '',
+        'goals' => $exportRow['goals'] ?? '',
+        'voiceid' => $exportRow['voiceid'] ?? '',
+        'gender' => $exportRow['gender'] ?? '',
+        'race' => $exportRow['race'] ?? '',
+        'dynamic_profile' => $exportRow['dynamic_profile'] ?? null,
+        'base' => $exportRow['base'] ?? '',
+        'core' => $exportRow['core'] ?? '',
+        'tags' => $exportRow['tags'] ?? '',
+        'metadata' => null,
+        'extended_data' => null,
+    ];
+    
+    // Parse JSON fields
+    if (!empty($exportRow['metadata'])) {
+        $tmp = json_decode((string)$exportRow['metadata'], true);
+        if (is_array($tmp)) { $exportData['metadata'] = $tmp; }
+    }
+    if (!empty($exportRow['extended_data'])) {
+        $tmp = json_decode((string)$exportRow['extended_data'], true);
+        if (is_array($tmp)) { $exportData['extended_data'] = $tmp; }
+    }
+    
+    $filename = preg_replace('/[^a-z0-9_-]+/i', '_', strtolower($exportRow['npc_name'] ?? 'npc')) . '_export.json';
+    
+    header('Content-Type: application/json');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    echo json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Handle Import NPC (AJAX)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_npc"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    
+    try {
+        $importJson = $_POST['import_data'] ?? '';
+        $targetId = isset($_POST['target_id']) ? intval($_POST['target_id']) : 0;
+        $newName = trim($_POST['new_name'] ?? '');
+        
+        $importData = json_decode($importJson, true);
+        if (!is_array($importData)) {
+            echo json_encode(['ok' => false, 'error' => 'Invalid JSON data']);
+            exit;
+        }
+        
+        // Build NPC data from import
+        $npcData = [];
+        $allowedFields = ['npc_favorite', 'lock_profile', 'prompt_head', 'npc_static_bio', 
+            'oghma_knowledge_tags', 'emote_moods', 'personality', 'relationships', 
+            'occupation', 'appearance', 'skills', 'speechstyle', 'goals', 'voiceid',
+            'gender', 'race', 'dynamic_profile', 'base', 'core', 'tags'];
+        
+        foreach ($allowedFields as $field) {
+            if (array_key_exists($field, $importData)) {
+                $npcData[$field] = $importData[$field];
+            }
+        }
+        
+        // Handle JSON fields
+        if (isset($importData['metadata']) && is_array($importData['metadata'])) {
+            $npcData['metadata'] = json_encode($importData['metadata']);
+        }
+        if (isset($importData['extended_data']) && is_array($importData['extended_data'])) {
+            $npcData['extended_data'] = json_encode($importData['extended_data']);
+        }
+        
+        if ($targetId > 0) {
+            // Import to existing NPC
+            $existingNpc = $npc->getById($targetId);
+            if (!$existingNpc) {
+                echo json_encode(['ok' => false, 'error' => 'Target NPC not found']);
+                exit;
+            }
+            
+            // Don't overwrite the name when importing to existing NPC
+            unset($npcData['npc_name']);
+            
+            $npc->update($targetId, $npcData);
+            echo json_encode(['ok' => true, 'message' => 'Biography imported to existing NPC', 'id' => $targetId]);
+        } else {
+            // Create new NPC
+            if ($newName !== '') {
+                $npcData['npc_name'] = $newName;
+            } elseif (!empty($importData['npc_name'])) {
+                $npcData['npc_name'] = $importData['npc_name'];
+            } else {
+                echo json_encode(['ok' => false, 'error' => 'NPC name is required']);
+                exit;
+            }
+            
+            // Check if name already exists
+            $existingByName = $npc->getByName($npcData['npc_name']);
+            if ($existingByName) {
+                echo json_encode(['ok' => false, 'error' => 'An NPC with this name already exists. Use "Import to Existing" option instead.']);
+                exit;
+            }
+            
+            $npcData['md5'] = md5($npcData['npc_name']);
+            $newId = $npc->create($npcData);
+            echo json_encode(['ok' => true, 'message' => 'New NPC created from import', 'id' => $newId]);
+        }
+    } catch (Throwable $e) {
+        echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+    }
+    exit;
+}
+
 // Fetch Data
 $perPage = 12;
 $page = isset($_GET["page"]) ? intval($_GET["page"]) : 1;
@@ -726,6 +864,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Page <?= $page ?> / <?= $totalPages ?></span>
       <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Total <?= $totalRows ?></span>
       <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
+      <button id="npc_import_btn" type="button" title="Import NPC from JSON file">📥 Import NPC</button>
       <button id="rel_bulk_build_btn" type="button" class="btn-rel-build" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
       <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
     </div>
@@ -2358,6 +2497,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       <h2 class="modal-title">Edit NPC</h2>
       <div class="modal-actions">
         <button id="npc_modal_save_header" class="btn-save">Save</button>
+        <button id="npc_modal_export" class="btn-cancel" title="Export NPC biography to JSON file">Export Bio</button>
+        <button id="npc_modal_import_to" class="btn-cancel" title="Import biography from another NPC's export file">Import Bio</button>
         <button id="npc_modal_reset" class="btn-cancel" title="Reimport bio template fields">Reset NPC</button>
         <button id="npc_modal_diary" class="btn-cancel">View Diary</button>
         <button id="npc_modal_history" class="btn-cancel">View History</button>
@@ -2549,13 +2690,21 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       const tabs = document.getElementById('npc_modal_tabs');
       const bioPane = document.getElementById('pane_bio');
       const manualPane = document.getElementById('pane_manual');
+      const exportBtn = document.getElementById('npc_modal_export');
+      const importBioBtn = document.getElementById('npc_modal_import_to');
       const isEdit = /[?&]edit=/.test(url);
       if (isEdit){
         if (tabs) tabs.style.display = 'none';
         if (bioPane) { bioPane.style.display = 'none'; bioPane.classList.remove('active'); }
         if (manualPane) { manualPane.style.display = 'block'; manualPane.classList.add('active'); }
+        // Show export/import buttons only for existing NPCs
+        if (exportBtn) exportBtn.style.display = '';
+        if (importBioBtn) importBioBtn.style.display = '';
       } else {
         if (tabs) tabs.style.display = 'flex';
+        // Hide export/import buttons for new NPCs
+        if (exportBtn) exportBtn.style.display = 'none';
+        if (importBioBtn) importBioBtn.style.display = 'none';
       }
     } catch(_e){}
 
@@ -3603,6 +3752,135 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         modal.style.display = 'none';
         document.body.style.overflow = 'auto';
       }
+    });
+  }
+})();
+
+// NPC Export/Import functionality
+(function(){
+  // Export button in modal header
+  const exportBtn = document.getElementById('npc_modal_export');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', function(){
+      const id = window.CURRENT_NPC_ID;
+      if (!id) { alert('No NPC selected. Save the NPC first before exporting.'); return; }
+      // Trigger download by navigating to export URL
+      window.location.href = 'npc_master.php?export=' + id;
+    });
+  }
+  
+  // Import Bio to current NPC button in modal header (only for existing NPCs)
+  const importToBtn = document.getElementById('npc_modal_import_to');
+  if (importToBtn) {
+    importToBtn.addEventListener('click', function(){
+      const id = window.CURRENT_NPC_ID;
+      if (!id) { alert('No NPC selected. Save the NPC first before importing.'); return; }
+      
+      // Create file input
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      
+      input.addEventListener('change', async function(){
+        if (!input.files || !input.files[0]) return;
+        
+        const file = input.files[0];
+        const text = await file.text();
+        
+        try {
+          const data = JSON.parse(text);
+          if (!confirm('Import biography from "' + (data.npc_name || 'Unknown') + '" to this NPC?\n\nThis will overwrite the current NPC\'s biography fields (personality, appearance, skills, etc.) but keep the name.')) {
+            return;
+          }
+          
+          const formData = new FormData();
+          formData.append('import_npc', '1');
+          formData.append('import_data', text);
+          formData.append('target_id', id);
+          
+          const res = await fetch('npc_master.php', { method: 'POST', body: formData });
+          const result = await res.json();
+          
+          if (result.ok) {
+            alert(result.message || 'Biography imported successfully');
+            location.reload();
+          } else {
+            alert('Error: ' + (result.error || 'Import failed'));
+          }
+        } catch(e) {
+          alert('Error parsing JSON file: ' + e.message);
+        } finally {
+          document.body.removeChild(input);
+        }
+      });
+      
+      input.click();
+    });
+  }
+  
+  // Import NPC button in toolbar (create new NPC from JSON)
+  const importBtn = document.getElementById('npc_import_btn');
+  if (importBtn) {
+    importBtn.addEventListener('click', function(){
+      // Create file input
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      
+      input.addEventListener('change', async function(){
+        if (!input.files || !input.files[0]) return;
+        
+        const file = input.files[0];
+        const text = await file.text();
+        
+        try {
+          const data = JSON.parse(text);
+          const originalName = data.npc_name || '';
+          
+          // Show dialog to confirm or change name
+          const newName = prompt(
+            'Import NPC from file.\n\n' +
+            'Original name: ' + (originalName || '(none)') + '\n\n' +
+            'Enter NPC name (leave as-is or change for renamed NPCs):',
+            originalName
+          );
+          
+          if (newName === null) {
+            // User cancelled
+            return;
+          }
+          
+          if (!newName.trim()) {
+            alert('NPC name is required');
+            return;
+          }
+          
+          const formData = new FormData();
+          formData.append('import_npc', '1');
+          formData.append('import_data', text);
+          formData.append('new_name', newName.trim());
+          
+          const res = await fetch('npc_master.php', { method: 'POST', body: formData });
+          const result = await res.json();
+          
+          if (result.ok) {
+            alert(result.message || 'NPC imported successfully');
+            location.reload();
+          } else {
+            alert('Error: ' + (result.error || 'Import failed'));
+          }
+        } catch(e) {
+          alert('Error parsing JSON file: ' + e.message);
+        } finally {
+          document.body.removeChild(input);
+        }
+      });
+      
+      input.click();
     });
   }
 })();

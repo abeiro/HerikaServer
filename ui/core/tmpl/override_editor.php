@@ -521,6 +521,8 @@ foreach ($allowedSettings as $key) {
 (function(){
     const MODE = <?= json_encode($mode) ?>;
     const IS_NPC_MODE = MODE === 'npc';
+    // Display name mappings for UI labels
+    const displayNames = { 'xtts-fastapi': 'xtts/chatterbox' };
     const IS_PROFILE_MODE = MODE === 'profile';
     const FIELD_NAME = <?= json_encode($fieldName) ?>;
     const PREFIX = <?= json_encode($prefix) ?>;
@@ -795,10 +797,10 @@ foreach ($allowedSettings as $key) {
             inputHtml = `
                 <select id="${PREFIX}ovr-value-input" class="${PREFIX}ovr-input" required>
                     <option value="">-- Select --</option>
-                    ${values.map(v => `<option value="${escapeHtml(v)}" ${String(currentValue) === String(v) ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('')}
+                    ${values.map(v => `<option value="${escapeHtml(v)}" ${String(currentValue) === String(v) ? 'selected' : ''}>${escapeHtml(displayNames[v] || v)}</option>`).join('')}
                 </select>
             `;
-            validationHint = `<div style="color:#9fb1c9; font-size:11px; margin-top:4px;">✓ Valid options: ${values.join(', ')}</div>`;
+            validationHint = `<div style="color:#9fb1c9; font-size:11px; margin-top:4px;">✓ Valid options: ${values.map(v => displayNames[v] || v).join(', ')}</div>`;
         } else if (type === 'integer') {
             const val = currentValue ?? '';
             inputHtml = `<input type="number" id="${PREFIX}ovr-value-input" class="${PREFIX}ovr-input" value="${escapeHtml(val)}" placeholder="Enter integer" step="1" required>`;

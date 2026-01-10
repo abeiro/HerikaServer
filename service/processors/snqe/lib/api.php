@@ -15,7 +15,7 @@ define("_TRADE_TIMEOUT", 120);
  * @param string|null $appearance Visual description (optional)
  * @param string|null $background Lore/backstory (optional) e.g. "A reclusive scholar seeking lost knowledge. Born in Raven Rock...Grew up studying ancient texts...Currently obsessed with finding old trinkets."
  * @param string|null $speechStyle How NPC talks (optional), e.g., "casual, using slang, sometimes cursed words and metions old god names"
- * @param string|null $disposition "defiant"|"submissive"|"friendly"|"serious"|"sad"|"aggressive"|"cheerful"|"distrustful"|"furious"|"drunk"|"high" (optional)
+ * @param string|null $disposition "defiant"|"submissive"|"friendly"|"serious"|"sad"|"aggressive"|"cheerful"|"distrustful"|"furious"|"drunk"|"high"|"dead" (optional)
  * @param string|null $goal inmediate goal (optional)
  */
 function CreateNPC(
@@ -79,7 +79,7 @@ function CreateNPC(
  * @param string $quest_id Unique quest identifier
  * @param string $item_ref Internal item reference ID
  * @param string $name Item display name
- * @param string $type "sword"|"armor"|"helmet"|"ring"|"amulet"|"book"|"note"|"axe"|"long sword"|"staff"|"great axe"|"bow"
+ * @param string $type  'potion', 'necklace', 'amulet', 'ring', 'book', 'axe', 'note', 'dagger','armor'
  * @param string $location "nearby"|"major city"
  * @param string|null $description Description or content if book/note (optional)
  * @param string|null $npc_ref NPC reference ID to place item in inventory (optional)
@@ -372,6 +372,9 @@ function CheckNPCSpawn(
         $extData["background_life_last_updated"] = $GLOBALS["last_gamets"];
         $extData["middle_term_enabled"] = 1;
         $npcLocalData["dynamic_profile"] = 1;
+
+        $npcLocalData["speechstyle"] = getSpeechStyleText(strtolower($npc["race"]), strtolower($npc["class"])) ?? $npc["speechStyle"];
+        $npcLocalData["speechstyle"] .= getRandomSpeechFillers();
         $npcLocalData = $npcMaster->setMetadata($npcLocalData, $metaData);
         $npcLocalData = $npcMaster->setExtendedData($npcLocalData, $extData);
         $npcMaster->updateByArray($npcLocalData);
@@ -399,6 +402,12 @@ function CheckNPCSpawn(
                             'tag' => "",
                         ]
                     );
+                } else if (in_array($npc["disposition"], ["dead"])) {
+
+                    $skyrimCmd = new SkyrimCommandBuilder();
+                    $json = $skyrimCmd->Actor->Kill("0x{$npcLocalData["refid"]}");
+                    $skyrimCmd->send($json);
+
                 } else {
                     $GLOBALS["db"]->insert(
                         'responselog',
@@ -413,7 +422,16 @@ function CheckNPCSpawn(
                     );
                 }
             }
+        } else if (isset($npc["disposition"])) {
+            if (in_array($npc["disposition"], ["dead"])) {
+
+                $skyrimCmd = new SkyrimCommandBuilder();
+                $json = $skyrimCmd->Actor->Kill("0x{$npcLocalData["refid"]}");
+                $skyrimCmd->send($json);
+
+            }
         }
+
 
     } else {
         $isSpawned = false;
@@ -704,7 +722,7 @@ function TellTopicToPlayer(
     $quest_data = $quest["quest_data"] ?? [];
 
     if (!isset($quest_data["npcs"][$npc_ref])) {
-        if  ($npc_ref=="player") {
+        if ($npc_ref == "player") {
             error_log("[TellTopicToPlayer] WARNING, topic teller is player Marking Topic delivered <$topic_ref>");
             return "done";
         } else
@@ -1532,7 +1550,10 @@ function CombatNPC(
     }
 
     if (!isset($quest_data["npcs"][$npc_ref_target])) {
-        throw new Exception("NPC '$npc_ref_target' not declared. Use CreateNPC first.");
+        if ($npc_ref_target == "player") {
+            ;
+        } else
+            throw new Exception("NPC '$npc_ref_target' not declared. Use CreateNPC first.");
     }
 
     $npc_attacker = $quest_data["npcs"][$npc_ref_attacker];
@@ -1889,9 +1910,7 @@ function WaitAtLocation(
     if ($npc_ref && isset($quest_data["npcs"][$npc_ref])) {
         $npc = $quest_data["npcs"][$npc_ref];
         if ($quest_data["npcs"][$npc_ref]["name"] == $GLOBALS["PLAYER_NAME"]) {
-            // If waiting for self, bypass travel
-            error_log("[WaitAtLocation] Player is the NPC, bypassing travel to <$location>");
-            return "done";
+            $npc_ref = null;
         }
     }
 
@@ -1899,76 +1918,78 @@ function WaitAtLocation(
     if (!isset($quest_data["location_wait"])) {
         $quest_data["location_wait"] = [];
         error_log("[WaitAtLocation] first call");
-        if (strpos($GLOBALS["actors_present"], $quest_data["npcs"][$npc_ref]["name"]) === false) {
-            error_log("[WaitAtLocation] Using Background TravelTo");
-            // If NPC ref is provided, move NPC to location
-            if ($npc_ref && isset($quest_data["npcs"][$npc_ref])) {
-                $npcMaster = new NpcMaster();
-                $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
-                $unsignedInt = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
-                $refHexString = "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
+        if ($npc_ref) {
+            if ((strpos($GLOBALS["actors_present"], $quest_data["npcs"][$npc_ref]["name"]) === false)) {
+                error_log("[WaitAtLocation] Using Background TravelTo");
+                // If NPC ref is provided, move NPC to location
+                if ($npc_ref && isset($quest_data["npcs"][$npc_ref])) {
+                    $npcMaster = new NpcMaster();
+                    $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
+                    $unsignedInt = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
+                    $refHexString = "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
 
-                $locs = $GLOBALS["db"]->fetchOne("SELECT * FROM locations where name='" . $GLOBALS["db"]->escape($location) . "' LIMIT 1");
+                    $locs = $GLOBALS["db"]->fetchOne("SELECT * FROM locations where name='" . $GLOBALS["db"]->escape($location) . "' LIMIT 1");
 
-                if ($locs) {
-                    $GLOBALS["db"]->insert(
-                        'responselog',
-                        [
-                            'localts' => time(),
-                            'sent' => 0,
-                            'actor' => "rolemaster",
-                            'text' => "",
-                            'action' => "rolecommand|BackgroundCmd@$refHexString@TravelTo/{$locs["formid"]}",
-                            'tag' => '',
-                        ]
-                    );
+                    if ($locs) {
+                        $GLOBALS["db"]->insert(
+                            'responselog',
+                            [
+                                'localts' => time(),
+                                'sent' => 0,
+                                'actor' => "rolemaster",
+                                'text' => "",
+                                'action' => "rolecommand|BackgroundCmd@$refHexString@TravelTo/{$locs["formid"]}",
+                                'tag' => '',
+                            ]
+                        );
 
-                    //$GLOBALS["last_gamets"]
+                        //$GLOBALS["last_gamets"]
 
-                    $GLOBALS["db"]->insert(
-                        'eventlog',
-                        [
-                            'ts' => $GLOBALS["last_ts"],
-                            'gamets' => $GLOBALS["last_gamets"],
-                            'type' => "infoaction",
-                            'data' => "The Narrator: {$currentNpcData["npc_name"]} starts travelling to $location",
-                            'sess' => time(),
-                            'localts' => time(),
-                            'people' => $GLOBALS["actors_present"],
-                            'location' => "",
-                            'party' => "",
-                        ]
-                    );
+                        $GLOBALS["db"]->insert(
+                            'eventlog',
+                            [
+                                'ts' => $GLOBALS["last_ts"],
+                                'gamets' => $GLOBALS["last_gamets"],
+                                'type' => "infoaction",
+                                'data' => "The Narrator: {$currentNpcData["npc_name"]} starts travelling to $location",
+                                'sess' => time(),
+                                'localts' => time(),
+                                'people' => $GLOBALS["actors_present"],
+                                'location' => "",
+                                'party' => "",
+                            ]
+                        );
 
-                    // Insert actions_issued log entry
-                    $GLOBALS["db"]->insert(
-                        'actions_issued',
-                        [
-                            'action' => "TravelTo",
-                            'fullcall' => "TravelTo:$location",
-                            'actorname' => $currentNpcData["npc_name"],
-                            'ts' => $GLOBALS["last_ts"],
-                            'gamets' => $GLOBALS["gamets"],
-                            'localts' => time(),
-                            'original' => 'backgroundaction',
-                        ]
-                    );
+                        // Insert actions_issued log entry
+                        $GLOBALS["db"]->insert(
+                            'actions_issued',
+                            [
+                                'action' => "TravelTo",
+                                'fullcall' => "TravelTo:$location",
+                                'actorname' => $currentNpcData["npc_name"],
+                                'ts' => $GLOBALS["last_ts"],
+                                'gamets' => $GLOBALS["gamets"],
+                                'localts' => time(),
+                                'original' => 'backgroundaction',
+                            ]
+                        );
+                    }
                 }
+            } else {
+                error_log("Using Foreground TravelTo");
+                $suggestionText = "The following step  in the storyline requires {$quest_data["npcs"][$npc_ref]["name"]} to travel to a new location. {$quest_data["npcs"][$npc_ref]["name"]} must explain why this travel is needed.{$quest_data["npcs"][$npc_ref]["name"]} should travel to <$location>, (use TravelTo action). ";
+                $GLOBALS["db"]->insert(
+                    'responselog',
+                    [
+                        'localts' => time(),
+                        'sent' => 0,
+                        'actor' => "rolemaster",
+                        'text' => "",
+                        'action' => "rolecommand|Suggestion@{$quest_data["npcs"][$npc_ref]["name"]}@$suggestionText@$quest_id",
+                        'tag' => "",
+                    ]
+                );
             }
-        } else {
-            error_log("Using Foreground TravelTo");
-            $suggestionText = "The following step  in the storyline requires {$quest_data["npcs"][$npc_ref]["name"]} to travel to a new location. {$quest_data["npcs"][$npc_ref]["name"]} must explain why this travel is needed.{$quest_data["npcs"][$npc_ref]["name"]} should travel to <$location>, (use TravelTo action). ";
-            $GLOBALS["db"]->insert(
-                'responselog',
-                [
-                    'localts' => time(),
-                    'sent' => 0,
-                    'actor' => "rolemaster",
-                    'text' => "",
-                    'action' => "rolecommand|Suggestion@{$quest_data["npcs"][$npc_ref]["name"]}@$suggestionText@$quest_id",
-                    'tag' => "",
-                ]
-            );
         }
 
     }
@@ -2521,7 +2542,7 @@ function WaitForActivation(
         $activator_id = $activator_ref;
     }
 
- 
+
     // Use the form ID as the tracking key
     $tracking_key = $activator_id;
 
@@ -2555,7 +2576,7 @@ function WaitForActivation(
     }
     $attempts++;
 
-    $activator_id=strtoupper(dechex(hexdec($activator_id)));
+    $activator_id = strtoupper(dechex(hexdec($activator_id)));
     // Query event log to check if activator was activated
     // Pattern: "X activates Y" where Y contains the form ID or activator name
     $searchPattern = "%$activator_id%activated";
@@ -2616,5 +2637,209 @@ function WaitForActivation(
     SNQEQuestManager::updateQuestData($quest_id, ["activation_tracking" => $quest_data["activation_tracking"]]);
 
     error_log("[WaitForActivation] Waiting for activator <$activator_ref> activation (attempt $attempts/$maxAttempts)");
+    return "waiting";
+}
+
+/**
+ * SNQE PickUpItem function
+ *
+ * @param string $quest_id Unique quest identifier
+ * @param string $npc_ref NPC reference ID
+ * @param string $item_ref Item reference ID
+ * @return void
+ */
+function PickUpItem(
+    string $quest_id,
+    string $npc_ref,
+    string $item_ref
+): void {
+    // Fetch quest state
+    $quest = SNQEQuestManager::getQuest($quest_id);
+
+    if (!$quest) {
+        throw new Exception("Quest '$quest_id' does not exist.");
+    }
+
+    $quest_data = $quest["quest_data"] ?? [];
+
+    if (!isset($quest_data["npcs"][$npc_ref])) {
+        throw new Exception("NPC '$npc_ref' not declared. Use CreateNPC first.");
+    }
+
+    if (!isset($quest_data["items"][$item_ref])) {
+        throw new Exception("Item '$item_ref' not declared. Use CreateItem first.");
+    }
+
+    $npc = $quest_data["npcs"][$npc_ref];
+    $item = $quest_data["items"][$item_ref];
+
+    $tracking_key = "{$npc_ref}_{$item_ref}";
+
+    // Initialize pickup tracking if not exists
+    if (!isset($quest_data["pickup_tracking"][$tracking_key])) {
+        $quest_data["pickup_tracking"] = [];
+
+        $npcMaster = new NpcMaster();
+        $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
+        $unsignedInt = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
+        $refHexString = "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
+
+        $formId = convertSignedToUnsignedHex($item["int_refid"]);
+
+        $GLOBALS["db"]->insert(
+            'responselog',
+            [
+                'localts' => time(),
+                'sent' => 0,
+                'actor' => "rolemaster",
+                'text' => "",
+                'action' => "rolecommand|BackgroundCmd@$refHexString@PickUpItem/{$item["int_refid"]}",
+                'tag' => '',
+            ]
+        );
+
+        $GLOBALS["db"]->insert(
+            'responselog',
+            [
+                'localts' => time(),
+                'sent' => 0,
+                'actor' => "rolemaster",
+                'text' => "",
+                'action' => "rolecommand|QuestTrackReference@{$item["int_refid"]}",
+                'tag' => "",
+            ]
+        );
+
+        // Mark item as picked up by NPC
+        $quest_data["pickup_tracking"][$tracking_key] = [
+            "npc_ref" => $npc_ref,
+            "item_ref" => $item_ref,
+            "picked_up" => false,
+            "pickup_time" => time(),
+        ];
+
+        // Save updated quest state
+        SNQEQuestManager::updateQuestData($quest_id, [
+            "pickup_tracking" => $quest_data["pickup_tracking"],
+            "items" => $quest_data["items"]
+        ]);
+
+        error_log("[PickUpItem] NPC <$npc_ref> picked up item <$item_ref>");
+    } else {
+        error_log("[PickUpItem] NPC <$npc_ref> picked up item <$item_ref> Already issued");
+    }
+}
+
+/**
+ * SNQE WaitForPickUpItem function
+ *
+ * @param string $quest_id Unique quest identifier
+ * @param string $npc_ref NPC reference ID
+ * @param string $item_ref Item reference ID
+ * @param int $maxAttempts Maximum number of attempts to wait (default: 1000)
+ * @return string "done" if item was picked up, "waiting" otherwise
+ */
+function WaitForPickUpItem(
+    string $quest_id,
+    string $npc_ref,
+    string $item_ref,
+    int $maxAttempts = 1000
+): string {
+    // Fetch quest state
+    $quest = SNQEQuestManager::getQuest($quest_id);
+
+    if (!$quest) {
+        throw new Exception("Quest '$quest_id' does not exist.");
+    }
+
+    $quest_data = $quest["quest_data"] ?? [];
+
+    if (!isset($quest_data["npcs"][$npc_ref])) {
+        throw new Exception("NPC '$npc_ref' not declared. Use CreateNPC first.");
+    }
+
+    if (!isset($quest_data["items"][$item_ref])) {
+        throw new Exception("Item '$item_ref' not declared. Use CreateItem first.");
+    }
+
+    $npc = $quest_data["npcs"][$npc_ref];
+    $item = $quest_data["items"][$item_ref];
+
+    // Initialize pickup tracking if not exists
+    if (!isset($quest_data["pickup_tracking"])) {
+        $quest_data["pickup_tracking"] = [];
+    }
+
+    $tracking_key = "{$npc_ref}_{$item_ref}";
+
+    // Check if item has already been picked up
+    if (isset($quest_data["pickup_tracking"][$tracking_key]) && $quest_data["pickup_tracking"][$tracking_key]["picked_up"] === true) {
+        error_log("[WaitForPickUpItem] Item <$item_ref> already picked up by <$npc_ref>");
+        return "done";
+    }
+
+    // Increment pickup attempts
+    if (!isset($quest_data["pickup_tracking"][$tracking_key])) {
+        $quest_data["pickup_tracking"][$tracking_key] = [
+            "pickup_attempts" => 0,
+        ];
+    }
+
+    //error_log(print_r($quest_data["pickup_tracking"], true));
+
+    $quest_data["pickup_tracking"][$tracking_key]["pickup_attempts"] = ($quest_data["pickup_tracking"][$tracking_key]["pickup_attempts"] ?? 0) + 1;
+    $attempts = $quest_data["pickup_tracking"][$tracking_key]["pickup_attempts"];
+
+    if ($attempts % 10 == 0) {
+        error_log("[WaitForPickUpItem] Reissuing PickUpItem command for item <$item_ref> by NPC <$npc_ref> (attempt $attempts)");
+        unset($quest_data["pickup_tracking"][$tracking_key]);
+        SNQEQuestManager::updateQuestData($quest_id, [
+            "pickup_tracking" => $quest_data["pickup_tracking"],
+            "items" => $quest_data["items"]
+        ]);
+        return "waiting";
+    } else {
+    }
+    // Check if max attempts exceeded
+    if ($attempts > $maxAttempts) {
+        error_log("[WaitForPickUpItem] Max attempts ($maxAttempts) exceeded for item <$item_ref> by NPC <$npc_ref>");
+        return "failed";
+    }
+
+    // Query event log to see if NPC picked up the item
+    $cnItem = $GLOBALS["db"]->escape($item["name"]);
+    $cnNpc = $GLOBALS["db"]->escape($npc["name"]);
+
+    $rows = $GLOBALS["db"]->fetchAll("select count(*) as n from eventlog where type='itempickup' and data like '%$cnNpc%' and data like '%$cnItem%'");
+
+    $pickedUp = false;
+    if (is_array($rows) && isset($rows[0]) && $rows[0]["n"] > 0) {
+        $pickedUp = true;
+    }
+
+    if ($pickedUp) {
+        error_log("[WaitForPickUpItem] Item <$cnItem> successfully picked up by NPC <$cnNpc>");
+        $quest_data["pickup_tracking"][$tracking_key]["picked_up"] = true;
+        $quest_data["pickup_tracking"][$tracking_key]["pickup_time"] = time();
+
+        // Update item state to show it's in NPC inventory
+        if (!isset($quest_data["items"][$item_ref]["in_inventory"])) {
+            $quest_data["items"][$item_ref]["in_inventory"] = [];
+        }
+        $quest_data["items"][$item_ref]["in_inventory"][$npc_ref] = true;
+
+        SNQEQuestManager::updateQuestData($quest_id, [
+            "pickup_tracking" => $quest_data["pickup_tracking"],
+            "items" => $quest_data["items"]
+        ]);
+        return "done";
+    }
+
+
+
+    // Save updated quest state
+    SNQEQuestManager::updateQuestData($quest_id, ["pickup_tracking" => $quest_data["pickup_tracking"]]);
+
+    error_log("[WaitForPickUpItem] Waiting for NPC <$npc_ref> to pick up item <$item_ref> (attempt $attempts/$maxAttempts) tracking_key: $tracking_key");
     return "waiting";
 }

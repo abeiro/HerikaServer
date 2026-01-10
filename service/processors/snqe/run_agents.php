@@ -156,6 +156,10 @@ if ($mode === 'full' || $mode === '1') {
                 $state['questtitle'] = $data['questtitle'];
             }
 
+            if (isset($data['last_step'])) {
+                $state['last_step'] = $data['last_step'];
+            }
+
             if (isset($data['locations'])) {
                 updateList($state['locationlist'], $data['locations']);
             }
@@ -246,6 +250,8 @@ if ($mode === 'full' || $mode === '3') {
         'sysprompt' => $state['sysprompt'],
         'userprompt' => $state['userprompt'],
         'airesponse' => $state['airesponse'],
+        'spawneditemslist' => $state['spawneditemslist'],
+        'npclist' => $state['npclist'],
         'lastJournalEntry' => $lastJournalEntry,
         'questType' => 'miniquest',
     ];

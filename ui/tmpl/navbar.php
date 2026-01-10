@@ -414,8 +414,8 @@ $serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
                         <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header">TTS Voice Management</h6></li>
                         <li>
-                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/xtts_clone.php" title="Manually manage XTTS FastAPI voices."rel="noopener noreferrer">
-                            CHIM XTTS Management
+                        <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/xtts_clone.php" title="Manually manage XTTS/Chatterbox voices."rel="noopener noreferrer">
+                            XTTS/Chatterbox Management
                         </a>
                         </li>
 
