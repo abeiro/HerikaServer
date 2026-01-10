@@ -194,8 +194,10 @@ class Narrator
             }
         }
         
-        // Load character fields into HERIKA_* globals
-        $this->loadCharacterIntoGlobals();
+        // NOTE: Character data (HERIKA_NAME, HERIKA_PERS, PROMPT_HEAD, etc.) is NOT loaded here.
+        // loadCharacterIntoGlobals() should only be called when The Narrator is confirmed
+        // as the active speaker (in main.php profile loading or book override sections).
+        // Loading it here would overwrite global PROMPT_HEAD before profile selection.
     }
     
     /**
