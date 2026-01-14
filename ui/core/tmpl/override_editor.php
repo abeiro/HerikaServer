@@ -560,7 +560,10 @@ foreach ($allowedSettings as $key) {
     // Custom label mapping
     function getLabel(key) {
         const customLabels = {
-            'BORED_EVENT': 'BORED EVENT CHANCE'
+            'BORED_EVENT': 'BORED EVENT CHANCE',
+            'CONTEXT_HISTORY': 'CONTEXT HISTORY EVENT COUNT',
+            'CONTEXT_HISTORY_DIARY': 'CONTEXT HISTORY DIARY EVENT COUNT',
+            'CONTEXT_HISTORY_DYNAMIC_PROFILE': 'CONTEXT HISTORY DYNAMIC PROFILE EVENT COUNT'
         };
         return customLabels[key.toUpperCase()] || key.toUpperCase();
     }

@@ -129,7 +129,10 @@ $visualGroups = [
 function meta_pretty_label(string $name): string {
     // Custom label overrides
     $customLabels = [
-        'BORED_EVENT' => 'Bored Event Chance'
+        'BORED_EVENT' => 'Bored Event Chance',
+        'CONTEXT_HISTORY' => 'Context History Event Count',
+        'CONTEXT_HISTORY_DIARY' => 'Context History Diary Event Count',
+        'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 'Context History Dynamic Profile Event Count'
     ];
     
     if (isset($customLabels[$name])) {
