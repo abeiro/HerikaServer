@@ -684,10 +684,8 @@ function returnLines($lines,$writeOutput=true)
                     $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]=true;
                 }
 
-                if (!$GLOBALS["HERIKA_ANIMATIONS"]) {
-                    $GLOBALS["SCRIPTLINE_ANIMATION"]="";
-                    $GLOBALS["SCRIPTLINE_ANIMATION_SENT"]=true;
-                }
+                // HERIKA_ANIMATIONS is now always enabled (controlled via MCM in-game)
+                // Removed profile configuration option as it's redundant with MCM control
 
                 if (is_array($GLOBALS["SCRIPTLINE_LISTENER"]) && sizeof($GLOBALS["SCRIPTLINE_LISTENER"]) > 0 && is_string($GLOBALS["SCRIPTLINE_LISTENER"][0])) {
                     $GLOBALS["SCRIPTLINE_LISTENER"]=$GLOBALS["SCRIPTLINE_LISTENER"][0];

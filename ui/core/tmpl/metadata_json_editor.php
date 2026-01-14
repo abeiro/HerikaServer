@@ -68,10 +68,6 @@ $localSchemaOverrides = [
         'type' => 'integer',
         'description' => "Enforce a word limit for AI's responses. Leave as 0 to have no limit.",
     ],
-    'HERIKA_ANIMATIONS' => [
-        'type' => 'boolean',
-        'description' => 'Will issue animations for the NPC to play',
-    ],
     'QUEST_COMMENT_CHANCE' => [
         'type' => 'select',
         'values' => ['10%','25%','50%','75%','100%'],
@@ -107,7 +103,7 @@ $localSchemaOverrides = [
 $visualKeys = [
   "RECHAT_H","RECHAT_P","CORE_LANG","MINIME_T5","BORED_EVENT",
   "DIARY_PROMPT","OGHMA_AMOUNT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN","COMBAT_BARK_COOLDOWN",
-  "OGHMA_INFINIUM","CONTEXT_HISTORY","MAX_WORDS_LIMIT","HERIKA_ANIMATIONS",
+  "OGHMA_INFINIUM","CONTEXT_HISTORY","MAX_WORDS_LIMIT",
   "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE","ENFORCE_ACTIONS_PROMPT",
   "REMOVE_ASTERISKS_FROM_OUTPUT","CONTEXT_HISTORY_DYNAMIC_PROFILE"
 ];
@@ -121,7 +117,7 @@ $visualGroups = [
   'Oghma' => ["OGHMA_INFINIUM","OGHMA_AMOUNT","MINIME_T5"],
   'Context' => ["CONTEXT_HISTORY","CONTEXT_HISTORY_DIARY","CONTEXT_HISTORY_DYNAMIC_PROFILE"],
   'Quest' => ["QUEST_COMMENT","QUEST_COMMENT_CHANCE"],
-  'Behavior' => ["BORED_EVENT","BORED_EVENT_SERVERSIDE","HERIKA_ANIMATIONS"],
+  'Behavior' => ["BORED_EVENT","BORED_EVENT_SERVERSIDE"],
   'Language/Voice' => ["LANG_LLM_XTTS"],
 ];
 

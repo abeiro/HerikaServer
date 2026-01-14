@@ -156,11 +156,6 @@ $fullSchema = [
         'description' => 'Smart Bored Events. Uses director to generate dynamic topics (slower but better quality).',
         'category' => 'Behavior'
     ],
-    'HERIKA_ANIMATIONS' => [
-        'type' => 'boolean',
-        'description' => 'Will issue animations to play',
-        'category' => 'Behavior'
-    ],
     'LANG_LLM_XTTS' => [
         'type' => 'boolean',
         'description' => 'XTTS Only! Will offer a language field to LLM.',
