@@ -28,7 +28,7 @@ $localSchemaOverrides = [
     ],
     'BORED_EVENT' => [
         'type' => 'integer',
-        'description' => 'Bored Event Probability. Chance of an AI NPC starting a random conversation every couple of minutes.0 = Never | 50 = 50% | 100 = Always',
+        'description' => 'Bored Event Probability. Chance of an AI NPC starting a random conversation every couple of minutes. 0 = Never | 50 = 50% | 100 = Always. Note: Bored Event Chance can be configured ingame in the CHIM MCM menu',
     ],
     'DIARY_PROMPT' => [
         'type' => 'longstring',
@@ -127,6 +127,15 @@ $visualGroups = [
 
 // Pretty label similar to global_settings General tab
 function meta_pretty_label(string $name): string {
+    // Custom label overrides
+    $customLabels = [
+        'BORED_EVENT' => 'Bored Event Chance'
+    ];
+    
+    if (isset($customLabels[$name])) {
+        return $customLabels[$name];
+    }
+    
     $p = str_replace('_', ' ', strtolower(trim($name)));
     return ucwords($p);
 }

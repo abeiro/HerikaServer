@@ -148,7 +148,7 @@ $fullSchema = [
     ],
     'BORED_EVENT' => [
         'type' => 'integer',
-        'description' => 'Bored Event Probability. Chance of starting random conversations. 0 = Never | 50 = 50% | 100 = Always',
+        'description' => 'Bored Event Probability. Chance of starting random conversations. 0 = Never | 50 = 50% | 100 = Always. Note: Bored Event Chance can be configured ingame in the CHIM MCM menu',
         'category' => 'Behavior'
     ],
     'BORED_EVENT_SERVERSIDE' => [
@@ -557,6 +557,14 @@ foreach ($allowedSettings as $key) {
         return '⚙️';
     }
     
+    // Custom label mapping
+    function getLabel(key) {
+        const customLabels = {
+            'BORED_EVENT': 'BORED EVENT CHANCE'
+        };
+        return customLabels[key.toUpperCase()] || key.toUpperCase();
+    }
+    
     // Render overrides list
     function renderOverridesList() {
         const list = el('ovr-list');
@@ -580,7 +588,7 @@ foreach ($allowedSettings as $key) {
                 <div class="${PREFIX}ovr-item" data-key="${escapeHtml(key)}">
                     <div class="${PREFIX}ovr-icon">${getIcon(key)}</div>
                     <div class="${PREFIX}ovr-info">
-                        <div class="${PREFIX}ovr-key">${escapeHtml(key.toUpperCase())}</div>
+                        <div class="${PREFIX}ovr-key">${escapeHtml(getLabel(key))}</div>
                         <div class="${PREFIX}ovr-value">${escapeHtml(displayValue)}</div>
                     </div>
                     <div class="${PREFIX}ovr-actions">
