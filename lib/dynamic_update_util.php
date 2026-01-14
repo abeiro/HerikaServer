@@ -391,10 +391,9 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
         require_once(__DIR__ . "/../lib/data_functions.php");
     }
     
-    // Skip The Narrator
+    // Handle The Narrator separately
     if ($npcName === "The Narrator") {
-        Logger::debug("processSingleDynamicProfile: Skipping The Narrator");
-        return false;
+        return processNarratorDynamicProfile($db);
     }
     
     // Check if profile exists for this NPC
@@ -489,6 +488,113 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
     }
     
     return false;
+}
+
+/**
+ * Process dynamic profile updates for The Narrator
+ * @param object $db Database connection
+ * @return bool Success status
+ */
+function processNarratorDynamicProfile($db) {
+    require_once(__DIR__ . "/core/narrator.class.php");
+    require_once(__DIR__ . "/core/core_profiles.class.php");
+    require_once(__DIR__ . "/core/llm_connectors.class.php");
+    
+    if (!function_exists('DataSpeechJournal') || !function_exists('buildDynamicProfileDisplay')) {
+        require_once(__DIR__ . "/../lib/data_functions.php");
+    }
+    
+    $narrator = new Narrator();
+    
+    // Check if dynamic profile is enabled for narrator
+    if (!$narrator->getBool('dynamic_profile', false)) {
+        Logger::debug("processNarratorDynamicProfile: DYNAMIC_PROFILE disabled for The Narrator");
+        return false;
+    }
+    
+    // Get dynamic profile fields
+    $fieldsToUpdate = $narrator->getDynamicProfileFields();
+    
+    if (empty($fieldsToUpdate)) {
+        Logger::debug("processNarratorDynamicProfile: No fields selected for dynamic updates for The Narrator");
+        return false;
+    }
+    
+    try {
+        // Check if core connector is configured
+        $connector = new LLMConnector();
+        $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PROFILES"]);
+        if (!$currentConnectorData) {
+            Logger::debug("processNarratorDynamicProfile: No core connector configured");
+            return false;
+        }
+        
+        // Get history data for narrator
+        $historyData = getDynamicProfileHistoryData("The Narrator");
+        $updatedFields = [];
+        $successCount = 0;
+        
+        foreach ($fieldsToUpdate as $field) {
+            error_log("[processNarratorDynamicProfile] Updating The Narrator $field");
+            
+            $result = updateDynamicProfileField("The Narrator", $field, $historyData);
+            
+            if ($result !== false) {
+                $updatedFields[$field] = $result;
+                $successCount++;
+            }
+        }
+        
+        if ($successCount > 0) {
+            // Save the updated profile to narrator table
+            $success = saveNarratorDynamicProfileUpdates($updatedFields);
+            if ($success) {
+                Logger::info("processNarratorDynamicProfile: Successfully updated $successCount fields for The Narrator: " . implode(', ', array_keys($updatedFields)));
+                return true;
+            }
+        }
+        
+    } catch (Exception $e) {
+        Logger::error("processNarratorDynamicProfile: Error processing The Narrator: " . $e->getMessage());
+        return false;
+    }
+    
+    return false;
+}
+
+/**
+ * Save narrator dynamic profile updates to core_narrator table
+ * @param array $updatedFields Associative array of field => value
+ * @return bool Success status
+ */
+function saveNarratorDynamicProfileUpdates($updatedFields) {
+    require_once(__DIR__ . "/core/narrator.class.php");
+    
+    try {
+        $narrator = new Narrator();
+        $success = true;
+        
+        foreach ($updatedFields as $field => $value) {
+            // Map field names to narrator table keys
+            $fieldKey = $field; // personality, speechstyle, goals are stored directly
+            
+            if (!$narrator->set($fieldKey, $value)) {
+                $success = false;
+                Logger::error("saveNarratorDynamicProfileUpdates: Failed to save field '$field'");
+            } else {
+                Logger::info("saveNarratorDynamicProfileUpdates: Saved field '$field' for The Narrator");
+            }
+        }
+        
+        // Update timestamp
+        $narrator->set('gamets_last_updated', (string)time());
+        
+        return $success;
+        
+    } catch (Exception $e) {
+        Logger::error("saveNarratorDynamicProfileUpdates: Error saving updates: " . $e->getMessage());
+        return false;
+    }
 }
 
 // Function to generate diary entry for a specific follower

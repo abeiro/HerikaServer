@@ -1237,8 +1237,16 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $npcName = trim($npcName);
         if (empty($npcName)) continue;
         
-        // Skip The Narrator
+        // Handle The Narrator separately
         if ($npcName === "The Narrator") {
+            require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+            $narrator = new Narrator();
+            
+            // Check if narrator has dynamic profile enabled
+            if ($narrator->getBool('dynamic_profile', false)) {
+                $enabledNPCs[] = $npcName;
+                Logger::debug("updateprofiles_batch_async: The Narrator has dynamic profile enabled");
+            }
             continue;
         }
         
