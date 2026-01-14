@@ -154,13 +154,14 @@ function br2nl($string)
 }
 
 function split_at_end_of_sentence($paragraph) {
-    // split at dot, ellipsis, !, ? etc
-    $sentences = [];
+    // Split only at sentence-ending punctuation followed by a space
+    // This preserves ellipsis (...) because we require a space after the punctuation
+    $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/'); // .?!。？！
 
-    $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/'); // .?!。？！ 
-    //$splitSentenceRegex = "/(?<=[" . $eosPunc . "])[\p{P}]?[\s+]?/u"; //  This regex is eating ellipsis: /(?<=[.?!。？！])[\p{P}]?[\s+]?/u
-    $splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?!\.)[\p{P}]?[\s+]?/u";  // This should preserve ellipsis:   //   /(?<=[.?!。？！])(?!\.)[\p{P}]?[\s+]?/u
-    
+    // Split at any end-of-sentence punctuation followed by one or more spaces
+    // Negative lookahead (?!\.) ensures we don't split after a dot if another dot follows (ellipsis)
+    $splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?!\.)\s+/u";
+
     $sentences = preg_split($splitSentenceRegex, $paragraph, -1, PREG_SPLIT_NO_EMPTY);
 
     return $sentences;
@@ -168,101 +169,67 @@ function split_at_end_of_sentence($paragraph) {
 
 function split_sentences($paragraph)
 {
-    $paragraph=strtr($paragraph, array(" \n\n"=>".", " \n"=>".", "\n\n"=>".", '\n'=>".", "\n"=>".")); // do also for double nl
+    // Normalize newlines to periods -dont know what this is fixing, but i can see what it is breaking (.\n becomes .. is that useful?)- matt
+//    $paragraph = strtr($paragraph, array(" \n\n" => ".", " \n" => ".", "\n\n" => ".", '\n' => ".", "\n" => "."));
 
-    if (strlen($paragraph)<=MAXIMUM_SENTENCE_SIZE) {
+    if (strlen($paragraph) <= MAXIMUM_SENTENCE_SIZE) {
         return [$paragraph];
     }
-    
-    $paragraphNcr = br2nl($paragraph); // Some BR detected sometimes in response
 
-    /* 
-    //this sequence ignore ellipsis (split with dot instead of ellipsis and split at wrong limit); is used also in split_sentences_stream
-    $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/');
-    $splitSentenceRegex = "/[^\n" . $eosPunc . "]+[" . $eosPunc . "]/u"; // /[^\n.?!。？！]+[.?!。？！]/u 
-    $sentences = preg_split($splitSentenceRegex, $paragraphNcr, PREG_SPLIT_NO_EMPTY); // !!! third parameter missing (limit) and now is PREG_SPLIT_NO_EMPTY = 1 
-    */ 
-    
-    $sentences =  split_at_end_of_sentence($paragraph);
+    $paragraphNcr = br2nl($paragraph); // Remove any BR tags
 
-    // remove matched strings from the original paragraph in case the end of the paragraph didn't end with punctuation
-    foreach ($sentences as $sentence) {
-        $position = strpos($paragraph, $sentence);
-        if ($position !== false) {
-            $paragraph = substr_replace($paragraph, '', $position, strlen($sentence));
-        }
-    }
-
-    // clean the remaining paragraph after matched parts were removed
-    $paragraph=trim($paragraph);
-    $paragraph=preg_replace('/^[\p{P}|\s]+/u', '', $paragraph);
-
-    if ($paragraph) {
-        $sentences[]=$paragraph;
-    }
+    $sentences = split_at_end_of_sentence($paragraphNcr);
 
     return $sentences;
 }
 
 function split_sentences_stream($paragraph)
 {
-
-    if (strlen($paragraph)<=MAXIMUM_SENTENCE_SIZE) {
+    if (strlen($paragraph) <= MAXIMUM_SENTENCE_SIZE) {
         return [$paragraph];
     }
 
-    /*
-    $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/'); // .?!。？！ 
-    //$splitSentenceRegex = "/(?<=[" . $eosPunc . "])[\p{P}]?[\s+]?/u"; //  This regex is eating ellipsis: /(?<=[.?!。？！])[\p{P}]?[\s+]?/u
-    $splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?!\.)[\p{P}]?[\s+]?/u";  // This should preserve ellipsis:   //   /(?<=[.?!。？！])(?!\.)[\p{P}]?[\s+]?/u
-    $sentences = preg_split($splitSentenceRegex, $paragraph, -1, PREG_SPLIT_NO_EMPTY);
-    */
-    
-    $sentences =  split_at_end_of_sentence($paragraph);
-    
-    /*
-    $b_show = strpos($paragraph,'...') !== false;    
-    if ($b_show) {
-      error_log("split 1: {$paragraph} -exec trace" ); //debug xmd 
-      error_log("split 2: ".implode("|", $sentences) . " -exec trace" ); //debug xmd 
-    }
-    */
+    // Split at sentence boundaries
+    $sentences = split_at_end_of_sentence($paragraph);
 
-    // remove matched strings from the original paragraph in case the end of the paragraph didn't end with punctuation
-    foreach ($sentences as $sentence) {
-        $position = strpos($paragraph, $sentence);
-        if ($position !== false) {
-            $paragraph = substr_replace($paragraph, '', $position, strlen($sentence));
-        }
-    }
-
-    // clean the remaining paragraph after matched parts were removed
-    $paragraph=trim($paragraph);
-    $paragraph=preg_replace('/^[\p{P}|\s]+/u', '', $paragraph);
-
-    if ($paragraph) {
-        $sentences[]=$paragraph;
-    }
-
+    // Now combine sentences to fit within MINIMUM_SENTENCE_SIZE and MAXIMUM_SENTENCE_SIZE
     $splitSentences = [];
     $currentSentence = '';
 
     foreach ($sentences as $sentence) {
-        $currentSentence .= ' ' . $sentence;
-        if (strlen($currentSentence) > MAXIMUM_SENTENCE_SIZE) {
-            $splitSentences[] = trim($currentSentence);
-            $currentSentence = '';
-        } elseif (strlen($currentSentence) >= MINIMUM_SENTENCE_SIZE && strlen($currentSentence) <= MAXIMUM_SENTENCE_SIZE) {
-            $splitSentences[] = trim($currentSentence);
-            $currentSentence = '';
+        $sentence = trim($sentence);
+        if (empty($sentence)) {
+            continue;
+        }
+
+        if (empty($currentSentence)) {
+            // Start a new chunk
+            $currentSentence = $sentence;
+        } else {
+            $combined = $currentSentence . ' ' . $sentence;
+
+            // If adding this sentence would exceed maximum, flush current and start new
+            if (strlen($combined) > MAXIMUM_SENTENCE_SIZE) {
+                $splitSentences[] = $currentSentence;
+                $currentSentence = $sentence;
+            } else {
+                // Add to current sentence
+                $currentSentence = $combined;
+
+                // If we've reached minimum size and we're between min and max, we can flush
+                if (strlen($currentSentence) >= MINIMUM_SENTENCE_SIZE) {
+                    $splitSentences[] = $currentSentence;
+                    $currentSentence = '';
+                }
+            }
         }
     }
 
+    // Don't forget the last sentence
     if (!empty($currentSentence)) {
-        $splitSentences[] = trim($currentSentence);
+        $splitSentences[] = $currentSentence;
     }
 
-    //error_log("<$paragraph> => ".implode("|", $splitSentences)); //debug xmd aici e defect deja
     return $splitSentences;
 }
 
