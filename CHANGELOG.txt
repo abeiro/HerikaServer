@@ -1,0 +1,189 @@
+CHIM Cached Connector v1.3.3 - Release Notes
+============================================
+Release Date: 2025-11-16
+Compatible with: CHIM 2.0.3
+
+OVERVIEW
+--------
+v1.3.3 removes the MINIMUM_SENTENCE_SIZE bottleneck for simple format,
+enabling true sentence-by-sentence streaming. Previously, sentences were
+buffered until reaching 75 characters before being sent to CHIM.
+
+CRITICAL PERFORMANCE IMPROVEMENT
+---------------------------------
+This release significantly improves response time and perceived responsiveness
+for simple format by sending each sentence immediately as it's generated,
+rather than batching multiple sentences together.
+
+CHANGES FROM v1.3.2
+-------------------
+
+1. REMOVED 75-CHARACTER BUFFERING BOTTLENECK FOR SIMPLE FORMAT
+
+   **Problem:**
+   Despite the connector properly splitting sentences and returning them one
+   at a time, the main processing loop was buffering them until the total
+   accumulated text reached 75 characters.
+
+   **Example of the problem:**
+   - Connector returns: "Hello there." (13 chars) → BLOCKED (< 75)
+   - Connector returns: "How are you?" (12 chars) → BLOCKED (< 75)
+   - Connector returns: "I'm doing well." (15 chars) → BLOCKED (< 75)
+   - Connector returns: "What brings you here?" (21 chars) → BLOCKED (< 75)
+   - Connector returns: "I need your help." (17 chars) → All 5 sent together (78 chars)
+
+   **Solution:**
+   Added conditional logic to bypass the 75-character minimum for simple format
+   while preserving it for JSON format (which needs fragment accumulation).
+
+2. NEW CONNECTOR METHOD: handlesSentenceSplitting()
+
+   The connector now exposes a public method that indicates whether it handles
+   sentence splitting internally:
+
+   ```php
+   public function handlesSentenceSplitting() {
+       return ($this->_responseFormat === 'simple');
+   }
+   ```
+
+   This allows the processing loop to apply appropriate logic based on format.
+
+3. CONDITIONAL PROCESSING IN MAIN LOOP
+
+   The main processing loop (lib/data_functions.php) now checks if the
+   connector handles sentence splitting:
+
+   - If YES (simple format): Bypass 75-character minimum, send immediately
+   - If NO (JSON format): Apply original logic (accumulate fragments)
+
+   **Before (v1.3.2):**
+   - Simple format: Sentences buffered until ≥75 chars, sent in batch
+   - JSON format: Same buffering behavior (correct for JSON)
+
+   **After (v1.3.3):**
+   - Simple format: Each sentence sent IMMEDIATELY as returned by connector
+   - JSON format: UNCHANGED - still uses 75-char minimum (correct for JSON)
+
+TECHNICAL DETAILS
+-----------------
+
+Modified Files:
+- connector/openrouterjsoncached.php
+  * Added handlesSentenceSplitting() method (lines 134-138)
+  * Returns true for simple format, false for JSON
+  * Updated VERSION to v1.3.3 (line 12)
+
+- lib/data_functions.php
+  * Added connector sentence splitting check (lines 2988-2991)
+  * Conditional buffer size check (lines 2993-2998)
+    - Skipped for simple format
+    - Applied for JSON format
+  * Conditional position check (lines 3010-3017)
+    - Simple format: send when sentence ending found
+    - JSON format: send when position > 75 chars
+
+- ui/core/llm_connectors.php
+  * Updated version display to v1.3.3 (lines 410, 1443)
+
+- CLAUDE_changelog.md
+  * Added comprehensive Entry 9 documenting this change
+  * Includes root cause analysis and safety guarantees
+
+SAFETY GUARANTEES
+-----------------
+
+✓ JSON format completely unchanged
+  - All original 75-character checks still apply
+  - Fragment accumulation logic preserved
+  - No risk of sending incomplete sentences
+
+✓ Backward compatible
+  - Uses method_exists() check before calling handlesSentenceSplitting()
+  - Won't break other connectors that don't have this method
+  - Safe fallback to original behavior
+
+✓ Simple format only
+  - Bypass only applies when _responseFormat === 'simple'
+  - Connector's sentence splitting verified to work correctly
+  - Returns complete sentences only, never fragments
+
+✓ No data loss
+  - All sentences still processed
+  - Just sent faster, no batching delay
+  - Translation checks still apply
+
+✓ Edge cases handled
+  - Missing method: falls back to original logic
+  - Incomplete sentences: remain in buffer until complete
+  - Translation enabled: processing deferred as before
+  - Position check: must still find sentence ending
+
+PERFORMANCE IMPACT
+------------------
+
+**Simple Format (IMPROVED):**
+- Sentences now appear in game IMMEDIATELY
+- No artificial batching delay
+- True sentence-by-sentence streaming
+- Significantly improved perceived responsiveness
+
+**JSON Format (UNCHANGED):**
+- Maintains fragment accumulation
+- 75-character minimum still applied
+- No change in behavior or performance
+
+UPGRADE NOTES
+-------------
+
+Users upgrading from v1.3.2:
+- Simple format will feel much more responsive
+- Sentences appear as soon as they're generated
+- No configuration changes needed
+- JSON format behavior unchanged
+
+Users upgrading from v1.3.1 or earlier:
+- All v1.3.2 improvements included
+- Plus the new streaming performance improvement
+- Review v1.3.2 changelog for other changes
+
+TESTING RECOMMENDATIONS
+-----------------------
+
+After upgrading to v1.3.3, test the following:
+
+1. **Simple Format Streaming:**
+   - Use simple format with various sentence lengths
+   - Verify each sentence appears immediately in game
+   - Check for smooth, continuous streaming
+
+2. **JSON Format Stability:**
+   - Switch to JSON format
+   - Verify responses still work correctly
+   - Confirm no incomplete sentences sent
+
+3. **With Thinking/Reasoning:**
+   - Enable thinking toggle
+   - Test with both formats
+   - Verify reasoning works correctly
+
+4. **Edge Cases:**
+   - Test with translation enabled
+   - Test with very short sentences (< 10 chars)
+   - Test with very long sentences (> 200 chars)
+
+KNOWN ISSUES
+------------
+
+None at this time.
+
+COMPATIBILITY
+-------------
+
+✓ Works with CHIM 2.0.3
+✓ Backward compatible with all v1.3.x configurations
+✓ All existing settings preserved
+✓ No breaking changes
+
+For complete feature list and installation instructions, see INSTALLATION_INSTRUCTIONS.txt
+For detailed development history, see CLAUDE_changelog.md

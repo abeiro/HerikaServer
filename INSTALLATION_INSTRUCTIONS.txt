@@ -1,0 +1,296 @@
+CHIM Cached Connector v1.3.3 - Installation Instructions
+========================================================
+
+IMPORTANT: READ BEFORE INSTALLING
+----------------------------------
+This connector provides advanced caching, thinking/reasoning support, flexible
+quality instruction control, correct custom instruction placement, and true
+sentence-by-sentence streaming for simple format.
+
+REQUIREMENTS
+------------
+- CHIM 2.0.3 or compatible version
+- PHP 7.4 or higher
+- OpenRouter, Anthropic, OpenAI, or Gemini API access
+- Write permissions to CHIM installation directory
+
+INSTALLATION STEPS
+------------------
+
+1. BACKUP YOUR CURRENT INSTALLATION
+   Before installing, backup these directories:
+   - connector/
+   - lib/core/
+   - lib/
+   - ui/core/
+   - ui/
+   - conf/
+   - prompts/
+
+2. EXTRACT FILES
+   Extract the following files from this package to your CHIM installation,
+   maintaining the directory structure:
+
+   connector/openrouterjsoncached.php
+   connector/openrouterjsoncached_helpers.php
+   connector/openrouterjsoncached_verbose.php
+   connector/OPENROUTERJSONCACHED_README.md
+
+   conf/conf_schema.json
+
+   lib/core/llm_connector.class.php
+   lib/chat_helper_functions.php
+   lib/data_functions.php
+
+   ui/core/llm_connectors.php
+   ui/events-memories.php
+
+   prompts/dialogue_prompt.php
+
+3. SET PERMISSIONS
+   Ensure all files are readable by your web server:
+   chmod 644 connector/*.php
+   chmod 644 lib/*.php
+   chmod 644 lib/core/*.php
+   chmod 644 ui/core/*.php
+   chmod 644 ui/*.php
+   chmod 644 conf/*.json
+   chmod 644 prompts/*.php
+
+4. CLEAR CACHE FILES
+   Delete all cache files to ensure clean start:
+   rm -f *.tmp
+
+5. VERIFY INSTALLATION
+   - Access CHIM web interface
+   - Navigate to LLM Connectors configuration
+   - Create or edit a connector
+   - Verify all fields are visible and functional
+   - Check version displays as v1.3.3
+
+6. CONFIGURE CONNECTOR
+   a. Basic Settings:
+      - Set connector name
+      - Select service (OpenRouter/OpenAI/etc)
+      - Enter API URL and credentials
+      - Choose model
+
+   b. Caching Settings:
+      - Provider Caching Type: Select your provider
+      - Response Format: Choose JSON or Simple
+      - Uncached Dialogue Count: Default 4 is recommended
+
+   c. Thinking/Reasoning Settings:
+      - Toggle Thinking: Check to enable reasoning
+      - Thinking Tokens: Set max tokens (default 1000)
+      - Effort Level: Choose minimal/low/medium/high
+
+   d. Quality Instructions Control:
+      - Minimize Quality Instructions:
+        * Checked (recommended) = Minimalist prompts, filters quality phrases
+        * Unchecked = Full quality instructions, preserves all text
+
+   e. Custom Instructions:
+      - Custom System Instruction:
+        * Appears in system prompt BEFORE dialogue history
+        * Use for global conversation instructions
+        * Example: "Respond in one line only"
+
+      - Custom Last Instruction:
+        * Appears at end of dialogue history
+        * Use for per-turn instructions
+        * Example: "Remember your current goal"
+
+   f. Simple Format Options (if using Simple format):
+      - Include Mood: Recommended ON
+      - Include Listener: Recommended ON
+      - Include Actions: As needed
+      - Include Target: As needed
+
+   g. Advanced Settings:
+      - Max Dialogue Cache Context Size: Default 93
+
+7. TEST CONFIGURATION
+   a. Test Simple Format Streaming (NEW in v1.3.3):
+      - Set Response Format to "Simple"
+      - Send test conversation
+      - Verify sentences appear IMMEDIATELY in game
+      - Each sentence should stream individually, not batched
+      - Check for smooth, continuous dialogue flow
+
+   b. Test JSON Format Stability:
+      - Set Response Format to "JSON"
+      - Send test conversation
+      - Verify responses work correctly
+      - Confirm no incomplete sentences
+
+   c. Test Custom System Instruction:
+      - Add custom instruction: "Always start responses with 'Indeed,'"
+      - Send test message
+      - Check error log - instruction should appear in system prompt
+      - Verify response follows instruction
+
+   d. Test Thinking/Reasoning:
+      - Enable Toggle Thinking
+      - Send a test message
+      - Verify reasoning is performed (check provider logs)
+
+UPGRADING FROM PREVIOUS VERSIONS
+---------------------------------
+
+From v1.3.2:
+- Main improvement: Simple format now streams sentences immediately
+- No configuration changes required
+- Clear cache files (*.tmp) after upgrade
+- Test simple format to experience faster streaming
+
+From v1.3.1:
+- Includes v1.3.2 custom instruction placement fix
+- Plus v1.3.3 streaming performance improvement
+- Review v1.3.2 changelog for custom instruction changes
+
+From v1.3.0 or earlier:
+- Review all accumulated changes in CHANGELOG.txt
+- Test thoroughly after upgrade
+- Check CLAUDE_changelog.md for detailed history
+
+CONFIGURATION REFERENCE
+-----------------------
+
+Response Format:
+
+JSON Format:
+- Structured output in JSON format
+- Fragment accumulation with 75-char minimum (unchanged)
+- Suitable for structured responses
+- Actions/mood/listener in JSON fields
+
+Simple Format (IMPROVED in v1.3.3):
+- Natural language output with metadata tags
+- TRUE SENTENCE-BY-SENTENCE STREAMING (NEW!)
+- Each sentence sent immediately as generated
+- No artificial batching delays
+- Significantly faster perceived responsiveness
+- Metadata: (mood)(listener) etc.
+
+Custom System Instruction (FIXED in v1.3.2):
+
+Placement in Context:
+1. Main system content (character info, world state, etc.)
+2. Custom System Instruction ← HERE
+3. Actions list (if enabled)
+4. Format instruction (JSON/Simple)
+5. Dialogue history
+6. Custom Last Instruction ← HERE (if set)
+
+Use Cases:
+- Global formatting rules: "Respond in one line only"
+- Style instructions: "Use British spelling"
+- Response constraints: "Keep responses under 50 words"
+
+Minimize Quality Instructions Setting:
+
+When ENABLED (checked/true) - DEFAULT:
+- "Provide variety..." phrase is filtered from COMMAND_PROMPT_ENFORCE_ACTIONS
+- Recommended for advanced models (Claude 3.5+, GPT-4+, Gemini 2.0+)
+- Cleaner, more minimalist prompts
+
+When DISABLED (unchecked/false):
+- All text in COMMAND_PROMPT_ENFORCE_ACTIONS passes through
+- Recommended for older/smaller models
+- More explicit quality guidance
+
+TROUBLESHOOTING
+---------------
+
+Issue: Simple format sentences still feel delayed
+Solution:
+- Verify you're using v1.3.3 (check version in UI)
+- Clear cache files (*.tmp)
+- Check error log for any processing errors
+- Test with very short sentences to verify immediate sending
+
+Issue: JSON format not working correctly
+Solution:
+- JSON format should be unchanged from v1.3.2
+- Clear cache files
+- Verify JSON template is correct
+- Check error logs for parsing errors
+
+Issue: Custom instruction not working
+Solution:
+- Verify it's in "Custom System Instruction" field
+- Clear cache files (*.tmp)
+- Check error log for instruction in system prompt
+- Verify you're using v1.3.2+ (not earlier)
+
+Issue: Sentences appearing fragmented
+Solution:
+- Should not happen with v1.3.3
+- Verify connector is openrouterjsoncached (not different connector)
+- Check that handlesSentenceSplitting() returns true for simple format
+- Review error logs for processing issues
+
+PERFORMANCE NOTES
+-----------------
+
+Simple Format Performance (v1.3.3):
+- Sentences stream as fast as LLM generates them
+- No 75-character accumulation delay
+- Typical sentence (10-30 chars) sent in < 100ms
+- Much improved perceived responsiveness
+
+JSON Format Performance (unchanged):
+- Fragments accumulate until 75+ chars
+- Then processed and sent
+- Necessary for preventing incomplete sentences
+- Performance unchanged from v1.3.2
+
+COMPATIBILITY NOTES
+-------------------
+
+Compatible Models:
+- OpenAI: o1, o3, o4, gpt-5 series (reasoning models)
+- Anthropic: Claude 3.5 Sonnet, Claude 4 (thinking support)
+- Google: Gemini 2.0 series (thinking support)
+- DeepSeek: DeepSeek R1, V3 (reasoning models)
+- Other: Any model with thinking/reasoning API support
+
+Provider Requirements:
+- Thinking/Reasoning: Requires provider API support
+- Caching: Requires provider cache API support
+- Simple Format: Works with all text generation models
+
+SUPPORT & DOCUMENTATION
+------------------------
+
+For detailed change information:
+- See CHANGELOG.txt for v1.3.3 changes
+- See CLAUDE_changelog.md for complete development history
+
+For CHIM documentation:
+- Refer to main CHIM documentation
+- Check CHIM GitHub repository
+
+ADDITIONAL FILES
+----------------
+
+This package includes:
+- CHANGELOG.txt - v1.3.3 release notes
+- INSTALLATION_INSTRUCTIONS.txt - This file
+- PACKAGE_CONTENTS.txt - Complete file listing
+- CLAUDE_changelog.md - Complete development log
+- OPENROUTERJSONCACHED_README.md - Connector documentation
+
+LICENSE
+-------
+This connector is distributed as part of CHIM and follows the same
+license terms as the main CHIM project.
+
+VERSION INFORMATION
+-------------------
+Package: CHIM Cached Connector v1.3.3
+Release Date: 2025-11-16
+CHIM Compatibility: 2.0.3
+Connector Type: OpenRouter JSON Cached with Advanced Features
+Key Feature: True sentence-by-sentence streaming for simple format

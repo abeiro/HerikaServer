@@ -667,7 +667,6 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type='waitstop' then 'CONTEXTI' 
       when type='spellcast' then 'CONTEXTI' 
       when type='npcspellcast' then 'CONTEXTI' 
-      when type='reanimate' then 'CONTEXTI' 
       when type='info_timeforward' then 'TIMELAPSE' 
       when type='backgroundaction' then 'CONTEXTI' 
       when type like 'ext_%' then 'PLUGIN'
@@ -2967,17 +2966,35 @@ function call_llm() {
         }
         else {
             $buffer.= $tmpData;
-            $totalBuffer.=$buffer; 
+            $totalBuffer.=$tmpData;  // Fixed: add only new chunk, not entire buffer
         }
 
         if ($connectionHandler->isDone()) {
             $breakFlag=true;
         }
 
+        // Strip reasoning tokens from buffer BEFORE any other processing
+        // If buffer has unclosed reasoning markers, skip processing this iteration (wait for more data)
+        $reasoningFreeBuffer = extractReasoningFreeContent($buffer);
+        if ($reasoningFreeBuffer === false) {
+            // Buffer contains unclosed reasoning markers - wait for more data
+            continue;
+        }
+        // Update buffer with reasoning-stripped version
+        $buffer = $reasoningFreeBuffer;
+
         $buffer=strtr($buffer, array("\""=>"",".)"=>")."));
 
-        if (strlen($buffer)<MINIMUM_SENTENCE_SIZE) {	// Avoid too short buffers
-            continue;
+        // Check if connector handles sentence splitting internally (e.g., simple format)
+        // If so, bypass minimum size checks as connector already returns complete sentences
+        $connectorHandlesSentences = (method_exists($connectionHandler, 'handlesSentenceSplitting') &&
+                                       $connectionHandler->handlesSentenceSplitting());
+
+        if (!$connectorHandlesSentences) {
+            // Original logic: Apply minimum size check for formats that don't handle sentence splitting (JSON)
+            if (strlen($buffer)<MINIMUM_SENTENCE_SIZE) {	// Avoid too short buffers
+                continue;
+            }
         }
 
         // disable streaming when translating to avoid sentence fragments getting translated
@@ -2988,7 +3005,18 @@ function call_llm() {
         $position = findDotPosition($buffer);
 
         //echo "<$buffer>".PHP_EOL;
-        if (($position !== false) && ($position>MINIMUM_SENTENCE_SIZE)) {
+        // For connectors handling sentence splitting, send immediately when position found
+        // For others, apply minimum position check
+        $shouldProcess = false;
+        if ($connectorHandlesSentences) {
+            // Simple format: connector already returns complete sentences, send immediately
+            $shouldProcess = ($position !== false);
+        } else {
+            // JSON format: apply original minimum size logic
+            $shouldProcess = (($position !== false) && ($position>MINIMUM_SENTENCE_SIZE));
+        }
+
+        if ($shouldProcess) {
             $extractedData = substr($buffer, 0, $position + 1);
             $remainingData = substr($buffer, $position + 1);
             $sentences=split_sentences_stream(cleanResponse($extractedData));
@@ -3023,6 +3051,8 @@ function call_llm() {
     
     
     if (trim($buffer)) {
+        // Strip any remaining reasoning tokens from final buffer
+        $buffer = stripReasoningTokens($buffer);
         Logger::info("REMAINING DATA <$buffer>");
         $sentences=split_sentences_stream(cleanResponse(trim($buffer)));
 

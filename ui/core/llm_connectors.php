@@ -58,7 +58,6 @@ if (isset($_GET["export"])) {
         $valsEarly[] = $v;
     }
     fputcsv($outEarly, $valsEarly);
-    fflush($outEarly);
     fclose($outEarly);
     exit;
 }
@@ -305,6 +304,8 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     <input type="text" id="driver_input" name="driver" value="<?= htmlspecialchars($editItem["driver"] ?? "") ?>" style="display:none"><br>
                     <select id="driver_select" style="display:none">
                         <option value="openrouterjson">OpenRouter JSON</option>
+                        <option value="openrouterjsoncached">OpenRouter JSON (Cached)</option>
+                        <option value="openrouterjsoncached_verbose">OpenRouter JSON (Cached + Verbose Logging)</option>
                         <option value="openaijson">OpenAI JSON</option>
                         <option value="google_openaijson">Google OpenAI JSON</option>
                     </select>
@@ -338,12 +339,38 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 echo "<div id='api_key_notice' class='api-key-notice'></div>";
                 ?>
                 </div>
-                <div id="reasoning_row">
-                    <label class="label-with-toggle"><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span>
-                        <input type="hidden" name="reasoning_model" value="0">
-                        <input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>>
+                <?php
+                // Note: The old "reasoning_model" checkbox has been deprecated and removed.
+                // It has been replaced with toggle_thinking, thinking_tokens, and effort_level below.
+                // Parse metadata to get reasoning-related fields
+                $metadataArr = [];
+                if (isset($editItem["metadata"]) && !empty($editItem["metadata"])) {
+                    $tmpMeta = json_decode($editItem["metadata"], true);
+                    if (is_array($tmpMeta)) $metadataArr = $tmpMeta;
+                }
+                // Use same pattern as other checkboxes for proper boolean/string/int handling
+                $toggleThinking = isset($metadataArr["toggle_thinking"]) && $metadataArr["toggle_thinking"];
+                $thinkingTokens = $metadataArr["thinking_tokens"] ?? '';
+                $effortLevel = $metadataArr["effort_level"] ?? '';
+                ?>
+                <div id="reasoning_details" style="margin-top:8px; margin-left:20px; padding:8px; border-left:2px solid #444;">
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Enable thinking/reasoning for supported models (like o1, DeepSeek-R1). Shows model internal reasoning process.'>Toggle Thinking</span>
+                        <input type="hidden" name="metadata[toggle_thinking]" value="0">
+                        <input type="checkbox" id="toggle_thinking" name="metadata[toggle_thinking]" value="1" <?= $toggleThinking ? "checked" : "" ?>>
                         <span class="toggle-text">On</span>
                     </label>
+                    <div style="height:6px;"></div>
+                    <label for='thinking_tokens'><span class='tip-label' data-tip='Maximum tokens for thinking/reasoning output (Anthropic/Gemini only). OpenAI uses effort_level instead. Leave empty to use default.'>Thinking Tokens</span></label>
+                    <input type="number" id="thinking_tokens" name="metadata[thinking_tokens]" value="<?= htmlspecialchars($thinkingTokens) ?>" min="0" step="1" placeholder="Optional">
+                    <div style="height:6px;"></div>
+                    <label for='effort_level'><span class='tip-label' data-tip='Reasoning effort level for OpenAI reasoning models (o1, o3, o4, gpt-5). minimal=Quick (gpt-5+), low=Basic, medium=Balanced, high=Thorough. Leave empty for default.'>Effort Level</span></label>
+                    <select id="effort_level" name="metadata[effort_level]">
+                        <option value="">-- select --</option>
+                        <option value="minimal" <?= $effortLevel === 'minimal' ? 'selected' : '' ?>>Minimal</option>
+                        <option value="low" <?= $effortLevel === 'low' ? 'selected' : '' ?>>Low</option>
+                        <option value="medium" <?= $effortLevel === 'medium' ? 'selected' : '' ?>>Medium</option>
+                        <option value="high" <?= $effortLevel === 'high' ? 'selected' : '' ?>>High</option>
+                    </select>
                 </div>
                 <div id="json_toggles" style="margin-top:8px;">
                     <label class="label-with-toggle"><span class='tip-label' data-tip='Force responses to be strict JSON. Non‑JSON output may be rejected or auto‑retried.'>Enforce JSON</span>
@@ -364,6 +391,91 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                         <span class="toggle-text">On</span>
                     </label>
                 </div>
+
+                <?php
+                // Decode metadata for caching settings
+                $metadata = [];
+                if (isset($editItem['metadata'])) {
+                    if (is_string($editItem['metadata'])) {
+                        $metadata = json_decode($editItem['metadata'], true) ?: [];
+                    } elseif (is_array($editItem['metadata'])) {
+                        $metadata = $editItem['metadata'];
+                    }
+                }
+                ?>
+
+                <!-- Caching Settings (shown only for cached connectors) -->
+                <div id="caching_settings" style="display:none; margin-top:16px; padding:12px; border:1px solid #4a4a4a; border-radius:8px; background:#1a1a1a;">
+                    <div style="font-weight:600; color:#e9efff; margin-bottom:4px;">🔄 Caching Settings</div>
+                    <div style="font-size:11px; color:#888; margin-bottom:12px;">OpenRouter Cache Connector v1.3.3 for CHIM 2.0.3 | 2025/11/16</div>
+
+                    <label for='provider_caching'>Provider Caching Type</label><br>
+                    <select name="metadata[provider_caching]" id="provider_caching">
+                        <option value="Anthropic" <?= ($metadata['provider_caching'] ?? 'Anthropic') === 'Anthropic' ? 'selected' : '' ?>>Anthropic</option>
+                        <option value="OpenAI" <?= ($metadata['provider_caching'] ?? '') === 'OpenAI' ? 'selected' : '' ?>>OpenAI</option>
+                        <option value="Gemini" <?= ($metadata['provider_caching'] ?? '') === 'Gemini' ? 'selected' : '' ?>>Gemini</option>
+                    </select><br>
+
+                    <label for='response_format'>Response Format</label><br>
+                    <select name="metadata[response_format]" id="response_format">
+                        <option value="json" <?= ($metadata['response_format'] ?? 'json') === 'json' ? 'selected' : '' ?>>JSON (structured)</option>
+                        <option value="simple" <?= ($metadata['response_format'] ?? '') === 'simple' ? 'selected' : '' ?>>Simple (natural language)</option>
+                    </select><br>
+
+                    <label for='dialogue_cache_uncached_count'><span class='tip-label' data-tip='Number of most recent dialogue entries to keep uncached (0-10)'>Uncached Dialogue Count</span></label><br>
+                    <input type='number' name='metadata[dialogue_cache_uncached_count]' id='dialogue_cache_uncached_count' value='<?= htmlspecialchars($metadata['dialogue_cache_uncached_count'] ?? '4') ?>' min='0' max='10' step='1'><br>
+
+                    <div id="simple_format_options" style="display:none; margin-top:12px; padding:8px; border-left:3px solid #176529;">
+                        <div style="font-size:13px; font-weight:600; margin-bottom:8px;">Simple Format Content Options:</div>
+                        <label class="label-with-toggle"><span>Include Mood</span>
+                            <input type="hidden" name="metadata[include_mood_requirement]" value="0">
+                            <input type="checkbox" name="metadata[include_mood_requirement]" value="1" <?= (!isset($metadata['include_mood_requirement']) || $metadata['include_mood_requirement']) ? 'checked' : '' ?>>
+                        </label><br>
+                        <label class="label-with-toggle"><span>Include Listener</span>
+                            <input type="hidden" name="metadata[include_listener_requirement]" value="0">
+                            <input type="checkbox" name="metadata[include_listener_requirement]" value="1" <?= (!isset($metadata['include_listener_requirement']) || $metadata['include_listener_requirement']) ? 'checked' : '' ?>>
+                        </label><br>
+                        <label class="label-with-toggle"><span>Include Actions</span>
+                            <input type="hidden" name="metadata[include_actions_list]" value="0">
+                            <input type="checkbox" name="metadata[include_actions_list]" value="1" <?= (!isset($metadata['include_actions_list']) || $metadata['include_actions_list']) ? 'checked' : '' ?>>
+                        </label><br>
+                        <label class="label-with-toggle"><span>Include Target</span>
+                            <input type="hidden" name="metadata[include_target_requirement]" value="0">
+                            <input type="checkbox" name="metadata[include_target_requirement]" value="1" <?= (!isset($metadata['include_target_requirement']) || $metadata['include_target_requirement']) ? 'checked' : '' ?>>
+                        </label>
+                    </div>
+
+                    <div id="verbose_logging_option" style="display:none; margin-top:12px;">
+                        <label class="label-with-toggle"><span class='tip-label' data-tip='Enable detailed logging for testing (verbose connector only)'>Verbose Logging</span>
+                            <input type="hidden" name="metadata[verbose_logging]" value="0">
+                            <input type="checkbox" name="metadata[verbose_logging]" value="1" <?= (!isset($metadata['verbose_logging']) || $metadata['verbose_logging']) ? 'checked' : '' ?>>
+                            <span class="toggle-text">On</span>
+                        </label>
+                    </div>
+
+                    <div style="margin-top:12px;">
+                        <label class="label-with-toggle"><span class='tip-label' data-tip='Recommended ON for advanced models (Claude 4.5, GPT-4, Gemini 2.0). Uses minimal quality instructions. Turn OFF for older/smaller models that benefit from explicit guidance.'>Minimize Quality Instructions (Recommended)</span>
+                            <input type="hidden" name="metadata[minimize_quality_prompt]" value="0">
+                            <input type="checkbox" name="metadata[minimize_quality_prompt]" value="1" <?= (!isset($metadata['minimize_quality_prompt']) || $metadata['minimize_quality_prompt']) ? 'checked' : '' ?>>
+                            <span class="toggle-text">On</span>
+                        </label>
+                    </div>
+
+                    <div style="margin-top:12px;">
+                        <label for='max_dialogue_cache_context_size'><span class='tip-label' data-tip='Maximum number of dialogue entries to cache in temp files. Higher = more context but larger cache files. Recommended: 93'>Max Dialogue Cache Context Size</span></label><br>
+                        <input type='number' name='metadata[max_dialogue_cache_context_size]' id='max_dialogue_cache_context_size' value='<?= htmlspecialchars($metadata['max_dialogue_cache_context_size'] ?? '93') ?>' min='0' step='1'>
+                    </div>
+
+                    <div style="margin-top:12px;">
+                        <label for='custom_system_instruction'><span class='tip-label' data-tip='Additional instruction added to the system prompt (after character bio, before dialogue history). Does NOT replace other instructions.'>Custom System Instruction</span></label><br>
+                        <textarea name='metadata[custom_system_instruction]' id='custom_system_instruction' rows='3' style='width:100%; box-sizing:border-box;'><?= htmlspecialchars($metadata['custom_system_instruction'] ?? '') ?></textarea>
+                    </div>
+
+                    <div style="margin-top:12px;">
+                        <label for='custom_last_instruction'><span class='tip-label' data-tip='Custom text inserted as second-to-last element in dialogue history (current user message is always last). Appears right before user current request.'>Custom Last Instruction</span></label><br>
+                        <textarea name='metadata[custom_last_instruction]' id='custom_last_instruction' rows='3' style='width:100%; box-sizing:border-box;'><?= htmlspecialchars($metadata['custom_last_instruction'] ?? '') ?></textarea>
+                    </div>
+                </div>
             </div>
             <div>
                 <?php
@@ -371,14 +483,14 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 echo "<label for='max_tokens' style='margin-top:10px; display:block;'><span class='tip-label' data-tip='" . htmlspecialchars($tipMaxTokens, ENT_QUOTES) . "'>Max Tokens</span></label>";
                 echo "<input type='number' name='max_tokens' value='" . htmlspecialchars($editItem["max_tokens"] ?? "") . "' min='0' step='1'>";
                 $ranges = [
-                    'temperature' => ['min'=>0,'max'=>2,'step'=>0.01],
-                    'presence_penalty' => ['min'=>-2,'max'=>2,'step'=>0.01],
-                    'frequency_penalty' => ['min'=>-2,'max'=>2,'step'=>0.01],
-                    'repetition_penalty' => ['min'=>0,'max'=>2,'step'=>0.01],
-                    'top_p' => ['min'=>0,'max'=>1,'step'=>0.01],
+                    'temperature' => ['min'=>0,'max'=>2,'step'=>0.0001],
+                    'presence_penalty' => ['min'=>-2,'max'=>2,'step'=>0.0001],
+                    'frequency_penalty' => ['min'=>-2,'max'=>2,'step'=>0.0001],
+                    'repetition_penalty' => ['min'=>0,'max'=>2,'step'=>0.0001],
+                    'top_p' => ['min'=>0,'max'=>1,'step'=>0.0001],
                     'top_k' => ['min'=>0,'max'=>100,'step'=>1],
-                    'min_p' => ['min'=>0,'max'=>1,'step'=>0.01],
-                    'top_a' => ['min'=>0,'max'=>1,'step'=>0.01],
+                    'min_p' => ['min'=>0,'max'=>1,'step'=>0.0001],
+                    'top_a' => ['min'=>0,'max'=>1,'step'=>0.0001],
                 ];
                 $displayDefaults = [
                     'temperature' => 1,
@@ -556,7 +668,37 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             } catch(_e){}
         })();
         icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service, true)); });
-        if (driverSelect){ driverSelect.addEventListener('change', function(){ if (driverInput) driverInput.value = this.value; }); }
+        if (driverSelect){ driverSelect.addEventListener('change', function(){ if (driverInput) driverInput.value = this.value; updateCachingSettings(); }); }
+
+        // Caching settings visibility logic
+        function updateCachingSettings(){
+            const driver = driverInput ? driverInput.value : (driverSelect ? driverSelect.value : '');
+            const cachingSettings = document.getElementById('caching_settings');
+            const simpleFormatOptions = document.getElementById('simple_format_options');
+            const verboseLoggingOption = document.getElementById('verbose_logging_option');
+            const responseFormatSelect = document.getElementById('response_format');
+
+            // Show caching settings only for cached drivers
+            const isCachedDriver = driver === 'openrouterjsoncached' || driver === 'openrouterjsoncached_verbose';
+            if (cachingSettings) cachingSettings.style.display = isCachedDriver ? '' : 'none';
+
+            // Show verbose logging option only for verbose driver
+            if (verboseLoggingOption) verboseLoggingOption.style.display = (driver === 'openrouterjsoncached_verbose') ? '' : 'none';
+
+            // Show simple format options based on response_format selection
+            if (responseFormatSelect && simpleFormatOptions) {
+                simpleFormatOptions.style.display = (responseFormatSelect.value === 'simple') ? '' : 'none';
+            }
+        }
+
+        // Listen for response format changes
+        const responseFormatSelect = document.getElementById('response_format');
+        if (responseFormatSelect) {
+            responseFormatSelect.addEventListener('change', updateCachingSettings);
+        }
+
+        // Initial call to set correct visibility
+        updateCachingSettings();
     })();
     </script>
     <div id="toast" class="toast-notification" style="position:static; margin: 8px auto 12px; display:block; opacity:0; transform:none; max-width:960px; width: calc(100% - 20px);"><span class="message"></span></div>
@@ -574,7 +716,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     }
     // Sync On/Off labels for checkboxes
     (function(){
-        const names = ['reasoning_model','enforce_json','json_schema','prefill_json'];
+        const names = ['enforce_json','json_schema','prefill_json'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
@@ -837,29 +979,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import"])) {
         $tmp = $_FILES['import_file']['tmp_name'];
         $fh = fopen($tmp, 'r');
         if (!$fh) { header("Location: $redir"); exit; }
-        
-        // Read header, skipping any empty lines at the start
-        $header = false;
-        while (($line = fgetcsv($fh)) !== false) {
-            if (!empty(array_filter($line, function($v){ return trim((string)$v) !== ''; }))) {
-                $header = $line;
-                break;
-            }
-        }
+        $header = fgetcsv($fh);
         if ($header === false) { fclose($fh); header("Location: $redir"); exit; }
         $cols = array_map(function($v){ return strtolower(trim((string)$v)); }, $header);
-        
-        // Skip empty lines to find actual data row
-        $row = false;
-        while (($line = fgetcsv($fh)) !== false) {
-            if (!empty(array_filter($line, function($v){ return trim((string)$v) !== ''; }))) {
-                $row = $line;
-                break;
-            }
-        }
+        $row = fgetcsv($fh);
         fclose($fh);
         if ($row === false) { header("Location: $redir"); exit; }
-        
         $dataMap = [];
         for ($i=0; $i<count($cols); $i++) { $k = $cols[$i] ?? ''; if ($k==='') continue; $dataMap[$k] = $row[$i] ?? ''; }
 
@@ -919,10 +1044,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import"])) {
             $newId = $last['id'] ?? '';
         }
         $redir = 'llm_connectors.php' . ($newId ? ('?edit=' . urlencode($newId)) : '');
-    } catch (Exception $e) {
-        error_log("[CSV Import Error] " . $e->getMessage());
-        error_log("[CSV Import Error] Stack trace: " . $e->getTraceAsString());
-        $redir = 'llm_connectors.php?notice=' . urlencode('Import failed: ' . $e->getMessage());
+    } catch (Exception $_e) {
+        $redir = 'llm_connectors.php';
     }
     header("Location: $redir");
     exit;
@@ -1146,6 +1269,17 @@ if (typeof window.consolidation !== 'function') {
     window.consolidation = function(){ return true; };
 }
 </script>
+<?php
+// Parse metadata for main editor form (same as partial editor)
+$metadataArr = [];
+if (isset($editItem["metadata"]) && !empty($editItem["metadata"])) {
+    $tmpMeta = json_decode($editItem["metadata"], true);
+    if (is_array($tmpMeta)) $metadataArr = $tmpMeta;
+}
+$toggleThinking = isset($metadataArr["toggle_thinking"]) && $metadataArr["toggle_thinking"];
+$thinkingTokens = $metadataArr["thinking_tokens"] ?? '';
+$effortLevel = $metadataArr["effort_level"] ?? '';
+?>
 <form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= $editItem["id"] ?>">
@@ -1202,6 +1336,8 @@ if (typeof window.consolidation !== 'function') {
                 <input type="text" id="driver_input" name="driver" value="<?= htmlspecialchars($editItem["driver"] ?? "") ?>" style="display:none"><br>
                 <select id="driver_select">
                     <option value="openrouterjson">OpenRouter JSON</option>
+                    <option value="openrouterjsoncached">OpenRouter JSON (Cached)</option>
+                    <option value="openrouterjsoncached_verbose">OpenRouter JSON (Cached + Verbose Logging)</option>
                     <option value="openaijson">OpenAI JSON</option>
                     <option value="google_openaijson">Google OpenAI JSON</option>
                 </select>
@@ -1248,12 +1384,24 @@ if (typeof window.consolidation !== 'function') {
             echo "<div id='api_key_notice' class='api-key-notice'></div>";
             ?>
             </div>
-            <div id="reasoning_row">
-                <label class="label-with-toggle"><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span>
-                    <input type="hidden" name="reasoning_model" value="0">
-                    <input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>>
+            <div id="reasoning_details_modal" style="margin-top:8px; padding:8px; border-left:2px solid #444;">
+                <label class="label-with-toggle"><span class='tip-label' data-tip='Enable thinking/reasoning for supported models (like o1, DeepSeek-R1). Shows model internal reasoning process.'>Toggle Thinking</span>
+                    <input type="hidden" name="metadata[toggle_thinking]" value="0">
+                    <input type="checkbox" id="toggle_thinking_modal" name="metadata[toggle_thinking]" value="1" <?= $toggleThinking ? "checked" : "" ?>>
                     <span class="toggle-text">On</span>
                 </label>
+                <div style="height:6px;"></div>
+                <label for='thinking_tokens_modal'><span class='tip-label' data-tip='Maximum tokens for thinking/reasoning output (Anthropic/Gemini only). OpenAI uses effort_level instead. Leave empty to use default.'>Thinking Tokens</span></label>
+                <input type="number" id="thinking_tokens_modal" name="metadata[thinking_tokens]" value="<?= htmlspecialchars($thinkingTokens) ?>" min="0" step="1" placeholder="Optional">
+                <div style="height:6px;"></div>
+                <label for='effort_level_modal'><span class='tip-label' data-tip='Reasoning effort level for OpenAI reasoning models (o1, o3, o4, gpt-5). minimal=Quick (gpt-5+), low=Basic, medium=Balanced, high=Thorough. Leave empty for default.'>Effort Level</span></label>
+                <select id="effort_level_modal" name="metadata[effort_level]">
+                    <option value="">-- select --</option>
+                    <option value="minimal" <?= $effortLevel === 'minimal' ? 'selected' : '' ?>>Minimal</option>
+                    <option value="low" <?= $effortLevel === 'low' ? 'selected' : '' ?>>Low</option>
+                    <option value="medium" <?= $effortLevel === 'medium' ? 'selected' : '' ?>>Medium</option>
+                    <option value="high" <?= $effortLevel === 'high' ? 'selected' : '' ?>>High</option>
+                </select>
             </div>
             <div id="json_toggles" style="margin-top:8px;">
                 <label class="label-with-toggle"><span class='tip-label' data-tip='Force responses to be strict JSON. Non‑JSON output may be rejected or auto‑retried.'>Enforce JSON</span>
@@ -1276,6 +1424,91 @@ if (typeof window.consolidation !== 'function') {
                     <span class="toggle-text">On</span>
                 </label>
             </div>
+
+            <?php
+            // Decode metadata for caching settings (main editor)
+            $metadata_main = [];
+            if (isset($editItem['metadata'])) {
+                if (is_string($editItem['metadata'])) {
+                    $metadata_main = json_decode($editItem['metadata'], true) ?: [];
+                } elseif (is_array($editItem['metadata'])) {
+                    $metadata_main = $editItem['metadata'];
+                }
+            }
+            ?>
+
+            <!-- Caching Settings (shown only for cached connectors) - MAIN EDITOR -->
+            <div id="caching_settings_main" style="display:none; margin-top:16px; padding:12px; border:1px solid #4a4a4a; border-radius:8px; background:#1a1a1a;">
+                <div style="font-weight:600; color:#e9efff; margin-bottom:4px;">🔄 Caching Settings</div>
+                <div style="font-size:11px; color:#888; margin-bottom:12px;">OpenRouter Cache Connector v1.3.3 for CHIM 2.0.3 | 2025/11/16</div>
+
+                <label for='provider_caching_main'>Provider Caching Type</label><br>
+                <select name="metadata[provider_caching]" id="provider_caching_main">
+                    <option value="Anthropic" <?= ($metadata_main['provider_caching'] ?? 'Anthropic') === 'Anthropic' ? 'selected' : '' ?>>Anthropic</option>
+                    <option value="OpenAI" <?= ($metadata_main['provider_caching'] ?? '') === 'OpenAI' ? 'selected' : '' ?>>OpenAI</option>
+                    <option value="Gemini" <?= ($metadata_main['provider_caching'] ?? '') === 'Gemini' ? 'selected' : '' ?>>Gemini</option>
+                </select><br>
+
+                <label for='response_format_main'>Response Format</label><br>
+                <select name="metadata[response_format]" id="response_format_main">
+                    <option value="json" <?= ($metadata_main['response_format'] ?? 'json') === 'json' ? 'selected' : '' ?>>JSON (structured)</option>
+                    <option value="simple" <?= ($metadata_main['response_format'] ?? '') === 'simple' ? 'selected' : '' ?>>Simple (natural language)</option>
+                </select><br>
+
+                <label for='dialogue_cache_uncached_count_main'><span class='tip-label' data-tip='Number of most recent dialogue entries to keep uncached (0-10)'>Uncached Dialogue Count</span></label><br>
+                <input type='number' name='metadata[dialogue_cache_uncached_count]' id='dialogue_cache_uncached_count_main' value='<?= htmlspecialchars($metadata_main['dialogue_cache_uncached_count'] ?? '4') ?>' min='0' max='10' step='1'><br>
+
+                <div id="simple_format_options_main" style="display:none; margin-top:12px; padding:8px; border-left:3px solid #176529;">
+                    <div style="font-size:13px; font-weight:600; margin-bottom:8px;">Simple Format Content Options:</div>
+                    <label class="label-with-toggle"><span>Include Mood</span>
+                        <input type="hidden" name="metadata[include_mood_requirement]" value="0">
+                        <input type="checkbox" name="metadata[include_mood_requirement]" value="1" <?= (!isset($metadata_main['include_mood_requirement']) || $metadata_main['include_mood_requirement']) ? 'checked' : '' ?>>
+                    </label><br>
+                    <label class="label-with-toggle"><span>Include Listener</span>
+                        <input type="hidden" name="metadata[include_listener_requirement]" value="0">
+                        <input type="checkbox" name="metadata[include_listener_requirement]" value="1" <?= (!isset($metadata_main['include_listener_requirement']) || $metadata_main['include_listener_requirement']) ? 'checked' : '' ?>>
+                    </label><br>
+                    <label class="label-with-toggle"><span>Include Actions</span>
+                        <input type="hidden" name="metadata[include_actions_list]" value="0">
+                        <input type="checkbox" name="metadata[include_actions_list]" value="1" <?= (!isset($metadata_main['include_actions_list']) || $metadata_main['include_actions_list']) ? 'checked' : '' ?>>
+                    </label><br>
+                    <label class="label-with-toggle"><span>Include Target</span>
+                        <input type="hidden" name="metadata[include_target_requirement]" value="0">
+                        <input type="checkbox" name="metadata[include_target_requirement]" value="1" <?= (!isset($metadata_main['include_target_requirement']) || $metadata_main['include_target_requirement']) ? 'checked' : '' ?>>
+                    </label>
+                </div>
+
+                <div id="verbose_logging_option_main" style="display:none; margin-top:12px;">
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Enable detailed logging for testing (verbose connector only)'>Verbose Logging</span>
+                        <input type="hidden" name="metadata[verbose_logging]" value="0">
+                        <input type="checkbox" name="metadata[verbose_logging]" value="1" <?= (!isset($metadata_main['verbose_logging']) || $metadata_main['verbose_logging']) ? 'checked' : '' ?>>
+                        <span class="toggle-text">On</span>
+                    </label>
+                </div>
+
+                <div style="margin-top:12px;">
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Recommended ON for advanced models (Claude 4.5, GPT-4, Gemini 2.0). Uses minimal quality instructions. Turn OFF for older/smaller models that benefit from explicit guidance.'>Minimize Quality Instructions (Recommended)</span>
+                        <input type="hidden" name="metadata[minimize_quality_prompt]" value="0">
+                        <input type="checkbox" name="metadata[minimize_quality_prompt]" value="1" <?= (!isset($metadata_main['minimize_quality_prompt']) || $metadata_main['minimize_quality_prompt']) ? 'checked' : '' ?>>
+                        <span class="toggle-text">On</span>
+                    </label>
+                </div>
+
+                <div style="margin-top:12px;">
+                    <label for='max_dialogue_cache_context_size_main'><span class='tip-label' data-tip='Maximum number of dialogue entries to cache in temp files. Higher = more context but larger cache files. Recommended: 93'>Max Dialogue Cache Context Size</span></label><br>
+                    <input type='number' name='metadata[max_dialogue_cache_context_size]' id='max_dialogue_cache_context_size_main' value='<?= htmlspecialchars($metadata_main['max_dialogue_cache_context_size'] ?? '93') ?>' min='0' step='1'>
+                </div>
+
+                <div style="margin-top:12px;">
+                    <label for='custom_system_instruction_main'><span class='tip-label' data-tip='Additional instruction added to the system prompt (after character bio, before dialogue history). Does NOT replace other instructions.'>Custom System Instruction</span></label><br>
+                    <textarea name='metadata[custom_system_instruction]' id='custom_system_instruction_main' rows='3' style='width:100%; box-sizing:border-box;'><?= htmlspecialchars($metadata_main['custom_system_instruction'] ?? '') ?></textarea>
+                </div>
+
+                <div style="margin-top:12px;">
+                    <label for='custom_last_instruction_main'><span class='tip-label' data-tip='Custom text inserted as second-to-last element in dialogue history (current user message is always last). Appears right before user current request.'>Custom Last Instruction</span></label><br>
+                    <textarea name='metadata[custom_last_instruction]' id='custom_last_instruction_main' rows='3' style='width:100%; box-sizing:border-box;'><?= htmlspecialchars($metadata_main['custom_last_instruction'] ?? '') ?></textarea>
+                </div>
+            </div>
         </div>
 
         <div>
@@ -1284,14 +1517,14 @@ if (typeof window.consolidation !== 'function') {
             echo "<label for='max_tokens' style='margin-top:10px; display:block;'><span class='tip-label' data-tip='" . htmlspecialchars($tipMaxTokens, ENT_QUOTES) . "'>Max Tokens</span></label>";
             echo "<input type='number' name='max_tokens' value='" . htmlspecialchars($editItem["max_tokens"] ?? "") . "' min='0' step='1'>";
             $ranges = [
-                'temperature' => ['min'=>0,'max'=>2,'step'=>0.01],
-                'presence_penalty' => ['min'=>-2,'max'=>2,'step'=>0.01],
-                'frequency_penalty' => ['min'=>-2,'max'=>2,'step'=>0.01],
-                'repetition_penalty' => ['min'=>0,'max'=>2,'step'=>0.01],
-                'top_p' => ['min'=>0,'max'=>1,'step'=>0.01],
+                'temperature' => ['min'=>0,'max'=>2,'step'=>0.0001],
+                'presence_penalty' => ['min'=>-2,'max'=>2,'step'=>0.0001],
+                'frequency_penalty' => ['min'=>-2,'max'=>2,'step'=>0.0001],
+                'repetition_penalty' => ['min'=>0,'max'=>2,'step'=>0.0001],
+                'top_p' => ['min'=>0,'max'=>1,'step'=>0.0001],
                 'top_k' => ['min'=>0,'max'=>100,'step'=>1],
-                'min_p' => ['min'=>0,'max'=>1,'step'=>0.01],
-                'top_a' => ['min'=>0,'max'=>1,'step'=>0.01],
+                'min_p' => ['min'=>0,'max'=>1,'step'=>0.0001],
+                'top_a' => ['min'=>0,'max'=>1,'step'=>0.0001],
             ];
             $displayDefaults = [
                 'temperature' => 1,
@@ -1386,7 +1619,7 @@ if (typeof window.consolidation !== 'function') {
 <script>
 // Sync On/Off labels for checkboxes
 (function(){
-    const names = ['reasoning_model','enforce_json','json_schema','prefill_json'];
+    const names = ['enforce_json','json_schema','prefill_json'];
     names.forEach(n=>{
         const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
         if (!cb) return;
@@ -1446,8 +1679,50 @@ if (typeof window.consolidation !== 'function') {
     function detectService(){ const sValRaw=(document.getElementById('service_input')&&String(document.getElementById('service_input').value||''))||''; const sVal=sValRaw.toLowerCase(); if (['openrouter','openai','google','nanogpt','custom'].includes(sVal)) return sVal; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (u){ if (u.includes('openai.com')) return 'openai'; if (u.includes('generativelanguage.googleapis.com')) return 'google'; if (u.includes('openrouter.ai')) return 'openrouter'; if (u.includes('nano-gpt.com')) return 'nanogpt'; return 'custom'; } const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; if (d.includes('openai')) return 'openai'; if (d.includes('google')) return 'google'; if (d.includes('nanogpt')) return 'nanogpt'; if (d.includes('openrouter')) return 'openrouter'; return 'openrouter'; }
     (function init(){ const service = detectService(); applyService(service, false); const driverSelect = document.getElementById('driver_select'); if (driverSelect) { driverSelect.addEventListener('change', function(){ if (driverInput) driverInput.value = this.value; }); if (driverInput && driverInput.value) driverSelect.value = driverInput.value; } const btnWSL = document.getElementById('btn_wsl_ip'); const btnHost = document.getElementById('btn_host_ip'); function fillFrom(buttonEl, ip){ if (!buttonEl) return; const form = buttonEl.closest('form'); const urlEl = form ? form.querySelector('input[name="url"]') : document.querySelector('input[name="url"]'); if (!ip || !urlEl) return; urlEl.value = 'http://' + ip + ':5001'; try { urlEl.dispatchEvent(new Event('input', { bubbles:true })); } catch(_e){} try { urlEl.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){} try { urlEl.focus(); } catch(_e){} } if (btnWSL) btnWSL.addEventListener('click', function(){ let ip = this.getAttribute('data-ip')||''; if (!ip) { ip = '<?= htmlspecialchars($WSL_IP) ?>'; } fillFrom(this, String(ip).trim()); }); if (btnHost) btnHost.addEventListener('click', function(){ let ip = this.getAttribute('data-ip')||''; if (!ip) { ip = '<?= htmlspecialchars($HOST_IP) ?>'; } fillFrom(this, String(ip).trim()); }); })();
     icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service, true)); });
-    if (driverInput){ driverInput.addEventListener('input', ()=> applyService(detectService(), false)); driverInput.addEventListener('change', ()=> applyService(detectService(), false)); }
+    if (driverInput){ driverInput.addEventListener('input', ()=> { applyService(detectService(), false); updateCachingSettingsMain(); }); driverInput.addEventListener('change', ()=> { applyService(detectService(), false); updateCachingSettingsMain(); }); }
     if (urlInput){ urlInput.addEventListener('change', ()=> { const sEl=document.getElementById('service_input'); const sVal = sEl ? String(sEl.value||'').toLowerCase() : ''; if (sVal==='custom') return; applyService(detectService(), false); }); }
+
+    // Also listen to driver_select changes for caching settings
+    const driverSelect = document.getElementById('driver_select');
+    if (driverSelect) {
+        driverSelect.addEventListener('change', function() {
+            if (driverInput) driverInput.value = this.value;
+            updateCachingSettingsMain();
+        });
+    }
+})();
+
+// Caching settings visibility logic for main editor
+function updateCachingSettingsMain(){
+    const driverInput = document.querySelector('input[name="driver"]');
+    const driverSelect = document.getElementById('driver_select');
+    const driver = driverInput ? driverInput.value : (driverSelect ? driverSelect.value : '');
+    const cachingSettings = document.getElementById('caching_settings_main');
+    const simpleFormatOptions = document.getElementById('simple_format_options_main');
+    const verboseLoggingOption = document.getElementById('verbose_logging_option_main');
+    const responseFormatSelect = document.getElementById('response_format_main');
+
+    // Show caching settings only for cached drivers
+    const isCachedDriver = driver === 'openrouterjsoncached' || driver === 'openrouterjsoncached_verbose';
+    if (cachingSettings) cachingSettings.style.display = isCachedDriver ? '' : 'none';
+
+    // Show verbose logging option only for verbose driver
+    if (verboseLoggingOption) verboseLoggingOption.style.display = (driver === 'openrouterjsoncached_verbose') ? '' : 'none';
+
+    // Show simple format options based on response_format selection
+    if (responseFormatSelect && simpleFormatOptions) {
+        simpleFormatOptions.style.display = (responseFormatSelect.value === 'simple') ? '' : 'none';
+    }
+}
+
+// Listen for response format changes in main editor
+(function(){
+    const responseFormatSelect = document.getElementById('response_format_main');
+    if (responseFormatSelect) {
+        responseFormatSelect.addEventListener('change', updateCachingSettingsMain);
+    }
+    // Initial call to set correct visibility
+    updateCachingSettingsMain();
 })();
 function llmClamp(rangeId, numberId, min, max){ const r = document.getElementById(rangeId); const n = document.getElementById(numberId); if (!r || !n) return; let v = parseFloat(n.value); if (isNaN(v)) v = min; if (v < min) v = min; if (v > max) v = max; n.value = v; r.value = v; }
 // Clear advanced settings (all below Temperature)
@@ -1659,6 +1934,84 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
  // Provides a JSON editor for metadata field and form consolidation function (only needed if metadata field is present)
  include(__DIR__."/tmpl/metadata_json_editor.php");
  ?>
+
+<script>
+// Extend consolidation() to merge reasoning fields into metadata
+(function(){
+    const originalConsolidation = window.consolidation;
+    window.consolidation = function() {
+        // First run the original consolidation (from metadata_json_editor.php)
+        const result = originalConsolidation ? originalConsolidation() : true;
+        if (!result) return false;
+
+        // Now merge our custom reasoning fields into metadata
+        const form = document.querySelector('form[method="POST"]');
+        if (!form || !form.metadata) return result;
+
+        try {
+            // Parse existing metadata
+            let metadata = {};
+            try {
+                const metaStr = form.metadata.value || '{}';
+                metadata = JSON.parse(metaStr);
+            } catch (_e) {
+                metadata = {};
+            }
+
+            // Collect reasoning field values (check both regular and modal IDs)
+            const toggleThinkingEl = document.getElementById('toggle_thinking') || document.getElementById('toggle_thinking_modal');
+            const thinkingTokensEl = document.getElementById('thinking_tokens') || document.getElementById('thinking_tokens_modal');
+            const effortLevelEl = document.getElementById('effort_level') || document.getElementById('effort_level_modal');
+
+            // Add toggle_thinking
+            if (toggleThinkingEl) {
+                metadata.toggle_thinking = toggleThinkingEl.checked;
+            }
+
+            // Add thinking_tokens (only if not empty)
+            if (thinkingTokensEl) {
+                const val = thinkingTokensEl.value.trim();
+                if (val !== '') {
+                    metadata.thinking_tokens = parseInt(val, 10);
+                } else {
+                    delete metadata.thinking_tokens;
+                }
+            }
+
+            // Add effort_level (only if not empty)
+            if (effortLevelEl) {
+                const val = effortLevelEl.value.trim();
+                if (val !== '') {
+                    metadata.effort_level = val;
+                } else {
+                    delete metadata.effort_level;
+                }
+            }
+
+            // Update form metadata field
+            form.metadata.value = JSON.stringify(metadata);
+        } catch (err) {
+            console.error('Error merging reasoning fields into metadata:', err);
+        }
+
+        return result;
+    };
+})();
+
+// Sync On/Off labels for the new reasoning toggle checkboxes
+(function(){
+    const toggleIds = ['toggle_thinking', 'toggle_thinking_modal'];
+    toggleIds.forEach(id => {
+        const cb = document.getElementById(id);
+        if (!cb) return;
+        const label = cb.closest('label');
+        const span = label ? label.querySelector('.toggle-text') : null;
+        function sync(){ if (span) span.textContent = cb.checked ? 'On' : 'Off'; }
+        cb.addEventListener('change', sync);
+        sync(); // Initial sync
+    });
+})();
+</script>
 
 </main>
 

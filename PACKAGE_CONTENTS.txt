@@ -1,0 +1,288 @@
+CHIM Cached Connector v1.3.3 - Package Contents
+===============================================
+
+This package contains all files needed to install or upgrade the
+CHIM Cached Connector with advanced caching, thinking/reasoning,
+flexible quality instruction control, correct custom instruction
+placement, and true sentence-by-sentence streaming for simple format.
+
+DIRECTORY STRUCTURE
+-------------------
+
+chim_v1.3.3_package/
+├── CHANGELOG.txt
+├── INSTALLATION_INSTRUCTIONS.txt
+├── PACKAGE_CONTENTS.txt (this file)
+├── CLAUDE_changelog.md
+├── conf/
+│   └── conf_schema.json
+├── connector/
+│   ├── openrouterjsoncached.php
+│   ├── openrouterjsoncached_helpers.php
+│   ├── openrouterjsoncached_verbose.php
+│   └── OPENROUTERJSONCACHED_README.md
+├── lib/
+│   ├── chat_helper_functions.php
+│   ├── data_functions.php
+│   └── core/
+│       └── llm_connector.class.php
+├── prompts/
+│   └── dialogue_prompt.php
+└── ui/
+    ├── events-memories.php
+    └── core/
+        └── llm_connectors.php
+
+FILE DESCRIPTIONS
+-----------------
+
+Documentation Files:
+- CHANGELOG.txt
+  Release notes for v1.3.3, changes from v1.3.2
+  Key focus: Simple format streaming performance improvement
+
+- INSTALLATION_INSTRUCTIONS.txt
+  Complete installation and configuration guide
+  Updated for v1.3.3 streaming features
+
+- PACKAGE_CONTENTS.txt
+  This file - listing of all package contents
+
+- CLAUDE_changelog.md
+  Complete development history and audit trail
+  Includes Entry 9 for v1.3.3 streaming fix
+
+Configuration Files:
+- conf/conf_schema.json
+  Configuration schema for CHIM settings
+  Defines available connector options
+
+Connector Core Files:
+- connector/openrouterjsoncached.php
+  Main connector implementation (v1.3.3)
+  NEW: handlesSentenceSplitting() method for streaming
+  Handles API communication, caching, thinking, quality control
+
+- connector/openrouterjsoncached_helpers.php
+  Helper functions for connector
+  Format building, response parsing
+
+- connector/openrouterjsoncached_verbose.php
+  Verbose/debug version of connector
+  Additional logging and diagnostics
+
+- connector/OPENROUTERJSONCACHED_README.md
+  Connector-specific documentation
+  Technical details and API reference
+
+Library Files:
+- lib/core/llm_connector.class.php
+  Core LLM connector class
+  Base functionality for all connectors
+
+- lib/chat_helper_functions.php
+  Helper functions for chat processing
+  Message formatting, context handling
+
+- lib/data_functions.php
+  Data processing and manipulation functions (v1.3.3)
+  NEW: Conditional sentence processing logic
+  Database operations, data transformation
+
+Prompt Files:
+- prompts/dialogue_prompt.php
+  Dialogue prompt templates
+  Quality instruction templates
+
+UI Files:
+- ui/core/llm_connectors.php
+  Connector configuration interface (v1.3.3)
+  Settings forms, validation
+
+- ui/events-memories.php
+  Events and memories interface
+  Context management UI
+
+FILE SIZES (Approximate)
+-------------------------
+
+Total Package Size: ~800 KB
+
+Largest Files:
+- ui/core/llm_connectors.php: ~150 KB
+- lib/data_functions.php: ~182 KB (slightly larger - new logic added)
+- conf/conf_schema.json: ~87 KB
+- connector/openrouterjsoncached_verbose.php: ~94 KB
+- connector/openrouterjsoncached.php: ~73 KB
+- lib/chat_helper_functions.php: ~70 KB
+- ui/events-memories.php: ~59 KB
+
+INSTALLATION ORDER
+------------------
+
+Files should be installed in this order for best results:
+
+1. Configuration files (conf/)
+2. Library files (lib/ and lib/core/)
+3. Connector files (connector/)
+4. Prompt files (prompts/)
+5. UI files (ui/ and ui/core/)
+6. Clear cache files (*.tmp)
+
+See INSTALLATION_INSTRUCTIONS.txt for detailed steps.
+
+VERSION COMPATIBILITY
+---------------------
+
+All files in this package are version-matched for v1.3.3:
+
+- connector/openrouterjsoncached.php: v1.3.3
+- lib/data_functions.php: v1.3.3 (streaming logic added)
+- ui/core/llm_connectors.php: v1.3.3 display
+- All other files: Compatible with v1.3.3
+
+CHANGES FROM v1.3.2 PACKAGE
+----------------------------
+
+Modified Files:
+- connector/openrouterjsoncached.php
+  * Added handlesSentenceSplitting() method (lines 134-138)
+  * Signals that connector returns complete sentences
+  * Updated version to v1.3.3 (line 12)
+
+- lib/data_functions.php
+  * Added conditional sentence processing (lines 2988-3019)
+  * Bypasses 75-char minimum for simple format
+  * Preserves original logic for JSON format
+  * Enables true streaming for simple format
+
+- ui/core/llm_connectors.php
+  * Updated version display to v1.3.3 (lines 410, 1443)
+
+- CHANGELOG.txt
+  * Updated for v1.3.3 changes
+  * Detailed streaming performance improvement
+
+- INSTALLATION_INSTRUCTIONS.txt
+  * Updated for v1.3.3 features
+  * Added streaming testing instructions
+  * Updated performance notes
+
+- PACKAGE_CONTENTS.txt
+  * This file updated for v1.3.3
+
+- CLAUDE_changelog.md
+  * Added Entry 9 for streaming fix
+  * Comprehensive documentation of changes
+
+Unchanged Files (same as v1.3.2):
+- connector/openrouterjsoncached_helpers.php
+- connector/openrouterjsoncached_verbose.php
+- connector/OPENROUTERJSONCACHED_README.md
+- lib/core/llm_connector.class.php
+- lib/chat_helper_functions.php
+- prompts/dialogue_prompt.php
+- ui/events-memories.php
+- conf/conf_schema.json
+
+UPGRADE PATH
+------------
+
+From v1.3.2:
+- Only 2 code files changed (connector, lib/data_functions)
+- Can do minimal upgrade of just those files
+- Recommended: Full package install for completeness
+- IMPORTANT: Clear cache files after upgrade
+- Test simple format to experience streaming improvement
+
+From v1.3.1:
+- Includes v1.3.2 custom instruction placement fix
+- Plus v1.3.3 streaming performance improvement
+- Full package installation recommended
+
+From v1.3.0 or earlier:
+- Full package installation required
+- Review all changelog files for accumulated changes
+- Test thoroughly after upgrade
+
+From v1.2.x or earlier:
+- Full package installation required
+- Many accumulated improvements
+- Review CLAUDE_changelog.md for complete history
+
+CHECKSUMS
+---------
+
+For file integrity verification, check file sizes:
+- If any file is significantly different in size, re-extract
+- Verify connector version in openrouterjsoncached.php line 12
+- Should show: v1.3.3 for CHIM 2.0.3 | 2025/11/16
+- Verify lib/data_functions.php has new streaming logic (lines 2988-3019)
+
+KEY FEATURES IN v1.3.3
+----------------------
+
+✓ TRUE SENTENCE-BY-SENTENCE STREAMING (NEW!)
+  - Simple format sentences sent immediately as generated
+  - No 75-character accumulation delay
+  - Significantly improved perceived responsiveness
+  - JSON format unchanged (still uses proper fragment accumulation)
+
+✓ Fixed custom_system_instruction placement (from v1.3.2)
+  - Now in system prompt before dialogue history
+  - Properly influences entire conversation
+
+✓ Conditional "Provide variety" filtering (from v1.3.1)
+  - Controlled by minimize_quality_prompt setting
+  - Default: enabled (recommended for advanced models)
+
+✓ Advanced caching support (from v1.2.x)
+  - Anthropic, OpenAI, Gemini cache support
+  - Dialogue history caching
+  - Significant token savings
+
+✓ Thinking/Reasoning support (from v1.2.x)
+  - Works with o1, Claude, Gemini 2.0
+  - Configurable effort levels
+  - Token budget control
+
+✓ Flexible response formats (from v1.2.x)
+  - JSON: Structured output
+  - Simple: Natural language with tags (now with streaming!)
+
+PERFORMANCE COMPARISON
+----------------------
+
+Simple Format Streaming Performance:
+
+v1.3.2 (Before):
+- Sentences: "Hello." "How are you?" "I'm well." "What brings you?"
+- Buffer accumulation: Wait until 75+ chars
+- All 4 sentences sent together after delay
+- Noticeable lag between generation and display
+
+v1.3.3 (After):
+- Sentence 1: "Hello." → Sent IMMEDIATELY ✓
+- Sentence 2: "How are you?" → Sent IMMEDIATELY ✓
+- Sentence 3: "I'm well." → Sent IMMEDIATELY ✓
+- Sentence 4: "What brings you?" → Sent IMMEDIATELY ✓
+- True streaming: Each sentence appears as generated
+
+JSON Format (Unchanged):
+- Fragment accumulation still applies
+- 75-character minimum preserved
+- Necessary for preventing incomplete sentences
+- Performance identical to v1.3.2
+
+SUPPORT
+-------
+
+For issues or questions:
+- Check INSTALLATION_INSTRUCTIONS.txt troubleshooting section
+- Review CHANGELOG.txt for known issues
+- Consult CLAUDE_changelog.md for development history
+
+Package Date: 2025-11-16
+CHIM Version: 2.0.3
+Connector Version: 1.3.3
+Key Feature: True sentence-by-sentence streaming for simple format
