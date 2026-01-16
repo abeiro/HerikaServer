@@ -287,10 +287,13 @@ function split_at_end_of_sentence($paragraph) {
     // split at dot, ellipsis, !, ? etc
     $sentences = [];
 
-    $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/'); // .?!。？！ 
+    $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/'); // .?!。？！
     //$splitSentenceRegex = "/(?<=[" . $eosPunc . "])[\p{P}]?[\s+]?/u"; //  This regex is eating ellipsis: /(?<=[.?!。？！])[\p{P}]?[\s+]?/u
-    $splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?!\.)[\p{P}]?[\s+]?/u";  // This should preserve ellipsis:   //   /(?<=[.?!。？！])(?!\.)[\p{P}]?[\s+]?/u
-    
+    //$splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?!\.)[\p{P}]?[\s+]?/u";  // This preserves ellipsis but eats asterisks/dashes when no space after period
+    // Fix: Exclude asterisks, dashes, hashes, at-signs, and opening brackets from being consumed
+    // This preserves action markers like "* rises *" while still consuming closing quotes/brackets
+    $splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?!\.)[^\p{L}\p{N}\s\*\-\#\@\(\[\{]?[\s+]?/u";
+
     $sentences = preg_split($splitSentenceRegex, $paragraph, -1, PREG_SPLIT_NO_EMPTY);
 
     return $sentences;
@@ -342,9 +345,11 @@ function split_sentences_stream($paragraph)
     }
 
     /*
-    $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/'); // .?!。？！ 
-    //$splitSentenceRegex = "/(?<=[" . $eosPunc . "])[\p{P}]?[\s+]?/u"; //  This regex is eating ellipsis: /(?<=[.?!。？！])[\p{P}]?[\s+]?/u
-    $splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?!\.)[\p{P}]?[\s+]?/u";  // This should preserve ellipsis:   //   /(?<=[.?!。？！])(?!\.)[\p{P}]?[\s+]?/u
+    $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/'); // .?!。？！
+    // Old regex that eats asterisks/dashes when no space after period:
+    //$splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?!\.)[\p{P}]?[\s+]?/u";
+    // Fixed regex that preserves action markers like "* rises *":
+    $splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?!\.)[^\p{L}\p{N}\s\*\-\#\@\(\[\{]?[\s+]?/u";
     $sentences = preg_split($splitSentenceRegex, $paragraph, -1, PREG_SPLIT_NO_EMPTY);
     */
     
