@@ -430,3 +430,130 @@ Enable true sentence-by-sentence streaming for simple format while preserving th
 
 ---
 
+## Session: 2026-01-16 - Fix Asterisk/Dash Stripping in Sentence Splitting
+
+### Entry 10: Fix punctuation stripping in split_at_end_of_sentence()
+**Timestamp:** 2026-01-16 UTC
+**Version:** v1.3.4
+**File Modified:**
+- `lib/chat_helper_functions.php` (lines 290-295)
+
+**Problem Identified:**
+User reported that asterisks were being stripped from the start of sentences (but not the first sentence). For example:
+- Input: `Hello there.* rises from chair *.`
+- Output sentence 2: `rises from chair *.` (leading asterisk missing!)
+
+The issue was **inconsistent** - sometimes middle sentences were fine. This inconsistency was explained by whether the LLM included a space after the period:
+- `Hello there. * rises...` → asterisk preserved (space before asterisk)
+- `Hello there.* rises...` → asterisk consumed (no space before asterisk)
+
+**Root Cause Analysis:**
+
+The `split_at_end_of_sentence()` function in `lib/chat_helper_functions.php` used this regex:
+```php
+$splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?!\.)[\p{P}]?[\s+]?/u";
+```
+
+The `[\p{P}]?` part matches ANY Unicode punctuation character. When there was no space between the sentence-ending period and the next character, the regex would consume:
+- `*` (asterisks) - used for action/narration markers
+- `-` (dashes) - used for pauses
+- `#` (hashes) - used for tags
+- `@` (at signs) - used for mentions
+- And any other punctuation in `\p{Po}` category
+
+**Why `[\p{P}]` Was Originally There:**
+The intent was to consume closing punctuation that legitimately follows sentence endings, such as:
+- Closing quotes: `She said "Hello." Then left.` (the `"` after `.` should be consumed)
+- Closing brackets: `(Hello there.) Next sentence.` (the `)` after `.` should be consumed)
+
+**The Fix:**
+
+Changed from consuming ANY punctuation to explicitly EXCLUDING problematic characters:
+
+Old regex:
+```php
+$splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?!\.)[\p{P}]?[\s+]?/u";
+```
+
+New regex:
+```php
+$splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?!\.)[^\p{L}\p{N}\s\*\-\#\@\(\[\{]?[\s+]?/u";
+```
+
+The new pattern `[^\p{L}\p{N}\s\*\-\#\@\(\[\{]?` matches any character that is NOT:
+- `\p{L}` - Letters (shouldn't be consumed anyway)
+- `\p{N}` - Numbers (shouldn't be consumed anyway)
+- `\s` - Whitespace (shouldn't be consumed anyway)
+- `\*` - Asterisks (action/narration markers)
+- `\-` - Dashes (pause markers)
+- `\#` - Hashes (tags)
+- `\@` - At signs (mentions)
+- `\(` `\[` `\{` - Opening brackets (start of content)
+
+This means closing quotes (`"`, `'`) and closing brackets (`)`, `]`, `}`) are still consumed correctly.
+
+**Test Results:**
+
+| Input | Before (v1.3.3) | After (v1.3.4) |
+|-------|-----------------|----------------|
+| `Hello there.* rises *` | `["Hello there.","rises *"]` ❌ | `["Hello there.","* rises *"]` ✓ |
+| `Hello there.- pauses -` | `["Hello there.","pauses -"]` ❌ | `["Hello there.","- pauses -"]` ✓ |
+| `Hello there.# tagged` | `["Hello there.","tagged"]` ❌ | `["Hello there.","# tagged"]` ✓ |
+| `Hello there.@ mention` | `["Hello there.","mention"]` ❌ | `["Hello there.","@ mention"]` ✓ |
+| `She said "Hello." Then` | `["She said \"Hello.","Then"]` ✓ | `["She said \"Hello.","Then"]` ✓ |
+| `(Hello.) Next` | `["(Hello.","Next"]` ✓ | `["(Hello.","Next"]` ✓ |
+| `Hello?! What` | `["Hello?","What"]` ✓ | `["Hello?","What"]` ✓ |
+
+**Files Updated:**
+- `lib/chat_helper_functions.php` - Fixed regex in `split_at_end_of_sentence()` function
+- `connector/openrouterjsoncached.php` - Version updated to v1.3.4
+- `connector/openrouterjsoncached_verbose.php` - Version updated to v1.3.4
+- `ui/core/llm_connectors.php` - Version display updated to v1.3.4
+
+**Also updated commented-out code in `split_sentences_stream()` to reflect the fix for consistency.**
+
+**Conceptual Goal:**
+Preserve action/narration markers (asterisks, dashes) and other semantic punctuation while still correctly handling closing quotes and brackets that legitimately follow sentence-ending punctuation.
+
+**Critical Analysis:**
+- The fix is surgical - only affects the specific character class in the regex
+- Backward compatible - closing quotes/brackets still work correctly
+- Forward compatible - explicitly excludes known problematic characters
+- The inconsistency users saw was due to LLM spacing behavior, not a race condition or timing issue
+
+---
+
+## Versioning and Documentation Requirements
+
+**IMPORTANT:** The following requirements MUST be followed for ALL changes, no matter how small:
+
+1. **Version Number Updates:**
+   - Every change requires a version increment (e.g., v1.3.3 → v1.3.4)
+   - Update version in: `connector/openrouterjsoncached.php`, `connector/openrouterjsoncached_verbose.php`, `ui/core/llm_connectors.php`
+   - Use format: `vX.Y.Z for CHIM X.X.X | YYYY/MM/DD`
+
+2. **CLAUDE_changelog.md Entry:**
+   - Every change MUST have an entry in this file
+   - Include: timestamp, version, files modified, problem identified, solution, test results
+   - Be thorough - future developers need to understand the change
+
+3. **CHANGELOG.txt Update:**
+   - Update the release notes for users
+   - Focus on user-facing changes and benefits
+
+4. **PACKAGE_CONTENTS.txt Update:**
+   - Update file descriptions and version references
+   - Update "CHANGES FROM vX.X.X" section
+
+5. **Git Commit:**
+   - Commit with descriptive message
+   - Push to appropriate branch
+
+**These requirements ensure:**
+- Complete audit trail of all changes
+- Easy debugging when issues arise
+- Proper versioning for user installations
+- No lost context between development sessions
+
+---
+

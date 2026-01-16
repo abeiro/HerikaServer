@@ -407,7 +407,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 <!-- Caching Settings (shown only for cached connectors) -->
                 <div id="caching_settings" style="display:none; margin-top:16px; padding:12px; border:1px solid #4a4a4a; border-radius:8px; background:#1a1a1a;">
                     <div style="font-weight:600; color:#e9efff; margin-bottom:4px;">🔄 Caching Settings</div>
-                    <div style="font-size:11px; color:#888; margin-bottom:12px;">OpenRouter Cache Connector v1.3.3 for CHIM 2.0.3 | 2025/11/16</div>
+                    <div style="font-size:11px; color:#888; margin-bottom:12px;">OpenRouter Cache Connector v1.3.4 for CHIM 2.0.3 | 2026/01/16</div>
 
                     <label for='provider_caching'>Provider Caching Type</label><br>
                     <select name="metadata[provider_caching]" id="provider_caching">
@@ -1440,7 +1440,7 @@ $effortLevel = $metadataArr["effort_level"] ?? '';
             <!-- Caching Settings (shown only for cached connectors) - MAIN EDITOR -->
             <div id="caching_settings_main" style="display:none; margin-top:16px; padding:12px; border:1px solid #4a4a4a; border-radius:8px; background:#1a1a1a;">
                 <div style="font-weight:600; color:#e9efff; margin-bottom:4px;">🔄 Caching Settings</div>
-                <div style="font-size:11px; color:#888; margin-bottom:12px;">OpenRouter Cache Connector v1.3.3 for CHIM 2.0.3 | 2025/11/16</div>
+                <div style="font-size:11px; color:#888; margin-bottom:12px;">OpenRouter Cache Connector v1.3.4 for CHIM 2.0.3 | 2026/01/16</div>
 
                 <label for='provider_caching_main'>Provider Caching Type</label><br>
                 <select name="metadata[provider_caching]" id="provider_caching_main">
