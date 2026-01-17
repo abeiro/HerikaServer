@@ -2001,6 +2001,7 @@ $ittById = $byId($ittRows);
 /* Modal styling for Profile Import */
 #import_profile_modal.modal-backdrop { display:none; position:fixed; left:0; top:0; right:0; bottom:0; background:rgba(0,0,0,0.75); z-index:10000; }
 #import_profile_modal.modal-backdrop.show { display:block; }
+#import_profile_modal.modal-backdrop { opacity: 1 !important; backdrop-filter: none !important; filter: none !important; }
 #import_profile_modal .modal-container {
     position:fixed;
     left:50%;
