@@ -2861,27 +2861,106 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           document.getElementById("npc_modal").style.cursor="wait";
           
           const processingMessage = document.createElement('div');
-          processingMessage.textContent = 'Processing...';
+          processingMessage.innerHTML = '<div style="display:flex;align-items:center;gap:10px;"><div class="spinner" style="width:20px;height:20px;border:3px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite;"></div><span>Generating profile with AI...</span></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
           processingMessage.style.position = 'fixed';
           processingMessage.style.top = '50%';
           processingMessage.style.left = '50%';
           processingMessage.style.transform = 'translate(-50%, -50%)';
-          processingMessage.style.backgroundColor = '#000';
+          processingMessage.style.backgroundColor = 'rgba(0,0,0,0.9)';
           processingMessage.style.color = '#fff';
-          processingMessage.style.padding = '10px 20px';
-          processingMessage.style.borderRadius = '8px';
+          processingMessage.style.padding = '16px 24px';
+          processingMessage.style.borderRadius = '10px';
           processingMessage.style.zIndex = '10001';
+          processingMessage.style.border = '1px solid #4a4a4a';
           processingMessage.id="processing_wheel";
           document.body.appendChild(processingMessage);
 
           const params = new URLSearchParams({ name: npcName });
           if (userPrompt) params.append('user_prompt', userPrompt);
           
-          const res = await fetch('../cmd/action_ai_regen_profile.php?' + params.toString());
-          let j={}; try { j = await res.json(); } catch(_e) { j={ok:false}; }
+          let j = {};
+          let fetchError = null;
+          try {
+            const res = await fetch('../cmd/action_ai_regen_profile.php?' + params.toString());
+            if (!res.ok) {
+              fetchError = 'Server returned status ' + res.status;
+            } else {
+              try { j = await res.json(); } catch(_e) { j = {done:false, error:'Invalid JSON response from server'}; }
+            }
+          } catch(e) {
+            fetchError = 'Network error: ' + String(e.message || e);
+          }
           
-          document.location.reload();
+          // Remove processing message
+          const procEl = document.getElementById('processing_wheel');
+          if (procEl) procEl.remove();
+          document.getElementById("npc_modal").style.cursor = "";
+          
+          if (fetchError) {
+            showAIGenerateResult(false, fetchError, npcName);
+            return;
+          }
+          
+          if (j && j.done) {
+            showAIGenerateResult(true, 'Profile successfully generated with ' + (j.fields_updated || 'multiple') + ' fields updated.', npcName);
+          } else {
+            const errMsg = (j && j.error) ? j.error : 'Unknown error occurred. Check the server logs for details.';
+            showAIGenerateResult(false, errMsg, npcName);
+          }
         });
+        
+        function showAIGenerateResult(success, message, npcName) {
+          const resultBox = document.createElement('div');
+          resultBox.style.position = 'fixed';
+          resultBox.style.inset = '0';
+          resultBox.style.zIndex = '10050';
+          resultBox.style.display = 'flex';
+          resultBox.style.alignItems = 'center';
+          resultBox.style.justifyContent = 'center';
+          resultBox.style.background = 'rgba(0,0,0,0.65)';
+          
+          const iconColor = success ? '#4ade80' : '#f87171';
+          const iconSymbol = success ? '✓' : '✕';
+          const title = success ? 'Profile Generated Successfully' : 'Profile Generation Failed';
+          
+          resultBox.innerHTML = '<div style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:20px; max-width:500px; width:92%; color:#e9efff;">\
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">\
+              <div style="width:32px; height:32px; border-radius:50%; background:' + iconColor + '; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:bold; color:#111;">' + iconSymbol + '</div>\
+              <div style="font-weight:700; color:' + iconColor + '; font-size:18px;">' + title + '</div>\
+            </div>\
+            <div style="font-size:14px; color:#cfd9ea; margin-bottom:16px; line-height:1.5;">' + message.replace(/[<>]/g, c=>({'<':'&lt;','>':'&gt;'}[c])) + '</div>\
+            <div style="display:flex; gap:8px; justify-content:flex-end;">\
+              ' + (success ? '' : '<button id="ai_result_retry" class="btn-cancel">Try Again</button>') + '\
+              <button id="ai_result_ok" class="btn-save">' + (success ? 'Reload to View' : 'Close') + '</button>\
+            </div></div>';
+          document.body.appendChild(resultBox);
+          
+          const okBtn = resultBox.querySelector('#ai_result_ok');
+          const retryBtn = resultBox.querySelector('#ai_result_retry');
+          
+          okBtn.addEventListener('click', function(){
+            document.body.removeChild(resultBox);
+            if (success) {
+              document.location.reload();
+            }
+          });
+          
+          if (retryBtn) {
+            retryBtn.addEventListener('click', function(){
+              document.body.removeChild(resultBox);
+              // Re-trigger the regenerate button click
+              const regenBtn = document.getElementById('npc_modal_regen');
+              if (regenBtn) regenBtn.click();
+            });
+          }
+          
+          // Close on background click
+          resultBox.addEventListener('click', function(e){
+            if (e.target === resultBox) {
+              document.body.removeChild(resultBox);
+            }
+          });
+        }
 
       } catch(_e){console.log(_e)}
     });
