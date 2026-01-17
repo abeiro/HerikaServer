@@ -12,6 +12,8 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
 
 require_once "{$enginePath}/lib/core/core_profiles.class.php";
 require_once "{$enginePath}/lib/core/llm_connector.class.php";
+require_once "{$enginePath}/lib/core/tts_connector.class.php";
+require_once "{$enginePath}/lib/core/api_badge.class.php";
 require_once "{$enginePath}/lib/core/import_rules.class.php";
 
 //function renderSelect($obj, $fieldName, $labelText, $selectedValue = "") 
@@ -839,7 +841,10 @@ $ittById = $byId($ittRows);
                                 <div class="pf-line"><span class="pf-icon">🧾</span><span class="pf-key">Formatter LLM</span><span class="pf-val">${formatter||'—'}</span></div>
                             </div>
                             <div class="actions">
-                                <a href="core_profiles.php?export=${r.id}" class="btn-primary" style="text-decoration:none; display:inline-block; padding:6px 10px;">Export</a>
+                                <form method="get" action="core_profiles.php" style="display:inline">
+                                    <input type="hidden" name="export" value="${r.id}">
+                                    <button type="submit" class="btn-primary">Export</button>
+                                </form>
                                 <form method="get" action="core_profiles.php" onsubmit="return confirm('Delete this profile?');" style="display:inline">
                                     <input type="hidden" name="delete" value="${r.id}">
                                     <button type="submit" class="btn-danger">Delete</button>
