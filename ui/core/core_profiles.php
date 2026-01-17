@@ -1968,10 +1968,9 @@ $ittById = $byId($ittRows);
         <div class="modal-body" style="padding: 16px;">
             <div class="connector-help" style="margin-bottom: 16px; padding: 12px; background: #1a1a1a; border: 1px solid #4a4a4a; border-radius: 8px;">
                 <strong>About Profile Import:</strong>
-                <p style="margin: 6px 0;">Import a complete profile exported from another HerikaServer instance.</p>
                 <ul style="margin: 6px 0 0 16px; padding: 0;">
                     <li><strong>Connectors:</strong> Referenced connectors will be created or matched by label+driver</li>
-                    <li><strong>API Keys:</strong> API keys are NOT included in exports for security. You'll need to set them manually after import.</li>
+                    <li><strong>API Keys:</strong> API keys are NOT included in exports for security.</li>
                     <li><strong>Settings:</strong> All profile settings and metadata will be imported</li>
                 </ul>
             </div>
@@ -2452,8 +2451,6 @@ $ittById = $byId($ittRows);
             html += '<div><strong>Profile:</strong> ' + escapeHtml(profile.label || 'Unnamed') + '</div>';
             html += '<div><strong>Export Date:</strong> ' + escapeHtml(data.export_date || 'Unknown') + '</div>';
             html += '<div><strong>LLM Connectors:</strong> ' + llmConnectors.length + '</div>';
-            html += '<div><strong>TTS Connector:</strong> ' + (ttsConnector ? escapeHtml(ttsConnector.label || 'Yes') : 'None') + '</div>';
-            html += '<div><strong>ITT Connector:</strong> ' + (ittConnector ? escapeHtml(ittConnector.label || 'Yes') : 'None') + '</div>';
             html += '<div><strong>API Badges:</strong> ' + apiBadges.length + ' (keys must be set manually)</div>';
             
             if (llmConnectors.length > 0) {
