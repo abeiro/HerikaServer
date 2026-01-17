@@ -27,6 +27,28 @@ $GLOBALS["ENGINE_PATH"] = $enginePath;
 
 $db = new sql();
 
+// Load PLAYER_NAME from core_player table
+try {
+    require_once $enginePath . "lib/core/player.class.php";
+    $player = new Player();
+    $playerNameFromTable = $player->get('player_name');
+    if ($playerNameFromTable !== null && $playerNameFromTable !== '') {
+        $GLOBALS["PLAYER_NAME"] = $playerNameFromTable;
+    } else {
+        // Fallback to conf_opts
+        $playerNameFromDb = $db->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
+        if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
+            $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
+        }
+    }
+} catch (Exception $e) {
+    // Fallback to conf_opts on error
+    $playerNameFromDb = $db->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
+    if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
+        $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
+    }
+}
+
 require_once $enginePath . "lib/core/npc_master.class.php";
 require_once $enginePath . "lib/core/api_badge.class.php";
 require_once $enginePath . "lib/core/core_profiles.class.php";
