@@ -3004,11 +3004,11 @@ if ($checkVersion("core_narrator")<20250101002) {
 
 //----------------------------------------------------
 // Background Life Prompts - Style prompts for letters and inner thoughts
-// Version 20251207001
+// Version 20260118001 (fixed: was 20251207001 which was out of order and never applied)
 //----------------------------------------------------
 
-if ($checkVersion("prompts")<20251207001) {
-    Logger::debug("Applying background life prompts 20251207001");
+if ($checkVersion("prompts")<20260118001) {
+    Logger::debug("Applying background life prompts 20260118001");
     
     // Prompt 1: Letter writing style
     $bglLetterStyle = $db->escape(
@@ -3048,9 +3048,9 @@ if ($checkVersion("prompts")<20251207001) {
     ");
     
     //$db->execQuery("UPDATE versions SET version=20251207001 WHERE section='prompts'"); // ???
-    $updateVersion("prompts",20251207001);
+    $updateVersion("prompts",20260118001);
     
-    Logger::info("Applied patch prompts 20251207001 - Added background life style prompts to database");
+    Logger::info("Applied patch prompts 20260118001 - Added background life style prompts to database");
 }
 
 
