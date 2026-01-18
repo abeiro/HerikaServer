@@ -3,11 +3,14 @@
 $GLOBALS["OGHMA_HINT"] = "";
 
 // Helper function to properly check boolean values (handles string "false" from form submissions)
-function isOghmaEnabled($value) {
-    if ($value === null) return false;
-    if ($value === false || $value === 'false' || $value === '0' || $value === 0) return false;
-    if ($value === true || $value === 'true' || $value === '1' || $value === 1) return true;
-    return (bool)$value;
+// Guard against redeclaration when oghma.php is included multiple times (e.g., during rechat)
+if (!function_exists('isOghmaEnabled')) {
+    function isOghmaEnabled($value) {
+        if ($value === null) return false;
+        if ($value === false || $value === 'false' || $value === '0' || $value === 0) return false;
+        if ($value === true || $value === 'true' || $value === '1' || $value === 1) return true;
+        return (bool)$value;
+    }
 }
 
 $minimeEnabled = isOghmaEnabled($GLOBALS["MINIME_T5"] ?? false);
