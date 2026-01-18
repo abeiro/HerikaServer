@@ -314,10 +314,75 @@ $contextData = array_merge($head[$LANG], $prompt);
 Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
 
 $connectionHandler = $connector->getConnector($currentConnectorData);
-$buffer            = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 2048, "temperature" => 0.9], "profile_generation");
+
+// Check if connector was successfully retrieved
+if (!$connectionHandler) {
+    Logger::error("AI Profile Generation: Failed to get connector handler");
+    echo json_encode([
+        "done" => false, 
+        "error" => "Failed to initialize LLM connector. Check your connector configuration.",
+        "error_type" => "connector_init"
+    ]);
+    exit;
+}
+
+$buffer = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 2048, "temperature" => 0.9], "profile_generation");
 Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
 
-error_log(print_r($buffer,true));
+error_log("[AI Profile Generation] Response buffer: " . print_r($buffer, true));
+
+// Check if we got an empty or null response from the LLM
+if (empty($buffer)) {
+    Logger::error("AI Profile Generation: LLM returned empty response for NPC '{$name}'");
+    
+    // Try to get more details from the audit_request table
+    $lastError = "";
+    try {
+        $auditQuery = "SELECT result, url, connector FROM audit_request ORDER BY id DESC LIMIT 1";
+        $auditResult = $db->fetchOne($auditQuery);
+        if ($auditResult && strpos($auditResult["result"], "ERROR") === 0) {
+            $lastError = $auditResult["result"];
+            Logger::error("AI Profile Generation: Last audit error - {$lastError} from {$auditResult["connector"]} at {$auditResult["url"]}");
+        }
+    } catch (Exception $e) {
+        // Ignore audit lookup errors
+    }
+    
+    $errorMessage = "LLM did not return a response. ";
+    
+    // Parse the error details from the audit result
+    $errorParts = explode("|", $lastError);
+    $apiErrorMessage = "";
+    if (count($errorParts) >= 3) {
+        $apiErrorMessage = trim($errorParts[2]);
+    }
+    
+    if (strpos($lastError, "API_ERROR") !== false && $apiErrorMessage) {
+        // Display the actual API error message
+        $errorMessage = "API Error: " . $apiErrorMessage;
+    } else if (strpos($lastError, "NO RESPONSE") !== false) {
+        if ($apiErrorMessage) {
+            $errorMessage .= "Network error: " . $apiErrorMessage;
+        } else {
+            $errorMessage .= "The API request failed or timed out. Check your network connection, VPN settings, and API key.";
+        }
+    } else if (strpos($lastError, "INVALID JSON") !== false) {
+        $errorMessage .= "The API returned an invalid response. The model may be overloaded or rate-limited.";
+        if ($apiErrorMessage) {
+            $errorMessage .= " Response: " . $apiErrorMessage;
+        }
+    } else {
+        $errorMessage .= "Check the LLM connector settings and ensure the API is accessible.";
+    }
+    
+    echo json_encode([
+        "done" => false, 
+        "error" => $errorMessage,
+        "error_type" => "no_response",
+        "audit_detail" => $lastError
+    ]);
+    exit;
+}
 
 $profileFields = [
     'core'           => 'Core Identity',
@@ -332,11 +397,31 @@ $profileFields = [
 ];
 
 $cs = [];
+$parsedFieldCount = 0;
 foreach (array_keys($profileFields) as $field) {
-    $cs[$field] = strip_tags(current(manual_get_all_tag_contents($buffer, $field)));
+    $fieldContent = strip_tags(current(manual_get_all_tag_contents($buffer, $field)));
+    $cs[$field] = $fieldContent;
+    if (!empty(trim($fieldContent))) {
+        $parsedFieldCount++;
+    }
 }
 
-//die(print_r($cs));
+// Check if we actually parsed any useful content
+if ($parsedFieldCount === 0) {
+    Logger::warn("AI Profile Generation: LLM response did not contain expected XML fields for NPC '{$name}'");
+    echo json_encode([
+        "done" => false,
+        "error" => "The LLM response did not contain the expected profile fields. The response may have been incomplete or in an unexpected format. Try again or use a different LLM.",
+        "error_type" => "parse_error",
+        "raw_length" => strlen($buffer)
+    ]);
+    exit;
+}
 
-saveDynamicProfileUpdates($GLOBALS["HERIKA_NAME"], $cs, $db,false);
-echo json_encode(["done" => true]);
+saveDynamicProfileUpdates($GLOBALS["HERIKA_NAME"], $cs, $db, false);
+Logger::info("AI Profile Generation: Successfully generated profile for NPC '{$name}' with {$parsedFieldCount} fields");
+echo json_encode([
+    "done" => true, 
+    "fields_updated" => $parsedFieldCount,
+    "npc_name" => $name
+]);

@@ -149,6 +149,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit;
 }
 
+// Handle reset database versioning entry (single entry)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'reset_db_version') {
+    try {
+        $tablename = $_POST['tablename'] ?? '';
+        if (!empty($tablename)) {
+            $db->execQuery("DELETE FROM public.database_versioning WHERE tablename = " . $db->quote($tablename));
+            $message = "<p><strong>✅ Database version reset successfully!</strong></p>";
+            $message .= "<p>Table: <strong>" . htmlspecialchars($tablename) . "</strong></p>";
+            $message .= "<p>This update will be re-applied on the next server restart.</p>";
+        } else {
+            $message = "<p><strong>Error:</strong> Invalid table name.</p>";
+        }
+    } catch (Throwable $e) {
+        $message = "<p><strong>Error:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
+    }
+    // Redirect back with preserved query string
+    $qs = $_SERVER['QUERY_STRING'] ?? '';
+    $redirectUrl = ($_SERVER['PHP_SELF'] ?? 'import_db.php') . ($qs ? ('?' . $qs) : '');
+    header('Location: ' . $redirectUrl);
+    exit;
+}
+
+// Handle reset all database versioning entries
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'reset_all_db_versions') {
+    try {
+        $result = $db->fetchOne("SELECT COUNT(*) as count FROM public.database_versioning");
+        $count = intval($result['count'] ?? 0);
+        $db->execQuery("DELETE FROM public.database_versioning");
+        $message = "<p><strong>✅ All database versions reset successfully!</strong></p>";
+        $message .= "<p>Reset <strong>{$count}</strong> version entries.</p>";
+        $message .= "<p><strong>⚠️ Important:</strong> All database updates will be re-applied on the next server restart. This may take several minutes.</p>";
+    } catch (Throwable $e) {
+        $message = "<p><strong>Error:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
+    }
+    // Redirect back with preserved query string
+    $qs = $_SERVER['QUERY_STRING'] ?? '';
+    $redirectUrl = ($_SERVER['PHP_SELF'] ?? 'import_db.php') . ($qs ? ('?' . $qs) : '');
+    header('Location: ' . $redirectUrl);
+    exit;
+}
+
 // Handle download automatic backup
 if (isset($_GET['action']) && $_GET['action'] === 'download_auto' && isset($_GET['filename'])) {
     $autoBackup = new AutomaticBackup();
@@ -1046,6 +1087,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
         </div>
         
+    </div>
+    
+    <!-- Database Versioning Manager Section -->
+    <?php
+    // Query database versioning entries
+    $dbVersions = [];
+    try {
+        $dbVersions = $db->fetchAll("SELECT tablename, version FROM public.database_versioning ORDER BY tablename ASC");
+    } catch (Throwable $e) {
+        // Table might not exist yet, ignore error
+    }
+    
+    // Helper function to format version number as readable date
+    function formatVersionDate($version) {
+        // Version format: YYYYMMDDNNN (e.g., 20251207001)
+        $str = (string)$version;
+        if (strlen($str) >= 8) {
+            $year = substr($str, 0, 4);
+            $month = substr($str, 4, 2);
+            $day = substr($str, 6, 2);
+            $revision = strlen($str) > 8 ? substr($str, 8) : '001';
+            return "{$year}-{$month}-{$day} (rev {$revision})";
+        }
+        return $version;
+    }
+    ?>
+    
+    <div class="message" style="background-color: #2c3440; border: 1px solid #4a4a4a; margin-bottom: 20px;">
+        <h3>🗄️ Database Versioning Manager</h3>
+        <p>This table tracks which database updates have been applied. Resetting an entry will cause that specific update to be re-applied on the next server restart.</p>
+        
+        <div style="background-color: rgba(23, 101, 41, 0.1); border: 1px solid #176529; border-radius: 8px; padding: 15px; margin: 15px 0;">
+            <h4 style="color: #4ade80; margin: 0 0 10px 0;">ℹ️ How It Works</h4>
+            <ul style="color: #f8f9fa; margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6;">
+                <li>Each entry represents a database update that has been applied</li>
+                <li><strong>Reset Individual Entry:</strong> Deletes one entry - that specific update will be re-applied on restart</li>
+                <li><strong>Reset All:</strong> Deletes all entries - ALL updates will be re-applied on restart (may take several minutes)</li>
+                <li><strong>⚠️ Important:</strong> Changes take effect only after restarting the server</li>
+            </ul>
+        </div>
+        
+        <?php if (!empty($dbVersions)): ?>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h4 style="margin: 0;">Version Entries (<?php echo count($dbVersions); ?> total)</h4>
+                <form method="post" style="margin: 0;" onsubmit="return confirm('⚠️ RESET ALL DATABASE VERSIONS\n\nThis will delete ALL version entries.\n\n⚠️ WARNING:\n- All database updates will be re-applied on next restart\n- This may take several minutes\n- Some updates may overwrite or modify data\n\nAre you absolutely sure you want to continue?');">
+                    <input type="hidden" name="action" value="reset_all_db_versions">
+                    <button type="submit" class="button" style="background-color: #dc3545; color: white; padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;">
+                        🔄 Reset All Versions
+                    </button>
+                </form>
+            </div>
+            
+            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #333333; border-radius: 8px; background-color: #1a1a1a;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead style="position: sticky; top: 0; background-color: #2c2c2c; border-bottom: 2px solid #4a4a4a; z-index: 1;">
+                        <tr>
+                            <th style="text-align: left; padding: 12px; font-weight: bold; color: #f8f9fa; border-bottom: 1px solid #4a4a4a;">Table/Feature Name</th>
+                            <th style="text-align: left; padding: 12px; font-weight: bold; color: #f8f9fa; border-bottom: 1px solid #4a4a4a;">Version</th>
+                            <th style="text-align: center; padding: 12px; font-weight: bold; color: #f8f9fa; border-bottom: 1px solid #4a4a4a; width: 120px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($dbVersions as $index => $entry): ?>
+                            <tr style="border-bottom: 1px solid #333333; transition: background-color 0.2s; <?php echo $index % 2 === 0 ? 'background-color: #1a1a1a;' : 'background-color: #222222;'; ?>">
+                                <td style="padding: 10px; color: #f8f9fa; font-family: monospace; font-size: 13px;">
+                                    <?php echo htmlspecialchars($entry['tablename']); ?>
+                                </td>
+                                <td style="padding: 10px; color: #ccc; font-size: 12px;">
+                                    <?php echo htmlspecialchars(formatVersionDate($entry['version'])); ?>
+                                </td>
+                                <td style="padding: 10px; text-align: center;">
+                                    <form method="post" style="margin: 0;" onsubmit="return confirm('⚠️ RESET VERSION ENTRY\n\nTable: <?php echo htmlspecialchars($entry['tablename']); ?>\nVersion: <?php echo htmlspecialchars($entry['version']); ?>\n\nThis update will be re-applied on the next server restart.\n\nAre you sure?');">
+                                        <input type="hidden" name="action" value="reset_db_version">
+                                        <input type="hidden" name="tablename" value="<?php echo htmlspecialchars($entry['tablename']); ?>">
+                                        <button type="submit" class="button" style="background-color: #fd7e14; color: white; padding: 4px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                                            🔄 Reset
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php else: ?>
+            <div style="text-align: center; padding: 30px 20px; color: #888; font-style: italic; background-color: #2c2c2c; border-radius: 8px; border: 1px dashed #4a4a4a;">
+                <div style="font-size: 24px; margin-bottom: 10px;">📋</div>
+                <p style="margin: 0;">No database versioning entries found.</p>
+                <small style="color: #666; display: block; margin-top: 8px;">The database_versioning table is empty or does not exist yet.</small>
+            </div>
+        <?php endif; ?>
     </div>
     
     <?php
