@@ -65,6 +65,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
             $narrator->set('quest_comment_cooldown', (string)$cooldown);
         }
         
+        // Save dynamic profile settings
+        $narrator->set('dynamic_profile', isset($_POST['dynamic_profile']) && $_POST['dynamic_profile'] === '1' ? '1' : '0');
+        
+        // Save dynamic profile fields array
+        if (isset($_POST['dynamic_profile_fields']) && is_array($_POST['dynamic_profile_fields'])) {
+            $fields = array_filter($_POST['dynamic_profile_fields'], function($v) {
+                return in_array($v, ['personality', 'speechstyle', 'goals'], true);
+            });
+            $narrator->setDynamicProfileFields(array_values($fields));
+        } else {
+            $narrator->setDynamicProfileFields([]);
+        }
+        
         // Save profile_id
         if (isset($_POST['profile_id'])) {
             $profileId = intval($_POST['profile_id']);
@@ -122,6 +135,8 @@ $questCommentChance = $narrator->getInt('quest_comment_chance', 10);
 $questCommentCooldown = $narrator->getInt('quest_comment_cooldown', 3);
 $booksOnlyNarrator = $narrator->getBool('books_only_narrator', false);
 $hideFromContext = $narrator->getBool('hide_from_context', false);
+$dynamicProfileEnabled = $narrator->getBool('dynamic_profile', false);
+$dynamicProfileFields = $narrator->getDynamicProfileFields();
 
 // Extract character fields
 $profileId = $narrator->getInt('profile_id', 1);
@@ -531,6 +546,36 @@ if (!$isEmbed) {
             <!-- Character Fields Section -->
             <div class="content-section full-width-section" style="margin-top: 20px;">
                 <h2>Character Description</h2>
+                
+                <!-- Dynamic Profile Section (inline) -->
+                <div style="margin-bottom: 20px; padding: 15px; background: #1a1a1a; border: 1px solid #4a4a4a; border-radius: 6px;">
+                    <h3 style="color: rgb(242, 124, 17); margin-bottom: 10px; font-size: 1.1em;">♻️ Dynamic Profile Updates</h3>
+                    
+                    <div class="checkbox-group" style="margin-bottom: 12px;">
+                        <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?php echo $dynamicProfileEnabled ? 'checked' : ''; ?>>
+                        <label for="dynamic_profile">Enable Dynamic Profile</label>
+                    </div>
+                    <span class="hint">Allow systems to evolve the narrator profile based on gameplay events. Triggered by MCM Dynamic Profile Timer.</span>
+                    
+                    <label style="margin-top: 12px; display: block; color: rgb(242, 124, 17); font-weight: bold; font-size: 0.95em;">Field Selection (choose 1-3)</label>
+                    <span class="hint" style="margin-bottom: 8px;">Select which fields should be dynamically updated:</span>
+                    
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+                        <label style="display: flex; align-items: center; gap: 6px; background: #2a2a2a; border: 1px solid #555; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">
+                            <input type="checkbox" name="dynamic_profile_fields[]" value="personality" <?php echo in_array('personality', $dynamicProfileFields) ? 'checked' : ''; ?>>
+                            <span style="color: #cfd8e3;">Personality</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; background: #2a2a2a; border: 1px solid #555; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">
+                            <input type="checkbox" name="dynamic_profile_fields[]" value="speechstyle" <?php echo in_array('speechstyle', $dynamicProfileFields) ? 'checked' : ''; ?>>
+                            <span style="color: #cfd8e3;">Speech Style</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; background: #2a2a2a; border: 1px solid #555; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">
+                            <input type="checkbox" name="dynamic_profile_fields[]" value="goals" <?php echo in_array('goals', $dynamicProfileFields) ? 'checked' : ''; ?>>
+                            <span style="color: #cfd8e3;">Goals</span>
+                        </label>
+                    </div>
+                    <span class="hint" style="margin-top: 8px;">Recommended: Select only 1-3 fields. Updates use DYNAMIC_PROMPT_* prompts from Global Settings.</span>
+                </div>
                 
                 <label for="core">Core Summary</label>
                 <textarea id="core" name="core" rows="3" placeholder="Quick summary of The Narrator's persona..."><?php echo htmlspecialchars($core); ?></textarea>

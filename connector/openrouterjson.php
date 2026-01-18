@@ -1412,6 +1412,28 @@ class openrouterjson
 
         if ($json_response) {
             $text_response=json_decode($json_response,true);
+            
+            // Check for API error response (e.g., {"error": {"message": "..."}})
+            if (is_array($text_response) && isset($text_response["error"])) {
+                $errorMsg = "ERROR|API_ERROR";
+                if (is_array($text_response["error"]) && isset($text_response["error"]["message"])) {
+                    $errorMsg .= "|" . substr($text_response["error"]["message"], 0, 200);
+                } else if (is_string($text_response["error"])) {
+                    $errorMsg .= "|" . substr($text_response["error"], 0, 200);
+                }
+                error_log("[fast_request] API error from '{$this->_url}': " . json_encode($text_response["error"]));
+                if ($GLOBALS["db"]) {
+                    $GLOBALS["db"]->insert(
+                    'audit_request',
+                        array(
+                            'request' => json_encode($data),
+                            'result' => $errorMsg,
+                            'connector'=>$callName,
+                            'url'=>$this->_url
+                        ));
+                }
+                return "";
+            }
            
             if (is_valid_array($text_response)) {
                 if ($GLOBALS["db"]) {
@@ -1433,23 +1455,26 @@ class openrouterjson
                     'audit_request',
                         array(
                             'request' => json_encode($data),
-                            'result' => "ERROR|INVALID JSON RESPONSE",
+                            'result' => "ERROR|INVALID JSON RESPONSE|" . substr($json_response, 0, 200),
                             'connector'=>$callName,
                             'url'=>$this->_url
                         ));
                 }
-                error_log("Error in openrouter request '{$this->_url}':$json_response", 3);
+                error_log("[fast_request] Invalid JSON from '{$this->_url}': " . substr($json_response, 0, 500));
                 return "";
                 
             }
             
         } else {
+            $lastError = error_get_last();
+            $errorDetail = $lastError ? $lastError['message'] : 'unknown';
+            error_log("[fast_request] No response from '{$this->_url}': {$errorDetail}");
             if ($GLOBALS["db"]) {
                 $GLOBALS["db"]->insert(
                 'audit_request',
                     array(
                         'request' => json_encode($data),
-                        'result' => "ERROR|NO RESPONSE",
+                        'result' => "ERROR|NO RESPONSE|" . substr($errorDetail, 0, 200),
                         'connector'=>$this->name,
                         'url'=>$this->_url
                     ));

@@ -175,6 +175,7 @@ class Narrator
             'quest_comment_cooldown' => ['QUEST_COMMENT_COOLDOWN', 'int', 3],
             'books_only_narrator' => ['BOOK_EVENT_ALWAYS_NARRATOR', 'bool', false],
             'hide_from_context' => ['HIDE_NARRATOR_DIALOGUE', 'bool', false],
+            'dynamic_profile' => ['DYNAMIC_PROFILE', 'bool', false],
         ];
         
         foreach ($keyMapping as $dbKey => $config) {
@@ -304,7 +305,40 @@ class Narrator
             'lock_profile' => 1, // Narrator is always locked
             'npc_favorite' => 1, // Narrator is always favorited
             'md5' => md5('The Narrator'),
+            'dynamic_profile' => $this->getBool('dynamic_profile', false) ? 1 : 0,
         ];
+    }
+    
+    /**
+     * Get dynamic profile fields array
+     * @return array Array of field names to update dynamically
+     */
+    public function getDynamicProfileFields(): array
+    {
+        $value = $this->get('dynamic_profile_fields');
+        if ($value === null || $value === '') {
+            return [];
+        }
+        
+        $decoded = json_decode($value, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+        
+        return $decoded;
+    }
+    
+    /**
+     * Set dynamic profile fields array
+     * @param array $fields Array of field names (personality, speechstyle, goals)
+     * @return bool Success status
+     */
+    public function setDynamicProfileFields(array $fields): bool
+    {
+        $validFields = ['personality', 'speechstyle', 'goals'];
+        $filtered = array_intersect($fields, $validFields);
+        $json = json_encode(array_values($filtered));
+        return $this->set('dynamic_profile_fields', $json);
     }
     
     /**

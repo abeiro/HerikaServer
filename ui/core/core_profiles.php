@@ -12,6 +12,8 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
 
 require_once "{$enginePath}/lib/core/core_profiles.class.php";
 require_once "{$enginePath}/lib/core/llm_connector.class.php";
+require_once "{$enginePath}/lib/core/tts_connector.class.php";
+require_once "{$enginePath}/lib/core/api_badge.class.php";
 require_once "{$enginePath}/lib/core/import_rules.class.php";
 
 //function renderSelect($obj, $fieldName, $labelText, $selectedValue = "") 
@@ -254,6 +256,100 @@ if (isset($_GET["delete"])) {
     exit;
 }
 
+// Handle Export Profile (download JSON with all connectors)
+if (isset($_GET["export"]) && is_numeric($_GET["export"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    
+    $exportId = intval($_GET["export"]);
+    $profileRow = $profiles->readOne($exportId);
+    
+    if (!$profileRow) {
+        header("HTTP/1.1 404 Not Found");
+        echo "Profile not found";
+        exit;
+    }
+    
+    // Gather all referenced connectors
+    $llmConnector = new LLMConnector();
+    $ttsConnector = new TTSConnector();
+    $apiBadge = new ApiBadge();
+    
+    // Collect all LLM connectors referenced by this profile
+    $llmConnectorIds = array_filter([
+        $profileRow['llm_primary_id'],
+        $profileRow['llm_secondary_id'],
+        $profileRow['llm_tertiary_id'],
+        $profileRow['llm_quaternary_id'],
+        $profileRow['llm_formatter_id'],
+        $profileRow['llm_fallback_id'],
+        $profileRow['diary_connector_id']
+    ], function($id) { return !empty($id); });
+    
+    $llmConnectors = [];
+    $apiBadgeIds = [];
+    foreach ($llmConnectorIds as $llmId) {
+        $conn = $llmConnector->readOne($llmId);
+        if ($conn) {
+            // Track API badge IDs
+            if (!empty($conn['api_badge_id'])) {
+                $apiBadgeIds[] = $conn['api_badge_id'];
+            }
+            $llmConnectors[] = $conn;
+        }
+    }
+    
+    // Get TTS connector
+    $ttsConn = null;
+    if (!empty($profileRow['tts_connector_id'])) {
+        $ttsConn = $ttsConnector->readOne($profileRow['tts_connector_id']);
+        if ($ttsConn && !empty($ttsConn['api_badge_id'])) {
+            $apiBadgeIds[] = $ttsConn['api_badge_id'];
+        }
+    }
+    
+    // Get ITT connector (if ITT connector class exists)
+    $ittConn = null;
+    if (!empty($profileRow['itt_connector_id'])) {
+        // ITT connector table exists but class may not be implemented yet
+        $ittData = $GLOBALS["db"]->fetchOne("SELECT * FROM core_itt_connector WHERE id = " . intval($profileRow['itt_connector_id']));
+        if ($ittData) {
+            $ittConn = $ittData;
+        }
+    }
+    
+    // Get all referenced API badges (WITHOUT KEYS for security)
+    $apiBadges = [];
+    foreach (array_unique($apiBadgeIds) as $badgeId) {
+        $badge = $apiBadge->getById($badgeId);
+        if ($badge) {
+            // SECURITY: Exclude API key from export
+            $apiBadges[] = [
+                'id' => $badge['id'],
+                'label' => $badge['label'],
+                'api_key' => '' // Intentionally blank for security
+            ];
+        }
+    }
+    
+    // Build export data
+    $exportData = [
+        'export_version' => '1.0',
+        'export_date' => date('c'),
+        'profile' => $profileRow,
+        'llm_connectors' => $llmConnectors,
+        'tts_connector' => $ttsConn,
+        'itt_connector' => $ittConn,
+        'api_badges' => $apiBadges
+    ];
+    
+    $filename = preg_replace('/[^a-z0-9_-]+/i', '_', strtolower($profileRow['label'] ?? 'profile')) . '_export.json';
+    
+    header('Content-Type: application/json');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    echo json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 // Inline update handler for LLM connectors (AJAX)
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connector"])) {
     // Ensure no buffered HTML leaks into JSON response
@@ -336,6 +432,181 @@ if (isset($_GET["clone"])) {
         header("Location: core_profiles.php?edit=".urlencode((string)$newId));
     } else {
         header("Location: core_profiles.php");
+    }
+    exit;
+}
+
+// Handle Import Profile (AJAX)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    
+    try {
+        $importJson = $_POST['import_data'] ?? '';
+        
+        $importData = json_decode($importJson, true);
+        if (!is_array($importData)) {
+            echo json_encode(['ok' => false, 'error' => 'Invalid JSON data']);
+            exit;
+        }
+        
+        // Validate export version
+        if (empty($importData['export_version']) || $importData['export_version'] !== '1.0') {
+            echo json_encode(['ok' => false, 'error' => 'Unsupported export version']);
+            exit;
+        }
+        
+        // Extract components
+        $profileData = $importData['profile'] ?? [];
+        $llmConnectors = $importData['llm_connectors'] ?? [];
+        $ttsConnector = $importData['tts_connector'] ?? null;
+        $ittConnector = $importData['itt_connector'] ?? null;
+        $apiBadges = $importData['api_badges'] ?? [];
+        
+        // Map old IDs to new IDs
+        $apiBadgeIdMap = [];
+        $llmConnectorIdMap = [];
+        $ttsConnectorId = null;
+        $ittConnectorId = null;
+        
+        $llmConn = new LLMConnector();
+        $ttsConn = new TTSConnector();
+        $apiBadgeObj = new ApiBadge();
+        
+        // Step 1: Create or match API badges
+        foreach ($apiBadges as $badge) {
+            $oldId = $badge['id'];
+            $label = $badge['label'];
+            
+            // Try to find existing badge by label
+            $existing = $apiBadgeObj->getByLabel($label);
+            if ($existing) {
+                $apiBadgeIdMap[$oldId] = $existing['id'];
+            } else {
+                // Create new badge (without API key - user must set it manually)
+                $newBadgeId = $apiBadgeObj->create([
+                    'label' => $label,
+                    'api_key' => '' // Empty, user must fill in
+                ]);
+                $apiBadgeIdMap[$oldId] = $newBadgeId;
+            }
+        }
+        
+        // Step 2: Create or match LLM connectors
+        foreach ($llmConnectors as $conn) {
+            $oldId = $conn['id'];
+            $label = $conn['label'];
+            $driver = $conn['driver'];
+            $model = $conn['model'];
+            
+            // Try to find existing connector by label + driver + model
+            $existingConn = $GLOBALS["db"]->fetchOne(
+                "SELECT id FROM core_llm_connector WHERE label = '" . 
+                $GLOBALS["db"]->escape($label) . "' AND driver = '" . 
+                $GLOBALS["db"]->escape($driver) . "' AND model = '" . 
+                $GLOBALS["db"]->escape($model) . "' LIMIT 1"
+            );
+            
+            if ($existingConn) {
+                $llmConnectorIdMap[$oldId] = $existingConn['id'];
+            } else {
+                // Remap API badge ID if present
+                $connData = $conn;
+                unset($connData['id']); // Remove old ID
+                if (!empty($connData['api_badge_id']) && isset($apiBadgeIdMap[$connData['api_badge_id']])) {
+                    $connData['api_badge_id'] = $apiBadgeIdMap[$connData['api_badge_id']];
+                } else {
+                    $connData['api_badge_id'] = null;
+                }
+                
+                // Create new connector
+                $newConnId = $llmConn->create($connData);
+                $llmConnectorIdMap[$oldId] = $newConnId;
+            }
+        }
+        
+        // Step 3: Create or match TTS connector
+        if ($ttsConnector) {
+            $label = $ttsConnector['label'];
+            $driver = $ttsConnector['driver'];
+            
+            $existingTts = $GLOBALS["db"]->fetchOne(
+                "SELECT id FROM core_tts_connector WHERE label = '" . 
+                $GLOBALS["db"]->escape($label) . "' AND driver = '" . 
+                $GLOBALS["db"]->escape($driver) . "' LIMIT 1"
+            );
+            
+            if ($existingTts) {
+                $ttsConnectorId = $existingTts['id'];
+            } else {
+                $ttsData = $ttsConnector;
+                unset($ttsData['id']);
+                if (!empty($ttsData['api_badge_id']) && isset($apiBadgeIdMap[$ttsData['api_badge_id']])) {
+                    $ttsData['api_badge_id'] = $apiBadgeIdMap[$ttsData['api_badge_id']];
+                } else {
+                    $ttsData['api_badge_id'] = null;
+                }
+                
+                $ttsConnectorId = $ttsConn->create($ttsData);
+            }
+        }
+        
+        // Step 4: Create or match ITT connector (if present)
+        if ($ittConnector) {
+            $label = $ittConnector['label'];
+            $driver = $ittConnector['driver'];
+            
+            $existingItt = $GLOBALS["db"]->fetchOne(
+                "SELECT id FROM core_itt_connector WHERE label = '" . 
+                $GLOBALS["db"]->escape($label) . "' AND driver = '" . 
+                $GLOBALS["db"]->escape($driver) . "' LIMIT 1"
+            );
+            
+            if ($existingItt) {
+                $ittConnectorId = $existingItt['id'];
+            } else {
+                $ittData = $ittConnector;
+                unset($ittData['id']);
+                $ittConnectorId = $GLOBALS["db"]->insert('core_itt_connector', $ittData);
+            }
+        }
+        
+        // Step 5: Create new profile with remapped connector IDs
+        $newProfileData = [
+            'label' => ($profileData['label'] ?? 'Imported Profile') . ' (Imported)',
+            'default_npc' => 0, // Don't set as default
+            'default_narrator' => 0,
+            'tts_connector_id' => $ttsConnectorId,
+            'itt_connector_id' => $ittConnectorId,
+            'llm_primary_id' => !empty($profileData['llm_primary_id']) && isset($llmConnectorIdMap[$profileData['llm_primary_id']]) 
+                ? $llmConnectorIdMap[$profileData['llm_primary_id']] : null,
+            'llm_secondary_id' => !empty($profileData['llm_secondary_id']) && isset($llmConnectorIdMap[$profileData['llm_secondary_id']]) 
+                ? $llmConnectorIdMap[$profileData['llm_secondary_id']] : null,
+            'llm_tertiary_id' => !empty($profileData['llm_tertiary_id']) && isset($llmConnectorIdMap[$profileData['llm_tertiary_id']]) 
+                ? $llmConnectorIdMap[$profileData['llm_tertiary_id']] : null,
+            'llm_quaternary_id' => !empty($profileData['llm_quaternary_id']) && isset($llmConnectorIdMap[$profileData['llm_quaternary_id']]) 
+                ? $llmConnectorIdMap[$profileData['llm_quaternary_id']] : null,
+            'llm_formatter_id' => !empty($profileData['llm_formatter_id']) && isset($llmConnectorIdMap[$profileData['llm_formatter_id']]) 
+                ? $llmConnectorIdMap[$profileData['llm_formatter_id']] : null,
+            'llm_fallback_id' => !empty($profileData['llm_fallback_id']) && isset($llmConnectorIdMap[$profileData['llm_fallback_id']]) 
+                ? $llmConnectorIdMap[$profileData['llm_fallback_id']] : null,
+            'diary_connector_id' => !empty($profileData['diary_connector_id']) && isset($llmConnectorIdMap[$profileData['diary_connector_id']]) 
+                ? $llmConnectorIdMap[$profileData['diary_connector_id']] : null,
+            'metadata' => $profileData['metadata'] ?? null,
+            'slot' => null, // Don't assign slot automatically
+            'prompt' => $profileData['prompt'] ?? null
+        ];
+        
+        $newProfileId = $profiles->create($newProfileData);
+        
+        echo json_encode([
+            'ok' => true, 
+            'id' => $newProfileId,
+            'message' => 'Profile imported successfully. Please review connector settings and API keys.'
+        ]);
+        
+    } catch (Throwable $e) {
+        echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
     }
     exit;
 }
@@ -496,6 +767,7 @@ $ittById = $byId($ittRows);
                 <input type="hidden" name="create_blank" value="1">
                 <button type="submit" class="btn-save">New Profile</button>
             </form>
+            <button type="button" id="import_profile_btn" class="btn-primary">Import Profile</button>
             <button type="button" id="open_import_rules_btn" class="btn-primary">Profile Rules</button>
         </div>
         <div id="profiles_list" class="conn-list"></div>
@@ -569,6 +841,10 @@ $ittById = $byId($ittRows);
                                 <div class="pf-line"><span class="pf-icon">🧾</span><span class="pf-key">Formatter LLM</span><span class="pf-val">${formatter||'—'}</span></div>
                             </div>
                             <div class="actions">
+                                <form method="get" action="core_profiles.php" style="display:inline">
+                                    <input type="hidden" name="export" value="${r.id}">
+                                    <button type="submit" class="btn-primary">Export</button>
+                                </form>
                                 <form method="get" action="core_profiles.php" onsubmit="return confirm('Delete this profile?');" style="display:inline">
                                     <input type="hidden" name="delete" value="${r.id}">
                                     <button type="submit" class="btn-danger">Delete</button>
@@ -1680,6 +1956,71 @@ $ittById = $byId($ittRows);
     </div>
 </div>
 
+<!-- Profile Import Modal -->
+<div id="import_profile_modal" class="modal-backdrop">
+    <div class="modal-container" style="max-width: 700px;">
+        <div class="modal-header">
+            <h2 class="modal-title">Import Profile</h2>
+            <div class="modal-actions">
+                <button type="button" class="modal-close" id="close_import_modal">Close</button>
+            </div>
+        </div>
+        <div class="modal-body" style="padding: 16px;">
+            <div class="connector-help" style="margin-bottom: 16px; padding: 12px; background: #1a1a1a; border: 1px solid #4a4a4a; border-radius: 8px;">
+                <strong>About Profile Import:</strong>
+                <ul style="margin: 6px 0 0 16px; padding: 0;">
+                    <li><strong>Connectors:</strong> Referenced connectors will be created or matched by label+driver</li>
+                    <li><strong>API Keys:</strong> API keys are NOT included in exports for security.</li>
+                    <li><strong>Settings:</strong> All profile settings and metadata will be imported</li>
+                </ul>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <label for="import_file" style="display: block; font-weight: 700; color: rgb(242, 124, 17); margin-bottom: 8px;">
+                    Select Profile Export File (JSON)
+                </label>
+                <input type="file" id="import_file" accept=".json" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #4a4a4a; border-radius: 6px; color: #e9efff; cursor: pointer;">
+            </div>
+            
+            <div id="import_preview" style="display: none; margin-bottom: 16px;">
+                <div style="font-weight: 700; color: rgb(242, 124, 17); margin-bottom: 8px;">Preview:</div>
+                <div id="import_preview_content" style="background: #1a1a1a; border: 1px solid #4a4a4a; border-radius: 6px; padding: 12px; max-height: 300px; overflow-y: auto; font-size: 13px; color: #e9efff;">
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button type="button" class="btn-cancel" id="cancel_import_btn">Cancel</button>
+                <button type="button" class="btn-save" id="confirm_import_btn" disabled>Import Profile</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Modal styling for Profile Import */
+#import_profile_modal.modal-backdrop { display:none; position:fixed; left:0; top:0; right:0; bottom:0; background:rgba(0,0,0,0.75); z-index:10000; }
+#import_profile_modal.modal-backdrop.show { display:block; }
+#import_profile_modal.modal-backdrop { opacity: 1 !important; backdrop-filter: none !important; filter: none !important; }
+#import_profile_modal .modal-container {
+    position:fixed;
+    left:50%;
+    top:50%;
+    transform:translate(-50%, -50%);
+    background:#2a2a2a;
+    border:1px solid #4a4a4a;
+    border-radius:10px;
+    width: min(95vw, 700px);
+    max-height: 90vh;
+    overflow: hidden;
+    z-index: 10001;
+}
+#import_profile_modal .modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; }
+#import_profile_modal .modal-title { margin:0; font-weight:700; color: rgb(242, 124, 17); font-family: 'MagicCards', serif; word-spacing: 6px; font-size: 1.6em; }
+#import_profile_modal .modal-body { background:#2a2a2a; overflow:auto; max-height: calc(90vh - 60px); }
+#import_profile_modal .modal-close { background:#3a3a3a; color:#fff; border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; cursor:pointer; }
+#import_profile_modal .modal-close:hover { background:#4a4a4a; }
+</style>
+
 <style>
 /* Modal styling for Profile Rules */
 #import_rules_modal.modal-backdrop { display:none; position:fixed; left:0; top:0; right:0; bottom:0; background:rgba(0,0,0,0.75); z-index:10000; }
@@ -2026,6 +2367,154 @@ $ittById = $byId($ittRows);
         if (action === 'save') return window.IMPORT_RULES.saveRule(id);
         if (action === 'cancel') return window.IMPORT_RULES.cancelEdit();
     });
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+})();
+
+// Profile Import Modal Handler
+(function() {
+    const modal = document.getElementById('import_profile_modal');
+    const openBtn = document.getElementById('import_profile_btn');
+    const closeBtn = document.getElementById('close_import_modal');
+    const cancelBtn = document.getElementById('cancel_import_btn');
+    const fileInput = document.getElementById('import_file');
+    const previewDiv = document.getElementById('import_preview');
+    const previewContent = document.getElementById('import_preview_content');
+    const confirmBtn = document.getElementById('confirm_import_btn');
+    
+    let importData = null;
+    
+    function showToast(message, isError) {
+        const toast = document.getElementById('toast');
+        if (!toast) return;
+        const msgSpan = toast.querySelector('.message');
+        if (msgSpan) msgSpan.textContent = message;
+        toast.className = 'toast-notification' + (isError ? ' error' : '');
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+    
+    function openModal() {
+        modal.classList.add('show');
+        resetModal();
+    }
+    
+    function closeModal() {
+        modal.classList.remove('show');
+        resetModal();
+    }
+    
+    function resetModal() {
+        fileInput.value = '';
+        previewDiv.style.display = 'none';
+        previewContent.innerHTML = '';
+        confirmBtn.disabled = true;
+        importData = null;
+    }
+    
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) {
+            resetModal();
+            return;
+        }
+        
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            
+            // Validate structure
+            if (!data.export_version || !data.profile) {
+                showToast('Invalid profile export file', true);
+                resetModal();
+                return;
+            }
+            
+            importData = data;
+            
+            // Show preview
+            const profile = data.profile || {};
+            const llmConnectors = data.llm_connectors || [];
+            const ttsConnector = data.tts_connector;
+            const ittConnector = data.itt_connector;
+            const apiBadges = data.api_badges || [];
+            
+            let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+            html += '<div><strong>Profile:</strong> ' + escapeHtml(profile.label || 'Unnamed') + '</div>';
+            html += '<div><strong>Export Date:</strong> ' + escapeHtml(data.export_date || 'Unknown') + '</div>';
+            html += '<div><strong>LLM Connectors:</strong> ' + llmConnectors.length + '</div>';
+            html += '<div><strong>API Badges:</strong> ' + apiBadges.length + ' (keys must be set manually)</div>';
+            
+            if (llmConnectors.length > 0) {
+                html += '<div style="margin-top: 8px;"><strong>LLM Connectors:</strong></div>';
+                html += '<ul style="margin: 4px 0 0 16px; padding: 0;">';
+                llmConnectors.forEach(conn => {
+                    html += '<li>' + escapeHtml(conn.label || conn.model || 'Unnamed') + ' (' + escapeHtml(conn.driver || 'unknown') + ')</li>';
+                });
+                html += '</ul>';
+            }
+            
+            html += '</div>';
+            
+            previewContent.innerHTML = html;
+            previewDiv.style.display = 'block';
+            confirmBtn.disabled = false;
+            
+        } catch (err) {
+            showToast('Error reading file: ' + err.message, true);
+            resetModal();
+        }
+    });
+    
+    confirmBtn.addEventListener('click', async () => {
+        if (!importData) return;
+        
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Importing...';
+        
+        try {
+            const formData = new FormData();
+            formData.append('import_profile', '1');
+            formData.append('import_data', JSON.stringify(importData));
+            
+            const res = await fetch('core_profiles.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const json = await res.json();
+            
+            if (json.ok) {
+                showToast(json.message || 'Profile imported successfully!', false);
+                closeModal();
+                // Redirect to the new profile
+                setTimeout(() => {
+                    window.location.href = 'core_profiles.php?edit=' + json.id;
+                }, 1000);
+            } else {
+                showToast('Import failed: ' + (json.error || 'Unknown error'), true);
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Import Profile';
+            }
+            
+        } catch (err) {
+            showToast('Import error: ' + err.message, true);
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Import Profile';
+        }
+    });
+    
+    if (openBtn) openBtn.addEventListener('click', openModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
     
     // Close modal when clicking outside
     modal.addEventListener('click', (e) => {
