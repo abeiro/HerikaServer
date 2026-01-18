@@ -4755,7 +4755,7 @@ function DataRetrieveLastTimeTalk($s_player_name, $s_npc_name) {
 function GetAnimationHex($mood)
 {
 
-    error_log("Getting animation for mood: $mood");
+    //error_log("Getting animation for mood: $mood");
     $ANIMATIONS=[
         "ArmsCrossed"=>"IdleExamine",        // Arms crossed
         "PointClose"=>"IdlePointClose",
@@ -4888,7 +4888,7 @@ function GetAnimationHex($mood)
     } 
                       
     
-    error_log("Getting animation for mood: $mood, no result found");
+    //error_log("Getting animation for mood: $mood, no result found");
     return "";
 
 }

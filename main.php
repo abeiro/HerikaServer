@@ -1088,7 +1088,8 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         $oghmaInfiniumEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
         
         if (($minimeEnabled || $oghmaCustomEnabled) && $oghmaInfiniumEnabled) {
-                require(__DIR__."/processor/oghma.php"); // Process Oghma
+            $GLOBALS["OGHMA_CALLED"] = true;
+            require(__DIR__."/processor/oghma.php"); // Process Oghma
         }
     }
     else{
@@ -1874,7 +1875,10 @@ error_log("[OGHMA CHECK] MINIME_T5=" . var_export($GLOBALS["MINIME_T5"] ?? null,
     . " (enabled=" . ($oghmaInfiniumEnabled ? 'Y' : 'N') . ")");
 
 if (($minimeEnabled || $oghmaCustomEnabled) && $oghmaInfiniumEnabled) {
-    require(__DIR__."/processor/oghma.php");
+    if (!isset($GLOBALS["OGHMA_CALLED"])) {// Avoid double call
+        require(__DIR__."/processor/oghma.php");
+        $GLOBALS["OGHMA_CALLED"] = true;
+    }
 }
 
 if (sizeof($memoryInjectionCtx)>0) {
