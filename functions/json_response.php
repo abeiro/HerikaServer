@@ -141,6 +141,17 @@
             }
         }
 
+        // emotions expression:
+        if ($GLOBALS['use_emotions_expression']) {
+            if (!array_key_exists("emotion", $GLOBALS["responseTemplate"])) {
+                $GLOBALS["responseTemplate"]["emotion"] = 
+                "calm|surprised|aroused|desire|love|happy|amusement|gratitude|proud|anxious|fearful|panic|grieving|envious|jealous|sad|disappointed|ashamed|angry|offended|disgusted|sarcastic";
+            }
+            if (!array_key_exists("emotion_intensity", $GLOBALS["responseTemplate"])) {
+                $GLOBALS["responseTemplate"]["emotion_intensity"] = "low|moderate|strong";
+            }
+        }
+        
         // request speaking tones from the LLM when using zonos TTS
         if (zonosIsActive()) {
             $GLOBALS["responseTemplate"] = array_merge($GLOBALS["responseTemplate"], [
@@ -247,6 +258,24 @@
             }
 
         }
+
+        // emotions expression:
+        if ($GLOBALS['use_emotions_expression']) {
+            $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(
+                $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"], array(
+                    "emotion" => array(
+                        "type" => "string",
+                        "description" => "The emotion expressed."
+                    ),
+                    "emotion_intensity" => array(
+                        "type" => "string",
+                        "description" => "The intensity of the emotion expressed, possible values ​​'low', 'moderate' or 'strong'."
+                    )
+                ));
+            $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["required"][]="emotion";
+            $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["required"][]="emotion_intensity";
+        }
+        
         // request speaking tones from the LLM when using zonos TTS
         if (zonosIsActive()) {
             $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(

@@ -14,6 +14,10 @@ $GLOBALS["AVOID_TTS_CACHE"]=true;
 $GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try to provide a bogus example.
 $GLOBALS["MEMORY_THRESHOLD_MODIFIER"]=0;    // POST MEMORY
 $GLOBALS["skyrim_start_date"] = '0201-08-17 00:00:00'; // default Skyrim start date. Alternate start mods could change this. Candidate for global settings.
+$GLOBALS["SEMAPHORES_TIMEOUT"] = 300; 
+$GLOBALS["TTS_INJECT_NONVERBAL_VOCALIZATION"] = true; // Spice the TTS with non-verbal vocalization when expressing strong emotion. 
+$GLOBALS['use_emotions_expression'] = true; 
+
 
 // Cooldown for some actions
 $COOLDOWNMAP=[];
