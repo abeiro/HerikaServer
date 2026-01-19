@@ -87,11 +87,17 @@
             }
         }
     
+        // Build listener description - for rechat events, encourage addressing the previous speaker
+        $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order";
+        if (isset($GLOBALS["gameRequest"]) && in_array($GLOBALS["gameRequest"][0], ["rechat"])) {
+            $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to. Address whoever just spoke - can be any person in the conversation.";
+        }
+    
         if (isset($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])&&($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])) {
             if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
-                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
+                    "listener"=>$listenerDesc,
                     "message"=>"lines of dialogue",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
@@ -102,7 +108,7 @@
             } else {
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
-                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
+                    "listener"=>$listenerDesc,
                     "message"=>"lines of dialogue",
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
@@ -114,7 +120,7 @@
             if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
-                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
+                    "listener"=>$listenerDesc,
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
@@ -125,7 +131,7 @@
             } else {
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
-                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
+                    "listener"=>$listenerDesc,
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",

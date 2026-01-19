@@ -340,8 +340,8 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
             }
 
             if ($actor==$GLOBALS["PLAYER_NAME"]) {
-                // Player character - read from core_player table
-                $profileString = "$actor: player character";
+                // Player - read from core_player table (don't reveal they're "the player character")
+                $profileString = "$actor";
                 
                 try {
                     require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
@@ -350,7 +350,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     // Add appearance if available
                     $appearance = $player->get('appearance');
                     if (!empty($appearance)) {
-                        $profileString .= ". " . trim($appearance);
+                        $profileString .= ": " . trim($appearance);
                     }
                     
                     // Add equipment if available
@@ -360,9 +360,9 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'left_hand', 'right_hand'];
                         foreach ($slots as $slot) {
                             if (!empty($equipmentData[$slot])) {
-                                $itemName = $equipmentData[$slot];
-                                // Skip blacklisted items
-                                if (!isItemBlacklisted($itemName)) {
+                                $itemName = trim($equipmentData[$slot]);
+                                // Skip blacklisted items, empty names, or placeholder names
+                                if (!isItemBlacklisted($itemName) && !empty($itemName) && stripos($itemName, 'Missing Name') === false) {
                                     $equipmentParts[] = $itemName;
                                 }
                             }
@@ -376,7 +376,8 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     Logger::debug("Could not load player data for context: " . $e->getMessage());
                 }
                 
-                $actorDetailedListWithProfile[] = $profileString . $ittext;
+                // Don't append $ittext for player - profileString already starts with player name
+                $actorDetailedListWithProfile[] = $profileString;
                 
             } else {
                 
@@ -443,9 +444,9 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'left_hand', 'right_hand'];
                         foreach ($slots as $slot) {
                             if (!empty($metaData["equipment"][$slot])) {
-                                $itemName = $metaData["equipment"][$slot];
-                                // Skip blacklisted items
-                                if (!isItemBlacklisted($itemName)) {
+                                $itemName = trim($metaData["equipment"][$slot]);
+                                // Skip blacklisted items, empty names, or placeholder names
+                                if (!isItemBlacklisted($itemName) && !empty($itemName) && stripos($itemName, 'Missing Name') === false) {
                                     $equipmentParts[] = $itemName;
                                 }
                             }

@@ -1093,6 +1093,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         }
     }
     else{
+        Logger::info("Rechat terminated by RECHAT_P probability check (random > {$GLOBALS["RECHAT_P"]}%)");
         terminate();
     }
     
