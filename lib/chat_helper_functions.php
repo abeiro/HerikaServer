@@ -160,7 +160,8 @@ function split_at_end_of_sentence($paragraph) {
 
     // Split at any end-of-sentence punctuation followed by one or more spaces
     // Negative lookahead (?!\.) ensures we don't split after a dot if another dot follows (ellipsis)
-    $splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?!\.)\s+/u";
+    // "Don't split after ellipses either... Thanks :-)" -for example
+    $splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?<!\.\.)(?<!\.\.\.)\s+/u";
 
     $sentences = preg_split($splitSentenceRegex, $paragraph, -1, PREG_SPLIT_NO_EMPTY);
 
@@ -192,7 +193,7 @@ function split_sentences_stream($paragraph)
     // Split at sentence boundaries
     $sentences = split_at_end_of_sentence($paragraph);
 
-    // Now combine sentences to fit within MINIMUM_SENTENCE_SIZE and MAXIMUM_SENTENCE_SIZE
+    // Combine sentences to fit within MINIMUM_SENTENCE_SIZE and MAXIMUM_SENTENCE_SIZE
     $splitSentences = [];
     $currentSentence = '';
 
@@ -217,7 +218,9 @@ function split_sentences_stream($paragraph)
                 $currentSentence = $combined;
 
                 // If we've reached minimum size and we're between min and max, we can flush
-                if (strlen($currentSentence) >= MINIMUM_SENTENCE_SIZE) {
+                //EXPERIMENT: talk more in one go (longer subtitle text, fewer TTS calls)
+                $talkMore = true; //false to split as soon as we reach min len (old behavior), true to pack up to max
+                if (!talkMore && strlen($currentSentence) >= MINIMUM_SENTENCE_SIZE) {
                     $splitSentences[] = $currentSentence;
                     $currentSentence = '';
                 }
@@ -225,7 +228,7 @@ function split_sentences_stream($paragraph)
         }
     }
 
-    // Don't forget the last sentence
+    // Flush the last accumulated chunk
     if (!empty($currentSentence)) {
         $splitSentences[] = $currentSentence;
     }
