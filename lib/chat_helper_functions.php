@@ -46,10 +46,20 @@ function cleanResponse($rawResponse)
 
     $rawResponse = strtr($rawResponse,["The Narrator: background dialogue:"=>""]);
     
-    // Remove [*]]
-    $pattern = '/\[.*?\]/';
-    $replacement = '';
-    $rawResponse = preg_replace($pattern, $replacement, $rawResponse);
+    // Preserve Chatterbox Turbo paralinguistic tags, remove all other square brackets
+    // See: https://github.com/resemble-ai/chatterbox/blob/ed27b95ee46b95be201147bafe5ca85ac57ac4f2/gradio_tts_turbo_app.py#L9-L12
+    $eventTags = [
+        "[clear throat]", "[sigh]", "[shush]", "[cough]", "[groan]",
+        "[sniff]", "[gasp]", "[chuckle]", "[laugh]"
+    ];
+
+    $rawResponse = preg_replace_callback('/\[.*?\]/', function($matches) use ($eventTags) {
+        // Convert to lowercase to ensure case-insensitive matching
+        if (in_array(strtolower($matches[0]), $eventTags)) {
+            return $matches[0]; // Return the tag as-is
+        }
+        return ''; // Delete the tag
+    }, $rawResponse);
 
     // Any bracket { or }]
     //$rawResponse = strtr($rawResponse, array("{" => "", "}" => ""));
