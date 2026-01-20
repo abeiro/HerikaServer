@@ -46,20 +46,59 @@ function cleanResponse($rawResponse)
 
     $rawResponse = strtr($rawResponse,["The Narrator: background dialogue:"=>""]);
     
-    // Preserve Chatterbox Turbo paralinguistic tags, remove all other square brackets
-    // See: https://github.com/resemble-ai/chatterbox/blob/ed27b95ee46b95be201147bafe5ca85ac57ac4f2/gradio_tts_turbo_app.py#L9-L12
-    $eventTags = [
-        "[clear throat]", "[sigh]", "[shush]", "[cough]", "[groan]",
-        "[sniff]", "[gasp]", "[chuckle]", "[laugh]"
-    ];
-
-    $rawResponse = preg_replace_callback('/\[.*?\]/', function($matches) use ($eventTags) {
-        // Convert to lowercase to ensure case-insensitive matching
-        if (in_array(strtolower($matches[0]), $eventTags)) {
-            return $matches[0]; // Return the tag as-is
+    // Conditionally preserve paralinguistic tags based on provider settings
+    // This feature works for any TTS provider that defines PARALINGUISTIC_TAGS_ENABLED
+    $shouldPreserveTags = false;
+    $eventTags = [];
+    
+    if (isset($GLOBALS["TTSFUNCTION"]) && !empty($GLOBALS["TTSFUNCTION"])) {
+        // Map TTSFUNCTION to TTS array key
+        $ttsMap = [
+            'melotts' => 'MELOTTS',
+            'xtts-fastapi' => 'XTTSFASTAPI',
+            'mimic3' => 'MIMIC3',
+            'xvasynth' => 'XVASYNTH',
+            'azure' => 'AZURE',
+            '11labs' => 'ELEVEN_LABS',
+            'openai' => 'openai',
+            'kokoro' => 'KOKORO',
+            'koboldcpp' => 'koboldcpp',
+            'zonos_gradio' => 'ZONOS_GRADIO',
+            'piper-tts' => 'PIPERTTS',
+            'deepgram' => 'DEEPGRAM',
+            'cartesia' => 'CARTESIA',
+            'inworld' => 'INWORLD'
+        ];
+        
+        $ttsKey = $ttsMap[$GLOBALS["TTSFUNCTION"]] ?? strtoupper($GLOBALS["TTSFUNCTION"]);
+        
+        if (isset($GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_ENABLED"]) && 
+            (bool)$GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_ENABLED"]) {
+            $shouldPreserveTags = true;
+            
+            // Parse the configurable tag list
+            if (isset($GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_LIST"]) && 
+                !empty($GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_LIST"])) {
+                $tagsList = $GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_LIST"];
+                $eventTags = array_map('trim', explode(',', $tagsList));
+            }
         }
-        return ''; // Delete the tag
-    }, $rawResponse);
+    }
+    
+    if ($shouldPreserveTags && !empty($eventTags)) {
+        $rawResponse = preg_replace_callback('/\[.*?\]/', function($matches) use ($eventTags) {
+            // Convert to lowercase to ensure case-insensitive matching
+            foreach ($eventTags as $tag) {
+                if (strtolower($matches[0]) === strtolower($tag)) {
+                    return $matches[0]; // Return the tag as-is
+                }
+            }
+            return ''; // Delete the tag
+        }, $rawResponse);
+    } else {
+        // Remove all square brackets content
+        $rawResponse = preg_replace('/\[.*?\]/', '', $rawResponse);
+    }
 
     // Any bracket { or }]
     //$rawResponse = strtr($rawResponse, array("{" => "", "}" => ""));
