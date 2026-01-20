@@ -43,7 +43,7 @@ class LLMConnector
 
     public function readAll()
     {
-        $query = "SELECT * FROM {$this->table} ORDER BY id ASC";
+        $query = "SELECT * FROM {$this->table} ORDER BY LOWER(COALESCE(NULLIF(label,''), model)) ASC";
         return $GLOBALS["db"]->fetchAll($query);
     }
 
@@ -135,7 +135,7 @@ class LLMConnector
         $table = $foreignKeys[$fieldName]["table"];
         $labelField = $foreignKeys[$fieldName]["label_field"];
 
-        $query = "SELECT id, {$labelField} AS label FROM {$table} ORDER BY id ASC";
+        $query = "SELECT id, {$labelField} AS label FROM {$table} ORDER BY LOWER({$labelField}) ASC";
         return $GLOBALS["db"]->fetchAll($query);
     }
 
