@@ -303,6 +303,9 @@ $TTS["XTTSFASTAPI"]["endpoint"]='http://127.0.0.1:8020'; //API endpoint.
 $TTS["XTTSFASTAPI"]["language"]='en'; //Lanuguage.
 $TTS["XTTSFASTAPI"]["voiceid"]='TheNarrator'; //Generated voice file name.
 $TTS["XTTSFASTAPI"]["voicelogic"]='voicetype';
+$TTS["XTTSFASTAPI"]["PARALINGUISTIC_TAGS_ENABLED"]=false; //Enable paralinguistic tags like [laugh], [sigh] for expressive TTS output.
+$TTS["XTTSFASTAPI"]["PARALINGUISTIC_TAGS_PROMPT"]=''; //Prompt snippet for instructing LLM to use paralinguistic tags.
+$TTS["XTTSFASTAPI"]["PARALINGUISTIC_TAGS_LIST"]='[clear throat],[sigh],[shush],[cough],[groan],[sniff],[gasp],[chuckle],[laugh]'; //Comma-separated list of supported tags.
 //MIMIC3
 $TTS["MIMIC3"]["URL"]="http://127.0.0.1:59125"; //API endpoint. 
 $TTS["MIMIC3"]["voice"]="en_UK/apope_low#default"; //Voice ID.

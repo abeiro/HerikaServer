@@ -10,6 +10,124 @@
  * - Caching of Inworld voice IDs in conf_opts database
  */
 
+
+/**
+ * is this TTS service capable to express emotions?
+ * @return: boolean
+*/
+function isEmotionCapable() {
+    // inworld-tts-1 is not yet capable to handle emotions consistently, max is
+    $modelId = $GLOBALS["TTS"]["INWORLD"]["model_id"] ?? 'inworld-tts-1';
+    if ($modelId == 'inworld-tts-1')
+        return false;
+    else 
+        return true;
+}
+
+/**
+ * is this TTS service capable to handle non-verbal vocalization markups?
+ * @return: boolean
+*/
+function isNonVerbalVocalizationCapable() {
+    // inworld-tts-1 is not yet capable to handle non-verbal vocalization consistently, max is
+    $modelId = $GLOBALS["TTS"]["INWORLD"]["model_id"] ?? 'inworld-tts-1';
+    if ($modelId == 'inworld-tts-1')
+        return false;
+    else 
+        return true;
+}
+
+//Delivery Style: [laughing], [whispering]
+
+/**
+ * list of accepted emotions
+ * @return: string
+*/
+function getEmotionsList() {
+    // inworld documented emotions: happy sad calm angry surprised fearful disgusted
+    // inworld (max) could handle also other emotions with mixed results
+    $s_emo = "[happy] [sad] [calm] [angry] [surprised] [fearful] [disgusted] ". // documented
+        " [desire] [desiring] [love] [loving] [arousal] [aroused] [panic] [envy] [envious] ".
+        " [jealousy] [jealous] [shame] [ashamed] [gratitude] [proud} "; 
+    return $s_emo;
+}
+
+/**
+ * is in accepted emotions list
+ * @param string $s_emotion 
+ * @return: string
+*/
+function isInEmotionsList($s_emotion) {
+    $b_res = false;
+    $s_list = getEmotionsList();
+    if (!stripos($s_list, $s_emotion) === false)
+        $b_res = true;
+    return $b_res;
+}
+
+/**
+ * convert emotion to closest emotion from accepted emotions list
+ * @param string $s_emotion - emotion
+ * @return: string
+*/
+function convertEmotion($s_emotion) {
+    //documented: [happy], [sad], [angry], [surprised], [fearful], [disgusted]
+    //inworld tts (not max) most frequent refusals: aroused anxious nervous worried embarrassed resentful
+    $s_emo = strtolower(trim($s_emotion));
+    $s_res = "";
+    if (strlen($s_emo) > 2) {
+        if ($s_emo == 'aroused') 
+            $s_res = 'happy';
+        if ($s_emo == 'arousal') 
+            $s_res = 'happy';
+        elseif ($s_emo == 'anxious') 
+            $s_res = 'fearful';
+        elseif ($s_emo == 'nervous') 
+            $s_res = 'fearful';
+        elseif ($s_emo == 'worried') 
+            $s_res = 'fearful';
+        elseif ($s_emo == 'embarrassed') 
+            $s_res = 'ashamed';
+        elseif ($s_emo == 'resentful') 
+            $s_res = 'angry';
+        elseif ($s_emo == 'offended') 
+            $s_res = 'angry';
+        elseif ($s_emo == 'grieving') 
+            $s_res = 'sad';
+        elseif ($s_emo == 'disappointed') 
+            $s_res = 'sad';
+        elseif ($s_emo == 'joy') 
+            $s_res = 'happy';
+        elseif ($s_emo == 'joyful') 
+            $s_res = 'happy';
+    }
+    return $s_res;
+}
+
+/**
+ * list of accepted non-verbal vocalization markups
+ * @return: string
+*/
+function getNonVerbalVocalizationList() {
+    //non-verbal vocalization markups add in non-verbal sounds based on where they are placed in the text.
+    //[breathe] [clear_throat] [cough] [laugh] [sigh] [yawn]
+    return "[breathe] [clear_throat] [cough] [laugh] [sigh] [yawn]";
+}
+
+/**
+ * is in accepted non-verbal vocalization markups list
+ * @param string - markup string
+ * @return: boolean
+*/
+function isInNonVerbalVocalizationList($s_markup) {
+    $b_res = false;
+    $s_list = getNonVerbalVocalizationList();
+    if (!stripos($s_list, $s_markup) === false)
+        $b_res = true;
+    return $b_res;
+}
+
+
 /**
  * Get or create Inworld voice ID for a given voice sample
  * 
@@ -268,8 +386,8 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal', $outputFile = nul
     // Get temperature
     $temperature = $GLOBALS["TTS"]["INWORLD"]["temperature"] ?? 1.1;
     $temperature = floatval($temperature);
-    if ($temperature < 0) $temperature = 0;
-    if ($temperature > 2) $temperature = 2;
+    if ($temperature < 0.0) $temperature = 0.0;
+    if ($temperature > 2.0) $temperature = 2.0;
     
     // Get language from config
     $language = $GLOBALS["TTS"]["INWORLD"]["language"] ?? 'EN_US';
@@ -299,8 +417,9 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal', $outputFile = nul
         'text' => $text,
         'voiceId' => $voiceId,
         'modelId' => $modelId,
-        'language' => $language,
+        'language' => $language,        
         'audioConfig' => $audioConfig,
+        //'applyTextNormalization' => 'ON', // APPLY_TEXT_NORMALIZATION_UNSPECIFIED (default), ON, OFF 
         'temperature' => $temperature
     );
     
@@ -580,7 +699,84 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
     // Use .pcm extension for raw PCM data (no WAV header)
     $oname = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . 
             "soundcache/" . md5(trim($stringforhash)) . "_o.pcm";
+            
+    // pronunciation: 
+    $textString = str_ireplace(
+        ['Herika',    'Aeter',      'f-f-f' ], // Change from
+        ['/hˈɛɹɪ.kə/','/ˈiːθə(r)/', 'f... f'], // to this. Could be International Phonetic Alphabet (IPA) format, wrapped in slashes. 
+        $textString
+    );
     
+    // emotions:
+    $b_emotions = isset($GLOBALS["LAST_LLM_RESPONSE"]) && ($GLOBALS['use_emotions_expression'] ?? false);
+    if (isEmotionCapable() && $b_emotions) {
+        $s_mood = strtolower($GLOBALS["LAST_LLM_RESPONSE"]["mood"] ?? "");
+        if (isset($GLOBALS["FORCE_MOOD"]) && (strlen($GLOBALS["FORCE_MOOD"]) > 0)) {
+            $s_mood = strtolower($GLOBALS["FORCE_MOOD"]);
+        }
+        
+        if (($s_mood == "whispering") || ($s_mood == "laughing"))  {
+            $textString = "[{$s_mood}] " . $textString; 
+        } else {  
+            $s_emo_int = $GLOBALS["LAST_LLM_RESPONSE"]["emotion intensity"] ?? "";
+            if (($s_emo_int == "strong") || ($s_emo_int == "moderate")) {
+                $s_emo = strtolower($GLOBALS["LAST_LLM_RESPONSE"]["emotion"] ?? "");
+                if (strlen($s_emo) > 0) {
+                    if (isInEmotionsList($s_emo)) {
+                        $textString = "[$s_emo] " . $textString; 
+                    } else {
+                        $s_emo2 = convertEmotion($s_emo);
+                        if (strlen($s_emo2) > 0)
+                            $textString = "[$s_emo2] " . $textString; 
+                    }
+                    
+                    $b_inject = ($GLOBALS["TTS_INJECT_NONVERBAL_VOCALIZATION"] ?? false) && isNonVerbalVocalizationCapable() && ($s_emo_int == "strong"); // spice with non-verbals 
+                    if ($b_inject) { // add some random non-verbal vocalization
+                        $n_rnd = rand(0,19); // 
+                        if ($n_rnd == 0) { 
+                            if (isInNonVerbalVocalizationList("sigh")) {
+                                $i_pos = strrpos($textString, '...'); // last ellipsis
+                                if ($i_pos !== false) {
+                                    if (($i_pos > 16) && ($i_pos < (strlen($textString) - 16))) { // not close to begining, not at the end
+                                        $textString = substr_replace($textString, '... [sigh] ', $i_pos, 3);
+                                        //error_log(" sigh "); // debug
+                                    }
+                                }
+                            }
+                        } elseif ($n_rnd == 1) { 
+                            if (isInNonVerbalVocalizationList("breathe")) {
+                                $i_pos = strrpos($textString, '...'); // last ellipsis
+                                if ($i_pos !== false) {
+                                    if (($i_pos > 16) && ($i_pos < (strlen($textString) - 16))) { // not close to begining, not at the end
+                                        $textString = substr_replace($textString, '... [breathe] ', $i_pos, 3);
+                                        //error_log(" breathe "); // debug
+                                    }
+                                }
+                            }
+                        } elseif ($n_rnd == 2) { 
+                            if (isInNonVerbalVocalizationList("laugh")) {
+                                // joy happy amusement: laugh
+                                //$b_laugh = true; // debug 
+                                $b_laugh = (!strpos('playful,delighted,amused', $s_mood) === false) || 
+                                           (!strpos('happy,happiness,amusement,amused,joy,joyful', $s_emo) === false); 
+                                if ($b_laugh) {
+                                    $i_pos = strrpos($textString, '...'); // last ellipsis
+                                    if ($i_pos !== false) {
+                                        if (($i_pos > 16) && ($i_pos < (strlen($textString) - 16))) { // not close to begining, not at the end
+                                            $textString = substr_replace($textString, '... [laugh] ', $i_pos, 3);
+                                            //error_log(" laugh "); // debug
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        //2do: Emphasis Markers: Asterisks around a word (e.g. *really*)
+                    }
+                }
+            }
+        } 
+    } // --- endif emotions
+
     // Generate TTS with streaming directly to file
     $response = generateInworldTTS($textString, $inworldVoiceId, $mood, $oname);
     

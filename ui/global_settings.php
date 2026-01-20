@@ -158,6 +158,40 @@ function flatten_current_conf(array $currentConf, array $confSchema): array {
     return $flat;
 }
 
+// Helper: format field name for display with proper title casing
+function format_field_label($fieldName) {
+    // Special cases for common acronyms and abbreviations
+    $specialCases = [
+        'api_key' => 'API Key',
+        'url' => 'URL',
+        'tts' => 'TTS',
+        'stt' => 'STT',
+        'itt' => 'ITT',
+        'llm' => 'LLM',
+        'id' => 'ID',
+        'voiceid' => 'Voice ID',
+        'model_id' => 'Model ID',
+        'voice_id' => 'Voice ID',
+        'speaker_id' => 'Speaker ID',
+        'cfg_scale' => 'CFG Scale',
+    ];
+    
+    $lower = strtolower($fieldName);
+    if (isset($specialCases[$lower])) {
+        return $specialCases[$lower];
+    }
+    
+    // Convert snake_case or underscore-separated to Title Case
+    $words = preg_split('/[_\s]+/', $fieldName);
+    $formatted = array_map(function($word) {
+        // Capitalize first letter of each word
+        return ucfirst(strtolower($word));
+    }, $words);
+    
+    return implode(' ', $formatted);
+}
+
+
 // Helper: build conf.php content using logic aligned with tools/conf_writer.php
 function build_conf_php_from_pairs(array $pairs, array $confSchema): string {
     $buffer = "<?php" . PHP_EOL;
@@ -845,7 +879,7 @@ function current_value(string $flatName, array $currentConf) {
                                 continue;
                             }
                         ?>
-                            <label for="tts_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars($fname); ?></label>
+                            <label for="tts_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars(format_field_label($fname)); ?></label>
                             <?php if ($ftype==='boolean'): ?>
                                 <input type="hidden" name="tts__<?php echo htmlspecialchars($fname); ?>" value="false">
                                 <input type="checkbox" id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>" value="true" <?php echo ($current?'checked':''); ?> style="width:auto;">
@@ -889,6 +923,40 @@ function current_value(string $flatName, array $currentConf) {
                 </div>
                 <?php else: ?>
                     <div class="provider-card"><div class="provider-body"><div></div><div>No settings available for this provider.</div></div></div>
+                <?php endif; ?>
+
+                <?php 
+                // Check if current TTS provider supports paralinguistic tags
+                $hasParalinguisticTags = isset($ttsSchemaCur['PARALINGUISTIC_TAGS_ENABLED']);
+                if ($hasParalinguisticTags): 
+                    $paraEnabled = current_value('TTS '.$ttsKeyCur.' PARALINGUISTIC_TAGS_ENABLED', $currentConf);
+                    $paraPrompt = (string)current_value('TTS '.$ttsKeyCur.' PARALINGUISTIC_TAGS_PROMPT', $currentConf);
+                    $paraTagsList = (string)current_value('TTS '.$ttsKeyCur.' PARALINGUISTIC_TAGS_LIST', $currentConf);
+                ?>
+                <div class="provider-card">
+                    <div class="provider-head">
+                        <div class="provider-title">
+                            <div class="provider-icon">🎭</div>
+                            <div>Paralinguistic Tags</div>
+                        </div>
+                    </div>
+                    <div class="provider-body grid">
+                        <label for="tts_PARALINGUISTIC_TAGS_ENABLED">Enable Tags</label>
+                        <div>
+                            <input type="hidden" name="tts__PARALINGUISTIC_TAGS_ENABLED" value="false">
+                            <input type="checkbox" id="tts_PARALINGUISTIC_TAGS_ENABLED" name="tts__PARALINGUISTIC_TAGS_ENABLED" value="true" <?php echo ($paraEnabled?'checked':''); ?> style="width:auto;">
+                        </div>
+                        <div class="help">Enable paralinguistic tags like [laugh], [sigh], [gasp] for expressive TTS output. When enabled, these tags will be preserved in the TTS output.</div>
+                        
+                        <label for="tts_PARALINGUISTIC_TAGS_LIST">Tag List</label>
+                        <input type="text" id="tts_PARALINGUISTIC_TAGS_LIST" name="tts__PARALINGUISTIC_TAGS_LIST" value="<?php echo htmlspecialchars($paraTagsList); ?>" placeholder="[laugh],[sigh],[gasp],[cough],[chuckle]">
+                        <div class="help">Comma-separated list of paralinguistic tags to preserve. Tags are case-insensitive. Example: [laugh],[sigh],[gasp],[cough],[groan],[sniff],[chuckle],[clear throat],[shush]</div>
+                        
+                        <label for="tts_PARALINGUISTIC_TAGS_PROMPT">Prompt Snippet</label>
+                        <textarea id="tts_PARALINGUISTIC_TAGS_PROMPT" name="tts__PARALINGUISTIC_TAGS_PROMPT" rows="4" placeholder="You may use paralinguistic tags in your dialogue: [laugh], [sigh], [gasp], [cough], [chuckle]. Place them within your spoken text for audible effects. Use sparingly for natural immersion."><?php echo htmlspecialchars($paraPrompt); ?></textarea>
+                        <div class="help">Prompt snippet instructing the LLM to use paralinguistic tags. This will be added to the system prompt when paralinguistic tags are enabled. Leave empty to disable prompt injection.</div>
+                    </div>
+                </div>
                 <?php endif; ?>
 
                 <div class="provider-card">
@@ -1021,7 +1089,7 @@ function current_value(string $flatName, array $currentConf) {
                                 continue;
                             }
                         ?>
-                            <label for="stt_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars($fname); ?></label>
+                            <label for="stt_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars(format_field_label($fname)); ?></label>
                             <?php if ($ftype==='boolean'): ?>
                                 <input type="hidden" name="stt__<?php echo htmlspecialchars($fname); ?>" value="false">
                                 <input type="checkbox" id="stt_<?php echo htmlspecialchars($fname); ?>" name="stt__<?php echo htmlspecialchars($fname); ?>" value="true" <?php echo ($current?'checked':''); ?> style="width:auto;">
@@ -1113,7 +1181,7 @@ function current_value(string $flatName, array $currentConf) {
                                 continue;
                             }
                         ?>
-                            <label for="itt_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars($fname); ?></label>
+                            <label for="itt_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars(format_field_label($fname)); ?></label>
                             <?php if ($ftype==='boolean'): ?>
                                 <input type="hidden" name="itt__<?php echo htmlspecialchars($fname); ?>" value="false">
                                 <input type="checkbox" id="itt_<?php echo htmlspecialchars($fname); ?>" name="itt__<?php echo htmlspecialchars($fname); ?>" value="true" <?php echo ($current?'checked':''); ?> style="width:auto;">
