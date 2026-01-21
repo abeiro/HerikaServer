@@ -308,6 +308,7 @@ function icon_for_field(string $flatName): string {
     // Specific keys
     if ($u === 'PLAYER_NAME') return '🏷️';
     if ($u === 'PROMPT_HEAD') return '🔝';
+    if ($u === 'PROMPT_TIMESTAMP') return '🕐';
     // Connectors
     if (strpos($u, 'CORE_CONNECTOR_') === 0) {
         if ($u === 'CORE_CONNECTOR_PLAYER') return '🎮';
@@ -334,8 +335,9 @@ function icon_for_field(string $flatName): string {
 
 // Curated, manually-defined global settings (exclude TTS, STT, ITT)
 $gsSections = [
-    'General' => [
+    'Prompt Settings' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
+        [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
         [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],

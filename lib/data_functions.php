@@ -1359,6 +1359,24 @@ function flushConsolidationBuffer(array $buffer): array {
     return $result;
 }
 
+/**
+ * Convert time difference in hours to a human-readable time category
+ * 
+ * @param float $hoursAgo Number of in-game hours since the event
+ * @return string Human-readable time category
+ */
+function getTimeCategory($hoursAgo) {
+    if ($hoursAgo < 0.02) return "Happened Recently";
+    if ($hoursAgo < 0.1) return "Moments Ago";
+    if ($hoursAgo < 0.25) return "A few minutes ago";
+    if ($hoursAgo < 0.5) return "A while ago";
+    if ($hoursAgo < 1.5) return "About an hour ago";
+    if ($hoursAgo < 4) return "A couple of hours ago";
+    if ($hoursAgo < 12) return "Earlier in the day";
+    if ($hoursAgo < 36) return "A day ago";
+    return "Days ago";
+}
+
 
 function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
 
@@ -1471,6 +1489,8 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     $lastlocation="";
     $lastGameTs=0;
     $memoryLogToRemove=[];
+    
+    $lastTimeCategory = null; // Track last timestamp category for PROMPT_TIMESTAMP feature
 
     $focusOnChat=($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"] ?? false);
 
@@ -1712,6 +1732,20 @@ New setting: $currentLocation
         }
 
         $lastSpeaker = $speaker;
+        
+        // Insert timestamp subdividers if PROMPT_TIMESTAMP is enabled
+        if (!empty($GLOBALS["PROMPT_TIMESTAMP"]) && $row["type"] != "info_timeforward") {
+            $hoursAgo = ($currentGameTs - $row["gamets"]) * 0.0000024;
+            $currentTimeCategory = getTimeCategory($hoursAgo);
+            
+            // If category changed, insert a subdivider
+            if ($lastTimeCategory !== null && $currentTimeCategory !== $lastTimeCategory) {
+                $lastDialogFull[] = array('role' => "narratorci", 'content' => "--- {$currentTimeCategory} ---");
+            }
+            
+            $lastTimeCategory = $currentTimeCategory;
+        }
+        
         $row= array('role' => $lastSpeaker, 'content' => trim($rowData),'subtype'=>$row["subtype"]?:strtoupper($lastSpeaker),'type'=>$row["type"]);
         $lastDialogFull[] = $row;
         $previousRow=$row;
