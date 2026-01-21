@@ -288,7 +288,7 @@ class openrouterjson
         }
 
         if (isset($GLOBALS["HERIKA_SPEECHSTYLE"]) && (!empty($GLOBALS["HERIKA_SPEECHSTYLE"]))) {
-            $speechReinforcement="Use <speechstyle> for reference.";
+            $speechReinforcement="Use <speech_style> for reference.";
         } else
             $speechReinforcement="";
 

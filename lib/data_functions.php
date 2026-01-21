@@ -5282,7 +5282,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         'HERIKA_RELATIONSHIPS' => 'Relationships',
         'HERIKA_OCCUPATION' => 'Occupation',
         'HERIKA_SKILLS' => 'Skills',
-        'HERIKA_SPEECHSTYLE' => 'SpeechStyle',
+        'HERIKA_SPEECHSTYLE' => 'Speech Style',
         'HERIKA_GOALS' => 'Goals'
     ];
     $SKILLS_ADD="";
