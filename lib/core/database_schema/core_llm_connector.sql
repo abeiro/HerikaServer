@@ -87,7 +87,7 @@ INSERT INTO public.core_llm_connector (
     max_tokens, enforce_json, prefill_json, api_badge_id, json_schema, temperature, service
 ) VALUES
     (1, 'Gemini 2.5 Flash', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'google/gemini-2.5-flash', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 1, 'openrouter'),
-    (2, 'Gemini 2.5 Flash', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'google/gemini-2.5-flash', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 1, 'openrouter'),
+    (2, 'Gemini 2.5 Flash Lite', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'google/gemini-2.5-flash-lite', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 1, 'openrouter'),
     (3, 'Sonnet 4.5',          '{}', 'https://openrouter.ai/api/v1/chat/completions', 'anthropic/claude-sonnet-4.5', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 1, 'openrouter'),
     (4, 'DeepSeek Chat V3.1',          '{}', 'https://openrouter.ai/api/v1/chat/completions', 'deepseek/deepseek-chat-v3.1', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 0.6, 'openrouter'),
     (5, 'Mistral Small 3.2 24B', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'mistralai/mistral-small-3.2-24b-instruct', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 1, 'openrouter'),
