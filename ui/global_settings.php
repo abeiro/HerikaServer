@@ -132,6 +132,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test']) && 
     exit;
 }
 
+// Handle Clear Reanimation Status action
+$clearReanimationResult = null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_reanimation_status'])) {
+    try {
+        // Initialize database if needed
+        if (!isset($GLOBALS['db']) || !$GLOBALS['db']) {
+            @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+            if (isset($GLOBALS["DBDRIVER"])) {
+                @require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php");
+            }
+            $GLOBALS['db'] = new sql();
+        }
+        
+        $db = $GLOBALS['db'];
+        $affectedCount = 0;
+        
+        // 1. Remove "reanimated" flag from extended_data for all NPCs
+        $updateExtended = "UPDATE core_npc_master 
+            SET extended_data = extended_data - 'reanimated'
+            WHERE extended_data::text LIKE '%reanimated%'";
+        $db->execQuery($updateExtended);
+        
+        // 2. Remove zombie text from core field (multiple variations)
+        $zombiePhrases = [
+            ' You have been reanimated from death as a zombie.',
+            'You have been reanimated from death as a zombie. ',
+            'You have been reanimated from death as a zombie.',
+        ];
+        
+        foreach ($zombiePhrases as $phrase) {
+            $escaped = $db->escape($phrase);
+            $updateCore = "UPDATE core_npc_master 
+                SET core = REPLACE(core, '{$escaped}', '')
+                WHERE core LIKE '%{$escaped}%'";
+            $db->execQuery($updateCore);
+        }
+        
+        // Count affected NPCs for feedback
+        $countQuery = "SELECT COUNT(*) as cnt FROM core_npc_master WHERE 1=0"; // Placeholder
+        
+        $clearReanimationResult = ['success' => true, 'message' => 'Successfully cleared reanimation status from all NPCs.'];
+        Logger::info("[GLOBAL_SETTINGS] Cleared reanimation status from all NPCs");
+        
+    } catch (Exception $e) {
+        $clearReanimationResult = ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
+        Logger::error("[GLOBAL_SETTINGS] Failed to clear reanimation status: " . $e->getMessage());
+    }
+}
+
 // Helper: flatten currentConf into name=>value pairs like conf_wizard/conf_writer
 function flatten_current_conf(array $currentConf, array $confSchema): array {
     $flat = [];
@@ -346,7 +395,7 @@ $gsSections = [
         [ 'name' => 'GROUND_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'INVENTORY_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
-        [ 'name' => 'DISABLE_REANIMATION_TRACKING', 'type' => 'boolean' ],
+        [ 'name' => 'DISABLE_REANIMATION_TRACKING', 'type' => 'boolean', 'action' => 'clear_reanimation' ],
         [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
         [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
     ],
@@ -763,7 +812,21 @@ function current_value(string $flatName, array $currentConf) {
                                 </div>
                                 <div class="provider-body">
                                     <?php if ($ftype === 'boolean'): ?>
-                                        <!-- Boolean rendered in header next to title -->
+                                        <?php if (isset($f['action']) && $f['action'] === 'clear_reanimation'): ?>
+                                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                                <button type="submit" name="clear_reanimation_status" value="1" class="btn-action" style="background:#8b0000; border:1px solid #a52a2a; color:#fff; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px;" onclick="return confirm('This will remove the reanimated/zombie status from ALL NPCs in the database. Continue?');">
+                                                    🧟 Clear Reanimation Status
+                                                </button>
+                                                <span style="color:#888; font-size:12px;">Removes zombie flags from all NPCs</span>
+                                            </div>
+                                            <?php if ($clearReanimationResult !== null): ?>
+                                                <div style="margin-top:8px; padding:8px 12px; border-radius:6px; <?php echo $clearReanimationResult['success'] ? 'background:#1a3d1a; color:#90EE90;' : 'background:#3d1a1a; color:#ff6b6b;'; ?>">
+                                                    <?php echo htmlspecialchars($clearReanimationResult['message']); ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <!-- Boolean rendered in header next to title -->
+                                        <?php endif; ?>
                                     <?php elseif ($ftype === 'integer'): ?>
                                         <?php $min = isset($f['min']) ? (int)$f['min'] : null; $max = isset($f['max']) ? (int)$f['max'] : null; ?>
                                         <input type="number" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" <?php echo ($min!==null?('min="'.$min.'"'):''); ?> <?php echo ($max!==null?('max="'.$max.'"'):''); ?> step="1" <?php echo $readonlyAttr; ?>>
