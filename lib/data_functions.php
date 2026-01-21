@@ -1349,8 +1349,8 @@ function flushConsolidationBuffer(array $buffer): array {
                 $event['content'] = "{$actorList} {$action} {$target}";
             }
         } elseif ($buffered['count'] > 1) {
-            // Same actor repeating - add count suffix
-            $event['content'] = trim($event['content']) . " (x{$buffered['count']})";
+            // Same event repeating - add count prefix for clarity (e.g., "2x SKEEVER DIED")
+            $event['content'] = "{$buffered['count']}x " . trim($event['content']);
         }
         
         $result[] = $event;
