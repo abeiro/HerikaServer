@@ -43,7 +43,7 @@ class LLMConnector
 
     public function readAll()
     {
-        $query = "SELECT * FROM {$this->table} ORDER BY id ASC";
+        $query = "SELECT * FROM {$this->table} ORDER BY LOWER(COALESCE(NULLIF(label,''), model)) ASC";
         return $GLOBALS["db"]->fetchAll($query);
     }
 
@@ -135,7 +135,7 @@ class LLMConnector
         $table = $foreignKeys[$fieldName]["table"];
         $labelField = $foreignKeys[$fieldName]["label_field"];
 
-        $query = "SELECT id, {$labelField} AS label FROM {$table} ORDER BY id ASC";
+        $query = "SELECT id, {$labelField} AS label FROM {$table} ORDER BY LOWER({$labelField}) ASC";
         return $GLOBALS["db"]->fetchAll($query);
     }
 
@@ -163,7 +163,7 @@ class LLMConnector
             $apiKeyData = $apiBadge->getById($currentConnectorData["api_badge_id"]);
             // error_log("[CORE SYSTEM] Using new profile system CONNECTOR openaijson {$currentConnectorData["id"]} {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
             $GLOBALS["CONNECTOR"]["openaijson"]["url"] = $currentConnectorData["url"] ?? 'https://openrouter.ai/api/v1/chat/completions';
-            $GLOBALS["CONNECTOR"]["openaijson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.0-flash-001';
+            $GLOBALS["CONNECTOR"]["openaijson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.5-flash';
 
             $GLOBALS["CONNECTOR"]["openaijson"]["reasoning_model"] = $currentConnectorData["reasoning_model"] ?? false;
             $GLOBALS["CONNECTOR"]["openaijson"]["max_tokens"] = $currentConnectorData["max_tokens"] ?? '1024';
@@ -194,7 +194,7 @@ class LLMConnector
             $apiKeyData = $apiBadge->getById($currentConnectorData["api_badge_id"]);
             // error_log("[CORE SYSTEM] Using new profile system CONNECTOR openaijson {$currentConnectorData["id"]} {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
             $GLOBALS["CONNECTOR"]["openrouterjson"]["url"] = $currentConnectorData["url"] ?? 'https://openrouter.ai/api/v1/chat/completions';
-            $GLOBALS["CONNECTOR"]["openrouterjson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.0-flash-001';
+            $GLOBALS["CONNECTOR"]["openrouterjson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.5-flash';
             $GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"] = $currentConnectorData["provider"] ?? '';
             $GLOBALS["CONNECTOR"]["openrouterjson"]["reasoning_model"] = $currentConnectorData["reasoning_model"] ?? false;
             $GLOBALS["CONNECTOR"]["openrouterjson"]["max_tokens"] = $currentConnectorData["max_tokens"] ?? '1024';
@@ -225,7 +225,7 @@ class LLMConnector
             $apiKeyData = $apiBadge->getById($currentConnectorData["api_badge_id"]);
             // error_log("[CORE SYSTEM] Using new profile system CONNECTOR openaijson {$currentConnectorData["id"]} {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
             $GLOBALS["CONNECTOR"]["google_openaijson"]["url"] = $currentConnectorData["url"] ?? 'https://openrouter.ai/api/v1/chat/completions';
-            $GLOBALS["CONNECTOR"]["google_openaijson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.0-flash-001';
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.5-flash';
             $GLOBALS["CONNECTOR"]["google_openaijson"]["PROVIDER"] = $currentConnectorData["provider"] ?? '';
             $GLOBALS["CONNECTOR"]["google_openaijson"]["reasoning_model"] = $currentConnectorData["reasoning_model"] ?? false;
             $GLOBALS["CONNECTOR"]["google_openaijson"]["max_tokens"] = $currentConnectorData["max_tokens"] ?? '1024';

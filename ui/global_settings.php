@@ -308,6 +308,7 @@ function icon_for_field(string $flatName): string {
     // Specific keys
     if ($u === 'PLAYER_NAME') return '🏷️';
     if ($u === 'PROMPT_HEAD') return '🔝';
+    if ($u === 'PROMPT_TIMESTAMP') return '🕐';
     // Connectors
     if (strpos($u, 'CORE_CONNECTOR_') === 0) {
         if ($u === 'CORE_CONNECTOR_PLAYER') return '🎮';
@@ -334,8 +335,9 @@ function icon_for_field(string $flatName): string {
 
 // Curated, manually-defined global settings (exclude TTS, STT, ITT)
 $gsSections = [
-    'General' => [
+    'Prompt Settings' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
+        [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
         [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
@@ -867,7 +869,7 @@ function current_value(string $flatName, array $currentConf) {
                             }
                             $apiBadges = $GLOBALS['db']->fetchAll("SELECT id,label,api_key FROM core_api_badge ORDER BY label ASC");
                         } catch (Throwable $_e) {}
-                        foreach ($ttsSchemaCur as $fname => $def): if (!is_array($def)) continue; $ftype=$def['type']??'string'; $plain='TTS '.$ttsKeyCur.' '.$fname; $current=$currentConf[$plain]['currentValue']??''; $help=$def['description']??''; $lname=strtolower($fname); $lnameNorm=str_replace(['_','-'],'',$lname); if ($lnameNorm==='voiceid' || $lnameNorm==='voicelogic') continue; if ($ttsKeyCur==='XVASYNTH' && $lname==='model') continue; if (strtolower($ttsKeyCur)==='openai' && $lname==='voice') continue; 
+                        foreach ($ttsSchemaCur as $fname => $def): if (!is_array($def)) continue; $ftype=$def['type']??'string'; $plain='TTS '.$ttsKeyCur.' '.$fname; $current=$currentConf[$plain]['currentValue']??''; $help=$def['description']??''; $lname=strtolower($fname); $lnameNorm=str_replace(['_','-'],'',$lname); if ($lnameNorm==='voiceid' || $lnameNorm==='voicelogic') continue; if ($ttsKeyCur==='XVASYNTH' && $lname==='model') continue; if (strtolower($ttsKeyCur)==='openai' && $lname==='voice') continue; if (strpos($fname, 'PARALINGUISTIC_TAGS') === 0) continue; 
                             // API KEY badge handling for known providers
                             $provLower = strtolower($ttsKeyCur);
                             if ($fname === 'API_KEY' && in_array($provLower, ['azure','eleven_labs','openai','deepgram','cartesia','inworld'])) {

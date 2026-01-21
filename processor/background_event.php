@@ -31,23 +31,26 @@ if ($gameRequest[0] === 'npc_reanimated') {
                     $extended = [];
                 }
                 
-                // Mark as reanimated
+                // Mark as reanimated (always track the state in extended_data)
                 $extended["reanimated"] = true;
                 
-                // Also append reanimation status to the core field if not already there
-                $currentCore = isset($npcData['core']) ? $npcData['core'] : '';
-                $reanimationText = "You have been reanimated from death as a zombie.";
-                
-                // Only add if not already present
-                if (stripos($currentCore, 'reanimated') === false && stripos($currentCore, 'zombie') === false) {
-                    $npcData['core'] = trim($currentCore) . ' ' . $reanimationText;
+                // Only modify core field and prompts if reanimation tracking is enabled
+                if (empty($GLOBALS["DISABLE_REANIMATION_TRACKING"])) {
+                    // Append reanimation status to the core field if not already there
+                    $currentCore = isset($npcData['core']) ? $npcData['core'] : '';
+                    $reanimationText = "You have been reanimated from death as a zombie.";
+                    
+                    // Only add if not already present
+                    if (stripos($currentCore, 'reanimated') === false && stripos($currentCore, 'zombie') === false) {
+                        $npcData['core'] = trim($currentCore) . ' ' . $reanimationText;
+                    }
                 }
                 
                 // Update NPC profile
                 $npcData = $npcManager->setExtendedData($npcData, $extended);
                 $npcManager->updateByArray($npcData);
                 
-                error_log("[NPC_REANIMATED] Successfully updated {$targetName} - marked as reanimated and updated core field");
+                error_log("[NPC_REANIMATED] Successfully updated {$targetName} - marked as reanimated" . (empty($GLOBALS["DISABLE_REANIMATION_TRACKING"]) ? " and updated core field" : " (core field update skipped - tracking disabled)"));
             } else {
                 error_log("[NPC_REANIMATED] NPC not found in database: {$targetName}");
             }
