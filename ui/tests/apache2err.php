@@ -2415,54 +2415,107 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// JavaScript for copy to clipboard
-document.addEventListener('DOMContentLoaded', () => {
-    document.body.addEventListener('click', function(event) {
-        if (event.target.classList.contains('copy-llm-btn')) {
-            const llmBlock = event.target.closest('.llm-block');
-            if (llmBlock) {
-                let contentToCopy = '';
-                // Try to find LLM output content (multiple divs)
-                const outputMessages = llmBlock.querySelectorAll('.log-message .llm-content');
-                if (outputMessages.length > 0) {
-                    outputMessages.forEach(msg => {
-                        contentToCopy += msg.textContent.trim() + '\n';
-                    });
-                } else {
-                    // Try to find LLM context content (preformatted text)
-                    const contextMessage = llmBlock.querySelector('.log-message pre.llm-content');
-                    if (contextMessage) {
-                        contentToCopy = contextMessage.textContent;
-                    }
-                }
+// JavaScript for copy to clipboard (with iframe fallback)
+// Fallback copy function for iframes and older browsers
+function copyToClipboardFallback(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.top = '0';
+    textarea.style.left = '0';
+    textarea.style.width = '2em';
+    textarea.style.height = '2em';
+    textarea.style.padding = '0';
+    textarea.style.border = 'none';
+    textarea.style.outline = 'none';
+    textarea.style.boxShadow = 'none';
+    textarea.style.background = 'transparent';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    
+    let success = false;
+    try {
+        success = document.execCommand('copy');
+    } catch (err) {
+        console.error('Fallback copy failed:', err);
+    }
+    
+    document.body.removeChild(textarea);
+    return success;
+}
 
-                contentToCopy = contentToCopy.trim();
+// Main copy function with fallback
+function copyToClipboard(text) {
+    // Try modern clipboard API first
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text)
+            .then(() => true)
+            .catch(err => {
+                console.warn('Clipboard API failed, using fallback:', err);
+                return copyToClipboardFallback(text);
+            });
+    } else {
+        // Use fallback immediately if clipboard API not available
+        return Promise.resolve(copyToClipboardFallback(text));
+    }
+}
 
-                if (contentToCopy) {
-                    navigator.clipboard.writeText(contentToCopy)
-                        .then(() => {
-                            event.target.textContent = '✅'; // Copied!
-                            setTimeout(() => {
-                                event.target.textContent = '📋'; // Reset icon
-                            }, 1500);
-                        })
-                        .catch(err => {
-                            console.error('Failed to copy text: ', err);
-                            event.target.textContent = '❌'; // Error
-                             setTimeout(() => {
-                                event.target.textContent = '📋'; // Reset icon
-                            }, 1500);
-                        });
-                } else {
-                    console.warn('No content found to copy in LLM block:', llmBlock);
-                    event.target.textContent = '❓'; // No content
-                     setTimeout(() => {
-                        event.target.textContent = '📋'; // Reset icon
-                    }, 1500);
+// No need for DOMContentLoaded since this script runs at the end of the body
+document.body.addEventListener('click', function(event) {
+    // Use closest to handle clicks on the button or any child elements (like the emoji)
+    const copyBtn = event.target.closest('.copy-llm-btn');
+    if (copyBtn) {
+        const llmBlock = copyBtn.closest('.llm-block');
+        if (llmBlock) {
+            let contentToCopy = '';
+            // Try to find LLM output content (multiple divs)
+            const outputMessages = llmBlock.querySelectorAll('.log-message .llm-content');
+            if (outputMessages.length > 0) {
+                outputMessages.forEach(msg => {
+                    contentToCopy += msg.textContent.trim() + '\n';
+                });
+            } else {
+                // Try to find LLM context content (preformatted text)
+                const contextMessage = llmBlock.querySelector('.log-message pre.llm-content');
+                if (contextMessage) {
+                    contentToCopy = contextMessage.textContent;
                 }
             }
+
+            contentToCopy = contentToCopy.trim();
+
+            if (contentToCopy) {
+                copyToClipboard(contentToCopy)
+                    .then((success) => {
+                        if (success) {
+                            copyBtn.textContent = '✅'; // Copied!
+                            setTimeout(() => {
+                                copyBtn.textContent = '📋'; // Reset icon
+                            }, 1500);
+                        } else {
+                            copyBtn.textContent = '❌'; // Error
+                            setTimeout(() => {
+                                copyBtn.textContent = '📋'; // Reset icon
+                            }, 1500);
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy text: ', err);
+                        copyBtn.textContent = '❌'; // Error
+                        setTimeout(() => {
+                            copyBtn.textContent = '📋'; // Reset icon
+                        }, 1500);
+                    });
+            } else {
+                console.warn('No content found to copy in LLM block:', llmBlock);
+                copyBtn.textContent = '❓'; // No content
+                setTimeout(() => {
+                    copyBtn.textContent = '📋'; // Reset icon
+                }, 1500);
+            }
         }
-    });
+    }
 });
 
 // Timezone conversion functionality
