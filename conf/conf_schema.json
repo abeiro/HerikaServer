@@ -8,6 +8,7 @@
   "PLAYER_BIOS": {"userlvl":"pro","type":"longstring","description":"Player character description. Any info here will be known by all AI NPC's."},
   "PLAYER_SPEECH_STYLE":{"type":"longstring","description":"Instructions for how the player character speaks and communicates. This will be used as context when rewriting player dialogue.","scope":"global"},
   "PROMPT_TIMESTAMP": {"userlvl":"basic","type":"boolean","description":"Add rough timestamp subdividers to event context (e.g., 'Moments Ago', 'A while ago') to help the AI NPCs understand when events happend.","scope":"global"},
+  "use_emotions_expression": {"userlvl":"basic","type":"boolean","description":"Emotions expression support.","scope":"global"},
   "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"Basic Summary of the NPC.","helpurl":"https://dwemerdynamics.hostwiki.io/en/Profiles"},
   "HERIKA_BACKGROUND": {"userlvl":"basic","type":"longstring","description":"NPC Background. <br> Detailed history, origins, and past experiences that shaped this character.<br>","helpurl":"https://dwemerdynamics.hostwiki.io/en/Profiles"},
   "HERIKA_PERSONALITY": {"userlvl":"basic","type":"longstring","description":"NPC Personality Traits. <br> Detailed character traits, behavioral patterns, and psychological characteristics.<br>","helpurl":"https://dwemerdynamics.hostwiki.io/en/Profiles"},
