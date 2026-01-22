@@ -3,6 +3,8 @@
 define("_MINIMAL_DISTANCE_TO_BE_THE_SAME", 0.0);
 define("_MAXIMAL_DISTANCE_TO_BE_RELATED", 0.8);
 define("_MINIMAL_ELEMENTS_TO_TRIGGER_MESSAGE", 3);
+//prevent in-game buffer overflow (does not truncate tts only subtitles. Fixes long player input playertts (auto-chat / manual player scene setting)) - ideally player input needs splitting for tts but returnLines is not appropriate
+define("_MAX_SUBTITLE_LENGTH", 1000);
 
 require_once(__DIR__."/online_translation.php");
 require_once(__DIR__."/utils_game_timestamp.php");
@@ -728,7 +730,9 @@ function returnLines($lines,$writeOutput=true)
             $responseForSubtitles = trim($responseForSubtitles);
         } else {
             // If narration is disabled or will be split, use the same text as TTS (narration stripped)
-            $responseForSubtitles = $responseTextUnmooded;
+            $responseForSubtitles = strlen($responseTextUnmooded) > _MAX_SUBTITLE_LENGTH ?
+            substr($responseTextUnmooded, 0, _MAX_SUBTITLE_LENGTH) :
+            $responseTextUnmooded;
         }
 
         $ttsOutput = null;
