@@ -269,7 +269,7 @@ function split_sentences_stream($paragraph)
                 // If we've reached minimum size and we're between min and max, we can flush
                 //EXPERIMENT: talk more in one go (longer subtitle text, fewer TTS calls)
                 $talkMore = true; //false to split as soon as we reach min len (old behavior), true to pack up to max
-                if (!talkMore && strlen($currentSentence) >= MINIMUM_SENTENCE_SIZE) {
+                if (!$talkMore && strlen($currentSentence) >= MINIMUM_SENTENCE_SIZE) {
                     $splitSentences[] = $currentSentence;
                     $currentSentence = '';
                 }
@@ -385,6 +385,98 @@ function checkOAIComplains($responseTextUnmooded)
     return $scoring;
 }
 
+/**
+ * Extract narration (text in asterisks) from dialogue
+ * Handles multiple narration blocks throughout the text
+ * 
+ * @param string $text The full text potentially containing narration
+ * @return array ['narration' => array of narration texts, 'dialogue' => cleaned dialogue]
+ */
+function extractNarrationAndDialogue($text) {
+    $narrations = [];
+    $remainingText = $text;
+    
+    // IMPORTANT: Check for leftover "* " from sentence splitting FIRST, before checking paired asterisks
+    // This prevents "* dialogue with *emphasis*" from being treated as narration
+    if (preg_match('/^\*\s+(.+)$/s', $text, $matches)) {
+        // This is likely dialogue that got a leftover "* " prefix from sentence splitting
+        // Treat it as dialogue, not narration
+        $remainingText = trim($matches[1]);
+        Logger::info("[extractNarrationAndDialogue] Detected leftover asterisk from sentence split, treating as dialogue: " . substr($remainingText, 0, 50));
+    }
+    // Try to extract paired asterisks at the START of the sentence: *narration* dialogue
+    else if (preg_match('/^\*([^*]+)\*\s*(.*)$/s', $text, $matches)) {
+        // Only extract narration if it's at the beginning, followed by dialogue
+        $narrations = [trim($matches[1])];
+        $remainingText = trim($matches[2]);
+        
+        Logger::info("[extractNarrationAndDialogue] Found narration at start (paired asterisks): " . substr($narrations[0], 0, 50));
+    } 
+    // If starts with asterisk and ends with period/punctuation, it's pure narration
+    else if (preg_match('/^\*([^*]+)[.!?]\s*$/s', $text, $matches)) {
+        // Single asterisk at start with punctuation at end - pure narration, no dialogue
+        $narrations = [trim($matches[1], '. !?')];
+        $remainingText = ''; // All narration, no dialogue
+        
+        Logger::info("[extractNarrationAndDialogue] Found 1 narration block (single asterisk, complete sentence)");
+    }
+    else {
+        Logger::info("[extractNarrationAndDialogue] No narration found in: " . substr($text, 0, 100));
+    }
+    
+    return [
+        'narrations' => $narrations,
+        'dialogue' => $remainingText,
+        'has_narration' => !empty($narrations)
+    ];
+}
+
+/**
+ * Save current TTS voice settings
+ * @return array Current TTS settings
+ */
+function saveCurrentVoiceSettings() {
+    return isset($GLOBALS['TTS']) ? $GLOBALS['TTS'] : [];
+}
+
+/**
+ * Load The Narrator's voice settings into GLOBALS
+ */
+function loadNarratorVoiceSettings() {
+    require_once(__DIR__ . "/core/narrator.class.php");
+    $narrator = new Narrator();
+    $voiceid = $narrator->get('voiceid');
+    
+    if (!$voiceid) {
+        $voiceid = 'TheNarrator'; // Fallback default
+    }
+    
+    // Apply Narrator voice to all TTS providers
+    $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']  = $voiceid;
+    $GLOBALS['TTS']['MELOTTS']['voiceid']      = $voiceid;
+    $GLOBALS['TTS']['MIMIC3']['voice']         = $voiceid;
+    $GLOBALS['TTS']['XVASYNTH']['model']       = $voiceid;
+    $GLOBALS['TTS']['ZONOS_GRADIO']['voiceid'] = $voiceid;
+    $GLOBALS['TTS']['PIPERTTS']['voiceid']     = $voiceid;
+    $GLOBALS['TTS']['ELEVEN_LABS']['voice_id'] = $voiceid;
+    $GLOBALS['TTS']['AZURE']['voice']          = $voiceid;
+    $GLOBALS['TTS']['KOKORO']['voiceid']       = $voiceid;
+    $GLOBALS['TTS']['openai']['voice']         = $voiceid;
+    $GLOBALS['TTS']['deepgram']['model']       = $voiceid;
+    $GLOBALS['TTS']['CARTESIA']['voiceid']     = $voiceid;
+    $GLOBALS['TTS']['INWORLD']['voiceid']      = $voiceid;
+}
+
+/**
+ * Restore previously saved voice settings
+ * @param array $savedSettings The settings to restore
+ */
+function restoreVoiceSettings($savedSettings) {
+    if (!empty($savedSettings)) {
+        $GLOBALS['TTS'] = $savedSettings;
+    }
+}
+
 
 function unmoodSentence($sentence) {
     global $forceMood;
@@ -392,13 +484,14 @@ function unmoodSentence($sentence) {
     $output = $sentence;
 
     // Determine whether to process asterisks:
-    // - strip_emotes_from_output (if set) overrides
-    // - otherwise fall back to REMOVE_ASTERISKS_FROM_OUTPUT
+    // This function is used to prepare text for TTS, so we ALWAYS want to strip asterisks
+    // (narration should never be spoken by NPCs, even when inline narration is enabled)
+    // The only exception is if explicitly disabled via strip_emotes_from_output or REMOVE_ASTERISKS_FROM_OUTPUT
+    $processAsterisks = true; // Default to stripping asterisks for TTS
+    
     if (array_key_exists('strip_emotes_from_output', $GLOBALS)) {
         $processAsterisks = (bool)$GLOBALS['strip_emotes_from_output'];
-    } 
-    
-    if (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'])) {
+    } elseif (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'])) {
         error_log("[unmoodSentence] REMOVE_ASTERISKS_FROM_OUTPUT is setted to <{$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']}>" );
         $processAsterisks=$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'];
     }
@@ -468,6 +561,36 @@ function unmoodSentence($sentence) {
 function returnLines($lines,$writeOutput=true)
 {
     global $db, $startTime, $forceMood, $staticMood, $talkedSoFar, $FORCED_STOP, $TRANSFORMER_FUNCTION,$receivedData;
+    
+    // Check if inline narration is enabled
+    $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
+    
+    // If inline narration is enabled, recombine split narration sentences
+    if ($inlineNarrationEnabled) {
+        $recombinedLines = [];
+        $i = 0;
+        while ($i < count($lines)) {
+            $currentLine = trim($lines[$i]);
+            
+            // Check if this line looks like narration: starts with * and ends with period/no dialogue
+            if (preg_match('/^\*[^*]+\.?\s*$/', $currentLine)) {
+                // This is a narration-only sentence, check if next line is dialogue
+                if ($i + 1 < count($lines) && !preg_match('/^\*/', trim($lines[$i + 1]))) {
+                    // Next line doesn't start with *, combine them
+                    $recombinedLines[] = $currentLine . ' ' . trim($lines[$i + 1]);
+                    error_log("[returnLines] Recombined narration + dialogue: " . substr($currentLine . ' ' . trim($lines[$i + 1]), 0, 100));
+                    $i += 2; // Skip next line since we combined it
+                    continue;
+                }
+            }
+            
+            $recombinedLines[] = $currentLine;
+            $i++;
+        }
+        $lines = $recombinedLines;
+        error_log("[returnLines] After recombination: " . count($lines) . " lines");
+    }
+    
     foreach ($lines as $n => $sentence) {
 
         if ($FORCED_STOP) {
@@ -491,6 +614,37 @@ function returnLines($lines,$writeOutput=true)
         //$sentence = preg_replace('/[[:^print:]]/', '', $output); // Remove non ASCII chracters
 
         $sentence=$output;
+        
+        // Preserve the original sentence for subtitles BEFORE any processing
+        // Check if inline narration is enabled (default to false if not set)
+        $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
+        $sentenceForSubtitles = $sentence; // Keep the original with narration
+        
+        // Strip "(Talking to ...)" from player speech for cleaner subtitles
+        if ($inlineNarrationEnabled) {
+            $sentence = preg_replace('/\s*\(Talking to [^)]+\)\s*$/i', '', $sentence);
+            $sentenceForSubtitles = preg_replace('/\s*\(Talking to [^)]+\)\s*$/i', '', $sentenceForSubtitles);
+        }
+        
+        // Check if we should split narration to The Narrator BEFORE unmoodSentence strips asterisks
+        $splitNarration = false;
+        $narrationParts = null;
+        if ($inlineNarrationEnabled) {
+            $narrationParts = extractNarrationAndDialogue($sentenceForSubtitles);
+            $splitNarration = $narrationParts['has_narration'];
+            
+            // Debug logging
+            Logger::info("[INLINE_NARRATION] Enabled: true");
+            Logger::info("[INLINE_NARRATION] Original sentence: " . $sentenceForSubtitles);
+            Logger::info("[INLINE_NARRATION] Has narration: " . ($splitNarration ? 'yes' : 'no'));
+            if ($splitNarration) {
+                Logger::info("[INLINE_NARRATION] Narrations: " . json_encode($narrationParts['narrations']));
+                Logger::info("[INLINE_NARRATION] Dialogue: " . $narrationParts['dialogue']);
+            }
+        } else {
+            Logger::info("[INLINE_NARRATION] Disabled or not set");
+        }
+        
         $responseTextUnmooded=unmoodSentence($sentence);
 
         $scoring = checkOAIComplains($responseTextUnmooded);
@@ -540,8 +694,23 @@ function returnLines($lines,$writeOutput=true)
         $responseTextUnmooded = preg_replace("/{$GLOBALS["HERIKA_NAME"]}\s*:\s*/", '', $responseTextUnmooded);	// Should not happen
 
         $responseText = $responseTextUnmooded;
-        $responseForTTS = $responseTextUnmooded;
-        $responseForSubtitles = $responseTextUnmooded;
+        $responseForTTS = $responseTextUnmooded; // TTS gets the "unmooded" version (narration stripped)
+        
+        // Set up subtitles based on whether inline narration is enabled
+        if ($inlineNarrationEnabled && !$splitNarration) {
+            // Preserve narration in subtitles - use the original sentence
+            $responseForSubtitles = $sentenceForSubtitles;
+            $responseForSubtitles = preg_replace("/{$GLOBALS["HERIKA_NAME"]}\s*:\s*/", '', $responseForSubtitles);
+            // Remove quotes and other non-narration cleanup
+            $responseForSubtitles = preg_replace('/"/', '', $responseForSubtitles);
+            $responseForSubtitles = preg_replace('/\s*# ?ACTIONS.*/', '', $responseForSubtitles);
+            $responseForSubtitles = preg_replace('/#[A-Za-z]+/', '', $responseForSubtitles);
+            $responseForSubtitles = trim($responseForSubtitles);
+        } else {
+            // If narration is disabled or will be split, use the same text as TTS (narration stripped)
+            $responseForSubtitles = $responseTextUnmooded;
+        }
+        
         $ttsOutput = null;
 
         if (Translation::$response) {
@@ -578,6 +747,135 @@ function returnLines($lines,$writeOutput=true)
         }
 
         if ($responseTextUnmooded) {
+            // Check if we need to split narration to The Narrator
+            if ($splitNarration && $narrationParts && !empty($narrationParts['narrations'])) {
+                Logger::info("[INLINE_NARRATION] Splitting narration - processing " . count($narrationParts['narrations']) . " blocks");
+                
+                // Save the current NPC voice settings
+                $savedVoiceSettings = saveCurrentVoiceSettings();
+                $savedHerikaName = $GLOBALS["HERIKA_NAME"];
+                
+                Logger::info("[INLINE_NARRATION] Saved NPC name: " . $savedHerikaName);
+                
+                // Process each narration block with The Narrator's voice
+                foreach ($narrationParts['narrations'] as $narrationText) {
+                    if (empty(trim($narrationText))) {
+                        continue; // Skip empty narrations
+                    }
+                    
+                    Logger::info("[INLINE_NARRATION] Processing narration: " . $narrationText);
+                    
+                    // Switch to Narrator voice
+                    loadNarratorVoiceSettings();
+                    $GLOBALS["HERIKA_NAME"] = "The Narrator";
+                    
+                    Logger::info("[INLINE_NARRATION] Switched to Narrator, voice settings loaded");
+                    
+                    // Prepare narration for TTS (with asterisks for subtitle display)
+                    $narrationForTTS = $narrationText;
+                    $narrationForSubtitles = "*" . $narrationText . "*";
+                    
+                    Logger::info("[INLINE_NARRATION] Generating TTS with function: " . $GLOBALS["TTSFUNCTION"]);
+                    
+                    // Generate TTS for narration using the configured TTS function
+                    $narratorTtsOutput = null;
+                    if ($GLOBALS["TTSFUNCTION"] == "azure") {
+                        require_once(__DIR__."/../tts/tts-azure.php");
+                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
+                    } else if ($GLOBALS["TTSFUNCTION"] == "mimic3") {
+                        require_once(__DIR__."/../tts/tts-mimic3.php");
+                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
+                    } else if ($GLOBALS["TTSFUNCTION"] == "piper-tts") {
+                        require_once(__DIR__."/../tts/tts-piper-tts.php");
+                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
+                    } else if ($GLOBALS["TTSFUNCTION"] == "11labs") {
+                        require_once(__DIR__."/../tts/tts-11labs.php");
+                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
+                    } else if ($GLOBALS["TTSFUNCTION"] == "gcp") {
+                        require_once(__DIR__."/../tts/tts-gcp.php");
+                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
+                    } else if ($GLOBALS["TTSFUNCTION"] == "coqui-ai") {
+                        require_once(__DIR__."/../tts/tts-coqui-ai.php");
+                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
+                    } else if ($GLOBALS["TTSFUNCTION"] == "xvasynth") {
+                        require_once(__DIR__."/../tts/tts-xvasynth.php");
+                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
+                    } else if ($GLOBALS["TTSFUNCTION"] == "openai") {
+                        require_once(__DIR__."/../tts/tts-openai.php");
+                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
+                    } else if ($GLOBALS["TTSFUNCTION"] == "convai") {
+                        require_once(__DIR__."/../tts/tts-convai.php");
+                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
+                    } else if ($GLOBALS["TTSFUNCTION"] == "xtts") {
+                        require_once(__DIR__."/../tts/tts-xtts.php");
+                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
+                    } else if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
+                        require_once(__DIR__."/../tts/tts-stylettsv2-2.php");
+                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
+                    } else if ($GLOBALS["TTSFUNCTION"] == "koboldcpp") {
+                        require_once(__DIR__."/../tts/tts-koboldcpp.php");
+                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
+                    } else if ($GLOBALS["TTSFUNCTION"] == "zonos_gradio") {
+                        require_once(__DIR__."/../tts/tts-zonos_gradio.php");
+                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
+                    } else if ($GLOBALS["TTSFUNCTION"] == "cartesia") {
+                        require_once(__DIR__."/../tts/tts-cartesia.php");
+                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
+                    } else if ($GLOBALS["TTSFUNCTION"] == "inworld") {
+                        require_once(__DIR__."/../tts/tts-inworld.php");
+                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
+                    } else {
+                        if (file_exists(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php")) {
+                            require_once(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php");
+                            $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
+                        }
+                    }
+                    
+                    // Track narrator TTS output
+                    if ($narratorTtsOutput) {
+                        $GLOBALS["TRACK"]["FILES_GENERATED"][] = $narratorTtsOutput;
+                        Logger::info("[INLINE_NARRATION] Narrator TTS generated: " . $narratorTtsOutput);
+                        
+                        // Output narrator speech to game immediately
+                        if ($writeOutput) {
+                            // Use the same format as the main output at line 1093
+                            $narratorListener = isset($GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]) ? $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"] : "";
+                            $narratorExpression = ""; // No expression for narrator
+                            $narratorAnimation = ""; // No animation for narrator
+                            
+                            echo "The Narrator|ScriptQueue|{$narrationForSubtitles}/{$narratorExpression}/{$narratorListener}/{$narratorAnimation}/{$narrationText}\r\n";
+                            if (ob_get_level()) @ob_flush();
+                            @flush();
+                            Logger::info("[INLINE_NARRATION] Narrator speech sent to game: " . $narrationForSubtitles);
+                        }
+                    } else {
+                        Logger::warn("[INLINE_NARRATION] WARNING: Narrator TTS returned null/empty");
+                    }
+                }
+                
+                // Restore NPC voice settings
+                restoreVoiceSettings($savedVoiceSettings);
+                $GLOBALS["HERIKA_NAME"] = $savedHerikaName;
+                
+                // Now generate TTS for the NPC's dialogue (if any)
+                if (!empty($narrationParts['dialogue'])) {
+                    $responseForTTS = $narrationParts['dialogue'];
+                    // Strip any remaining asterisks from NPC dialogue for subtitles
+                    $responseForSubtitles = preg_replace('/\*/', '', $narrationParts['dialogue']);
+                    $responseForSubtitles = trim($responseForSubtitles);
+                    // Clean up any leading punctuation artifacts (., *, etc.)
+                    $responseForSubtitles = ltrim($responseForSubtitles, '*.!? ');
+                    $responseForSubtitles = trim($responseForSubtitles);
+                    // IMPORTANT: Also update the main response variables so the output buffer uses dialogue only
+                    $responseText = $responseForSubtitles;
+                    $responseTextUnmooded = $responseForSubtitles;
+                } else {
+                    // No dialogue to speak, we're done
+                    return;
+                }
+            }
+            
+            // Generate regular TTS (either full text if no narration, or just dialogue after narration)
             if ($GLOBALS["TTSFUNCTION"] == "azure") {
 
                 require_once(__DIR__."/../tts/tts-azure.php");
