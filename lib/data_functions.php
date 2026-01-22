@@ -4025,6 +4025,7 @@ function call_llm_internal() {
     $fullContent="";
     $totalProcessedData="";
     $numOutputTokens = 0;
+    $INCREMENTAL_SENTENCESIZE=20;
 
     while (true) {
         if ($breakFlag) {
@@ -4048,10 +4049,6 @@ function call_llm_internal() {
 
         $buffer=strtr($buffer, array("\""=>"",".)"=>")."));
 
-        
-        $INCREMENTAL_SENTENCESIZE=20;
-        
-
         // For narration events, allow immediate streaming without minimum buffer size
         if ($gameRequest[0] !== "narration" && strlen($buffer)<$INCREMENTAL_SENTENCESIZE) {	// Avoid too short buffers
             continue;
@@ -4062,7 +4059,7 @@ function call_llm_internal() {
             continue;
         }
 
-        $position = findDotPosition($buffer);
+        $position = findFastSentencePosition($buffer);
 
         //echo "<$buffer>".PHP_EOL;
         if (($position !== false) && ($gameRequest[0] === "narration" || $position>$INCREMENTAL_SENTENCESIZE)) {
@@ -4075,7 +4072,7 @@ function call_llm_internal() {
             if ($gameRequest[0] != "diary") {
                 returnLines($sentences);
                 $INCREMENTAL_SENTENCESIZE=MINIMUM_SENTENCE_SIZE;
-            } else {
+            } else { //why is the diary talking? is this correct?
                 $talkedSoFar[md5(implode(" ", $sentences))]=implode(" ", $sentences);
             }
 
@@ -4406,7 +4403,9 @@ function call_llm_internal() {
                         } else if ($actionParts2[0]=="SetCurrentTask") {
                             // Lets polish the parammeters
                             if (empty(trim($actionParts2[1]))) {
-                                $speech=implode(" ".$talkedSoFar);
+                                //$speech=implode(" ".$talkedSoFar); typo? if not, what does this do
+                                //trying
+                                $speech=implode(" ", $talkedSoFar);
                                 $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|SetCurrentTask@$speech";
                                 error_log("[ACTION POSTFILTER SetCurrentTask, using speech as parameter $speech] ");
                             
