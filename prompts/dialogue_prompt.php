@@ -25,9 +25,15 @@ $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should b
 // Morgan|ScriptQueue|Wrestling, you say? Now *that* sounds like a fun way to get acquainted.//Vixi Talax//
 //
 $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line." . 
-" Avoid narrations, be original, creative, knowledgeable, use your own thoughts. " . 
+" Be original, creative, knowledgeable, use your own thoughts. " . 
 " Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines." . 
 "";
+
+// Add narration instruction if inline narration is enabled (default to false if not set)
+$inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
+if ($inlineNarrationEnabled) {
+    $TEMPLATE_DIALOG .= " You may include brief third-person narration in asterisks (e.g., *She smiles*) before the dialogue.";
+}
 
 // To keep the original one
 // $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line using this format \"{$GLOBALS["HERIKA_NAME"]}: ";

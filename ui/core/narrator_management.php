@@ -34,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
         $narrator->set('random_enabled', isset($_POST['random_enabled']) && $_POST['random_enabled'] === '1' ? '1' : '0');
         $narrator->set('books_only_narrator', isset($_POST['books_only_narrator']) && $_POST['books_only_narrator'] === '1' ? '1' : '0');
         $narrator->set('hide_from_context', isset($_POST['hide_from_context']) && $_POST['hide_from_context'] === '1' ? '1' : '0');
+        $narrator->set('inline_narration_enabled', isset($_POST['inline_narration_enabled']) && $_POST['inline_narration_enabled'] === '1' ? '1' : '0');
         
         // Save integer settings
         if (isset($_POST['random_chance'])) {
@@ -135,6 +136,7 @@ $questCommentChance = $narrator->getInt('quest_comment_chance', 10);
 $questCommentCooldown = $narrator->getInt('quest_comment_cooldown', 3);
 $booksOnlyNarrator = $narrator->getBool('books_only_narrator', false);
 $hideFromContext = $narrator->getBool('hide_from_context', false);
+$inlineNarrationEnabled = $narrator->getBool('inline_narration_enabled', false);
 $dynamicProfileEnabled = $narrator->getBool('dynamic_profile', false);
 $dynamicProfileFields = $narrator->getDynamicProfileFields();
 
@@ -454,6 +456,12 @@ if (!$isEmbed) {
                         <label for="hide_from_context">Hide Narrator Dialogue from NPC Context</label>
                     </div>
                     <span class="hint">Hide Narrator-spoken dialogue lines from NPC context.</span>
+                    
+                    <div class="checkbox-group" style="margin-top: 16px;">
+                        <input type="checkbox" id="inline_narration_enabled" name="inline_narration_enabled" value="1" <?php echo $inlineNarrationEnabled ? 'checked' : ''; ?>>
+                        <label for="inline_narration_enabled">Enable Inline Narration</label>
+                    </div>
+                    <span class="hint">Include brief third-person narration in asterisks (e.g., *She smiles*).</span>
                 </div>
 
                 <!-- Welcome Message Section -->
