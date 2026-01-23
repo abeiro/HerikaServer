@@ -93,12 +93,19 @@
             $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to. Address whoever just spoke - can be any person in the conversation.";
         }
     
+        // Determine message description based on INLINE_NARRATION_ENABLED setting (default to false if not set)
+        $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
+        $messageDescription = "lines of dialogue";
+        if ($inlineNarrationEnabled) {
+            $messageDescription = "Include brief third-person narration followed by {$GLOBALS["HERIKA_NAME"]}'s first-person spoken text. Example: *She smiles*. It's good to see you again, my friend!";
+        }
+    
         if (isset($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])&&($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])) {
             if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
                     "listener"=>$listenerDesc,
-                    "message"=>"lines of dialogue",
+                    "message"=>$messageDescription,
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
@@ -109,7 +116,7 @@
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
                     "listener"=>$listenerDesc,
-                    "message"=>"lines of dialogue",
+                    "message"=>$messageDescription,
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
@@ -126,7 +133,7 @@
                     "target"=>"action target actor|action destination location name",
                     "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50')",
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
-                    "message"=>"lines of dialogue"
+                    "message"=>$messageDescription
                 ];
             } else {
                 $GLOBALS["responseTemplate"] = [
@@ -136,11 +143,22 @@
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
                     "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells)",
-                    "message"=>"lines of dialogue"
+                    "message"=>$messageDescription
                 ];
             }
         }
 
+        // emotions expression:
+        if ($GLOBALS['use_emotions_expression']) {
+            if (!array_key_exists("emotion", $GLOBALS["responseTemplate"])) {
+                $GLOBALS["responseTemplate"]["emotion"] = 
+                "calm|surprised|aroused|desire|love|happy|amusement|gratitude|proud|anxious|fearful|panic|grieving|envious|jealous|sad|disappointed|ashamed|angry|offended|disgusted|sarcastic";
+            }
+            if (!array_key_exists("emotion_intensity", $GLOBALS["responseTemplate"])) {
+                $GLOBALS["responseTemplate"]["emotion_intensity"] = "low|moderate|strong";
+            }
+        }
+        
         // request speaking tones from the LLM when using zonos TTS
         if (zonosIsActive()) {
             $GLOBALS["responseTemplate"] = array_merge($GLOBALS["responseTemplate"], [
@@ -161,6 +179,13 @@
         $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
         shuffle($moods);
 
+        // Determine message description based on INLINE_NARRATION_ENABLED setting (default to false if not set)
+        $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
+        $messageDescription = "lines of {$GLOBALS["HERIKA_NAME"]}'s dialogue";
+        if ($inlineNarrationEnabled) {
+            $messageDescription = "Include brief third-person narration followed by {$GLOBALS["HERIKA_NAME"]}'s first-person spoken text. Example: *She smiles*. It's good to see you again, my friend!";
+        }
+
         $GLOBALS["structuredOutputTemplate"] = array(
             "type" => "json_schema",
             "json_schema" => array(
@@ -178,7 +203,7 @@
                         ),
                         "message" => array(
                             "type" => "string",
-                            "description" => "lines of {$GLOBALS["HERIKA_NAME"]}'s dialogue"
+                            "description" => $messageDescription
                         ),
                         "mood" => empty($moods) ?
                             array(
@@ -247,6 +272,24 @@
             }
 
         }
+
+        // emotions expression:
+        if ($GLOBALS['use_emotions_expression']) {
+            $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(
+                $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"], array(
+                    "emotion" => array(
+                        "type" => "string",
+                        "description" => "The emotion expressed."
+                    ),
+                    "emotion_intensity" => array(
+                        "type" => "string",
+                        "description" => "The intensity of the emotion expressed, possible values ​​'low', 'moderate' or 'strong'."
+                    )
+                ));
+            $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["required"][]="emotion";
+            $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["required"][]="emotion_intensity";
+        }
+        
         // request speaking tones from the LLM when using zonos TTS
         if (zonosIsActive()) {
             $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(

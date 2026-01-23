@@ -1349,14 +1349,32 @@ function flushConsolidationBuffer(array $buffer): array {
                 $event['content'] = "{$actorList} {$action} {$target}";
             }
         } elseif ($buffered['count'] > 1) {
-            // Same actor repeating - add count suffix
-            $event['content'] = trim($event['content']) . " (x{$buffered['count']})";
+            // Same event repeating - add count prefix for clarity (e.g., "2x SKEEVER DIED")
+            $event['content'] = "{$buffered['count']}x " . trim($event['content']);
         }
         
         $result[] = $event;
     }
     
     return $result;
+}
+
+/**
+ * Convert time difference in hours to a human-readable time category
+ * 
+ * @param float $hoursAgo Number of in-game hours since the event
+ * @return string Human-readable time category
+ */
+function getTimeCategory($hoursAgo) {
+    if ($hoursAgo < 0.02) return "Happened Recently";
+    if ($hoursAgo < 0.1) return "Moments Ago";
+    if ($hoursAgo < 0.25) return "A few minutes ago";
+    if ($hoursAgo < 0.5) return "A while ago";
+    if ($hoursAgo < 1.5) return "About an hour ago";
+    if ($hoursAgo < 4) return "A couple of hours ago";
+    if ($hoursAgo < 12) return "Earlier in the day";
+    if ($hoursAgo < 36) return "A day ago";
+    return "Days ago";
 }
 
 
@@ -1471,6 +1489,8 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     $lastlocation="";
     $lastGameTs=0;
     $memoryLogToRemove=[];
+    
+    $lastTimeCategory = null; // Track last timestamp category for PROMPT_TIMESTAMP feature
 
     $focusOnChat=($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"] ?? false);
 
@@ -1712,6 +1732,20 @@ New setting: $currentLocation
         }
 
         $lastSpeaker = $speaker;
+        
+        // Insert timestamp subdividers if PROMPT_TIMESTAMP is enabled
+        if (!empty($GLOBALS["PROMPT_TIMESTAMP"]) && $row["type"] != "info_timeforward") {
+            $hoursAgo = ($currentGameTs - $row["gamets"]) * 0.0000024;
+            $currentTimeCategory = getTimeCategory($hoursAgo);
+            
+            // If category changed, insert a subdivider
+            if ($lastTimeCategory !== null && $currentTimeCategory !== $lastTimeCategory) {
+                $lastDialogFull[] = array('role' => "narratorci", 'content' => "--- {$currentTimeCategory} ---");
+            }
+            
+            $lastTimeCategory = $currentTimeCategory;
+        }
+        
         $row= array('role' => $lastSpeaker, 'content' => trim($rowData),'subtype'=>$row["subtype"]?:strtoupper($lastSpeaker),'type'=>$row["type"]);
         $lastDialogFull[] = $row;
         $previousRow=$row;
@@ -3991,6 +4025,7 @@ function call_llm_internal() {
     $fullContent="";
     $totalProcessedData="";
     $numOutputTokens = 0;
+    $INCREMENTAL_SENTENCESIZE=20;
 
     while (true) {
         if ($breakFlag) {
@@ -4014,10 +4049,6 @@ function call_llm_internal() {
 
         $buffer=strtr($buffer, array("\""=>"",".)"=>")."));
 
-        
-        $INCREMENTAL_SENTENCESIZE=20;
-        
-
         // For narration events, allow immediate streaming without minimum buffer size
         if ($gameRequest[0] !== "narration" && strlen($buffer)<$INCREMENTAL_SENTENCESIZE) {	// Avoid too short buffers
             continue;
@@ -4028,7 +4059,7 @@ function call_llm_internal() {
             continue;
         }
 
-        $position = findDotPosition($buffer);
+        $position = findFastSentencePosition($buffer);
 
         //echo "<$buffer>".PHP_EOL;
         if (($position !== false) && ($gameRequest[0] === "narration" || $position>$INCREMENTAL_SENTENCESIZE)) {
@@ -4041,7 +4072,7 @@ function call_llm_internal() {
             if ($gameRequest[0] != "diary") {
                 returnLines($sentences);
                 $INCREMENTAL_SENTENCESIZE=MINIMUM_SENTENCE_SIZE;
-            } else {
+            } else { //why is the diary talking? is this correct?
                 $talkedSoFar[md5(implode(" ", $sentences))]=implode(" ", $sentences);
             }
 
@@ -4372,7 +4403,9 @@ function call_llm_internal() {
                         } else if ($actionParts2[0]=="SetCurrentTask") {
                             // Lets polish the parammeters
                             if (empty(trim($actionParts2[1]))) {
-                                $speech=implode(" ".$talkedSoFar);
+                                //$speech=implode(" ".$talkedSoFar); typo? if not, what does this do
+                                //trying
+                                $speech=implode(" ", $talkedSoFar);
                                 $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|SetCurrentTask@$speech";
                                 error_log("[ACTION POSTFILTER SetCurrentTask, using speech as parameter $speech] ");
                             
@@ -5248,7 +5281,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         'HERIKA_RELATIONSHIPS' => 'Relationships',
         'HERIKA_OCCUPATION' => 'Occupation',
         'HERIKA_SKILLS' => 'Skills',
-        'HERIKA_SPEECHSTYLE' => 'SpeechStyle',
+        'HERIKA_SPEECHSTYLE' => 'Speech Style',
         'HERIKA_GOALS' => 'Goals'
     ];
     $SKILLS_ADD="";

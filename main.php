@@ -14,6 +14,10 @@ $GLOBALS["AVOID_TTS_CACHE"]=true;
 $GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try to provide a bogus example.
 $GLOBALS["MEMORY_THRESHOLD_MODIFIER"]=0;    // POST MEMORY
 $GLOBALS["skyrim_start_date"] = '0201-08-17 00:00:00'; // default Skyrim start date. Alternate start mods could change this. Candidate for global settings.
+$GLOBALS["SEMAPHORES_TIMEOUT"] = 300; 
+$GLOBALS["TTS_INJECT_NONVERBAL_VOCALIZATION"] = true; // Spice the TTS with non-verbal vocalization when expressing strong emotion. 
+$GLOBALS['use_emotions_expression'] = true; 
+
 
 // Cooldown for some actions
 $COOLDOWNMAP=[];
@@ -2009,10 +2013,44 @@ if (isset($GLOBALS["PROMPT_ACTIONS_LIST"]) && !empty($GLOBALS["PROMPT_ACTIONS_LI
     $actionsList = $GLOBALS["PROMPT_ACTIONS_LIST"];
 }
 
+// Inject paralinguistic tags prompt if enabled (works for any TTS provider)
+$paralinguisticTagsPrompt = "";
+if (isset($GLOBALS["TTSFUNCTION"]) && !empty($GLOBALS["TTSFUNCTION"])) {
+    // Map TTSFUNCTION to TTS array key
+    $ttsMap = [
+        'melotts' => 'MELOTTS',
+        'xtts-fastapi' => 'XTTSFASTAPI',
+        'mimic3' => 'MIMIC3',
+        'xvasynth' => 'XVASYNTH',
+        'azure' => 'AZURE',
+        '11labs' => 'ELEVEN_LABS',
+        'openai' => 'openai',
+        'kokoro' => 'KOKORO',
+        'koboldcpp' => 'koboldcpp',
+        'zonos_gradio' => 'ZONOS_GRADIO',
+        'piper-tts' => 'PIPERTTS',
+        'deepgram' => 'DEEPGRAM',
+        'cartesia' => 'CARTESIA',
+        'inworld' => 'INWORLD'
+    ];
+    
+    $ttsKey = $ttsMap[$GLOBALS["TTSFUNCTION"]] ?? strtoupper($GLOBALS["TTSFUNCTION"]);
+    
+    if (isset($GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_ENABLED"]) && 
+        (bool)$GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_ENABLED"]) {
+        if (isset($GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_PROMPT"]) && 
+            !empty(trim($GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_PROMPT"]))) {
+            $paralinguisticTagsPrompt = "\n\n<paralinguistic_tags>\n" . 
+                trim($GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_PROMPT"]) . 
+                "\n</paralinguistic_tags>";
+        }
+    }
+}
+
 if (!empty($GLOBALS["OGHMA_HINT"])) {
 
     $head[] = array('role' => 'system', 'content' =>  
-        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>".$actionsList.$nearbySections."\n$rumorsText\n",
+        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
 
     );
@@ -2020,7 +2058,7 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
     $GLOBALS["COMMAND_PROMPT"] = "";
 } else {
     $head[] = array('role' => 'system', 'content' =>  
-        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>".$actionsList.$nearbySections."\n$rumorsText\n",
+        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
     );
     //avoid reinjecting command prompt that we have already appended

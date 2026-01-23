@@ -2426,7 +2426,7 @@ if ($checkVersion("prompts")<20251110001) {
         "<relationships>     Text. relationships with other actors.\n".
         "<occupation>        Text. Main Occupation & Role\n".
         "<skills>            Text. Skills & Abilities\n".
-        "<speechstyle>       Text. Speech Style\n".
+        "<speech_style>      Text. Speech Style\n".
         "<goals>             Text. Long term Goals & Aspirations'\n"
     );
     

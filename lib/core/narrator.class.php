@@ -176,6 +176,7 @@ class Narrator
             'books_only_narrator' => ['BOOK_EVENT_ALWAYS_NARRATOR', 'bool', false],
             'hide_from_context' => ['HIDE_NARRATOR_DIALOGUE', 'bool', false],
             'dynamic_profile' => ['DYNAMIC_PROFILE', 'bool', false],
+            'inline_narration_enabled' => ['INLINE_NARRATION_ENABLED', 'bool', false],
         ];
         
         foreach ($keyMapping as $dbKey => $config) {

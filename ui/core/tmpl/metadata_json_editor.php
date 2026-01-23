@@ -77,6 +77,14 @@ $localSchemaOverrides = [
         'type' => 'boolean',
         'description' => 'Allow AI NPCs to trigger actions between eachother during Rechat. This can cause some chaos...',
     ],
+    'REMOVE_ASTERISKS_FROM_OUTPUT' => [
+        'type' => 'boolean',
+        'description' => 'Remove text between ** when responding (*cough*, *smiles*, etc)',
+    ],
+    'INLINE_NARRATION_ENABLED' => [
+        'type' => 'boolean',
+        'description' => 'Enable inline narration in asterisks (e.g., *She smiles*). Appears in subtitles but not spoken in TTS.',
+    ],
     'CONTEXT_HISTORY_DIARY' => [
         'type' => 'integer',
         'description' => 'Amount of context history (dialogue and events) that will be sent to LLM specifically for diary entries. If set to 0, will use the regular CONTEXT_HISTORY value instead.',
@@ -88,10 +96,6 @@ $localSchemaOverrides = [
     'ENFORCE_ACTIONS_PROMPT' => [
         'type' => 'boolean',
         'description' => 'Encourage AI NPCs to use actions more often.',
-    ],
-    'REMOVE_ASTERISKS_FROM_OUTPUT' => [
-        'type' => 'boolean',
-        'description' => 'Remove text between ** when the AI responds, such as *couch*, *smiles*, "claps, etc',
     ],
     'CONTEXT_HISTORY_DYNAMIC_PROFILE' => [
         'type' => 'integer',
@@ -105,12 +109,12 @@ $visualKeys = [
   "DIARY_PROMPT","OGHMA_AMOUNT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN","COMBAT_BARK_COOLDOWN",
   "OGHMA_INFINIUM","CONTEXT_HISTORY","MAX_WORDS_LIMIT",
   "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE","ENFORCE_ACTIONS_PROMPT",
-  "REMOVE_ASTERISKS_FROM_OUTPUT","CONTEXT_HISTORY_DYNAMIC_PROFILE"
+  "REMOVE_ASTERISKS_FROM_OUTPUT","INLINE_NARRATION_ENABLED","CONTEXT_HISTORY_DYNAMIC_PROFILE"
 ];
 
 // Organize visual keys into categories for display
 $visualGroups = [
-  'Core' => ["CORE_LANG","ENFORCE_ACTIONS_PROMPT","REMOVE_ASTERISKS_FROM_OUTPUT","MAX_WORDS_LIMIT"],
+  'Core' => ["CORE_LANG","ENFORCE_ACTIONS_PROMPT","REMOVE_ASTERISKS_FROM_OUTPUT","INLINE_NARRATION_ENABLED","MAX_WORDS_LIMIT"],
   'Rechat' => ["RECHAT_H","RECHAT_P","RECHAT_ALLOW_ACTIONS"],
   'Diary' => ["DIARY_PROMPT","DIARY_COOLDOWN"],
   'Combat' => ["COMBAT_BARK_COOLDOWN"],

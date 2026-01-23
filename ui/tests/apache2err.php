@@ -1427,6 +1427,235 @@ if (isset($_GET['download_logs'])) {
             background-color: #20c997;
             color: white;
         }
+
+        /* AI Assistant Sidebar Styles */
+        .ai-sidebar {
+            position: fixed;
+            top: 0;
+            right: -450px;
+            width: 450px;
+            height: 100vh;
+            background-color: #1a1a1a;
+            border-left: 1px solid #4a4a4a;
+            z-index: 2000;
+            transition: right 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .ai-sidebar.open {
+            right: 0;
+        }
+
+        body.ai-sidebar-open {
+            overflow: hidden;
+        }
+
+        body.ai-sidebar-open main {
+            margin-right: 450px;
+            transition: margin-right 0.3s ease;
+        }
+
+        main {
+            transition: margin-right 0.3s ease;
+        }
+
+        body.ai-sidebar-open .grid-container {
+            margin-right: 0;
+        }
+
+        .ai-sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #4a4a4a;
+            background-color: #252526;
+        }
+
+        .ai-sidebar-header h2 {
+            margin: 0;
+            color: rgb(242, 124, 17);
+            font-size: 1.4em;
+            border: none;
+            padding: 0;
+        }
+
+        .ai-sidebar-close {
+            background: none;
+            border: none;
+            color: #f8f9fa;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .ai-sidebar-close:hover {
+            background-color: #444;
+        }
+
+        .ai-sidebar-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .ai-model-selector {
+            margin-bottom: 15px;
+        }
+
+        .ai-model-selector label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: #d4d4d4;
+        }
+
+        .ai-model-selector select {
+            width: 100%;
+            padding: 8px;
+            background-color: #2c2c2c;
+            color: #f8f9fa;
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .ai-chat-history {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #2c2c2c;
+            border-radius: 6px;
+            border: 1px solid #3a3a3a;
+        }
+
+        .ai-chat-message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 6px;
+            line-height: 1.5;
+        }
+
+        .ai-chat-message.user {
+            background-color: #204e7a;
+            margin-left: 20px;
+        }
+
+        .ai-chat-message.assistant {
+            background-color: #2a3a2a;
+            margin-right: 20px;
+        }
+
+        .ai-chat-message.error {
+            background-color: #4a2a2a;
+            color: #ff6b6b;
+        }
+
+        .ai-chat-message-role {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .ai-chat-message-content {
+            font-size: 0.95em;
+        }
+
+        .ai-chat-message-content pre {
+            background-color: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .ai-chat-message-content code {
+            background-color: #1a1a1a;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .ai-chat-message-content ul,
+        .ai-chat-message-content ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .ai-chat-input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .ai-chat-input {
+            flex: 1;
+            padding: 10px;
+            background-color: #2c2c2c;
+            color: #f8f9fa;
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+            resize: vertical;
+            min-height: 60px;
+            max-height: 150px;
+            font-family: 'Futura CondensedLight', Arial, sans-serif;
+        }
+
+        .ai-send-button {
+            padding: 10px 20px;
+            background-color: #176529;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            align-self: flex-end;
+        }
+
+        .ai-send-button:hover:not(:disabled) {
+            background-color: #125121;
+        }
+
+        .ai-send-button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .ai-loading-indicator {
+            text-align: center;
+            padding: 10px;
+            color: #9fb1c9;
+            font-style: italic;
+        }
+
+        .ai-chat-history::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .ai-chat-history::-webkit-scrollbar-track {
+            background: #2c2c2c;
+        }
+
+        .ai-chat-history::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        .ai-chat-history::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
     </style>
 </head>
 <body>
@@ -1469,6 +1698,10 @@ if (isset($_GET['download_logs'])) {
                 <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
             </svg>
             Timezone: UTC
+        </button>
+        <button class="refresh-button" id="aiAssistantToggle" style="margin-left: 10px;" title="Open AI Analyzer">
+            <img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" width="20" height="20" style="margin-right:6px; vertical-align: middle; border-radius: 3px;">
+            AI Analyzer
         </button>
     </div>
     <h2>Last 2000 lines from each log are displayed here. The full logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">View the log folder.</a></h2>
@@ -1609,6 +1842,45 @@ if (isset($_GET['download_logs'])) {
     </div>
 </div>
 </main>
+
+<!-- AI Assistant Sidebar -->
+<div class="ai-sidebar" id="aiSidebar">
+    <div class="ai-sidebar-header">
+        <h2><img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" width="28" height="28" style="vertical-align: middle; margin-right: 8px; border-radius: 4px;"> AI Analyzer</h2>
+        <button class="ai-sidebar-close" id="aiSidebarClose">&times;</button>
+    </div>
+    <div class="ai-sidebar-body">
+        <div class="ai-model-selector">
+            <label for="ai-model-select">Model (Requires OpenRouter API Key):</label>
+            <select id="ai-model-select">
+                <option value="anthropic/claude-sonnet-4">Claude Sonnet 4.5</option>
+                <option value="anthropic/claude-opus-4">Claude Opus 4.5</option>
+            </select>
+        </div>
+        
+        <div class="ai-chat-history" id="ai-chat-history">
+            <div class="ai-chat-message assistant">
+                <div class="ai-chat-message-role">CHIM</div>
+                <div class="ai-chat-message-content">
+                    Hello! I an a AI Analyzer, your log analysis assistant. I can help you:
+                    <ul>
+                        <li>Debug LLM connection issues</li>
+                        <li>Analyze failed requests</li>
+                        <li>Query the database with SQL</li>
+                        <li>Review log files</li>
+                        <li>Find patterns and errors</li>
+                    </ul>
+                    Ask me anything about the logs!
+                </div>
+            </div>
+        </div>
+        
+        <div class="ai-chat-input-container">
+            <textarea id="ai-chat-input" class="ai-chat-input" placeholder="Ask about logs, request SQL queries, or ask for help debugging..."></textarea>
+            <button id="ai-send-button" class="ai-send-button">Send</button>
+        </div>
+    </div>
+</div>
 
 <!-- Modals -->
 <div id="errorLogModal" class="modal">
@@ -2143,54 +2415,107 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// JavaScript for copy to clipboard
-document.addEventListener('DOMContentLoaded', () => {
-    document.body.addEventListener('click', function(event) {
-        if (event.target.classList.contains('copy-llm-btn')) {
-            const llmBlock = event.target.closest('.llm-block');
-            if (llmBlock) {
-                let contentToCopy = '';
-                // Try to find LLM output content (multiple divs)
-                const outputMessages = llmBlock.querySelectorAll('.log-message .llm-content');
-                if (outputMessages.length > 0) {
-                    outputMessages.forEach(msg => {
-                        contentToCopy += msg.textContent.trim() + '\n';
-                    });
-                } else {
-                    // Try to find LLM context content (preformatted text)
-                    const contextMessage = llmBlock.querySelector('.log-message pre.llm-content');
-                    if (contextMessage) {
-                        contentToCopy = contextMessage.textContent;
-                    }
-                }
+// JavaScript for copy to clipboard (with iframe fallback)
+// Fallback copy function for iframes and older browsers
+function copyToClipboardFallback(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.top = '0';
+    textarea.style.left = '0';
+    textarea.style.width = '2em';
+    textarea.style.height = '2em';
+    textarea.style.padding = '0';
+    textarea.style.border = 'none';
+    textarea.style.outline = 'none';
+    textarea.style.boxShadow = 'none';
+    textarea.style.background = 'transparent';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    
+    let success = false;
+    try {
+        success = document.execCommand('copy');
+    } catch (err) {
+        console.error('Fallback copy failed:', err);
+    }
+    
+    document.body.removeChild(textarea);
+    return success;
+}
 
-                contentToCopy = contentToCopy.trim();
+// Main copy function with fallback
+function copyToClipboard(text) {
+    // Try modern clipboard API first
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text)
+            .then(() => true)
+            .catch(err => {
+                console.warn('Clipboard API failed, using fallback:', err);
+                return copyToClipboardFallback(text);
+            });
+    } else {
+        // Use fallback immediately if clipboard API not available
+        return Promise.resolve(copyToClipboardFallback(text));
+    }
+}
 
-                if (contentToCopy) {
-                    navigator.clipboard.writeText(contentToCopy)
-                        .then(() => {
-                            event.target.textContent = '✅'; // Copied!
-                            setTimeout(() => {
-                                event.target.textContent = '📋'; // Reset icon
-                            }, 1500);
-                        })
-                        .catch(err => {
-                            console.error('Failed to copy text: ', err);
-                            event.target.textContent = '❌'; // Error
-                             setTimeout(() => {
-                                event.target.textContent = '📋'; // Reset icon
-                            }, 1500);
-                        });
-                } else {
-                    console.warn('No content found to copy in LLM block:', llmBlock);
-                    event.target.textContent = '❓'; // No content
-                     setTimeout(() => {
-                        event.target.textContent = '📋'; // Reset icon
-                    }, 1500);
+// No need for DOMContentLoaded since this script runs at the end of the body
+document.body.addEventListener('click', function(event) {
+    // Use closest to handle clicks on the button or any child elements (like the emoji)
+    const copyBtn = event.target.closest('.copy-llm-btn');
+    if (copyBtn) {
+        const llmBlock = copyBtn.closest('.llm-block');
+        if (llmBlock) {
+            let contentToCopy = '';
+            // Try to find LLM output content (multiple divs)
+            const outputMessages = llmBlock.querySelectorAll('.log-message .llm-content');
+            if (outputMessages.length > 0) {
+                outputMessages.forEach(msg => {
+                    contentToCopy += msg.textContent.trim() + '\n';
+                });
+            } else {
+                // Try to find LLM context content (preformatted text)
+                const contextMessage = llmBlock.querySelector('.log-message pre.llm-content');
+                if (contextMessage) {
+                    contentToCopy = contextMessage.textContent;
                 }
             }
+
+            contentToCopy = contentToCopy.trim();
+
+            if (contentToCopy) {
+                copyToClipboard(contentToCopy)
+                    .then((success) => {
+                        if (success) {
+                            copyBtn.textContent = '✅'; // Copied!
+                            setTimeout(() => {
+                                copyBtn.textContent = '📋'; // Reset icon
+                            }, 1500);
+                        } else {
+                            copyBtn.textContent = '❌'; // Error
+                            setTimeout(() => {
+                                copyBtn.textContent = '📋'; // Reset icon
+                            }, 1500);
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy text: ', err);
+                        copyBtn.textContent = '❌'; // Error
+                        setTimeout(() => {
+                            copyBtn.textContent = '📋'; // Reset icon
+                        }, 1500);
+                    });
+            } else {
+                console.warn('No content found to copy in LLM block:', llmBlock);
+                copyBtn.textContent = '❓'; // No content
+                setTimeout(() => {
+                    copyBtn.textContent = '📋'; // Reset icon
+                }, 1500);
+            }
         }
-    });
+    }
 });
 
 // Timezone conversion functionality
@@ -2397,6 +2722,193 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+</script>
+
+<!-- AI Assistant JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+(function() {
+    const aiSidebar = document.getElementById('aiSidebar');
+    const aiToggleBtn = document.getElementById('aiAssistantToggle');
+    const aiCloseBtn = document.getElementById('aiSidebarClose');
+    const aiChatHistory = document.getElementById('ai-chat-history');
+    const aiChatInput = document.getElementById('ai-chat-input');
+    const aiSendButton = document.getElementById('ai-send-button');
+    const aiModelSelect = document.getElementById('ai-model-select');
+    
+    let conversationHistory = [];
+    let isLoading = false;
+    
+    // Determine webRoot from current script context
+    const webRoot = (function() {
+        const scriptPath = window.location.pathname;
+        const uiPos = scriptPath.indexOf('/ui/');
+        if (uiPos !== -1) {
+            return scriptPath.substring(0, uiPos);
+        }
+        return '';
+    })();
+    
+    // Marked configuration for safe HTML
+    if (typeof marked !== 'undefined') {
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+    }
+    
+    // Toggle sidebar
+    function openSidebar() {
+        aiSidebar.classList.add('open');
+        document.body.classList.add('ai-sidebar-open');
+        aiChatInput.focus();
+    }
+    
+    function closeSidebar() {
+        aiSidebar.classList.remove('open');
+        document.body.classList.remove('ai-sidebar-open');
+    }
+    
+    aiToggleBtn.addEventListener('click', openSidebar);
+    aiCloseBtn.addEventListener('click', closeSidebar);
+    
+    // Close sidebar with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && aiSidebar.classList.contains('open')) {
+            closeSidebar();
+        }
+    });
+    
+    function addMessage(role, content, isError = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'ai-chat-message ' + (isError ? 'error' : role);
+        
+        const roleDiv = document.createElement('div');
+        roleDiv.className = 'ai-chat-message-role';
+        roleDiv.textContent = role === 'user' ? 'You' : (isError ? 'Error' : 'CHIM');
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'ai-chat-message-content';
+        
+        // Use marked for markdown if available, otherwise plain text
+        if (typeof marked !== 'undefined' && !isError) {
+            contentDiv.innerHTML = marked.parse(content);
+        } else {
+            contentDiv.textContent = content;
+        }
+        
+        messageDiv.appendChild(roleDiv);
+        messageDiv.appendChild(contentDiv);
+        aiChatHistory.appendChild(messageDiv);
+        
+        // Scroll to bottom
+        aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
+    }
+    
+    function addLoadingIndicator() {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'ai-loading-indicator';
+        loadingDiv.id = 'ai-loading-indicator';
+        loadingDiv.textContent = 'AI is thinking...';
+        aiChatHistory.appendChild(loadingDiv);
+        aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
+    }
+    
+    function removeLoadingIndicator() {
+        const loadingDiv = document.getElementById('ai-loading-indicator');
+        if (loadingDiv) {
+            loadingDiv.remove();
+        }
+    }
+    
+    async function sendMessage() {
+        if (isLoading) return;
+        
+        const message = aiChatInput.value.trim();
+        if (!message) return;
+        
+        isLoading = true;
+        aiSendButton.disabled = true;
+        aiChatInput.disabled = true;
+        
+        // Add user message to UI
+        addMessage('user', message);
+        
+        // Add to conversation history
+        conversationHistory.push({
+            role: 'user',
+            content: message
+        });
+        
+        // Clear input
+        aiChatInput.value = '';
+        
+        // Show loading
+        addLoadingIndicator();
+        
+        try {
+            const response = await fetch(webRoot + '/ui/cmd/ai_log_assistant.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: message,
+                    model: aiModelSelect.value,
+                    history: conversationHistory
+                })
+            });
+            
+            removeLoadingIndicator();
+            
+            if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.statusText);
+            }
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                addMessage('assistant', 'Error: ' + data.error, true);
+            } else if (data.success && data.message) {
+                addMessage('assistant', data.message);
+                
+                // Add to conversation history
+                conversationHistory.push({
+                    role: 'assistant',
+                    content: data.message
+                });
+            } else {
+                addMessage('assistant', 'Received unexpected response format', true);
+            }
+            
+        } catch (error) {
+            removeLoadingIndicator();
+            addMessage('assistant', 'Failed to communicate with AI: ' + error.message, true);
+            console.error('AI request error:', error);
+        } finally {
+            isLoading = false;
+            aiSendButton.disabled = false;
+            aiChatInput.disabled = false;
+            aiChatInput.focus();
+        }
+    }
+    
+    // Event listeners
+    aiSendButton.addEventListener('click', sendMessage);
+    
+    aiChatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+    
+    // Auto-resize textarea
+    aiChatInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+    });
+})();
 </script>
 
 <?php
