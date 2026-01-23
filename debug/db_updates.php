@@ -2319,6 +2319,7 @@ $db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS closed in
 $db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS door_name text");
 $db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS door_x numeric");
 $db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS door_y numeric");
+
 $db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS gamets bigint");
 $db->execQuery("DO $$
 BEGIN
@@ -2337,6 +2338,37 @@ if ($checkTableExists("master_packages") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/master_packages.sql"));
 } else
     Logger::info(__FILE__." master_packages exists");
+
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS event_log_type ON public.eventlog USING btree (type)");
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_people_trgm
+ON eventlog
+USING gin (people gin_trgm_ops)");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_people_trgm2
+ON eventlog
+USING gin (data gin_trgm_ops)");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_speech_speaker_trgm
+ON speech
+USING gin (speaker gin_trgm_ops)");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_speech_listener_trgm
+ON speech
+USING gin (listener gin_trgm_ops)");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_gamets_pos
+ON eventlog (gamets)
+WHERE gamets > 0");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_gamets_ts_pos
+ON eventlog (gamets DESC, ts DESC)");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS   idx_speech_gamets_pos
+ON speech (gamets)
+WHERE gamets > 0");
+
+
 
 //----------------------------------------------------
 // Prompts Table - System for managing default and custom prompts

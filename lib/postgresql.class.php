@@ -139,9 +139,15 @@ class sql
         $query = "INSERT INTO $table ($columns) VALUES ($values)";
         $params = array_values($data);
         $result = pg_query_params(self::$link, $query, $params);
+        
+        $endTime = microtime(true);
+        $elapsedTime = $endTime - $startTime;
+        if (!isset($GLOBALS["DB_EXECUTION_TIME"])) {
+            $GLOBALS["DB_EXECUTION_TIME"] = 0;
+        }
+        $GLOBALS["DB_EXECUTION_TIME"] += $elapsedTime;
+        
         if ($this->debug_level > 2) {
-            $endTime = microtime(true);
-            $elapsedTime = $endTime - $startTime;
             if ($elapsedTime > $this->queryTimeThreshold) {
                 Logger::warn("SQL: Insert query execution time exceeded threshold {$elapsedTime} seconds. {$query} ". $this->extract_caller() );
             }
@@ -153,6 +159,7 @@ class sql
 
     public function query($query)
     {
+        $startTime = microtime(true);
         $this->re_connect();
 
         if (!function_exists('pg_query')) {
@@ -161,6 +168,19 @@ class sql
         }
 
         $result = pg_query(self::$link, $query);
+        
+        $endTime = microtime(true);
+        $elapsedTime = $endTime - $startTime;
+        if (!isset($GLOBALS["DB_EXECUTION_TIME"])) {
+            $GLOBALS["DB_EXECUTION_TIME"] = 0;
+        }
+        $GLOBALS["DB_EXECUTION_TIME"] += $elapsedTime;
+        
+        if ($this->debug_level > 2) {
+            if ($elapsedTime > $this->queryTimeThreshold) {
+                Logger::warn("SQL: query execution time exceeded threshold {$elapsedTime} seconds. {$query} " . $this->extract_caller());
+            }
+        }
         if ($result === false) {
             Logger::error("SQL: query failed {$query} " . $this->GetLastError() . $this->extract_caller());
         }
@@ -169,9 +189,23 @@ class sql
 
     public function delete($table, $where = "FALSE")
     {
+        $startTime = microtime(true);
         $this->re_connect();
         $query = "DELETE FROM $table WHERE $where";
         $result = pg_query(self::$link, $query);
+        
+        $endTime = microtime(true);
+        $elapsedTime = $endTime - $startTime;
+        if (!isset($GLOBALS["DB_EXECUTION_TIME"])) {
+            $GLOBALS["DB_EXECUTION_TIME"] = 0;
+        }
+        $GLOBALS["DB_EXECUTION_TIME"] += $elapsedTime;
+        
+        if ($this->debug_level > 2) {
+            if ($elapsedTime > $this->queryTimeThreshold) {
+                Logger::warn("SQL: delete execution time exceeded threshold {$elapsedTime} seconds. {$query} " . $this->extract_caller());
+            }
+        }
         if ($result === false) {
             $error = pg_last_error(self::$link);
             error_log("[DB_DELETE] Failed to delete from {$table} WHERE {$where}. Error: {$error}");
@@ -182,6 +216,7 @@ class sql
     public function truncate($table, $restart = false, $cascade = false)
     {
         if ($table > "") {
+            $startTime = microtime(true);
             $this->re_connect();
             $query = "TRUNCATE {$table}";
             if ($restart) 
@@ -189,6 +224,19 @@ class sql
             if ($cascade)
                 $query .= " CASCADE";
             pg_query(self::$link, $query);
+            
+            $endTime = microtime(true);
+            $elapsedTime = $endTime - $startTime;
+            if (!isset($GLOBALS["DB_EXECUTION_TIME"])) {
+                $GLOBALS["DB_EXECUTION_TIME"] = 0;
+            }
+            $GLOBALS["DB_EXECUTION_TIME"] += $elapsedTime;
+            
+            if ($this->debug_level > 2) {
+                if ($elapsedTime > $this->queryTimeThreshold) {
+                    Logger::warn("SQL: truncate execution time exceeded threshold {$elapsedTime} seconds. {$query} " . $this->extract_caller());
+                }
+            }
         } else
             Logger::warn("SQL: truncate empty parameter [table] " . $this->extract_caller() );
     }
@@ -200,9 +248,14 @@ class sql
         $query = "UPDATE $table SET $set WHERE $where";
         $result = pg_query(self::$link, $query);
 
+        $endTime = microtime(true);
+        $elapsedTime = $endTime - $startTime;
+        if (!isset($GLOBALS["DB_EXECUTION_TIME"])) {
+            $GLOBALS["DB_EXECUTION_TIME"] = 0;
+        }
+        $GLOBALS["DB_EXECUTION_TIME"] += $elapsedTime;
+        
         if ($this->debug_level > 2) {
-            $endTime = microtime(true);
-            $elapsedTime = $endTime - $startTime;
             if ($elapsedTime > $this->queryTimeThreshold) {
                 Logger::warn("SQL: update query execution time exceeded threshold: {$elapsedTime} seconds. {$query} ");
             }
@@ -218,9 +271,14 @@ class sql
         $this->re_connect();
         $result = pg_query(self::$link, $sqlquery);
 
+        $endTime = microtime(true);
+        $elapsedTime = $endTime - $startTime;
+        if (!isset($GLOBALS["DB_EXECUTION_TIME"])) {
+            $GLOBALS["DB_EXECUTION_TIME"] = 0;
+        }
+        $GLOBALS["DB_EXECUTION_TIME"] += $elapsedTime;
+        
         if ($this->debug_level > 2) {
-            $endTime = microtime(true);
-            $elapsedTime = $endTime - $startTime;
             if ($elapsedTime > $this->queryTimeThreshold) {
                 Logger::warn("SQL: query execution time exceeded threshold: {$elapsedTime} seconds. {$sqlquery} ");
             }
@@ -238,9 +296,14 @@ class sql
         $this->re_connect();
         $result = pg_query(self::$link, $sqlquery);
 
+        $endTime = microtime(true);
+        $elapsedTime = $endTime - $startTime;
+        if (!isset($GLOBALS["DB_EXECUTION_TIME"])) {
+            $GLOBALS["DB_EXECUTION_TIME"] = 0;
+        }
+        $GLOBALS["DB_EXECUTION_TIME"] += $elapsedTime;
+        
         if ($this->debug_level > 2) {
-            $endTime = microtime(true);
-            $elapsedTime = $endTime - $startTime;
             if ($elapsedTime > $this->queryTimeThreshold) {
                 Logger::error("Query execution time exceeded threshold: {$elapsedTime} seconds. {$sqlquery} ");
             }
@@ -259,9 +322,14 @@ class sql
         $this->re_connect();
         $result = pg_query(self::$link, $q);
 
+        $endTime = microtime(true);
+        $elapsedTime = $endTime - $startTime;
+        if (!isset($GLOBALS["DB_EXECUTION_TIME"])) {
+            $GLOBALS["DB_EXECUTION_TIME"] = 0;
+        }
+        $GLOBALS["DB_EXECUTION_TIME"] += $elapsedTime;
+        
         if ($this->debug_level > 2) {
-            $endTime = microtime(true);
-            $elapsedTime = $endTime - $startTime;
             if ($elapsedTime > $this->queryTimeThreshold) {
                 Logger::warn("SQL: FetchAll execution time exceeded threshold: {$elapsedTime} seconds. '{$q}' ");
             }
@@ -296,9 +364,15 @@ class sql
         $this->re_connect();
         $result = pg_query(self::$link, $q);
         // error_log($q);
+        
+        $endTime = microtime(true);
+        $elapsedTime = $endTime - $startTime;
+        if (!isset($GLOBALS["DB_EXECUTION_TIME"])) {
+            $GLOBALS["DB_EXECUTION_TIME"] = 0;
+        }
+        $GLOBALS["DB_EXECUTION_TIME"] += $elapsedTime;
+        
         if ($this->debug_level > 2) {
-            $endTime = microtime(true);
-            $elapsedTime = $endTime - $startTime;
             if ($elapsedTime > $this->queryTimeThreshold) {
                 Logger::error("SQL: FetchOne query execution time exceeded threshold: {$elapsedTime} seconds. {$q} ");
             }
@@ -343,6 +417,7 @@ class sql
 
     public function updateRow($table, $data, $where)
     {
+        $startTime = microtime(true);
         $setClauses = [];
         $params = [];
         $i = 0;
@@ -357,12 +432,26 @@ class sql
         $query = "UPDATE $table SET $set WHERE $where";
         $this->re_connect();
         $result = pg_query_params(self::$link, $query, $params);
+        
+        $endTime = microtime(true);
+        $elapsedTime = $endTime - $startTime;
+        if (!isset($GLOBALS["DB_EXECUTION_TIME"])) {
+            $GLOBALS["DB_EXECUTION_TIME"] = 0;
+        }
+        $GLOBALS["DB_EXECUTION_TIME"] += $elapsedTime;
+        
+        if ($this->debug_level > 2) {
+            if ($elapsedTime > $this->queryTimeThreshold) {
+                Logger::warn("SQL: updateRow execution time exceeded threshold: {$elapsedTime} seconds. {$query} " . $this->extract_caller());
+            }
+        }
         if (!$result) {
             Logger::error("SQL: updateRow failed {$query} " .$this->GetLastError() . $this->extract_caller() );
         }
     }
 
     public function upsertRow($table, $data, $where) {
+        $startTime = microtime(true);
         // Check if the row exists
         $this->re_connect();
         $checkQuery = "SELECT 1 FROM $table WHERE $where LIMIT 1";
@@ -406,6 +495,19 @@ class sql
 
         // Execute the query
         $result = pg_query_params(self::$link, $query, $params);
+        
+        $endTime = microtime(true);
+        $elapsedTime = $endTime - $startTime;
+        if (!isset($GLOBALS["DB_EXECUTION_TIME"])) {
+            $GLOBALS["DB_EXECUTION_TIME"] = 0;
+        }
+        $GLOBALS["DB_EXECUTION_TIME"] += $elapsedTime;
+        
+        if ($this->debug_level > 2) {
+            if ($elapsedTime > $this->queryTimeThreshold) {
+                Logger::warn("SQL: upsertRow execution time exceeded threshold: {$elapsedTime} seconds. {$query} " . $this->extract_caller());
+            }
+        }
         if (!$result) {
             Logger::error("SQL: upsertRow failed {$query} " . $this->GetLastError() . $this->extract_caller() );
             return false;
@@ -415,6 +517,7 @@ class sql
     }
 
     public function upsertRowTrx($table, $data, $whereCondition) {
+        $startTime = microtime(true);
         // Start a transaction
         $this->re_connect();
         pg_query(self::$link, "BEGIN");
@@ -489,10 +592,31 @@ class sql
             // Commit transaction
             pg_query(self::$link, "COMMIT");
     
+            $endTime = microtime(true);
+            $elapsedTime = $endTime - $startTime;
+            if (!isset($GLOBALS["DB_EXECUTION_TIME"])) {
+                $GLOBALS["DB_EXECUTION_TIME"] = 0;
+            }
+            $GLOBALS["DB_EXECUTION_TIME"] += $elapsedTime;
+            
+            if ($this->debug_level > 2) {
+                if ($elapsedTime > $this->queryTimeThreshold) {
+                    Logger::warn("SQL: upsertRowTrx execution time exceeded threshold: {$elapsedTime} seconds. " . $this->extract_caller());
+                }
+            }
+            
             return true;
         } catch (Exception $e) {
             // Rollback on error
             pg_query(self::$link, "ROLLBACK");
+            
+            $endTime = microtime(true);
+            $elapsedTime = $endTime - $startTime;
+            if (!isset($GLOBALS["DB_EXECUTION_TIME"])) {
+                $GLOBALS["DB_EXECUTION_TIME"] = 0;
+            }
+            $GLOBALS["DB_EXECUTION_TIME"] += $elapsedTime;
+            
             Logger::error("SQL: upsertRowTrx failed {$query} " . $e->getMessage() . $this->extract_caller() );
             return false;
         }
@@ -500,6 +624,7 @@ class sql
 
     // an upsert that completes in one query. Good for simple cases when a constraint can be used
     public function upsertRowOnConflict($tableName, $data, $conflictTarget) {
+        $startTime = microtime(true);
         // Prepare the column names for the INSERT statement.
 
         $columns = implode(', ', array_keys($data));
@@ -527,6 +652,18 @@ class sql
     
         $result = pg_query(self::$link, $sqlquery);
     
+        $endTime = microtime(true);
+        $elapsedTime = $endTime - $startTime;
+        if (!isset($GLOBALS["DB_EXECUTION_TIME"])) {
+            $GLOBALS["DB_EXECUTION_TIME"] = 0;
+        }
+        $GLOBALS["DB_EXECUTION_TIME"] += $elapsedTime;
+        
+        if ($this->debug_level > 2) {
+            if ($elapsedTime > $this->queryTimeThreshold) {
+                Logger::warn("SQL: upsertRowOnConflict execution time exceeded threshold: {$elapsedTime} seconds. {$sqlquery} " . $this->extract_caller());
+            }
+        }
         if (!$result) {
             Logger::error("SQL: upsertRowOnConflict failed {$sqlquery} " . $this->GetLastError() . $this->extract_caller() );
             return false; // Indicate failure

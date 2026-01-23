@@ -1302,7 +1302,8 @@ function lastKeyWordsContext($n, $npcname='')
     else
         $whileago=0;
     
-    $lastRecords = $db->fetchAll("SELECT speaker,location,companions,speech,gamets from speech where (speaker ilike '$speaker' or speaker ilike '%$pj%' ) and gamets>$whileago
+    $lastRecords = $db->fetchAll("SELECT speaker,location,companions,speech,gamets
+     from (select * from speech where  gamets>$whileago) where (speaker ilike '$speaker' or speaker ilike '%$pj%' ) 
         order by gamets desc limit $m offset 0");
     
     
@@ -1797,6 +1798,9 @@ function ExtractKeywords($sourceText) {
 // This is used to dynamically adjust the memory window based on recent activity.
 
 function getGametsLimitFor($actor) {
+    if (isset($GLOBALS["GAMETS_LIMIT_FOR_ACTOR"][$actor])) {
+        return $GLOBALS["GAMETS_LIMIT_FOR_ACTOR"][$actor];
+    }
     global $db;
 
     $actorEscaped = $db->escape($actor);
@@ -1808,8 +1812,8 @@ function getGametsLimitFor($actor) {
         FROM (
             SELECT gamets 
             FROM eventlog 
-            WHERE people LIKE '%$actorEscaped%'
-            and type='chat'
+            WHERE type='chat'
+            and people LIKE '%$actorEscaped%'
             ORDER BY gamets DESC
             LIMIT $limit
         ) AS recent_events
@@ -1820,9 +1824,12 @@ function getGametsLimitFor($actor) {
     Logger::debug("MEMORY_EMBEDDING getGametsLimitFor($actor),CONTEXT_HISTORY: {$GLOBALS["CONTEXT_HISTORY"]} => {$limitRow["hour_threshold"]}");
 
     // If no data or result is too small, fall back to a sensible default (e.g. 72 in-game hours)
-    return (isset($limitRow["hour_threshold"]) && $limitRow["hour_threshold"] > 0)
+    $res = (isset($limitRow["hour_threshold"]) && $limitRow["hour_threshold"] > 0)
         ? $limitRow["hour_threshold"]
         : 72;
+
+    $GLOBALS["GAMETS_LIMIT_FOR_ACTOR"][$actor] = $res;
+    return $res;
 }
 
 

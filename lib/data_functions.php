@@ -755,6 +755,10 @@ function DataLocationsAround($current_location = "") {
 
 function DataPosibleLocationsToGo()
 {
+    if (isset($GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO"])) {
+        return $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO"];
+    }
+
     global $db;
     $lastDialogFull = array();
     $results = $db->fetchAll("select  a.data  as data  FROM  eventlog a 
@@ -824,11 +828,16 @@ function DataPosibleLocationsToGo()
     }     */
     //return ["Goldenglow Estate","Faldar's Tooth","Goldenglow Estate Sewer","Pit Wolf(dead)","Pit Wolf(dead)","Herika"];
     //error_log("DataPosibleLocationsToGo: ".print_r($retData,true));
-    return array_values($retData);
+    $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO"] = array_values($retData);
+    return $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO"];
 }
 
 function DataPosibleLocationsToGoWide()
 {
+    if (isset($GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO_WIDE"])) {
+        return $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO_WIDE"];
+    }
+
     global $db;
     $lastDialogFull = array();
     $results = $db->fetchOne("select  a.data  as data  FROM  eventlog a 
@@ -846,15 +855,21 @@ function DataPosibleLocationsToGoWide()
                 $r[$loc["name"]]="";
 
         }
+        $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO_WIDE"] = $r;
         return $r;
     }
 
+    $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO_WIDE"] = [];
     return [];
 
 }
 
 function DataPosibleInspectTargets($pack=true)
 {
+    if (isset($GLOBALS["CACHE_POSIBLE_INSPECT_TARGETS"][(int)$pack])) {
+        return $GLOBALS["CACHE_POSIBLE_INSPECT_TARGETS"][(int)$pack];
+    }
+
     global $db;
     $results = $db->fetchAll("select  a.data  as data  FROM  eventlog a 
     WHERE type in ('infonpc')  order by gamets desc,ts desc LIMIT 50 OFFSET 0");
@@ -908,7 +923,8 @@ function DataPosibleInspectTargets($pack=true)
         
     }
 
-    return array_values($retData);
+    $GLOBALS["CACHE_POSIBLE_INSPECT_TARGETS"][(int)$pack] = array_values($retData);
+    return $GLOBALS["CACHE_POSIBLE_INSPECT_TARGETS"][(int)$pack];
 }
 
 function DataQuestJournal($quest)
@@ -2581,6 +2597,9 @@ function DataActorHasDied($actor)
 
 function DataLastKnowDate() 
 {
+    if (isset($GLOBALS["CACHE_LAST_KNOW_DATE"])) {
+        return $GLOBALS["CACHE_LAST_KNOW_DATE"];
+    }
 
     global $db;
     
@@ -2588,19 +2607,23 @@ function DataLastKnowDate()
     $lastLoc=$db->fetchAll("SELECT a.gamets FROM eventlog a WHERE (type in ('infoloc')) ORDER BY gamets desc, ts desc LIMIT 1");
     if (is_array($lastLoc) && sizeof($lastLoc) > 0 && !empty($lastLoc[0]["gamets"])) {
         require_once(__DIR__ . "/utils_game_timestamp.php");
-        return convert_gamets2skyrim_long_date($lastLoc[0]["gamets"]);
+        $GLOBALS["CACHE_LAST_KNOW_DATE"] = convert_gamets2skyrim_long_date($lastLoc[0]["gamets"]);
+        return $GLOBALS["CACHE_LAST_KNOW_DATE"];
     }
     
     // Fall back to parsing data field
     $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE (type in ('infoloc')) and (data like '%Current Date%')  order by gamets desc, ts desc LIMIT 1"); //make sure record has datetime
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        $GLOBALS["CACHE_LAST_KNOW_DATE"] = "";
         return "";
     }
     $re = '/(\w+), (\d{1,2}:\d{2} (?:AM|PM)), (\d{1,2})(?:st|nd|rd|th) of ([A-Za-z\'\ ]+), 4E (\d+)/'; //extract also for months with apostrophe like Sun's Something
     if (preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0)) {
-        return $matches[0][0];
+        $GLOBALS["CACHE_LAST_KNOW_DATE"] = $matches[0][0];
+        return $GLOBALS["CACHE_LAST_KNOW_DATE"];
     } else {
         Logger::info("DataLastKnowDate: NO match found");
+        $GLOBALS["CACHE_LAST_KNOW_DATE"] = "";
         return "";
     }
 }
@@ -2608,18 +2631,23 @@ function DataLastKnowDate()
 
 function DataLastKnownLocation()
 {
+    if (isset($GLOBALS["CACHE_LAST_KNOWN_LOCATION"])) {
+        return $GLOBALS["CACHE_LAST_KNOWN_LOCATION"];
+    }
 
     global $db;
 
     $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc','location') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        $GLOBALS["CACHE_LAST_KNOWN_LOCATION"] = "";
         return "";
     }
     /*
     $re = '/Context location: ([\w\ \']*)/';
     preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0);
     */
-    return $lastLoc[0]["data"];
+    $GLOBALS["CACHE_LAST_KNOWN_LOCATION"] = $lastLoc[0]["data"];
+    return $GLOBALS["CACHE_LAST_KNOWN_LOCATION"];
 
 }
 
@@ -2628,29 +2656,31 @@ function DataLastKnownLocationHuman($hold=false,$cached=false)
 
     global $db;
     
-    if ($cached && isset($GLOBALS["LAST_KNOW_LOCATION_HUMAN"]))
-        return $GLOBALS["LAST_KNOW_LOCATION_HUMAN"];
+    $cache_key = $hold ? "HOLD" : "LOC";
+    if (isset($GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key]))
+        return $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key];
 
     $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc','location','request') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key] = "";
         return "";
     }
     
     if (!$hold) {
         $re = '/Context (?:new )?location: ([\w\ \']*)/';
         preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0);
-        $GLOBALS["LAST_KNOW_LOCATION_HUMAN"]=$matches[1][0];
+        $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key]=$matches[1][0];
         return $matches[1][0];
     } else {
         preg_match('/Hold:\s*(\w+)/', $lastLoc[0]["data"], $matches);
         if (isset($matches[1])) {
-            $hold = $matches[1];
-            $GLOBALS["LAST_KNOW_LOCATION_HUMAN"]=$matches[1];
+            $val = $matches[1];
         }
         else 
-            $hold = "";
+            $val = "";
         
-        return $hold;
+        $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key] = $val;
+        return $val;
     }
 
 }
@@ -2836,11 +2866,15 @@ function DataGetCurrentPartyConf() {
 
 function DataBeingsInRange()
 {
+    if (isset($GLOBALS["CACHE_BEINGS_IN_RANGE"])) {
+        return $GLOBALS["CACHE_BEINGS_IN_RANGE"];
+    }
 
     global $db;
 
     $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infonpc')  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        $GLOBALS["CACHE_BEINGS_IN_RANGE"] = "";
         return "";
     }
     
@@ -2858,16 +2892,21 @@ function DataBeingsInRange()
     }
     $beingsFormatted=implode("|",$beingsArrayNew);
     
-    return "|".$beingsFormatted."|";
+    $GLOBALS["CACHE_BEINGS_IN_RANGE"] = "|".$beingsFormatted."|";
+    return $GLOBALS["CACHE_BEINGS_IN_RANGE"];
 }
 
 function DataBeingsInRangeExcluding($excludeNPC="", $excludePlayer=true)
 {
+    if (isset($GLOBALS["CACHE_BEINGS_IN_RANGE_EXCLUDING"][$excludeNPC][(int)$excludePlayer])) {
+        return $GLOBALS["CACHE_BEINGS_IN_RANGE_EXCLUDING"][$excludeNPC][(int)$excludePlayer];
+    }
 
     global $db;
 
     $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infonpc')  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        $GLOBALS["CACHE_BEINGS_IN_RANGE_EXCLUDING"][$excludeNPC][(int)$excludePlayer] = "";
         return "";
     }
     if (trim($excludeNPC) > "")
@@ -2890,16 +2929,21 @@ function DataBeingsInRangeExcluding($excludeNPC="", $excludePlayer=true)
     }
     $beingsFormatted=implode("|",$beingsArrayNew);
     error_log("<{$lastLoc[0]["data"]}> $beingsFormatted");
-    return "|".$beingsFormatted."|";
+    $GLOBALS["CACHE_BEINGS_IN_RANGE_EXCLUDING"][$excludeNPC][(int)$excludePlayer] = "|".$beingsFormatted."|";
+    return $GLOBALS["CACHE_BEINGS_IN_RANGE_EXCLUDING"][$excludeNPC][(int)$excludePlayer];
 }
 
 function DataBeingsOrDeathsInRangeExcluding($excludeNPC="", $excludePlayer=true)
 {
+    if (isset($GLOBALS["CACHE_BEINGS_OR_DEATHS_IN_RANGE_EXCLUDING"][$excludeNPC][(int)$excludePlayer])) {
+        return $GLOBALS["CACHE_BEINGS_OR_DEATHS_IN_RANGE_EXCLUDING"][$excludeNPC][(int)$excludePlayer];
+    }
 
     global $db;
 
     $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infonpc')  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        $GLOBALS["CACHE_BEINGS_OR_DEATHS_IN_RANGE_EXCLUDING"][$excludeNPC][(int)$excludePlayer] = "";
         return "";
     }
     if (trim($excludeNPC) > "")
@@ -2922,7 +2966,8 @@ function DataBeingsOrDeathsInRangeExcluding($excludeNPC="", $excludePlayer=true)
     }
     $beingsFormatted=implode("|",$beingsArrayNew);
     error_log("<{$lastLoc[0]["data"]}> $beingsFormatted");
-    return "|".$beingsFormatted."|";
+    $GLOBALS["CACHE_BEINGS_OR_DEATHS_IN_RANGE_EXCLUDING"][$excludeNPC][(int)$excludePlayer] = "|".$beingsFormatted."|";
+    return $GLOBALS["CACHE_BEINGS_OR_DEATHS_IN_RANGE_EXCLUDING"][$excludeNPC][(int)$excludePlayer];
 }
 
 function DataBeingsInCloseRange($excludeFarAway=false)

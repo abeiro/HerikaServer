@@ -1064,12 +1064,12 @@ if ($GLOBALS["ENABLED_FUNCTIONS"]) {
         $isCombat=$GLOBALS["db"]->fetchOne("SELECT EXISTS (
     SELECT 1 as combat_active
     FROM public.eventlog start_evt
-    WHERE start_evt.data LIKE '%$cnName%engages fair combat with $playerCnName%'
+    WHERE start_evt.data LIKE '%$cnName%engages fair combat with $playerCnName%' and type='funcrect'
       AND NOT EXISTS (
           SELECT 1
           FROM public.eventlog defeat_evt
           WHERE defeat_evt.gamets > start_evt.gamets
-            AND defeat_evt.data LIKE '%$playerCnName%defeat%$cnName%'
+            AND defeat_evt.data LIKE '%$playerCnName%defeat%$cnName%' and type='death'
       ) )
 ");
         if (isset($isCombat["exists"])) {

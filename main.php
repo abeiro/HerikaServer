@@ -2167,7 +2167,9 @@ if ($gameRequest[0] == "funcret") {
     
 }
 
-error_log("*TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
+error_log("SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
+
+error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." secs building call");
 //returnLines(["Mmm..let me think"]);
 
 // Global switch. Needed id we need to stop processing because sme function requires it. Example, funcret conditions.

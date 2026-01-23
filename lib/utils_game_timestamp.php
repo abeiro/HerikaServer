@@ -762,7 +762,7 @@ function DataLastKnownGameTS() {
 // retrieve gamets from eventlog
     global $db;
 
-    $lastLoc=$db->fetchAll("SELECT MAX(gamets) AS m_gts FROM eventlog WHERE (gamets > 0)");
+    $lastLoc=$db->fetchAll("SELECT MAX(gamets) AS m_gts FROM eventlog WHERE (gamets > 0) LIMIT 1");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
         Logger::warn("DataLastKnownGameTS: NO record found");
     } else { // ok 
