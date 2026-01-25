@@ -22,8 +22,8 @@ function SaveOriginalHerikaName() {
         if ((strlen($herika) > 0) && ($herika != "Player") && ($herika != "LLMFallback") && (stripos($herika, "Narrator") === false) && (stripos($herika, "actor") === false) && (stripos($herika, "everyone") === false) && (stripos($herika, "*") === false) && (stripos($herika, "none") === false) ) {
             $GLOBALS["ORIGINAL_HERIKA_NAME"] = $herika;
             $GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] = true;
-        } else {
-            Logger::debug("SaveOriginalHerikaName: ignored new value for HERIKA_NAME {$herika}");
+        //} else {
+        //    Logger::debug("SaveOriginalHerikaName: ignored new value for HERIKA_NAME {$herika}");
         }
     }
 }
@@ -1417,13 +1417,14 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     }
     
     $lastDialogFull = array();
-    $actorEscaped=$db->escape($actor);
-    $playerEscaped=$db->escape($GLOBALS["PLAYER_NAME"]);
+    $b_actor = (strlen($actor) > 0);
+    if ($b_actor)
+        $actorEscaped=$db->escape($actor);
+    else
+        $actorEscaped='';
+    //$playerEscaped=$db->escape($GLOBALS["PLAYER_NAME"]);
     
-    if (empty($actorEscaped))
-        $actorEscaped="%";
-
-    $query="select  
+    $query="select   
     case 
       when type='infoaction' and a.data like '#%MEMORY%' then 'MEMORY'
       when type like 'info%' or type like 'funcret%' or type like 'location%' then 'CONTEXTI'
@@ -1452,19 +1453,14 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc' and type<>'infoitems'  
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
-    and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region' and type<>'named_cell' and type<>'narrator_inputtext'
-    ".(($actorEscaped)?" 
-    and (
-     people like '%|$actorEscaped|%' 
-     or people like '$actorEscaped' 
-     or people like '%|$actorEscaped (busy)|%'
-     OR people LIKE '%|$actorEscaped (hostile)|%' 
-     or type='info_timeforward' )
-    ":"")." 
-    and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
-    ((false)?" and gamets>".($currentGameTs-(60*60*60*60)):"").
-    " order by gamets desc, ts desc, rowid desc LIMIT $nRecordsLimit OFFSET 0";  
-    
+    and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region' and type<>'named_cell' and type<>'narrator_inputtext' 
+    and type<>'funccall' and type<>'togglemodel' 
+    OR type ILIKE 'info\_%' 
+    OR type ILIKE 'ext\_%' 
+    ".(($b_actor) ? " AND (people ILIKE '%|$actorEscaped%')" : " ").
+    " {$removeBooks} {$sqlfilter} ".
+    //((false)?" and gamets>".($currentGameTs-(60*60*60*60)):"").
+    " ORDER BY gamets desc, ts desc, rowid desc LIMIT {$nRecordsLimit} OFFSET 0";  
     // OR people LIKE '%|$actorEscaped (far away)|%') this can be confusing in whisper mode
     $results = $db->fetchAll($query);
 
