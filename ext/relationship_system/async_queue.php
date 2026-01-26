@@ -41,6 +41,9 @@ function _relQueueEvaluation($evalData) {
     $listenerNpcId = $evalData['listener_npc_id'] ?? null;
     $listenerName = $evalData['listener_name'] ?? null;
 
+    // Track whether this evaluation has player action (for smart upsert priority)
+    $hasPlayerAction = !empty($evalData['has_player_action']);
+
     $queueData = [
         'npc_id' => $npcId,
         'npc_name' => $npcName,
@@ -49,6 +52,7 @@ function _relQueueEvaluation($evalData) {
         'is_npc2npc' => $evalData['is_npc2npc'] ?? false,
         'listener_npc_id' => $listenerNpcId,
         'listener_name' => $listenerName,
+        'has_player_action' => $hasPlayerAction,
         'queued_at' => date('Y-m-d H:i:s')
     ];
 
@@ -59,12 +63,27 @@ function _relQueueEvaluation($evalData) {
     try {
         $escapedJson = $GLOBALS['db']->escape($jsonData);
         $escapedNpcId = intval($npcId);
+        $hasPlayerActionSql = $hasPlayerAction ? 'true' : 'false';
 
-        // Upsert: Replace any existing queue for this NPC (only latest matters)
+        // SMART UPSERT: Player action evaluations have priority over NPC-initiated ones
+        // - If new request has player action: ALWAYS replace (player is interacting)
+        // - If existing request has player action: DON'T replace (preserve player interaction)
+        // - If neither has player action: Replace with new data (latest NPC-initiated)
+        // This prevents NPC chatter from overwriting pending Player relationship evaluations
         $GLOBALS['db']->query(
             "INSERT INTO relationship_eval_queue (npc_id, eval_data, created_at)
              VALUES ({$escapedNpcId}, '{$escapedJson}', NOW())
-             ON CONFLICT (npc_id) DO UPDATE SET eval_data = '{$escapedJson}', created_at = NOW()"
+             ON CONFLICT (npc_id) DO UPDATE SET
+                eval_data = CASE
+                    WHEN {$hasPlayerActionSql} THEN '{$escapedJson}'
+                    WHEN (relationship_eval_queue.eval_data->>'has_player_action')::boolean IS NOT TRUE THEN '{$escapedJson}'
+                    ELSE relationship_eval_queue.eval_data
+                END,
+                created_at = CASE
+                    WHEN {$hasPlayerActionSql} THEN NOW()
+                    WHEN (relationship_eval_queue.eval_data->>'has_player_action')::boolean IS NOT TRUE THEN NOW()
+                    ELSE relationship_eval_queue.created_at
+                END"
         );
 
         Logger::info("[REL-ASYNC] Queued evaluation for {$npcName} (NPC {$npcId})" .
@@ -76,12 +95,22 @@ function _relQueueEvaluation($evalData) {
         if (strpos($e->getMessage(), 'relation "relationship_eval_queue" does not exist') !== false ||
             strpos($e->getMessage(), 'does not exist') !== false) {
             _relCreateQueueTable();
-            // Retry once
+            // Retry once with same smart upsert logic
             try {
                 $GLOBALS['db']->query(
                     "INSERT INTO relationship_eval_queue (npc_id, eval_data, created_at)
                      VALUES ({$escapedNpcId}, '{$escapedJson}', NOW())
-                     ON CONFLICT (npc_id) DO UPDATE SET eval_data = '{$escapedJson}', created_at = NOW()"
+                     ON CONFLICT (npc_id) DO UPDATE SET
+                        eval_data = CASE
+                            WHEN {$hasPlayerActionSql} THEN '{$escapedJson}'
+                            WHEN (relationship_eval_queue.eval_data->>'has_player_action')::boolean IS NOT TRUE THEN '{$escapedJson}'
+                            ELSE relationship_eval_queue.eval_data
+                        END,
+                        created_at = CASE
+                            WHEN {$hasPlayerActionSql} THEN NOW()
+                            WHEN (relationship_eval_queue.eval_data->>'has_player_action')::boolean IS NOT TRUE THEN NOW()
+                            ELSE relationship_eval_queue.created_at
+                        END"
                 );
                 return true;
             } catch (Exception $e2) {
@@ -167,14 +196,15 @@ function _relProcessQueue($limit = 5) {
                 // Check if this is NPC-to-NPC conversation
                 $isNpcToNpc = !empty($data['is_npc2npc']) || !empty($data['listener_npc_id']);
 
-                // Check if Player actually did something in this context
-                // If there's no player_action, the Player wasn't involved - skip Player eval
-                $playerActed = !empty($data['context']['player_action']);
+                // Check if Player was involved in this conversation
+                // Player is involved if:
+                // 1. Player explicitly said/did something (player_action set), OR
+                // 2. NPC was talking TO the Player (not NPC-to-NPC)
+                // This ensures NPCs form opinions about the Player even for NPC-initiated greetings
+                $playerInvolved = !empty($data['context']['player_action']) || !$isNpcToNpc;
 
-                // Only evaluate NPC->Player if:
-                // 1. This is NOT an NPC-to-NPC conversation, AND
-                // 2. The Player actually said/did something
-                if (!$isNpcToNpc && $playerActed) {
+                // Only evaluate NPC->Player if Player was involved in the conversation
+                if ($playerInvolved && !$isNpcToNpc) {
                     $evalResult = $relLLM->evaluateContext(
                         $data['npc_id'],
                         $data['dialogue'],
@@ -187,8 +217,6 @@ function _relProcessQueue($limit = 5) {
                     }
                 } else if ($isNpcToNpc) {
                     Logger::debug("[REL-ASYNC] Skipping Player eval for NPC-to-NPC: {$data['npc_name']} -> {$data['listener_name']}");
-                } else if (!$playerActed) {
-                    Logger::debug("[REL-ASYNC] Skipping Player eval - no player action: {$data['npc_name']}");
                 }
 
                 // NPC-to-NPC evaluation

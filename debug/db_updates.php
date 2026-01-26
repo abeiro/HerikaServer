@@ -2319,7 +2319,6 @@ $db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS closed in
 $db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS door_name text");
 $db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS door_x numeric");
 $db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS door_y numeric");
-
 $db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS gamets bigint");
 $db->execQuery("DO $$
 BEGIN
@@ -3081,10 +3080,145 @@ if ($checkVersion("prompts")<20260118001) {
     
     //$db->execQuery("UPDATE versions SET version=20251207001 WHERE section='prompts'"); // ???
     $updateVersion("prompts",20260118001);
-    
+
     Logger::info("Applied patch prompts 20260118001 - Added background life style prompts to database");
 }
 
+//----------------------------------------------------
+// Relationship LLM Prompts
+// Version 20260125001
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20260125001) {
+    Logger::debug("Applying relationship LLM prompts 20260125001");
+
+    // Relationship Analysis Prompt - For parsing TEXT relationships to JSONB
+    $relAnalysisPrompt = $db->escape(
+'You are a relationship analyzer for Skyrim NPCs. Analyze relationship descriptions and output JSON.
+
+AFFINITY SCALE (-100 to +100, bell curve - extremes are RARE):
++91 to +100: Bonded (soulmates, unbreakable)
++76 to +90: Devoted (deep loyalty/love)
++56 to +75: Fond (genuine affection)
++31 to +55: Friendly (pleasant, helpful)
++6 to +30: Acquaintance (polite nod)
+-5 to +5: Neutral (stranger)
+-6 to -30: Wary (distrustful)
+-31 to -55: Cold (unfriendly)
+-56 to -75: Resentful (bitter, grudges)
+-76 to -90: Hateful (active malice)
+-91 to -100: Hostile (kill on sight)
+
+TYPES: romantic, platonic, familial, professional, rival, enemy, neutral, nemesis, estranged, transactional, protective, indebted, fanatical, mentor, student, servant, client, patron, crush, ex, betrayed, suspicious, admirer, jealous, fearful, obsessed, awed, contempt, pitying, grateful, curious, dismissive
+
+INFERENCE RULES:
+1. FACTION: Imperial → add "Stormcloak": -60 enemy. Stormcloak → add "Imperial": -60 enemy.
+2. RACIAL: If NPC shows racial attitudes, add race as target (e.g., "Khajit": -40 contempt)
+3. OCCUPATION: Thieves Guild → "Guard": -40 rival. Companions → "Silver Hand": -70 enemy.
+4. "{PLAYER_NAME}" = Player character. Store as "Player".
+
+OUTPUT (JSON only):
+{"relationships": {"Target": {"aff": 50, "type": "professional", "note": "works together"}}}'
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'rel_llm_analysis',
+            '$relAnalysisPrompt',
+            'System prompt for relationship LLM analysis - parses TEXT relationships to JSONB format (contains {PLAYER_NAME} placeholder). Used in: ext/relationship_system/relationship_llm.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    // Relationship Evaluation Prompt - For evaluating conversations
+    $relEvalPrompt = $db->escape(
+'You are a behavioral psychologist. Evaluate interactions and provide BRIEF insight.
+
+SPEAKER ATTRIBUTION:
+- [PLAYER] and [NPC] tags show who said what
+- Only evaluate based on what PLAYER did, not the NPC\'s own words
+
+AFFINITY SCALE (-100 to +100):
+- +/-1: Normal chat
+- +/-2-3: Notably friendly/rude, small favors
+- +/-5-10: Meaningful help, gifts, insults
+- +/-15-25: Saving life, violence, betrayal
+- +/-50+: Extreme events (killing loved ones, marriage)
+
+MOST INTERACTIONS = 0 or +/-1. Be conservative. Skip trivial exchanges.
+
+REASON FORMAT - Keep it SHORT (under 15 words):
+✓ "Teasing triggered defensiveness"
+✓ "Genuine interest validates their experience"
+✓ "Protective action builds trust"
+✗ NOT: Long clinical explanations
+
+TYPE CHANGES (rare - only for defining moments):
+- Only change type for: romance confession, betrayal, violence, marriage, family reveal
+- Most interactions just adjust affinity, not type
+
+OUTPUT (JSON only):
+{"changes": {"Player": {"delta": 1, "reason": "brief insight"}}}
+
+No changes? Return: {"changes": {}}'
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'rel_llm_evaluation',
+            '$relEvalPrompt',
+            'System prompt for relationship evaluation - judges affinity changes from conversations. Used in: ext/relationship_system/relationship_llm.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    // NPC-to-NPC Evaluation Prompt - For bidirectional NPC conversations
+    $relNpc2NpcPrompt = $db->escape(
+'You are a behavioral psychologist. Evaluate NPC-to-NPC interaction briefly.
+
+DIRECTION:
+- speaker = NPC who SPOKE
+- listener = NPC who HEARD
+- speaker.delta = speaker\'s feelings toward listener changed?
+- listener.delta = listener\'s feelings toward speaker changed?
+
+SCALE: +/-1 typical, +/-2-3 notable, +/-5+ significant. Be conservative.
+
+REASON FORMAT - Under 15 words:
+✓ "Dark humor built rapport"
+✓ "Bossy tone caused mild resentment"
+✓ "Helpful advice appreciated"
+
+OUTPUT - Use exactly "speaker" and "listener":
+{"speaker": {"delta": 0, "reason": "brief"}, "listener": {"delta": 1, "reason": "brief"}}
+
+No changes? Return empty objects: {}'
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'rel_llm_npc_to_npc',
+            '$relNpc2NpcPrompt',
+            'System prompt for NPC-to-NPC relationship evaluation - bidirectional in single call. Used in: ext/relationship_system/relationship_llm.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $updateVersion("prompts", 20260125001);
+    Logger::info("Applied patch prompts 20260125001 - Added relationship LLM prompts");
+}
 
 //----------------------------------------------------
 // emotions expression
