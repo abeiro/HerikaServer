@@ -408,7 +408,6 @@ $gsSections = [
         [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'RELLLM_CONNECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'OGHMA_CUSTOM', 'type' => 'boolean' ],
         [ 'name' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'foreign:core_llm_connector:id:label' ],
     ],
     // 'Dynamic Prompts' => [
@@ -534,6 +533,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
     } else {
         // Checkbox unchecked - no POST value means false
         $allPairs['RELATIONSHIP_SYSTEM_ENABLED'] = 'false';
+    }
+
+    // Apply OGHMA_CUSTOM (rendered inline with CORE_CONNECTOR_OGHMA_CUSTOM, not in $gsSections)
+    if (isset($_POST['OGHMA_CUSTOM'])) {
+        $allPairs['OGHMA_CUSTOM'] = ($_POST['OGHMA_CUSTOM'] === 'true') ? 'true' : 'false';
+    } else {
+        $allPairs['OGHMA_CUSTOM'] = 'false';
     }
 
 	// Apply TTS overrides (selection + provider fields + Player TTS)
@@ -821,6 +827,12 @@ function current_value(string $flatName, array $currentConf) {
                                             <div class="provider-toggle">
                                                 <input type="hidden" name="RELATIONSHIP_SYSTEM_ENABLED" value="false">
                                                 <input type="checkbox" name="RELATIONSHIP_SYSTEM_ENABLED" value="true" <?php echo (current_value('RELATIONSHIP_SYSTEM_ENABLED', $currentConf) ? 'checked' : ''); ?> style="width:auto;" title="Enable/Disable Relationship System">
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if ($fname === 'CORE_CONNECTOR_OGHMA_CUSTOM'): ?>
+                                            <div class="provider-toggle">
+                                                <input type="hidden" name="OGHMA_CUSTOM" value="false">
+                                                <input type="checkbox" name="OGHMA_CUSTOM" value="true" <?php echo (current_value('OGHMA_CUSTOM', $currentConf) ? 'checked' : ''); ?> style="width:auto;" title="Enable/Disable Custom Oghma LLM">
                                             </div>
                                         <?php endif; ?>
                                     </div>
