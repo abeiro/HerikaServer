@@ -1028,13 +1028,15 @@ if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtex
 // Force actions when instruction issued
 if (in_array($gameRequest[0],["instruction"])) {
     $FUNCTIONS_ARE_ENABLED=true;
-    $gameRequest[3]=strtr($gameRequest[3],[$GLOBALS["PLAYER_NAME"].":"=>""]);// Remove 'Player:'
+    // Remove any "SpeakerName:" prefix to prevent player/NPC attribution in instructions
+    $gameRequest[3] = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
     $GLOBALS["ADD_PLAYER_BIOS"]=false;
 }
 
 if (in_array($gameRequest[0],["suggestion"])) {
     $FUNCTIONS_ARE_ENABLED=false;
-    $gameRequest[3]=strtr($gameRequest[3],[$GLOBALS["PLAYER_NAME"].":"=>""]);// Remove 'Player:'
+    // Remove any "SpeakerName:" prefix to prevent player/NPC attribution in suggestions
+    $gameRequest[3] = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
 }
 
 // Disable functions for The Narrator
