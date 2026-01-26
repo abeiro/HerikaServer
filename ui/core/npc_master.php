@@ -2325,7 +2325,15 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .modal-title { margin:0; font-weight:700; color: rgb(242, 124, 17); font-family: 'MagicCards', serif; word-spacing: 6px; }
 .modal-body { max-height:calc(85vh - 100px); /*overflow-y:auto;*/ background:#2a2a2a; }
 .modal-close { background:#3a3a3a; color:#fff; border:1px solid #4a4a4a; border-radius:6px; padding:4px 10px; cursor:pointer; }
-.modal-actions { display:flex; gap:8px; align-items:center; }
+.modal-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.modal-actions .btn-save { background:#176529; color:#fff; border:1px solid rgba(72,187,120,0.3); border-radius:6px; padding:8px 14px; cursor:pointer; font-weight:700; font-size:13px; transition:all 0.2s ease; }
+.modal-actions .btn-save:hover { background:#125121; border-color:rgba(72,187,120,0.5); }
+.modal-actions .btn-cancel { background:#3a3a3a; color:#e9efff; border:1px solid #4a4a4a; border-radius:6px; padding:8px 14px; cursor:pointer; font-weight:600; font-size:13px; transition:all 0.2s ease; }
+.modal-actions .btn-cancel:hover { background:#4a4a4a; border-color:#5a5a5a; color:rgb(242,124,17); }
+.modal-actions #npc_modal_regen { background:rgba(242,124,17,0.15); border-color:rgb(242,124,17); color:rgb(242,124,17); }
+.modal-actions #npc_modal_regen:hover { background:rgba(242,124,17,0.3); }
+.modal-actions #npc_modal_close { background:#5a2a2a; border-color:#7a3a3a; color:#fff; }
+.modal-actions #npc_modal_close:hover { background:#6a3a3a; }
 .modal-save { background: rgb(242, 124, 17); color:#111; border:1px solid rgb(242, 124, 17); border-radius:6px; padding:6px 12px; cursor:pointer; font-weight:700; }
 /* Styled tabs to match button aesthetics */
 #npc_modal_tabs .pf-tab { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; cursor:pointer; font-weight:700; }
@@ -2866,8 +2874,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           <label style="display:block; font-size:13px; margin:6px 0 4px; color:#cfd9ea; font-weight:600;">Custom Instructions (optional):</label>\
           <textarea id="ai_user_prompt" placeholder="Example: This NPC should be a merchant specializing in enchanted weapons, with a mysterious past..." style="width:100%; min-height:120px; padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; resize:vertical; font-family:inherit;"></textarea>\
           <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">\
-            <button id="ai_prompt_cancel" class="btn-cancel">Cancel</button>\
-            <button id="ai_prompt_ok" class="btn-save">Generate Profile</button>\
+            <button id="ai_prompt_cancel" style="padding:10px 20px; color:#fff; background:rgba(85,95,109,0.9); border:1px solid rgba(156,163,175,0.3); border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; transition:all 0.2s ease;">Cancel</button>\
+            <button id="ai_prompt_ok" style="padding:10px 20px; color:#111; background:rgb(242,124,17); border:1px solid rgb(242,124,17); border-radius:8px; cursor:pointer; font-size:14px; font-weight:700; transition:all 0.2s ease;">Generate Profile</button>\
           </div></div>';
         document.body.appendChild(promptBox);
         
@@ -2960,8 +2968,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             </div>\
             <div style="font-size:14px; color:#cfd9ea; margin-bottom:16px; line-height:1.5;">' + message.replace(/[<>]/g, c=>({'<':'&lt;','>':'&gt;'}[c])) + '</div>\
             <div style="display:flex; gap:8px; justify-content:flex-end;">\
-              ' + (success ? '' : '<button id="ai_result_retry" class="btn-cancel">Try Again</button>') + '\
-              <button id="ai_result_ok" class="btn-save">' + (success ? 'Reload to View' : 'Close') + '</button>\
+              ' + (success ? '' : '<button id="ai_result_retry" style="padding:10px 20px; color:#fff; background:rgba(85,95,109,0.9); border:1px solid rgba(156,163,175,0.3); border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; transition:all 0.2s ease;">Try Again</button>') + '\
+              <button id="ai_result_ok" style="padding:10px 20px; color:#111; background:' + (success ? 'rgb(242,124,17)' : 'rgba(85,95,109,0.9)') + '; border:1px solid ' + (success ? 'rgb(242,124,17)' : 'rgba(156,163,175,0.3)') + '; border-radius:8px; cursor:pointer; font-size:14px; font-weight:700; ' + (success ? 'color:#111;' : 'color:#fff;') + ' transition:all 0.2s ease;">' + (success ? 'Reload to View' : 'Close') + '</button>\
             </div></div>';
           document.body.appendChild(resultBox);
           
