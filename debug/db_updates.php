@@ -2338,6 +2338,37 @@ if ($checkTableExists("master_packages") == -1) {
 } else
     Logger::info(__FILE__." master_packages exists");
 
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS event_log_type ON public.eventlog USING btree (type)");
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_people_trgm
+ON eventlog
+USING gin (people gin_trgm_ops)");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_people_trgm2
+ON eventlog
+USING gin (data gin_trgm_ops)");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_speech_speaker_trgm
+ON speech
+USING gin (speaker gin_trgm_ops)");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_speech_listener_trgm
+ON speech
+USING gin (listener gin_trgm_ops)");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_gamets_pos
+ON eventlog (gamets)
+WHERE gamets > 0");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_gamets_ts_pos
+ON eventlog (gamets DESC, ts DESC)");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS   idx_speech_gamets_pos
+ON speech (gamets)
+WHERE gamets > 0");
+
+
+
 //----------------------------------------------------
 // Prompts Table - System for managing default and custom prompts
 // Version 20251110001
