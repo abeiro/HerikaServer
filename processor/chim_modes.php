@@ -51,6 +51,9 @@ if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtex
     $EXECUTION_MODE="STANDARD";
 }
 
+// Store globally for later use (e.g., updating speech table after LLM response)
+$GLOBALS["CHIM_EXECUTION_MODE"] = $EXECUTION_MODE;
+
 if ($EXECUTION_MODE=="STANDARD") {
 
 

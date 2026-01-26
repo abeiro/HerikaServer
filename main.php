@@ -2268,6 +2268,27 @@ if (sizeof($talkedSoFar) == 0) {
                     ;
                 }
             }
+            
+            // Update speech table with LLM-generated text for AUTOCHAT mode
+            if (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && $GLOBALS["CHIM_EXECUTION_MODE"] === "AUTOCHAT" 
+                && in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s"])
+                && sizeof($talkedSoFar) > 0) {
+                
+                $transformedSpeech = $db->escape(implode(" ", $talkedSoFar));
+                $playerName = $db->escape($GLOBALS["PLAYER_NAME"]);
+                $currentGamets = intval($gameRequest[2]);
+                
+                // Update the most recent player speech entry with the LLM-generated text
+                $db->execQuery(
+                    "UPDATE speech 
+                     SET speech = '{$transformedSpeech}' 
+                     WHERE speaker ILIKE '{$playerName}' 
+                     AND gamets >= {$currentGamets} - 100 
+                     AND gamets <= {$currentGamets} + 100
+                     AND sess = 'pending'"
+                );
+                Logger::info("[AUTOCHAT] Updated speech table with LLM-generated player text");
+            }
         }
     }
 }
