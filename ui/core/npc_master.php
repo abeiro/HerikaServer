@@ -2812,6 +2812,11 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   })();
 
    // Regenerate profile using AI
+  // Global LLM connector data for AI generate dropdown
+  const AI_GEN_LLM_CONNECTORS = <?= json_encode($llmRows ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+  const AI_GEN_PROFILE_CONN = <?= json_encode($profilesConnById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+  const AI_GEN_DEFAULT_CONNECTOR = <?= json_encode($GLOBALS["CORE_CONNECTOR_PROFILES"] ?? '', JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+  
   (function(){
     const regenBtn = document.getElementById('npc_modal_regen');
     if (!regenBtn) return;
@@ -2823,6 +2828,26 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         const npcName = nameEl ? String(nameEl.value||'').trim() : '';
         
         if (!npcName) { alert('Enter NPC Name to generate profile.'); return; }
+        
+        // Get the NPC's profile ID to determine default LLM connector
+        const profileIdEl = doc ? doc.getElementById('profile_id') : null;
+        const profileId = profileIdEl ? String(profileIdEl.value||'').trim() : '';
+        
+        // Determine default connector: profile's primary LLM > global CORE_CONNECTOR_PROFILES
+        let defaultConnectorId = AI_GEN_DEFAULT_CONNECTOR;
+        if (profileId && AI_GEN_PROFILE_CONN[profileId]) {
+          const pc = AI_GEN_PROFILE_CONN[profileId];
+          if (pc.llm_primary_id) defaultConnectorId = String(pc.llm_primary_id);
+        }
+        
+        // Build LLM connector dropdown options
+        let llmOptions = '<option value="">-- Use Global Connector --</option>';
+        AI_GEN_LLM_CONNECTORS.forEach(function(c){
+          const cid = String(c.id||'');
+          const lbl = c.label || ('Connector #'+cid);
+          const sel = (cid === String(defaultConnectorId)) ? ' selected' : '';
+          llmOptions += '<option value="'+cid+'"'+sel+'>'+lbl.replace(/[<>&"]/g, x=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[x]))+'</option>';
+        });
         
         // Show prompt dialog for user to add custom instructions
         const promptBox = document.createElement('div');
@@ -2836,6 +2861,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         promptBox.innerHTML = '<div style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:16px; max-width:600px; width:92%; color:#e9efff;">\
           <div style="font-weight:700; color:rgb(242,124,17); margin-bottom:8px; font-size:18px;">AI Generate Profile for "' + npcName.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) + '"</div>\
           <div style="font-size:13px; color:#cfd9ea; margin-bottom:12px;">Add any specific information or instructions for the AI to consider when generating this profile. Leave blank to use default generation.</div>\
+          <label style="display:block; font-size:13px; margin:6px 0 4px; color:#cfd9ea; font-weight:600;">LLM Connector:</label>\
+          <select id="ai_llm_connector" style="width:100%; padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#333; color:#e9efff; font-family:inherit; margin-bottom:8px;">'+llmOptions+'</select>\
           <label style="display:block; font-size:13px; margin:6px 0 4px; color:#cfd9ea; font-weight:600;">Custom Instructions (optional):</label>\
           <textarea id="ai_user_prompt" placeholder="Example: This NPC should be a merchant specializing in enchanted weapons, with a mysterious past..." style="width:100%; min-height:120px; padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; resize:vertical; font-family:inherit;"></textarea>\
           <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">\
@@ -2856,6 +2883,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         
         okBtn.addEventListener('click', async function(){
           const userPrompt = String(promptInput.value||'').trim();
+          const connectorSelect = promptBox.querySelector('#ai_llm_connector');
+          const selectedConnector = connectorSelect ? String(connectorSelect.value||'').trim() : '';
           document.body.removeChild(promptBox);
           
           document.getElementById("npc_modal").style.cursor="wait";
@@ -2877,6 +2906,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 
           const params = new URLSearchParams({ name: npcName });
           if (userPrompt) params.append('user_prompt', userPrompt);
+          if (selectedConnector) params.append('connector_id', selectedConnector);
           
           let j = {};
           let fetchError = null;
