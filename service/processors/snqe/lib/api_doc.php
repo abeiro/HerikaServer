@@ -207,8 +207,8 @@ Returns: "done" | "pending" | "failed".
 
 * PickUpItem(quest_id, npc_ref, item_ref)
 
-Immediately marks an item as picked up by an NPC. Used to command an NPC to pick up an item.
-
+Immediately marks an item as picked up by an NPC. Used to command an NPC to pick up an item from the ground or from a container.
+Do not use if item already on pocket.
 quest_id (string, required)
 npc_ref (string, required) – NPC reference created via CreateNPC.
 item_ref (string, required) – Item reference created via CreateItem.
@@ -219,7 +219,7 @@ Notes:
 
 This is an action function that directly marks an item as picked up by the NPC.
 Updates internal inventory tracking in quest data.
-Use before WaitForPickUpItem to initiate the pickup action.
+Use PickUpItem before WaitForPickUpItem to initiate the pickup action.
 
 * WaitForPickUpItem(quest_id, npc_ref, item_ref, maxAttempts)
 

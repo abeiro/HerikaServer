@@ -135,17 +135,17 @@ Available elements (you MUST use only the values listed below—no exceptions):
     WaitAtLocation: Blocking wait, NPC will wait at location. UNTIL player reaches location, and then will continue with the following instruction. Location should be in the 'Locations/entrances available for adventuring' list
     StationAtLocation: Non-Blocking wait. NPC will wait location, quests advances to next step. Location should be in the 'Locations/entrances available for adventuring' list
     WaitForActivation: Blocking wait. Quest execution will pause until activator is activated. Needs a provided activator ref id.
-    WaitForPickUpItem: NPC will pick up a spawned item
+    WaitForPickUpItem: NPC will pick up a spawned item from world
   </action>
   <target>Only required if action involves another NPC</target>
-  <location>If used, must be "nearby" or a user-provided location name</location>
+  <location>If used, must be "nearby" or a user-provided location name. e.g "Serpent's Bluff Ruins"</location>
   <item>If used, must match the <name> of a defined item</item>
   <topic important="true|false">Full dialogue or narrative content. Set attribute important to true if it's a plot relevant topic</topic>
 </instruction>
 
-* Wait for player do something, so we can advance the quest.
+* Wait for player do get an item, so we can advance the quest.
 <instruction>
-  <npc>{Player name}</npc>
+  <npc>{Player Name}</npc>
   <action>
     WaitToItemBeRecovered: Waits until player finds and recover an item 
   </action>
@@ -153,11 +153,11 @@ Available elements (you MUST use only the values listed below—no exceptions):
 </instruction>
 
 
-* Wait for NPC do recover item
+* Wait for NPC to recover item from world. **only use if instructions mention this specific action**
 <instruction>
   <npc>NPC</npc>
   <action>Must be exactly one of: 
-    WaitForPickUpItem: Waits until NPC picks the item
+    WaitForPickUpItem: Waits until NPC picks the item from world
   </action>
   <item>must match the <name> of a defined item</item>
 </instruction>

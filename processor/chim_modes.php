@@ -51,6 +51,9 @@ if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtex
     $EXECUTION_MODE="STANDARD";
 }
 
+// Store globally for later use (e.g., updating speech table after LLM response)
+$GLOBALS["CHIM_EXECUTION_MODE"] = $EXECUTION_MODE;
+
 if ($EXECUTION_MODE=="STANDARD") {
 
 
@@ -119,21 +122,21 @@ if ($EXECUTION_MODE=="STANDARD") {
     
 } else if ($EXECUTION_MODE=="AUTOCHAT") {
     
-    $cleaned_player_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
-    $gameRequest[3]="**(".$cleaned_player_dialogue.")";
+    $cleaned_player_dialogue = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
+    $gameRequest[3]="**(".trim($cleaned_player_dialogue).")";
     // Don't set PLAYER_RESPEECH to avoid name duplication
     
 } else if ($EXECUTION_MODE=="INJECTION_LOG") {
-    $cleaned_player_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
-    $gameRequest[3]="($cleaned_player_dialogue)";
+    $cleaned_player_dialogue = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
+    $gameRequest[3]="(".trim($cleaned_player_dialogue).")";
     logEvent($gameRequest);
 
 
     
 } else if ($EXECUTION_MODE=="INJECTION_CHAT") {
-    $cleaned_player_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
+    $cleaned_player_dialogue = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
 
-    $gameRequest[3]="($cleaned_player_dialogue)";
+    $gameRequest[3]="(".trim($cleaned_player_dialogue).")";
 
     
 }

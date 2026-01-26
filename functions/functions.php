@@ -42,7 +42,8 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'Drink',
     'StartRitualCeremony',
     'EndRitualCeremony',
-    'Training'
+    'Training',
+    'Surrender'
     //    'WaitHere'
 ];
 
@@ -123,7 +124,7 @@ $F_TRANSLATIONS_LOCAL["StartRitualCeremony"] = "Participates in a ritual or cere
 $F_TRANSLATIONS_LOCAL["EndRitualCeremony"] = "Concludes a ritual or ceremony, marking its completion.";
     
 $F_TRANSLATIONS_LOCAL["Training"] = "Opens training menu to improve skills with a trainer.";
-
+$F_TRANSLATIONS_LOCAL["Surrender"] = "{$GLOBALS["HERIKA_NAME"]} surrenders to avoid conflict or harm.";
 
 $F_RETURNMESSAGES_LOCAL["Inspect"] = "{$GLOBALS["HERIKA_NAME"]} inspects #TARGET# and see this: #RESULT#";
 $F_RETURNMESSAGES_LOCAL["LookAt"] = "LOOK at or Inspects NPC, Actor, or being OUTFIT and GEAR";
@@ -169,6 +170,7 @@ $F_RETURNMESSAGES_LOCAL["StartRitualCeremony"] = "{$GLOBALS["HERIKA_NAME"]} begi
 $F_RETURNMESSAGES_LOCAL["EndRitualCeremony"] = "{$GLOBALS["HERIKA_NAME"]} concludes a ritual or ceremony, marking its completion.";
 $F_RETURNMESSAGES_LOCAL["Training"] = "{$GLOBALS["HERIKA_NAME"]} opens the training menu.";
 
+$F_RETURNMESSAGES_LOCAL["Surrender"] = "{$GLOBALS["HERIKA_NAME"]} surrenders to avoid conflict or harm.";
 // What is this?. We can translate functions or give them a custom name.
 // This array will handle translations. Plugin must receive the codename always.
 
@@ -217,6 +219,7 @@ $F_NAMES_LOCAL["StartRitualCeremony"] = "StartRitualCeremony";
 $F_NAMES_LOCAL["EndRitualCeremony"] = "EndRitualCeremony";
 
 $F_NAMES_LOCAL["Training"] = "Training";
+$F_NAMES_LOCAL["Surrender"] = "Surrender";
 
 if (isset($GLOBALS["CORE_LANG"])) {
     if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lang" . DIRECTORY_SEPARATOR . $GLOBALS["CORE_LANG"] . DIRECTORY_SEPARATOR . "functions.php")) {
@@ -847,6 +850,20 @@ $GLOBALS["FUNCTIONS"] = [
             "required" => [""],
         ],
     ],
+      [
+        "name" => $F_NAMES_LOCAL["Surrender"],
+        "description" => $F_TRANSLATIONS_LOCAL["Surrender"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ],
+            ],
+            "required" => [""],
+        ],
+    ],
 ];
 
 // Mantain a copy of all functions defined here
@@ -963,7 +980,7 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         'AttackHunt',
         'TravelTo',
         'Follow',
-        //'CheckInventory', // Commented out - redundant since <inventory> tag already shows NPC's items. Could be repurposed to check OTHER NPCs' inventories later.
+        'CheckInventory', // Commented out - redundant since <inventory> tag already shows NPC's items. Could be repurposed to check OTHER NPCs' inventories later.
         //'SheatheWeapon',
         'Relax',
         //'LeadTheWayTo',
@@ -1008,7 +1025,7 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         'AttackHunt',
         'TravelTo',
         'Follow',
-        //'CheckInventory', // Commented out - redundant since <inventory> tag already shows NPC's items. Could be repurposed to check OTHER NPCs' inventories later.
+        'CheckInventory', // Commented out - redundant since <inventory> tag already shows NPC's items. Could be repurposed to check OTHER NPCs' inventories later.
         'SheatheWeapon',
         'Relax',
         //'LeadTheWayTo',
@@ -1038,6 +1055,30 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         //'SearchMemory',
         //'StopWalk'
     ];
+}
+
+if ($GLOBALS["ENABLED_FUNCTIONS"]) {
+    if ($GLOBALS["HERIKA_NAME"] && $GLOBALS["HERIKA_NAME"]!="(actor)") {
+        $cnName=$GLOBALS["db"]->escape($GLOBALS["HERIKA_NAME"]);
+        $playerCnName=$GLOBALS["db"]->escape($GLOBALS["PLAYER_NAME"]);
+        $isCombat=$GLOBALS["db"]->fetchOne("SELECT EXISTS (
+    SELECT 1 as combat_active
+    FROM public.eventlog start_evt
+    WHERE start_evt.data LIKE '%$cnName%engages fair combat with $playerCnName%' and type='funcrect'
+      AND NOT EXISTS (
+          SELECT 1
+          FROM public.eventlog defeat_evt
+          WHERE defeat_evt.gamets > start_evt.gamets
+            AND defeat_evt.data LIKE '%$playerCnName%defeat%$cnName%' and type='death'
+      ) )
+");
+        if (isset($isCombat["exists"])) {
+            error_log("[DEBUG functions.php] Combat active detected for {$GLOBALS["HERIKA_NAME"]}, adding Surrender function");
+            $GLOBALS["ENABLED_FUNCTIONS"][]="Surrender";
+        } else {
+            error_log("[DEBUG functions.php] No active combat detected for {$GLOBALS["HERIKA_NAME"]}");
+        }
+    }
 }
 
 $folderPath = __DIR__ . DIRECTORY_SEPARATOR . "../ext/";
@@ -1148,7 +1189,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                     }
                 } 
                 error_log("[POST-FILTER] Toast: Current buffer size before delay: " . $totalChars . " chars");
-                $timeToWait= ceil($totalChars / 8); // 1 second per 8 chars
+                $timeToWait= ceil($totalChars / 12); // 1 second per 12 chars
                 
                 $json      = $skyrimCmd->Actor->PlayIdle("0x{$npcData["refid"]}", "0x00103656");// DrinkIdle Start                $skyrimCmd->send($json);
                 $skyrimCmd->send(cmd: $json, localts:time()+$timeToWait);  // 30 seconds later actually drink to avoid NPC stuck in toast animation
@@ -1233,7 +1274,14 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                         $json      = $skyrimCmd->Actor->PlayIdle("0x{$npcData["refid"]}", "0x0006f300");//idlePray
                         $skyrimCmd->send(cmd: $json,    localts: time()+10);//10 seconds later
                         
-                    }
+                    } else {
+
+                        $skyrimCmd = new SkyrimCommandBuilder();
+                        $json      = $skyrimCmd->Actor->PlayIdle("0x{$npcData["refid"]}", $defAnim);
+                        $skyrimCmd->send(cmd: $json);
+                        $json = $skyrimCmd->EffectShader->Play($shader, "0x{$npcData["refid"]}", 20);
+                        $skyrimCmd->send(cmd: $json);
+                 }
                 } else {
 
                     $skyrimCmd = new SkyrimCommandBuilder();
@@ -1303,6 +1351,36 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 );
 
                 error_log("[ACTION POSTFILTER Toast] Executed server-side");
+
+            } else if ($actionParts2[0]=="Surrender") {
+                
+                $npcMaster = new Npcmaster();
+                $npcData   = $npcMaster->getByName($actionParts[0]);
+
+                $skyrimCmd = new SkyrimCommandBuilder();
+                $json      = $skyrimCmd->Actor->SetRelationshipRank("0x{$npcData["refid"]}", "0x00000014", 0);// Set to Ally
+                $skyrimCmd->send(cmd: $json);
+
+  
+                $GLOBALS["db"]->insert(
+                    'eventlog',
+                    [
+                'ts' => $gameRequest[1],
+                'gamets' => $gameRequest[2],
+                'type' => "combatend",
+                'data' => "{$GLOBALS["PLAYER_NAME"]} has defeated {$actionParts[0]}, {$actionParts[0]} surrenders.",
+                'sess' => 'pending',
+                'localts' => time(),
+                'people'=> $GLOBALS["CACHE_PEOPLE_LIMITED"],
+                'location'=>$GLOBALS["CACHE_LOCATION"],
+                'party'=>$GLOBALS["CACHE_PARTY"]
+                    ]
+                );
+                unset($actionsCopy[$n]);// Remove action from list, so client does not execute it
+
+              
+
+                error_log("[ACTION POSTFILTER Surrender] Executed server-side");
             }
         }
     }

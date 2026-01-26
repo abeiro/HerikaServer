@@ -1028,13 +1028,15 @@ if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtex
 // Force actions when instruction issued
 if (in_array($gameRequest[0],["instruction"])) {
     $FUNCTIONS_ARE_ENABLED=true;
-    $gameRequest[3]=strtr($gameRequest[3],[$GLOBALS["PLAYER_NAME"].":"=>""]);// Remove 'Player:'
+    // Remove any "SpeakerName:" prefix to prevent player/NPC attribution in instructions
+    $gameRequest[3] = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
     $GLOBALS["ADD_PLAYER_BIOS"]=false;
 }
 
 if (in_array($gameRequest[0],["suggestion"])) {
     $FUNCTIONS_ARE_ENABLED=false;
-    $gameRequest[3]=strtr($gameRequest[3],[$GLOBALS["PLAYER_NAME"].":"=>""]);// Remove 'Player:'
+    // Remove any "SpeakerName:" prefix to prevent player/NPC attribution in suggestions
+    $gameRequest[3] = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
 }
 
 // Disable functions for The Narrator
@@ -1092,7 +1094,8 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         $oghmaInfiniumEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
         
         if (($minimeEnabled || $oghmaCustomEnabled) && $oghmaInfiniumEnabled) {
-                require(__DIR__."/processor/oghma.php"); // Process Oghma
+            $GLOBALS["OGHMA_CALLED"] = true;
+            require(__DIR__."/processor/oghma.php"); // Process Oghma
         }
     }
     else{
@@ -1879,7 +1882,10 @@ error_log("[OGHMA CHECK] MINIME_T5=" . var_export($GLOBALS["MINIME_T5"] ?? null,
     . " (enabled=" . ($oghmaInfiniumEnabled ? 'Y' : 'N') . ")");
 
 if (($minimeEnabled || $oghmaCustomEnabled) && $oghmaInfiniumEnabled) {
-    require(__DIR__."/processor/oghma.php");
+    if (!isset($GLOBALS["OGHMA_CALLED"])) {// Avoid double call
+        require(__DIR__."/processor/oghma.php");
+        $GLOBALS["OGHMA_CALLED"] = true;
+    }
 }
 
 if (sizeof($memoryInjectionCtx)>0) {
@@ -2163,7 +2169,9 @@ if ($gameRequest[0] == "funcret") {
     
 }
 
-error_log("*TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
+error_log("SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
+
+error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." secs building call");
 //returnLines(["Mmm..let me think"]);
 
 // Global switch. Needed id we need to stop processing because sme function requires it. Example, funcret conditions.
@@ -2261,6 +2269,27 @@ if (sizeof($talkedSoFar) == 0) {
                     //logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["PLAYER_NAME"], "{$GLOBALS["HERIKA_NAME"]}:".implode(" ", $talkedSoFar), $momentum, $gameRequest[2]);
                     ;
                 }
+            }
+            
+            // Update speech table with LLM-generated text for AUTOCHAT mode
+            if (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && $GLOBALS["CHIM_EXECUTION_MODE"] === "AUTOCHAT" 
+                && in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s"])
+                && sizeof($talkedSoFar) > 0) {
+                
+                $transformedSpeech = $db->escape(implode(" ", $talkedSoFar));
+                $playerName = $db->escape($GLOBALS["PLAYER_NAME"]);
+                $currentGamets = intval($gameRequest[2]);
+                
+                // Update the most recent player speech entry with the LLM-generated text
+                $db->execQuery(
+                    "UPDATE speech 
+                     SET speech = '{$transformedSpeech}' 
+                     WHERE speaker ILIKE '{$playerName}' 
+                     AND gamets >= {$currentGamets} - 100 
+                     AND gamets <= {$currentGamets} + 100
+                     AND sess = 'pending'"
+                );
+                Logger::info("[AUTOCHAT] Updated speech table with LLM-generated player text");
             }
         }
     }

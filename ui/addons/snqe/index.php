@@ -20,10 +20,28 @@ function getTailOfFile($filepath, $lines = 100) {
         return "File not found: " . htmlspecialchars($filepath);
     }
     
-    $content = file_get_contents($filepath);
-    if ($content === false) {
+    $file = fopen($filepath, 'r');
+    if ($file === false) {
         return "Cannot read file: " . htmlspecialchars($filepath);
     }
+    
+    fseek($file, 0, SEEK_END);
+    $fileSize = ftell($file);
+    
+    $buffer = min($fileSize, 8192);
+    $position = $fileSize;
+    $lineCount = 0;
+    $content = '';
+    
+    while ($position > 0 && $lineCount <= $lines) {
+        $position = max(0, $position - $buffer);
+        fseek($file, $position);
+        $chunk = fread($file, min($buffer, $fileSize - $position));
+        $content = $chunk . $content;
+        $lineCount = substr_count($content, "\n");
+    }
+    
+    fclose($file);
     
     $allLines = explode("\n", $content);
     $lastLines = array_slice($allLines, -$lines);

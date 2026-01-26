@@ -601,6 +601,58 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
 
     $masterData = $GLOBALS["item_types"];
 
+    $localItemName  = ($name);
+    $localItemPlace = ($location);
+
+    $localItemType = $masterData[$basetype][array_rand($masterData[$basetype])];
+
+    if ($localItemPlace == "nearby") {
+        $localItemPlace = 0;
+    } else if ($localItemPlace == "pocket") {
+        $localItemPlace = 0;
+        $npcMaster      = new NpcMaster();
+        $currentNpcData = $npcMaster->getByName($npc_ref);
+        $unsignedInt    = hexdec($currentNpcData["refid"]);
+        // Convert to 32-bit signed integer
+        if ($unsignedInt >= 0x80000000) {
+            $unsignedInt -= 0x100000000;
+        }
+        $localItemPlace = $unsignedInt;
+
+    } else if (preg_match('/^[a-zA-Z0-9\s\'-]+:0x[0-9a-fA-F]+$/', $location)){
+        $localItemPlace = 0;
+        list($itemName, $refidHex) = explode(":", $location);
+        $unsignedInt    = hexdec($refidHex);
+        // Convert to 32-bit signed integer
+        if ($unsignedInt >= 0x80000000) {
+            $unsignedInt -= 0x100000000;
+        }
+        $localItemPlace = $unsignedInt;
+
+    } else {
+        if (! is_numeric($localItemPlace)) {
+            if (isset($GLOBALS["masterDataLocations"][$location])) {
+                $localItemPlace = $GLOBALS["masterDataLocations"][$location][array_rand($GLOBALS["masterDataLocations"][$location])];
+            } else {
+                // Cells
+                $locationCn    = $GLOBALS["db"]->escape($location);
+                $dbDestination = $GLOBALS["db"]->fetchOne("SELECT id FROM named_cell where cell_name='$location'");
+                if ($dbDestination) {
+                    $localItemPlace = $dbDestination["id"];
+                } else {
+                    // Location
+                    $dbDestination = $GLOBALS["db"]->fetchOne("SELECT name, similarity(name, '$locationCn') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
+                    if ($dbDestination) {
+                        $localItemPlace = $dbDestination["formid"];
+                    }
+                }
+            }
+
+        } else {
+            ; // ref is gonna be an NPC
+        }
+    }
+
     if ($basetype == "note" || $basetype == "book") {
 
         // Generate content for the book/note
@@ -667,57 +719,7 @@ Read the quest context above and write the content of the in-game book/note titl
         return;
     }
 
-    $localItemName  = ($name);
-    $localItemPlace = ($location);
-
-    $localItemType = $masterData[$basetype][array_rand($masterData[$basetype])];
-
-    if ($localItemPlace == "nearby") {
-        $localItemPlace = 0;
-    } else if ($localItemPlace == "pocket") {
-        $localItemPlace = 0;
-        $npcMaster      = new NpcMaster();
-        $currentNpcData = $npcMaster->getByName($npc_ref);
-        $unsignedInt    = hexdec($currentNpcData["refid"]);
-        // Convert to 32-bit signed integer
-        if ($unsignedInt >= 0x80000000) {
-            $unsignedInt -= 0x100000000;
-        }
-        $localItemPlace = $unsignedInt;
-
-    } else if (preg_match('/^[a-zA-Z0-9\s\'-]+:0x[0-9a-fA-F]+$/', $location)){
-        $localItemPlace = 0;
-        list($itemName, $refidHex) = explode(":", $location);
-        $unsignedInt    = hexdec($refidHex);
-        // Convert to 32-bit signed integer
-        if ($unsignedInt >= 0x80000000) {
-            $unsignedInt -= 0x100000000;
-        }
-        $localItemPlace = $unsignedInt;
-
-    }  else {
-        if (! is_numeric($localItemPlace)) {
-            if (isset($GLOBALS["masterDataLocations"][$location])) {
-                $localItemPlace = $GLOBALS["masterDataLocations"][$location][array_rand($GLOBALS["masterDataLocations"][$location])];
-            } else {
-                // Cells
-                $locationCn    = $GLOBALS["db"]->escape($location);
-                $dbDestination = $GLOBALS["db"]->fetchOne("SELECT id FROM named_cell where cell_name='$location'");
-                if ($dbDestination) {
-                    $localItemPlace = $dbDestination["id"];
-                } else {
-                    // Location
-                    $dbDestination = $GLOBALS["db"]->fetchOne("SELECT name, similarity(name, '$locationCn') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
-                    if ($dbDestination) {
-                        $localItemPlace = $dbDestination["formid"];
-                    }
-                }
-            }
-
-        } else {
-            ; // ref is gonna be an NPC
-        }
-    }
+  
 
     $GLOBALS["db"]->insert(
         'responselog',

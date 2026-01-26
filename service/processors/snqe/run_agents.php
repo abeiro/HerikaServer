@@ -1,6 +1,9 @@
 <?php
 
-$ENGINE_PATH = __DIR__ . "/../../../";
+
+$enginePath = __DIR__ . "/../../../";
+$GLOBALS["ENGINE_PATH"] = $enginePath;
+
 echo "Using ENGINE_PATH: {$ENGINE_PATH}\n";
 // Define paths
 $basePath = dirname(__FILE__);
@@ -8,6 +11,22 @@ $stateFile = "{$ENGINE_PATH}/log/snqe_state.json";
 $uiPath = dirname(dirname(dirname($basePath))) . DIRECTORY_SEPARATOR . "ui" . DIRECTORY_SEPARATOR . "addons" . DIRECTORY_SEPARATOR . "snqe";
 $cmdPath = $uiPath . DIRECTORY_SEPARATOR . "cmd";
 
+require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "lazy_xml.php";
+
+
+
+$db = new sql();
+
+require_once $enginePath . "lib/core/npc_master.class.php";
+require_once $enginePath . "lib/core/api_badge.class.php";
+require_once $enginePath . "lib/core/core_profiles.class.php";
+require_once $enginePath . "lib/core/llm_connector.class.php";
 
 // Ensure state file exists
 if (!file_exists($stateFile)) {
@@ -105,7 +124,7 @@ function updateList(&$list, $newItems)
 
 // Determine execution mode
 $mode = isset($argv[1]) ? $argv[1] : 'full';
-$needsEnd = isset($argv[2]) ? $argv[2]=="end": false;
+$needsEnd = isset($argv[2]) ? $argv[2] == "end" : false;
 $baseUrl = "http://localhost/HerikaServer/ui/addons/snqe/cmd"; // Adjust base URL as needed, assuming localhost for internal calls or file inclusion if possible.
 // However, the user asked to use fopen calls using set_stream_context to mimic fetch calls.
 // Since this is running on the server, we might need the full URL.
@@ -119,9 +138,66 @@ $serverUrl = "http://127.0.0.1/HerikaServer/ui/addons/snqe/cmd";
 echo "Running in mode: $mode\n";
 
 // Step 1: Agent 0 (Scenario)
-if ($mode === 'full' || $mode === '1') {
+if ($mode === 'start_from_context') {
+    // Get around rolemastered NPCs 
+    $rolemasteredNpcList = [];
+    $npcList = DataBeingsInCloseRange(true);
+    foreach (explode("|", $npcList) as $npc) {
+        if ($npc) {
+            $npcMaster = new NpcMaster();
+            $npcData = $npcMaster->getByName(trim($npc));
+            $npcDataExt = $npcMaster->getMetadata($npcData);
+            if (isset($npcDataExt["is_rolemastered"]) && $npcDataExt["is_rolemastered"]) {
+                $rolemasteredNpcList[] = $npc;
+            }
+        }
+    }
+
+    updateList($state['npclist'], $rolemasteredNpcList);
+    $payload = [
+        'prompt' => "Given the context, generate a brief quest scenario summary title.\n\n",
+        'npclist' => $rolemasteredNpcList,
+    ];
+
+    $data = callAgent($serverUrl . "/agent0.php", $payload);
+
+    if ($data) {
+        if (isset($data['response'])) {
+            $state['userprompt'] = $data['response'];
+        }
+
+        if (isset($data['briefing'])) {
+            $state['briefing'] = $data['briefing'];
+        }
+
+        if (isset($data['questtitle'])) {
+            $state['questtitle'] = $data['questtitle']??($rolemasteredNpcList[0]."'s quest");
+        } else {
+            $state['questtitle'] = ($rolemasteredNpcList[0]??"NPC")."'s quest";
+        }
+
+        if (isset($data['last_step'])) {
+            $state['last_step'] = $data['last_step'];
+        }
+
+        if (isset($data['locations'])) {
+            updateList($state['locationlist'], $data['locations']);
+        }
+
+        echo "Agent 0 complete.\n";
+        file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
+        chmod($stateFile, 0777);
+        print_r($data);
+        echo date("d/M/y H:i:s") . PHP_EOL;
+        $mode = "full"; // Continue with full mode after context initialization
+        
+    } else {
+        echo "FATAL: Agent 0 failed. Interrupting process.\n";
+        exit(1);
+    }
+} else if ($mode === 'full' || $mode === '1') { // Step 1: Agent 0 (Scenario)
     echo "Step 1: Calling Agent 0...\n";
-    if (isset($state['questtitle']) && !empty($state['questtitle']) && !isset($state['npclist'])) { 
+    if (isset($state['questtitle']) && !empty($state['questtitle']) && !isset($state['npclist'])) {
         echo "Using existing quest title: {$state['questtitle']}. Skipping Agent 0.\n";
     } else {
         echo "Running Agent 0... at least 1 NPCs spawned.\n";
@@ -168,8 +244,8 @@ if ($mode === 'full' || $mode === '1') {
             file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
             chmod($stateFile, 0777);
             print_r($data);
-            echo date("d/M/y H:i:s") .PHP_EOL;
-            
+            echo date("d/M/y H:i:s") . PHP_EOL;
+
         } else {
             echo "FATAL: Agent 0 failed. Interrupting process.\n";
             exit(1);
@@ -229,7 +305,7 @@ if ($mode === 'full' || $mode === '2') {
         file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
         chmod($stateFile, 0777);
         print_r($data);
-        echo date("d/M/y H:i:s") .PHP_EOL;
+        echo date("d/M/y H:i:s") . PHP_EOL;
 
     } else {
         echo "FATAL: Agent 1 failed. Interrupting process.\n";
@@ -275,7 +351,7 @@ if ($mode === 'full' || $mode === '3') {
         file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
         chmod($stateFile, permissions: 0777);
         print_r($data);
-        echo date("d/M/y H:i:s") .PHP_EOL;
+        echo date("d/M/y H:i:s") . PHP_EOL;
 
     } else {
         echo "FATAL: Agent 2 failed. Interrupting process.\n";

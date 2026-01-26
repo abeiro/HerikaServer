@@ -24,15 +24,15 @@ $connector->setOldGlobals($currentConnectorData);
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-$MODEL_1="bytedance-seed/seed-1.6-flash"; // Initial quest generator
-$MODEL_2="google/gemini-3-flash-preview";   // Quest steps generator
+$MODEL_1 = "bytedance-seed/seed-1.6-flash"; // Initial quest generator
+$MODEL_2 = "google/gemini-3-flash-preview";   // Quest steps generator
 
 
 $formInput = json_decode(file_get_contents("php://input"), true) ?? ["npclist" => []];
 
 header('Content-Type: application/json');
 
-$awaredCell =$db->fetchOne("SELECT A.gamets,A.localts,cell_name,name as location_name,statics_list,A.sess::BIGINT
+$awaredCell = $db->fetchOne("SELECT A.gamets,A.localts,cell_name,name as location_name,statics_list,A.sess::BIGINT
 FROM public.eventlog A
 LEFT JOIN public.named_cell B ON (B.id = A.sess::BIGINT AND B.statics_list IS NOT NULL)
 LEFT JOIN public.locations C ON (C.formid=B.location_id  )
@@ -204,7 +204,7 @@ Short briefing:{$formInput["briefing"]}
         $buffer = $connectionHandler->fast_request(
             $contextData,
             //["MAX_TOKENS" => 4096, "model" => "x-ai/grok-4-fast", "temperature" => 0.7],// Builds classical quest, find relic stuff.
-            ["MAX_TOKENS" => 2048, "model" =>$MODEL_2, "temperature" => 0.7], // Builds classical quest, find relic stuff.
+            ["MAX_TOKENS" => 2048, "model" => $MODEL_2, "temperature" => 0.7], // Builds classical quest, find relic stuff.
             "questpreplanner"
         );
 
@@ -292,13 +292,13 @@ $suggested",
 
         preg_match('/Quest Title:\s*(.+?)(?:\n|$)/i', $buffer, $titleMatch);
         preg_match('/Quest Short brief\s*(?:\(.+?\))?\s*:\s*(.+?)(?:\nStarter character|$)/is', $buffer, $briefMatch);
-        
+
 
         $result["questtitle"] = trim($titleMatch[1] ?? "");
         $result["briefing"] = trim($briefMatch[1] ?? "");
         $result["response"] = $buffer;
-        $result["response"].= "\nPlayer Name: {$GLOBALS["PLAYER_NAME"]}";
-        $result["response"].= "\nCurrent location: $lastLocation";
+        $result["response"] .= "\nPlayer Name: {$GLOBALS["PLAYER_NAME"]}";
+        $result["response"] .= "\nCurrent location: $lastLocation";
     }
 
 } else {
@@ -317,7 +317,7 @@ $suggested",
             $cnTitle = $GLOBALS["db"]->escape(trim($bookTitle));
             $results = $db->fetchOne("select content from books where title='$cnTitle' and content is not null order by gamets desc limit 1");
             if (empty($results)) {
-                error_log("". $bookTitle ."". $cnTitle ." not found in database.");
+                error_log("" . $bookTitle . "" . $cnTitle . " not found in database.");
             } else
                 $history .= trim($results["content"]) . PHP_EOL . PHP_EOL;
         }
@@ -330,17 +330,21 @@ $suggested",
     //$formInput["journallist"][1]
     //$formInput["nextlist"][1]
     $journalsMixed = [];
-    $maxItems = max(count($formInput["journallist"]), count($formInput["nextlist"]));
-    for ($i = 0; $i < $maxItems; $i++) {
-        if (isset($formInput["journallist"][$i])) {
-            $journalsMixed[] = $formInput["journallist"][$i];
+    if ($formInput["journallist"]) {
+        $maxItems = max(count($formInput["journallist"]), count($formInput["nextlist"]));
+        for ($i = 0; $i < $maxItems; $i++) {
+            if (isset($formInput["journallist"][$i])) {
+                $journalsMixed[] = $formInput["journallist"][$i];
+            }
+            if (isset($formInput["nextlist"][$i])) {
+                $journalsMixed[] = $formInput["nextlist"][$i];
+            }
         }
-        if (isset($formInput["nextlist"][$i])) {
-            $journalsMixed[] = $formInput["nextlist"][$i];
-        }
+        $journals = arrayToBulletedList($journalsMixed);
+    } else {
+        $journals = "";
     }
-    $journals = arrayToBulletedList($journalsMixed);
-    
+
 
     $npcList = [];
     foreach ($formInput["npclist"] as $npc) {
@@ -401,13 +405,13 @@ $suggested",
     $prevSteps = arrayToBulletedList($formInput["nextlist"], " * [done]");
 
     $activatorsText = "";
-    $activators = $awaredCell["statics_list"]??"";
+    $activators = $awaredCell["statics_list"] ?? "";
     if (!empty($activators)) {
-        $activatorsText = "# Available activators in current location. (specify id to use them for triggering, e.g. wait for Pedestal:0x00112233 to be activated)".PHP_EOL;
+        $activatorsText = "# Available activators in current location. (specify id to use them for triggering, e.g. wait for Pedestal:0x00112233 to be activated)" . PHP_EOL;
         $activatorsText .= $activators . PHP_EOL;
-        
-    } 
-    
+
+    }
+
     $spawnedItemArray = $formInput["spawneditemslist"];
 
     foreach ($spawnedItemArray as $n => $itemName) {
@@ -575,7 +579,7 @@ $considerFinish
     $contextData = $prompt;
 
     $connectionHandler = $connector->getConnector($currentConnectorData);
-    
+
     $buffer = $connectionHandler->fast_request(
         $contextData,
         ["MAX_TOKENS" => 2048, "model" => $MODEL_2, "temperature" => 0.7],

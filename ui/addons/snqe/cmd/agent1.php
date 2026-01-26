@@ -135,6 +135,16 @@ function validate_spawns($xmlString, $allowedRaces, $allowedClasses, $allowedLoc
             $errors[] = "NPC '$name': Class 'forsworn' requires race 'breton', but got '$race'";
         }
 
+        // if name contains forsworn, class should be forsworn, and race breton
+        if (stripos($name,"forsworn")!==false) {
+            if ($class !=='forsworn') {
+                $errors[] = "NPC '$name': Name contains 'forsworn', so class should be 'forsworn', but got '$class'";
+            }
+            if ($race !=='breton') {
+                $errors[] = "NPC '$name': Name contains 'forsworn', so race should be 'breton', but got '$race'";
+            }
+        }
+         
         // Validate location (case-insensitive)
         if ($location !== 'nearby' && !in_array($location, $allowedLocationsLower)) {
             if (preg_match('/^[a-zA-Z0-9\s\'-]+@[0-9]+$/', $location)) {
@@ -142,6 +152,8 @@ function validate_spawns($xmlString, $allowedRaces, $allowedClasses, $allowedLoc
             } else
                 $errors[] = "NPC '$name': Invalid location '$location'. Allowed: nearby or " . implode(', ', $allowedLocationList);
         }
+
+
     }
 
     return $errors;
@@ -255,7 +267,7 @@ function validate_instructions($xmlString, $playerName = null, $npclist = [])
         // Check if instruction NPC is the player
         // Allow player name only for WaitToItemBeRecovered action
         if ($playerName && strtolower(trim($playerName)) === $npcLower) {
-            if ($action !== 'waittoitemberecovered' && $action !== 'travelto' && $action !== 'waitforactivation') {
+            if ($action !== 'waittoitemberecovered' && $action !== 'travelto' && $action !== 'waitforactivation' && $action !== 'waitatlocation') {
                 if ($action == "telltopictonpc")
                     $errors[] = "Instruction '$actionOriginal' references player as NPC: '$npc'. Instructions can only reference spawned NPCs, not the player. Change the sense of the topic and use TellTopicToPlayer";
                 else
@@ -265,10 +277,7 @@ function validate_instructions($xmlString, $playerName = null, $npclist = [])
                 $errors[] = "Instruction '$actionOriginal' references player as NPC: '$npc'. Change to WaitAtLocation without npc_ref, so quest will pause until that location is reached.";
                 continue;
             }
-        }
-
-        // Validate NPC is in the provided npclist or spawned by <spawn> tags (if list is provided)
-        if ($action !== 'waittoitemberecovered' && $action !== 'travelto' && $action !== 'waitforactivation') {
+        } else if ($action !== 'waittoitemberecovered' && $action !== 'travelto' && $action !== 'waitforactivation' ) {
             if (!empty($npclistLower) && !in_array($npcLower, $npclistLower) && !in_array($npcLower, $spawnedNpcNames)) {
                 $errors[] = "Instruction '$actionOriginal' references NPC '$npc' which is not in the NPC list. Allowed NPCs: " . implode(', ', $npclist);
             }

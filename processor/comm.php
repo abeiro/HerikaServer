@@ -47,7 +47,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $db->delete("moods_issued", "gamets>={$gameRequest[2]}  ");
     $db->delete("rumors", "gamets>={$gameRequest[2]}  ");
     $db->delete("named_cell", "gamets>={$gameRequest[2]}  ");
-
+    $db->delete("named_cell", "gamets<=({$gameRequest[2]} - 30000000) "); //((24 * 3) / 0.0000024)
     /* This is obsolete */
     /*
     if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
@@ -889,89 +889,91 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
     if ($currentNpcData) {
         $currentNpcData["base"]=$splitNameBase[1];
-        $currentNpcData["gender"]=$splitNameBase[2];
-        $currentNpcData["race"]=$splitNameBase[3];
-        $currentNpcData["refid"]=$splitNameBase[4];
-        
+        if (sizeof($splitNameBase)>1) {
+      
+            $currentNpcData["gender"]=$splitNameBase[2];
+            $currentNpcData["race"]=$splitNameBase[3];
+            $currentNpcData["refid"]=$splitNameBase[4];
+            
 
-        $meta=$npcMaster->getMetadata($currentNpcData);
-        // NPC skills
-        $meta["skills"]["archery"]=$splitNameBase[5];
-        $meta["skills"]["block"]=$splitNameBase[6];
-        $meta["skills"]["onehanded"]=$splitNameBase[7];
-        $meta["skills"]["twohanded"]=$splitNameBase[8];
-        $meta["skills"]["conjuration"]=$splitNameBase[9];
-        $meta["skills"]["destruction"]=$splitNameBase[10];
-        $meta["skills"]["restoration"]=$splitNameBase[11];
-        $meta["skills"]["alteration"]=$splitNameBase[12];
-        $meta["skills"]["illusion"]=$splitNameBase[13];
-        $meta["skills"]["heavyarmor"]=$splitNameBase[14];
-        $meta["skills"]["lightarmor"]=$splitNameBase[15];
-        $meta["skills"]["lockpicking"]=$splitNameBase[16];
-        $meta["skills"]["pickpocket"]=$splitNameBase[17];
-        $meta["skills"]["sneak"]=$splitNameBase[18];
-        $meta["skills"]["speech"]=$splitNameBase[19];
-        $meta["skills"]["smithing"]=$splitNameBase[20];
-        $meta["skills"]["alchemy"]=$splitNameBase[21];
-        $meta["skills"]["enchanting"]=$splitNameBase[22];
-        
-        // NPC equipment (10 slots from Skyrim) - format: name^baseid
-        $equipmentSlots = [
-            23 => 'helmet',
-            24 => 'armor',
-            25 => 'boots',
-            26 => 'gloves',
-            27 => 'amulet',
-            28 => 'ring',
-            29 => 'cape',
-            30 => 'backpack',
-            31 => 'left_hand',
-            32 => 'right_hand'
-        ];
-        
-        foreach ($equipmentSlots as $index => $slotName) {
-            $slotData = isset($splitNameBase[$index]) ? $splitNameBase[$index] : '';
-            if (!empty($slotData)) {
-                $parts = explode("^", $slotData);
-                $meta["equipment"][$slotName] = isset($parts[0]) ? $parts[0] : '';
-                $meta["equipment"][$slotName . '_baseid'] = isset($parts[1]) ? $parts[1] : '';
-            } else {
-                $meta["equipment"][$slotName] = '';
-                $meta["equipment"][$slotName . '_baseid'] = '';
-            }
-        }
-        
-        // NPC stats (core attributes)
-        $meta["stats"]["level"]=isset($splitNameBase[33]) ? intval($splitNameBase[33]) : 1;
-        $meta["stats"]["health"]=isset($splitNameBase[34]) ? floatval($splitNameBase[34]) : 0;
-        $meta["stats"]["health_max"]=isset($splitNameBase[35]) ? floatval($splitNameBase[35]) : 0;
-        $meta["stats"]["magicka"]=isset($splitNameBase[36]) ? floatval($splitNameBase[36]) : 0;
-        $meta["stats"]["magicka_max"]=isset($splitNameBase[37]) ? floatval($splitNameBase[37]) : 0;
-        $meta["stats"]["stamina"]=isset($splitNameBase[38]) ? floatval($splitNameBase[38]) : 0;
-        $meta["stats"]["stamina_max"]=isset($splitNameBase[39]) ? floatval($splitNameBase[39]) : 0;
-        $meta["stats"]["scale"]=isset($splitNameBase[40]) ? floatval($splitNameBase[40]) : 1.0;
-
-        $meta["mods"]=isset($splitNameBase[41]) ?explode("#",$splitNameBase[41]):null;
-
-        // NPC factions - format: formID1:rank1#formID2:rank2#...
-        $factionString = isset($splitNameBase[42]) ? $splitNameBase[42] : '';
-        $factionList = [];
-        if (!empty($factionString)) {
-            $factionPairs = explode("#", $factionString);
-            foreach ($factionPairs as $pair) {
-                $parts = explode(":", $pair);
-                if (count($parts) >= 2) {
-                    $formId = $parts[0];
-                    $rank = intval($parts[1]);
-                    $factionList[] = [
-                        'formid' => $formId,
-                        'rank' => $rank
-                    ];
+            $meta=$npcMaster->getMetadata($currentNpcData);
+            // NPC skills
+            $meta["skills"]["archery"]=$splitNameBase[5];
+            $meta["skills"]["block"]=$splitNameBase[6];
+            $meta["skills"]["onehanded"]=$splitNameBase[7];
+            $meta["skills"]["twohanded"]=$splitNameBase[8];
+            $meta["skills"]["conjuration"]=$splitNameBase[9];
+            $meta["skills"]["destruction"]=$splitNameBase[10];
+            $meta["skills"]["restoration"]=$splitNameBase[11];
+            $meta["skills"]["alteration"]=$splitNameBase[12];
+            $meta["skills"]["illusion"]=$splitNameBase[13];
+            $meta["skills"]["heavyarmor"]=$splitNameBase[14];
+            $meta["skills"]["lightarmor"]=$splitNameBase[15];
+            $meta["skills"]["lockpicking"]=$splitNameBase[16];
+            $meta["skills"]["pickpocket"]=$splitNameBase[17];
+            $meta["skills"]["sneak"]=$splitNameBase[18];
+            $meta["skills"]["speech"]=$splitNameBase[19];
+            $meta["skills"]["smithing"]=$splitNameBase[20];
+            $meta["skills"]["alchemy"]=$splitNameBase[21];
+            $meta["skills"]["enchanting"]=$splitNameBase[22];
+            
+            // NPC equipment (10 slots from Skyrim) - format: name^baseid
+            $equipmentSlots = [
+                23 => 'helmet',
+                24 => 'armor',
+                25 => 'boots',
+                26 => 'gloves',
+                27 => 'amulet',
+                28 => 'ring',
+                29 => 'cape',
+                30 => 'backpack',
+                31 => 'left_hand',
+                32 => 'right_hand'
+            ];
+            
+            foreach ($equipmentSlots as $index => $slotName) {
+                $slotData = isset($splitNameBase[$index]) ? $splitNameBase[$index] : '';
+                if (!empty($slotData)) {
+                    $parts = explode("^", $slotData);
+                    $meta["equipment"][$slotName] = isset($parts[0]) ? $parts[0] : '';
+                    $meta["equipment"][$slotName . '_baseid'] = isset($parts[1]) ? $parts[1] : '';
+                } else {
+                    $meta["equipment"][$slotName] = '';
+                    $meta["equipment"][$slotName . '_baseid'] = '';
                 }
             }
-        }
+            
+            // NPC stats (core attributes)
+            $meta["stats"]["level"]=isset($splitNameBase[33]) ? intval($splitNameBase[33]) : 1;
+            $meta["stats"]["health"]=isset($splitNameBase[34]) ? floatval($splitNameBase[34]) : 0;
+            $meta["stats"]["health_max"]=isset($splitNameBase[35]) ? floatval($splitNameBase[35]) : 0;
+            $meta["stats"]["magicka"]=isset($splitNameBase[36]) ? floatval($splitNameBase[36]) : 0;
+            $meta["stats"]["magicka_max"]=isset($splitNameBase[37]) ? floatval($splitNameBase[37]) : 0;
+            $meta["stats"]["stamina"]=isset($splitNameBase[38]) ? floatval($splitNameBase[38]) : 0;
+            $meta["stats"]["stamina_max"]=isset($splitNameBase[39]) ? floatval($splitNameBase[39]) : 0;
+            $meta["stats"]["scale"]=isset($splitNameBase[40]) ? floatval($splitNameBase[40]) : 1.0;
 
-       
+            $meta["mods"]=isset($splitNameBase[41]) ?explode("#",$splitNameBase[41]):null;
+
+            // NPC factions - format: formID1:rank1#formID2:rank2#...
+            $factionString = isset($splitNameBase[42]) ? $splitNameBase[42] : '';
+            $factionList = [];
+            if (!empty($factionString)) {
+                $factionPairs = explode("#", $factionString);
+                foreach ($factionPairs as $pair) {
+                    $parts = explode(":", $pair);
+                    if (count($parts) >= 2) {
+                        $formId = $parts[0];
+                        $rank = intval($parts[1]);
+                        $factionList[] = [
+                            'formid' => $formId,
+                            'rank' => $rank
+                        ];
+                    }
+                }
+            }
+
+        }
         // Importing rules
         $npcName = $GLOBALS["db"]->escape($localName);
         $npcRace = $GLOBALS["db"]->escape($currentNpcData["race"]);
@@ -1803,6 +1805,40 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 Logger::info("[SNQE] State file deleted successfully");
             }
         }
+    } else if (strtoupper($localData[0]) == "RESTART") {
+        // Clean and restart from context
+        // Execute SNQE manager clean command
+        $enginePath = escapeshellarg($GLOBALS["ENGINE_PATH"]);
+        $cmd = "php {$enginePath}/service/manager.php snqe clean 2>&1";
+        
+        try {
+            $output = shell_exec($cmd);
+            Logger::info("[SNQE] Clean command executed: " . trim($output ?? ""));
+        } catch (Exception $e) {
+            Logger::error("[SNQE] Clean command failed: " . $e->getMessage());
+        }
+        
+        // Remove state file if it exists
+        $stateFile = "{$GLOBALS["ENGINE_PATH"]}/log/snqe_state.json";
+        if (file_exists($stateFile)) {
+            if (!unlink($stateFile)) {
+                Logger::warn("[SNQE] Failed to delete state file: {$stateFile}");
+            } else {
+                Logger::info("[SNQE] State file deleted successfully");
+            }
+        }
+
+        $enginePath = escapeshellarg($GLOBALS["ENGINE_PATH"]);
+        $cmd = "php {$enginePath}/service/processors/snqe/run_agents.php start_from_context> {$enginePath}/log/log_run_agent.log 2>&1 &";
+        $output = shell_exec($cmd);
+        $output = trim($output);    
+        if ($output === null) {
+            Logger::error("[SNQE] Failed to start background agent processing");
+        } else {
+            Logger::info("[SNQE] Background agent processing started successfully");
+        }
+
+
     } else {
         Logger::warn("[SNQE] Unknown action: " . ($localData[0] ?? "unknown"));
     }

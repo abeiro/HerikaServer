@@ -3,6 +3,8 @@
 define("_MINIMAL_DISTANCE_TO_BE_THE_SAME", 0.0);
 define("_MAXIMAL_DISTANCE_TO_BE_RELATED", 0.8);
 define("_MINIMAL_ELEMENTS_TO_TRIGGER_MESSAGE", 3);
+//prevent in-game buffer overflow (does not truncate tts only subtitles. Fixes long player input playertts (auto-chat / manual player scene setting)) - ideally player input needs splitting for tts but returnLines is not appropriate
+define("_MAX_SUBTITLE_LENGTH", 1000);
 
 require_once(__DIR__."/online_translation.php");
 require_once(__DIR__."/utils_game_timestamp.php");
@@ -50,7 +52,7 @@ function cleanResponse($rawResponse)
     // This feature works for any TTS provider that defines PARALINGUISTIC_TAGS_ENABLED
     $shouldPreserveTags = false;
     $eventTags = [];
-    
+
     if (isset($GLOBALS["TTSFUNCTION"]) && !empty($GLOBALS["TTSFUNCTION"])) {
         // Map TTSFUNCTION to TTS array key
         $ttsMap = [
@@ -69,22 +71,22 @@ function cleanResponse($rawResponse)
             'cartesia' => 'CARTESIA',
             'inworld' => 'INWORLD'
         ];
-        
+
         $ttsKey = $ttsMap[$GLOBALS["TTSFUNCTION"]] ?? strtoupper($GLOBALS["TTSFUNCTION"]);
-        
-        if (isset($GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_ENABLED"]) && 
+
+        if (isset($GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_ENABLED"]) &&
             (bool)$GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_ENABLED"]) {
             $shouldPreserveTags = true;
-            
+
             // Parse the configurable tag list
-            if (isset($GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_LIST"]) && 
+            if (isset($GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_LIST"]) &&
                 !empty($GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_LIST"])) {
                 $tagsList = $GLOBALS["TTS"][$ttsKey]["PARALINGUISTIC_TAGS_LIST"];
                 $eventTags = array_map('trim', explode(',', $tagsList));
             }
         }
     }
-    
+
     if ($shouldPreserveTags && !empty($eventTags)) {
         $rawResponse = preg_replace_callback('/\[.*?\]/', function($matches) use ($eventTags) {
             // Convert to lowercase to ensure case-insensitive matching
@@ -163,6 +165,26 @@ function cleanResponse($rawResponse)
     );
 
     return $sentenceXX;
+}
+
+// replace findDotPosition with first EOS split detection - same logic as split_at_end_of_sentence
+function findFastSentencePosition($s_string) {
+    // Find the position of the first sentence-ending punctuation followed by a space
+    // This preserves ellipsis (...) because we require a space after the punctuation
+    $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/'); // .?!。？！
+
+    // Match the EOS punctuation character followed by spaces
+    // Negative lookbehind ensures we don't match after ellipsis (..)
+    // "Don't split after ellipses either... Thanks :-)" -for example
+    $splitSentenceRegex = "/([" . $eosPunc . "])(?<!\.\.)(?<!\.\.\.)\s+/u";
+
+    // Find the first match and return the position of the EOS punctuation
+    if (preg_match($splitSentenceRegex, $s_string, $matches, PREG_OFFSET_CAPTURE)) {
+        // Return the position of the EOS punctuation character (to match findDotPosition behavior)
+        return $matches[1][1];
+    }
+
+    return false;
 }
 
 function findDotPosition($s_string) {
@@ -388,14 +410,14 @@ function checkOAIComplains($responseTextUnmooded)
 /**
  * Extract narration (text in asterisks) from dialogue
  * Handles multiple narration blocks throughout the text
- * 
+ *
  * @param string $text The full text potentially containing narration
  * @return array ['narration' => array of narration texts, 'dialogue' => cleaned dialogue]
  */
 function extractNarrationAndDialogue($text) {
     $narrations = [];
     $remainingText = $text;
-    
+
     // IMPORTANT: Check for leftover "* " from sentence splitting FIRST, before checking paired asterisks
     // This prevents "* dialogue with *emphasis*" from being treated as narration
     if (preg_match('/^\*\s+(.+)$/s', $text, $matches)) {
@@ -409,21 +431,21 @@ function extractNarrationAndDialogue($text) {
         // Only extract narration if it's at the beginning, followed by dialogue
         $narrations = [trim($matches[1])];
         $remainingText = trim($matches[2]);
-        
+
         Logger::info("[extractNarrationAndDialogue] Found narration at start (paired asterisks): " . substr($narrations[0], 0, 50));
-    } 
+    }
     // If starts with asterisk and ends with period/punctuation, it's pure narration
     else if (preg_match('/^\*([^*]+)[.!?]\s*$/s', $text, $matches)) {
         // Single asterisk at start with punctuation at end - pure narration, no dialogue
         $narrations = [trim($matches[1], '. !?')];
         $remainingText = ''; // All narration, no dialogue
-        
+
         Logger::info("[extractNarrationAndDialogue] Found 1 narration block (single asterisk, complete sentence)");
     }
     else {
         Logger::info("[extractNarrationAndDialogue] No narration found in: " . substr($text, 0, 100));
     }
-    
+
     return [
         'narrations' => $narrations,
         'dialogue' => $remainingText,
@@ -446,11 +468,11 @@ function loadNarratorVoiceSettings() {
     require_once(__DIR__ . "/core/narrator.class.php");
     $narrator = new Narrator();
     $voiceid = $narrator->get('voiceid');
-    
+
     if (!$voiceid) {
         $voiceid = 'TheNarrator'; // Fallback default
     }
-    
+
     // Apply Narrator voice to all TTS providers
     $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']  = $voiceid;
     $GLOBALS['TTS']['MELOTTS']['voiceid']      = $voiceid;
@@ -488,7 +510,7 @@ function unmoodSentence($sentence) {
     // (narration should never be spoken by NPCs, even when inline narration is enabled)
     // The only exception is if explicitly disabled via strip_emotes_from_output or REMOVE_ASTERISKS_FROM_OUTPUT
     $processAsterisks = true; // Default to stripping asterisks for TTS
-    
+
     if (array_key_exists('strip_emotes_from_output', $GLOBALS)) {
         $processAsterisks = (bool)$GLOBALS['strip_emotes_from_output'];
     } elseif (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'])) {
@@ -561,17 +583,17 @@ function unmoodSentence($sentence) {
 function returnLines($lines,$writeOutput=true)
 {
     global $db, $startTime, $forceMood, $staticMood, $talkedSoFar, $FORCED_STOP, $TRANSFORMER_FUNCTION,$receivedData;
-    
+
     // Check if inline narration is enabled
     $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
-    
+
     // If inline narration is enabled, recombine split narration sentences
     if ($inlineNarrationEnabled) {
         $recombinedLines = [];
         $i = 0;
         while ($i < count($lines)) {
             $currentLine = trim($lines[$i]);
-            
+
             // Check if this line looks like narration: starts with * and ends with period/no dialogue
             if (preg_match('/^\*[^*]+\.?\s*$/', $currentLine)) {
                 // This is a narration-only sentence, check if next line is dialogue
@@ -583,14 +605,14 @@ function returnLines($lines,$writeOutput=true)
                     continue;
                 }
             }
-            
+
             $recombinedLines[] = $currentLine;
             $i++;
         }
         $lines = $recombinedLines;
         error_log("[returnLines] After recombination: " . count($lines) . " lines");
     }
-    
+
     foreach ($lines as $n => $sentence) {
 
         if ($FORCED_STOP) {
@@ -614,25 +636,25 @@ function returnLines($lines,$writeOutput=true)
         //$sentence = preg_replace('/[[:^print:]]/', '', $output); // Remove non ASCII chracters
 
         $sentence=$output;
-        
+
         // Preserve the original sentence for subtitles BEFORE any processing
         // Check if inline narration is enabled (default to false if not set)
         $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
         $sentenceForSubtitles = $sentence; // Keep the original with narration
-        
+
         // Strip "(Talking to ...)" from player speech for cleaner subtitles
         if ($inlineNarrationEnabled) {
             $sentence = preg_replace('/\s*\(Talking to [^)]+\)\s*$/i', '', $sentence);
             $sentenceForSubtitles = preg_replace('/\s*\(Talking to [^)]+\)\s*$/i', '', $sentenceForSubtitles);
         }
-        
+
         // Check if we should split narration to The Narrator BEFORE unmoodSentence strips asterisks
         $splitNarration = false;
         $narrationParts = null;
         if ($inlineNarrationEnabled) {
             $narrationParts = extractNarrationAndDialogue($sentenceForSubtitles);
             $splitNarration = $narrationParts['has_narration'];
-            
+
             // Debug logging
             Logger::info("[INLINE_NARRATION] Enabled: true");
             Logger::info("[INLINE_NARRATION] Original sentence: " . $sentenceForSubtitles);
@@ -644,7 +666,7 @@ function returnLines($lines,$writeOutput=true)
         } else {
             Logger::info("[INLINE_NARRATION] Disabled or not set");
         }
-        
+
         $responseTextUnmooded=unmoodSentence($sentence);
 
         $scoring = checkOAIComplains($responseTextUnmooded);
@@ -695,7 +717,7 @@ function returnLines($lines,$writeOutput=true)
 
         $responseText = $responseTextUnmooded;
         $responseForTTS = $responseTextUnmooded; // TTS gets the "unmooded" version (narration stripped)
-        
+
         // Set up subtitles based on whether inline narration is enabled
         if ($inlineNarrationEnabled && !$splitNarration) {
             // Preserve narration in subtitles - use the original sentence
@@ -708,9 +730,11 @@ function returnLines($lines,$writeOutput=true)
             $responseForSubtitles = trim($responseForSubtitles);
         } else {
             // If narration is disabled or will be split, use the same text as TTS (narration stripped)
-            $responseForSubtitles = $responseTextUnmooded;
+            $responseForSubtitles = strlen($responseTextUnmooded) > _MAX_SUBTITLE_LENGTH ?
+            substr($responseTextUnmooded, 0, _MAX_SUBTITLE_LENGTH) :
+            $responseTextUnmooded;
         }
-        
+
         $ttsOutput = null;
 
         if (Translation::$response) {
@@ -750,33 +774,33 @@ function returnLines($lines,$writeOutput=true)
             // Check if we need to split narration to The Narrator
             if ($splitNarration && $narrationParts && !empty($narrationParts['narrations'])) {
                 Logger::info("[INLINE_NARRATION] Splitting narration - processing " . count($narrationParts['narrations']) . " blocks");
-                
+
                 // Save the current NPC voice settings
                 $savedVoiceSettings = saveCurrentVoiceSettings();
                 $savedHerikaName = $GLOBALS["HERIKA_NAME"];
-                
+
                 Logger::info("[INLINE_NARRATION] Saved NPC name: " . $savedHerikaName);
-                
+
                 // Process each narration block with The Narrator's voice
                 foreach ($narrationParts['narrations'] as $narrationText) {
                     if (empty(trim($narrationText))) {
                         continue; // Skip empty narrations
                     }
-                    
+
                     Logger::info("[INLINE_NARRATION] Processing narration: " . $narrationText);
-                    
+
                     // Switch to Narrator voice
                     loadNarratorVoiceSettings();
                     $GLOBALS["HERIKA_NAME"] = "The Narrator";
-                    
+
                     Logger::info("[INLINE_NARRATION] Switched to Narrator, voice settings loaded");
-                    
+
                     // Prepare narration for TTS (with asterisks for subtitle display)
                     $narrationForTTS = $narrationText;
                     $narrationForSubtitles = "*" . $narrationText . "*";
-                    
+
                     Logger::info("[INLINE_NARRATION] Generating TTS with function: " . $GLOBALS["TTSFUNCTION"]);
-                    
+
                     // Generate TTS for narration using the configured TTS function
                     $narratorTtsOutput = null;
                     if ($GLOBALS["TTSFUNCTION"] == "azure") {
@@ -830,19 +854,19 @@ function returnLines($lines,$writeOutput=true)
                             $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
                         }
                     }
-                    
+
                     // Track narrator TTS output
                     if ($narratorTtsOutput) {
                         $GLOBALS["TRACK"]["FILES_GENERATED"][] = $narratorTtsOutput;
                         Logger::info("[INLINE_NARRATION] Narrator TTS generated: " . $narratorTtsOutput);
-                        
+
                         // Output narrator speech to game immediately
                         if ($writeOutput) {
                             // Use the same format as the main output at line 1093
                             $narratorListener = isset($GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]) ? $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"] : "";
                             $narratorExpression = ""; // No expression for narrator
                             $narratorAnimation = ""; // No animation for narrator
-                            
+
                             echo "The Narrator|ScriptQueue|{$narrationForSubtitles}/{$narratorExpression}/{$narratorListener}/{$narratorAnimation}/{$narrationText}\r\n";
                             if (ob_get_level()) @ob_flush();
                             @flush();
@@ -852,11 +876,11 @@ function returnLines($lines,$writeOutput=true)
                         Logger::warn("[INLINE_NARRATION] WARNING: Narrator TTS returned null/empty");
                     }
                 }
-                
+
                 // Restore NPC voice settings
                 restoreVoiceSettings($savedVoiceSettings);
                 $GLOBALS["HERIKA_NAME"] = $savedHerikaName;
-                
+
                 // Now generate TTS for the NPC's dialogue (if any)
                 if (!empty($narrationParts['dialogue'])) {
                     $responseForTTS = $narrationParts['dialogue'];
@@ -874,7 +898,7 @@ function returnLines($lines,$writeOutput=true)
                     return;
                 }
             }
-            
+
             // Generate regular TTS (either full text if no narration, or just dialogue after narration)
             if ($GLOBALS["TTSFUNCTION"] == "azure") {
 
@@ -956,7 +980,7 @@ function returnLines($lines,$writeOutput=true)
                 require_once(__DIR__."/../tts/tts-inworld.php");
                 $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
 
-            } 
+            }
             else {
                 if (file_exists(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php")) {
                     require_once(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php");
@@ -1278,9 +1302,13 @@ function lastKeyWordsContext($n, $npcname='')
     else
         $whileago=0;
     
-    $lastRecords = $db->fetchAll("SELECT speaker,location,companions,speech,gamets from speech where (speaker ilike '$speaker' or speaker ilike '%$pj%' ) and gamets>$whileago
-        order by gamets desc limit $m offset 0");
-    
+    /* $lastRecords = $db->fetchAll("SELECT speaker,location,companions,speech,gamets
+     from (select * from speech where  gamets>$whileago) where (speaker ilike '$speaker' or speaker ilike '%$pj%' ) 
+        order by gamets desc limit $m offset 0"); */
+    $lastRecords = $db->fetchAll("SELECT speaker, location, companions, speech, gamets 
+     from (select * from speech where  gamets>{$whileago}) AS sp 
+     where ((speaker ilike '{$speaker}') or (speaker ilike '{%$pj%}' )) 
+        order by gamets desc limit {$m} offset 0"); 
     
     $words=[];
     $uniqueArray=[];
@@ -1773,6 +1801,9 @@ function ExtractKeywords($sourceText) {
 // This is used to dynamically adjust the memory window based on recent activity.
 
 function getGametsLimitFor($actor) {
+    if (isset($GLOBALS["GAMETS_LIMIT_FOR_ACTOR"][$actor])) {
+        return $GLOBALS["GAMETS_LIMIT_FOR_ACTOR"][$actor];
+    }
     global $db;
 
     $actorEscaped = $db->escape($actor);
@@ -1784,8 +1815,8 @@ function getGametsLimitFor($actor) {
         FROM (
             SELECT gamets 
             FROM eventlog 
-            WHERE people LIKE '%$actorEscaped%'
-            and type='chat'
+            WHERE type='chat'
+            and people LIKE '%$actorEscaped%'
             ORDER BY gamets DESC
             LIMIT $limit
         ) AS recent_events
@@ -1796,9 +1827,12 @@ function getGametsLimitFor($actor) {
     Logger::debug("MEMORY_EMBEDDING getGametsLimitFor($actor),CONTEXT_HISTORY: {$GLOBALS["CONTEXT_HISTORY"]} => {$limitRow["hour_threshold"]}");
 
     // If no data or result is too small, fall back to a sensible default (e.g. 72 in-game hours)
-    return (isset($limitRow["hour_threshold"]) && $limitRow["hour_threshold"] > 0)
+    $res = (isset($limitRow["hour_threshold"]) && $limitRow["hour_threshold"] > 0)
         ? $limitRow["hour_threshold"]
         : 72;
+
+    $GLOBALS["GAMETS_LIMIT_FOR_ACTOR"][$actor] = $res;
+    return $res;
 }
 
 
@@ -2132,7 +2166,7 @@ function arrayToBulletedList($items, $bulletChar = " *") {
     
     if ($bulletedList)
         return rtrim($bulletedList);
-    else    
+    else
         return "(none)";
 }
 

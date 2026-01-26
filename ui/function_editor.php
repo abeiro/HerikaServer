@@ -53,6 +53,7 @@ $npcFunctions = [
     'Toast',
     'Drink',
     'Training',
+    'Surrender',
 ];
 
 $playerFunctions = [
@@ -85,7 +86,7 @@ $playerFunctions = [
     'Drink',
 ];
 
-$socialFunctions = ['Inspect', 'InspectSurroundings', 'Relax', 'TakeASeat', 'UseSoulGaze','Toast', 'Drink', 'Training','EndRitualCeremony','StartRitualCeremony'];
+$socialFunctions = ['Inspect', 'InspectSurroundings', 'Relax', 'TakeASeat', 'UseSoulGaze','Toast', 'Drink', 'Training','EndRitualCeremony','StartRitualCeremony','Surrender'];
 $movementFunctions = ['TravelTo', 'Follow', 'FollowPlayer', 'ComeCloser', 'WaitHere', 'IncreaseWalkSpeed', 'DecreaseWalkSpeed','MakeFollower'];
 $combatFunctions = ['Attack', 'AttackHunt', 'Brawl', 'SheatheWeapon'];
 $inventoryFunctions = ['OpenInventory', 'OpenInventory2', 'CheckInventory', 'GiveGoldTo', 'GiveItemTo', 'PickupItem', 'TakeGoldFromPlayer', 'CastSpell'];
@@ -444,7 +445,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         'UseSoulGaze' => 'Use ITT to visualize and describe the current scene',
                                         'Toast' => 'Raise a glass in celebration or honor',
                                         'Drink' => 'Drink a beverage to quench thirst',
-                                        'Training' => 'Opens training menu for skill improvement (only available for trainer NPCs)'
+                                        'Training' => 'Opens training menu for skill improvement (only available for trainer NPCs)',
+                                        'Surrender' => 'Surrender to avoid conflict or harm',
                                     ];
                                     echo $descriptions[$func] ?? 'Social interaction function';
                                     ?>

@@ -732,21 +732,40 @@ PROMPT;
             $contextStr .= "Recent Events:\n" . implode("\n", array_slice($context['events'], -10)) . "\n\n";
         }
 
-        // Build clear dialogue attribution
+        // Build EXPLICIT speaker/listener attribution
+        // CRITICAL: The LLM must know unambiguously WHO is the speaker and WHO is the listener
+        // to record the correct relationship direction
+        //
+        // In Player<->NPC conversations:
+        // - SPEAKER: The NPC (whose feelings we're recording)
+        // - LISTENER: The Player (who they're talking to)
+        //
         // Note: $context['dialogue'] contains the NPC's previous lines (talkedSoFar)
         // $context['player_action'] is what the Player said/did
         // $npcResponse is the NPC's latest response being evaluated
 
-        $contextStr .= "CONVERSATION (clear speaker attribution):\n";
+        $playerName = $this->getPlayerName();
+        $listenerName = $context['listener_name'] ?? 'Player';
+        $listenerKey = ($listenerName === 'Player' || strcasecmp($listenerName, $playerName) === 0) ? 'Player' : $listenerName;
+
+        // EXPLICIT SPEAKER/LISTENER HEADER
+        $contextStr .= "═══════════════════════════════════════════════════════\n";
+        $contextStr .= "SPEAKER: {$npcName} (the NPC whose feelings we are recording)\n";
+        $contextStr .= "LISTENER: {$listenerKey} (who they were talking to)\n";
+        $contextStr .= "═══════════════════════════════════════════════════════\n\n";
+
+        $contextStr .= "Your task: Record how {$npcName} felt about this exchange with {$listenerKey}.\n";
+        $contextStr .= "Your output MUST include \"{$listenerKey}\" - this is mandatory, not optional.\n\n";
+
+        $contextStr .= "CONVERSATION:\n";
 
         // Player's action/speech (what triggered this NPC response)
         if (!empty($context['player_action'])) {
-            $playerName = $this->getPlayerName();
-            $contextStr .= "[PLAYER ({$playerName})]: " . $context['player_action'] . "\n";
+            $contextStr .= "[{$listenerKey} said]: " . $context['player_action'] . "\n";
         }
 
         // NPC's response to the Player
-        $contextStr .= "[NPC ({$npcName})]: " . $npcResponse . "\n";
+        $contextStr .= "[{$npcName} replied]: " . $npcResponse . "\n";
 
         // Recent dialogue history (for additional context, but clearly labeled)
         if (!empty($context['dialogue'])) {
@@ -806,10 +825,19 @@ PROMPT;
 
         $systemPrompt = $this->getDynamicEvalPrompt();
 
-        $playerName = $this->getPlayerName();
+        // Build output key instruction based on listener
+        $outputKeyInstruction = "";
+        if ($listenerKey === 'Player') {
+            $outputKeyInstruction = "IMPORTANT: Use \"Player\" as the key (not \"{$playerName}\").";
+        } else {
+            $outputKeyInstruction = "IMPORTANT: Use \"{$listenerKey}\" as the key for the listener NPC.";
+        }
+
         $userPrompt = <<<PROMPT
-NPC: {$npcName}
-PLAYER CHARACTER: "{$playerName}" - ALWAYS use key "Player" in output (not "{$playerName}")
+═══════════════════════════════════════════════════════
+SPEAKER: {$npcName} (whose feelings we are recording)
+LISTENER: {$listenerKey} (who they were talking to)
+═══════════════════════════════════════════════════════
 
 CURRENT RELATIONSHIPS:
 {$relStateStr}
@@ -817,13 +845,14 @@ CURRENT RELATIONSHIPS:
 CONTEXT:
 {$contextStr}
 
-Based on this interaction, should any relationships change?
+Based on this interaction, how did {$npcName}'s feelings toward {$listenerKey} change?
 Consider: Was there kindness, insult, betrayal, gratitude, violence, romance, etc.?
 Only suggest changes for SIGNIFICANT moments - not every interaction needs a change.
 
-IMPORTANT: Use "Player" as the key for the player character, never use their name "{$playerName}" directly.
+{$outputKeyInstruction}
 
-Return JSON with any changes (or empty if no changes):
+Return JSON: {"changes": {"{$listenerKey}": {"delta": X, "reason": "brief"}}}
+Or if no changes: {"changes": {}}
 PROMPT;
 
         $contextData = [

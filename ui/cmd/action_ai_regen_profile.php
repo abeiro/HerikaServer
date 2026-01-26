@@ -1,5 +1,13 @@
 <?php
 
+// Ensure clean JSON output - no PHP warnings/notices to stdout
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
+// Set JSON content type early
+header('Content-Type: application/json');
+
 $jsonDataInput = $_GET;
 
 $startTime = microtime(true);
@@ -10,9 +18,6 @@ define("MINIMUM_SENTENCE_SIZE", 15);
 $GLOBALS["SCRIPTLINE_EXPRESSION"] = "";
 $GLOBALS["SCRIPTLINE_LISTENER"]   = "";
 $GLOBALS["SCRIPTLINE_ANIMATION"]  = "";
-
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 $file       = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . 'CurrentModel_.json';
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
@@ -41,8 +46,14 @@ $name = $jsonDataInput["name"];
 
 $npcMaster = new NpcMaster();
 
-$connector            = new LLMConnector();
-$currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PROFILES"]);
+$connector = new LLMConnector();
+
+// Use user-selected connector if provided, otherwise fall back to global CORE_CONNECTOR_PROFILES
+$connectorId = isset($jsonDataInput["connector_id"]) && trim((string)$jsonDataInput["connector_id"]) !== '' 
+    ? intval($jsonDataInput["connector_id"]) 
+    : $GLOBALS["CORE_CONNECTOR_PROFILES"];
+
+$currentConnectorData = $connector->getById($connectorId);
 $currentNpcData       = $npcMaster->getByName($name);
 
 $profile            = new CoreProfile();
