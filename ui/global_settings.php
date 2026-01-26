@@ -690,7 +690,7 @@ function current_value(string $flatName, array $currentConf) {
 
     .content-grid {
         display: grid;
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
         gap: 30px;
         margin-bottom: 30px;
     }
