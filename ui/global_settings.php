@@ -368,6 +368,7 @@ function icon_for_field(string $flatName): string {
         if ($u === 'CORE_CONNECTOR_OGHMA_CUSTOM') return '🐙';
         return '🔌';
     }
+    if ($u === 'RELATIONSHIP_SYSTEM_ENABLED') return '💞';
     if ($u === 'RELLLM_CONNECTOR') return '🔗';
     // Respeech related
     if (strpos($u, 'RESPEECH') !== false) return '🦜';
@@ -525,6 +526,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
                 $allPairs[$postKey] = 'false';
             }
         }
+    }
+
+    // Apply RELATIONSHIP_SYSTEM_ENABLED (rendered inline with RELLLM_CONNECTOR, not in $gsSections)
+    if (isset($_POST['RELATIONSHIP_SYSTEM_ENABLED'])) {
+        $allPairs['RELATIONSHIP_SYSTEM_ENABLED'] = ($_POST['RELATIONSHIP_SYSTEM_ENABLED'] === 'true') ? 'true' : 'false';
+    } else {
+        // Checkbox unchecked - no POST value means false
+        $allPairs['RELATIONSHIP_SYSTEM_ENABLED'] = 'false';
     }
 
 	// Apply TTS overrides (selection + provider fields + Player TTS)
@@ -808,6 +817,12 @@ function current_value(string $flatName, array $currentConf) {
                                                 <input type="checkbox" value="true" name="<?php echo htmlspecialchars($fname); ?>" <?php echo ($current ? 'checked' : ''); ?> <?php echo $isReadonly ? 'disabled' : ''; ?> style="width:auto;">
                                             </div>
                                         <?php endif; ?>
+                                        <?php if ($fname === 'RELLLM_CONNECTOR'): ?>
+                                            <div class="provider-toggle">
+                                                <input type="hidden" name="RELATIONSHIP_SYSTEM_ENABLED" value="false">
+                                                <input type="checkbox" name="RELATIONSHIP_SYSTEM_ENABLED" value="true" <?php echo (current_value('RELATIONSHIP_SYSTEM_ENABLED', $currentConf) ? 'checked' : ''); ?> style="width:auto;" title="Enable/Disable Relationship System">
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                                 <div class="provider-body">
@@ -847,13 +862,15 @@ function current_value(string $flatName, array $currentConf) {
                                         </select>
                                     <?php elseif (strpos($ftype, 'foreign:') === 0): ?>
                                         <?php $rows = $foreignOptions[$fname] ?? []; ?>
-                                        <select name="<?php echo htmlspecialchars($fname); ?>" <?php echo $isReadonly ? 'disabled' : ''; ?>>
-                                            <option value="" <?php echo (empty($current) ? 'selected' : ''); ?>>None</option>
-                                            <?php foreach ($rows as $row): ?>
-                                                <?php $idCol = explode(':', $ftype)[2]; $labelCol = explode(':', $ftype)[3]; ?>
-                                                <option value="<?php echo htmlspecialchars($row[$idCol]); ?>" <?php echo ((string)$current===(string)$row[$idCol]?'selected':''); ?>><?php echo htmlspecialchars($row[$labelCol]); ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
+                                        <div style="display:flex; align-items:center; gap:10px;">
+                                            <select name="<?php echo htmlspecialchars($fname); ?>" <?php echo $isReadonly ? 'disabled' : ''; ?>>
+                                                <option value="" <?php echo (empty($current) ? 'selected' : ''); ?>>None</option>
+                                                <?php foreach ($rows as $row): ?>
+                                                    <?php $idCol = explode(':', $ftype)[2]; $labelCol = explode(':', $ftype)[3]; ?>
+                                                    <option value="<?php echo htmlspecialchars($row[$idCol]); ?>" <?php echo ((string)$current===(string)$row[$idCol]?'selected':''); ?>><?php echo htmlspecialchars($row[$labelCol]); ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
                                     <?php else: ?>
                                         <input type="text" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" <?php echo $readonlyAttr; ?>>
                                     <?php endif; ?>

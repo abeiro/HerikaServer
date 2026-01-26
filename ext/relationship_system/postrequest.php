@@ -1,28 +1,29 @@
 <?php
 /**
- * RELATIONSHIP SYSTEM - Post-Request Processing
+ * RELATIONSHIP SYSTEM - Post-Request Processing (ASYNC)
  *
  * This file is automatically loaded AFTER the AI response has been sent.
- * Processes relationship evaluations DIRECTLY here - no queue, no delay.
+ * QUEUES relationship evaluations for background worker processing.
  *
- * WHY DIRECT PROCESSING WORKS:
- * - This runs AFTER voice/TTS response is already sent to the game
- * - No input lag because player already got their response
- * - Uses scoped global swapping in RelationshipLLM to avoid connector corruption
+ * CRITICAL: NEVER BLOCKS THE MAIN CHAT FLOW
+ * - All LLM calls happen in the background worker (worker.php)
+ * - This file only queues data to the database - instant, non-blocking
+ * - The relationship model cannot interfere with player-NPC conversations
  *
- * INITIALIZATION STRATEGY:
- * - NEW NPCs: Proactive init in comm.php when addnpc event fires
- * - EXISTING SAVES: Lazy init here on first conversation
+ * ASYNC FLOW:
+ * 1. postrequest.php queues evaluation data (this file - instant)
+ * 2. worker.php daemon processes queue in background (separate process)
+ * 3. context.php injects updated relationships on next request
  *
  * TWO MODES:
- * 1. RELLLM_CONNECTOR set: Uses dedicated Relationship LLM for dynamic evaluation
- *    - Processes directly after response (no blocking because response already sent)
+ * 1. RELLLM_CONNECTOR set: Uses dedicated Relationship LLM
+ *    - Queues for async processing by worker.php
  *    - No #REL: commands needed from conversation model
- *    - More token-efficient for the main conversation
+ *    - Completely isolated from main chat API calls
  *
  * 2. RELLLM_CONNECTOR not set: Falls back to parsing #REL: commands
  *    - Conversation model embeds #REL:Player=+5# in responses
- *    - Traditional approach (still synchronous, but fast)
+ *    - Traditional approach (synchronous but fast - no LLM call)
  *
  * NPC-TO-NPC RELATIONSHIPS:
  * When one NPC talks to another NPC (not the Player), both NPCs form/update
@@ -34,6 +35,11 @@
  *
  *   require_once(__DIR__."/../ext/relationship_system/postrequest.php");
  */
+
+// Master toggle - if disabled, skip everything in this file
+if (empty($GLOBALS['RELATIONSHIP_SYSTEM_ENABLED'])) {
+    return;
+}
 
 // Ensure Logger is available
 require_once $GLOBALS["ENGINE_PATH"] . "lib/logger.php";
@@ -89,6 +95,9 @@ function _relGetNpcIdByName($npcName) {
 /**
  * Helper: Find NPCs mentioned in dialogue content (overhearing/being addressed)
  * Returns array of NPC names found in the dialogue that exist in core_npc_master
+ *
+ * NOTE: Currently unused - kept for future "overhearing" feature where NPCs can
+ * form opinions about other NPCs mentioned in conversations they witness.
  */
 function _relFindMentionedNpcs($dialogue, $excludeNames = []) {
     if (empty($dialogue)) return [];
@@ -155,27 +164,30 @@ if ($npcName === "The Narrator") {
 }
 
 // Determine who the NPC was talking to (listener)
-$listenerName = _relGetConversationListener($npcName);
-$isNpcToNpcConversation = _relIsValidNpcTarget($listenerName);
+// PRIORITY ORDER:
+// 1. SCRIPTLINE_LISTENER_ATOMIC - set during response processing (most reliable)
+// 2. Speech table query - fallback for edge cases
+$listenerName = null;
+$listenerSource = 'none';
 
-// FALLBACK: If speech table says Player but dialogue mentions another NPC by name,
-// they might be addressing or talking about that NPC (overhearing detection)
-$mentionedNpcs = [];
-if (!$isNpcToNpcConversation && !empty($GLOBALS["talkedSoFar"])) {
-    $playerName = $GLOBALS["PLAYER_NAME"] ?? "Player";
-    $mentionedNpcs = _relFindMentionedNpcs($GLOBALS["talkedSoFar"], [$npcName, $playerName]);
-
-    // If we found mentioned NPCs and the speech table listener is the Player,
-    // use the first mentioned NPC as the target (likely being addressed)
-    if (!empty($mentionedNpcs)) {
-        $listenerName = $mentionedNpcs[0];
-        $isNpcToNpcConversation = true;
-        Logger::debug("[REL-DEBUG] Fallback: Found NPC mentioned in dialogue: " . implode(", ", $mentionedNpcs));
-    }
+if (!empty($GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"])) {
+    $listenerName = $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"];
+    $listenerSource = 'SCRIPTLINE_LISTENER_ATOMIC';
+} elseif (!empty($GLOBALS["SCRIPTLINE_LISTENER"])) {
+    // SCRIPTLINE_LISTENER may have multiple listeners comma-separated, take first
+    $listeners = explode(',', $GLOBALS["SCRIPTLINE_LISTENER"]);
+    $listenerName = trim($listeners[0]);
+    $listenerSource = 'SCRIPTLINE_LISTENER';
+} else {
+    // Fallback to speech table (may have race condition issues)
+    $listenerName = _relGetConversationListener($npcName);
+    $listenerSource = 'speech_table';
 }
 
+$isNpcToNpcConversation = _relIsValidNpcTarget($listenerName);
+
 // Debug: Always log listener detection
-Logger::debug("[REL-DEBUG] Speaker: {$npcName}, Listener from speech table: " . ($listenerName ?? 'NULL') . ", IsNpcToNpc: " . ($isNpcToNpcConversation ? 'YES' : 'NO'));
+Logger::debug("[REL-DEBUG] Speaker: {$npcName}, Listener: " . ($listenerName ?? 'NULL') . " (from {$listenerSource}), IsNpcToNpc: " . ($isNpcToNpcConversation ? 'YES' : 'NO'));
 
 if ($isNpcToNpcConversation) {
     Logger::info("[REL] NPC-to-NPC conversation detected: {$npcName} -> {$listenerName}");
@@ -202,7 +214,7 @@ if (!empty($GLOBALS["HERIKA_ID"])) {
 $useRelLLM = !empty($GLOBALS['RELLLM_CONNECTOR']) && $GLOBALS['RELLLM_CONNECTOR'] > 0;
 
 if ($useRelLLM && $npcId) {
-    // MODE 1: ASYNC - Queue evaluation for processing on next request
+    // MODE 1: ASYNC - Queue evaluation for processing by background worker
     // This prevents LLM calls from blocking the current response
     require_once __DIR__ . "/async_queue.php";
 
@@ -251,9 +263,12 @@ if ($useRelLLM && $npcId) {
         $context['nearby_npcs'] = array_map('trim', explode(',', $GLOBALS["CACHE_PEOPLE"]));
     }
 
+    // Add listener name to context for explicit SPEAKER/LISTENER identification
+    $context['listener_name'] = $isNpcToNpcConversation ? $listenerName : 'Player';
+
     // Get the NPC's response
     $npcResponse = !empty($GLOBALS["talkedSoFar"]) ? implode(" ", $GLOBALS["talkedSoFar"]) : "";
-    
+
     // Clean up: If NPC response starts with player's text (echo bug), remove it
     // This happens when the main LLM accidentally echoes the player's input
     if (!empty($context['player_action']) && !empty($npcResponse)) {
@@ -283,33 +298,21 @@ if ($useRelLLM && $npcId) {
     // Debug: Log what we're processing
     $requestType = $gameRequest[0] ?? 'unknown';
     $hasPlayerAction = !empty($context['player_action']);
-    Logger::info("[REL] Processing {$npcName}: request_type={$requestType}, has_player_action=" . ($hasPlayerAction ? 'YES' : 'NO') . ", is_npc2npc=" . ($isNpcToNpcConversation ? 'YES' : 'NO'));
+    Logger::info("[REL] Queueing {$npcName}: request_type={$requestType}, has_player_action=" . ($hasPlayerAction ? 'YES' : 'NO') . ", is_npc2npc=" . ($isNpcToNpcConversation ? 'YES' : 'NO'));
 
-    // Process evaluation directly - response is already sent, no input lag
-    // RelationshipLLM uses scoped global swapping to avoid corrupting main connector
-    require_once __DIR__ . "/relationship_llm.php";
-    $relLLM = new RelationshipLLM();
-
-    if ($relLLM->isAvailable()) {
-        // Lazy init for speaker
-        $relLLM->analyzeNpc($npcId, false);
-
-        // Lazy init for listener if NPC-to-NPC
-        if ($listenerNpcId) {
-            $relLLM->analyzeNpc($listenerNpcId, false);
-        }
-
-        // Evaluate based on conversation type
-        if ($isNpcToNpcConversation && $listenerNpcId) {
-            $relLLM->evaluateNpcToNpcContext($npcId, $listenerNpcId, $npcResponse, $context);
-        } elseif (!empty($context['player_action'])) {
-            $relLLM->evaluateContext($npcId, $npcResponse, $context);
-        }
-
-        // Process any pending NPC inits from cell loading
-        require_once __DIR__ . "/async_queue.php";
-        _relProcessInitQueue(5);
-    }
+    // ASYNC: Queue evaluation for background worker processing
+    // This ensures relationship LLM calls NEVER block the main chat flow
+    // The worker.php daemon processes these in the background
+    _relQueueEvaluation([
+        'npc_id' => $npcId,
+        'npc_name' => $npcName,
+        'npc_response' => $npcResponse,
+        'context' => $context,
+        'is_npc2npc' => $isNpcToNpcConversation,
+        'listener_npc_id' => $listenerNpcId,
+        'listener_name' => $listenerName,
+        'has_player_action' => $hasPlayerAction
+    ]);
 }
 
 if (!$useRelLLM && !empty($GLOBALS["talkedSoFar"])) {

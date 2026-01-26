@@ -344,7 +344,7 @@ class RelationshipManager {
             $lines[] = "[RELATIONSHIPS]";
         }
 
-        // Always include Player
+        // Always include Player - use actual player name for context display
         $playerRel = $rels['Player'] ?? ['aff' => 0, 'type' => 'neutral'];
         $playerAff = $playerRel['aff'] ?? 0;
         $playerType = ucfirst($playerRel['type'] ?? 'neutral');
@@ -354,6 +354,12 @@ class RelationshipManager {
         $playerBest = $playerRel['best'] ?? '';
         $playerWorst = $playerRel['worst'] ?? '';
 
+        // Get actual player name for display (falls back to "Player" if not set)
+        $playerDisplayName = $GLOBALS['PLAYER_NAME'] ?? 'Player';
+        if (empty($playerDisplayName) || $playerDisplayName === 'the Player') {
+            $playerDisplayName = 'Player';
+        }
+
         // Build type/relation string: "Familial/son" or just "Familial"
         $typeStr = $playerType;
         if (!empty($playerRelation)) {
@@ -362,12 +368,12 @@ class RelationshipManager {
 
         if ($tierOnly) {
             // Token-efficient: tier, type/relation, and events
-            $playerLine = sprintf("Player: %s (%s)", $playerTier, $typeStr);
+            $playerLine = sprintf("%s: %s (%s)", $playerDisplayName, $playerTier, $typeStr);
             $playerLine .= self::formatEventNotes($playerWorst, $playerBest, $playerNote);
             $lines[] = $playerLine;
         } else {
             // Include numbers for #REL: command system
-            $playerLine = sprintf("Player: %+d (%s, %s)", $playerAff, $playerTier, $typeStr);
+            $playerLine = sprintf("%s: %+d (%s, %s)", $playerDisplayName, $playerAff, $playerTier, $typeStr);
             $playerLine .= self::formatEventNotes($playerWorst, $playerBest, $playerNote);
             $lines[] = $playerLine;
         }
