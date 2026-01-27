@@ -371,21 +371,6 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     </label>
                 </div>
                 
-                <div id="google_settings" style="margin-top:12px; display:none;">
-                    <div style="font-weight:600; color:#e9efff; margin-bottom:8px;">Google API Settings</div>
-                    <label class="label-with-toggle"><span class='tip-label' data-tip='Disable all Google safety filters. Sets BLOCK_NONE for harassment, hate speech, sexually explicit, and dangerous content categories. Use with caution.'>Block None (Disable Safety Filters)</span>
-                        <input type="hidden" name="block_none" value="0">
-                        <input type="checkbox" name="block_none" value="1" <?php 
-                            $metadata = [];
-                            if (isset($editItem["metadata"]) && !empty($editItem["metadata"])) {
-                                $metadata = is_string($editItem["metadata"]) ? json_decode($editItem["metadata"], true) : $editItem["metadata"];
-                                if (!is_array($metadata)) $metadata = [];
-                            }
-                            echo (isset($metadata["block_none"]) && $metadata["block_none"]) ? "checked" : "";
-                        ?>>
-                        <span class="toggle-text">On</span>
-                    </label>
-                </div>
                 <div id="remove_action_prompt" style="margin-top:12px;">
                     <label class="label-with-toggle"><span class='tip-label' data-tip='Option to disable the action enforcement prompt. Some models like gemini-3-flash tend to use actions a lot.'>Remove Action Prompt</span>
                         <input type="hidden" name="remove_action_prompt" value="0">
@@ -556,15 +541,6 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 if (urlRow) urlRow.style.display = (service === 'custom') ? '' : 'none';
                 if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || '');
                 setActive(service);
-                
-                // Show/hide Google settings (show for google service OR openrouter with google/gemini models)
-                const googleSettings = document.getElementById('google_settings');
-                if (googleSettings) {
-                    const modelValue = (document.querySelector('input[name="model"]') || {}).value || '';
-                    const isGoogleModel = /google|gemini/i.test(modelValue);
-                    const showGoogle = (service === 'google') || (service === 'openrouter' && isGoogleModel);
-                    googleSettings.style.display = showGoogle ? '' : 'none';
-                }
             } catch (e) {
                 console.log(e);
 
@@ -629,7 +605,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     }
     // Sync On/Off labels for checkboxes
     (function(){
-        const names = ['reasoning_model','enforce_json','json_schema','prefill_json','block_none','remove_action_prompt'];
+        const names = ['reasoning_model','enforce_json','json_schema','prefill_json','remove_action_prompt'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
@@ -1156,7 +1132,7 @@ if (isset($_GET["create_blank"])) {
 if ($_SERVER["REQUEST_METHOD"] === "POST" && (isset($_POST["save"]) || isset($_POST["update"])) ) {
     $id = $_POST["id"] ?? '';
     
-    // Merge block_none into metadata
+    // Prepare metadata
     $metadata = [];
     if (isset($_POST["metadata"]) && !empty($_POST["metadata"])) {
         $metadata = json_decode($_POST["metadata"], true);
@@ -1170,15 +1146,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && (isset($_POST["save"]) || isset($_P
         }
     }
     
-    // Add block_none to metadata (checkbox with hidden field pattern)
-    if (isset($_POST["block_none"])) {
-        $metadata["block_none"] = ($_POST["block_none"] === "1" || $_POST["block_none"] === 1);
-    } else {
-        // If checkbox not present, remove from metadata
-        unset($metadata["block_none"]);
-    }
-
-     // Add remove_action_prompt to metadata (checkbox with hidden field pattern)
+    // Add remove_action_prompt to metadata (checkbox with hidden field pattern)
     if (isset($_POST["remove_action_prompt"])) {
         $metadata["remove_action_prompt"] = ($_POST["remove_action_prompt"] === "1" || $_POST["remove_action_prompt"] === 1);
     } else {
@@ -1523,21 +1491,6 @@ if (typeof window.consolidation !== 'function') {
                 </label>
             </div>
             
-            <div id="google_settings_main" style="margin-top:12px; display:none;">
-                <div style="font-weight:600; color:#e9efff; margin-bottom:8px;">Google API Settings</div>
-                <label class="label-with-toggle"><span class='tip-label' data-tip='Disable all Google safety filters. Sets BLOCK_NONE for harassment, hate speech, sexually explicit, and dangerous content categories. Use with caution.'>Block None (Disable Safety Filters)</span>
-                    <input type="hidden" name="block_none" value="0">
-                    <input type="checkbox" name="block_none" value="1" <?php 
-                        $metadataMain = [];
-                        if (isset($editItem["metadata"]) && !empty($editItem["metadata"])) {
-                            $metadataMain = is_string($editItem["metadata"]) ? json_decode($editItem["metadata"], true) : $editItem["metadata"];
-                            if (!is_array($metadataMain)) $metadataMain = [];
-                        }
-                        echo (isset($metadataMain["block_none"]) && $metadataMain["block_none"]) ? "checked" : "";
-                    ?>>
-                    <span class="toggle-text">On</span>
-                </label>
-            </div>
              <div id="remove_action_prompt_main" style="margin-top:12px;">
                 <div style="font-weight:600; color:#e9efff; margin-bottom:8px;">Remove Action Prompt</div>
                     <label class="label-with-toggle"><span class='tip-label' data-tip='Option to disable the action enforcement prompt. Some models like gemini-3-flash tend to use actions a lot.'>Remove Action Prompt</span>
@@ -1720,7 +1673,7 @@ if (typeof window.consolidation !== 'function') {
             driverInput.value = nextDefault;
         }
     }
-    const btnWSL = document.getElementById('btn_wsl_ip'); const btnHost = document.getElementById('btn_host_ip'); const isCustom = (service==='custom'); if (btnWSL) btnWSL.style.display = isCustom ? '' : 'none'; if (btnHost) btnHost.style.display = isCustom ? '' : 'none'; const customNote = document.getElementById('custom_note'); if (customNote) customNote.style.display = isCustom ? '' : 'none'; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); const googleSettingsMain = document.getElementById('google_settings_main'); if (googleSettingsMain) { const modelValue = (document.querySelector('input[name="model"]') || {}).value || ''; const isGoogleModel = /google|gemini/i.test(modelValue); const showGoogle = (service === 'google') || (service === 'openrouter' && isGoogleModel); googleSettingsMain.style.display = showGoogle ? '' : 'none'; } }
+    const btnWSL = document.getElementById('btn_wsl_ip'); const btnHost = document.getElementById('btn_host_ip'); const isCustom = (service==='custom'); if (btnWSL) btnWSL.style.display = isCustom ? '' : 'none'; if (btnHost) btnHost.style.display = isCustom ? '' : 'none'; const customNote = document.getElementById('custom_note'); if (customNote) customNote.style.display = isCustom ? '' : 'none'; syncApiBadge(service); setActive(service); if (apiKeyRow) apiKeyRow.style.display = ''; if (driverRow) driverRow.style.display = (service === 'custom') ? '' : 'none'; if (serviceLabelEl) serviceLabelEl.textContent = 'Service: ' + (displayNames[service] || ''); }
     function detectService(){ const sValRaw=(document.getElementById('service_input')&&String(document.getElementById('service_input').value||''))||''; const sVal=sValRaw.toLowerCase(); if (['openrouter','openai','google','groq','nanogpt','custom'].includes(sVal)) return sVal; const u=(urlInput&&String(urlInput.value||'').toLowerCase())||''; if (u){ if (u.includes('openai.com')) return 'openai'; if (u.includes('generativelanguage.googleapis.com')) return 'google'; if (u.includes('openrouter.ai')) return 'openrouter'; if (u.includes('groq.com')) return 'groq'; if (u.includes('nano-gpt.com')) return 'nanogpt'; return 'custom'; } const d=(driverInput&&String(driverInput.value||'').toLowerCase())||''; if (d.includes('openai')) return 'openai'; if (d.includes('google')) return 'google'; if (d.includes('groq')) return 'groq'; if (d.includes('nanogpt')) return 'nanogpt'; if (d.includes('openrouter')) return 'openrouter'; return 'openrouter'; }
     (function init(){ const service = detectService(); applyService(service, false); const driverSelect = document.getElementById('driver_select'); if (driverSelect) { driverSelect.addEventListener('change', function(){ if (driverInput) driverInput.value = this.value; }); if (driverInput && driverInput.value) driverSelect.value = driverInput.value; } const btnWSL = document.getElementById('btn_wsl_ip'); const btnHost = document.getElementById('btn_host_ip'); function fillFrom(buttonEl, ip){ if (!buttonEl) return; const form = buttonEl.closest('form'); const urlEl = form ? form.querySelector('input[name="url"]') : document.querySelector('input[name="url"]'); if (!ip || !urlEl) return; urlEl.value = 'http://' + ip + ':5001'; try { urlEl.dispatchEvent(new Event('input', { bubbles:true })); } catch(_e){} try { urlEl.dispatchEvent(new Event('change', { bubbles:true })); } catch(_e){} try { urlEl.focus(); } catch(_e){} } if (btnWSL) btnWSL.addEventListener('click', function(){ let ip = this.getAttribute('data-ip')||''; if (!ip) { ip = '<?= htmlspecialchars($WSL_IP) ?>'; } fillFrom(this, String(ip).trim()); }); if (btnHost) btnHost.addEventListener('click', function(){ let ip = this.getAttribute('data-ip')||''; if (!ip) { ip = '<?= htmlspecialchars($HOST_IP) ?>'; } fillFrom(this, String(ip).trim()); }); })();
     icons.forEach(ic=>{ ic.addEventListener('click', ()=> applyService(ic.dataset.service, true)); });
