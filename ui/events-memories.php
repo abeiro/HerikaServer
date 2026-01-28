@@ -466,6 +466,12 @@ function getTimeColor($time) {
         <!-- Event Log Tab -->
         <div id="eventlog-tab" class="tab-content <?php echo $activeTab === 'eventlog' ? 'active' : ''; ?>">
             <?php
+            // Add subtitle description
+            echo "<div style='background: #2a2a2a; border-left: 4px solid rgb(242, 124, 17); padding: 12px 15px; border-radius: 5px; margin: 15px 0; font-size: 0.9em;'>";
+            echo "<span style='color: rgb(242, 124, 17); font-weight: bold;'>📝 Events:</span> ";
+            echo "<span style='color: #f8f9fa;'>Raw log of in-game events (combat, deaths, location changes, etc.) that provide context to the AI. These events are filtered and selectively added to AI prompts based on relevance.</span>";
+            echo "</div>";
+            
             // Show success message if events were deleted
             if (isset($_GET['deleted'])) {
                 $deletedCount = intval($_GET['deleted']);
@@ -834,6 +840,12 @@ function getTimeColor($time) {
         <!-- Response Log Tab -->
         <div id="responselog-tab" class="tab-content <?php echo $activeTab === 'responselog' ? 'active' : ''; ?>">
             <?php
+            // Add subtitle description
+            echo "<div style='background: #2a2a2a; border-left: 4px solid rgb(242, 124, 17); padding: 12px 15px; border-radius: 5px; margin: 15px 0; font-size: 0.9em;'>";
+            echo "<span style='color: rgb(242, 124, 17); font-weight: bold;'>💬 AI Responses:</span> ";
+            echo "<span style='color: #f8f9fa;'>Complete log of all AI-generated responses including the full context (prompts, events, memories) sent to the LLM. Use this to debug conversations and understand what information the AI had access to.</span>";
+            echo "</div>";
+            
             // Helper to extract Oghma topic and level from the stored JSON in prompt
             if (!function_exists('extractOghmaTopicAndLevel')) {
                 function extractOghmaTopicAndLevel($rawPromptValue) {
