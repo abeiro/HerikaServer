@@ -481,11 +481,51 @@ if (!empty($timelineItems)) {
 <style>
     main { padding-top: 80px; padding-bottom: 40px; padding-left: 10%; padding-right: 10%; width: 100%; margin: 0; }
     footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031633; z-index: 100; }
-    .page-header { text-align: center; margin-bottom: 30px; padding: 20px; background: #2a2a2a; border-radius: 8px; border: 1px solid #4a4a4a; }
-    .page-header h1 { margin-bottom: 10px; font-family: 'MagicCards', serif; word-spacing: 8px; font-size: 2.0em; color: rgb(242, 124, 17); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+    
+    .page-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+    }
+    
+    .page-header h1 {
+        margin-bottom: 8px;
+        font-family: 'MagicCards', serif;
+        word-spacing: 8px;
+        font-size: 2.0em;
+        color: rgb(242, 124, 17);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    
     .content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
-    .content-section { background: #2a2a2a; padding: 25px; border-radius: 8px; border: 1px solid #4a4a4a; }
-    .content-section h2 { font-family: 'MagicCards', serif; color: rgb(242, 124, 17); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); word-spacing: 6px; margin-bottom: 15px; font-size: 1.4em; }
+    
+    .content-section {
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        padding: 25px;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .content-section:hover {
+        border-color: rgba(242, 124, 17, 0.3);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.05);
+    }
+    
+    .content-section h2 {
+        font-family: 'MagicCards', serif;
+        color: rgb(242, 124, 17);
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        word-spacing: 6px;
+        margin-bottom: 15px;
+        font-size: 1.4em;
+    }
+    
     .full-width-section { grid-column: 1 / -1; }
     .button-group { display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; }
     @font-face { font-family: 'MagicCards'; src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype'); font-weight: normal; font-style: normal; }

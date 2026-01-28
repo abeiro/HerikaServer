@@ -587,18 +587,26 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         text-align: center;
         margin-bottom: 30px;
         padding: 20px;
-        background: #2a2a2a;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
     }
 
     .page-header h1 {
-        margin-bottom: 15px;
+        margin-bottom: 8px;
         font-family: 'MagicCards', serif;
         word-spacing: 8px;
         font-size: 2.2em;
         color: rgb(242, 124, 17);
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .page-subtitle {
+        margin: 0;
+        color: #bbb;
+        font-size: 1.1em;
+        line-height: 1.6;
     }
 
     .page-header h3 {
@@ -702,6 +710,8 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         width: 100%;
         table-layout: fixed;
         border-collapse: collapse;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
     }
 
     /* Column width optimization */
@@ -756,6 +766,19 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
         font-weight: bold;
         text-align: left;
         vertical-align: top;
+        background: linear-gradient(135deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 0.9));
+        color: rgb(242, 124, 17);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        font-family: 'MagicCards', serif;
+    }
+    
+    .table-container tbody tr {
+        border-bottom: 1px solid #3a3a3a;
+        transition: background 0.2s ease;
+    }
+    
+    .table-container tbody tr:hover {
+        background: rgba(58, 58, 58, 0.5);
     }
 
     /* Action container styling */
@@ -785,11 +808,18 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
 
     /* Content sections */
     .content-section {
-        background: #2a2a2a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
         padding: 25px;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
         margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .content-section:hover {
+        border-color: #4a4a4a;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.05);
     }
 
     /* Responsive table for smaller screens */
@@ -912,8 +942,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                onmouseover="this.style.background='rgb(242, 124, 17)'; this.style.color='white';" 
                onmouseout="this.style.background='transparent'; this.style.color='rgb(242, 124, 17)';">ℹ</a>
         </h1>
-        <p>The <b>NPC Biography System</b> allows you to create custom character profiles that AI NPCs will use during roleplay.</p>
-        <p>Upload biographies individually or in bulk via CSV files. All custom entries override default templates.</p>
+        <p class="page-subtitle">Create custom character profiles for AI NPCs during roleplay</p>
     </div>
 
     <div class="indent5">

@@ -1407,18 +1407,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         text-align: center;
         margin-bottom: 30px;
         padding: 20px;
-        background: #2a2a2a;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
     }
 
     .page-header h1 {
-        margin-bottom: 15px;
+        margin-bottom: 8px;
         font-family: 'MagicCards', serif;
         word-spacing: 8px;
         font-size: 2.2em;
         color: rgb(242, 124, 17);
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    
+    .page-subtitle {
+        margin: 0 0 10px 0;
+        color: #bbb;
+        font-size: 1.1em;
+        line-height: 1.6;
+    }
+    
+    .page-note {
+        color: #f0ad4e;
+        font-size: 0.9em;
+        margin: 10px 0 0 0;
+    }
+    
+    .info-link {
+        display: inline-block;
+        margin-left: 15px;
+        color: rgb(242, 124, 17);
+        text-decoration: none;
+        font-size: 0.7em;
+        vertical-align: top;
+        border: 2px solid rgb(242, 124, 17);
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        text-align: center;
+        line-height: 20px;
+        transition: all 0.3s ease;
+    }
+    
+    .info-link:hover {
+        background: rgb(242, 124, 17);
+        color: white;
+        box-shadow: 0 2px 8px rgba(242, 124, 17, 0.4);
     }
 
     .page-header h3 {
@@ -1444,11 +1480,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /* Form Container Styling */
     .form-container {
-        background: #2a2a2a;
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
         padding: 25px;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
         margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .form-container:hover {
+        border-color: rgba(242, 124, 17, 0.3);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.05);
     }
 
     .button-group {
@@ -1467,11 +1510,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     .content-section {
-        background: #2a2a2a;
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
         padding: 25px;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
         margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .content-section:hover {
+        border-color: rgba(242, 124, 17, 0.3);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.05);
     }
 
     .full-width-section {
@@ -1482,9 +1532,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .response-container {
         margin-top: 15px;
         padding: 15px;
-        background-color: #2c2c2c;
-        border: 1px solid #4a4a4a;
-        border-radius: 5px;
+        background: linear-gradient(135deg, rgba(44, 44, 44, 0.8), rgba(38, 38, 38, 0.9));
+        border: 1px solid #3a3a3a;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.02);
     }
 
     .voice-grid {
@@ -1499,10 +1550,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         justify-content: space-between;
         align-items: center;
         padding: 8px 12px;
-        background-color: #3a3a3a;
-        border: 1px solid #555555;
-        border-radius: 4px;
+        background: linear-gradient(135deg, rgba(58, 58, 58, 0.8), rgba(48, 48, 48, 0.9));
+        border: 1px solid #3a3a3a;
+        border-radius: 6px;
         color: #f8f9fa;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .speaker-item:hover {
+        background: linear-gradient(135deg, rgba(68, 68, 68, 0.9), rgba(58, 58, 58, 1));
+        border-color: rgba(242, 124, 17, 0.3);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     .copy-btn {
@@ -1617,14 +1676,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         display: flex;
         gap: 10px;
         margin-bottom: 30px;
-        border-bottom: 2px solid #4a4a4a;
+        border-bottom: 2px solid rgba(242, 124, 17, 0.2);
         padding-bottom: 10px;
     }
 
     .tab-btn {
         padding: 12px 24px;
-        background: #2a2a2a;
-        border: 2px solid #4a4a4a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.8), rgba(34, 34, 34, 0.9));
+        border: 2px solid #3a3a3a;
         border-bottom: none;
         border-radius: 8px 8px 0 0;
         color: #cfd8e3;
@@ -1633,20 +1692,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         font-weight: 600;
         transition: all 0.3s ease;
         margin-bottom: -2px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .tab-btn:hover {
-        background: #3a3a3a;
+        background: linear-gradient(180deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 1));
         color: rgb(242, 124, 17);
+        border-color: rgba(242, 124, 17, 0.3);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     .tab-btn.active {
-        background: #2a2a2a;
-        border-color: rgb(242, 124, 17);
-        border-bottom: 2px solid #2a2a2a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-color: rgba(242, 124, 17, 0.5);
+        border-bottom: 2px solid rgba(42, 42, 42, 0.95);
         color: rgb(242, 124, 17);
         position: relative;
         z-index: 1;
+        box-shadow: 0 4px 8px rgba(242, 124, 17, 0.2);
     }
 
     .tab-content {
@@ -1669,17 +1732,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         justify-content: space-between;
         align-items: center;
         padding: 12px 16px;
-        background-color: #3a3a3a;
+        background: linear-gradient(135deg, rgba(58, 58, 58, 0.8), rgba(48, 48, 48, 0.9));
         cursor: pointer;
-        border: 1px solid #555555;
-        border-radius: 6px;
+        border: 1px solid #3a3a3a;
+        border-radius: 8px;
         color: #f8f9fa;
         transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .voice-status-item:hover {
-        background-color: #4a4a4a;
-        border-color: rgb(242, 124, 17);
+        background: linear-gradient(135deg, rgba(74, 74, 74, 0.9), rgba(64, 64, 64, 1));
+        border-color: rgba(242, 124, 17, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     .voice-status-item .voice-name {
@@ -1794,13 +1859,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="page-header">
         <h1>Voice Management 
             <a href="https://dwemerdynamics.hostwiki.io/en/Auto-TTS-Voices" target="_blank" rel="noopener" 
-               style="display: inline-block; margin-left: 15px; color: rgb(242, 124, 17); text-decoration: none; font-size: 0.7em; vertical-align: top; border: 2px solid rgb(242, 124, 17); border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 20px; transition: all 0.3s ease;" 
-               title="View detailed documentation about TTS Voice Configuration"
-               onmouseover="this.style.background='rgb(242, 124, 17)'; this.style.color='white';" 
-               onmouseout="this.style.background='transparent'; this.style.color='rgb(242, 124, 17)';">ℹ</a>
+               class="info-link" 
+               title="View detailed documentation about TTS Voice Configuration">ℹ</a>
         </h1>
-        <p>Manage voice samples across multiple TTS providers: XTTS/Chatterbox, Cartesia, and Inworld.</p>
-        <p style="color: #f0ad4e; font-size: 0.9em; margin-top: 10px;"><strong>Note:</strong> If you switch between XTTS and Chatterbox, you must resync your voices by clicking "Sync All Voices" below.</p>
+        <p class="page-subtitle">Manage voice samples across multiple TTS providers: XTTS/Chatterbox, Cartesia, and Inworld</p>
+        <p class="page-note"><strong>Note:</strong> If you switch between XTTS and Chatterbox, you must resync your voices by clicking "Sync All Voices" below.</p>
     </div>
 
     <!-- Tab Navigation -->

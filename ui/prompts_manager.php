@@ -310,13 +310,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         text-align: center;
         margin-bottom: 30px;
         padding: 20px;
-        background: #2a2a2a;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
     }
 
     .page-header h1 {
-        margin: 0 0 10px 0;
+        margin: 0 0 8px 0;
         font-family: 'MagicCards', serif !important;
         word-spacing: 8px;
         font-size: 2.5em;
@@ -325,27 +326,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         letter-spacing: 2px;
     }
 
-    .page-header p {
-        color: #b0b0b0;
+    .page-subtitle {
+        color: #bbb;
         margin: 0;
+        font-size: 1.1em;
+        line-height: 1.6;
     }
 
     /* Info boxes */
     .info-box, .warning-box {
         margin-bottom: 25px;
         padding: 20px;
-        border-radius: 8px;
+        border-radius: 10px;
         border: 1px solid;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.02);
     }
 
     .info-box {
-        background: rgba(100, 149, 237, 0.1);
-        border-color: rgb(100, 149, 237);
+        background: linear-gradient(135deg, rgba(100, 149, 237, 0.1), rgba(100, 149, 237, 0.05));
+        border-color: rgba(100, 149, 237, 0.3);
     }
 
     .warning-box {
-        background: rgba(242, 124, 17, 0.1);
-        border-color: rgb(242, 124, 17);
+        background: linear-gradient(135deg, rgba(242, 124, 17, 0.1), rgba(242, 124, 17, 0.05));
+        border-color: rgba(242, 124, 17, 0.3);
     }
 
     .info-box h3, .warning-box h3 {
@@ -361,12 +365,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     /* Table container */
     .table-container {
-        background: #2a2a2a;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
         max-height: 600px;
         overflow-y: auto;
         overflow-x: auto;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
     }
     
     /* Sticky table header */
@@ -383,8 +388,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     .prompts-table thead {
-        background: #1a1a1a;
-        border-bottom: 2px solid rgb(242, 124, 17);
+        background: linear-gradient(180deg, rgba(26, 26, 26, 0.95), rgba(20, 20, 20, 0.98));
+        border-bottom: 2px solid rgba(242, 124, 17, 0.5);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
     .prompts-table th {
@@ -399,11 +405,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     .prompts-table tbody tr {
         border-bottom: 1px solid #3a3a3a;
-        transition: background-color 0.2s ease;
+        transition: background-color 0.2s ease, box-shadow 0.2s ease;
     }
 
     .prompts-table tbody tr:hover {
-        background: #333;
+        background: rgba(242, 124, 17, 0.05);
+        box-shadow: inset 0 0 10px rgba(242, 124, 17, 0.1);
     }
 
     .prompts-table td {
@@ -478,61 +485,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     .btn {
         padding: 6px 12px;
-        border: none;
-        border-radius: 4px;
+        border: 1px solid rgba(58, 58, 58, 0.5);
+        border-radius: 6px;
         cursor: pointer;
         font-size: 0.85em;
         transition: all 0.2s ease;
         margin: 2px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
     }
 
     .btn-edit {
-        background: rgb(100, 149, 237);
+        background: linear-gradient(135deg, rgba(100, 149, 237, 0.9), rgba(80, 129, 217, 0.9));
         color: white;
+        border-color: rgba(100, 149, 237, 0.3);
     }
 
     .btn-edit:hover {
-        background: rgb(80, 129, 217);
+        background: linear-gradient(135deg, rgba(80, 129, 217, 1), rgba(60, 109, 197, 1));
+        border-color: rgba(100, 149, 237, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
     }
 
     .btn-clear {
-        background: rgb(242, 124, 17);
+        background: linear-gradient(135deg, rgba(242, 124, 17, 0.9), rgba(222, 104, 0, 0.9));
         color: white;
+        border-color: rgba(242, 124, 17, 0.3);
     }
 
     .btn-clear:hover {
-        background: rgb(222, 104, 0);
+        background: linear-gradient(135deg, rgba(222, 104, 0, 1), rgba(202, 84, 0, 1));
+        border-color: rgba(242, 124, 17, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
     }
 
     .btn-save {
-        background: #4CAF50;
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0.9), rgba(69, 160, 73, 0.9));
         color: white;
+        border-color: rgba(76, 175, 80, 0.3);
     }
 
     .btn-save:hover {
-        background: #45a049;
+        background: linear-gradient(135deg, rgba(69, 160, 73, 1), rgba(62, 145, 66, 1));
+        border-color: rgba(76, 175, 80, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
     }
 
     .btn-cancel {
-        background: #888;
+        background: linear-gradient(135deg, rgba(136, 136, 136, 0.9), rgba(102, 102, 102, 0.9));
         color: white;
+        border-color: rgba(136, 136, 136, 0.3);
     }
 
     .btn-cancel:hover {
-        background: #666;
+        background: linear-gradient(135deg, rgba(102, 102, 102, 1), rgba(85, 85, 85, 1));
+        border-color: rgba(136, 136, 136, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
     }
 
     /* Import/Export section */
     .import-export-section {
-        background: #2a2a2a;
-        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-radius: 10px;
         padding: 20px;
         margin-bottom: 25px;
-        border: 1px solid #4a4a4a;
+        border: 1px solid #3a3a3a;
         display: flex;
         gap: 20px;
         align-items: center;
         flex-wrap: wrap;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .import-export-section:hover {
+        border-color: rgba(242, 124, 17, 0.3);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.05);
     }
 
     .import-export-section h3 {
@@ -586,40 +613,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     .btn-export {
-        background: rgb(100, 149, 237);
+        background: linear-gradient(135deg, rgba(100, 149, 237, 0.9), rgba(80, 129, 217, 0.9));
         color: white;
         padding: 10px 20px;
-        border: none;
-        border-radius: 4px;
+        border: 1px solid rgba(100, 149, 237, 0.3);
+        border-radius: 6px;
         cursor: pointer;
         font-size: 1em;
-        transition: background 0.2s ease;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+        text-decoration: none;
+        display: inline-block;
     }
 
     .btn-export:hover {
-        background: rgb(80, 129, 217);
+        background: linear-gradient(135deg, rgba(80, 129, 217, 1), rgba(60, 109, 197, 1));
+        border-color: rgba(100, 149, 237, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
     }
 
     .btn-import {
-        background: rgb(242, 124, 17);
+        background: linear-gradient(135deg, rgba(242, 124, 17, 0.9), rgba(222, 104, 0, 0.9));
         color: white;
         padding: 10px 20px;
-        border: none;
-        border-radius: 4px;
+        border: 1px solid rgba(242, 124, 17, 0.3);
+        border-radius: 6px;
         cursor: pointer;
         font-size: 1em;
-        transition: background 0.2s ease;
+        transition: all 0.2s ease;
         margin-top: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
     }
 
     .btn-import:hover {
-        background: rgb(222, 104, 0);
+        background: linear-gradient(135deg, rgba(222, 104, 0, 1), rgba(202, 84, 0, 1));
+        border-color: rgba(242, 124, 17, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
     }
 
     .btn-import:disabled {
-        background: #666;
+        background: linear-gradient(135deg, rgba(102, 102, 102, 0.6), rgba(85, 85, 85, 0.6));
         cursor: not-allowed;
         opacity: 0.5;
+        border-color: rgba(102, 102, 102, 0.3);
     }
 
     /* Modal styles */
@@ -636,23 +672,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     .modal-content {
-        background-color: #2a2a2a;
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.98), rgba(34, 34, 34, 0.98));
         margin: 2% auto;
         padding: 0;
-        border: 2px solid rgb(242, 124, 17);
-        border-radius: 8px;
+        border: 2px solid rgba(242, 124, 17, 0.5);
+        border-radius: 10px;
         width: 90%;
         max-width: 1200px;
         max-height: 90vh;
         display: flex;
         flex-direction: column;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px rgba(255, 255, 255, 0.03);
     }
 
     .modal-header {
         padding: 20px;
-        background: #1a1a1a;
-        border-bottom: 1px solid #4a4a4a;
-        border-radius: 6px 6px 0 0;
+        background: linear-gradient(180deg, rgba(26, 26, 26, 0.95), rgba(20, 20, 20, 0.98));
+        border-bottom: 1px solid rgba(242, 124, 17, 0.3);
+        border-radius: 8px 8px 0 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
     .modal-header h2 {
@@ -670,10 +708,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     .modal-footer {
         padding: 15px 20px;
-        background: #1a1a1a;
-        border-top: 1px solid #4a4a4a;
+        background: linear-gradient(180deg, rgba(26, 26, 26, 0.95), rgba(20, 20, 20, 0.98));
+        border-top: 1px solid rgba(242, 124, 17, 0.3);
         text-align: right;
-        border-radius: 0 0 6px 6px;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.2);
     }
 
     .close {
@@ -704,18 +743,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     .form-control {
         width: 100%;
         padding: 12px;
-        background: #1a1a1a;
-        border: 1px solid #4a4a4a;
-        border-radius: 4px;
+        background: rgba(26, 26, 26, 0.8);
+        border: 1px solid #3a3a3a;
+        border-radius: 6px;
         color: #e0e0e0;
         font-family: 'Courier New', monospace;
         font-size: 14px;
         line-height: 1.5;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
     }
 
     .form-control:focus {
         outline: none;
         border-color: rgb(242, 124, 17);
+        box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+        background: rgba(26, 26, 26, 0.95);
     }
 
     textarea.form-control {
@@ -724,9 +766,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     .readonly-content {
-        background: #252525;
+        background: linear-gradient(135deg, rgba(37, 37, 37, 0.8), rgba(32, 32, 32, 0.9));
         padding: 15px;
-        border-radius: 4px;
+        border-radius: 6px;
         border: 1px solid #3a3a3a;
         font-family: 'Courier New', monospace;
         color: #999;
@@ -734,6 +776,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         max-height: 200px;
         overflow-y: auto;
         line-height: 1.5;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
     /* Toast notification */
@@ -804,8 +847,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     </div>
 
     <div class="page-header">
-        <h1>⚙️ Prompts Manager</h1>
-        <p>Manage system and custom prompts used throughout CHIM</p>
+        <h1>Prompts Manager</h1>
+        <p class="page-subtitle">Manage system and custom prompts used throughout CHIM</p>
     </div>
 
     <div class="info-box">
