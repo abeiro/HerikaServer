@@ -1109,10 +1109,10 @@ function getTimeColor($time) {
             }
 
             // Display Memory Configuration Status
-            echo "<div style='background: #1e2938; border: 1px solid #3d4e68; border-radius: 8px; padding: 20px; margin: 15px 0;'>";
+            echo "<div style='background: #1a1a1a; border: 1px solid #3a3a3a; border-radius: 8px; padding: 20px; margin: 15px 0;'>";
             echo "<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;'>";
-            echo "<h3 style='margin: 0; color: #e0e0e0;'>💭 Memory System Configuration</h3>";
-            echo "<a href='" . $webRoot . "/ui/global_settings.php' target='_blank' class='btn-base btn-primary' style='font-size: 13px; padding: 6px 12px;'>⚙️ Configure Settings</a>";
+            echo "<h3 style='margin: 0; color: rgb(242, 124, 17); word-spacing: 5px;'>💭 Memory System Configuration</h3>";
+            echo "<a href='" . $webRoot . "/ui/core/config_hub.php?tab=globals' target='_blank' class='btn-base btn-primary' style='font-size: 13px; padding: 6px 12px;'>⚙️ Configure Settings</a>";
             echo "</div>";
             
             // Get memory settings
@@ -1126,46 +1126,46 @@ function getTimeColor($time) {
             
             // Status indicator helper
             $statusIcon = function($enabled) {
-                return $enabled ? "<span style='color: #28a745;'>✓ Enabled</span>" : "<span style='color: #dc3545;'>✗ Disabled</span>";
+                return $enabled ? "<span style='color: #4caf50;'>✓ Enabled</span>" : "<span style='color: #f44336;'>✗ Disabled</span>";
             };
             
             echo "<div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;'>";
             
             // Memory System Status
-            echo "<div style='background: #2a3f5f; padding: 12px; border-radius: 5px;'>";
-            echo "<div style='font-weight: bold; margin-bottom: 8px; color: #a0b0c0;'>Memory System</div>";
+            echo "<div style='background: #2a2a2a; padding: 15px; border-radius: 5px; border: 1px solid #3a3a3a;'>";
+            echo "<div style='font-weight: bold; margin-bottom: 8px; color: rgb(242, 124, 17); font-size: 14px;'>Memory System</div>";
             echo "<div style='font-size: 14px;'>" . $statusIcon($memoryEnabled) . "</div>";
             echo "</div>";
             
             // TXT2VEC Status
-            echo "<div style='background: #2a3f5f; padding: 12px; border-radius: 5px;'>";
-            echo "<div style='font-weight: bold; margin-bottom: 8px; color: #a0b0c0;'>TXT2VEC (Embeddings)</div>";
+            echo "<div style='background: #2a2a2a; padding: 15px; border-radius: 5px; border: 1px solid #3a3a3a;'>";
+            echo "<div style='font-weight: bold; margin-bottom: 8px; color: rgb(242, 124, 17); font-size: 14px;'>TXT2VEC (Embeddings)</div>";
             echo "<div style='font-size: 14px;'>" . $statusIcon($useText2Vec) . "</div>";
-            echo "<div style='font-size: 12px; color: #8090a0; margin-top: 4px;'>URL: " . htmlspecialchars($txtaiUrl) . "</div>";
+            echo "<div style='font-size: 12px; color: #aaa; margin-top: 4px;'>URL: " . htmlspecialchars($txtaiUrl) . "</div>";
             echo "</div>";
             
             // Auto-Create Summaries
-            echo "<div style='background: #2a3f5f; padding: 12px; border-radius: 5px;'>";
-            echo "<div style='font-weight: bold; margin-bottom: 8px; color: #a0b0c0;'>Auto-Create Summaries</div>";
+            echo "<div style='background: #2a2a2a; padding: 15px; border-radius: 5px; border: 1px solid #3a3a3a;'>";
+            echo "<div style='font-weight: bold; margin-bottom: 8px; color: rgb(242, 124, 17); font-size: 14px;'>Auto-Create Summaries</div>";
             echo "<div style='font-size: 14px;'>" . $statusIcon($autoCreateSummary) . "</div>";
-            echo "<div style='font-size: 12px; color: #8090a0; margin-top: 4px;'>Interval: " . htmlspecialchars($summaryInterval) . " (in-game time units)</div>";
+            echo "<div style='font-size: 12px; color: #aaa; margin-top: 4px;'>Interval: " . htmlspecialchars($summaryInterval) . " (in-game time units)</div>";
             echo "</div>";
             
             // Memory Context Settings
-            echo "<div style='background: #2a3f5f; padding: 12px; border-radius: 5px;'>";
-            echo "<div style='font-weight: bold; margin-bottom: 8px; color: #a0b0c0;'>Context Settings</div>";
-            echo "<div style='font-size: 12px; color: #e0e0e0;'>Time Delay: " . htmlspecialchars($memoryDelay) . " minutes</div>";
-            echo "<div style='font-size: 12px; color: #e0e0e0; margin-top: 4px;'>Context Size: " . htmlspecialchars($memoryContextSize) . " memories</div>";
+            echo "<div style='background: #2a2a2a; padding: 15px; border-radius: 5px; border: 1px solid #3a3a3a;'>";
+            echo "<div style='font-weight: bold; margin-bottom: 8px; color: rgb(242, 124, 17); font-size: 14px;'>Context Settings</div>";
+            echo "<div style='font-size: 12px; color: #f8f9fa;'>Time Delay: " . htmlspecialchars($memoryDelay) . " minutes</div>";
+            echo "<div style='font-size: 12px; color: #f8f9fa; margin-top: 4px;'>Context Size: " . htmlspecialchars($memoryContextSize) . " memories</div>";
             echo "</div>";
             
             echo "</div>"; // Close grid
             
             // Warning if TXT2VEC is not enabled
             if (!$useText2Vec) {
-                echo "<div style='background: #6c4a00; border-left: 4px solid #ffc107; padding: 12px; margin-top: 15px; border-radius: 4px;'>";
-                echo "<strong>⚠️ Warning:</strong> TXT2VEC is disabled. Memory embeddings will not be generated. ";
+                echo "<div style='background: #2a2a2a; border-left: 4px solid rgb(242, 124, 17); padding: 12px; margin-top: 15px; border-radius: 4px;'>";
+                echo "<strong style='color: rgb(242, 124, 17);'>⚠️ Warning:</strong> <span style='color: #f8f9fa;'>TXT2VEC is disabled. Memory embeddings will not be generated. ";
                 echo "Mind Map visualization and advanced memory search will not work. ";
-                echo "<a href='" . $webRoot . "/ui/global_settings.php' target='_blank' style='color: #ffd54f; text-decoration: underline;'>Enable it in Global Settings</a>";
+                echo "<a href='" . $webRoot . "/ui/core/config_hub.php?tab=globals' target='_blank' style='color: rgb(242, 124, 17); text-decoration: underline;'>Enable it in Global Settings</a></span>";
                 echo "</div>";
             }
             
