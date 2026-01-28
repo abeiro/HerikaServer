@@ -253,11 +253,6 @@ h1.api-title {
 
 <main>
 
-<div class="page-header">
-    <h1 class="api-title">CHIM NPCs</h1>
-    <p class="page-subtitle">Manage NPC biographies, personalities, and AI behaviors</p>
-</div>
-
 <?php
 $GLOBALS["db"] = new sql();
 $npc = new NpcMaster();
