@@ -759,8 +759,8 @@ function current_value(string $flatName, array $currentConf) {
         box-shadow: inset 0 1px rgba(255, 255, 255, 0.05);
     }
     .provider-body { display:flex; gap:8px; align-items:center; }
-    .provider-body.grid { display:grid; grid-template-columns: 220px 1fr; gap:8px 12px; align-items:center; }
-    .provider-body.grid .help { grid-column: 1 / -1; margin-top:6px; color:#bbb; font-size:12px; }
+    .provider-body.grid { display:grid; grid-template-columns: 1fr; gap:8px; align-items:start; }
+    .provider-body.grid .help { margin-top:6px; color:#bbb; font-size:12px; }
     .provider-body input[type="text"], .provider-body input[type="url"], .provider-body input[type="number"], .provider-body input[type="password"], .provider-body select, .provider-body textarea { 
         flex: 1; 
         background-color: rgba(26, 26, 26, 0.8); 
