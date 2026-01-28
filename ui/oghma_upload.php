@@ -646,40 +646,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     .tab-navigation {
         display: flex;
         border-bottom: 2px solid #4a4a4a;
-        margin-bottom: 30px;
-        background: #2a2a2a;
-        border-radius: 8px 8px 0 0;
+        margin-bottom: 28px;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-radius: 10px 10px 0 0;
+        border: 1px solid #3a3a3a;
+        border-bottom: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
     }
 
     .tab-button {
         flex: 1;
-        padding: 15px 20px;
-        background: #3a3a3a;
+        padding: 16px 20px;
+        background: transparent;
         color: rgb(242, 124, 17);
         border: none;
         cursor: pointer;
         font-family: 'MagicCards', serif;
-        font-size: 18px;
+        font-size: 17px;
         font-weight: bold;
         word-spacing: 8px;
         transition: all 0.3s ease;
-        border-radius: 8px 8px 0 0;
+        border-radius: 10px 10px 0 0;
         text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        position: relative;
     }
 
     .tab-button:first-child {
-        border-right: 1px solid #4a4a4a;
+        border-right: 1px solid rgba(74, 74, 74, 0.5);
     }
 
     .tab-button.active {
-        background: rgb(242, 124, 17);
-        color: #000;
+        background: linear-gradient(180deg, rgba(242, 124, 17, 0.15), rgba(242, 124, 17, 0.05));
+        color: rgb(242, 124, 17);
         font-weight: bold;
-        text-shadow: 1px 1px 2px rgba(255,255,255,0.3);
+        text-shadow: 1px 1px 3px rgba(242, 124, 17, 0.3);
+        box-shadow: inset 0 -3px 0 rgb(242, 124, 17);
     }
 
     .tab-button:hover:not(.active) {
-        background: #4a4a4a;
+        background: rgba(74, 74, 74, 0.3);
         color: rgb(255, 140, 30);
     }
 
@@ -707,10 +712,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     .content-section {
-        background: #2a2a2a;
-        padding: 25px;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        padding: 22px;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
+                    inset 0 1px rgba(255, 255, 255, 0.03);
+        transition: border-color 0.2s ease;
+    }
+
+    .content-section:hover {
+        border-color: #4a4a4a;
     }
 
     .content-section h2 {
@@ -718,8 +730,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         color: rgb(242, 124, 17);
         text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         word-spacing: 6px;
-        margin-bottom: 15px;
-        font-size: 1.4em;
+        margin-bottom: 18px;
+        font-size: 1.35em;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(242, 124, 17, 0.2);
     }
 
     .full-width-section {
@@ -731,18 +745,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         color: rgb(242, 124, 17);
         text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         word-spacing: 6px;
-        margin-bottom: 15px;
-        font-size: 1.6em;
+        margin-bottom: 18px;
+        font-size: 1.5em;
         text-align: center;
+        padding-bottom: 14px;
+        border-bottom: 1px solid rgba(242, 124, 17, 0.2);
     }
 
     /* Form Improvements */
     .form-container {
-        background: #2a2a2a;
-        padding: 25px;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        padding: 22px;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
         margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
+                    inset 0 1px rgba(255, 255, 255, 0.03);
+    }
+
+    .content-section label,
+    .form-container label {
+        display: block;
+        font-size: 13px;
+        color: rgb(242, 124, 17);
+        font-weight: 600;
+        margin-bottom: 8px;
+        margin-top: 14px;
+    }
+
+    .content-section label:first-of-type,
+    .form-container label:first-of-type {
+        margin-top: 0;
+    }
+
+    .content-section input[type="text"],
+    .content-section input[type="file"],
+    .content-section textarea,
+    .form-container input[type="text"],
+    .form-container input[type="file"],
+    .form-container textarea {
+        background-color: rgba(26, 26, 26, 0.8);
+        color: #e9efff;
+        border: 1px solid #3a3a3a;
+        padding: 10px 12px;
+        border-radius: 6px;
+        width: 100%;
+        margin-bottom: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .content-section input:focus,
+    .content-section textarea:focus,
+    .form-container input:focus,
+    .form-container textarea:focus {
+        border-color: rgba(242, 124, 17, 0.5);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+    }
+
+    .content-section p {
+        color: #aaa;
+        font-size: 0.95em;
+        line-height: 1.5;
+        margin: 8px 0;
+    }
+
+    .content-section code {
+        background: rgba(26, 26, 26, 0.8);
+        padding: 2px 6px;
+        border-radius: 3px;
+        color: #ffeb3b;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
     }
 
     .button-group {
@@ -763,20 +837,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     /* Header Styling */
     .page-header {
         text-align: center;
-        margin-bottom: 30px;
-        padding: 20px;
-        background: #2a2a2a;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        margin-bottom: 28px;
+        padding: 24px 20px;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(28, 28, 28, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     }
 
     .page-header h1 {
-        margin-bottom: 15px;
+        margin-bottom: 10px;
         font-family: 'MagicCards', serif;
         word-spacing: 8px;
-        font-size: 2.2em;
+        font-size: 2em;
         color: rgb(242, 124, 17);
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .page-header p {
+        color: #aaa;
+        font-size: 0.95em;
+        margin: 8px 0;
+        line-height: 1.5;
+    }
+
+    .page-header h3 {
+        color: rgb(242, 124, 17);
+        font-size: 1.1em;
+        margin-top: 20px;
+        margin-bottom: 8px;
+    }
+
+    .page-header h4 {
+        color: #ccc;
+        font-size: 1em;
+        margin-bottom: 12px;
     }
 
     #title-text {
@@ -800,18 +895,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     /* Logic Section Styling */
     .logic-section {
         margin: 25px 0;
-        padding: 20px;
-        background: #1a1a1a;
-        border-radius: 8px;
-        border: 2px solid rgb(242, 124, 17);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        padding: 22px;
+        background: linear-gradient(135deg, rgba(26, 26, 26, 0.95), rgba(20, 20, 20, 0.98));
+        border-radius: 10px;
+        border: 1px solid rgba(242, 124, 17, 0.3);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3),
+                    inset 0 1px rgba(242, 124, 17, 0.05);
     }
 
     .logic-title {
         text-align: center;
         color: rgb(242, 124, 17);
         margin-bottom: 20px;
-        font-size: 1.3em;
+        font-size: 1.25em;
         font-weight: bold;
         text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         font-family: 'MagicCards', serif;
@@ -820,38 +916,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     .logic-steps {
         display: grid;
-        gap: 15px;
+        gap: 12px;
     }
 
     .logic-step {
         display: flex;
         align-items: flex-start;
         gap: 15px;
-        padding: 15px;
-        background: #2a2a2a;
-        border-radius: 6px;
+        padding: 16px;
+        background: rgba(42, 42, 42, 0.8);
+        border-radius: 8px;
         border-left: 4px solid rgb(242, 124, 17);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
     .logic-step:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(242, 124, 17, 0.2);
+        transform: translateX(4px);
+        box-shadow: 0 4px 12px rgba(242, 124, 17, 0.25),
+                    0 2px 8px rgba(0, 0, 0, 0.3);
     }
 
     .step-number {
         flex-shrink: 0;
-        width: 30px;
-        height: 30px;
-        background: rgb(242, 124, 17);
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, rgb(242, 124, 17), rgb(212, 94, 0));
         color: #000;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: bold;
-        font-size: 14px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        font-size: 15px;
+        box-shadow: 0 2px 6px rgba(242, 124, 17, 0.4),
+                    inset 0 1px rgba(255, 255, 255, 0.3);
     }
 
     .step-content {
@@ -861,23 +960,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     .step-content strong {
         color: rgb(242, 124, 17);
         display: block;
-        margin-bottom: 5px;
-        font-size: 1.1em;
+        margin-bottom: 6px;
+        font-size: 1.05em;
     }
 
     .step-content p {
         margin: 0;
-        line-height: 1.4;
-        color: #e0e0e0;
+        line-height: 1.5;
+        color: #d0d0d0;
     }
 
     .step-content code {
-        background: #4a4a4a;
-        padding: 2px 6px;
-        border-radius: 3px;
+        background: rgba(74, 74, 74, 0.8);
+        padding: 3px 7px;
+        border-radius: 4px;
         color: #ffeb3b;
         font-family: 'Courier New', monospace;
         font-size: 0.9em;
+        border: 1px solid rgba(255, 235, 59, 0.2);
     }
 
     .step-content em {
@@ -899,41 +999,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         margin: 80px auto 40px auto !important;
         max-width: 800px !important;
         width: 90% !important;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.98), rgba(34, 34, 34, 0.98));
+        border-radius: 12px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .modal-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid rgba(242, 124, 17, 0.2);
+    }
+
+    .modal-title {
+        color: rgb(242, 124, 17);
+        font-family: 'MagicCards', serif;
+        font-size: 1.4em;
+        margin: 0;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
     }
 
     .modal-body {
         max-height: calc(100vh - 300px);
         overflow-y: auto;
-        padding-right: 15px;
+        padding: 20px 24px;
+        padding-right: 20px;
     }
 
     /* Form field spacing */
     .modal-body label {
         display: block;
-        margin-top: 15px;
+        margin-top: 16px;
         color: rgb(242, 124, 17);
-        font-weight: bold;
+        font-weight: 600;
+        font-size: 13px;
+    }
+
+    .modal-body label:first-of-type {
+        margin-top: 0;
     }
 
     .modal-body small {
         display: block;
-        color: #888;
-        margin-bottom: 5px;
+        color: #999;
+        margin-bottom: 6px;
+        font-size: 12px;
+        line-height: 1.4;
     }
 
     .modal-body input[type="text"],
+    .modal-body input[type="number"],
     .modal-body textarea {
         width: 100%;
-        margin-bottom: 15px;
+        margin-bottom: 12px;
+        background-color: rgba(26, 26, 26, 0.8);
+        color: #e9efff;
+        border: 1px solid #3a3a3a;
+        padding: 10px 12px;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+
+    .modal-body input:focus,
+    .modal-body textarea:focus {
+        border-color: rgba(242, 124, 17, 0.5);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
     }
 
     .modal-footer {
         position: sticky;
         bottom: 0;
-        background: #3a3a3a;
-        padding: 15px 0;
+        background: rgba(42, 42, 42, 0.98);
+        padding: 16px 24px;
         margin-top: 20px;
-        border-top: 1px solid #4a4a4a;
+        border-top: 1px solid rgba(242, 124, 17, 0.2);
+        border-radius: 0 0 12px 12px;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
     }
 
     /* Table container height adjustment */
@@ -942,6 +1085,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         margin-top: 20px;
         width: 100%;
         overflow-x: auto;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
+                    inset 0 1px rgba(255, 255, 255, 0.03);
+        padding: 12px;
     }
 
     /* Table styling improvements */
@@ -949,6 +1098,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         width: 100%;
         table-layout: fixed;
         border-collapse: collapse;
+    }
+
+    .table-container th {
+        padding: 12px 10px;
+        font-weight: bold;
+        text-align: left;
+        vertical-align: top;
+        color: rgb(242, 124, 17);
+        background: rgba(26, 26, 26, 0.6);
+        border-bottom: 2px solid rgba(242, 124, 17, 0.3);
+        font-size: 0.95em;
+    }
+
+    .table-container td {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+        vertical-align: top;
+        padding: 10px;
+        line-height: 1.5;
+        border-bottom: 1px solid rgba(74, 74, 74, 0.3);
+        color: #d0d0d0;
+    }
+
+    .table-container tr:hover td {
+        background: rgba(242, 124, 17, 0.05);
     }
 
     /* Column width optimization */
@@ -1006,15 +1181,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         overflow-wrap: break-word;
         hyphens: auto;
         vertical-align: top;
-        padding: 8px;
-        line-height: 1.4;
+        padding: 10px;
+        line-height: 1.5;
+        border-bottom: 1px solid rgba(74, 74, 74, 0.3);
+        color: #d0d0d0;
     }
 
     .table-container th {
-        padding: 10px 8px;
+        padding: 12px 10px;
         font-weight: bold;
         text-align: left;
         vertical-align: top;
+        color: rgb(242, 124, 17);
+        background: rgba(26, 26, 26, 0.6);
+        border-bottom: 2px solid rgba(242, 124, 17, 0.3);
+        font-size: 0.95em;
     }
 
     /* Responsive table for smaller screens */
@@ -1047,11 +1228,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     /* Filter improvements */
     .filter-section {
-        background: #2a2a2a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
         padding: 20px;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
         margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
+                    inset 0 1px rgba(255, 255, 255, 0.03);
+    }
+
+    .filter-section strong {
+        color: rgb(242, 124, 17);
+        font-size: 1.05em;
     }
 
     .action-container {
@@ -1061,12 +1249,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         flex-wrap: wrap;
         gap: 15px;
         margin-bottom: 20px;
+        padding: 16px;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
 
     .search-container {
         display: flex;
         gap: 10px;
         min-width: 300px;
+    }
+
+    .search-container input[type="text"] {
+        flex-grow: 1;
+        padding: 10px 12px;
+        border-radius: 6px;
+        border: 1px solid #3a3a3a;
+        background-color: rgba(26, 26, 26, 0.8);
+        color: #e9efff;
+        transition: all 0.2s ease;
+    }
+
+    .search-container input:focus {
+        border-color: rgba(242, 124, 17, 0.5);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
     }
 
     /* Responsive Design */
