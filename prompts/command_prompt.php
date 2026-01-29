@@ -28,7 +28,7 @@ if (!isset($GLOBALS["PLAYER_NAME"]) || $GLOBALS["PLAYER_NAME"] === '') {
     $GLOBALS["PLAYER_NAME"] = $safePlayerName;
 }
 
-$COMMAND_PROMPT = "Don't write narrations.";
+$COMMAND_PROMPT = "";
 
 // Database Prompt (Command Prompt)
 $COMMAND_PROMPT_FUNCTIONS="\n\n#Available Actions\nUse if your character needs to perform an action:";

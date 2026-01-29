@@ -29,7 +29,8 @@ listener $$ &
 LISTENER_PID=$!
 
 # Set trap for clean exit (still useful for SIGTERM, etc.)
-trap "kill $LISTENER_PID 2>/dev/null" EXIT
+# Also kills relationship worker daemon and cleans up PID file
+trap "kill $LISTENER_PID 2>/dev/null; pkill -f 'relationship_system/worker.php.*--daemon' 2>/dev/null; rm -f /var/www/html/HerikaServer/log/relationship_worker.pid 2>/dev/null" EXIT
 
 # Main loop
 while true; do 

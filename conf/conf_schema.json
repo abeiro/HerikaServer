@@ -7,6 +7,8 @@
   "PROMPT_HEAD": {"userlvl":"pro","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "PLAYER_BIOS": {"userlvl":"pro","type":"longstring","description":"Player character description. Any info here will be known by all AI NPC's."},
   "PLAYER_SPEECH_STYLE":{"type":"longstring","description":"Instructions for how the player character speaks and communicates. This will be used as context when rewriting player dialogue.","scope":"global"},
+  "PROMPT_TIMESTAMP": {"userlvl":"basic","type":"boolean","description":"Add rough timestamp subdividers to event context (e.g., 'Moments Ago', 'A while ago') to help the AI NPCs understand when events happend.","scope":"global"},
+  "use_emotions_expression": {"userlvl":"basic","type":"boolean","description":"Emotions expression support.","scope":"global"},
   "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"Basic Summary of the NPC.","helpurl":"https://dwemerdynamics.hostwiki.io/en/Profiles"},
   "HERIKA_BACKGROUND": {"userlvl":"basic","type":"longstring","description":"NPC Background. <br> Detailed history, origins, and past experiences that shaped this character.<br>","helpurl":"https://dwemerdynamics.hostwiki.io/en/Profiles"},
   "HERIKA_PERSONALITY": {"userlvl":"basic","type":"longstring","description":"NPC Personality Traits. <br> Detailed character traits, behavioral patterns, and psychological characteristics.<br>","helpurl":"https://dwemerdynamics.hostwiki.io/en/Profiles"},
@@ -47,6 +49,7 @@
   "HIDE_NARRATOR_DIALOGUE": {"userlvl":"basic","type":"boolean","description":"Hide Narrator-spoken dialogue lines from NPC context.","scope":"global"},
   "QUEST_COMMENT":{"type":"boolean","userlvl":"basic","description":"Will trigger AI (NPCs and Narrator) to talk about new objectives in your current active quest. Will trigger a lot of events on a new character, so leave disabled until you complete the tutorial!"},
   "QUEST_COMMENT_CHANCE":{"type":"select","userlvl":"basic","values":["10%","25%","50%","75%","100%"],"description":"Chance that an AI Quest Comment will happen every time a quest updates."},
+  "QUEST_COMMENT_COOLDOWN": {"type":"integer","userlvl":"basic","description":"Minimum time in minutes between quest comments. Default: 3 minutes","scope":"global"},
   "CURRENT_TASK": {"userlvl":"basic","type":"boolean","description":"Include the current Dynamic AI Objective to the AI NPC's prompt. Disable this if the AI NPC becomes fixated on the task."},
   "RPG_COMMENTS": {"type":"selectmultiple","values":["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"],"description":"Pick which comments you want a chance to trigger when one of these ingame events happens."},
   "DETECT_MAGIC_EVENT": {"userlvl":"basic","type":"boolean","scope":"global","description":"Enable detection and logging of spellcasting events. When disabled, spellcast events will not be logged to the context log."},
@@ -85,6 +88,8 @@
   "CORE_CONNECTOR_MEDIUMTERM": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to generate longer memories summaries after every 10 memory summaries. Can be enabled in CHIM NPC page. Recommend to user a smaller LLM."},
   "CORE_CONNECTOR_PROFILES": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to update CHIM NPC Dynamic Profiles. Recommend to use a 🕹️Standard LLM.","scope":"global"},
   "CORE_CONNECTOR_OGHMA_CUSTOM": {"userlvl": "basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for custom Oghma LLM topic extraction. Will be slower than MiniMe T5 and slow down responses. Recommend to use a very very 🏃‍♀️‍➡️Fast LLM.","scope": "global"},
+  "RELATIONSHIP_SYSTEM_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","description":"Enable the Relationship Management System. When enabled, NPCs will dynamically form and update relationships based on conversations and events. Requires RELLLM_CONNECTOR to be configured.","_title":"Relationship System"},
+  "RELLLM_CONNECTOR": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for Relationship Management system. Analyzes and updates NPC relationships. Recommend to use a 🏃‍♀️‍➡️Fast LLM with ❄️low temperature (0.1-0.3) for consistent evaluations.","scope":"global"},
   "CLEAN_CONTEXT_FOCUS_CHAT_HISTORY": {"userlvl":"basic","type": "integer","description": "Historic context to use when Focus on Chat mode. Should be lower than normal context.","scope":"global"},
   "BGL_TRIGGER_DAYS": {"userlvl":"basic","type": "integer","description": "RECOMMEND TO NOT GO BELOW 5 DAYS! Number of in-game days between Background Life events. NPCs will generate thoughts and take actions based on this interval. Default: 5 days. Range: 1-30 days.","scope":"global"},
   "CONNECTOR": {
@@ -228,7 +233,7 @@
       "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro! Will connect automatically so do not change the URL. Does not currently support Chat Assist/Creation.","helpurl":"https://dwemerdynamics.hostwiki.io/en/Online-LLMs#player2"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","piper-tts","mimic3","deepgram","cartesia"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","piper-tts","mimic3","deepgram","cartesia","inworld"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
 
   "TTS": {
     "_title":"Text-to-Speech Service",
@@ -244,7 +249,10 @@
       "endpoint":{"type":"url","description":"Leave as is if using CHIM XTTS. If you want to use Mantella XTTS then click[HOST PC IP]. [WSL IP] will set it back to point to CHIM XTTS.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chim-xtts"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
-      "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS XTTSFASTAPI voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"}
+      "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS XTTSFASTAPI voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"},
+      "PARALINGUISTIC_TAGS_ENABLED":{"type":"boolean","description":"Enable paralinguistic tags like [laugh], [sigh] for expressive TTS output.","scope":"global"},
+      "PARALINGUISTIC_TAGS_PROMPT":{"type":"longstring","description":"Prompt snippet instructing the LLM to use paralinguistic tags. Added to system prompt when enabled.","scope":"global"},
+      "PARALINGUISTIC_TAGS_LIST":{"type":"string","description":"Comma-separated list of supported paralinguistic tags (e.g., [laugh],[sigh],[gasp]). Tags are case-insensitive.","scope":"global"}
     },
     "MIMIC3": {
       "_title":"MIMIC3 (Installed in DwemerDistro)",
@@ -357,9 +365,18 @@
       "language": {"type":"select","values":["en","fr","de","es","pt","zh","ja","hi","it","ko","nl","pl","ru","sv","tr","tl","bg","ro","ar","cs","el","fi","hr","ms","sk","da","ta","uk","hu","no","vi","bn","th","he","ka","id","te","gu","kn","ml","mr","pa"],"description":"Language to use for TTS generation. Sonic 3 supports 42 languages."},
       "model_id": {"type":"select","values":["sonic-3","sonic-english","sonic-multilingual"],"description":"Cartesia model to use. sonic-3 is the latest model with 42 languages, volume/speed/emotion controls. Use sonic-3-2025-10-27 to pin a specific snapshot.","helpurl":"https://docs.cartesia.ai/"},
       "speed": {"type":"select","values":["slowest","slow","normal","fast","fastest"],"description":"Speaking speed for the voice"}
+    },
+    "INWORLD": {
+      "_title": "Inworld TTS",
+      "workspace": {"type":"string","description":"Inworld workspace ID (required for voice cloning). Format: workspaces/{workspace} or just the workspace ID.","helpurl":"https://docs.inworld.ai/"},
+      "voiceid": {"type":"string","description":"Voice file name. Works the same as CHIM-XTTS voiceid. Will only work with voices in your Voice Cache. Voice will be automatically cloned to Inworld when first used.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
+      "language": {"type":"select","values":["EN_US","ZH_CN","KO_KR","JA_JP","RU_RU","IT_IT","ES_ES","PT_BR","DE_DE","FR_FR","AR_SA","PL_PL","NL_NL","HI_IN","HE_IL"],"description":"Language to use for TTS generation. Uses regional language codes."},
+      "model_id": {"type":"select","values":["inworld-tts-1","inworld-tts-1-max"],"description":"Inworld model to use. inworld-tts-1 is the standard model, inworld-tts-1-max is the higher quality model.","helpurl":"https://docs.inworld.ai/docs/tts/tts-models"},
+      "temperature": {"type":"number","description":"Sampling temperature (0-2). Higher values make output more random. Default: 1.1"},
+      "speed": {"type":"number","description":"Speaking rate/speed (0.5-1.5). Default: 1.0"}
     }
 },
-  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","piper-tts","azure","11labs","openai","kokoro","zonos_gradio","cartesia"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
+  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","piper-tts","azure","11labs","openai","kokoro","zonos_gradio","cartesia","inworld"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
   "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
   "TTSFUNCTION_PLAYER_VOICE_ID": {"type":"integer","userlvl":"pro","scope":"global","description":"Speaker ID to select a voice from multi-voice model."},
   "TTSFUNCTION_PLAYER_LANGUAGE": {"type":"string","userlvl":"basic","scope":"global","description":"Overrides the TTS language for the player character."},

@@ -188,7 +188,7 @@ if (Translation::isTextEnabled()) {
                     <strong>500 = Internal Server Error</strong>
                     <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
                         <li>The audio file for the voice ID does not exist</li>
-                        <li>CHIM XTTS = Sync Voices in XTTS Management page</li>
+                        <li>XTTS/Chatterbox = Sync Voices in XTTS/Chatterbox Management page</li>
                         <li>MeloTTS= Use one of the 
                             <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options#melotts-voice-ids" target="_blank">approved voice IDs</a>
                         </li>
@@ -199,7 +199,7 @@ if (Translation::isTextEnabled()) {
                     <strong>404 = Not Found</strong>
                     <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
                         <li>The URL is not valid for your TTS server</li>
-                        <li>CHIM XTTS = If locally installed make sure it is http://127.0.0.1:8020. If its on the cloud verify the URL from the cloud provider </li>
+                        <li>XTTS/Chatterbox = If locally installed make sure it is http://127.0.0.1:8020. If its on the cloud verify the URL from the cloud provider </li>
                         <li>MeloTTS= Make sure it is http://127.0.0.1:8084</li>
                         <li>xVASynth = Make sure you have the URL pointed to your PC's IP address. 
                             <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options" target="_blank">Read this guide.</a>

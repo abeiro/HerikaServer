@@ -5,7 +5,7 @@ function renderSelect($obj, $fieldName, $labelText, $selectedValue = "") {
     if (!is_array($options) || count($options)===0) {
         if ($fieldName === 'llm_formatter_id') {
             try {
-                $options = $GLOBALS["db"]->fetchAll("SELECT id, COALESCE(NULLIF(label,''), model) AS label FROM core_llm_connector ORDER BY id ASC");
+                $options = $GLOBALS["db"]->fetchAll("SELECT id, COALESCE(NULLIF(label,''), model) AS label FROM core_llm_connector ORDER BY LOWER(COALESCE(NULLIF(label,''), model)) ASC");
             } catch (Throwable $_e) { $options = []; }
         }
     }
@@ -27,7 +27,7 @@ function getSelectOptions($obj, $fieldName) {
     if (!is_array($options) || count($options)===0) {
         if ($fieldName === 'llm_formatter_id') {
             try {
-                $options = $GLOBALS["db"]->fetchAll("SELECT id, COALESCE(NULLIF(label,''), model) AS label FROM core_llm_connector ORDER BY id ASC");
+                $options = $GLOBALS["db"]->fetchAll("SELECT id, COALESCE(NULLIF(label,''), model) AS label FROM core_llm_connector ORDER BY LOWER(COALESCE(NULLIF(label,''), model)) ASC");
             } catch (Throwable $_e) { $options = []; }
         }
     }

@@ -13,14 +13,23 @@ define("PLAYER_REFID","0x00000014");
 
 class SkyrimCommandBuilder
 {
-    // === Actor Commands (cmdID 199) ===
+    // === Actor Commands (cmdID 1-199) ===
     public $Actor;
 
-    // === ObjectReference Commands (cmdID 100199) ===
+    // === ObjectReference Commands (cmdID 100-199) ===
     public $ObjectReference;
 
-    // === FormList Commands (cmdID 200299) ===
+    // === FormList Commands (cmdID 200-299) ===
     public $FormList;
+
+    // === EffectShader Commands (cmdID 300-399) ===
+    public $EffectShader;
+
+    
+    // === ActorUtil Commands (cmdID 400-499) ===
+    public $ActorUtil;
+
+
 
     public function __construct()
     {
@@ -403,6 +412,10 @@ class SkyrimCommandBuilder
             public function RemoveFromAllFactions(string $targetObjectFormId): array {
                 return $this->builder->build(80, compact('targetObjectFormId'));
             }
+
+            public function EvaluatePackage(string $targetObjectFormId): array {
+                return $this->builder->build(81, compact('targetObjectFormId'));
+            }
         };
 
         $this->ObjectReference = new class($this) {
@@ -624,20 +637,74 @@ class SkyrimCommandBuilder
                 return $this->builder->build(202, compact('targetObjectFormId'));
             }
         };
+
+        $this->EffectShader = new class($this) {
+            private $builder;
+
+            public function __construct($builder) {
+                $this->builder = $builder;
+            }
+
+            // 300
+            public function Play(string $targetObjectFormId, string $akObject, float $afDuration): array {
+                return $this->builder->build(300, compact('targetObjectFormId', 'akObject','afDuration'));
+            }
+
+            // 301
+            public function Stop(string $targetObjectFormId, string $akObject): array {
+                return $this->builder->build(301, compact('targetObjectFormId','akObject'));
+            }
+
+        };
+
+
+        $this->ActorUtil = new class($this) {
+            private $builder;
+
+            public function __construct($builder) {
+                $this->builder = $builder;
+            }
+
+            // 400
+            public function AddPackageOverride(string $targetObjectFormId, string $akActor, string $apForm,int $aiPriority): array {
+                return $this->builder->build(400, compact('targetObjectFormId', 'akActor','apForm','aiPriority'));
+            }
+
+             // 401
+            public function SetLinkedRef(string $targetObjectFormId, string $akActor, string $asRef): array {
+                return $this->builder->build(401, compact('targetObjectFormId', 'akActor','asRef'));
+            }
+
+            // 490
+            public function SpawnDoor(string $targetObjectFormId, string $akTargetRef, string $asName): array {
+                return $this->builder->build(490, compact('targetObjectFormId', 'akTargetRef', 'asName'));
+            }
+
+        };
     }
 
     public function build(int $cmdID, array $params): array {
         return array_merge(['cmdID' => $cmdID], $params);
     }
 
-    public function send($cmd) {
+    public function getLoadOrderESP(): string{
+        $hexFormId = $GLOBALS["db"]->fetchOne("select value from conf_opts where id='aiagent_rolemastered_faction'");
+        if (!$hexFormId ) {
+            throw new Exception("Configuration 'aiagent_rolemastered_faction' not set.");
+        }
+        //Extract ESP index from FormID
+        $espIndexHex = substr($hexFormId["value"], 0, 2);
+        return $espIndexHex;
+    }
+
+    public function send($cmd,$localts = null) {
 
         $strJson=json_encode($cmd);
 
         $GLOBALS["db"]->insert(
             'responselog',
             [
-                'localts' => time(),
+                'localts' => $localts??time(),
                 'sent'    => 0,
                 'actor'   => "rolemaster",
                 'text'    => "",

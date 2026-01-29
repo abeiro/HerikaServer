@@ -42,7 +42,7 @@ if (!isset($data['actor_name']) || !isset($data['actor_type'])) {
     exit;
 }
 
-$npcMaster = new NpcMaster($GLOBALS["db"]);
+$npcMaster = new NpcMaster();
 
 try {
     switch ($data['type']) {
@@ -66,6 +66,15 @@ try {
             break;
         case 'skyrim_stats':
             handleSkyrimStatsUpdate($data);
+            break;
+         case 'furniture':
+            $currentData = $npcMaster->getByName($data["actor_name"]);
+            if ($currentData) {
+                $meta = $npcMaster->getMetadata($currentData);
+                $meta['furniture'] = $data['furniture'];    
+                            $currentData = $npcMaster->setMetadata($currentData, $meta);
+                $npcMaster->updateByArray($currentData);
+            }
             break;
         default:
             http_response_code(400);

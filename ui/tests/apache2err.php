@@ -212,7 +212,12 @@ function readRegularLog($logPath, $logName) {
                     }
 
                     echo '<div class="log-entry ' . $levelClass . '">';
-                    echo '<div class="timestamp">' . htmlspecialchars($entry['timestamp']) . '</div>';
+                    $isoTimestamp = timestampToISO8601($entry['timestamp']);
+                    if ($isoTimestamp !== null) {
+                        echo '<div class="timestamp" data-utc="' . htmlspecialchars($isoTimestamp) . '">' . htmlspecialchars($entry['timestamp']) . '</div>';
+                    } else {
+                        echo '<div class="timestamp">' . htmlspecialchars($entry['timestamp']) . '</div>';
+                    }
                     echo '<div class="log-level">' . htmlspecialchars($entry['level']) . '</div>';
                     echo '<div class="log-message">' . htmlspecialchars($entry['message']) . '</div>';
                     echo '</div>';
@@ -365,10 +370,10 @@ function outputLLMBlock($block) {
     
     echo '<div class="log-entry llm-block">';
     echo '<div class="timestamp">';
-    echo '<span class="time-label">Start:</span> ' . htmlspecialchars($block['start_time']);
+    echo '<span class="time-label">Start:</span> <span class="time-value" data-utc="' . htmlspecialchars($block['start_time']) . '">' . htmlspecialchars($block['start_time']) . '</span>';
     if (isset($block['end_time'])) {
         echo ' <span class="time-separator">→</span> ';
-        echo '<span class="time-label">End:</span> ' . htmlspecialchars($block['end_time']);
+        echo '<span class="time-label">End:</span> <span class="time-value" data-utc="' . htmlspecialchars($block['end_time']) . '">' . htmlspecialchars($block['end_time']) . '</span>';
     }
     echo '<span class="copy-llm-btn" title="Copy to clipboard">📋</span>';
     echo '</div>';
@@ -464,7 +469,7 @@ function outputLLMContextBlock($block) {
     
     echo '<div class="log-entry llm-block">';
     echo '<div class="timestamp">';
-    echo '<span class="time-label">Time:</span> ' . htmlspecialchars($block['timestamp']);
+    echo '<span class="time-label">Time:</span> <span class="time-value" data-utc="' . htmlspecialchars($block['timestamp']) . '">' . htmlspecialchars($block['timestamp']) . '</span>';
     echo '<span class="copy-llm-btn" title="Copy to clipboard">📋</span>';
     echo '</div>';
     echo '<div class="log-message">';
@@ -563,7 +568,12 @@ function readErrorLog($errorLogPath, $logType, $showAllEntries = false) {
 
         foreach ($entries as $entry) {
             echo '<div class="log-entry ' . $entry['level_class'] . '">';
-            echo '<div class="timestamp">' . htmlspecialchars($entry['timestamp']) . '</div>';
+            $isoTimestamp = timestampToISO8601($entry['timestamp']);
+            if ($isoTimestamp !== null) {
+                echo '<div class="timestamp" data-utc="' . htmlspecialchars($isoTimestamp) . '">' . htmlspecialchars($entry['timestamp']) . '</div>';
+            } else {
+                echo '<div class="timestamp">' . htmlspecialchars($entry['timestamp']) . '</div>';
+            }
             echo '<div class="log-level">' . strtoupper(htmlspecialchars($entry['level'])) . '</div>';
             echo '<div class="log-module">' . htmlspecialchars($entry['module']) . '</div>';
             echo '<div class="log-message">' . htmlspecialchars($entry['message']) . '</div>';
@@ -603,6 +613,30 @@ function parseApacheTimestamp($timestamp) {
     }
     
     return false;
+}
+
+// Helper function to convert timestamp string to ISO 8601 format for timezone conversion
+function timestampToISO8601($timestamp) {
+    // Try to parse the timestamp
+    $time = parseApacheTimestamp($timestamp);
+    if ($time !== false) {
+        // Create DateTime object from timestamp (assumes server timezone)
+        $date = new DateTime('@' . $time);
+        // Convert to UTC and return ISO 8601
+        $date->setTimezone(new DateTimeZone('UTC'));
+        return $date->format('c'); // ISO 8601 format
+    }
+    
+    // If parsing fails, try strtotime directly
+    $time = strtotime($timestamp);
+    if ($time !== false) {
+        $date = new DateTime('@' . $time);
+        $date->setTimezone(new DateTimeZone('UTC'));
+        return $date->format('c');
+    }
+    
+    // If all parsing fails, return null (won't add data-utc attribute)
+    return null;
 }
 
 // Helper function to create valid IDs from log names
@@ -1393,6 +1427,235 @@ if (isset($_GET['download_logs'])) {
             background-color: #20c997;
             color: white;
         }
+
+        /* AI Assistant Sidebar Styles */
+        .ai-sidebar {
+            position: fixed;
+            top: 0;
+            right: -450px;
+            width: 450px;
+            height: 100vh;
+            background-color: #1a1a1a;
+            border-left: 1px solid #4a4a4a;
+            z-index: 2000;
+            transition: right 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .ai-sidebar.open {
+            right: 0;
+        }
+
+        body.ai-sidebar-open {
+            overflow: hidden;
+        }
+
+        body.ai-sidebar-open main {
+            margin-right: 450px;
+            transition: margin-right 0.3s ease;
+        }
+
+        main {
+            transition: margin-right 0.3s ease;
+        }
+
+        body.ai-sidebar-open .grid-container {
+            margin-right: 0;
+        }
+
+        .ai-sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #4a4a4a;
+            background-color: #252526;
+        }
+
+        .ai-sidebar-header h2 {
+            margin: 0;
+            color: rgb(242, 124, 17);
+            font-size: 1.4em;
+            border: none;
+            padding: 0;
+        }
+
+        .ai-sidebar-close {
+            background: none;
+            border: none;
+            color: #f8f9fa;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .ai-sidebar-close:hover {
+            background-color: #444;
+        }
+
+        .ai-sidebar-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .ai-model-selector {
+            margin-bottom: 15px;
+        }
+
+        .ai-model-selector label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: #d4d4d4;
+        }
+
+        .ai-model-selector select {
+            width: 100%;
+            padding: 8px;
+            background-color: #2c2c2c;
+            color: #f8f9fa;
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .ai-chat-history {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #2c2c2c;
+            border-radius: 6px;
+            border: 1px solid #3a3a3a;
+        }
+
+        .ai-chat-message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 6px;
+            line-height: 1.5;
+        }
+
+        .ai-chat-message.user {
+            background-color: #204e7a;
+            margin-left: 20px;
+        }
+
+        .ai-chat-message.assistant {
+            background-color: #2a3a2a;
+            margin-right: 20px;
+        }
+
+        .ai-chat-message.error {
+            background-color: #4a2a2a;
+            color: #ff6b6b;
+        }
+
+        .ai-chat-message-role {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .ai-chat-message-content {
+            font-size: 0.95em;
+        }
+
+        .ai-chat-message-content pre {
+            background-color: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .ai-chat-message-content code {
+            background-color: #1a1a1a;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .ai-chat-message-content ul,
+        .ai-chat-message-content ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .ai-chat-input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .ai-chat-input {
+            flex: 1;
+            padding: 10px;
+            background-color: #2c2c2c;
+            color: #f8f9fa;
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+            resize: vertical;
+            min-height: 60px;
+            max-height: 150px;
+            font-family: 'Futura CondensedLight', Arial, sans-serif;
+        }
+
+        .ai-send-button {
+            padding: 10px 20px;
+            background-color: #176529;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            align-self: flex-end;
+        }
+
+        .ai-send-button:hover:not(:disabled) {
+            background-color: #125121;
+        }
+
+        .ai-send-button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .ai-loading-indicator {
+            text-align: center;
+            padding: 10px;
+            color: #9fb1c9;
+            font-style: italic;
+        }
+
+        .ai-chat-history::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .ai-chat-history::-webkit-scrollbar-track {
+            background: #2c2c2c;
+        }
+
+        .ai-chat-history::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        .ai-chat-history::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
     </style>
 </head>
 <body>
@@ -1428,6 +1691,17 @@ if (isset($_GET['download_logs'])) {
                 <path d="M8 0a1 1 0 0 1 1 1v6h2.586l-2.293 2.293a1 1 0 0 1-1.414 0L5.586 7H8V1a1 1 0 0 1 1-1zM4 11h8a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2z"/>
             </svg>
             Download All Logs
+        </button>
+        <button class="refresh-button" id="timezoneToggle" style="margin-left: 10px;" title="Toggle between UTC and local browser time">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right:6px;">
+                <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+            </svg>
+            Timezone: UTC
+        </button>
+        <button class="refresh-button" id="aiAssistantToggle" style="margin-left: 10px;" title="Open AI Analyzer">
+            <img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" width="20" height="20" style="margin-right:6px; vertical-align: middle; border-radius: 3px;">
+            AI Analyzer
         </button>
     </div>
     <h2>Last 2000 lines from each log are displayed here. The full logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">View the log folder.</a></h2>
@@ -1542,9 +1816,10 @@ if (isset($_GET['download_logs'])) {
                         $time = new DateTime($error['created_at']);
                         $time->setTimezone(new DateTimeZone('UTC'));
                         $timestamp = $time->format('Y-m-d H:i:s');
+                        $isoTimestamp = $time->format('c'); // ISO 8601 format for conversion
                         
                         echo '<div class="log-entry error-entry">';
-                        echo '<div class="timestamp">' . htmlspecialchars($timestamp) . ' UTC</div>';
+                        echo '<div class="timestamp" data-utc="' . htmlspecialchars($isoTimestamp) . '" data-timezone-label="UTC">' . htmlspecialchars($timestamp) . ' UTC</div>';
                         echo '<div class="error-message">';
                         echo '<strong>Request:</strong> ' . htmlspecialchars($error['request']) . '<br>';
                         echo '<strong>Result:</strong> ' . htmlspecialchars($error['result']);
@@ -1567,6 +1842,45 @@ if (isset($_GET['download_logs'])) {
     </div>
 </div>
 </main>
+
+<!-- AI Assistant Sidebar -->
+<div class="ai-sidebar" id="aiSidebar">
+    <div class="ai-sidebar-header">
+        <h2><img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" width="28" height="28" style="vertical-align: middle; margin-right: 8px; border-radius: 4px;"> AI Analyzer</h2>
+        <button class="ai-sidebar-close" id="aiSidebarClose">&times;</button>
+    </div>
+    <div class="ai-sidebar-body">
+        <div class="ai-model-selector">
+            <label for="ai-model-select">Model (Requires OpenRouter API Key):</label>
+            <select id="ai-model-select">
+                <option value="anthropic/claude-sonnet-4">Claude Sonnet 4.5</option>
+                <option value="anthropic/claude-opus-4">Claude Opus 4.5</option>
+            </select>
+        </div>
+        
+        <div class="ai-chat-history" id="ai-chat-history">
+            <div class="ai-chat-message assistant">
+                <div class="ai-chat-message-role">CHIM</div>
+                <div class="ai-chat-message-content">
+                    Hello! I an a AI Analyzer, your log analysis assistant. I can help you:
+                    <ul>
+                        <li>Debug LLM connection issues</li>
+                        <li>Analyze failed requests</li>
+                        <li>Query the database with SQL</li>
+                        <li>Review log files</li>
+                        <li>Find patterns and errors</li>
+                    </ul>
+                    Ask me anything about the logs!
+                </div>
+            </div>
+        </div>
+        
+        <div class="ai-chat-input-container">
+            <textarea id="ai-chat-input" class="ai-chat-input" placeholder="Ask about logs, request SQL queries, or ask for help debugging..."></textarea>
+            <button id="ai-send-button" class="ai-send-button">Send</button>
+        </div>
+    </div>
+</div>
 
 <!-- Modals -->
 <div id="errorLogModal" class="modal">
@@ -1790,6 +2104,14 @@ function refreshLogs() {
                     container.innerHTML = newContainer.innerHTML;
                 }
             });
+            
+            // Re-apply timezone conversion if in local mode
+            const timezoneMode = localStorage.getItem('chim_logs_timezone') || 'utc';
+            if (timezoneMode === 'local' && typeof window.convertTimestamps === 'function') {
+                setTimeout(() => {
+                    window.convertTimestamps(true);
+                }, 100);
+            }
         })
         .catch(error => {
             console.error('Error refreshing logs:', error);
@@ -1965,6 +2287,14 @@ function openModal(modalId, sourceId) {
         }
         modal.style.display = 'block';
         
+        // Apply timezone conversion if in local mode
+        const timezoneMode = localStorage.getItem('chim_logs_timezone') || 'utc';
+        if (timezoneMode === 'local' && typeof window.convertTimestamps === 'function') {
+            setTimeout(() => {
+                window.convertTimestamps(true);
+            }, 50);
+        }
+        
         // Initialize search functionality for the modal
         const modalSearchInput = modal.querySelector('.modal-search-input');
         if (modalSearchInput) {
@@ -2085,55 +2415,295 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// JavaScript for copy to clipboard
-document.addEventListener('DOMContentLoaded', () => {
-    document.body.addEventListener('click', function(event) {
-        if (event.target.classList.contains('copy-llm-btn')) {
-            const llmBlock = event.target.closest('.llm-block');
-            if (llmBlock) {
-                let contentToCopy = '';
-                // Try to find LLM output content (multiple divs)
-                const outputMessages = llmBlock.querySelectorAll('.log-message .llm-content');
-                if (outputMessages.length > 0) {
-                    outputMessages.forEach(msg => {
-                        contentToCopy += msg.textContent.trim() + '\n';
-                    });
-                } else {
-                    // Try to find LLM context content (preformatted text)
-                    const contextMessage = llmBlock.querySelector('.log-message pre.llm-content');
-                    if (contextMessage) {
-                        contentToCopy = contextMessage.textContent;
-                    }
-                }
+// JavaScript for copy to clipboard (with iframe fallback)
+// Fallback copy function for iframes and older browsers
+function copyToClipboardFallback(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.top = '0';
+    textarea.style.left = '0';
+    textarea.style.width = '2em';
+    textarea.style.height = '2em';
+    textarea.style.padding = '0';
+    textarea.style.border = 'none';
+    textarea.style.outline = 'none';
+    textarea.style.boxShadow = 'none';
+    textarea.style.background = 'transparent';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    
+    let success = false;
+    try {
+        success = document.execCommand('copy');
+    } catch (err) {
+        console.error('Fallback copy failed:', err);
+    }
+    
+    document.body.removeChild(textarea);
+    return success;
+}
 
-                contentToCopy = contentToCopy.trim();
+// Main copy function with fallback
+function copyToClipboard(text) {
+    // Try modern clipboard API first
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text)
+            .then(() => true)
+            .catch(err => {
+                console.warn('Clipboard API failed, using fallback:', err);
+                return copyToClipboardFallback(text);
+            });
+    } else {
+        // Use fallback immediately if clipboard API not available
+        return Promise.resolve(copyToClipboardFallback(text));
+    }
+}
 
-                if (contentToCopy) {
-                    navigator.clipboard.writeText(contentToCopy)
-                        .then(() => {
-                            event.target.textContent = '✅'; // Copied!
-                            setTimeout(() => {
-                                event.target.textContent = '📋'; // Reset icon
-                            }, 1500);
-                        })
-                        .catch(err => {
-                            console.error('Failed to copy text: ', err);
-                            event.target.textContent = '❌'; // Error
-                             setTimeout(() => {
-                                event.target.textContent = '📋'; // Reset icon
-                            }, 1500);
-                        });
-                } else {
-                    console.warn('No content found to copy in LLM block:', llmBlock);
-                    event.target.textContent = '❓'; // No content
-                     setTimeout(() => {
-                        event.target.textContent = '📋'; // Reset icon
-                    }, 1500);
+// No need for DOMContentLoaded since this script runs at the end of the body
+document.body.addEventListener('click', function(event) {
+    // Use closest to handle clicks on the button or any child elements (like the emoji)
+    const copyBtn = event.target.closest('.copy-llm-btn');
+    if (copyBtn) {
+        const llmBlock = copyBtn.closest('.llm-block');
+        if (llmBlock) {
+            let contentToCopy = '';
+            // Try to find LLM output content (multiple divs)
+            const outputMessages = llmBlock.querySelectorAll('.log-message .llm-content');
+            if (outputMessages.length > 0) {
+                outputMessages.forEach(msg => {
+                    contentToCopy += msg.textContent.trim() + '\n';
+                });
+            } else {
+                // Try to find LLM context content (preformatted text)
+                const contextMessage = llmBlock.querySelector('.log-message pre.llm-content');
+                if (contextMessage) {
+                    contentToCopy = contextMessage.textContent;
                 }
             }
+
+            contentToCopy = contentToCopy.trim();
+
+            if (contentToCopy) {
+                copyToClipboard(contentToCopy)
+                    .then((success) => {
+                        if (success) {
+                            copyBtn.textContent = '✅'; // Copied!
+                            setTimeout(() => {
+                                copyBtn.textContent = '📋'; // Reset icon
+                            }, 1500);
+                        } else {
+                            copyBtn.textContent = '❌'; // Error
+                            setTimeout(() => {
+                                copyBtn.textContent = '📋'; // Reset icon
+                            }, 1500);
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy text: ', err);
+                        copyBtn.textContent = '❌'; // Error
+                        setTimeout(() => {
+                            copyBtn.textContent = '📋'; // Reset icon
+                        }, 1500);
+                    });
+            } else {
+                console.warn('No content found to copy in LLM block:', llmBlock);
+                copyBtn.textContent = '❓'; // No content
+                setTimeout(() => {
+                    copyBtn.textContent = '📋'; // Reset icon
+                }, 1500);
+            }
+        }
+    }
+});
+
+// Timezone conversion functionality
+(function() {
+    const TIMEZONE_KEY = 'chim_logs_timezone';
+    const UTC_MODE = 'utc';
+    const LOCAL_MODE = 'local';
+    
+    // Get current timezone preference from localStorage (default: UTC)
+    function getTimezoneMode() {
+        return localStorage.getItem(TIMEZONE_KEY) || UTC_MODE;
+    }
+    
+    // Save timezone preference to localStorage
+    function setTimezoneMode(mode) {
+        localStorage.setItem(TIMEZONE_KEY, mode);
+    }
+    
+    // Convert ISO 8601 timestamp to local time string
+    function toLocalTime(isoString) {
+        try {
+            const date = new Date(isoString);
+            if (isNaN(date.getTime())) {
+                return isoString; // Return original if parsing fails
+            }
+            // Format as: YYYY-MM-DD HH:MM:SS (local timezone)
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            const tzOffset = -date.getTimezoneOffset();
+            const tzHours = Math.floor(Math.abs(tzOffset) / 60);
+            const tzMinutes = Math.abs(tzOffset) % 60;
+            const tzSign = tzOffset >= 0 ? '+' : '-';
+            const tzString = `${tzSign}${String(tzHours).padStart(2, '0')}:${String(tzMinutes).padStart(2, '0')}`;
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} ${tzString}`;
+        } catch (e) {
+            return isoString;
+        }
+    }
+    
+    // Convert local time string back to UTC ISO 8601
+    function toUTC(isoString) {
+        try {
+            const date = new Date(isoString);
+            if (isNaN(date.getTime())) {
+                return isoString;
+            }
+            // Return ISO 8601 format in UTC
+            return date.toISOString();
+        } catch (e) {
+            return isoString;
+        }
+    }
+    
+    // Format UTC timestamp (YYYY-MM-DD HH:MM:SS format)
+    function formatUTCTimestamp(isoString) {
+        try {
+            const date = new Date(isoString);
+            if (isNaN(date.getTime())) {
+                return isoString;
+            }
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            const hours = String(date.getUTCHours()).padStart(2, '0');
+            const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+            const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        } catch (e) {
+            return isoString;
+        }
+    }
+    
+    // Store original timestamp text for restoration
+    const originalTimestamps = new Map();
+    
+    // Convert all timestamps on the page
+    function convertTimestamps(toLocal) {
+        // Handle all timestamps with data-utc attribute (database errors, regular logs, Apache logs)
+        document.querySelectorAll('.timestamp[data-utc]').forEach(el => {
+            const utcValue = el.getAttribute('data-utc');
+            const timezoneLabel = el.getAttribute('data-timezone-label') || '';
+            
+            // Store original text if not already stored
+            if (!originalTimestamps.has(el)) {
+                originalTimestamps.set(el, el.textContent);
+            }
+            
+            if (toLocal) {
+                const localTime = toLocalTime(utcValue);
+                // Only add (Local) label if it was a database error (has timezone-label attribute)
+                if (timezoneLabel) {
+                    el.textContent = localTime + ' (Local)';
+                } else {
+                    el.textContent = localTime;
+                }
+            } else {
+                // Restore original timestamp text
+                el.textContent = originalTimestamps.get(el);
+            }
+        });
+        
+        // Handle LLM block timestamps (time-value spans)
+        document.querySelectorAll('.time-value[data-utc]').forEach(el => {
+            const utcValue = el.getAttribute('data-utc');
+            
+            // Store original text if not already stored
+            if (!originalTimestamps.has(el)) {
+                originalTimestamps.set(el, el.textContent);
+            }
+            
+            if (toLocal) {
+                const localTime = toLocalTime(utcValue);
+                el.textContent = localTime;
+            } else {
+                // Restore original ISO 8601 format
+                el.textContent = originalTimestamps.get(el);
+            }
+        });
+    }
+    
+    // Expose convertTimestamps globally for refresh functionality
+    window.convertTimestamps = convertTimestamps;
+    
+    // Initialize timezone toggle
+    document.addEventListener('DOMContentLoaded', function() {
+        const timezoneToggle = document.getElementById('timezoneToggle');
+        if (!timezoneToggle) return;
+        
+        // Set initial state
+        const currentMode = getTimezoneMode();
+        const isLocal = currentMode === LOCAL_MODE;
+        
+        // Update button text
+        timezoneToggle.textContent = isLocal ? 'Timezone: Local' : 'Timezone: UTC';
+        if (isLocal) {
+            timezoneToggle.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right:6px;"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>Timezone: Local';
+        }
+        
+        // Store original timestamps before any conversion
+        document.querySelectorAll('.timestamp[data-utc], .time-value[data-utc]').forEach(el => {
+            if (!originalTimestamps.has(el)) {
+                originalTimestamps.set(el, el.textContent);
+            }
+        });
+        
+        // Convert timestamps on initial load if needed
+        if (isLocal) {
+            convertTimestamps(true);
+        }
+        
+        // Handle toggle click
+        timezoneToggle.addEventListener('click', function() {
+            const currentMode = getTimezoneMode();
+            const newMode = currentMode === UTC_MODE ? LOCAL_MODE : UTC_MODE;
+            const toLocal = newMode === LOCAL_MODE;
+            
+            setTimezoneMode(newMode);
+            convertTimestamps(toLocal);
+            
+            // Update button text
+            if (toLocal) {
+                this.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right:6px;"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>Timezone: Local';
+            } else {
+                this.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right:6px;"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>Timezone: UTC';
+            }
+        });
+        
+        // Re-convert timestamps when modals are opened (in case they were updated)
+        const originalOpenModal = window.openModal;
+        if (typeof originalOpenModal === 'function') {
+            window.openModal = function(modalId, sourceId) {
+                originalOpenModal(modalId, sourceId);
+                const currentMode = getTimezoneMode();
+                if (currentMode === LOCAL_MODE) {
+                    setTimeout(() => {
+                        if (typeof window.convertTimestamps === 'function') {
+                            window.convertTimestamps(true);
+                        }
+                    }, 100);
+                }
+            };
         }
     });
-});
+})();
 
 // Apache log toggle functionality
 document.addEventListener('DOMContentLoaded', function() {
@@ -2152,6 +2722,193 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+</script>
+
+<!-- AI Assistant JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+(function() {
+    const aiSidebar = document.getElementById('aiSidebar');
+    const aiToggleBtn = document.getElementById('aiAssistantToggle');
+    const aiCloseBtn = document.getElementById('aiSidebarClose');
+    const aiChatHistory = document.getElementById('ai-chat-history');
+    const aiChatInput = document.getElementById('ai-chat-input');
+    const aiSendButton = document.getElementById('ai-send-button');
+    const aiModelSelect = document.getElementById('ai-model-select');
+    
+    let conversationHistory = [];
+    let isLoading = false;
+    
+    // Determine webRoot from current script context
+    const webRoot = (function() {
+        const scriptPath = window.location.pathname;
+        const uiPos = scriptPath.indexOf('/ui/');
+        if (uiPos !== -1) {
+            return scriptPath.substring(0, uiPos);
+        }
+        return '';
+    })();
+    
+    // Marked configuration for safe HTML
+    if (typeof marked !== 'undefined') {
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+    }
+    
+    // Toggle sidebar
+    function openSidebar() {
+        aiSidebar.classList.add('open');
+        document.body.classList.add('ai-sidebar-open');
+        aiChatInput.focus();
+    }
+    
+    function closeSidebar() {
+        aiSidebar.classList.remove('open');
+        document.body.classList.remove('ai-sidebar-open');
+    }
+    
+    aiToggleBtn.addEventListener('click', openSidebar);
+    aiCloseBtn.addEventListener('click', closeSidebar);
+    
+    // Close sidebar with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && aiSidebar.classList.contains('open')) {
+            closeSidebar();
+        }
+    });
+    
+    function addMessage(role, content, isError = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'ai-chat-message ' + (isError ? 'error' : role);
+        
+        const roleDiv = document.createElement('div');
+        roleDiv.className = 'ai-chat-message-role';
+        roleDiv.textContent = role === 'user' ? 'You' : (isError ? 'Error' : 'CHIM');
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'ai-chat-message-content';
+        
+        // Use marked for markdown if available, otherwise plain text
+        if (typeof marked !== 'undefined' && !isError) {
+            contentDiv.innerHTML = marked.parse(content);
+        } else {
+            contentDiv.textContent = content;
+        }
+        
+        messageDiv.appendChild(roleDiv);
+        messageDiv.appendChild(contentDiv);
+        aiChatHistory.appendChild(messageDiv);
+        
+        // Scroll to bottom
+        aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
+    }
+    
+    function addLoadingIndicator() {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'ai-loading-indicator';
+        loadingDiv.id = 'ai-loading-indicator';
+        loadingDiv.textContent = 'AI is thinking...';
+        aiChatHistory.appendChild(loadingDiv);
+        aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
+    }
+    
+    function removeLoadingIndicator() {
+        const loadingDiv = document.getElementById('ai-loading-indicator');
+        if (loadingDiv) {
+            loadingDiv.remove();
+        }
+    }
+    
+    async function sendMessage() {
+        if (isLoading) return;
+        
+        const message = aiChatInput.value.trim();
+        if (!message) return;
+        
+        isLoading = true;
+        aiSendButton.disabled = true;
+        aiChatInput.disabled = true;
+        
+        // Add user message to UI
+        addMessage('user', message);
+        
+        // Add to conversation history
+        conversationHistory.push({
+            role: 'user',
+            content: message
+        });
+        
+        // Clear input
+        aiChatInput.value = '';
+        
+        // Show loading
+        addLoadingIndicator();
+        
+        try {
+            const response = await fetch(webRoot + '/ui/cmd/ai_log_assistant.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: message,
+                    model: aiModelSelect.value,
+                    history: conversationHistory
+                })
+            });
+            
+            removeLoadingIndicator();
+            
+            if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.statusText);
+            }
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                addMessage('assistant', 'Error: ' + data.error, true);
+            } else if (data.success && data.message) {
+                addMessage('assistant', data.message);
+                
+                // Add to conversation history
+                conversationHistory.push({
+                    role: 'assistant',
+                    content: data.message
+                });
+            } else {
+                addMessage('assistant', 'Received unexpected response format', true);
+            }
+            
+        } catch (error) {
+            removeLoadingIndicator();
+            addMessage('assistant', 'Failed to communicate with AI: ' + error.message, true);
+            console.error('AI request error:', error);
+        } finally {
+            isLoading = false;
+            aiSendButton.disabled = false;
+            aiChatInput.disabled = false;
+            aiChatInput.focus();
+        }
+    }
+    
+    // Event listeners
+    aiSendButton.addEventListener('click', sendMessage);
+    
+    aiChatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+    
+    // Auto-resize textarea
+    aiChatInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+    });
+})();
 </script>
 
 <?php

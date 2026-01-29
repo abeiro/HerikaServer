@@ -36,6 +36,9 @@ $PROMPTS=array(
     "narration"=>[ 
         "cue"=>[""] // Empty cue - actual prompt loaded from database in main.php
     ],
+    "narrator_welcome"=>[ 
+        "cue"=>[""] // Empty cue - actual prompt loaded in main.php
+    ],
     "location"=>[
             "cue"=>["(Chat as {$GLOBALS["HERIKA_NAME"]})"], // give way to
             "player_request"=>["{$gameRequest[3]} What do you know about this place?"]  //requirement
@@ -72,11 +75,15 @@ $PROMPTS=array(
         ],
         "extra" => shouldTriggerRPGComment("combat_end") ? [] : ["dontuse" => true]
     ],
-    // Database Prompt (Quest)
+    // Database Prompt (Quest) - player_request loaded from database in request.php
     "quest"=>[
         "cue"=>["{$GLOBALS["TEMPLATE_DIALOG"]}"],
         //"player_request"=>"{$GLOBALS["HERIKA_NAME"]}, what should we do about this quest '{$questName}'?"
-        "player_request"=>["{$GLOBALS["HERIKA_NAME"]}, what should we do about this new quest?"]
+        "player_request"=>["{$GLOBALS["HERIKA_NAME"]}, what should we do about this new quest?"] // Fallback - will be overridden in request.php if database prompt exists
+    ],
+    "narrator_quest_comment"=>[
+        "cue"=>["{$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "player_request"=>["{$GLOBALS["HERIKA_NAME"]}, what should we do about this new quest?"] // Fallback - will be overridden in request.php if database prompt exists
     ],
 
     "bleedout"=>[
@@ -204,35 +211,18 @@ $PROMPTS=array(
         
     ],
     // Database Prompt (Rechat)
+    // Encourages natural multi-party conversation - NPCs can address each other directly
     "rechat"=>[ 
         "cue"=>[
-            /*"({$GLOBALS['HERIKA_NAME']} reflects on the topic with the last speaker.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} disagrees politely with the last speaker.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} offers an alternative perspective to the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} shares a personal anecdote related to the topic.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} questions the logic behind the last speakers statement.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} highlights an interesting point in the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} suggests a course of action based on the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} expresses concern about the implications of the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} makes a light-hearted comment to ease the tension.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} shares a related fact or piece of knowledge.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} encourages the last speaker to elaborate further.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} challenges the last speakers viewpoint.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} redirects the conversation to another aspect of the topic.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} expresses curiosity about the topic.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} summarizes the key points of the discussion.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} comments the last speakers insight.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} adds humor to lighten the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} ties the conversation back to a previous discussion.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} subtly shifts the focus of the discussion.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} speculates about potential outcomes of the topic.) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS['HERIKA_NAME']} warns about possible risks tied to the conversation.) {$GLOBALS["TEMPLATE_DIALOG"]}",*/
-            ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]==0)?"Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Consider only one answer and/or action involving a third actor, without repeating your answer for each actor. Keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}"
-                :"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Consider only one answer and/or action involving a third actor, without repeating your answer for each actor. Keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
-            ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]==0)?"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer, keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}"
-                :"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Consider an answer , keep current topic or change it. {$GLOBALS["TEMPLATE_DIALOG"]}",
-            ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]==0)?"Dialogue/action turn for {$GLOBALS['HERIKA_NAME']}. Focus speech and/or action only on one actor. {$GLOBALS["TEMPLATE_DIALOG"]}"
-                :"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Focus speech only on one actor. {$GLOBALS["TEMPLATE_DIALOG"]}"
+            ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]==0)
+                ?"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Respond naturally to whoever just spoke. Address the previous speaker directly. {$GLOBALS["TEMPLATE_DIALOG"]}"
+                :"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Respond to the previous speaker directly. {$GLOBALS["TEMPLATE_DIALOG"]}",
+            ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]==0)
+                ?"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Continue the conversation naturally. Address whoever you're actually responding to. {$GLOBALS["TEMPLATE_DIALOG"]}"
+                :"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Continue naturally. {$GLOBALS["TEMPLATE_DIALOG"]}",
+            ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]==0)
+                ?"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Focus on one actor - respond to whoever just spoke. {$GLOBALS["TEMPLATE_DIALOG"]}"
+                :"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Focus on one actor. {$GLOBALS["TEMPLATE_DIALOG"]}"
         ]
         
     ],
@@ -300,8 +290,8 @@ $PROMPTS=array(
         "cue"=>["{$gameRequest[3]}. {$GLOBALS["HERIKA_NAME"]} should Inspect surroundings to see who is in scene. Write {$GLOBALS["HERIKA_NAME"]}'s dialogue lines without narrations."],
         "player_request"=>["The Narrator: {$gameRequest[3]}"],
     ],
-    "cheatmode"=>[ 
-        "cue"=>["PRIORITY INSTRUCTION -  {$currentNpcData["npc_name"]} must do this, even if breaks character's roleplay: $gameRequest[3]}"],
+    "cheatmode"=>[
+        "cue"=>["PRIORITY INSTRUCTION -  " . ($currentNpcData["npc_name"] ?? $GLOBALS["HERIKA_NAME"] ?? "NPC") . " must do this, even if breaks character's roleplay: $gameRequest[3]}"],
         "player_request"=>[""],
     ],
 );

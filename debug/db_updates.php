@@ -38,6 +38,23 @@ $checkTableExists = function($tablename) {
     return ($result[0]["exists"] == "1")?1:-1;
 };
 
+$checkColumnExists = function($tablename, $columnname) {
+    global $db;
+    $query = "
+        SELECT 1 AS exists 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' AND table_name = '{$tablename}' AND column_name = '{$columnname}'
+    ";
+
+    $result = $db->fetchAll($query);
+
+    if (sizeof($result) == 0) {
+        return -1;
+    }
+
+    return ($result[0]["exists"] == "1") ? 1 : -1;
+};
+
 $updateVersion = function($tablename,$version) {
     global $db;
     $db->execQuery("INSERT INTO public.database_versioning SELECT '$tablename',$version where not exists (SELECT 1 from public.database_versioning where tablename='$tablename')");
@@ -99,75 +116,16 @@ if ($checkTableExists("core_profiles") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_player.sql"));
         $db->execQuery("SET search_path TO public");
     }
+    if ($checkTableExists("core_narrator") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_narrator.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
 } catch (Exception $e) {
     Logger::warn("Bootstrap core tables: " . $e->getMessage());
 }
 
-$__seed_narrator_done = false;
-try {
-    // Seed default Narrator (ID = 1) only on truly fresh installs
-    // Conditions: table exists AND is empty
-    if ($checkTableExists("core_npc_master") == 1) {
-        $cntRows = $db->fetchAll("SELECT COUNT(*) AS c FROM public.core_npc_master");
-        if ($cntRows && intval($cntRows[0]["c"]) === 0) {
-            Logger::info("Seeding core_npc_master with ID 1 'The Narrator' (fresh install)");
-            $db->execQuery(
-                "INSERT INTO public.core_npc_master (
-                    id,
-                    npc_name,
-                    profile_id,
-                    npc_favorite,
-                    lock_profile,
-                    core,
-                    npc_static_bio,
-                    oghma_knowledge_tags,
-                    personality,
-                    occupation,
-                    speechstyle,
-                    goals,
-                    md5,
-                    voiceid,
-                    metadata,
-                    gender,
-                    extended_data,
-                    tags
-                ) VALUES (
-                    1,
-                    'The Narrator',
-                    1,
-                    1,
-                    1,
-                    ".$db->escapeLiteral("The Narrator is a male voice within the player's mind. His job is to help the player as they navigate the world of Tamriel. Provide unique insight and descriptions of what is going on in the world.").",
-                    ".$db->escapeLiteral("A guiding voice that describes the world, events, and transitions. He is not a character, but a voice within the player's mind.").",
-                    'knowall',
-                    'Detached, descriptive, witty, helpful.',
-                    'Narrator',
-                    '',
-                    '',
-                    md5('The Narrator'),
-                    'TheNarrator',
-                    '{}'::jsonb,
-                    'male',
-                    '{}'::jsonb,
-                    'system'
-                )"
-            );
-            $__seed_narrator_done = true;
-            // Optional safety: make sure id sequence remains valid
-            try { $db->execQuery("SELECT setval('public.npc_master_id_seq', GREATEST((SELECT MAX(id) FROM public.core_npc_master), 1), true)"); } catch (Exception $e2) {}
-        }
-    }
-} catch (Exception $e) {
-    Logger::warn("Narrator seed skipped: ".$e->getMessage());
-}
-
-// Defensive repair: ensure The Narrator exists and is bound to profile 1
-try {
-    $db->execQuery("UPDATE public.core_npc_master SET profile_id = 1 WHERE npc_name = 'The Narrator' AND (profile_id IS NULL OR profile_id <> 1)");
-    $db->execQuery("UPDATE public.core_profiles SET default_npc = '1', default_narrator = '1' WHERE id = 1 AND (default_npc IS NULL OR default_npc = '' OR default_narrator IS NULL OR default_narrator = '')");
-} catch (Exception $e) {
-    Logger::warn("Narrator/profile binding repair skipped: ".$e->getMessage());
-}
+// Narrator is now managed via core_narrator table, not core_npc_master
+// Seeding of narrator data happens in the core_narrator migration blocks
 
 $query = "
     SELECT column_name 
@@ -1499,6 +1457,13 @@ if ($checkVersion("dynamic_bio")<20250710001) {
     Logger::info("Applied patch oghma 20250903001");
 //}
 
+if ($checkVersion("oghma")<20260104001) {
+    $query = "DELETE FROM public.oghma WHERE topic = 'dragon_tongue'";
+    $db->execQuery($query);
+    $updateVersion("oghma",20260104001);
+    Logger::info("Applied patch oghma 20260104001 - Removed dragon_tongue entry");
+}
+
 if ($checkVersion("locations")<20250526001) {
     Logger::debug(" try patch: locations 20250526001");
     $db->execQuery("CREATE EXTENSION IF NOT EXISTS pg_trgm;");
@@ -1533,8 +1498,8 @@ if ($checkVersion("audit_request")<20250616001) {
 // - autovacuum / table
 //----------------------------------------------------
 
-if ($checkVersion("db_maintenance")<20250528002) {
-    Logger::debug(" try patch: db_maintenance 20250528002");
+if ($checkVersion("db_maintenance")<20251208001) {
+    Logger::debug(" try patch: db_maintenance 20251208001");
 
     $db->execQuery("DROP FUNCTION IF EXISTS public.sql_exec2(text) CASCADE");
 
@@ -1556,8 +1521,8 @@ if ($checkVersion("db_maintenance")<20250528002) {
         WHERE (pgc.relkind ='r')
         AND (pgn.nspname='public'); ");
 
-    $updateVersion("db_maintenance",20250528002);
-    Logger::info("Applied patch db_maintenance 20250528002");
+    $updateVersion("db_maintenance",20251208001);
+    Logger::info("Applied patch db_maintenance 20251208001");
 }
 
 //----------------------------------------------------
@@ -1787,6 +1752,7 @@ if ($checkTableExists("core_api_badge") > 0 && $checkVersion("core_api_badge") <
         $db->execQuery("UPDATE public.core_api_badge SET label = 'ElevenLabs' WHERE LOWER(label) = 'elevenlabs'");
         $db->execQuery("UPDATE public.core_api_badge SET label = 'Cartesia' WHERE LOWER(label) = 'cartesia'");
         $db->execQuery("UPDATE public.core_api_badge SET label = 'Replicate' WHERE LOWER(label) = 'replicate'");
+        $db->execQuery("UPDATE public.core_api_badge SET label = 'Groq' WHERE LOWER(label) = 'groq'");
         $db->execQuery("UPDATE public.core_api_badge SET label = 'Nano-GPT' WHERE LOWER(label) = 'nano-gpt'");
         $db->execQuery("UPDATE public.core_api_badge SET label = 'DeepL' WHERE LOWER(label) = 'deepl'");
         
@@ -1863,7 +1829,7 @@ if ($checkTableExists("core_npc_master") == -1) {
     Logger::info(__FILE__." core_npc_master exists");
 
 
-if ($checkTableExists("core_profiles") > 0 && $checkVersion("core_profiles") < 20250904005) {
+if (($checkTableExists("core_profiles") > 0) && ($checkVersion("core_profiles") < 20250904005)) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles_2.sql"));
     $db->execQuery("SET search_path TO public");
     // ensure slot column exists for existing installs
@@ -2100,7 +2066,25 @@ try {
     Logger::error("Error creating combined_bio_templates view: " . $e->getMessage());
 }
 
+// Remove DB-layer protection for The Narrator to allow deletion via UI
+// Version 20250124001
+if ($checkVersion("narrator_protection")<20250124001) {
+    Logger::debug("Removing narrator delete/rename protection triggers");
+    try {
+        $db->execQuery("DROP TRIGGER IF EXISTS trg_protect_narrator_delete ON public.core_npc_master");
+        $db->execQuery("DROP FUNCTION IF EXISTS public.protect_narrator_delete() CASCADE");
+        $db->execQuery("DROP TRIGGER IF EXISTS trg_protect_narrator_rename ON public.core_npc_master");
+        $db->execQuery("DROP FUNCTION IF EXISTS public.protect_narrator_rename() CASCADE");
+        $updateVersion("narrator_protection",20250124001);
+        Logger::info("Removed narrator protection triggers");
+    } catch (Exception $e) {
+        Logger::error("Error removing narrator protection triggers: " . $e->getMessage());
+    }
+}
+
 // Enforce DB-layer protection for The Narrator: prevent delete or rename
+// NOTE: This is now commented out to allow narrator deletion from UI
+/*
 try {
     $db->execQuery("DROP FUNCTION IF EXISTS public.protect_narrator_delete() CASCADE");
     $db->execQuery("CREATE OR REPLACE FUNCTION public.protect_narrator_delete() RETURNS trigger AS $$\nBEGIN\n    IF OLD.id = 1 OR OLD.npc_name = 'The Narrator' THEN\n        RAISE EXCEPTION 'Deletion of The Narrator is not allowed';\n    END IF;\n    RETURN OLD;\nEND;\n$$ LANGUAGE plpgsql;");
@@ -2114,6 +2098,7 @@ try {
 } catch (Exception $e) {
     Logger::warn("DB trigger setup for narrator protection failed or already present: ".$e->getMessage());
 }
+*/
 
 //----------------------------------------------------
 // Item descriptions: new tables and combined view
@@ -2184,6 +2169,26 @@ if ($checkVersion("spell_descriptions")<20241129001) {
     
     $updateVersion("spell_descriptions",20241129001);
     Logger::info("Applied patch spell_descriptions 20241129001");
+}
+
+if ($checkVersion("faction_descriptions")<20250115001) {
+    Logger::debug("Applying faction_descriptions 20250115001");
+    
+    $sqlFile = __DIR__ . '/../data/faction_descriptions.sql';
+    if (file_exists($sqlFile)) {
+        $sql = file_get_contents($sqlFile);
+        if ($sql !== false) {
+            $db->execQuery($sql);
+            Logger::info("Imported faction descriptions from faction_descriptions.sql");
+        } else {
+            Logger::warn("Could not read faction_descriptions.sql");
+        }
+    } else {
+        Logger::warn("faction_descriptions.sql not found at $sqlFile");
+    }
+    
+    $updateVersion("faction_descriptions",20250115001);
+    Logger::info("Applied patch faction_descriptions 20250115001");
 }
 
 // Always (re)create combined view once base tables exist
@@ -2263,7 +2268,7 @@ if ($checkTableExists("import_rules") == -1) {
     Logger::info(__FILE__." import_rules exists");
 
 // Usage column
-$db->execQuery("ALTER TABLE audit_request ADD COLUMN IF NOT EXISTS usage jsonb");
+$db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS usage jsonb");
 
 if ($checkTableExists("rumors") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/add_rumors.sql"));
@@ -2275,17 +2280,94 @@ if ($checkTableExists("named_cell") == -1) {
 } else
     Logger::info(__FILE__." named_cell exists");
 
+if ($checkColumnExists("named_cell","vanilla_cell") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/named_cell.sql"));
+    Logger::info(__FILE__." named_cell - vanilla_cell not found! ");
+} else {
+    Logger::info(__FILE__." named_cell - vanilla_cell exists");
+    if ($checkColumnExists("named_cell","door_id") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../data/named_cell.sql"));
+        Logger::info(__FILE__." named_cell - door_id not found! ");
+    } else
+        Logger::info(__FILE__." named_cell - door_id exists");
+}
 
-$db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS region text");
-$db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS hold text");
-$db->execQuery("ALTER TABLE locations ADD COLUMN IF NOT EXISTS tags text");
-$db->execQuery("ALTER TABLE sneq_quests ADD COLUMN IF NOT EXISTS title text");
-$db->execQuery("ALTER TABLE sneq_quests ADD COLUMN IF NOT EXISTS stage text");
+
+if ($checkTableExists("sneq_quests") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/sneq_quests.sql"));
+} else
+    Logger::info(__FILE__." sneq_quests exists");
+
+    
+if ($checkTableExists("sneq_quests_saved") == -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/sneq_quests_saved.sql"));
+} else
+    Logger::info(__FILE__." sneq_quests_saved exists");
+
+
+
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS region text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS hold text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS tags text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS factions text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS is_interior int");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS vanilla_location boolean");
+$db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS title text");
+$db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS stage text");
+$db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS worldspace text");
+$db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS closed int");
+$db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS door_name text");
+$db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS door_x numeric");
+$db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS door_y numeric");
+$db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS gamets bigint");
+$db->execQuery("DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'sneq_quests_saved_id'
+    ) THEN
+        ALTER TABLE public.sneq_quests_saved
+        ADD CONSTRAINT sneq_quests_saved_id
+        PRIMARY KEY (history_id);
+    END IF;
+END $$;");
 
 if ($checkTableExists("master_packages") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/master_packages.sql"));
 } else
     Logger::info(__FILE__." master_packages exists");
+
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS event_log_type ON public.eventlog USING btree (type)");
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_people_trgm
+ON eventlog
+USING gin (people gin_trgm_ops)");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_people_trgm2
+ON eventlog
+USING gin (data gin_trgm_ops)");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_speech_speaker_trgm
+ON speech
+USING gin (speaker gin_trgm_ops)");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_speech_listener_trgm
+ON speech
+USING gin (listener gin_trgm_ops)");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_gamets_pos
+ON eventlog (gamets)
+WHERE gamets > 0");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_gamets_ts_pos
+ON eventlog (gamets DESC, ts DESC)");
+
+$db->execQuery("CREATE INDEX IF NOT EXISTS   idx_speech_gamets_pos
+ON speech (gamets)
+WHERE gamets > 0");
+
+
 
 //----------------------------------------------------
 // Prompts Table - System for managing default and custom prompts
@@ -2375,7 +2457,7 @@ if ($checkVersion("prompts")<20251110001) {
         "<relationships>     Text. relationships with other actors.\n".
         "<occupation>        Text. Main Occupation & Role\n".
         "<skills>            Text. Skills & Abilities\n".
-        "<speechstyle>       Text. Speech Style\n".
+        "<speech_style>      Text. Speech Style\n".
         "<goals>             Text. Long term Goals & Aspirations'\n"
     );
     
@@ -2645,6 +2727,65 @@ if ($checkVersion("prompts")<20251214001) {
 }
 
 //----------------------------------------------------
+// Add narrator_welcome_prompt to prompts table
+// Version 20251224001
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251224001) {
+    Logger::debug("Applying prompts table 20251224001 - Adding narrator_welcome_prompt");
+    
+    $welcomePrompt = $db->escape(
+        "Give a brief (2-3 sentence) recap of recent events and adventures. ".
+        "Welcome the player back to their journey."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'narrator_welcome_prompt',
+            '$welcomePrompt',
+            'Prompt for narrator welcome message when loading a save game. Used in: main.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251224001);
+    Logger::info("Applied patch prompts 20251224001 - Added narrator_welcome_prompt");
+}
+
+//----------------------------------------------------
+// Add quest_comment_prompt to prompts table
+// Version 20251224002
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20251224002) {
+    Logger::debug("Applying prompts table 20251224002 - Adding quest_comment_prompt");
+    
+    $questPrompt = $db->escape(
+        "{HERIKA_NAME}, what should we do about this new quest?"
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'quest_comment_prompt',
+            '$questPrompt',
+            'Prompt for narrator/NPC comments on quest objective updates (contains {HERIKA_NAME} placeholder). Used in: prompts/prompts.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20251224002);
+    Logger::info("Applied patch prompts 20251224002 - Added quest_comment_prompt");
+}
+
+//----------------------------------------------------
 // CORE_PLAYER DATA MIGRATION
 //----------------------------------------------------
 
@@ -2709,12 +2850,196 @@ if ($checkVersion("core_player")<20241128001) {
 }
 
 //----------------------------------------------------
-// Background Life Prompts - Style prompts for letters and inner thoughts
-// Version 20251207001
+// CORE_NARRATOR DATA MIGRATION
 //----------------------------------------------------
 
-if ($checkVersion("prompts")<20251207001) {
-    Logger::debug("Applying background life prompts 20251207001");
+if ($checkVersion("core_narrator")<20250101001) {
+    Logger::debug("Applying core_narrator migration 20250101001 - Migrating narrator settings from conf_opts");
+    
+    // Map conf_opts keys to core_narrator keys
+    $keysToMigrate = [
+        'NARRATOR_TALKS' => 'enabled',
+        'NARRATOR_WELCOME' => 'welcome_enabled',
+        'RANDOM_NARATION' => 'random_enabled',
+        'RANDOM_NARATION_CHANCE' => 'random_chance',
+        'RANDOM_NARRATION_COOLDOWN' => 'random_cooldown',
+        'BOOK_EVENT_ALWAYS_NARRATOR' => 'books_only_narrator',
+        'HIDE_NARRATOR_DIALOGUE' => 'hide_from_context',
+    ];
+    
+    foreach ($keysToMigrate as $confKey => $narratorKey) {
+        // Check if data exists in conf_opts
+        $escapedConfKey = $db->escape($confKey);
+        $result = $db->fetchAll("SELECT value FROM public.conf_opts WHERE id = '{$escapedConfKey}' LIMIT 1");
+        
+        if ($result && isset($result[0]['value'])) {
+            $value = $result[0]['value'];
+            $escapedNarratorKey = $db->escape($narratorKey);
+            $escapedValue = $db->escape($value);
+            
+            // Insert or update in core_narrator
+            $db->execQuery("
+                INSERT INTO public.core_narrator (id, value) 
+                VALUES ('{$escapedNarratorKey}', '{$escapedValue}')
+                ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+            ");
+            
+            Logger::debug("Migrated {$confKey} -> core_narrator.{$narratorKey}");
+        }
+    }
+    
+    // Seed defaults if no values exist (only if table is empty)
+    $countResult = $db->fetchAll("SELECT COUNT(*) AS c FROM public.core_narrator");
+    $count = $countResult && isset($countResult[0]['c']) ? intval($countResult[0]['c']) : 0;
+    
+    if ($count === 0) {
+        // Seed with defaults from conf.php if available, otherwise use hardcoded defaults
+        $defaults = [
+            'enabled' => isset($GLOBALS["NARRATOR_TALKS"]) ? ($GLOBALS["NARRATOR_TALKS"] ? '1' : '0') : '1',
+            'welcome_enabled' => isset($GLOBALS["NARRATOR_WELCOME"]) ? ($GLOBALS["NARRATOR_WELCOME"] ? '1' : '0') : '0',
+            'random_enabled' => isset($GLOBALS["RANDOM_NARATION"]) ? ($GLOBALS["RANDOM_NARATION"] ? '1' : '0') : '0',
+            'random_chance' => isset($GLOBALS["RANDOM_NARATION_CHANCE"]) ? (string)intval($GLOBALS["RANDOM_NARATION_CHANCE"]) : '15',
+            'random_cooldown' => isset($GLOBALS["RANDOM_NARRATION_COOLDOWN"]) ? (string)intval($GLOBALS["RANDOM_NARRATION_COOLDOWN"]) : '2',
+            'books_only_narrator' => isset($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"]) ? ($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"] ? '1' : '0') : '0',
+            'hide_from_context' => isset($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) ? ($GLOBALS["HIDE_NARRATOR_DIALOGUE"] ? '1' : '0') : '0',
+        ];
+        
+        foreach ($defaults as $key => $value) {
+            $escapedKey = $db->escape($key);
+            $escapedValue = $db->escape($value);
+            $db->execQuery("
+                INSERT INTO public.core_narrator (id, value) 
+                VALUES ('{$escapedKey}', '{$escapedValue}')
+                ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+            ");
+        }
+        
+        Logger::debug("Seeded core_narrator with default values");
+    }
+    
+    $updateVersion("core_narrator", 20250101001);
+    Logger::info("Applied patch core_narrator 20250101001 - Migrated narrator settings from conf_opts");
+}
+
+//----------------------------------------------------
+// CORE_NARRATOR CHARACTER DATA MIGRATION FROM CORE_NPC_MASTER
+//----------------------------------------------------
+
+if ($checkVersion("core_narrator")<20250101002) {
+    Logger::debug("Applying core_narrator migration 20250101002 - Migrating narrator character data from core_npc_master");
+    
+    // Check if The Narrator exists in core_npc_master
+    $narratorNpc = $db->fetchOne("SELECT * FROM public.core_npc_master WHERE npc_name = 'The Narrator' LIMIT 1");
+    
+    if ($narratorNpc) {
+        // Copy character data to core_narrator
+        $migrationData = [];
+        
+        if (isset($narratorNpc['profile_id']) && $narratorNpc['profile_id'] !== null) {
+            $migrationData['profile_id'] = (string)intval($narratorNpc['profile_id']);
+        }
+        
+        if (isset($narratorNpc['voiceid']) && $narratorNpc['voiceid'] !== null && $narratorNpc['voiceid'] !== '') {
+            $migrationData['voiceid'] = $narratorNpc['voiceid'];
+        }
+        
+        if (isset($narratorNpc['core']) && $narratorNpc['core'] !== null && $narratorNpc['core'] !== '') {
+            $migrationData['core'] = $narratorNpc['core'];
+        }
+        
+        if (isset($narratorNpc['npc_static_bio']) && $narratorNpc['npc_static_bio'] !== null && $narratorNpc['npc_static_bio'] !== '') {
+            $migrationData['background'] = $narratorNpc['npc_static_bio'];
+        }
+        
+        if (isset($narratorNpc['personality']) && $narratorNpc['personality'] !== null && $narratorNpc['personality'] !== '') {
+            $migrationData['personality'] = $narratorNpc['personality'];
+        }
+        
+        if (isset($narratorNpc['speechstyle']) && $narratorNpc['speechstyle'] !== null && $narratorNpc['speechstyle'] !== '') {
+            $migrationData['speechstyle'] = $narratorNpc['speechstyle'];
+        }
+        
+        if (isset($narratorNpc['goals']) && $narratorNpc['goals'] !== null && $narratorNpc['goals'] !== '') {
+            $migrationData['goals'] = $narratorNpc['goals'];
+        }
+        
+        if (isset($narratorNpc['oghma_knowledge_tags']) && $narratorNpc['oghma_knowledge_tags'] !== null && $narratorNpc['oghma_knowledge_tags'] !== '') {
+            $migrationData['oghma_knowledge'] = $narratorNpc['oghma_knowledge_tags'];
+        }
+        
+        if (isset($narratorNpc['gender']) && $narratorNpc['gender'] !== null && $narratorNpc['gender'] !== '') {
+            $migrationData['gender'] = $narratorNpc['gender'];
+        }
+        
+        if (isset($narratorNpc['prompt_head']) && $narratorNpc['prompt_head'] !== null && $narratorNpc['prompt_head'] !== '') {
+            $migrationData['prompt_head'] = $narratorNpc['prompt_head'];
+        }
+        
+        // Insert/update in core_narrator (only if not already set)
+        foreach ($migrationData as $key => $value) {
+            $existing = $db->fetchOne("SELECT value FROM public.core_narrator WHERE id = '{$db->escape($key)}' LIMIT 1");
+            if (!$existing || !isset($existing['value']) || $existing['value'] === '') {
+                $escapedKey = $db->escape($key);
+                $escapedValue = $db->escape($value);
+                $db->execQuery("
+                    INSERT INTO public.core_narrator (id, value) 
+                    VALUES ('{$escapedKey}', '{$escapedValue}')
+                    ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+                ");
+                Logger::debug("Migrated narrator.{$key} from core_npc_master");
+            }
+        }
+        
+    // Delete The Narrator from core_npc_master
+    $db->execQuery("DELETE FROM public.core_npc_master WHERE npc_name = 'The Narrator'");
+    Logger::info("Deleted The Narrator from core_npc_master");
+    } else {
+        // No narrator in core_npc_master - check if we need to seed defaults in core_narrator
+        $narratorCount = $db->fetchAll("SELECT COUNT(*) AS c FROM public.core_narrator");
+        $count = $narratorCount && isset($narratorCount[0]['c']) ? intval($narratorCount[0]['c']) : 0;
+        
+        if ($count === 0) {
+            // Fresh install - seed narrator character data with defaults
+            $defaultProfile = $db->fetchOne("SELECT id FROM public.core_profiles WHERE default_narrator = '1' LIMIT 1");
+            $profileId = $defaultProfile && isset($defaultProfile['id']) ? (string)intval($defaultProfile['id']) : '1';
+            
+            $defaults = [
+                'profile_id' => $profileId,
+                'voiceid' => 'TheNarrator',
+                'core' => "The Narrator is a male voice within the player's mind. His job is to help the player as they navigate the world of Tamriel. Provide unique insight and descriptions of what is going on in the world.",
+                'background' => "A guiding voice that describes the world, events, and transitions. He is not a character, but a voice within the player's mind.",
+                'personality' => 'Detached, descriptive, witty, helpful.',
+                'speechstyle' => '',
+                'goals' => '',
+                'oghma_knowledge' => 'knowall',
+                'gender' => 'male',
+            ];
+            
+            foreach ($defaults as $key => $value) {
+                $escapedKey = $db->escape($key);
+                $escapedValue = $db->escape($value);
+                $db->execQuery("
+                    INSERT INTO public.core_narrator (id, value) 
+                    VALUES ('{$escapedKey}', '{$escapedValue}')
+                    ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+                ");
+            }
+            
+            Logger::info("Seeded narrator character data with defaults for fresh install");
+        }
+    }
+    
+    $updateVersion("core_narrator", 20250101002);
+    Logger::info("Applied patch core_narrator 20250101002 - Migrated narrator character data from core_npc_master and removed from NPC list");
+}
+
+//----------------------------------------------------
+// Background Life Prompts - Style prompts for letters and inner thoughts
+// Version 20260118001 (fixed: was 20251207001 which was out of order and never applied)
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20260118001) {
+    Logger::debug("Applying background life prompts 20260118001");
     
     // Prompt 1: Letter writing style
     $bglLetterStyle = $db->escape(
@@ -2753,12 +3078,237 @@ if ($checkVersion("prompts")<20251207001) {
             updated_at = CURRENT_TIMESTAMP
     ");
     
-    $db->execQuery("UPDATE versions SET version=20251207001 WHERE section='prompts'");
-    Logger::info("Applied patch prompts 20251207001 - Added background life style prompts to database");
+    //$db->execQuery("UPDATE versions SET version=20251207001 WHERE section='prompts'"); // ???
+    $updateVersion("prompts",20260118001);
+
+    Logger::info("Applied patch prompts 20260118001 - Added background life style prompts to database");
+}
+
+//----------------------------------------------------
+// Relationship LLM Prompts
+// Version 20260125001
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20260125001) {
+    Logger::debug("Applying relationship LLM prompts 20260125001");
+
+    // Relationship Analysis Prompt - For parsing TEXT relationships to JSONB
+    $relAnalysisPrompt = $db->escape(
+'You are a relationship analyzer for Skyrim NPCs. Analyze relationship descriptions and output JSON.
+
+AFFINITY SCALE (-100 to +100, bell curve - extremes are RARE):
++91 to +100: Bonded (soulmates, unbreakable)
++76 to +90: Devoted (deep loyalty/love)
++56 to +75: Fond (genuine affection)
++31 to +55: Friendly (pleasant, helpful)
++6 to +30: Acquaintance (polite nod)
+-5 to +5: Neutral (stranger)
+-6 to -30: Wary (distrustful)
+-31 to -55: Cold (unfriendly)
+-56 to -75: Resentful (bitter, grudges)
+-76 to -90: Hateful (active malice)
+-91 to -100: Hostile (kill on sight)
+
+TYPES: romantic, platonic, familial, professional, rival, enemy, neutral, nemesis, estranged, transactional, protective, indebted, fanatical, mentor, student, servant, client, patron, crush, ex, betrayed, suspicious, admirer, jealous, fearful, obsessed, awed, contempt, pitying, grateful, curious, dismissive
+
+INFERENCE RULES:
+1. FACTION: Imperial → add "Stormcloak": -60 enemy. Stormcloak → add "Imperial": -60 enemy.
+2. RACIAL: If NPC shows racial attitudes, add race as target (e.g., "Khajit": -40 contempt)
+3. OCCUPATION: Thieves Guild → "Guard": -40 rival. Companions → "Silver Hand": -70 enemy.
+4. "{PLAYER_NAME}" = Player character. Store as "Player".
+
+OUTPUT (JSON only):
+{"relationships": {"Target": {"aff": 50, "type": "professional", "note": "works together"}}}'
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'rel_llm_analysis',
+            '$relAnalysisPrompt',
+            'System prompt for relationship LLM analysis - parses TEXT relationships to JSONB format (contains {PLAYER_NAME} placeholder). Used in: ext/relationship_system/relationship_llm.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    // Relationship Evaluation Prompt - For evaluating conversations
+    $relEvalPrompt = $db->escape(
+'You are a behavioral psychologist. Evaluate interactions and provide BRIEF insight.
+
+SPEAKER ATTRIBUTION:
+- [PLAYER] and [NPC] tags show who said what
+- Only evaluate based on what PLAYER did, not the NPC\'s own words
+
+AFFINITY SCALE (-100 to +100):
+- +/-1: Normal chat
+- +/-2-3: Notably friendly/rude, small favors
+- +/-5-10: Meaningful help, gifts, insults
+- +/-15-25: Saving life, violence, betrayal
+- +/-50+: Extreme events (killing loved ones, marriage)
+
+MOST INTERACTIONS = 0 or +/-1. Be conservative. Skip trivial exchanges.
+
+REASON FORMAT - Keep it SHORT (under 15 words):
+✓ "Teasing triggered defensiveness"
+✓ "Genuine interest validates their experience"
+✓ "Protective action builds trust"
+✗ NOT: Long clinical explanations
+
+TYPE CHANGES (rare - only for defining moments):
+- Only change type for: romance confession, betrayal, violence, marriage, family reveal
+- Most interactions just adjust affinity, not type
+
+OUTPUT (JSON only):
+{"changes": {"Player": {"delta": 1, "reason": "brief insight"}}}
+
+No changes? Return: {"changes": {}}'
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'rel_llm_evaluation',
+            '$relEvalPrompt',
+            'System prompt for relationship evaluation - judges affinity changes from conversations. Used in: ext/relationship_system/relationship_llm.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    // NPC-to-NPC Evaluation Prompt - For bidirectional NPC conversations
+    $relNpc2NpcPrompt = $db->escape(
+'You are a behavioral psychologist. Evaluate NPC-to-NPC interaction briefly.
+
+DIRECTION:
+- speaker = NPC who SPOKE
+- listener = NPC who HEARD
+- speaker.delta = speaker\'s feelings toward listener changed?
+- listener.delta = listener\'s feelings toward speaker changed?
+
+SCALE: +/-1 typical, +/-2-3 notable, +/-5+ significant. Be conservative.
+
+REASON FORMAT - Under 15 words:
+✓ "Dark humor built rapport"
+✓ "Bossy tone caused mild resentment"
+✓ "Helpful advice appreciated"
+
+OUTPUT - Use exactly "speaker" and "listener":
+{"speaker": {"delta": 0, "reason": "brief"}, "listener": {"delta": 1, "reason": "brief"}}
+
+No changes? Return empty objects: {}'
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'rel_llm_npc_to_npc',
+            '$relNpc2NpcPrompt',
+            'System prompt for NPC-to-NPC relationship evaluation - bidirectional in single call. Used in: ext/relationship_system/relationship_llm.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $updateVersion("prompts", 20260125001);
+    Logger::info("Applied patch prompts 20260125001 - Added relationship LLM prompts");
+}
+
+//----------------------------------------------------
+// emotions expression
+//----------------------------------------------------
+
+if ($checkVersion("emotions_expression")<20251130003) {
+    Logger::debug(" try patch: emotions_expression 20251130003");
+    $b_ok = true;
+    try {
+        $query = " ALTER TABLE public.speech ADD COLUMN IF NOT EXISTS mood TEXT; ";
+        $db->execQuery($query);        
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'speech' table: " . $e->getMessage());
+    }
+    try {
+        $query = " ALTER TABLE public.speech ADD COLUMN IF NOT EXISTS emotion TEXT; ";
+        $db->execQuery($query);        
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'speech' table: " . $e->getMessage());
+    }
+    try {
+        $query = " ALTER TABLE public.speech ADD COLUMN IF NOT EXISTS emotion_intensity TEXT; ";
+        $db->execQuery($query);        
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'speech' table: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("emotions_expression",20251130003);
+        Logger::info("Applied patch emotions_expression 20251130003");
+    }
+}
+
+if ($checkVersion("emotions_expression")<20251230001) {
+    Logger::debug(" try patch: emotions_expression 20251230001");
+    $b_ok = true;
+    try {
+        $query = " ALTER TABLE public.moods_issued ADD COLUMN IF NOT EXISTS emotion TEXT; ";
+        $db->execQuery($query);        
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'moods_issued' table: " . $e->getMessage());
+    }
+    try {
+        $query = " ALTER TABLE public.moods_issued ADD COLUMN IF NOT EXISTS emotion_intensity TEXT; ";
+        $db->execQuery($query);        
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'moods_issued' table: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("emotions_expression",20251230001);
+        Logger::info("Applied patch emotions_expression 20251230001");
+    }
 }
 
 //----------------------------------------------------
 
+// Relationship Evaluation and Initialization Queues
+$db->execQuery("CREATE TABLE IF NOT EXISTS relationship_eval_queue (
+                id SERIAL PRIMARY KEY,
+                npc_id INTEGER NOT NULL UNIQUE,
+                eval_data JSONB NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()  )");
+
+$db->execQuery("CREATE TABLE IF NOT EXISTS relationship_init_queue (
+                id SERIAL PRIMARY KEY,
+                npc_id INTEGER NOT NULL UNIQUE,
+                init_data JSONB NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()  )");
+
+$db->execQuery("
+            ALTER TABLE relationship_init_queue
+            ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0
+        ");
+$db->execQuery("
+            ALTER TABLE relationship_init_queue
+            ADD COLUMN IF NOT EXISTS last_error TEXT
+        ");
+$db->execQuery("
+            ALTER TABLE relationship_eval_queue
+            ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0
+        ");
 Logger::info(__FILE__." update file processed");
 
+//----------------------------------------------------
+        
+Logger::info(__FILE__." update file processed. This file has ".__LINE__." lines.");
 ?>

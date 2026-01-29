@@ -1,15 +1,34 @@
 <?php
 
-class LLMConnector {
+class LLMConnector
+{
 
     private $table = "core_llm_connector";
 
-    public function create($data) {
+    public function create($data)
+    {
         $fields = [
-            "label", "metadata", "url", "model", "provider", "driver", "service", "reasoning_model",
-            "max_tokens", "enforce_json", "prefill_json", "api_badge_id", "json_schema",
-            "temperature", "presence_penalty", "frequency_penalty", "repetition_penalty",
-            "top_p", "top_k", "min_p", "top_a"
+            "label",
+            "metadata",
+            "url",
+            "model",
+            "provider",
+            "driver",
+            "service",
+            "reasoning_model",
+            "max_tokens",
+            "enforce_json",
+            "prefill_json",
+            "api_badge_id",
+            "json_schema",
+            "temperature",
+            "presence_penalty",
+            "frequency_penalty",
+            "repetition_penalty",
+            "top_p",
+            "top_k",
+            "min_p",
+            "top_a"
         ];
 
         foreach ($data as $k => $v) {
@@ -22,31 +41,54 @@ class LLMConnector {
         return $GLOBALS["db"]->insert($this->table, $filtered);
     }
 
-    public function readAll() {
-        $query = "SELECT * FROM {$this->table} ORDER BY id ASC";
+    public function readAll()
+    {
+        $query = "SELECT * FROM {$this->table} ORDER BY LOWER(COALESCE(NULLIF(label,''), model)) ASC";
         return $GLOBALS["db"]->fetchAll($query);
     }
 
-    public function readOne($id) {
+    public function readOne($id)
+    {
         $id = intval($id);
         $query = "SELECT * FROM {$this->table} WHERE id = {$id} LIMIT 1";
-        return $GLOBALS["db"]->fetchOne($query);
+        $data = $GLOBALS["db"]->fetchOne($query);
+
+        return $data;
     }
 
-    public function getById($id) {
+    public function getById($id)
+    {
         return $this->readOne($id);
     }
 
-    public function update($id, $data) {
+    public function update($id, $data)
+    {
         $fields = [
-            "label", "metadata", "url", "model", "provider", "driver", "service", "reasoning_model",
-            "max_tokens", "enforce_json", "prefill_json", "api_badge_id", "json_schema",
-            "temperature", "presence_penalty", "frequency_penalty", "repetition_penalty",
-            "top_p", "top_k", "min_p", "top_a"
+            "label",
+            "metadata",
+            "url",
+            "model",
+            "provider",
+            "driver",
+            "service",
+            "reasoning_model",
+            "max_tokens",
+            "enforce_json",
+            "prefill_json",
+            "api_badge_id",
+            "json_schema",
+            "temperature",
+            "presence_penalty",
+            "frequency_penalty",
+            "repetition_penalty",
+            "top_p",
+            "top_k",
+            "min_p",
+            "top_a"
         ];
 
         foreach ($data as $k => $v) {
-            if (empty("$v") && $v!=="0") {
+            if (empty("$v") && $v !== "0") {
                 $data[$k] = null;
             }
         }
@@ -57,25 +99,30 @@ class LLMConnector {
         return $GLOBALS["db"]->updateRow($this->table, $filtered, $where);
     }
 
-    public function delete($id) {
+    public function delete($id)
+    {
         $id = intval($id);
         return $GLOBALS["db"]->delete($this->table, "id = {$id}");
     }
 
-    public function truncate($restart = false, $cascade = false) {
+    public function truncate($restart = false, $cascade = false)
+    {
         return $GLOBALS["db"]->truncate($this->table, $restart, $cascade);
     }
 
-    public function getLastError() {
+    public function getLastError()
+    {
         return $GLOBALS["db"]->GetLastError();
     }
 
-    public function getDriver() {
+    public function getDriver($id)
+    {
         $driver = $this->readOne($id)["driver"];
         return new $driver();
     }
 
-    public function getAllFk($fieldName) {
+    public function getAllFk($fieldName)
+    {
         // Define supported foreign keys and their corresponding table + label fields
         $foreignKeys = [
             "api_badge_id" => ["table" => "core_api_badge", "label_field" => "label"]
@@ -88,11 +135,12 @@ class LLMConnector {
         $table = $foreignKeys[$fieldName]["table"];
         $labelField = $foreignKeys[$fieldName]["label_field"];
 
-        $query = "SELECT id, {$labelField} AS label FROM {$table} ORDER BY id ASC";
+        $query = "SELECT id, {$labelField} AS label FROM {$table} ORDER BY LOWER({$labelField}) ASC";
         return $GLOBALS["db"]->fetchAll($query);
     }
 
-    public function clone($id) {
+    public function clone($id)
+    {
         $id = intval($id);
         $original = $this->readOne($id);
 
@@ -106,16 +154,17 @@ class LLMConnector {
         return $this->create($original);
     }
 
-    public function setOldGlobals($currentConnectorData) {
+    public function setOldGlobals($currentConnectorData)
+    {
 
         if ($currentConnectorData["driver"] == "openaijson") {
 
-            $apiBadge=new ApiBadge();
-            $apiKeyData=$apiBadge->getById($currentConnectorData["api_badge_id"]);
+            $apiBadge = new ApiBadge();
+            $apiKeyData = $apiBadge->getById($currentConnectorData["api_badge_id"]);
             // error_log("[CORE SYSTEM] Using new profile system CONNECTOR openaijson {$currentConnectorData["id"]} {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
             $GLOBALS["CONNECTOR"]["openaijson"]["url"] = $currentConnectorData["url"] ?? 'https://openrouter.ai/api/v1/chat/completions';
-            $GLOBALS["CONNECTOR"]["openaijson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.0-flash-001';
-            
+            $GLOBALS["CONNECTOR"]["openaijson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.5-flash';
+
             $GLOBALS["CONNECTOR"]["openaijson"]["reasoning_model"] = $currentConnectorData["reasoning_model"] ?? false;
             $GLOBALS["CONNECTOR"]["openaijson"]["max_tokens"] = $currentConnectorData["max_tokens"] ?? '1024';
             $GLOBALS["CONNECTOR"]["openaijson"]["temperature"] = $currentConnectorData["temperature"] ?? 1.0;
@@ -131,7 +180,7 @@ class LLMConnector {
             $GLOBALS["CONNECTOR"]["openaijson"]["API_KEY"] = $apiKeyData["api_key"];
             $GLOBALS["CONNECTOR"]["openaijson"]["json_schema"] = $currentConnectorData["json_schema"] ?? false;
 
-             // Decode metadata and extended_data if available
+            // Decode metadata and extended_data if available
             $metadata = json_decode($currentConnectorData['metadata'] ?? '{}', true);
             if (is_array($metadata)) {
                 foreach ($metadata as $key => $value) {
@@ -141,11 +190,11 @@ class LLMConnector {
 
         } else if ($currentConnectorData["driver"] == "openrouterjson") {
 
-            $apiBadge=new ApiBadge();
-            $apiKeyData=$apiBadge->getById($currentConnectorData["api_badge_id"]);
+            $apiBadge = new ApiBadge();
+            $apiKeyData = $apiBadge->getById($currentConnectorData["api_badge_id"]);
             // error_log("[CORE SYSTEM] Using new profile system CONNECTOR openaijson {$currentConnectorData["id"]} {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
             $GLOBALS["CONNECTOR"]["openrouterjson"]["url"] = $currentConnectorData["url"] ?? 'https://openrouter.ai/api/v1/chat/completions';
-            $GLOBALS["CONNECTOR"]["openrouterjson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.0-flash-001';
+            $GLOBALS["CONNECTOR"]["openrouterjson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.5-flash';
             $GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"] = $currentConnectorData["provider"] ?? '';
             $GLOBALS["CONNECTOR"]["openrouterjson"]["reasoning_model"] = $currentConnectorData["reasoning_model"] ?? false;
             $GLOBALS["CONNECTOR"]["openrouterjson"]["max_tokens"] = $currentConnectorData["max_tokens"] ?? '1024';
@@ -162,7 +211,7 @@ class LLMConnector {
             $GLOBALS["CONNECTOR"]["openrouterjson"]["API_KEY"] = $apiKeyData["api_key"];
             $GLOBALS["CONNECTOR"]["openrouterjson"]["json_schema"] = $currentConnectorData["json_schema"] ?? false;
 
-             // Decode metadata and extended_data if available
+            // Decode metadata and extended_data if available
             $metadata = json_decode($currentConnectorData['metadata'] ?? '{}', true);
             if (is_array($metadata)) {
                 foreach ($metadata as $key => $value) {
@@ -172,11 +221,11 @@ class LLMConnector {
 
         } else if ($currentConnectorData["driver"] == "google_openaijson") {
 
-            $apiBadge=new ApiBadge();
-            $apiKeyData=$apiBadge->getById($currentConnectorData["api_badge_id"]);
+            $apiBadge = new ApiBadge();
+            $apiKeyData = $apiBadge->getById($currentConnectorData["api_badge_id"]);
             // error_log("[CORE SYSTEM] Using new profile system CONNECTOR openaijson {$currentConnectorData["id"]} {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
             $GLOBALS["CONNECTOR"]["google_openaijson"]["url"] = $currentConnectorData["url"] ?? 'https://openrouter.ai/api/v1/chat/completions';
-            $GLOBALS["CONNECTOR"]["google_openaijson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.0-flash-001';
+            $GLOBALS["CONNECTOR"]["google_openaijson"]["model"] = $currentConnectorData["model"] ?? 'google/gemini-2.5-flash';
             $GLOBALS["CONNECTOR"]["google_openaijson"]["PROVIDER"] = $currentConnectorData["provider"] ?? '';
             $GLOBALS["CONNECTOR"]["google_openaijson"]["reasoning_model"] = $currentConnectorData["reasoning_model"] ?? false;
             $GLOBALS["CONNECTOR"]["google_openaijson"]["max_tokens"] = $currentConnectorData["max_tokens"] ?? '1024';
@@ -193,11 +242,41 @@ class LLMConnector {
             $GLOBALS["CONNECTOR"]["google_openaijson"]["API_KEY"] = $apiKeyData["api_key"];
             $GLOBALS["CONNECTOR"]["google_openaijson"]["json_schema"] = $currentConnectorData["json_schema"] ?? false;
 
-             // Decode metadata and extended_data if available
+            // Decode metadata and extended_data if available
             $metadata = json_decode($currentConnectorData['metadata'] ?? '{}', true);
             if (is_array($metadata)) {
                 foreach ($metadata as $key => $value) {
                     $GLOBALS["CONNECTOR"]["google_openaijson"][$key] = $value;
+                }
+            }
+
+        } else if ($currentConnectorData["driver"] == "groqjson") {
+
+            $apiBadge = new ApiBadge();
+            $apiKeyData = $apiBadge->getById($currentConnectorData["api_badge_id"]);
+            // error_log("[CORE SYSTEM] Using new profile system CONNECTOR groqjson {$currentConnectorData["id"]} {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
+            $GLOBALS["CONNECTOR"]["groqjson"]["url"] = $currentConnectorData["url"] ?? 'https://api.groq.com/openai/v1/chat/completions';
+            $GLOBALS["CONNECTOR"]["groqjson"]["model"] = $currentConnectorData["model"] ?? 'llama-3.3-70b-versatile';
+            $GLOBALS["CONNECTOR"]["groqjson"]["reasoning_model"] = $currentConnectorData["reasoning_model"] ?? false;
+            $GLOBALS["CONNECTOR"]["groqjson"]["max_tokens"] = $currentConnectorData["max_tokens"] ?? '1024';
+            $GLOBALS["CONNECTOR"]["groqjson"]["temperature"] = $currentConnectorData["temperature"] ?? 1.0;
+            $GLOBALS["CONNECTOR"]["groqjson"]["presence_penalty"] = $currentConnectorData["presence_penalty"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["groqjson"]["frequency_penalty"] = $currentConnectorData["frequency_penalty"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["groqjson"]["repetition_penalty"] = $currentConnectorData["repetition_penalty"] ?? 1.0;
+            $GLOBALS["CONNECTOR"]["groqjson"]["top_p"] = $currentConnectorData["top_p"] ?? 1.0;
+            $GLOBALS["CONNECTOR"]["groqjson"]["top_k"] = $currentConnectorData["top_k"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["groqjson"]["min_p"] = $currentConnectorData["min_p"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["groqjson"]["top_a"] = $currentConnectorData["top_a"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["groqjson"]["ENFORCE_JSON"] = $currentConnectorData["enforce_json"] ?? true;
+            $GLOBALS["CONNECTOR"]["groqjson"]["PREFILL_JSON"] = $currentConnectorData["prefill_json"] ?? false;
+            $GLOBALS["CONNECTOR"]["groqjson"]["API_KEY"] = $apiKeyData["api_key"] ?? '';
+            $GLOBALS["CONNECTOR"]["groqjson"]["json_schema"] = false; // Force disabled for Groq - not supported on most models
+
+            // Decode metadata and extended_data if available
+            $metadata = json_decode($currentConnectorData['metadata'] ?? '{}', true);
+            if (is_array($metadata)) {
+                foreach ($metadata as $key => $value) {
+                    $GLOBALS["CONNECTOR"]["groqjson"][$key] = $value;
                 }
             }
 
@@ -206,17 +285,26 @@ class LLMConnector {
     }
 
 
-    public function getConnector($currentConnectorData) {
+    public function getConnector($currentConnectorData)
+    {
 
         if (!isset($currentConnectorData["driver"]) || empty($currentConnectorData["driver"])) {
             throw new \Exception("Invalid connector data: missing or empty 'driver' key");
         }
 
-        require_once($GLOBALS["ENGINE_PATH"]."/connector".DIRECTORY_SEPARATOR."{$currentConnectorData["driver"]}.php");
-        $connector=new $currentConnectorData["driver"]();
-        
+        require_once($GLOBALS["ENGINE_PATH"] . "/connector" . DIRECTORY_SEPARATOR . "{$currentConnectorData["driver"]}.php");
+        $connector = new $currentConnectorData["driver"]();
+
+        $metadata = is_string($currentConnectorData["metadata"]) ? json_decode($currentConnectorData["metadata"], true) : $currentConnectorData["metadata"];
+        if (isset($metadata["remove_action_prompt"]) && $metadata["remove_action_prompt"] === true) {
+            // Option to disable actions enfoncement prompt per connector. Some models like gemini-3-flash tend to use actions a lot.
+            error_log("[CORE SYSTEM] Disabling action enforcement prompt for connector ID {$currentConnectorData["id"]} ({$currentConnectorData["driver"]}/{$currentConnectorData["model"]})");
+            $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"] = "(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is appropriate, use it)";
+        } else {
+            error_log("[CORE SYSTEM] Using action enforcement prompt for connector ID {$currentConnectorData["id"]} ({$currentConnectorData["driver"]}/{$currentConnectorData["model"]})");
+        }
         return $connector;
-        
+
     }
 
 }

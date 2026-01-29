@@ -46,7 +46,8 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $db->delete("actions_issued", "gamets>={$gameRequest[2]}  ");
     $db->delete("moods_issued", "gamets>={$gameRequest[2]}  ");
     $db->delete("rumors", "gamets>={$gameRequest[2]}  ");
-
+    $db->delete("named_cell", "gamets>={$gameRequest[2]}  ");
+    $db->delete("named_cell", "gamets<=({$gameRequest[2]} - 30000000) "); //((24 * 3) / 0.0000024)
     /* This is obsolete */
     /*
     if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
@@ -116,6 +117,78 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $npcMaster=new NpcMaster();
     $npcMaster->restoreNPC($gameRequest[2]);
     Logger::trace("POST INIT PROCESSING ".(time()-$now));
+    
+    // RELATIONSHIP SYSTEM: Clear async queues on game load (Paradox Prevention)
+    // Stale evaluations from a previous session could corrupt the restored state
+    try {
+        $db->execQuery("DELETE FROM relationship_eval_queue WHERE 1=1");
+        $db->execQuery("DELETE FROM relationship_init_queue WHERE 1=1");
+        error_log("[INIT] Cleared relationship async queues for paradox prevention");
+    } catch (Exception $e) {
+        // Tables may not exist yet - that's fine
+    }
+
+    require_once __DIR__ . "/../service/processors/snqe/lib/snqe.class.php";
+    SNQEQuestManager::load_quests($gameRequest[2]);
+    
+    // Narrator Welcome Message on Load
+    try {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+        $narrator = new Narrator();
+        
+        // Check if narrator is enabled and welcome message is enabled
+        if ($narrator->getBool('enabled', true) && $narrator->getBool('welcome_enabled', false)) {
+            // Get cooldown from narrator settings (in minutes, default 10)
+            $cooldownMinutes = $narrator->getInt('welcome_cooldown', 10);
+            $cooldownSeconds = $cooldownMinutes * 60;
+            
+            // Check cooldown
+            $lastWelcomeTs = $db->fetchOne("SELECT value FROM conf_opts WHERE id='last_narrator_welcome'");
+            $currentTime = time();
+            
+            $canTrigger = true;
+            if ($lastWelcomeTs && isset($lastWelcomeTs['value'])) {
+                $timeSinceLastWelcome = $currentTime - intval($lastWelcomeTs['value']);
+                if ($timeSinceLastWelcome < $cooldownSeconds) {
+                    $canTrigger = false;
+                    Logger::debug("Narrator welcome message on cooldown. {$timeSinceLastWelcome}s since last, need {$cooldownSeconds}s");
+                }
+            }
+            
+            if ($canTrigger) {
+                // Queue the event in eventlog so it shows up in context
+                $db->insert(
+                    'eventlog',
+                    array(
+                        'ts' => $gameRequest[1],
+                        'gamets' => $gameRequest[2],
+                        'type' => 'narrator_welcome',
+                        'data' => 'Narrator welcome message triggered on game load',
+                        'sess' => 'complete', // Mark as complete so it doesn't get processed again
+                        'localts' => $currentTime
+                    )
+                );
+                
+                // Update last welcome timestamp
+                $db->upsertRowOnConflict(
+                    'conf_opts',
+                    array(
+                        'id' => 'last_narrator_welcome',
+                        'value' => (string)$currentTime
+                    ),
+                    'id'
+                );
+                
+                // Store flag to trigger narrator after init processing
+                $GLOBALS["TRIGGER_NARRATOR_WELCOME"] = true;
+                
+                Logger::info("Narrator welcome message will be triggered");
+            }
+        }
+    } catch (Exception $e) {
+        Logger::warn("Could not trigger narrator welcome message: " . $e->getMessage());
+    }
+    
     $MUST_END=true;
 
 
@@ -185,13 +258,14 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
 } elseif ($gameRequest[0] == "request") { // Just requested response
     // Do nothing
-    $responseDataMl = DataDequeue();
+    $responseDataMl = DataDequeue(time()-1);// Allow responses queued up to 1 second in the future
     foreach ($responseDataMl as $responseData) {
         echo "{$responseData["actor"]}|{$responseData["action"]}|{$responseData["text"]}\r\n";
     }
     
-    if (time()%5==0)
+    if (time()%5==0) {
         logEvent($gameRequest);
+    }
     
     $MUST_END=true;
 
@@ -437,7 +511,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         array(
             'ts' => $gameRequest[1],
             'gamets' => $gameRequest[2],
-            'title' => substr($gameRequest[3],1),   // Initial strange "p" at the beginning.
+            'title' => substr($gameRequest[3],0),   // Initial strange "p" at the beginning.
             'sess' => 'pending',
             'localts' => time()
         )
@@ -515,7 +589,11 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         if (strpos($gameRequest[3],'New quest ""')) {
           // plugin couldn't get quest name  
             $MUST_END=true;
-        } else {
+        } else if (stripos($gameRequest[3],'Storyline Tracker')!==false) {
+            // AIAgent quests - ignore
+            $MUST_END=true;
+
+    } else {
             logEvent($gameRequest);
             
         }
@@ -526,17 +604,73 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         if ($GLOBALS["FEATURES"]["MISC"]["QUEST_COMMENT"]===false)
             $MUST_END=true;
     */
-    if (isset($GLOBALS["QUEST_COMMENT"])) {
-        // Remove the '%' from the value and convert it to an integer
-        $questCommentChance = (int)str_replace('%', '', $GLOBALS["QUEST_COMMENT_CHANCE"]);
-    
-        // Generate a random integer between 1 and 100 (inclusive).
-        $randomChance = random_int(1, 100);
-    
-        // Adjust the logic to reverse the chance
-        if ($randomChance > $questCommentChance || $GLOBALS["QUEST_COMMENT"] === false) {
+    // Check if quest comments are enabled for narrator
+    try {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+        $narrator = new Narrator();
+        
+        if ($narrator->getBool('enabled', true) && $narrator->getBool('quest_comment_enabled', false)) {
+            $questCommentChance = $narrator->getInt('quest_comment_chance', 10);
+            $randomChance = random_int(1, 100);
+            
+            if ($randomChance > $questCommentChance) {
+                $MUST_END = true;
+            } else {
+                // Chance check passed, now check cooldown
+                $cooldownMinutes = $narrator->getInt('quest_comment_cooldown', 3);
+                $cooldownSeconds = $cooldownMinutes * 60;
+                
+                // Fetch last quest comment timestamp
+                $lastQuestCommentTs = $db->fetchOne("SELECT value FROM conf_opts WHERE id='QUEST_COMMENT_LAST_TIMESTAMP'");
+                $currentTime = time();
+                
+                $canTrigger = true;
+                if ($lastQuestCommentTs && isset($lastQuestCommentTs['value'])) {
+                    $timeSinceLastComment = $currentTime - intval($lastQuestCommentTs['value']);
+                    if ($timeSinceLastComment < $cooldownSeconds) {
+                        $canTrigger = false;
+                        Logger::info("Quest comment on cooldown. {$timeSinceLastComment}s since last, need {$cooldownSeconds}s");
+                    }
+                }
+                
+                if (!$canTrigger) {
+                    $MUST_END = true;
+                } else {
+                    // Queue the event in eventlog so it shows up in context
+                    $db->insert(
+                        'eventlog',
+                        array(
+                            'ts' => $gameRequest[1],
+                            'gamets' => $gameRequest[2],
+                            'type' => 'narrator_quest_comment',
+                            'data' => $gameRequest[3],
+                            'sess' => 'complete', // Mark as complete so it doesn't get processed again
+                            'localts' => $currentTime
+                        )
+                    );
+                    
+                    // Update timestamp for successful quest comment
+                    $db->upsertRowOnConflict(
+                        "conf_opts",
+                        array(
+                            "id"    => "QUEST_COMMENT_LAST_TIMESTAMP",
+                            "value" => $currentTime
+                        ),
+                        'id'
+                    );
+                    
+                    // Store flag to trigger narrator after init processing
+                    $GLOBALS["TRIGGER_NARRATOR_QUEST_COMMENT"] = true;
+                    
+                    Logger::info("Narrator quest comment will be triggered");
+                }
+            }
+        } else {
             $MUST_END = true;
         }
+    } catch (Exception $e) {
+        Logger::warn("Could not check narrator quest comment settings: " . $e->getMessage());
+        $MUST_END = true;
     }
 } elseif ($gameRequest[0] == "location") {
     $GLOBALS["CACHE_LOCATION"]=$gameRequest[3];
@@ -695,6 +829,9 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
     $npcMaster=new NpcMaster();
     $npcMaster->backupAllNpcs($gameRequest[2]);
+    require_once __DIR__ . "/../service/processors/snqe/lib/snqe.class.php";
+    SNQEQuestManager::save_quests($gameRequest[2]);
+
     $MUST_END=true;
     
 } elseif (strpos($gameRequest[0], "info")===0) {    // info_whatever requests
@@ -752,71 +889,91 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
     if ($currentNpcData) {
         $currentNpcData["base"]=$splitNameBase[1];
-        $currentNpcData["gender"]=$splitNameBase[2];
-        $currentNpcData["race"]=$splitNameBase[3];
-        $currentNpcData["refid"]=$splitNameBase[4];
-        
+        if (sizeof($splitNameBase)>1) {
+      
+            $currentNpcData["gender"]=$splitNameBase[2];
+            $currentNpcData["race"]=$splitNameBase[3];
+            $currentNpcData["refid"]=$splitNameBase[4];
+            
 
-        $meta=$npcMaster->getMetadata($currentNpcData);
-        // NPC skills
-        $meta["skills"]["archery"]=$splitNameBase[5];
-        $meta["skills"]["block"]=$splitNameBase[6];
-        $meta["skills"]["onehanded"]=$splitNameBase[7];
-        $meta["skills"]["twohanded"]=$splitNameBase[8];
-        $meta["skills"]["conjuration"]=$splitNameBase[9];
-        $meta["skills"]["destruction"]=$splitNameBase[10];
-        $meta["skills"]["restoration"]=$splitNameBase[11];
-        $meta["skills"]["alteration"]=$splitNameBase[12];
-        $meta["skills"]["illusion"]=$splitNameBase[13];
-        $meta["skills"]["heavyarmor"]=$splitNameBase[14];
-        $meta["skills"]["lightarmor"]=$splitNameBase[15];
-        $meta["skills"]["lockpicking"]=$splitNameBase[16];
-        $meta["skills"]["pickpocket"]=$splitNameBase[17];
-        $meta["skills"]["sneak"]=$splitNameBase[18];
-        $meta["skills"]["speech"]=$splitNameBase[19];
-        $meta["skills"]["smithing"]=$splitNameBase[20];
-        $meta["skills"]["alchemy"]=$splitNameBase[21];
-        $meta["skills"]["enchanting"]=$splitNameBase[22];
-        
-        // NPC equipment (10 slots from Skyrim) - format: name^baseid
-        $equipmentSlots = [
-            23 => 'helmet',
-            24 => 'armor',
-            25 => 'boots',
-            26 => 'gloves',
-            27 => 'amulet',
-            28 => 'ring',
-            29 => 'cape',
-            30 => 'backpack',
-            31 => 'left_hand',
-            32 => 'right_hand'
-        ];
-        
-        foreach ($equipmentSlots as $index => $slotName) {
-            $slotData = isset($splitNameBase[$index]) ? $splitNameBase[$index] : '';
-            if (!empty($slotData)) {
-                $parts = explode("^", $slotData);
-                $meta["equipment"][$slotName] = isset($parts[0]) ? $parts[0] : '';
-                $meta["equipment"][$slotName . '_baseid'] = isset($parts[1]) ? $parts[1] : '';
-            } else {
-                $meta["equipment"][$slotName] = '';
-                $meta["equipment"][$slotName . '_baseid'] = '';
+            $meta=$npcMaster->getMetadata($currentNpcData);
+            // NPC skills
+            $meta["skills"]["archery"]=$splitNameBase[5];
+            $meta["skills"]["block"]=$splitNameBase[6];
+            $meta["skills"]["onehanded"]=$splitNameBase[7];
+            $meta["skills"]["twohanded"]=$splitNameBase[8];
+            $meta["skills"]["conjuration"]=$splitNameBase[9];
+            $meta["skills"]["destruction"]=$splitNameBase[10];
+            $meta["skills"]["restoration"]=$splitNameBase[11];
+            $meta["skills"]["alteration"]=$splitNameBase[12];
+            $meta["skills"]["illusion"]=$splitNameBase[13];
+            $meta["skills"]["heavyarmor"]=$splitNameBase[14];
+            $meta["skills"]["lightarmor"]=$splitNameBase[15];
+            $meta["skills"]["lockpicking"]=$splitNameBase[16];
+            $meta["skills"]["pickpocket"]=$splitNameBase[17];
+            $meta["skills"]["sneak"]=$splitNameBase[18];
+            $meta["skills"]["speech"]=$splitNameBase[19];
+            $meta["skills"]["smithing"]=$splitNameBase[20];
+            $meta["skills"]["alchemy"]=$splitNameBase[21];
+            $meta["skills"]["enchanting"]=$splitNameBase[22];
+            
+            // NPC equipment (10 slots from Skyrim) - format: name^baseid
+            $equipmentSlots = [
+                23 => 'helmet',
+                24 => 'armor',
+                25 => 'boots',
+                26 => 'gloves',
+                27 => 'amulet',
+                28 => 'ring',
+                29 => 'cape',
+                30 => 'backpack',
+                31 => 'left_hand',
+                32 => 'right_hand'
+            ];
+            
+            foreach ($equipmentSlots as $index => $slotName) {
+                $slotData = isset($splitNameBase[$index]) ? $splitNameBase[$index] : '';
+                if (!empty($slotData)) {
+                    $parts = explode("^", $slotData);
+                    $meta["equipment"][$slotName] = isset($parts[0]) ? $parts[0] : '';
+                    $meta["equipment"][$slotName . '_baseid'] = isset($parts[1]) ? $parts[1] : '';
+                } else {
+                    $meta["equipment"][$slotName] = '';
+                    $meta["equipment"][$slotName . '_baseid'] = '';
+                }
             }
+            
+            // NPC stats (core attributes)
+            $meta["stats"]["level"]=isset($splitNameBase[33]) ? intval($splitNameBase[33]) : 1;
+            $meta["stats"]["health"]=isset($splitNameBase[34]) ? floatval($splitNameBase[34]) : 0;
+            $meta["stats"]["health_max"]=isset($splitNameBase[35]) ? floatval($splitNameBase[35]) : 0;
+            $meta["stats"]["magicka"]=isset($splitNameBase[36]) ? floatval($splitNameBase[36]) : 0;
+            $meta["stats"]["magicka_max"]=isset($splitNameBase[37]) ? floatval($splitNameBase[37]) : 0;
+            $meta["stats"]["stamina"]=isset($splitNameBase[38]) ? floatval($splitNameBase[38]) : 0;
+            $meta["stats"]["stamina_max"]=isset($splitNameBase[39]) ? floatval($splitNameBase[39]) : 0;
+            $meta["stats"]["scale"]=isset($splitNameBase[40]) ? floatval($splitNameBase[40]) : 1.0;
+
+            $meta["mods"]=isset($splitNameBase[41]) ?explode("#",$splitNameBase[41]):null;
+
+            // NPC factions - format: formID1:rank1#formID2:rank2#...
+            $factionString = isset($splitNameBase[42]) ? $splitNameBase[42] : '';
+            $factionList = [];
+            if (!empty($factionString)) {
+                $factionPairs = explode("#", $factionString);
+                foreach ($factionPairs as $pair) {
+                    $parts = explode(":", $pair);
+                    if (count($parts) >= 2) {
+                        $formId = $parts[0];
+                        $rank = intval($parts[1]);
+                        $factionList[] = [
+                            'formid' => $formId,
+                            'rank' => $rank
+                        ];
+                    }
+                }
+            }
+
         }
-        
-        // NPC stats (core attributes)
-        $meta["stats"]["level"]=isset($splitNameBase[33]) ? intval($splitNameBase[33]) : 1;
-        $meta["stats"]["health"]=isset($splitNameBase[34]) ? floatval($splitNameBase[34]) : 0;
-        $meta["stats"]["health_max"]=isset($splitNameBase[35]) ? floatval($splitNameBase[35]) : 0;
-        $meta["stats"]["magicka"]=isset($splitNameBase[36]) ? floatval($splitNameBase[36]) : 0;
-        $meta["stats"]["magicka_max"]=isset($splitNameBase[37]) ? floatval($splitNameBase[37]) : 0;
-        $meta["stats"]["stamina"]=isset($splitNameBase[38]) ? floatval($splitNameBase[38]) : 0;
-        $meta["stats"]["stamina_max"]=isset($splitNameBase[39]) ? floatval($splitNameBase[39]) : 0;
-        $meta["stats"]["scale"]=isset($splitNameBase[40]) ? floatval($splitNameBase[40]) : 1.0;
-
-        $meta["mods"]=isset($splitNameBase[41]) ?explode("#",$splitNameBase[41]):null;
-
-       
         // Importing rules
         $npcName = $GLOBALS["db"]->escape($localName);
         $npcRace = $GLOBALS["db"]->escape($currentNpcData["race"]);
@@ -873,6 +1030,31 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
         $currentNpcData=$npcMaster->setMetadata($currentNpcData,$meta);
 
+        // Store factions in extended_data
+        $extended = $npcMaster->getExtendedData($currentNpcData);
+        $extended['factions'] = $factionList;
+        
+        // NPC class - format: className:formID:trainSkill:trainLevel
+        $classString = isset($splitNameBase[43]) ? $splitNameBase[43] : '';
+        $classData = null;
+        if (!empty($classString)) {
+            $parts = explode(":", $classString);
+            if (count($parts) >= 2) {
+                $classData = [
+                    'name' => $parts[0],
+                    'formid' => $parts[1]
+                ];
+                // Add training data if present
+                if (count($parts) >= 4 && !empty($parts[2])) {
+                    $classData['teaches'] = $parts[2];
+                    $classData['max_training_level'] = intval($parts[3]);
+                }
+            }
+        }
+        $extended['class'] = $classData;
+        
+        $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extended);
+
         $npcMaster->updateByArray($currentNpcData);
         
         $profile=new CoreProfile();
@@ -907,26 +1089,43 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         }
     }
 
+    // RELATIONSHIP SYSTEM: Queue NPC for relationship initialization
+    // This parses TEXT relationships into JSONB without blocking map load
+    if ($currentNpcData && !empty($currentNpcData['id'])) {
+        $relAsyncFile = $GLOBALS["ENGINE_PATH"] . "ext/relationship_system/async_queue.php";
+        if (file_exists($relAsyncFile)) {
+            require_once $relAsyncFile;
+            if (function_exists('_relQueueNpcInit')) {
+                _relQueueNpcInit($currentNpcData['id'], $localName);
+            }
+        }
+    }
+
     $MUST_END=true;
     
     
 } elseif (strpos($gameRequest[0], "util_location_name")===0) {    // util_location_name 
     
-    
     $splitNameBase=explode("/",$gameRequest[3]);
-    if ($splitNameBase[0] && $splitNameBase[1]) {
-        $db->insert(
-            'locations',
-            array(
-                'name' => $splitNameBase[0],
-                'formid' => $splitNameBase[1],
-                'region' => $splitNameBase[2],
-                'hold' => $splitNameBase[3],
-                'tags' => $splitNameBase[4]
-            )
-        );
+    if (strtoupper($splitNameBase[0])=="__CLEAR_ALL__")
+        $db->query("truncate table locations");
+    else {
+        
+        if ($splitNameBase[0] && $splitNameBase[1]) {
+            $db->insert(
+                'locations',
+                array(
+                    'name' => $splitNameBase[0],
+                    'formid' => $splitNameBase[1],
+                    'region' => $splitNameBase[2],
+                    'hold' => $splitNameBase[3],
+                    'tags' => $splitNameBase[4],
+                    'is_interior' => intval($splitNameBase[5]),
+                    'vanilla_location'=>intval(value: $splitNameBase[1])<77175193 ? true : false,// IDs below 77175193 are vanilla cells 0x04999999
+                )
+            );
+        }
     }
-
     $MUST_END=true;
     
     
@@ -935,6 +1134,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     
     $splitNameBase=explode("/",$gameRequest[3]);
     if ($splitNameBase[0] && $splitNameBase[1]) {
+        $npcMaster=new NpcMaster();
         $currentNpcData = $npcMaster->getByName($splitNameBase[0]);
         
         if ($currentNpcData) {
@@ -990,7 +1190,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     
 }  elseif (strpos($gameRequest[0], "enable_bg")===0) {    // util_location_name 
     
-    
+    $npcMaster = new NpcMaster();
     $splitNameBase=explode("/",$gameRequest[3]);
     if ($splitNameBase[0] && $splitNameBase[1]) {
         $currentNpcData = $npcMaster->getByName($splitNameBase[0]);
@@ -1039,8 +1239,16 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $npcName = trim($npcName);
         if (empty($npcName)) continue;
         
-        // Skip The Narrator
+        // Handle The Narrator separately
         if ($npcName === "The Narrator") {
+            require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+            $narrator = new Narrator();
+            
+            // Check if narrator has dynamic profile enabled
+            if ($narrator->getBool('dynamic_profile', false)) {
+                $enabledNPCs[] = $npcName;
+                Logger::debug("updateprofiles_batch_async: The Narrator has dynamic profile enabled");
+            }
             continue;
         }
         
@@ -1472,31 +1680,228 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
-} elseif (strpos($gameRequest[0], "named_cell")===0) {    // diary_nearby event - manual trigger for all NPCs in range
+} elseif (strpos($gameRequest[0], "named_cell_static")===0) {    // diary_nearby event - manual trigger for all NPCs in range
     
     // logEvent($gameRequest);
 
-    $localData=explode("@",$gameRequest[3]);
+    $localData=explode("/",$gameRequest[3]);
+    $staticListRaw=explode(",",$localData[1]);
+    foreach ($staticListRaw as $key => $value) {
+        if ($value) {
+            $nameRefIdPair = explode("@",$value);
+            if (!empty($nameRefIdPair[0])) {
+                $unsignedInt = (intval($nameRefIdPair[1]) + 0) & 0xFFFFFFFF;
+                $hexRefId = '0x' . strtoupper(str_pad(dechex($unsignedInt), 8, '0', STR_PAD_LEFT));
+                $nameRefIdPair[1] = $hexRefId;
+                $inCellItems[]=implode(":",$nameRefIdPair);
+            }
+        }
+    }
+    $static_list=implode("\n",$inCellItems);
     $db->upsertRowOnConflict(
             'named_cell',
             array(
                 'id' => intval($localData[0]),
-                'name' =>$localData[1],
-                'location'=>intval($localData[2]),
+                'door_id'=>0,
+                'statics_list'=> $static_list,
+                'gamets'=> intval($gameRequest[2]),
             ),
-            "id"
+            "id,door_id"
         );
-    
+
+
     $MUST_END=true;
     
     
-} elseif (strpos($gameRequest[0], "switchrace")===0) {    // diary_nearby event - manual trigger for all NPCs in range
+} elseif (strpos($gameRequest[0], "named_cell")===0) {    // diary_nearby event - manual trigger for all NPCs in range
+    
+    // logEvent($gameRequest);
+
+    $localData=explode("/",$gameRequest[3]);
+    if ($localData) {
+        // Lets check first if already exists a record with same id, same door_id and dest_door_cell_id is not 0, in that case, don't update as we already have better info on the database
+        $existingRecord = $db->fetchOne("SELECT * FROM named_cell WHERE id = " . intval($localData[1]) . " AND door_id = " . intval($localData[6]) . " AND dest_door_cell_id != 0 and door_id<>0 and location_id<>0");
+        
+        if (!$existingRecord) {
+            $db->upsertRowOnConflict(
+                    'named_cell',
+                    array(
+                        'id' => intval($localData[1]),
+                        'cell_name' =>$localData[0],
+                        'location_id'=>intval($localData[2]),
+                        'interior'=>intval($localData[3]),
+                        'dest_door_cell_id'=>intval($localData[4]),
+                        'dest_door_exterior'=>intval($localData[5]),
+                        'door_id'=>intval($localData[6]),
+                        'vanilla_cell'=>(intval($localData[1])<77175193) ? true : false,// IDs below 77175193 are vanilla cells 0x04999999
+                        'worldspace'=> $localData[7],
+                        'closed'=>intval($localData[8]),
+                        'door_name'=> $localData[9],
+                        'door_x'=> floatval($localData[10]),
+                        'door_y'=> floatval($localData[11]),
+                        'gamets'=> intval($gameRequest[2]),
+                    ),
+                    "id,door_id"
+                );
+        } else {
+            error_log("Skipping named_cell update for id:{$localData[1]} door_id:{$localData[6]} as better data already exists.");
+        }
+    } else {
+        error_log("named_cell: No data provided");
+    }
+    $MUST_END=true;
+    
+    
+}  elseif (strpos($gameRequest[0], "switchrace")===0) {    // diary_nearby event - manual trigger for all NPCs in range
     
     logEvent($gameRequest);
     
     $MUST_END=true;
     
     
+} elseif (strpos($gameRequest[0], "snqe")===0) {    // Quest event - SNEQ related event
+    
+    $localData=explode("@",$gameRequest[3]);
+    if (strtoupper($localData[0]) == "START") {
+        // Execute background SNQE agent processing with proper error handling
+        $enginePath = escapeshellarg($GLOBALS["ENGINE_PATH"]);
+        $cmd = "php {$enginePath}/service/processors/snqe/run_agents.php full > {$enginePath}/log/log_run_agent.log 2>&1 &";
+        $output = shell_exec($cmd);
+        $output = trim($output);    
+        if ($output === null) {
+            Logger::error("[SNQE] Failed to start background agent processing");
+        } else {
+            Logger::info("[SNQE] Background agent processing started successfully");
+        }
+    } else  if (strtoupper($localData[0]) == "END") {
+        // Execute background SNQE agent processing with proper error handling
+        $enginePath = escapeshellarg($GLOBALS["ENGINE_PATH"]);
+        $cmd = "php {$enginePath}/service/processors/snqe/run_agents.php full end> {$enginePath}/log/log_run_agent.log 2>&1 &";
+        $output = shell_exec($cmd);
+        $output = trim($output);    
+        if ($output === null) {
+            Logger::error("[SNQE] Failed to start background agent processing");
+        } else {
+            Logger::info("[SNQE] Background agent processing started successfully");
+        }
+    } else if (strtoupper($localData[0]) == "CLEAN") {
+        // Execute SNQE manager clean command
+        $enginePath = escapeshellarg($GLOBALS["ENGINE_PATH"]);
+        $cmd = "php {$enginePath}/service/manager.php snqe clean 2>&1";
+        
+        try {
+            $output = shell_exec($cmd);
+            Logger::info("[SNQE] Clean command executed: " . trim($output ?? ""));
+        } catch (Exception $e) {
+            Logger::error("[SNQE] Clean command failed: " . $e->getMessage());
+        }
+        
+        // Remove state file if it exists
+        $stateFile = "{$GLOBALS["ENGINE_PATH"]}/log/snqe_state.json";
+        if (file_exists($stateFile)) {
+            if (!unlink($stateFile)) {
+                Logger::warn("[SNQE] Failed to delete state file: {$stateFile}");
+            } else {
+                Logger::info("[SNQE] State file deleted successfully");
+            }
+        }
+    } else if (strtoupper($localData[0]) == "RESTART") {
+        // Clean and restart from context
+        // Execute SNQE manager clean command
+        $enginePath = escapeshellarg($GLOBALS["ENGINE_PATH"]);
+        $cmd = "php {$enginePath}/service/manager.php snqe clean 2>&1";
+        
+        try {
+            $output = shell_exec($cmd);
+            Logger::info("[SNQE] Clean command executed: " . trim($output ?? ""));
+        } catch (Exception $e) {
+            Logger::error("[SNQE] Clean command failed: " . $e->getMessage());
+        }
+        
+        // Remove state file if it exists
+        $stateFile = "{$GLOBALS["ENGINE_PATH"]}/log/snqe_state.json";
+        if (file_exists($stateFile)) {
+            if (!unlink($stateFile)) {
+                Logger::warn("[SNQE] Failed to delete state file: {$stateFile}");
+            } else {
+                Logger::info("[SNQE] State file deleted successfully");
+            }
+        }
+
+        $enginePath = escapeshellarg($GLOBALS["ENGINE_PATH"]);
+        $cmd = "php {$enginePath}/service/processors/snqe/run_agents.php start_from_context> {$enginePath}/log/log_run_agent.log 2>&1 &";
+        $output = shell_exec($cmd);
+        $output = trim($output);    
+        if ($output === null) {
+            Logger::error("[SNQE] Failed to start background agent processing");
+        } else {
+            Logger::info("[SNQE] Background agent processing started successfully");
+        }
+
+
+    } else {
+        Logger::warn("[SNQE] Unknown action: " . ($localData[0] ?? "unknown"));
+    }
+    
+    $MUST_END=true;
+    
+    
 } 
+
+// Trigger narrator welcome message if flagged during init
+if (isset($GLOBALS["TRIGGER_NARRATOR_WELCOME"]) && $GLOBALS["TRIGGER_NARRATOR_WELCOME"]) {
+    // Change the request type to narrator_welcome so main.php processes it
+    $gameRequest[0] = "narrator_welcome";
+    $MUST_END = false; // Don't end, continue to main.php
+    
+    // Load narrator profile
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+    $narrator = new Narrator();
+    
+    // Get narrator profile ID
+    $narratorProfileId = $narrator->getProfileId();
+    if (!$narratorProfileId) {
+        // Try to find The Narrator profile
+        $narratorProfile = $db->fetchOne("SELECT id FROM core_profiles WHERE name = 'The Narrator' LIMIT 1");
+        if ($narratorProfile && isset($narratorProfile['id'])) {
+            $narratorProfileId = $narratorProfile['id'];
+        }
+    }
+    
+    if ($narratorProfileId) {
+        $_GET["profile"] = $narratorProfileId;
+    } else {
+        Logger::warn("[NARRATOR_WELCOME] Could not find narrator profile, welcome message cancelled");
+        $MUST_END = true;
+    }
+}
+
+// Trigger narrator quest comment if flagged during quest event
+if (isset($GLOBALS["TRIGGER_NARRATOR_QUEST_COMMENT"]) && $GLOBALS["TRIGGER_NARRATOR_QUEST_COMMENT"]) {
+    // Change the request type to narrator_quest_comment so main.php processes it
+    $gameRequest[0] = "narrator_quest_comment";
+    $MUST_END = false; // Don't end, continue to main.php
+    
+    // Load narrator profile
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+    $narrator = new Narrator();
+    
+    // Get narrator profile ID
+    $narratorProfileId = $narrator->getProfileId();
+    if (!$narratorProfileId) {
+        // Try to find The Narrator profile
+        $narratorProfile = $db->fetchOne("SELECT id FROM core_profiles WHERE name = 'The Narrator' LIMIT 1");
+        if ($narratorProfile && isset($narratorProfile['id'])) {
+            $narratorProfileId = $narratorProfile['id'];
+        }
+    }
+    
+    if ($narratorProfileId) {
+        $_GET["profile"] = $narratorProfileId;
+    } else {
+        Logger::warn("[NARRATOR_QUEST_COMMENT] Could not find narrator profile, quest comment cancelled");
+        $MUST_END = true;
+    }
+}
 
 ?>

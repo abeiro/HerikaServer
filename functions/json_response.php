@@ -26,16 +26,19 @@
 
     // specify the available actions which will be made available in the context
     Function setActions() {
+        // Initialize actions list
+        $GLOBALS["PROMPT_ACTIONS_LIST"] = "";
+        
         // Skip actions list for narration events (The Narrator doesn't need action options for atmospheric descriptions)
         if (isset($GLOBALS["gameRequest"]) && $GLOBALS["gameRequest"][0] === "narration") {
             $GLOBALS["FUNC_LIST"] = ["Talk"];  // Only Talk action for narration
             return;
         }
         
+        // Build actions list separately (not in PROMPT_HEAD)
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-            // inject the prompt here with the actions (original flat format)
-            $GLOBALS["COMMAND_PROMPT"].="\n<available_actions_list>\n";
-            $GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
+            $GLOBALS["PROMPT_ACTIONS_LIST"] = "\n<available_actions_list>\n";
+            $GLOBALS["PROMPT_ACTIONS_LIST"] .= $GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
             
             foreach ($GLOBALS["FUNCTIONS"] as $index => $function) {
                 if (!$function) {
@@ -50,16 +53,20 @@
 
                 $GLOBALS["FUNC_LIST"][]=$function["name"];
                 if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"] || $function["name"]==$GLOBALS["F_NAMES"]["Brawl"] || $function["name"]==$GLOBALS["F_NAMES"]["AttackHunt"]) {
-                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
-                    $GLOBALS["COMMAND_PROMPT"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
                 } else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
-                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]}(keywords to search ({$function["description"]})";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]}(keywords to search ({$function["description"]})";
+                } else if ($fname == "GiveGoldTo") {
+                    require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
+                    $goldAmount = getGoldFromMetadata();
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). You currently have {$goldAmount} gold. Put the amount in the 'item' field.";
                 } else {
-                    $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                 }
             }
             
-            $GLOBALS["COMMAND_PROMPT"].="\nAVAILABLE ACTION: Talk\n</available_actions_list>";
+            $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: Talk\n</available_actions_list>";
             $GLOBALS["FUNC_LIST"][]="Talk";
             shuffle($GLOBALS["FUNC_LIST"]);
         }
@@ -80,54 +87,78 @@
             }
         }
     
+        // Build listener description - for rechat events, encourage addressing the previous speaker
+        $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order";
+        if (isset($GLOBALS["gameRequest"]) && in_array($GLOBALS["gameRequest"][0], ["rechat"])) {
+            $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to. Address whoever just spoke - can be any person in the conversation.";
+        }
+    
+        // Determine message description based on INLINE_NARRATION_ENABLED setting (default to false if not set)
+        $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
+        $messageDescription = "lines of dialogue";
+        if ($inlineNarrationEnabled) {
+            $messageDescription = "Include brief third-person narration followed by {$GLOBALS["HERIKA_NAME"]}'s first-person spoken text. Example: *She smiles*. It's good to see you again, my friend!";
+        }
+    
         if (isset($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])&&($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])) {
             if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
-                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
-                    "message"=>"lines of dialogue",
+                    "listener"=>$listenerDesc,
+                    "message"=>$messageDescription,
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells)",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50')",
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                 ];
             } else {
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
-                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
-                    "message"=>"lines of dialogue",
+                    "listener"=>$listenerDesc,
+                    "message"=>$messageDescription,
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells)"
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50')"
                 ];
             }
         } else {
             if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
-                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
+                    "listener"=>$listenerDesc,
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells)",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50')",
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
-                    "message"=>"lines of dialogue"
+                    "message"=>$messageDescription
                 ];
             } else {
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
-                    "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
+                    "listener"=>$listenerDesc,
                     "mood"=>implode("|",$moods),
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
                     "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells)",
-                    "message"=>"lines of dialogue"
+                    "message"=>$messageDescription
                 ];
             }
         }
 
+        // emotions expression:
+        if ($GLOBALS['use_emotions_expression']) {
+            if (!array_key_exists("emotion", $GLOBALS["responseTemplate"])) {
+                $GLOBALS["responseTemplate"]["emotion"] = 
+                "calm|surprised|aroused|desire|love|happy|amusement|gratitude|proud|anxious|fearful|panic|grieving|envious|jealous|sad|disappointed|ashamed|angry|offended|disgusted|sarcastic";
+            }
+            if (!array_key_exists("emotion_intensity", $GLOBALS["responseTemplate"])) {
+                $GLOBALS["responseTemplate"]["emotion_intensity"] = "low|moderate|strong";
+            }
+        }
+        
         // request speaking tones from the LLM when using zonos TTS
         if (zonosIsActive()) {
             $GLOBALS["responseTemplate"] = array_merge($GLOBALS["responseTemplate"], [
@@ -148,6 +179,13 @@
         $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
         shuffle($moods);
 
+        // Determine message description based on INLINE_NARRATION_ENABLED setting (default to false if not set)
+        $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
+        $messageDescription = "lines of {$GLOBALS["HERIKA_NAME"]}'s dialogue";
+        if ($inlineNarrationEnabled) {
+            $messageDescription = "Include brief third-person narration followed by {$GLOBALS["HERIKA_NAME"]}'s first-person spoken text. Example: *She smiles*. It's good to see you again, my friend!";
+        }
+
         $GLOBALS["structuredOutputTemplate"] = array(
             "type" => "json_schema",
             "json_schema" => array(
@@ -165,7 +203,7 @@
                         ),
                         "message" => array(
                             "type" => "string",
-                            "description" => "lines of {$GLOBALS["HERIKA_NAME"]}'s dialogue"
+                            "description" => $messageDescription
                         ),
                         "mood" => empty($moods) ?
                             array(
@@ -193,7 +231,7 @@
                         ),
                         "item" => array(
                             "type" => "string",
-                            "description" => "item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact name from inventory, nearby_items, or spell name from spells)"
+                            "description" => "item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact name from inventory, nearby_items, or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50')"
                         )
                     ),
                     "required" => [
@@ -234,6 +272,24 @@
             }
 
         }
+
+        // emotions expression:
+        if ($GLOBALS['use_emotions_expression']) {
+            $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(
+                $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"], array(
+                    "emotion" => array(
+                        "type" => "string",
+                        "description" => "The emotion expressed."
+                    ),
+                    "emotion_intensity" => array(
+                        "type" => "string",
+                        "description" => "The intensity of the emotion expressed, possible values ​​'low', 'moderate' or 'strong'."
+                    )
+                ));
+            $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["required"][]="emotion";
+            $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["required"][]="emotion_intensity";
+        }
+        
         // request speaking tones from the LLM when using zonos TTS
         if (zonosIsActive()) {
             $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(
