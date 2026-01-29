@@ -202,7 +202,9 @@ function convert_gamets2gregorian_date($gamets) {
 function convert_gamets2skyrim_long_date($gamets) {
     $s_result = "";
 
-    $skyrim_start_timestamp = strtotime('0201-08-17 00:00:00'); 
+    $s_skyrim_start_date = $GLOBALS["skyrim_start_date"] ?? '0201-08-17 00:00:00'; 
+    $skyrim_start_timestamp = strtotime($s_skyrim_start_date); 
+    
     $f_gamets = floatval($gamets); 
 
     if ($f_gamets > 0.0) {
@@ -230,7 +232,9 @@ function convert_gamets2skyrim_long_date($gamets) {
 function convert_gamets2skyrim_long_date2($gamets) {
     $s_result = "";
 
-    $skyrim_start_timestamp = strtotime('0201-08-17 00:00:00'); 
+    $s_skyrim_start_date = $GLOBALS["skyrim_start_date"] ?? '0201-08-17 00:00:00'; 
+    $skyrim_start_timestamp = strtotime($s_skyrim_start_date); 
+
     $f_gamets = floatval($gamets); 
 
     if ($f_gamets > 0.0) {
@@ -260,7 +264,9 @@ function convert_gamets2skyrim_long_date2($gamets) {
 function convert_gamets2skyrim_long_date_no_time($gamets) {
     $s_result = "";
 
-    $skyrim_start_timestamp = strtotime('0201-08-17 00:00:00'); 
+    $s_skyrim_start_date = $GLOBALS["skyrim_start_date"] ?? '0201-08-17 00:00:00'; 
+    $skyrim_start_timestamp = strtotime($s_skyrim_start_date); 
+
     $f_gamets = floatval($gamets); 
 
     if ($f_gamets > 0.0) {
@@ -283,7 +289,10 @@ function convert_gamets2skyrim_long_date_no_time($gamets) {
 
 function convert_gamets2skyrim_date($gamets) {
     $sRes = "";
-    $skyrim_start_timestamp = strtotime('0201-08-17 00:00:00'); 
+
+    $s_skyrim_start_date = $GLOBALS["skyrim_start_date"] ?? '0201-08-17 00:00:00'; 
+    $skyrim_start_timestamp = strtotime($s_skyrim_start_date); 
+
     $f_gamets = floatval($gamets); 
     if ($f_gamets > 0.0) {
         $ts_datetime = gamets2timestamp($f_gamets);
@@ -299,7 +308,8 @@ function convert_gamets2skyrim_date($gamets) {
 //----------------------------------------------------------------------------
 
 function gamets2timestamp($gamets) {
-    $skyrim_start_timestamp = strtotime('0201-08-17 00:00:00'); 
+    $s_skyrim_start_date = $GLOBALS["skyrim_start_date"] ?? '0201-08-17 00:00:00'; 
+    $skyrim_start_timestamp = strtotime($s_skyrim_start_date); 
     $f_seconds = floatval($gamets) * 0.00864; 
     $ts_time = $skyrim_start_timestamp + intval($f_seconds );
     return $ts_time;
@@ -347,7 +357,8 @@ function gamets2seconds_between($gamets_start, $gamets_end) {
 
 
 function gamets2str_format_date($gamets, $dt_format = 'Y-m-d H:i:s') {
-    $skyrim_start_timestamp = strtotime('0201-08-17 00:00:00'); 
+    $s_skyrim_start_date = $GLOBALS["skyrim_start_date"] ?? '0201-08-17 00:00:00'; 
+    $skyrim_start_timestamp = strtotime($s_skyrim_start_date); 
     $f_seconds = floatval($gamets) * 0.00864; 
     $ts_time = $skyrim_start_timestamp + intval($f_seconds );
     return date($dt_format, $ts_time);
@@ -364,7 +375,8 @@ function gamets2str_format_gregorian_date($gamets, $dt_format = 'Y-m-d H:i:s') {
 
 
 function gamets2str_dow_gregorian($gamets) {
-    $skyrim_start_timestamp = strtotime('0201-08-17 00:00:00'); 
+    $s_skyrim_start_date = $GLOBALS["skyrim_start_date"] ?? '0201-08-17 00:00:00'; 
+    $skyrim_start_timestamp = strtotime($s_skyrim_start_date); 
     $f_seconds = floatval($gamets) * 0.00864; 
     $ts_time = $skyrim_start_timestamp + intval($f_seconds);
     // date('l', $ts_time) is wrong, Skyrim week is not ISO standard
@@ -374,7 +386,8 @@ function gamets2str_dow_gregorian($gamets) {
 
 
 function gamets2str_dow_skyrim($gamets) {
-    $skyrim_start_timestamp = strtotime('0201-08-17 00:00:00'); 
+    $s_skyrim_start_date = $GLOBALS["skyrim_start_date"] ?? '0201-08-17 00:00:00'; 
+    $skyrim_start_timestamp = strtotime($s_skyrim_start_date); 
     $f_seconds = floatval($gamets) * 0.00864; 
     $ts_time = $skyrim_start_timestamp + intval($f_seconds);
     // date('l', $ts_time) is wrong, Skyrim week is not ISO standard
@@ -749,7 +762,7 @@ function DataLastKnownGameTS() {
 // retrieve gamets from eventlog
     global $db;
 
-    $lastLoc=$db->fetchAll("SELECT MAX(gamets) AS m_gts FROM eventlog WHERE (gamets > 0)");
+    $lastLoc=$db->fetchAll("SELECT MAX(gamets) AS m_gts FROM eventlog WHERE (gamets > 0) LIMIT 1");
     if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
         Logger::warn("DataLastKnownGameTS: NO record found");
     } else { // ok 
@@ -760,6 +773,28 @@ function DataLastKnownGameTS() {
             }
         } else {
             Logger::error("DataLastKnownGameTS: NO game timestamp value found");
+        }
+    }
+    return 0;
+}
+
+
+
+function DataLastKnownTS() {
+// retrieve gamets from eventlog
+    global $db;
+
+    $lastLoc=$db->fetchAll("SELECT MAX(ts) AS m_gts FROM eventlog WHERE (gamets > 0)");
+    if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
+        Logger::warn("DataLastKnownTS: NO record found");
+    } else { // ok 
+        if (isset($lastLoc[0]["m_gts"]) && (strlen($lastLoc[0]["m_gts"])>0)) {
+            $i_gamets = intval($lastLoc[0]["m_gts"]);
+            if ($i_gamets > 0) {
+                return $i_gamets;
+            }
+        } else {
+            Logger::error("DataLastKnownTS: NO game timestamp value found");
         }
     }
     return 0;

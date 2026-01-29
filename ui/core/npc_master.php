@@ -49,6 +49,153 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 }
 main { padding-top: 40px; padding-bottom: 40px; }
 h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacing: 8px; font-size: 2.2em; color: rgb(242, 124, 17); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); text-align: center; }
+
+/* Relationship Build Button - Gray/Orange theme to match UI */
+.btn-rel-build {
+    background: #3a3a4a;
+    color: rgb(242, 124, 17);
+    border: 1px solid rgb(242, 124, 17);
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.btn-rel-build:hover {
+    background: #4a4a5a;
+}
+
+/* Relationship Build Modal - Gray/Orange theme */
+.rel-build-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+.rel-build-modal-overlay.show { display: flex; }
+.rel-build-modal {
+    background: #2a2a2a;
+    border: 2px solid #ffffff;
+    border-radius: 16px;
+    padding: 30px;
+    max-width: 600px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 30px rgba(255, 255, 255, 0.15);
+}
+.rel-build-modal h2 {
+    margin: 0 0 20px 0;
+    color: rgb(242, 124, 17);
+    font-family: 'MagicCards', serif;
+    font-size: 1.8em;
+    text-align: center;
+    text-shadow: 0 0 15px rgba(242, 124, 17, 0.4);
+}
+.rel-build-modal .modal-body {
+    color: #e0e0e0;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    text-align: center;
+}
+.rel-build-modal .modal-body p { margin: 10px 0; }
+.rel-build-modal .modal-body strong { color: rgb(242, 124, 17); }
+.rel-build-modal .stats-box {
+    background: #1a1a1a;
+    border: 1px solid #555;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 15px 0;
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+}
+.rel-build-modal .stat-item { }
+.rel-build-modal .stat-value { font-size: 2em; color: rgb(242, 124, 17); font-weight: bold; }
+.rel-build-modal .stat-label { font-size: 0.85em; color: #888; }
+.rel-build-modal .progress-section { display: none; margin: 20px 0; }
+.rel-build-modal .progress-section.show { display: block; }
+.rel-build-modal .progress-bar-wrap {
+    background: #1a1a1a;
+    border-radius: 8px;
+    height: 24px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+.rel-build-modal .progress-bar {
+    background: linear-gradient(90deg, rgb(200, 100, 10), rgb(242, 124, 17));
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 8px;
+}
+.rel-build-modal .progress-text {
+    text-align: center;
+    color: rgb(242, 124, 17);
+    font-size: 0.9em;
+}
+.rel-build-modal .progress-log {
+    background: #0a0a0a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 10px;
+    max-height: 150px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 0.8em;
+    color: #888;
+    margin-top: 10px;
+}
+.rel-build-modal .progress-log .success { color: #4ade80; }
+.rel-build-modal .progress-log .error { color: #f87171; }
+.rel-build-modal .progress-log .skip { color: rgb(242, 124, 17); }
+.rel-build-modal .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 20px;
+}
+.rel-build-modal .btn-start {
+    background: #3a3a3a;
+    color: rgb(242, 124, 17);
+    border: 1px solid rgb(242, 124, 17);
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.rel-build-modal .btn-start:hover { background: #4a4a4a; }
+.rel-build-modal .btn-start:disabled { background: #222; color: #555; border-color: #444; cursor: not-allowed; }
+.rel-build-modal .btn-cancel {
+    background: #3a3a3a;
+    color: rgb(242, 124, 17);
+    border: 1px solid rgb(242, 124, 17);
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.rel-build-modal .btn-cancel:hover { background: #4a4a4a; }
+.rel-build-modal .connector-info {
+    background: rgba(242, 124, 17, 0.1);
+    border: 1px solid rgb(242, 124, 17);
+    border-radius: 8px;
+    padding: 10px;
+    margin: 10px 0;
+    font-size: 0.9em;
+    text-align: center;
+    color: #34d399;
+}
+.rel-build-modal .connector-info .connector-model {
+    color: #aaa;
+    font-size: 0.9em;
+}
+.rel-build-modal .no-connector {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+    color: #f87171;
+}
 </style>
 
 <main>
@@ -58,6 +205,15 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
 <?php
 $GLOBALS["db"] = new sql();
 $npc = new NpcMaster();
+
+// Check if The Narrator exists in core_npc_master (for informational note)
+$narratorExistsInNpcMaster = false;
+try {
+    $narratorCheck = $GLOBALS["db"]->fetchOne("SELECT 1 FROM core_npc_master WHERE npc_name = 'The Narrator' LIMIT 1");
+    $narratorExistsInNpcMaster = ($narratorCheck !== null && $narratorCheck !== false);
+} catch (Exception $e) {
+    // Ignore errors
+}
 
 $lastInfoRow=$GLOBALS["db"]->fetchOne("select max(gamets) as gamets from eventlog where type='infosave'");
 $LAST_INFOSAVE_EVENT=$lastInfoRow["gamets"];
@@ -193,6 +349,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
     header('Content-Type: application/json');
     try {
         $id = intval($_POST['id'] ?? 0);
+
+        // Merge relationship editor data into extended_data BEFORE processing
+        if (file_exists(__DIR__."/../../ext/relationship_system/npc_save_handler.php")) {
+            include(__DIR__."/../../ext/relationship_system/npc_save_handler.php");
+        }
+
         // Server-side: extended_data already has feature toggles synced by JS, just ensure it's valid JSON
         // The client-side JS only includes values that differ from profile defaults
         try {
@@ -392,13 +554,154 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["set_portrait"])) {
 
 // Handle Delete
 if (isset($_GET["delete"])) {
-    // Prevent deleting The Narrator from UI
     $toDel = intval($_GET["delete"]);
-    if ($toDel === 1) { header("Location: npc_master.php"); exit; }
     $rowCheck = $npc->getById($toDel);
-    if ($rowCheck && (($rowCheck['npc_name'] ?? '') === 'The Narrator' || !empty($rowCheck['lock_profile']))) { header("Location: npc_master.php"); exit; }
+    
+    if ($rowCheck && !empty($rowCheck['lock_profile'])) {
+        header("Location: npc_master.php"); 
+        exit; 
+    }
+    
     $npc->delete($toDel);
     header("Location: npc_master.php");
+    exit;
+}
+
+// Handle Export NPC (download JSON)
+if (isset($_GET["export"]) && is_numeric($_GET["export"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    
+    $exportId = intval($_GET["export"]);
+    $exportRow = $npc->getById($exportId);
+    
+    if (!$exportRow) {
+        header("HTTP/1.1 404 Not Found");
+        echo "NPC not found";
+        exit;
+    }
+    
+    // Build export data
+    $exportData = [
+        'export_version' => '1.0',
+        'export_date' => date('c'),
+        'npc_name' => $exportRow['npc_name'] ?? '',
+        'npc_favorite' => !empty($exportRow['npc_favorite']) ? 1 : 0,
+        'lock_profile' => !empty($exportRow['lock_profile']) ? 1 : 0,
+        'prompt_head' => $exportRow['prompt_head'] ?? '',
+        'npc_static_bio' => $exportRow['npc_static_bio'] ?? '',
+        'oghma_knowledge_tags' => $exportRow['oghma_knowledge_tags'] ?? '',
+        'emote_moods' => $exportRow['emote_moods'] ?? '',
+        'personality' => $exportRow['personality'] ?? '',
+        'relationships' => $exportRow['relationships'] ?? '',
+        'occupation' => $exportRow['occupation'] ?? '',
+        'appearance' => $exportRow['appearance'] ?? '',
+        'skills' => $exportRow['skills'] ?? '',
+        'speechstyle' => $exportRow['speechstyle'] ?? '',
+        'goals' => $exportRow['goals'] ?? '',
+        'voiceid' => $exportRow['voiceid'] ?? '',
+        'gender' => $exportRow['gender'] ?? '',
+        'race' => $exportRow['race'] ?? '',
+        'dynamic_profile' => $exportRow['dynamic_profile'] ?? null,
+        'base' => $exportRow['base'] ?? '',
+        'core' => $exportRow['core'] ?? '',
+        'tags' => $exportRow['tags'] ?? '',
+        'metadata' => null,
+        'extended_data' => null,
+    ];
+    
+    // Parse JSON fields
+    if (!empty($exportRow['metadata'])) {
+        $tmp = json_decode((string)$exportRow['metadata'], true);
+        if (is_array($tmp)) { $exportData['metadata'] = $tmp; }
+    }
+    if (!empty($exportRow['extended_data'])) {
+        $tmp = json_decode((string)$exportRow['extended_data'], true);
+        if (is_array($tmp)) { $exportData['extended_data'] = $tmp; }
+    }
+    
+    $filename = preg_replace('/[^a-z0-9_-]+/i', '_', strtolower($exportRow['npc_name'] ?? 'npc')) . '_export.json';
+    
+    header('Content-Type: application/json');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    echo json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Handle Import NPC (AJAX)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_npc"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    
+    try {
+        $importJson = $_POST['import_data'] ?? '';
+        $targetId = isset($_POST['target_id']) ? intval($_POST['target_id']) : 0;
+        $newName = trim($_POST['new_name'] ?? '');
+        
+        $importData = json_decode($importJson, true);
+        if (!is_array($importData)) {
+            echo json_encode(['ok' => false, 'error' => 'Invalid JSON data']);
+            exit;
+        }
+        
+        // Build NPC data from import
+        $npcData = [];
+        $allowedFields = ['npc_favorite', 'lock_profile', 'prompt_head', 'npc_static_bio', 
+            'oghma_knowledge_tags', 'emote_moods', 'personality', 'relationships', 
+            'occupation', 'appearance', 'skills', 'speechstyle', 'goals', 'voiceid',
+            'gender', 'race', 'dynamic_profile', 'base', 'core', 'tags'];
+        
+        foreach ($allowedFields as $field) {
+            if (array_key_exists($field, $importData)) {
+                $npcData[$field] = $importData[$field];
+            }
+        }
+        
+        // Handle JSON fields
+        if (isset($importData['metadata']) && is_array($importData['metadata'])) {
+            $npcData['metadata'] = json_encode($importData['metadata']);
+        }
+        if (isset($importData['extended_data']) && is_array($importData['extended_data'])) {
+            $npcData['extended_data'] = json_encode($importData['extended_data']);
+        }
+        
+        if ($targetId > 0) {
+            // Import to existing NPC
+            $existingNpc = $npc->getById($targetId);
+            if (!$existingNpc) {
+                echo json_encode(['ok' => false, 'error' => 'Target NPC not found']);
+                exit;
+            }
+            
+            // Don't overwrite the name when importing to existing NPC
+            unset($npcData['npc_name']);
+            
+            $npc->update($targetId, $npcData);
+            echo json_encode(['ok' => true, 'message' => 'Biography imported to existing NPC', 'id' => $targetId]);
+        } else {
+            // Create new NPC
+            if ($newName !== '') {
+                $npcData['npc_name'] = $newName;
+            } elseif (!empty($importData['npc_name'])) {
+                $npcData['npc_name'] = $importData['npc_name'];
+            } else {
+                echo json_encode(['ok' => false, 'error' => 'NPC name is required']);
+                exit;
+            }
+            
+            // Check if name already exists
+            $existingByName = $npc->getByName($npcData['npc_name']);
+            if ($existingByName) {
+                echo json_encode(['ok' => false, 'error' => 'An NPC with this name already exists. Use "Import to Existing" option instead.']);
+                exit;
+            }
+            
+            $npcData['md5'] = md5($npcData['npc_name']);
+            $newId = $npc->create($npcData);
+            echo json_encode(['ok' => true, 'message' => 'New NPC created from import', 'id' => $newId]);
+        }
+    } catch (Throwable $e) {
+        echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+    }
     exit;
 }
 
@@ -429,7 +732,7 @@ if (is_array($profileRows) && count($profileRows) > 0) {
 }
 // Preload profile connector mappings and LLM connector labels for modal summary
 $profileConnRows = $GLOBALS["db"]->fetchAll("SELECT id, llm_primary_id, llm_secondary_id, llm_tertiary_id, llm_quaternary_id, llm_formatter_id, diary_connector_id, metadata FROM core_profiles ORDER BY id ASC");
-$llmRows = $GLOBALS["db"]->fetchAll("SELECT id, COALESCE(NULLIF(label,''), model) AS label FROM core_llm_connector ORDER BY id ASC");
+$llmRows = $GLOBALS["db"]->fetchAll("SELECT id, COALESCE(NULLIF(label,''), model) AS label FROM core_llm_connector ORDER BY LOWER(COALESCE(NULLIF(label,''), model)) ASC");
 $profilesById = [];
 foreach (($profileRows ?? []) as $pr) {
     $pid = (string)($pr['id'] ?? '');
@@ -507,9 +810,8 @@ if ($gpsOnly) {
     $where .= " and coalesce(metadata::text,'') ~ '\"gps_track\"\\s*:\\s*(true|1)'";
 }
 
-// Default: favorites first, then alphabetical by name
-// Ensure The Narrator is always first, then favorites, then alpha
-$order = "order by (case when npc_name='The Narrator' then 0 else 1 end) asc, coalesce(npc_favorite,0) desc, coalesce(gamets_last_updated,0) desc,lower(npc_name) ".$alpha.", id asc";
+// Default: The Narrator first, then favorites, then alphabetical by name
+$order = "order by (case when npc_name = 'The Narrator' then 0 else 1 end), coalesce(npc_favorite,0) desc, coalesce(gamets_last_updated,0) desc, lower(npc_name) ".$alpha.", id asc";
 
 // Count with filters
 $rowCountRow = $GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM core_npc_master where {$where}");
@@ -562,6 +864,8 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Page <?= $page ?> / <?= $totalPages ?></span>
       <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Total <?= $totalRows ?></span>
       <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
+      <button id="npc_import_btn" type="button" title="Import NPC from JSON file">📥 Import NPC</button>
+      <button id="rel_bulk_build_btn" type="button" class="btn-rel-build" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
       <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
     </div>
     <div class="npc-grid">
@@ -640,9 +944,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                     <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                 <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
                 <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
-                <?php if ((int)$row['id'] !== 1 && ($row['npc_name'] ?? '') !== 'The Narrator'): ?>
                 <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : "return confirm('Delete this NPC?');" ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">🗑️</a>
-                <?php endif; ?>
                 </div>
             </div>
             <div class="npc-divider"></div>
@@ -957,7 +1259,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     <style>
     .form-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px 16px; }
     @media (max-width: 900px){ .form-grid { grid-template-columns: 1fr; } }
-    .form-item { display:flex; flex-direction:column; gap:6px; }
+    .form-item { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
     .form-item label { font-weight:700; color:rgb(242, 124, 17); }
     .form-item .hint { color:#e9efff; font-size:12px; line-height:1.35; }
     .form-item textarea { min-height:96px; }
@@ -969,7 +1271,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     /* Header-style checkbox next to label title */
     .label-with-toggle { display:flex; align-items:center; gap:10px; }
     .label-with-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; }
-    .span-2 { grid-column: 1 / -1; }
+    .span-2 { grid-column: 1 / -1; margin-bottom:12px; }
     .checkbox-inline { display:flex; align-items:center; gap:8px; }
     </style>
     <?php if ($editItem): ?>
@@ -1406,6 +1708,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Named entities the NPC knows and how they feel about them.</small>
         </div>
 
+        <?php if (file_exists(__DIR__."/../../ext/relationship_system/relationship_editor.php")) {
+            include(__DIR__."/../../ext/relationship_system/relationship_editor.php");
+        } ?>
+
         <div class="form-item">
             <label for="occupation">Occupation</label>
             <textarea id="occupation" name="occupation" placeholder="Role, job, affiliations."><?= htmlspecialchars($editItem["occupation"] ?? "") ?></textarea>
@@ -1766,7 +2072,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             $overrideEditorConfig = [
                 'mode' => 'npc',
                 'fieldName' => 'extended_data',
-                'allowedSettings' => ['TTSFUNCTION','RECHAT_H','RECHAT_P','RECHAT_ALLOW_ACTIONS','CORE_LANG','ENFORCE_ACTIONS_PROMPT','REMOVE_ASTERISKS_FROM_OUTPUT','MAX_WORDS_LIMIT','DIARY_PROMPT','DIARY_COOLDOWN','COMBAT_BARK_COOLDOWN','OGHMA_INFINIUM','OGHMA_AMOUNT','MINIME_T5','CONTEXT_HISTORY','CONTEXT_HISTORY_DIARY','CONTEXT_HISTORY_DYNAMIC_PROFILE','QUEST_COMMENT','QUEST_COMMENT_CHANCE','BORED_EVENT','BORED_EVENT_SERVERSIDE','HERIKA_ANIMATIONS','LANG_LLM_XTTS'],
+                'allowedSettings' => ['TTSFUNCTION','RECHAT_H','RECHAT_P','RECHAT_ALLOW_ACTIONS','CORE_LANG','ENFORCE_ACTIONS_PROMPT','REMOVE_ASTERISKS_FROM_OUTPUT','MAX_WORDS_LIMIT','DIARY_PROMPT','DIARY_COOLDOWN','COMBAT_BARK_COOLDOWN','OGHMA_INFINIUM','OGHMA_AMOUNT','MINIME_T5','CONTEXT_HISTORY','CONTEXT_HISTORY_DIARY','CONTEXT_HISTORY_DYNAMIC_PROFILE','QUEST_COMMENT','QUEST_COMMENT_CHANCE','BORED_EVENT','BORED_EVENT_SERVERSIDE','LANG_LLM_XTTS'],
                 'reservedKeys' => $reservedKeys,
                 'currentData' => $currentOverrides,
                 'systemFields' => $systemFields,
@@ -2019,7 +2325,15 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .modal-title { margin:0; font-weight:700; color: rgb(242, 124, 17); font-family: 'MagicCards', serif; word-spacing: 6px; }
 .modal-body { max-height:calc(85vh - 100px); /*overflow-y:auto;*/ background:#2a2a2a; }
 .modal-close { background:#3a3a3a; color:#fff; border:1px solid #4a4a4a; border-radius:6px; padding:4px 10px; cursor:pointer; }
-.modal-actions { display:flex; gap:8px; align-items:center; }
+.modal-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.modal-actions .btn-save { background:#176529; color:#fff; border:1px solid rgba(72,187,120,0.3); border-radius:6px; padding:8px 14px; cursor:pointer; font-weight:700; font-size:13px; transition:all 0.2s ease; }
+.modal-actions .btn-save:hover { background:#125121; border-color:rgba(72,187,120,0.5); }
+.modal-actions .btn-cancel { background:#3a3a3a; color:#e9efff; border:1px solid #4a4a4a; border-radius:6px; padding:8px 14px; cursor:pointer; font-weight:600; font-size:13px; transition:all 0.2s ease; }
+.modal-actions .btn-cancel:hover { background:#4a4a4a; border-color:#5a5a5a; color:rgb(242,124,17); }
+.modal-actions #npc_modal_regen { background:rgba(242,124,17,0.15); border-color:rgb(242,124,17); color:rgb(242,124,17); }
+.modal-actions #npc_modal_regen:hover { background:rgba(242,124,17,0.3); }
+.modal-actions #npc_modal_close { background:#5a2a2a; border-color:#7a3a3a; color:#fff; }
+.modal-actions #npc_modal_close:hover { background:#6a3a3a; }
 .modal-save { background: rgb(242, 124, 17); color:#111; border:1px solid rgb(242, 124, 17); border-radius:6px; padding:6px 12px; cursor:pointer; font-weight:700; }
 /* Styled tabs to match button aesthetics */
 #npc_modal_tabs .pf-tab { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; cursor:pointer; font-weight:700; }
@@ -2073,8 +2387,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Page <?= $page ?> / <?= $totalPages ?></span>
   <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Total <?= $totalRows ?></span>
   <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
+  <button id="rel_bulk_build_btn" type="button" class="btn-rel-build" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
   <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
 </div>
+<?php if ($narratorExistsInNpcMaster && !isset($_GET['list'])): ?>
+<p style="margin: 12px 0; color: #cfd8e3; font-size: 13px;">
+    ℹ️ The narrator has been moved to the <a href="<?php echo $webRoot; ?>/ui/core/config_hub.php?tab=narrator" style="color: #4a8ab6; text-decoration: underline;">Narrator menu</a>. You can copy over the values from the CHIM NPC narrator profile to here manually. We recommend you delete the NPC entry of the narrator.
+</p>
+<?php endif; ?>
 <?php endif; ?>
 <div class="npc-grid">
     <?php foreach ($data as $row): ?>
@@ -2148,9 +2468,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                 <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
                 <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
-                <?php if ((int)$row['id'] !== 1 && ($row['npc_name'] ?? '') !== 'The Narrator'): ?>
                 <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : "return confirm('Delete this NPC?');" ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">🗑️</a>
-                <?php endif; ?>
             </div>
         </div>
         <div class="npc-divider"></div>
@@ -2187,6 +2505,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       <h2 class="modal-title">Edit NPC</h2>
       <div class="modal-actions">
         <button id="npc_modal_save_header" class="btn-save">Save</button>
+        <button id="npc_modal_export" class="btn-cancel" title="Export NPC biography to JSON file">Export Bio</button>
+        <button id="npc_modal_import_to" class="btn-cancel" title="Import biography from another NPC's export file">Import Bio</button>
         <button id="npc_modal_reset" class="btn-cancel" title="Reimport bio template fields">Reset NPC</button>
         <button id="npc_modal_diary" class="btn-cancel">View Diary</button>
         <button id="npc_modal_history" class="btn-cancel">View History</button>
@@ -2275,7 +2595,91 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   </div>
 </div>
 
- 
+
+<!-- Build Relationships Modal -->
+<div id="rel_build_modal" class="modal-backdrop" style="z-index:10003; display:none;">
+  <div class="modal-container rel-build-modal-container" style="max-width:500px;">
+    <div class="modal-header" style="border-bottom:1px solid rgb(242, 124, 17); text-align:center; justify-content:center;">
+      <h2 class="modal-title" style="color:rgb(242, 124, 17); margin:0; width:100%; text-align:center;">🔗 Build Relationships</h2>
+    </div>
+    <div class="modal-body" style="padding:24px; text-align:center;">
+      <div id="rel_build_content">
+        <!-- Info Box -->
+        <div style="background:#2a2a3a; border:1px solid #5a5a6a; border-radius:8px; padding:12px; margin-bottom:16px; text-align:left;">
+          <div style="color:#9fb1c9; font-size:0.85em; line-height:1.4;">
+            💡 Building runs in the background while you play. You can adjust any NPC individually by clicking their profile and editing <strong>Relationship Affinities</strong>.
+          </div>
+        </div>
+
+        <!-- Model Info -->
+        <div style="background:#1a1a2a; border:1px solid #4a4a4a; border-radius:8px; padding:16px; margin-bottom:20px;">
+          <div style="color:#9fb1c9; font-size:0.9em; margin-bottom:4px;">Relationship Model</div>
+          <div id="rel_build_model" style="color:rgb(242, 124, 17); font-size:1.1em; font-weight:bold;">Loading...</div>
+        </div>
+
+        <!-- NPC Counts -->
+        <div style="display:flex; gap:16px; justify-content:center; margin-bottom:20px;">
+          <div style="background:#1e3f1e; border:1px solid #2d5a2d; border-radius:8px; padding:16px; min-width:120px;">
+            <div style="color:#4ade80; font-size:2em; font-weight:bold;" id="rel_count_built">--</div>
+            <div style="color:#9fb1c9; font-size:0.85em;">Already Built</div>
+          </div>
+          <div style="background:#3f2f1e; border:1px solid #5a4a2d; border-radius:8px; padding:16px; min-width:120px;">
+            <div style="color:rgb(242, 124, 17); font-size:2em; font-weight:bold;" id="rel_count_pending">--</div>
+            <div style="color:#9fb1c9; font-size:0.85em;">Need Building</div>
+          </div>
+        </div>
+
+        <!-- Options -->
+        <div style="text-align:left; background:#2a2a3a; border-radius:8px; padding:16px; margin-bottom:20px;">
+          <label style="display:flex; align-items:flex-start; gap:10px; color:#cfd9ea; margin-bottom:12px; cursor:pointer;">
+            <input type="checkbox" id="rel_build_force" style="width:16px; height:16px; min-width:16px; min-height:16px; accent-color:rgb(242, 124, 17); margin-top:2px;">
+            <span>Include NPCs that were already built</span>
+          </label>
+          <label style="display:flex; align-items:flex-start; gap:10px; color:#cfd9ea; cursor:pointer;">
+            <input type="checkbox" id="rel_build_infer" checked style="width:16px; height:16px; min-width:16px; min-height:16px; accent-color:rgb(242, 124, 17); margin-top:2px;">
+            <div>
+              <span>Build advanced relationship connections</span>
+              <div style="font-size:0.75em; color:#7a8a9a; margin-top:4px; line-height:1.4;">
+                Creates indirect opinions based on social networks.<br>
+                <em>Example: If Eris loves Vivienne (+80) and Vivienne hates a bandit (-70), Eris becomes wary of that bandit too.</em>
+              </div>
+            </div>
+          </label>
+        </div>
+
+        <!-- Buttons -->
+        <div style="display:flex; gap:12px; justify-content:center;">
+          <button id="rel_build_start" style="background:#1e3f1e; color:#fff; border:none; padding:12px 32px; border-radius:8px; font-size:1.1em; font-weight:bold; cursor:pointer; transition:background 0.2s;">
+            Start Building
+          </button>
+          <button id="rel_build_close" style="background:#7a1e1e; color:#fff; border:none; padding:12px 32px; border-radius:8px; font-size:1.1em; font-weight:bold; cursor:pointer; transition:background 0.2s;">
+            Cancel
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress View -->
+      <div id="rel_build_progress" style="display:none;">
+        <div style="margin-bottom:20px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span id="rel_build_status" style="color:rgb(242, 124, 17); font-weight:bold;">Processing...</span>
+            <span id="rel_build_count" style="color:#9fb1c9;">0 / 0</span>
+          </div>
+          <div style="background:#1a1a2a; border-radius:8px; height:28px; overflow:hidden; border:1px solid #4a4a4a;">
+            <div id="rel_build_bar" style="background:linear-gradient(90deg, rgb(242, 124, 17), #f59e0b); height:100%; width:0%; transition:width 0.3s;"></div>
+          </div>
+        </div>
+        <div id="rel_build_log" style="background:#1a1a2a; border:1px solid #4a4a4a; border-radius:8px; padding:12px; height:200px; overflow-y:auto; font-family:monospace; font-size:12px; color:#9fb1c9; text-align:left;">
+        </div>
+        <div style="margin-top:16px;">
+          <button id="rel_build_done" style="display:none; background:#3a3a4a; color:rgb(242, 124, 17); border:1px solid rgb(242, 124, 17); padding:12px 32px; border-radius:8px; font-size:1.1em; font-weight:bold; cursor:pointer;">
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -2294,13 +2698,21 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       const tabs = document.getElementById('npc_modal_tabs');
       const bioPane = document.getElementById('pane_bio');
       const manualPane = document.getElementById('pane_manual');
+      const exportBtn = document.getElementById('npc_modal_export');
+      const importBioBtn = document.getElementById('npc_modal_import_to');
       const isEdit = /[?&]edit=/.test(url);
       if (isEdit){
         if (tabs) tabs.style.display = 'none';
         if (bioPane) { bioPane.style.display = 'none'; bioPane.classList.remove('active'); }
         if (manualPane) { manualPane.style.display = 'block'; manualPane.classList.add('active'); }
+        // Show export/import buttons only for existing NPCs
+        if (exportBtn) exportBtn.style.display = '';
+        if (importBioBtn) importBioBtn.style.display = '';
       } else {
         if (tabs) tabs.style.display = 'flex';
+        // Hide export/import buttons for new NPCs
+        if (exportBtn) exportBtn.style.display = 'none';
+        if (importBioBtn) importBioBtn.style.display = 'none';
       }
     } catch(_e){}
 
@@ -2408,6 +2820,11 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   })();
 
    // Regenerate profile using AI
+  // Global LLM connector data for AI generate dropdown
+  const AI_GEN_LLM_CONNECTORS = <?= json_encode($llmRows ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+  const AI_GEN_PROFILE_CONN = <?= json_encode($profilesConnById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+  const AI_GEN_DEFAULT_CONNECTOR = <?= json_encode($GLOBALS["CORE_CONNECTOR_PROFILES"] ?? '', JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+  
   (function(){
     const regenBtn = document.getElementById('npc_modal_regen');
     if (!regenBtn) return;
@@ -2419,6 +2836,26 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         const npcName = nameEl ? String(nameEl.value||'').trim() : '';
         
         if (!npcName) { alert('Enter NPC Name to generate profile.'); return; }
+        
+        // Get the NPC's profile ID to determine default LLM connector
+        const profileIdEl = doc ? doc.getElementById('profile_id') : null;
+        const profileId = profileIdEl ? String(profileIdEl.value||'').trim() : '';
+        
+        // Determine default connector: profile's primary LLM > global CORE_CONNECTOR_PROFILES
+        let defaultConnectorId = AI_GEN_DEFAULT_CONNECTOR;
+        if (profileId && AI_GEN_PROFILE_CONN[profileId]) {
+          const pc = AI_GEN_PROFILE_CONN[profileId];
+          if (pc.llm_primary_id) defaultConnectorId = String(pc.llm_primary_id);
+        }
+        
+        // Build LLM connector dropdown options
+        let llmOptions = '<option value="">-- Use Global Connector --</option>';
+        AI_GEN_LLM_CONNECTORS.forEach(function(c){
+          const cid = String(c.id||'');
+          const lbl = c.label || ('Connector #'+cid);
+          const sel = (cid === String(defaultConnectorId)) ? ' selected' : '';
+          llmOptions += '<option value="'+cid+'"'+sel+'>'+lbl.replace(/[<>&"]/g, x=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[x]))+'</option>';
+        });
         
         // Show prompt dialog for user to add custom instructions
         const promptBox = document.createElement('div');
@@ -2432,11 +2869,13 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         promptBox.innerHTML = '<div style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:16px; max-width:600px; width:92%; color:#e9efff;">\
           <div style="font-weight:700; color:rgb(242,124,17); margin-bottom:8px; font-size:18px;">AI Generate Profile for "' + npcName.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) + '"</div>\
           <div style="font-size:13px; color:#cfd9ea; margin-bottom:12px;">Add any specific information or instructions for the AI to consider when generating this profile. Leave blank to use default generation.</div>\
+          <label style="display:block; font-size:13px; margin:6px 0 4px; color:#cfd9ea; font-weight:600;">LLM Connector:</label>\
+          <select id="ai_llm_connector" style="width:100%; padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#333; color:#e9efff; font-family:inherit; margin-bottom:8px;">'+llmOptions+'</select>\
           <label style="display:block; font-size:13px; margin:6px 0 4px; color:#cfd9ea; font-weight:600;">Custom Instructions (optional):</label>\
           <textarea id="ai_user_prompt" placeholder="Example: This NPC should be a merchant specializing in enchanted weapons, with a mysterious past..." style="width:100%; min-height:120px; padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; resize:vertical; font-family:inherit;"></textarea>\
           <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">\
-            <button id="ai_prompt_cancel" class="btn-cancel">Cancel</button>\
-            <button id="ai_prompt_ok" class="btn-save">Generate Profile</button>\
+            <button id="ai_prompt_cancel" style="padding:10px 20px; color:#fff; background:rgba(85,95,109,0.9); border:1px solid rgba(156,163,175,0.3); border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; transition:all 0.2s ease;">Cancel</button>\
+            <button id="ai_prompt_ok" style="padding:10px 20px; color:#111; background:rgb(242,124,17); border:1px solid rgb(242,124,17); border-radius:8px; cursor:pointer; font-size:14px; font-weight:700; transition:all 0.2s ease;">Generate Profile</button>\
           </div></div>';
         document.body.appendChild(promptBox);
         
@@ -2452,32 +2891,114 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         
         okBtn.addEventListener('click', async function(){
           const userPrompt = String(promptInput.value||'').trim();
+          const connectorSelect = promptBox.querySelector('#ai_llm_connector');
+          const selectedConnector = connectorSelect ? String(connectorSelect.value||'').trim() : '';
           document.body.removeChild(promptBox);
           
           document.getElementById("npc_modal").style.cursor="wait";
           
           const processingMessage = document.createElement('div');
-          processingMessage.textContent = 'Processing...';
+          processingMessage.innerHTML = '<div style="display:flex;align-items:center;gap:10px;"><div class="spinner" style="width:20px;height:20px;border:3px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite;"></div><span>Generating profile with AI...</span></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
           processingMessage.style.position = 'fixed';
           processingMessage.style.top = '50%';
           processingMessage.style.left = '50%';
           processingMessage.style.transform = 'translate(-50%, -50%)';
-          processingMessage.style.backgroundColor = '#000';
+          processingMessage.style.backgroundColor = 'rgba(0,0,0,0.9)';
           processingMessage.style.color = '#fff';
-          processingMessage.style.padding = '10px 20px';
-          processingMessage.style.borderRadius = '8px';
+          processingMessage.style.padding = '16px 24px';
+          processingMessage.style.borderRadius = '10px';
           processingMessage.style.zIndex = '10001';
+          processingMessage.style.border = '1px solid #4a4a4a';
           processingMessage.id="processing_wheel";
           document.body.appendChild(processingMessage);
 
           const params = new URLSearchParams({ name: npcName });
           if (userPrompt) params.append('user_prompt', userPrompt);
+          if (selectedConnector) params.append('connector_id', selectedConnector);
           
-          const res = await fetch('../cmd/action_ai_regen_profile.php?' + params.toString());
-          let j={}; try { j = await res.json(); } catch(_e) { j={ok:false}; }
+          let j = {};
+          let fetchError = null;
+          try {
+            const res = await fetch('../cmd/action_ai_regen_profile.php?' + params.toString());
+            if (!res.ok) {
+              fetchError = 'Server returned status ' + res.status;
+            } else {
+              try { j = await res.json(); } catch(_e) { j = {done:false, error:'Invalid JSON response from server'}; }
+            }
+          } catch(e) {
+            fetchError = 'Network error: ' + String(e.message || e);
+          }
           
-          document.location.reload();
+          // Remove processing message
+          const procEl = document.getElementById('processing_wheel');
+          if (procEl) procEl.remove();
+          document.getElementById("npc_modal").style.cursor = "";
+          
+          if (fetchError) {
+            showAIGenerateResult(false, fetchError, npcName);
+            return;
+          }
+          
+          if (j && j.done) {
+            showAIGenerateResult(true, 'Profile successfully generated with ' + (j.fields_updated || 'multiple') + ' fields updated.', npcName);
+          } else {
+            const errMsg = (j && j.error) ? j.error : 'Unknown error occurred. Check the server logs for details.';
+            showAIGenerateResult(false, errMsg, npcName);
+          }
         });
+        
+        function showAIGenerateResult(success, message, npcName) {
+          const resultBox = document.createElement('div');
+          resultBox.style.position = 'fixed';
+          resultBox.style.inset = '0';
+          resultBox.style.zIndex = '10050';
+          resultBox.style.display = 'flex';
+          resultBox.style.alignItems = 'center';
+          resultBox.style.justifyContent = 'center';
+          resultBox.style.background = 'rgba(0,0,0,0.65)';
+          
+          const iconColor = success ? '#4ade80' : '#f87171';
+          const iconSymbol = success ? '✓' : '✕';
+          const title = success ? 'Profile Generated Successfully' : 'Profile Generation Failed';
+          
+          resultBox.innerHTML = '<div style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:20px; max-width:500px; width:92%; color:#e9efff;">\
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">\
+              <div style="width:32px; height:32px; border-radius:50%; background:' + iconColor + '; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:bold; color:#111;">' + iconSymbol + '</div>\
+              <div style="font-weight:700; color:' + iconColor + '; font-size:18px;">' + title + '</div>\
+            </div>\
+            <div style="font-size:14px; color:#cfd9ea; margin-bottom:16px; line-height:1.5;">' + message.replace(/[<>]/g, c=>({'<':'&lt;','>':'&gt;'}[c])) + '</div>\
+            <div style="display:flex; gap:8px; justify-content:flex-end;">\
+              ' + (success ? '' : '<button id="ai_result_retry" style="padding:10px 20px; color:#fff; background:rgba(85,95,109,0.9); border:1px solid rgba(156,163,175,0.3); border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; transition:all 0.2s ease;">Try Again</button>') + '\
+              <button id="ai_result_ok" style="padding:10px 20px; color:#111; background:' + (success ? 'rgb(242,124,17)' : 'rgba(85,95,109,0.9)') + '; border:1px solid ' + (success ? 'rgb(242,124,17)' : 'rgba(156,163,175,0.3)') + '; border-radius:8px; cursor:pointer; font-size:14px; font-weight:700; ' + (success ? 'color:#111;' : 'color:#fff;') + ' transition:all 0.2s ease;">' + (success ? 'Reload to View' : 'Close') + '</button>\
+            </div></div>';
+          document.body.appendChild(resultBox);
+          
+          const okBtn = resultBox.querySelector('#ai_result_ok');
+          const retryBtn = resultBox.querySelector('#ai_result_retry');
+          
+          okBtn.addEventListener('click', function(){
+            document.body.removeChild(resultBox);
+            if (success) {
+              document.location.reload();
+            }
+          });
+          
+          if (retryBtn) {
+            retryBtn.addEventListener('click', function(){
+              document.body.removeChild(resultBox);
+              // Re-trigger the regenerate button click
+              const regenBtn = document.getElementById('npc_modal_regen');
+              if (regenBtn) regenBtn.click();
+            });
+          }
+          
+          // Close on background click
+          resultBox.addEventListener('click', function(e){
+            if (e.target === resultBox) {
+              document.body.removeChild(resultBox);
+            }
+          });
+        }
 
       } catch(_e){console.log(_e)}
     });
@@ -2958,6 +3479,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       if (newCreate){ newCreate.addEventListener('click', function(){ openModal('npc_master.php?partial=1'); }); }
       // rebind bulk delete in refreshed DOM
       try { if (window.bindNpcBulkDelete) window.bindNpcBulkDelete(document.getElementById('npc_bulk_delete_btn')); } catch(_){}
+      // rebind Build Relationships button in refreshed DOM
+      try { if (window.bindRelBuildButton) window.bindRelBuildButton(document.getElementById('rel_bulk_build_btn')); } catch(_){}
       // Hook pagination links to AJAX
       // Bind pick-picture buttons after refresh
       document.querySelectorAll('[data-pick-picture-id]').forEach(btn=>{
@@ -3164,7 +3687,320 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   });
 })();
 
+// Build Relationships Modal functionality
+(function(){
+  async function loadModalStats(){
+    // Load model info and NPC counts
+    try {
+      const res = await fetch('../../ext/relationship_system/batch_build.php?action=stats');
+      const data = await res.json();
+      if (data.ok){
+        document.getElementById('rel_build_model').textContent = data.model || 'Not configured';
+        document.getElementById('rel_count_built').textContent = data.built || 0;
+        document.getElementById('rel_count_pending').textContent = data.pending || 0;
+      }
+    } catch(e){
+      document.getElementById('rel_build_model').textContent = 'Error loading';
+    }
+  }
 
+  function bindRelBuildButton(btn){
+    if (!btn) return;
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      const modal = document.getElementById('rel_build_modal');
+      if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        // Reset state
+        document.getElementById('rel_build_content').style.display = 'block';
+        document.getElementById('rel_build_progress').style.display = 'none';
+        document.getElementById('rel_build_log').innerHTML = '';
+        document.getElementById('rel_build_bar').style.width = '0%';
+        document.getElementById('rel_build_count').textContent = '0 / 0';
+        document.getElementById('rel_build_status').textContent = 'Ready';
+        const doneBtn = document.getElementById('rel_build_done');
+        if (doneBtn) doneBtn.style.display = 'none';
+        // Load stats
+        loadModalStats();
+      }
+    });
+  }
+
+  // Bind both buttons (AJAX partial and main page)
+  bindRelBuildButton(document.getElementById('rel_bulk_build_btn'));
+
+  // Make it available for rebinding after AJAX refresh
+  window.bindRelBuildButton = bindRelBuildButton;
+
+  // Close button
+  const closeBtn = document.getElementById('rel_build_close');
+  if (closeBtn){
+    closeBtn.addEventListener('click', function(){
+      const modal = document.getElementById('rel_build_modal');
+      if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+      }
+    });
+  }
+
+  // Start button
+  const startBtn = document.getElementById('rel_build_start');
+  if (startBtn){
+    startBtn.addEventListener('click', async function(){
+      const force = document.getElementById('rel_build_force').checked ? 1 : 0;
+      const infer = document.getElementById('rel_build_infer').checked ? 1 : 0;
+
+      // Show progress
+      document.getElementById('rel_build_content').style.display = 'none';
+      document.getElementById('rel_build_progress').style.display = 'block';
+
+      const logEl = document.getElementById('rel_build_log');
+      const barEl = document.getElementById('rel_build_bar');
+      const countEl = document.getElementById('rel_build_count');
+      const statusEl = document.getElementById('rel_build_status');
+
+      function log(msg, type){
+        const line = document.createElement('div');
+        line.textContent = msg;
+        if (type === 'error') line.style.color = '#ff6b6b';
+        else if (type === 'success') line.style.color = '#69db7c';
+        else if (type === 'info') line.style.color = 'rgb(242, 124, 17)';
+        logEl.appendChild(line);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      try {
+        log('Starting relationship build...', 'info');
+        statusEl.textContent = 'Fetching NPC list...';
+
+        // Fetch list of NPCs to process
+        const listRes = await fetch('../../ext/relationship_system/batch_build.php?action=list&force=' + force);
+        const listData = await listRes.json();
+
+        if (!listData.ok){
+          log('Error: ' + (listData.error || 'Failed to get NPC list'), 'error');
+          statusEl.textContent = 'Failed';
+          return;
+        }
+
+        const npcs = listData.npcs || [];
+        const total = npcs.length;
+
+        if (total === 0){
+          log('No NPCs need processing.', 'info');
+          statusEl.textContent = 'Complete';
+          barEl.style.width = '100%';
+          return;
+        }
+
+        log('Found ' + total + ' NPCs to process.', 'info');
+        countEl.textContent = '0 / ' + total;
+
+        let processed = 0;
+        let success = 0;
+        let failed = 0;
+
+        // Process each NPC
+        for (const npc of npcs){
+          statusEl.textContent = 'Processing: ' + npc.name;
+
+          try {
+            const res = await fetch('../../ext/relationship_system/batch_build.php?action=process&id=' + npc.id + '&force=' + force);
+            const data = await res.json();
+
+            if (data.ok){
+              success++;
+              log('✓ ' + npc.name + ': ' + (data.count || 0) + ' relationships', 'success');
+            } else {
+              failed++;
+              log('✗ ' + npc.name + ': ' + (data.error || 'Failed'), 'error');
+            }
+          } catch(e){
+            failed++;
+            log('✗ ' + npc.name + ': Network error', 'error');
+          }
+
+          processed++;
+          countEl.textContent = processed + ' / ' + total;
+          barEl.style.width = Math.round((processed / total) * 100) + '%';
+        }
+
+        // Run inference if requested
+        if (infer && success > 0){
+          statusEl.textContent = 'Running transitive inference...';
+          log('Running transitive inference...', 'info');
+
+          try {
+            const infRes = await fetch('../../ext/relationship_system/batch_build.php?action=infer');
+            const infData = await infRes.json();
+            if (infData.ok){
+              log('✓ Inference complete: ' + (infData.count || 0) + ' relationships updated', 'success');
+            }
+          } catch(e){
+            log('Inference skipped due to error', 'error');
+          }
+        }
+
+        statusEl.textContent = 'Complete';
+        log('Done! ' + success + ' succeeded, ' + failed + ' failed.', 'info');
+
+        // Show Done button
+        const doneBtn = document.getElementById('rel_build_done');
+        if (doneBtn) doneBtn.style.display = 'inline-block';
+
+      } catch(e){
+        log('Error: ' + e.message, 'error');
+        statusEl.textContent = 'Failed';
+        // Show Done button even on error
+        const doneBtn = document.getElementById('rel_build_done');
+        if (doneBtn) doneBtn.style.display = 'inline-block';
+      }
+    });
+  }
+
+  // Done button handler
+  const doneBtn = document.getElementById('rel_build_done');
+  if (doneBtn){
+    doneBtn.addEventListener('click', function(){
+      const modal = document.getElementById('rel_build_modal');
+      if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+      }
+    });
+  }
+})();
+
+// NPC Export/Import functionality
+(function(){
+  // Export button in modal header
+  const exportBtn = document.getElementById('npc_modal_export');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', function(){
+      const id = window.CURRENT_NPC_ID;
+      if (!id) { alert('No NPC selected. Save the NPC first before exporting.'); return; }
+      // Trigger download by navigating to export URL
+      window.location.href = 'npc_master.php?export=' + id;
+    });
+  }
+  
+  // Import Bio to current NPC button in modal header (only for existing NPCs)
+  const importToBtn = document.getElementById('npc_modal_import_to');
+  if (importToBtn) {
+    importToBtn.addEventListener('click', function(){
+      const id = window.CURRENT_NPC_ID;
+      if (!id) { alert('No NPC selected. Save the NPC first before importing.'); return; }
+      
+      // Create file input
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      
+      input.addEventListener('change', async function(){
+        if (!input.files || !input.files[0]) return;
+        
+        const file = input.files[0];
+        const text = await file.text();
+        
+        try {
+          const data = JSON.parse(text);
+          if (!confirm('Import biography from "' + (data.npc_name || 'Unknown') + '" to this NPC?\n\nThis will overwrite the current NPC\'s biography fields (personality, appearance, skills, etc.) but keep the name.')) {
+            return;
+          }
+          
+          const formData = new FormData();
+          formData.append('import_npc', '1');
+          formData.append('import_data', text);
+          formData.append('target_id', id);
+          
+          const res = await fetch('npc_master.php', { method: 'POST', body: formData });
+          const result = await res.json();
+          
+          if (result.ok) {
+            alert(result.message || 'Biography imported successfully');
+            location.reload();
+          } else {
+            alert('Error: ' + (result.error || 'Import failed'));
+          }
+        } catch(e) {
+          alert('Error parsing JSON file: ' + e.message);
+        } finally {
+          document.body.removeChild(input);
+        }
+      });
+      
+      input.click();
+    });
+  }
+  
+  // Import NPC button in toolbar (create new NPC from JSON)
+  const importBtn = document.getElementById('npc_import_btn');
+  if (importBtn) {
+    importBtn.addEventListener('click', function(){
+      // Create file input
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      
+      input.addEventListener('change', async function(){
+        if (!input.files || !input.files[0]) return;
+        
+        const file = input.files[0];
+        const text = await file.text();
+        
+        try {
+          const data = JSON.parse(text);
+          const originalName = data.npc_name || '';
+          
+          // Show dialog to confirm or change name
+          const newName = prompt(
+            'Import NPC from file.\n\n' +
+            'Original name: ' + (originalName || '(none)') + '\n\n' +
+            'Enter NPC name (leave as-is or change for renamed NPCs):',
+            originalName
+          );
+          
+          if (newName === null) {
+            // User cancelled
+            return;
+          }
+          
+          if (!newName.trim()) {
+            alert('NPC name is required');
+            return;
+          }
+          
+          const formData = new FormData();
+          formData.append('import_npc', '1');
+          formData.append('import_data', text);
+          formData.append('new_name', newName.trim());
+          
+          const res = await fetch('npc_master.php', { method: 'POST', body: formData });
+          const result = await res.json();
+          
+          if (result.ok) {
+            alert(result.message || 'NPC imported successfully');
+            location.reload();
+          } else {
+            alert('Error: ' + (result.error || 'Import failed'));
+          }
+        } catch(e) {
+          alert('Error parsing JSON file: ' + e.message);
+        } finally {
+          document.body.removeChild(input);
+        }
+      });
+      
+      input.click();
+    });
+  }
+})();
 
 </script>
 

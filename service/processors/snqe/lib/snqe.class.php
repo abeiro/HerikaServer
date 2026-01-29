@@ -118,5 +118,44 @@ class SNQEQuestManager {
         $res = self::getQuest($quest_id);
         return $res !== null;
     }
+
+    public static function save_quests(int $gamets) {
+        $state=$GLOBALS["db"]->escape(file_get_contents($GLOBALS["ENGINE_PATH"]."/log/snqe_state.json"));
+        $GLOBALS["db"]->query(
+            "INSERT INTO sneq_quests_saved (quest_id, code, created_at,updated_at,quest_run_state, quest_data, title, stage, gamets,\"state\")
+             SELECT t.quest_id, t.code, t.created_at, t.updated_at, t.quest_run_state, t.quest_data, t.title, t.stage, $gamets,'$state'
+             FROM (
+                 SELECT DISTINCT ON (quest_id) quest_id, code, created_at, updated_at, quest_run_state, quest_data, title, stage
+                 FROM sneq_quests
+                 ORDER BY quest_id, updated_at DESC
+             ) t
+             "
+        );
+    }
+
+    public static function load_quests(int $gamets) {
+        
+        $GLOBALS["db"]->query("truncate table sneq_quests");
+        $runningQuest=$GLOBALS["db"]->fetchOne("SELECT * FROM sneq_quests_saved where gamets<=$gamets order by gamets desc,updated_at desc limit 1");
+        if ($runningQuest) {
+            $state=json_decode($runningQuest["state"],true);
+            file_put_contents($GLOBALS["ENGINE_PATH"]."/log/snqe_state.json",json_encode($state,JSON_PRETTY_PRINT));   
+            chmod(filename: $GLOBALS["ENGINE_PATH"]."/log/snqe_state.json", permissions: 0777);
+            $GLOBALS["db"]->insert(
+                'sneq_quests',
+                [
+                    'quest_id' => $runningQuest["quest_id"],
+                    'code' => $runningQuest["code"],
+                    'quest_run_state' => $runningQuest["quest_run_state"],
+                    'quest_data' => $runningQuest["quest_data"],
+                    'title' => $runningQuest["title"],
+                    'stage' => $runningQuest["stage"],
+                    'created_at' => $runningQuest["created_at"],
+                    'updated_at' => $runningQuest["updated_at"],
+                ]
+            );
+        }
+
+    }
 }
 ?>

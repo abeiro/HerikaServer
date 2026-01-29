@@ -22,6 +22,8 @@ $OGHMA_KNOWLEDGE="knowall"; //Assists smaller weight LLMs with action and memory
 $OGHMA_AMOUNT=1; //Number of Oghma keywords to extract from each response. More keyword extraction will mean longer response times.
 $PLAYER_RESPEECH=true; //Use default diary connector AI to rewrite player speech. Currently only triggers when starting speech with **.
 $PLAYER_SPEECH_STYLE=""; //Instructions for how the player character speaks and communicates. Used as context when rewriting player dialogue.
+$PROMPT_TIMESTAMP=false; //Add rough timestamp subdividers to event context (e.g., 'Moments Ago', 'A while ago') to help the LLM understand temporal relationships.
+$use_emotions_expression = false; //Add emotions support. Changes the affect context/json object offered to LLM must be false by default.
 
 //[Advanced Configuration]
 $RECHAT_H=2; //Rechat Rounds. Higher values will increase the amount of rounds NPC's will talk amongst themselves.
@@ -63,7 +65,11 @@ $EMOTEMOODS="sassy,"
     . "playful,"
     . "neutral,"
     . "teasing,"
-    . "mocking"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
+    . "mocking"
+    . "desperate"
+    . "distressed"
+    . "pleading"
+    . "sad"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 
 $REMOVE_ASTERISKS_FROM_OUTPUT=true;
 $ENFORCE_ACTIONS_PROMPT=false;
@@ -299,6 +305,9 @@ $TTS["XTTSFASTAPI"]["endpoint"]='http://127.0.0.1:8020'; //API endpoint.
 $TTS["XTTSFASTAPI"]["language"]='en'; //Lanuguage.
 $TTS["XTTSFASTAPI"]["voiceid"]='TheNarrator'; //Generated voice file name.
 $TTS["XTTSFASTAPI"]["voicelogic"]='voicetype';
+$TTS["XTTSFASTAPI"]["PARALINGUISTIC_TAGS_ENABLED"]=false; //Enable paralinguistic tags like [laugh], [sigh] for expressive TTS output.
+$TTS["XTTSFASTAPI"]["PARALINGUISTIC_TAGS_PROMPT"]=''; //Prompt snippet for instructing LLM to use paralinguistic tags.
+$TTS["XTTSFASTAPI"]["PARALINGUISTIC_TAGS_LIST"]='[clear throat],[sigh],[shush],[cough],[groan],[sniff],[gasp],[chuckle],[laugh]'; //Comma-separated list of supported tags.
 //MIMIC3
 $TTS["MIMIC3"]["URL"]="http://127.0.0.1:59125"; //API endpoint. 
 $TTS["MIMIC3"]["voice"]="en_UK/apope_low#default"; //Voice ID.
@@ -404,6 +413,14 @@ $TTS["CARTESIA"]["voiceid"]=''; //Voice file name. Works like XTTS voiceid.
 $TTS["CARTESIA"]["language"]='en'; //Language (en, fr, de, es, etc.).
 $TTS["CARTESIA"]["model_id"]='sonic-3'; //Model (sonic-3, sonic-english, sonic-multilingual).
 $TTS["CARTESIA"]["speed"]='normal'; //Speed (slowest, slow, normal, fast, fastest).
+
+//Inworld TTS
+$TTS["INWORLD"]["workspace"]=''; //Workspace ID (required for voice cloning). Format: workspaces/{workspace} or just the workspace ID.
+$TTS["INWORLD"]["voiceid"]=''; //Voice file name. Works like XTTS voiceid. Voice will be automatically cloned to Inworld when first used.
+$TTS["INWORLD"]["language"]='EN_US'; //Language code (EN_US, ZH_CN, KO_KR, JA_JP, RU_RU, IT_IT, ES_ES, PT_BR, DE_DE, FR_FR, AR_SA, PL_PL, NL_NL, HI_IN, HE_IL).
+$TTS["INWORLD"]["model_id"]='inworld-tts-1'; //Model (inworld-tts-1, inworld-tts-1-max).
+$TTS["INWORLD"]["temperature"]=1.1; //Sampling temperature (0-2). Higher values make output more random. Default: 1.1.
+$TTS["INWORLD"]["speed"]=1.0; //Speaking rate/speed (0.5-1.5). Default: 1.0.
 
 //[Player TTS]
 $TTSFUNCTION_PLAYER="none";
@@ -522,5 +539,6 @@ $RANDOM_NARATION=false;
 $RANDOM_NARATION_CHANCE=15;
 $RANDOM_NARRATION_COOLDOWN=2;
 
+$OGHMA_CUSTOM=false;
 ?>
 

@@ -84,6 +84,11 @@ $fullSchema = [
         'description' => 'Remove text between ** when responding (*cough*, *smiles*, etc)',
         'category' => 'Core Settings'
     ],
+    'INLINE_NARRATION_ENABLED' => [
+        'type' => 'boolean',
+        'description' => 'Enable inline narration in asterisks (e.g., *She smiles*). Appears in subtitles but not spoken in TTS.',
+        'category' => 'Core Settings'
+    ],
     'MAX_WORDS_LIMIT' => [
         'type' => 'integer',
         'description' => 'Enforce a word limit for responses. Leave as 0 for no limit.',
@@ -148,17 +153,12 @@ $fullSchema = [
     ],
     'BORED_EVENT' => [
         'type' => 'integer',
-        'description' => 'Bored Event Probability. Chance of starting random conversations. 0 = Never | 50 = 50% | 100 = Always',
+        'description' => 'Bored Event Probability. Chance of starting random conversations. 0 = Never | 50 = 50% | 100 = Always. Note: Bored Event Chance can be configured ingame in the CHIM MCM menu',
         'category' => 'Behavior'
     ],
     'BORED_EVENT_SERVERSIDE' => [
         'type' => 'boolean',
         'description' => 'Smart Bored Events. Uses director to generate dynamic topics (slower but better quality).',
-        'category' => 'Behavior'
-    ],
-    'HERIKA_ANIMATIONS' => [
-        'type' => 'boolean',
-        'description' => 'Will issue animations to play',
         'category' => 'Behavior'
     ],
     'LANG_LLM_XTTS' => [
@@ -521,6 +521,8 @@ foreach ($allowedSettings as $key) {
 (function(){
     const MODE = <?= json_encode($mode) ?>;
     const IS_NPC_MODE = MODE === 'npc';
+    // Display name mappings for UI labels
+    const displayNames = { 'xtts-fastapi': 'xtts/chatterbox' };
     const IS_PROFILE_MODE = MODE === 'profile';
     const FIELD_NAME = <?= json_encode($fieldName) ?>;
     const PREFIX = <?= json_encode($prefix) ?>;
@@ -555,6 +557,17 @@ foreach ($allowedSettings as $key) {
         return '⚙️';
     }
     
+    // Custom label mapping
+    function getLabel(key) {
+        const customLabels = {
+            'BORED_EVENT': 'BORED EVENT CHANCE',
+            'CONTEXT_HISTORY': 'CONTEXT HISTORY EVENT COUNT',
+            'CONTEXT_HISTORY_DIARY': 'CONTEXT HISTORY DIARY EVENT COUNT',
+            'CONTEXT_HISTORY_DYNAMIC_PROFILE': 'CONTEXT HISTORY DYNAMIC PROFILE EVENT COUNT'
+        };
+        return customLabels[key.toUpperCase()] || key.toUpperCase();
+    }
+    
     // Render overrides list
     function renderOverridesList() {
         const list = el('ovr-list');
@@ -578,7 +591,7 @@ foreach ($allowedSettings as $key) {
                 <div class="${PREFIX}ovr-item" data-key="${escapeHtml(key)}">
                     <div class="${PREFIX}ovr-icon">${getIcon(key)}</div>
                     <div class="${PREFIX}ovr-info">
-                        <div class="${PREFIX}ovr-key">${escapeHtml(key.toUpperCase())}</div>
+                        <div class="${PREFIX}ovr-key">${escapeHtml(getLabel(key))}</div>
                         <div class="${PREFIX}ovr-value">${escapeHtml(displayValue)}</div>
                     </div>
                     <div class="${PREFIX}ovr-actions">
@@ -795,10 +808,10 @@ foreach ($allowedSettings as $key) {
             inputHtml = `
                 <select id="${PREFIX}ovr-value-input" class="${PREFIX}ovr-input" required>
                     <option value="">-- Select --</option>
-                    ${values.map(v => `<option value="${escapeHtml(v)}" ${String(currentValue) === String(v) ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('')}
+                    ${values.map(v => `<option value="${escapeHtml(v)}" ${String(currentValue) === String(v) ? 'selected' : ''}>${escapeHtml(displayNames[v] || v)}</option>`).join('')}
                 </select>
             `;
-            validationHint = `<div style="color:#9fb1c9; font-size:11px; margin-top:4px;">✓ Valid options: ${values.join(', ')}</div>`;
+            validationHint = `<div style="color:#9fb1c9; font-size:11px; margin-top:4px;">✓ Valid options: ${values.map(v => displayNames[v] || v).join(', ')}</div>`;
         } else if (type === 'integer') {
             const val = currentValue ?? '';
             inputHtml = `<input type="number" id="${PREFIX}ovr-value-input" class="${PREFIX}ovr-input" value="${escapeHtml(val)}" placeholder="Enter integer" step="1" required>`;

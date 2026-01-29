@@ -28,7 +28,7 @@ $localSchemaOverrides = [
     ],
     'BORED_EVENT' => [
         'type' => 'integer',
-        'description' => 'Bored Event Probability. Chance of an AI NPC starting a random conversation every couple of minutes.0 = Never | 50 = 50% | 100 = Always',
+        'description' => 'Bored Event Probability. Chance of an AI NPC starting a random conversation every couple of minutes. 0 = Never | 50 = 50% | 100 = Always. Note: Bored Event Chance can be configured ingame in the CHIM MCM menu',
     ],
     'DIARY_PROMPT' => [
         'type' => 'longstring',
@@ -41,7 +41,7 @@ $localSchemaOverrides = [
     ],
     'LANG_LLM_XTTS' => [
         'type' => 'boolean',
-        'description' => 'XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language.',
+        'description' => 'XTTS/Chatterbox Only! Will offer a language field to LLM, and will try match to XTTSv2 language.',
     ],
     'QUEST_COMMENT' => [
         'type' => 'boolean',
@@ -59,10 +59,7 @@ $localSchemaOverrides = [
         'type' => 'boolean',
         'description' => "Needs Minime-T5 enabled and running. Tamriel lore information will be added to the prompt, enhancing their understanding on specific topics.",
     ],
-    'OGHMA_CUSTOM' => [
-        'type' => 'boolean',
-        'description' => 'Use custom LLM for Oghma keyword extraction instead of MiniMe T5. Customize prompt via Prompts Manager.',
-    ],
+    // OGHMA_CUSTOM removed - now only in Global Settings
     'CONTEXT_HISTORY' => [
         'type' => 'integer',
         'description' => 'Amount of context history (dialogue and events) that will be sent to LLM. Improves short term memory.Higher Context = more tokens used and slower response time.We recommend you do not go over 100',
@@ -70,10 +67,6 @@ $localSchemaOverrides = [
     'MAX_WORDS_LIMIT' => [
         'type' => 'integer',
         'description' => "Enforce a word limit for AI's responses. Leave as 0 to have no limit.",
-    ],
-    'HERIKA_ANIMATIONS' => [
-        'type' => 'boolean',
-        'description' => 'Will issue animations for the NPC to play',
     ],
     'QUEST_COMMENT_CHANCE' => [
         'type' => 'select',
@@ -83,6 +76,14 @@ $localSchemaOverrides = [
     'RECHAT_ALLOW_ACTIONS' => [
         'type' => 'boolean',
         'description' => 'Allow AI NPCs to trigger actions between eachother during Rechat. This can cause some chaos...',
+    ],
+    'REMOVE_ASTERISKS_FROM_OUTPUT' => [
+        'type' => 'boolean',
+        'description' => 'Remove text between ** when responding (*cough*, *smiles*, etc)',
+    ],
+    'INLINE_NARRATION_ENABLED' => [
+        'type' => 'boolean',
+        'description' => 'Enable inline narration in asterisks (e.g., *She smiles*). Appears in subtitles but not spoken in TTS.',
     ],
     'CONTEXT_HISTORY_DIARY' => [
         'type' => 'integer',
@@ -96,10 +97,6 @@ $localSchemaOverrides = [
         'type' => 'boolean',
         'description' => 'Encourage AI NPCs to use actions more often.',
     ],
-    'REMOVE_ASTERISKS_FROM_OUTPUT' => [
-        'type' => 'boolean',
-        'description' => 'Remove text between ** when the AI responds, such as *couch*, *smiles*, "claps, etc',
-    ],
     'CONTEXT_HISTORY_DYNAMIC_PROFILE' => [
         'type' => 'integer',
         'description' => 'Amount of context history (dialogue and events) that will be sent to LLM specifically for dynamic profile updates. If set to 0, will use the regular CONTEXT_HISTORY value instead.',
@@ -110,26 +107,38 @@ $localSchemaOverrides = [
 $visualKeys = [
   "RECHAT_H","RECHAT_P","CORE_LANG","MINIME_T5","BORED_EVENT",
   "DIARY_PROMPT","OGHMA_AMOUNT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN","COMBAT_BARK_COOLDOWN",
-  "OGHMA_INFINIUM","OGHMA_CUSTOM","CONTEXT_HISTORY","MAX_WORDS_LIMIT","HERIKA_ANIMATIONS",
+  "OGHMA_INFINIUM","CONTEXT_HISTORY","MAX_WORDS_LIMIT",
   "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE","ENFORCE_ACTIONS_PROMPT",
-  "REMOVE_ASTERISKS_FROM_OUTPUT","CONTEXT_HISTORY_DYNAMIC_PROFILE"
+  "REMOVE_ASTERISKS_FROM_OUTPUT","INLINE_NARRATION_ENABLED","CONTEXT_HISTORY_DYNAMIC_PROFILE"
 ];
 
 // Organize visual keys into categories for display
 $visualGroups = [
-  'Core' => ["CORE_LANG","ENFORCE_ACTIONS_PROMPT","REMOVE_ASTERISKS_FROM_OUTPUT","MAX_WORDS_LIMIT"],
+  'Core' => ["CORE_LANG","ENFORCE_ACTIONS_PROMPT","REMOVE_ASTERISKS_FROM_OUTPUT","INLINE_NARRATION_ENABLED","MAX_WORDS_LIMIT"],
   'Rechat' => ["RECHAT_H","RECHAT_P","RECHAT_ALLOW_ACTIONS"],
   'Diary' => ["DIARY_PROMPT","DIARY_COOLDOWN"],
   'Combat' => ["COMBAT_BARK_COOLDOWN"],
-  'Oghma' => ["OGHMA_INFINIUM","OGHMA_AMOUNT","MINIME_T5","OGHMA_CUSTOM"],
+  'Oghma' => ["OGHMA_INFINIUM","OGHMA_AMOUNT","MINIME_T5"],
   'Context' => ["CONTEXT_HISTORY","CONTEXT_HISTORY_DIARY","CONTEXT_HISTORY_DYNAMIC_PROFILE"],
   'Quest' => ["QUEST_COMMENT","QUEST_COMMENT_CHANCE"],
-  'Behavior' => ["BORED_EVENT","BORED_EVENT_SERVERSIDE","HERIKA_ANIMATIONS"],
+  'Behavior' => ["BORED_EVENT","BORED_EVENT_SERVERSIDE"],
   'Language/Voice' => ["LANG_LLM_XTTS"],
 ];
 
 // Pretty label similar to global_settings General tab
 function meta_pretty_label(string $name): string {
+    // Custom label overrides
+    $customLabels = [
+        'BORED_EVENT' => 'Bored Event Chance',
+        'CONTEXT_HISTORY' => 'Context History Event Count',
+        'CONTEXT_HISTORY_DIARY' => 'Context History Diary Event Count',
+        'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 'Context History Dynamic Profile Event Count'
+    ];
+    
+    if (isset($customLabels[$name])) {
+        return $customLabels[$name];
+    }
+    
     $p = str_replace('_', ' ', strtolower(trim($name)));
     return ucwords($p);
 }

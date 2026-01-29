@@ -43,16 +43,18 @@ if (!is_array($rawSchema)) $rawSchema = [];
 $providersTts = is_array($rawSchema['TTS'] ?? null) ? $rawSchema['TTS'] : [];
 $providersStt = is_array($rawSchema['STT'] ?? null) ? $rawSchema['STT'] : [];
 $ittProviders = is_array($rawSchema['ITT'] ?? null) ? $rawSchema['ITT'] : [];
-$ttsOptions = $rawSchema['TTSFUNCTION']['values'] ?? [ 'mimic3','melotts','xtts-fastapi','xvasynth','azure','11labs','openai','koboldcpp','zonos_gradio','piper-tts','kokoro','deepgram','cartesia' ];
+$ttsOptions = $rawSchema['TTSFUNCTION']['values'] ?? [ 'mimic3','melotts','xtts-fastapi','xvasynth','azure','11labs','openai','koboldcpp','zonos_gradio','piper-tts','kokoro','deepgram','cartesia','inworld' ];
 $sttOptions = $rawSchema['STTFUNCTION']['values'] ?? [ 'none','whisper','localwhisper','azure','deepgram' ];
 $ittOptionsRaw = $rawSchema['ITTFUNCTION']['values'] ?? [ 'openai','google_openai','openrouter','llamacpp' ];
 // Exclude llamacpp per existing ITT page behavior
 $ittOptions = array_values(array_filter($ittOptionsRaw, function($v){ return strtolower($v) !== 'llamacpp'; }));
 
 // Mappings
-$ttsMap = [ 'melotts' => 'MELOTTS','xtts-fastapi' => 'XTTSFASTAPI','mimic3' => 'MIMIC3','xvasynth' => 'XVASYNTH','azure' => 'AZURE','11labs' => 'ELEVEN_LABS','openai' => 'openai','kokoro' => 'KOKORO','koboldcpp' => 'koboldcpp','zonos_gradio' => 'ZONOS_GRADIO','piper-tts' => 'PIPERTTS','deepgram' => 'deepgram','cartesia' => 'CARTESIA' ];
+$ttsMap = [ 'melotts' => 'MELOTTS','xtts-fastapi' => 'XTTSFASTAPI','mimic3' => 'MIMIC3','xvasynth' => 'XVASYNTH','azure' => 'AZURE','11labs' => 'ELEVEN_LABS','openai' => 'openai','kokoro' => 'KOKORO','koboldcpp' => 'koboldcpp','zonos_gradio' => 'ZONOS_GRADIO','piper-tts' => 'PIPERTTS','deepgram' => 'deepgram','cartesia' => 'CARTESIA','inworld' => 'INWORLD' ];
 $sttMap = [ 'whisper' => 'WHISPER','localwhisper' => 'LOCALWHISPER','azure' => 'AZURE','deepgram' => 'DEEPGRAM','parakeet'=>"PARAKEET" ];
 $ittMap = [ 'openai' => 'openai','google_openai' => 'google_openai','openrouter' => 'openrouter' ];
+// Display name mappings for UI labels
+$ttsDisplayNames = [ 'xtts-fastapi' => 'xtts/chatterbox' ];
 
 // Active tab tracking for postback previews
 $activeTab = (isset($_POST['gs_tab']) && is_string($_POST['gs_tab'])) ? (string)$_POST['gs_tab'] : 'tab-global';
@@ -103,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test'])) {
         // Only set default voices for providers that need them; let 11labs/openai/azure/deepgram use configured voice
         if ($selLower === 'xtts-fastapi') $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator';
         else if ($selLower === 'cartesia') $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator';
+        else if ($selLower === 'inworld') $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator';
         else if (in_array($selLower, ['melotts','piper-tts','xvasynth'], true)) $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'malenord';
     }
     try {
@@ -127,6 +130,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test']) && 
         'url' => $ttsTestOutputUrl,
     ]);
     exit;
+}
+
+// Handle Clear Reanimation Status action
+$clearReanimationResult = null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_reanimation_status'])) {
+    try {
+        // Initialize database if needed
+        if (!isset($GLOBALS['db']) || !$GLOBALS['db']) {
+            @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+            if (isset($GLOBALS["DBDRIVER"])) {
+                @require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php");
+            }
+            $GLOBALS['db'] = new sql();
+        }
+        
+        $db = $GLOBALS['db'];
+        $affectedCount = 0;
+        
+        // 1. Remove "reanimated" flag from extended_data for all NPCs
+        $updateExtended = "UPDATE core_npc_master 
+            SET extended_data = extended_data - 'reanimated'
+            WHERE extended_data::text LIKE '%reanimated%'";
+        $db->execQuery($updateExtended);
+        
+        // 2. Remove zombie text from core field (multiple variations)
+        $zombiePhrases = [
+            ' You have been reanimated from death as a zombie.',
+            'You have been reanimated from death as a zombie. ',
+            'You have been reanimated from death as a zombie.',
+        ];
+        
+        foreach ($zombiePhrases as $phrase) {
+            $escaped = $db->escape($phrase);
+            $updateCore = "UPDATE core_npc_master 
+                SET core = REPLACE(core, '{$escaped}', '')
+                WHERE core LIKE '%{$escaped}%'";
+            $db->execQuery($updateCore);
+        }
+        
+        // Count affected NPCs for feedback
+        $countQuery = "SELECT COUNT(*) as cnt FROM core_npc_master WHERE 1=0"; // Placeholder
+        
+        $clearReanimationResult = ['success' => true, 'message' => 'Successfully cleared reanimation status from all NPCs.'];
+        Logger::info("[GLOBAL_SETTINGS] Cleared reanimation status from all NPCs");
+        
+    } catch (Exception $e) {
+        $clearReanimationResult = ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
+        Logger::error("[GLOBAL_SETTINGS] Failed to clear reanimation status: " . $e->getMessage());
+    }
 }
 
 // Helper: flatten currentConf into name=>value pairs like conf_wizard/conf_writer
@@ -154,6 +206,40 @@ function flatten_current_conf(array $currentConf, array $confSchema): array {
     }
     return $flat;
 }
+
+// Helper: format field name for display with proper title casing
+function format_field_label($fieldName) {
+    // Special cases for common acronyms and abbreviations
+    $specialCases = [
+        'api_key' => 'API Key',
+        'url' => 'URL',
+        'tts' => 'TTS',
+        'stt' => 'STT',
+        'itt' => 'ITT',
+        'llm' => 'LLM',
+        'id' => 'ID',
+        'voiceid' => 'Voice ID',
+        'model_id' => 'Model ID',
+        'voice_id' => 'Voice ID',
+        'speaker_id' => 'Speaker ID',
+        'cfg_scale' => 'CFG Scale',
+    ];
+    
+    $lower = strtolower($fieldName);
+    if (isset($specialCases[$lower])) {
+        return $specialCases[$lower];
+    }
+    
+    // Convert snake_case or underscore-separated to Title Case
+    $words = preg_split('/[_\s]+/', $fieldName);
+    $formatted = array_map(function($word) {
+        // Capitalize first letter of each word
+        return ucfirst(strtolower($word));
+    }, $words);
+    
+    return implode(' ', $formatted);
+}
+
 
 // Helper: build conf.php content using logic aligned with tools/conf_writer.php
 function build_conf_php_from_pairs(array $pairs, array $confSchema): string {
@@ -246,9 +332,10 @@ function pretty_label(string $flatName): string {
         'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
         'CORE_CONNECTOR_SUMMARY' => 'Summaries',
         'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory/Background Life',
-        'CORE_CONNECTOR_PROFILES' => 'Dynamic Profiles',
+        'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
         'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
+        'RELLLM_CONNECTOR' => 'Relationship Management',
     ];
     if (isset($connectorLabels[$flatName])) {
         return $connectorLabels[$flatName];
@@ -270,6 +357,7 @@ function icon_for_field(string $flatName): string {
     // Specific keys
     if ($u === 'PLAYER_NAME') return '🏷️';
     if ($u === 'PROMPT_HEAD') return '🔝';
+    if ($u === 'PROMPT_TIMESTAMP') return '🕐';
     // Connectors
     if (strpos($u, 'CORE_CONNECTOR_') === 0) {
         if ($u === 'CORE_CONNECTOR_PLAYER') return '🎮';
@@ -280,6 +368,8 @@ function icon_for_field(string $flatName): string {
         if ($u === 'CORE_CONNECTOR_OGHMA_CUSTOM') return '🐙';
         return '🔌';
     }
+    if ($u === 'RELATIONSHIP_SYSTEM_ENABLED') return '💞';
+    if ($u === 'RELLLM_CONNECTOR') return '🔗';
     // Respeech related
     if (strpos($u, 'RESPEECH') !== false) return '🦜';
     if (strpos($u, 'SPEECH_STYLE') !== false) return '🦜';
@@ -295,8 +385,9 @@ function icon_for_field(string $flatName): string {
 
 // Curated, manually-defined global settings (exclude TTS, STT, ITT)
 $gsSections = [
-    'General' => [
+    'Prompt Settings' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
+        [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
         [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
@@ -305,7 +396,7 @@ $gsSections = [
         [ 'name' => 'GROUND_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'INVENTORY_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
-        [ 'name' => 'DISABLE_REANIMATION_TRACKING', 'type' => 'boolean' ],
+        [ 'name' => 'DISABLE_REANIMATION_TRACKING', 'type' => 'boolean', 'action' => 'clear_reanimation' ],
         [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
         [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
     ],
@@ -316,7 +407,7 @@ $gsSections = [
         [ 'name' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'OGHMA_CUSTOM', 'type' => 'boolean' ],
+        [ 'name' => 'RELLLM_CONNECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'foreign:core_llm_connector:id:label' ],
     ],
     // 'Dynamic Prompts' => [
@@ -328,15 +419,7 @@ $gsSections = [
     //     // [ 'name' => 'DYNAMIC_PROMPT_SPEECHSTYLE', 'type' => 'longstring' ],
     //     // [ 'name' => 'DYNAMIC_PROMPT_GOALS', 'type' => 'longstring' ],
     // ],
-    'Narrator' => [
-        [ 'name' => 'NARRATOR_TALKS', 'type' => 'boolean' ],
-        [ 'name' => 'RANDOM_NARATION', 'type' => 'boolean' ],
-        [ 'name' => 'RANDOM_NARATION_CHANCE', 'type' => 'integer', 'min' => 1, 'max' => 100 ],
-        [ 'name' => 'RANDOM_NARRATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 10 ],
-        [ 'name' => 'NARRATOR_WELCOME', 'type' => 'boolean' ],
-        [ 'name' => 'BOOK_EVENT_ALWAYS_NARRATOR', 'type' => 'boolean' ],
-        [ 'name' => 'HIDE_NARRATOR_DIALOGUE', 'type' => 'boolean' ]
-    ],
+    // 'Narrator' section removed - now managed via Narrator Management page (Config Hub > Narrator)
     'Memory' => [
         // SUMMARY_PROMPT moved to Prompts Manager
         // [ 'name' => 'SUMMARY_PROMPT', 'type' => 'longstring' ],
@@ -422,6 +505,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
 
     // Apply posted overrides for our curated settings
     foreach ($gsSections as $sec => $fields) {
+        // Skip Narrator section - it's now managed separately
+        if ($sec === 'Narrator') {
+            continue;
+        }
         foreach ($fields as $f) {
             $key = $f['name'];
             $postKey = $key;
@@ -438,6 +525,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
                 $allPairs[$postKey] = 'false';
             }
         }
+    }
+
+    // Apply RELATIONSHIP_SYSTEM_ENABLED (rendered inline with RELLLM_CONNECTOR, not in $gsSections)
+    if (isset($_POST['RELATIONSHIP_SYSTEM_ENABLED'])) {
+        $allPairs['RELATIONSHIP_SYSTEM_ENABLED'] = ($_POST['RELATIONSHIP_SYSTEM_ENABLED'] === 'true') ? 'true' : 'false';
+    } else {
+        // Checkbox unchecked - no POST value means false
+        $allPairs['RELATIONSHIP_SYSTEM_ENABLED'] = 'false';
+    }
+
+    // Apply OGHMA_CUSTOM (rendered inline with CORE_CONNECTOR_OGHMA_CUSTOM, not in $gsSections)
+    if (isset($_POST['OGHMA_CUSTOM'])) {
+        $allPairs['OGHMA_CUSTOM'] = ($_POST['OGHMA_CUSTOM'] === 'true') ? 'true' : 'false';
+    } else {
+        $allPairs['OGHMA_CUSTOM'] = 'false';
     }
 
 	// Apply TTS overrides (selection + provider fields + Player TTS)
@@ -588,7 +690,7 @@ function current_value(string $flatName, array $currentConf) {
 
     .content-grid {
         display: grid;
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
         gap: 30px;
         margin-bottom: 30px;
     }
@@ -721,11 +823,37 @@ function current_value(string $flatName, array $currentConf) {
                                                 <input type="checkbox" value="true" name="<?php echo htmlspecialchars($fname); ?>" <?php echo ($current ? 'checked' : ''); ?> <?php echo $isReadonly ? 'disabled' : ''; ?> style="width:auto;">
                                             </div>
                                         <?php endif; ?>
+                                        <?php if ($fname === 'RELLLM_CONNECTOR'): ?>
+                                            <div class="provider-toggle">
+                                                <input type="hidden" name="RELATIONSHIP_SYSTEM_ENABLED" value="false">
+                                                <input type="checkbox" name="RELATIONSHIP_SYSTEM_ENABLED" value="true" <?php echo (current_value('RELATIONSHIP_SYSTEM_ENABLED', $currentConf) ? 'checked' : ''); ?> style="width:auto;" title="Enable/Disable Relationship System">
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if ($fname === 'CORE_CONNECTOR_OGHMA_CUSTOM'): ?>
+                                            <div class="provider-toggle">
+                                                <input type="hidden" name="OGHMA_CUSTOM" value="false">
+                                                <input type="checkbox" name="OGHMA_CUSTOM" value="true" <?php echo (current_value('OGHMA_CUSTOM', $currentConf) ? 'checked' : ''); ?> style="width:auto;" title="Enable/Disable Custom Oghma LLM">
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                                 <div class="provider-body">
                                     <?php if ($ftype === 'boolean'): ?>
-                                        <!-- Boolean rendered in header next to title -->
+                                        <?php if (isset($f['action']) && $f['action'] === 'clear_reanimation'): ?>
+                                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                                <button type="submit" name="clear_reanimation_status" value="1" class="btn-action" style="background:#8b0000; border:1px solid #a52a2a; color:#fff; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px;" onclick="return confirm('This will remove the reanimated/zombie status from ALL NPCs in the database. Continue?');">
+                                                    🧟 Clear Reanimation Status
+                                                </button>
+                                                <span style="color:#888; font-size:12px;">Removes zombie flags from all NPCs</span>
+                                            </div>
+                                            <?php if ($clearReanimationResult !== null): ?>
+                                                <div style="margin-top:8px; padding:8px 12px; border-radius:6px; <?php echo $clearReanimationResult['success'] ? 'background:#1a3d1a; color:#90EE90;' : 'background:#3d1a1a; color:#ff6b6b;'; ?>">
+                                                    <?php echo htmlspecialchars($clearReanimationResult['message']); ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <!-- Boolean rendered in header next to title -->
+                                        <?php endif; ?>
                                     <?php elseif ($ftype === 'integer'): ?>
                                         <?php $min = isset($f['min']) ? (int)$f['min'] : null; $max = isset($f['max']) ? (int)$f['max'] : null; ?>
                                         <input type="number" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" <?php echo ($min!==null?('min="'.$min.'"'):''); ?> <?php echo ($max!==null?('max="'.$max.'"'):''); ?> step="1" <?php echo $readonlyAttr; ?>>
@@ -746,12 +874,15 @@ function current_value(string $flatName, array $currentConf) {
                                         </select>
                                     <?php elseif (strpos($ftype, 'foreign:') === 0): ?>
                                         <?php $rows = $foreignOptions[$fname] ?? []; ?>
-                                        <select name="<?php echo htmlspecialchars($fname); ?>" <?php echo $isReadonly ? 'disabled' : ''; ?>>
-                                            <?php foreach ($rows as $row): ?>
-                                                <?php $idCol = explode(':', $ftype)[2]; $labelCol = explode(':', $ftype)[3]; ?>
-                                                <option value="<?php echo htmlspecialchars($row[$idCol]); ?>" <?php echo ((string)$current===(string)$row[$idCol]?'selected':''); ?>><?php echo htmlspecialchars($row[$labelCol]); ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
+                                        <div style="display:flex; align-items:center; gap:10px;">
+                                            <select name="<?php echo htmlspecialchars($fname); ?>" <?php echo $isReadonly ? 'disabled' : ''; ?>>
+                                                <option value="" <?php echo (empty($current) ? 'selected' : ''); ?>>None</option>
+                                                <?php foreach ($rows as $row): ?>
+                                                    <?php $idCol = explode(':', $ftype)[2]; $labelCol = explode(':', $ftype)[3]; ?>
+                                                    <option value="<?php echo htmlspecialchars($row[$idCol]); ?>" <?php echo ((string)$current===(string)$row[$idCol]?'selected':''); ?>><?php echo htmlspecialchars($row[$labelCol]); ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
                                     <?php else: ?>
                                         <input type="text" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" <?php echo $readonlyAttr; ?>>
                                     <?php endif; ?>
@@ -780,7 +911,7 @@ function current_value(string $flatName, array $currentConf) {
                         <label for="TTSFUNCTION">TTS Selection</label>
                         <select name="TTSFUNCTION" id="TTSFUNCTION" onchange="document.getElementById('gs_tab').value='tab-tts'; this.form.submit()">
                             <?php foreach ($ttsOptions as $opt): ?>
-                                <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$ttsSelRender===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
+                                <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$ttsSelRender===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($ttsDisplayNames[$opt] ?? $opt); ?></option>
                             <?php endforeach; ?>
                         </select>
                         
@@ -789,7 +920,7 @@ function current_value(string $flatName, array $currentConf) {
                             <?php
                             $ttsDescMap = [
                                 'melotts' => "[Skyrim Voices] MeloTTS runs locally installed via DwemerDistro. It's fast and free, but low quality voices. Under 1GB of VRAM.",
-                                'xtts-fastapi' => "[Skyrim Voices] CHIM XTTS runs locally and generates cloned voices from samples. Great for immersive, consistent character voices. Uses roughly 4GB of VRAM.",
+                                'xtts-fastapi' => "[Skyrim Voices] XTTS/Chatterbox runs locally and generates cloned voices from samples. Great for immersive, consistent character voices. Uses roughly 4GB of VRAM.",
                                 'mimic3' => "Mimic3 is a very basic LLM installed in DwemerDistro. It's fast and free, but low quality custom voices. Under 1GB of VRAM.",
                                 'xvasynth' => "[Skyrim Voices] xVASynth uses pre-trained game voices. Good fit for Skyrim-style character voices and mod voicepacks.",
                                 'azure' => "Azure TTS offers decent voices with emotion control. Requires Azure subscription and API key.",
@@ -800,7 +931,8 @@ function current_value(string $flatName, array $currentConf) {
                                 'zonos_gradio' => "Zonos TTS provides expressive voices with emotion controls. Recommended to use with cloud GPU hosting (Vast.ai). Uses roughly 6GB of VRAM.",
                                 'piper-tts' => "[Skyrim Voices]Piper-TTS is a middle quality and fast TTS. Requires manual installation of voices though. Under 1GB of VRAM. https://dwemerdynamics.hostwiki.io/en/TTS-Options",
                                 'deepgram' => "Deepgram TTS is a cloud option aimed at simple, quick voice generation. Requires API key.",
-                                'cartesia' => "[Skyrim Voices] Cartesia TTS provides high-quality automatic voice generation. Supports emotions and multiple languages. Requires API key."
+                                'cartesia' => "[Skyrim Voices] Cartesia TTS provides high-quality automatic voice generation. Supports emotions and multiple languages. Requires API key.",
+                                'inworld' => "[Skyrim Voices] Inworld TTS provides high-quality automatic voice generation. Requires API credential (Base64) and workspace ID."
                             ];
                             $ttsLower = strtolower((string)$ttsSelRender);
                             echo htmlspecialchars($ttsDescMap[$ttsLower] ?? '');
@@ -814,7 +946,7 @@ function current_value(string $flatName, array $currentConf) {
                     <div class="provider-head">
                         <div class="provider-title">
                             <div class="provider-icon">⚙️</div>
-                            <div><?php echo htmlspecialchars($ttsKeyCur); ?> Settings</div>
+                            <div><?php $ttsProviderDisplayName = ($ttsKeyCur === 'XTTSFASTAPI') ? 'XTTS/Chatterbox API' : $ttsKeyCur; echo htmlspecialchars($ttsProviderDisplayName); ?> Settings</div>
                         </div>
                     </div>
                     <div class="provider-body grid">
@@ -829,10 +961,10 @@ function current_value(string $flatName, array $currentConf) {
                             }
                             $apiBadges = $GLOBALS['db']->fetchAll("SELECT id,label,api_key FROM core_api_badge ORDER BY label ASC");
                         } catch (Throwable $_e) {}
-                        foreach ($ttsSchemaCur as $fname => $def): if (!is_array($def)) continue; $ftype=$def['type']??'string'; $plain='TTS '.$ttsKeyCur.' '.$fname; $current=$currentConf[$plain]['currentValue']??''; $help=$def['description']??''; $lname=strtolower($fname); $lnameNorm=str_replace(['_','-'],'',$lname); if ($lnameNorm==='voiceid' || $lnameNorm==='voicelogic') continue; if ($ttsKeyCur==='XVASYNTH' && $lname==='model') continue; 
+                        foreach ($ttsSchemaCur as $fname => $def): if (!is_array($def)) continue; $ftype=$def['type']??'string'; $plain='TTS '.$ttsKeyCur.' '.$fname; $current=$currentConf[$plain]['currentValue']??''; $help=$def['description']??''; $lname=strtolower($fname); $lnameNorm=str_replace(['_','-'],'',$lname); if ($lnameNorm==='voiceid' || $lnameNorm==='voicelogic') continue; if ($ttsKeyCur==='XVASYNTH' && $lname==='model') continue; if (strtolower($ttsKeyCur)==='openai' && $lname==='voice') continue; if (strpos($fname, 'PARALINGUISTIC_TAGS') === 0) continue; 
                             // API KEY badge handling for known providers
                             $provLower = strtolower($ttsKeyCur);
-                            if ($fname === 'API_KEY' && in_array($provLower, ['azure','eleven_labs','openai','deepgram','cartesia'])) {
+                            if ($fname === 'API_KEY' && in_array($provLower, ['azure','eleven_labs','openai','deepgram','cartesia','inworld'])) {
                                 $badgeName = ($provLower==='eleven_labs') ? 'ElevenLabs' : ucfirst($provLower);
                                 $hasKey=false; foreach ($apiBadges as $r){ if (strtolower((string)($r['label']??''))===strtolower($badgeName) && trim((string)($r['api_key']??''))!==''){ $hasKey=true; break; } }
                                 echo '<div>API Badge ('.htmlspecialchars($badgeName).')</div>';
@@ -841,7 +973,7 @@ function current_value(string $flatName, array $currentConf) {
                                 continue;
                             }
                         ?>
-                            <label for="tts_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars($fname); ?></label>
+                            <label for="tts_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars(format_field_label($fname)); ?></label>
                             <?php if ($ftype==='boolean'): ?>
                                 <input type="hidden" name="tts__<?php echo htmlspecialchars($fname); ?>" value="false">
                                 <input type="checkbox" id="tts_<?php echo htmlspecialchars($fname); ?>" name="tts__<?php echo htmlspecialchars($fname); ?>" value="true" <?php echo ($current?'checked':''); ?> style="width:auto;">
@@ -887,6 +1019,40 @@ function current_value(string $flatName, array $currentConf) {
                     <div class="provider-card"><div class="provider-body"><div></div><div>No settings available for this provider.</div></div></div>
                 <?php endif; ?>
 
+                <?php 
+                // Check if current TTS provider supports paralinguistic tags
+                $hasParalinguisticTags = isset($ttsSchemaCur['PARALINGUISTIC_TAGS_ENABLED']);
+                if ($hasParalinguisticTags): 
+                    $paraEnabled = current_value('TTS '.$ttsKeyCur.' PARALINGUISTIC_TAGS_ENABLED', $currentConf);
+                    $paraPrompt = (string)current_value('TTS '.$ttsKeyCur.' PARALINGUISTIC_TAGS_PROMPT', $currentConf);
+                    $paraTagsList = (string)current_value('TTS '.$ttsKeyCur.' PARALINGUISTIC_TAGS_LIST', $currentConf);
+                ?>
+                <div class="provider-card">
+                    <div class="provider-head">
+                        <div class="provider-title">
+                            <div class="provider-icon">🎭</div>
+                            <div>Paralinguistic Tags</div>
+                        </div>
+                    </div>
+                    <div class="provider-body grid">
+                        <label for="tts_PARALINGUISTIC_TAGS_ENABLED">Enable Tags</label>
+                        <div>
+                            <input type="hidden" name="tts__PARALINGUISTIC_TAGS_ENABLED" value="false">
+                            <input type="checkbox" id="tts_PARALINGUISTIC_TAGS_ENABLED" name="tts__PARALINGUISTIC_TAGS_ENABLED" value="true" <?php echo ($paraEnabled?'checked':''); ?> style="width:auto;">
+                        </div>
+                        <div class="help">Enable paralinguistic tags like [laugh], [sigh], [gasp] for expressive TTS output. When enabled, these tags will be preserved in the TTS output.</div>
+                        
+                        <label for="tts_PARALINGUISTIC_TAGS_LIST">Tag List</label>
+                        <input type="text" id="tts_PARALINGUISTIC_TAGS_LIST" name="tts__PARALINGUISTIC_TAGS_LIST" value="<?php echo htmlspecialchars($paraTagsList); ?>" placeholder="[laugh],[sigh],[gasp],[cough],[chuckle]">
+                        <div class="help">Comma-separated list of paralinguistic tags to preserve. Tags are case-insensitive. Example: [laugh],[sigh],[gasp],[cough],[groan],[sniff],[chuckle],[clear throat],[shush]</div>
+                        
+                        <label for="tts_PARALINGUISTIC_TAGS_PROMPT">Prompt Snippet</label>
+                        <textarea id="tts_PARALINGUISTIC_TAGS_PROMPT" name="tts__PARALINGUISTIC_TAGS_PROMPT" rows="4" placeholder="You may use paralinguistic tags in your dialogue: [laugh], [sigh], [gasp], [cough], [chuckle]. Place them within your spoken text for audible effects. Use sparingly for natural immersion."><?php echo htmlspecialchars($paraPrompt); ?></textarea>
+                        <div class="help">Prompt snippet instructing the LLM to use paralinguistic tags. This will be added to the system prompt when paralinguistic tags are enabled. Leave empty to disable prompt injection.</div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <div class="provider-card">
                     <div class="provider-head">
                         <div class="provider-title">
@@ -894,13 +1060,13 @@ function current_value(string $flatName, array $currentConf) {
                             <div>Player TTS</div>
                         </div>
                     </div>
-                        <?php $playerFunctionSaved = current_value('TTSFUNCTION_PLAYER',$currentConf); $descTtsPlayer = (string)($rawSchema['TTSFUNCTION_PLAYER']['description'] ?? ''); $descPlayerVoice = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE']['description'] ?? ''); $descPlayerVoiceId = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE_ID']['description'] ?? ''); $descPlayerLang = (string)($rawSchema['TTSFUNCTION_PLAYER_LANGUAGE']['description'] ?? ''); $playerLangSupported = ['melotts','xtts-fastapi','xvasynth','piper-tts','zonos_gradio','cartesia']; $showPlayerLang = in_array(strtolower((string)$playerFunctionSaved), $playerLangSupported, true); ?>
+                        <?php $playerFunctionSaved = current_value('TTSFUNCTION_PLAYER',$currentConf); $descTtsPlayer = (string)($rawSchema['TTSFUNCTION_PLAYER']['description'] ?? ''); $descPlayerVoice = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE']['description'] ?? ''); $descPlayerVoiceId = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE_ID']['description'] ?? ''); $descPlayerLang = (string)($rawSchema['TTSFUNCTION_PLAYER_LANGUAGE']['description'] ?? ''); $playerLangSupported = ['melotts','xtts-fastapi','xvasynth','piper-tts','zonos_gradio','cartesia','inworld']; $showPlayerLang = in_array(strtolower((string)$playerFunctionSaved), $playerLangSupported, true); ?>
                     <div class="provider-body grid">
                         <label for="TTSFUNCTION_PLAYER">Player TTS Selection</label>
-                        <?php $playerTtsOptions = $rawSchema['TTSFUNCTION_PLAYER']['values'] ?? [ 'none','melotts','xtts-fastapi','xvasynth','mimic3','piper-tts','azure','11labs','openai','kokoro','zonos_gradio','cartesia' ]; ?>
+                        <?php $playerTtsOptions = $rawSchema['TTSFUNCTION_PLAYER']['values'] ?? [ 'none','melotts','xtts-fastapi','xvasynth','mimic3','piper-tts','azure','11labs','openai','kokoro','zonos_gradio','cartesia','inworld' ]; ?>
                         <select name="TTSFUNCTION_PLAYER" id="TTSFUNCTION_PLAYER">
                             <?php foreach ($playerTtsOptions as $opt): ?>
-                                <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$playerFunctionSaved===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
+                                <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$playerFunctionSaved===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($ttsDisplayNames[$opt] ?? $opt); ?></option>
                             <?php endforeach; ?>
                         </select>
                         <?php if (!empty($descTtsPlayer)): ?><div class="help"><?php echo $descTtsPlayer; ?></div><?php endif; ?>
@@ -937,14 +1103,14 @@ function current_value(string $flatName, array $currentConf) {
                                     var voice = document.getElementById('tts_voiceid');
                                     if (sel && voice && !voice.value) {
                                         var v = (sel.value||'').toLowerCase();
-                                        if (v==='xtts-fastapi' || v==='cartesia') voice.placeholder = 'TheNarrator';
+                                        if (v==='xtts-fastapi' || v==='cartesia' || v==='inworld') voice.placeholder = 'TheNarrator';
                                         else if (v==='melotts' || v==='piper-tts' || v==='xvasynth') voice.placeholder = 'malenord';
                                     }
                                     if (sel && voice){
                                         sel.addEventListener('change', function(){
                                             if (voice && !voice.value){
                                                 var vv = String(sel.value||'').toLowerCase();
-                                                voice.placeholder = (vv==='xtts-fastapi' || vv==='cartesia') ? 'TheNarrator' : (['melotts','piper-tts','xvasynth'].indexOf(vv)>=0 ? 'malenord' : '');
+                                                voice.placeholder = (vv==='xtts-fastapi' || vv==='cartesia' || vv==='inworld') ? 'TheNarrator' : (['melotts','piper-tts','xvasynth'].indexOf(vv)>=0 ? 'malenord' : '');
                                             }
                                         });
                                     }
@@ -1017,7 +1183,7 @@ function current_value(string $flatName, array $currentConf) {
                                 continue;
                             }
                         ?>
-                            <label for="stt_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars($fname); ?></label>
+                            <label for="stt_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars(format_field_label($fname)); ?></label>
                             <?php if ($ftype==='boolean'): ?>
                                 <input type="hidden" name="stt__<?php echo htmlspecialchars($fname); ?>" value="false">
                                 <input type="checkbox" id="stt_<?php echo htmlspecialchars($fname); ?>" name="stt__<?php echo htmlspecialchars($fname); ?>" value="true" <?php echo ($current?'checked':''); ?> style="width:auto;">
@@ -1109,7 +1275,7 @@ function current_value(string $flatName, array $currentConf) {
                                 continue;
                             }
                         ?>
-                            <label for="itt_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars($fname); ?></label>
+                            <label for="itt_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars(format_field_label($fname)); ?></label>
                             <?php if ($ftype==='boolean'): ?>
                                 <input type="hidden" name="itt__<?php echo htmlspecialchars($fname); ?>" value="false">
                                 <input type="checkbox" id="itt_<?php echo htmlspecialchars($fname); ?>" name="itt__<?php echo htmlspecialchars($fname); ?>" value="true" <?php echo ($current?'checked':''); ?> style="width:auto;">
@@ -1390,7 +1556,7 @@ echo $buffer;
     function togglePlayerLanguage(){
       var sel = document.getElementById('TTSFUNCTION_PLAYER');
       var v = (sel && sel.value) ? String(sel.value).toLowerCase() : '';
-      var supported = ['melotts','xtts-fastapi','xvasynth','piper-tts','zonos_gradio','cartesia'];
+      var supported = ['melotts','xtts-fastapi','xvasynth','piper-tts','zonos_gradio','cartesia','inworld'];
       var show = supported.indexOf(v) >= 0;
       var nodes = document.querySelectorAll('.player-language-only');
       for (var i=0;i<nodes.length;i++){

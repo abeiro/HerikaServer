@@ -62,7 +62,7 @@ function mainFunction($inputText) {
             continue;
         }
 
-        $position = findDotPosition($buffer);
+        $position = findFastSentencePosition($buffer);
 
         if ($position !== false && $position>MINIMUM_SENTENCE_SIZE ) {
             $extractedData = substr($buffer, 0, $position + 1);

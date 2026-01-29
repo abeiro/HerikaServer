@@ -160,7 +160,7 @@ if (!function_exists('race_icon_web_path')) {
         
         // Add your handler code here
            // Add your handler code here
-        `php $enginePath/debug/simple_llm_request_with_context_life.php "$npcName" `;
+        `php $enginePath/debug/simple_llm_request_with_context_life.php "$npcName" forceletter`;
         echo json_encode(['ok' => true, 'message' => "Reporting request processed for $npcName"]);
     }
 
