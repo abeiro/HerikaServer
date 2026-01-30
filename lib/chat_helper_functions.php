@@ -1302,11 +1302,11 @@ function lastKeyWordsContext($n, $npcname='')
     else
         $whileago=0;
     
-        $lastRecords = $db->fetchAll("SELECT speaker, location, companions, speech, gamets 
-        from (select * from speech where  gamets>{$whileago}) AS sp 
-        where ((speaker ilike '{$speaker}') or (speaker ilike '%{$pj}%' )) 
-           order by gamets desc limit {$m} offset 0");  
-
+    $lastRecords = $db->fetchAll("SELECT speaker, location, companions, speech, gamets 
+     from (select * from speech where  gamets>{$whileago}) AS sp 
+     where ((speaker ilike '{$speaker}') or (speaker ilike '%{$pj}%' )) 
+        order by gamets desc limit {$m} offset 0"); 
+    
     $words=[];
     $uniqueArray=[];
     $uppercaseWords = [];
