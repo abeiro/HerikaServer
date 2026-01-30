@@ -637,7 +637,9 @@ class openrouterjson
                 $data["reasoning"]["enabled"] = true;
             } elseif ($this->_model=="x-ai/grok-4") {// needs reasoning and cannot be disabled 
                 $data["reasoning"]["enabled"] = true;
-            }         
+            } elseif ($this->_model=="google/gemini-3-pro-preview") {// needs reasoning and cannot be disabled 
+                $data["reasoning"] = array ('exclude' => true, 'enabled' => true, 'effort' => 'low');
+            }   
         }
         
         if ($this->_is_mistral_ai) { // Mistral AI API does not support penalty params
