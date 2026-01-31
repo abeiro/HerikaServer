@@ -1740,10 +1740,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 
 
         <div class="form-item span-2">
-            <label for="emote_moods">Emote Moods</label>
+            <label for="emote_moods">Emote Moods Override</label>
             <textarea id="emote_moods" name="emote_moods" placeholder="Allowed mood/emote set (comma-separated).">
             <?= htmlspecialchars($editItem["emote_moods"] ?? "") ?></textarea>
-            <small class="hint">Whitelist of mood/emote cues the NPC may use (e.g., calm, angry, playful).</small>
+            <small class="hint">Whitelist of mood/emote cues the NPC may use (e.g., calm, angry, playful). <strong>Overrides</strong> the global EMOTEMOODS setting. Leave empty to use global default.</small>
         </div>
 
         <?php
