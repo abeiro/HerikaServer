@@ -678,14 +678,28 @@ function current_value(string $flatName, array $currentConf) {
         font-style: normal;
     }
 
+    .page-header {
+        margin: 0 0 24px 0;
+        padding: 24px;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(28, 28, 28, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        text-align: center;
+    }
     h1.gs-title {
-        margin: 0 0 20px 0;
+        margin: 0 0 8px 0;
         font-family: 'MagicCards', serif;
         word-spacing: 8px;
-        font-size: 2.2em;
+        font-size: 2em;
         color: rgb(242, 124, 17);
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        text-align: center;
+    }
+    .page-subtitle {
+        color: #aaa;
+        font-size: 0.95em;
+        line-height: 1.5;
+        margin: 0;
     }
 
     .content-grid {
@@ -695,24 +709,88 @@ function current_value(string $flatName, array $currentConf) {
         margin-bottom: 30px;
     }
     .content-section {
-        background: #2a2a2a;
-        padding: 25px;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        padding: 22px;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
+                    inset 0 1px rgba(255, 255, 255, 0.03);
+        transition: border-color 0.2s ease;
     }
-    .content-section h2 { font-family: 'MagicCards', serif; color: rgb(242,124,17); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); word-spacing: 6px; margin-bottom: 15px; font-size: 1.4em; }
+    .content-section:hover {
+        border-color: #4a4a4a;
+    }
+    .content-section h2 { 
+        font-family: 'MagicCards', serif; 
+        color: rgb(242,124,17); 
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5); 
+        word-spacing: 6px; 
+        margin-bottom: 18px; 
+        font-size: 1.35em; 
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(242, 124, 17, 0.2);
+    }
     .provider-grid { display:grid; grid-template-columns: 1fr; gap:12px; align-items:start; }
-    .provider-card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:12px; }
+    .provider-card { 
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.95)); 
+        border: 1px solid #3a3a3a; 
+        border-radius: 8px; 
+        padding: 14px; 
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15),
+                    inset 0 1px rgba(255, 255, 255, 0.02);
+        transition: all 0.2s ease;
+    }
+    .provider-card:hover {
+        border-color: #4a4a4a;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2),
+                    inset 0 1px rgba(255, 255, 255, 0.03);
+    }
     .provider-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
     .provider-title { display:flex; align-items:center; gap:10px; color:#e0e0e0; }
-    .provider-icon { width:28px; height:28px; border-radius:6px; background:#3a3a3a; display:flex; align-items:center; justify-content:center; font-size:16px; }
+    .provider-icon { 
+        width: 30px; 
+        height: 30px; 
+        border-radius: 6px; 
+        background: linear-gradient(135deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 0.9)); 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 17px; 
+        box-shadow: inset 0 1px rgba(255, 255, 255, 0.05);
+    }
     .provider-body { display:flex; gap:8px; align-items:center; }
-    .provider-body.grid { display:grid; grid-template-columns: 220px 1fr; gap:8px 12px; align-items:center; }
-    .provider-body.grid .help { grid-column: 1 / -1; margin-top:6px; color:#bbb; font-size:12px; }
-    .provider-body input[type="text"], .provider-body input[type="url"], .provider-body input[type="number"], .provider-body input[type="password"], .provider-body select, .provider-body textarea { flex:1; background-color:#333; color:#fff; border:1px solid #444; border-radius:4px; padding:8px; }
+    .provider-body.grid { display:grid; grid-template-columns: 1fr; gap:8px; align-items:start; }
+    .provider-body.grid .help { margin-top:6px; color:#bbb; font-size:12px; }
+    .provider-body input[type="text"], .provider-body input[type="url"], .provider-body input[type="number"], .provider-body input[type="password"], .provider-body select, .provider-body textarea { 
+        flex: 1; 
+        background-color: rgba(26, 26, 26, 0.8); 
+        color: #e9efff; 
+        border: 1px solid #3a3a3a; 
+        border-radius: 6px; 
+        padding: 10px 12px; 
+        transition: all 0.2s ease;
+    }
+    .provider-body input:focus, .provider-body select:focus, .provider-body textarea:focus {
+        border-color: rgba(242, 124, 17, 0.5);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+    }
     .actions { display:flex; justify-content:flex-end; margin-top:10px; }
-    .btn-primary { background:#204e7a; color:#fff; border:1px solid rgba(138,155,182,0.4); border-radius:8px; padding:8px 14px; cursor:pointer; }
-    .btn-primary:hover { background:#285c8f; }
+    .btn-primary { 
+        background: linear-gradient(135deg, #204e7a, #1a3d5f); 
+        color: #fff; 
+        border: 1px solid rgba(138,155,182,0.4); 
+        border-radius: 8px; 
+        padding: 10px 16px; 
+        cursor: pointer; 
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .btn-primary:hover { 
+        background: linear-gradient(135deg, #285c8f, #204e7a); 
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
 
     @media (max-width: 900px) {
         main { padding-left: 5%; padding-right: 5%; }
@@ -757,27 +835,64 @@ function current_value(string $flatName, array $currentConf) {
     }
 
 \\
-    .tab-buttons { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; justify-content:center; align-items:center; }
-    .tab-button { background:#1a2940; color:#cfd8e3; border:1px solid rgba(138,155,182,0.35); padding:6px 12px; border-radius:8px; cursor:pointer; }
-    .tab-button:hover { background:#203553; }
-    .tab-button.active { background:#204e7a; color:#fff; border-color: rgba(138,155,182,0.6); }
-    .btn-save-green { 
-        background-color: rgba(32, 122, 74, 0.8);
-        color: #fff;
-        border: 1px solid rgba(138, 155, 182, 0.3);
-        border-radius: 8px;
-        padding: 8px 16px;
-        cursor: pointer;
+    .tab-buttons { 
+        display: flex; 
+        gap: 10px; 
+        flex-wrap: wrap; 
+        margin-top: 8px; 
+        justify-content: center; 
+        align-items: center; 
     }
-    .btn-save-green:hover { background-color: rgba(42, 142, 94, 0.9); }
+    .tab-button { 
+        background: rgba(26, 41, 64, 0.8); 
+        color: #cfd8e3; 
+        border: 1px solid rgba(138,155,182,0.35); 
+        padding: 8px 16px; 
+        border-radius: 8px; 
+        cursor: pointer; 
+        transition: all 0.2s ease;
+        font-weight: 600;
+    }
+    .tab-button:hover { 
+        background: rgba(32, 53, 83, 0.9); 
+        transform: translateY(-1px);
+    }
+    .tab-button.active { 
+        background: linear-gradient(135deg, rgba(242, 124, 17, 0.2), rgba(242, 124, 17, 0.1)); 
+        color: rgb(242, 124, 17); 
+        border-color: rgba(242, 124, 17, 0.5); 
+        box-shadow: inset 0 -2px 0 rgb(242, 124, 17);
+        font-weight: 700;
+    }
+    .btn-save-green { 
+        background: linear-gradient(135deg, rgba(32, 122, 74, 0.9), rgba(23, 101, 57, 0.9));
+        color: #fff;
+        border: 1px solid rgba(72, 187, 120, 0.3);
+        border-radius: 8px;
+        padding: 10px 20px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        font-weight: 700;
+        font-size: 14px;
+    }
+    .btn-save-green:hover { 
+        background: linear-gradient(135deg, rgba(42, 142, 94, 0.95), rgba(32, 122, 74, 0.95)); 
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(32, 122, 74, 0.3);
+        border-color: rgba(72, 187, 120, 0.5);
+    }
 </style>
 
 <main>
-    <h1 class="gs-title">Global Settings</h1>
-    <div class="provider-card" style="margin-bottom:16px;">
-    <div style="display:flex; justify-content:center; margin-top:8px; margin-bottom:12px;">
+    <div class="page-header">
+        <h1 class="gs-title">Global Settings</h1>
+        <p class="page-subtitle">Configure core system settings, connectors, and memory management</p>
+        
+        <div style="display:flex; justify-content:center; margin-top:16px; margin-bottom:12px;">
             <button type="submit" class="btn-save-green" name="save_all" value="1" form="gs_form">Save All</button>
         </div>
+        
         <div class="provider-head" style="justify-content:center;">
             <div class="tab-buttons">
                 <button type="button" class="tab-button active" data-gs-tab="tab-global">🌐General</button>
@@ -786,8 +901,8 @@ function current_value(string $flatName, array $currentConf) {
                 <button type="button" class="tab-button" data-gs-tab="tab-itt">🖼️ITT</button>
             </div>
         </div>
-
     </div>
+    
     <div id="toast" class="toast-notification" style="display:none;"><span class="message"></span></div>
 
     <?php if ($saveSuccess): ?>

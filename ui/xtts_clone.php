@@ -244,6 +244,118 @@ if (isset($_GET['action']) && ($_GET['action'] === 'test_cartesia' || $_GET['act
     }
 }
 
+// AJAX Batch Upload Handler - MUST be before output buffering starts
+if (isset($_GET['action']) && $_GET['action'] === 'batch_process' && isset($_GET['provider']) && isset($_GET['voice'])) {
+    header('Content-Type: application/json');
+    
+    $provider = $_GET['provider'];
+    $voiceName = $_GET['voice'];
+    $response = ['success' => false, 'message' => ''];
+    
+    try {
+        // Initialize database if needed
+        if (!isset($GLOBALS['db']) || !$GLOBALS['db']) {
+            @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+            if (isset($GLOBALS["DBDRIVER"])) {
+                @require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php");
+            }
+            $GLOBALS['db'] = new sql();
+        }
+        
+        $voicePath = $enginePath . 'data' . DIRECTORY_SEPARATOR . 'voices' . DIRECTORY_SEPARATOR . $voiceName;
+        
+        if (!file_exists($voicePath)) {
+            $response['message'] = "Voice file not found: {$voiceName}";
+            echo json_encode($response);
+            exit;
+        }
+        
+        if ($provider === 'xtts') {
+            // Upload to XTTS server
+            $fileName = basename($voiceName);
+            $fileType = mime_content_type($voicePath);
+            
+            $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/upload_sample';
+            $cfile = new CURLFile($voicePath, $fileType, $fileName);
+            $postFields = ['wavFile' => $cfile];
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'accept: application/json',
+                'Content-Type: multipart/form-data'
+            ]);
+            
+            $curlResponse = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            
+            if (curl_errno($ch)) {
+                $response['message'] = 'cURL Error: ' . curl_error($ch);
+            } elseif ($httpCode == 200) {
+                $response['success'] = true;
+                $response['message'] = 'Successfully uploaded to XTTS server';
+            } else {
+                $response['message'] = 'Upload failed (HTTP ' . $httpCode . '): ' . $curlResponse;
+            }
+            curl_close($ch);
+            
+        } elseif ($provider === 'cartesia') {
+            // Load Cartesia TTS functions
+            require_once($enginePath . 'tts' . DIRECTORY_SEPARATOR . 'tts-cartesia.php');
+            
+            $voiceBasename = pathinfo($voiceName, PATHINFO_FILENAME);
+            $result = getOrCreateCartesiaVoice($voiceBasename);
+            
+            if ($result !== false && !empty($result)) {
+                $response['success'] = true;
+                $response['message'] = 'Successfully generated voice for Cartesia';
+                $response['voiceId'] = $result;
+            } else {
+                $errorMsg = error_get_last();
+                if ($errorMsg && (strpos($errorMsg['message'], '429') !== false || strpos($errorMsg['message'], 'Too Many Requests') !== false)) {
+                    $response['message'] = 'Rate limit reached. Please wait before uploading more.';
+                    $response['rateLimit'] = true;
+                } else {
+                    $response['message'] = 'Failed to generate voice. Check API configuration.';
+                }
+            }
+            
+        } elseif ($provider === 'inworld') {
+            // Load Inworld TTS functions
+            require_once($enginePath . 'tts' . DIRECTORY_SEPARATOR . 'tts-inworld.php');
+            
+            $voiceBasename = pathinfo($voiceName, PATHINFO_FILENAME);
+            $result = getOrCreateInworldVoice($voiceBasename);
+            
+            if ($result !== false && !empty($result)) {
+                $response['success'] = true;
+                $response['message'] = 'Successfully generated voice for Inworld';
+                $response['voiceId'] = $result;
+            } else {
+                $errorMsg = error_get_last();
+                if ($errorMsg && (strpos($errorMsg['message'], '429') !== false || strpos($errorMsg['message'], 'Too Many Requests') !== false)) {
+                    $response['message'] = 'Rate limit reached. Please wait before uploading more.';
+                    $response['rateLimit'] = true;
+                } else {
+                    $response['message'] = 'Failed to generate voice. Check API configuration.';
+                }
+            }
+            
+        } else {
+            $response['message'] = 'Invalid provider: ' . $provider;
+        }
+        
+    } catch (Throwable $e) {
+        $response['message'] = 'Error: ' . $e->getMessage();
+    }
+    
+    echo json_encode($response);
+    exit;
+}
+
 $TITLE = "🔊 Voice Management";
 
 ob_start();
@@ -324,6 +436,81 @@ if (!function_exists('normalize_endpoint_url')) {
         $url = rtrim($url, '/');
         return $url;
     }
+}
+
+/**
+ * Extract .wav files from ZIP archive
+ * @param string $zipPath Path to ZIP file
+ * @param string $destDir Destination directory for extracted files
+ * @return array Array of extracted .wav filenames or error array
+ */
+function extractWavFromZip($zipPath, $destDir) {
+    $result = [
+        'success' => false,
+        'files' => [],
+        'errors' => []
+    ];
+    
+    if (!class_exists('ZipArchive')) {
+        $result['errors'][] = 'ZipArchive class not available';
+        return $result;
+    }
+    
+    $zip = new ZipArchive();
+    $openResult = $zip->open($zipPath);
+    
+    if ($openResult !== true) {
+        $result['errors'][] = 'Failed to open ZIP file (Error code: ' . $openResult . ')';
+        return $result;
+    }
+    
+    $extractedFiles = [];
+    $tempDir = sys_get_temp_dir() . '/tts_batch_' . uniqid();
+    
+    if (!mkdir($tempDir, 0777, true)) {
+        $zip->close();
+        $result['errors'][] = 'Failed to create temporary directory';
+        return $result;
+    }
+    
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $filename = $zip->getNameIndex($i);
+        $fileInfo = pathinfo($filename);
+        
+        // Skip directories and non-wav files
+        if (substr($filename, -1) === '/' || strtolower($fileInfo['extension'] ?? '') !== 'wav') {
+            continue;
+        }
+        
+        // Extract to temp location
+        $tempFile = $tempDir . '/' . basename($filename);
+        if (copy('zip://' . $zipPath . '#' . $filename, $tempFile)) {
+            // Validate it's a real WAV file
+            $mimeType = mime_content_type($tempFile);
+            if ($mimeType === 'audio/wav' || $mimeType === 'audio/x-wav') {
+                // Move to destination
+                $destFile = $destDir . basename($filename);
+                if (rename($tempFile, $destFile)) {
+                    $extractedFiles[] = basename($filename);
+                } else {
+                    $result['errors'][] = 'Failed to move ' . basename($filename) . ' to destination';
+                }
+            } else {
+                $result['errors'][] = basename($filename) . ' is not a valid WAV file';
+                @unlink($tempFile);
+            }
+        } else {
+            $result['errors'][] = 'Failed to extract ' . basename($filename);
+        }
+    }
+    
+    $zip->close();
+    @rmdir($tempDir);
+    
+    $result['success'] = count($extractedFiles) > 0;
+    $result['files'] = $extractedFiles;
+    
+    return $result;
 }
 
 // Define the endpoint for the XTTS API
@@ -422,72 +609,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Cartesia upload handler
     if (isset($_POST["submit_cartesia"])) {
+        $saveDir = __DIR__ . '/../data/voices/';
+        $filesToProcess = [];
+        
+        // Ensure the directory exists
+        if (!is_dir($saveDir)) {
+            mkdir($saveDir, 0777, true);
+        }
+        
         $total = count($_FILES['file']['name']);
-        $uploadedCount = 0;
-        $clonedCount = 0;
-        $errorCount = 0;
-        $rateLimitHit = false;
         
         for ($i = 0; $i < $total; $i++) {
             if ($_FILES['file']['error'][$i] !== UPLOAD_ERR_OK) {
                 $cartesiaMessage .= '<p style="color:red;">Error: File upload error code ' . $_FILES['file']['error'][$i] . '</p>';
-                $errorCount++;
                 continue;
             }
 
-            // Get the uploaded file details
             $fileTmpPath = $_FILES["file"]["tmp_name"][$i];
             $fileName = $_FILES["file"]["name"][$i];
-            $fileType = mime_content_type($fileTmpPath);
             $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 
-            // Directory where you want to save the uploaded file
-            $saveDir = __DIR__ . '/../data/voices/';
-
-            // Ensure the directory exists
-            if (!is_dir($saveDir)) {
-                mkdir($saveDir, 0777, true);
+            // Handle ZIP files
+            if ($fileExtension === 'zip') {
+                $zipResult = extractWavFromZip($fileTmpPath, $saveDir);
+                
+                if ($zipResult['success']) {
+                    foreach ($zipResult['files'] as $wavFile) {
+                        $filesToProcess[] = $wavFile;
+                    }
+                    $cartesiaMessage .= "<p style='color:rgb(247, 231, 16);'>Extracted " . count($zipResult['files']) . " .wav file(s) from " . htmlspecialchars($fileName) . "</p>";
+                }
+                
+                if (!empty($zipResult['errors'])) {
+                    foreach ($zipResult['errors'] as $error) {
+                        $cartesiaMessage .= "<p style='color:orange;'>Warning: " . htmlspecialchars($error) . "</p>";
+                    }
+                }
+                continue;
             }
 
-            // Ensure the file is a .wav file
+            // Handle individual WAV files
+            $fileType = mime_content_type($fileTmpPath);
+            
             if ($fileExtension !== 'wav' || ($fileType !== 'audio/wav' && $fileType !== 'audio/x-wav')) {
-                $cartesiaMessage .= "<p style='color:red;'>Error: Please upload a valid .wav file. ($fileName)</p>";
-                $errorCount++;
+                $cartesiaMessage .= "<p style='color:red;'>Error: Please upload a valid .wav file. (" . htmlspecialchars($fileName) . ")</p>";
             } else {
-                // Save the file to the specified directory
                 $destinationPath = $saveDir . $fileName;
-
                 if (move_uploaded_file($fileTmpPath, $destinationPath)) {
-                    $uploadedCount++;
-                    $voiceName = pathinfo($fileName, PATHINFO_FILENAME);
-                    
-                    // Automatically generate the voice for Cartesia
-                    $result = getOrCreateCartesiaVoice($voiceName);
-                    if ($result !== false && !empty($result)) {
-                        $clonedCount++;
-                        $cartesiaMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and generated voice '{$voiceName}' for Cartesia.</strong></p>";
-                    } else {
-                        // Check if it's a rate limit error
-                        $errorMsg = error_get_last();
-                        if ($errorMsg && (strpos($errorMsg['message'], '429') !== false || strpos($errorMsg['message'], 'Too Many Requests') !== false)) {
-                            $rateLimitHit = true;
-                            $cartesiaMessage .= "<p style='color:orange;'>Voice '{$voiceName}' uploaded but rate limit reached. Please wait before uploading more.</p>";
-                        } else {
-                            $cartesiaMessage .= "<p style='color:orange;'>Voice '{$voiceName}' uploaded but failed to generate. Please check API configuration and logs.</p>";
-                        }
-                    }
+                    $filesToProcess[] = $fileName;
                 } else {
                     $cartesiaMessage .= "<p style='color:red;'>Error: File could not be saved to $destinationPath.</p>";
-                    $errorCount++;
                 }
             }
         }
         
-        // Summary message
-        if ($uploadedCount > 0 && $clonedCount === $uploadedCount) {
-            $cartesiaMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and generated {$uploadedCount} voice(s) for Cartesia.</strong></p>";
-        } elseif ($uploadedCount > 0 && $clonedCount < $uploadedCount) {
-            $cartesiaMessage .= "<p style='color:orange;'><strong>Uploaded {$uploadedCount} voice(s), but only {$clonedCount} were successfully generated.</strong></p>";
+        // Note: Files are saved but not auto-generated
+        // JavaScript will handle batch processing with rate limiting
+        if (count($filesToProcess) > 0) {
+            $cartesiaMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Uploaded " . count($filesToProcess) . " voice file(s). Use the batch upload feature to generate voices with rate limiting.</strong></p>";
         }
     }
     
@@ -572,72 +751,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Inworld upload handler
     if (isset($_POST["submit_inworld"])) {
+        $saveDir = __DIR__ . '/../data/voices/';
+        $filesToProcess = [];
+        
+        // Ensure the directory exists
+        if (!is_dir($saveDir)) {
+            mkdir($saveDir, 0777, true);
+        }
+        
         $total = count($_FILES['file']['name']);
-        $uploadedCount = 0;
-        $clonedCount = 0;
-        $errorCount = 0;
-        $rateLimitHit = false;
         
         for ($i = 0; $i < $total; $i++) {
             if ($_FILES['file']['error'][$i] !== UPLOAD_ERR_OK) {
                 $inworldMessage .= '<p style="color:red;">Error: File upload error code ' . $_FILES['file']['error'][$i] . '</p>';
-                $errorCount++;
                 continue;
             }
 
-            // Get the uploaded file details
             $fileTmpPath = $_FILES["file"]["tmp_name"][$i];
             $fileName = $_FILES["file"]["name"][$i];
-            $fileType = mime_content_type($fileTmpPath);
             $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 
-            // Directory where you want to save the uploaded file
-            $saveDir = __DIR__ . '/../data/voices/';
-
-            // Ensure the directory exists
-            if (!is_dir($saveDir)) {
-                mkdir($saveDir, 0777, true);
+            // Handle ZIP files
+            if ($fileExtension === 'zip') {
+                $zipResult = extractWavFromZip($fileTmpPath, $saveDir);
+                
+                if ($zipResult['success']) {
+                    foreach ($zipResult['files'] as $wavFile) {
+                        $filesToProcess[] = $wavFile;
+                    }
+                    $inworldMessage .= "<p style='color:rgb(247, 231, 16);'>Extracted " . count($zipResult['files']) . " .wav file(s) from " . htmlspecialchars($fileName) . "</p>";
+                }
+                
+                if (!empty($zipResult['errors'])) {
+                    foreach ($zipResult['errors'] as $error) {
+                        $inworldMessage .= "<p style='color:orange;'>Warning: " . htmlspecialchars($error) . "</p>";
+                    }
+                }
+                continue;
             }
 
-            // Ensure the file is a .wav file
+            // Handle individual WAV files
+            $fileType = mime_content_type($fileTmpPath);
+            
             if ($fileExtension !== 'wav' || ($fileType !== 'audio/wav' && $fileType !== 'audio/x-wav')) {
-                $inworldMessage .= "<p style='color:red;'>Error: Please upload a valid .wav file. ($fileName)</p>";
-                $errorCount++;
+                $inworldMessage .= "<p style='color:red;'>Error: Please upload a valid .wav file. (" . htmlspecialchars($fileName) . ")</p>";
             } else {
-                // Save the file to the specified directory
                 $destinationPath = $saveDir . $fileName;
-
                 if (move_uploaded_file($fileTmpPath, $destinationPath)) {
-                    $uploadedCount++;
-                    $voiceName = pathinfo($fileName, PATHINFO_FILENAME);
-                    
-                    // Automatically generate the voice for Inworld
-                    $result = getOrCreateInworldVoice($voiceName);
-                    if ($result !== false && !empty($result)) {
-                        $clonedCount++;
-                        $inworldMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and generated voice '{$voiceName}' for Inworld.</strong></p>";
-                    } else {
-                        // Check if it's a rate limit error
-                        $errorMsg = error_get_last();
-                        if ($errorMsg && (strpos($errorMsg['message'], '429') !== false || strpos($errorMsg['message'], 'Too Many Requests') !== false)) {
-                            $rateLimitHit = true;
-                            $inworldMessage .= "<p style='color:orange;'>Voice '{$voiceName}' uploaded but rate limit reached. Please wait before uploading more.</p>";
-                        } else {
-                            $inworldMessage .= "<p style='color:orange;'>Voice '{$voiceName}' uploaded but failed to generate. Please check API configuration and logs.</p>";
-                        }
-                    }
+                    $filesToProcess[] = $fileName;
                 } else {
                     $inworldMessage .= "<p style='color:red;'>Error: File could not be saved to $destinationPath.</p>";
-                    $errorCount++;
                 }
             }
         }
         
-        // Summary message
-        if ($uploadedCount > 0 && $clonedCount === $uploadedCount) {
-            $inworldMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and generated {$uploadedCount} voice(s) for Inworld.</strong></p>";
-        } elseif ($uploadedCount > 0 && $clonedCount < $uploadedCount) {
-            $inworldMessage .= "<p style='color:orange;'><strong>Uploaded {$uploadedCount} voice(s), but only {$clonedCount} were successfully generated.</strong></p>";
+        // Note: Files are saved but not auto-generated
+        // JavaScript will handle batch processing with rate limiting
+        if (count($filesToProcess) > 0) {
+            $inworldMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Uploaded " . count($filesToProcess) . " voice file(s). Use the batch upload feature to generate voices with rate limiting.</strong></p>";
         }
     }
     
@@ -719,70 +890,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         curl_close($ch);
     }
     if (isset($_POST["submit"])) {
+        $saveDir = __DIR__ . '/../data/voices/';
+        $filesToProcess = [];
+        
+        // Ensure the directory exists
+        if (!is_dir($saveDir)) {
+            mkdir($saveDir, 0777, true);
+        }
+        
         $total = count($_FILES['file']['name']);
-        for( $i=0 ; $i < $total ; $i++ ) {
+        
+        for ($i = 0; $i < $total; $i++) {
             if ($_FILES['file']['error'][$i] !== UPLOAD_ERR_OK) {
-                $message .= '<p>Error: File upload error code ' . $_FILES['file']['error'][$i] . '</p>';
+                $message .= '<p style="color:red;">Error: File upload error code ' . $_FILES['file']['error'][$i] . '</p>';
                 continue;
             }
 
-            // Get the uploaded file details
             $fileTmpPath = $_FILES["file"]["tmp_name"][$i];
             $fileName = $_FILES["file"]["name"][$i];
-            $fileType = mime_content_type($fileTmpPath);
             $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 
-            // Directory where you want to save the uploaded file
-            $saveDir = __DIR__ . '/../data/voices/';  // Adjust the path if needed
-
-            // Ensure the directory exists
-            if (!is_dir($saveDir)) {
-                mkdir($saveDir, 0777, true);
+            // Handle ZIP files
+            if ($fileExtension === 'zip') {
+                $zipResult = extractWavFromZip($fileTmpPath, $saveDir);
+                
+                if ($zipResult['success']) {
+                    foreach ($zipResult['files'] as $wavFile) {
+                        $filesToProcess[] = $wavFile;
+                    }
+                    $message .= "<p style='color:rgb(247, 231, 16);'>Extracted " . count($zipResult['files']) . " .wav file(s) from " . htmlspecialchars($fileName) . "</p>";
+                }
+                
+                if (!empty($zipResult['errors'])) {
+                    foreach ($zipResult['errors'] as $error) {
+                        $message .= "<p style='color:orange;'>Warning: " . htmlspecialchars($error) . "</p>";
+                    }
+                }
+                continue;
             }
 
-            // Ensure the file is a .wav file
+            // Handle individual WAV files
+            $fileType = mime_content_type($fileTmpPath);
+            
             if ($fileExtension !== 'wav' || ($fileType !== 'audio/wav' && $fileType !== 'audio/x-wav')) {
-                $message .= "<p>Error: Please upload a valid .wav file.</p>";
+                $message .= "<p style='color:red;'>Error: Please upload a valid .wav file. (" . htmlspecialchars($fileName) . ")</p>";
             } else {
-                // Save the file to the specified directory
                 $destinationPath = $saveDir . $fileName;
-
                 if (move_uploaded_file($fileTmpPath, $destinationPath)) {
-                    $message .= "<p>.wav file has been uploaded to $destinationPath</p>";
-
-                    // Prepare the cURL request
-                    $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/upload_sample';
-                    $cfile = new CURLFile($destinationPath, $fileType, $fileName);
-
-                    $postFields = array('wavFile' => $cfile);
-
-                    $ch = curl_init();
-                    curl_setopt($ch, CURLOPT_URL, $url);
-                    curl_setopt($ch, CURLOPT_POST, 1);
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                        'accept: application/json',
-                        'Content-Type: multipart/form-data'
-                    ));
-
-                    $response = curl_exec($ch);
-                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-                    if (curl_errno($ch)) {
-                        $message .= '<p>cURL Error: ' . curl_error($ch) . '</p>';
-                    } else {
-                        if ($httpCode == 200) {
-                            $message .= "<p>.wav file has been cached to the CHIM server</p>";
-                        } else {
-                            $message .= '<p>Response from server (HTTP code ' . $httpCode . '): ' . htmlspecialchars($response) . '</p>';
-                        }
-                    }
-                    curl_close($ch);
+                    $filesToProcess[] = $fileName;
                 } else {
-                    $message .= "<p>Error: File could not be saved to $destinationPath.</p>";
+                    $message .= "<p style='color:red;'>Error: File could not be saved to $destinationPath.</p>";
                 }
             }
+        }
+        
+        // Process uploaded files - upload to XTTS server
+        $uploadedCount = 0;
+        foreach ($filesToProcess as $fileName) {
+            $destinationPath = $saveDir . $fileName;
+            $fileType = mime_content_type($destinationPath);
+            
+            $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/upload_sample';
+            $cfile = new CURLFile($destinationPath, $fileType, $fileName);
+            $postFields = ['wavFile' => $cfile];
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'accept: application/json',
+                'Content-Type: multipart/form-data'
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+            if (curl_errno($ch)) {
+                $message .= '<p style="color:red;">cURL Error for ' . htmlspecialchars($fileName) . ': ' . curl_error($ch) . '</p>';
+            } else {
+                if ($httpCode == 200) {
+                    $uploadedCount++;
+                } else {
+                    $message .= '<p style="color:red;">Upload failed for ' . htmlspecialchars($fileName) . ' (HTTP code ' . $httpCode . '): ' . htmlspecialchars($response) . '</p>';
+                }
+            }
+            curl_close($ch);
+        }
+        
+        if ($uploadedCount > 0) {
+            $message .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and cached {$uploadedCount} voice(s) to XTTS/Chatterbox server.</strong></p>";
         }
     } elseif (isset($_POST["upload_all"])) {
         // Upload all .wav files in ../data/voices
@@ -1012,6 +1210,164 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         document.body.appendChild(form);
         form.submit();
     }
+
+    // Batch upload functionality
+    let batchCancelled = false;
+    let currentBatchProvider = null;
+
+    function startBatchUpload(provider, voices) {
+        if (!voices || voices.length === 0) {
+            alert('No voices to process');
+            return;
+        }
+
+        batchCancelled = false;
+        currentBatchProvider = provider;
+        
+        // Show progress UI
+        const progressDiv = document.getElementById('batch-progress-' + provider);
+        const cancelBtn = document.getElementById('cancel-batch-' + provider);
+        const statusDiv = document.getElementById('batch-status-' + provider);
+        
+        if (progressDiv) progressDiv.style.display = 'block';
+        if (cancelBtn) cancelBtn.style.display = 'inline-block';
+        if (statusDiv) statusDiv.innerHTML = '';
+        
+        // Update totals
+        const totalSpan = document.getElementById('batch-total-' + provider);
+        const currentSpan = document.getElementById('batch-current-' + provider);
+        if (totalSpan) totalSpan.textContent = voices.length;
+        if (currentSpan) currentSpan.textContent = '0';
+        
+        // Process voices one by one
+        processBatchVoices(provider, voices, 0);
+    }
+
+    function processBatchVoices(provider, voices, index) {
+        if (batchCancelled || index >= voices.length) {
+            if (batchCancelled) {
+                addBatchStatus(provider, '❌ Batch upload cancelled', 'orange');
+            } else {
+                addBatchStatus(provider, '✅ Batch upload complete!', 'rgb(247, 231, 16)');
+                // Refresh page after completion to show updated voice list
+                setTimeout(() => {
+                    window.location.href = WEB_ROOT + '/ui/xtts_clone.php?tab=' + provider;
+                }, 2000);
+            }
+            
+            const cancelBtn = document.getElementById('cancel-batch-' + provider);
+            if (cancelBtn) cancelBtn.style.display = 'none';
+            return;
+        }
+
+        const voice = voices[index];
+        const current = index + 1;
+        
+        // Update progress
+        updateBatchProgress(provider, current, voices.length);
+        
+        // Add processing status
+        addBatchStatus(provider, '⏳ Processing: ' + voice, '#4a8ab6');
+        
+        // Get delay based on provider
+        const delays = {
+            'xtts': 0,
+            'cartesia': 2000,
+            'inworld': 3000
+        };
+        const delay = delays[provider] || 0;
+        
+        // Make AJAX request
+        const url = WEB_ROOT + '/ui/xtts_clone.php?action=batch_process&provider=' + 
+                    encodeURIComponent(provider) + '&voice=' + encodeURIComponent(voice + '.wav');
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    addBatchStatus(provider, '✓ ' + voice, '#4caf50');
+                } else {
+                    const errorMsg = data.message || 'Unknown error';
+                    addBatchStatus(provider, '✗ ' + voice + ': ' + errorMsg, '#f44336');
+                    
+                    // If rate limited, stop the batch
+                    if (data.rateLimit) {
+                        batchCancelled = true;
+                        addBatchStatus(provider, '⚠ Rate limit reached. Please wait before continuing.', 'orange');
+                        const cancelBtn = document.getElementById('cancel-batch-' + provider);
+                        if (cancelBtn) cancelBtn.style.display = 'none';
+                        return;
+                    }
+                }
+                
+                // Process next voice after delay
+                setTimeout(() => {
+                    processBatchVoices(provider, voices, index + 1);
+                }, delay);
+            })
+            .catch(error => {
+                addBatchStatus(provider, '✗ ' + voice + ': ' + error.message, '#f44336');
+                
+                // Continue with next voice after delay
+                setTimeout(() => {
+                    processBatchVoices(provider, voices, index + 1);
+                }, delay);
+            });
+    }
+
+    function updateBatchProgress(provider, current, total) {
+        const currentSpan = document.getElementById('batch-current-' + provider);
+        const progressBar = document.getElementById('batch-progress-bar-' + provider);
+        const etaSpan = document.getElementById('batch-eta-' + provider);
+        
+        if (currentSpan) currentSpan.textContent = current;
+        
+        const percentage = (current / total) * 100;
+        if (progressBar) progressBar.style.width = percentage + '%';
+        
+        // Calculate ETA
+        if (etaSpan && current < total) {
+            const delays = {
+                'xtts': 0,
+                'cartesia': 2,
+                'inworld': 3
+            };
+            const avgDelay = delays[provider] || 0;
+            const remaining = total - current;
+            const etaSeconds = remaining * avgDelay;
+            
+            if (etaSeconds > 60) {
+                const minutes = Math.ceil(etaSeconds / 60);
+                etaSpan.textContent = '(~' + minutes + ' minute' + (minutes > 1 ? 's' : '') + ' remaining)';
+            } else if (etaSeconds > 0) {
+                etaSpan.textContent = '(~' + etaSeconds + ' seconds remaining)';
+            } else {
+                etaSpan.textContent = '';
+            }
+        } else if (etaSpan) {
+            etaSpan.textContent = '';
+        }
+    }
+
+    function addBatchStatus(provider, message, color) {
+        const statusDiv = document.getElementById('batch-status-' + provider);
+        if (!statusDiv) return;
+        
+        const statusItem = document.createElement('div');
+        statusItem.style.padding = '5px 0';
+        statusItem.style.color = color || '#f8f9fa';
+        statusItem.textContent = message;
+        
+        statusDiv.appendChild(statusItem);
+        
+        // Auto-scroll to bottom
+        statusDiv.scrollTop = statusDiv.scrollHeight;
+    }
+
+    function cancelBatchUpload() {
+        batchCancelled = true;
+    }
+
 </script>
 <?php
 
@@ -1051,18 +1407,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         text-align: center;
         margin-bottom: 30px;
         padding: 20px;
-        background: #2a2a2a;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
     }
 
     .page-header h1 {
-        margin-bottom: 15px;
+        margin-bottom: 8px;
         font-family: 'MagicCards', serif;
         word-spacing: 8px;
         font-size: 2.2em;
         color: rgb(242, 124, 17);
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    
+    .page-subtitle {
+        margin: 0 0 10px 0;
+        color: #bbb;
+        font-size: 1.1em;
+        line-height: 1.6;
+    }
+    
+    .page-note {
+        color: #f0ad4e;
+        font-size: 0.9em;
+        margin: 10px 0 0 0;
+    }
+    
+    .info-link {
+        display: inline-block;
+        margin-left: 15px;
+        color: rgb(242, 124, 17);
+        text-decoration: none;
+        font-size: 0.7em;
+        vertical-align: top;
+        border: 2px solid rgb(242, 124, 17);
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        text-align: center;
+        line-height: 20px;
+        transition: all 0.3s ease;
+    }
+    
+    .info-link:hover {
+        background: rgb(242, 124, 17);
+        color: white;
+        box-shadow: 0 2px 8px rgba(242, 124, 17, 0.4);
     }
 
     .page-header h3 {
@@ -1088,11 +1480,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /* Form Container Styling */
     .form-container {
-        background: #2a2a2a;
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
         padding: 25px;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
         margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .form-container:hover {
+        border-color: rgba(242, 124, 17, 0.3);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.05);
     }
 
     .button-group {
@@ -1111,11 +1510,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     .content-section {
-        background: #2a2a2a;
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
         padding: 25px;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
         margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .content-section:hover {
+        border-color: rgba(242, 124, 17, 0.3);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.05);
     }
 
     .full-width-section {
@@ -1126,9 +1532,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .response-container {
         margin-top: 15px;
         padding: 15px;
-        background-color: #2c2c2c;
-        border: 1px solid #4a4a4a;
-        border-radius: 5px;
+        background: linear-gradient(135deg, rgba(44, 44, 44, 0.8), rgba(38, 38, 38, 0.9));
+        border: 1px solid #3a3a3a;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.02);
     }
 
     .voice-grid {
@@ -1143,10 +1550,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         justify-content: space-between;
         align-items: center;
         padding: 8px 12px;
-        background-color: #3a3a3a;
-        border: 1px solid #555555;
-        border-radius: 4px;
+        background: linear-gradient(135deg, rgba(58, 58, 58, 0.8), rgba(48, 48, 48, 0.9));
+        border: 1px solid #3a3a3a;
+        border-radius: 6px;
         color: #f8f9fa;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .speaker-item:hover {
+        background: linear-gradient(135deg, rgba(68, 68, 68, 0.9), rgba(58, 58, 58, 1));
+        border-color: rgba(242, 124, 17, 0.3);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     .copy-btn {
@@ -1261,14 +1676,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         display: flex;
         gap: 10px;
         margin-bottom: 30px;
-        border-bottom: 2px solid #4a4a4a;
+        border-bottom: 2px solid rgba(242, 124, 17, 0.2);
         padding-bottom: 10px;
     }
 
     .tab-btn {
         padding: 12px 24px;
-        background: #2a2a2a;
-        border: 2px solid #4a4a4a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.8), rgba(34, 34, 34, 0.9));
+        border: 2px solid #3a3a3a;
         border-bottom: none;
         border-radius: 8px 8px 0 0;
         color: #cfd8e3;
@@ -1277,20 +1692,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         font-weight: 600;
         transition: all 0.3s ease;
         margin-bottom: -2px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .tab-btn:hover {
-        background: #3a3a3a;
+        background: linear-gradient(180deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 1));
         color: rgb(242, 124, 17);
+        border-color: rgba(242, 124, 17, 0.3);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     .tab-btn.active {
-        background: #2a2a2a;
-        border-color: rgb(242, 124, 17);
-        border-bottom: 2px solid #2a2a2a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-color: rgba(242, 124, 17, 0.5);
+        border-bottom: 2px solid rgba(42, 42, 42, 0.95);
         color: rgb(242, 124, 17);
         position: relative;
         z-index: 1;
+        box-shadow: 0 4px 8px rgba(242, 124, 17, 0.2);
     }
 
     .tab-content {
@@ -1313,17 +1732,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         justify-content: space-between;
         align-items: center;
         padding: 12px 16px;
-        background-color: #3a3a3a;
+        background: linear-gradient(135deg, rgba(58, 58, 58, 0.8), rgba(48, 48, 48, 0.9));
         cursor: pointer;
-        border: 1px solid #555555;
-        border-radius: 6px;
+        border: 1px solid #3a3a3a;
+        border-radius: 8px;
         color: #f8f9fa;
         transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .voice-status-item:hover {
-        background-color: #4a4a4a;
-        border-color: rgb(242, 124, 17);
+        background: linear-gradient(135deg, rgba(74, 74, 74, 0.9), rgba(64, 64, 64, 1));
+        border-color: rgba(242, 124, 17, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     .voice-status-item .voice-name {
@@ -1438,13 +1859,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="page-header">
         <h1>Voice Management 
             <a href="https://dwemerdynamics.hostwiki.io/en/Auto-TTS-Voices" target="_blank" rel="noopener" 
-               style="display: inline-block; margin-left: 15px; color: rgb(242, 124, 17); text-decoration: none; font-size: 0.7em; vertical-align: top; border: 2px solid rgb(242, 124, 17); border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 20px; transition: all 0.3s ease;" 
-               title="View detailed documentation about TTS Voice Configuration"
-               onmouseover="this.style.background='rgb(242, 124, 17)'; this.style.color='white';" 
-               onmouseout="this.style.background='transparent'; this.style.color='rgb(242, 124, 17)';">ℹ</a>
+               class="info-link" 
+               title="View detailed documentation about TTS Voice Configuration">ℹ</a>
         </h1>
-        <p>Manage voice samples across multiple TTS providers: XTTS/Chatterbox, Cartesia, and Inworld.</p>
-        <p style="color: #f0ad4e; font-size: 0.9em; margin-top: 10px;"><strong>Note:</strong> If you switch between XTTS and Chatterbox, you must resync your voices by clicking "Sync All Voices" below.</p>
+        <p class="page-subtitle">Manage voice samples across multiple TTS providers: XTTS/Chatterbox, Cartesia, and Inworld</p>
+        <p class="page-note"><strong>Note:</strong> If you switch between XTTS and Chatterbox, you must resync your voices by clicking "Sync All Voices" below.</p>
     </div>
 
     <!-- Tab Navigation -->
@@ -1490,8 +1909,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=xtts" method="post" enctype="multipart/form-data" style="margin-top: 20px;">
                 <div style="margin-bottom: 15px;">
-                    <label for="file" style="display: block; margin-bottom: 8px;">Select .wav file(s) to upload:</label>
-                    <input type="file" name="file[]" id="file" accept=".wav" multiple="multiple" required style="width: 100%; max-width: 500px; padding: 8px;">
+                    <label for="file" style="display: block; margin-bottom: 8px;">Select .wav file(s) or .zip archive to upload:</label>
+                    <input type="file" name="file[]" id="file" accept=".wav,.zip" multiple="multiple" required style="width: 100%; max-width: 500px; padding: 8px;">
                 </div>
                 <div class="button-group">
                     <input type="submit" name="submit" value="Upload Voice Sample" class="action-button upload-csv">
@@ -1558,6 +1977,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <div class="content-section full-width-section">
+            <h1>Batch Process Missing Voices</h1>
+            <p>Upload missing local voices to the XTTS/Chatterbox server.</p>
+            
+            <?php
+            $localVoices = getLocalVoices();
+            $xttsVoices = [];
+            if (isset($_SESSION['xtts_speakers_list']) && is_array($_SESSION['xtts_speakers_list'])) {
+                foreach ($_SESSION['xtts_speakers_list'] as $speaker) {
+                    $displayName = basename($speaker, '.wav');
+                    $xttsVoices[$displayName] = true;
+                }
+            }
+            $missingXttsVoices = [];
+            foreach ($localVoices as $voice) {
+                if (!isset($xttsVoices[$voice])) {
+                    $missingXttsVoices[] = $voice;
+                }
+            }
+            ?>
+            
+            <?php if (count($missingXttsVoices) > 0): ?>
+                <p style="color: #4a8ab6;">Found <?php echo count($missingXttsVoices); ?> voice(s) not yet uploaded to XTTS server.</p>
+                <div class="button-group">
+                    <button onclick="startBatchUpload('xtts', <?php echo htmlspecialchars(json_encode($missingXttsVoices)); ?>)" class="action-button upload-csv">
+                        Batch Upload Missing Voices (<?php echo count($missingXttsVoices); ?>)
+                    </button>
+                    <button onclick="cancelBatchUpload()" id="cancel-batch-xtts" class="action-button delete" style="display:none;">Cancel</button>
+                </div>
+                
+                <div id="batch-progress-xtts" style="display:none; margin-top: 20px; padding: 15px; background: #2c2c2c; border: 1px solid #4a4a4a; border-radius: 5px;">
+                    <div style="margin-bottom: 10px;">
+                        <strong>Progress: <span id="batch-current-xtts">0</span> / <span id="batch-total-xtts">0</span></strong>
+                        <span id="batch-eta-xtts" style="margin-left: 15px; color: #aaa;"></span>
+                    </div>
+                    <div style="background: #1a1a1a; height: 30px; border-radius: 4px; overflow: hidden; margin-bottom: 15px;">
+                        <div id="batch-progress-bar-xtts" style="background: rgb(242, 124, 17); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                    <div id="batch-status-xtts" style="max-height: 300px; overflow-y: auto;">
+                        <!-- Status messages will appear here -->
+                    </div>
+                </div>
+            <?php else: ?>
+                <p style="color: #4caf50;">✓ All local voices are already uploaded to XTTS server.</p>
+            <?php endif; ?>
+        </div>
+
+        <div class="content-section full-width-section">
             <h1>Cloud XTTS/Chatterbox Sync</h1>
             <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=xtts" method="post" onsubmit="showLoadingMessage('Syncing voice cache to XTTS/Chatterbox server, this can take a couple minutes...');">
                 <p><strong>Only required for online XTTS/Chatterbox instances.</strong></p>
@@ -1580,10 +2046,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h1>Voice Sample Upload</h1>
             <p>Upload voice samples to <code>data/voices</code>. Files will be available for generating voices in Cartesia.</p>
             
-            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=cartesia" method="post" enctype="multipart/form-data" style="margin-top: 20px;" onsubmit="showLoadingMessage('Uploading and generating voice for Cartesia, please wait...');">
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=cartesia" method="post" enctype="multipart/form-data" style="margin-top: 20px;" onsubmit="showLoadingMessage('Uploading voice files for Cartesia, please wait...');">
                 <div style="margin-bottom: 15px;">
-                    <label for="file_cartesia" style="display: block; margin-bottom: 8px;">Select .wav file(s) to upload:</label>
-                    <input type="file" name="file[]" id="file_cartesia" accept=".wav" multiple="multiple" required style="width: 100%; max-width: 500px; padding: 8px;">
+                    <label for="file_cartesia" style="display: block; margin-bottom: 8px;">Select .wav file(s) or .zip archive to upload:</label>
+                    <input type="file" name="file[]" id="file_cartesia" accept=".wav,.zip" multiple="multiple" required style="width: 100%; max-width: 500px; padding: 8px;">
                 </div>
                 <div class="button-group">
                     <input type="submit" name="submit_cartesia" value="Upload Voice Sample" class="action-button upload-csv">
@@ -1654,6 +2120,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
             </div>
         </div>
+        
+        <div class="content-section full-width-section">
+            <h1>Batch Generate Missing Voices</h1>
+            <p>Generate voice clones for Cartesia from uploaded files. Rate limited to avoid API errors (2 second delay between requests).</p>
+            
+            <?php
+            $localVoices = getLocalVoices();
+            $clonedVoices = getClonedVoices('cartesia');
+            $missingCartesiaVoices = array_diff($localVoices, array_keys($clonedVoices));
+            ?>
+            
+            <?php if (count($missingCartesiaVoices) > 0): ?>
+                <p style="color: #4a8ab6;">Found <?php echo count($missingCartesiaVoices); ?> voice(s) not yet generated for Cartesia.</p>
+                <p style="color: #aaa; font-size: 0.9em;">Estimated time: ~<?php echo ceil(count($missingCartesiaVoices) * 2 / 60); ?> minute(s)</p>
+                <div class="button-group">
+                    <button onclick="startBatchUpload('cartesia', <?php echo htmlspecialchars(json_encode(array_values($missingCartesiaVoices))); ?>)" class="action-button upload-csv" <?php echo !$cartesiaConfigured ? 'disabled title="Configure Cartesia API first"' : ''; ?>>
+                        Batch Generate Missing Voices (<?php echo count($missingCartesiaVoices); ?>)
+                    </button>
+                    <button onclick="cancelBatchUpload()" id="cancel-batch-cartesia" class="action-button delete" style="display:none;">Cancel</button>
+                </div>
+                
+                <div id="batch-progress-cartesia" style="display:none; margin-top: 20px; padding: 15px; background: #2c2c2c; border: 1px solid #4a4a4a; border-radius: 5px;">
+                    <div style="margin-bottom: 10px;">
+                        <strong>Progress: <span id="batch-current-cartesia">0</span> / <span id="batch-total-cartesia">0</span></strong>
+                        <span id="batch-eta-cartesia" style="margin-left: 15px; color: #aaa;"></span>
+                    </div>
+                    <div style="background: #1a1a1a; height: 30px; border-radius: 4px; overflow: hidden; margin-bottom: 15px;">
+                        <div id="batch-progress-bar-cartesia" style="background: rgb(242, 124, 17); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                    <div id="batch-status-cartesia" style="max-height: 300px; overflow-y: auto;">
+                        <!-- Status messages will appear here -->
+                    </div>
+                </div>
+            <?php else: ?>
+                <p style="color: #4caf50;">✓ All local voices have been generated for Cartesia.</p>
+            <?php endif; ?>
+        </div>
     </div>
 
     <!-- Inworld Tab Content -->
@@ -1662,10 +2165,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h1>Voice Sample Upload</h1>
             <p>Upload voice samples to <code>data/voices</code>. Files will be available for generating voices in Inworld.</p>
             
-            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=inworld" method="post" enctype="multipart/form-data" style="margin-top: 20px;" onsubmit="showLoadingMessage('Uploading and generating voice for Inworld, please wait...');">
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=inworld" method="post" enctype="multipart/form-data" style="margin-top: 20px;" onsubmit="showLoadingMessage('Uploading voice files for Inworld, please wait...');">
                 <div style="margin-bottom: 15px;">
-                    <label for="file_inworld" style="display: block; margin-bottom: 8px;">Select .wav file(s) to upload:</label>
-                    <input type="file" name="file[]" id="file_inworld" accept=".wav" multiple="multiple" required style="width: 100%; max-width: 500px; padding: 8px;">
+                    <label for="file_inworld" style="display: block; margin-bottom: 8px;">Select .wav file(s) or .zip archive to upload:</label>
+                    <input type="file" name="file[]" id="file_inworld" accept=".wav,.zip" multiple="multiple" required style="width: 100%; max-width: 500px; padding: 8px;">
                 </div>
                 <div class="button-group">
                     <input type="submit" name="submit_inworld" value="Upload Voice Sample" class="action-button upload-csv">
@@ -1735,6 +2238,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <p>No voice files found in <code>data/voices</code>. Upload voice samples in the XTTS tab first.</p>
                 <?php endif; ?>
             </div>
+        </div>
+        
+        <div class="content-section full-width-section">
+            <h1>Batch Generate Missing Voices</h1>
+            <p>Generate voice clones for Inworld from uploaded files. Rate limited to avoid API errors (3 second delay between requests).</p>
+            
+            <?php
+            $localVoices = getLocalVoices();
+            $clonedVoices = getClonedVoices('inworld');
+            $missingInworldVoices = array_diff($localVoices, array_keys($clonedVoices));
+            ?>
+            
+            <?php if (count($missingInworldVoices) > 0): ?>
+                <p style="color: #4a8ab6;">Found <?php echo count($missingInworldVoices); ?> voice(s) not yet generated for Inworld.</p>
+                <p style="color: #aaa; font-size: 0.9em;">Estimated time: ~<?php echo ceil(count($missingInworldVoices) * 3 / 60); ?> minute(s)</p>
+                <div class="button-group">
+                    <button onclick="startBatchUpload('inworld', <?php echo htmlspecialchars(json_encode(array_values($missingInworldVoices))); ?>)" class="action-button upload-csv" <?php echo !$inworldConfigured ? 'disabled title="Configure Inworld API first"' : ''; ?>>
+                        Batch Generate Missing Voices (<?php echo count($missingInworldVoices); ?>)
+                    </button>
+                    <button onclick="cancelBatchUpload()" id="cancel-batch-inworld" class="action-button delete" style="display:none;">Cancel</button>
+                </div>
+                
+                <div id="batch-progress-inworld" style="display:none; margin-top: 20px; padding: 15px; background: #2c2c2c; border: 1px solid #4a4a4a; border-radius: 5px;">
+                    <div style="margin-bottom: 10px;">
+                        <strong>Progress: <span id="batch-current-inworld">0</span> / <span id="batch-total-inworld">0</span></strong>
+                        <span id="batch-eta-inworld" style="margin-left: 15px; color: #aaa;"></span>
+                    </div>
+                    <div style="background: #1a1a1a; height: 30px; border-radius: 4px; overflow: hidden; margin-bottom: 15px;">
+                        <div id="batch-progress-bar-inworld" style="background: rgb(242, 124, 17); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                    <div id="batch-status-inworld" style="max-height: 300px; overflow-y: auto;">
+                        <!-- Status messages will appear here -->
+                    </div>
+                </div>
+            <?php else: ?>
+                <p style="color: #4caf50;">✓ All local voices have been generated for Inworld.</p>
+            <?php endif; ?>
         </div>
     </div>
 </main>

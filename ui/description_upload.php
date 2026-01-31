@@ -312,13 +312,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         text-align: center;
         margin-bottom: 30px;
         padding: 20px;
-        background: #2a2a2a;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
     }
 
     .page-header h1 {
-        margin-bottom: 15px;
+        margin-bottom: 8px;
         font-family: 'MagicCards', serif;
         word-spacing: 8px;
         font-size: 2.2em;
@@ -330,9 +331,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         font-family: 'MagicCards', serif;
     }
 
-    .page-header p {
-        margin: 5px 0;
-        color: #d0d0d0;
+    .page-subtitle {
+        margin: 0;
+        color: #bbb;
         font-size: 1.1em;
         line-height: 1.6;
     }
@@ -346,10 +347,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     .content-section {
-        background: #2a2a2a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
         padding: 25px;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .content-section:hover {
+        border-color: #4a4a4a;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.05);
     }
 
     .content-section h2 {
@@ -389,13 +397,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     input[type="file"],
     textarea {
         width: 100%;
-        padding: 10px;
+        padding: 10px 12px;
         margin-bottom: 10px;
-        border-radius: 4px;
-        border: 1px solid #555555;
-        background-color: #4a4a4a;
-        color: #f8f9fa;
+        border-radius: 6px;
+        border: 1px solid #3a3a3a;
+        background: rgba(26, 26, 26, 0.8);
+        color: #e9efff;
         box-sizing: border-box;
+        transition: all 0.2s ease;
+    }
+    
+    input[type="text"]:focus,
+    textarea:focus {
+        border-color: rgba(242, 124, 17, 0.5);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+        background: rgba(34, 34, 34, 0.9);
     }
 
     textarea {
@@ -432,7 +449,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         width: 100%;
         table-layout: fixed;
         border-collapse: collapse;
-        background-color: #2a2a2a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
     }
 
     th, td {
@@ -446,15 +464,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     th {
-        background-color: #3a3a3a;
+        background: linear-gradient(135deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 0.9));
         color: rgb(242, 124, 17);
         font-weight: bold;
         font-family: 'MagicCards', serif;
         word-spacing: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     }
 
     tr:hover {
-        background-color: #333333;
+        background: rgba(58, 58, 58, 0.5);
     }
 
     /* Column width optimization */
@@ -484,11 +503,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     /* Filter improvements */
     .filter-section {
-        background: #2a2a2a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
         padding: 20px;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
         margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
     }
 
     .filter-buttons {
@@ -692,9 +712,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <h1 id="page-title">
             <span id="title-text">Description Manager</span>
         </h1>
-        <p>The <b>Description System</b> allows you to create custom descriptions for items and equipment.</p>
-        <p>Upload descriptions individually or in bulk via CSV files. All custom entries override default templates.</p>
-        <p>Descriptions are automatically injected into NPC equipment and inventory context when available.</p>
+        <p class="page-subtitle">Create custom descriptions for items and equipment that enhance NPC context</p>
     </div>
 
     <div class="content-grid">

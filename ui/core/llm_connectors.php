@@ -77,6 +77,26 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
     font-style: normal;
 }
 main { padding: 30px 5px 5px; }
+
+/* Page Header */
+.page-header {
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #3a3a3a;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+    text-align: center;
+    margin-bottom: 30px;
+}
+.page-header h1.api-title {
+    margin-bottom: 8px;
+}
+.page-subtitle {
+    color: #bbb;
+    font-size: 1.1em;
+    margin: 0;
+}
+
 h1.api-title {
     margin: 0 0 20px 0;
     font-family: 'MagicCards', serif;
@@ -165,8 +185,9 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     .orm-err { color:#ff6b6b; padding:8px 10px; }
     .orm-info-box { border:1px solid rgba(138,155,182,0.3); background:#0d1117; border-radius:8px; padding:8px 10px; margin-top:8px; max-width: 800px; }
     /* Inline title + toggle styling */
-    .label-with-toggle { display:flex; align-items:center; gap:10px; }
-    .label-with-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; }
+    .label-with-toggle { display:flex; align-items:center; gap:24px; margin-bottom: 12px; }
+    .label-with-toggle input[type="checkbox"] { accent-color: #176529; transform: scale(1.8); transform-origin:center; cursor:pointer; margin: 0; }
+    .label-with-toggle .tip-label { flex: 1; }
     </style>
     <script>
     // Define consolidation() if not present (embedded partial doesn't include metadata editor)
@@ -348,26 +369,22 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     <label class="label-with-toggle"><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span>
                         <input type="hidden" name="reasoning_model" value="0">
                         <input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>>
-                        <span class="toggle-text">On</span>
                     </label>
                 </div>
                 <div id="json_toggles" style="margin-top:8px;">
                     <label class="label-with-toggle"><span class='tip-label' data-tip='Force responses to be strict JSON. Non‑JSON output may be rejected or auto‑retried.'>Enforce JSON</span>
                         <input type="hidden" name="enforce_json" value="0">
                         <input type="checkbox" name="enforce_json" value="1" <?= isset($editItem["enforce_json"]) && $editItem["enforce_json"] == 1 ? "checked" : "" ?>>
-                        <span class="toggle-text">On</span>
                     </label>
                     <div style="height:6px;"></div>
                     <label class="label-with-toggle"><span class='tip-label' data-tip='Guide/validate the JSON structure with a schema. Best used with Enforce JSON.'>JSON Schema</span>
                         <input type="hidden" name="json_schema" value="0">
                         <input type="checkbox" name="json_schema" value="1" <?= isset($editItem["json_schema"]) && $editItem["json_schema"] == 1 ? "checked" : "" ?>>
-                        <span class="toggle-text">On</span>
                     </label>
                     <div style="height:6px;"></div>
                     <label class="label-with-toggle"><span class='tip-label' data-tip='Send a starter JSON object to steer field names/shape in the response.'>Prefill JSON</span>
                         <input type="hidden" name="prefill_json" value="0">
                         <input type="checkbox" name="prefill_json" value="1" <?= isset($editItem["prefill_json"]) && $editItem["prefill_json"] == 1 ? "checked" : "" ?>>
-                        <span class="toggle-text">On</span>
                     </label>
                 </div>
                 
@@ -382,7 +399,6 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                             }
                             echo (isset($metadata["remove_action_prompt"]) && $metadata["remove_action_prompt"]) ? "checked" : "";
                         ?>>
-                        <span class="toggle-text">On</span>
                     </label>
                 </div>
             </div>
@@ -1204,12 +1220,15 @@ if (isset($_GET["edit"])) {
 }
 ?>
 
-<h1 class="api-title">LLM Connectors</h1>
+<div class="page-header">
+    <h1 class="api-title">LLM Connectors</h1>
+    <p class="page-subtitle">Configure Language Model connectors for AI dialogue generation</p>
+</div>
+
 <div id="toast" class="toast-notification" style="position:static; margin: 8px auto 12px; display:block; opacity:0; transform:none; max-width:960px; width: calc(100% - 20px);"><span class="message"></span></div>
 
 <div class="llm-layout">
     <div class="llm-left position-sticky">
-        <div class="llm-title" style="margin: 4px 0 6px 2px; font-weight: 600; color: rgb(242,124,17);">Connectors</div>
         <div style="margin: 6px 0 10px 4px; display:flex; gap:8px; flex-wrap:wrap;">
             <form method="get" style="display:inline" action="llm_connectors.php">
                 <input type="hidden" name="create_blank" value="1">
@@ -1316,34 +1335,147 @@ if (isset($_GET["edit"])) {
 /* Keep two-column layout even on narrower screens so half-screen works */
 @media (max-width: 1100px) { .llm-layout { grid-template-columns: minmax(220px, 300px) 1fr; } }
 @media (max-width: 860px) { .llm-layout { grid-template-columns: minmax(200px, 260px) 1fr; } }
-.llm-left { display:flex; flex-direction:column; height:calc(100vh - (2.2em*1.2) - 55px); overflow:hidden; padding:8px; padding-right:8px; border:1px solid #4a4a4a; border-radius:8px; background:#2a2a2a; top: calc((2.2em*1.2) + 50px)}
+.llm-left { 
+    display:flex; 
+    flex-direction:column; 
+    height:calc(100vh - (2.2em*1.2) - 55px); 
+    overflow:hidden; 
+    padding:12px; 
+    padding-right:12px; 
+    border:1px solid #3a3a3a; 
+    border-radius:10px; 
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+    top: calc((2.2em*1.2) + 50px)
+}
 .llm-left .llm-title { margin: 6px 0 10px 4px; font-size: 20px; color: #e9efff; }
 .llm-right { min-width: 0; }
 .list-filters { display:flex; gap:8px; align-items:center; margin:6px 0 10px; flex-wrap:wrap; }
-.list-filters input[type="text"]{ width: 100%; max-width: 260px; }
-.list-filters select { max-width: 200px; }
+.list-filters input[type="text"]{ 
+    width: 100%; 
+    max-width: 260px;
+    background: rgba(26, 26, 26, 0.8); 
+    color: #e9efff; 
+    border: 1px solid #3a3a3a; 
+    border-radius: 6px; 
+    padding: 8px 12px;
+    transition: all 0.2s ease;
+}
+.list-filters input[type="text"]:focus {
+    border-color: rgba(242, 124, 17, 0.5);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+}
+.list-filters select { 
+    max-width: 200px;
+    background: rgba(26, 26, 26, 0.8); 
+    color: #e9efff; 
+    border: 1px solid #3a3a3a; 
+    border-radius: 6px; 
+    padding: 8px 12px;
+    transition: all 0.2s ease;
+}
+.list-filters select:focus {
+    border-color: rgba(242, 124, 17, 0.5);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+}
 .conn-list { display:flex; flex-direction:column; gap:8px; flex:1 1 auto; overflow:auto; }
-.conn-li { border:1px solid #4a4a4a; background:#2a2a2a; border-radius:10px; padding:10px; cursor:pointer; transition:transform .08s ease, background .12s ease; }
-.conn-li:hover { background:#3a3a3a; transform: translateY(-1px); }
-.conn-li.active { outline:2px solid rgb(242,124,17); }
+.conn-li { 
+    border:1px solid #3a3a3a; 
+    background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98)); 
+    border-radius:10px; 
+    padding:12px; 
+    cursor:pointer; 
+    transition: all .2s ease;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+.conn-li:hover { 
+    background: linear-gradient(135deg, rgba(58, 58, 58, 0.95), rgba(48, 48, 48, 0.98)); 
+    transform: translateY(-2px);
+    border-color: #4a4a4a;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+.conn-li.active { 
+    outline:2px solid rgb(242,124,17); 
+    background: linear-gradient(135deg, rgba(52, 42, 32, 0.95), rgba(44, 34, 24, 0.98));
+    box-shadow: 0 4px 12px rgba(242, 124, 17, 0.3);
+}
 .conn-li .head { display:flex; justify-content:space-between; gap:8px; align-items:center; }
 .conn-li .title { font-weight:600; color:#e9efff; }
 .conn-li .badge { font-size:11px; padding:2px 6px; border:1px solid #4a4a4a; border-radius:999px; color:#9fb1c9; }
 .conn-li .sub { font-size:12px; color:#9fb1c9; margin-top:3px; overflow-wrap:anywhere; }
 .conn-li .actions { display:flex; gap:6px; margin-top:6px; justify-content:flex-end; }
 /* Collapsible block for Metadata */
-.collapsible { margin-top: 8px; border:1px solid #4a4a4a; border-radius:10px; background:#2a2a2a; }
-.collapsible-header { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px; cursor:pointer; user-select:none; color:#e9efff; font-weight:600; }
+.collapsible { 
+    margin-top: 8px; 
+    border:1px solid #3a3a3a; 
+    border-radius:10px; 
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+.collapsible-header { 
+    display:flex; 
+    align-items:center; 
+    justify-content:space-between; 
+    gap:8px; 
+    padding:12px; 
+    cursor:pointer; 
+    user-select:none; 
+    color:#e9efff; 
+    font-weight:600;
+    transition: background 0.2s ease;
+}
+.collapsible-header:hover {
+    background: rgba(58, 58, 58, 0.3);
+}
 .collapsible-header::after { content:'\25BE'; font-size:12px; color:#9fb1c9; transition: transform .12s ease; }
-.collapsible[open] .collapsible-header { border-bottom:1px solid #4a4a4a; }
+.collapsible[open] .collapsible-header { border-bottom:1px solid #3a3a3a; }
 .collapsible[open] .collapsible-header::after { transform: rotate(180deg); }
-.collapsible-content { padding:10px; }
+.collapsible-content { padding:12px; }
 /* Inline title + toggle styling */
-.label-with-toggle { display:flex; align-items:center; gap:10px; }
-.label-with-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; }
+.label-with-toggle { display:flex; align-items:center; gap:24px; margin-bottom: 12px; }
+.label-with-toggle input[type="checkbox"] { accent-color: #176529; transform: scale(1.8); transform-origin:center; cursor:pointer; margin: 0; }
+.label-with-toggle .tip-label { flex: 1; }
+
+/* Form inputs styling */
+.form-container input[type="text"],
+.form-container input[type="number"],
+.form-container input[type="password"],
+.form-container select,
+.form-container textarea {
+    background: rgba(26, 26, 26, 0.8); 
+    color: #e9efff; 
+    border: 1px solid #3a3a3a; 
+    border-radius: 6px; 
+    padding: 10px 12px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+.form-container input[type="text"]:focus,
+.form-container input[type="number"]:focus,
+.form-container input[type="password"]:focus,
+.form-container select:focus,
+.form-container textarea:focus {
+    border-color: rgba(242, 124, 17, 0.5);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+    background: rgba(34, 34, 34, 0.9);
+}
+.form-container textarea {
+    resize: vertical;
+    font-family: inherit;
+}
+.form-container label {
+    color: rgb(242, 124, 17);
+    font-weight: 600;
+    display: inline-block;
+    margin-bottom: 6px;
+    margin-top: 8px;
+}
 </style>
 <?php if (!$editItem): ?>
-    <div class="connector-placeholder" style="border:1px dashed #4a4a4a; background:#2a2a2a; color:#9fb1c9; border-radius:10px; padding:18px; margin-bottom:10px;">
+    <div class="connector-placeholder" style="border:1px solid #3a3a3a; background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98)); color:#9fb1c9; border-radius:10px; padding:18px; margin-bottom:10px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);">
         <div style="font-weight:600; color:#e9efff; margin-bottom:6px;">No connector selected</div>
         <div>Select a connector from the list on the left to view and edit its settings.</div>
     </div>
@@ -1466,28 +1598,24 @@ if (typeof window.consolidation !== 'function') {
                 <label class="label-with-toggle"><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span>
                     <input type="hidden" name="reasoning_model" value="0">
                     <input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>>
-                    <span class="toggle-text">On</span>
                 </label>
             </div>
             <div id="json_toggles" style="margin-top:8px;">
                 <label class="label-with-toggle"><span class='tip-label' data-tip='Force responses to be strict JSON. Non‑JSON output may be rejected or auto‑retried.'>Enforce JSON</span>
                     <input type="hidden" name="enforce_json" value="0">
                     <input type="checkbox" name="enforce_json" value="1" <?= isset($editItem["enforce_json"]) && $editItem["enforce_json"] == 1 ? "checked" : "" ?>>
-                    <span class="toggle-text">On</span>
                 </label>
 
                 <div style="height:6px;"></div>
                 <label class="label-with-toggle"><span class='tip-label' data-tip='Guide/validate the JSON structure with a schema. Best used with Enforce JSON.'>JSON Schema</span>
                     <input type="hidden" name="json_schema" value="0">
                     <input type="checkbox" name="json_schema" value="1" <?= isset($editItem["json_schema"]) && $editItem["json_schema"] == 1 ? "checked" : "" ?>>
-                    <span class="toggle-text">On</span>
                 </label>
 
                 <div style="height:6px;"></div>
                 <label class="label-with-toggle"><span class='tip-label' data-tip='Send a starter JSON object to steer field names/shape in the response.'>Prefill JSON</span>
                     <input type="hidden" name="prefill_json" value="0">
                     <input type="checkbox" name="prefill_json" value="1" <?= isset($editItem["prefill_json"]) && $editItem["prefill_json"] == 1 ? "checked" : "" ?>>
-                    <span class="toggle-text">On</span>
                 </label>
             </div>
             
@@ -1503,7 +1631,6 @@ if (typeof window.consolidation !== 'function') {
                         }
                         echo (isset($metadataMain["remove_action_prompt"]) && $metadataMain["remove_action_prompt"]) ? "checked" : "";
                     ?>>
-                    <span class="toggle-text">On</span>
                 </label>
             </div>
         </div>

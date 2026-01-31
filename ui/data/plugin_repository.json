@@ -9,7 +9,7 @@
         },
         "mindmap": {
             "name": "CHIM-MindMap",
-            "description": "3D Visualization of memories via embeddings.",
+            "description": "3D Visualization of memories via embeddings. Must have TXT2VEC enabled and synced memories.",
             "git_repo": "Dwemer-Dynamics/CHIM-MindMap",
             "github_url": "https://github.com/Dwemer-Dynamics/CHIM-MindMap",
             "mod_download_url": ""

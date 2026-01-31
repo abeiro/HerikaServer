@@ -755,6 +755,14 @@ if (isset($_GET['download_logs'])) {
     <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
     <link rel="stylesheet" href="../css/main.css">
     <style>
+        /* Font declaration */
+        @font-face {
+            font-family: 'MagicCards';
+            src: url('../css/font/MagicCardsNormal.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        
         /* Override main container styles */
         main {
             padding-top: <?php echo $isEmbedded? '20' : '160'; ?>px;
@@ -769,14 +777,25 @@ if (isset($_GET['download_logs'])) {
         /* Override footer styles */
         footer { display: <?php echo $isEmbedded? 'none' : 'block'; ?>; }
 
-        /* Updated color scheme for a more mellow dark theme */
+        /* Updated color scheme for modern dark theme */
         body {
             background-color: #1e1e1e;
             color: #d4d4d4;
         }
 
-        h1, h2 {
-            color: #ffffff;
+        h1 {
+            color: rgb(242, 124, 17);
+            font-family: 'MagicCards', serif;
+            word-spacing: 8px;
+            font-size: 2.0em;
+            font-weight: normal;
+            letter-spacing: 0.5px;
+        }
+        
+        h2 {
+            color: rgb(242, 124, 17);
+            font-family: 'Futura CondensedLight', Arial, sans-serif;
+            font-size: 1.2em;
         }
 
         .grid-container {
@@ -789,10 +808,9 @@ if (isset($_GET['download_logs'])) {
         }
 
         .log-section {
-            background-color: #252526;
-            border-color: #333333;
-            border: 1px solid #444;
-            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+            border: 1px solid #3a3a3a;
+            border-radius: 10px;
             padding: 15px;
             display: flex;
             flex-direction: column;
@@ -800,6 +818,13 @@ if (isset($_GET['download_logs'])) {
             position: relative;
             min-height: 300px;
             min-width: 300px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .log-section:hover {
+            border-color: rgba(242, 124, 17, 0.3);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.05);
         }
 
         .log-section::after {
@@ -809,7 +834,7 @@ if (isset($_GET['download_logs'])) {
         h2 {
             margin-top: 0;
             padding-bottom: 10px;
-            border-bottom: 1px solid #444;
+            border-bottom: 2px solid rgba(242, 124, 17, 0.3);
             font-size: 1.2em;
             white-space: nowrap;
             overflow: hidden;
@@ -817,15 +842,14 @@ if (isset($_GET['download_logs'])) {
         }
 
         .log-container {
-            background-color: #1e1e1e;
-            border-color: #333333;
+            background: rgba(26, 26, 26, 0.8);
+            border: 1px solid #3a3a3a;
             overflow-y: auto;
             overflow-x: hidden;
             color: #d4d4d4;
             font-size: 13px;
             padding: 10px;
-            border: 1px solid #555555;
-            border-radius: 5px;
+            border-radius: 6px;
             height: 600px;
             max-height: 600px;
             width: 100%;
@@ -975,19 +999,22 @@ if (isset($_GET['download_logs'])) {
         .refresh-button {
             display: inline-flex;
             align-items: center;
-            background-color: #17a2b8;
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
             color: white;
-            border: none;
-            border-radius: 4px;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
             padding: 8px 16px;
             margin-left: 15px;
             cursor: pointer;
             font-size: 14px;
-            transition: background-color 0.2s;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.05);
         }
 
         .refresh-button:hover {
-            background-color: #138496;
+            border-color: rgba(242, 124, 17, 0.5);
+            color: rgb(242, 124, 17);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.1);
         }
 
         .refresh-button svg {
@@ -1015,18 +1042,21 @@ if (isset($_GET['download_logs'])) {
 
         .search-input {
             flex: 1;
-            padding: 8px;
-            border: 1px solid #444;
-            border-radius: 4px;
-            background-color: #1e1e1e;
+            padding: 8px 12px;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            background: rgba(26, 26, 26, 0.8);
             color: #d4d4d4;
             font-family: monospace;
             font-size: 14px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
         }
 
         .search-input:focus {
             outline: none;
-            border-color: #454545;
+            border-color: rgb(242, 124, 17);
+            box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+            background: rgba(26, 26, 26, 0.95);
         }
 
         /* Inline toggle switch styles (smaller version) */
@@ -1052,7 +1082,7 @@ if (isset($_GET['download_logs'])) {
         }
 
         .toggle-switch-inline input[type="checkbox"]:checked {
-            background-color: #17a2b8;
+            background-color: rgb(242, 124, 17);
         }
 
         .toggle-switch-inline input[type="checkbox"]::before {

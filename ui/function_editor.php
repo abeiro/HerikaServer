@@ -154,18 +154,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         text-align: center;
         margin-bottom: 30px;
         padding: 20px;
-        background: #2a2a2a;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
     }
 
     .page-header h1 {
-        margin-bottom: 15px;
+        margin-bottom: 8px;
         font-family: 'MagicCards', serif;
         word-spacing: 8px;
         font-size: 2.2em;
         color: rgb(242, 124, 17);
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    
+    .page-subtitle {
+        margin: 0;
+        color: #bbb;
+        font-size: 1.1em;
+        line-height: 1.6;
     }
 
     /* Content Section Headers */
@@ -181,11 +189,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /* Content sections */
     .content-section {
-        background: #2a2a2a;
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
         padding: 25px;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
         margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .content-section:hover {
+        border-color: rgba(242, 124, 17, 0.3);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.05);
     }
 
     /* Function Grid Layout */
@@ -197,17 +212,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     .function-category {
-        background: #1a1a1a;
-        border: 1px solid #4a4a4a;
-        border-radius: 6px;
+        background: linear-gradient(180deg, rgba(26, 26, 26, 0.9), rgba(20, 20, 20, 0.95));
+        border: 1px solid #3a3a3a;
+        border-radius: 8px;
         padding: 20px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.02);
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .function-category:hover {
+        border-color: rgba(242, 124, 17, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.04);
     }
 
     .function-category h3 {
         color: rgb(242, 124, 17);
         margin-bottom: 15px;
         font-size: 1.1em;
-        border-bottom: 1px solid #4a4a4a;
+        border-bottom: 1px solid rgba(242, 124, 17, 0.2);
         padding-bottom: 8px;
     }
 
@@ -217,19 +239,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         align-items: center;
         margin: 8px 0;
         padding: 8px 12px;
-        background: #2a2a2a;
-        border-radius: 4px;
-        transition: background-color 0.2s ease;
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.6), rgba(34, 34, 34, 0.7));
+        border-radius: 6px;
+        border: 1px solid rgba(58, 58, 58, 0.5);
+        transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
     .function-item:hover {
-        background: #333;
+        background: linear-gradient(135deg, rgba(51, 51, 51, 0.8), rgba(42, 42, 42, 0.9));
+        border-color: rgba(242, 124, 17, 0.3);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     }
 
     .function-item input[type="checkbox"] {
         margin-right: 12px;
         transform: scale(1.2);
         accent-color: rgb(242, 124, 17);
+        cursor: pointer;
     }
 
     .function-item label {
@@ -247,13 +273,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     /* Mode indicator */
     .mode-indicator {
         display: inline-block;
-        background: rgba(242, 124, 17, 0.2);
+        background: linear-gradient(135deg, rgba(242, 124, 17, 0.2), rgba(242, 124, 17, 0.15));
         color: rgb(242, 124, 17);
-        padding: 6px 12px;
+        padding: 8px 16px;
         border-radius: 20px;
+        border: 1px solid rgba(242, 124, 17, 0.3);
         font-size: 0.9em;
         font-weight: 600;
         margin-bottom: 20px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     }
 
 
@@ -338,8 +366,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <div class="page-header">
-        <h1>AI Action Editor (Beta)</h1>
-        <p>Configure which AI functions are available for AI actors in CHIM.</p>
+        <h1>AI Action Editor</h1>
+        <p class="page-subtitle">Configure which AI functions are available for AI actors in CHIM</p>
     </div>
 
     <div class="content-section">

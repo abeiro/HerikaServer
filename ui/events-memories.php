@@ -71,14 +71,15 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         display: flex;
         flex-wrap: wrap;
         margin-bottom: 20px;
-        border-bottom: 2px solid #3a3a3a;
+        border-bottom: 2px solid rgba(242, 124, 17, 0.2);
         gap: 5px;
         word-spacing: 5px;
     }
 
     .tab-button {
-        background: #2a2a2a;
-        border: none;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.8), rgba(34, 34, 34, 0.9));
+        border: 2px solid #3a3a3a;
+        border-bottom: none;
         padding: 12px 18px;
         color: #f8f9fa;
         cursor: pointer;
@@ -90,24 +91,33 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         font-family: 'MagicCards', sans-serif;
         word-spacing: 5px;
         letter-spacing: 1.5px;
+        margin-bottom: -2px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .tab-button:hover {
-        background: #3a3a3a;
+        background: linear-gradient(180deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 1));
+        color: rgb(242, 124, 17);
+        border-color: rgba(242, 124, 17, 0.3);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     .tab-button.active {
-        background: #1a1a1a;
-        border-bottom: 2px solid rgb(212, 94, 0);
-        margin-bottom: -2px;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-color: rgba(242, 124, 17, 0.5);
+        border-bottom: 2px solid rgba(42, 42, 42, 0.95);
+        color: rgb(242, 124, 17);
+        box-shadow: 0 4px 8px rgba(242, 124, 17, 0.2);
     }
 
     .tab-content {
         display: none;
-        background: #2a2a2a;
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
         padding: 20px;
         border-radius: 8px;
         border-top-left-radius: 0;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
     }
 
     .tab-content.active {
@@ -116,45 +126,83 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     /* Table Container Styles */
     .table-container {
-        background-color: #2a2a2a;
-        border-radius: 5px;
-        padding: 15px;
-        margin-bottom: 20px;
+        max-height: calc(100vh - 450px) !important;
+        margin-top: 20px;
+        width: 100%;
         overflow-x: auto;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
+                    inset 0 1px rgba(255, 255, 255, 0.03);
+        padding: 12px;
     }
 
     /* Table Styles */
+    .table-container table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        margin-bottom: 0;
+    }
+    
     table {
         width: 100%;
         border-collapse: collapse;
-        background-color: #3a3a3a;
         margin-bottom: 20px;
         font-size: small;
     }
 
     /* Header Cells */
-    th {
-        background-color: #1a1a1a;
-        color: #fff;
+    .table-container th {
+        padding: 12px 10px;
         font-weight: bold;
-        padding: 12px;
         text-align: left;
-        border-bottom: 2px solid #444;
+        vertical-align: top;
+        color: rgb(242, 124, 17);
+        background: rgba(26, 26, 26, 0.6);
+        border-bottom: 2px solid rgba(242, 124, 17, 0.3);
+        font-size: 0.95em;
+    }
+    
+    th {
+        padding: 12px;
+        font-weight: bold;
+        text-align: left;
+        color: rgb(242, 124, 17);
+        background: rgba(26, 26, 26, 0.6);
+        border-bottom: 2px solid rgba(242, 124, 17, 0.3);
     }
 
     /* Data Cells */
+    .table-container td {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+        vertical-align: top;
+        padding: 10px;
+        line-height: 1.5;
+        border-bottom: 1px solid rgba(74, 74, 74, 0.3);
+        color: #d0d0d0;
+    }
+    
     td {
         padding: 10px;
         text-align: left;
-        border-bottom: 1px solid #444;
+        border-bottom: 1px solid rgba(74, 74, 74, 0.3);
         color: #f8f9fa;
     }
 
-    /* Row Alternating Colors */
-    tr:nth-child(even) {
-        background-color:rgb(77, 77, 77);
+    /* Row hover effect */
+    .table-container tr:hover td {
+        background: rgba(242, 124, 17, 0.05);
     }
+    
+    tr:hover td {
+        background: rgba(242, 124, 17, 0.05);
+    }
+
+    /* Row Alternating Colors - removed for consistency with Oghma */
 
     /* Button Cell Alignment */
     td:has(button), td:has(.btn-base) {
@@ -210,18 +258,18 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .modal-content {
-        background-color: #2a2a2a;
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.98), rgba(34, 34, 34, 0.98));
         margin: 3% auto;
         padding: 20px;
-        border: 1px solid #444;
+        border: 2px solid rgba(242, 124, 17, 0.5);
         width: 90%;
         max-width: 1600px;
         max-height: 90vh;
         overflow-y: auto;
-        border-radius: 8px;
+        border-radius: 10px;
         color: #fff;
         position: relative;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px rgba(255, 255, 255, 0.03);
     }
     
     .view-contents-btn {
@@ -429,13 +477,6 @@ function getTimeColor($time) {
 </div>
 
 <div class="container-fluid">
-    <h1 class='my-2'>Events & Memories 
-        <a href="https://dwemerdynamics.hostwiki.io/en/Rechat" target="_blank" rel="noopener" 
-           style="display: inline-block; margin-left: 15px; color: rgb(242, 124, 17); text-decoration: none; font-size: 0.7em; vertical-align: top; border: 2px solid rgb(242, 124, 17); border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 20px; transition: all 0.3s ease;" 
-           title="View detailed documentation about Events, Response Logs, and Rechat System"
-           onmouseover="this.style.background='rgb(242, 124, 17)'; this.style.color='white';" 
-           onmouseout="this.style.background='transparent'; this.style.color='rgb(242, 124, 17)';">ℹ</a>
-    </h1>
 
     <div class="tab-container">
         <div class="tab-buttons">
@@ -466,6 +507,12 @@ function getTimeColor($time) {
         <!-- Event Log Tab -->
         <div id="eventlog-tab" class="tab-content <?php echo $activeTab === 'eventlog' ? 'active' : ''; ?>">
             <?php
+            // Add subtitle description
+            echo "<div style='background: #2a2a2a; border-left: 4px solid rgb(242, 124, 17); padding: 12px 15px; border-radius: 5px; margin: 15px 0; font-size: 0.9em;'>";
+            echo "<span style='color: rgb(242, 124, 17); font-weight: bold;'>📝 Events:</span> ";
+            echo "<span style='color: #f8f9fa;'>Raw log of in-game events (combat, deaths, location changes, etc.) that provide context to the AI. These events are filtered and selectively added to AI prompts based on relevance.</span>";
+            echo "</div>";
+            
             // Show success message if events were deleted
             if (isset($_GET['deleted'])) {
                 $deletedCount = intval($_GET['deleted']);
@@ -834,6 +881,12 @@ function getTimeColor($time) {
         <!-- Response Log Tab -->
         <div id="responselog-tab" class="tab-content <?php echo $activeTab === 'responselog' ? 'active' : ''; ?>">
             <?php
+            // Add subtitle description
+            echo "<div style='background: #2a2a2a; border-left: 4px solid rgb(242, 124, 17); padding: 12px 15px; border-radius: 5px; margin: 15px 0; font-size: 0.9em;'>";
+            echo "<span style='color: rgb(242, 124, 17); font-weight: bold;'>💬 AI Responses:</span> ";
+            echo "<span style='color: #f8f9fa;'>Complete log of all AI-generated responses including the full context (prompts, events, memories) sent to the LLM. Use this to debug conversations and understand what information the AI had access to.</span>";
+            echo "</div>";
+            
             // Helper to extract Oghma topic and level from the stored JSON in prompt
             if (!function_exists('extractOghmaTopicAndLevel')) {
                 function extractOghmaTopicAndLevel($rawPromptValue) {
@@ -1107,6 +1160,69 @@ function getTimeColor($time) {
             if (isset($_GET['deleted'])) {
                 echo "<div style='background: #dc3545; color: white; padding: 10px; border-radius: 5px; margin: 10px 0;'>Memory summary deleted successfully!</div>";
             }
+
+            // Display Memory Configuration Status
+            echo "<div style='background: #1a1a1a; border: 1px solid #3a3a3a; border-radius: 8px; padding: 20px; margin: 15px 0;'>";
+            echo "<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;'>";
+            echo "<h3 style='margin: 0; color: rgb(242, 124, 17); word-spacing: 5px;'>💭 Memory System Configuration</h3>";
+            echo "<a href='" . $webRoot . "/ui/core/config_hub.php?tab=globals' target='_blank' class='btn-base btn-primary' style='font-size: 13px; padding: 6px 12px;'>⚙️ Configure Settings</a>";
+            echo "</div>";
+            
+            // Get memory settings
+            $memoryEnabled = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['ENABLED'] ?? false;
+            $txtaiUrl = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['TXTAI_URL'] ?? 'Not set';
+            $useText2Vec = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['USE_TEXT2VEC'] ?? false;
+            $memoryDelay = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['MEMORY_TIME_DELAY'] ?? 'Not set';
+            $memoryContextSize = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['MEMORY_CONTEXT_SIZE'] ?? 'Not set';
+            $autoCreateSummary = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['AUTO_CREATE_SUMMARYS'] ?? false;
+            $summaryInterval = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['AUTO_CREATE_SUMMARY_INTERVAL'] ?? 'Not set';
+            
+            // Status indicator helper
+            $statusIcon = function($enabled) {
+                return $enabled ? "<span style='color: #4caf50;'>✓ Enabled</span>" : "<span style='color: #f44336;'>✗ Disabled</span>";
+            };
+            
+            echo "<div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;'>";
+            
+            // Memory System Status
+            echo "<div style='background: #2a2a2a; padding: 15px; border-radius: 5px; border: 1px solid #3a3a3a;'>";
+            echo "<div style='font-weight: bold; margin-bottom: 8px; color: rgb(242, 124, 17); font-size: 14px;'>Memory System</div>";
+            echo "<div style='font-size: 14px;'>" . $statusIcon($memoryEnabled) . "</div>";
+            echo "</div>";
+            
+            // TXT2VEC Status
+            echo "<div style='background: #2a2a2a; padding: 15px; border-radius: 5px; border: 1px solid #3a3a3a;'>";
+            echo "<div style='font-weight: bold; margin-bottom: 8px; color: rgb(242, 124, 17); font-size: 14px;'>TXT2VEC (Embeddings)</div>";
+            echo "<div style='font-size: 14px;'>" . $statusIcon($useText2Vec) . "</div>";
+            echo "<div style='font-size: 12px; color: #aaa; margin-top: 4px;'>URL: " . htmlspecialchars($txtaiUrl) . "</div>";
+            echo "</div>";
+            
+            // Auto-Create Summaries
+            echo "<div style='background: #2a2a2a; padding: 15px; border-radius: 5px; border: 1px solid #3a3a3a;'>";
+            echo "<div style='font-weight: bold; margin-bottom: 8px; color: rgb(242, 124, 17); font-size: 14px;'>Auto-Create Summaries</div>";
+            echo "<div style='font-size: 14px;'>" . $statusIcon($autoCreateSummary) . "</div>";
+            echo "<div style='font-size: 12px; color: #aaa; margin-top: 4px;'>Interval: " . htmlspecialchars($summaryInterval) . " (in-game time units)</div>";
+            echo "</div>";
+            
+            // Memory Context Settings
+            echo "<div style='background: #2a2a2a; padding: 15px; border-radius: 5px; border: 1px solid #3a3a3a;'>";
+            echo "<div style='font-weight: bold; margin-bottom: 8px; color: rgb(242, 124, 17); font-size: 14px;'>Context Settings</div>";
+            echo "<div style='font-size: 12px; color: #f8f9fa;'>Time Delay: " . htmlspecialchars($memoryDelay) . " minutes</div>";
+            echo "<div style='font-size: 12px; color: #f8f9fa; margin-top: 4px;'>Context Size: " . htmlspecialchars($memoryContextSize) . " memories</div>";
+            echo "</div>";
+            
+            echo "</div>"; // Close grid
+            
+            // Warning if TXT2VEC is not enabled
+            if (!$useText2Vec) {
+                echo "<div style='background: #2a2a2a; border-left: 4px solid rgb(242, 124, 17); padding: 12px; margin-top: 15px; border-radius: 4px;'>";
+                echo "<strong style='color: rgb(242, 124, 17);'>⚠️ Warning:</strong> <span style='color: #f8f9fa;'>TXT2VEC is disabled. Memory embeddings will not be generated. ";
+                echo "Mind Map visualization and advanced memory search will not work. ";
+                echo "<a href='" . $webRoot . "/ui/core/config_hub.php?tab=globals' target='_blank' style='color: rgb(242, 124, 17); text-decoration: underline;'>Enable it in Global Settings</a></span>";
+                echo "</div>";
+            }
+            
+            echo "</div>"; // Close configuration panel
 
             $results = $db->fetchAll("SELECT gamets_truncated, n, summary, companions, tags, classifier, uid, ROWID as rowid, packed_message, native_vec 
                                     FROM memory_summary 

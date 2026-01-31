@@ -23,22 +23,93 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."navbar.php");
 <style>
 main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
 .tab-container { margin: 20px 0; }
-.tab-buttons { display:flex; flex-wrap:wrap; gap:5px; word-spacing:5px; }
-.tab-button { background:#2a2a2a; border:none; padding:12px 18px; color:#f8f9fa; cursor:pointer; border-top-left-radius:8px; border-top-right-radius:8px; transition: all 0.3s ease; font-size:1em; white-space:nowrap; font-family:'MagicCards', sans-serif; word-spacing:5px; letter-spacing:1.5px; }
-.tab-button:hover { background:#3a3a3a; }
-.tab-button.active { background:#1a1a1a; border-bottom:2px solid rgb(212, 94, 0); margin-bottom:-2px; }
-.tab-content { display:none; background:#2a2a2a; border-radius:8px; border-top-left-radius:0; }
-.tab-content.active { display:block; }
-.embed-wrap { height: calc(100vh - 220px); min-height: 520px; border:1px solid #4a4a4a; border-radius:8px; overflow:hidden; background:#2a2a2a; }
-.embed { width:100%; height:100%; border:0; background:transparent; }
-@media (max-height: 800px){ .embed-wrap { min-height: 420px; } }
+
+.tab-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    border-bottom: 2px solid rgba(242, 124, 17, 0.2);
+    gap: 5px;
+    word-spacing: 5px;
+}
+
+.tab-button {
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.8), rgba(34, 34, 34, 0.9));
+    border: 2px solid #3a3a3a;
+    border-bottom: none;
+    padding: 12px 18px;
+    color: #f8f9fa;
+    cursor: pointer;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    transition: all 0.3s ease;
+    font-size: 1em;
+    white-space: nowrap;
+    font-family: 'MagicCards', sans-serif;
+    word-spacing: 5px;
+    letter-spacing: 1.5px;
+    margin-bottom: -2px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tab-button:hover {
+    background: linear-gradient(180deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 1));
+    color: rgb(242, 124, 17);
+    border-color: rgba(242, 124, 17, 0.3);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.tab-button.active {
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+    border-color: rgba(242, 124, 17, 0.5);
+    border-bottom: 2px solid rgba(42, 42, 42, 0.95);
+    color: rgb(242, 124, 17);
+    box-shadow: 0 4px 8px rgba(242, 124, 17, 0.2);
+}
+
+.tab-content {
+    display: none;
+    background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+    border-radius: 8px;
+    border-top-left-radius: 0;
+    border: 1px solid #3a3a3a;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.tab-content.active { display: block; }
+
+.embed-wrap {
+    height: calc(100vh - 220px);
+    min-height: 520px;
+    border: 1px solid #4a4a4a;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #2a2a2a;
+}
+
+.embed {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+}
+
+@media (max-height: 800px) {
+    .embed-wrap {
+        min-height: 420px;
+    }
+}
+
 /* Actions in header */
-.cp-title .cp-actions { display:flex; align-items:center; gap:8px; }
+.cp-title .cp-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 </style>
 
 <main>
     <div class="cp-title" style="display:flex; align-items:center; justify-content:space-between; margin: 4px 0 8px 0;">
-        <h1 style="margin:0;">Control Panel</h1>
         <div class="cp-actions">
             <a href="<?php echo $webRoot; ?>/ui/tests/ai_agent_ini.php" target="_blank" class="btn-base btn-primary" title="Generate AIAgent.ini file for the mod file.">Create Custom AIAgent.ini</a>
             <a href="<?php echo $webRoot; ?>/ui/core/migrate_profiles.php" class="btn-base btn-primary" title="Migrate all legacy conf_*.php profiles to the database and archive them.">⚙️ Migrate Legacy Profiles</a>

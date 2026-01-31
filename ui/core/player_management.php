@@ -175,26 +175,27 @@ if (!$isEmbed) {
     /* Header Styling */
     .page-header {
         text-align: center;
-        margin-bottom: 30px;
-        padding: 20px;
-        background: #2a2a2a;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        margin-bottom: 28px;
+        padding: 24px 20px;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(28, 28, 28, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     }
 
     .page-header h1 {
-        margin-bottom: 15px;
+        margin-bottom: 10px;
         font-family: 'MagicCards', serif;
         word-spacing: 8px;
-        font-size: 2.2em;
+        font-size: 2em;
         color: rgb(242, 124, 17);
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     }
 
     .page-header p {
-        color: #e0e0e0;
-        font-size: 1.1em;
-        margin: 10px 0;
+        color: #aaa;
+        font-size: 0.95em;
+        margin: 4px 0;
     }
 
     /* Content Layout */
@@ -210,10 +211,17 @@ if (!$isEmbed) {
     }
 
     .content-section {
-        background: #2a2a2a;
-        padding: 25px;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        padding: 22px;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
+                    inset 0 1px rgba(255, 255, 255, 0.03);
+        transition: border-color 0.2s ease;
+    }
+
+    .content-section:hover {
+        border-color: #4a4a4a;
     }
 
     .content-section h2 {
@@ -221,12 +229,21 @@ if (!$isEmbed) {
         color: rgb(242, 124, 17);
         text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         word-spacing: 6px;
-        margin-bottom: 15px;
-        font-size: 1.4em;
+        margin-bottom: 18px;
+        font-size: 1.35em;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(242, 124, 17, 0.2);
     }
 
     .full-width-section {
         grid-column: 1 / -1;
+    }
+
+    .content-grid + .full-width-section,
+    .full-width-section + .content-grid,
+    .full-width-section + .full-width-section,
+    .content-grid + .content-grid {
+        margin-top: 20px;
     }
 
     .full-width-section h2 {
@@ -234,9 +251,11 @@ if (!$isEmbed) {
         color: rgb(242, 124, 17);
         text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         word-spacing: 6px;
-        margin-bottom: 15px;
-        font-size: 1.6em;
+        margin-bottom: 18px;
+        font-size: 1.5em;
         text-align: center;
+        padding-bottom: 14px;
+        border-bottom: 1px solid rgba(242, 124, 17, 0.2);
     }
 
     /* Form Styling */
@@ -244,20 +263,32 @@ if (!$isEmbed) {
         display: block;
         font-size: 13px;
         color: rgb(242, 124, 17);
-        font-weight: bold;
-        margin-bottom: 4px;
-        margin-top: 12px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        margin-top: 14px;
+    }
+
+    .content-section label:first-of-type {
+        margin-top: 0;
     }
 
     .content-section input[type="text"], 
     .content-section textarea { 
-        background-color: #333; 
-        color: #fff; 
-        border: 1px solid #444; 
-        padding: 8px; 
-        border-radius: 4px; 
-        width: 100%; 
-        margin-bottom: 8px;
+        background-color: rgba(26, 26, 26, 0.8);
+        color: #e9efff;
+        border: 1px solid #3a3a3a;
+        padding: 10px 12px;
+        border-radius: 6px;
+        width: 100%;
+        margin-bottom: 4px;
+        transition: all 0.2s ease;
+    }
+
+    .content-section input[type="text"]:focus,
+    .content-section textarea:focus {
+        border-color: rgba(242, 124, 17, 0.5);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
     }
 
     .content-section textarea { 
@@ -267,30 +298,42 @@ if (!$isEmbed) {
     }
 
     .hint { 
-        font-size: 12px; 
-        color: #bbb; 
-        margin-top: 4px; 
+        font-size: 12px;
+        color: #999;
+        margin-top: 4px;
+        margin-bottom: 6px;
         display: block;
+        padding-left: 2px;
+        line-height: 1.4;
     }
 
     /* Button Styling */
     .btn-save { 
-        background-color: rgba(32, 122, 74, 0.8); 
-        color: #fff; 
-        border: 1px solid rgba(138, 155, 182, 0.3); 
-        border-radius: 8px; 
-        padding: 12px 24px; 
-        cursor: pointer; 
-        font-size: 15px; 
-        margin-bottom: 20px;
+        background-color: #176529;
+        color: #fff;
+        border: 1px solid rgba(72, 187, 120, 0.3);
+        border-radius: 8px;
+        padding: 12px 28px;
+        cursor: pointer;
+        font-size: 15px;
         font-weight: 600;
-        transition: all 0.3s ease;
+        letter-spacing: 0.3px;
+        margin-bottom: 24px;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                    inset 0 1px rgba(255, 255, 255, 0.1);
     }
 
     .btn-save:hover { 
-        background-color: rgba(42, 142, 94, 0.9); 
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        background-color: #1e8738;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+                    inset 0 1px rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-save:active {
+        transform: translateY(0);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     }
 
     /* Toast Notification */
@@ -314,22 +357,33 @@ if (!$isEmbed) {
     /* Stats Grid */
     .stats-grid { 
         display: grid; 
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
+        grid-template-columns: repeat(2, 1fr);
         gap: 12px; 
     }
 
     .stat-card { 
-        padding: 12px; 
-        background: #1a1a1a; 
-        border-radius: 4px; 
-        border: 1px solid #333;
+        padding: 14px;
+        background: linear-gradient(135deg, rgba(26, 26, 26, 0.9), rgba(20, 20, 20, 0.95));
+        border-radius: 8px;
+        border: 1px solid #2a2a2a;
+        transition: all 0.2s ease;
+        box-shadow: inset 0 1px rgba(255,255,255,0.02);
+    }
+
+    .stat-card:hover {
+        border-color: #3a3a3a;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2),
+                    inset 0 1px rgba(255,255,255,0.03);
     }
 
     .stat-card-title { 
         font-size: 11px; 
-        color: #999; 
+        color: #888; 
         text-transform: uppercase; 
-        margin-bottom: 6px; 
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+        font-weight: 600;
     }
 
     .stat-card-value { 
@@ -340,53 +394,77 @@ if (!$isEmbed) {
 
     .stat-bar-container { 
         width: 100%; 
-        height: 6px; 
-        background: #2a2a2a; 
-        border-radius: 3px; 
-        margin-top: 6px; 
-        overflow: hidden; 
+        height: 7px;
+        background: rgba(20, 20, 20, 0.8);
+        border-radius: 4px;
+        margin-top: 8px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .stat-bar { 
         height: 100%; 
         background: linear-gradient(90deg, #207a4a, #2aa65e); 
         border-radius: 3px; 
-        transition: width 0.3s; 
+        transition: width 0.3s ease;
+        box-shadow: inset 0 1px rgba(255,255,255,0.2);
     }
 
-    .stat-bar.health { background: linear-gradient(90deg, #c03, #e04); }
-    .stat-bar.magicka { background: linear-gradient(90deg, #2070c0, #3090e0); }
-    .stat-bar.stamina { background: linear-gradient(90deg, #20a020, #30c030); }
+    .stat-bar.health { 
+        background: linear-gradient(90deg, #c03, #e04);
+    }
+    
+    .stat-bar.magicka { 
+        background: linear-gradient(90deg, #2070c0, #3090e0);
+    }
+    
+    .stat-bar.stamina { 
+        background: linear-gradient(90deg, #20a020, #30c030);
+    }
 
     /* Equipment Grid */
     .equipment-grid { 
         display: grid; 
         grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
-        gap: 8px; 
+        gap: 10px;
+        max-width: 900px;
+        margin: 0 auto;
     }
 
     .equipment-slot { 
-        padding: 8px; 
-        background: #1a1a1a; 
-        border-radius: 4px; 
-        border: 1px solid #333;
+        padding: 12px;
+        background: linear-gradient(135deg, rgba(26, 26, 26, 0.9), rgba(20, 20, 20, 0.95));
+        border-radius: 8px;
+        border: 1px solid #2a2a2a;
+        transition: all 0.2s ease;
+        box-shadow: inset 0 1px rgba(255,255,255,0.02);
+    }
+
+    .equipment-slot:hover {
+        border-color: #3a3a3a;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2),
+                    inset 0 1px rgba(255,255,255,0.03);
     }
 
     .equipment-slot-name { 
         font-size: 11px; 
-        color: #999; 
-        text-transform: uppercase; 
-        margin-bottom: 4px; 
+        color: #888;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+        letter-spacing: 0.5px;
+        font-weight: 600;
     }
 
     .equipment-item-name { 
         font-size: 13px; 
-        color: #fff; 
+        color: #e9efff;
+        font-weight: 500;
     }
 
     .equipment-empty { 
         font-size: 13px; 
-        color: #666; 
+        color: #555;
         font-style: italic; 
     }
 
@@ -395,6 +473,25 @@ if (!$isEmbed) {
         max-height: 400px; 
         overflow-y: auto;
         overflow-x: hidden;
+        padding-right: 4px;
+    }
+    
+    .inventory-list::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .inventory-list::-webkit-scrollbar-track {
+        background: rgba(26, 26, 26, 0.5);
+        border-radius: 4px;
+    }
+
+    .inventory-list::-webkit-scrollbar-thumb {
+        background: #3a3a3a;
+        border-radius: 4px;
+    }
+
+    .inventory-list::-webkit-scrollbar-thumb:hover {
+        background: #4a4a4a;
     }
     
     .inventory-container {
@@ -405,58 +502,95 @@ if (!$isEmbed) {
         display: flex; 
         justify-content: space-between; 
         align-items: center; 
-        padding: 6px 8px; 
-        background: #1a1a1a; 
-        border-radius: 4px; 
-        margin-bottom: 4px; 
-        border: 1px solid #333;
+        padding: 10px 12px;
+        background: linear-gradient(90deg, rgba(26, 26, 26, 0.9), rgba(20, 20, 20, 0.95));
+        border-radius: 6px;
+        margin-bottom: 6px;
+        border: 1px solid #2a2a2a;
+        transition: all 0.2s ease;
+    }
+
+    .inventory-item:hover {
+        border-color: #3a3a3a;
+        transform: translateX(4px);
+        background: linear-gradient(90deg, rgba(30, 30, 30, 0.95), rgba(24, 24, 24, 0.98));
     }
 
     .inventory-item-name { 
         font-size: 13px; 
-        color: #fff; 
+        color: #e9efff;
+        font-weight: 500;
     }
 
     .inventory-item-count { 
         font-size: 12px; 
         color: #8a9bb6; 
         font-weight: 600; 
-        background: #2a2a2a; 
-        padding: 2px 8px; 
-        border-radius: 3px; 
+        background: rgba(20, 20, 20, 0.8);
+        padding: 4px 10px;
+        border-radius: 4px;
+        border: 1px solid rgba(138, 155, 182, 0.2);
     }
 
     /* Skills Grid */
     .skills-grid { 
         display: grid; 
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
-        gap: 8px; 
+        gap: 10px;
+        max-width: 900px;
+        margin: 0 auto;
     }
 
     .skill-item { 
-        padding: 6px 8px; 
-        background: #1a1a1a; 
-        border-radius: 4px; 
-        border: 1px solid #333;
+        padding: 10px 12px;
+        background: linear-gradient(135deg, rgba(26, 26, 26, 0.9), rgba(20, 20, 20, 0.95));
+        border-radius: 8px;
+        border: 1px solid #2a2a2a;
+        transition: all 0.2s ease;
+        box-shadow: inset 0 1px rgba(255,255,255,0.02);
+    }
+
+    .skill-item:hover {
+        border-color: #3a3a3a;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2),
+                    inset 0 1px rgba(255,255,255,0.03);
     }
 
     .skill-name { 
         font-size: 12px; 
-        color: #cfd8e3; 
-        margin-bottom: 2px; 
+        color: #888;
+        margin-bottom: 4px;
+        font-weight: 600;
     }
 
     .skill-value { 
-        font-size: 16px; 
-        color: #fff; 
+        font-size: 18px;
+        color: #e9efff;
         font-weight: 600; 
     }
 
     .no-data { 
-        padding: 20px; 
+        padding: 30px 20px;
         text-align: center; 
         color: #666; 
-        font-style: italic; 
+        font-style: italic;
+        line-height: 1.6;
+    }
+
+    .no-data ul {
+        color: #888;
+        font-size: 0.95em;
+    }
+
+    .no-data strong {
+        color: #999;
+    }
+
+    .no-data ul {
+        text-align: left;
+        margin: 10px auto;
+        display: inline-block;
     }
 
     /* Responsive Design */
@@ -481,11 +615,17 @@ if (!$isEmbed) {
         }
         
         .page-header {
-            padding: 15px;
+            padding: 18px 15px;
         }
         
         .content-section {
-            padding: 15px;
+            padding: 18px;
+        }
+
+        .stats-grid,
+        .equipment-grid,
+        .skills-grid {
+            grid-template-columns: 1fr;
         }
     }
 
@@ -497,6 +637,20 @@ if (!$isEmbed) {
         
         .page-header h1 {
             font-size: 1.5em;
+        }
+
+        .page-header p {
+            font-size: 0.85em;
+        }
+
+        .content-section {
+            padding: 15px;
+        }
+
+        .stats-grid,
+        .equipment-grid,
+        .skills-grid {
+            grid-template-columns: 1fr;
         }
     }
 </style>
@@ -618,93 +772,6 @@ if (!$isEmbed) {
         </div>
         <?php endif; ?>
 
-        <!-- Equipment Card -->
-        <?php if (!empty($equipment)): ?>
-        <div class="content-section full-width-section">
-            <h2>⚔️ Equipment</h2>
-            <?php
-            $equipmentSlots = [
-                'helmet' => '🪖 Helmet',
-                'armor' => '🛡️ Armor',
-                'boots' => '👢 Boots',
-                'gloves' => '🧤 Gloves',
-                'amulet' => '📿 Amulet',
-                'ring' => '💍 Ring',
-                'cape' => '🧥 Cape',
-                'backpack' => '🎒 Backpack',
-                'left_hand' => '🤚 Left Hand',
-                'right_hand' => '✋ Right Hand'
-            ];
-            
-            // Check if any equipment is actually equipped
-            $hasEquipment = false;
-            foreach ($equipmentSlots as $slot => $label) {
-                $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
-                if ($itemName) {
-                    $hasEquipment = true;
-                    break;
-                }
-            }
-            ?>
-            
-            <?php if ($hasEquipment): ?>
-                <div class="equipment-grid">
-                    <?php foreach ($equipmentSlots as $slot => $label):
-                        $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
-                    ?>
-                    <div class="equipment-slot">
-                        <div class="equipment-slot-name"><?php echo $label; ?></div>
-                        <?php if ($itemName): ?>
-                            <div class="equipment-item-name"><?php echo htmlspecialchars($itemName); ?></div>
-                        <?php else: ?>
-                            <div class="equipment-empty">Empty</div>
-                        <?php endif; ?>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php else: ?>
-                <div class="no-data">
-                    <p><strong>No equipment currently equipped.</strong></p>
-                    <p>If you have items equipped in-game but they're not showing here:</p>
-                    <ul style="text-align: left; margin: 10px auto; display: inline-block;">
-                        <li>Make sure you're in-game (not in a menu)</li>
-                        <li>Talk to any NPC to trigger a sync</li>
-                        <li>Or wait a few seconds for auto-sync</li>
-                        <li>Then refresh this page</li>
-                    </ul>
-                </div>
-            <?php endif; ?>
-        </div>
-        <?php else: ?>
-        <div class="content-section full-width-section">
-            <h2>⚔️ Equipment</h2>
-            <div class="no-data">No equipment data available. Play the game to sync your equipment.</div>
-        </div>
-        <?php endif; ?>
-    </div>
-
-    <!-- Skills Section -->
-    <?php if (!empty($skills)): ?>
-    <div class="content-section full-width-section" style="margin-top: 16px;">
-        <h2>⭐ Skills</h2>
-            <div class="skills-grid">
-                <?php 
-                // Sort skills by value descending
-                arsort($skills);
-                foreach ($skills as $skillName => $skillValue): 
-                    $displayName = ucwords(str_replace('_', ' ', $skillName));
-                ?>
-                <div class="skill-item">
-                    <div class="skill-name"><?php echo htmlspecialchars($displayName); ?></div>
-                    <div class="skill-value"><?php echo round($skillValue); ?></div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-    </div>
-    <?php endif; ?>
-
-    <!-- Inventory Section -->
-    <div class="content-grid two-col" style="margin-top: 16px;">
         <!-- Inventory Card -->
         <?php if (!empty($inventory)): ?>
         <div class="content-section">
@@ -733,6 +800,90 @@ if (!$isEmbed) {
         </div>
         <?php endif; ?>
     </div>
+
+    <!-- Equipment Section -->
+    <?php if (!empty($equipment)): ?>
+    <div class="content-section full-width-section">
+        <h2>⚔️ Equipment</h2>
+        <?php
+        $equipmentSlots = [
+            'helmet' => '🪖 Helmet',
+            'armor' => '🛡️ Armor',
+            'boots' => '👢 Boots',
+            'gloves' => '🧤 Gloves',
+            'amulet' => '📿 Amulet',
+            'ring' => '💍 Ring',
+            'cape' => '🧥 Cape',
+            'backpack' => '🎒 Backpack',
+            'left_hand' => '🤚 Left Hand',
+            'right_hand' => '✋ Right Hand'
+        ];
+        
+        // Check if any equipment is actually equipped
+        $hasEquipment = false;
+        foreach ($equipmentSlots as $slot => $label) {
+            $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
+            if ($itemName) {
+                $hasEquipment = true;
+                break;
+            }
+        }
+        ?>
+        
+        <?php if ($hasEquipment): ?>
+            <div class="equipment-grid">
+                <?php foreach ($equipmentSlots as $slot => $label):
+                    $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
+                ?>
+                <div class="equipment-slot">
+                    <div class="equipment-slot-name"><?php echo $label; ?></div>
+                    <?php if ($itemName): ?>
+                        <div class="equipment-item-name"><?php echo htmlspecialchars($itemName); ?></div>
+                    <?php else: ?>
+                        <div class="equipment-empty">Empty</div>
+                    <?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="no-data">
+                <p><strong>No equipment currently equipped.</strong></p>
+                <p>If you have items equipped in-game but they're not showing here:</p>
+                <ul>
+                    <li>Make sure you're in-game (not in a menu)</li>
+                    <li>Talk to any NPC to trigger a sync</li>
+                    <li>Or wait a few seconds for auto-sync</li>
+                    <li>Then refresh this page</li>
+                </ul>
+            </div>
+        <?php endif; ?>
+    </div>
+    <?php else: ?>
+    <div class="content-section full-width-section">
+        <h2>⚔️ Equipment</h2>
+        <div class="no-data">No equipment data available. Play the game to sync your equipment.</div>
+    </div>
+    <?php endif; ?>
+
+    <!-- Skills Section -->
+    <?php if (!empty($skills)): ?>
+    <div class="content-section full-width-section">
+        <h2>⭐ Skills</h2>
+            <div class="skills-grid">
+                <?php 
+                // Sort skills by value descending
+                arsort($skills);
+                foreach ($skills as $skillName => $skillValue): 
+                    $displayName = ucwords(str_replace('_', ' ', $skillName));
+                ?>
+                <div class="skill-item">
+                    <div class="skill-name"><?php echo htmlspecialchars($displayName); ?></div>
+                    <div class="skill-value"><?php echo round($skillValue); ?></div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+    </div>
+    <?php endif; ?>
     </div>
 </main>
 

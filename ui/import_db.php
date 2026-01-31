@@ -593,7 +593,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     <title>Database Manager</title>
     <style>
-        /* Database Manager - Using main.css consistent color scheme */
+        /* Font declaration */
+        @font-face {
+            font-family: 'MagicCards';
+            src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        
+        /* Database Manager - Modern styling */
         body {
             font-family: 'Futura CondensedLight', Arial, sans-serif;
             background-color: #2c2c2c;
@@ -603,14 +611,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         h1, h2, h3, h4, h5, h6 {
-            color: #ffffff;
-            font-family: 'Futura CondensedLight', Arial, sans-serif;
+            color: rgb(242, 124, 17);
+            font-family: 'MagicCards', serif;
             margin-bottom: 15px;
         }
 
         h1 {
             font-size: 32px;
-            font-family: 'MagicCards', sans-serif;
+            font-family: 'MagicCards', serif;
             font-weight: normal;
             letter-spacing: 0.5px;
             word-spacing: 8px;
@@ -622,29 +630,134 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .message {
-            background-color: rgba(30, 35, 45, 0.8);
-            border: 1px solid rgba(138, 155, 182, 0.3);
-            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+            border: 1px solid #3a3a3a;
+            border-radius: 10px;
             padding: 20px;
             margin-bottom: 20px;
-            color: #f8f9fa;
-            height: fit-content;
-            backdrop-filter: blur(5px);
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
-                        inset 0 1px rgba(255, 255, 255, 0.1);
-            transition: all 0.2s ease-in-out;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
-
+        
         .message:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
-                        inset 0 1px rgba(255, 255, 255, 0.15);
+            border-color: rgba(242, 124, 17, 0.3);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.05);
         }
 
         .message p {
             margin: 0 0 10px 0;
             line-height: 150%;
             font-size: 16px;
+        }
+        
+        /* Page header styling */
+        .page-header {
+            background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+            border: 1px solid #3a3a3a;
+            border-radius: 10px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+        }
+        
+        .page-header h1 {
+            margin: 0 0 8px 0;
+            font-size: 32px;
+            color: rgb(242, 124, 17);
+            font-family: 'MagicCards', serif;
+            font-weight: normal;
+            letter-spacing: 0.5px;
+            word-spacing: 8px;
+        }
+        
+        .page-subtitle {
+            color: #9fb1c9;
+            font-size: 16px;
+            margin: 0;
+            font-family: 'Futura CondensedLight', Arial, sans-serif;
+        }
+        
+        /* Grid container */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+            align-items: stretch;
+        }
+        
+        @media (max-width: 1400px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Card styling */
+        .card-tile {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+            border: 1px solid #3a3a3a;
+            border-radius: 10px;
+            padding: 20px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+        }
+        
+        .card-tile:hover {
+            border-color: rgba(242, 124, 17, 0.3);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.05);
+        }
+        
+        .card-content {
+            flex-grow: 1;
+        }
+        
+        .card-actions {
+            margin-top: auto;
+        }
+        
+        /* Stats grid styling */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .stat-tile {
+            background: rgba(26, 26, 26, 0.8);
+            border: 1px solid #3a3a3a;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .stat-tile:hover {
+            border-color: rgba(242, 124, 17, 0.3);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .stat-tile h5 {
+            margin: 0 0 5px 0;
+            color: #f8f9fa;
+            font-size: 14px;
+        }
+        
+        .stat-value {
+            margin: 0;
+            font-size: 16px;
+            font-weight: bold;
+            color: #f8f9fa;
         }
 
         .response-container {
@@ -663,8 +776,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .button {
             padding: 10px 20px;
             color: #ffffff;
-            background-color: rgba(30, 35, 45, 0.8);
-            border: 1px solid rgba(138, 155, 182, 0.3);
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+            border: 1px solid #3a3a3a;
             border-radius: 8px;
             cursor: pointer;
             font-size: 15px;
@@ -672,40 +785,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease-in-out;
+            transition: all 0.3s ease;
             margin: 5px;
             font-weight: 500;
             letter-spacing: 0.3px;
-            backdrop-filter: blur(5px);
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
-                        inset 0 1px rgba(255, 255, 255, 0.1);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.05);
         }
 
         .button:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
-                        inset 0 1px rgba(255, 255, 255, 0.15);
+            border-color: rgba(242, 124, 17, 0.5);
+            color: rgb(242, 124, 17);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.1);
             text-decoration: none;
-            color: #ffffff;
         }
 
         .button:active {
             transform: translateY(1px);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2),
-                        inset 0 1px rgba(255, 255, 255, 0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.05);
         }
 
-        /* Form elements using main.css styling */
+        /* Form elements using modern styling */
         input[type="text"],
         input[type="file"],
         select {
-            background-color: #4a4a4a;
+            background: rgba(26, 26, 26, 0.8);
             color: #f8f9fa;
-            padding: 8px;
-            border-radius: 4px;
-            border: 1px solid #555555;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #3a3a3a;
             cursor: pointer;
             width: auto;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+        }
+        
+        input[type="text"]:focus,
+        input[type="file"]:focus,
+        select:focus {
+            outline: none;
+            border-color: rgb(242, 124, 17);
+            box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+            background: rgba(26, 26, 26, 0.95);
         }
 
         input[type="file"]::-webkit-file-upload-button {
@@ -733,13 +853,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             overflow: auto;
         }
 
-        code {
-            background-color: #000000;
-            padding: 2px 4px;
-            border-radius: 3px;
-            color: #f8f9fa;
-        }
-
         /* Progress bar styling */
         #progressBar {
             background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
@@ -748,17 +861,143 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* Backup list container */
         .backup-list {
-            background-color: #1a1a1a;
-            border: 1px solid #333333;
+            background: rgba(26, 26, 26, 0.8);
+            border: 1px solid #3a3a3a;
             border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 0;
+            margin: 0;
         }
 
         .backup-item {
-            border-bottom: 1px solid #333333;
+            padding: 12px;
+            border-bottom: 1px solid #3a3a3a;
+            transition: all 0.3s ease;
         }
 
         .backup-item:hover {
-            background-color: #1f1f1f;
+            background: rgba(42, 42, 42, 0.5);
+        }
+        
+        .backup-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        
+        .backup-details {
+            flex-grow: 1;
+            min-width: 0;
+        }
+        
+        .backup-filename {
+            font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 4px;
+            word-break: break-all;
+            color: #f8f9fa;
+        }
+        
+        .backup-meta {
+            font-size: 11px;
+            color: #ccc;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .backup-actions {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        
+        .backup-btn {
+            color: white;
+            padding: 4px 8px;
+            border: none;
+            border-radius: 3px;
+            font-size: 11px;
+            cursor: pointer;
+            flex: 1;
+            min-width: 70px;
+        }
+        
+        /* Instruction box styling */
+        .instruction-box {
+            background: rgba(23, 101, 41, 0.1);
+            border: 1px solid #176529;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        code {
+            background-color: #000000;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #f8f9fa;
+        }
+        
+        /* Empty state styling */
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #888;
+            font-style: italic;
+            background: rgba(26, 26, 26, 0.8);
+            border-radius: 8px;
+            border: 1px dashed #3a3a3a;
+            margin: 15px 0;
+        }
+        
+        .empty-state-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        /* Version table styling */
+        .version-table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
+            background: rgba(26, 26, 26, 0.8);
+        }
+        
+        .version-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .version-table thead {
+            position: sticky;
+            top: 0;
+            background: rgba(26, 26, 26, 0.95);
+            border-bottom: 2px solid rgba(242, 124, 17, 0.3);
+            z-index: 1;
+        }
+        
+        .version-table th {
+            padding: 12px;
+            font-weight: bold;
+            color: rgb(242, 124, 17);
+            border-bottom: 1px solid #3a3a3a;
+        }
+        
+        .version-table tbody tr {
+            border-bottom: 1px solid #3a3a3a;
+            transition: background-color 0.3s ease;
+        }
+        
+        .version-table tbody tr:hover {
+            background: rgba(242, 124, 17, 0.05);
+        }
+        
+        .version-table td {
+            padding: 10px;
+            color: #f8f9fa;
         }
 
         /* Loading overlay */
@@ -854,66 +1093,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <style> main { padding-top: 20px; } </style>
 <?php endif; ?>
 <div class="indent5">
-    <h1>Database Manager</h1>
-    
-
+    <div class="page-header">
+        <h1>Database Manager</h1>
+        <div class="page-subtitle">Manage database backups, imports, exports, and maintenance operations</div>
+    </div>
     
     <!-- Main Grid Container -->
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 20px; align-items: stretch;">
+    <div class="grid-container">
         
         <!-- Database Manager Section -->
-        <div class="message" style="background-color: #2c3440; border: 1px solid #4a4a4a; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
-            <div style="flex-grow: 1;">
+        <div class="card-tile">
+            <div class="card-content">
                 <h3>🗄️ Database Access</h3>
                 <p>Access the pgAdmin database manager for advanced database management.</p>
                 <p><strong>Login:</strong> username = dwemer & password = dwemer</p>
             </div>
-            <div style="margin-top: auto;">
-                <a href="/pgAdmin/" target="_blank" class="button" style="background-color: rgb(1 53 166 / 90%); color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; width: 100%; text-align: center;">
+            <div class="card-actions">
+                <a href="/pgAdmin/" target="_blank" class="button" style="background-color: rgb(1 53 166 / 90%); color: white; width: 100%; text-align: center;">
                     Open Database Manager
                 </a>
             </div>
         </div>
         
         <!-- Backup Section -->
-        <div class="message" style="background-color: #374151; border: 1px solid #4a4a4a; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
-            <div style="flex-grow: 1;">
+        <div class="card-tile">
+            <div class="card-content">
                 <h3>📦 Manual Backup</h3>
                 <p>Create a backup of your current database. This will generate an SQL file you can download.</p>
                 <p style="color: #ccc; font-size: 14px;">Creates a one-time downloadable backup file.</p>
             </div>
-            <div style="margin-top: auto;">
-                <a href="?action=backup" class="button" style="background-color: #176529; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; width: 100%; text-align: center;">
+            <div class="card-actions">
+                <a href="?action=backup" class="button" style="background-color: #176529; color: white; width: 100%; text-align: center;">
                     Create Backup
                 </a>
             </div>
         </div>
         
         <!-- Maintenance Section -->
-        <div class="message" style="background-color: #2d3748; border: 1px solid #4a4a4a; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
-            <div style="flex-grow: 1;">
+        <div class="card-tile">
+            <div class="card-content">
                 <h3>🔧 Database Maintenance</h3>
                 <p>Optimize and clean your database. This will compact the database and reclaim unused space.</p>
                 <p><strong>⚠️ Important:</strong> Make sure Skyrim is stopped before running maintenance.</p>
             </div>
-            <div style="margin-top: auto;">
+            <div class="card-actions">
                 <button onclick="if (confirm('Database maintenance will optimize and compact the database.\n\n- Make sure Skyrim game is stopped\n- To reclaim unused space, free temporary space is required\n- During this operation tables will be locked, do not interrupt\n- This could take some time, please wait until you see the confirmation\n\nContinue?')) { window.open('<?php echo $webRoot; ?>/ui/vacuum_db.php', 'Database_maintenance', 'resizable=yes,scrollbars=yes,titlebar=no,width=800,height=600'); return false; }" 
-                        class="button" style="background-color: #fd7e14; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%;">
+                        class="button" style="background-color: #fd7e14; color: white; width: 100%;">
                     Run Database Maintenance
                 </button>
             </div>
         </div>
         
         <!-- Factory Reset Section -->
-        <div class="message" style="background-color: #481f1f; border: 1px solid #dc3545; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
-            <div style="flex-grow: 1;">
+        <div class="card-tile" style="border-color: #dc3545;">
+            <div class="card-content">
                 <h3>💥 Factory Reset Database</h3>
                 <p>Completely wipe and reinstall the entire database to the default configuration.</p>
                 <p><strong>⚠️ DANGER:</strong> This will permanently delete data including events, diaries, and memories.</p>
             </div>
-            <div style="margin-top: auto;">
+            <div class="card-actions">
                 <button onclick="if (confirm('⚠️ FACTORY RESET DATABASE\n\nThis will wipe and reinstall the entire database to the default configuration.\n\n❌ ALL DATA WILL BE PERMANENTLY LOST:\n- All event logs\n- All diaries and memories\n- All custom Oghma and NPC Biography management profiles\n\n✅ Database will be reset to fresh installation state\n\nThis action CANNOT be undone!\n\nAre you absolutely sure you want to continue?')) { window.location.href = '<?php echo $webRoot; ?>/ui/index.php?reinstall=true&delete=true'; }" 
-                        class="button" style="background-color: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%;">
+                        class="button" style="background-color: #dc3545; color: white; width: 100%;">
                     Factory Reset Database
                 </button>
             </div>
@@ -945,16 +1185,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (is_array($rowMax) && isset($rowMax['value'])) { $v=intval($rowMax['value']); if ($v>0) $currentMax=$v; }
     } catch (Throwable $e) {}
     ?>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; align-items: start;">
+    <div class="grid-container" style="grid-template-columns: 1fr 1fr;">
         
         <!-- Left Column: Automatic Backups -->
-        <div class="message" style="background-color: #3a2d48; border: 1px solid #4a4a4a; height: 100%;">
+        <div class="message">
             <h3>🤖 Automatic Backup System</h3>
             <p>System-generated backups created automatically every time the server starts up. Keeps a maximum of <?php echo (int)$currentMax; ?> backups, automatically deleting the oldest when the limit is reached.</p>
             
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0;">
-                <div style="background-color: #2c2c2c; border: 1px solid #4a4a4a; padding: 10px; border-radius: 8px; text-align: center;">
-                    <h5 style="margin: 0 0 5px 0; color: #f8f9fa; font-size: 14px;">Status</h5>
+            <div class="stats-grid">
+                <div class="stat-tile">
+                    <h5>Status</h5>
                     <form method="post" style="margin:0;">
                         <input type="hidden" name="action" value="toggle_auto_enabled">
                         <input type="hidden" name="embed" value="1">
@@ -964,13 +1204,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </form>
                 </div>
                 
-                <div style="background-color: #2c2c2c; border: 1px solid #4a4a4a; padding: 10px; border-radius: 8px; text-align: center;">
-                    <h5 style="margin: 0 0 5px 0; color: #f8f9fa; font-size: 14px;">Available</h5>
+                <div class="stat-tile">
+                    <h5>Available</h5>
                     <form method="post" style="margin:0; display:flex; gap:6px; justify-content:center; align-items:center;">
                         <input type="hidden" name="action" value="update_auto_max">
                         <input type="hidden" name="embed" value="1">
                         <span style="font-size: 16px; font-weight: bold; color: #f8f9fa;"><?php echo count($automaticBackups); ?> / </span>
-                        <select name="auto_max" onchange="this.form.submit()" style="background-color:#4a4a4a; color:#f8f9fa; border:1px solid #555555; border-radius:4px; padding:4px;">
+                        <select name="auto_max" onchange="this.form.submit()">
                             <?php for ($i=1; $i<=10; $i++): ?>
                                 <option value="<?php echo $i; ?>" <?php echo ((int)$currentMax === $i ? 'selected' : ''); ?>><?php echo $i; ?></option>
                             <?php endfor; ?>
@@ -978,45 +1218,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </form>
                 </div>
                 
-                <div style="background-color: #2c2c2c; border: 1px solid #4a4a4a; padding: 10px; border-radius: 8px; text-align: center;">
-                    <h5 style="margin: 0 0 5px 0; color: #f8f9fa; font-size: 14px;">Total Size</h5>
-                    <p style="margin: 0; font-size: 16px; font-weight: bold; color: #eaee05;">
+                <div class="stat-tile">
+                    <h5>Total Size</h5>
+                    <p class="stat-value" style="color: #eaee05;">
                         <?php echo AutomaticBackup::formatFileSize($totalBackupsSize); ?>
                     </p>
                 </div>
             </div>
             
-            
 
             <h4 style="margin: 15px 0 10px 0;">📂 Backup Management</h4>
             
             <?php if (!empty($automaticBackups)): ?>
-                <div class="backup-list" style="max-height: 300px; overflow-y: auto; padding: 0; margin: 0; border: 1px solid #333333; border-radius: 8px; background-color: #1a1a1a;">
+                <div class="backup-list">
                     <?php foreach ($automaticBackups as $index => $backup): ?>
-                        <div class="backup-item" style="padding: 12px; border-bottom: 1px solid #333333; transition: all 0.2s ease-in-out; <?php echo $index === count($automaticBackups) - 1 ? 'border-bottom: none;' : ''; ?>">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                                <div style="flex-grow: 1; min-width: 0;">
-                                    <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px; word-break: break-all;">
+                        <div class="backup-item" style="<?php echo $index === count($automaticBackups) - 1 ? 'border-bottom: none;' : ''; ?>">
+                            <div class="backup-info">
+                                <div class="backup-details">
+                                    <div class="backup-filename">
                                         <?php echo htmlspecialchars($backup['filename']); ?>
                                     </div>
-                                    <div style="font-size: 11px; color: #ccc; display: flex; justify-content: space-between;">
-                                        <span>📁 <?php echo AutomaticBackup::formatFileSize($backup['size']); ?></span>                                    </div>
+                                    <div class="backup-meta">
+                                        <span>📁 <?php echo AutomaticBackup::formatFileSize($backup['size']); ?></span>
+                                    </div>
                                 </div>
                             </div>
                             
-                            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                            <div class="backup-actions">
                                 <button onclick="window.location.href='?action=download_auto&filename=<?php echo urlencode($backup['filename']); ?>'" 
-                                        class="button" style="background-color: #176529; color: white; padding: 4px 8px; border: none; border-radius: 3px; font-size: 11px; cursor: pointer; flex: 1; min-width: 70px;" 
+                                        class="button backup-btn" style="background-color: #176529;" 
                                         title="Download backup file">
                                     📥
                                 </button>
                                 <button onclick="if (confirm('⚠️ RESTORE DATABASE\n\nRestore from: <?php echo htmlspecialchars($backup['filename']); ?>\n\nThis will COMPLETELY REPLACE your current database with this backup.\n\n❌ All current data will be lost!\n✅ Database will be restored to backup state\n\nAre you absolutely sure you want to continue?')) { window.location.href='?action=restore_auto&filename=<?php echo urlencode($backup['filename']); ?>'; }" 
-                                        class="button" style="background-color: rgb(1 53 166 / 90%); color: white; padding: 4px 8px; border: none; border-radius: 3px; font-size: 11px; cursor: pointer; flex: 1; min-width: 70px;" 
+                                        class="button backup-btn" style="background-color: rgb(1 53 166 / 90%);" 
                                         title="Restore database from this backup">
                                     🔄
                                 </button>
                                 <button onclick="if (confirm('⚠️ DELETE BACKUP\n\nDelete: <?php echo htmlspecialchars($backup['filename']); ?>\n\nThis action cannot be undone!\n\nAre you sure you want to permanently delete this backup?')) { window.location.href='?action=delete_auto&filename=<?php echo urlencode($backup['filename']); ?>'; }" 
-                                        class="button" style="background-color: rgba(166, 53, 63, 0.9); color: white; padding: 4px 8px; border: none; border-radius: 3px; font-size: 11px; cursor: pointer; flex: 1; min-width: 70px;" 
+                                        class="button backup-btn" style="background-color: rgba(166, 53, 63, 0.9);" 
                                         title="Delete this backup file">
                                     🗑️
                                 </button>
@@ -1025,8 +1265,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php endforeach; ?>
                 </div>
             <?php else: ?>
-                <div style="text-align: center; padding: 30px 20px; color: #888; font-style: italic; background-color: #2c2c2c; border-radius: 8px; border: 1px dashed #4a4a4a;">
-                    <div style="font-size: 24px; margin-bottom: 10px;">📂</div>
+                <div class="empty-state">
+                    <div class="empty-state-icon">📂</div>
                     <p style="margin: 0;">No automatic backups available yet.</p>
                     <?php if ($autoEnabled): ?>
                         <small style="color: #ffffff; display: block; margin-top: 8px;">Backups will be created on server restart.</small>
@@ -1036,16 +1276,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <!-- Right Column: Server-Side File Import -->
-        <div class="message" style="background-color: #283344; border: 1px solid #4a4a4a; height: 100%;">
+        <div class="message">
             <h3>💾 Restore Manual Backup</h3>
             <p>Restore manual backup files from the server filesystem.</p>
             
-            <div style="background-color: rgba(23, 101, 41, 0.1); border: 1px solid #176529; border-radius: 8px; padding: 15px; margin: 15px 0;">
+            <div class="instruction-box">
                 <h4 style="color: #4ade80; margin: 0 0 10px 0;">Instructions</h4>
                 <ol style="color: #f8f9fa; margin: 0; padding-left: 20px; font-size: 14px;">
                     <li>Click [Open Server Folder] in CHIM.exe</li>
                     <li>Navigate to: ui/data/manualbackup</li>
-                    <li>Copy your <code style="background-color: #000; padding: 2px 6px; border-radius: 3px;">.sql</code> backup file there</li>
+                    <li>Copy your <code>backup.sql</code> backup file there</li>
                     <li>Refresh the page and select it from the list below and click Import. It may take a while to import so please don't refresh the page.</li>
                 </ol>
                 <p style="margin: 10px 0 0 0; font-size: 13px; color: #ccc;">This bypasses PHP upload limits and handles files of any size.</p>
@@ -1064,7 +1304,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <form id="importForm" method="post" onsubmit="return handleImportSubmit(event);">
                     <input type="hidden" name="action" value="import_from_server">
                     <label for="server_file" style="color: #f8f9fa; font-weight: bold; display: block; margin-bottom: 8px;">Available SQL files on server:</label>
-                    <select name="server_file" id="server_file" required style="width: 100%; padding: 10px; background-color: #4a4a4a; color: #f8f9fa; border: 1px solid #555555; border-radius: 4px; margin: 10px 0;">
+                    <select name="server_file" id="server_file" required style="width: 100%; padding: 10px; margin: 10px 0;">
                         <?php foreach ($sqlFiles as $sqlFile): 
                             $filename = basename($sqlFile);
                             $filesize = filesize($sqlFile);
@@ -1076,11 +1316,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php endforeach; ?>
                     </select>
                     <input type="submit" class="button" value="🚀 Import from Server" 
-                           style="background-color: #176529; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; width: 100%; font-size: 16px;">
+                           style="background-color: #176529; color: white; padding: 12px 24px; margin-top: 10px; width: 100%; font-size: 16px;">
                 </form>
             <?php else: ?>
-                <div style="text-align: center; padding: 20px; background-color: #2c2c2c; border: 1px dashed #4a4a4a; border-radius: 8px; margin: 15px 0;">
-                    <div style="font-size: 24px; margin-bottom: 10px;">📁</div>
+                <div class="empty-state">
+                    <div class="empty-state-icon">📁</div>
                     <p style="margin: 0; color: #ccc;">No SQL files found in manual backup directory.</p>
                     <small style="color: #888; display: block; margin-top: 5px;">Place .sql files in ui/data/manualbackup folder to import them.</small>
                 </div>
@@ -1114,11 +1354,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     ?>
     
-    <div class="message" style="background-color: #2c3440; border: 1px solid #4a4a4a; margin-bottom: 20px;">
+    <div class="message">
         <h3>🗄️ Database Versioning Manager</h3>
         <p>This table tracks which database updates have been applied. Resetting an entry will cause that specific update to be re-applied on the next server restart.</p>
         
-        <div style="background-color: rgba(23, 101, 41, 0.1); border: 1px solid #176529; border-radius: 8px; padding: 15px; margin: 15px 0;">
+        <div class="instruction-box">
             <h4 style="color: #4ade80; margin: 0 0 10px 0;">ℹ️ How It Works</h4>
             <ul style="color: #f8f9fa; margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6;">
                 <li>Each entry represents a database update that has been applied</li>
@@ -1133,35 +1373,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h4 style="margin: 0;">Version Entries (<?php echo count($dbVersions); ?> total)</h4>
                 <form method="post" style="margin: 0;" onsubmit="return confirm('⚠️ RESET ALL DATABASE VERSIONS\n\nThis will delete ALL version entries.\n\n⚠️ WARNING:\n- All database updates will be re-applied on next restart\n- This may take several minutes\n- Some updates may overwrite or modify data\n\nAre you absolutely sure you want to continue?');">
                     <input type="hidden" name="action" value="reset_all_db_versions">
-                    <button type="submit" class="button" style="background-color: #dc3545; color: white; padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;">
+                    <button type="submit" class="button" style="background-color: #dc3545; color: white; padding: 8px 16px; font-size: 14px;">
                         🔄 Reset All Versions
                     </button>
                 </form>
             </div>
             
-            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #333333; border-radius: 8px; background-color: #1a1a1a;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead style="position: sticky; top: 0; background-color: #2c2c2c; border-bottom: 2px solid #4a4a4a; z-index: 1;">
+            <div class="version-table-container">
+                <table class="version-table">
+                    <thead>
                         <tr>
-                            <th style="text-align: left; padding: 12px; font-weight: bold; color: #f8f9fa; border-bottom: 1px solid #4a4a4a;">Table/Feature Name</th>
-                            <th style="text-align: left; padding: 12px; font-weight: bold; color: #f8f9fa; border-bottom: 1px solid #4a4a4a;">Version</th>
-                            <th style="text-align: center; padding: 12px; font-weight: bold; color: #f8f9fa; border-bottom: 1px solid #4a4a4a; width: 120px;">Action</th>
+                            <th style="text-align: left;">Table/Feature Name</th>
+                            <th style="text-align: left;">Version</th>
+                            <th style="text-align: center; width: 120px;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($dbVersions as $index => $entry): ?>
-                            <tr style="border-bottom: 1px solid #333333; transition: background-color 0.2s; <?php echo $index % 2 === 0 ? 'background-color: #1a1a1a;' : 'background-color: #222222;'; ?>">
-                                <td style="padding: 10px; color: #f8f9fa; font-family: monospace; font-size: 13px;">
+                            <tr>
+                                <td style="font-family: monospace; font-size: 13px;">
                                     <?php echo htmlspecialchars($entry['tablename']); ?>
                                 </td>
-                                <td style="padding: 10px; color: #ccc; font-size: 12px;">
+                                <td style="font-size: 12px; color: #ccc;">
                                     <?php echo htmlspecialchars(formatVersionDate($entry['version'])); ?>
                                 </td>
-                                <td style="padding: 10px; text-align: center;">
+                                <td style="text-align: center;">
                                     <form method="post" style="margin: 0;" onsubmit="return confirm('⚠️ RESET VERSION ENTRY\n\nTable: <?php echo htmlspecialchars($entry['tablename']); ?>\nVersion: <?php echo htmlspecialchars($entry['version']); ?>\n\nThis update will be re-applied on the next server restart.\n\nAre you sure?');">
                                         <input type="hidden" name="action" value="reset_db_version">
                                         <input type="hidden" name="tablename" value="<?php echo htmlspecialchars($entry['tablename']); ?>">
-                                        <button type="submit" class="button" style="background-color: #fd7e14; color: white; padding: 4px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                                        <button type="submit" class="button" style="background-color: #fd7e14; color: white; padding: 4px 12px; font-size: 12px;">
                                             🔄 Reset
                                         </button>
                                     </form>
@@ -1172,8 +1412,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </table>
             </div>
         <?php else: ?>
-            <div style="text-align: center; padding: 30px 20px; color: #888; font-style: italic; background-color: #2c2c2c; border-radius: 8px; border: 1px dashed #4a4a4a;">
-                <div style="font-size: 24px; margin-bottom: 10px;">📋</div>
+            <div class="empty-state">
+                <div class="empty-state-icon">📋</div>
                 <p style="margin: 0;">No database versioning entries found.</p>
                 <small style="color: #666; display: block; margin-top: 8px;">The database_versioning table is empty or does not exist yet.</small>
             </div>

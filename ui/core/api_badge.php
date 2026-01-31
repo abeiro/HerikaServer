@@ -68,6 +68,25 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
         text-align: center;
     }
 
+    /* Page Header */
+    .page-header {
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        padding: 20px;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .page-header h1.api-title {
+        margin-bottom: 8px;
+    }
+    .page-subtitle {
+        color: #bbb;
+        font-size: 1.1em;
+        margin: 0;
+    }
+
     .content-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -75,10 +94,16 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
         margin-bottom: 30px;
     }
     .content-section {
-        background: #2a2a2a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
         padding: 25px;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .content-section:hover {
+        border-color: #4a4a4a;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.05);
     }
     .content-section h2, .content-section h3 {
         font-family: 'MagicCards', serif;
@@ -106,31 +131,111 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
     /* Cards and grids styled like oghma sections */
     .provider-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; }
     .provider-card {
-        background:#2a2a2a;
-        border:1px solid #4a4a4a;
-        border-radius:8px;
-        padding:12px;
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border:1px solid #3a3a3a;
+        border-radius:10px;
+        padding:14px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+    }
+    .provider-card:hover {
+        border-color: #4a4a4a;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+        transform: translateY(-1px);
     }
     .provider-card .provider-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
     .provider-card .provider-title { display:flex; align-items:center; gap:10px; color:#e0e0e0; }
-    .provider-card .provider-icon { width:28px; height:28px; border-radius:6px; background:#3a3a3a; display:flex; align-items:center; justify-content:center; font-size:16px; }
+    .provider-card .provider-icon { 
+        width:28px; 
+        height:28px; 
+        border-radius:6px; 
+        background: linear-gradient(135deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 0.9)); 
+        display:flex; 
+        align-items:center; 
+        justify-content:center; 
+        font-size:16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
     .provider-card .provider-links { display:flex; gap:10px; }
     .provider-card .provider-links a { font-size:12px; color: rgb(242,124,17); text-decoration: underline; }
     .provider-card .provider-body { display:flex; gap:8px; align-items:center; }
-    .provider-card input[type="password"], .provider-card input[type="text"] { flex:1; background-color:#333; color:#fff; border:1px solid #444; }
+    .provider-card input[type="password"], .provider-card input[type="text"] { 
+        flex:1; 
+        background: rgba(26, 26, 26, 0.8); 
+        color: #e9efff; 
+        border: 1px solid #3a3a3a; 
+        border-radius: 6px; 
+        padding: 10px 12px;
+        transition: all 0.2s ease;
+    }
+    .provider-card input[type="password"]:focus, .provider-card input[type="text"]:focus {
+        border-color: rgba(242, 124, 17, 0.5);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+        background: rgba(34, 34, 34, 0.9);
+    }
     .provider-card .provider-subtext { margin-top:8px; color:#bdbdbd; font-size:12px; }
     .provider-card .provider-subtext ul { margin:4px 0 0 18px; padding:0; }
     .provider-card .provider-subtext li { line-height:1.4; }
     .provider-card .provider-subtext .desc { margin:0 0 2px 0; color:#cfcfcf; }
 
     #custom-keys { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; }
-    .custom-card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:12px; }
-    .custom-card.has-key { box-shadow: 0 0 0 1px rgba(45,106,79,0.35) inset; border-color:#2d6a4f; }
+    .custom-card { 
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98)); 
+        border:1px solid #3a3a3a; 
+        border-radius:10px; 
+        padding:14px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+    }
+    .custom-card:hover {
+        border-color: #4a4a4a;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+        transform: translateY(-1px);
+    }
+    .custom-card.has-key { 
+        box-shadow: 0 0 0 1px rgba(45,106,79,0.35) inset, 0 1px 4px rgba(0, 0, 0, 0.1); 
+        border-color:#2d6a4f; 
+    }
+    .custom-card.has-key:hover {
+        box-shadow: 0 0 0 1px rgba(45,106,79,0.5) inset, 0 3px 8px rgba(0, 0, 0, 0.2);
+    }
     .custom-card .provider-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
     .custom-card .provider-title { display:flex; align-items:center; gap:10px; color:#e0e0e0; }
-    .custom-card .provider-icon { width:28px; height:28px; border-radius:6px; background:#3a3a3a; display:flex; align-items:center; justify-content:center; font-size:16px; }
+    .custom-card .provider-icon { 
+        width:28px; 
+        height:28px; 
+        border-radius:6px; 
+        background: linear-gradient(135deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 0.9)); 
+        display:flex; 
+        align-items:center; 
+        justify-content:center; 
+        font-size:16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
     .custom-card .provider-body { display:flex; gap:8px; align-items:center; }
-    .custom-card input[type="password"], .custom-card input[type="text"] { flex:1; background-color:#333; color:#fff; border:1px solid #444; }
+    .custom-card input[type="password"], .custom-card input[type="text"] { 
+        flex:1; 
+        background: rgba(26, 26, 26, 0.8); 
+        color: #e9efff; 
+        border: 1px solid #3a3a3a; 
+        border-radius: 6px; 
+        padding: 10px 12px;
+        transition: all 0.2s ease;
+    }
+    .custom-card input[type="password"]:focus, .custom-card input[type="text"]:focus {
+        border-color: rgba(242, 124, 17, 0.5);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+        background: rgba(34, 34, 34, 0.9);
+    }
+    .custom-card label {
+        color: rgb(242, 124, 17);
+        font-weight: 600;
+        display: block;
+        margin-top: 10px;
+        margin-bottom: 6px;
+    }
 
     @media (max-width: 900px) {
         .provider-grid { grid-template-columns: 1fr; }
@@ -139,7 +244,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 </style>
 
 <main>
-    <h1 class="api-title">API Keys</h1>
+    <div class="page-header">
+        <h1 class="api-title">API Keys</h1>
+        <p class="page-subtitle">Manage API keys for LLM, TTS, and other service connectors</p>
+    </div>
+    
     <div id="toast" class="toast-notification">
         <span class="message"></span>
     </div>
