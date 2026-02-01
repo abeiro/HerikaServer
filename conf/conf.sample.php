@@ -137,6 +137,7 @@ $EVENT_TYPE_FILTER=""; //Comma-separated list of event types to exclude from con
 $GROUND_ITEMS_DESCRIPTIONS_ONLY=false; //Only show nearby ground items that have descriptions in the database.
 $INVENTORY_ITEMS_DESCRIPTIONS_ONLY=false; //Only show inventory items that have descriptions in the database.
 $HIDE_AMBIENT_COMBAT=false; //Hide ambient NPC-to-NPC combat deaths from context.
+$DISABLE_REANIMATION_TRACKING=true; //Disable reanimation tracking. NPCs marked as reanimated will not have zombie status text injected into their prompts.
 
 //[AI/LLM Service Selection]
 $CONNECTORS=["openrouterjson","openaijson","koboldcppjson"]; //AI Service(s).

@@ -327,8 +327,8 @@ function pretty_label(string $flatName): string {
     if ($flatName === 'TRANSLATION_FUNCTION') {
         return 'Provider';
     }
-    // Custom display names for connectors (UI-only)
-    $connectorLabels = [
+    // Custom display names (UI-only)
+    $customLabels = [
         'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
         'CORE_CONNECTOR_SUMMARY' => 'Summaries',
         'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory/Background Life',
@@ -336,9 +336,10 @@ function pretty_label(string $flatName): string {
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
         'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
         'RELLLM_CONNECTOR' => 'Relationship Management',
+        'EMOTEMOODS' => 'Emote Moods',
     ];
-    if (isset($connectorLabels[$flatName])) {
-        return $connectorLabels[$flatName];
+    if (isset($customLabels[$flatName])) {
+        return $customLabels[$flatName];
     }
     $parts = explode('@', $flatName);
     $prettyParts = [];
@@ -357,6 +358,7 @@ function icon_for_field(string $flatName): string {
     // Specific keys
     if ($u === 'PLAYER_NAME') return '🏷️';
     if ($u === 'PROMPT_HEAD') return '🔝';
+    if ($u === 'EMOTEMOODS') return '🎭';
     if ($u === 'PROMPT_TIMESTAMP') return '🕐';
     // Connectors
     if (strpos($u, 'CORE_CONNECTOR_') === 0) {
@@ -387,6 +389,7 @@ function icon_for_field(string $flatName): string {
 $gsSections = [
     'Prompt Settings' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
+        [ 'name' => 'EMOTEMOODS', 'type' => 'longstring' ],
         [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
         [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
