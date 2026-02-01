@@ -385,6 +385,29 @@ if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
     $GLOBALS["db"] = new sql();
 }
 
+// Auto-refresh XTTS speakers list on page load if on XTTS tab and list is empty/stale
+if ($activeTab === 'xtts' && isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) && !empty($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"])) {
+    // Only auto-refresh if no speakers list in session
+    if (!isset($_SESSION['xtts_speakers_list']) || empty($_SESSION['xtts_speakers_list'])) {
+        $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/speakers_list';
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('accept: application/json'));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Short timeout for page load
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+        $response = curl_exec($ch);
+        
+        if (!curl_errno($ch) && curl_getinfo($ch, CURLINFO_HTTP_CODE) == 200) {
+            $speakersList = json_decode($response, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($speakersList)) {
+                $_SESSION['xtts_speakers_list'] = $speakersList;
+            }
+        }
+        curl_close($ch);
+    }
+}
+
 // Load TTS functions for Cartesia and Inworld
 require_once(__DIR__ . '/../tts/tts-cartesia.php');
 require_once(__DIR__ . '/../tts/tts-inworld.php');
@@ -843,7 +866,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (curl_errno($ch)) {
                 $message .= '<p style="color:red;">Error syncing voice to XTTS/Chatterbox server: ' . curl_error($ch) . '</p>';
             } else {
-                if ($httpCode == 200) {
+                // Check if voice already exists on server (treat as success)
+                $alreadyExists = ($httpCode == 400 && strpos($response, 'already exists') !== false);
+                
+                if ($httpCode == 200 || $alreadyExists) {
                     // Refresh speakers list and redirect to show updated status
                     $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/speakers_list';
                     $ch2 = curl_init();
@@ -1019,7 +1045,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (curl_errno($ch)) {
                     $message .= '<p>cURL Error while uploading ' . htmlspecialchars($fileName) . ': ' . curl_error($ch) . '</p>';
                 } else {
-                    if ($httpCode == 200) {
+                    // Check if voice already exists on server (treat as success)
+                    $alreadyExists = ($httpCode == 400 && strpos($response, 'already exists') !== false);
+                    
+                    if ($httpCode == 200 || $alreadyExists) {
                         $numUploaded++;
                     } else {
                         $message .= '<p>Error uploading ' . htmlspecialchars($fileName) . ' (HTTP code ' . $httpCode . '): ' . htmlspecialchars($response) . '</p>';
@@ -1028,7 +1057,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 curl_close($ch);
             }
         }
-        $message .= "<p><h3 style='color:rgb(247, 231, 16);'>$numUploaded out of $numFiles voice files have been uploaded.</h3></p>";
+        $message .= "<p><h3 style='color:rgb(247, 231, 16);'>$numUploaded out of $numFiles voice files have been synced.</h3></p>";
     }
 }
 
