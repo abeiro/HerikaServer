@@ -32,6 +32,7 @@
   "RECHAT_H": {"userlvl":"basic","type":"integer","description":"Rechat Rounds. Higher values will increase the amount of times AI NPC's will go back-and-forth during a conversation.<br>1 = 1 Round | 2 = 2 Rounds | 3 = 3 Rounds etc","_title":"Roleplay Management"},
   "RECHAT_P": {"userlvl":"basic","type":"integer","description":"Rechat Probability. Chance that an AI NPC will continue an ongoing conversation.<br>0 = Never | 50 = 50% | 100 = Always"},
   "RECHAT_ALLOW_ACTIONS": {"userlvl":"basic","type":"boolean","description":"Allow AI NPCs to trigger actions between eachother during Rechat. This can cause some chaos..."},
+  "END_CONVERSATION_COOLDOWN": {"userlvl":"basic","type":"integer","scope":"global","description":"Seconds an NPC is ineligible for AI dialogue if they wish to stop talking. Default: 60"},
   "RANDOM_NARATION": {"userlvl":"basic","type":"boolean","scope":"global","description":"Enable random Narrator interjections. The Narrator will occasionally add visual scene descriptions during conversations."},
   "RANDOM_NARATION_CHANCE": {"userlvl":"basic","type":"integer","scope":"global","description":"Probability (1-100) that the Narrator will interject with a scene description. Default: 15%"},
   "RANDOM_NARRATION_COOLDOWN": {"userlvl":"basic","type":"integer","scope":"global","description":"Minimum number of conversation rounds between Narrator interjections. Prevents narration spam. Range: 0-10, Default: 2"},

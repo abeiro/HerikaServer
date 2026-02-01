@@ -43,7 +43,8 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'StartRitualCeremony',
     'EndRitualCeremony',
     'Training',
-    'Surrender'
+    'Surrender',
+    'EndConversation'
     //    'WaitHere'
 ];
 
@@ -125,6 +126,7 @@ $F_TRANSLATIONS_LOCAL["EndRitualCeremony"] = "Concludes a ritual or ceremony, ma
     
 $F_TRANSLATIONS_LOCAL["Training"] = "Opens training menu to improve skills with a trainer.";
 $F_TRANSLATIONS_LOCAL["Surrender"] = "{$GLOBALS["HERIKA_NAME"]} surrenders to avoid conflict or harm.";
+$F_TRANSLATIONS_LOCAL["EndConversation"] = "{$GLOBALS["HERIKA_NAME"]} ends the conversation and becomes unavailable to talk for a short time.";
 
 $F_RETURNMESSAGES_LOCAL["Inspect"] = "{$GLOBALS["HERIKA_NAME"]} inspects #TARGET# and see this: #RESULT#";
 $F_RETURNMESSAGES_LOCAL["LookAt"] = "LOOK at or Inspects NPC, Actor, or being OUTFIT and GEAR";
@@ -220,6 +222,7 @@ $F_NAMES_LOCAL["EndRitualCeremony"] = "EndRitualCeremony";
 
 $F_NAMES_LOCAL["Training"] = "Training";
 $F_NAMES_LOCAL["Surrender"] = "Surrender";
+$F_NAMES_LOCAL["EndConversation"] = "EndConversation";
 
 if (isset($GLOBALS["CORE_LANG"])) {
     if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lang" . DIRECTORY_SEPARATOR . $GLOBALS["CORE_LANG"] . DIRECTORY_SEPARATOR . "functions.php")) {
@@ -864,6 +867,20 @@ $GLOBALS["FUNCTIONS"] = [
             "required" => [""],
         ],
     ],
+    [
+        "name" => $F_NAMES_LOCAL["EndConversation"],
+        "description" => $F_TRANSLATIONS_LOCAL["EndConversation"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ],
+            ],
+            "required" => [""],
+        ],
+    ],
 ];
 
 // Mantain a copy of all functions defined here
@@ -1009,7 +1026,8 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         'Toast',
         'StartRitualCeremony',
         'EndRitualCeremony',
-        'Training'
+        'Training',
+        'EndConversation'
 
     ];
     error_log("[DEBUG functions.php] IS_NPC=true, CastSpell in ENABLED: " . (in_array('CastSpell', $GLOBALS["ENABLED_FUNCTIONS"]) ? "YES" : "NO"));
