@@ -58,7 +58,34 @@ if ($EXECUTION_MODE=="STANDARD") {
 
 
 } else if ($EXECUTION_MODE=="WHISPER") {
-
+    // Define whisper range (300 units = ~4 meters, intimate conversation distance)
+    $GLOBALS["WHISPER_RANGE"] = 300;
+    
+    // Send commands to plugin to reduce NPC detection range to whisper distance
+    $GLOBALS["db"]->insert(
+        'responselog',
+        array(
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => '',
+            'action' => "rolecommand|SetConf@_max_distance_outside@{$GLOBALS["WHISPER_RANGE"]}@0@",
+            'tag' => ""
+        )
+    );
+    $GLOBALS["db"]->insert(
+        'responselog',
+        array(
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => '',
+            'action' => "rolecommand|SetConf@_max_distance_inside@{$GLOBALS["WHISPER_RANGE"]}@0@",
+            'tag' => ""
+        )
+    );
+    
+    // Disable rechat when player is sneaking (handled by plugin side based on stealth state)
     
 } else if ($EXECUTION_MODE=="DIRECTOR") {
     
@@ -146,6 +173,47 @@ if (isset($CONTEXT_MODE["value"]) && $CONTEXT_MODE["value"]==1)
     $GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]=true;
 else
     $GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]=false;
+
+// Restore normal distances when leaving whisper mode
+if ($EXECUTION_MODE != "WHISPER") {
+    // Check if we were previously in whisper mode and need to restore
+    $prevMode = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode_previous'");
+    if (isset($prevMode["value"]) && strtoupper($prevMode["value"]) == "WHISPER") {
+        // Restore normal distances (2400 outdoors, 1200 indoors)
+        $GLOBALS["db"]->insert(
+            'responselog',
+            array(
+                'localts' => time(),
+                'sent' => 0,
+                'actor' => "rolemaster",
+                'text' => '',
+                'action' => "rolecommand|SetConf@_max_distance_outside@2400@0@",
+                'tag' => ""
+            )
+        );
+        $GLOBALS["db"]->insert(
+            'responselog',
+            array(
+                'localts' => time(),
+                'sent' => 0,
+                'actor' => "rolemaster",
+                'text' => '',
+                'action' => "rolecommand|SetConf@_max_distance_inside@1200@0@",
+                'tag' => ""
+            )
+        );
+    }
+}
+
+// Store current mode as previous for next check
+$db->upsertRowOnConflict(
+    'conf_opts',
+    array(
+        'id' => 'chim_mode_previous',
+        'value' => $EXECUTION_MODE
+    ),
+    "id"
+);
 
 
 ?>
