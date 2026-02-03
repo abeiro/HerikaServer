@@ -32,7 +32,22 @@ $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line." .
 // Add narration instruction if inline narration is enabled (default to false if not set)
 $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
 if ($inlineNarrationEnabled) {
-    $TEMPLATE_DIALOG .= " You may include brief third-person narration in asterisks (e.g., *She smiles*) before the dialogue.";
+    global $db;
+    $inlineNarrationPrompt = null;
+    try {
+        $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'inline_narration_prompt'");
+        if ($promptData) {
+            $inlineNarrationPrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+        }
+    } catch (Exception $e) {
+        Logger::warn("[INLINE_NARRATION] Failed to load prompt from database, using hardcoded fallback: " . $e->getMessage());
+    }
+    
+    // Hardcoded fallback if database query failed or returned no results
+    if (!$inlineNarrationPrompt) {
+        $inlineNarrationPrompt = "You may include brief third-person narration in asterisks (e.g., *She smiles*) before the dialogue.";
+    }
+    $TEMPLATE_DIALOG .= " " . $inlineNarrationPrompt;
 }
 
 // To keep the original one
