@@ -1121,11 +1121,23 @@ function returnLines($lines,$writeOutput=true)
                     Logger::debug("Transliterated Japanese text to: $responseTextPhonetic");
                 }
                 
-                // Output here.
-                echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
+                // Calculate volume boost based on distance
+                // Shouting distance threshold
+                define('SHOUTING_DISTANCE_THRESHOLD', 800);
+                define('SHOUTING_VOLUME_BOOST', 1.3);
+                
+                $volumeBoost = 1.0;
+                $distance = isset($GLOBALS["LAST_SPEECH_DISTANCE"]) ? $GLOBALS["LAST_SPEECH_DISTANCE"] : 0.0;
+                if ($distance > SHOUTING_DISTANCE_THRESHOLD) {
+                    $volumeBoost = SHOUTING_VOLUME_BOOST; // 30% louder for shouting
+                    Logger::info("Distance {$distance} > " . SHOUTING_DISTANCE_THRESHOLD . ", applying volume boost: {$volumeBoost}");
+                }
+                
+                // Output here with volumeBoost appended
+                echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic/$volumeBoost\r\n";
 
                 
-                $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
+                $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic/$volumeBoost\r\n";
                 if ($outBuffer["actor"]!="Player" && isset($GLOBALS["PATCH_ORIGINAL_MOOD_ISSUED"])) {
                     $GLOBALS["db"]->insert(
                         'moods_issued',
@@ -1175,10 +1187,20 @@ function returnLines($lines,$writeOutput=true)
             $originalRequest[0]="prechat";
             $originalRequest[1]++;
             $originalRequest[2]++;
-            if ($GLOBALS["SCRIPTLINE_LISTENER"])
-                $addonlistener="(talking to {$GLOBALS["SCRIPTLINE_LISTENER"]})";
-            else
+            if ($GLOBALS["SCRIPTLINE_LISTENER"]) {
+                // Check if speaking from distance (shouting)
+                if (!defined('SHOUTING_DISTANCE_THRESHOLD')) {
+                    define('SHOUTING_DISTANCE_THRESHOLD', 800);
+                }
+                $distance = isset($GLOBALS["LAST_SPEECH_DISTANCE"]) ? $GLOBALS["LAST_SPEECH_DISTANCE"] : 0.0;
+                if ($distance > SHOUTING_DISTANCE_THRESHOLD) {
+                    $addonlistener="(speaking loudly to {$GLOBALS["SCRIPTLINE_LISTENER"]} from far away)";
+                } else {
+                    $addonlistener="(talking to {$GLOBALS["SCRIPTLINE_LISTENER"]})";
+                }
+            } else {
                 $addonlistener="";
+            }
             $originalRequest[3]="{$outBuffer["actor"]}: $responseTextUnmooded $addonlistener";
             logEvent($originalRequest);
             
@@ -1186,10 +1208,20 @@ function returnLines($lines,$writeOutput=true)
             $originalRequest[0]="chat";
             $originalRequest[1]++;
             $originalRequest[2]++;
-            if ($GLOBALS["SCRIPTLINE_LISTENER"])
-                $addonlistener="(talking to {$GLOBALS["SCRIPTLINE_LISTENER"]})";
-            else
+            if ($GLOBALS["SCRIPTLINE_LISTENER"]) {
+                // Check if speaking from distance (shouting)
+                if (!defined('SHOUTING_DISTANCE_THRESHOLD')) {
+                    define('SHOUTING_DISTANCE_THRESHOLD', 800);
+                }
+                $distance = isset($GLOBALS["LAST_SPEECH_DISTANCE"]) ? $GLOBALS["LAST_SPEECH_DISTANCE"] : 0.0;
+                if ($distance > SHOUTING_DISTANCE_THRESHOLD) {
+                    $addonlistener="(speaking loudly to {$GLOBALS["SCRIPTLINE_LISTENER"]} from far away)";
+                } else {
+                    $addonlistener="(talking to {$GLOBALS["SCRIPTLINE_LISTENER"]})";
+                }
+            } else {
                 $addonlistener="";
+            }
             $originalRequest[3]="{$outBuffer["actor"]}: $responseTextUnmooded $addonlistener";
             logEvent($originalRequest);
         }
