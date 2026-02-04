@@ -111,6 +111,9 @@ h1.api-title {
 .toast-notification.show { opacity: 1; transform: translateX(0); }
 .toast-notification:not(.error) { background: linear-gradient(135deg, #6dd19c, #5bb377); border: 1px solid rgba(109, 209, 156, 0.3); }
 .toast-notification.error { background: linear-gradient(135deg, #ff6b6b, #e55a5a); border: 1px solid rgba(255, 107, 107, 0.3); }
+#extra_parameters_editor .ace_content * {
+    font-family: monospace, monospace;
+}
 </style>
 
 <main class="d-flex flex-column">
