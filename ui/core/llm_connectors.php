@@ -111,7 +111,7 @@ h1.api-title {
 .toast-notification.show { opacity: 1; transform: translateX(0); }
 .toast-notification:not(.error) { background: linear-gradient(135deg, #6dd19c, #5bb377); border: 1px solid rgba(109, 209, 156, 0.3); }
 .toast-notification.error { background: linear-gradient(135deg, #ff6b6b, #e55a5a); border: 1px solid rgba(255, 107, 107, 0.3); }
-#extra_parameters_editor .ace_content * {
+.extra_parameters_editor_container .ace_content * {
     font-family: monospace, monospace;
 }
 </style>
@@ -506,8 +506,8 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 }
                 echo "<div style='margin-top:18px;'>";
                 echo "<label for='extra_parameters_yaml' style='font-weight:600; color:#e9efff; display:block; margin-bottom:6px;'>Include Body Parameters (YAML)</label>";
-                echo "<div id='extra_parameters_editor' style='height:120px; width:100%; border-radius:6px; border:1px solid #4a4a4a; background:#181a20; color:#e9efff;'></div>";
-                echo "<textarea id='extra_parameters_yaml' name='extra_parameters_yaml' style='display:none;'>" . htmlspecialchars($extra_parameters_yaml) . "</textarea>";
+                echo "<div class='extra_parameters_editor_container' style='height:120px; width:100%; border-radius:6px; border:1px solid #4a4a4a; background:#181a20; color:#e9efff;'></div>";
+                echo "<textarea class='extra_parameters_yaml' name='extra_parameters_yaml' style='display:none;'>" . htmlspecialchars($extra_parameters_yaml) . "</textarea>";
                 echo "<div style='font-size:12px; color:#b0b0b0; margin-top:4px;'>Enter additional request body parameters in YAML format. (Advanced users only.)</div>";
                 echo "</div>";
                 echo "<div style='margin-top:10px; display:flex; gap:8px; align-items:center;'>";
@@ -519,6 +519,41 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             </div>
         </div>
     </form>
+    
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js'></script>
+    <script>
+    (function(){
+        if (!window.ace || !window.jsyaml) return;
+        var containers = document.querySelectorAll('.extra_parameters_editor_container');
+        var editors = [];
+        containers.forEach(function(container, index){
+            var wrapper = container.parentElement;
+            var ta = wrapper ? wrapper.querySelector('.extra_parameters_yaml') : null;
+            if (!ta) return;
+            var editor = ace.edit(container);
+            editor.setTheme('ace/theme/ambiance');
+            editor.session.setMode('ace/mode/yaml');
+            editor.setOption('cursorStyle', 'ace');
+            editor.setValue(ta.value || '', -1);
+            editor.session.on('change', function(){
+                ta.value = editor.getValue();
+            });
+            editors.push({editor: editor, textarea: ta});
+        });
+        window.getExtraParameters = function(){
+            try {
+                var primaryEditor = editors.length > 0 ? editors[0] : null;
+                if (!primaryEditor) return {};
+                var yaml = primaryEditor.editor.getValue();
+                var obj = window.jsyaml.load(yaml);
+                if (typeof obj !== 'object' || obj === null) return {};
+                return obj;
+            } catch(e){ return {}; }
+        };
+    })();
+    </script>
+    
     <script>
     (function(){
         // Service selection logic for embedded editor
@@ -1770,8 +1805,8 @@ if (typeof window.consolidation !== 'function') {
             }
             echo "<div style='margin-top:18px;'>";
             echo "<label for='extra_parameters_yaml' style='font-weight:600; color:#e9efff; display:block; margin-bottom:6px;'>Include Body Parameters (YAML)</label>";
-            echo "<div id='extra_parameters_editor' style='height:120px; width:100%; border-radius:6px; border:1px solid #4a4a4a; background:#181a20; color:#e9efff;'></div>";
-            echo "<textarea id='extra_parameters_yaml' name='extra_parameters_yaml' style='display:none;'>" . htmlspecialchars($extra_parameters_yaml) . "</textarea>";
+            echo "<div class='extra_parameters_editor_container' style='height:120px; width:100%; border-radius:6px; border:1px solid #4a4a4a; background:#181a20; color:#e9efff;'></div>";
+            echo "<textarea class='extra_parameters_yaml' name='extra_parameters_yaml' style='display:none;'>" . htmlspecialchars($extra_parameters_yaml) . "</textarea>";
             echo "<div style='font-size:12px; color:#b0b0b0; margin-top:4px;'>Enter additional request body parameters in YAML format. (Advanced users only.)</div>";
             echo "</div>";
             echo "<div style='margin-top:10px; display:flex; gap:8px; align-items:center;'>";
@@ -2203,26 +2238,44 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
 <script src='https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js'></script>
 <script>
 (function(){
-    var el = document.getElementById('extra_parameters_editor');
-    var ta = document.getElementById('extra_parameters_yaml');
-    if (el && ta && window.ace && window.jsyaml) {
-        var editor = ace.edit('extra_parameters_editor');
+    if (!window.ace || !window.jsyaml) return;
+    var containers = document.querySelectorAll('.extra_parameters_editor_container');
+    var editors = [];
+    containers.forEach(function(container, index){
+        // Find the textarea sibling - it should be the next sibling or nearby in the parent
+        var wrapper = container.parentElement;
+        var ta = wrapper ? wrapper.querySelector('.extra_parameters_yaml') : null;
+        
+        if (!ta || !ta.value) {
+            console.log('Editor ' + index + ': textarea not found or empty');
+        }
+        
+        if (!ta) return;
+        
+        // Create unique editor instance
+        var editor = ace.edit(container);
         editor.setTheme('ace/theme/ambiance');
         editor.session.setMode('ace/mode/yaml');
         editor.setOption('cursorStyle', 'ace');
         editor.setValue(ta.value || '', -1);
+        
         editor.session.on('change', function(){
             ta.value = editor.getValue();
         });
-        window.getExtraParameters = function(){
-            try {
-                var yaml = editor.getValue();
-                var obj = window.jsyaml.load(yaml);
-                if (typeof obj !== 'object' || obj === null) return {};
-                return obj;
-            } catch(e){ return {}; }
-        };
-    }
+        
+        editors.push({editor: editor, textarea: ta});
+    });
+    
+    window.getExtraParameters = function(){
+        try {
+            var primaryEditor = editors.length > 0 ? editors[0] : null;
+            if (!primaryEditor) return {};
+            var yaml = primaryEditor.editor.getValue();
+            var obj = window.jsyaml.load(yaml);
+            if (typeof obj !== 'object' || obj === null) return {};
+            return obj;
+        } catch(e){ return {}; }
+    };
 })();
 </script>
 </main>
