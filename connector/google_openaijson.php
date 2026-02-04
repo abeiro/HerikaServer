@@ -666,7 +666,6 @@ class google_openaijson
             }
         }
         
-        // Merge in extra_parameters from metadata (after all other parameters)
         if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
             foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
                 $data[$k]=$v;

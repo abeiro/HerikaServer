@@ -445,8 +445,6 @@ class openaijson
             'response_format'=>["type"=>"json_object"]
         );
 
-        
-
         if ($this->_is_openai_com) {
             // OpenAI safeguard: remove unsupported top_p for gpt-5 models regardless of reasoning flag
 
@@ -551,7 +549,6 @@ class openaijson
             unset($data["max_tokens"]); 
         }
 
-        // Merge in extra_parameters from metadata (after all other parameters)
         if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
             foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
                 $data[$k]=$v;

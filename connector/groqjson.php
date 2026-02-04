@@ -114,7 +114,6 @@ class groqjson
     {
         $this->init_connector($customParms);
 
-
         $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48));
 
         // Memory embedding handling
@@ -324,7 +323,7 @@ class groqjson
             'top_p' => $top_p, 
             'presence_penalty' => $presence_penalty, 
             'frequency_penalty' => $frequency_penalty, 
-            'response_format'=>["type"=>"json_object"],
+            'response_format'=>["type"=>"json_object"]
         );
 
         // Handle reasoning models

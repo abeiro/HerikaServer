@@ -384,12 +384,10 @@ class player2json
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
-
         foreach ($customParms as $k=>$v) {
             $data[$k]=$v;
         }
 
-        // Merge in extra_parameters from metadata (after all other parameters)
         if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
             foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
                 $data[$k]=$v;
