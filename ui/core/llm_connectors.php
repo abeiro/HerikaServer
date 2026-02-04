@@ -500,7 +500,14 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     if (is_array($meta) && isset($meta['extra_parameters']) && is_array($meta['extra_parameters'])) {
                         // Convert map to YAML
                         foreach ($meta['extra_parameters'] as $k => $v) {
-                            $extra_parameters_yaml .= $k . ': ' . (is_array($v) ? json_encode($v) : $v) . "\n";
+                            if (is_array($v)) {
+                                $val = json_encode($v);
+                            } elseif (is_bool($v)) {
+                                $val = $v ? 'true' : 'false';
+                            } else {
+                                $val = $v;
+                            }
+                            $extra_parameters_yaml .= $k . ': ' . $val . "\n";
                         }
                     }
                 }
@@ -1799,7 +1806,14 @@ if (typeof window.consolidation !== 'function') {
                 $meta = is_string($editItem['metadata']) ? json_decode($editItem['metadata'], true) : $editItem['metadata'];
                 if (is_array($meta) && isset($meta['extra_parameters']) && is_array($meta['extra_parameters'])) {
                     foreach ($meta['extra_parameters'] as $k => $v) {
-                        $extra_parameters_yaml .= $k . ': ' . (is_array($v) ? json_encode($v) : $v) . "\n";
+                        if (is_array($v)) {
+                            $val = json_encode($v);
+                        } elseif (is_bool($v)) {
+                            $val = $v ? 'true' : 'false';
+                        } else {
+                            $val = $v;
+                        }
+                        $extra_parameters_yaml .= $k . ': ' . $val . "\n";
                     }
                 }
             }

@@ -8,7 +8,7 @@ function parse_simple_yaml($yaml) {
         if ($line === '' || $line[0] === '#') continue;
         if (preg_match('/^([a-zA-Z0-9_\-]+):\s*(.*)$/', $line, $m)) {
             $key = $m[1];
-            $val = $m[2];
+            $val = trim($m[2]);
             // Try to cast to int/float/bool/null
             if (is_numeric($val)) {
                 $val = $val + 0;
