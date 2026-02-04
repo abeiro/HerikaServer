@@ -16,6 +16,15 @@ require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_loader.php");
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
+// Normalize endpoint URL - defined early as it's used in multiple places
+if (!function_exists('normalize_endpoint_url')) {
+    function normalize_endpoint_url($url) {
+        // Remove trailing slashes
+        $url = rtrim($url, '/');
+        return $url;
+    }
+}
+
 // XTTS voice test handler - MUST be before output buffering starts
 if (isset($_GET['action']) && $_GET['action'] === 'test_xtts' && isset($_GET['voice'])) {
     // Set up logging
@@ -451,14 +460,6 @@ function isProviderConfigured($provider) {
     $providerLower = strtolower($provider);
     $row = $db->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='{$providerLower}' LIMIT 1");
     return (is_array($row) && !empty($row['api_key']));
-}
-
-if (!function_exists('normalize_endpoint_url')) {
-    function normalize_endpoint_url($url) {
-        // Remove trailing slashes
-        $url = rtrim($url, '/');
-        return $url;
-    }
 }
 
 /**
