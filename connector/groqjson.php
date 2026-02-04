@@ -354,15 +354,13 @@ class groqjson
             unset($data["max_tokens"]); 
         }
 
-
-        // Merge extra_parameters LAST, so they always overwrite previous keys
         if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
             foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
                 $data[$k]=$v;
             }
         }
 
-        $GLOBALS["DEBUG_DATA"]["full"]=(($data));
+        $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
         file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
 
@@ -731,14 +729,13 @@ class groqjson
             unset($data["max_tokens"]); 
         }
 
-        // Merge extra_parameters LAST, so they always overwrite previous keys
         if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
             foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
                 $data[$k]=$v;
             }
         }
 
-        $GLOBALS["DEBUG_DATA"]["full"]=(($data));
+        $GLOBALS["DEBUG_DATA"]["full"]=($data);
      
         $headers = array(
             'Content-Type: application/json',
