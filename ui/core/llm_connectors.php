@@ -507,8 +507,6 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 echo "<textarea id='extra_parameters_yaml' name='extra_parameters_yaml' style='display:none;'>" . htmlspecialchars($extra_parameters_yaml) . "</textarea>";
                 echo "<div style='font-size:12px; color:#b0b0b0; margin-top:4px;'>Enter additional request body parameters in YAML format. (Advanced users only.)</div>";
                 echo "</div>";
-                echo "<script src='https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.js'></script>";
-                echo "<script>\n(function(){\nvar editor = ace.edit('extra_parameters_editor');\neditor.setTheme('ace/theme/ambiance');\neditor.session.setMode('ace/mode/yaml');\neditor.setOption('cursorStyle', 'ace');\neditor.setValue(document.getElementById('extra_parameters_yaml').value || '', -1);\neditor.session.on('change', function(){\n    document.getElementById('extra_parameters_yaml').value = editor.getValue();\n});\nwindow.getExtraParameters = function(){\n    try {\n        var yaml = editor.getValue();\n        var obj = window.jsyaml.load(yaml);\n        if (typeof obj !== 'object' || obj === null) return {};\n        return obj;\n    } catch(e){ return {}; }\n};\n})();\n</script>";
                 echo "<div style='margin-top:10px; display:flex; gap:8px; align-items:center;'>";
                 // Seems not working on profiles tab, so not print
                 //echo "<button type='button' id='btn_clear_adv' class='btn-danger'>Clear advanced settings</button>";
@@ -1189,8 +1187,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && (isset($_POST["save"]) || isset($_P
         unset($metadata["remove_action_prompt"]);
     }
 
-
-    // Persist extra_parameters from YAML (Ace editor)
+    // Persist extra_parameters from YAML editor
     if (isset($_POST['extra_parameters_yaml'])) {
         require_once __DIR__ . '/../../connector/parse_simple_yaml.php';
         $extra_parameters = parse_simple_yaml($_POST['extra_parameters_yaml']);
@@ -1777,8 +1774,6 @@ if (typeof window.consolidation !== 'function') {
             echo "<div style='margin-top:10px; display:flex; gap:8px; align-items:center;'>";
             echo "<button type='button' id='btn_clear_adv' class='btn-danger'>Clear advanced settings</button>";
             echo "</div>";
-            echo "<script src='https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.js'></script>";
-            echo "<script>\n(function(){\nvar editor = ace.edit('extra_parameters_editor');\neditor.setTheme('ace/theme/ambiance');\neditor.session.setMode('ace/mode/yaml');\neditor.setOption('cursorStyle', 'ace');\neditor.setValue(document.getElementById('extra_parameters_yaml').value || '', -1);\neditor.session.on('change', function(){\n    document.getElementById('extra_parameters_yaml').value = editor.getValue();\n});\nwindow.getExtraParameters = function(){\n    try {\n        var yaml = editor.getValue();\n        var obj = window.jsyaml.load(yaml);\n        if (typeof obj !== 'object' || obj === null) return {};\n        return obj;\n    } catch(e){ return {}; }\n};\n})();\n</script>";
             ?>
         </div>
     </div>
@@ -2201,6 +2196,32 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
  include(__DIR__."/tmpl/metadata_json_editor.php");
  ?>
 
+<script src='https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.js'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js'></script>
+<script>
+(function(){
+    var el = document.getElementById('extra_parameters_editor');
+    var ta = document.getElementById('extra_parameters_yaml');
+    if (el && ta && window.ace && window.jsyaml) {
+        var editor = ace.edit('extra_parameters_editor');
+        editor.setTheme('ace/theme/ambiance');
+        editor.session.setMode('ace/mode/yaml');
+        editor.setOption('cursorStyle', 'ace');
+        editor.setValue(ta.value || '', -1);
+        editor.session.on('change', function(){
+            ta.value = editor.getValue();
+        });
+        window.getExtraParameters = function(){
+            try {
+                var yaml = editor.getValue();
+                var obj = window.jsyaml.load(yaml);
+                if (typeof obj !== 'object' || obj === null) return {};
+                return obj;
+            } catch(e){ return {}; }
+        };
+    }
+})();
+</script>
 </main>
 
 <?php
