@@ -1,26 +1,63 @@
 <?php
-// Minimal YAML parser for simple key: value pairs (no nesting, no arrays)
+// YAML parser supporting simple key-value pairs and nested objects (via indentation)
 function parse_simple_yaml($yaml) {
     $result = array();
     $lines = preg_split('/\r?\n/', $yaml);
+    $stack = array(&$result);  // Stack of references for nested structures
+    $indentStack = array(0);   // Stack of indentation levels
+    
     foreach ($lines as $line) {
-        $line = trim($line);
-        if ($line === '' || $line[0] === '#') continue;
-        if (preg_match('/^([a-zA-Z0-9_\-]+):\s*(.*)$/', $line, $m)) {
+        // Count leading spaces for indentation
+        $indent = strlen($line) - strlen(ltrim($line));
+        $trimmed = trim($line);
+        
+        // Skip empty lines and comments
+        if ($trimmed === '' || $trimmed[0] === '#') continue;
+        
+        // Parse key: value pattern
+        if (preg_match('/^([a-zA-Z0-9_\-]+):\s*(.*)$/', $trimmed, $m)) {
             $key = $m[1];
             $val = trim($m[2]);
-            // Try to cast to int/float/bool/null
-            if (is_numeric($val)) {
-                $val = $val + 0;
-            } elseif (strtolower($val) === 'true') {
-                $val = true;
-            } elseif (strtolower($val) === 'false') {
-                $val = false;
-            } elseif (strtolower($val) === 'null') {
-                $val = null;
+            
+            // Adjust stack based on indentation
+            while (count($indentStack) > 1 && $indent <= $indentStack[count($indentStack) - 1]) {
+                array_pop($stack);
+                array_pop($indentStack);
             }
-            $result[$key] = $val;
+            
+            // Parse the value
+            $parsedVal = null;
+            if ($val === '') {
+                // Empty value means this is a parent object, value will be set to array
+                $parsedVal = array();
+            } elseif (is_numeric($val)) {
+                $parsedVal = $val + 0;
+            } elseif (strtolower($val) === 'true') {
+                $parsedVal = true;
+            } elseif (strtolower($val) === 'false') {
+                $parsedVal = false;
+            } elseif (strtolower($val) === 'null') {
+                $parsedVal = null;
+            } else {
+                // Remove quotes if present
+                if ((($val[0] === '"' && $val[strlen($val)-1] === '"') || 
+                     ($val[0] === "'" && $val[strlen($val)-1] === "'"))) {
+                    $parsedVal = substr($val, 1, -1);
+                } else {
+                    $parsedVal = $val;
+                }
+            }
+            
+            // Set the value in the current context
+            $stack[count($stack) - 1][$key] = $parsedVal;
+            
+            // If value is an array (parent object), prepare for nested children
+            if (is_array($parsedVal)) {
+                $stack[] = &$stack[count($stack) - 1][$key];
+                array_push($indentStack, $indent);
+            }
         }
     }
+    
     return $result;
 }

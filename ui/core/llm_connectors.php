@@ -10,6 +10,26 @@ require_once($enginePath . "lib/data_functions.php");
 require_once($enginePath . "lib/logger.php");
 require_once("{$enginePath}/lib/core/llm_connector.class.php");
 
+// Helper function to convert nested arrays to YAML format
+function array_to_yaml($arr, $indent = 0) {
+    $yaml = '';
+    $prefix = str_repeat('  ', $indent);
+    foreach ($arr as $k => $v) {
+        if (is_array($v)) {
+            $yaml .= $prefix . $k . ":\n";
+            $yaml .= array_to_yaml($v, $indent + 1);
+        } else {
+            if (is_bool($v)) {
+                $val = $v ? 'true' : 'false';
+            } else {
+                $val = $v;
+            }
+            $yaml .= $prefix . $k . ': ' . $val . "\n";
+        }
+    }
+    return $yaml;
+}
+
 //function renderSelect($obj, $fieldName, $labelText, $selectedValue = "") 
 //function include from bewlow file
 include(__DIR__."/tmpl/ui_utils.php");
@@ -499,16 +519,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     $meta = is_string($editItem['metadata']) ? json_decode($editItem['metadata'], true) : $editItem['metadata'];
                     if (is_array($meta) && isset($meta['extra_parameters']) && is_array($meta['extra_parameters'])) {
                         // Convert map to YAML
-                        foreach ($meta['extra_parameters'] as $k => $v) {
-                            if (is_array($v)) {
-                                $val = json_encode($v);
-                            } elseif (is_bool($v)) {
-                                $val = $v ? 'true' : 'false';
-                            } else {
-                                $val = $v;
-                            }
-                            $extra_parameters_yaml .= $k . ': ' . $val . "\n";
-                        }
+                        $extra_parameters_yaml = array_to_yaml($meta['extra_parameters']);
                     }
                 }
                 echo "<div style='margin-top:18px;'>";
@@ -1805,16 +1816,7 @@ if (typeof window.consolidation !== 'function') {
             if (isset($editItem['metadata'])) {
                 $meta = is_string($editItem['metadata']) ? json_decode($editItem['metadata'], true) : $editItem['metadata'];
                 if (is_array($meta) && isset($meta['extra_parameters']) && is_array($meta['extra_parameters'])) {
-                    foreach ($meta['extra_parameters'] as $k => $v) {
-                        if (is_array($v)) {
-                            $val = json_encode($v);
-                        } elseif (is_bool($v)) {
-                            $val = $v ? 'true' : 'false';
-                        } else {
-                            $val = $v;
-                        }
-                        $extra_parameters_yaml .= $k . ': ' . $val . "\n";
-                    }
+                    $extra_parameters_yaml = array_to_yaml($meta['extra_parameters']);
                 }
             }
             echo "<div style='margin-top:18px;'>";
