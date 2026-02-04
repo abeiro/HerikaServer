@@ -514,7 +514,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
         if ($id <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid id"]); exit; }
 
         $allowed = [
-            'label','service','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema','api_badge_id'
+            'label','service','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema','api_badge_id','extra_parameters_yaml'
         ];
         $data = [];
         foreach ($allowed as $k) {
@@ -528,6 +528,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
                 $data[$k] = ($v === '' ? null : floatval($v));
             } else if ($k === 'api_badge_id') {
                 $data[$k] = ($v === '' ? null : intval($v));
+            } else if ($k === 'extra_parameters_yaml') {
+                // Parse YAML and store as metadata.extra_parameters
+                require_once __DIR__ . '/../../connector/parse_simple_yaml.php';
+                $extra_parameters = parse_simple_yaml($v);
+                if (is_array($extra_parameters)) {
+                    // Get current metadata
+                    $row = $llm->getById($id);
+                    $metadata = is_string($row['metadata'] ?? '') ? json_decode($row['metadata'], true) : ($row['metadata'] ?? []);
+                    if (!is_array($metadata)) $metadata = [];
+                    $metadata['extra_parameters'] = $extra_parameters;
+                    $data['metadata'] = json_encode($metadata);
+                } else {
+                    // Invalid YAML, remove extra_parameters
+                    $row = $llm->getById($id);
+                    $metadata = is_string($row['metadata'] ?? '') ? json_decode($row['metadata'], true) : ($row['metadata'] ?? []);
+                    if (!is_array($metadata)) $metadata = [];
+                    unset($metadata['extra_parameters']);
+                    $data['metadata'] = json_encode($metadata);
+                }
+                // Don't add extra_parameters_yaml to $data directly
+                continue;
             } else {
                 $data[$k] = ($v === '' ? null : $v);
             }
