@@ -245,7 +245,7 @@ final class CommTest extends DatabaseTestCase
         ->with(
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
-                $expectedPrompt = ["role"=>"user", "content"=>" The Narrator replies to Prisoner. write The Narrator's next dialogue lines. Avoid narrations. "];
+                $expectedPrompt = ["role"=>"user", "content"=>" The Narrator replies to Prisoner. Write The Narrator's next prose/narration. "];
                 $this->expectPromptInContext($streamContext, $expectedPrompt);
                 
                 return true;
