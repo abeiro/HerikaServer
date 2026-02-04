@@ -54,6 +54,7 @@ $npcFunctions = [
     'Drink',
     'Training',
     'Surrender',
+    'EndConversation',
 ];
 
 $playerFunctions = [
@@ -86,7 +87,7 @@ $playerFunctions = [
     'Drink',
 ];
 
-$socialFunctions = ['Inspect', 'InspectSurroundings', 'Relax', 'TakeASeat', 'UseSoulGaze','Toast', 'Drink', 'Training','EndRitualCeremony','StartRitualCeremony','Surrender'];
+$socialFunctions = ['Inspect', 'InspectSurroundings', 'Relax', 'TakeASeat', 'UseSoulGaze','Toast', 'Drink', 'Training','EndRitualCeremony','StartRitualCeremony','Surrender','EndConversation'];
 $movementFunctions = ['TravelTo', 'Follow', 'FollowPlayer', 'ComeCloser', 'WaitHere', 'IncreaseWalkSpeed', 'DecreaseWalkSpeed','MakeFollower'];
 $combatFunctions = ['Attack', 'AttackHunt', 'Brawl', 'SheatheWeapon'];
 $inventoryFunctions = ['OpenInventory', 'OpenInventory2', 'CheckInventory', 'GiveGoldTo', 'GiveItemTo', 'PickupItem', 'TakeGoldFromPlayer', 'CastSpell'];
@@ -476,7 +477,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         'Training' => 'Opens training menu for skill improvement (only available for trainer NPCs)',
                                         'Surrender' => 'Surrender to avoid conflict or harm',
                                     ];
-                                    echo $descriptions[$func] ?? 'Social interaction function';
+                                    echo $descriptions[$func] ?? 'AI ends conversation';
                                     ?>
                                 </div>
                             </label>

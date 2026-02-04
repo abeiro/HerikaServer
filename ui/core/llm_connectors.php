@@ -1619,9 +1619,8 @@ if (typeof window.consolidation !== 'function') {
                 </label>
             </div>
             
-             <div id="remove_action_prompt_main" style="margin-top:12px;">
-                <div style="font-weight:600; color:#e9efff; margin-bottom:8px;">Remove Action Prompt</div>
-                    <label class="label-with-toggle"><span class='tip-label' data-tip='Option to disable the action enforcement prompt. Some models like gemini-3-flash tend to use actions a lot.'>Remove Action Prompt</span>
+            <div id="remove_action_prompt_main" style="margin-top:12px;">
+                <label class="label-with-toggle"><span class='tip-label' data-tip='Option to disable the action enforcement prompt. Some models like gemini-3-flash tend to use actions a lot.'>Remove Action Prompt</span>
                     <input type="hidden" name="remove_action_prompt" value="0">
                     <input type="checkbox" name="remove_action_prompt" value="1" <?php 
                         $metadataMain = [];

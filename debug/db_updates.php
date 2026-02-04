@@ -3221,6 +3221,34 @@ No changes? Return empty objects: {}'
 }
 
 //----------------------------------------------------
+// INLINE NARRATION PROMPT
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20260203001) {
+    Logger::debug("Applying prompts table 20260203001 - Adding inline_narration_prompt");
+    
+    $inlineNarrationPrompt = $db->escape(
+        "You may include brief third-person narration in asterisks (e.g., *She smiles*) before the dialogue."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'inline_narration_prompt',
+            '$inlineNarrationPrompt',
+            'Prompt appended to dialogue instructions when inline narration is enabled. Encourages NPCs to include brief third-person narration in asterisks before dialogue. Used in: prompts/dialogue_prompt.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20260203001);
+    Logger::info("Applied patch prompts 20260203001 - Added inline_narration_prompt");
+}
+
+//----------------------------------------------------
 // emotions expression
 //----------------------------------------------------
 
