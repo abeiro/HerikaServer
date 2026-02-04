@@ -591,6 +591,14 @@ class openrouterjson
                 ],
             'transforms'=>[]
         );
+
+
+        // Merge in extra_parameters from metadata (after all other parameters)
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
+            foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
+                $data[$k]=$v;
+            }
+        }
         
         if ($GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) {
             if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {

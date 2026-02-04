@@ -490,6 +490,25 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     echo "</div>";
                 }
                 echo "</div>";
+                // Ace editor for extra_parameters (YAML)
+                $extra_parameters_yaml = '';
+                if (isset($editItem['metadata'])) {
+                    $meta = is_string($editItem['metadata']) ? json_decode($editItem['metadata'], true) : $editItem['metadata'];
+                    if (is_array($meta) && isset($meta['extra_parameters']) && is_array($meta['extra_parameters'])) {
+                        // Convert map to YAML
+                        foreach ($meta['extra_parameters'] as $k => $v) {
+                            $extra_parameters_yaml .= $k . ': ' . (is_array($v) ? json_encode($v) : $v) . "\n";
+                        }
+                    }
+                }
+                echo "<div style='margin-top:18px;'>";
+                echo "<label for='extra_parameters_yaml' style='font-weight:600; color:#e9efff; display:block; margin-bottom:6px;'>Include Body Parameters (YAML)</label>";
+                echo "<div id='extra_parameters_editor' style='height:120px; width:100%; border-radius:6px; border:1px solid #4a4a4a; background:#181a20; color:#e9efff;'></div>";
+                echo "<textarea id='extra_parameters_yaml' name='extra_parameters_yaml' style='display:none;'>" . htmlspecialchars($extra_parameters_yaml) . "</textarea>";
+                echo "<div style='font-size:12px; color:#b0b0b0; margin-top:4px;'>Enter additional request body parameters in YAML format. (Advanced users only.)</div>";
+                echo "</div>";
+                echo "<script src='https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.js'></script>";
+                echo "<script>\n(function(){\nvar editor = ace.edit('extra_parameters_editor');\neditor.setTheme('ace/theme/ambiance');\neditor.session.setMode('ace/mode/yaml');\neditor.setOption('cursorStyle', 'ace');\neditor.setValue(document.getElementById('extra_parameters_yaml').value || '', -1);\neditor.session.on('change', function(){\n    document.getElementById('extra_parameters_yaml').value = editor.getValue();\n});\nwindow.getExtraParameters = function(){\n    try {\n        var yaml = editor.getValue();\n        var obj = window.jsyaml.load(yaml);\n        if (typeof obj !== 'object' || obj === null) return {};\n        return obj;\n    } catch(e){ return {}; }\n};\n})();\n</script>";
                 echo "<div style='margin-top:10px; display:flex; gap:8px; align-items:center;'>";
                 // Seems not working on profiles tab, so not print
                 //echo "<button type='button' id='btn_clear_adv' class='btn-danger'>Clear advanced settings</button>";
@@ -1169,9 +1188,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && (isset($_POST["save"]) || isset($_P
         // If checkbox not present, remove from metadata
         unset($metadata["remove_action_prompt"]);
     }
-    
+
+
+    // Persist extra_parameters from YAML (Ace editor)
+    if (isset($_POST['extra_parameters_yaml'])) {
+        require_once __DIR__ . '/../../connector/parse_simple_yaml.php';
+        $extra_parameters = parse_simple_yaml($_POST['extra_parameters_yaml']);
+        if (is_array($extra_parameters)) {
+            $metadata['extra_parameters'] = $extra_parameters;
+        } else {
+            unset($metadata['extra_parameters']);
+        }
+    } else {
+        unset($metadata['extra_parameters']);
+    }
+
     $_POST["metadata"] = json_encode($metadata);
-    
+
     $llm->update($id, $_POST);
     $redir = 'llm_connectors.php' . ($id !== '' ? ('?edit=' . urlencode($id)) : '');
     if (isset($_POST['partial']) && $_POST['partial'] === 'editor') {
@@ -1725,10 +1758,27 @@ if (typeof window.consolidation !== 'function') {
                 echo "</div>";
             }
             echo "</div>";
+            // Ace editor for extra_parameters (YAML)
+            $extra_parameters_yaml = '';
+            if (isset($editItem['metadata'])) {
+                $meta = is_string($editItem['metadata']) ? json_decode($editItem['metadata'], true) : $editItem['metadata'];
+                if (is_array($meta) && isset($meta['extra_parameters']) && is_array($meta['extra_parameters'])) {
+                    foreach ($meta['extra_parameters'] as $k => $v) {
+                        $extra_parameters_yaml .= $k . ': ' . (is_array($v) ? json_encode($v) : $v) . "\n";
+                    }
+                }
+            }
+            echo "<div style='margin-top:18px;'>";
+            echo "<label for='extra_parameters_yaml' style='font-weight:600; color:#e9efff; display:block; margin-bottom:6px;'>Include Body Parameters (YAML)</label>";
+            echo "<div id='extra_parameters_editor' style='height:120px; width:100%; border-radius:6px; border:1px solid #4a4a4a; background:#181a20; color:#e9efff;'></div>";
+            echo "<textarea id='extra_parameters_yaml' name='extra_parameters_yaml' style='display:none;'>" . htmlspecialchars($extra_parameters_yaml) . "</textarea>";
+            echo "<div style='font-size:12px; color:#b0b0b0; margin-top:4px;'>Enter additional request body parameters in YAML format. (Advanced users only.)</div>";
+            echo "</div>";
             echo "<div style='margin-top:10px; display:flex; gap:8px; align-items:center;'>";
             echo "<button type='button' id='btn_clear_adv' class='btn-danger'>Clear advanced settings</button>";
             echo "</div>";
-            echo "</div>";
+            echo "<script src='https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.js'></script>";
+            echo "<script>\n(function(){\nvar editor = ace.edit('extra_parameters_editor');\neditor.setTheme('ace/theme/ambiance');\neditor.session.setMode('ace/mode/yaml');\neditor.setOption('cursorStyle', 'ace');\neditor.setValue(document.getElementById('extra_parameters_yaml').value || '', -1);\neditor.session.on('change', function(){\n    document.getElementById('extra_parameters_yaml').value = editor.getValue();\n});\nwindow.getExtraParameters = function(){\n    try {\n        var yaml = editor.getValue();\n        var obj = window.jsyaml.load(yaml);\n        if (typeof obj !== 'object' || obj === null) return {};\n        return obj;\n    } catch(e){ return {}; }\n};\n})();\n</script>";
             ?>
         </div>
     </div>

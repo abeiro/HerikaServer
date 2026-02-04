@@ -114,6 +114,7 @@ class groqjson
     {
         $this->init_connector($customParms);
 
+
         $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48));
 
         // Memory embedding handling
@@ -323,8 +324,16 @@ class groqjson
             'top_p' => $top_p, 
             'presence_penalty' => $presence_penalty, 
             'frequency_penalty' => $frequency_penalty, 
-            'response_format'=>["type"=>"json_object"]
+            'response_format'=>["type"=>"json_object"],
         );
+
+
+        // Merge in extra_parameters from metadata (after all other parameters)
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
+            foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
+                $data[$k]=$v;
+            }
+        }
 
         // Handle reasoning models
         if ($this->_is_reasoning) { 
