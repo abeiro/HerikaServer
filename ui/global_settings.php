@@ -372,6 +372,7 @@ function icon_for_field(string $flatName): string {
     }
     if ($u === 'RELATIONSHIP_SYSTEM_ENABLED') return '💞';
     if ($u === 'RELLLM_CONNECTOR') return '🔗';
+    if ($u === 'POWER_AWARENESS_ENABLED') return '⚔️';
     // Respeech related
     if (strpos($u, 'RESPEECH') !== false) return '🦜';
     if (strpos($u, 'SPEECH_STYLE') !== false) return '🦜';
@@ -537,6 +538,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
     } else {
         // Checkbox unchecked - no POST value means false
         $allPairs['RELATIONSHIP_SYSTEM_ENABLED'] = 'false';
+    }
+
+    // Apply POWER_AWARENESS_ENABLED
+    if (isset($_POST['POWER_AWARENESS_ENABLED'])) {
+        $allPairs['POWER_AWARENESS_ENABLED'] = ($_POST['POWER_AWARENESS_ENABLED'] === 'true') ? 'true' : 'false';
+    } else {
+        // Checkbox unchecked - no POST value means false
+        $allPairs['POWER_AWARENESS_ENABLED'] = 'false';
     }
 
     // Apply OGHMA_CUSTOM (rendered inline with CORE_CONNECTOR_OGHMA_CUSTOM, not in $gsSections)
