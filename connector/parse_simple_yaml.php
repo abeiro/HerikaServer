@@ -30,6 +30,30 @@ function parse_simple_yaml($yaml) {
             if ($val === '') {
                 // Empty value means this is a parent object, value will be set to array
                 $parsedVal = array();
+            } elseif ($val[0] === '[' && $val[strlen($val)-1] === ']') {
+                // Parse as inline array/list
+                $arrayStr = substr($val, 1, -1);
+                $arrayItems = array_map('trim', explode(',', $arrayStr));
+                $parsedVal = array();
+                foreach ($arrayItems as $item) {
+                    if (is_numeric($item)) {
+                        $parsedVal[] = $item + 0;
+                    } elseif (strtolower($item) === 'true') {
+                        $parsedVal[] = true;
+                    } elseif (strtolower($item) === 'false') {
+                        $parsedVal[] = false;
+                    } elseif (strtolower($item) === 'null') {
+                        $parsedVal[] = null;
+                    } else {
+                        // Remove quotes if present
+                        if ((($item[0] === '"' && $item[strlen($item)-1] === '"') || 
+                             ($item[0] === "'" && $item[strlen($item)-1] === "'"))) {
+                            $parsedVal[] = substr($item, 1, -1);
+                        } else {
+                            $parsedVal[] = $item;
+                        }
+                    }
+                }
             } elseif (is_numeric($val)) {
                 $parsedVal = $val + 0;
             } elseif (strtolower($val) === 'true') {

@@ -16,8 +16,25 @@ function array_to_yaml($arr, $indent = 0) {
     $prefix = str_repeat('  ', $indent);
     foreach ($arr as $k => $v) {
         if (is_array($v)) {
-            $yaml .= $prefix . $k . ":\n";
-            $yaml .= array_to_yaml($v, $indent + 1);
+            // Check if this is a simple list (indexed array with no gaps)
+            if (array_keys($v) === range(0, count($v) - 1)) {
+                // Format as inline list
+                $items = array();
+                foreach ($v as $item) {
+                    if (is_bool($item)) {
+                        $items[] = $item ? 'true' : 'false';
+                    } elseif (is_string($item) && (strpos($item, ' ') !== false || strpos($item, ',') !== false)) {
+                        $items[] = '"' . $item . '"';
+                    } else {
+                        $items[] = $item;
+                    }
+                }
+                $yaml .= $prefix . $k . ': [' . implode(', ', $items) . "]\n";
+            } else {
+                // Format as nested object
+                $yaml .= $prefix . $k . ":\n";
+                $yaml .= array_to_yaml($v, $indent + 1);
+            }
         } else {
             if (is_bool($v)) {
                 $val = $v ? 'true' : 'false';
