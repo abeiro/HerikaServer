@@ -32,7 +32,7 @@ class LLMConnector
         ];
 
         foreach ($data as $k => $v) {
-            if (empty("$v") && $v !== "0") {
+            if (($v === "" || $v === null) && $v !== "0" && $v !== false && $v !== 0) {
                 $data[$k] = null;
             }
         }
@@ -88,7 +88,7 @@ class LLMConnector
         ];
 
         foreach ($data as $k => $v) {
-            if (empty("$v") && $v !== "0") {
+            if (($v === "" || $v === null) && $v !== "0" && $v !== false && $v !== 0) {
                 $data[$k] = null;
             }
         }

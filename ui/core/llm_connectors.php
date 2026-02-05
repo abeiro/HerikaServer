@@ -10,6 +10,47 @@ require_once($enginePath . "lib/data_functions.php");
 require_once($enginePath . "lib/logger.php");
 require_once("{$enginePath}/lib/core/llm_connector.class.php");
 
+// Helper function to convert nested arrays to YAML format
+function array_to_yaml($arr, $indent = 0) {
+    $yaml = '';
+    $prefix = str_repeat('  ', $indent);
+    foreach ($arr as $k => $v) {
+        if (is_array($v)) {
+            // Check if this is a simple list (indexed array with no gaps)
+            if (array_keys($v) === range(0, count($v) - 1)) {
+                // Format as inline list
+                $items = array();
+                foreach ($v as $item) {
+                    if (is_bool($item)) {
+                        $items[] = $item ? 'true' : 'false';
+                    } elseif (is_string($item)) {
+                        // Always quote strings to preserve them
+                        $items[] = '"' . addslashes($item) . '"';
+                    } else {
+                        $items[] = $item;
+                    }
+                }
+                $yaml .= $prefix . $k . ': [' . implode(', ', $items) . "]\n";
+            } else {
+                // Format as nested object
+                $yaml .= $prefix . $k . ":\n";
+                $yaml .= array_to_yaml($v, $indent + 1);
+            }
+        } else {
+            if (is_bool($v)) {
+                $val = $v ? 'true' : 'false';
+            } elseif (is_string($v)) {
+                // Quote string values to preserve them
+                $val = '"' . addslashes($v) . '"';
+            } else {
+                $val = $v;
+            }
+            $yaml .= $prefix . $k . ': ' . $val . "\n";
+        }
+    }
+    return $yaml;
+}
+
 //function renderSelect($obj, $fieldName, $labelText, $selectedValue = "") 
 //function include from bewlow file
 include(__DIR__."/tmpl/ui_utils.php");
@@ -111,6 +152,9 @@ h1.api-title {
 .toast-notification.show { opacity: 1; transform: translateX(0); }
 .toast-notification:not(.error) { background: linear-gradient(135deg, #6dd19c, #5bb377); border: 1px solid rgba(109, 209, 156, 0.3); }
 .toast-notification.error { background: linear-gradient(135deg, #ff6b6b, #e55a5a); border: 1px solid rgba(255, 107, 107, 0.3); }
+.extra_parameters_editor_container .ace_content * {
+    font-family: monospace, monospace;
+}
 </style>
 
 <main class="d-flex flex-column">
@@ -490,6 +534,21 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     echo "</div>";
                 }
                 echo "</div>";
+                // Ace editor for extra_parameters (YAML)
+                $extra_parameters_yaml = '';
+                if (isset($editItem['metadata'])) {
+                    $meta = is_string($editItem['metadata']) ? json_decode($editItem['metadata'], true) : $editItem['metadata'];
+                    if (is_array($meta) && isset($meta['extra_parameters']) && is_array($meta['extra_parameters'])) {
+                        // Convert map to YAML
+                        $extra_parameters_yaml = array_to_yaml($meta['extra_parameters']);
+                    }
+                }
+                echo "<div style='margin-top:18px;'>";
+                echo "<label for='extra_parameters_yaml' style='font-weight:600; color:#e9efff; display:block; margin-bottom:6px;'>Include Body Parameters (YAML)</label>";
+                echo "<div class='extra_parameters_editor_container' style='height:120px; width:100%; border-radius:6px; border:1px solid #4a4a4a; background:#181a20; color:#e9efff;'></div>";
+                echo "<textarea class='extra_parameters_yaml' name='extra_parameters_yaml' style='display:none;'>" . htmlspecialchars($extra_parameters_yaml) . "</textarea>";
+                echo "<div style='font-size:12px; color:#b0b0b0; margin-top:4px;'>Enter additional request body parameters in YAML format. (Advanced users only.)</div>";
+                echo "</div>";
                 echo "<div style='margin-top:10px; display:flex; gap:8px; align-items:center;'>";
                 // Seems not working on profiles tab, so not print
                 //echo "<button type='button' id='btn_clear_adv' class='btn-danger'>Clear advanced settings</button>";
@@ -499,6 +558,41 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
             </div>
         </div>
     </form>
+    
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js'></script>
+    <script>
+    (function(){
+        if (!window.ace || !window.jsyaml) return;
+        var containers = document.querySelectorAll('.extra_parameters_editor_container');
+        var editors = [];
+        containers.forEach(function(container, index){
+            var wrapper = container.parentElement;
+            var ta = wrapper ? wrapper.querySelector('.extra_parameters_yaml') : null;
+            if (!ta) return;
+            var editor = ace.edit(container);
+            editor.setTheme('ace/theme/ambiance');
+            editor.session.setMode('ace/mode/yaml');
+            editor.setOption('cursorStyle', 'ace');
+            editor.setValue(ta.value || '', -1);
+            editor.session.on('change', function(){
+                ta.value = editor.getValue();
+            });
+            editors.push({editor: editor, textarea: ta});
+        });
+        window.getExtraParameters = function(){
+            try {
+                var primaryEditor = editors.length > 0 ? editors[0] : null;
+                if (!primaryEditor) return {};
+                var yaml = primaryEditor.editor.getValue();
+                var obj = window.jsyaml.load(yaml);
+                if (typeof obj !== 'object' || obj === null) return {};
+                return obj;
+            } catch(e){ return {}; }
+        };
+    })();
+    </script>
+    
     <script>
     (function(){
         // Service selection logic for embedded editor
@@ -1169,9 +1263,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && (isset($_POST["save"]) || isset($_P
         // If checkbox not present, remove from metadata
         unset($metadata["remove_action_prompt"]);
     }
-    
+
+    // Persist extra_parameters from YAML editor
+    if (isset($_POST['extra_parameters_yaml'])) {
+        require_once __DIR__ . '/../../connector/parse_simple_yaml.php';
+        $extra_parameters = parse_simple_yaml($_POST['extra_parameters_yaml']);
+        if (is_array($extra_parameters)) {
+            $metadata['extra_parameters'] = $extra_parameters;
+        } else {
+            unset($metadata['extra_parameters']);
+        }
+    } else {
+        unset($metadata['extra_parameters']);
+    }
+
     $_POST["metadata"] = json_encode($metadata);
-    
+
     $llm->update($id, $_POST);
     $redir = 'llm_connectors.php' . ($id !== '' ? ('?edit=' . urlencode($id)) : '');
     if (isset($_POST['partial']) && $_POST['partial'] === 'editor') {
@@ -1725,9 +1832,22 @@ if (typeof window.consolidation !== 'function') {
                 echo "</div>";
             }
             echo "</div>";
+            // Ace editor for extra_parameters (YAML)
+            $extra_parameters_yaml = '';
+            if (isset($editItem['metadata'])) {
+                $meta = is_string($editItem['metadata']) ? json_decode($editItem['metadata'], true) : $editItem['metadata'];
+                if (is_array($meta) && isset($meta['extra_parameters']) && is_array($meta['extra_parameters'])) {
+                    $extra_parameters_yaml = array_to_yaml($meta['extra_parameters']);
+                }
+            }
+            echo "<div style='margin-top:18px;'>";
+            echo "<label for='extra_parameters_yaml' style='font-weight:600; color:#e9efff; display:block; margin-bottom:6px;'>Include Body Parameters (YAML)</label>";
+            echo "<div class='extra_parameters_editor_container' style='height:120px; width:100%; border-radius:6px; border:1px solid #4a4a4a; background:#181a20; color:#e9efff;'></div>";
+            echo "<textarea class='extra_parameters_yaml' name='extra_parameters_yaml' style='display:none;'>" . htmlspecialchars($extra_parameters_yaml) . "</textarea>";
+            echo "<div style='font-size:12px; color:#b0b0b0; margin-top:4px;'>Enter additional request body parameters in YAML format. (Advanced users only.)</div>";
+            echo "</div>";
             echo "<div style='margin-top:10px; display:flex; gap:8px; align-items:center;'>";
             echo "<button type='button' id='btn_clear_adv' class='btn-danger'>Clear advanced settings</button>";
-            echo "</div>";
             echo "</div>";
             ?>
         </div>
@@ -2151,6 +2271,50 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
  include(__DIR__."/tmpl/metadata_json_editor.php");
  ?>
 
+<script src='https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.js'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js'></script>
+<script>
+(function(){
+    if (!window.ace || !window.jsyaml) return;
+    var containers = document.querySelectorAll('.extra_parameters_editor_container');
+    var editors = [];
+    containers.forEach(function(container, index){
+        // Find the textarea sibling - it should be the next sibling or nearby in the parent
+        var wrapper = container.parentElement;
+        var ta = wrapper ? wrapper.querySelector('.extra_parameters_yaml') : null;
+        
+        if (!ta || !ta.value) {
+            console.log('Editor ' + index + ': textarea not found or empty');
+        }
+        
+        if (!ta) return;
+        
+        // Create unique editor instance
+        var editor = ace.edit(container);
+        editor.setTheme('ace/theme/ambiance');
+        editor.session.setMode('ace/mode/yaml');
+        editor.setOption('cursorStyle', 'ace');
+        editor.setValue(ta.value || '', -1);
+        
+        editor.session.on('change', function(){
+            ta.value = editor.getValue();
+        });
+        
+        editors.push({editor: editor, textarea: ta});
+    });
+    
+    window.getExtraParameters = function(){
+        try {
+            var primaryEditor = editors.length > 0 ? editors[0] : null;
+            if (!primaryEditor) return {};
+            var yaml = primaryEditor.editor.getValue();
+            var obj = window.jsyaml.load(yaml);
+            if (typeof obj !== 'object' || obj === null) return {};
+            return obj;
+        } catch(e){ return {}; }
+    };
+})();
+</script>
 </main>
 
 <?php
