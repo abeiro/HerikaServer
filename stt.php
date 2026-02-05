@@ -7,11 +7,15 @@ $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
 require_once($path . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
 require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
+require_once($path . "lib" .DIRECTORY_SEPARATOR."pipeline_status.php");
 
 
 $startTime = microtime(true);
 Logger::trace("Audit run ID: " . $GLOBALS["AUDIT_RUNID"]. " (STT) started: ".$startTime);
 $GLOBALS["AUDIT_RUNID_REQUEST"]="STT";
+
+// Set STT processing status
+pipeline_status_set('stt', true);
 
 $finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_stt_".md5($_FILES["file"]["tmp_name"]).".wav";
 
@@ -49,6 +53,9 @@ if ($STTFUNCTION=="azure") {
     require_once($path."stt/stt-none.php");
     $text= stt($finalName);
 } 
+
+// Clear STT processing status
+pipeline_status_set('stt', false);
 
 echo $text;
 

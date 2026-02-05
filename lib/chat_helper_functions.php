@@ -899,6 +899,9 @@ function returnLines($lines,$writeOutput=true)
                 }
             }
 
+            // Set TTS processing status
+            pipeline_status_set('tts', true);
+
             // Generate regular TTS (either full text if no narration, or just dialogue after narration)
             if ($GLOBALS["TTSFUNCTION"] == "azure") {
 
@@ -991,6 +994,10 @@ function returnLines($lines,$writeOutput=true)
                 if (isset($GLOBALS["TTS_FALLBACK_FNCT"]))
                     $ttsOutput = $GLOBALS["TTS_FALLBACK_FNCT"]($responseForTTS, $mood, $responseForSubtitles);
             }
+            
+            // Clear TTS processing status
+            pipeline_status_set('tts', false);
+            
             $GLOBALS["TRACK"]["FILES_GENERATED"][] = $ttsOutput;
             if (trim($responseText)) {
                 $talkedSoFar[] = $responseText;
