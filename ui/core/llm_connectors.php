@@ -23,8 +23,9 @@ function array_to_yaml($arr, $indent = 0) {
                 foreach ($v as $item) {
                     if (is_bool($item)) {
                         $items[] = $item ? 'true' : 'false';
-                    } elseif (is_string($item) && (strpos($item, ' ') !== false || strpos($item, ',') !== false)) {
-                        $items[] = '"' . $item . '"';
+                    } elseif (is_string($item)) {
+                        // Always quote strings to preserve them
+                        $items[] = '"' . addslashes($item) . '"';
                     } else {
                         $items[] = $item;
                     }
@@ -38,6 +39,9 @@ function array_to_yaml($arr, $indent = 0) {
         } else {
             if (is_bool($v)) {
                 $val = $v ? 'true' : 'false';
+            } elseif (is_string($v)) {
+                // Quote string values to preserve them
+                $val = '"' . addslashes($v) . '"';
             } else {
                 $val = $v;
             }

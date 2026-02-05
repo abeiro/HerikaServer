@@ -45,10 +45,11 @@ function parse_simple_yaml($yaml) {
                     } elseif (strtolower($item) === 'null') {
                         $parsedVal[] = null;
                     } else {
-                        // Remove quotes if present
+                        // Remove quotes if present and unescape
                         if ((($item[0] === '"' && $item[strlen($item)-1] === '"') || 
                              ($item[0] === "'" && $item[strlen($item)-1] === "'"))) {
-                            $parsedVal[] = substr($item, 1, -1);
+                            $unquoted = substr($item, 1, -1);
+                            $parsedVal[] = stripslashes($unquoted);
                         } else {
                             $parsedVal[] = $item;
                         }
@@ -63,10 +64,11 @@ function parse_simple_yaml($yaml) {
             } elseif (strtolower($val) === 'null') {
                 $parsedVal = null;
             } else {
-                // Remove quotes if present
+                // Remove quotes if present and unescape
                 if ((($val[0] === '"' && $val[strlen($val)-1] === '"') || 
                      ($val[0] === "'" && $val[strlen($val)-1] === "'"))) {
-                    $parsedVal = substr($val, 1, -1);
+                    $unquoted = substr($val, 1, -1);
+                    $parsedVal = stripslashes($unquoted);
                 } else {
                     $parsedVal = $val;
                 }
