@@ -5,7 +5,9 @@ header("Pragma: no-cache"); // HTTP 1.0
 header("Expires: 0"); // Proxies
 
 error_reporting(E_ERROR);
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 ob_start();
 
