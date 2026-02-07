@@ -92,6 +92,6 @@ function stt($file)
 
     $result = isset($reponseParsed->text) ? $reponseParsed->text : '';
     $elapsed = microtime(true) - $startTime;
-    error_log("Transcription time: " . round($elapsed * 1000, 2) . "ms (success)");
+    error_log("Transcription time: " . round($elapsed * 1000, 2) . "ms (success) {$result}");
     return $result;
 }

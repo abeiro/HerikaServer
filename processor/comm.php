@@ -483,6 +483,13 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             // Ensure companion field has same format as DataBeingsInCloseRange
             $companionsReformatStr="|".(implode("|",$speech["companions"]))."|";
         }
+        
+        // Store distance for shouting detection
+        $distance = isset($speech["distance"]) ? floatval($speech["distance"]) : 0.0;
+        
+        // Store distance globally for context building
+        $GLOBALS["LAST_SPEECH_DISTANCE"] = $distance;
+        
         $db->insert(
             'speech',
             array(

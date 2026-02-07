@@ -10,13 +10,13 @@
 // Common patterns to use in most functions
 $MAXIMUM_WORDS=($GLOBALS["MAX_WORDS_LIMIT"]>0)?"(Maximum {$GLOBALS["MAX_WORDS_LIMIT"]} words)":"";
 
-// Database Prompt (Dialogue)
-$TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should be a casual direct reaction to what was just said." . 
-" Avoid narrations, be original, creative, knowledgeable, use your own thoughts. " . 
-" Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines." . 
-" {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines will use this format \"{$GLOBALS["HERIKA_NAME"]}: ";
+// Database Prompt (Prose/Narration)
+$TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next prose/narration as a casual direct reaction to what was just said." . 
+" Be original, creative, knowledgeable, use your own thoughts. " . 
+" Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines." . 
+" {$GLOBALS["HERIKA_NAME"]}'s next lines will use this format \"{$GLOBALS["HERIKA_NAME"]}: ";
 
-// Database Prompt (Dialogue)
+// Database Prompt (Prose/Narration)
 // "should be a casual direct reaction to what was just said" is not always true, maybe last line was the same NPC,
 // and is repeating (not copying) this same line, because is the 'direct reaction to what was just said'
 // Example:
@@ -24,9 +24,9 @@ $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line should b
 // (a funcrec event comes, which just write  something into context. )
 // Morgan|ScriptQueue|Wrestling, you say? Now *that* sounds like a fun way to get acquainted.//Vixi Talax//
 //
-$TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line." . 
+$TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next prose/narration." . 
 " Be original, creative, knowledgeable, use your own thoughts. " . 
-" Review dialogue history to focus on conversation topic and to avoid repeating sentences and phraseology from previous dialog lines." . 
+" Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines." . 
 "";
 
 // Add narration instruction if inline narration is enabled (default to false if not set)
@@ -50,8 +50,8 @@ if ($inlineNarrationEnabled) {
     $TEMPLATE_DIALOG .= " " . $inlineNarrationPrompt;
 }
 
-// To keep the original one
-// $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line using this format \"{$GLOBALS["HERIKA_NAME"]}: ";
+// Legacy format reference (prose-friendly update applied)
+// $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next prose/narration using this format \"{$GLOBALS["HERIKA_NAME"]}: ";
 
 
 
@@ -77,27 +77,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
 }
 
 // Database Prompt (Dialogue should all be one)
-/* aren't these redundant?
-if (DMgetCurrentModel()=="openaijson") {
-    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines. Avoid narrations.";
-    $TEMPLATE_ACTION="";
-}
-
-if (DMgetCurrentModel()=="google_openaijson") {
-    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines. Avoid narrations.";
-    $TEMPLATE_ACTION="";
-}
-
-if (DMgetCurrentModel()=="koboldcppjson") {
-    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines. Avoid narrations.";
-    $TEMPLATE_ACTION="";
-}
-
-if (DMgetCurrentModel()=="openrouterjson") {
-    $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next dialogue lines. Avoid narrations.";
-    $TEMPLATE_ACTION="";
-}
-  */
+/* Legacy model-specific overrides removed - prose/narration now handled uniformly */
   
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"dialogue_prompt.php");
 

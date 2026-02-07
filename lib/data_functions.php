@@ -372,6 +372,24 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         }
                     }
                     
+                    // Power Awareness: Add relative power assessment for player
+                    if (isset($GLOBALS["POWER_AWARENESS_ENABLED"]) && $GLOBALS["POWER_AWARENESS_ENABLED"]) {
+                        require_once(__DIR__ . DIRECTORY_SEPARATOR . "power_awareness.php");
+                        
+                        // Get player's level
+                        $playerLevel = getPlayerLevel();
+                        
+                        // Get assessing actor's level (the NPC looking at the player)
+                        if (!empty($GLOBALS["HERIKA_NAME"])) {
+                            $assessorLevel = getNpcLevel($GLOBALS["HERIKA_NAME"]);
+                            
+                            if ($assessorLevel !== null && $playerLevel !== null) {
+                                $powerComparison = calculatePowerComparison($assessorLevel, $playerLevel);
+                                $profileString .= " ({$powerComparison})";
+                            }
+                        }
+                    }
+                    
                 } catch (Exception $e) {
                     Logger::debug("Could not load player data for context: " . $e->getMessage());
                 }
@@ -435,6 +453,24 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $heightDesc = getHeightDescription(floatval($metaData["stats"]["scale"]));
                         if (!empty($heightDesc)) {
                             $profileString .= ". " . $heightDesc;
+                        }
+                    }
+                    
+                    // Power Awareness: Add relative power assessment
+                    if (isset($GLOBALS["POWER_AWARENESS_ENABLED"]) && $GLOBALS["POWER_AWARENESS_ENABLED"]) {
+                        require_once(__DIR__ . DIRECTORY_SEPARATOR . "power_awareness.php");
+                        
+                        // Get current NPC's level
+                        $npcLevel = isset($metaData["stats"]["level"]) ? intval($metaData["stats"]["level"]) : null;
+                        
+                        // Get assessing actor's level (the NPC looking at this person)
+                        if (!empty($GLOBALS["HERIKA_NAME"])) {
+                            $assessorLevel = getNpcLevel($GLOBALS["HERIKA_NAME"]);
+                            
+                            if ($assessorLevel !== null && $npcLevel !== null) {
+                                $powerComparison = calculatePowerComparison($assessorLevel, $npcLevel);
+                                $profileString .= " ({$powerComparison})";
+                            }
                         }
                     }
                     

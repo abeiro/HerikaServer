@@ -46,6 +46,7 @@ require_once($path . "lib/core/tts_connector.class.php");
 require_once($path . "lib/core/npc_master.class.php");
 require_once($path . "lib/core/core_profiles.class.php");
 require_once($path . "lib/semaphore_manager.class.php");
+require_once($path . "lib/pipeline_status.php");
 
 // PARSE GET RESPONSE into $gameRequest
 $cooldownPeriod = 600;
@@ -617,6 +618,14 @@ if (isset($_GET["profile"])) {
             
             $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
             
+            // Update pipeline status with mode and connector info
+            $currentMode = $GLOBALS["db"]->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
+            pipeline_status_set_context(
+                $currentMode['value'] ?? 'STANDARD',
+                $currentConnectorData['label'] ?? '',
+                $currentConnectorData['model'] ?? ''
+            );
+            
             error_log("[CORE SYSTEM] Using Narrator profile from core_narrator table, profile: {$currentProfileData["label"]}");
         } else {
             error_log("[CORE SYSTEM] Narrator profile not found, using defaults");
@@ -679,6 +688,14 @@ if (isset($_GET["profile"])) {
         $npcMaster->updateByArray($currentNpcData);
         
         $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
+        
+        // Update pipeline status with connector info
+        $currentMode = $GLOBALS["db"]->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
+        pipeline_status_set_context(
+            $currentMode['value'] ?? 'STANDARD',
+            $currentConnectorData['label'] ?? '',
+            $currentConnectorData['model'] ?? ''
+        );
         
         @error_log("[CORE SYSTEM] Using new profile system , GLOBALS['LLM_LANG']:{$GLOBALS["LLM_LANG"]} profile: {$currentProfileData["label"]}");
         @error_log("[CORE SYSTEM] GLOBALS['LLM_LANG']:{$GLOBALS["LLM_LANG"]} GLOBALS['PATCH_OVERRIDE_TTS_LANGUAGE']:{$GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]}");
@@ -2049,6 +2066,11 @@ if (isset($GLOBALS["TTSFUNCTION"]) && !empty($GLOBALS["TTSFUNCTION"])) {
     }
 }
 
+
+// Check for context overrides on ext dir (plugins)
+requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
+
+
 if (!empty($GLOBALS["OGHMA_HINT"])) {
 
     $head[] = array('role' => 'system', 'content' =>  
@@ -2067,12 +2089,6 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
     $GLOBALS["COMMAND_PROMPT"] = "";
 }
 
-
-
-
-
-// Check for context overrides on ext dir (plugins)
-requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
 
 // audit_log(__FILE__." [PLUGINS CONTEXT]  ".__LINE__);
 
@@ -2196,7 +2212,13 @@ CALL INITIALIZATION
 
 audit_log(__FILE__." [PRE LLM CALL]  ".__LINE__);
 
+// Set LLM processing status
+pipeline_status_set('llm', true);
+
 $outputWasValid = call_llm();
+
+// Clear LLM processing status
+pipeline_status_set('llm', false);
 
 if (!$outputWasValid) {
     Logger::warn("LLM returned invalid output.");

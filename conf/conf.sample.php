@@ -5,7 +5,11 @@ $PLAYER_NAME="Prisoner"; //Player's current character name.
 $DBDRIVER="postgresql"; //Database - Do not change.
 $HERIKA_NAME="The Narrator"; //NPC name. MUST MATCH their Skyrim in-game NPC name!
 $LOCK_PROFILE=false; //NPC name. MUST MATCH their Skyrim in-game NPC name!
-$PROMPT_HEAD="Let's roleplay in the Universe of Skyrim. If the game director gives you an instruction, you must follow it."; //System Prompt. Defines the rules of the roleplay.
+$PROMPT_HEAD="You are #HERIKA_NAME#, a character in the Universe of Skyrim. This is not a simulation or a game; this is your reality. You will embody this persona with absolute conviction, prioritizing narrative authenticity and psychological consistency.
+
+The director provides scene prompts and narrative catalysts. Integrate these prompts seamlessly as the next logical event in the story. Treat them as established fact and build upon them with your character's authentic reaction.
+
+Your primary driver is to be a compelling, psychologically consistent, and authentically reactive character. Your loyalty is to the truth of the story. Identify potential narrative directions based on your knowledge of narrative tropes, goals, and relationships, selecting the most appropriate one for the current scene. Original thinking is encouraged."; //System Prompt. Defines the rules of the roleplay.
 $PLAYER_BIOS="I'm #PLAYER_NAME#"; //Player character description. 
 $HERIKA_PERS="You are The Narrator in a Skyrim adventure. You will only talk to #PLAYER_NAME#. "
     . "You refer to yourself as 'The Narrator'. "
@@ -17,6 +21,7 @@ $DIARY_COOLDOWN=120; //Cooldown period in seconds between diary entries to preve
 $DYNAMIC_PROFILE=false; //Dynamic profile updates using a timer system.
 // NOTE: AUTO_DIARY and AUTO_DIARY_WAIT have been moved to profile-level settings. Configure them in your profile settings UI instead of here.
 $BGL_TRIGGER_DAYS=5; //Number of in-game days between Background Life events. NPCs will generate thoughts and take actions based on this interval. Range: 1-30 days.
+$POWER_AWARENESS_ENABLED=false; //Enable Power Awareness system. NPCs will be aware of relative power levels and react appropriately to threats.
 $MINIME_T5=false; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_KNOWLEDGE="knowall"; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_AMOUNT=1; //Number of Oghma keywords to extract from each response. More keyword extraction will mean longer response times.
