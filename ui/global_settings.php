@@ -1,6 +1,8 @@
 <?php
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
@@ -123,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test'])) {
 
 // If TTS quick test was requested via AJAX, return JSON and exit early
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test']) && isset($_POST['ajax'])) {
-    while (@ob_end_clean());
+    while (ob_get_level() > 0) { @ob_end_clean(); }
     header('Content-Type: application/json');
     echo json_encode([
         'ok' => ($ttsTestOutputUrl !== ''),
@@ -643,7 +645,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
 		@clearstatcache(true, $target);
 		if (function_exists('opcache_invalidate')) { @opcache_invalidate($target, true); }
         Logger::info("Global settings saved to conf.php by UI");
-		while (@ob_end_clean());
+		while (ob_get_level() > 0) { @ob_end_clean(); }
 		$redirectUrl = strtok($_SERVER['REQUEST_URI'], '?') . '?_ts=' . time();
 		header("Location: " . $redirectUrl);
 		exit;

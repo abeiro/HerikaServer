@@ -994,7 +994,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                     <?php endif; ?>
                     <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                 <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
-                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
+                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock - Locked profiles are protected from history pullback when loading saves"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
                 <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : "return confirm('Delete this NPC?');" ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">🗑️</a>
                 </div>
             </div>
@@ -1335,7 +1335,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <p style="margin:0; color:rgb(242, 124, 17) ;">Tags:</p>
         <input type="text" id="modal_tags_input" name="tags" value="<?= htmlspecialchars($editItem['tags'] ?? '') ?>" placeholder="tags" style="max-width:240px; font-size:12px; padding:4px 6px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff;" title="Tags help with searching and grouping" />
         <a id="modal_fav_btn" class="btn btn-toggle<?= $isFav? ' active':'' ?>" href="#" title="Toggle favorite" data-favorite><?= $isFav? '★' : '☆' ?></a>
-        <a id="modal_lock_btn" class="btn btn-toggle<?= $isLock? ' active':'' ?>" href="#" title="Toggle lock" data-lock><?= $isLock? '🔒' : '🔓' ?></a>
+        <a id="modal_lock_btn" class="btn btn-toggle<?= $isLock? ' active':'' ?>" href="#" title="Toggle lock - Locked profiles are protected from history pullback when loading saves" data-lock><?= $isLock? '🔒' : '🔓' ?></a>
     </div>
     <?php
     // Render LLM summary container (will live-update via JS)
@@ -2669,6 +2669,13 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     ℹ️ The narrator has been moved to the <a href="<?php echo $webRoot; ?>/ui/core/config_hub.php?tab=narrator" style="color: #4a8ab6; text-decoration: underline;">Narrator menu</a>. You can copy over the values from the CHIM NPC narrator profile to here manually. We recommend you delete the NPC entry of the narrator.
 </p>
 <?php endif; ?>
+<div style="margin:10px 0; padding:10px 14px; background:rgba(242,124,17,0.08); border:1px solid rgba(242,124,17,0.25); border-radius:8px; font-size:12.5px; color:#cfd9ea; line-height:1.5;">
+  <strong style="color:rgb(242,124,17);">History Pullback:</strong>
+  Every time a save game is loaded, CHIM snapshots all NPC profiles and restores <strong>unlocked</strong> NPCs to their state at the save's Tamrielic timestamp.
+  Loading an older save will roll back unlocked profiles to that point in time. NPCs created <em>after</em> the save's timestamp may disappear entirely.
+  <span style="color:rgb(242,124,17);">Lock a profile (🔒) to protect it from pullback.</span>
+  You can view and restore previous versions of any NPC via the <strong>View History</strong> button in the edit modal.
+</div>
 <div class="npc-grid">
     <?php foreach ($data as $row): ?>
     <?php 
@@ -2740,7 +2747,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <?php endif; ?>
                 <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                 <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
-                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
+                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock - Locked profiles are protected from history pullback when loading saves"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
                 <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : "return confirm('Delete this NPC?');" ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">🗑️</a>
             </div>
         </div>
@@ -3862,7 +3869,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
               <div class="npc-title-actions">
                 <span class="npc-tags-top" style="display:none"></span>
                 <a class="btn btn-toggle" href="#" data-favorite-id="${id}" title="Toggle favorite">☆</a>
-                <a class="btn btn-toggle" href="#" data-lock-id="${id}" title="Toggle lock">🔓</a>
+                <a class="btn btn-toggle" href="#" data-lock-id="${id}" title="Toggle lock - Locked profiles are protected from history pullback when loading saves">🔓</a>
                 <a class="btn btn-trash" href="?delete=${id}" onclick="return confirm('Delete this NPC?');" title="Delete">🗑️</a>
               </div>
             </div>
