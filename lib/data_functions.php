@@ -4162,18 +4162,20 @@ function call_llm_internal() {
             $extractedData="";
             $buffer=$remainingData;
             //$user_input_after=$GLOBALS["db"]->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]"); //9.0ms
-            $user_input_after=$GLOBALS["db"]->fetchAll("select rowid as N from eventlog where type='user_input' and ts>$gameRequest[1] LIMIT 1"); // 2.1ms, faster than count(*)
-            if (isset($user_input_after[0]))
-                if (isset($user_input_after[0]["N"]))
-
-                    if ($user_input_after[0]["N"]>0) {
-                        
-                        Logger::info("Generation stopped because user_input. ".__FILE__." ".__LINE__." ".__FUNCTION__);
-                        die('X-CUSTOM-CLOSE');
-                        // Abort , user input detected
-                    }
+            
 
         }
+        // This is intended to stop the generation as soon as user input is detected, so we will attend new request instead of keeping generating this
+        $user_input_after=$GLOBALS["db"]->fetchAll("select rowid as N from eventlog where type='user_input' and ts>$gameRequest[1] LIMIT 1"); // 2.1ms, faster than count(*)
+        if (isset($user_input_after[0]))
+            if (isset($user_input_after[0]["N"]))
+                if ($user_input_after[0]["N"]>0) {
+                    Logger::info("Generation stopped because user_input. ".__FILE__." ".__LINE__." ".__FUNCTION__);
+                    error_log("Generation stopped because user_input. ".__FILE__." ".__LINE__." ".__FUNCTION__);
+                    $connectionHandler->close();
+                    die('X-CUSTOM-CLOSE');
+                    // Abort , user input detected
+                }
 
     } // --- end while
     
@@ -4421,6 +4423,63 @@ function call_llm_internal() {
                                 } else if (stripos($destination,"outside")!==false) {
                                     $destination=DataLastKnownLocationHuman(true,false);
                                     error_log("[ACTION POSTFILTER TravelTo] reference to outside detected , $localtarget => $destination");
+                                    
+                                } else
+                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$destination";
+                            }
+                            
+                        } else if ($actionParts2[0]=="MoveTo") {
+                            // Lets polish the parammeters
+                            $localtarget=$actionParts2[1];
+                            $mang1=explode(",",$localtarget);
+                            $mang2=explode(" and ",$mang1[0]);
+                            $mang3=explode("(",$mang2[0]);
+                            $mang4=explode("--",$mang3[0]);
+                            
+                            $destination=$mang4[0];
+
+                            error_log("[ACTION POSTFILTER MoveTo]  $localtarget => {$mang4[0]} => $destination");
+
+                            //MoveTo will be rewritten as TravelTo with some post-filtering, to avoid confusion with Follow action and also to be able to apply some heuristics to polish the destination parameter, which is usually the most error-prone one.
+
+                            $destinationName=$GLOBALS["db"]->escape(trim($destination));
+                            $dbDestination=$GLOBALS["db"]->fetchOne("SELECT name, similarity(name, '$destinationName') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
+                            $dbDestinationRegion=$GLOBALS["db"]->fetchOne("SELECT name, similarity(region, '$destinationName') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
+
+                            $contextDestinations=DataPosibleLocationsToGo();
+
+                            if (in_array(trim($localtarget),$contextDestinations)) {
+                                // Perfect match
+                                error_log("[ACTION POSTFILTER MoveTo] Seems valid as-is (context destination): <$localtarget> => $localtarget");
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$localtarget";
+
+                            } else if (in_array($destination,$contextDestinations)) {
+                                error_log("[ACTION POSTFILTER MoveTo] Seemd valid (context destination): $localtarget => $destination");
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$destination";
+
+                            } else {
+                                if (isset($GLOBALS["NPC_ROLEMASTERED"]) && $GLOBALS["NPC_ROLEMASTERED"]) {
+                                    if (stripos($destination,"home")===0) {
+                                        // Rolemastered NPC wants to return back home
+                                        $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|ReturnBackHome@"; 
+                                        continue;
+
+                                    }
+
+                                } 
+                                if (is_array($dbDestination) && isset($dbDestination["formid"])) {
+                                    $destination=$dbDestination["formid"];
+                                    error_log("[ACTION POSTFILTER MoveTo] found database entry for $localtarget => $destination => {$dbDestination["name"]}, similarity ({$dbDestination["sim"]})");
+                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelToRaw@$destination";    
+                                
+                                } else if (is_array($dbDestinationRegion) && isset($dbDestinationRegion["formid"])) {
+
+                                    $destination=$dbDestinationRegion["formid"];
+                                    error_log("[ACTION POSTFILTER MoveTo] found database (searching by region) entry for $localtarget => $destination => {$dbDestinationRegion["name"]}, similarity ({$dbDestinationRegion["sim"]})");
+                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelToRaw@$destination";    
+                                } else if (stripos($destination,"outside")!==false) {
+                                    $destination=DataLastKnownLocationHuman(true,false);
+                                    error_log("[ACTION POSTFILTER MoveTo] reference to outside detected , $localtarget => $destination");
                                     
                                 } else
                                     $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$destination";
