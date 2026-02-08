@@ -8,6 +8,7 @@ define("_MAX_SUBTITLE_LENGTH", 1000);
 
 require_once(__DIR__."/online_translation.php");
 require_once(__DIR__."/utils_game_timestamp.php");
+require_once(__DIR__."/pipeline_status.php");
 
 function randomReplaceShortWordsWithPoints($inputString, $distance)
 {
@@ -520,7 +521,7 @@ function unmoodSentence($sentence) {
     
 
     if ($processAsterisks === true ) {
-        error_log("[unmoodSentence] REMOVE_ASTERISKS_FROM_OUTPUT FULL is active! $sentence <{$GLOBALS['strip_emotes_from_output']}> <{$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']}>" );
+        error_log("[unmoodSentence] REMOVE_ASTERISKS_FROM_OUTPUT FULL is active! $sentence <" . ($GLOBALS['strip_emotes_from_output'] ?? 'N/A') . "> <" . ($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] ?? 'N/A') . ">" );
 
         // If the entire message is wrapped in asterisks, strip them from both ends
         if (str_starts_with($output, '*') && str_ends_with($output, '*')) {
