@@ -36,6 +36,22 @@ $sinceGamets = isset($_GET["since_gamets"]) ? intval($_GET["since_gamets"]) : 0;
 // Base event type filter
 $typeFilter = "type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import','backgroundaction','innerchat','npc_reanimated')";
 
+// If specific event types are requested (for MCM conversation history panel)
+if (isset($_GET["event_types"]) && !empty($_GET["event_types"])) {
+    $allowedTypes = explode(',', $_GET["event_types"]);
+    $allowedTypes = array_map('trim', $allowedTypes);
+    $allowedTypes = array_filter($allowedTypes);
+    
+    if (!empty($allowedTypes)) {
+        // Sanitize and quote each type for SQL
+        $quotedTypes = array_map(function($type) use ($db) {
+            return "'" . $db->escape($type) . "'";
+        }, $allowedTypes);
+        
+        $typeFilter = "type IN (" . implode(',', $quotedTypes) . ")";
+    }
+}
+
 // Build query based on filtering options
 if ($sinceGamets > 0) {
     // Filter by game timestamp - get events since a specific in-game time
