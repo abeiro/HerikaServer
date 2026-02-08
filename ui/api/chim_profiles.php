@@ -11,10 +11,10 @@ require_once(__DIR__ . "/../../conf/conf.php");
 require_once(__DIR__ . "/../../lib/db/{$GLOBALS["DBDRIVER"]}.class.php");
 
 try {
-    $db = new Sql();
+    $db = new sql();
     
-    // Get all profiles with slots 1-4
-    $profiles = [];
+    // Get profile slots and their connectors (same structure as chim_overlay.php)
+    $profileSlots = [];
     for ($slot = 1; $slot <= 4; $slot++) {
         $profile = $db->fetchOne("
             SELECT 
@@ -52,8 +52,7 @@ try {
                     ");
                     
                     if ($connector) {
-                        $connectors[] = [
-                            'slot_name' => $slotNames[$idx],
+                        $connectors[$slotNames[$idx]] = [
                             'label' => $connector['label'],
                             'model' => $connector['model'],
                             'driver' => $connector['driver']
@@ -62,24 +61,16 @@ try {
                 }
             }
             
-            $profiles[] = [
-                'slot' => $slot,
+            $profileSlots[$slot] = [
                 'profile_name' => $profile['label'],
                 'connectors' => $connectors
-            ];
-        } else {
-            // Slot not configured
-            $profiles[] = [
-                'slot' => $slot,
-                'profile_name' => 'Unconfigured',
-                'connectors' => []
             ];
         }
     }
     
     echo json_encode([
         'success' => true,
-        'profiles' => $profiles,
+        'profile_slots' => $profileSlots,
         'timestamp' => time()
     ]);
     
@@ -89,6 +80,6 @@ try {
     echo json_encode([
         'success' => false,
         'error' => 'Internal server error',
-        'profiles' => []
+        'profile_slots' => []
     ]);
 }
