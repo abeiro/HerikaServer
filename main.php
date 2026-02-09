@@ -2067,9 +2067,8 @@ if (isset($GLOBALS["TTSFUNCTION"]) && !empty($GLOBALS["TTSFUNCTION"])) {
 }
 
 
-// Check for context overrides on ext dir (plugins)
-error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)."");
-requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
+// Check for context overrides on ext dir (plugins) before system prompt build
+requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context_pre.php");
 
 
 if (!empty($GLOBALS["OGHMA_HINT"])) {
@@ -2090,6 +2089,8 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
     $GLOBALS["COMMAND_PROMPT"] = "";
 }
 
+// Check for context overrides on ext dir (plugins) after system prompt build
+requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
 
 // audit_log(__FILE__." [PLUGINS CONTEXT]  ".__LINE__);
 

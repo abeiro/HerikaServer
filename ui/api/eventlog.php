@@ -33,8 +33,25 @@ $offset = ($page - 1) * $limit;
 $sinceRowId = isset($_GET["since_rowid"]) ? intval($_GET["since_rowid"]) : 0;
 $sinceGamets = isset($_GET["since_gamets"]) ? intval($_GET["since_gamets"]) : 0;
 
-// Base event type filter
-$typeFilter = "type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import','backgroundaction','innerchat','npc_reanimated')";
+// Base event type filter - exclude internal events and location context
+$typeFilter = "type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import','backgroundaction','innerchat','npc_reanimated','infoloc','location')";
+
+// If specific event types are requested (for MCM conversation history panel)
+if (isset($_GET["event_types"]) && !empty($_GET["event_types"])) {
+    $allowedTypes = explode(',', $_GET["event_types"]);
+    $allowedTypes = array_map('trim', $allowedTypes);
+    $allowedTypes = array_filter($allowedTypes);
+    
+    if (!empty($allowedTypes)) {
+        // Sanitize and quote each type for SQL
+        $quotedTypes = array_map(function($type) use ($db) {
+            return "'" . $db->escape($type) . "'";
+        }, $allowedTypes);
+        
+        $typeFilter = "type IN (" . implode(',', $quotedTypes) . ")";
+        // Note: Background chat filtering is handled by JavaScript on the client side
+    }
+}
 
 // Build query based on filtering options
 if ($sinceGamets > 0) {
@@ -58,7 +75,7 @@ if ($sinceGamets > 0) {
          LIMIT 50"
     );
 } else {
-    // Normal paginated query - get most recent events by gamets
+    // Normal paginated query - get most recent events by game timestamp (gamets)
     $results = $db->fetchAll(
         "SELECT type, data, people, gamets, localts, ts, rowid
          FROM eventlog a
@@ -133,8 +150,8 @@ $mappedResults = array_map(function ($row) use ($columnHeaders) {
     return $mappedRow;
 }, $results);
 
-// Get total count for pagination info
-$countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','backgroundaction','innerchat','npc_reanimated')";
+// Get total count for pagination info - also exclude location types
+$countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','backgroundaction','innerchat','npc_reanimated','infoloc','location')";
 $countResult = $db->fetchAll($countQuery);
 $totalRecords = $countResult[0]['total'];
 $totalPages = ceil($totalRecords / $limit);
