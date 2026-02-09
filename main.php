@@ -92,7 +92,7 @@ ignore_user_abort(true);
 set_time_limit(1200);
 
 $momentum=time();
-
+$GLOBALS["runid"]=uniqid("run_",false);
 // Array with sentences talked so far
 $talkedSoFar = array();
 
@@ -2068,6 +2068,7 @@ if (isset($GLOBALS["TTSFUNCTION"]) && !empty($GLOBALS["TTSFUNCTION"])) {
 
 
 // Check for context overrides on ext dir (plugins)
+error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)."");
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
 
 
@@ -2095,6 +2096,7 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
 /**********************
 CALL BUILDING
 ***********************/
+error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)."");
 
 if ($gameRequest[0] == "funcret") {
 
@@ -2185,7 +2187,7 @@ if ($gameRequest[0] == "funcret") {
     
 }
 
-error_log("SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
+error_log("*TRACE SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
 
 error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." secs building call");
 //returnLines(["Mmm..let me think"]);

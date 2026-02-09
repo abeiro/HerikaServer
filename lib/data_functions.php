@@ -759,8 +759,10 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     }
         
 
-    //$lastDialog[]=array('role' => 'user', 'content' => $GLOBALS["PROMPT_NEARBY_SECTIONS"]);
-    // this is going to return nothing
+    $lastDialog=[];
+    // This function originally returned an array, now it's directly filling PROMPT_NEARBY_SECTIONS.
+    // MUST return an array, even if empty; Review where is called to ensure it's handled properly
+    // Proposal: $lastDialog[]=array('role' => 'user', 'content' => $GLOBALS["PROMPT_NEARBY_SECTIONS"]);
     return $lastDialog;
 
 }
