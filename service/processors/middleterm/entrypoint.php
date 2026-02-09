@@ -48,7 +48,8 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
 
                 // Remove the pending event from extended_data
                 unset($extendedData['pending_delayed_event']);
-                $npcMaster->setExtendedData($npc, $extendedData);
+                $npc = $npcMaster->setExtendedData($npc, $extendedData);
+                $npcMaster->updateByArray($npc);
 
                 logger::info("[DELAYED-EVENT] Event posted and cleared for {$npc['npc_name']}");
             } else {
@@ -139,6 +140,9 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
 
     // Process delayed events for BgL NPCs
     processDelayedEvents($GLOBALS["db"], $enginePath);
+
+    // Process delayed speech events for BgL NPCs
+    processDelayedSpeechEvents($GLOBALS["db"], $enginePath);
 
     // BgL commands
     $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_commands' = 'true' ");

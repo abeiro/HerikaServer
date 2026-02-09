@@ -633,7 +633,8 @@ if (is_array($parsed)) {
 
             // Store in npcMaster extended_data
             $extendedData['pending_delayed_event'] = $delayedEvent;
-            $npcMaster->setExtendedData($currentNpcData, $extendedData);
+            $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extendedData);
+            $npcMaster->updateByArray($currentNpcData);
 
             error_log("[DELAYED-EVENT] Letter announcement event queued for {$GLOBALS["HERIKA_NAME"]}, will post after speech idle for 15s");
 
