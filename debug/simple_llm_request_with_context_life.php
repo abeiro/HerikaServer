@@ -610,6 +610,46 @@ if (is_array($parsed)) {
                 'localts' => time(),
             ]
         );
+
+        $narratorInstantLetter = true; //TODO make global / configurable
+        if($narratorInstantLetter) {
+            $taskId = uniqid();
+
+            $instructionText = "hey narrator, {$GLOBALS["HERIKA_NAME"]} has sent a letter to {$GLOBALS["PLAYER_NAME"]}, announce it, and you MUST include the content of <letter_content> verbatim in your response. (listener MUST be {$GLOBALS["PLAYER_NAME"]})";
+
+            // Format action string
+            $roleMasterAction = make_replacements("rolecommand|Instruction@The Narrator@{$instructionText}@$taskId");
+
+            // Store event as pending delayed event instead of inserting immediately
+            // This will be posted by middleterm processor after speech has been idle for 15+ seconds
+            $delayedEvent = array(
+                'localts' => time(),
+                'sent' => 0,
+                'actor' => "rolemaster",
+                'text' => '',
+                'action' => $roleMasterAction,
+                'tag' => ""
+            );
+
+            // Store in npcMaster extended_data
+            $extendedData['pending_delayed_event'] = $delayedEvent;
+            $npcMaster->setExtendedData($currentNpcData, $extendedData);
+
+            error_log("[DELAYED-EVENT] Letter announcement event queued for {$GLOBALS["HERIKA_NAME"]}, will post after speech idle for 15s");
+
+            $GLOBALS["db"]->insert(
+                'responselog',
+                array(
+                    'localts' => time(),
+                    'sent' => 0,
+                    'actor' => "rolemaster",
+                    'text' => '',
+                    'action' => "rolecommand|DebugNotification@Letter from {$GLOBALS["HERIKA_NAME"]}",
+                    'tag' => ""
+                )
+            );
+        }
+
         // Write into books table, books.php entrypoint will pickup and create new book entry when readed by player
         $GLOBALS["db"]->insert(
             'books',
