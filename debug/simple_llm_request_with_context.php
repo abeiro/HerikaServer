@@ -158,7 +158,7 @@ else {
             $breakFlag=true;
         }
         
-        $position = findDotPosition($buffer);
+        $position = findFastSentencePosition($buffer);
 
         if ($position !== false) {
             $extractedData = substr($buffer, 0, $position + 1);

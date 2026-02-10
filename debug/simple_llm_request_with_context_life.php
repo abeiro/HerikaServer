@@ -70,15 +70,16 @@ function loadBGLStylePrompt($promptKey, $replacements = [])
     global $db;
 
     try {
-        $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = '$promptKey'");
+        //TODO commented while working on default prompts
+        $promptData = false;//$db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = '$promptKey'");
 
         if (!$promptData) {
             error_log("[BGL] Style prompt not found: $promptKey - using fallback");
             // Fallback defaults
             if ($promptKey === 'background_life_letter') {
-                return "Write it as a letter to {PLAYER_NAME} from {HERIKA_NAME}. Use same language as <text>. IMPORTANT: Keep the letter SHORT and CONCISE - maximum 2-3 brief paragraphs.";
+                return "Write a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["HERIKA_NAME"]} based on the content of <text>. Use same language as <text>. Take into account the <speech_style> section for the writing style, and particularly <letter_guidance> if present. Do not include any meta-commentary or asside, only the content of the letter.";
             } else {
-                return "Read the following text, which represents a mental note or inner monologue of a character within the Skyrim universe.\nBased on the content of the text, propose one of the following actions that would make sense for the development of the story:";
+                return "Read the <text> content, which represents a mental note or inner monologue of the character within the Skyrim universe.\nBased on the content of the <text>, propose one of the defined actions that would make sense for the development of the story.";
             }
         }
 
@@ -95,9 +96,9 @@ function loadBGLStylePrompt($promptKey, $replacements = [])
         error_log("[BGL] Exception loading style prompt $promptKey: " . $e->getMessage());
         // Return fallback
         if ($promptKey === 'background_life_letter') {
-            return "Write it as a letter to {PLAYER_NAME} from {HERIKA_NAME}. Use same language as <text>. IMPORTANT: Keep the letter SHORT and CONCISE - maximum 2-3 brief paragraphs.";
+            return "Write it as a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["HERIKA_NAME"]}. Use same language as <text>.";
         } else {
-            return "Read the following text, which represents a mental note or inner monologue of a character within the Skyrim universe.\nBased on the content of the text, propose one of the following actions that would make sense for the development of the story:";
+            return "Read the following text, which represents a mental note or inner monologue of a character within the Skyrim universe.\nBased on the content of the <text>, propose one of the defined actions that would make sense for the development of the story:";
         }
     }
 }
@@ -133,7 +134,7 @@ $gameRequest = ["inputtext", "0", $last_gamets, $argv[1]];
 
 $request = $argv[1];
 
-$dynamicBiography = buildDynamicBiography($GLOBALS);
+$dynamicBiography = buildDynamicBiography($GLOBALS, true, true);
 $npcMaster = new NpcMaster();
 $currentNpcData = $npcMaster->getByName($argv[1]);
 $extended_data = $npcMaster->getExtendedData($currentNpcData);
@@ -173,8 +174,8 @@ if (($last_gamets - $lastItNumber) < ((24 * 3) / 0.0000024)) {
     $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extdata);
     $npcMaster->updateByArray($currentNpcData);
     error_log("[BACKGROUND LIFE] $npcNameEsc Last iteration less than 3 days ago");
-    
-    if (isset($argv[2]) && $argv[2] == "forceletter") 
+
+    if (isset($argv[2]) && $argv[2] == "forceletter")
         error_log("[BACKGROUND LIFE] $npcNameEsc Last iteration less than 3 days ago...bypassing by forceletter");
     else
         return;
@@ -400,11 +401,12 @@ The main character in this logbook is {$GLOBALS["HERIKA_NAME"]}.
 Read the context history (context_history) and the recent memories (middle_term_memory), paying attention to notable events and the names of relevant characters.
 
 Based on all this information, generate an inner thought - soliloquy for {$GLOBALS["HERIKA_NAME"]}.
-Take into account the <speech_style> section for the writing style.
+Take into account the <speech_style> section for the writing style, and particularly <inner_thought_guidance> if present.
 
 This soliloquy should reflect what the character might have done over the last $daysPassed day(s):
 
- * What activities they have engaged in. Detalied list.
+ * Details of set tasks if given 
+ * What activities they have engaged in. Detailed list.
  * What possible events or encounters might have occurred.
  * Intimate thoughts.
 
@@ -413,9 +415,10 @@ The character may express the intention to travel elsewhere, but such travel sho
 
 Important note: Character {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]} ARE NOT  IN THE SAME PLACE after <context_history> events.
 Write in english as if you were {$GLOBALS["HERIKA_NAME"]}, soliloquy, speaking to yourself in first person.
-
-IMPORTANT: Keep this inner thought short and concise - aim for 2-3 brief paragraphs maximum.
 ";
+
+//IMPORTANT: Keep this inner thought short and concise - aim for 2-3 brief paragraphs maximum.
+//";
 
 $metadata = json_decode($currentNpcData["metadata"], true);
 $metadata_p = json_decode($currentProfileData["metadata"], true);
@@ -460,7 +463,7 @@ $letterStyle = loadBGLStylePrompt('background_life_letter', [
 ]);
 
 // Build hardcoded prompt structure
-$promptContent = $innerThoughtStyle . "\n\n";
+$promptContent = "You are responsible for deciding an action, creating a rumor, and writing a letter based on the character's inner thoughts and the provided context.\n";
 $promptContent .= "Character's name is {$GLOBALS["HERIKA_NAME"]}.\n";
 $promptContent .= "$dynamicBiography\n\n";
 
@@ -471,6 +474,8 @@ if ($fullMode) {
 
 $promptContent .= "<text>\n$buffer\n</text>\n\n";
 
+$promptContent .= $innerThoughtStyle . "\n\n";
+
 // Hardcoded action definitions
 if ($fullMode) {
     $promptContent .= "Possible actions (check character's goals section):\n";
@@ -480,29 +485,33 @@ if ($fullMode) {
 } else {
     $promptContent .= "Possible actions:\n";
     $promptContent .= "StayAtPlace - The character remains in their current location, performing activities locally. Take into account how much time character has been at this location and is current task. If gathering info or spreading rumors, should stay at least 24 hours.\n";
-    $promptContent .= "SpreadRumor - Character activities generate rumors, also, character can explictly create a rumor. E.G. If character's goal or activity is to enforce local trade, create a rumor about local trading being enhaced.\n";
+    $promptContent .= "SpreadRumor - Character activities generate rumors, also, character can explictly create a rumor. E.G. If character's goal or activity is to enforce local trade, create a rumor about local trading being enhanced.\n";
 }
 
 // XML structure based on letter setting
 $numElements = $lettersEnabled ? 3 : 2;
-$promptContent .= "Your answer must use markup - XML like - format, containing exactly $numElements elements:\n\n";
+
+$promptContent .= "\nElement Definitions:\n```\n";
+
+// Field descriptions
+if ($fullMode) {
+    $promptContent .= "<action>: chosen action (e.g., StayAtPlace,TravelTo:<Place>,ReturnHome)\n";
+} else {
+    $promptContent .= "<action>: chosen action (StayAtPlace or SpreadRumor)\n";
+}
+$promptContent .= "<rumor>: rumor spread or created. rumor should be located and related to current character's location ($LAST_REPORTED_LOCATION), e.g if character is at Dawnstar, rumor should be Dawnstar related.\n";
+if ($lettersEnabled) {
+    $promptContent .= "<notification>: $letterStyle\n";
+}
+$promptContent .= "```\n\n- Your answer must use XML format, containing exactly $numElements elements\n".
+    " - NEVER include any commentary inside or outside of the element tags or ANY other content beyond the following defined format in your response.\n\n".
+    "Use only this exact Response Format:\n```\n";
 $promptContent .= "<action> ... </action>\n";
 $promptContent .= "<rumor> ... </rumor>\n";
 if ($lettersEnabled) {
     $promptContent .= "<notification> ... </notification>\n";
 }
-$promptContent .= "\n\nWhere:\n\n";
-
-// Field descriptions
-if ($fullMode) {
-    $promptContent .= "action: chosen action (e.g., StayAtPlace,TravelTo:<Place>,ReturnHome)\n";
-} else {
-    $promptContent .= "action: chosen action (StayAtPlace or SpreadRumor)\n";
-}
-$promptContent .= "rumor:  rumor spreaded or created. rumor should be located and related to current character's location ($LAST_REPORTED_LOCATION), e.g if character is at Dawnstar, rumor should be Dawnstar related.\n";
-if ($lettersEnabled) {
-    $promptContent .= "notification: $letterStyle\n";
-}
+$promptContent .= "```";
 
 $prompt = [['role' => 'system', 'content' => $promptContent]];
 
@@ -579,7 +588,7 @@ if (is_array($parsed)) {
                 'ts' => $last_ts,
                 'gamets' => $last_gamets + 1,
                 'type' => "innerchat",
-                'data' => "The Narrator:{$GLOBALS["HERIKA_NAME"]} sent this letter to {$GLOBALS["PLAYER_NAME"]} " . "\n{$parsed["notification"]} )",
+                'data'   => "The Narrator:{$GLOBALS["HERIKA_NAME"]} sent this letter to {$GLOBALS["PLAYER_NAME"]} " . "\n<letter_content>\n{$parsed["notification"]}\n</letter_content>",
                 'sess' => $momentum,
                 'localts' => time(),
                 'people' => $GLOBALS["HERIKA_NAME"],
@@ -601,6 +610,47 @@ if (is_array($parsed)) {
                 'localts' => time(),
             ]
         );
+
+        $narratorInstantLetter = true; //TODO make global / configurable
+        if($narratorInstantLetter) {
+            $taskId = uniqid();
+
+            $instructionText = "hey narrator, {$GLOBALS["HERIKA_NAME"]} has sent a letter to {$GLOBALS["PLAYER_NAME"]}, announce it, and you MUST include the content of <letter_content> verbatim in your response. (listener MUST be {$GLOBALS["PLAYER_NAME"]})";
+
+            // Format action string
+            $roleMasterAction = make_replacements("rolecommand|Instruction@The Narrator@{$instructionText}@$taskId");
+
+            // Store event as pending delayed event instead of inserting immediately
+            // This will be posted by middleterm processor after speech has been idle for 15+ seconds
+            $delayedEvent = array(
+                'localts' => time(),
+                'sent' => 0,
+                'actor' => "rolemaster",
+                'text' => '',
+                'action' => $roleMasterAction,
+                'tag' => ""
+            );
+
+            // Store in npcMaster extended_data
+            $extendedData['pending_delayed_event'] = $delayedEvent;
+            $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extendedData);
+            $npcMaster->updateByArray($currentNpcData);
+
+            error_log("[DELAYED-EVENT] Letter announcement event queued for {$GLOBALS["HERIKA_NAME"]}, will post after speech idle for 15s");
+
+            $GLOBALS["db"]->insert(
+                'responselog',
+                array(
+                    'localts' => time(),
+                    'sent' => 0,
+                    'actor' => "rolemaster",
+                    'text' => '',
+                    'action' => "rolecommand|DebugNotification@Letter from {$GLOBALS["HERIKA_NAME"]}",
+                    'tag' => ""
+                )
+            );
+        }
+
         // Write into books table, books.php entrypoint will pickup and create new book entry when readed by player
         $GLOBALS["db"]->insert(
             'books',

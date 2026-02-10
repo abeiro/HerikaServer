@@ -12,11 +12,54 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     require_once($enginePath . "lib/chat_helper_functions.php");
     require_once($enginePath . "lib/data_functions.php");
     require_once($enginePath . "lib/rolemaster_helpers.php");
+    require_once($enginePath . "lib/utils_game_timestamp.php");
 
     require_once $enginePath . "lib/core/npc_master.class.php";
     require_once $enginePath . "lib/core/api_badge.class.php";
     require_once $enginePath . "lib/core/core_profiles.class.php";
     require_once $enginePath . "lib/core/llm_connector.class.php";
+
+    /**
+     * Process delayed events waiting for TTS to finish
+     * Events are stored in npcMaster extended_data and posted when speech has been idle for 15+ seconds
+     */
+    function processDelayedEvents($db, $enginePath) {
+        $npcMaster = new NpcMaster();
+        $lastSpeechGamets = GetLastSpeechTs();
+        $currentGamets = DataLastKnownGameTS();
+
+        // Check all NPCs with pending delayed events
+        $allNpcs = $db->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'pending_delayed_event' IS NOT NULL");
+
+        foreach ($allNpcs as $npc) {
+            $extendedData = $npcMaster->getExtendedData($npc);
+
+            if (!isset($extendedData['pending_delayed_event'])) {
+                continue;
+            }
+
+            $pendingEvent = $extendedData['pending_delayed_event'];
+
+            // Check if 15 seconds have passed since last speech (using game ticks)
+            $secondsSinceLastSpeech = gamets2seconds_between($lastSpeechGamets, $currentGamets);
+            if ($secondsSinceLastSpeech >= 15) {
+                logger::info("[DELAYED-EVENT] Posting delayed event for {$npc['npc_name']}");
+
+                // Insert the pending event into responselog
+                $db->insert('responselog', $pendingEvent);
+
+                // Remove the pending event from extended_data
+                unset($extendedData['pending_delayed_event']);
+                $npc = $npcMaster->setExtendedData($npc, $extendedData);
+                $npcMaster->updateByArray($npc);
+
+                logger::info("[DELAYED-EVENT] Event posted and cleared for {$npc['npc_name']}");
+            } else {
+                $waitTime = 15 - $secondsSinceLastSpeech;
+                logger::debug("[DELAYED-EVENT] Waiting {$waitTime}s more for speech to finish for {$npc['npc_name']}");
+            }
+        }
+    }
 
     //$results = $GLOBALS["db"]->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary where summary is not null order by gamets_truncated desc limit 1"); //0.8ms
     $results = $GLOBALS["db"]->fetchAll("select max(gamets_truncated) as gamets_truncated from memory_summary where summary is not null"); // 0.5ms, faster 
@@ -96,6 +139,9 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
             break;  // One per iteration - break after processing
         }
     }
+
+    // Process delayed events for BgL NPCs
+    processDelayedEvents($GLOBALS["db"], $enginePath);
 
     // BgL commands
     $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_commands' = 'true' ");
