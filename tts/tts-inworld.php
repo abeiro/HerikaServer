@@ -461,7 +461,7 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal', $outputFile = nul
         return false;
     }
     
-    Logger::info("Inworld TTS response received: " . number_format(strlen($response)) . " bytes");
+    Logger::debug("Inworld TTS response received: " . number_format(strlen($response)) . " bytes");
     
     // Parse SSE response to extract audio chunks
     $audioData = '';
@@ -502,7 +502,7 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal', $outputFile = nul
                     if (strlen($chunkAudio) > $wavHeaderSize) {
                         // Check if this chunk starts with a WAV header (RIFF signature)
                         if (substr($chunkAudio, 0, 4) === 'RIFF') {
-                            Logger::debug("Chunk #{$chunkCount} has WAV header, stripping it");
+                            Logger::trace("Chunk #{$chunkCount} has WAV header, stripping it");
                             // Strip the WAV header, keep only raw PCM data
                             $chunkAudio = substr($chunkAudio, $wavHeaderSize);
                         }
@@ -516,7 +516,7 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal', $outputFile = nul
         }
     }
     
-    Logger::info("Extracted {$chunkCount} audio chunks, total audio size: " . number_format(strlen($audioData)) . " bytes (WAV headers stripped)");
+    Logger::debug("Extracted {$chunkCount} audio chunks, total audio size: " . number_format(strlen($audioData)) . " bytes (WAV headers stripped)");
     
     if (empty($audioData)) {
         Logger::error("No audio data extracted from Inworld response");
@@ -530,7 +530,7 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal', $outputFile = nul
             Logger::error("Failed to write audio data to file: {$outputFile}");
             return false;
         }
-        Logger::info("Wrote " . number_format($written) . " bytes of audio data to file");
+        Logger::debug("Wrote " . number_format($written) . " bytes of audio data to file");
         return $outputFile;
     }
     
@@ -849,7 +849,7 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
     }
     
     $rawAudioSize = filesize($oname);
-    Logger::info("Raw audio file size: " . number_format($rawAudioSize) . " bytes before FFmpeg processing");
+    Logger::debug("Raw audio file size: " . number_format($rawAudioSize) . " bytes before FFmpeg processing");
     
     $startTimeTrans = microtime(true);
     // Specify input format for raw PCM
@@ -865,11 +865,11 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
     // Use same format as input to minimize processing
     $ffmpegCmd .= "-c:a pcm_s16le -ar 22050 -ac 1 \"$fname\" 2>&1";
     
-    Logger::info("FFmpeg command: {$ffmpegCmd}");
+    Logger::debug("FFmpeg command: {$ffmpegCmd}");
     $ffmpegOutput = shell_exec($ffmpegCmd);
     $endTimeTrans = microtime(true) - $startTimeTrans;
     
-    Logger::info("FFmpeg processing took " . number_format($endTimeTrans, 3) . " seconds");
+    Logger::debug("FFmpeg processing took " . number_format($endTimeTrans, 3) . " seconds");
     
     // Check if output file was created successfully
     if (!file_exists($fname) || filesize($fname) === 0) {
@@ -880,7 +880,7 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
     }
     
     $finalAudioSize = filesize($fname);
-    Logger::info("Final audio file size: " . number_format($finalAudioSize) . " bytes after FFmpeg processing");
+    Logger::debug("Final audio file size: " . number_format($finalAudioSize) . " bytes after FFmpeg processing");
     
     // Save debug info
     file_put_contents(

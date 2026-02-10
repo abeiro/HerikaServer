@@ -296,6 +296,7 @@ function DataLastDataFor($actor, $lastNelements = -10)
 function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescriptions=false,$excludeBusy=false)
 {
     
+    $lastDialog = array(); // Initialize the return array
     $followers=[];
     $actorsInRangeList=DataBeingsInCloseRange();
     $actorsInRange=strtr($actorsInRangeList,["|"=>"\n* "]);
@@ -5383,9 +5384,13 @@ function getConfFileFor($npcname) {
     
 }
 
-function buildDynamicBiography(array $FOLLOWER_CONF) {
+function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bool $forThought = false)
+{
     /**
      * Build dynamic biography from new HERIKA fields, with fallback to legacy HERIKA_DYNAMIC
+     * @param array $FOLLOWER_CONF Configuration array containing HERIKA fields
+     * @param bool $forLetter If false, removes <letter_guidance> sections from HERIKA_SPEECHSTYLE
+     * @param bool $forThought If false, removes <inner_thought_guidance> sections from HERIKA_SPEECHSTYLE
      * @return string The dynamic biography content
      */
     $dynamicBio = '';
@@ -5753,7 +5758,24 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
     foreach ($herikaFields as $fieldName => $label) {
         if (isset($FOLLOWER_CONF[$fieldName]) && !empty(trim($FOLLOWER_CONF[$fieldName]))) {
             $xmlLabel=strtr(strtolower($label),[" "=>"_"]);
-            $dynamicBio .= "\n<$xmlLabel>\n" . trim($FOLLOWER_CONF[$fieldName])."\n</$xmlLabel>";
+            $fieldValue = trim($FOLLOWER_CONF[$fieldName]);
+
+            // Apply conditional XML tag removal for HERIKA_SPEECHSTYLE field
+            if ($fieldName === 'HERIKA_SPEECHSTYLE') {
+                if (!$forLetter) {
+                    // Remove <letter_guidance>...</letter_guidance> and its content
+                    $fieldValue = preg_replace('/<letter_guidance>.*?<\/letter_guidance>/is', '', $fieldValue);
+                }
+                if (!$forThought) {
+                    // Remove <inner_thought_guidance>...</inner_thought_guidance> and its content
+                    $fieldValue = preg_replace('/<inner_thought_guidance>.*?<\/inner_thought_guidance>/is', '', $fieldValue);
+                }
+                // Clean up any excessive whitespace left after removal
+                $fieldValue = trim(preg_replace('/\n{3,}/', "\n\n", $fieldValue));
+            }
+
+
+            $dynamicBio .= "\n<$xmlLabel>\n" . $fieldValue ."\n</$xmlLabel>";
             
             // Add groups (factions) right after HERIKA_BACKGROUND (basic_summary) section
             if ($fieldName=="HERIKA_BACKGROUND") {

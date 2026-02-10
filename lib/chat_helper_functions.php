@@ -1131,8 +1131,12 @@ function returnLines($lines,$writeOutput=true)
                 
                 // Calculate volume boost based on distance
                 // Shouting distance threshold
-                define('SHOUTING_DISTANCE_THRESHOLD', 800);
-                define('SHOUTING_VOLUME_BOOST', 1.3);
+                if (!defined('SHOUTING_DISTANCE_THRESHOLD')) {
+                    define('SHOUTING_DISTANCE_THRESHOLD', 800);
+                }
+                if (!defined('SHOUTING_VOLUME_BOOST')) {
+                    define('SHOUTING_VOLUME_BOOST', 1.3);
+                }
                 
                 $volumeBoost = 1.0;
                 $distance = isset($GLOBALS["LAST_SPEECH_DISTANCE"]) ? $GLOBALS["LAST_SPEECH_DISTANCE"] : 0.0;
@@ -1861,7 +1865,7 @@ function getGametsLimitFor($actor) {
 
     $limitRow = $db->fetchOne($query);
 
-    Logger::debug("MEMORY_EMBEDDING getGametsLimitFor($actor),CONTEXT_HISTORY: {$GLOBALS["CONTEXT_HISTORY"]} => {$limitRow["hour_threshold"]}");
+    Logger::trace("MEMORY_EMBEDDING getGametsLimitFor($actor),CONTEXT_HISTORY: {$GLOBALS["CONTEXT_HISTORY"]} => {$limitRow["hour_threshold"]}");
 
     // If no data or result is too small, fall back to a sensible default (e.g. 72 in-game hours)
     $res = (isset($limitRow["hour_threshold"]) && $limitRow["hour_threshold"] > 0)

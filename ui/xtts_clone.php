@@ -410,7 +410,7 @@ if ($activeTab === 'xtts' && isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) &
         if (!curl_errno($ch) && curl_getinfo($ch, CURLINFO_HTTP_CODE) == 200) {
             $speakersList = json_decode($response, true);
             if (json_last_error() === JSON_ERROR_NONE && is_array($speakersList)) {
-                $_SESSION['xtts_speakers_list'] = $speakersList;
+                $_SESSION['xtts_speakers_list'] = normalizeSpeakersList($speakersList);
             }
         }
         curl_close($ch);
@@ -422,6 +422,30 @@ require_once(__DIR__ . '/../tts/tts-cartesia.php');
 require_once(__DIR__ . '/../tts/tts-inworld.php');
 
 // Helper functions
+
+// Normalize speakers list from XTTS server into a flat array of speaker names.
+// Standard XTTS returns: ["speaker1", "speaker2"]
+// Mantella XTTS returns: {"en": {"speakers": ["speaker1", ...]}, "de": {"speakers": []}}
+function normalizeSpeakersList($speakersList) {
+    if (!is_array($speakersList)) {
+        return [];
+    }
+    // Check if it's already a flat array of strings
+    if (isset($speakersList[0]) || empty($speakersList)) {
+        return $speakersList;
+    }
+    // Nested format: language code => {"speakers": [...]}
+    $flat = [];
+    foreach ($speakersList as $langData) {
+        if (is_array($langData) && isset($langData['speakers']) && is_array($langData['speakers'])) {
+            foreach ($langData['speakers'] as $speaker) {
+                $flat[] = $speaker;
+            }
+        }
+    }
+    return array_unique($flat);
+}
+
 function getLocalVoices() {
     $voiceDir = __DIR__ . '/../data/voices/';
     $voices = [];
@@ -882,7 +906,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!curl_errno($ch2) && curl_getinfo($ch2, CURLINFO_HTTP_CODE) == 200) {
                         $speakersList = json_decode($response2, true);
                         if (json_last_error() === JSON_ERROR_NONE && is_array($speakersList)) {
-                            $_SESSION['xtts_speakers_list'] = $speakersList;
+                            $_SESSION['xtts_speakers_list'] = normalizeSpeakersList($speakersList);
                         }
                     }
                     curl_close($ch2);
@@ -911,7 +935,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!curl_errno($ch) && curl_getinfo($ch, CURLINFO_HTTP_CODE) == 200) {
             $speakersList = json_decode($response, true);
             if (json_last_error() === JSON_ERROR_NONE && is_array($speakersList)) {
-                $_SESSION['xtts_speakers_list'] = $speakersList;
+                $_SESSION['xtts_speakers_list'] = normalizeSpeakersList($speakersList);
             }
         }
         curl_close($ch);
