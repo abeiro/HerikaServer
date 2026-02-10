@@ -598,6 +598,9 @@ if (isset($_GET["profile"])) {
         $narrator = new Narrator();
         $narratorData = $narrator->getNarratorData();
         
+        // Load narrator settings into GLOBALS (includes NARRATOR_DIARY_ENABLED, etc.)
+        $narrator->loadIntoGlobals();
+        
         if ($narratorData && isset($narratorData["profile_id"])) {
             $profile = new CoreProfile();
             $currentProfileData = $profile->getById($narratorData["profile_id"]);

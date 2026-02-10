@@ -177,6 +177,9 @@ class Narrator
             'hide_from_context' => ['HIDE_NARRATOR_DIALOGUE', 'bool', false],
             'dynamic_profile' => ['DYNAMIC_PROFILE', 'bool', false],
             'inline_narration_enabled' => ['INLINE_NARRATION_ENABLED', 'bool', false],
+            'diary_enabled' => ['NARRATOR_DIARY_ENABLED', 'bool', false],
+            'connector_id' => ['NARRATOR_CONNECTOR_ID', 'int', null],
+            'diary_connector_id' => ['NARRATOR_DIARY_CONNECTOR_ID', 'int', null],
         ];
         
         foreach ($keyMapping as $dbKey => $config) {

@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
         $narrator->set('books_only_narrator', isset($_POST['books_only_narrator']) && $_POST['books_only_narrator'] === '1' ? '1' : '0');
         $narrator->set('hide_from_context', isset($_POST['hide_from_context']) && $_POST['hide_from_context'] === '1' ? '1' : '0');
         $narrator->set('inline_narration_enabled', isset($_POST['inline_narration_enabled']) && $_POST['inline_narration_enabled'] === '1' ? '1' : '0');
+        $narrator->set('diary_enabled', isset($_POST['diary_enabled']) && $_POST['diary_enabled'] === '1' ? '1' : '0');
         
         // Save integer settings
         if (isset($_POST['random_chance'])) {
@@ -137,6 +138,7 @@ $questCommentCooldown = $narrator->getInt('quest_comment_cooldown', 3);
 $booksOnlyNarrator = $narrator->getBool('books_only_narrator', false);
 $hideFromContext = $narrator->getBool('hide_from_context', false);
 $inlineNarrationEnabled = $narrator->getBool('inline_narration_enabled', false);
+$diaryEnabled = $narrator->getBool('diary_enabled', true);
 $dynamicProfileEnabled = $narrator->getBool('dynamic_profile', false);
 $dynamicProfileFields = $narrator->getDynamicProfileFields();
 
@@ -717,6 +719,15 @@ if (!$isEmbed) {
                         <span class="toggle-label">Enable Inline Narration</span>
                     </label>
                     <span class="hint">Include brief third-person narration in asterisks (e.g., *She smiles*).</span>
+                    
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="diary_enabled" name="diary_enabled" value="1" <?php echo $diaryEnabled ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Narrator Diary</span>
+                    </label>
+                    <span class="hint">Allow The Narrator to write diary entries. Will trigger on autodiary, all nearby npc diary hotkey & if you look up in the sky and press the diary hotkey.</span>
                 </div>
 
                 <!-- Welcome Message Section -->
