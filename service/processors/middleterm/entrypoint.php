@@ -12,6 +12,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     require_once($enginePath . "lib/chat_helper_functions.php");
     require_once($enginePath . "lib/data_functions.php");
     require_once($enginePath . "lib/rolemaster_helpers.php");
+    require_once($enginePath . "lib/utils_game_timestamp.php");
 
     require_once $enginePath . "lib/core/npc_master.class.php";
     require_once $enginePath . "lib/core/api_badge.class.php";
@@ -24,8 +25,8 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
      */
     function processDelayedEvents($db, $enginePath) {
         $npcMaster = new NpcMaster();
-        $lastSpeechTs = GetLastSpeechTs();
-        $currentTime = time();
+        $lastSpeechGamets = GetLastSpeechTs();
+        $currentGamets = DataLastKnownGameTS();
 
         // Check all NPCs with pending delayed events
         $allNpcs = $db->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'pending_delayed_event' IS NOT NULL");
@@ -39,8 +40,9 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
 
             $pendingEvent = $extendedData['pending_delayed_event'];
 
-            // Check if 15 seconds have passed since last speech
-            if (($currentTime - $lastSpeechTs) >= 15) {
+            // Check if 15 seconds have passed since last speech (using game ticks)
+            $secondsSinceLastSpeech = gamets2seconds_between($lastSpeechGamets, $currentGamets);
+            if ($secondsSinceLastSpeech >= 15) {
                 logger::info("[DELAYED-EVENT] Posting delayed event for {$npc['npc_name']}");
 
                 // Insert the pending event into responselog
@@ -53,7 +55,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
 
                 logger::info("[DELAYED-EVENT] Event posted and cleared for {$npc['npc_name']}");
             } else {
-                $waitTime = 15 - ($currentTime - $lastSpeechTs);
+                $waitTime = 15 - $secondsSinceLastSpeech;
                 logger::debug("[DELAYED-EVENT] Waiting {$waitTime}s more for speech to finish for {$npc['npc_name']}");
             }
         }
