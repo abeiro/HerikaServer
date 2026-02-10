@@ -104,7 +104,11 @@ if (sizeof($formInput["npclist"]) == 0) { // Initial case
         $filteredLocArray = $locListArray;
     }
 
-    $suggested_location = $filteredLocArray[array_rand($filteredLocArray)];
+    if (!empty($filteredLocArray)) {
+        $suggested_location = $filteredLocArray[array_rand($filteredLocArray)];
+    } else {
+        $suggested_location = null;
+    }
 
     $nearByLoc = "\nLocations where new events/action can happen: \n$wideLocList";
 
@@ -219,6 +223,27 @@ Short briefing:{$formInput["briefing"]}
             $suggested = "";
         }
 
+        $query = "SELECT summary as content,gamets_truncated FROM memory_summary where summary is not null and gamets_truncated>0 order by gamets_truncated desc LIMIT 10";
+        $contextDataFull = $GLOBALS["db"]->fetchAll($query);
+        // $task=DataGetCurrentTask();
+        $limit = 10;
+        $contextFromMemories = "";
+
+        if (sizeof($contextDataFull) == 0 || sizeof($contextDataFull) < $limit) {
+
+        } else {
+
+            foreach (array_reverse($contextDataFull) as $entry) {
+                if ($entry["content"]) {
+                    $contextFromMemories .= "===\nMemory entry, date " . convert_gamets2skyrim_date($entry["gamets_truncated"]) . PHP_EOL;
+                    $contextFromMemories .= trim($entry["content"]) . PHP_EOL . PHP_EOL;
+                    $lastgamets = $entry["gamets_truncated"];
+                }
+            }
+        }
+
+
+
         $result["response"] = "
 
 Player: {$GLOBALS["PLAYER_NAME"]}
@@ -229,12 +254,15 @@ $locList
 
 * Nearby Actors. (you cannot instruct this actors) $closeNpcText
 
+* Context for quest generation:
+$contextFromMemories
+
 $nearByLoc
 
 Current Location: $lastLocation
 
 
-Ideas for initial NPC name: a woman, which name must start with $randomLettersA, and surname/nick by $randomLettersB. Never use \" or ' in the name.
+Ideas for initial NPC name: a character, which name must start with $randomLettersA, and surname/nick by $randomLettersB. Never use \" or ' in the name.
 ";
         $result["locations"] = $locListArray;
 
