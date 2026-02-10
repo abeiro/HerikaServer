@@ -296,6 +296,7 @@ function DataLastDataFor($actor, $lastNelements = -10)
 function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescriptions=false,$excludeBusy=false)
 {
     
+    $lastDialog = array(); // Initialize the return array
     $followers=[];
     $actorsInRangeList=DataBeingsInCloseRange();
     $actorsInRange=strtr($actorsInRangeList,["|"=>"\n* "]);
