@@ -191,7 +191,7 @@ class openaijson
             $default_model = 'command-r-08-2024';
         } elseif (stripos($this->_url, "cerebras.ai") > 0 ) {  //api.cerebras.ai
             $this->_is_cerebras_ai = true;
-        }
+        } 
 
         $this->_model = $GLOBALS["CONNECTOR"][$this->name]["model"] ?? $default_model;
         // We shoud be able to overwrite model.
@@ -542,7 +542,11 @@ class openaijson
         
         if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
             $data["response_format"]=$GLOBALS["structuredOutputTemplate"];
-        }
+        } else if (isset($GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) && $GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) {
+            error_log("Enforcing JSON output for {$this->name} connector");
+            ;//It's enabled by default
+        } else 
+            unset($data["response_format"]);
 
         if ($MAX_TOKENS<1) {
             unset($data["max_completion_tokens"]); 
@@ -780,7 +784,7 @@ class openaijson
         $buffer="";
 
         if (!empty($this->_buffer))
-            $finalData=__jpd_decode_lazy($this->_buffer, true);
+            $finalData=__jpd_decode_lazy($this->_buffer);
             if (is_array($finalData)) {
                 
                 
@@ -800,7 +804,7 @@ class openaijson
                         if (isset($finalData["listener"])) {
                             $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["listener"];
                         }
-                        if (isset($finalData["target"]) && !empty($finalData["target"]) && $finalData["action"]=="Talk") {
+                        if (isset($finalData["target"]) && !empty($finalData["target"]) && isset($finalData["action"]) && $finalData["action"]=="Talk") {
                             // Cover the case where action is talk, and LLM hast pointed a target
                             $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["target"];
                         }
@@ -1206,7 +1210,7 @@ class openaijson
                 return $text_response["choices"][0]["message"]["content"];    
             }
             else {
-                log_msg("Error in openai request '$url':$json_response", 3);
+                log_msg("Error in openai request '{$this->_url}':$json_response", 3);
                 return "";
             }
         }
