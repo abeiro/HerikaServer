@@ -52,14 +52,14 @@ function _relEnsureWorkerRunning() {
     $workerPath = __DIR__ . '/worker.php';
     $logPath = $GLOBALS["ENGINE_PATH"] . 'log/relationship_worker.log';
 
-    Logger::debug("[REL-WORKER-START] Checking worker status...");
+    Logger::trace("[REL-WORKER-START] Checking worker status...");
 
     // Check PID file first (fast path)
     if (file_exists($pidFile)) {
         $pid = trim(file_get_contents($pidFile));
-        Logger::debug("[REL-WORKER-START] PID file exists with PID: {$pid}");
+        Logger::trace("[REL-WORKER-START] PID file exists with PID: {$pid}");
         if (!empty($pid) && file_exists("/proc/{$pid}")) {
-            Logger::debug("[REL-WORKER-START] Worker already running at PID {$pid}");
+            Logger::trace("[REL-WORKER-START] Worker already running at PID {$pid}");
             return; // Worker is running
         }
         // Stale PID file - worker died, clean up
@@ -179,13 +179,13 @@ if ($npcName) {
     // This automatically uses tier-only mode if RELLLM_CONNECTOR is set
     $relationshipContext = RelationshipManager::buildContext($npcName, $relevantNpcs);
 
-    Logger::info("[REL-CONTEXT] buildContext returned " . strlen($relationshipContext) . " chars for " . $npcName);
+    Logger::debug("[REL-CONTEXT] buildContext returned " . strlen($relationshipContext) . " chars for " . $npcName);
 
     // Inject into the character section of the prompt
     // We append to HERIKA_PERS which gets included in the <character> block
     if (!empty($relationshipContext)) {
         $GLOBALS["HERIKA_PERS"] .= "\n\n" . $relationshipContext;
-        Logger::info("[REL-CONTEXT] Injected " . strlen($relationshipContext) . " chars for {$npcName}");
+        Logger::debug("[REL-CONTEXT] Injected " . strlen($relationshipContext) . " chars for {$npcName}");
     } else {
         Logger::warn("[REL-CONTEXT] No context to inject for {$npcName}");
     }

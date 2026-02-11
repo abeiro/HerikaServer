@@ -598,6 +598,9 @@ if (isset($_GET["profile"])) {
         $narrator = new Narrator();
         $narratorData = $narrator->getNarratorData();
         
+        // Load narrator settings into GLOBALS (includes NARRATOR_DIARY_ENABLED, etc.)
+        $narrator->loadIntoGlobals();
+        
         if ($narratorData && isset($narratorData["profile_id"])) {
             $profile = new CoreProfile();
             $currentProfileData = $profile->getById($narratorData["profile_id"]);
@@ -2039,6 +2042,8 @@ if (isset($GLOBALS["TTSFUNCTION"]) && !empty($GLOBALS["TTSFUNCTION"])) {
     $ttsMap = [
         'melotts' => 'MELOTTS',
         'xtts-fastapi' => 'XTTSFASTAPI',
+        'chatterbox' => 'CHATTERBOX',
+        'pockettts' => 'POCKETTTS',
         'mimic3' => 'MIMIC3',
         'xvasynth' => 'XVASYNTH',
         'azure' => 'AZURE',
@@ -2067,8 +2072,8 @@ if (isset($GLOBALS["TTSFUNCTION"]) && !empty($GLOBALS["TTSFUNCTION"])) {
 }
 
 
-// Check for context overrides on ext dir (plugins)
-requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
+// Check for context overrides on ext dir (plugins) before system prompt build
+requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context_pre.php");
 
 
 if (!empty($GLOBALS["OGHMA_HINT"])) {
@@ -2089,6 +2094,8 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
     $GLOBALS["COMMAND_PROMPT"] = "";
 }
 
+// Check for context overrides on ext dir (plugins) after system prompt build
+requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context.php");
 
 // audit_log(__FILE__." [PLUGINS CONTEXT]  ".__LINE__);
 

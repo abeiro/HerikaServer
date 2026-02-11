@@ -69,9 +69,14 @@ class SemaphoreManager {
     public static function release(string $id): bool {
         $semaphore = self::get($id);
         if ($semaphore) {
-            @sem_release($semaphore);
-            Logger::info("[SemaphoreManager] Lock released for '{$id}'");
-            return true;
+            // Suppress warning if semaphore is not acquired (common during cleanup)
+            $result = @sem_release($semaphore);
+            if ($result === false) {
+                Logger::debug("[SemaphoreManager] sem_release failed for '{$id}' (may not be acquired)");
+            } else {
+                Logger::info("[SemaphoreManager] Lock released for '{$id}'");
+            }
+            return $result !== false;
         }
         return false;
     }

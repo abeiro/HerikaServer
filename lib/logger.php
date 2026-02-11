@@ -17,6 +17,12 @@ class Logger {
     // timestamp format (default = ISO 8601)
     private static $_timestampFormat = 'Y-m-d\TH:i:sP';
 
+    // minimum log level to backtrace (default = disabled)
+    private static $_backtraceLevel = 9;
+
+    // include arguments in backtrace (default no)
+    private static $_backtraceArgs = false;
+
     // Set custom log file path
     public static function setCustomLog($logFile) {
         self::$CUSTOM_LOG = $logFile;
@@ -36,6 +42,17 @@ class Logger {
         }
     }
 
+    // Ex: Logger::setBacktrace("disabled") to suppress backtrace, Logger::setBacktrace("warn") to show stack and  for warnings and errors
+    public static function setBacktrace($level, $exposeArgs=false) {
+        if (isset(self::LOG_LEVELS[$level])) {
+            self::$_backtraceLevel = self::LOG_LEVELS[$level];
+            self::$_backtraceArgs = $exposeArgs;
+        } else {
+            self::$_backtraceLevel = 9;
+            self::$_backtraceArgs = false;
+        }
+    }
+
     // Can call with no parameter or an empty string to omit the timestamp from logs
     public static function setTimestampFormat($format = "") {
         self::$_timestampFormat = $format;
@@ -45,13 +62,37 @@ class Logger {
         return self::LOG_LEVELS[$level] >= self::LOG_LEVELS[self::$_minLogLevel];
     }
 
+    private static function shouldBacktrace($level) {
+        $b_res = false;
+        
+        if (isset(self::LOG_LEVELS[$level])) {
+            $b_res = (self::LOG_LEVELS[$level] >= self::$_backtraceLevel);
+        }
+        
+        return $b_res; 
+    }
+
     private static function log($level, $message, $logFile) {
         if (!self::shouldLog($level)) {
             return;
         }
 
         $timestamp = self::$_timestampFormat ? "[".date(self::$_timestampFormat)."] " : "";
-        $logEntry = "{$timestamp}[{$level}] {$message}\n";
+
+        if (self::shouldBacktrace($level)) {
+            ob_start();
+            if (self::$_backtraceArgs)
+                debug_print_backtrace(0, 7);
+            else
+                debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 7);
+            $s_trace = ob_get_contents();
+            ob_end_clean();
+            if (str_contains($s_trace, '#1')) {
+                $s_trace = strstr($s_trace, '#1');
+            }
+        } else $s_trace = "";
+        
+        $logEntry = "{$timestamp}[{$level}] {$message}\n{$s_trace}";
         
 
         if ($logFile == self::DEFAULT_LOG && isset(self::$CUSTOM_LOG) && !empty(self::$CUSTOM_LOG)) {

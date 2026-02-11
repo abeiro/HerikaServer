@@ -73,8 +73,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'test_xtts' && isset($_GET['vo
     
     $testText = "CHIM has been described as the secret syllable of royalty, and can be considered a form of Apotheosis";
     
-    header('Content-Type: application/json');
-    @file_put_contents($logFile, "Headers sent\n", FILE_APPEND);
+    // Start output buffering to catch any unwanted output
+    ob_start();
     
     try {
         @file_put_contents($logFile, "Calling returnLines...\n", FILE_APPEND);
@@ -82,6 +82,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'test_xtts' && isset($_GET['vo
         // Check if returnLines exists
         if (!function_exists('returnLines')) {
             @file_put_contents($logFile, "ERROR: returnLines function not found!\n", FILE_APPEND);
+            ob_end_clean();
+            header('Content-Type: application/json');
             http_response_code(500);
             echo json_encode(['error' => 'returnLines function not available']);
             exit;
@@ -90,9 +92,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'test_xtts' && isset($_GET['vo
         returnLines([$testText], false);
         @file_put_contents($logFile, "returnLines completed\n", FILE_APPEND);
         
+        // Clear any output from returnLines
+        $capturedOutput = ob_get_clean();
+        if ($capturedOutput !== '') {
+            @file_put_contents($logFile, "Captured output from returnLines: " . $capturedOutput . "\n", FILE_APPEND);
+        }
+        
         $file = isset($GLOBALS["TRACK"]["FILES_GENERATED"][0]) ? basename((string)$GLOBALS["TRACK"]["FILES_GENERATED"][0]) : '';
         @file_put_contents($logFile, "Generated file: " . ($file ?: 'NONE') . "\n", FILE_APPEND);
         
+        header('Content-Type: application/json');
         if ($file !== '') {
             $url = $webRoot . '/soundcache/' . $file . '?ts=' . time();
             @file_put_contents($logFile, "URL: " . $url . "\n", FILE_APPEND);
@@ -107,11 +116,179 @@ if (isset($_GET['action']) && $_GET['action'] === 'test_xtts' && isset($_GET['vo
     } catch (Throwable $e) {
         $errMsg = "EXCEPTION: " . $e->getMessage() . "\nTrace: " . $e->getTraceAsString() . "\n";
         @file_put_contents($logFile, $errMsg, FILE_APPEND);
+        ob_end_clean();
+        header('Content-Type: application/json');
         http_response_code(500);
         echo json_encode(['error' => $e->getMessage()]);
     }
     
     @file_put_contents($logFile, "=== Test Handler Complete ===\n\n", FILE_APPEND);
+    unset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
+    exit;
+}
+
+// Chatterbox voice test handler
+if (isset($_GET['action']) && $_GET['action'] === 'test_chatterbox' && isset($_GET['voice'])) {
+    $logFile = $enginePath . 'log.txt';
+    $logMsg = "\n=== Chatterbox Test Handler Started at " . date('Y-m-d H:i:s') . " ===\n";
+    @file_put_contents($logFile, $logMsg, FILE_APPEND);
+    
+    $voice = $_GET['voice'];
+    @file_put_contents($logFile, "Voice requested: " . $voice . "\n", FILE_APPEND);
+    
+    try { @set_time_limit(30); } catch (Throwable $_) {}
+    try { @ini_set('default_socket_timeout', '20'); } catch (Throwable $_) {}
+    
+    try {
+        if (!isset($GLOBALS['db']) || !$GLOBALS['db']) {
+            @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+            if (isset($GLOBALS["DBDRIVER"])) {
+                @require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php");
+            }
+            $GLOBALS['db'] = new sql();
+        }
+    } catch (Throwable $e) {
+        @file_put_contents($logFile, "Database init error: " . $e->getMessage() . "\n", FILE_APPEND);
+    }
+    
+    $GLOBALS["TTSFUNCTION"] = 'chatterbox';
+    $GLOBALS["HERIKA_NAME"] = "The Narrator";
+    $GLOBALS["AVOID_TTS_CACHE"] = true;
+    $GLOBALS["TTS_FFMPEG_FILTERS"] = [];
+    $GLOBALS["HERIKA_ANIMATIONS"] = false;
+    $GLOBALS["SCRIPTLINE_LISTENER"] = '';
+    $GLOBALS["SCRIPTLINE_EXPRESSION"] = '';
+    $GLOBALS["DEBUG_DATA"] = [];
+    if (!isset($GLOBALS["HTTP_TIMEOUT"]) || (int)$GLOBALS["HTTP_TIMEOUT"] <= 0) { $GLOBALS["HTTP_TIMEOUT"] = 20; }
+    $GLOBALS["FEATURES"] = $GLOBALS["FEATURES"] ?? [];
+    if (!isset($GLOBALS["FEATURES"]["MISC"])) $GLOBALS["FEATURES"]["MISC"] = [];
+    if (!isset($GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"])) $GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"] = false;
+    if (!isset($GLOBALS["PLAYER_NAME"])) $GLOBALS["PLAYER_NAME"] = 'Player';
+    $GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"] = true;
+    $GLOBALS["PATCH_OVERRIDE_VOICE"] = $voice;
+    
+    $testText = "CHIM has been described as the secret syllable of royalty, and can be considered a form of Apotheosis";
+    
+    ob_start();
+    
+    try {
+        if (!function_exists('returnLines')) {
+            ob_end_clean();
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode(['error' => 'returnLines function not available']);
+            exit;
+        }
+        
+        returnLines([$testText], false);
+        
+        $capturedOutput = ob_get_clean();
+        if ($capturedOutput !== '') {
+            @file_put_contents($logFile, "Captured output: " . $capturedOutput . "\n", FILE_APPEND);
+        }
+        
+        $file = isset($GLOBALS["TRACK"]["FILES_GENERATED"][0]) ? basename((string)$GLOBALS["TRACK"]["FILES_GENERATED"][0]) : '';
+        
+        header('Content-Type: application/json');
+        if ($file !== '') {
+            $url = $webRoot . '/soundcache/' . $file . '?ts=' . time();
+            echo json_encode(['url' => $url]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to generate audio file']);
+        }
+    } catch (Throwable $e) {
+        @file_put_contents($logFile, "EXCEPTION: " . $e->getMessage() . "\n", FILE_APPEND);
+        ob_end_clean();
+        header('Content-Type: application/json');
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+    
+    unset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
+    exit;
+}
+
+// PocketTTS voice test handler
+if (isset($_GET['action']) && $_GET['action'] === 'test_pockettts' && isset($_GET['voice'])) {
+    $logFile = $enginePath . 'log.txt';
+    $logMsg = "\n=== PocketTTS Test Handler Started at " . date('Y-m-d H:i:s') . " ===\n";
+    @file_put_contents($logFile, $logMsg, FILE_APPEND);
+    @file_put_contents($logFile, "ACTION: test_pockettts confirmed\n", FILE_APPEND);
+    
+    $voice = $_GET['voice'];
+    @file_put_contents($logFile, "Voice requested: " . $voice . "\n", FILE_APPEND);
+    
+    try { @set_time_limit(30); } catch (Throwable $_) {}
+    try { @ini_set('default_socket_timeout', '20'); } catch (Throwable $_) {}
+    
+    try {
+        if (!isset($GLOBALS['db']) || !$GLOBALS['db']) {
+            @include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+            if (isset($GLOBALS["DBDRIVER"])) {
+                @require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php");
+            }
+            $GLOBALS['db'] = new sql();
+        }
+    } catch (Throwable $e) {
+        @file_put_contents($logFile, "Database init error: " . $e->getMessage() . "\n", FILE_APPEND);
+    }
+    
+    $GLOBALS["TTSFUNCTION"] = 'pockettts';
+    @file_put_contents($logFile, "TTSFUNCTION set to: pockettts\n", FILE_APPEND);
+    $GLOBALS["HERIKA_NAME"] = "The Narrator";
+    $GLOBALS["AVOID_TTS_CACHE"] = true;
+    $GLOBALS["TTS_FFMPEG_FILTERS"] = [];
+    $GLOBALS["HERIKA_ANIMATIONS"] = false;
+    $GLOBALS["SCRIPTLINE_LISTENER"] = '';
+    $GLOBALS["SCRIPTLINE_EXPRESSION"] = '';
+    $GLOBALS["DEBUG_DATA"] = [];
+    if (!isset($GLOBALS["HTTP_TIMEOUT"]) || (int)$GLOBALS["HTTP_TIMEOUT"] <= 0) { $GLOBALS["HTTP_TIMEOUT"] = 20; }
+    $GLOBALS["FEATURES"] = $GLOBALS["FEATURES"] ?? [];
+    if (!isset($GLOBALS["FEATURES"]["MISC"])) $GLOBALS["FEATURES"]["MISC"] = [];
+    if (!isset($GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"])) $GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"] = false;
+    if (!isset($GLOBALS["PLAYER_NAME"])) $GLOBALS["PLAYER_NAME"] = 'Player';
+    $GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"] = true;
+    $GLOBALS["PATCH_OVERRIDE_VOICE"] = $voice;
+    
+    $testText = "CHIM has been described as the secret syllable of royalty, and can be considered a form of Apotheosis";
+    
+    ob_start();
+    
+    try {
+        if (!function_exists('returnLines')) {
+            ob_end_clean();
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode(['error' => 'returnLines function not available']);
+            exit;
+        }
+        
+        returnLines([$testText], false);
+        
+        $capturedOutput = ob_get_clean();
+        if ($capturedOutput !== '') {
+            @file_put_contents($logFile, "Captured output: " . $capturedOutput . "\n", FILE_APPEND);
+        }
+        
+        $file = isset($GLOBALS["TRACK"]["FILES_GENERATED"][0]) ? basename((string)$GLOBALS["TRACK"]["FILES_GENERATED"][0]) : '';
+        
+        header('Content-Type: application/json');
+        if ($file !== '') {
+            $url = $webRoot . '/soundcache/' . $file . '?ts=' . time();
+            echo json_encode(['url' => $url]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to generate audio file']);
+        }
+    } catch (Throwable $e) {
+        @file_put_contents($logFile, "EXCEPTION: " . $e->getMessage() . "\n", FILE_APPEND);
+        ob_end_clean();
+        header('Content-Type: application/json');
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+    
     unset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
     exit;
 }
@@ -305,7 +482,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'batch_process' && isset($_GET
                 $response['message'] = 'cURL Error: ' . curl_error($ch);
             } elseif ($httpCode == 200) {
                 $response['success'] = true;
-                $response['message'] = 'Successfully uploaded to XTTS server';
+                $response['message'] = 'Successfully uploaded to XTTS/Chatterbox/Pocket-TTS server';
             } else {
                 $response['message'] = 'Upload failed (HTTP ' . $httpCode . '): ' . $curlResponse;
             }
@@ -410,7 +587,7 @@ if ($activeTab === 'xtts' && isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) &
         if (!curl_errno($ch) && curl_getinfo($ch, CURLINFO_HTTP_CODE) == 200) {
             $speakersList = json_decode($response, true);
             if (json_last_error() === JSON_ERROR_NONE && is_array($speakersList)) {
-                $_SESSION['xtts_speakers_list'] = $speakersList;
+                $_SESSION['xtts_speakers_list'] = normalizeSpeakersList($speakersList);
             }
         }
         curl_close($ch);
@@ -422,6 +599,30 @@ require_once(__DIR__ . '/../tts/tts-cartesia.php');
 require_once(__DIR__ . '/../tts/tts-inworld.php');
 
 // Helper functions
+
+// Normalize speakers list from XTTS server into a flat array of speaker names.
+// Standard XTTS returns: ["speaker1", "speaker2"]
+// Mantella XTTS returns: {"en": {"speakers": ["speaker1", ...]}, "de": {"speakers": []}}
+function normalizeSpeakersList($speakersList) {
+    if (!is_array($speakersList)) {
+        return [];
+    }
+    // Check if it's already a flat array of strings
+    if (isset($speakersList[0]) || empty($speakersList)) {
+        return $speakersList;
+    }
+    // Nested format: language code => {"speakers": [...]}
+    $flat = [];
+    foreach ($speakersList as $langData) {
+        if (is_array($langData) && isset($langData['speakers']) && is_array($langData['speakers'])) {
+            foreach ($langData['speakers'] as $speaker) {
+                $flat[] = $speaker;
+            }
+        }
+    }
+    return array_unique($flat);
+}
+
 function getLocalVoices() {
     $voiceDir = __DIR__ . '/../data/voices/';
     $voices = [];
@@ -837,16 +1038,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     
-    // XTTS single voice sync handler
-    if (isset($_POST['action']) && $_POST['action'] === 'sync_xtts_single' && isset($_POST['voice'])) {
+    // XTTS/Chatterbox/PocketTTS single voice sync handler (all share same API)
+    if (isset($_POST['action']) && isset($_POST['voice']) && 
+        in_array($_POST['action'], ['sync_xtts_single', 'sync_chatterbox_single', 'sync_pockettts_single'])) {
         $voice = $_POST['voice'];
+        // Detect which tab the request came from
+        $redirectTab = isset($_GET['tab']) && in_array($_GET['tab'], ['xtts', 'chatterbox', 'pockettts']) ? $_GET['tab'] : 'xtts';
+        
+        // Determine which endpoint to use based on tab
+        $endpointKey = 'XTTSFASTAPI'; // default
+        if ($redirectTab === 'chatterbox') $endpointKey = 'CHATTERBOX';
+        elseif ($redirectTab === 'pockettts') $endpointKey = 'POCKETTTS';
+        
         $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
         if (file_exists($voiceSamplePath)) {
             $fileName = $voice . '.wav';
             $fileType = mime_content_type($voiceSamplePath);
             
-            // Prepare the cURL request
-            $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/upload_sample';
+            // Prepare the cURL request using the appropriate endpoint
+            $url = normalize_endpoint_url($GLOBALS["TTS"][$endpointKey]["endpoint"]) . '/upload_sample';
             $cfile = new CURLFile($voiceSamplePath, $fileType, $fileName);
             
             $postFields = array('wavFile' => $cfile);
@@ -865,14 +1075,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             
             if (curl_errno($ch)) {
-                $message .= '<p style="color:red;">Error syncing voice to XTTS/Chatterbox server: ' . curl_error($ch) . '</p>';
+                $message .= '<p style="color:red;">Error syncing voice to XTTS/Chatterbox/Pocket-TTS server: ' . curl_error($ch) . '</p>';
             } else {
                 // Check if voice already exists on server (treat as success)
                 $alreadyExists = ($httpCode == 400 && strpos($response, 'already exists') !== false);
                 
                 if ($httpCode == 200 || $alreadyExists) {
                     // Refresh speakers list and redirect to show updated status
-                    $url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/speakers_list';
+                    $url = normalize_endpoint_url($GLOBALS["TTS"][$endpointKey]["endpoint"]) . '/speakers_list';
                     $ch2 = curl_init();
                     curl_setopt($ch2, CURLOPT_URL, $url);
                     curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
@@ -882,15 +1092,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!curl_errno($ch2) && curl_getinfo($ch2, CURLINFO_HTTP_CODE) == 200) {
                         $speakersList = json_decode($response2, true);
                         if (json_last_error() === JSON_ERROR_NONE && is_array($speakersList)) {
-                            $_SESSION['xtts_speakers_list'] = $speakersList;
+                            $_SESSION['xtts_speakers_list'] = normalizeSpeakersList($speakersList);
                         }
                     }
                     curl_close($ch2);
                     
-                    header('Location: ' . $webRoot . '/ui/xtts_clone.php?tab=xtts&synced=' . urlencode($voice));
+                    header('Location: ' . $webRoot . '/ui/xtts_clone.php?tab=' . $redirectTab . '&synced=' . urlencode($voice));
                     exit;
                 } else {
-                    $message .= '<p style="color:red;">Error syncing voice to XTTS/Chatterbox server (HTTP code ' . $httpCode . '): ' . htmlspecialchars($response) . '</p>';
+                    $message .= '<p style="color:red;">Error syncing voice to XTTS/Chatterbox/Pocket-TTS server (HTTP code ' . $httpCode . '): ' . htmlspecialchars($response) . '</p>';
                 }
             }
             curl_close($ch);
@@ -911,7 +1121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!curl_errno($ch) && curl_getinfo($ch, CURLINFO_HTTP_CODE) == 200) {
             $speakersList = json_decode($response, true);
             if (json_last_error() === JSON_ERROR_NONE && is_array($speakersList)) {
-                $_SESSION['xtts_speakers_list'] = $speakersList;
+                $_SESSION['xtts_speakers_list'] = normalizeSpeakersList($speakersList);
             }
         }
         curl_close($ch);
@@ -1126,7 +1336,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     function testVoice(voiceName) {
-        const testUrl = WEB_ROOT + '/ui/xtts_clone.php?action=test_xtts&voice=' + encodeURIComponent(voiceName);
+        // Determine which tab is active using data attribute
+        const activeTab = document.querySelector('.tab-content.active');
+        let action = 'test_xtts'; // default
+        
+        if (activeTab && activeTab.hasAttribute('data-tab-type')) {
+            const tabType = activeTab.getAttribute('data-tab-type');
+            if (tabType === 'xtts') action = 'test_xtts';
+            else if (tabType === 'chatterbox') action = 'test_chatterbox';
+            else if (tabType === 'pockettts') action = 'test_pockettts';
+        }
+        
+        console.log('Testing voice:', voiceName, 'using action:', action);
+        
+        const testUrl = WEB_ROOT + '/ui/xtts_clone.php?action=' + action + '&voice=' + encodeURIComponent(voiceName);
         
         fetch(testUrl)
             .then(function(response) {
@@ -1892,14 +2115,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                class="info-link" 
                title="View detailed documentation about TTS Voice Configuration">ℹ</a>
         </h1>
-        <p class="page-subtitle">Manage voice samples across multiple TTS providers: XTTS/Chatterbox, Cartesia, and Inworld</p>
-        <p class="page-note"><strong>Note:</strong> If you switch between XTTS and Chatterbox, you must resync your voices by clicking "Sync All Voices" below.</p>
+        <p class="page-subtitle">Manage voice samples across multiple TTS providers: XTTS, Chatterbox, PocketTTS, Cartesia, and Inworld</p>
+        <p class="page-note"><strong>Note:</strong> XTTS, Chatterbox, and PocketTTS all use the same API endpoint (port 8020). They share the same voice samples - no need to resync when switching between them.</p>
     </div>
 
     <!-- Tab Navigation -->
     <div class="tab-nav">
         <button class="tab-btn <?php echo $activeTab === 'xtts' ? 'active' : ''; ?>" 
-                onclick="switchTab('xtts')">XTTS/Chatterbox</button>
+                onclick="switchTab('xtts')">XTTS</button>
+        <button class="tab-btn <?php echo $activeTab === 'chatterbox' ? 'active' : ''; ?>" 
+                onclick="switchTab('chatterbox')">Chatterbox</button>
+        <button class="tab-btn <?php echo $activeTab === 'pockettts' ? 'active' : ''; ?>" 
+                onclick="switchTab('pockettts')">PocketTTS</button>
         <button class="tab-btn <?php echo $activeTab === 'cartesia' ? 'active' : ''; ?>" 
                 onclick="switchTab('cartesia')">Cartesia</button>
         <button class="tab-btn <?php echo $activeTab === 'inworld' ? 'active' : ''; ?>" 
@@ -1915,9 +2142,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php if (!empty($inworldMessage)): ?>
         <div class="message"><?php echo $inworldMessage; ?></div>
     <?php endif; ?>
-    <?php if (isset($_GET['synced']) && $activeTab === 'xtts'): ?>
+    <?php if (isset($_GET['synced']) && ($activeTab === 'xtts' || $activeTab === 'chatterbox' || $activeTab === 'pockettts')): ?>
         <div class="message">
-            <p style='color:rgb(247, 231, 16);'><strong>Successfully synced voice '<?php echo htmlspecialchars($_GET['synced']); ?>' to XTTS server.</strong></p>
+            <p style='color:rgb(247, 231, 16);'><strong>Successfully synced voice '<?php echo htmlspecialchars($_GET['synced']); ?>' to server.</strong></p>
         </div>
     <?php endif; ?>
     <?php if (isset($_GET['synced']) && $activeTab === 'cartesia'): ?>
@@ -1932,10 +2159,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
 
     <!-- XTTS Tab Content -->
-    <div class="tab-content <?php echo $activeTab === 'xtts' ? 'active' : ''; ?>">
+    <div class="tab-content <?php echo $activeTab === 'xtts' ? 'active' : ''; ?>" data-tab-type="xtts">
         <div class="content-section full-width-section">
             <h1>Voice Sample Upload</h1>
-            <p>Upload voice samples to <code>data/voices</code>. Files will be cached and uploaded to the XTTS/Chatterbox server.</p>
+            <p>Upload voice samples to <code>data/voices</code>. Files will be cached and uploaded to the XTTS server.</p>
+            <p style="color: #4a8ab6;"><strong>XTTS Info:</strong> XTTS is a TTS engine that generates cloned voices from samples. Uses roughly 4GB of VRAM. Best for NVIDIA GPUs.</p>
             
             <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=xtts" method="post" enctype="multipart/form-data" style="margin-top: 20px;">
                 <div style="margin-bottom: 15px;">
@@ -1953,15 +2181,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <li>Format: WAV (PCM), 16-bit, Mono, 20500Hz</li>
                     <li>Size: 5MB or less</li>
                     <li>Filename: lowercase with underscores (e.g., "mjoll_the_lioness.wav")</li>
-                    <li><b>Chatterbox:</b> Audio clips must be at least <b>5 seconds</b> long for voice generation</li>
+                    <li><b>XTTS:</b> Audio clips must be at least <b>5 seconds</b> long for voice generation</li>
                 </ul>
-                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #aaa;"><b>Note:</b> If replacing an existing voice, restart the XTTS/Chatterbox server after upload.</p>
+                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #aaa;"><b>Note:</b> If replacing an existing voice, restart the XTTS server after upload.</p>
             </div>
         </div>
 
         <div class="content-section full-width-section">
-            <h1>XTTS/Chatterbox Voice Cache</h1>
-            <p>Manage voice samples for XTTS/Chatterbox. Voices are uploaded from local .wav files in <code>data/voices</code> to the XTTS/Chatterbox server.</p>
+            <h1>XTTS Voice Cache</h1>
+            <p>Manage voice samples for XTTS. Voices are uploaded from local .wav files in <code>data/voices</code> to the XTTS server.</p>
             
             <?php
             $localVoices = getLocalVoices();
@@ -2008,7 +2236,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="content-section full-width-section">
             <h1>Batch Process Missing Voices</h1>
-            <p>Upload missing local voices to the XTTS/Chatterbox server.</p>
+            <p>Upload missing local voices to the XTTS server.</p>
             
             <?php
             $localVoices = getLocalVoices();
@@ -2054,11 +2282,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <div class="content-section full-width-section">
-            <h1>Cloud XTTS/Chatterbox Sync</h1>
-            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=xtts" method="post" onsubmit="showLoadingMessage('Syncing voice cache to XTTS/Chatterbox server, this can take a couple minutes...');">
-                <p><strong>Only required for online XTTS/Chatterbox instances.</strong></p>
+            <h1>Cloud XTTS Sync</h1>
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=xtts" method="post" onsubmit="showLoadingMessage('Syncing voice cache to XTTS server, this can take a couple minutes...');">
+                <p><strong>Only required for online XTTS instances.</strong></p>
                 <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
-                <p style="color: #f0ad4e;"><strong>Important:</strong> If you switch between XTTS and Chatterbox, run "Sync All Voices" to resync your voice cache.</p>
                 <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
                 <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.hostwiki.io/en/Vast-AI" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
                 <p>Cached voices are stored in <code>data/voices</code>. <a href="<?php echo $webRoot; ?>/data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>
@@ -2067,6 +2294,284 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </form>
             <p>Advanced XTTS configuration: <a href="<?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs" style="color: yellow;" target="_blank"><?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs</a></p>
+        </div>
+    </div>
+
+    <!-- Chatterbox Tab Content -->
+    <div class="tab-content <?php echo $activeTab === 'chatterbox' ? 'active' : ''; ?>" data-tab-type="chatterbox">
+        <div class="content-section full-width-section">
+            <h1>Voice Sample Upload</h1>
+            <p>Upload voice samples to <code>data/voices</code>. Files will be cached and uploaded to the Chatterbox server.</p>
+            <p style="color: #4a8ab6;"><strong>Chatterbox Info:</strong> Chatterbox is an optimized fork of XTTS with faster inference. Uses roughly 4GB of VRAM. Shares the same API as XTTS.</p>
+            
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=chatterbox" method="post" enctype="multipart/form-data" style="margin-top: 20px;">
+                <div style="margin-bottom: 15px;">
+                    <label for="file" style="display: block; margin-bottom: 8px;">Select .wav file(s) or .zip archive to upload:</label>
+                    <input type="file" name="file[]" id="file" accept=".wav,.zip" multiple="multiple" required style="width: 100%; max-width: 500px; padding: 8px;">
+                </div>
+                <div class="button-group">
+                    <input type="submit" name="submit" value="Upload Voice Sample" class="action-button upload-csv">
+                </div>
+            </form>
+            
+            <div style="margin-top: 20px; padding: 15px; background: rgba(74, 138, 182, 0.1); border: 1px solid #4a8ab6; border-radius: 6px;">
+                <p style="margin: 0 0 10px 0; font-weight: 600; color: #4a8ab6;">📋 File Requirements:</p>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>Format: WAV (PCM), 16-bit, Mono, 20500Hz</li>
+                    <li>Size: 5MB or less</li>
+                    <li>Filename: lowercase with underscores (e.g., "mjoll_the_lioness.wav")</li>
+                    <li><b>Chatterbox:</b> Audio clips must be at least <b>5 seconds</b> long for voice generation</li>
+                </ul>
+                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #aaa;"><b>Note:</b> If replacing an existing voice, restart the Chatterbox server after upload.</p>
+            </div>
+        </div>
+
+        <div class="content-section full-width-section">
+            <h1>Chatterbox Voice Cache</h1>
+            <p>Manage voice samples for Chatterbox. Voices are uploaded from local .wav files in <code>data/voices</code> to the Chatterbox server.</p>
+            
+            <?php
+            $localVoices = getLocalVoices();
+            $xttsVoices = [];
+            if (isset($_SESSION['xtts_speakers_list']) && is_array($_SESSION['xtts_speakers_list'])) {
+                foreach ($_SESSION['xtts_speakers_list'] as $speaker) {
+                    $displayName = basename($speaker, '.wav');
+                    $xttsVoices[$displayName] = true;
+                }
+            }
+            ?>
+            
+            <div class="button-group" style="margin-top: 20px;">
+                <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=chatterbox" method="post" style="display: inline;">
+                    <input type="hidden" name="get_speakers" value="1">
+                    <input type="submit" value="Refresh Chatterbox Server Voices" class="action-button download-csv">
+                </form>
+            </div>
+
+            <div class="voice-status-grid" style="margin-top: 20px;">
+                <?php foreach ($localVoices as $voice): ?>
+                    <?php $isOnServer = isset($xttsVoices[$voice]); ?>
+                    <div class="voice-status-item" onclick="copyToClipboard('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" title="Click to copy voice name">
+                        <span class="voice-name"><?php echo htmlspecialchars($voice); ?></span>
+                        <span class="status-icon <?php echo $isOnServer ? 'cloned' : 'not-cloned'; ?>">
+                            <?php echo $isOnServer ? '✓' : '✗'; ?>
+                        </span>
+                        <div class="button-container">
+                            <?php if ($isOnServer): ?>
+                                <button onclick="event.stopPropagation(); testVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
+                                        class="play-btn" title="Test voice">▶</button>
+                            <?php else: ?>
+                                <button onclick="event.stopPropagation(); syncSingleVoice('chatterbox', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
+                                        class="sync-btn" title="Sync this voice to Chatterbox server">↻</button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+                <?php if (empty($localVoices)): ?>
+                    <p>No voice files found in <code>data/voices</code>. Upload voice samples above first.</p>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <div class="content-section full-width-section">
+            <h1>Batch Process Missing Voices</h1>
+            <p>Upload missing local voices to the Chatterbox server.</p>
+            
+            <?php
+            $localVoices = getLocalVoices();
+            $xttsVoices = [];
+            if (isset($_SESSION['xtts_speakers_list']) && is_array($_SESSION['xtts_speakers_list'])) {
+                foreach ($_SESSION['xtts_speakers_list'] as $speaker) {
+                    $displayName = basename($speaker, '.wav');
+                    $xttsVoices[$displayName] = true;
+                }
+            }
+            $missingXttsVoices = [];
+            foreach ($localVoices as $voice) {
+                if (!isset($xttsVoices[$voice])) {
+                    $missingXttsVoices[] = $voice;
+                }
+            }
+            ?>
+            
+            <?php if (count($missingXttsVoices) > 0): ?>
+                <p style="color: #4a8ab6;">Found <?php echo count($missingXttsVoices); ?> voice(s) not yet uploaded to Chatterbox server.</p>
+                <div class="button-group">
+                    <button onclick="startBatchUpload('xtts', <?php echo htmlspecialchars(json_encode($missingXttsVoices)); ?>)" class="action-button upload-csv">
+                        Batch Upload Missing Voices (<?php echo count($missingXttsVoices); ?>)
+                    </button>
+                    <button onclick="cancelBatchUpload()" id="cancel-batch-xtts" class="action-button delete" style="display:none;">Cancel</button>
+                </div>
+                
+                <div id="batch-progress-xtts" style="display:none; margin-top: 20px; padding: 15px; background: #2c2c2c; border: 1px solid #4a4a4a; border-radius: 5px;">
+                    <div style="margin-bottom: 10px;">
+                        <strong>Progress: <span id="batch-current-xtts">0</span> / <span id="batch-total-xtts">0</span></strong>
+                        <span id="batch-eta-xtts" style="margin-left: 15px; color: #aaa;"></span>
+                    </div>
+                    <div style="background: #1a1a1a; height: 30px; border-radius: 4px; overflow: hidden; margin-bottom: 15px;">
+                        <div id="batch-progress-bar-xtts" style="background: rgb(242, 124, 17); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                    <div id="batch-status-xtts" style="max-height: 300px; overflow-y: auto;">
+                        <!-- Status messages will appear here -->
+                    </div>
+                </div>
+            <?php else: ?>
+                <p style="color: #4caf50;">✓ All local voices are already uploaded to Chatterbox server.</p>
+            <?php endif; ?>
+        </div>
+
+        <div class="content-section full-width-section">
+            <h1>Cloud Chatterbox Sync</h1>
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=chatterbox" method="post" onsubmit="showLoadingMessage('Syncing voice cache to Chatterbox server, this can take a couple minutes...');">
+                <p><strong>Only required for online Chatterbox instances.</strong></p>
+                <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
+                <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
+                <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.hostwiki.io/en/Vast-AI" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
+                <p>Cached voices are stored in <code>data/voices</code>. <a href="<?php echo $webRoot; ?>/data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>
+                <div class="button-group">
+                    <input type="submit" name="upload_all" value="Sync Voice Cache" class="action-button edit">
+                </div>
+            </form>
+            <p>Advanced Chatterbox configuration: <a href="<?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs" style="color: yellow;" target="_blank"><?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs</a></p>
+        </div>
+    </div>
+
+    <!-- PocketTTS Tab Content -->
+    <div class="tab-content <?php echo $activeTab === 'pockettts' ? 'active' : ''; ?>" data-tab-type="pockettts">
+        <div class="content-section full-width-section">
+            <h1>Voice Sample Upload</h1>
+            <p>Upload voice samples to <code>data/voices</code>. Files will be cached and uploaded to the PocketTTS server.</p>
+            <p style="color: #4a8ab6;"><strong>PocketTTS Info:</strong> PocketTTS is a CPU-based TTS engine that runs without a GPU. Perfect for AMD systems or CPU-only setups. Shares the same API as XTTS.</p>
+            
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=pockettts" method="post" enctype="multipart/form-data" style="margin-top: 20px;">
+                <div style="margin-bottom: 15px;">
+                    <label for="file" style="display: block; margin-bottom: 8px;">Select .wav file(s) or .zip archive to upload:</label>
+                    <input type="file" name="file[]" id="file" accept=".wav,.zip" multiple="multiple" required style="width: 100%; max-width: 500px; padding: 8px;">
+                </div>
+                <div class="button-group">
+                    <input type="submit" name="submit" value="Upload Voice Sample" class="action-button upload-csv">
+                </div>
+            </form>
+            
+            <div style="margin-top: 20px; padding: 15px; background: rgba(74, 138, 182, 0.1); border: 1px solid #4a8ab6; border-radius: 6px;">
+                <p style="margin: 0 0 10px 0; font-weight: 600; color: #4a8ab6;">📋 File Requirements:</p>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>Format: WAV (PCM), 16-bit, Mono, 20500Hz</li>
+                    <li>Size: 5MB or less</li>
+                    <li>Filename: lowercase with underscores (e.g., "mjoll_the_lioness.wav")</li>
+                    <li><b>PocketTTS:</b> Audio clips must be at least <b>5 seconds</b> long for voice generation</li>
+                </ul>
+                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #aaa;"><b>Note:</b> If replacing an existing voice, restart the PocketTTS server after upload.</p>
+            </div>
+        </div>
+
+        <div class="content-section full-width-section">
+            <h1>PocketTTS Voice Cache</h1>
+            <p>Manage voice samples for PocketTTS. Voices are uploaded from local .wav files in <code>data/voices</code> to the PocketTTS server.</p>
+            
+            <?php
+            $localVoices = getLocalVoices();
+            $xttsVoices = [];
+            if (isset($_SESSION['xtts_speakers_list']) && is_array($_SESSION['xtts_speakers_list'])) {
+                foreach ($_SESSION['xtts_speakers_list'] as $speaker) {
+                    $displayName = basename($speaker, '.wav');
+                    $xttsVoices[$displayName] = true;
+                }
+            }
+            ?>
+            
+            <div class="button-group" style="margin-top: 20px;">
+                <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=pockettts" method="post" style="display: inline;">
+                    <input type="hidden" name="get_speakers" value="1">
+                    <input type="submit" value="Refresh PocketTTS Server Voices" class="action-button download-csv">
+                </form>
+            </div>
+
+            <div class="voice-status-grid" style="margin-top: 20px;">
+                <?php foreach ($localVoices as $voice): ?>
+                    <?php $isOnServer = isset($xttsVoices[$voice]); ?>
+                    <div class="voice-status-item" onclick="copyToClipboard('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" title="Click to copy voice name">
+                        <span class="voice-name"><?php echo htmlspecialchars($voice); ?></span>
+                        <span class="status-icon <?php echo $isOnServer ? 'cloned' : 'not-cloned'; ?>">
+                            <?php echo $isOnServer ? '✓' : '✗'; ?>
+                        </span>
+                        <div class="button-container">
+                            <?php if ($isOnServer): ?>
+                                <button onclick="event.stopPropagation(); testVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
+                                        class="play-btn" title="Test voice">▶</button>
+                            <?php else: ?>
+                                <button onclick="event.stopPropagation(); syncSingleVoice('pockettts', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
+                                        class="sync-btn" title="Sync this voice to PocketTTS server">↻</button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+                <?php if (empty($localVoices)): ?>
+                    <p>No voice files found in <code>data/voices</code>. Upload voice samples above first.</p>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <div class="content-section full-width-section">
+            <h1>Batch Process Missing Voices</h1>
+            <p>Upload missing local voices to the PocketTTS server.</p>
+            
+            <?php
+            $localVoices = getLocalVoices();
+            $xttsVoices = [];
+            if (isset($_SESSION['xtts_speakers_list']) && is_array($_SESSION['xtts_speakers_list'])) {
+                foreach ($_SESSION['xtts_speakers_list'] as $speaker) {
+                    $displayName = basename($speaker, '.wav');
+                    $xttsVoices[$displayName] = true;
+                }
+            }
+            $missingXttsVoices = [];
+            foreach ($localVoices as $voice) {
+                if (!isset($xttsVoices[$voice])) {
+                    $missingXttsVoices[] = $voice;
+                }
+            }
+            ?>
+            
+            <?php if (count($missingXttsVoices) > 0): ?>
+                <p style="color: #4a8ab6;">Found <?php echo count($missingXttsVoices); ?> voice(s) not yet uploaded to PocketTTS server.</p>
+                <div class="button-group">
+                    <button onclick="startBatchUpload('xtts', <?php echo htmlspecialchars(json_encode($missingXttsVoices)); ?>)" class="action-button upload-csv">
+                        Batch Upload Missing Voices (<?php echo count($missingXttsVoices); ?>)
+                    </button>
+                    <button onclick="cancelBatchUpload()" id="cancel-batch-xtts" class="action-button delete" style="display:none;">Cancel</button>
+                </div>
+                
+                <div id="batch-progress-xtts" style="display:none; margin-top: 20px; padding: 15px; background: #2c2c2c; border: 1px solid #4a4a4a; border-radius: 5px;">
+                    <div style="margin-bottom: 10px;">
+                        <strong>Progress: <span id="batch-current-xtts">0</span> / <span id="batch-total-xtts">0</span></strong>
+                        <span id="batch-eta-xtts" style="margin-left: 15px; color: #aaa;"></span>
+                    </div>
+                    <div style="background: #1a1a1a; height: 30px; border-radius: 4px; overflow: hidden; margin-bottom: 15px;">
+                        <div id="batch-progress-bar-xtts" style="background: rgb(242, 124, 17); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                    <div id="batch-status-xtts" style="max-height: 300px; overflow-y: auto;">
+                        <!-- Status messages will appear here -->
+                    </div>
+                </div>
+            <?php else: ?>
+                <p style="color: #4caf50;">✓ All local voices are already uploaded to PocketTTS server.</p>
+            <?php endif; ?>
+        </div>
+
+        <div class="content-section full-width-section">
+            <h1>Cloud PocketTTS Sync</h1>
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=pockettts" method="post" onsubmit="showLoadingMessage('Syncing voice cache to PocketTTS server, this can take a couple minutes...');">
+                <p><strong>Only required for online PocketTTS instances.</strong></p>
+                <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
+                <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
+                <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.hostwiki.io/en/Vast-AI" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
+                <p>Cached voices are stored in <code>data/voices</code>. <a href="<?php echo $webRoot; ?>/data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>
+                <div class="button-group">
+                    <input type="submit" name="upload_all" value="Sync Voice Cache" class="action-button edit">
+                </div>
+            </form>
+            <p>Advanced PocketTTS configuration: <a href="<?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs" style="color: yellow;" target="_blank"><?php echo normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]); ?>/docs</a></p>
         </div>
     </div>
 
