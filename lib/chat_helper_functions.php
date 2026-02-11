@@ -59,6 +59,8 @@ function cleanResponse($rawResponse)
         $ttsMap = [
             'melotts' => 'MELOTTS',
             'xtts-fastapi' => 'XTTSFASTAPI',
+            'chatterbox' => 'CHATTERBOX',
+            'pockettts' => 'POCKETTTS',
             'mimic3' => 'MIMIC3',
             'xvasynth' => 'XVASYNTH',
             'azure' => 'AZURE',
@@ -476,6 +478,8 @@ function loadNarratorVoiceSettings() {
 
     // Apply Narrator voice to all TTS providers
     $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']  = $voiceid;
+    $GLOBALS['TTS']['CHATTERBOX']['voiceid']   = $voiceid;
+    $GLOBALS['TTS']['POCKETTTS']['voiceid']    = $voiceid;
     $GLOBALS['TTS']['MELOTTS']['voiceid']      = $voiceid;
     $GLOBALS['TTS']['MIMIC3']['voice']         = $voiceid;
     $GLOBALS['TTS']['XVASYNTH']['model']       = $voiceid;

@@ -22,8 +22,6 @@ function SaveOriginalHerikaName() {
         if ((strlen($herika) > 0) && ($herika != "Player") && ($herika != "LLMFallback") && (stripos($herika, "Narrator") === false) && (stripos($herika, "actor") === false) && (stripos($herika, "everyone") === false) && (stripos($herika, "*") === false) && (stripos($herika, "none") === false) ) {
             $GLOBALS["ORIGINAL_HERIKA_NAME"] = $herika;
             $GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] = true;
-        } else {
-            Logger::debug("SaveOriginalHerikaName: ignored new value for HERIKA_NAME {$herika}");
         }
     }
 }
@@ -818,18 +816,22 @@ function DataPosibleLocationsToGo()
     }
 
     // Location blacklist // $LOCATION_BLACKLIST
-    $LOCATION_BLACKLIST_ARRAY=explode(",", $GLOBALS["LOCATION_BLACKLIST"] ?: []);
-    if (count($LOCATION_BLACKLIST_ARRAY) > 0) {
-        foreach ($retData as $k => $v) {
-            foreach ($LOCATION_BLACKLIST_ARRAY as $blacklistedLocation) {
-                $blacklistedLocationTrimmed = trim($blacklistedLocation);
-                if (!empty($blacklistedLocationTrimmed) && (stripos($v, $blacklistedLocationTrimmed) !== false)) {
-                    unset($retData[$k]);
-                    break; // No need to check other blacklisted locations
+    if (isset($GLOBALS["LOCATION_BLACKLIST"]) && (strlen($GLOBALS["LOCATION_BLACKLIST"])>0)) {
+        $LOCATION_BLACKLIST_ARRAY = explode(",", $GLOBALS["LOCATION_BLACKLIST"]); 
+        //$LOCATION_BLACKLIST_ARRAY = empty($GLOBALS["LOCATION_BLACKLIST"]) ? [] : explode(",", $GLOBALS["LOCATION_BLACKLIST"]); 
+        if (count($LOCATION_BLACKLIST_ARRAY) > 0) {
+            foreach ($retData as $k => $v) {
+                foreach ($LOCATION_BLACKLIST_ARRAY as $blacklistedLocation) {
+                    $blacklistedLocationTrimmed = trim($blacklistedLocation);
+                    if (!empty($blacklistedLocationTrimmed) && (stripos($v, $blacklistedLocationTrimmed) !== false)) {
+                        unset($retData[$k]);
+                        break; // No need to check other blacklisted locations
+                    }
                 }
             }
         }
     }
+    
     foreach ($retData as $k => $v) {
         if ($v=="Skyrim") {
             $retData[$k].=" (exit)";

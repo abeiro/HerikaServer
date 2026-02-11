@@ -2042,6 +2042,8 @@ if (isset($GLOBALS["TTSFUNCTION"]) && !empty($GLOBALS["TTSFUNCTION"])) {
     $ttsMap = [
         'melotts' => 'MELOTTS',
         'xtts-fastapi' => 'XTTSFASTAPI',
+        'chatterbox' => 'CHATTERBOX',
+        'pockettts' => 'POCKETTTS',
         'mimic3' => 'MIMIC3',
         'xvasynth' => 'XVASYNTH',
         'azure' => 'AZURE',

@@ -255,6 +255,8 @@ class Narrator
         if (isset($allSettings['voiceid']) && $allSettings['voiceid']) {
 
             $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']  = $allSettings['voiceid'];
+            $GLOBALS['TTS']['CHATTERBOX']['voiceid']   = $allSettings['voiceid'];
+            $GLOBALS['TTS']['POCKETTTS']['voiceid']    = $allSettings['voiceid'];
             $GLOBALS['TTS']['MELOTTS']['voiceid']      = $allSettings['voiceid'];
             $GLOBALS['TTS']['MIMIC3']['voice']         = $allSettings['voiceid'];
             $GLOBALS['TTS']['XVASYNTH']['model']       = $allSettings['voiceid'];

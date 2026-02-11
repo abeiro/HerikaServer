@@ -11,9 +11,9 @@ class sql
     public function __construct()
     {
         //$connString = "host=localhost dbname=dwemer user=dwemer password=dwemer connect_timeout=15";
-        self::$link = pg_connect($this->connString);
+        self::$link = @pg_connect($this->connString);
 
-        if (!isset(self::$link)) {
+        if (!self::$link || self::$link === false) {
             Logger::error("SQL: connection init failed. " . $this->extract_caller() );
             die("SQL: Error in connection.");
         }
