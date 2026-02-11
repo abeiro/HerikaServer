@@ -56,7 +56,25 @@ $ttsMap = [ 'melotts' => 'MELOTTS','xtts-fastapi' => 'XTTSFASTAPI','chatterbox' 
 $sttMap = [ 'whisper' => 'WHISPER','localwhisper' => 'LOCALWHISPER','azure' => 'AZURE','deepgram' => 'DEEPGRAM','parakeet'=>"PARAKEET" ];
 $ittMap = [ 'openai' => 'openai','google_openai' => 'google_openai','openrouter' => 'openrouter' ];
 // Display name mappings for UI labels
-$ttsDisplayNames = [ 'xtts-fastapi' => 'XTTS', 'chatterbox' => 'Chatterbox', 'pockettts' => 'PocketTTS' ];
+$ttsDisplayNames = [ 
+    'none' => 'None',
+    'melotts' => 'MeloTTS', 
+    'xtts-fastapi' => 'XTTS', 
+    'chatterbox' => 'Chatterbox', 
+    'pockettts' => 'PocketTTS',
+    'xvasynth' => 'xVASynth',
+    'mimic3' => 'Mimic3',
+    'azure' => 'Azure TTS',
+    '11labs' => 'ElevenLabs',
+    'openai' => 'OpenAI TTS',
+    'kokoro' => 'Kokoro',
+    'koboldcpp' => 'KoboldCPP',
+    'zonos_gradio' => 'Zonos TTS',
+    'piper-tts' => 'Piper TTS',
+    'deepgram' => 'Deepgram',
+    'cartesia' => 'Cartesia',
+    'inworld' => 'Inworld'
+];
 
 // Active tab tracking for postback previews
 $activeTab = (isset($_POST['gs_tab']) && is_string($_POST['gs_tab'])) ? (string)$_POST['gs_tab'] : 'tab-global';
