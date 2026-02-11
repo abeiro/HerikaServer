@@ -530,6 +530,8 @@ class NpcMaster
         if (isset($currentNpcData['voiceid']) && $currentNpcData['voiceid']) {
 
             $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']  = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['CHATTERBOX']['voiceid']   = $currentNpcData['voiceid'];
+            $GLOBALS['TTS']['POCKETTTS']['voiceid']    = $currentNpcData['voiceid'];
             $GLOBALS['TTS']['MELOTTS']['voiceid']      = $currentNpcData['voiceid'];
             $GLOBALS['TTS']['MIMIC3']['voice']         = $currentNpcData['voiceid'];
             $GLOBALS['TTS']['XVASYNTH']['model']       = $currentNpcData['voiceid'];

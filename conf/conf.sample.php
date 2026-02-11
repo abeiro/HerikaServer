@@ -315,6 +315,19 @@ $TTS["XTTSFASTAPI"]["voicelogic"]='voicetype';
 $TTS["XTTSFASTAPI"]["PARALINGUISTIC_TAGS_ENABLED"]=false; //Enable paralinguistic tags like [laugh], [sigh] for expressive TTS output.
 $TTS["XTTSFASTAPI"]["PARALINGUISTIC_TAGS_PROMPT"]=''; //Prompt snippet for instructing LLM to use paralinguistic tags.
 $TTS["XTTSFASTAPI"]["PARALINGUISTIC_TAGS_LIST"]='[clear throat],[sigh],[shush],[cough],[groan],[sniff],[gasp],[chuckle],[laugh]'; //Comma-separated list of supported tags.
+//Chatterbox
+$TTS["CHATTERBOX"]["endpoint"]='http://127.0.0.1:8020'; //API endpoint.
+$TTS["CHATTERBOX"]["language"]='en'; //Language.
+$TTS["CHATTERBOX"]["voiceid"]='TheNarrator'; //Generated voice file name.
+$TTS["CHATTERBOX"]["voicelogic"]='voicetype';
+$TTS["CHATTERBOX"]["PARALINGUISTIC_TAGS_ENABLED"]=false; //Enable paralinguistic tags like [laugh], [sigh] for expressive TTS output.
+$TTS["CHATTERBOX"]["PARALINGUISTIC_TAGS_PROMPT"]=''; //Prompt snippet for instructing LLM to use paralinguistic tags.
+$TTS["CHATTERBOX"]["PARALINGUISTIC_TAGS_LIST"]='[clear throat],[sigh],[shush],[cough],[groan],[sniff],[gasp],[chuckle],[laugh]'; //Comma-separated list of supported tags.
+//PocketTTS
+$TTS["POCKETTTS"]["endpoint"]='http://127.0.0.1:8020'; //API endpoint.
+$TTS["POCKETTTS"]["language"]='en'; //Language.
+$TTS["POCKETTTS"]["voiceid"]='TheNarrator'; //Generated voice file name.
+$TTS["POCKETTTS"]["voicelogic"]='voicetype';
 //MIMIC3
 $TTS["MIMIC3"]["URL"]="http://127.0.0.1:59125"; //API endpoint. 
 $TTS["MIMIC3"]["voice"]="en_UK/apope_low#default"; //Voice ID.

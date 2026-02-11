@@ -235,7 +235,7 @@
       "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro! Will connect automatically so do not change the URL. Does not currently support Chat Assist/Creation.","helpurl":"https://dwemerdynamics.hostwiki.io/en/Online-LLMs#player2"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","piper-tts","mimic3","deepgram","cartesia","inworld"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","chatterbox","pockettts","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","piper-tts","mimic3","deepgram","cartesia","inworld"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
 
   "TTS": {
     "_title":"Text-to-Speech Service",
@@ -255,6 +255,23 @@
       "PARALINGUISTIC_TAGS_ENABLED":{"type":"boolean","description":"Enable paralinguistic tags like [laugh], [sigh] for expressive TTS output.","scope":"global"},
       "PARALINGUISTIC_TAGS_PROMPT":{"type":"longstring","description":"Prompt snippet instructing the LLM to use paralinguistic tags. Added to system prompt when enabled.","scope":"global"},
       "PARALINGUISTIC_TAGS_LIST":{"type":"string","description":"Comma-separated list of supported paralinguistic tags (e.g., [laugh],[sigh],[gasp]). Tags are case-insensitive.","scope":"global"}
+    },
+    "CHATTERBOX": {
+      "_title":"Chatterbox (Optimized XTTS Fork)",
+      "endpoint":{"type":"url","description":"Chatterbox endpoint. Uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chatterbox"},
+      "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
+      "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
+      "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS CHATTERBOX voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"},
+      "PARALINGUISTIC_TAGS_ENABLED":{"type":"boolean","description":"Enable paralinguistic tags like [laugh], [sigh] for expressive TTS output.","scope":"global"},
+      "PARALINGUISTIC_TAGS_PROMPT":{"type":"longstring","description":"Prompt snippet instructing the LLM to use paralinguistic tags. Added to system prompt when enabled.","scope":"global"},
+      "PARALINGUISTIC_TAGS_LIST":{"type":"string","description":"Comma-separated list of supported paralinguistic tags (e.g., [laugh],[sigh],[gasp]). Tags are case-insensitive.","scope":"global"}
+    },
+    "POCKETTTS": {
+      "_title":"PocketTTS (CPU-based TTS)",
+      "endpoint":{"type":"url","description":"PocketTTS endpoint. CPU-only TTS, uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#pockettts"},
+      "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
+      "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
+      "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS POCKETTTS voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"}
     },
     "MIMIC3": {
       "_title":"MIMIC3 (Installed in DwemerDistro)",
@@ -378,7 +395,7 @@
       "speed": {"type":"number","description":"Speaking rate/speed (0.5-1.5). Default: 1.0"}
     }
 },
-  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","piper-tts","azure","11labs","openai","kokoro","zonos_gradio","cartesia","inworld"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
+  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","chatterbox","pockettts","xvasynth","mimic3","piper-tts","azure","11labs","openai","kokoro","zonos_gradio","cartesia","inworld"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
   "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
   "TTSFUNCTION_PLAYER_VOICE_ID": {"type":"integer","userlvl":"pro","scope":"global","description":"Speaker ID to select a voice from multi-voice model."},
   "TTSFUNCTION_PLAYER_LANGUAGE": {"type":"string","userlvl":"basic","scope":"global","description":"Overrides the TTS language for the player character."},

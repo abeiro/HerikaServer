@@ -45,8 +45,8 @@ if (!function_exists('normalize_endpoint_url')) {
     }
 }
 
-function xtts_fastapi_settings($settings,$resetAfter=false) {
-	$url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]).'/set_tts_settings';
+function chatterbox_settings($settings,$resetAfter=false) {
+	$url = normalize_endpoint_url($GLOBALS["TTS"]["CHATTERBOX"]["endpoint"]).'/set_tts_settings';
 	$data = json_decode('{
 		"stream_chunk_size": 20,
 		"temperature": 0.9,
@@ -61,7 +61,7 @@ function xtts_fastapi_settings($settings,$resetAfter=false) {
 	$finalData=array_merge($data,$settings);
 	
 	if ($resetAfter)
-		$GLOBALS["TTS"]["XTTSFASTAPI"]["RESET"]=true;
+		$GLOBALS["TTS"]["CHATTERBOX"]["RESET"]=true;
 
 	$options = array(
 		'http' => array(
@@ -123,7 +123,7 @@ function num2kan_decimal($instr) {
 
 $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 
-		//xtts_fastapi_settings([]); //Check this
+		//chatterbox_settings([]); //Check this
 		
 		if (isset($GLOBALS["AVOID_TTS_CACHE"]) && $GLOBALS["AVOID_TTS_CACHE"]===false )
 			if (file_exists(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav"))
@@ -135,7 +135,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		
 	    $starTime = microtime(true);
 
-		$url = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"])."/tts_to_audio";
+		$url = normalize_endpoint_url($GLOBALS["TTS"]["CHATTERBOX"]["endpoint"])."/tts_to_audio/";
 
 		// Request headers
 		$headers = array(
@@ -143,7 +143,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			'Content-Type: application/json'
 		);
 		
-		$lang=isset($GLOBALS["TTS"]["FORCED_LANG_DEV"])?$GLOBALS["TTS"]["FORCED_LANG_DEV"]:$GLOBALS["TTS"]["XTTSFASTAPI"]["language"];
+		$lang=isset($GLOBALS["TTS"]["FORCED_LANG_DEV"])?$GLOBALS["TTS"]["FORCED_LANG_DEV"]:$GLOBALS["TTS"]["CHATTERBOX"]["language"];
 		
 		
 		if ((isset($GLOBALS["LLM_LANG"]))&&(isset($GLOBALS["LANG_LLM_XTTS"]))&&$GLOBALS["LANG_LLM_XTTS"]) {
@@ -155,7 +155,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
         	$lang=$GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"];
 
 		if (empty($lang))
-			$lang=$GLOBALS["TTS"]["XTTSFASTAPI"]["language"];
+			$lang=$GLOBALS["TTS"]["CHATTERBOX"]["language"];
 
 		// Sanitize language code - remove any extra characters from LLM parsing
 		// Valid XTTS language codes
@@ -186,10 +186,10 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 	
 			}
 		}
-		$voice=isset($GLOBALS["TTS"]["FORCED_VOICE_DEV"])?$GLOBALS["TTS"]["FORCED_VOICE_DEV"]:$GLOBALS["TTS"]["XTTSFASTAPI"]["voiceid"];
+		$voice=isset($GLOBALS["TTS"]["FORCED_VOICE_DEV"])?$GLOBALS["TTS"]["FORCED_VOICE_DEV"]:$GLOBALS["TTS"]["CHATTERBOX"]["voiceid"];
 		
 		if (empty($voice))
-			$voice=$GLOBALS["TTS"]["XTTSFASTAPI"]["voiceid"];
+			$voice=$GLOBALS["TTS"]["CHATTERBOX"]["voiceid"];
 	
 		if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]))
 			$voice=$GLOBALS["PATCH_OVERRIDE_VOICE"];
@@ -249,8 +249,8 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$FFMPEG_FILTER='-filter:a "adelay=150|150"';
 		}
 		
-		if (isset($GLOBALS["TTS"]["XTTSFASTAPI"]["RESET"]) && $GLOBALS["TTS"]["XTTSFASTAPI"]["RESET"]) {
-			xtts_fastapi_settings([]);
+		if (isset($GLOBALS["TTS"]["CHATTERBOX"]["RESET"]) && $GLOBALS["TTS"]["CHATTERBOX"]["RESET"]) {
+			chatterbox_settings([]);
 		}
 
 		// Handle the response
@@ -271,7 +271,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$textString.=PHP_EOL.print_r($http_response_header,true);
 			
             file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n$FFMPEG_FILTER\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rffmpeg transcoding: $endTimeTrans secs\n\rsize of wav ($size)\n\rfunction tts($textString,$mood=\"cheerful\",$stringforhash)");
-			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in xtts-fast-api call";
+			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in chatterbox call";
 
 			if (isset($GLOBALS["DEVELOP_STORE_AUDIO_FOR_TRANING"]) && $GLOBALS["DEVELOP_STORE_AUDIO_FOR_TRANING"]) {
 				$rootPath=dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" ;
@@ -293,9 +293,9 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 };
 
 /*
-$GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]='http://localhost:8020';
-$GLOBALS["TTS"]["XTTSFASTAPI"]["voiceid"]='svenja';
-$GLOBALS["TTS"]["XTTSFASTAPI"]["language"]='en';
+$GLOBALS["TTS"]["CHATTERBOX"]["endpoint"]='http://localhost:8020';
+$GLOBALS["TTS"]["CHATTERBOX"]["voiceid"]='svenja';
+$GLOBALS["TTS"]["CHATTERBOX"]["language"]='en';
 
 $textTosay="Hello fellows...this is a new text to speech connector";
 
