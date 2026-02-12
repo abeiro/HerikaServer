@@ -47,20 +47,50 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
     font-weight: normal;
     font-style: normal;
 }
-main { padding-top: 40px; padding-bottom: 40px; }
-h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacing: 8px; font-size: 2.2em; color: rgb(242, 124, 17); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); text-align: center; }
+main { 
+    padding-top: 40px; 
+    padding-bottom: 40px; 
+}
+.page-header {
+    margin: 0 0 24px 0; 
+    padding: 24px;
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(28, 28, 28, 0.98));
+    border-radius: 10px;
+    border: 1px solid #3a3a3a;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    text-align: center;
+}
+h1.api-title { 
+    margin: 0 0 8px 0; 
+    font-family: 'MagicCards', serif; 
+    word-spacing: 8px; 
+    font-size: 2em; 
+    color: rgb(242, 124, 17); 
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5); 
+}
+.page-subtitle {
+    color: #aaa;
+    font-size: 0.95em;
+    line-height: 1.5;
+    margin: 0;
+}
 
 /* Relationship Build Button - Gray/Orange theme to match UI */
 .btn-rel-build {
-    background: #3a3a4a;
+    background: rgba(58, 58, 74, 0.8);
     color: rgb(242, 124, 17);
-    border: 1px solid rgb(242, 124, 17);
-    padding: 6px 10px;
+    border: 1px solid rgba(242, 124, 17, 0.5);
+    padding: 8px 14px;
     border-radius: 6px;
     cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 600;
 }
 .btn-rel-build:hover {
-    background: #4a4a5a;
+    background: rgba(74, 74, 90, 0.9);
+    border-color: rgb(242, 124, 17);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(242, 124, 17, 0.2);
 }
 
 /* Relationship Build Modal - Gray/Orange theme */
@@ -75,19 +105,20 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
 }
 .rel-build-modal-overlay.show { display: flex; }
 .rel-build-modal {
-    background: #2a2a2a;
-    border: 2px solid #ffffff;
-    border-radius: 16px;
-    padding: 30px;
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.98), rgba(34, 34, 34, 0.98));
+    border: 1px solid #3a3a3a;
+    border-radius: 12px;
+    padding: 32px;
     max-width: 600px;
     width: 90%;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 30px rgba(255, 255, 255, 0.15);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), 
+                0 0 30px rgba(242, 124, 17, 0.1);
 }
 .rel-build-modal h2 {
-    margin: 0 0 20px 0;
+    margin: 0 0 22px 0;
     color: rgb(242, 124, 17);
     font-family: 'MagicCards', serif;
-    font-size: 1.8em;
+    font-size: 1.7em;
     text-align: center;
     text-shadow: 0 0 15px rgba(242, 124, 17, 0.4);
 }
@@ -97,110 +128,130 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
     margin-bottom: 20px;
     text-align: center;
 }
-.rel-build-modal .modal-body p { margin: 10px 0; }
+.rel-build-modal .modal-body p { margin: 12px 0; }
 .rel-build-modal .modal-body strong { color: rgb(242, 124, 17); }
 .rel-build-modal .stats-box {
-    background: #1a1a1a;
-    border: 1px solid #555;
+    background: linear-gradient(135deg, rgba(26, 26, 26, 0.9), rgba(20, 20, 20, 0.95));
+    border: 1px solid #3a3a3a;
     border-radius: 8px;
-    padding: 15px;
-    margin: 15px 0;
+    padding: 16px;
+    margin: 16px 0;
     display: flex;
     justify-content: space-around;
     text-align: center;
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.03);
 }
 .rel-build-modal .stat-item { }
-.rel-build-modal .stat-value { font-size: 2em; color: rgb(242, 124, 17); font-weight: bold; }
-.rel-build-modal .stat-label { font-size: 0.85em; color: #888; }
+.rel-build-modal .stat-value { font-size: 2em; color: rgb(242, 124, 17); font-weight: bold; text-shadow: 0 0 10px rgba(242, 124, 17, 0.3); }
+.rel-build-modal .stat-label { font-size: 0.85em; color: #999; margin-top: 4px; }
 .rel-build-modal .progress-section { display: none; margin: 20px 0; }
 .rel-build-modal .progress-section.show { display: block; }
 .rel-build-modal .progress-bar-wrap {
-    background: #1a1a1a;
+    background: rgba(26, 26, 26, 0.9);
     border-radius: 8px;
-    height: 24px;
+    height: 26px;
     overflow: hidden;
-    margin: 10px 0;
+    margin: 12px 0;
+    border: 1px solid #3a3a3a;
 }
 .rel-build-modal .progress-bar {
     background: linear-gradient(90deg, rgb(200, 100, 10), rgb(242, 124, 17));
     height: 100%;
     width: 0%;
     transition: width 0.3s ease;
-    border-radius: 8px;
+    border-radius: 7px;
+    box-shadow: 0 0 10px rgba(242, 124, 17, 0.5);
 }
 .rel-build-modal .progress-text {
     text-align: center;
     color: rgb(242, 124, 17);
     font-size: 0.9em;
+    margin-top: 8px;
 }
 .rel-build-modal .progress-log {
-    background: #0a0a0a;
+    background: rgba(10, 10, 10, 0.9);
     border: 1px solid #333;
     border-radius: 8px;
-    padding: 10px;
+    padding: 12px;
     max-height: 150px;
     overflow-y: auto;
     font-family: monospace;
     font-size: 0.8em;
-    color: #888;
-    margin-top: 10px;
+    color: #999;
+    margin-top: 12px;
 }
 .rel-build-modal .progress-log .success { color: #4ade80; }
 .rel-build-modal .progress-log .error { color: #f87171; }
 .rel-build-modal .progress-log .skip { color: rgb(242, 124, 17); }
 .rel-build-modal .modal-actions {
     display: flex;
-    gap: 12px;
+    gap: 14px;
     justify-content: center;
-    margin-top: 20px;
+    margin-top: 22px;
 }
 .rel-build-modal .btn-start {
-    background: #3a3a3a;
+    background: rgba(58, 58, 58, 0.9);
     color: rgb(242, 124, 17);
-    border: 1px solid rgb(242, 124, 17);
-    padding: 12px 30px;
+    border: 1px solid rgba(242, 124, 17, 0.5);
+    padding: 12px 32px;
     border-radius: 8px;
     font-size: 1em;
     cursor: pointer;
     transition: all 0.3s ease;
+    font-weight: 600;
 }
-.rel-build-modal .btn-start:hover { background: #4a4a4a; }
-.rel-build-modal .btn-start:disabled { background: #222; color: #555; border-color: #444; cursor: not-allowed; }
+.rel-build-modal .btn-start:hover { 
+    background: rgba(74, 74, 74, 0.9); 
+    border-color: rgb(242, 124, 17);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(242, 124, 17, 0.3);
+}
+.rel-build-modal .btn-start:disabled { 
+    background: #222; 
+    color: #555; 
+    border-color: #444; 
+    cursor: not-allowed; 
+    transform: none;
+    box-shadow: none;
+}
 .rel-build-modal .btn-cancel {
-    background: #3a3a3a;
+    background: rgba(58, 58, 58, 0.9);
     color: rgb(242, 124, 17);
-    border: 1px solid rgb(242, 124, 17);
-    padding: 12px 30px;
+    border: 1px solid rgba(242, 124, 17, 0.5);
+    padding: 12px 32px;
     border-radius: 8px;
     font-size: 1em;
     cursor: pointer;
     transition: all 0.3s ease;
+    font-weight: 600;
 }
-.rel-build-modal .btn-cancel:hover { background: #4a4a4a; }
+.rel-build-modal .btn-cancel:hover { 
+    background: rgba(74, 74, 74, 0.9); 
+    border-color: rgb(242, 124, 17);
+    transform: translateY(-1px);
+}
 .rel-build-modal .connector-info {
     background: rgba(242, 124, 17, 0.1);
-    border: 1px solid rgb(242, 124, 17);
+    border: 1px solid rgba(242, 124, 17, 0.5);
     border-radius: 8px;
-    padding: 10px;
-    margin: 10px 0;
+    padding: 12px;
+    margin: 12px 0;
     font-size: 0.9em;
     text-align: center;
     color: #34d399;
 }
 .rel-build-modal .connector-info .connector-model {
-    color: #aaa;
+    color: #bbb;
     font-size: 0.9em;
 }
 .rel-build-modal .no-connector {
     background: rgba(239, 68, 68, 0.1);
-    border-color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.5);
     color: #f87171;
 }
 </style>
 
 <main>
-
-<h1 class="api-title">CHIM NPCs</h1>
 
 <?php
 $GLOBALS["db"] = new sql();
@@ -943,7 +994,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                     <?php endif; ?>
                     <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                 <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
-                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
+                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock - Locked profiles are protected from history pullback when loading saves"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
                 <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : "return confirm('Delete this NPC?');" ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">🗑️</a>
                 </div>
             </div>
@@ -1284,7 +1335,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <p style="margin:0; color:rgb(242, 124, 17) ;">Tags:</p>
         <input type="text" id="modal_tags_input" name="tags" value="<?= htmlspecialchars($editItem['tags'] ?? '') ?>" placeholder="tags" style="max-width:240px; font-size:12px; padding:4px 6px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff;" title="Tags help with searching and grouping" />
         <a id="modal_fav_btn" class="btn btn-toggle<?= $isFav? ' active':'' ?>" href="#" title="Toggle favorite" data-favorite><?= $isFav? '★' : '☆' ?></a>
-        <a id="modal_lock_btn" class="btn btn-toggle<?= $isLock? ' active':'' ?>" href="#" title="Toggle lock" data-lock><?= $isLock? '🔒' : '🔓' ?></a>
+        <a id="modal_lock_btn" class="btn btn-toggle<?= $isLock? ' active':'' ?>" href="#" title="Toggle lock - Locked profiles are protected from history pullback when loading saves" data-lock><?= $isLock? '🔒' : '🔓' ?></a>
     </div>
     <?php
     // Render LLM summary container (will live-update via JS)
@@ -2266,8 +2317,26 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 @media (max-width: 1400px){ .npc-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 1100px){ .npc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px){ .npc-grid { grid-template-columns: 1fr; } }
-.npc-card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:8px; box-shadow:none; transition: transform .12s ease, background .12s ease; cursor:pointer; }
-.npc-card:hover { transform: translateY(-1px); background:#333333; }
+.npc-card { 
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98)); 
+    border: 1px solid #3a3a3a; 
+    border-radius: 10px; 
+    padding: 16px; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px; 
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
+                inset 0 1px rgba(255, 255, 255, 0.03); 
+    transition: all 0.2s ease; 
+    cursor: pointer; 
+}
+.npc-card:hover { 
+    transform: translateY(-2px); 
+    background: linear-gradient(180deg, rgba(48, 48, 48, 0.95), rgba(40, 40, 40, 0.98)); 
+    border-color: #4a4a4a;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25),
+                inset 0 1px rgba(255, 255, 255, 0.05);
+}
 .npc-title { font-weight:800; color:#e9efff; font-size:18px; text-align:center; letter-spacing:0.3px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .npc-title-left { flex:1 1 auto; text-align:left; }
 .npc-title-actions { display:flex; align-items:center; gap:6px; flex:0 0 auto; }
@@ -2281,7 +2350,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-sal-icon { margin-left:6px; color:#ffb347; opacity:0.95; }
 .npc-blc-icon { margin-left:6px; color:#8db4e2; opacity:0.95; }
 .npc-gps-icon { margin-left:6px; color:#ff6b6b; opacity:0.95; }
-.npc-divider { height:1px; background:#4a4a4a; margin:2px 0 6px; }
+.npc-divider { height:1px; background: linear-gradient(90deg, transparent, rgba(242, 124, 17, 0.3) 50%, transparent); margin:6px 0 10px; }
 .npc-fields { display:flex; flex-direction:column; gap:8px; }
 .npc-line { color:#e0e0e0; font-size:13px; line-height:1.35; }
 .npc-muted { color:rgb(242, 124, 17); }
@@ -2313,49 +2382,254 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 @media (max-width: 900px){ .npc-race-art { width:140px; height:140px; } }
 @media (max-width: 720px){ .npc-right { display:none; } }
 /* Dynamic profile grouping */
-.dynamic-profile-section { border:1px solid #4a4a4a; border-radius:8px; padding:10px; margin:8px 0; background:#262626; }
-.dynamic-profile-section .section-title { font-weight:700; color:rgb(242, 124, 17); margin-bottom:6px; }
-.dynamic-profile-section > .form-item { margin-bottom:8px; }
+.dynamic-profile-section { 
+    border:1px solid #3a3a3a; 
+    border-radius:8px; 
+    padding:12px; 
+    margin:10px 0; 
+    background: linear-gradient(135deg, rgba(26, 26, 26, 0.8), rgba(32, 32, 32, 0.6)); 
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+.dynamic-profile-section .section-title { 
+    font-weight:700; 
+    color:rgb(242, 124, 17); 
+    margin-bottom:8px; 
+    font-size: 1.05em;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+.dynamic-profile-section > .form-item { margin-bottom:10px; }
 </style>
 <style>
 /* Modal styling aligned with Oghma edit modal */
-.modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:10000; align-items:center; justify-content:center; overflow-y:auto; padding:20px 0; }
-.modal-container { position:relative; top:auto; left:auto; transform:none; /*margin: 120px auto 40px auto*/; max-width:1200px; width:95%; background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; }
-.modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; position:sticky; top:0; z-index:2; }
-.modal-title { margin:0; font-weight:700; color: rgb(242, 124, 17); font-family: 'MagicCards', serif; word-spacing: 6px; }
-.modal-body { max-height:calc(85vh - 100px); /*overflow-y:auto;*/ background:#2a2a2a; }
-.modal-close { background:#3a3a3a; color:#fff; border:1px solid #4a4a4a; border-radius:6px; padding:4px 10px; cursor:pointer; }
-.modal-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-.modal-actions .btn-save { background:#176529; color:#fff; border:1px solid rgba(72,187,120,0.3); border-radius:6px; padding:8px 14px; cursor:pointer; font-weight:700; font-size:13px; transition:all 0.2s ease; }
-.modal-actions .btn-save:hover { background:#125121; border-color:rgba(72,187,120,0.5); }
-.modal-actions .btn-cancel { background:#3a3a3a; color:#e9efff; border:1px solid #4a4a4a; border-radius:6px; padding:8px 14px; cursor:pointer; font-weight:600; font-size:13px; transition:all 0.2s ease; }
-.modal-actions .btn-cancel:hover { background:#4a4a4a; border-color:#5a5a5a; color:rgb(242,124,17); }
-.modal-actions #npc_modal_regen { background:rgba(242,124,17,0.15); border-color:rgb(242,124,17); color:rgb(242,124,17); }
-.modal-actions #npc_modal_regen:hover { background:rgba(242,124,17,0.3); }
-.modal-actions #npc_modal_close { background:#5a2a2a; border-color:#7a3a3a; color:#fff; }
-.modal-actions #npc_modal_close:hover { background:#6a3a3a; }
-.modal-save { background: rgb(242, 124, 17); color:#111; border:1px solid rgb(242, 124, 17); border-radius:6px; padding:6px 12px; cursor:pointer; font-weight:700; }
+.modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:10000; align-items:center; justify-content:center; overflow-y:auto; padding:20px 0; }
+.modal-container { 
+    position:relative; 
+    top:auto; 
+    left:auto; 
+    transform:none; 
+    max-width:1200px; 
+    width:95%; 
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.98), rgba(34, 34, 34, 0.98)); 
+    border: 1px solid #3a3a3a; 
+    border-radius: 12px; 
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+.modal-header { 
+    display:flex; 
+    justify-content:space-between; 
+    align-items:center; 
+    padding:16px 18px; 
+    border-bottom: 1px solid rgba(242, 124, 17, 0.2); 
+    background: rgba(42, 42, 42, 0.95); 
+    position:sticky; 
+    top:0; 
+    z-index:2; 
+    border-radius: 12px 12px 0 0;
+}
+.modal-title { 
+    margin:0; 
+    font-weight:700; 
+    color: rgb(242, 124, 17); 
+    font-family: 'MagicCards', serif; 
+    word-spacing: 6px; 
+    font-size: 1.4em;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+.modal-body { 
+    max-height:calc(85vh - 100px); 
+    background: rgba(34, 34, 34, 0.95); 
+}
+.modal-close { 
+    background:#3a3a3a; 
+    color:#fff; 
+    border:1px solid #4a4a4a; 
+    border-radius:6px; 
+    padding:6px 12px; 
+    cursor:pointer; 
+    transition: all 0.2s ease;
+}
+.modal-close:hover {
+    background:#4a4a4a;
+    border-color:#5a5a5a;
+}
+.modal-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.modal-actions .btn-save { 
+    background: linear-gradient(135deg, #176529, #125121); 
+    color:#fff; 
+    border:1px solid rgba(72,187,120,0.3); 
+    border-radius:6px; 
+    padding:10px 16px; 
+    cursor:pointer; 
+    font-weight:700; 
+    font-size:13px; 
+    transition:all 0.2s ease; 
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.modal-actions .btn-save:hover { 
+    background: linear-gradient(135deg, #125121, #0d3d19); 
+    border-color:rgba(72,187,120,0.5); 
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+.modal-actions .btn-cancel { 
+    background:#3a3a3a; 
+    color:#e9efff; 
+    border:1px solid #4a4a4a; 
+    border-radius:6px; 
+    padding:10px 16px; 
+    cursor:pointer; 
+    font-weight:600; 
+    font-size:13px; 
+    transition:all 0.2s ease; 
+}
+.modal-actions .btn-cancel:hover { 
+    background:#4a4a4a; 
+    border-color:#5a5a5a; 
+    color:rgb(242,124,17); 
+    transform: translateY(-1px);
+}
+.modal-actions #npc_modal_regen { 
+    background:rgba(242,124,17,0.15); 
+    border-color:rgb(242,124,17); 
+    color:rgb(242,124,17); 
+}
+.modal-actions #npc_modal_regen:hover { 
+    background:rgba(242,124,17,0.3); 
+    border-color:rgb(242,124,17);
+    transform: translateY(-1px);
+}
+.modal-actions #npc_modal_close { 
+    background: linear-gradient(135deg, #5a2a2a, #4a1a1a); 
+    border-color:#7a3a3a; 
+    color:#fff; 
+}
+.modal-actions #npc_modal_close:hover { 
+    background: linear-gradient(135deg, #6a3a3a, #5a2a2a); 
+    transform: translateY(-1px);
+}
+.modal-save { 
+    background: rgb(242, 124, 17); 
+    color:#111; 
+    border:1px solid rgb(242, 124, 17); 
+    border-radius:6px; 
+    padding:8px 14px; 
+    cursor:pointer; 
+    font-weight:700; 
+    transition: all 0.2s ease;
+}
+.modal-save:hover {
+    background: rgb(212, 94, 0);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(242, 124, 17, 0.3);
+}
 /* Styled tabs to match button aesthetics */
-#npc_modal_tabs .pf-tab { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; cursor:pointer; font-weight:700; }
-#npc_modal_tabs .pf-tab:hover { background:#3a3a3a; }
-#npc_modal_tabs .pf-tab.active { background: rgb(242, 124, 17); color:#111; border-color: rgb(242, 124, 17); }
+#npc_modal_tabs .pf-tab { 
+    padding:8px 14px; 
+    border-radius:6px; 
+    border:1px solid #3a3a3a; 
+    background: rgba(42, 42, 42, 0.8); 
+    color:#e9efff; 
+    cursor:pointer; 
+    font-weight:700; 
+    transition: all 0.2s ease;
+}
+#npc_modal_tabs .pf-tab:hover { 
+    background: rgba(58, 58, 58, 0.9); 
+    border-color: #4a4a4a;
+}
+#npc_modal_tabs .pf-tab.active { 
+    background: linear-gradient(135deg, rgba(242, 124, 17, 0.2), rgba(242, 124, 17, 0.1)); 
+    color: rgb(242, 124, 17); 
+    border-color: rgba(242, 124, 17, 0.5); 
+    box-shadow: inset 0 -2px 0 rgb(242, 124, 17);
+}
 </style>
 <?php if ($totalPages >= 1): ?>
 <style>
-.pagination { display:flex; gap:6px; align-items:center; justify-content:center; margin:10px 0 12px; flex-wrap:wrap; }
-.pagination a, .pagination span { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; text-decoration:none; }
-.pagination a:hover { background:#3a3a3a; }
-.pagination .active { background: rgb(242, 124, 17); color:#111; border-color: rgb(242, 124, 17); font-weight:700; }
-.pagination .disabled { opacity:0.5; pointer-events:none; }
-.pagination button { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; cursor:pointer; }
-.pagination button:hover { background:#3a3a3a; }
-.filter-inline { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
-.filter-inline input[type="text"] { padding:4px 8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; height:28px; }
-.filter-inline select { padding:4px 8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; height:28px; }
-.filter-inline .btn { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; cursor:pointer; }
-.filter-inline .btn:hover { background:#3a3a3a; }
+.pagination { display:flex; gap:8px; align-items:center; justify-content:center; margin:16px 0 0 0; flex-wrap:wrap; }
+.pagination a, .pagination span { 
+    padding:8px 12px; 
+    border-radius:6px; 
+    border:1px solid #3a3a3a; 
+    background: rgba(42, 42, 42, 0.8); 
+    color:#e9efff; 
+    text-decoration:none; 
+    transition: all 0.2s ease;
+}
+.pagination a:hover { 
+    background: rgba(58, 58, 58, 0.9); 
+    border-color: #4a4a4a;
+    transform: translateY(-1px);
+}
+.pagination .active { 
+    background: linear-gradient(135deg, rgba(242, 124, 17, 0.2), rgba(242, 124, 17, 0.1)); 
+    color: rgb(242, 124, 17); 
+    border-color: rgba(242, 124, 17, 0.5); 
+    font-weight:700; 
+    box-shadow: inset 0 -2px 0 rgb(242, 124, 17);
+}
+.pagination .disabled { opacity:0.4; pointer-events:none; }
+.pagination button { 
+    padding:8px 14px; 
+    border-radius:6px; 
+    border:1px solid #3a3a3a; 
+    background: rgba(42, 42, 42, 0.8); 
+    color:#e9efff; 
+    cursor:pointer; 
+    transition: all 0.2s ease;
+    font-weight: 600;
+}
+.pagination button:hover { 
+    background: rgba(58, 58, 58, 0.9); 
+    border-color: #4a4a4a;
+    transform: translateY(-1px);
+}
+.filter-inline { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.filter-inline input[type="text"] { 
+    padding:6px 10px; 
+    border-radius:6px; 
+    border:1px solid #3a3a3a; 
+    background: rgba(26, 26, 26, 0.8); 
+    color:#e9efff; 
+    height:32px; 
+    transition: all 0.2s ease;
+}
+.filter-inline input[type="text"]:focus {
+    border-color: rgba(242, 124, 17, 0.5);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+}
+.filter-inline select { 
+    padding:6px 10px; 
+    border-radius:6px; 
+    border:1px solid #3a3a3a; 
+    background: rgba(26, 26, 26, 0.8); 
+    color:#e9efff; 
+    height:32px; 
+    transition: all 0.2s ease;
+}
+.filter-inline select:focus {
+    border-color: rgba(242, 124, 17, 0.5);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+}
+.filter-inline .btn { 
+    padding:8px 14px; 
+    border-radius:6px; 
+    border:1px solid #3a3a3a; 
+    background: rgba(42, 42, 42, 0.8); 
+    color:#e9efff; 
+    cursor:pointer; 
+    transition: all 0.2s ease;
+    font-weight: 600;
+}
+.filter-inline .btn:hover { 
+    background: rgba(58, 58, 58, 0.9); 
+    border-color: #4a4a4a;
+    transform: translateY(-1px);
+}
 </style>
-<div class="pagination">
+<div class="pagination" style="padding: 14px; background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98)); border-radius: 10px; border: 1px solid #3a3a3a; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); margin-bottom: 16px;">
   <div class="filter-inline">
     <div class="npc-filter-dropdown" style="position:relative;">
       <button type="button" id="npc_filter_btn_top" class="btn" style="margin-right:6px;">Filters ▾</button>
@@ -2395,7 +2669,13 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     ℹ️ The narrator has been moved to the <a href="<?php echo $webRoot; ?>/ui/core/config_hub.php?tab=narrator" style="color: #4a8ab6; text-decoration: underline;">Narrator menu</a>. You can copy over the values from the CHIM NPC narrator profile to here manually. We recommend you delete the NPC entry of the narrator.
 </p>
 <?php endif; ?>
-<?php endif; ?>
+<div style="margin:10px 0; padding:10px 14px; background:rgba(242,124,17,0.08); border:1px solid rgba(242,124,17,0.25); border-radius:8px; font-size:12.5px; color:#cfd9ea; line-height:1.5;">
+  <strong style="color:rgb(242,124,17);">History Pullback:</strong>
+  Every time a save game is loaded, CHIM snapshots all NPC profiles and restores <strong>unlocked</strong> NPCs to their state at the save's Tamrielic timestamp.
+  Loading an older save will roll back unlocked profiles to that point in time. NPCs created <em>after</em> the save's timestamp may disappear entirely.
+  <span style="color:rgb(242,124,17);">Lock a profile (🔒) to protect it from pullback.</span>
+  You can view and restore previous versions of any NPC via the <strong>View History</strong> button in the edit modal.
+</div>
 <div class="npc-grid">
     <?php foreach ($data as $row): ?>
     <?php 
@@ -2467,7 +2747,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <?php endif; ?>
                 <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                 <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
-                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
+                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock - Locked profiles are protected from history pullback when loading saves"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
                 <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : "return confirm('Delete this NPC?');" ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">🗑️</a>
             </div>
         </div>
@@ -2498,6 +2778,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     </div>
 <?php endforeach; ?>
 </div>
+<?php endif; ?>
 
 <div id="npc_modal" class="modal-backdrop">
   <div class="modal-container">
@@ -3588,7 +3869,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
               <div class="npc-title-actions">
                 <span class="npc-tags-top" style="display:none"></span>
                 <a class="btn btn-toggle" href="#" data-favorite-id="${id}" title="Toggle favorite">☆</a>
-                <a class="btn btn-toggle" href="#" data-lock-id="${id}" title="Toggle lock">🔓</a>
+                <a class="btn btn-toggle" href="#" data-lock-id="${id}" title="Toggle lock - Locked profiles are protected from history pullback when loading saves">🔓</a>
                 <a class="btn btn-trash" href="?delete=${id}" onclick="return confirm('Delete this NPC?');" title="Delete">🗑️</a>
               </div>
             </div>

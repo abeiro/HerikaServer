@@ -37,16 +37,20 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     /* Tabs styling aligned with Events & Memories */
     .tab-container { margin: 20px 0; }
+    
     .tab-buttons {
         display: flex;
         flex-wrap: wrap;
-        border-bottom: 2px solid #3a3a3a;
+        margin-bottom: 20px;
+        border-bottom: 2px solid rgba(242, 124, 17, 0.2);
         gap: 5px;
         word-spacing: 5px;
     }
+    
     .tab-button {
-        background: #2a2a2a;
-        border: none;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.8), rgba(34, 34, 34, 0.9));
+        border: 2px solid #3a3a3a;
+        border-bottom: none;
         padding: 12px 18px;
         color: #f8f9fa;
         cursor: pointer;
@@ -58,22 +62,35 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         font-family: 'MagicCards', sans-serif;
         word-spacing: 5px;
         letter-spacing: 1.5px;
-    }
-    .tab-button:hover { background: #3a3a3a; }
-    .tab-button.active {
-        background: #1a1a1a;
-        border-bottom: 2px solid rgb(212, 94, 0);
         margin-bottom: -2px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
+    
+    .tab-button:hover {
+        background: linear-gradient(180deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 1));
+        color: rgb(242, 124, 17);
+        border-color: rgba(242, 124, 17, 0.3);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .tab-button.active {
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-color: rgba(242, 124, 17, 0.5);
+        border-bottom: 2px solid rgba(42, 42, 42, 0.95);
+        color: rgb(242, 124, 17);
+        box-shadow: 0 4px 8px rgba(242, 124, 17, 0.2);
+    }
+    
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
     .embed-frame {
         width: 100%;
         height: 75vh;
-        border: 1px solid #444;
-        border-radius: 6px;
-        background: #1a1a1a;
+        border: 1px solid #3a3a3a;
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
     }
 
     @media (max-width: 768px) {
@@ -90,7 +107,6 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'diaries';
 ?>
 
 <div class="container-fluid">
-    <h1 class='my-2'>Immersion</h1>
 
     <div class="tab-container">
         <div class="tab-buttons">

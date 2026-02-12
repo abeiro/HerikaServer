@@ -4,6 +4,10 @@
     
     
     audit_log(__FILE__." ".__LINE__);
+    
+    // Set Player TTS processing status
+    pipeline_status_set('player_tts', true);
+    
     $GLOBALS["PATCH_OVERRIDE_VOICE"]=$GLOBALS["TTSFUNCTION_PLAYER_VOICE"];
     $GLOBALS["PATCH_OVERRIDE_VOICE_ID"]=$GLOBALS["TTSFUNCTION_PLAYER_VOICE_ID"];
     $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]=$GLOBALS["TTSFUNCTION_PLAYER_LANGUAGE"];
@@ -20,6 +24,9 @@
     Translation::$sentences = [Translation::$response];
 
     $ownspeech=returnlines([$cleaned_dialogue]);
+    
+    // Clear Player TTS processing status
+    pipeline_status_set('player_tts', false);
     
     if (Translation::isSavePlayerTranslationEnabled()) {
         $gameRequest[3]=$GLOBALS["PLAYER_NAME"].":".Translation::$response;

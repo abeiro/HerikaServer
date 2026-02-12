@@ -22,8 +22,6 @@ function SaveOriginalHerikaName() {
         if ((strlen($herika) > 0) && ($herika != "Player") && ($herika != "LLMFallback") && (stripos($herika, "Narrator") === false) && (stripos($herika, "actor") === false) && (stripos($herika, "everyone") === false) && (stripos($herika, "*") === false) && (stripos($herika, "none") === false) ) {
             $GLOBALS["ORIGINAL_HERIKA_NAME"] = $herika;
             $GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] = true;
-        } else {
-            Logger::debug("SaveOriginalHerikaName: ignored new value for HERIKA_NAME {$herika}");
         }
     }
 }
@@ -296,6 +294,7 @@ function DataLastDataFor($actor, $lastNelements = -10)
 function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescriptions=false,$excludeBusy=false)
 {
     
+    $lastDialog = array(); // Initialize the return array
     $followers=[];
     $actorsInRangeList=DataBeingsInCloseRange();
     $actorsInRange=strtr($actorsInRangeList,["|"=>"\n* "]);
@@ -372,6 +371,24 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         }
                     }
                     
+                    // Power Awareness: Add relative power assessment for player
+                    if (isset($GLOBALS["POWER_AWARENESS_ENABLED"]) && $GLOBALS["POWER_AWARENESS_ENABLED"]) {
+                        require_once(__DIR__ . DIRECTORY_SEPARATOR . "power_awareness.php");
+                        
+                        // Get player's level
+                        $playerLevel = getPlayerLevel();
+                        
+                        // Get assessing actor's level (the NPC looking at the player)
+                        if (!empty($GLOBALS["HERIKA_NAME"])) {
+                            $assessorLevel = getNpcLevel($GLOBALS["HERIKA_NAME"]);
+                            
+                            if ($assessorLevel !== null && $playerLevel !== null) {
+                                $powerComparison = calculatePowerComparison($assessorLevel, $playerLevel);
+                                $profileString .= " ({$powerComparison})";
+                            }
+                        }
+                    }
+                    
                 } catch (Exception $e) {
                     Logger::debug("Could not load player data for context: " . $e->getMessage());
                 }
@@ -435,6 +452,24 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $heightDesc = getHeightDescription(floatval($metaData["stats"]["scale"]));
                         if (!empty($heightDesc)) {
                             $profileString .= ". " . $heightDesc;
+                        }
+                    }
+                    
+                    // Power Awareness: Add relative power assessment
+                    if (isset($GLOBALS["POWER_AWARENESS_ENABLED"]) && $GLOBALS["POWER_AWARENESS_ENABLED"]) {
+                        require_once(__DIR__ . DIRECTORY_SEPARATOR . "power_awareness.php");
+                        
+                        // Get current NPC's level
+                        $npcLevel = isset($metaData["stats"]["level"]) ? intval($metaData["stats"]["level"]) : null;
+                        
+                        // Get assessing actor's level (the NPC looking at this person)
+                        if (!empty($GLOBALS["HERIKA_NAME"])) {
+                            $assessorLevel = getNpcLevel($GLOBALS["HERIKA_NAME"]);
+                            
+                            if ($assessorLevel !== null && $npcLevel !== null) {
+                                $powerComparison = calculatePowerComparison($assessorLevel, $npcLevel);
+                                $profileString .= " ({$powerComparison})";
+                            }
                         }
                     }
                     
@@ -779,18 +814,22 @@ function DataPosibleLocationsToGo()
     }
 
     // Location blacklist // $LOCATION_BLACKLIST
-    $LOCATION_BLACKLIST_ARRAY=explode(",", $GLOBALS["LOCATION_BLACKLIST"] ?: []);
-    if (count($LOCATION_BLACKLIST_ARRAY) > 0) {
-        foreach ($retData as $k => $v) {
-            foreach ($LOCATION_BLACKLIST_ARRAY as $blacklistedLocation) {
-                $blacklistedLocationTrimmed = trim($blacklistedLocation);
-                if (!empty($blacklistedLocationTrimmed) && (stripos($v, $blacklistedLocationTrimmed) !== false)) {
-                    unset($retData[$k]);
-                    break; // No need to check other blacklisted locations
+    if (isset($GLOBALS["LOCATION_BLACKLIST"]) && (strlen($GLOBALS["LOCATION_BLACKLIST"])>0)) {
+        $LOCATION_BLACKLIST_ARRAY = explode(",", $GLOBALS["LOCATION_BLACKLIST"]); 
+        //$LOCATION_BLACKLIST_ARRAY = empty($GLOBALS["LOCATION_BLACKLIST"]) ? [] : explode(",", $GLOBALS["LOCATION_BLACKLIST"]); 
+        if (count($LOCATION_BLACKLIST_ARRAY) > 0) {
+            foreach ($retData as $k => $v) {
+                foreach ($LOCATION_BLACKLIST_ARRAY as $blacklistedLocation) {
+                    $blacklistedLocationTrimmed = trim($blacklistedLocation);
+                    if (!empty($blacklistedLocationTrimmed) && (stripos($v, $blacklistedLocationTrimmed) !== false)) {
+                        unset($retData[$k]);
+                        break; // No need to check other blacklisted locations
+                    }
                 }
             }
         }
     }
+    
     foreach ($retData as $k => $v) {
         if ($v=="Skyrim") {
             $retData[$k].=" (exit)";
@@ -5286,9 +5325,13 @@ function getConfFileFor($npcname) {
     
 }
 
-function buildDynamicBiography(array $FOLLOWER_CONF) {
+function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bool $forThought = false)
+{
     /**
      * Build dynamic biography from new HERIKA fields, with fallback to legacy HERIKA_DYNAMIC
+     * @param array $FOLLOWER_CONF Configuration array containing HERIKA fields
+     * @param bool $forLetter If false, removes <letter_guidance> sections from HERIKA_SPEECHSTYLE
+     * @param bool $forThought If false, removes <inner_thought_guidance> sections from HERIKA_SPEECHSTYLE
      * @return string The dynamic biography content
      */
     $dynamicBio = '';
@@ -5656,7 +5699,24 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
     foreach ($herikaFields as $fieldName => $label) {
         if (isset($FOLLOWER_CONF[$fieldName]) && !empty(trim($FOLLOWER_CONF[$fieldName]))) {
             $xmlLabel=strtr(strtolower($label),[" "=>"_"]);
-            $dynamicBio .= "\n<$xmlLabel>\n" . trim($FOLLOWER_CONF[$fieldName])."\n</$xmlLabel>";
+            $fieldValue = trim($FOLLOWER_CONF[$fieldName]);
+
+            // Apply conditional XML tag removal for HERIKA_SPEECHSTYLE field
+            if ($fieldName === 'HERIKA_SPEECHSTYLE') {
+                if (!$forLetter) {
+                    // Remove <letter_guidance>...</letter_guidance> and its content
+                    $fieldValue = preg_replace('/<letter_guidance>.*?<\/letter_guidance>/is', '', $fieldValue);
+                }
+                if (!$forThought) {
+                    // Remove <inner_thought_guidance>...</inner_thought_guidance> and its content
+                    $fieldValue = preg_replace('/<inner_thought_guidance>.*?<\/inner_thought_guidance>/is', '', $fieldValue);
+                }
+                // Clean up any excessive whitespace left after removal
+                $fieldValue = trim(preg_replace('/\n{3,}/', "\n\n", $fieldValue));
+            }
+
+
+            $dynamicBio .= "\n<$xmlLabel>\n" . $fieldValue ."\n</$xmlLabel>";
             
             // Add groups (factions) right after HERIKA_BACKGROUND (basic_summary) section
             if ($fieldName=="HERIKA_BACKGROUND") {

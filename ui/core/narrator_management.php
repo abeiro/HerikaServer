@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
         $narrator->set('books_only_narrator', isset($_POST['books_only_narrator']) && $_POST['books_only_narrator'] === '1' ? '1' : '0');
         $narrator->set('hide_from_context', isset($_POST['hide_from_context']) && $_POST['hide_from_context'] === '1' ? '1' : '0');
         $narrator->set('inline_narration_enabled', isset($_POST['inline_narration_enabled']) && $_POST['inline_narration_enabled'] === '1' ? '1' : '0');
+        $narrator->set('diary_enabled', isset($_POST['diary_enabled']) && $_POST['diary_enabled'] === '1' ? '1' : '0');
         
         // Save integer settings
         if (isset($_POST['random_chance'])) {
@@ -137,6 +138,7 @@ $questCommentCooldown = $narrator->getInt('quest_comment_cooldown', 3);
 $booksOnlyNarrator = $narrator->getBool('books_only_narrator', false);
 $hideFromContext = $narrator->getBool('hide_from_context', false);
 $inlineNarrationEnabled = $narrator->getBool('inline_narration_enabled', false);
+$diaryEnabled = $narrator->getBool('diary_enabled', true);
 $dynamicProfileEnabled = $narrator->getBool('dynamic_profile', false);
 $dynamicProfileFields = $narrator->getDynamicProfileFields();
 
@@ -154,6 +156,26 @@ $promptHead = $narrator->get('prompt_head') ?? '';
 // Load profiles for dropdown
 $profileMgr = new CoreProfile();
 $allProfiles = $profileMgr->readAll();
+
+// Load connector data for display
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "llm_connector.class.php");
+$connectorMgr = new LLMConnector();
+$allConnectors = $connectorMgr->readAll();
+
+// Build lookup maps
+$llmById = [];
+foreach ($allConnectors as $conn) {
+    $llmById[$conn['id']] = $conn['label'] ?? 'Connector ' . $conn['id'];
+}
+
+// Build profile connector map
+$profilesConnById = [];
+foreach ($allProfiles as $prof) {
+    $profilesConnById[$prof['id']] = $prof;
+}
+
+// Get current profile data
+$currentProfileData = $profilesConnById[$profileId] ?? null;
 
 $isEmbed = isset($_GET['embed']) && $_GET['embed'] == '1';
 
@@ -206,26 +228,27 @@ if (!$isEmbed) {
     /* Header Styling */
     .page-header {
         text-align: center;
-        margin-bottom: 30px;
-        padding: 20px;
-        background: #2a2a2a;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        margin-bottom: 28px;
+        padding: 24px 20px;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(28, 28, 28, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     }
 
     .page-header h1 {
-        margin-bottom: 15px;
+        margin-bottom: 10px;
         font-family: 'MagicCards', serif;
         word-spacing: 8px;
-        font-size: 2.2em;
+        font-size: 2em;
         color: rgb(242, 124, 17);
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     }
 
     .page-header p {
-        color: #e0e0e0;
-        font-size: 1.1em;
-        margin: 10px 0;
+        color: #aaa;
+        font-size: 1em;
+        margin: 0;
     }
 
     /* Content Layout */
@@ -237,10 +260,17 @@ if (!$isEmbed) {
     }
 
     .content-section {
-        background: #2a2a2a;
-        padding: 25px;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        padding: 22px;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
+                    inset 0 1px rgba(255, 255, 255, 0.03);
+        transition: border-color 0.2s ease;
+    }
+
+    .content-section:hover {
+        border-color: #4a4a4a;
     }
 
     .content-section h2 {
@@ -248,65 +278,185 @@ if (!$isEmbed) {
         color: rgb(242, 124, 17);
         text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         word-spacing: 6px;
-        margin-bottom: 15px;
-        font-size: 1.4em;
+        margin-bottom: 18px;
+        font-size: 1.35em;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(242, 124, 17, 0.2);
     }
 
     .full-width-section {
         grid-column: 1 / -1;
     }
 
+    .content-grid + .content-grid,
+    .content-grid + .content-section {
+        margin-top: 20px;
+    }
+
+    .content-section.full-width-section + .content-section.full-width-section {
+        margin-top: 20px;
+    }
+
     /* Form Styling */
-    .content-section label {
+    .content-section > label:not(.toggle-row) {
         display: block;
         font-size: 13px;
         color: rgb(242, 124, 17);
-        font-weight: bold;
-        margin-bottom: 4px;
-        margin-top: 12px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        margin-top: 14px;
+    }
+
+    .content-section > label:not(.toggle-row):first-of-type {
+        margin-top: 0;
     }
 
     .content-section input[type="text"],
     .content-section input[type="number"] {
-        background-color: #333;
-        color: #fff;
-        border: 1px solid #444;
-        padding: 8px;
-        border-radius: 4px;
+        background-color: rgba(26, 26, 26, 0.8);
+        color: #e9efff;
+        border: 1px solid #3a3a3a;
+        padding: 10px 12px;
+        border-radius: 6px;
         width: 100%;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
+        transition: all 0.2s ease;
+    }
+
+    .content-section input[type="text"]:focus,
+    .content-section input[type="number"]:focus {
+        border-color: rgba(242, 124, 17, 0.5);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
     }
     
     .content-section textarea {
         min-height: 80px;
         font-family: inherit;
         resize: vertical;
-        background-color: #333;
-        color: #fff;
-        border: 1px solid #444;
-        padding: 8px;
-        border-radius: 4px;
+        background-color: rgba(26, 26, 26, 0.8);
+        color: #e9efff;
+        border: 1px solid #3a3a3a;
+        padding: 10px 12px;
+        border-radius: 6px;
         width: 100%;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
+        transition: all 0.2s ease;
+    }
+
+    .content-section textarea:focus {
+        border-color: rgba(242, 124, 17, 0.5);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
     }
     
     .content-section select {
-        background-color: #333;
-        color: #fff;
-        border: 1px solid #444;
-        padding: 8px;
-        border-radius: 4px;
+        background-color: rgba(26, 26, 26, 0.8);
+        color: #e9efff;
+        border: 1px solid #3a3a3a;
+        padding: 10px 12px;
+        border-radius: 6px;
         width: 100%;
-        margin-bottom: 8px;
-    }
-
-    .content-section input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
-        margin-right: 8px;
+        margin-bottom: 4px;
         cursor: pointer;
+        transition: all 0.2s ease;
     }
 
+    .content-section select:focus {
+        border-color: rgba(242, 124, 17, 0.5);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+    }
+
+    /* Toggle Switch Styling */
+    .toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        background: rgba(26, 26, 26, 0.6);
+        border: 1px solid #3a3a3a;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        transition: all 0.2s ease;
+    }
+
+    .toggle-row:hover {
+        background: rgba(36, 36, 36, 0.8);
+        border-color: #4a4a4a;
+    }
+
+    .toggle-switch {
+        position: relative;
+        width: 48px;
+        height: 24px;
+        flex-shrink: 0;
+    }
+
+    .toggle-switch input[type="checkbox"] {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+        margin: 0;
+        z-index: 2;
+    }
+
+    .toggle-slider {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #3a3a3a;
+        border-radius: 24px;
+        transition: all 0.3s ease;
+        border: 1px solid #555;
+    }
+
+    .toggle-slider::before {
+        content: '';
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        left: 3px;
+        top: 50%;
+        transform: translateY(-50%);
+        background-color: #888;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .toggle-switch input[type="checkbox"]:checked + .toggle-slider {
+        background-color: rgba(32, 122, 74, 0.9);
+        border-color: rgba(72, 187, 120, 0.5);
+    }
+
+    .toggle-switch input[type="checkbox"]:checked + .toggle-slider::before {
+        transform: translateY(-50%) translateX(22px);
+        background-color: #fff;
+    }
+
+    .toggle-switch input[type="checkbox"]:focus + .toggle-slider {
+        box-shadow: 0 0 0 3px rgba(32, 122, 74, 0.25);
+    }
+
+    .toggle-label {
+        flex: 1;
+        color: #e0e0e0;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .toggle-label:hover {
+        color: #fff;
+    }
+
+    /* Legacy checkbox group - keep for dynamic profile fields */
     .checkbox-group {
         display: flex;
         align-items: center;
@@ -320,31 +470,130 @@ if (!$isEmbed) {
         cursor: pointer;
     }
 
+    .checkbox-group input[type="checkbox"] {
+        accent-color: #176529;
+        transform: scale(1.4);
+        margin-right: 8px;
+        cursor: pointer;
+    }
+
+    /* Dynamic Profile Card */
+    .dynamic-profile-card {
+        margin-bottom: 20px;
+        padding: 18px;
+        background: linear-gradient(135deg, rgba(26, 26, 26, 0.8), rgba(32, 32, 32, 0.6));
+        border: 1px solid #3a3a3a;
+        border-radius: 10px;
+        box-shadow: inset 0 1px rgba(255,255,255,0.03);
+    }
+
+    .dynamic-profile-card h3 {
+        color: rgb(242, 124, 17);
+        margin-bottom: 14px;
+        font-size: 1.15em;
+        font-weight: 600;
+    }
+
+    .field-selection-label {
+        margin-top: 14px;
+        display: block;
+        color: rgb(242, 124, 17);
+        font-weight: 600;
+        font-size: 0.95em;
+    }
+
+    .field-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .field-chip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(42, 42, 42, 0.8);
+        border: 1px solid #4a4a4a;
+        padding: 10px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .field-chip:hover {
+        background: rgba(52, 52, 52, 0.9);
+        border-color: #5a5a5a;
+    }
+
+    .field-chip:has(input:checked) {
+        background: rgba(32, 122, 74, 0.25);
+        border-color: rgba(72, 187, 120, 0.5);
+    }
+
+    .field-chip input[type="checkbox"] {
+        accent-color: #176529;
+        transform: scale(1.3);
+        cursor: pointer;
+    }
+
+    .field-chip .chip-text {
+        color: #cfd8e3;
+        font-size: 0.95em;
+        font-weight: 500;
+    }
+
+    .field-chips + .hint {
+        margin-top: 10px;
+    }
+
     .hint {
         font-size: 12px;
-        color: #bbb;
+        color: #999;
         margin-top: 4px;
+        margin-bottom: 6px;
         display: block;
+        padding-left: 2px;
+        line-height: 1.4;
+    }
+
+    .toggle-row + .hint {
+        margin-left: 62px;
+        margin-top: -2px;
+        margin-bottom: 12px;
+    }
+
+    .toggle-row + .hint + label:not(.toggle-row) {
+        margin-top: 8px;
     }
 
     /* Button Styling */
     .btn-save {
-        background-color: rgba(32, 122, 74, 0.8);
+        background-color: #176529;
         color: #fff;
-        border: 1px solid rgba(138, 155, 182, 0.3);
+        border: 1px solid rgba(72, 187, 120, 0.3);
         border-radius: 8px;
-        padding: 12px 24px;
+        padding: 12px 28px;
         cursor: pointer;
         font-size: 15px;
-        margin-bottom: 20px;
         font-weight: 600;
-        transition: all 0.3s ease;
+        letter-spacing: 0.3px;
+        margin-bottom: 24px;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                    inset 0 1px rgba(255, 255, 255, 0.1);
     }
 
     .btn-save:hover {
-        background-color: rgba(42, 142, 94, 0.9);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        background-color: #1e8738;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+                    inset 0 1px rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-save:active {
+        transform: translateY(0);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     }
 
     /* Toast Notification */
@@ -394,6 +643,22 @@ if (!$isEmbed) {
         .page-header h1 {
             font-size: 1.5em;
         }
+
+        .toggle-row {
+            padding: 10px 12px;
+        }
+
+        .toggle-label {
+            font-size: 13px;
+        }
+
+        .field-chips {
+            flex-direction: column;
+        }
+
+        .toggle-row + .hint {
+            margin-left: 0;
+        }
     }
 </style>
 
@@ -439,42 +704,66 @@ if (!$isEmbed) {
                 <div class="content-section">
                     <h2>Core Settings</h2>
                     
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="enabled" name="enabled" value="1" <?php echo $enabled ? 'checked' : ''; ?>>
-                        <label for="enabled">Enable Narrator</label>
-                    </div>
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="enabled" name="enabled" value="1" <?php echo $enabled ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Enable Narrator</span>
+                    </label>
                     <span class="hint">Enable or disable the narrator system entirely.</span>
                     
-                    <div class="checkbox-group" style="margin-top: 16px;">
-                        <input type="checkbox" id="books_only_narrator" name="books_only_narrator" value="1" <?php echo $booksOnlyNarrator ? 'checked' : ''; ?>>
-                        <label for="books_only_narrator">Only Narrator Summarizes Books</label>
-                    </div>
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="books_only_narrator" name="books_only_narrator" value="1" <?php echo $booksOnlyNarrator ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Only Narrator Summarizes Books</span>
+                    </label>
                     <span class="hint">The Narrator will be the only one to summarize books.</span>
                     
-                    <div class="checkbox-group" style="margin-top: 16px;">
-                        <input type="checkbox" id="hide_from_context" name="hide_from_context" value="1" <?php echo $hideFromContext ? 'checked' : ''; ?>>
-                        <label for="hide_from_context">Hide Narrator Dialogue from NPC Context</label>
-                    </div>
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="hide_from_context" name="hide_from_context" value="1" <?php echo $hideFromContext ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Hide Narrator from NPC Context</span>
+                    </label>
                     <span class="hint">Hide Narrator-spoken dialogue lines from NPC context.</span>
                     
-                    <div class="checkbox-group" style="margin-top: 16px;">
-                        <input type="checkbox" id="inline_narration_enabled" name="inline_narration_enabled" value="1" <?php echo $inlineNarrationEnabled ? 'checked' : ''; ?>>
-                        <label for="inline_narration_enabled">Enable Inline Narration</label>
-                    </div>
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="inline_narration_enabled" name="inline_narration_enabled" value="1" <?php echo $inlineNarrationEnabled ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Enable Inline Narration</span>
+                    </label>
                     <span class="hint">Include brief third-person narration in asterisks (e.g., *She smiles*).</span>
+                    
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="diary_enabled" name="diary_enabled" value="1" <?php echo $diaryEnabled ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Narrator Diary</span>
+                    </label>
+                    <span class="hint">Allow The Narrator to write diary entries. Will trigger on autodiary, all nearby npc diary hotkey & if you look up in the sky and press the diary hotkey.</span>
                 </div>
 
                 <!-- Welcome Message Section -->
                 <div class="content-section">
                     <h2>Welcome Message</h2>
                     
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="welcome_enabled" name="welcome_enabled" value="1" <?php echo $welcomeEnabled ? 'checked' : ''; ?>>
-                        <label for="welcome_enabled">Enable Welcome Message on Load</label>
-                    </div>
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="welcome_enabled" name="welcome_enabled" value="1" <?php echo $welcomeEnabled ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Enable Welcome Message on Load</span>
+                    </label>
                     <span class="hint">The Narrator will give you a quick recap of what happened previously after you have loaded a save game.</span>
                     
-                    <label for="welcome_cooldown" style="margin-top: 16px;">Welcome Message Cooldown (minutes)</label>
+                    <label for="welcome_cooldown">Welcome Message Cooldown (minutes)</label>
                     <input type="number" id="welcome_cooldown" name="welcome_cooldown" value="<?php echo htmlspecialchars((string)$welcomeCooldown); ?>" min="1" max="1440">
                     <span class="hint">Minimum time in minutes between welcome messages. Range: 1-1440 (24 hours), Default: 10 minutes</span>
                 </div>
@@ -483,17 +772,20 @@ if (!$isEmbed) {
                 <div class="content-section">
                     <h2>Random Narration</h2>
                     
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="random_enabled" name="random_enabled" value="1" <?php echo $randomEnabled ? 'checked' : ''; ?>>
-                        <label for="random_enabled">Enable Random Narration</label>
-                    </div>
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="random_enabled" name="random_enabled" value="1" <?php echo $randomEnabled ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Enable Random Narration</span>
+                    </label>
                     <span class="hint">Enable random Narrator interjections. The Narrator will occasionally add visual scene descriptions during conversations.</span>
                     
-                    <label for="random_chance" style="margin-top: 16px;">Random Narration Chance (%)</label>
+                    <label for="random_chance">Random Narration Chance (%)</label>
                     <input type="number" id="random_chance" name="random_chance" value="<?php echo htmlspecialchars((string)$randomChance); ?>" min="1" max="100">
                     <span class="hint">Probability (1-100) that the Narrator will interject with a scene description. Default: 15%</span>
                     
-                    <label for="random_cooldown" style="margin-top: 16px;">Random Narration Cooldown</label>
+                    <label for="random_cooldown">Random Narration Cooldown</label>
                     <input type="number" id="random_cooldown" name="random_cooldown" value="<?php echo htmlspecialchars((string)$randomCooldown); ?>" min="0" max="10">
                     <span class="hint">Minimum number of conversation rounds between Narrator interjections. Prevents narration spam. Range: 0-10, Default: 2</span>
                 </div>
@@ -502,29 +794,32 @@ if (!$isEmbed) {
                 <div class="content-section">
                     <h2>Quest Comments</h2>
                     
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="quest_comment_enabled" name="quest_comment_enabled" value="1" <?php echo $questCommentEnabled ? 'checked' : ''; ?>>
-                        <label for="quest_comment_enabled">Enable Quest Comments</label>
-                    </div>
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="quest_comment_enabled" name="quest_comment_enabled" value="1" <?php echo $questCommentEnabled ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Enable Quest Comments</span>
+                    </label>
                     <span class="hint">Narrator will comment on quest objective updates.</span>
                     
-                    <label for="quest_comment_chance" style="margin-top: 16px;">Quest Comment Chance (%)</label>
+                    <label for="quest_comment_chance">Quest Comment Chance (%)</label>
                     <input type="number" id="quest_comment_chance" name="quest_comment_chance" value="<?php echo htmlspecialchars((string)$questCommentChance); ?>" min="1" max="100">
                     <span class="hint">Probability (1-100) that Narrator will comment on quest updates. Default: 10%</span>
                     
-                    <label for="quest_comment_cooldown" style="margin-top: 16px;">Quest Comment Cooldown (minutes)</label>
+                    <label for="quest_comment_cooldown">Quest Comment Cooldown (minutes)</label>
                     <input type="number" id="quest_comment_cooldown" name="quest_comment_cooldown" value="<?php echo htmlspecialchars((string)$questCommentCooldown); ?>" min="1" max="60">
                     <span class="hint">Minimum time in minutes between quest comments. Prevents spam. Range: 1-60 minutes, Default: 3 minutes</span>
                 </div>
             </div>
             
             <!-- Profile & Voice Section -->
-            <div class="content-grid" style="margin-top: 20px;">
+            <div class="content-grid">
                 <div class="content-section">
                     <h2>Profile & Voice</h2>
                     
                     <label for="profile_id">Profile</label>
-                    <select id="profile_id" name="profile_id" style="background-color: #333; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 4px; width: 100%; margin-bottom: 8px;">
+                    <select id="profile_id" name="profile_id">
                         <?php foreach ($allProfiles as $profile): ?>
                             <option value="<?php echo htmlspecialchars((string)$profile['id']); ?>" <?php echo ($profileId == $profile['id']) ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars($profile['label'] ?? 'Profile ' . $profile['id']); ?>
@@ -533,18 +828,90 @@ if (!$isEmbed) {
                     </select>
                     <span class="hint">LLM connector profile for The Narrator.</span>
                     
-                    <label for="voiceid" style="margin-top: 16px;">Voice ID</label>
+                    <label for="voiceid">Voice ID</label>
                     <input type="text" id="voiceid" name="voiceid" value="<?php echo htmlspecialchars($voiceid); ?>" placeholder="TheNarrator">
                     <span class="hint">TTS voice identifier for The Narrator.</span>
                     
-                    <label for="oghma_knowledge" style="margin-top: 16px;">Oghma Knowledge Tags</label>
-                    <input type="text" id="oghma_knowledge" name="oghma_knowledge" placeholder="Comma-separated knowledge tags (e.g., knowall, knowsome, knownone)" value="<?php echo htmlspecialchars($oghmaKnowledge); ?>" style="background-color: #333; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 4px; width: 100%; margin-bottom: 8px;">
+                    <label for="oghma_knowledge">Oghma Knowledge Tags</label>
+                    <input type="text" id="oghma_knowledge" name="oghma_knowledge" placeholder="Comma-separated knowledge tags (e.g., knowall, knowsome, knownone)" value="<?php echo htmlspecialchars($oghmaKnowledge); ?>">
                     <span class="hint">Comma-separated knowledge tags used by Oghma systems for knowledge lookup restrictions.</span>
+                </div>
+                
+                <div class="content-section">
+                    <h2>Selected Profile Connectors</h2>
+                    <?php
+                    // Helper function to get connector label
+                    $getConnectorLabel = function($id) use ($llmById) {
+                        return htmlspecialchars($llmById[$id] ?? '—');
+                    };
+                    ?>
+                    <div id="profile_llm_summary" style="display:grid; grid-template-columns: auto 1fr; gap:8px; color:#cfd9ea; font-size: 13px; line-height: 1.6;">
+                        <div style="color:rgb(242,124,17); font-weight:600;">🕹️ Standard:</div>
+                        <div><?= $getConnectorLabel($currentProfileData['llm_primary_id'] ?? null) ?></div>
+                        
+                        <div style="color:rgb(242,124,17); font-weight:600;">🏃‍♂️‍➡️ Fast:</div>
+                        <div><?= $getConnectorLabel($currentProfileData['llm_secondary_id'] ?? null) ?></div>
+                        
+                        <div style="color:rgb(242,124,17); font-weight:600;">💪 Power:</div>
+                        <div><?= $getConnectorLabel($currentProfileData['llm_tertiary_id'] ?? null) ?></div>
+                        
+                        <div style="color:rgb(242,124,17); font-weight:600;">🧪 Experimental:</div>
+                        <div><?= $getConnectorLabel($currentProfileData['llm_quaternary_id'] ?? null) ?></div>
+                        
+                        <div style="color:rgb(242,124,17); font-weight:600;">📓 Diary:</div>
+                        <div><?= $getConnectorLabel($currentProfileData['diary_connector_id'] ?? null) ?></div>
+                        
+                        <div style="color:rgb(242,124,17); font-weight:600;">🧾 Formatter:</div>
+                        <div><?= $getConnectorLabel($currentProfileData['llm_formatter_id'] ?? null) ?></div>
+                    </div>
+                    <span class="hint" style="margin-top: 8px;">These connectors are configured in the selected profile and will be used for The Narrator's AI responses.</span>
                 </div>
             </div>
             
+            <script>
+            (function(){
+                const PROFILE_CONN = <?= json_encode($profilesConnById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+                const LLM_LABELS = <?= json_encode($llmById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+                
+                function labelOf(id){ 
+                    const k = String(id || ''); 
+                    return (k && LLM_LABELS[k]) ? String(LLM_LABELS[k]) : '—'; 
+                }
+                
+                function renderProfileConnectors(pid){
+                    const box = document.getElementById('profile_llm_summary');
+                    if (!box) return;
+                    const pc = PROFILE_CONN[String(pid || '')] || null;
+                    
+                    const rows = [
+                        ['🕹️ Standard:', labelOf(pc ? pc.llm_primary_id : null)],
+                        ['🏃‍♂️‍➡️ Fast:', labelOf(pc ? pc.llm_secondary_id : null)],
+                        ['💪 Power:', labelOf(pc ? pc.llm_tertiary_id : null)],
+                        ['🧪 Experimental:', labelOf(pc ? pc.llm_quaternary_id : null)],
+                        ['📓 Diary:', labelOf(pc ? pc.diary_connector_id : null)],
+                        ['🧾 Formatter:', labelOf(pc ? pc.llm_formatter_id : null)]
+                    ];
+                    
+                    let html = '';
+                    rows.forEach(([k, v]) => {
+                        html += '<div style="color:rgb(242,124,17); font-weight:600;">' + k + '</div>';
+                        html += '<div>' + String(v || '—') + '</div>';
+                    });
+                    box.innerHTML = html;
+                }
+                
+                // Update on profile change
+                const profileSelect = document.getElementById('profile_id');
+                if (profileSelect) {
+                    profileSelect.addEventListener('change', function() {
+                        renderProfileConnectors(this.value);
+                    });
+                }
+            })();
+            </script>
+            
             <!-- Prompt Head Override Section -->
-            <div class="content-section full-width-section" style="margin-top: 20px;">
+            <div class="content-section full-width-section">
                 <h2>Prompt Head Override</h2>
                 <label for="prompt_head">Custom Prompt Head</label>
                 <textarea id="prompt_head" name="prompt_head" rows="5" placeholder="High-level system instructions injected before the core..."><?php echo htmlspecialchars($promptHead); ?></textarea>
@@ -552,56 +919,59 @@ if (!$isEmbed) {
             </div>
             
             <!-- Character Fields Section -->
-            <div class="content-section full-width-section" style="margin-top: 20px;">
+            <div class="content-section full-width-section">
                 <h2>Character Description</h2>
                 
                 <!-- Dynamic Profile Section (inline) -->
-                <div style="margin-bottom: 20px; padding: 15px; background: #1a1a1a; border: 1px solid #4a4a4a; border-radius: 6px;">
-                    <h3 style="color: rgb(242, 124, 17); margin-bottom: 10px; font-size: 1.1em;">♻️ Dynamic Profile Updates</h3>
+                <div class="dynamic-profile-card">
+                    <h3>♻️ Dynamic Profile Updates</h3>
                     
-                    <div class="checkbox-group" style="margin-bottom: 12px;">
-                        <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?php echo $dynamicProfileEnabled ? 'checked' : ''; ?>>
-                        <label for="dynamic_profile">Enable Dynamic Profile</label>
-                    </div>
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="dynamic_profile" name="dynamic_profile" value="1" <?php echo $dynamicProfileEnabled ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Enable Dynamic Profile</span>
+                    </label>
                     <span class="hint">Allow systems to evolve the narrator profile based on gameplay events. Triggered by MCM Dynamic Profile Timer.</span>
                     
-                    <label style="margin-top: 12px; display: block; color: rgb(242, 124, 17); font-weight: bold; font-size: 0.95em;">Field Selection (choose 1-3)</label>
-                    <span class="hint" style="margin-bottom: 8px;">Select which fields should be dynamically updated:</span>
+                    <label class="field-selection-label">Field Selection (choose 1-3)</label>
+                    <span class="hint">Select which fields should be dynamically updated:</span>
                     
-                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
-                        <label style="display: flex; align-items: center; gap: 6px; background: #2a2a2a; border: 1px solid #555; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">
+                    <div class="field-chips">
+                        <label class="field-chip">
                             <input type="checkbox" name="dynamic_profile_fields[]" value="personality" <?php echo in_array('personality', $dynamicProfileFields) ? 'checked' : ''; ?>>
-                            <span style="color: #cfd8e3;">Personality</span>
+                            <span class="chip-text">Personality</span>
                         </label>
-                        <label style="display: flex; align-items: center; gap: 6px; background: #2a2a2a; border: 1px solid #555; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">
+                        <label class="field-chip">
                             <input type="checkbox" name="dynamic_profile_fields[]" value="speechstyle" <?php echo in_array('speechstyle', $dynamicProfileFields) ? 'checked' : ''; ?>>
-                            <span style="color: #cfd8e3;">Speech Style</span>
+                            <span class="chip-text">Speech Style</span>
                         </label>
-                        <label style="display: flex; align-items: center; gap: 6px; background: #2a2a2a; border: 1px solid #555; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">
+                        <label class="field-chip">
                             <input type="checkbox" name="dynamic_profile_fields[]" value="goals" <?php echo in_array('goals', $dynamicProfileFields) ? 'checked' : ''; ?>>
-                            <span style="color: #cfd8e3;">Goals</span>
+                            <span class="chip-text">Goals</span>
                         </label>
                     </div>
-                    <span class="hint" style="margin-top: 8px;">Recommended: Select only 1-3 fields. Updates use DYNAMIC_PROMPT_* prompts from Global Settings.</span>
+                    <span class="hint">Recommended: Select only 1-3 fields. Updates use DYNAMIC_PROMPT_* prompts from Global Settings.</span>
                 </div>
                 
                 <label for="core">Core Summary</label>
                 <textarea id="core" name="core" rows="3" placeholder="Quick summary of The Narrator's persona..."><?php echo htmlspecialchars($core); ?></textarea>
                 <span class="hint">Brief summary of The Narrator's role and personality.</span>
                 
-                <label for="background" style="margin-top: 16px;">Background</label>
+                <label for="background">Background</label>
                 <textarea id="background" name="background" rows="4" placeholder="Background description..."><?php echo htmlspecialchars($background); ?></textarea>
                 <span class="hint">Detailed background and history of The Narrator.</span>
                 
-                <label for="personality" style="margin-top: 16px;">Personality</label>
+                <label for="personality">Personality</label>
                 <textarea id="personality" name="personality" rows="3" placeholder="Personality traits..."><?php echo htmlspecialchars($personality); ?></textarea>
                 <span class="hint">Behavioral traits and personality characteristics.</span>
                 
-                <label for="speechstyle" style="margin-top: 16px;">Speech Style</label>
+                <label for="speechstyle">Speech Style</label>
                 <textarea id="speechstyle" name="speechstyle" rows="2" placeholder="How The Narrator speaks..."><?php echo htmlspecialchars($speechstyle); ?></textarea>
                 <span class="hint">How The Narrator communicates and speaks.</span>
                 
-                <label for="goals" style="margin-top: 16px;">Goals</label>
+                <label for="goals">Goals</label>
                 <textarea id="goals" name="goals" rows="3" placeholder="Current objectives..."><?php echo htmlspecialchars($goals); ?></textarea>
                 <span class="hint">Current goals and objectives for The Narrator.</span>
             </div>

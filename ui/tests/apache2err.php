@@ -157,6 +157,23 @@ function readRegularLog($logPath, $logName) {
         echo '<div class="search-container">';
         echo '<input type="text" class="search-input" placeholder="Search in ' . htmlspecialchars($logName) . '..." data-target="' . $sanitizedId . 'Container">';
         echo '</div>';
+        
+        // Add log level filter controls
+        echo '<div class="log-filter-container" id="' . $sanitizedId . 'FilterContainer">';
+        echo '<div class="filter-header">Filter by Level:</div>';
+        echo '<div class="filter-controls">';
+        echo '<button class="filter-btn filter-btn-sm" onclick="selectAllLevels(\'' . $sanitizedId . '\')">All</button>';
+        echo '<button class="filter-btn filter-btn-sm" onclick="selectNoLevels(\'' . $sanitizedId . '\')">None</button>';
+        echo '</div>';
+        echo '<div class="filter-checkboxes">';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="' . $sanitizedId . '" data-level="error" checked><span class="filter-badge error-badge">Error <span class="level-count" id="' . $sanitizedId . '-error-count">0</span></span></label>';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="' . $sanitizedId . '" data-level="warn" checked><span class="filter-badge warn-badge">Warn <span class="level-count" id="' . $sanitizedId . '-warn-count">0</span></span></label>';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="' . $sanitizedId . '" data-level="info"><span class="filter-badge info-badge">Info <span class="level-count" id="' . $sanitizedId . '-info-count">0</span></span></label>';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="' . $sanitizedId . '" data-level="debug"><span class="filter-badge debug-badge">Debug <span class="level-count" id="' . $sanitizedId . '-debug-count">0</span></span></label>';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="' . $sanitizedId . '" data-level="trace"><span class="filter-badge trace-badge">Trace <span class="level-count" id="' . $sanitizedId . '-trace-count">0</span></span></label>';
+        echo '</div>';
+        echo '</div>';
+        
         echo '<div class="log-container" id="' . $sanitizedId . 'Container">';
 
         if (empty($log)) {
@@ -211,7 +228,7 @@ function readRegularLog($logPath, $logName) {
                             break;
                     }
 
-                    echo '<div class="log-entry ' . $levelClass . '">';
+                    echo '<div class="log-entry ' . $levelClass . '" data-level="' . htmlspecialchars($entry['level']) . '">';
                     $isoTimestamp = timestampToISO8601($entry['timestamp']);
                     if ($isoTimestamp !== null) {
                         echo '<div class="timestamp" data-utc="' . htmlspecialchars($isoTimestamp) . '">' . htmlspecialchars($entry['timestamp']) . '</div>';
@@ -483,7 +500,7 @@ function outputLLMContextBlock($block) {
 }
 
 // Function to read and filter the error log from a given path
-function readErrorLog($errorLogPath, $logType, $showAllEntries = false) {
+function readErrorLog($errorLogPath, $logType) {
     if (file_exists($errorLogPath) && is_readable($errorLogPath)) {
         $errorLog = tail($errorLogPath, 2000); // Get last 2000 lines
 
@@ -495,12 +512,24 @@ function readErrorLog($errorLogPath, $logType, $showAllEntries = false) {
         echo '</div>';
         echo '<div class="search-container">';
         echo '<input type="text" class="search-input" placeholder="Search in Apache Error Log..." data-target="errorLogContainer">';
-        echo '<label class="toggle-switch-inline">';
-        echo '<input type="checkbox" id="apacheLogToggle" ' . ($showAllEntries ? 'checked' : '') . '>';
-        echo '<span class="toggle-slider-inline"></span>';
-        echo '<span class="toggle-label-inline">Show All</span>';
-        echo '</label>';
         echo '</div>';
+        
+        // Add log level filter controls for Apache error log
+        echo '<div class="log-filter-container" id="errorLogFilterContainer">';
+        echo '<div class="filter-header">Filter by Level:</div>';
+        echo '<div class="filter-controls">';
+        echo '<button class="filter-btn filter-btn-sm" onclick="selectAllLevels(\'errorLog\')">All</button>';
+        echo '<button class="filter-btn filter-btn-sm" onclick="selectNoLevels(\'errorLog\')">None</button>';
+        echo '</div>';
+        echo '<div class="filter-checkboxes">';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="errorLog" data-level="error" checked><span class="filter-badge error-badge">Error <span class="level-count" id="errorLog-error-count">0</span></span></label>';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="errorLog" data-level="warn" checked><span class="filter-badge warn-badge">Warn <span class="level-count" id="errorLog-warn-count">0</span></span></label>';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="errorLog" data-level="notice"><span class="filter-badge notice-badge">Notice <span class="level-count" id="errorLog-notice-count">0</span></span></label>';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="errorLog" data-level="info"><span class="filter-badge info-badge">Info <span class="level-count" id="errorLog-info-count">0</span></span></label>';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="errorLog" data-level="debug"><span class="filter-badge debug-badge">Debug <span class="level-count" id="errorLog-debug-count">0</span></span></label>';
+        echo '</div>';
+        echo '</div>';
+        
         echo '<div class="log-container" id="errorLogContainer">';
         
         $entries = [];
@@ -542,18 +571,16 @@ function readErrorLog($errorLogPath, $logType, $showAllEntries = false) {
                     $levelClass = 'debug-level';
                 }
 
-                // Show entry based on toggle state
-                if ($showAllEntries || $level === 'error') {
-                    $entries[] = [
-                        'timestamp' => $timestamp,
-                        'module' => $module,
-                        'message' => $message,
-                        'level' => $level,
-                        'level_class' => $levelClass,
-                        'raw_time' => $rawTime,
-                        'line_order' => $lineNumber // Preserve file order as secondary sort
-                    ];
-                }
+                // Always add entry to array (no filtering at PHP level)
+                $entries[] = [
+                    'timestamp' => $timestamp,
+                    'module' => $module,
+                    'message' => $message,
+                    'level' => $level,
+                    'level_class' => $levelClass,
+                    'raw_time' => $rawTime,
+                    'line_order' => $lineNumber // Preserve file order as secondary sort
+                ];
             }
         }
 
@@ -567,7 +594,7 @@ function readErrorLog($errorLogPath, $logType, $showAllEntries = false) {
         });
 
         foreach ($entries as $entry) {
-            echo '<div class="log-entry ' . $entry['level_class'] . '">';
+            echo '<div class="log-entry ' . $entry['level_class'] . '" data-level="' . htmlspecialchars($entry['level']) . '">';
             $isoTimestamp = timestampToISO8601($entry['timestamp']);
             if ($isoTimestamp !== null) {
                 echo '<div class="timestamp" data-utc="' . htmlspecialchars($isoTimestamp) . '">' . htmlspecialchars($entry['timestamp']) . '</div>';
@@ -755,6 +782,14 @@ if (isset($_GET['download_logs'])) {
     <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
     <link rel="stylesheet" href="../css/main.css">
     <style>
+        /* Font declaration */
+        @font-face {
+            font-family: 'MagicCards';
+            src: url('../css/font/MagicCardsNormal.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        
         /* Override main container styles */
         main {
             padding-top: <?php echo $isEmbedded? '20' : '160'; ?>px;
@@ -769,14 +804,25 @@ if (isset($_GET['download_logs'])) {
         /* Override footer styles */
         footer { display: <?php echo $isEmbedded? 'none' : 'block'; ?>; }
 
-        /* Updated color scheme for a more mellow dark theme */
+        /* Updated color scheme for modern dark theme */
         body {
             background-color: #1e1e1e;
             color: #d4d4d4;
         }
 
-        h1, h2 {
-            color: #ffffff;
+        h1 {
+            color: rgb(242, 124, 17);
+            font-family: 'MagicCards', serif;
+            word-spacing: 8px;
+            font-size: 2.0em;
+            font-weight: normal;
+            letter-spacing: 0.5px;
+        }
+        
+        h2 {
+            color: rgb(242, 124, 17);
+            font-family: 'Futura CondensedLight', Arial, sans-serif;
+            font-size: 1.2em;
         }
 
         .grid-container {
@@ -789,10 +835,9 @@ if (isset($_GET['download_logs'])) {
         }
 
         .log-section {
-            background-color: #252526;
-            border-color: #333333;
-            border: 1px solid #444;
-            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+            border: 1px solid #3a3a3a;
+            border-radius: 10px;
             padding: 15px;
             display: flex;
             flex-direction: column;
@@ -800,6 +845,13 @@ if (isset($_GET['download_logs'])) {
             position: relative;
             min-height: 300px;
             min-width: 300px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .log-section:hover {
+            border-color: rgba(242, 124, 17, 0.3);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.05);
         }
 
         .log-section::after {
@@ -809,7 +861,7 @@ if (isset($_GET['download_logs'])) {
         h2 {
             margin-top: 0;
             padding-bottom: 10px;
-            border-bottom: 1px solid #444;
+            border-bottom: 2px solid rgba(242, 124, 17, 0.3);
             font-size: 1.2em;
             white-space: nowrap;
             overflow: hidden;
@@ -817,15 +869,14 @@ if (isset($_GET['download_logs'])) {
         }
 
         .log-container {
-            background-color: #1e1e1e;
-            border-color: #333333;
+            background: rgba(26, 26, 26, 0.8);
+            border: 1px solid #3a3a3a;
             overflow-y: auto;
             overflow-x: hidden;
             color: #d4d4d4;
             font-size: 13px;
             padding: 10px;
-            border: 1px solid #555555;
-            border-radius: 5px;
+            border-radius: 6px;
             height: 600px;
             max-height: 600px;
             width: 100%;
@@ -895,6 +946,14 @@ if (isset($_GET['download_logs'])) {
         }
         .debug-level .log-level {
             background-color: #6c757d;
+            color: white;
+        }
+
+        .trace-level {
+            border-left: 4px solid #9370DB;
+        }
+        .trace-level .log-level {
+            background-color: #9370DB;
             color: white;
         }
 
@@ -975,19 +1034,22 @@ if (isset($_GET['download_logs'])) {
         .refresh-button {
             display: inline-flex;
             align-items: center;
-            background-color: #17a2b8;
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
             color: white;
-            border: none;
-            border-radius: 4px;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
             padding: 8px 16px;
             margin-left: 15px;
             cursor: pointer;
             font-size: 14px;
-            transition: background-color 0.2s;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.05);
         }
 
         .refresh-button:hover {
-            background-color: #138496;
+            border-color: rgba(242, 124, 17, 0.5);
+            color: rgb(242, 124, 17);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.1);
         }
 
         .refresh-button svg {
@@ -1013,20 +1075,145 @@ if (isset($_GET['download_logs'])) {
             align-items: center;
         }
 
+        /* Log Filter Styles */
+        .log-filter-container {
+            background: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            padding: 12px 15px;
+            margin: 10px 0;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .filter-header {
+            font-weight: 600;
+            color: #fff;
+            font-size: 14px;
+            margin-right: 5px;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-btn-sm {
+            padding: 4px 12px;
+            font-size: 12px;
+            background: #3a3a3a;
+            border: 1px solid #4a4a4a;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn-sm:hover {
+            background: #4a4a4a;
+            border-color: #5a5a5a;
+        }
+
+        .filter-checkboxes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .filter-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .filter-checkbox input[type="checkbox"] {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        .filter-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+
+        .filter-checkbox input[type="checkbox"]:not(:checked) + .filter-badge {
+            opacity: 0.4;
+        }
+
+        .level-count {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .error-badge {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .warn-badge {
+            background-color: #ffc107;
+            color: black;
+        }
+
+        .notice-badge {
+            background-color: #20c997;
+            color: white;
+        }
+
+        .info-badge {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        .debug-badge {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .trace-badge {
+            background-color: #9370DB;
+            color: white;
+        }
+
+        /* Hide filtered log entries */
+        .log-entry.hidden-by-filter,
+        .log-entry.hidden-by-search {
+            display: none !important;
+        }
+
         .search-input {
             flex: 1;
-            padding: 8px;
-            border: 1px solid #444;
-            border-radius: 4px;
-            background-color: #1e1e1e;
+            padding: 8px 12px;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            background: rgba(26, 26, 26, 0.8);
             color: #d4d4d4;
             font-family: monospace;
             font-size: 14px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
         }
 
         .search-input:focus {
             outline: none;
-            border-color: #454545;
+            border-color: rgb(242, 124, 17);
+            box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+            background: rgba(26, 26, 26, 0.95);
         }
 
         /* Inline toggle switch styles (smaller version) */
@@ -1052,7 +1239,7 @@ if (isset($_GET['download_logs'])) {
         }
 
         .toggle-switch-inline input[type="checkbox"]:checked {
-            background-color: #17a2b8;
+            background-color: rgb(242, 124, 17);
         }
 
         .toggle-switch-inline input[type="checkbox"]::before {
@@ -1709,11 +1896,8 @@ if (isset($_GET['download_logs'])) {
     <div class="grid-container" id="logGrid">
         <div class="log-section">
             <?php
-            // Check if we should show all entries based on GET parameter
-            $showAllApacheEntries = isset($_GET['show_all_apache']) && $_GET['show_all_apache'] === '1';
             // Display Apache error log
-            $apacheLogTitle = $showAllApacheEntries ? "Apache Log [All Entries] (apache_error.log)" : "Apache Log [Errors Only] (apache_error.log)";
-            readErrorLog($distroLogPath, $apacheLogTitle, $showAllApacheEntries);
+            readErrorLog($distroLogPath, "Apache Log (apache_error.log)");
             ?>
         </div>
 
@@ -2145,10 +2329,11 @@ document.querySelectorAll('.search-input, .modal-search-input').forEach(input =>
         // Get all entries
         const entries = container.querySelectorAll('.log-entry, .error-entry, .llm-block');
         
-        // If search is empty, show all entries and remove highlights
+        // If search is empty, show all entries (except those hidden by filters) and remove highlights
         if (!searchTerm) {
             entries.forEach(entry => {
-                entry.style.display = '';
+                // Remove search hiding, but keep filter hiding
+                entry.classList.remove('hidden-by-search');
                 // Remove all highlights
                 entry.querySelectorAll('.highlight').forEach(highlight => {
                     const text = highlight.textContent;
@@ -2174,13 +2359,13 @@ document.querySelectorAll('.search-input, .modal-search-input').forEach(input =>
             const entryText = entry.textContent.toLowerCase();
             
             if (entryText.includes(searchLower)) {
-                entry.style.display = '';
+                entry.classList.remove('hidden-by-search');
                 hasMatches = true;
                 
                 // Highlight matches in text nodes only, preserving structure
                 highlightInElement(entry, searchTerm);
             } else {
-                entry.style.display = 'none';
+                entry.classList.add('hidden-by-search');
             }
         });
 
@@ -2705,23 +2890,167 @@ document.body.addEventListener('click', function(event) {
     });
 })();
 
-// Apache log toggle functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const apacheToggle = document.getElementById('apacheLogToggle');
-    if (apacheToggle) {
-        apacheToggle.addEventListener('change', function() {
-            const url = new URL(window.location);
-            if (this.checked) {
-                url.searchParams.set('show_all_apache', '1');
-            } else {
-                url.searchParams.delete('show_all_apache');
-            }
-            // Remove download parameter if it exists
-            url.searchParams.delete('download_logs');
-            window.location.href = url.toString();
+// Log Level Filtering System
+(function() {
+    const STORAGE_KEY_PREFIX = 'logLevelFilters_';
+    
+    // Initialize filter counts and set up listeners
+    function initializeLogFilters() {
+        // Get all unique container IDs from filter checkboxes
+        const containers = new Set();
+        document.querySelectorAll('.level-filter').forEach(checkbox => {
+            containers.add(checkbox.dataset.container);
+        });
+        
+        // Initialize each container
+        containers.forEach(containerId => {
+            updateLogCounts(containerId);
+            loadFilterPreferences(containerId);
+            applyFilters(containerId);
+        });
+        
+        // Set up event listeners for all filter checkboxes
+        document.querySelectorAll('.level-filter').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const containerId = this.dataset.container;
+                applyFilters(containerId);
+                saveFilterPreferences(containerId);
+            });
         });
     }
-});
+    
+    // Count log entries by level and update badges
+    function updateLogCounts(containerId) {
+        const container = document.getElementById(containerId + 'Container');
+        if (!container) return;
+        
+        const counts = {
+            error: 0,
+            warn: 0,
+            warning: 0,
+            notice: 0,
+            info: 0,
+            debug: 0,
+            trace: 0
+        };
+        
+        // Count entries
+        container.querySelectorAll('.log-entry[data-level]').forEach(entry => {
+            const level = entry.dataset.level.toLowerCase();
+            if (counts.hasOwnProperty(level)) {
+                counts[level]++;
+            }
+        });
+        
+        // Combine warn and warning counts
+        counts.warn += counts.warning;
+        
+        // Update count displays
+        Object.keys(counts).forEach(level => {
+            if (level !== 'warning') { // Skip warning as it's combined with warn
+                const countEl = document.getElementById(`${containerId}-${level}-count`);
+                if (countEl) {
+                    countEl.textContent = counts[level];
+                }
+            }
+        });
+    }
+    
+    // Apply filters based on checkbox states
+    function applyFilters(containerId) {
+        const container = document.getElementById(containerId + 'Container');
+        if (!container) return;
+        
+        // Get enabled levels
+        const enabledLevels = new Set();
+        document.querySelectorAll(`.level-filter[data-container="${containerId}"]`).forEach(checkbox => {
+            if (checkbox.checked) {
+                enabledLevels.add(checkbox.dataset.level.toLowerCase());
+            }
+        });
+        
+        // Apply filters to log entries
+        let visibleCount = 0;
+        container.querySelectorAll('.log-entry[data-level]').forEach(entry => {
+            const level = entry.dataset.level.toLowerCase();
+            // Handle both 'warn' and 'warning' levels
+            const shouldShow = enabledLevels.has(level) || 
+                             (level === 'warning' && enabledLevels.has('warn'));
+            
+            if (shouldShow) {
+                entry.classList.remove('hidden-by-filter');
+                visibleCount++;
+            } else {
+                entry.classList.add('hidden-by-filter');
+            }
+        });
+        
+        // Show "no results" message if all entries are filtered out
+        const existingMessage = container.querySelector('.no-filter-results');
+        if (visibleCount === 0 && container.querySelectorAll('.log-entry[data-level]').length > 0) {
+            if (!existingMessage) {
+                const message = document.createElement('p');
+                message.className = 'no-filter-results info-message';
+                message.style.cssText = 'color: #888; padding: 20px; text-align: center;';
+                message.textContent = 'No log entries match the selected filters.';
+                container.appendChild(message);
+            }
+        } else if (existingMessage) {
+            existingMessage.remove();
+        }
+    }
+    
+    // Save filter preferences to localStorage
+    function saveFilterPreferences(containerId) {
+        const preferences = {};
+        document.querySelectorAll(`.level-filter[data-container="${containerId}"]`).forEach(checkbox => {
+            preferences[checkbox.dataset.level] = checkbox.checked;
+        });
+        localStorage.setItem(STORAGE_KEY_PREFIX + containerId, JSON.stringify(preferences));
+    }
+    
+    // Load filter preferences from localStorage
+    function loadFilterPreferences(containerId) {
+        const stored = localStorage.getItem(STORAGE_KEY_PREFIX + containerId);
+        if (!stored) return;
+        
+        try {
+            const preferences = JSON.parse(stored);
+            document.querySelectorAll(`.level-filter[data-container="${containerId}"]`).forEach(checkbox => {
+                const level = checkbox.dataset.level;
+                if (preferences.hasOwnProperty(level)) {
+                    checkbox.checked = preferences[level];
+                }
+            });
+        } catch (e) {
+            console.error('Failed to load filter preferences:', e);
+        }
+    }
+    
+    // Global functions for select all/none buttons
+    window.selectAllLevels = function(containerId) {
+        document.querySelectorAll(`.level-filter[data-container="${containerId}"]`).forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        applyFilters(containerId);
+        saveFilterPreferences(containerId);
+    };
+    
+    window.selectNoLevels = function(containerId) {
+        document.querySelectorAll(`.level-filter[data-container="${containerId}"]`).forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        applyFilters(containerId);
+        saveFilterPreferences(containerId);
+    };
+    
+    // Initialize on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeLogFilters);
+    } else {
+        initializeLogFilters();
+    }
+})();
 </script>
 
 <!-- AI Assistant JavaScript -->

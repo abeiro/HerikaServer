@@ -1,6 +1,8 @@
 <?php
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
@@ -50,11 +52,29 @@ $ittOptionsRaw = $rawSchema['ITTFUNCTION']['values'] ?? [ 'openai','google_opena
 $ittOptions = array_values(array_filter($ittOptionsRaw, function($v){ return strtolower($v) !== 'llamacpp'; }));
 
 // Mappings
-$ttsMap = [ 'melotts' => 'MELOTTS','xtts-fastapi' => 'XTTSFASTAPI','mimic3' => 'MIMIC3','xvasynth' => 'XVASYNTH','azure' => 'AZURE','11labs' => 'ELEVEN_LABS','openai' => 'openai','kokoro' => 'KOKORO','koboldcpp' => 'koboldcpp','zonos_gradio' => 'ZONOS_GRADIO','piper-tts' => 'PIPERTTS','deepgram' => 'deepgram','cartesia' => 'CARTESIA','inworld' => 'INWORLD' ];
+$ttsMap = [ 'melotts' => 'MELOTTS','xtts-fastapi' => 'XTTSFASTAPI','chatterbox' => 'CHATTERBOX','pockettts' => 'POCKETTTS','mimic3' => 'MIMIC3','xvasynth' => 'XVASYNTH','azure' => 'AZURE','11labs' => 'ELEVEN_LABS','openai' => 'openai','kokoro' => 'KOKORO','koboldcpp' => 'koboldcpp','zonos_gradio' => 'ZONOS_GRADIO','piper-tts' => 'PIPERTTS','deepgram' => 'deepgram','cartesia' => 'CARTESIA','inworld' => 'INWORLD' ];
 $sttMap = [ 'whisper' => 'WHISPER','localwhisper' => 'LOCALWHISPER','azure' => 'AZURE','deepgram' => 'DEEPGRAM','parakeet'=>"PARAKEET" ];
 $ittMap = [ 'openai' => 'openai','google_openai' => 'google_openai','openrouter' => 'openrouter' ];
 // Display name mappings for UI labels
-$ttsDisplayNames = [ 'xtts-fastapi' => 'xtts/chatterbox' ];
+$ttsDisplayNames = [ 
+    'none' => 'None',
+    'melotts' => 'MeloTTS', 
+    'xtts-fastapi' => 'XTTS', 
+    'chatterbox' => 'Chatterbox', 
+    'pockettts' => 'PocketTTS',
+    'xvasynth' => 'xVASynth',
+    'mimic3' => 'Mimic3',
+    'azure' => 'Azure TTS',
+    '11labs' => 'ElevenLabs',
+    'openai' => 'OpenAI TTS',
+    'kokoro' => 'Kokoro',
+    'koboldcpp' => 'KoboldCPP',
+    'zonos_gradio' => 'Zonos TTS',
+    'piper-tts' => 'Piper TTS',
+    'deepgram' => 'Deepgram',
+    'cartesia' => 'Cartesia',
+    'inworld' => 'Inworld'
+];
 
 // Active tab tracking for postback previews
 $activeTab = (isset($_POST['gs_tab']) && is_string($_POST['gs_tab'])) ? (string)$_POST['gs_tab'] : 'tab-global';
@@ -104,6 +124,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test'])) {
     } else {
         // Only set default voices for providers that need them; let 11labs/openai/azure/deepgram use configured voice
         if ($selLower === 'xtts-fastapi') $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator';
+        else if ($selLower === 'chatterbox') $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator';
+        else if ($selLower === 'pockettts') $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator';
         else if ($selLower === 'cartesia') $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator';
         else if ($selLower === 'inworld') $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'TheNarrator';
         else if (in_array($selLower, ['melotts','piper-tts','xvasynth'], true)) $GLOBALS["PATCH_OVERRIDE_VOICE"] = 'malenord';
@@ -123,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test'])) {
 
 // If TTS quick test was requested via AJAX, return JSON and exit early
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tts_quick_test']) && isset($_POST['ajax'])) {
-    while (@ob_end_clean());
+    while (ob_get_level() > 0) { @ob_end_clean(); }
     header('Content-Type: application/json');
     echo json_encode([
         'ok' => ($ttsTestOutputUrl !== ''),
@@ -372,6 +394,7 @@ function icon_for_field(string $flatName): string {
     }
     if ($u === 'RELATIONSHIP_SYSTEM_ENABLED') return '💞';
     if ($u === 'RELLLM_CONNECTOR') return '🔗';
+    if ($u === 'POWER_AWARENESS_ENABLED') return '⚔️';
     // Respeech related
     if (strpos($u, 'RESPEECH') !== false) return '🦜';
     if (strpos($u, 'SPEECH_STYLE') !== false) return '🦜';
@@ -402,6 +425,7 @@ $gsSections = [
         [ 'name' => 'DISABLE_REANIMATION_TRACKING', 'type' => 'boolean', 'action' => 'clear_reanimation' ],
         [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
         [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
+        [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
     ],
     // NOTE: Diary section removed - AUTO_DIARY is now configured per-profile in Profile Settings
     'Global Connectors' => [
@@ -538,6 +562,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
         $allPairs['RELATIONSHIP_SYSTEM_ENABLED'] = 'false';
     }
 
+    // Apply POWER_AWARENESS_ENABLED
+    if (isset($_POST['POWER_AWARENESS_ENABLED'])) {
+        $allPairs['POWER_AWARENESS_ENABLED'] = ($_POST['POWER_AWARENESS_ENABLED'] === 'true') ? 'true' : 'false';
+    } else {
+        // Checkbox unchecked - no POST value means false
+        $allPairs['POWER_AWARENESS_ENABLED'] = 'false';
+    }
+
     // Apply OGHMA_CUSTOM (rendered inline with CORE_CONNECTOR_OGHMA_CUSTOM, not in $gsSections)
     if (isset($_POST['OGHMA_CUSTOM'])) {
         $allPairs['OGHMA_CUSTOM'] = ($_POST['OGHMA_CUSTOM'] === 'true') ? 'true' : 'false';
@@ -633,7 +665,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
 		@clearstatcache(true, $target);
 		if (function_exists('opcache_invalidate')) { @opcache_invalidate($target, true); }
         Logger::info("Global settings saved to conf.php by UI");
-		while (@ob_end_clean());
+		while (ob_get_level() > 0) { @ob_end_clean(); }
 		$redirectUrl = strtok($_SERVER['REQUEST_URI'], '?') . '?_ts=' . time();
 		header("Location: " . $redirectUrl);
 		exit;
@@ -681,14 +713,28 @@ function current_value(string $flatName, array $currentConf) {
         font-style: normal;
     }
 
+    .page-header {
+        margin: 0 0 24px 0;
+        padding: 24px;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(28, 28, 28, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        text-align: center;
+    }
     h1.gs-title {
-        margin: 0 0 20px 0;
+        margin: 0 0 8px 0;
         font-family: 'MagicCards', serif;
         word-spacing: 8px;
-        font-size: 2.2em;
+        font-size: 2em;
         color: rgb(242, 124, 17);
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        text-align: center;
+    }
+    .page-subtitle {
+        color: #aaa;
+        font-size: 0.95em;
+        line-height: 1.5;
+        margin: 0;
     }
 
     .content-grid {
@@ -698,24 +744,88 @@ function current_value(string $flatName, array $currentConf) {
         margin-bottom: 30px;
     }
     .content-section {
-        background: #2a2a2a;
-        padding: 25px;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        padding: 22px;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
+                    inset 0 1px rgba(255, 255, 255, 0.03);
+        transition: border-color 0.2s ease;
     }
-    .content-section h2 { font-family: 'MagicCards', serif; color: rgb(242,124,17); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); word-spacing: 6px; margin-bottom: 15px; font-size: 1.4em; }
+    .content-section:hover {
+        border-color: #4a4a4a;
+    }
+    .content-section h2 { 
+        font-family: 'MagicCards', serif; 
+        color: rgb(242,124,17); 
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5); 
+        word-spacing: 6px; 
+        margin-bottom: 18px; 
+        font-size: 1.35em; 
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(242, 124, 17, 0.2);
+    }
     .provider-grid { display:grid; grid-template-columns: 1fr; gap:12px; align-items:start; }
-    .provider-card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:12px; }
+    .provider-card { 
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.95)); 
+        border: 1px solid #3a3a3a; 
+        border-radius: 8px; 
+        padding: 14px; 
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15),
+                    inset 0 1px rgba(255, 255, 255, 0.02);
+        transition: all 0.2s ease;
+    }
+    .provider-card:hover {
+        border-color: #4a4a4a;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2),
+                    inset 0 1px rgba(255, 255, 255, 0.03);
+    }
     .provider-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
     .provider-title { display:flex; align-items:center; gap:10px; color:#e0e0e0; }
-    .provider-icon { width:28px; height:28px; border-radius:6px; background:#3a3a3a; display:flex; align-items:center; justify-content:center; font-size:16px; }
+    .provider-icon { 
+        width: 30px; 
+        height: 30px; 
+        border-radius: 6px; 
+        background: linear-gradient(135deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 0.9)); 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 17px; 
+        box-shadow: inset 0 1px rgba(255, 255, 255, 0.05);
+    }
     .provider-body { display:flex; gap:8px; align-items:center; }
-    .provider-body.grid { display:grid; grid-template-columns: 220px 1fr; gap:8px 12px; align-items:center; }
-    .provider-body.grid .help { grid-column: 1 / -1; margin-top:6px; color:#bbb; font-size:12px; }
-    .provider-body input[type="text"], .provider-body input[type="url"], .provider-body input[type="number"], .provider-body input[type="password"], .provider-body select, .provider-body textarea { flex:1; background-color:#333; color:#fff; border:1px solid #444; border-radius:4px; padding:8px; }
+    .provider-body.grid { display:grid; grid-template-columns: 1fr; gap:8px; align-items:start; }
+    .provider-body.grid .help { margin-top:6px; color:#bbb; font-size:12px; }
+    .provider-body input[type="text"], .provider-body input[type="url"], .provider-body input[type="number"], .provider-body input[type="password"], .provider-body select, .provider-body textarea { 
+        flex: 1; 
+        background-color: rgba(26, 26, 26, 0.8); 
+        color: #e9efff; 
+        border: 1px solid #3a3a3a; 
+        border-radius: 6px; 
+        padding: 10px 12px; 
+        transition: all 0.2s ease;
+    }
+    .provider-body input:focus, .provider-body select:focus, .provider-body textarea:focus {
+        border-color: rgba(242, 124, 17, 0.5);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+    }
     .actions { display:flex; justify-content:flex-end; margin-top:10px; }
-    .btn-primary { background:#204e7a; color:#fff; border:1px solid rgba(138,155,182,0.4); border-radius:8px; padding:8px 14px; cursor:pointer; }
-    .btn-primary:hover { background:#285c8f; }
+    .btn-primary { 
+        background: linear-gradient(135deg, #204e7a, #1a3d5f); 
+        color: #fff; 
+        border: 1px solid rgba(138,155,182,0.4); 
+        border-radius: 8px; 
+        padding: 10px 16px; 
+        cursor: pointer; 
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .btn-primary:hover { 
+        background: linear-gradient(135deg, #285c8f, #204e7a); 
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
 
     @media (max-width: 900px) {
         main { padding-left: 5%; padding-right: 5%; }
@@ -760,27 +870,64 @@ function current_value(string $flatName, array $currentConf) {
     }
 
 \\
-    .tab-buttons { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; justify-content:center; align-items:center; }
-    .tab-button { background:#1a2940; color:#cfd8e3; border:1px solid rgba(138,155,182,0.35); padding:6px 12px; border-radius:8px; cursor:pointer; }
-    .tab-button:hover { background:#203553; }
-    .tab-button.active { background:#204e7a; color:#fff; border-color: rgba(138,155,182,0.6); }
-    .btn-save-green { 
-        background-color: rgba(32, 122, 74, 0.8);
-        color: #fff;
-        border: 1px solid rgba(138, 155, 182, 0.3);
-        border-radius: 8px;
-        padding: 8px 16px;
-        cursor: pointer;
+    .tab-buttons { 
+        display: flex; 
+        gap: 10px; 
+        flex-wrap: wrap; 
+        margin-top: 8px; 
+        justify-content: center; 
+        align-items: center; 
     }
-    .btn-save-green:hover { background-color: rgba(42, 142, 94, 0.9); }
+    .tab-button { 
+        background: rgba(26, 41, 64, 0.8); 
+        color: #cfd8e3; 
+        border: 1px solid rgba(138,155,182,0.35); 
+        padding: 8px 16px; 
+        border-radius: 8px; 
+        cursor: pointer; 
+        transition: all 0.2s ease;
+        font-weight: 600;
+    }
+    .tab-button:hover { 
+        background: rgba(32, 53, 83, 0.9); 
+        transform: translateY(-1px);
+    }
+    .tab-button.active { 
+        background: linear-gradient(135deg, rgba(242, 124, 17, 0.2), rgba(242, 124, 17, 0.1)); 
+        color: rgb(242, 124, 17); 
+        border-color: rgba(242, 124, 17, 0.5); 
+        box-shadow: inset 0 -2px 0 rgb(242, 124, 17);
+        font-weight: 700;
+    }
+    .btn-save-green { 
+        background: linear-gradient(135deg, rgba(32, 122, 74, 0.9), rgba(23, 101, 57, 0.9));
+        color: #fff;
+        border: 1px solid rgba(72, 187, 120, 0.3);
+        border-radius: 8px;
+        padding: 10px 20px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        font-weight: 700;
+        font-size: 14px;
+    }
+    .btn-save-green:hover { 
+        background: linear-gradient(135deg, rgba(42, 142, 94, 0.95), rgba(32, 122, 74, 0.95)); 
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(32, 122, 74, 0.3);
+        border-color: rgba(72, 187, 120, 0.5);
+    }
 </style>
 
 <main>
-    <h1 class="gs-title">Global Settings</h1>
-    <div class="provider-card" style="margin-bottom:16px;">
-    <div style="display:flex; justify-content:center; margin-top:8px; margin-bottom:12px;">
+    <div class="page-header">
+        <h1 class="gs-title">Global Settings</h1>
+        <p class="page-subtitle">Configure core system settings, connectors, and memory management</p>
+        
+        <div style="display:flex; justify-content:center; margin-top:16px; margin-bottom:12px;">
             <button type="submit" class="btn-save-green" name="save_all" value="1" form="gs_form">Save All</button>
         </div>
+        
         <div class="provider-head" style="justify-content:center;">
             <div class="tab-buttons">
                 <button type="button" class="tab-button active" data-gs-tab="tab-global">🌐General</button>
@@ -789,8 +936,8 @@ function current_value(string $flatName, array $currentConf) {
                 <button type="button" class="tab-button" data-gs-tab="tab-itt">🖼️ITT</button>
             </div>
         </div>
-
     </div>
+    
     <div id="toast" class="toast-notification" style="display:none;"><span class="message"></span></div>
 
     <?php if ($saveSuccess): ?>
@@ -923,7 +1070,9 @@ function current_value(string $flatName, array $currentConf) {
                             <?php
                             $ttsDescMap = [
                                 'melotts' => "[Skyrim Voices] MeloTTS runs locally installed via DwemerDistro. It's fast and free, but low quality voices. Under 1GB of VRAM.",
-                                'xtts-fastapi' => "[Skyrim Voices] XTTS/Chatterbox runs locally and generates cloned voices from samples. Great for immersive, consistent character voices. Uses roughly 4GB of VRAM.",
+                                'xtts-fastapi' => "[Skyrim Voices] XTTS runs locally and generates cloned voices from samples. Great for immersive, consistent character voices. Uses roughly 4GB of VRAM. Best for NVIDIA GPUs.",
+                                'chatterbox' => "[Skyrim Voices] Chatterbox is an optimized fork of XTTS with faster inference. Generates cloned voices from samples. Uses roughly 4GB of VRAM. Best for NVIDIA GPUs.",
+                                'pockettts' => "[Skyrim Voices] PocketTTS is a CPU-based TTS engine that generates cloned voices from samples. Perfect for AMD systems or CPU-only setups. No GPU required.",
                                 'mimic3' => "Mimic3 is a very basic LLM installed in DwemerDistro. It's fast and free, but low quality custom voices. Under 1GB of VRAM.",
                                 'xvasynth' => "[Skyrim Voices] xVASynth uses pre-trained game voices. Good fit for Skyrim-style character voices and mod voicepacks.",
                                 'azure' => "Azure TTS offers decent voices with emotion control. Requires Azure subscription and API key.",
@@ -943,13 +1092,13 @@ function current_value(string $flatName, array $currentConf) {
                         </div>
                     </div>
                 </div>
-                <?php $ttsKeyCur = $ttsMap[$ttsSelRender] ?? ''; $ttsSchemaCur = ($ttsKeyCur && isset($providersTts[$ttsKeyCur]) && is_array($providersTts[$ttsKeyCur])) ? $providersTts[$ttsKeyCur] : []; $HOST_IP=''; $WSL_IP=''; if ($ttsKeyCur==='XVASYNTH' || $ttsKeyCur==='XTTSFASTAPI'){ try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) { @include_once($enginePath.'conf'.DIRECTORY_SEPARATOR.'conf.php'); if (isset($GLOBALS['DBDRIVER'])) { @require_once($enginePath.'lib'.DIRECTORY_SEPARATOR.$GLOBALS['DBDRIVER'].'.class.php'); } $GLOBALS['db'] = new sql(); } $row = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='Network/HOST_IP' LIMIT 1"); if (is_array($row) && isset($row['value'])) { $HOST_IP = (string)$row['value']; } $row2 = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='Network/WSL_IP' LIMIT 1"); if (is_array($row2) && isset($row2['value'])) { $WSL_IP = (string)$row2['value']; } } catch (Throwable $_e) { $HOST_IP=''; $WSL_IP=''; } } ?>
+                <?php $ttsKeyCur = $ttsMap[$ttsSelRender] ?? ''; $ttsSchemaCur = ($ttsKeyCur && isset($providersTts[$ttsKeyCur]) && is_array($providersTts[$ttsKeyCur])) ? $providersTts[$ttsKeyCur] : []; $HOST_IP=''; $WSL_IP=''; if ($ttsKeyCur==='XVASYNTH' || $ttsKeyCur==='XTTSFASTAPI' || $ttsKeyCur==='CHATTERBOX' || $ttsKeyCur==='POCKETTTS'){ try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) { @include_once($enginePath.'conf'.DIRECTORY_SEPARATOR.'conf.php'); if (isset($GLOBALS['DBDRIVER'])) { @require_once($enginePath.'lib'.DIRECTORY_SEPARATOR.$GLOBALS['DBDRIVER'].'.class.php'); } $GLOBALS['db'] = new sql(); } $row = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='Network/HOST_IP' LIMIT 1"); if (is_array($row) && isset($row['value'])) { $HOST_IP = (string)$row['value']; } $row2 = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='Network/WSL_IP' LIMIT 1"); if (is_array($row2) && isset($row2['value'])) { $WSL_IP = (string)$row2['value']; } } catch (Throwable $_e) { $HOST_IP=''; $WSL_IP=''; } } ?>
                 <?php if (!empty($ttsSchemaCur)): ?>
                 <div class="provider-card">
                     <div class="provider-head">
                         <div class="provider-title">
                             <div class="provider-icon">⚙️</div>
-                            <div><?php $ttsProviderDisplayName = ($ttsKeyCur === 'XTTSFASTAPI') ? 'XTTS/Chatterbox API' : $ttsKeyCur; echo htmlspecialchars($ttsProviderDisplayName); ?> Settings</div>
+                            <div><?php echo htmlspecialchars($ttsKeyCur); ?> Settings</div>
                         </div>
                     </div>
                     <div class="provider-body grid">
@@ -1001,6 +1150,22 @@ function current_value(string $flatName, array $currentConf) {
                                         if(bh && inp){ bh.addEventListener('click', function(){ setHost((bh.getAttribute('data-ip')||'').trim()); }); }
                                         if(bw && inp){ bw.addEventListener('click', function(){ setWsl((bw.getAttribute('data-ip')||'').trim()); }); }
                                         }catch(_e){} })();</script>
+                                    <?php elseif ($ttsKeyCur==='CHATTERBOX' && strtolower($fname)==='endpoint'): ?>
+                                        <button type="button" id="btn_host_ip_chatterbox" class="btn-primary" data-ip="<?php echo htmlspecialchars($HOST_IP); ?>">Host PC IP</button>
+                                        <button type="button" id="btn_wsl_ip_chatterbox" class="btn-primary" data-ip="<?php echo htmlspecialchars($WSL_IP); ?>">WSL IP</button>
+                                        <script>(function(){ try{ var bh=document.getElementById('btn_host_ip_chatterbox'); var bw=document.getElementById('btn_wsl_ip_chatterbox'); var inp=document.getElementById('tts_endpoint'); function setHost(ip){ if(!ip){ try{ alert('Host IP not set. Configure Network/HOST_IP in Settings.'); }catch(_){} return; } try{ var u = new URL(inp.value||('http://'+ip+':8020')); u.protocol = 'http:'; u.hostname = ip; u.port = '8020'; inp.value = u.toString(); } catch(e){ inp.value = 'http://'+ip+':8020'; } try{ inp.dispatchEvent(new Event('input', { bubbles:true })); }catch(_){} try{ inp.dispatchEvent(new Event('change', { bubbles:true })); }catch(_){} }
+                                        function setWsl(ip){ if(!ip){ try{ alert('WSL IP not set. Configure Network/WSL_IP in Settings.'); }catch(_){} return; } try{ var u = new URL(inp.value||('http://'+ip+':8020')); u.protocol='http:'; u.hostname=ip; u.port='8020'; inp.value = u.toString(); } catch(e){ inp.value = 'http://'+ip+':8020'; } try{ inp.dispatchEvent(new Event('input', { bubbles:true })); }catch(_){} try{ inp.dispatchEvent(new Event('change', { bubbles:true })); }catch(_){} }
+                                        if(bh && inp){ bh.addEventListener('click', function(){ setHost((bh.getAttribute('data-ip')||'').trim()); }); }
+                                        if(bw && inp){ bw.addEventListener('click', function(){ setWsl((bw.getAttribute('data-ip')||'').trim()); }); }
+                                        }catch(_e){} })();</script>
+                                    <?php elseif ($ttsKeyCur==='POCKETTTS' && strtolower($fname)==='endpoint'): ?>
+                                        <button type="button" id="btn_host_ip_pockettts" class="btn-primary" data-ip="<?php echo htmlspecialchars($HOST_IP); ?>">Host PC IP</button>
+                                        <button type="button" id="btn_wsl_ip_pockettts" class="btn-primary" data-ip="<?php echo htmlspecialchars($WSL_IP); ?>">WSL IP</button>
+                                        <script>(function(){ try{ var bh=document.getElementById('btn_host_ip_pockettts'); var bw=document.getElementById('btn_wsl_ip_pockettts'); var inp=document.getElementById('tts_endpoint'); function setHost(ip){ if(!ip){ try{ alert('Host IP not set. Configure Network/HOST_IP in Settings.'); }catch(_){} return; } try{ var u = new URL(inp.value||('http://'+ip+':8020')); u.protocol = 'http:'; u.hostname = ip; u.port = '8020'; inp.value = u.toString(); } catch(e){ inp.value = 'http://'+ip+':8020'; } try{ inp.dispatchEvent(new Event('input', { bubbles:true })); }catch(_){} try{ inp.dispatchEvent(new Event('change', { bubbles:true })); }catch(_){} }
+                                        function setWsl(ip){ if(!ip){ try{ alert('WSL IP not set. Configure Network/WSL_IP in Settings.'); }catch(_){} return; } try{ var u = new URL(inp.value||('http://'+ip+':8020')); u.protocol='http:'; u.hostname=ip; u.port='8020'; inp.value = u.toString(); } catch(e){ inp.value = 'http://'+ip+':8020'; } try{ inp.dispatchEvent(new Event('input', { bubbles:true })); }catch(_){} try{ inp.dispatchEvent(new Event('change', { bubbles:true })); }catch(_){} }
+                                        if(bh && inp){ bh.addEventListener('click', function(){ setHost((bh.getAttribute('data-ip')||'').trim()); }); }
+                                        if(bw && inp){ bw.addEventListener('click', function(){ setWsl((bw.getAttribute('data-ip')||'').trim()); }); }
+                                        }catch(_e){} })();</script>
                                     <?php endif; ?>
                                 </div>
                             <?php elseif ($ftype==='select'): $values=$def['values']??[]; ?>
@@ -1025,7 +1190,7 @@ function current_value(string $flatName, array $currentConf) {
                 <?php 
                 // Check if current TTS provider supports paralinguistic tags
                 $hasParalinguisticTags = isset($ttsSchemaCur['PARALINGUISTIC_TAGS_ENABLED']);
-                if ($hasParalinguisticTags): 
+                if ($hasParalinguisticTags && $ttsKeyCur === 'CHATTERBOX'): 
                     $paraEnabled = current_value('TTS '.$ttsKeyCur.' PARALINGUISTIC_TAGS_ENABLED', $currentConf);
                     $paraPrompt = (string)current_value('TTS '.$ttsKeyCur.' PARALINGUISTIC_TAGS_PROMPT', $currentConf);
                     $paraTagsList = (string)current_value('TTS '.$ttsKeyCur.' PARALINGUISTIC_TAGS_LIST', $currentConf);
@@ -1063,10 +1228,10 @@ function current_value(string $flatName, array $currentConf) {
                             <div>Player TTS</div>
                         </div>
                     </div>
-                        <?php $playerFunctionSaved = current_value('TTSFUNCTION_PLAYER',$currentConf); $descTtsPlayer = (string)($rawSchema['TTSFUNCTION_PLAYER']['description'] ?? ''); $descPlayerVoice = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE']['description'] ?? ''); $descPlayerVoiceId = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE_ID']['description'] ?? ''); $descPlayerLang = (string)($rawSchema['TTSFUNCTION_PLAYER_LANGUAGE']['description'] ?? ''); $playerLangSupported = ['melotts','xtts-fastapi','xvasynth','piper-tts','zonos_gradio','cartesia','inworld']; $showPlayerLang = in_array(strtolower((string)$playerFunctionSaved), $playerLangSupported, true); ?>
+                        <?php $playerFunctionSaved = current_value('TTSFUNCTION_PLAYER',$currentConf); $descTtsPlayer = (string)($rawSchema['TTSFUNCTION_PLAYER']['description'] ?? ''); $descPlayerVoice = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE']['description'] ?? ''); $descPlayerVoiceId = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE_ID']['description'] ?? ''); $descPlayerLang = (string)($rawSchema['TTSFUNCTION_PLAYER_LANGUAGE']['description'] ?? ''); $playerLangSupported = ['melotts','xtts-fastapi','chatterbox','pockettts','xvasynth','piper-tts','zonos_gradio','cartesia','inworld']; $showPlayerLang = in_array(strtolower((string)$playerFunctionSaved), $playerLangSupported, true); ?>
                     <div class="provider-body grid">
                         <label for="TTSFUNCTION_PLAYER">Player TTS Selection</label>
-                        <?php $playerTtsOptions = $rawSchema['TTSFUNCTION_PLAYER']['values'] ?? [ 'none','melotts','xtts-fastapi','xvasynth','mimic3','piper-tts','azure','11labs','openai','kokoro','zonos_gradio','cartesia','inworld' ]; ?>
+                        <?php $playerTtsOptions = $rawSchema['TTSFUNCTION_PLAYER']['values'] ?? [ 'none','melotts','xtts-fastapi','chatterbox','pockettts','xvasynth','mimic3','piper-tts','azure','11labs','openai','kokoro','zonos_gradio','cartesia','inworld' ]; ?>
                         <select name="TTSFUNCTION_PLAYER" id="TTSFUNCTION_PLAYER">
                             <?php foreach ($playerTtsOptions as $opt): ?>
                                 <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$playerFunctionSaved===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($ttsDisplayNames[$opt] ?? $opt); ?></option>
@@ -1106,14 +1271,14 @@ function current_value(string $flatName, array $currentConf) {
                                     var voice = document.getElementById('tts_voiceid');
                                     if (sel && voice && !voice.value) {
                                         var v = (sel.value||'').toLowerCase();
-                                        if (v==='xtts-fastapi' || v==='cartesia' || v==='inworld') voice.placeholder = 'TheNarrator';
+                                        if (v==='xtts-fastapi' || v==='chatterbox' || v==='pockettts' || v==='cartesia' || v==='inworld') voice.placeholder = 'TheNarrator';
                                         else if (v==='melotts' || v==='piper-tts' || v==='xvasynth') voice.placeholder = 'malenord';
                                     }
                                     if (sel && voice){
                                         sel.addEventListener('change', function(){
                                             if (voice && !voice.value){
                                                 var vv = String(sel.value||'').toLowerCase();
-                                                voice.placeholder = (vv==='xtts-fastapi' || vv==='cartesia' || vv==='inworld') ? 'TheNarrator' : (['melotts','piper-tts','xvasynth'].indexOf(vv)>=0 ? 'malenord' : '');
+                                                voice.placeholder = (vv==='xtts-fastapi' || vv==='chatterbox' || vv==='pockettts' || vv==='cartesia' || vv==='inworld') ? 'TheNarrator' : (['melotts','piper-tts','xvasynth'].indexOf(vv)>=0 ? 'malenord' : '');
                                             }
                                         });
                                     }
@@ -1559,7 +1724,7 @@ echo $buffer;
     function togglePlayerLanguage(){
       var sel = document.getElementById('TTSFUNCTION_PLAYER');
       var v = (sel && sel.value) ? String(sel.value).toLowerCase() : '';
-      var supported = ['melotts','xtts-fastapi','xvasynth','piper-tts','zonos_gradio','cartesia','inworld'];
+      var supported = ['melotts','xtts-fastapi','chatterbox','pockettts','xvasynth','piper-tts','zonos_gradio','cartesia','inworld'];
       var show = supported.indexOf(v) >= 0;
       var nodes = document.querySelectorAll('.player-language-only');
       for (var i=0;i<nodes.length;i++){

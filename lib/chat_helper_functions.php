@@ -8,6 +8,7 @@ define("_MAX_SUBTITLE_LENGTH", 1000);
 
 require_once(__DIR__."/online_translation.php");
 require_once(__DIR__."/utils_game_timestamp.php");
+require_once(__DIR__."/pipeline_status.php");
 
 function randomReplaceShortWordsWithPoints($inputString, $distance)
 {
@@ -58,6 +59,8 @@ function cleanResponse($rawResponse)
         $ttsMap = [
             'melotts' => 'MELOTTS',
             'xtts-fastapi' => 'XTTSFASTAPI',
+            'chatterbox' => 'CHATTERBOX',
+            'pockettts' => 'POCKETTTS',
             'mimic3' => 'MIMIC3',
             'xvasynth' => 'XVASYNTH',
             'azure' => 'AZURE',
@@ -475,6 +478,8 @@ function loadNarratorVoiceSettings() {
 
     // Apply Narrator voice to all TTS providers
     $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']  = $voiceid;
+    $GLOBALS['TTS']['CHATTERBOX']['voiceid']   = $voiceid;
+    $GLOBALS['TTS']['POCKETTTS']['voiceid']    = $voiceid;
     $GLOBALS['TTS']['MELOTTS']['voiceid']      = $voiceid;
     $GLOBALS['TTS']['MIMIC3']['voice']         = $voiceid;
     $GLOBALS['TTS']['XVASYNTH']['model']       = $voiceid;
@@ -520,7 +525,7 @@ function unmoodSentence($sentence) {
     
 
     if ($processAsterisks === true ) {
-        error_log("[unmoodSentence] REMOVE_ASTERISKS_FROM_OUTPUT FULL is active! $sentence <{$GLOBALS['strip_emotes_from_output']}> <{$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']}>" );
+        error_log("[unmoodSentence] REMOVE_ASTERISKS_FROM_OUTPUT FULL is active! $sentence <" . ($GLOBALS['strip_emotes_from_output'] ?? 'N/A') . "> <" . ($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] ?? 'N/A') . ">" );
 
         // If the entire message is wrapped in asterisks, strip them from both ends
         if (str_starts_with($output, '*') && str_ends_with($output, '*')) {
@@ -899,6 +904,9 @@ function returnLines($lines,$writeOutput=true)
                 }
             }
 
+            // Set TTS processing status
+            pipeline_status_set('tts', true);
+
             // Generate regular TTS (either full text if no narration, or just dialogue after narration)
             if ($GLOBALS["TTSFUNCTION"] == "azure") {
 
@@ -991,6 +999,10 @@ function returnLines($lines,$writeOutput=true)
                 if (isset($GLOBALS["TTS_FALLBACK_FNCT"]))
                     $ttsOutput = $GLOBALS["TTS_FALLBACK_FNCT"]($responseForTTS, $mood, $responseForSubtitles);
             }
+            
+            // Clear TTS processing status
+            pipeline_status_set('tts', false);
+            
             $GLOBALS["TRACK"]["FILES_GENERATED"][] = $ttsOutput;
             if (trim($responseText)) {
                 $talkedSoFar[] = $responseText;
@@ -1121,11 +1133,27 @@ function returnLines($lines,$writeOutput=true)
                     Logger::debug("Transliterated Japanese text to: $responseTextPhonetic");
                 }
                 
-                // Output here.
-                echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
+                // Calculate volume boost based on distance
+                // Shouting distance threshold
+                if (!defined('SHOUTING_DISTANCE_THRESHOLD')) {
+                    define('SHOUTING_DISTANCE_THRESHOLD', 800);
+                }
+                if (!defined('SHOUTING_VOLUME_BOOST')) {
+                    define('SHOUTING_VOLUME_BOOST', 1.3);
+                }
+                
+                $volumeBoost = 1.0;
+                $distance = isset($GLOBALS["LAST_SPEECH_DISTANCE"]) ? $GLOBALS["LAST_SPEECH_DISTANCE"] : 0.0;
+                if ($distance > SHOUTING_DISTANCE_THRESHOLD) {
+                    $volumeBoost = SHOUTING_VOLUME_BOOST; // 30% louder for shouting
+                    Logger::info("Distance {$distance} > " . SHOUTING_DISTANCE_THRESHOLD . ", applying volume boost: {$volumeBoost}");
+                }
+                
+                // Output here with volumeBoost appended
+                echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic/$volumeBoost\r\n";
 
                 
-                $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic\r\n";
+                $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic/$volumeBoost\r\n";
                 if ($outBuffer["actor"]!="Player" && isset($GLOBALS["PATCH_ORIGINAL_MOOD_ISSUED"])) {
                     $GLOBALS["db"]->insert(
                         'moods_issued',
@@ -1175,10 +1203,20 @@ function returnLines($lines,$writeOutput=true)
             $originalRequest[0]="prechat";
             $originalRequest[1]++;
             $originalRequest[2]++;
-            if ($GLOBALS["SCRIPTLINE_LISTENER"])
-                $addonlistener="(talking to {$GLOBALS["SCRIPTLINE_LISTENER"]})";
-            else
+            if ($GLOBALS["SCRIPTLINE_LISTENER"]) {
+                // Check if speaking from distance (shouting)
+                if (!defined('SHOUTING_DISTANCE_THRESHOLD')) {
+                    define('SHOUTING_DISTANCE_THRESHOLD', 800);
+                }
+                $distance = isset($GLOBALS["LAST_SPEECH_DISTANCE"]) ? $GLOBALS["LAST_SPEECH_DISTANCE"] : 0.0;
+                if ($distance > SHOUTING_DISTANCE_THRESHOLD) {
+                    $addonlistener="(speaking loudly to {$GLOBALS["SCRIPTLINE_LISTENER"]} from far away)";
+                } else {
+                    $addonlistener="(talking to {$GLOBALS["SCRIPTLINE_LISTENER"]})";
+                }
+            } else {
                 $addonlistener="";
+            }
             $originalRequest[3]="{$outBuffer["actor"]}: $responseTextUnmooded $addonlistener";
             logEvent($originalRequest);
             
@@ -1186,10 +1224,20 @@ function returnLines($lines,$writeOutput=true)
             $originalRequest[0]="chat";
             $originalRequest[1]++;
             $originalRequest[2]++;
-            if ($GLOBALS["SCRIPTLINE_LISTENER"])
-                $addonlistener="(talking to {$GLOBALS["SCRIPTLINE_LISTENER"]})";
-            else
+            if ($GLOBALS["SCRIPTLINE_LISTENER"]) {
+                // Check if speaking from distance (shouting)
+                if (!defined('SHOUTING_DISTANCE_THRESHOLD')) {
+                    define('SHOUTING_DISTANCE_THRESHOLD', 800);
+                }
+                $distance = isset($GLOBALS["LAST_SPEECH_DISTANCE"]) ? $GLOBALS["LAST_SPEECH_DISTANCE"] : 0.0;
+                if ($distance > SHOUTING_DISTANCE_THRESHOLD) {
+                    $addonlistener="(speaking loudly to {$GLOBALS["SCRIPTLINE_LISTENER"]} from far away)";
+                } else {
+                    $addonlistener="(talking to {$GLOBALS["SCRIPTLINE_LISTENER"]})";
+                }
+            } else {
                 $addonlistener="";
+            }
             $originalRequest[3]="{$outBuffer["actor"]}: $responseTextUnmooded $addonlistener";
             logEvent($originalRequest);
         }
@@ -1821,7 +1869,7 @@ function getGametsLimitFor($actor) {
 
     $limitRow = $db->fetchOne($query);
 
-    Logger::debug("MEMORY_EMBEDDING getGametsLimitFor($actor),CONTEXT_HISTORY: {$GLOBALS["CONTEXT_HISTORY"]} => {$limitRow["hour_threshold"]}");
+    Logger::trace("MEMORY_EMBEDDING getGametsLimitFor($actor),CONTEXT_HISTORY: {$GLOBALS["CONTEXT_HISTORY"]} => {$limitRow["hour_threshold"]}");
 
     // If no data or result is too small, fall back to a sensible default (e.g. 72 in-game hours)
     $res = (isset($limitRow["hour_threshold"]) && $limitRow["hour_threshold"] > 0)

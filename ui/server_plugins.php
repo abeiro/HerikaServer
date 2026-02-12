@@ -35,17 +35,74 @@ footer { display: <?php echo $isEmbedded? 'none' : 'block'; ?>; }
     font-display: swap;
 }
 h1 { font-family: 'MagicCards', serif; letter-spacing: 1.5px; }
-/* Centered orange header like Oghma page */
-.page-header { text-align:center; margin: 0 0 20px 0; padding: 20px; background:#2a2a2a; border-radius:8px; border:1px solid #4a4a4a; }
+/* Centered orange header */
+.page-header { 
+    text-align: center; 
+    margin: 0 0 20px 0; 
+    padding: 20px; 
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+    border-radius: 10px; 
+    border: 1px solid #3a3a3a;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+}
 .page-header h1, #page-title, #title-text { font-family:'MagicCards', serif !important; }
-.page-header h1 { margin:0; word-spacing:8px; font-size:2.2em; color: rgb(242, 124, 17); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
-.table-container { background-color: #2a2a2a; border-radius: 5px; padding: 15px; margin-bottom: 20px; overflow-x: auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-table { width: 100%; border-collapse: collapse; background-color: #3a3a3a; margin-bottom: 20px; font-size: small; }
-th { background-color: #1a1a1a; color: #fff; font-weight: bold; padding: 12px; text-align: left; border-bottom: 2px solid #444; }
-td { padding: 10px; text-align: left; border-bottom: 1px solid #444; color: #f8f9fa; }
+.page-header h1 { 
+    margin: 0 0 8px 0; 
+    word-spacing: 8px; 
+    font-size: 2.2em; 
+    color: rgb(242, 124, 17); 
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5); 
+}
+.page-subtitle {
+    margin: 0;
+    color: #bbb;
+    font-size: 1.1em;
+    line-height: 1.6;
+}
+.table-container { 
+    background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+    border-radius: 10px; 
+    padding: 15px; 
+    margin-bottom: 20px; 
+    overflow-x: auto; 
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+    border: 1px solid #3a3a3a;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.table-container:hover {
+    border-color: rgba(242, 124, 17, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.05);
+}
+table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    background: linear-gradient(135deg, rgba(58, 58, 58, 0.5), rgba(48, 48, 48, 0.6));
+    margin-bottom: 20px; 
+    font-size: small;
+    border-radius: 8px;
+    overflow: hidden;
+}
+th { 
+    background: linear-gradient(180deg, rgba(26, 26, 26, 0.95), rgba(20, 20, 20, 0.98));
+    color: rgb(242, 124, 17); 
+    font-weight: bold; 
+    padding: 12px; 
+    text-align: left; 
+    border-bottom: 2px solid rgba(242, 124, 17, 0.3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+td { 
+    padding: 10px; 
+    text-align: left; 
+    border-bottom: 1px solid #3a3a3a; 
+    color: #f8f9fa;
+}
+tr:hover td {
+    background: rgba(242, 124, 17, 0.05);
+}
 /* Use main.css button system; do not override rounded corners/colors here */
 /* .btn-* styles intentionally inherited from main.css */
- .btn-base:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-base:disabled { opacity: 0.6; cursor: not-allowed; }
 /* Extra styling parity with index.php */
 .title-with-button { display:flex; align-items:center; }
 .title-with-button h2 { margin-right:10px; margin-bottom:0; }
@@ -54,6 +111,7 @@ td { padding: 10px; text-align: left; border-bottom: 1px solid #444; color: #f8f
 <main>
     <div class="page-header">
         <h1 id="page-title"><span id="title-text">Server Plugins</span></h1>
+        <p class="page-subtitle">Manage and install plugins to extend CHIM functionality</p>
     </div>
 
     <div class="table-container">
@@ -223,10 +281,9 @@ td { padding: 10px; text-align: left; border-bottom: 1px solid #444; color: #f8f
         echo '</table>';
 
         echo '<br>';
-        echo '<div style="display:flex; align-items:center; margin-top: 20px;">';
-        echo '<h1 style="margin-right: 10px;">CHIM Plugins Repository</h1>';
-        echo '</div>';
-        echo '<p>Here you can download extensions that add extra AI features to CHIM.</p>';
+        echo '<div class="table-container" style="margin-top: 30px;">';
+        echo '<h1 style="margin: 0 0 15px 0; text-align: center; color: rgb(242, 124, 17); font-family: \'MagicCards\', serif; font-size: 1.8em;">CHIM Plugins Repository</h1>';
+        echo '<p style="text-align: center; color: #bbb; margin: 0 0 20px 0;">Download extensions that add extra AI features to CHIM</p>';
 
         // Load plugin repository data from JSON file
         $pluginRepositoryFile = __DIR__ . '/data/plugin_repository.json';
@@ -289,6 +346,7 @@ td { padding: 10px; text-align: left; border-bottom: 1px solid #444; color: #f8f
         echo '<td><button onclick="window.open(\'https://github.com/MinLL/MinAI\', \'_blank\')" class="btn-base btn-primary">More Info</button></td>';
         echo '<td><button onclick="window.open(\'https://github.com/MinLL/MinAI/releases\', \'_blank\')" class="btn-base btn-primary">Mod Download</button></td>';
         echo '</tr></table>';
+        echo '</div>'; // Close the second table-container
         ?>
     </div>
 </main>

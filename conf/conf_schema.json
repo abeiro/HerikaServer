@@ -32,6 +32,7 @@
   "RECHAT_H": {"userlvl":"basic","type":"integer","description":"Rechat Rounds. Higher values will increase the amount of times AI NPC's will go back-and-forth during a conversation.<br>1 = 1 Round | 2 = 2 Rounds | 3 = 3 Rounds etc","_title":"Roleplay Management"},
   "RECHAT_P": {"userlvl":"basic","type":"integer","description":"Rechat Probability. Chance that an AI NPC will continue an ongoing conversation.<br>0 = Never | 50 = 50% | 100 = Always"},
   "RECHAT_ALLOW_ACTIONS": {"userlvl":"basic","type":"boolean","description":"Allow AI NPCs to trigger actions between eachother during Rechat. This can cause some chaos..."},
+  "END_CONVERSATION_COOLDOWN": {"userlvl":"basic","type":"integer","scope":"global","description":"Seconds an NPC is ineligible for AI dialogue if they wish to stop talking. Default: 60"},
   "RANDOM_NARATION": {"userlvl":"basic","type":"boolean","scope":"global","description":"Enable random Narrator interjections. The Narrator will occasionally add visual scene descriptions during conversations."},
   "RANDOM_NARATION_CHANCE": {"userlvl":"basic","type":"integer","scope":"global","description":"Probability (1-100) that the Narrator will interject with a scene description. Default: 15%"},
   "RANDOM_NARRATION_COOLDOWN": {"userlvl":"basic","type":"integer","scope":"global","description":"Minimum number of conversation rounds between Narrator interjections. Prevents narration spam. Range: 0-10, Default: 2"},
@@ -90,6 +91,7 @@
   "CORE_CONNECTOR_OGHMA_CUSTOM": {"userlvl": "basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for custom Oghma LLM topic extraction. Will be slower than MiniMe T5 and slow down responses. Recommend to use a very very 🏃‍♀️‍➡️Fast LLM.","scope": "global"},
   "RELATIONSHIP_SYSTEM_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","description":"Enable the Relationship Management System. When enabled, NPCs will dynamically form and update relationships based on conversations and events. Requires RELLLM_CONNECTOR to be configured.","_title":"Relationship System"},
   "RELLLM_CONNECTOR": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for Relationship Management system. Analyzes and updates NPC relationships. Recommend to use a 🏃‍♀️‍➡️Fast LLM with ❄️low temperature (0.1-0.3) for consistent evaluations.","scope":"global"},
+  "POWER_AWARENESS_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","description":"NPCs will be aware of relative power levels (based on character level) and react appropriately to threats.","_title":"Power Awareness System"},
   "CLEAN_CONTEXT_FOCUS_CHAT_HISTORY": {"userlvl":"basic","type": "integer","description": "Historic context to use when Focus on Chat mode. Should be lower than normal context.","scope":"global"},
   "BGL_TRIGGER_DAYS": {"userlvl":"basic","type": "integer","description": "RECOMMEND TO NOT GO BELOW 5 DAYS! Number of in-game days between Background Life events. NPCs will generate thoughts and take actions based on this interval. Default: 5 days. Range: 1-30 days.","scope":"global"},
   "CONNECTOR": {
@@ -233,7 +235,7 @@
       "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro! Will connect automatically so do not change the URL. Does not currently support Chat Assist/Creation.","helpurl":"https://dwemerdynamics.hostwiki.io/en/Online-LLMs#player2"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","piper-tts","mimic3","deepgram","cartesia","inworld"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["pockettts","chatterbox","xtts-fastapi","inworld","cartesia","piper-tts","xvasynth","none","melotts","mimic3","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","deepgram"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
 
   "TTS": {
     "_title":"Text-to-Speech Service",
@@ -253,6 +255,23 @@
       "PARALINGUISTIC_TAGS_ENABLED":{"type":"boolean","description":"Enable paralinguistic tags like [laugh], [sigh] for expressive TTS output.","scope":"global"},
       "PARALINGUISTIC_TAGS_PROMPT":{"type":"longstring","description":"Prompt snippet instructing the LLM to use paralinguistic tags. Added to system prompt when enabled.","scope":"global"},
       "PARALINGUISTIC_TAGS_LIST":{"type":"string","description":"Comma-separated list of supported paralinguistic tags (e.g., [laugh],[sigh],[gasp]). Tags are case-insensitive.","scope":"global"}
+    },
+    "CHATTERBOX": {
+      "_title":"Chatterbox (Optimized XTTS Fork)",
+      "endpoint":{"type":"url","description":"Chatterbox endpoint. Uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chatterbox"},
+      "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
+      "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
+      "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS CHATTERBOX voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"},
+      "PARALINGUISTIC_TAGS_ENABLED":{"type":"boolean","description":"Enable paralinguistic tags like [laugh], [sigh] for expressive TTS output.","scope":"global"},
+      "PARALINGUISTIC_TAGS_PROMPT":{"type":"longstring","description":"Prompt snippet instructing the LLM to use paralinguistic tags. Added to system prompt when enabled.","scope":"global"},
+      "PARALINGUISTIC_TAGS_LIST":{"type":"string","description":"Comma-separated list of supported paralinguistic tags (e.g., [laugh],[sigh],[gasp]). Tags are case-insensitive.","scope":"global"}
+    },
+    "POCKETTTS": {
+      "_title":"PocketTTS (CPU-based TTS)",
+      "endpoint":{"type":"url","description":"PocketTTS endpoint. CPU-only TTS, uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#pockettts"},
+      "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
+      "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
+      "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS POCKETTTS voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"}
     },
     "MIMIC3": {
       "_title":"MIMIC3 (Installed in DwemerDistro)",
@@ -371,12 +390,12 @@
       "workspace": {"type":"string","description":"Inworld workspace ID (required for voice cloning). Format: workspaces/{workspace} or just the workspace ID.","helpurl":"https://docs.inworld.ai/"},
       "voiceid": {"type":"string","description":"Voice file name. Works the same as CHIM-XTTS voiceid. Will only work with voices in your Voice Cache. Voice will be automatically cloned to Inworld when first used.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "language": {"type":"select","values":["EN_US","ZH_CN","KO_KR","JA_JP","RU_RU","IT_IT","ES_ES","PT_BR","DE_DE","FR_FR","AR_SA","PL_PL","NL_NL","HI_IN","HE_IL"],"description":"Language to use for TTS generation. Uses regional language codes."},
-      "model_id": {"type":"select","values":["inworld-tts-1","inworld-tts-1-max"],"description":"Inworld model to use. inworld-tts-1 is the standard model, inworld-tts-1-max is the higher quality model.","helpurl":"https://docs.inworld.ai/docs/tts/tts-models"},
+      "model_id": {"type":"select","values":["inworld-tts-1","inworld-tts-1-max","inworld-tts-1.5-mini","inworld-tts-1.5-max"],"description":"Inworld model to use. inworld-tts-1 is the standard model, inworld-tts-1.5-max is the higher quality model.","helpurl":"https://docs.inworld.ai/docs/tts/tts-models"},
       "temperature": {"type":"number","description":"Sampling temperature (0-2). Higher values make output more random. Default: 1.1"},
       "speed": {"type":"number","description":"Speaking rate/speed (0.5-1.5). Default: 1.0"}
     }
 },
-  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","piper-tts","azure","11labs","openai","kokoro","zonos_gradio","cartesia","inworld"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
+  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["pockettts","chatterbox","xtts-fastapi","inworld","cartesia","piper-tts","xvasynth","none","melotts","mimic3","azure","11labs","openai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
   "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
   "TTSFUNCTION_PLAYER_VOICE_ID": {"type":"integer","userlvl":"pro","scope":"global","description":"Speaker ID to select a voice from multi-voice model."},
   "TTSFUNCTION_PLAYER_LANGUAGE": {"type":"string","userlvl":"basic","scope":"global","description":"Overrides the TTS language for the player character."},

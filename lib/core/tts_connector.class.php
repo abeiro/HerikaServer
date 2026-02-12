@@ -85,7 +85,7 @@ class TTSConnector {
                     // CRITICAL FIX: If language is an array (schema definition), use default value instead
                     if ($key === "language" && is_array($value)) {
                         // Use default language based on driver
-                        if ($driver === "XTTSFASTAPI") {
+                        if ($driver === "XTTSFASTAPI" || $driver === "CHATTERBOX" || $driver === "POCKETTTS") {
                             $value = "en";
                         } elseif ($driver === "MELOTTS") {
                             $value = "EN";

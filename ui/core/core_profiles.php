@@ -48,6 +48,26 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
     font-style: normal;
 }
 main { padding-top: 40px; padding-bottom: 40px; }
+
+/* Page Header */
+.page-header {
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #3a3a3a;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+    text-align: center;
+    margin-bottom: 30px;
+}
+.page-header h1.api-title {
+    margin-bottom: 8px;
+}
+.page-subtitle {
+    color: #bbb;
+    font-size: 1.1em;
+    margin: 0;
+}
+
 h1.api-title {
     margin: 0 0 20px 0;
     font-family: 'MagicCards', serif;
@@ -60,23 +80,97 @@ h1.api-title {
 }
 .wide-centered { max-width: 1300px; margin: 0 auto; }
 .two-col-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.connector-card { background: #2a2a2a; border: 1px solid #4a4a4a; border-radius: 8px; padding: 12px; }
-.connector-title { font-family: 'MagicCards', serif; color: rgb(242, 124, 17); margin-bottom: 8px; font-size: 1.1em; letter-spacing: 0.6px; word-spacing: 10px; }
+.connector-card { 
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98)); 
+    border: 1px solid #3a3a3a; 
+    border-radius: 8px; 
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.connector-card:hover {
+    border-color: #4a4a4a;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.05);
+}
+.connector-title { 
+    font-family: 'MagicCards', serif; 
+    color: rgb(242, 124, 17); 
+    margin-bottom: 12px; 
+    font-size: 1.2em; 
+    letter-spacing: 0.6px; 
+    word-spacing: 10px;
+    font-weight: 600;
+}
 @media (max-width: 1000px) { .two-col-grid { grid-template-columns: 1fr; } }
 /* Split layout like LLM Connectors */
 .llm-layout { display:grid; grid-template-columns: minmax(240px, 340px) 1fr; gap:16px; align-items:stretch; }
 @media (max-width: 1100px) { .llm-layout { grid-template-columns: minmax(220px, 300px) 1fr; } }
 @media (max-width: 860px) { .llm-layout { grid-template-columns: minmax(200px, 260px) 1fr; } }
-.llm-left { display:flex; flex-direction:column; height:800px; overflow:hidden; padding:8px; padding-right:8px; border:1px solid #4a4a4a; border-radius:8px; background:#2a2a2a; }
+.llm-left { 
+    display:flex; 
+    flex-direction:column; 
+    height:800px; 
+    overflow:hidden; 
+    padding:12px; 
+    padding-right:12px; 
+    border:1px solid #3a3a3a; 
+    border-radius:10px; 
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+}
 .llm-right { min-width: 0; }
 .list-filters { display:flex; gap:8px; align-items:center; margin:6px 0 10px; flex-wrap:wrap; }
-.list-filters input[type="text"]{ width: 100%; max-width: 260px; }
-.list-filters select { max-width: 200px; }
+.list-filters input[type="text"]{ 
+    width: 100%; 
+    max-width: 260px;
+    background: rgba(26, 26, 26, 0.8); 
+    color: #e9efff; 
+    border: 1px solid #3a3a3a; 
+    border-radius: 6px; 
+    padding: 8px 12px;
+    transition: all 0.2s ease;
+}
+.list-filters input[type="text"]:focus {
+    border-color: rgba(242, 124, 17, 0.5);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+}
+.list-filters select { 
+    max-width: 200px;
+    background: rgba(26, 26, 26, 0.8); 
+    color: #e9efff; 
+    border: 1px solid #3a3a3a; 
+    border-radius: 6px; 
+    padding: 8px 12px;
+    transition: all 0.2s ease;
+}
+.list-filters select:focus {
+    border-color: rgba(242, 124, 17, 0.5);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+}
 .conn-list { display:flex; flex-direction:column; gap:8px; flex:1 1 auto; overflow:auto; }
 .llm-left .llm-title { font-family: 'MagicCards', serif; letter-spacing: 0.6px; word-spacing: 10px; }
-.conn-li { border:1px solid #4a4a4a; background:#2a2a2a; border-radius:10px; padding:10px; cursor:pointer; transition:transform .08s ease, background .12s ease; }
-.conn-li:hover { background:#3a3a3a; transform: translateY(-1px); }
-.conn-li.active { outline:2px solid rgb(242,124,17); }
+.conn-li { 
+    border:1px solid #3a3a3a; 
+    background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98)); 
+    border-radius:10px; 
+    padding:12px; 
+    cursor:pointer; 
+    transition: all .2s ease;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+.conn-li:hover { 
+    background: linear-gradient(135deg, rgba(58, 58, 58, 0.95), rgba(48, 48, 48, 0.98)); 
+    transform: translateY(-2px);
+    border-color: #4a4a4a;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+.conn-li.active { 
+    outline:2px solid rgb(242,124,17); 
+    background: linear-gradient(135deg, rgba(52, 42, 32, 0.95), rgba(44, 34, 24, 0.98));
+    box-shadow: 0 4px 12px rgba(242, 124, 17, 0.3);
+}
 .conn-li .head { display:flex; justify-content:space-between; gap:8px; align-items:center; }
 .conn-li .title { font-weight:600; color:#e9efff; }
 .conn-li .badge { font-size:11px; padding:2px 6px; border:1px solid #4a4a4a; border-radius:999px; color:#9fb1c9; }
@@ -90,9 +184,31 @@ h1.api-title {
 .slot-key { color: rgb(242,124,17); font-weight:700; min-width:70px; white-space:nowrap; }
 .slot-val { color:#cfd9ea; overflow-wrap:anywhere; }
 .pf-tabs { display:flex; gap:6px; flex-wrap:wrap; margin: 8px 0 10px; border-bottom: 2px solid #3a3a3a; }
-.pf-tab { background:#2a2a2a; border:none; padding:8px 12px; color:#f8f9fa; cursor:pointer; border-top-left-radius:8px; border-top-right-radius:8px; transition: all .2s ease; font-size:0.95em; }
-.pf-tab:hover { background:#3a3a3a; }
-.pf-tab.active { background:#1a1a1a; border-bottom: 2px solid rgb(242,124,17); margin-bottom:-2px; }
+.pf-tab { 
+    background: rgba(42, 42, 42, 0.8); 
+    border:none; 
+    padding:10px 16px; 
+    color:#e9efff; 
+    cursor:pointer; 
+    border-top-left-radius:8px; 
+    border-top-right-radius:8px; 
+    transition: all .2s ease; 
+    font-size:0.95em;
+    font-weight: 600;
+    border: 1px solid #3a3a3a;
+    border-bottom: none;
+}
+.pf-tab:hover { 
+    background: rgba(58, 58, 58, 0.9);
+    transform: translateY(-1px);
+}
+.pf-tab.active { 
+    background: linear-gradient(180deg, rgba(52, 42, 32, 0.95), rgba(42, 34, 24, 0.98)); 
+    border-color: rgb(242,124,17); 
+    border-bottom: 2px solid rgb(242,124,17); 
+    margin-bottom:-2px;
+    color: rgb(242,124,17);
+}
 .pf-pane { display:none; }
 .pf-pane.active { display:block; }
 .pf-lines { display:flex; flex-direction:column; gap:4px; margin-top:6px; }
@@ -105,7 +221,47 @@ h1.api-title {
 .connector-card input[type="number"],
 .connector-card input[type="password"],
 .connector-card select,
-.connector-card textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
+.connector-card textarea { 
+    width: 100%; 
+    max-width: 100%; 
+    box-sizing: border-box;
+    background: rgba(26, 26, 26, 0.8); 
+    color: #e9efff; 
+    border: 1px solid #3a3a3a; 
+    border-radius: 6px; 
+    padding: 10px 12px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+.connector-card input[type="text"]:focus,
+.connector-card input[type="number"]:focus,
+.connector-card input[type="password"]:focus,
+.connector-card select:focus,
+.connector-card textarea:focus {
+    border-color: rgba(242, 124, 17, 0.5);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+    background: rgba(34, 34, 34, 0.9);
+}
+.connector-card textarea {
+    min-height: 100px;
+    resize: vertical;
+    font-family: inherit;
+}
+.connector-card label {
+    color: rgb(242, 124, 17);
+    font-weight: 600;
+    display: block;
+    margin-bottom: 6px;
+}
+.connector-card .hint,
+.connector-card small.hint {
+    color: #9fb1c9;
+    font-size: 12px;
+    display: block;
+    margin-top: 4px;
+    line-height: 1.4;
+}
 /* Connector help text */
 .connector-help { color:#cfd9ea; font-size:12px; margin-top:6px; }
 .connector-help ul { margin:6px 0 0 16px; padding:0; }
@@ -149,9 +305,6 @@ h1.api-title {
     <div id="toast" class="toast-notification">
         <span class="message"></span>
     </div>
-
-    <h1 class="api-title">Profiles</h1>
-
 <?php
 $GLOBALS["db"]=new sql();
 
@@ -361,7 +514,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
         if ($id <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid id"]); exit; }
 
         $allowed = [
-            'label','service','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema','api_badge_id'
+            'label','service','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema','api_badge_id','extra_parameters_yaml'
         ];
         $data = [];
         foreach ($allowed as $k) {
@@ -375,6 +528,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
                 $data[$k] = ($v === '' ? null : floatval($v));
             } else if ($k === 'api_badge_id') {
                 $data[$k] = ($v === '' ? null : intval($v));
+            } else if ($k === 'extra_parameters_yaml') {
+                // Parse YAML and store as metadata.extra_parameters
+                require_once __DIR__ . '/../../connector/parse_simple_yaml.php';
+                $extra_parameters = parse_simple_yaml($v);
+                if (is_array($extra_parameters)) {
+                    // Get current metadata
+                    $row = $llm->getById($id);
+                    $metadata = is_string($row['metadata'] ?? '') ? json_decode($row['metadata'], true) : ($row['metadata'] ?? []);
+                    if (!is_array($metadata)) $metadata = [];
+                    $metadata['extra_parameters'] = $extra_parameters;
+                    $data['metadata'] = json_encode($metadata);
+                } else {
+                    // Invalid YAML, remove extra_parameters
+                    $row = $llm->getById($id);
+                    $metadata = is_string($row['metadata'] ?? '') ? json_decode($row['metadata'], true) : ($row['metadata'] ?? []);
+                    if (!is_array($metadata)) $metadata = [];
+                    unset($metadata['extra_parameters']);
+                    $data['metadata'] = json_encode($metadata);
+                }
+                // Don't add extra_parameters_yaml to $data directly
+                continue;
             } else {
                 $data[$k] = ($v === '' ? null : $v);
             }
@@ -759,9 +933,13 @@ $ttsById = $byId($ttsRows);
 $ittById = $byId($ittRows);
 ?>
 
+<div class="page-header">
+    <h1 class="api-title">CHIM Profiles</h1>
+    <p class="page-subtitle">Manage NPC profiles with LLM, TTS, and ITT connectors</p>
+</div>
+
 <div class="llm-layout">
     <div class="llm-left">
-        <div class="llm-title" style="margin: 4px 0 6px 2px; font-weight: 600; color: rgb(242,124,17);">Profiles</div>
         <div style="margin: 6px 0 10px 4px; display:flex; gap:8px; flex-wrap:wrap;">
             <form method="get" action="core_profiles.php" style="display:inline">
                 <input type="hidden" name="create_blank" value="1">
@@ -819,7 +997,6 @@ $ittById = $byId($ittRows);
                     const npcCount = Number((NPC_COUNT||{})[String(r.id)]||0);
                     const row1 = [];
                     if (String(r.default_npc)==='1') row1.push('<span class="pf-flag">👤 NPC</span>');
-                    if (String(r.default_narrator)==='1') row1.push('<span class="pf-flag">🗣️Narrator</span>');
                     const row2 = [];
                     // Slot badge removed from list items
                     if (npcCount > 0) row2.push('<span class="pf-flag">'+npcCount+' NPCs</span>');
@@ -925,14 +1102,6 @@ $ittById = $byId($ittRows);
             <span class="toggle-text">On</span>
         </label>
         <small class="hint">When enabled, new NPCs will default to using this profile. Only 1 profile can be default.</small>
-
-        <div style="height:6px;"></div>
-        <label class="label-with-toggle">🗣️Default Narrator
-            <input type="hidden" name="default_narrator" value="0">
-            <input type="checkbox" name="default_narrator" value="1" <?= isset($editItem["default_narrator"]) && $editItem["default_narrator"] == 1 ? "checked" : "" ?>>
-            <span class="toggle-text">On</span>
-        </label>
-        <small class="hint">When enabled, this profile is used for the narrator. Only 1 profile can be default narrator.</small>
 
         <div style="height:8px;"></div>
         <?php
@@ -1060,7 +1229,7 @@ $ittById = $byId($ittRows);
 
     <script>
     document.addEventListener('DOMContentLoaded', function(){
-        const names = ['default_npc','default_narrator','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]','meta_vis[AUTO_DIARY_WAIT_ENABLED]'];
+        const names = ['default_npc','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]','meta_vis[AUTO_DIARY_WAIT_ENABLED]'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
@@ -1461,7 +1630,6 @@ $ittById = $byId($ittRows);
             if (!pid){ if (typeof showToast==='function') showToast('Save failed: create the profile first', true); return; }
             const label = (form.querySelector('input[name="label"]').value||'');
             const defNpc = !!(form.querySelector('input[type=\"checkbox\"][name=\"default_npc\"]').checked) ? '1' : '0';
-            const defNarr = !!(form.querySelector('input[type="checkbox"][name="default_narrator"]').checked) ? '1' : '0';
             const prompt = (form.querySelector('textarea[name="prompt"]').value||'');
             const slotSel = form.querySelector('select[name="slot"]');
             const slotVal = slotSel ? (slotSel.value||'') : '';
@@ -1472,7 +1640,6 @@ $ittById = $byId($ittRows);
             fd.append('id', pid);
             fd.append('label', label);
             fd.append('default_npc', defNpc);
-            fd.append('default_narrator', defNarr);
             fd.append('prompt', prompt);
             fd.append('slot', slotVal);
             if (fmtSel) fd.append('llm_formatter_id', fmtVal);
@@ -1480,14 +1647,14 @@ $ittById = $byId($ittRows);
             let json={}; try { json = await res.json(); } catch(_){ json = { ok:false, error:'Invalid response' }; }
             if (json && json.ok){
                 if (typeof showToast==='function') showToast('Profile settings saved');
-                try { updateLeftListBasics(label, defNpc==='1', defNarr==='1'); } catch(_e){}
+                try { updateLeftListBasics(label, defNpc==='1'); } catch(_e){}
             } else {
                 if (typeof showToast==='function') showToast('Save failed: ' + (json && json.error ? json.error : 'Unknown error'), true);
             }
         } catch(e){ if (typeof showToast==='function') showToast('Save failed: ' + e.message, true); }
     }
 
-    function updateLeftListBasics(newLabel, isDefaultNpc, isDefaultNarrator){
+    function updateLeftListBasics(newLabel, isDefaultNpc){
         const li = document.querySelector('.llm-left .conn-li[data-id="'+String(CURRENT_PROFILE_ID)+'"]');
         if (!li) return;
         const title = li.querySelector('.title');
@@ -1499,7 +1666,6 @@ $ittById = $byId($ittRows);
             badges.innerHTML='';
             if (countBadge) badges.appendChild(countBadge);
             if (isDefaultNpc){ const b=document.createElement('span'); b.className='pf-flag'; b.textContent='NPC'; badges.appendChild(b); }
-            if (isDefaultNarrator){ const b=document.createElement('span'); b.className='pf-flag'; b.textContent='Narrator'; badges.appendChild(b); }
         }
     }
 

@@ -31,32 +31,67 @@ $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 100;
 $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
 $offset = ($page - 1) * $limit;
 $sinceRowId = isset($_GET["since_rowid"]) ? intval($_GET["since_rowid"]) : 0;
+$sinceGamets = isset($_GET["since_gamets"]) ? intval($_GET["since_gamets"]) : 0;
 
-// If we're checking for new events since a specific ROWID
-if ($sinceRowId > 0) {
+// Base event type filter - exclude internal events and location context
+$typeFilter = "type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import','backgroundaction','innerchat','npc_reanimated','infoloc','location')";
+
+// If specific event types are requested (for MCM conversation history panel)
+if (isset($_GET["event_types"]) && !empty($_GET["event_types"])) {
+    $allowedTypes = explode(',', $_GET["event_types"]);
+    $allowedTypes = array_map('trim', $allowedTypes);
+    $allowedTypes = array_filter($allowedTypes);
+    
+    if (!empty($allowedTypes)) {
+        // Sanitize and quote each type for SQL
+        $quotedTypes = array_map(function($type) use ($db) {
+            return "'" . $db->escape($type) . "'";
+        }, $allowedTypes);
+        
+        $typeFilter = "type IN (" . implode(',', $quotedTypes) . ")";
+        // Note: Background chat filtering is handled by JavaScript on the client side
+    }
+}
+
+// Build query based on filtering options
+if ($sinceGamets > 0) {
+    // Filter by game timestamp - get events since a specific in-game time
     $results = $db->fetchAll(
         "SELECT type, data, people, gamets, localts, ts, rowid
          FROM eventlog a
-         WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import','backgroundaction','innerchat','npc_reanimated')
+         WHERE $typeFilter
+         AND gamets >= $sinceGamets
+         ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
+         LIMIT $limit"
+    );
+} else if ($sinceRowId > 0) {
+    // Filter by rowid - for incremental updates
+    $results = $db->fetchAll(
+        "SELECT type, data, people, gamets, localts, ts, rowid
+         FROM eventlog a
+         WHERE $typeFilter
          AND rowid > $sinceRowId
          ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
          LIMIT 50"
     );
 } else {
-    // Normal paginated query
+    // Normal paginated query - get most recent events by game timestamp (gamets)
     $results = $db->fetchAll(
         "SELECT type, data, people, gamets, localts, ts, rowid
          FROM eventlog a
-         WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import','backgroundaction','innerchat','npc_reanimated')
+         WHERE $typeFilter
          ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
          LIMIT $limit OFFSET $offset"
     );
 }
 
+// Check if raw format is requested (for in-game UI)
+$rawFormat = isset($_GET["format"]) && $_GET["format"] === "raw";
+
 $columnHeaders = [
     'type' => 'Event',
     'data' => 'Events',
-    'gamets' => '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrielic Time</a>',
+    'gamets' => $rawFormat ? 'Tamrielic Time' : '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrielic Time</a>',
     'localts' => 'Time (UTC)',
     'ts' => 'TS',
 ];
@@ -92,8 +127,8 @@ $mappedResults = array_map(function ($row) use ($columnHeaders) {
             $value = $dt->format('d-m-Y H:i:s');
         }
         
-        // Special handling for chat events
-        if ($row['type'] === 'chat' && ($key === 'data' || $key === 'type')) {
+        // Special handling for chat events (only add HTML styling for web view, not raw)
+        if (!$rawFormat && $row['type'] === 'chat' && ($key === 'data' || $key === 'type')) {
             $value = '<span style="color:rgb(255, 255, 255);">' . htmlspecialchars($value) . '</span>';
         } else {
             $value = htmlspecialchars($value);
@@ -115,17 +150,24 @@ $mappedResults = array_map(function ($row) use ($columnHeaders) {
     return $mappedRow;
 }, $results);
 
-// Get total count for pagination info
-$countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','backgroundaction','innerchat','npc_reanimated')";
+// Get total count for pagination info - also exclude location types
+$countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','backgroundaction','innerchat','npc_reanimated','infoloc','location')";
 $countResult = $db->fetchAll($countQuery);
 $totalRecords = $countResult[0]['total'];
 $totalPages = ceil($totalRecords / $limit);
+
+// Get the latest gamets from the results for reference
+$latestGamets = 0;
+if (!empty($results) && isset($results[0]['gamets'])) {
+    $latestGamets = intval($results[0]['gamets']);
+}
 
 $response = [
     'success' => true,
     'data' => $mappedResults,
     'timestamp' => time(),
-    'new_count' => count($mappedResults)
+    'new_count' => count($mappedResults),
+    'latest_gamets' => $latestGamets
 ];
 
 // Only include pagination if not doing incremental update
