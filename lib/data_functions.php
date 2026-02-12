@@ -1500,6 +1500,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
      or people like '$actorEscaped' 
      or people like '%|$actorEscaped (busy)|%'
      OR people LIKE '%|$actorEscaped (hostile)|%' 
+     OR people LIKE '%|$actorEscaped (in combat)|%' 
      or type='info_timeforward' )
     ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
