@@ -16,6 +16,18 @@ $password = 'dwemer';
 // Connect to the database
 $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
 
+// Resolve MCP host from conf_opts (fallback to localhost)
+$mcpHost = 'localhost';
+if ($conn) {
+    $mcpRes = @pg_query($conn, "SELECT value FROM conf_opts WHERE id='Network/WSL_IP' LIMIT 1");
+    if ($mcpRes && pg_num_rows($mcpRes) > 0) {
+        $mcpRow = pg_fetch_assoc($mcpRes);
+        if (!empty($mcpRow['value'])) {
+            $mcpHost = trim((string)$mcpRow['value']);
+        }
+    }
+}
+
 $TITLE = "🌲 CHIM Server Logs";
 
 // Auto-trim logs setting (chim_meta.settings)
@@ -831,7 +843,306 @@ if (isset($_GET['download_logs'])) {
             width: 100%;
             margin: 0 auto;
             box-sizing: border-box;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .logs-kagrenac-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+            align-items: start;
+        }
+
+        .logs-column {
+            min-width: 0;
+        }
+
+        .kagrenac-panel {
+            position: sticky;
+            top: 86px;
+            align-self: start;
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+            border: 1px solid #3a3a3a;
+            border-radius: 10px;
+            min-height: 300px;
+            height: calc(100vh - 110px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .kagrenac-header {
+            padding: 12px 14px;
+            border-bottom: 1px solid #3a3a3a;
+            background: rgba(30, 30, 30, 0.85);
+        }
+
+        .kagrenac-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .kagrenac-header h2 {
+            margin: 0 0 6px 0;
+            padding: 0;
+            border: 0;
+            font-size: 1.1em;
+        }
+
+        .kagrenac-subtitle {
+            color: #c8c8c8;
+            font-size: 12px;
+        }
+
+        .kagrenac-toggle-settings {
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            background: rgba(20, 20, 20, 0.85);
+            color: #ddd;
+            font-size: 11px;
+            line-height: 1;
+            padding: 6px 8px;
+            cursor: pointer;
+        }
+
+        .kagrenac-toggle-settings:hover {
+            border-color: rgba(242, 124, 17, 0.5);
+            color: rgb(242, 124, 17);
+        }
+
+        .kagrenac-settings {
+            padding: 10px 14px;
+            border-bottom: 1px solid #3a3a3a;
+            display: grid;
+            gap: 8px;
+            background: rgba(30, 30, 30, 0.6);
+        }
+
+        .kagrenac-settings.hidden {
+            display: none;
+        }
+
+        .kagrenac-settings label {
+            color: #d4d4d4;
+            font-size: 12px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .kagrenac-settings input,
+        .kagrenac-settings select,
+        .kagrenac-settings textarea {
+            width: 100%;
+            padding: 7px 9px;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            background: rgba(26, 26, 26, 0.8);
+            color: #d4d4d4;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+
+        .kagrenac-settings textarea {
+            min-height: 64px;
+            resize: vertical;
+        }
+
+        .kagrenac-settings .settings-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .kagrenac-settings .settings-btn {
+            border: 1px solid #3a3a3a;
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+            color: #f8f9fa;
+            border-radius: 6px;
+            padding: 7px 10px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .kagrenac-settings .settings-btn:hover {
+            border-color: rgba(242, 124, 17, 0.5);
+            color: rgb(242, 124, 17);
+        }
+
+        .kagrenac-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .kagrenac-chat-history {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            background: radial-gradient(circle at top left, rgba(40, 40, 40, 0.35), rgba(20, 20, 20, 0.9));
+        }
+
+        .kag-msg-row {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .kag-msg-row.user {
+            justify-content: flex-end;
+        }
+
+        .kag-msg-row.assistant,
+        .kag-msg-row.error {
+            justify-content: flex-start;
+        }
+
+        .kag-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid rgba(242, 124, 17, 0.65);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            background: rgba(35, 35, 35, 0.9);
+            flex: 0 0 30px;
+        }
+
+        .kag-msg {
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-width: 88%;
+            border: 1px solid rgba(242, 124, 17, 0.35);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+        }
+
+        .kag-msg.user {
+            background: linear-gradient(135deg, rgba(66, 66, 155, 0.55), rgba(42, 42, 120, 0.65));
+            border-color: rgba(110, 110, 190, 0.45);
+        }
+
+        .kag-msg.assistant {
+            background: linear-gradient(135deg, rgba(242, 124, 17, 0.5), rgba(184, 92, 13, 0.55));
+            border-color: rgba(242, 124, 17, 0.65);
+            color: #fff4e8;
+        }
+
+        .kag-msg.error {
+            background: linear-gradient(135deg, rgba(145, 40, 40, 0.5), rgba(95, 20, 20, 0.6));
+            border-color: rgba(190, 70, 70, 0.5);
+            color: #ffd0d0;
+        }
+
+        .kag-msg-meta {
+            margin-top: 4px;
+            font-size: 10px;
+            color: #a0a0a0;
+            text-align: right;
+            opacity: 0.9;
+        }
+
+        .kag-msg-row.thinking .kag-msg {
+            background: linear-gradient(135deg, rgba(58, 58, 58, 0.85), rgba(42, 42, 42, 0.9));
+            border-style: dashed;
+            color: #dddddd;
+        }
+
+        .kag-typing-dots {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+
+        .kag-typing-dots span {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: rgba(242, 124, 17, 0.95);
+            animation: kagDotsPulse 1s infinite ease-in-out;
+        }
+
+        .kag-typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+        .kag-typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes kagDotsPulse {
+            0%, 80%, 100% { transform: scale(0.7); opacity: 0.6; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .kagrenac-chat-input {
+            border-top: 1px solid #3a3a3a;
+            padding: 10px;
+            display: grid;
+            gap: 8px;
+            background: rgba(34, 34, 34, 0.95);
+        }
+
+        .kagrenac-chat-input textarea {
+            width: 100%;
+            min-height: 58px;
+            max-height: 150px;
+            padding: 8px 10px;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            background: rgba(26, 26, 26, 0.8);
+            color: #d4d4d4;
+            font-size: 12px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        .kag-processing-hint {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            color: #bfbfbf;
+            font-size: 11px;
+        }
+
+        .kag-processing-hint.active {
+            display: inline-flex;
+        }
+
+        .kag-processing-spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid #555;
+            border-top-color: rgba(242, 124, 17, 0.95);
+            border-radius: 50%;
+            animation: kagSpin 0.8s linear infinite;
+        }
+
+        @keyframes kagSpin {
+            to { transform: rotate(360deg); }
+        }
+
+        .kagrenac-send {
+            justify-self: end;
+            border: 1px solid #3a3a3a;
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+            color: #f8f9fa;
+            border-radius: 6px;
+            padding: 7px 12px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .kagrenac-send:hover:not(:disabled) {
+            border-color: rgba(242, 124, 17, 0.5);
+            color: rgb(242, 124, 17);
+        }
+
+        .kagrenac-send:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .log-section {
@@ -966,6 +1277,17 @@ if (isset($_GET['download_logs'])) {
         }
 
         @media (max-width: 1200px) {
+            .logs-kagrenac-layout {
+                grid-template-columns: 1fr;
+            }
+            .kagrenac-panel {
+                position: static;
+                height: auto;
+                max-height: none;
+            }
+        }
+
+        @media (max-width: 1200px) {
             .grid-container {
                 grid-template-columns: repeat(2, 1fr);
             }
@@ -1073,6 +1395,33 @@ if (isset($_GET['download_logs'])) {
             display: flex;
             gap: 10px;
             align-items: center;
+        }
+
+        /* Compact per-panel header layout: title + search on one line */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: nowrap;
+            margin-bottom: 6px;
+        }
+
+        .section-header h2 {
+            margin: 0;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .section-header .search-container {
+            margin: 0;
+            flex: 0 0 clamp(260px, 42%, 520px);
+            min-width: 220px;
+            justify-content: flex-end;
+        }
+
+        .section-header .search-input {
+            width: 100%;
         }
 
         /* Log Filter Styles */
@@ -1425,10 +1774,14 @@ if (isset($_GET['download_logs'])) {
             margin-right: 4px;
         }
 
-        .section-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+        @media (max-width: 980px) {
+            .section-header {
+                flex-wrap: wrap;
+            }
+            .section-header .search-container {
+                flex-basis: 100%;
+                min-width: 100%;
+            }
         }
 
         .log-module {
@@ -1615,233 +1968,8 @@ if (isset($_GET['download_logs'])) {
             color: white;
         }
 
-        /* AI Assistant Sidebar Styles */
-        .ai-sidebar {
-            position: fixed;
-            top: 0;
-            right: -450px;
-            width: 450px;
-            height: 100vh;
-            background-color: #1a1a1a;
-            border-left: 1px solid #4a4a4a;
-            z-index: 2000;
-            transition: right 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.5);
-        }
-
-        .ai-sidebar.open {
-            right: 0;
-        }
-
-        body.ai-sidebar-open {
-            overflow: hidden;
-        }
-
-        body.ai-sidebar-open main {
-            margin-right: 450px;
-            transition: margin-right 0.3s ease;
-        }
-
         main {
             transition: margin-right 0.3s ease;
-        }
-
-        body.ai-sidebar-open .grid-container {
-            margin-right: 0;
-        }
-
-        .ai-sidebar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            border-bottom: 1px solid #4a4a4a;
-            background-color: #252526;
-        }
-
-        .ai-sidebar-header h2 {
-            margin: 0;
-            color: rgb(242, 124, 17);
-            font-size: 1.4em;
-            border: none;
-            padding: 0;
-        }
-
-        .ai-sidebar-close {
-            background: none;
-            border: none;
-            color: #f8f9fa;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-        }
-
-        .ai-sidebar-close:hover {
-            background-color: #444;
-        }
-
-        .ai-sidebar-body {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-            overflow: hidden;
-        }
-
-        .ai-model-selector {
-            margin-bottom: 15px;
-        }
-
-        .ai-model-selector label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 0.9em;
-            color: #d4d4d4;
-        }
-
-        .ai-model-selector select {
-            width: 100%;
-            padding: 8px;
-            background-color: #2c2c2c;
-            color: #f8f9fa;
-            border: 1px solid #4a4a4a;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .ai-chat-history {
-            flex: 1;
-            overflow-y: auto;
-            margin-bottom: 15px;
-            padding: 10px;
-            background-color: #2c2c2c;
-            border-radius: 6px;
-            border: 1px solid #3a3a3a;
-        }
-
-        .ai-chat-message {
-            margin-bottom: 15px;
-            padding: 10px;
-            border-radius: 6px;
-            line-height: 1.5;
-        }
-
-        .ai-chat-message.user {
-            background-color: #204e7a;
-            margin-left: 20px;
-        }
-
-        .ai-chat-message.assistant {
-            background-color: #2a3a2a;
-            margin-right: 20px;
-        }
-
-        .ai-chat-message.error {
-            background-color: #4a2a2a;
-            color: #ff6b6b;
-        }
-
-        .ai-chat-message-role {
-            font-weight: bold;
-            margin-bottom: 5px;
-            font-size: 0.9em;
-            opacity: 0.8;
-        }
-
-        .ai-chat-message-content {
-            font-size: 0.95em;
-        }
-
-        .ai-chat-message-content pre {
-            background-color: #1a1a1a;
-            padding: 10px;
-            border-radius: 4px;
-            overflow-x: auto;
-            margin: 10px 0;
-        }
-
-        .ai-chat-message-content code {
-            background-color: #1a1a1a;
-            padding: 2px 6px;
-            border-radius: 3px;
-        }
-
-        .ai-chat-message-content ul,
-        .ai-chat-message-content ol {
-            margin: 10px 0;
-            padding-left: 20px;
-        }
-
-        .ai-chat-input-container {
-            display: flex;
-            gap: 10px;
-        }
-
-        .ai-chat-input {
-            flex: 1;
-            padding: 10px;
-            background-color: #2c2c2c;
-            color: #f8f9fa;
-            border: 1px solid #4a4a4a;
-            border-radius: 4px;
-            resize: vertical;
-            min-height: 60px;
-            max-height: 150px;
-            font-family: 'Futura CondensedLight', Arial, sans-serif;
-        }
-
-        .ai-send-button {
-            padding: 10px 20px;
-            background-color: #176529;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.2s;
-            align-self: flex-end;
-        }
-
-        .ai-send-button:hover:not(:disabled) {
-            background-color: #125121;
-        }
-
-        .ai-send-button:disabled {
-            background-color: #555;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        .ai-loading-indicator {
-            text-align: center;
-            padding: 10px;
-            color: #9fb1c9;
-            font-style: italic;
-        }
-
-        .ai-chat-history::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .ai-chat-history::-webkit-scrollbar-track {
-            background: #2c2c2c;
-        }
-
-        .ai-chat-history::-webkit-scrollbar-thumb {
-            background: #555;
-            border-radius: 4px;
-        }
-
-        .ai-chat-history::-webkit-scrollbar-thumb:hover {
-            background: #666;
         }
     </style>
 </head>
@@ -1886,14 +2014,11 @@ if (isset($_GET['download_logs'])) {
             </svg>
             Timezone: UTC
         </button>
-        <button class="refresh-button" id="aiAssistantToggle" style="margin-left: 10px;" title="Open AI Analyzer">
-            <img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" width="20" height="20" style="margin-right:6px; vertical-align: middle; border-radius: 3px;">
-            AI Analyzer
-        </button>
     </div>
-    <h2>Last 2000 lines from each log are displayed here. The full logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">View the log folder.</a></h2>
-
-    <div class="grid-container" id="logGrid">
+    <div class="logs-kagrenac-layout">
+        <div class="logs-column">
+            <h2>Last 2000 lines from each log are displayed here. The full logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">View the log folder.</a></h2>
+            <div class="grid-container" id="logGrid">
         <div class="log-section">
             <?php
             // Display Apache error log
@@ -2023,48 +2148,57 @@ if (isset($_GET['download_logs'])) {
             readRegularLog($debugStreamLogPath, "Debug Stream Log (debugstream.log)");
             ?>
         </div>
+            </div>
+        </div>
+        <aside class="kagrenac-panel" id="kagrenacPanel">
+            <div class="kagrenac-header">
+                <div class="kagrenac-header-row">
+                    <h2>Ask Kagrenac</h2>
+                    <button id="kagToggleSettingsBtn" type="button" class="kagrenac-toggle-settings">Settings</button>
+                </div>
+                <div class="kagrenac-subtitle">Analyze logs and files with MCP tools.</div>
+            </div>
+            <div class="kagrenac-settings">
+                <div>
+                    <label for="kagConnector">LLM Connector</label>
+                    <select id="kagConnector"></select>
+                </div>
+                <div>
+                    <label for="kagApiBadge">API Badge</label>
+                    <select id="kagApiBadge"></select>
+                </div>
+                <div>
+                    <label for="kagModel">Model</label>
+                    <input id="kagModel" type="text" placeholder="anthropic/claude-sonnet-4">
+                </div>
+                <div>
+                    <label for="kagMaxRounds">Max Tool Rounds</label>
+                    <input id="kagMaxRounds" type="number" min="1" max="30" step="1" placeholder="10">
+                </div>
+                <div>
+                    <label for="kagSystemPrompt">System Prompt Override</label>
+                    <textarea id="kagSystemPrompt" placeholder="Leave blank to use server default prompt"></textarea>
+                </div>
+                <div class="settings-actions">
+                    <button class="settings-btn" id="kagSaveSettingsBtn" type="button">Save Settings</button>
+                    <button class="settings-btn" id="kagReloadSettingsBtn" type="button">Reload</button>
+                </div>
+            </div>
+            <div class="kagrenac-chat">
+                <div class="kagrenac-chat-history" id="kagChatHistory"></div>
+                <div class="kagrenac-chat-input">
+                    <textarea id="kagUserInput" placeholder="Ask about current errors, log patterns, or config issues..."></textarea>
+                    <div id="kagProcessingHint" class="kag-processing-hint" aria-live="polite">
+                        <span class="kag-processing-spinner"></span>
+                        <span>Kagrenac is analyzing your request...</span>
+                    </div>
+                    <button class="kagrenac-send" id="kagSendBtn" type="button">Send</button>
+                </div>
+            </div>
+        </aside>
     </div>
 </div>
 </main>
-
-<!-- AI Assistant Sidebar -->
-<div class="ai-sidebar" id="aiSidebar">
-    <div class="ai-sidebar-header">
-        <h2><img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" width="28" height="28" style="vertical-align: middle; margin-right: 8px; border-radius: 4px;"> AI Analyzer</h2>
-        <button class="ai-sidebar-close" id="aiSidebarClose">&times;</button>
-    </div>
-    <div class="ai-sidebar-body">
-        <div class="ai-model-selector">
-            <label for="ai-model-select">Model (Requires OpenRouter API Key):</label>
-            <select id="ai-model-select">
-                <option value="anthropic/claude-sonnet-4">Claude Sonnet 4.5</option>
-                <option value="anthropic/claude-opus-4">Claude Opus 4.5</option>
-            </select>
-        </div>
-        
-        <div class="ai-chat-history" id="ai-chat-history">
-            <div class="ai-chat-message assistant">
-                <div class="ai-chat-message-role">CHIM</div>
-                <div class="ai-chat-message-content">
-                    Hello! I an a AI Analyzer, your log analysis assistant. I can help you:
-                    <ul>
-                        <li>Debug LLM connection issues</li>
-                        <li>Analyze failed requests</li>
-                        <li>Query the database with SQL</li>
-                        <li>Review log files</li>
-                        <li>Find patterns and errors</li>
-                    </ul>
-                    Ask me anything about the logs!
-                </div>
-            </div>
-        </div>
-        
-        <div class="ai-chat-input-container">
-            <textarea id="ai-chat-input" class="ai-chat-input" placeholder="Ask about logs, request SQL queries, or ask for help debugging..."></textarea>
-            <button id="ai-send-button" class="ai-send-button">Send</button>
-        </div>
-    </div>
-</div>
 
 <!-- Modals -->
 <div id="errorLogModal" class="modal">
@@ -3053,190 +3187,295 @@ document.body.addEventListener('click', function(event) {
 })();
 </script>
 
-<!-- AI Assistant JavaScript -->
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!-- Ask Kagrenac embedded panel -->
 <script>
 (function() {
-    const aiSidebar = document.getElementById('aiSidebar');
-    const aiToggleBtn = document.getElementById('aiAssistantToggle');
-    const aiCloseBtn = document.getElementById('aiSidebarClose');
-    const aiChatHistory = document.getElementById('ai-chat-history');
-    const aiChatInput = document.getElementById('ai-chat-input');
-    const aiSendButton = document.getElementById('ai-send-button');
-    const aiModelSelect = document.getElementById('ai-model-select');
-    
-    let conversationHistory = [];
-    let isLoading = false;
-    
-    // Determine webRoot from current script context
-    const webRoot = (function() {
-        const scriptPath = window.location.pathname;
-        const uiPos = scriptPath.indexOf('/ui/');
-        if (uiPos !== -1) {
-            return scriptPath.substring(0, uiPos);
+    const mcpServerUrl = 'http://<?php echo htmlspecialchars($mcpHost, ENT_QUOTES, 'UTF-8'); ?>:3100';
+    const configApiUrl = '<?php echo $webRoot; ?>/ui/api/chim_mcp_config.php';
+    const kagAvatarUrl = '<?php echo $webRoot; ?>/ui/images/metaphysics.png';
+    const sendBtn = document.getElementById('kagSendBtn');
+    const inputEl = document.getElementById('kagUserInput');
+    const historyEl = document.getElementById('kagChatHistory');
+    const connectorEl = document.getElementById('kagConnector');
+    const apiBadgeEl = document.getElementById('kagApiBadge');
+    const modelEl = document.getElementById('kagModel');
+    const maxRoundsEl = document.getElementById('kagMaxRounds');
+    const systemPromptEl = document.getElementById('kagSystemPrompt');
+    const saveSettingsBtn = document.getElementById('kagSaveSettingsBtn');
+    const reloadSettingsBtn = document.getElementById('kagReloadSettingsBtn');
+    const toggleSettingsBtn = document.getElementById('kagToggleSettingsBtn');
+    const settingsContainer = document.querySelector('.kagrenac-settings');
+    const processingHintEl = document.getElementById('kagProcessingHint');
+
+    if (!sendBtn || !inputEl || !historyEl) {
+        return;
+    }
+
+    let isSending = false;
+    let thinkingRow = null;
+
+    function addMessage(role, text) {
+        const row = document.createElement('div');
+        row.className = 'kag-msg-row ' + role;
+
+        if (role === 'assistant') {
+            const avatar = document.createElement('img');
+            avatar.className = 'kag-avatar';
+            avatar.src = kagAvatarUrl;
+            avatar.alt = 'Kagrenac';
+            row.appendChild(avatar);
         }
-        return '';
-    })();
-    
-    // Marked configuration for safe HTML
-    if (typeof marked !== 'undefined') {
-        marked.setOptions({
-            breaks: true,
-            gfm: true
-        });
+
+        const msg = document.createElement('div');
+        msg.className = 'kag-msg ' + role;
+        const body = document.createElement('div');
+        body.textContent = text;
+        msg.appendChild(body);
+
+        const meta = document.createElement('div');
+        meta.className = 'kag-msg-meta';
+        meta.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        msg.appendChild(meta);
+
+        row.appendChild(msg);
+        historyEl.appendChild(row);
+        historyEl.scrollTop = historyEl.scrollHeight;
     }
-    
-    // Toggle sidebar
-    function openSidebar() {
-        aiSidebar.classList.add('open');
-        document.body.classList.add('ai-sidebar-open');
-        aiChatInput.focus();
-    }
-    
-    function closeSidebar() {
-        aiSidebar.classList.remove('open');
-        document.body.classList.remove('ai-sidebar-open');
-    }
-    
-    aiToggleBtn.addEventListener('click', openSidebar);
-    aiCloseBtn.addEventListener('click', closeSidebar);
-    
-    // Close sidebar with Escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && aiSidebar.classList.contains('open')) {
-            closeSidebar();
+
+    function setSendingState(sending) {
+        isSending = sending;
+        sendBtn.disabled = sending;
+        inputEl.disabled = sending;
+        sendBtn.textContent = sending ? 'Processing...' : 'Send';
+        if (processingHintEl) {
+            processingHintEl.classList.toggle('active', sending);
         }
-    });
-    
-    function addMessage(role, content, isError = false) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'ai-chat-message ' + (isError ? 'error' : role);
-        
-        const roleDiv = document.createElement('div');
-        roleDiv.className = 'ai-chat-message-role';
-        roleDiv.textContent = role === 'user' ? 'You' : (isError ? 'Error' : 'CHIM');
-        
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'ai-chat-message-content';
-        
-        // Use marked for markdown if available, otherwise plain text
-        if (typeof marked !== 'undefined' && !isError) {
-            contentDiv.innerHTML = marked.parse(content);
+        if (sending) {
+            showThinkingMessage();
         } else {
-            contentDiv.textContent = content;
-        }
-        
-        messageDiv.appendChild(roleDiv);
-        messageDiv.appendChild(contentDiv);
-        aiChatHistory.appendChild(messageDiv);
-        
-        // Scroll to bottom
-        aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
-    }
-    
-    function addLoadingIndicator() {
-        const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'ai-loading-indicator';
-        loadingDiv.id = 'ai-loading-indicator';
-        loadingDiv.textContent = 'AI is thinking...';
-        aiChatHistory.appendChild(loadingDiv);
-        aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
-    }
-    
-    function removeLoadingIndicator() {
-        const loadingDiv = document.getElementById('ai-loading-indicator');
-        if (loadingDiv) {
-            loadingDiv.remove();
+            hideThinkingMessage();
         }
     }
-    
-    async function sendMessage() {
-        if (isLoading) return;
-        
-        const message = aiChatInput.value.trim();
-        if (!message) return;
-        
-        isLoading = true;
-        aiSendButton.disabled = true;
-        aiChatInput.disabled = true;
-        
-        // Add user message to UI
-        addMessage('user', message);
-        
-        // Add to conversation history
-        conversationHistory.push({
-            role: 'user',
-            content: message
+
+    function showThinkingMessage() {
+        if (thinkingRow) {
+            return;
+        }
+
+        const row = document.createElement('div');
+        row.className = 'kag-msg-row assistant thinking';
+
+        const avatar = document.createElement('img');
+        avatar.className = 'kag-avatar';
+        avatar.src = kagAvatarUrl;
+        avatar.alt = 'Kagrenac';
+        row.appendChild(avatar);
+
+        const msg = document.createElement('div');
+        msg.className = 'kag-msg assistant';
+
+        const body = document.createElement('div');
+        body.textContent = 'Kagrenac is calibrating tonal resonators';
+
+        const dots = document.createElement('span');
+        dots.className = 'kag-typing-dots';
+        dots.innerHTML = '<span></span><span></span><span></span>';
+        body.appendChild(dots);
+        msg.appendChild(body);
+
+        row.appendChild(msg);
+        historyEl.appendChild(row);
+        historyEl.scrollTop = historyEl.scrollHeight;
+        thinkingRow = row;
+    }
+
+    function hideThinkingMessage() {
+        if (!thinkingRow) {
+            return;
+        }
+        thinkingRow.remove();
+        thinkingRow = null;
+    }
+
+    async function loadApiBadges() {
+        if (!apiBadgeEl) {
+            return;
+        }
+        apiBadgeEl.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Select API Badge';
+        apiBadgeEl.appendChild(placeholder);
+
+        const response = await fetch(configApiUrl + '?badges=1');
+        const payload = await response.json();
+        if (!payload || !payload.success || !payload.data || !Array.isArray(payload.data.badges)) {
+            throw new Error('Failed to load API badges');
+        }
+
+        payload.data.badges.forEach((badge) => {
+            const option = document.createElement('option');
+            option.value = String(badge.id);
+            option.textContent = badge.label;
+            apiBadgeEl.appendChild(option);
         });
-        
-        // Clear input
-        aiChatInput.value = '';
-        
-        // Show loading
-        addLoadingIndicator();
-        
-        try {
-            const response = await fetch(webRoot + '/ui/cmd/ai_log_assistant.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: message,
-                    model: aiModelSelect.value,
-                    history: conversationHistory
-                })
-            });
-            
-            removeLoadingIndicator();
-            
-            if (!response.ok) {
-                throw new Error('Network response was not ok: ' + response.statusText);
-            }
-            
-            const data = await response.json();
-            
-            if (data.error) {
-                addMessage('assistant', 'Error: ' + data.error, true);
-            } else if (data.success && data.message) {
-                addMessage('assistant', data.message);
-                
-                // Add to conversation history
-                conversationHistory.push({
-                    role: 'assistant',
-                    content: data.message
-                });
-            } else {
-                addMessage('assistant', 'Received unexpected response format', true);
-            }
-            
-        } catch (error) {
-            removeLoadingIndicator();
-            addMessage('assistant', 'Failed to communicate with AI: ' + error.message, true);
-            console.error('AI request error:', error);
-        } finally {
-            isLoading = false;
-            aiSendButton.disabled = false;
-            aiChatInput.disabled = false;
-            aiChatInput.focus();
+    }
+
+    async function loadConnectors() {
+        if (!connectorEl) {
+            return;
+        }
+        connectorEl.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Use MCP default / API Badge';
+        connectorEl.appendChild(placeholder);
+
+        const response = await fetch(configApiUrl + '?connectors=1');
+        const payload = await response.json();
+        if (!payload || !payload.success || !payload.data || !Array.isArray(payload.data.connectors)) {
+            throw new Error('Failed to load connectors');
+        }
+
+        payload.data.connectors.forEach((connector) => {
+            const option = document.createElement('option');
+            option.value = String(connector.id);
+            const service = connector.service ? String(connector.service).toUpperCase() : 'UNKNOWN';
+            const label = connector.label ? String(connector.label) : ('Connector #' + String(connector.id));
+            option.textContent = '[' + service + '] ' + label;
+            connectorEl.appendChild(option);
+        });
+    }
+
+    async function loadSettings() {
+        const response = await fetch(configApiUrl);
+        const payload = await response.json();
+        if (!payload || !payload.success || !payload.data) {
+            throw new Error('Failed to load MCP settings');
+        }
+        const cfg = payload.data;
+        if (connectorEl) {
+            connectorEl.value = cfg.llm_connector_id || '';
+        }
+        if (apiBadgeEl) {
+            apiBadgeEl.value = cfg.api_badge_id || '';
+        }
+        if (modelEl) {
+            modelEl.value = cfg.model || '';
+        }
+        if (maxRoundsEl) {
+            maxRoundsEl.value = cfg.max_tool_rounds || '10';
+        }
+        if (systemPromptEl) {
+            systemPromptEl.value = cfg.system_prompt || '';
         }
     }
-    
-    // Event listeners
-    aiSendButton.addEventListener('click', sendMessage);
-    
-    aiChatInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
+
+    async function saveSettings() {
+        const body = {
+            llm_connector_id: connectorEl ? connectorEl.value : '',
+            api_badge_id: apiBadgeEl ? apiBadgeEl.value : '',
+            model: modelEl ? modelEl.value.trim() : '',
+            max_tool_rounds: maxRoundsEl ? maxRoundsEl.value : '10',
+            system_prompt: systemPromptEl ? systemPromptEl.value : '',
+        };
+
+        const response = await fetch(configApiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const payload = await response.json();
+        if (!payload || !payload.success) {
+            throw new Error(payload && payload.error ? payload.error : 'Failed to save settings');
+        }
+    }
+
+    async function sendMessage() {
+        const content = inputEl.value.trim();
+        if (!content || isSending) {
+            return;
+        }
+
+        addMessage('user', content);
+        inputEl.value = '';
+        setSendingState(true);
+
+        try {
+            const response = await fetch(mcpServerUrl + '/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: content }),
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text || ('MCP request failed (' + response.status + ')'));
+            }
+
+            const payload = await response.json();
+            const answer = payload && payload.response ? String(payload.response) : 'No response received.';
+            addMessage('assistant', answer);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            addMessage('error', 'Error: ' + message);
+        } finally {
+            setSendingState(false);
+        }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    inputEl.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
             sendMessage();
         }
     });
-    
-    // Auto-resize textarea
-    aiChatInput.addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = Math.min(this.scrollHeight, 150) + 'px';
-    });
+
+    if (saveSettingsBtn) {
+        saveSettingsBtn.addEventListener('click', async function() {
+            try {
+                await saveSettings();
+                addMessage('assistant', 'Settings saved.');
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Unknown error';
+                addMessage('error', 'Error saving settings: ' + message);
+            }
+        });
+    }
+
+    if (reloadSettingsBtn) {
+        reloadSettingsBtn.addEventListener('click', async function() {
+            try {
+                await loadConnectors();
+                await loadApiBadges();
+                await loadSettings();
+                addMessage('assistant', 'Settings reloaded.');
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Unknown error';
+                addMessage('error', 'Error loading settings: ' + message);
+            }
+        });
+    }
+
+    if (toggleSettingsBtn && settingsContainer) {
+        toggleSettingsBtn.addEventListener('click', function() {
+            settingsContainer.classList.toggle('hidden');
+            toggleSettingsBtn.textContent = settingsContainer.classList.contains('hidden') ? 'Settings' : 'Hide';
+        });
+    }
+
+    (async function initKagrenacPanel() {
+        addMessage('assistant', 'Ask Kagrenac is ready. I can inspect logs, MCP config, and HerikaServer files.');
+        try {
+            await loadConnectors();
+            await loadApiBadges();
+            await loadSettings();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            addMessage('error', 'Settings unavailable: ' + message);
+        }
+    })();
 })();
 </script>
 
