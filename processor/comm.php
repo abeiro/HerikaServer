@@ -970,13 +970,27 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     $parts = explode(":", $pair);
                     if (count($parts) >= 2) {
                         $formId = $parts[0];
+                        $formIds[]=$formId;// Collect form IDs to fetch names later
                         $rank = intval($parts[1]);
                         $factionList[] = [
                             'formid' => $formId,
-                            'rank' => $rank
+                            'rank' => $rank,
+                            'name'=>'' // Placeholder, will be filled after fetching faction names from DB
                         ];
                     }
                 }
+            }
+            //Fetch only the faction names we need in a single query to avoid multiple DB hits
+            $arrFormIdNames=$factionNames=$db->fetchAll("select formid,name from factions where formid in ('".implode("','", $formIds)."')");
+            
+            // Now map the arrFormIdNames to  mapFormIdNames 
+            $mapFormIdNames=[];
+            foreach ($arrFormIdNames as $factionInfo) {
+                $mapFormIdNames[($factionInfo['formid'])]=$factionInfo['name'];
+            }
+            // Finally, fill the faction names in the factionList
+            foreach ($factionList as &$faction) {
+                $faction["name"]=$mapFormIdNames[$faction["formid"]] ?? 'Unknown Faction';
             }
 
         }
@@ -1128,6 +1142,28 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     'tags' => $splitNameBase[4],
                     'is_interior' => intval($splitNameBase[5]),
                     'vanilla_location'=>intval(value: $splitNameBase[1])<77175193 ? "TRUE" : "FALSE",// IDs below 77175193 are vanilla cells 0x04999999
+                )
+            );
+        }
+    }
+    $MUST_END=true;
+    
+    
+} elseif (strpos($gameRequest[0], "util_faction_name")===0) {    // util_location_name 
+    
+    $splitNameBase=explode("/",$gameRequest[3]);
+    if (strtoupper($splitNameBase[0])=="__CLEAR_ALL__")
+        $db->query("truncate table factions");
+    else {
+        
+        if ($splitNameBase[0] && $splitNameBase[1]) {
+            $db->insert(
+                'factions',
+                array(
+                    'name' => $splitNameBase[1],
+                    'formid' => strtoupper($splitNameBase[0]),
+
+
                 )
             );
         }
