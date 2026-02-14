@@ -863,9 +863,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     if ($localName==$baseProfile)
         $baseProfile="";
 
-   
 
-    
     $retVal=createProfile($localName,[],false,$baseProfile); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
     audit_log("comm.php addnpc $localName");
 
@@ -965,6 +963,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             // NPC factions - format: formID1:rank1#formID2:rank2#...
             $factionString = isset($splitNameBase[42]) ? $splitNameBase[42] : '';
             $factionList = [];
+            error_log("*TRACE: [ADDNPC] Processing factions for $localName: {$factionString}");
             if (!empty($factionString)) {
                 $factionPairs = explode("#", $factionString);
                 foreach ($factionPairs as $pair) {

@@ -990,7 +990,7 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         'Inspect',
         //'LookAt',
         'InspectSurroundings',
-        //'MoveTo',
+        'MoveTo',
         'OpenInventory',
         'OpenInventory2',
         'Attack',

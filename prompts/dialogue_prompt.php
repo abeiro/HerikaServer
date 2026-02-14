@@ -26,7 +26,7 @@ $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next prose/narration as a c
 //
 $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next prose/narration." . 
 " Be original, creative, knowledgeable, use your own thoughts. " . 
-" Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines." . 
+" Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.$MAXIMUM_WORDS" . 
 "";
 
 // Add narration instruction if inline narration is enabled (default to false if not set)
