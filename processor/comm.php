@@ -963,6 +963,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             // NPC factions - format: formID1:rank1#formID2:rank2#...
             $factionString = isset($splitNameBase[42]) ? $splitNameBase[42] : '';
             $factionList = [];
+            $formIds=[];
             error_log("*TRACE: [ADDNPC] Processing factions for $localName: {$factionString}");
             if (!empty($factionString)) {
                 $factionPairs = explode("#", $factionString);
