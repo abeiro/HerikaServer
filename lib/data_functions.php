@@ -886,7 +886,7 @@ function DataPosibleLocationsToGoWide()
 
     if ($results) {
         $regCn=$db->escape(trim($results["data"]));
-        error_log("select  name  FROM  locations where region ilike'{$regCn}'");
+        error_log("select  name  FROM  locations where region ilike '{$regCn}'");
         $locs = $db->fetchAll("select  name,tags  FROM  locations where region ilike '{$regCn}'");
         $r=[];
         foreach ($locs as $loc) {
@@ -898,6 +898,29 @@ function DataPosibleLocationsToGoWide()
         }
         $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO_WIDE"] = $r;
         return $r;
+    } else {
+        
+        $locs = $db->fetchAll("SELECT L.name,L.tags, 
+                L.coords <-> P.coords AS distance
+            FROM locations L
+            CROSS JOIN (
+                SELECT B.coords
+                FROM public.named_cell A
+                LEFT JOIN locations B ON B.formid = A.location_id
+                WHERE A.id = 0
+            ) AS P
+            WHERE L.coords <-> P.coords < 15000
+            ORDER BY distance ASC
+        ");
+        $r=[];
+        foreach ($locs as $loc) {
+            if ($loc["tags"])
+                $r[$loc["name"]]=$loc["tags"];
+            else
+                $r[$loc["name"]]="";
+
+        }
+        $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO_WIDE"] = $r;
     }
 
     $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO_WIDE"] = [];
@@ -6359,6 +6382,8 @@ limit 1";
             $locationDetailedName.=" (interior)";
         } 
         
+    } else {
+        $locationDetailedName=$locData["cell_name"] ?? "Unknown Location";
     }
 
     return $locationDetailedName;
