@@ -597,7 +597,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
 function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref = null)
 {
 
-    //echo "CreateItem($basetype,$name,$location,$content)";
+    error_log("SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref ");
 
     $masterData = $GLOBALS["item_types"];
 
