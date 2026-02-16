@@ -31,7 +31,7 @@ if (!$_FILES["file"]["tmp_name"]) {
 $db = new sql();
 
 
-$title = $_GET["title"];   // Initial strange "p" at the beginning.
+$title = $_GET["title"];
 $titleEsc = $db->escape($title);
 $alreadyinDb = $db->fetchOne("select * from books where title = '$titleEsc' and sess='generated' ");
 
