@@ -980,8 +980,11 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     }
                 }
             }
-            //Fetch only the faction names we need in a single query to avoid multiple DB hits
-            $arrFormIdNames=$factionNames=$db->fetchAll("select formid,name from factions where formid in ('".implode("','", $formIds)."')");
+            // Fetch only the faction names we need in a single query to avoid multiple DB hits
+            $arrFormIdNames=[];
+            if (sizeof($formIds)>0) {
+                $arrFormIdNames=$factionNames=$db->fetchAll("select formid,name from factions where formid in ('".implode("','", $formIds)."')");
+            }
             
             // Now map the arrFormIdNames to  mapFormIdNames 
             $mapFormIdNames=[];
@@ -1022,8 +1025,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
         $rules = $db->fetchAll($sql);
         error_log("[ADDNPC IMPORTING RULES] Matching rules for $npcName: ".sizeof($rules));
-        foreach ($rules as $rule) {
 
+        foreach ($rules as $rule) {
 
             if (!empty($rule["profile"])) {
                 $currentNpcData["profile_id"] = (int)$rule["profile"];
@@ -1132,18 +1135,39 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     else {
         
         if ($splitNameBase[0] && $splitNameBase[1]) {
+            $existingRecord = $db->fetchOne("SELECT * FROM locations WHERE formid = '{$splitNameBase[1]}'");
+            
+            if ($existingRecord) {
+            $db->updateRow(
+                'locations',
+                array(
+                'name' => $splitNameBase[0],
+                'region' => $splitNameBase[2],
+                'hold' => $splitNameBase[3],
+                'tags' => $splitNameBase[4],
+                'is_interior' => intval($splitNameBase[5]),
+                'vanilla_location' => intval($splitNameBase[1]) < 77175193 ? "TRUE" : "FALSE",
+                'factions' => $splitNameBase[6] ?? '',
+                'coords' => (isset($splitNameBase[7]) && isset($splitNameBase[8]) && $splitNameBase[7] && $splitNameBase[8]) ? "(" . floatval($splitNameBase[7]) . "," . floatval($splitNameBase[8]) . ")" : NULL
+                ),
+                "formid = '{$splitNameBase[1]}'"
+            );
+            } else {
             $db->insert(
                 'locations',
                 array(
-                    'name' => $splitNameBase[0],
-                    'formid' => $splitNameBase[1],
-                    'region' => $splitNameBase[2],
-                    'hold' => $splitNameBase[3],
-                    'tags' => $splitNameBase[4],
-                    'is_interior' => intval($splitNameBase[5]),
-                    'vanilla_location'=>intval(value: $splitNameBase[1])<77175193 ? "TRUE" : "FALSE",// IDs below 77175193 are vanilla cells 0x04999999
+                'name' => $splitNameBase[0],
+                'formid' => $splitNameBase[1],
+                'region' => $splitNameBase[2],
+                'hold' => $splitNameBase[3],
+                'tags' => $splitNameBase[4],
+                'is_interior' => intval($splitNameBase[5]),
+                'vanilla_location' => intval($splitNameBase[1]) < 77175193 ? "TRUE" : "FALSE",
+                'factions' => $splitNameBase[6] ?? '',
+                'coords' => (isset($splitNameBase[7]) && isset($splitNameBase[8]) && $splitNameBase[7] && $splitNameBase[8]) ? "(" . floatval($splitNameBase[7]) . "," . floatval($splitNameBase[8]) . ")" : NULL
                 )
             );
+            }
         }
     }
     $MUST_END=true;
