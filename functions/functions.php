@@ -1379,6 +1379,8 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 $json      = $skyrimCmd->Actor->SetRelationshipRank("0x{$npcData["refid"]}", "0x00000014", 0);// Set to Ally
                 $skyrimCmd->send(cmd: $json);
 
+                $json      = $skyrimCmd->Actor->StopCombat("0x{$npcData["refid"]}");
+                $skyrimCmd->send(cmd: $json);
   
                 $GLOBALS["db"]->insert(
                     'eventlog',
