@@ -843,6 +843,16 @@ function createBook($title, $content, $location, $quest_id, $npc_ref = null)
         }
         $localItemPlace = $unsignedInt;
 
+    } else if (preg_match('/^[a-zA-Z0-9\s\'-]+:0x[0-9a-fA-F]+$/', $localItemPlace)){
+        $localItemPlace = 0;
+        list($itemName, $refidHex) = explode(":", $localItemPlace);
+        $unsignedInt    = hexdec($refidHex);
+        // Convert to 32-bit signed integer
+        if ($unsignedInt >= 0x80000000) {
+            $unsignedInt -= 0x100000000;
+        }
+        $localItemPlace = $unsignedInt;
+
     } else {
         if (! is_numeric($localItemPlace)) {
             if (isset($GLOBALS["masterDataLocations"][$location])) {
