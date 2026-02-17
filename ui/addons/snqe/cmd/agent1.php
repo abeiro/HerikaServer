@@ -33,7 +33,7 @@ $sysprompt_content = file_get_contents(__DIR__ . "/../prompts/agent1.txt");
 
 if (strpos($formInput["userprompt"], "Quest Title") !== false) {
     // First Quest iteration
-    $formInput["userprompt"] .= "\nNote: this is the first step of the quest, so first topic should be a salutation, and then generate the quest steps.";
+    $formInput["userprompt"] .= "\nNote: this is the first step of the quest, so first topic should be a salutation, and then generate the quest steps. THIS IS THE QUEST BEGINNING, quest will continue later, so no final end.";
 
 }
 $prompt = [];
