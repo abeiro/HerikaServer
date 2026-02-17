@@ -518,7 +518,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         array(
             'ts' => $gameRequest[1],
             'gamets' => $gameRequest[2],
-            'title' => substr($gameRequest[3],0),   // Initial strange "p" at the beginning.
+            'title' => $gameRequest[3],
             'sess' => 'pending',
             'localts' => time()
         )
