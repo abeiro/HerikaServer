@@ -1341,6 +1341,12 @@ if ($checkVersion("locations")<20250516001) {
     error_log("Applied patch locations 20250516001");
 }
 
+if ($checkVersion(tablename: "factions")<20260214001) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/add_factions.sql"));
+    $updateVersion("factions",20260214001);
+    error_log("Applied patch factions 20260214001");
+}
+
 if ($checkVersion("actions_issued")<20250525001) {
     $db->execQuery(file_get_contents(__DIR__."/../data/actions_issued.sql"));
     $updateVersion("actions_issued",20250525001);
@@ -2312,6 +2318,7 @@ $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS tags text"
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS factions text");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS is_interior int");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS vanilla_location boolean");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS coords POINT ");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS title text");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS stage text");
 $db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS worldspace text");

@@ -110,7 +110,17 @@ if (sizeof($formInput["npclist"]) == 0) { // Initial case
         $suggested_location = null;
     }
 
-    $nearByLoc = "\nLocations where new events/action can happen: \n$wideLocList";
+    $filteredWideLocList = "";
+    foreach ($locListArrayRaw as $name => $tags) {
+        if (strpos($lastLocation, $name) === false) {
+            if ($tags) {
+            $filteredWideLocList .= "* <$name> ($tags)\n";
+            } else {
+            $filteredWideLocList .= "* <$name>\n";
+            }
+        }
+    }
+    $nearByLoc = "\nLocations where new events/action can happen: \n$filteredWideLocList";
 
     $nearByLoc .= "\n\nNote: locations for adventuring must be chosen from the list above. 
     * 'Dungeon' tagged locations are preferred for quest generation as they have interiors (classical D&D dungeon).

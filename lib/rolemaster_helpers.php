@@ -597,7 +597,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
 function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref = null)
 {
 
-    //echo "CreateItem($basetype,$name,$location,$content)";
+    error_log("SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref ");
 
     $masterData = $GLOBALS["item_types"];
 
@@ -837,6 +837,16 @@ function createBook($title, $content, $location, $quest_id, $npc_ref = null)
         $npcMaster      = new NpcMaster();
         $currentNpcData = $npcMaster->getByName($npc_ref);
         $unsignedInt    = hexdec($currentNpcData["refid"]);
+        // Convert to 32-bit signed integer
+        if ($unsignedInt >= 0x80000000) {
+            $unsignedInt -= 0x100000000;
+        }
+        $localItemPlace = $unsignedInt;
+
+    } else if (preg_match('/^[a-zA-Z0-9\s\'-]+:0x[0-9a-fA-F]+$/', $localItemPlace)){
+        $localItemPlace = 0;
+        list($itemName, $refidHex) = explode(":", $localItemPlace);
+        $unsignedInt    = hexdec($refidHex);
         // Convert to 32-bit signed integer
         if ($unsignedInt >= 0x80000000) {
             $unsignedInt -= 0x100000000;
