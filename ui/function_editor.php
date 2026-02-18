@@ -55,6 +55,7 @@ $npcFunctions = [
     'Training',
     'Surrender',
     'EndConversation',
+    'MoveTo',
 ];
 
 $playerFunctions = [
@@ -87,7 +88,7 @@ $playerFunctions = [
     'Drink',
 ];
 
-$socialFunctions = ['Inspect', 'InspectSurroundings', 'Relax', 'TakeASeat', 'UseSoulGaze','Toast', 'Drink', 'Training','EndRitualCeremony','StartRitualCeremony','Surrender','EndConversation'];
+$socialFunctions = ['Inspect', 'InspectSurroundings', 'Relax', 'TakeASeat', 'UseSoulGaze','Toast', 'Drink', 'Training','EndRitualCeremony','StartRitualCeremony','Surrender','EndConversation','MoveTo'];
 $movementFunctions = ['TravelTo', 'Follow', 'FollowPlayer', 'ComeCloser', 'WaitHere', 'IncreaseWalkSpeed', 'DecreaseWalkSpeed','MakeFollower'];
 $combatFunctions = ['Attack', 'AttackHunt', 'Brawl', 'SheatheWeapon'];
 $inventoryFunctions = ['OpenInventory', 'OpenInventory2', 'CheckInventory', 'GiveGoldTo', 'GiveItemTo', 'PickupItem', 'TakeGoldFromPlayer', 'CastSpell'];

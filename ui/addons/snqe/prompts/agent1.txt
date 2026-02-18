@@ -68,7 +68,11 @@ Short and clear. Timeline prior to all instructions/steps.
 
 Example:
 
-Journal Entry: Investigate the hooded figures near Solitude’s docks.
+1st journal entry.
+Journal Entry: Speak to the <spanwed NPC>
+
+nth journal entry.
+Journal Entry: Recover <item> at <place>
 
 5. Rumors
 
@@ -183,6 +187,7 @@ Available elements (you MUST use only the values listed below—no exceptions):
 
 * Journal Entry. Brief and short. Write the entry as a short hint about what the player must do, **without spoilers** and it should appear before any action actually happens.
  For example, if you spawn an NPC in Riverwood, the journal entry should say something like: “Travel to Riverwood to meet someone.”
+ If a NPC is spawned nearby, "Someone is trying to talk to you"
  Use the first steps data to generate this journal content to not spoil the later steps.
 <journal>
   e.g.: I should talk to Ulfgar Stonevein

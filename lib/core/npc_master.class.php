@@ -869,4 +869,38 @@ FROM restore
         $currentNpcData["core"] .= ".Formerly known as {$currentNpcDataAlt["npc_name"]}";
         $this->updateByArray($currentNpcData);
     }
+
+      /**
+     * Check if an NPC is in a specific faction by formid
+     * 
+     * @param array $npcData The NPC data array
+     * @param string $factionFormId The faction formid to check (e.g., "0002817C")
+     * @return bool True if the NPC is in the faction, false otherwise
+     */
+    public function isNpcInFaction($npcData, $factionFormId)
+    {
+        if (!isset($npcData['extended_data']) || empty($npcData['extended_data'])) {
+            return false;
+        }
+
+        $extendedData = json_decode($npcData['extended_data'], true);
+        
+        if (!is_array($extendedData) || !isset($extendedData['factions']) || !is_array($extendedData['factions'])) {
+            return false;
+        }
+
+        // Normalize formid for comparison (handle case-insensitive comparison)
+        $normalizedSearchFormId = strtoupper($factionFormId);
+
+        // Check if any faction in the array matches the formid
+        foreach ($extendedData['factions'] as $faction) {
+            if (isset($faction['formid']) && strtoupper($faction['formid']) === $normalizedSearchFormId) {
+                if ($faction['rank'] > -1) { // Optional: check if rank is greater than 0 to confirm active membership
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 }

@@ -13,7 +13,7 @@ class SemaphoreManager {
         if (!isset(self::$semaphores[$key]) || !self::$semaphores[$key]) {
             $sem = sem_get($key);
             if ($sem === false) {
-                Logger::warn("[SemaphoreManager] sem_get failed for key {$key} (id={$id})");
+                Logger::warn("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} sem_get failed for key {$key} (id={$id})");
                 return null;
             }
             self::$semaphores[$key] = $sem;
@@ -33,7 +33,10 @@ class SemaphoreManager {
      */
     public static function wait(string $id, int $timeout = 300, int $tick_ms = 1003, $callback = null): bool {
         $semaphore = self::get($id);
-        if (!$semaphore) return false;
+        if (!$semaphore) {
+            error_log("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} Failed to get semaphore for id '{$id}'");
+            return false;
+        }
 
         $ix = 0;
         $t0 = time();
@@ -45,38 +48,42 @@ class SemaphoreManager {
                 try {
                     $cb = $callback();
                     if ($cb === false) {
+                        Logger::warn("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} callback returned false, aborting wait for '{$id}'");
                         return false;
                     }
                 } catch (\Throwable $e) {
-                    Logger::warn("[SemaphoreManager] callback threw: ".$e->getMessage());
+                    Logger::warn("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} callback threw: ".$e->getMessage());
                 }
             }
             if ($ix > 2000) {
                 $dt = time() - $t0;
                 if ($dt > $timeout) {
-                    Logger::warn("[SemaphoreManager] wait loop break after {$dt} sec for semaphore '{$id}'");
+                    Logger::warn("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} wait loop break after {$dt} sec for semaphore '{$id}'");
                     return false;
                 } else {
                     $ix = 0;
                 }
             }
+
+            if ($ix % 10 ===  1) {
+                Logger::warn("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} still waiting for $id after {$ix} attempts and " . (time() - $t0) . " seconds");
+            }
+
             usleep($tick_us);
         }
-        Logger::info("[SemaphoreManager] Lock acquired by '{$id}'");
+        Logger::info("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} Lock acquired by '{$id}'");
         return true;
     }
 
     public static function release(string $id): bool {
         $semaphore = self::get($id);
         if ($semaphore) {
-            // Suppress warning if semaphore is not acquired (common during cleanup)
-            $result = @sem_release($semaphore);
-            if ($result === false) {
-                Logger::debug("[SemaphoreManager] sem_release failed for '{$id}' (may not be acquired)");
-            } else {
-                Logger::info("[SemaphoreManager] Lock released for '{$id}'");
-            }
-            return $result !== false;
+            if (@sem_release($semaphore)) 
+                Logger::info("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} Lock released for '{$id}'");
+            /*else
+                Logger::info("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} Failed to release lock for '{$id}'");
+                */
+            return true;
         }
         return false;
     }

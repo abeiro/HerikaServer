@@ -90,14 +90,14 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
         
         // Name randomizer
         $randomLetter = chr(rand(65, 90)); // ASCII A-Z
-        $nameRandom="Start by letter \"$randomLetter\"";
+        $nameRandom="start by letter \"$randomLetter\"";
 
         // Database Prompt (Spawn Character)
         $prompt[] = array('role' => 'system', 'content' => $GLOBALS["PROMPT_HEAD"]."\n$sysprompt");
         $prompt[] = array('role' => 'user', 'content' =>"
 
  * Use Tamrielic names. Use Name and Surname (example Hans Ulfon) or name nickname (Example: Orik Stormbreaker, Nidia the Witch)
- * Name should $nameRandom
+ * If not specified by directive, Name should $nameRandom
  * Human Races are Nord, Imperial RedGuard and Breton.
  * Give your answer as JSON object:
  {$GLOBALS["custom_json_template_as_text"]}
@@ -193,7 +193,7 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
             // This should be on new npc profile table
             $codename = npcNameToCodename($response["name"]);
            
-
+            sleep(5);
             $GLOBALS["db"]->insert(
                 'responselog',
                 array(
@@ -201,7 +201,7 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
                     'sent' => 0,
                     'actor' => "rolemaster",
                     'text' => "",
-                    'action' => "rolecommand|moveToPlayer@{$response["name"]}@$taskId",
+                    'action' => "rolecommand|moveToPlayer@{$response["name"]}@$taskId@3",
                     'tag' => ""
                 )
             );

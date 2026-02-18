@@ -21,6 +21,13 @@
 
 
 
+## Related PRs
+
+<!-- Does this PR relate to or rely on another PR in another CHIM repo? -->
+<!-- If yes, link the related PR(s) below: -->
+
+
+
 ## Notes
 
 <!-- Any additional context, implementation details, breaking changes, or dependencies -->
@@ -28,9 +35,3 @@
 
 
 
----
-
-### Checklist
-
-- [ ] I have tested these changes
-- [ ] I have submitted this PR to the `unstable` branch

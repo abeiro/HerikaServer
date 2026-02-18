@@ -177,6 +177,8 @@ if (($last_gamets - $lastItNumber) < ((24 * 3) / 0.0000024)) {
 
     if (isset($argv[2]) && $argv[2] == "forceletter")
         error_log("[BACKGROUND LIFE] $npcNameEsc Last iteration less than 3 days ago...bypassing by forceletter");
+    if (isset($argv[3]) && $argv[3] == "forceaction")
+        error_log("[BACKGROUND LIFE] $npcNameEsc Last iteration less than 3 days ago...bypassing by forceaction");
     else
         return;
 }
