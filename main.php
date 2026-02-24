@@ -179,9 +179,10 @@ require_once($path . "processor" .DIRECTORY_SEPARATOR."chim_modes.php");
 
 
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"preprocessing.php");
+
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext","instruction","init"])) {
-    // This is just form mark that user has made an input request. We will check later when waiting for LLm response 
-    // if use has made input after that request, so we can abort it.
+    // This is just a mark that user has made an input request. We will check later when waiting for LLm response 
+    // if user has made input after initial request, so we can abort it.
     $GLOBALS["ADD_PLAYER_BIOS"]=true;
     // $db = new sql();
     $db->insert(
@@ -388,6 +389,7 @@ if ($gameRequest[0]=="oghma_import") {
 
 // Dynamic Oghma CSV upload
 // Move this to a processor file
+// Will insert data into database and will terminate.
 if ($gameRequest[0]=="dynamic_oghma_import") {
     Logger::info("Processing Dynamic Oghma CSV data upload");
     
@@ -531,7 +533,7 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
 
 
 // Player rewrite
-
+// Will change  $gameRequest[3] with the rewritten LLM request.
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && isset($GLOBALS["PLAYER_RESPEECH"]) && $GLOBALS["PLAYER_RESPEECH"]) {
     // Use preg_replace to remove the name and colon before the dialogue
     $cleaned_player_dialogue = addcslashes(preg_replace('/^[^:]+:/', '', $gameRequest[3]),'"');
@@ -779,7 +781,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
     
 }
 
-
+// Will enable functions and change $gameRequest[0] to cheatmode and $gameRequest[3] to a formatted instruction.
 $GLOBALS["CHEAT_MODE"]=true;
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && isset($GLOBALS["CHEAT_MODE"]) && $GLOBALS["CHEAT_MODE"]) {
     // Use preg_replace to remove the name and colon before the dialogue
@@ -815,7 +817,7 @@ $GLOBALS["active_profile"]=md5($GLOBALS["HERIKA_NAME"]);
 // End of profile selection
 
 // This is the correct place, after parsing $gameRequest and before starting to do substitutions
-
+// Will change connector, and apply narrator settings
 if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"])) {
 
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
@@ -930,6 +932,7 @@ if ($gameRequest[0] == "npcspellcast") {
 }
 
 // Exit if only a event info log.
+// Optional events
 
 if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","infoitems","chatme","chat","infoaction","death","itemfound",
     "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast","backgroundaction","reanimate","itempickup","npc_reanimated"])) {
