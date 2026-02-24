@@ -542,6 +542,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
         //$newSpeech=file_get_contents(getBaseUrlForSpeech()."/HerikaServer/player_rewrite.php?speech=".urlencode($cleaned_player_dialogue));
         $player_rewrite_speech=`php player_rewrite.php "$cleaned_player_dialogue"`;
+        $player_rewrite_speech=cleanResponse($player_rewrite_speech);
         $gameRequest[3]="{$GLOBALS["PLAYER_NAME"]}:$player_rewrite_speech";
         $GLOBALS["CHIM_EXECUTION_MODE"] = "AUTOCHAT"; //required when using STANDARD/WHISPER and ** prefix triggers speech database fix
     }
