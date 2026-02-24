@@ -718,7 +718,7 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
         if (($s_mood == "whispering") || ($s_mood == "laughing"))  {
             $textString = "[{$s_mood}] " . $textString; 
         } else {  
-            $s_emo_int = $GLOBALS["LAST_LLM_RESPONSE"]["emotion intensity"] ?? "";
+            $s_emo_int = $GLOBALS["LAST_LLM_RESPONSE"]["emotion_intensity"] ?? "";
             if (($s_emo_int == "strong") || ($s_emo_int == "moderate")) {
                 $s_emo = strtolower($GLOBALS["LAST_LLM_RESPONSE"]["emotion"] ?? "");
                 if (strlen($s_emo) > 0) {
