@@ -533,7 +533,10 @@ if ($gameRequest[0]=="dynamic_oghma_import") {
 
 
 // Player rewrite
+
 // Will change  $gameRequest[3] with the rewritten LLM request.
+
+$player_rewrite_speech = "";
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && isset($GLOBALS["PLAYER_RESPEECH"]) && $GLOBALS["PLAYER_RESPEECH"]) {
     // Use preg_replace to remove the name and colon before the dialogue
     $cleaned_player_dialogue = addcslashes(preg_replace('/^[^:]+:/', '', $gameRequest[3]),'"');
@@ -543,9 +546,10 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
         error_log("Overwritting user prompt $cleaned_player_dialogue");
 
         //$newSpeech=file_get_contents(getBaseUrlForSpeech()."/HerikaServer/player_rewrite.php?speech=".urlencode($cleaned_player_dialogue));
-        $newSpeech=`php player_rewrite.php "$cleaned_player_dialogue"`;
-        $gameRequest[3]="{$GLOBALS["PLAYER_NAME"]}:$newSpeech";
-
+        $player_rewrite_speech=`php player_rewrite.php "$cleaned_player_dialogue"`;
+        $player_rewrite_speech=cleanResponse($player_rewrite_speech);
+        $gameRequest[3]="{$GLOBALS["PLAYER_NAME"]}:$player_rewrite_speech";
+        $GLOBALS["CHIM_EXECUTION_MODE"] = "AUTOCHAT"; //required when using STANDARD/WHISPER and ** prefix triggers speech database fix
     }
 }
 
@@ -2309,7 +2313,7 @@ if (sizeof($talkedSoFar) == 0) {
                 && in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s"])
                 && sizeof($talkedSoFar) > 0) {
                 
-                $transformedSpeech = $db->escape(implode(" ", $talkedSoFar));
+                $transformedSpeech = trim($db->escape($player_rewrite_speech));
                 $playerName = $db->escape($GLOBALS["PLAYER_NAME"]);
                 $currentGamets = intval($gameRequest[2]);
                 

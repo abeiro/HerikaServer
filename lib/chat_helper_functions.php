@@ -224,7 +224,7 @@ function findDotPosition($s_string) {
 
 function br2nl($string)
 {
-    return preg_replace('/[\r\n]+/', '', preg_replace('/\<br(\s*)?\/?\>/i', "", $string));
+    return trim(preg_replace('/\s+/', ' ', preg_replace('/[\r\n]+/', ' ', preg_replace('/\<br(\s*)?\/?\>/i', " ", $string))));
 }
 
 function split_at_end_of_sentence($paragraph) {
