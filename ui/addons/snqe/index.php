@@ -1,6 +1,5 @@
 <?php
 
-// Common headers
 $enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
@@ -10,29 +9,33 @@ require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
 
 $GLOBALS["ENGINE_PATH"] = $enginePath;
-$stateFile = "{$ENGINE_PATH}/log/snqe_state.json";
+$stateFile = "{$enginePath}log/snqe_state.json";
 
 $db = new sql();
+
+$isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
+
+// Determine web root
+$scriptPath = $_SERVER['SCRIPT_NAME'];
+$uiPos = strpos($scriptPath, '/ui/');
+$webRoot = ($uiPos !== false) ? substr($scriptPath, 0, $uiPos) : '';
+$webRoot = rtrim($webRoot, '/');
 
 // Function to read last N lines from a file
 function getTailOfFile($filepath, $lines = 100) {
     if (!file_exists($filepath)) {
         return "File not found: " . htmlspecialchars($filepath);
     }
-    
     $file = fopen($filepath, 'r');
     if ($file === false) {
         return "Cannot read file: " . htmlspecialchars($filepath);
     }
-    
     fseek($file, 0, SEEK_END);
     $fileSize = ftell($file);
-    
     $buffer = min($fileSize, 8192);
     $position = $fileSize;
     $lineCount = 0;
     $content = '';
-    
     while ($position > 0 && $lineCount <= $lines) {
         $position = max(0, $position - $buffer);
         fseek($file, $position);
@@ -40,23 +43,19 @@ function getTailOfFile($filepath, $lines = 100) {
         $content = $chunk . $content;
         $lineCount = substr_count($content, "\n");
     }
-    
     fclose($file);
-    
     $allLines = explode("\n", $content);
     $lastLines = array_slice($allLines, -$lines);
     return implode("\n", $lastLines);
 }
 
-$logRunAgent = getTailOfFile("{$ENGINE_PATH}/log/log_run_agent.log", 100);
-$serviceLog = getTailOfFile("{$ENGINE_PATH}/log/service.log", 100);
+$logRunAgent = getTailOfFile("{$enginePath}log/log_run_agent.log", 100);
+$serviceLog  = getTailOfFile("{$enginePath}log/service.log", 100);
 
-// Fetch running quests
 function getRunningQuests($db) {
     try {
         $query = "SELECT quest_id, title, stage, created_at, updated_at FROM sneq_quests WHERE quest_run_state = 'running' ORDER BY updated_at DESC";
-        $runningQuests = $db->fetchAll($query);
-        return $runningQuests;
+        return $db->fetchAll($query);
     } catch (Exception $e) {
         Logger::error("Failed to fetch running quests: " . $e->getMessage());
         return [];
@@ -65,364 +64,269 @@ function getRunningQuests($db) {
 
 $runningQuests = getRunningQuests($db);
 
-// Handle AJAX request for running quests
+// AJAX: running quests
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_running_quests') {
     header('Content-Type: application/json');
     echo json_encode(['quests' => $runningQuests]);
     exit;
 }
 
-// Handle AJAX request for logs
+// AJAX: logs
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_logs') {
     header('Content-Type: application/json');
     echo json_encode([
-        'agentLog' => getTailOfFile("{$ENGINE_PATH}/log/log_run_agent.log", 100),
-        'serviceLog' => getTailOfFile("{$ENGINE_PATH}/log/service.log", 100)
+        'agentLog'   => getTailOfFile("{$enginePath}log/log_run_agent.log", 100),
+        'serviceLog' => getTailOfFile("{$enginePath}log/service.log", 100),
     ]);
     exit;
 }
 
-// Handle form submission
-$response = array();
+// Form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'submit_form') {
-    $userprompt = isset($_POST['userprompt']) ? ($_POST['userprompt']) : '';
-    $questtitle = isset($_POST['questtitle']) ? ($_POST['questtitle']) : '';
-    $briefing = isset($_POST['briefing']) ? ($_POST['briefing']) : '';
-    $suggested = isset($_POST['suggested']) ? ($_POST['suggested']) : '';
-    $locations = isset($_POST['locationlist']) ? json_decode($_POST['locationlist'], true) : [];
+    $userprompt = isset($_POST['userprompt']) ? $_POST['userprompt'] : '';
+    $questtitle = isset($_POST['questtitle']) ? $_POST['questtitle'] : '';
+    $briefing   = isset($_POST['briefing'])   ? $_POST['briefing']   : '';
+    $suggested  = isset($_POST['suggested'])  ? $_POST['suggested']  : '';
+    $locations  = isset($_POST['locationlist']) ? json_decode($_POST['locationlist'], true) : [];
 
-
-    $state['userprompt'] = $userprompt;
-    $state['briefing'] = $briefing;
-    $state['questtitle'] = $questtitle;
-    $state['suggested'] = $suggested;
-    $state['locationlist'] = $locations;
-
-
-
+    $state = [
+        'userprompt'   => $userprompt,
+        'briefing'     => $briefing,
+        'questtitle'   => $questtitle,
+        'suggested'    => $suggested,
+        'locationlist' => $locations,
+    ];
     file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
-    chmod($stateFile, permissions: 0777);
-
-    // Log the submission
-    error_log("[SNQE Handler] Form submitted - Title: " . $questtitle . ", Briefing: " . $briefing);
-
-    // Return success response
-    $response = array(
-        'status' => 'success',
-        'message' => 'Form data received successfully',
-        'data' => array(
-            'userprompt' => $userprompt,
-            'questtitle' => $questtitle,
-            'briefing' => $briefing,
-            'suggested' => $suggested
-        ),
-        'timestamp' => date('Y-m-d H:i:s')
-    );
+    chmod($stateFile, 0777);
 
     header('Content-Type: application/json');
-    echo json_encode($response);
+    echo json_encode([
+        'status'    => 'success',
+        'message'   => 'Form data received successfully',
+        'data'      => compact('userprompt', 'questtitle', 'briefing', 'suggested'),
+        'timestamp' => date('Y-m-d H:i:s'),
+    ]);
     exit;
 }
 
-function sanitize_input($input)
-{
-    return htmlspecialchars(trim($input), ENT_QUOTES, 'UTF-8');
+$uiPath = $enginePath . "ui" . DIRECTORY_SEPARATOR;
+$TITLE = "🧭 AI Quest Manager";
+
+ob_start();
+include($uiPath . "tmpl/head.html");
+require_once($uiPath . "profile_loader.php");
+?>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<style>
+@font-face {
+    font-family: "MagicCards";
+    src: url("<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf") format("truetype");
 }
 
-?>
+main {
+    padding-top: <?php echo $isEmbed ? '20px' : '80px'; ?>;
+    padding-bottom: 40px;
+    padding-left: 16px;
+    padding-right: 16px;
+}
 
-<!DOCTYPE html>
-<html lang="en">
+footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031633; z-index: 100; }
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quest Scenario Generator</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+.snqe-layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            min-height: 100vh;
-            padding: 40px 20px;
-            color: #e0e0e0;
-        }
+.snqe-main {
+    flex: 1;
+    min-width: 360px;
+    background: linear-gradient(135deg, rgba(42,42,42,0.95), rgba(34,34,34,0.98));
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    padding: 28px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
 
-        .main-wrapper {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            gap: 30px;
-            flex-wrap: wrap;
-        }
+.snqe-sidebar {
+    flex: 0 0 280px;
+    background: linear-gradient(135deg, rgba(42,42,42,0.95), rgba(34,34,34,0.98));
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
 
-        .container {
-            flex: 1;
-            min-width: 400px;
-            background: #0f3460;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            padding: 40px;
-            border: 1px solid #16213e;
-        }
+.snqe-page-title {
+    font-family: "MagicCards", serif;
+    font-size: 1.8em;
+    color: rgb(242,124,17);
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+    word-spacing: 6px;
+    margin: 0 0 24px 0;
+}
 
-        .sidebar {
-            flex: 0 0 300px;
-            background: #0f3460;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            padding: 25px;
-            border: 1px solid #16213e;
-            max-height: 600px;
-            overflow-y: auto;
-        }
+.snqe-section-title {
+    font-family: "MagicCards", serif;
+    font-size: 1.1em;
+    color: rgb(242,124,17);
+    margin: 0 0 14px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 
-        .sidebar h2 {
-            color: #00d4ff;
-            margin-bottom: 20px;
-            font-size: 1.3em;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+.pulse-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    background: #10b981;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+    flex-shrink: 0;
+}
 
-        .quest-status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            background: #10b981;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+}
 
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.5;
-            }
-        }
+.form-group { margin-bottom: 18px; }
 
-        .running-quests-list {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    color: #cfd9ea;
+    font-weight: 600;
+    font-size: 0.9em;
+}
 
-        .quest-item {
-            background: #1a1a2e;
-            border: 1px solid #16213e;
-            border-left: 3px solid #00d4ff;
-            border-radius: 6px;
-            padding: 15px;
-            transition: all 0.3s ease;
-        }
+.form-group textarea,
+.form-group input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    background: #1e1e1e;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #e0e0e0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.88em;
+    resize: vertical;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
 
-        .quest-item:hover {
-            border-left-color: #7c3aed;
-            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.2);
-        }
+.form-group textarea { min-height: 100px; }
 
-        .quest-item-title {
-            color: #00d4ff;
-            font-weight: 600;
-            margin-bottom: 8px;
-            word-break: break-word;
-        }
+.form-group textarea:focus,
+.form-group input[type="text"]:focus {
+    outline: none;
+    border-color: rgb(242,124,17);
+    box-shadow: 0 0 0 2px rgba(242,124,17,0.15);
+}
 
-        .quest-item-id {
-            font-size: 0.8em;
-            color: #888;
-            margin-bottom: 5px;
-            font-family: 'Courier New', monospace;
-            word-break: break-all;
-        }
+.form-group input[readonly] {
+    background: #161616;
+    color: #999;
+    cursor: default;
+}
 
-        .quest-item-stage {
-            color: #b0b0b0;
-            font-size: 0.9em;
-            margin-bottom: 8px;
-        }
+.log-box {
+    width: 100%;
+    padding: 10px 12px;
+    background: #000;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #00ff88;
+    font-family: 'Courier New', monospace;
+    font-size: 0.82em;
+    overflow-y: auto;
+    max-height: 260px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.4;
+    resize: vertical;
+    box-sizing: border-box;
+}
 
-        .quest-item-time {
-            color: #666;
-            font-size: 0.75em;
-            font-style: italic;
-        }
+.btn-group { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
 
-        .no-running-quests {
-            color: #666;
-            text-align: center;
-            padding: 40px 20px;
-            font-style: italic;
-        }
+.btn-snqe {
+    flex: 1;
+    min-width: 160px;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.95em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.3px;
+    color: #fff;
+}
 
-        h1 {
-            color: #e0e0e0;
-            margin-bottom: 30px;
-            text-align: center;
-            font-size: 2.5em;
-            background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
+.btn-snqe-generate {
+    background: linear-gradient(135deg, rgba(37,99,235,0.85), rgba(37,99,235,0.65));
+    border: 1px solid rgba(138,155,182,0.3);
+}
+.btn-snqe-generate:hover { background: linear-gradient(135deg, rgba(47,109,245,0.9), rgba(47,109,245,0.75)); transform: translateY(-1px); }
 
-        .form-group {
-            margin-bottom: 25px;
-        }
+.btn-snqe-create {
+    background: linear-gradient(135deg, rgba(16,185,129,0.85), rgba(5,150,105,0.75));
+    border: 1px solid rgba(52,211,153,0.3);
+}
+.btn-snqe-create:hover { background: linear-gradient(135deg, rgba(16,185,129,1), rgba(5,150,105,0.9)); transform: translateY(-1px); }
 
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #b0b0b0;
-            font-weight: 600;
-            font-size: 0.95em;
-        }
+.btn-snqe-clear {
+    background: linear-gradient(135deg, rgba(185,28,28,0.75), rgba(153,27,27,0.65));
+    border: 1px solid rgba(239,68,68,0.3);
+}
+.btn-snqe-clear:hover { background: linear-gradient(135deg, rgba(220,38,38,0.9), rgba(185,28,28,0.8)); transform: translateY(-1px); }
 
-        textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #16213e;
-            border-radius: 6px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            resize: vertical;
-            min-height: 120px;
-            transition: all 0.3s ease;
-            background-color: #1a1a2e;
-            color: #e0e0e0;
-        }
+.loading-msg {
+    display: none;
+    margin-top: 10px;
+    color: rgb(242,124,17);
+    font-weight: 600;
+    font-size: 0.9em;
+}
+.loading-msg.active { display: block; }
 
-        textarea:focus {
-            outline: none;
-            border-color: #00d4ff;
-            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2);
-        }
+.quest-item {
+    background: rgba(30,30,30,0.8);
+    border: 1px solid #3a3a3a;
+    border-left: 3px solid rgb(242,124,17);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+    transition: border-left-color 0.2s;
+}
+.quest-item:hover { border-left-color: #f0a040; }
 
-        input[type="text"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #16213e;
-            border-radius: 6px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            transition: all 0.3s ease;
-            background-color: #1a1a2e;
-            color: #e0e0e0;
-        }
+.quest-item-title { color: rgb(242,124,17); font-weight: 600; margin-bottom: 5px; word-break: break-word; }
+.quest-item-id    { font-size: 0.78em; color: #666; margin-bottom: 4px; font-family: 'Courier New', monospace; word-break: break-all; }
+.quest-item-stage { color: #aaa; font-size: 0.88em; margin-bottom: 5px; }
+.quest-item-time  { color: #666; font-size: 0.75em; font-style: italic; }
 
-        input[type="text"]:focus {
-            outline: none;
-            border-color: #00d4ff;
-            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2);
-        }
+.no-quests { color: #666; text-align: center; padding: 30px 10px; font-style: italic; }
 
-        input[type="text"]:read-only {
-            background-color: #16213e;
-            cursor: default;
-        }
+@media (max-width: 900px) {
+    .snqe-layout { flex-direction: column; }
+    .snqe-sidebar { flex: 1 1 100%; }
+}
+</style>
 
-        .log-box {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #16213e;
-            border-radius: 6px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.85em;
-            background-color: #000000;
-            color: #00ff00;
-            overflow-y: auto;
-            max-height: 300px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            line-height: 1.4;
-            resize: vertical;
-        }
+<?php if (!$isEmbed): ?>
+<?php include($uiPath . "tmpl/navbar.php"); ?>
+<?php endif; ?>
 
-        .button-group {
-            display: flex;
-            gap: 15px;
-            margin-top: 30px;
-            flex-wrap: wrap;
-        }
+<main>
+    <div class="snqe-layout">
+        <div class="snqe-main">
+            <div class="snqe-page-title">🧭 AI Quest Manager</div>
 
-        button {
-            flex: 1;
-            min-width: 200px;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 1em;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
-        }
-
-        .btn-clear {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-        }
-
-        .btn-clear:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(239, 68, 68, 0.4);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            color: #00d4ff;
-            font-weight: 600;
-            margin-top: 10px;
-        }
-
-        .loading.active {
-            display: block;
-        }
-
-        @media (max-width: 1200px) {
-            .main-wrapper {
-                flex-wrap: wrap-reverse;
-            }
-            
-            .sidebar {
-                flex: 1;
-                min-width: 350px;
-                max-height: none;
-            }
-        }
-    </style>
-</head>
-
-<body>
-    <div class="main-wrapper">
-        <div class="container">
-            <h1>📖 Quest Scenario Generator</h1>
-
-            <form>
+            <form id="snqeForm">
                 <div class="form-group">
                     <label for="suggested">Suggested</label>
                     <textarea name="suggested" id="suggested" placeholder="Enter suggestions here..."></textarea>
@@ -430,13 +334,12 @@ function sanitize_input($input)
 
                 <div class="form-group">
                     <label for="userprompt">User Prompt</label>
-                    <textarea name="userprompt" id="userprompt"
-                        placeholder="Enter your quest scenario prompt here..."></textarea>
+                    <textarea name="userprompt" id="userprompt" placeholder="Enter your quest scenario prompt here..."></textarea>
                 </div>
 
                 <div class="form-group">
                     <label for="questtitle">Quest Title</label>
-                    <input type="text" name="questtitle" id="questtitle" placeholder="Quest title will appear here..."/>
+                    <input type="text" name="questtitle" id="questtitle" placeholder="Quest title will appear here..." />
                 </div>
 
                 <div class="form-group">
@@ -445,39 +348,37 @@ function sanitize_input($input)
                 </div>
 
                 <div class="form-group">
-                    <label>Agent Log (last 100 lines)</label>
+                    <label>Agent Log <small style="color:#666;">(last 100 lines)</small></label>
                     <div class="log-box" id="agentLog"><?php echo htmlspecialchars($logRunAgent); ?></div>
                 </div>
 
                 <div class="form-group">
-                    <label>Service Log (last 100 lines)</label>
+                    <label>Service Log <small style="color:#666;">(last 100 lines)</small></label>
                     <div class="log-box" id="serviceLog"><?php echo htmlspecialchars($serviceLog); ?></div>
                 </div>
 
-                <div class="form-group" style="display:none;">
-                    <label for="locationlist">Locations</label>
-                    <select name="locationlist" id="locationlist" multiple readonly></select>
+                <div style="display:none;">
+                    <select name="locationlist" id="locationlist" multiple></select>
                 </div>
 
-                <div class="button-group">
-                    <button type="button" class="btn-primary" onclick="generateScenario()">Generate Scenario</button>
-                    <button type="button" class="btn-primary" onclick="submitFormData()"
-                        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">Create 1st step</button>
-                    <button type="button" class="btn-clear" onclick="clearAllData()">Clear Data</button>
+                <div class="btn-group">
+                    <button type="button" class="btn-snqe btn-snqe-generate" onclick="generateScenario()">Generate Scenario</button>
+                    <button type="button" class="btn-snqe btn-snqe-create" onclick="submitFormData()">Create 1st Step</button>
+                    <button type="button" class="btn-snqe btn-snqe-clear" onclick="clearAllData()">Clear Data</button>
                 </div>
 
-                <div class="loading" id="loading">Generating scenario...</div>
+                <div class="loading-msg" id="loading">Generating scenario...</div>
             </form>
         </div>
 
-        <div class="sidebar">
-            <h2>
-                <span class="quest-status-indicator"></span>
+        <div class="snqe-sidebar">
+            <div class="snqe-section-title">
+                <span class="pulse-dot"></span>
                 Running Quests
-            </h2>
-            <div class="running-quests-list" id="runningQuestsList">
+            </div>
+            <div id="runningQuestsList">
                 <?php if (empty($runningQuests)): ?>
-                    <div class="no-running-quests">No running quests</div>
+                    <div class="no-quests">No running quests</div>
                 <?php else: ?>
                     <?php foreach ($runningQuests as $quest): ?>
                         <div class="quest-item">
@@ -491,264 +392,159 @@ function sanitize_input($input)
             </div>
         </div>
     </div>
+</main>
 
-    <script>
+<script>
+const SNQE_SELF = '<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>';
 
-        // Auto-refresh running quests every 5 seconds
-        function refreshRunningQuests() {
-            fetch('<?php echo $_SERVER['PHP_SELF']; ?>?action=get_running_quests', {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    const questsList = document.getElementById('runningQuestsList');
-                    
-                    if (data.quests && data.quests.length > 0) {
-                        let html = '';
-                        data.quests.forEach(quest => {
-                            html += `
-                                <div class="quest-item">
-                                    <div class="quest-item-title">${escapeHtml(quest.title || 'Untitled Quest')}</div>
-                                    <div class="quest-item-id">ID: ${escapeHtml(quest.quest_id.substring(0, 8))}...</div>
-                                    <div class="quest-item-stage">Stage: ${escapeHtml(quest.stage || 'N/A')}</div>
-                                    <div class="quest-item-time">Updated: ${formatTime(quest.updated_at)}</div>
-                                </div>
-                            `;
-                        });
-                        questsList.innerHTML = html;
-                    } else {
-                        questsList.innerHTML = '<div class="no-running-quests">No running quests</div>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error refreshing quests:', error);
-                });
-        }
+function escapeHtml(text) {
+    const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+}
 
-        // Auto-refresh logs every 10 seconds
-        function refreshLogs() {
-            fetch('<?php echo $_SERVER['PHP_SELF']; ?>?action=get_logs', {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.agentLog) {
-                        document.getElementById('agentLog').textContent = data.agentLog;
-                        document.getElementById('agentLog').scrollTop = document.getElementById('agentLog').scrollHeight;
-                    }
-                    if (data.serviceLog) {
-                        document.getElementById('serviceLog').textContent = data.serviceLog;
-                        document.getElementById('serviceLog').scrollTop = document.getElementById('serviceLog').scrollHeight;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error refreshing logs:', error);
-                });
-        }
+function formatTime(ts) {
+    return new Date(ts).toLocaleTimeString('en-US', { hour12: false });
+}
 
-        // Escape HTML to prevent XSS
-        function escapeHtml(text) {
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
-            return text.replace(/[&<>"']/g, m => map[m]);
-        }
-
-        // Format timestamp to HH:mm:ss
-        function formatTime(timestamp) {
-            const date = new Date(timestamp);
-            return date.toLocaleTimeString('en-US', { hour12: false });
-        }
-
-        // Load quest title from localStorage
-        function loadQuestTitleFromStorage() {
-            const savedTitle = localStorage.getItem('snqe_questtitle');
-            if (savedTitle) {
-                document.querySelector('input[name="questtitle"]').value = savedTitle;
+function refreshRunningQuests() {
+    fetch(SNQE_SELF + '?action=get_running_quests')
+        .then(r => r.json())
+        .then(data => {
+            const el = document.getElementById('runningQuestsList');
+            if (!data.quests || data.quests.length === 0) {
+                el.innerHTML = '<div class="no-quests">No running quests</div>';
+                return;
             }
-        }
+            el.innerHTML = data.quests.map(q => `
+                <div class="quest-item">
+                    <div class="quest-item-title">${escapeHtml(q.title || 'Untitled Quest')}</div>
+                    <div class="quest-item-id">ID: ${escapeHtml(q.quest_id.substring(0, 8))}...</div>
+                    <div class="quest-item-stage">Stage: ${escapeHtml(q.stage || 'N/A')}</div>
+                    <div class="quest-item-time">Updated: ${formatTime(q.updated_at)}</div>
+                </div>`).join('');
+        })
+        .catch(() => {});
+}
 
-        // Load briefing from localStorage
-        function loadBriefingFromStorage() {
-            const savedBriefing = localStorage.getItem('snqe_briefing');
-            if (savedBriefing) {
-                document.querySelector('input[name="briefing"]').value = savedBriefing;
+function refreshLogs() {
+    fetch(SNQE_SELF + '?action=get_logs')
+        .then(r => r.json())
+        .then(data => {
+            const al = document.getElementById('agentLog');
+            const sl = document.getElementById('serviceLog');
+            if (data.agentLog)   { al.textContent = data.agentLog;   al.scrollTop = al.scrollHeight; }
+            if (data.serviceLog) { sl.textContent = data.serviceLog; sl.scrollTop = sl.scrollHeight; }
+        })
+        .catch(() => {});
+}
+
+function updateSelectBox(elementId, items) {
+    const select = document.getElementById(elementId);
+    const existing = Array.from(select.options).map(o => o.textContent);
+    items.forEach((item, i) => {
+        if (!existing.includes(item)) {
+            const opt = document.createElement('option');
+            opt.value = existing.length + i;
+            opt.textContent = item;
+            opt.selected = true;
+            select.appendChild(opt);
+        }
+    });
+}
+
+function generateScenario() {
+    const userprompt = document.getElementById('userprompt').value;
+    const questTitle = document.getElementById('questtitle').value;
+    const briefing   = document.getElementById('briefing').value;
+    const suggested  = document.getElementById('suggested').value;
+    const loadingEl  = document.getElementById('loading');
+
+    loadingEl.textContent = 'Generating scenario...';
+    loadingEl.classList.add('active');
+
+    fetch('cmd/agent0.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            prompt: userprompt, locationlist: [], npclist: [],
+            spawneditemslist: [], journallist: [], rumorlist: [], nextlist: [],
+            questtitle: questTitle, briefing, suggested
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('userprompt').value = data.response || '';
+        if (data.briefing)   document.getElementById('briefing').value   = data.briefing;
+        if (data.questtitle) document.getElementById('questtitle').value = data.questtitle;
+        if (data.locations)  updateSelectBox('locationlist', data.locations);
+        loadingEl.classList.remove('active');
+    })
+    .catch(() => loadingEl.classList.remove('active'));
+}
+
+function submitFormData() {
+    const userprompt  = document.getElementById('userprompt').value;
+    const questTitle  = document.getElementById('questtitle').value;
+    const briefing    = document.getElementById('briefing').value;
+    const suggested   = document.getElementById('suggested').value;
+    const locations   = Array.from(document.getElementById('locationlist').options).map(o => o.textContent);
+    const loadingEl   = document.getElementById('loading');
+
+    loadingEl.textContent = 'Submitting form data...';
+    loadingEl.classList.add('active');
+
+    const fd = new FormData();
+    fd.append('action', 'submit_form');
+    fd.append('userprompt', userprompt);
+    fd.append('questtitle', questTitle);
+    fd.append('briefing', briefing);
+    fd.append('suggested', suggested);
+    fd.append('locationlist', JSON.stringify(locations));
+
+    fetch(SNQE_SELF, { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'success') {
+                localStorage.setItem('snqe_questtitle', questTitle);
+                localStorage.setItem('snqe_briefing', briefing);
+                try { alert('Submitted!\n\nQuest: ' + data.data.questtitle + '\nBriefing: ' + data.data.briefing + '\n' + data.timestamp); } catch(_) {}
+            } else {
+                try { alert('Error: ' + data.message); } catch(_) {}
             }
-        }
+            loadingEl.classList.remove('active');
+            loadingEl.textContent = 'Generating scenario...';
+        })
+        .catch(() => { loadingEl.classList.remove('active'); });
+}
 
-        // Start auto-refresh interval
-        let refreshInterval;
-        let logsRefreshInterval;
-        window.addEventListener('DOMContentLoaded', function () {
-            loadQuestTitleFromStorage();
-            loadBriefingFromStorage();
-            
-            // Refresh immediately on load, then every 5 seconds
-            refreshRunningQuests();
-            refreshInterval = setInterval(refreshRunningQuests, 5000);
-            
-            // Refresh logs immediately on load, then every 10 seconds
-            refreshLogs();
-            logsRefreshInterval = setInterval(refreshLogs, 10000);
-        });
+function clearAllData() {
+    if (!confirm('Clear all data?')) return;
+    localStorage.removeItem('snqe_questtitle');
+    localStorage.removeItem('snqe_briefing');
+    document.getElementById('userprompt').value = '';
+    document.getElementById('questtitle').value = '';
+    document.getElementById('briefing').value   = '';
+    document.getElementById('suggested').value  = '';
+}
 
-        // Clean up interval on page unload
-        window.addEventListener('beforeunload', function () {
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
-            }
-            if (logsRefreshInterval) {
-                clearInterval(logsRefreshInterval);
-            }
-        });
+window.addEventListener('DOMContentLoaded', function() {
+    const t = localStorage.getItem('snqe_questtitle');
+    const b = localStorage.getItem('snqe_briefing');
+    if (t) document.getElementById('questtitle').value = t;
+    if (b) document.getElementById('briefing').value   = b;
 
-        function updateSelectBox(elementId, items) {
-            const select = document.getElementById(elementId);
-            const existingItems = Array.from(select.options).map(opt => opt.textContent);
+    refreshRunningQuests();
+    refreshLogs();
+    setInterval(refreshRunningQuests, 5000);
+    setInterval(refreshLogs, 10000);
+});
+</script>
 
-            items.forEach((item, index) => {
-                // Only add if not already in the list
-                if (!existingItems.includes(item)) {
-                    const option = document.createElement('option');
-                    option.value = existingItems.length + index;
-                    option.textContent = item;
-                    option.selected = true;
-                    select.appendChild(option);
-                }
-            });
+<?php
+include($uiPath . "tmpl/footer.html");
 
-        }
-
-        function submitToAgent0() {
-            const userprompt = document.querySelector('textarea[name="userprompt"]').value;
-            const questTitle = document.querySelector('input[name="questtitle"]').value;
-            const briefing = document.querySelector('input[name="briefing"]').value;
-            const suggested = document.querySelector('textarea[name="suggested"]').value;
-
-            const loadingEl = document.getElementById('loading');
-
-            loadingEl.classList.add('active');
-
-            fetch('cmd/agent0.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    prompt: userprompt,
-                    locationlist: [],
-                    npclist: [],
-                    spawneditemslist: [],
-                    journallist: [],
-                    rumorlist: [],
-                    nextlist: [],
-                    questtitle: questTitle,
-                    briefing: briefing,
-                    suggested: suggested
-                })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    // Populate userprompt with the scenario response
-                    document.querySelector('textarea[name="userprompt"]').value = data.response || '';
-
-                    // Update briefing if returned
-                    if (data.briefing) {
-                        document.querySelector('input[name="briefing"]').value = data.briefing;
-
-                    }
-
-                    // Update questtitle if returned
-                    if (data.questtitle) {
-                        document.querySelector('input[name="questtitle"]').value = data.questtitle || '';
-
-                    }
-
-                    if (data.locations) {
-                        updateSelectBox('locationlist', data.locations);
-                    }
-                    loadingEl.classList.remove('active');
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    loadingEl.classList.remove('active');
-                });
-        }
-
-        function generateScenario() {
-            submitToAgent0();
-        }
-
-        function submitFormData() {
-            const userprompt = document.querySelector('textarea[name="userprompt"]').value;
-            const questTitle = document.querySelector('input[name="questtitle"]').value;
-            const briefing = document.querySelector('input[name="briefing"]').value;
-            const suggested = document.querySelector('textarea[name="suggested"]').value;
-            const locationListItems = Array.from(document.getElementById('locationlist').options).map(opt => opt.textContent);
-
-            const loadingEl = document.getElementById('loading');
-            loadingEl.textContent = 'Submitting form data...';
-            loadingEl.classList.add('active');
-
-            const formData = new FormData();
-            formData.append('action', 'submit_form');
-            formData.append('userprompt', userprompt);
-            formData.append('questtitle', questTitle);
-            formData.append('briefing', briefing);
-            formData.append('suggested', suggested);
-            formData.append('locationlist', JSON.stringify(locationListItems));
-
-            fetch('<?php echo $_SERVER['PHP_SELF']; ?>', {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        // Save to localStorage
-                        localStorage.setItem('snqe_questtitle', questTitle);
-                        localStorage.setItem('snqe_briefing', briefing);
-                        
-                        alert('Form submitted successfully!\n\nQuest Title: ' + data.data.questtitle + '\nBriefing: ' + data.data.briefing + '\n\nTimestamp: ' + data.timestamp);
-                    } else {
-                        alert('Error: ' + data.message);
-                    }
-                    loadingEl.classList.remove('active');
-                    loadingEl.textContent = 'Generating scenario...';
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error submitting form data');
-                    loadingEl.classList.remove('active');
-                    loadingEl.textContent = 'Generating scenario...';
-                });
-        }
-
-        function generateScenario() {
-            submitToAgent0();
-        }
-
-        function clearAllData() {
-            if (confirm('Are you sure you want to clear all data?')) {
-                localStorage.removeItem('snqe_questtitle');
-                localStorage.removeItem('snqe_briefing');
-
-                document.querySelector('textarea[name="userprompt"]').value = '';
-                document.querySelector('input[name="questtitle"]').value = '';
-                document.querySelector('input[name="briefing"]').value = '';
-            }
-        }
-    </script>
-</body>
-
-</html>
+$buffer = ob_get_contents();
+ob_end_clean();
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $TITLE . '$3', $buffer);
+echo $buffer;
+?>
