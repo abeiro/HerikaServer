@@ -146,6 +146,23 @@ if (isset($returnFunction[2])) {
 		$useFunctionsAgain = false;
 		$GLOBALS["OPENAI_MAX_TOKENS"] = "64";
 		$request = "(reply with one short line accepting payment and ending the conversation. Do not ask follow-up questions.) $request";
+	} else if ($functionCodeName == "AddBounty") {
+		$argName = "target";
+		$useFunctionsAgain = true;
+		$request = "(You just added a bounty to the player. You may follow up with ArrestPlayer or PayBounty if appropriate. React in character.) $request";
+	} else if ($functionCodeName == "PayBounty") {
+		$argName = "target";
+		$useFunctionsAgain = false;
+		$GLOBALS["OPENAI_MAX_TOKENS"] = "64";
+		$request = "(The player has already paid the bounty and stolen items were removed from inventory. This action is fully complete. Reply with one short confirmation line, do not ask follow-up questions, and end the conversation.) $request";
+	} else if ($functionCodeName == "ArrestPlayer") {
+		$argName = "target";
+		$useFunctionsAgain = false;
+		$request = "(You attempted to arrest the player. They get a submit/resist prompt; resist starts combat. Deliver a stern final line.) $request";
+	} else if ($functionCodeName == "ForgiveCrime") {
+		$argName = "target";
+		$useFunctionsAgain = false;
+		$request = "(You forgave the player's crimes and cleared their bounty. Acknowledge this with a warning or blessing.) $request";
 
 	} else if ($functionCodeName == "FollowPlayer") {
 		terminate();

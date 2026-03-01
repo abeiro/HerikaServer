@@ -68,6 +68,14 @@
                 } else if ($fname == "HireFerry") {
                     $fiftyGoldDestinations = "Windhelm, Dawnstar, Solitude, Giant's Tooth";
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). Vanilla ferry costs: 50 gold for {$fiftyGoldDestinations}, 500 gold for Icewater Jetty, and free travel to Castle Volkihar. Put the destination in the 'target' field. Keep the spoken line short, accept payment when needed, and do not ask questions.";
+                } else if ($fname == "AddBounty") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). Crime types and vanilla bounty amounts: Assault=40 (violent), Murder=1000 (violent), Theft=100, Pickpocketing=25, Trespassing=5, Jailbreak=100, Custom (specify amount in 'item' field). Put the crime type in 'target'.";
+                } else if ($fname == "PayBounty") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). Use when the player agrees to pay now. Bounty payment and stolen-item confiscation happen immediately in one step. After using it, reply with a short confirmation and end the conversation.";
+                } else if ($fname == "ArrestPlayer") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). Use for serious crimes or if the player refuses to pay their bounty. The player gets a submit/resist popup. Submit sends them to jail with inventory confiscated. Resist makes guards attack.";
+                } else if ($fname == "ForgiveCrime") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). Use when the player successfully persuades, bribes, or invokes thane status to clear their bounty.";
                 } else {
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                 }
