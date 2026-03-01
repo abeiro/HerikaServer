@@ -158,7 +158,64 @@ class CoreProfile
     public function delete($id)
     {
         $id = intval($id);
+
+        $allProfiles = $this->readAll();
+        if (count($allProfiles) <= 1) {
+            $this->lastError = 'Cannot delete the last remaining profile';
+            return false;
+        }
+
+        $profile = $this->readOne($id);
+        if (!$profile) {
+            $this->lastError = 'Profile not found';
+            return false;
+        }
+
+        if ($profile['default_npc'] == '1') {
+            $this->lastError = 'Cannot delete the default NPC profile. Set another profile as default first.';
+            return false;
+        }
+
+        if ($profile['default_narrator'] == '1') {
+            $this->lastError = 'Cannot delete the default Narrator profile. Set another profile as default first.';
+            return false;
+        }
+
         return $GLOBALS["db"]->delete($this->table, "id = {$id}");
+    }
+
+    public function isDefaultNpc($id): bool
+    {
+        $id = intval($id);
+        $profile = $this->readOne($id);
+        return $profile && $profile['default_npc'] == '1';
+    }
+
+    public function isDefaultNarrator($id): bool
+    {
+        $id = intval($id);
+        $profile = $this->readOne($id);
+        return $profile && $profile['default_narrator'] == '1';
+    }
+
+    public function promoteToDefaultNpc($id)
+    {
+        $id = intval($id);
+        $GLOBALS["db"]->exec("UPDATE {$this->table} SET default_npc = '0' WHERE default_npc = '1'");
+        return $GLOBALS["db"]->updateRow($this->table, ['default_npc' => '1'], "id = {$id}");
+    }
+
+    public function promoteToDefaultNarrator($id)
+    {
+        $id = intval($id);
+        $GLOBALS["db"]->exec("UPDATE {$this->table} SET default_narrator = '0' WHERE default_narrator = '1'");
+        return $GLOBALS["db"]->updateRow($this->table, ['default_narrator' => '1'], "id = {$id}");
+    }
+
+    public function getProfileCount(): int
+    {
+        $row = $GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM {$this->table}");
+        return $row ? (int)$row['c'] : 0;
     }
 
     public function truncate($restart = false, $cascade = false)

@@ -404,7 +404,43 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
 
 // Handle Delete
 if (isset($_GET["delete"])) {
-    $profiles->delete($_GET["delete"]);
+    $deleteId = intval($_GET["delete"]);
+    $profileToDelete = $profiles->readOne($deleteId);
+
+    if (!$profileToDelete) {
+        header("Location: core_profiles.php");
+        exit;
+    }
+
+    $isDefaultNpc = $profileToDelete['default_npc'] == '1';
+    $isDefaultNarrator = $profileToDelete['default_narrator'] == '1';
+
+    // If a replacement was selected, promote it first then delete
+    if (isset($_GET["replace_with"]) && is_numeric($_GET["replace_with"])) {
+        $replaceId = intval($_GET["replace_with"]);
+        if ($isDefaultNpc) {
+            $profiles->promoteToDefaultNpc($replaceId);
+        }
+        if ($isDefaultNarrator) {
+            $profiles->promoteToDefaultNarrator($replaceId);
+        }
+        $profiles->delete($deleteId);
+        header("Location: core_profiles.php");
+        exit;
+    }
+
+    // If it's a default profile, redirect to the picker instead of deleting
+    if ($isDefaultNpc || $isDefaultNarrator) {
+        header("Location: core_profiles.php?pick_replacement={$deleteId}");
+        exit;
+    }
+
+    // Non-default profile: delete directly
+    $result = $profiles->delete($deleteId);
+    if (!$result) {
+        header("Location: core_profiles.php?error=" . urlencode($profiles->getLastError()));
+        exit;
+    }
     header("Location: core_profiles.php");
     exit;
 }
@@ -1022,10 +1058,7 @@ $ittById = $byId($ittRows);
                                     <input type="hidden" name="export" value="${r.id}">
                                     <button type="submit" class="btn-primary">Export</button>
                                 </form>
-                                <form method="get" action="core_profiles.php" onsubmit="return confirm('Delete this profile?');" style="display:inline">
-                                    <input type="hidden" name="delete" value="${r.id}">
-                                    <button type="submit" class="btn-danger">Delete</button>
-                                </form>
+                                <button type="button" class="btn-danger" onclick="handleProfileDelete(${r.id}, ${String(r.default_npc)==='1'}, ${String(r.default_narrator)==='1'}, '${escapeHtml(r.label||'Profile #'+r.id)}')">Delete</button>
                                 <form method="get" action="core_profiles.php" style="display:inline">
                                     <input type="hidden" name="clone" value="${r.id}">
                                     <button type="submit" class="btn-primary">Clone</button>
@@ -1051,7 +1084,72 @@ $ittById = $byId($ittRows);
             }
             render();
         })();
+
+        function handleProfileDelete(id, isDefaultNpc, isDefaultNarrator, label) {
+            if (RAW.length <= 1) {
+                alert('Cannot delete the last remaining profile.');
+                return;
+            }
+
+            if (isDefaultNpc || isDefaultNarrator) {
+                const others = RAW.filter(r => String(r.id) !== String(id));
+                if (others.length === 0) {
+                    alert('Cannot delete the last remaining profile.');
+                    return;
+                }
+
+                let defaultTypes = [];
+                if (isDefaultNpc) defaultTypes.push('NPC');
+                if (isDefaultNarrator) defaultTypes.push('Narrator');
+
+                const modal = document.getElementById('replace-profile-modal');
+                document.getElementById('replace-modal-title').textContent =
+                    'Replace Default ' + defaultTypes.join(' & ') + ' Profile';
+                document.getElementById('replace-modal-desc').textContent =
+                    '"' + label + '" is the default ' + defaultTypes.join(' & ').toLowerCase() +
+                    ' profile. Choose which profile should become the new default before deleting it.';
+
+                const select = document.getElementById('replace-profile-select');
+                select.innerHTML = '';
+                others.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.id;
+                    opt.textContent = r.label || ('Profile #' + r.id);
+                    select.appendChild(opt);
+                });
+
+                document.getElementById('replace-confirm-btn').onclick = function() {
+                    const replaceWith = select.value;
+                    if (!replaceWith) return;
+                    window.location.href = 'core_profiles.php?delete=' + id + '&replace_with=' + replaceWith;
+                };
+
+                modal.style.display = 'flex';
+                return;
+            }
+
+            if (confirm('Delete profile "' + label + '"? NPCs using this profile will be unassigned.')) {
+                window.location.href = 'core_profiles.php?delete=' + id;
+            }
+        }
+
+        function closeReplaceModal() {
+            document.getElementById('replace-profile-modal').style.display = 'none';
+        }
         </script>
+
+        <div id="replace-profile-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+            <div style="background:#1e1e1e; border:1px solid #4a4a4a; border-radius:12px; padding:24px; max-width:420px; width:90%; color:#e9efff;">
+                <div id="replace-modal-title" style="font-size:16px; font-weight:700; margin-bottom:8px;"></div>
+                <div id="replace-modal-desc" style="font-size:13px; color:#9fb1c9; margin-bottom:16px;"></div>
+                <label style="font-size:13px; font-weight:600; margin-bottom:4px; display:block;">New default profile:</label>
+                <select id="replace-profile-select" style="width:100%; padding:8px; background:#2a2a2a; color:#e9efff; border:1px solid #4a4a4a; border-radius:6px; margin-bottom:16px;"></select>
+                <div style="display:flex; gap:8px; justify-content:flex-end;">
+                    <button type="button" onclick="closeReplaceModal()" style="background:#3a3a3a; color:#e9efff; border:1px solid #4a4a4a; border-radius:6px; padding:8px 16px; cursor:pointer;">Cancel</button>
+                    <button type="button" id="replace-confirm-btn" style="background:#8b0000; color:#fff; border:1px solid #660000; border-radius:6px; padding:8px 16px; cursor:pointer; font-weight:700;">Delete & Replace</button>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="llm-right">
         <div class="form-container wide-centered">

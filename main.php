@@ -678,6 +678,16 @@ if (isset($_GET["profile"])) {
         // Profile has been migrated
 
         $profile=new CoreProfile();
+
+        // Fallback: assign default profile if NPC has none (orphaned by profile deletion)
+        if (empty($currentNpcData["profile_id"])) {
+            $defProfile = $profile->getDefaultNpc();
+            if ($defProfile) {
+                $currentNpcData["profile_id"] = (int)$defProfile['id'];
+                error_log("[CORE SYSTEM] NPC '{$currentNpcData["npc_name"]}' had no profile, assigned default profile #{$defProfile['id']}");
+            }
+        }
+
         $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
         $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]=$currentProfileData;
         $connector=new LLMConnector();
@@ -729,6 +739,17 @@ if (isset($_GET["profile"])) {
             $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $currentNpcData;
 
             $profile=new CoreProfile();
+
+            // Fallback: assign default profile if NPC has none (orphaned by profile deletion)
+            if (empty($currentNpcData["profile_id"])) {
+                $defProfile = $profile->getDefaultNpc();
+                if ($defProfile) {
+                    $currentNpcData["profile_id"] = (int)$defProfile['id'];
+                    $npcMaster->updateByArray($currentNpcData);
+                    error_log("[CORE SYSTEM] NPC '{$currentNpcData["npc_name"]}' had no profile, assigned default profile #{$defProfile['id']}");
+                }
+            }
+
             $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
         
             $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]=$currentProfileData;
