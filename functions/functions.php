@@ -44,6 +44,7 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'EndRitualCeremony',
     'Training',
     'Surrender',
+    'RentRoom',
     'EndConversation'
     //    'WaitHere'
 ];
@@ -107,6 +108,7 @@ $F_TRANSLATIONS_LOCAL["SearchMemory"] = "{$GLOBALS["HERIKA_NAME"]} tries to reme
 $F_TRANSLATIONS_LOCAL["WaitHere"] = "{$GLOBALS["HERIKA_NAME"]} waits and loiters at the current location";
 $F_TRANSLATIONS_LOCAL["GiveItemToPlayer"] = "{$GLOBALS["HERIKA_NAME"]} gives item (property target) to {$GLOBALS["PLAYER_NAME"]} (property listener)";
 $F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"] = "{$GLOBALS["HERIKA_NAME"]} takes amount (property target) of gold from {$GLOBALS["PLAYER_NAME"]}, once {$GLOBALS["PLAYER_NAME"]} is agree. infer amount from context.";
+$F_TRANSLATIONS_LOCAL["RentRoom"] = "{$GLOBALS["HERIKA_NAME"]} rents a room to {$GLOBALS["PLAYER_NAME"]} for 10 gold coins. Only innkeepers can use this action and it only applies to {$GLOBALS["PLAYER_NAME"]}.";
 $F_TRANSLATIONS_LOCAL["FollowPlayer"] = "{$GLOBALS["HERIKA_NAME"]} follows  {$GLOBALS["PLAYER_NAME"]}";
 $F_TRANSLATIONS_LOCAL["ComeCloser"] = "{$GLOBALS["HERIKA_NAME"]} aproaches to {$GLOBALS["PLAYER_NAME"]}";
 $F_TRANSLATIONS_LOCAL["Brawl"] = "{$GLOBALS["HERIKA_NAME"]} engages non lethtal combat with another actor, using weapons";
@@ -155,6 +157,7 @@ $F_RETURNMESSAGES_LOCAL["SearchMemory"] = "{$GLOBALS["HERIKA_NAME"]} tries to re
 $F_RETURNMESSAGES_LOCAL["WaitHere"] = "{$GLOBALS["HERIKA_NAME"]} waits and stands at the place";
 $F_RETURNMESSAGES_LOCAL["GiveItemToPlayer"] = "{$GLOBALS["HERIKA_NAME"]} gave #TARGET# to {$GLOBALS["PLAYER_NAME"]}.If this a transaction, maybe TakeGoldFromPlayer is needed.";
 $F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"] = "{$GLOBALS["PLAYER_NAME"]} gave #TARGET# coins to {$GLOBALS["HERIKA_NAME"]}. If this a transaction, maybe GiveItemToPlayer is needed.";
+$F_RETURNMESSAGES_LOCAL["RentRoom"] = "{$GLOBALS["HERIKA_NAME"]} rented a room to {$GLOBALS["PLAYER_NAME"]} for 10 gold.";
 $F_RETURNMESSAGES_LOCAL["FollowPlayer"] = "{$GLOBALS["HERIKA_NAME"]} follows {$GLOBALS["PLAYER_NAME"]}";
 $F_RETURNMESSAGES_LOCAL["Brawl"] = "{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES_LOCAL["ReturnBackHome"] = "{$GLOBALS["HERIKA_NAME"]} goes back home";
@@ -203,6 +206,7 @@ $F_NAMES_LOCAL["SearchMemory"] = "TryToRemember";
 $F_NAMES_LOCAL["WaitHere"] = "WaitHere";
 $F_NAMES_LOCAL["GiveItemToPlayer"] = "GiveItemToPlayer";
 $F_NAMES_LOCAL["TakeGoldFromPlayer"] = "TakeMoneyFrom{$GLOBALS["PLAYER_NAME"]}"; // Mmm
+$F_NAMES_LOCAL["RentRoom"] = "RentRoom";
 $F_NAMES_LOCAL["FollowPlayer"] = "FollowPlayer";
 $F_NAMES_LOCAL["ComeCloser"] = "ComeCloser";
 $F_NAMES_LOCAL["Brawl"] = "Fight";
@@ -612,6 +616,20 @@ $GLOBALS["FUNCTIONS"] = [
         ],
     ],
     [
+        "name" => $F_NAMES_LOCAL["RentRoom"],
+        "description" => $F_TRANSLATIONS_LOCAL["RentRoom"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ],
+            ],
+            "required" => [],
+        ],
+    ],
+    [
         "name" => $F_NAMES_LOCAL["FollowPlayer"],
         "description" => $F_TRANSLATIONS_LOCAL["FollowPlayer"],
         "parameters" => [
@@ -1013,6 +1031,7 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         'ComeCloser',
         //'GiveItemToPlayer',
         'TakeGoldFromPlayer',
+        'RentRoom',
         'FollowPlayer',
         'Brawl',
         'GiveGoldTo',
@@ -1056,6 +1075,7 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         'ComeCloser',
         //'GiveItemToPlayer',
         'TakeGoldFromPlayer',
+        'RentRoom',
         'Brawl',
         'GiveGoldTo',
         'GiveItemTo',
@@ -1095,6 +1115,19 @@ if ($GLOBALS["ENABLED_FUNCTIONS"]) {
             $GLOBALS["ENABLED_FUNCTIONS"][]="Surrender";
         } else {
             error_log("[DEBUG functions.php] No active combat detected for {$GLOBALS["HERIKA_NAME"]}");
+        }
+
+        if (in_array("RentRoom", $GLOBALS["ENABLED_FUNCTIONS"])) {
+            $npcMaster = new NpcMaster();
+            $npcData = $npcMaster->getByName($GLOBALS["HERIKA_NAME"]);
+            $isInnkeeper = false;
+            if (!empty($npcData)) {
+                $isInnkeeper = $npcMaster->isNpcInFaction($npcData, "0005091B");
+            }
+            if (!$isInnkeeper) {
+                error_log("[DEBUG functions.php] {$GLOBALS["HERIKA_NAME"]} is not innkeeper, removing RentRoom function");
+                unsetFunction('RentRoom');
+            }
         }
     }
 }

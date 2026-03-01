@@ -133,6 +133,10 @@ if (isset($returnFunction[2])) {
 		$useFunctionsAgain = true;
 		die();
 
+	} else if ($functionCodeName == "RentRoom") {
+		$argName = "target";
+		$useFunctionsAgain = false;
+
 	} else if ($functionCodeName == "FollowPlayer") {
 		terminate();
 
