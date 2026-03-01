@@ -744,7 +744,7 @@ if (!$isEmbed) {
                 <h2>💬 Speech Style</h2>
                 <label for="speech_style">How Your Character Speaks</label>
                 <textarea id="speech_style" name="speech_style" placeholder="Describe how your character speaks and communicates..."><?php echo htmlspecialchars($speechStyle); ?></textarea>
-                <span class="hint">Used for Auto Chat mode to guide the AI to speak for your character.</span>
+                <span class="hint">Used by Auto Chat mode. The AI rewrites your input into dialogue that matches your character's voice and personality.</span>
             </div>
         </div>
     </form>

@@ -545,7 +545,17 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
         error_log("Overwritting user prompt $cleaned_player_dialogue");
 
         //$newSpeech=file_get_contents(getBaseUrlForSpeech()."/HerikaServer/player_rewrite.php?speech=".urlencode($cleaned_player_dialogue));
-        $player_rewrite_speech=`php player_rewrite.php "$cleaned_player_dialogue"`;
+        // Profile isn't loaded yet at this point, so derive the NPC name from the DB using the profile MD5
+        $npcTarget = '';
+        if (isset($_GET["profile"]) && $_GET["profile"] !== '' && $_GET["profile"] !== md5('The Narrator')) {
+            $npcRow = $db->fetchOne("SELECT npc_name FROM core_npc_master WHERE md5='" . $db->escape($_GET["profile"]) . "' LIMIT 1");
+            if ($npcRow && !empty($npcRow['npc_name'])) {
+                $npcTarget = $npcRow['npc_name'];
+            }
+        }
+        $escapedDialogue = escapeshellarg($cleaned_player_dialogue);
+        $escapedNpc = escapeshellarg($npcTarget);
+        $player_rewrite_speech=`php player_rewrite.php $escapedDialogue $escapedNpc`;
         $player_rewrite_speech=cleanResponse($player_rewrite_speech);
         $gameRequest[3]="{$GLOBALS["PLAYER_NAME"]}:$player_rewrite_speech";
         $GLOBALS["CHIM_EXECUTION_MODE"] = "AUTOCHAT"; //required when using STANDARD/WHISPER and ** prefix triggers speech database fix
