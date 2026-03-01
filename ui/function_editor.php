@@ -44,6 +44,7 @@ $npcFunctions = [
     'ComeCloser',
     'TakeGoldFromPlayer',
     'RentRoom',
+    'HireCarriage',
     'FollowPlayer',
     'Brawl',
     'GiveGoldTo',
@@ -79,6 +80,7 @@ $playerFunctions = [
     'ComeCloser',
     'TakeGoldFromPlayer',
     'RentRoom',
+    'HireCarriage',
     'Brawl',
     'GiveGoldTo',
     'GiveItemTo',
@@ -93,7 +95,7 @@ $playerFunctions = [
 $socialFunctions = ['Inspect', 'InspectSurroundings', 'Relax', 'TakeASeat', 'UseSoulGaze','Toast', 'Drink', 'Training','EndRitualCeremony','StartRitualCeremony','Surrender','EndConversation','MoveTo'];
 $movementFunctions = ['TravelTo', 'Follow', 'FollowPlayer', 'ComeCloser', 'WaitHere', 'IncreaseWalkSpeed', 'DecreaseWalkSpeed','MakeFollower'];
 $combatFunctions = ['Attack', 'AttackHunt', 'Brawl', 'SheatheWeapon'];
-$inventoryFunctions = ['OpenInventory', 'OpenInventory2', 'CheckInventory', 'GiveGoldTo', 'GiveItemTo', 'PickupItem', 'TakeGoldFromPlayer', 'RentRoom', 'CastSpell'];
+$inventoryFunctions = ['OpenInventory', 'OpenInventory2', 'CheckInventory', 'GiveGoldTo', 'GiveItemTo', 'PickupItem', 'TakeGoldFromPlayer', 'RentRoom', 'HireCarriage', 'CastSpell'];
 $playerOnlyFunctions = ['ReadQuestJournal', 'SetCurrentTask', 'GoToSleep'];
 
 
@@ -111,6 +113,8 @@ require_once($enginePath."lib/utils.php");
 require_once($enginePath."functions/functions.php");
 
 $currentList = $GLOBALS["DEFINED_FUNCTIONS"];
+$alwaysVisibleFunctions = ['RentRoom', 'HireCarriage'];
+$currentList = array_unique(array_merge($currentList, $alwaysVisibleFunctions));
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -515,6 +519,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         'PickupItem' => 'Pick up items from the ground using RefID from nearby_items',
                                         'TakeGoldFromPlayer' => 'Receive or take gold from player. Requires player confirmation.',
                                         'RentRoom' => 'Innkeeper-only: rent a room to the player for 10 gold and unlock the inn bed for 24 in-game hours.',
+                                        'HireCarriage' => 'Carriage-driver-only: hire a carriage for player fast travel with vanilla costs (20 major cities, 50 minor towns).',
                                         'CastSpell' => 'Cast a spell on a target actor (use spell names from known spells).'
                                     ];
                                     echo $descriptions[$func] ?? 'Inventory management function';

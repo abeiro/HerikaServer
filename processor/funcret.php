@@ -136,6 +136,11 @@ if (isset($returnFunction[2])) {
 	} else if ($functionCodeName == "RentRoom") {
 		$argName = "target";
 		$useFunctionsAgain = false;
+	} else if ($functionCodeName == "HireCarriage") {
+		$argName = "target";
+		$useFunctionsAgain = false;
+		$GLOBALS["OPENAI_MAX_TOKENS"] = "64";
+		$request = "(reply with one short line accepting payment and ending the conversation. Do not ask follow-up questions.) $request";
 
 	} else if ($functionCodeName == "FollowPlayer") {
 		terminate();

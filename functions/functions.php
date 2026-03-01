@@ -45,6 +45,7 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'Training',
     'Surrender',
     'RentRoom',
+    'HireCarriage',
     'EndConversation'
     //    'WaitHere'
 ];
@@ -109,6 +110,7 @@ $F_TRANSLATIONS_LOCAL["WaitHere"] = "{$GLOBALS["HERIKA_NAME"]} waits and loiters
 $F_TRANSLATIONS_LOCAL["GiveItemToPlayer"] = "{$GLOBALS["HERIKA_NAME"]} gives item (property target) to {$GLOBALS["PLAYER_NAME"]} (property listener)";
 $F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"] = "{$GLOBALS["HERIKA_NAME"]} takes amount (property target) of gold from {$GLOBALS["PLAYER_NAME"]}, once {$GLOBALS["PLAYER_NAME"]} is agree. infer amount from context.";
 $F_TRANSLATIONS_LOCAL["RentRoom"] = "{$GLOBALS["HERIKA_NAME"]} rents a room to {$GLOBALS["PLAYER_NAME"]} for 10 gold coins. Only innkeepers can use this action and it only applies to {$GLOBALS["PLAYER_NAME"]}.";
+$F_TRANSLATIONS_LOCAL["HireCarriage"] = "{$GLOBALS["HERIKA_NAME"]} accepts carriage fare and transports {$GLOBALS["PLAYER_NAME"]} to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
 $F_TRANSLATIONS_LOCAL["FollowPlayer"] = "{$GLOBALS["HERIKA_NAME"]} follows  {$GLOBALS["PLAYER_NAME"]}";
 $F_TRANSLATIONS_LOCAL["ComeCloser"] = "{$GLOBALS["HERIKA_NAME"]} aproaches to {$GLOBALS["PLAYER_NAME"]}";
 $F_TRANSLATIONS_LOCAL["Brawl"] = "{$GLOBALS["HERIKA_NAME"]} engages non lethtal combat with another actor, using weapons";
@@ -158,6 +160,7 @@ $F_RETURNMESSAGES_LOCAL["WaitHere"] = "{$GLOBALS["HERIKA_NAME"]} waits and stand
 $F_RETURNMESSAGES_LOCAL["GiveItemToPlayer"] = "{$GLOBALS["HERIKA_NAME"]} gave #TARGET# to {$GLOBALS["PLAYER_NAME"]}.If this a transaction, maybe TakeGoldFromPlayer is needed.";
 $F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"] = "{$GLOBALS["PLAYER_NAME"]} gave #TARGET# coins to {$GLOBALS["HERIKA_NAME"]}. If this a transaction, maybe GiveItemToPlayer is needed.";
 $F_RETURNMESSAGES_LOCAL["RentRoom"] = "{$GLOBALS["HERIKA_NAME"]} rented a room to {$GLOBALS["PLAYER_NAME"]} for 10 gold.";
+$F_RETURNMESSAGES_LOCAL["HireCarriage"] = "{$GLOBALS["HERIKA_NAME"]} accepted the fare to #TARGET# and ended the conversation.";
 $F_RETURNMESSAGES_LOCAL["FollowPlayer"] = "{$GLOBALS["HERIKA_NAME"]} follows {$GLOBALS["PLAYER_NAME"]}";
 $F_RETURNMESSAGES_LOCAL["Brawl"] = "{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES_LOCAL["ReturnBackHome"] = "{$GLOBALS["HERIKA_NAME"]} goes back home";
@@ -207,6 +210,7 @@ $F_NAMES_LOCAL["WaitHere"] = "WaitHere";
 $F_NAMES_LOCAL["GiveItemToPlayer"] = "GiveItemToPlayer";
 $F_NAMES_LOCAL["TakeGoldFromPlayer"] = "TakeMoneyFrom{$GLOBALS["PLAYER_NAME"]}"; // Mmm
 $F_NAMES_LOCAL["RentRoom"] = "RentRoom";
+$F_NAMES_LOCAL["HireCarriage"] = "HireCarriage";
 $F_NAMES_LOCAL["FollowPlayer"] = "FollowPlayer";
 $F_NAMES_LOCAL["ComeCloser"] = "ComeCloser";
 $F_NAMES_LOCAL["Brawl"] = "Fight";
@@ -237,6 +241,28 @@ if (isset($GLOBALS["CORE_LANG"])) {
 $GLOBALS["F_TRANSLATIONS"] = $F_TRANSLATIONS_LOCAL;
 $GLOBALS["F_RETURNMESSAGES"] = $F_RETURNMESSAGES_LOCAL;
 $GLOBALS["F_NAMES"] = $F_NAMES_LOCAL;
+
+$hireCarriageDestinations = [
+    "Whiterun",
+    "Solitude",
+    "Markarth",
+    "Riften",
+    "Windhelm",
+    "Morthal",
+    "Dawnstar",
+    "Falkreath",
+    "Winterhold",
+    "Darkwater Crossing",
+    "Dragon Bridge",
+    "Ivarstead",
+    "Karthwasten",
+    "Kynesgrove",
+    "Old Hroldan",
+    "Riverwood",
+    "Rorikstead",
+    "Shor's Stone",
+    "Stonehills",
+];
 
 $GLOBALS["FUNCTIONS"] = [
     [
@@ -627,6 +653,21 @@ $GLOBALS["FUNCTIONS"] = [
                 ],
             ],
             "required" => [],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["HireCarriage"],
+        "description" => $F_TRANSLATIONS_LOCAL["HireCarriage"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Vanilla carriage destination for {$GLOBALS["PLAYER_NAME"]}",
+                    "enum" => $hireCarriageDestinations,
+                ],
+            ],
+            "required" => ["target"],
         ],
     ],
     [
@@ -1032,6 +1073,7 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         //'GiveItemToPlayer',
         'TakeGoldFromPlayer',
         'RentRoom',
+        'HireCarriage',
         'FollowPlayer',
         'Brawl',
         'GiveGoldTo',
@@ -1076,6 +1118,7 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         //'GiveItemToPlayer',
         'TakeGoldFromPlayer',
         'RentRoom',
+        'HireCarriage',
         'Brawl',
         'GiveGoldTo',
         'GiveItemTo',
@@ -1127,6 +1170,27 @@ if ($GLOBALS["ENABLED_FUNCTIONS"]) {
             if (!$isInnkeeper) {
                 error_log("[DEBUG functions.php] {$GLOBALS["HERIKA_NAME"]} is not innkeeper, removing RentRoom function");
                 unsetFunction('RentRoom');
+            }
+        }
+        if (in_array("HireCarriage", $GLOBALS["ENABLED_FUNCTIONS"])) {
+            $allowedDriversRaw = isset($GLOBALS["CARRIAGE_DRIVERS"]) ? (string) $GLOBALS["CARRIAGE_DRIVERS"] : "";
+            if (trim($allowedDriversRaw) === "") {
+                // Backward-compatible fallback for older conf.php files that don't have CARRIAGE_DRIVERS yet.
+                $allowedDriversRaw = "Bjorlam, Alfarinn, Kibell, Sigaar, Thaer, Engar, Gunjar, Markus";
+            }
+            $allowedDrivers = array_filter(array_map("trim", explode(",", $allowedDriversRaw)));
+            $isAllowedDriver = false;
+
+            foreach ($allowedDrivers as $driverName) {
+                if (strcasecmp($driverName, $GLOBALS["HERIKA_NAME"]) === 0) {
+                    $isAllowedDriver = true;
+                    break;
+                }
+            }
+
+            if (!$isAllowedDriver) {
+                error_log("[DEBUG functions.php] {$GLOBALS["HERIKA_NAME"]} is not in CARRIAGE_DRIVERS, removing HireCarriage function");
+                unsetFunction("HireCarriage");
             }
         }
     }

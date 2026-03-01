@@ -61,6 +61,10 @@
                     require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
                     $goldAmount = getGoldFromMetadata();
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). You currently have {$goldAmount} gold. Put the amount in the 'item' field.";
+                } else if ($fname == "HireCarriage") {
+                    $majorDestinations = "Whiterun, Solitude, Markarth, Riften, Windhelm";
+                    $minorDestinations = "Morthal, Dawnstar, Falkreath, Winterhold, Darkwater Crossing, Dragon Bridge, Ivarstead, Karthwasten, Kynesgrove, Old Hroldan, Riverwood, Rorikstead, Shor's Stone, Stonehills";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). Vanilla carriage costs: 20 gold for major destinations ({$majorDestinations}) and 50 gold for minor destinations ({$minorDestinations}). Put the destination in the 'target' field. Keep the spoken line short, accept payment, and do not ask questions.";
                 } else {
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                 }
