@@ -35,6 +35,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_player'])) {
         if (isset($_POST['appearance'])) {
             $player->set('appearance', $_POST['appearance']);
         }
+        if (isset($_POST['bio'])) {
+            $player->set('bio', $_POST['bio']);
+        }
+        $bioKnownByAll = (isset($_POST['bio_known_by_all']) && $_POST['bio_known_by_all'] === 'true') ? 'true' : 'false';
+        $player->set('bio_known_by_all', $bioKnownByAll);
         if (isset($_POST['speech_style'])) {
             $player->set('speech_style', $_POST['speech_style']);
         }
@@ -61,6 +66,8 @@ $allPlayerData = $player->getAll();
 // Extract main fields
 $playerName = $allPlayerData['player_name'] ?? 'Unknown';
 $appearance = $allPlayerData['appearance'] ?? '';
+$bio = $allPlayerData['bio'] ?? '';
+$bioKnownByAll = ($allPlayerData['bio_known_by_all'] ?? 'false') === 'true';
 $speechStyle = $allPlayerData['speech_style'] ?? '';
 
 // Load JSON data (equipment, inventory, skills, stats)
@@ -708,6 +715,28 @@ if (!$isEmbed) {
                 <label for="appearance">Physical Description</label>
                 <textarea id="appearance" name="appearance" placeholder="Describe your character's appearance..."><?php echo htmlspecialchars($appearance); ?></textarea>
                 <span class="hint">Physical description of your character used for AI context.</span>
+            </div>
+
+            <!-- Bio Section -->
+            <div class="content-section">
+                <h2>📜 Player Bio</h2>
+                <label for="bio">Character Bio</label>
+                <textarea id="bio" name="bio" placeholder="Describe your character's background and story..."><?php echo htmlspecialchars($bio); ?></textarea>
+                <span class="hint">Backstory and character context. Empty by default.</span>
+                <div style="margin-top: 10px;">
+                    <input type="hidden" name="bio_known_by_all" value="false">
+                    <label for="bio_known_by_all" style="display: inline-flex; align-items: center; gap: 8px; margin: 0;">
+                        <input
+                            type="checkbox"
+                            id="bio_known_by_all"
+                            name="bio_known_by_all"
+                            value="true"
+                            <?php echo $bioKnownByAll ? 'checked' : ''; ?>
+                        >
+                        Player Biography Known by All
+                    </label>
+                </div>
+                <span class="hint">If enabled, all NPCs know this bio. If disabled, only The Narrator knows it.</span>
             </div>
 
             <!-- Speech Style Section -->

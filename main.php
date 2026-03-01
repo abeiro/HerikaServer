@@ -183,7 +183,6 @@ requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"p
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext","instruction","init"])) {
     // This is just a mark that user has made an input request. We will check later when waiting for LLm response 
     // if user has made input after initial request, so we can abort it.
-    $GLOBALS["ADD_PLAYER_BIOS"]=true;
     // $db = new sql();
     $db->insert(
         'eventlog',
@@ -1016,8 +1015,6 @@ if (in_array($gameRequest[0],["bored"])) {
         logEvent($localGameRequest);
     }
     
-    $GLOBALS["ADD_PLAYER_BIOS"]=false;
-
     if ((isset($GLOBALS["BORED_EVENT_SERVERSIDE"])&&($GLOBALS["BORED_EVENT_SERVERSIDE"]))) {
         Logger::info("Redirecting bored event to rolemaster");
         `php service/manager.php rolemaster instruction ""`;
@@ -1064,7 +1061,6 @@ if (in_array($gameRequest[0],["combatbark"])) {
     $localGameRequest[0]="infoaction";
     $localGameRequest[3].=" ({$GLOBALS["HERIKA_NAME"]} shouts during combat)";
     logEvent($localGameRequest);
-    $GLOBALS["ADD_PLAYER_BIOS"]=false;
 }
 
 
@@ -1078,7 +1074,6 @@ if (in_array($gameRequest[0],["instruction"])) {
     $FUNCTIONS_ARE_ENABLED=true;
     // Remove any "SpeakerName:" prefix to prevent player/NPC attribution in instructions
     $gameRequest[3] = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
-    $GLOBALS["ADD_PLAYER_BIOS"]=false;
 }
 
 if (in_array($gameRequest[0],["suggestion"])) {
@@ -1288,8 +1283,6 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     // chat entries starting by "(Context%" are standard skyrim dialogue
 
     $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny => CHAOS MODE
-   
-    $GLOBALS["ADD_PLAYER_BIOS"]=false;
 
 } else
     $sqlfilter=" and type<>'prechat' "; // Will dismiss prechat entries by default. prechat are LLM responses still not displayed in-game
@@ -1988,6 +1981,21 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
 // Use centralized function from data_functions.php
 $dynamicBiography = buildDynamicBiography($GLOBALS);
 
+$playerBioSection = "";
+try {
+    require_once(__DIR__.DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."core".DIRECTORY_SEPARATOR."player.class.php");
+    $playerObj = new Player();
+    $playerBio = trim((string)($playerObj->get('bio') ?? ""));
+    $bioKnownByAll = $playerObj->get('bio_known_by_all') === 'true';
+    $isNarrator = ($GLOBALS["HERIKA_NAME"] === "The Narrator");
+
+    if ($playerBio !== "" && ($bioKnownByAll || $isNarrator)) {
+        $playerBioSection = "\n\n<player_character>\n# Player Character: {$GLOBALS["PLAYER_NAME"]}\n{$playerBio}\n</player_character>";
+    }
+} catch (Exception $e) {
+    Logger::debug("Could not load player bio for prompt: " . $e->getMessage());
+}
+
 
 if (isset($GLOBALS["PROFILE_PROMPT"])) {
     $dynamicBiography.="\n<group>\n#Part of a group\n{$GLOBALS["PROFILE_PROMPT"]}\n</group>";
@@ -2107,7 +2115,7 @@ requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"c
 if (!empty($GLOBALS["OGHMA_HINT"])) {
 
     $head[] = array('role' => 'system', 'content' =>  
-        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
+        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>".$playerBioSection."\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
 
     );
@@ -2115,7 +2123,7 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
     $GLOBALS["COMMAND_PROMPT"] = "";
 } else {
     $head[] = array('role' => 'system', 'content' =>  
-        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
+        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>".$playerBioSection."\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
     );
     //avoid reinjecting command prompt that we have already appended
