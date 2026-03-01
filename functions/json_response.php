@@ -65,6 +65,9 @@
                     $majorDestinations = "Whiterun, Solitude, Markarth, Riften, Windhelm";
                     $minorDestinations = "Morthal, Dawnstar, Falkreath, Winterhold, Darkwater Crossing, Dragon Bridge, Ivarstead, Karthwasten, Kynesgrove, Old Hroldan, Riverwood, Rorikstead, Shor's Stone, Stonehills";
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). Vanilla carriage costs: 20 gold for major destinations ({$majorDestinations}) and 50 gold for minor destinations ({$minorDestinations}). Put the destination in the 'target' field. Keep the spoken line short, accept payment, and do not ask questions.";
+                } else if ($fname == "HireFerry") {
+                    $fiftyGoldDestinations = "Windhelm, Dawnstar, Solitude, Giant's Tooth";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). Vanilla ferry costs: 50 gold for {$fiftyGoldDestinations}, 500 gold for Icewater Jetty, and free travel to Castle Volkihar. Put the destination in the 'target' field. Keep the spoken line short, accept payment when needed, and do not ask questions.";
                 } else {
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                 }

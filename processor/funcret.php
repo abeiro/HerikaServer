@@ -141,6 +141,11 @@ if (isset($returnFunction[2])) {
 		$useFunctionsAgain = false;
 		$GLOBALS["OPENAI_MAX_TOKENS"] = "64";
 		$request = "(reply with one short line accepting payment and ending the conversation. Do not ask follow-up questions.) $request";
+	} else if ($functionCodeName == "HireFerry") {
+		$argName = "target";
+		$useFunctionsAgain = false;
+		$GLOBALS["OPENAI_MAX_TOKENS"] = "64";
+		$request = "(reply with one short line accepting payment and ending the conversation. Do not ask follow-up questions.) $request";
 
 	} else if ($functionCodeName == "FollowPlayer") {
 		terminate();
