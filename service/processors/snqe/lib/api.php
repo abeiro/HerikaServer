@@ -793,6 +793,14 @@ function TellTopicToPlayer(
             );
         }
 
+        $GLOBALS["db"]->upsertRowOnConflict(
+            'conf_opts',
+            array(
+                'id' => "snqe_pending_step",
+                'value' => "Waiting for {$quest_data["npcs"][$npc_ref]["name"]}"
+            ),
+            "id"
+        );
         SNQEQuestManager::updateQuestData($quest_id, $quest_data);
         return "pending";
 
@@ -949,6 +957,15 @@ function CheckTopicToPlayer(
     // Still pending
     $quest_data["topics"][$topic_ref] = $topic;
     SNQEQuestManager::updateQuestData($quest_id, ["topics" => $quest_data["topics"]]);
+
+    $GLOBALS["db"]->upsertRowOnConflict(
+        'conf_opts',
+        array(
+            'id' => "snqe_pending_step",
+            'value' => "Waiting for {$topic["info"]}"
+        ),
+        "id"
+    );
     return "pending";
 }
 
@@ -1090,6 +1107,14 @@ function WaitToItemBeRecovered(
     $item["recovered"] = "pending";
     $quest_data["items"][$item_ref] = $item;
     SNQEQuestManager::updateQuestData($quest_id, ["items" => $quest_data["items"]]);
+    $GLOBALS["db"]->upsertRowOnConflict(
+        'conf_opts',
+        array(
+            'id' => "snqe_pending_step",
+            'value' => "Waiting for player to get item <{$item["name"]}>"
+        ),
+        "id"
+    );
     return "pending";
 }
 
@@ -1443,6 +1468,14 @@ function CompleteQuest(
     error_log("SELECT gamets FROM speech WHERE speaker = '$playerName' AND gamets > $quest_lastgamets ORDER BY gamets DESC LIMIT 1");
     if (!$playerSpokenAfter) {
         error_log("[CompleteQuest]\tPlayer has not spoken yet after quest event. Deferring completion.");
+        $GLOBALS["db"]->upsertRowOnConflict(
+            'conf_opts',
+            array(
+                'id' => "snqe_pending_step",
+                'value' => "Waiting for player to speak after quest completion event"
+            ),
+            "id"
+        );
         return;
     }
 
@@ -1467,7 +1500,14 @@ function CompleteQuest(
     );
 
     SNQEQuestManager::updateQuestState($quest_id, 'finished');
-
+    $GLOBALS["db"]->upsertRowOnConflict(
+        'conf_opts',
+        array(
+            'id' => "snqe_pending_step",
+            'value' => ""
+        ),
+        "id"
+    );
     error_log("[CompleteQuest]\tQuest '$quest_id' marked as finished");
 }
 
@@ -2929,7 +2969,7 @@ function WaitForPickUpItem(
     }
 
     if ($npc_ref == "player") {
-        $player= new Player();
+        $player = new Player();
         $playerInventory = json_decode($player->get("inventory"), true);
         foreach ($playerInventory as $itemInIventory) {
             if ($itemInIventory["name"] == $item["name"]) {

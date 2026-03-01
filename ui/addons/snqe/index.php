@@ -65,10 +65,27 @@ function getRunningQuests($db) {
 
 $runningQuests = getRunningQuests($db);
 
+// Fetch current pending step
+function getPendingStep($db) {
+    try {
+        $query = "SELECT * FROM conf_opts WHERE id='snqe_pending_step'";
+        $result = $db->fetchAll($query);
+        if (!empty($result)) {
+            return $result[0]['value'];
+        }
+        return 'No pending step';
+    } catch (Exception $e) {
+        Logger::error("Failed to fetch pending step: " . $e->getMessage());
+        return 'Error fetching pending step';
+    }
+}
+
+$pendingStep = getPendingStep($db);
+
 // Handle AJAX request for running quests
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_running_quests') {
     header('Content-Type: application/json');
-    echo json_encode(['quests' => $runningQuests]);
+    echo json_encode(['quests' => $runningQuests, 'pendingStep' => getPendingStep($GLOBALS['db'])]);
     exit;
 }
 
@@ -263,6 +280,33 @@ function sanitize_input($input)
             font-style: italic;
         }
 
+        .pending-step-container {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #16213e;
+        }
+
+        .pending-step-container h3 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pending-step-value {
+            background: #1a1a2e;
+            border: 1px solid #16213e;
+            border-left: 3px solid #7c3aed;
+            border-radius: 6px;
+            padding: 15px;
+            color: #e0e0e0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            word-break: break-word;
+        }
+
         h1 {
             color: #e0e0e0;
             margin-bottom: 30px;
@@ -423,20 +467,28 @@ function sanitize_input($input)
             <h1>📖 Quest Scenario Generator</h1>
 
             <form>
+                <div class="button-group">
+                    <button type="button" class="btn-primary" onclick="generateScenario()">Generate Scenario</button>
+                    <button type="button" class="btn-primary" onclick="submitFormData()"
+                        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">Create 1st step</button>
+                    <button type="button" class="btn-clear" onclick="clearAllData()">Clear Data</button>
+                </div>
+                <br />
+                <div class="loading" id="loading">Generating scenario...</div>
+                <br />
                 <div class="form-group">
-                    <label for="suggested">Suggested</label>
+                    <label for="suggested">User suggestions</label>
                     <textarea name="suggested" id="suggested" placeholder="Enter suggestions here..."></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label for="userprompt">User Prompt</label>
-                    <textarea name="userprompt" id="userprompt"
-                        placeholder="Enter your quest scenario prompt here..."></textarea>
+                    <label for="userprompt">Quest Prompt</label>
+                    <textarea name="userprompt" id="userprompt" readonly="true" ></textarea>
                 </div>
 
                 <div class="form-group">
                     <label for="questtitle">Quest Title</label>
-                    <input type="text" name="questtitle" id="questtitle" placeholder="Quest title will appear here..."/>
+                    <input type="text" name="questtitle" id="questtitle" placeholder="Quest title will appear here..." readonly />
                 </div>
 
                 <div class="form-group">
@@ -459,14 +511,7 @@ function sanitize_input($input)
                     <select name="locationlist" id="locationlist" multiple readonly></select>
                 </div>
 
-                <div class="button-group">
-                    <button type="button" class="btn-primary" onclick="generateScenario()">Generate Scenario</button>
-                    <button type="button" class="btn-primary" onclick="submitFormData()"
-                        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">Create 1st step</button>
-                    <button type="button" class="btn-clear" onclick="clearAllData()">Clear Data</button>
-                </div>
-
-                <div class="loading" id="loading">Generating scenario...</div>
+                
             </form>
         </div>
 
@@ -488,6 +533,13 @@ function sanitize_input($input)
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
+            </div>
+            
+            <div class="pending-step-container">
+                <h3>⏳ Current Pending Step</h3>
+                <div class="pending-step-value" id="pendingStepValue">
+                    <?php echo htmlspecialchars($pendingStep); ?>
+                </div>
             </div>
         </div>
     </div>
@@ -521,6 +573,11 @@ function sanitize_input($input)
                         questsList.innerHTML = html;
                     } else {
                         questsList.innerHTML = '<div class="no-running-quests">No running quests</div>';
+                    }
+                    
+                    // Update pending step
+                    if (data.pendingStep) {
+                        document.getElementById('pendingStepValue').textContent = data.pendingStep;
                     }
                 })
                 .catch(error => {
@@ -575,6 +632,10 @@ function sanitize_input($input)
             const savedTitle = localStorage.getItem('snqe_questtitle');
             if (savedTitle) {
                 document.querySelector('input[name="questtitle"]').value = savedTitle;
+                document.querySelector('textarea[name="suggested"]').style.display="none"
+
+            } else {
+                document.querySelector('textarea[name="suggested"]').style.display="block"
             }
         }
 
@@ -685,9 +746,6 @@ function sanitize_input($input)
                 });
         }
 
-        function generateScenario() {
-            submitToAgent0();
-        }
 
         function submitFormData() {
             const userprompt = document.querySelector('textarea[name="userprompt"]').value;
