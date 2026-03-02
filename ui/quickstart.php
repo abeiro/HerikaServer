@@ -395,13 +395,21 @@ foreach ($quickstartConf as $pname => $parms) {
 
     } else if ($parms["type"] == "select") {
         // Display name mappings for UI labels
-        $selectDisplayNames = [ 'xtts-fastapi' => 'xtts/chatterbox' ];
+        $selectDisplayNames = [
+            'pockettts'    => 'PocketTTS',
+            'chatterbox'   => 'Chatterbox',
+            'xtts-fastapi' => 'XTTS',
+            'melotts'      => 'MeloTTS',
+            'parakeet'     => 'Parakeet',
+            'deepgram'     => 'Deepgram',
+            'localwhisper' => 'Local Whisper',
+        ];
         if ($pname == "TTSFUNCTION") {
-            $parms["values"] = ["melotts","xtts-fastapi"];
-            $parms["description"] = "Select the TTS service you wish to use. <br>You can install MeloTTS and XTTS/Chatterbox in the CHIM Launcher under <b>Install Components.</b>";
+            $parms["values"] = ["pockettts","chatterbox","xtts-fastapi","melotts"];
+            $parms["description"] = "Select the TTS service you wish to use. <br>You can install PocketTTS, Chatterbox, XTTS and MeloTTS in the CHIM Launcher under <b>Install Components.</b>";
         } else if ($pname == "STTFUNCTION") {
-            $parms["values"] = ["deepgram","localwhisper"];
-            $parms["description"] = "Select the STT service you wish to use (Deepgram or Whisper).";
+            $parms["values"] = ["parakeet","deepgram","localwhisper"];
+            $parms["description"] = "Select the STT service you wish to use.";
         }
         echo "<select class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' $FORCE_DISABLED>";
         foreach ($parms["values"] as $item) {

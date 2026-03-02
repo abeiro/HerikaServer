@@ -418,6 +418,8 @@ $gsSections = [
         [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'ITEM_BLACKLIST', 'type' => 'longstring' ],
+        [ 'name' => 'CARRIAGE_DRIVERS', 'type' => 'longstring' ],
+        [ 'name' => 'FERRY_DRIVERS', 'type' => 'longstring' ],
         [ 'name' => 'EVENT_TYPE_FILTER', 'type' => 'longstring' ],
         [ 'name' => 'GROUND_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'INVENTORY_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
@@ -1060,9 +1062,28 @@ function current_value(string $flatName, array $currentConf) {
                     <div class="provider-body grid">
                         <label for="TTSFUNCTION">TTS Selection</label>
                         <select name="TTSFUNCTION" id="TTSFUNCTION" onchange="document.getElementById('gs_tab').value='tab-tts'; this.form.submit()">
-                            <?php foreach ($ttsOptions as $opt): ?>
-                                <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$ttsSelRender===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($ttsDisplayNames[$opt] ?? $opt); ?></option>
-                            <?php endforeach; ?>
+                            <?php
+                            $ttsRecommended = ['pockettts', 'chatterbox', 'xtts-fastapi', 'inworld'];
+                            $ttsDeprecated  = ['mimic3', 'azure', 'deepgram', 'koboldcpp', 'kokoro'];
+                            $ttsOthers = array_values(array_filter($ttsOptions, function($o) use ($ttsRecommended, $ttsDeprecated) {
+                                return !in_array($o, $ttsRecommended, true) && !in_array($o, $ttsDeprecated, true);
+                            }));
+                            $renderOpt = function($opt) use ($ttsSelRender, $ttsDisplayNames) {
+                                $sel = ((string)$ttsSelRender === (string)$opt) ? ' selected' : '';
+                                echo '<option value="'.htmlspecialchars($opt).'"'.$sel.'>'.htmlspecialchars($ttsDisplayNames[$opt] ?? $opt).'</option>';
+                            };
+                            echo '<optgroup label="— Recommended —">';
+                            foreach ($ttsRecommended as $opt) { if (in_array($opt, $ttsOptions, true)) $renderOpt($opt); }
+                            echo '</optgroup>';
+                            if (!empty($ttsOthers)) {
+                                echo '<optgroup label="— Others —">';
+                                foreach ($ttsOthers as $opt) { $renderOpt($opt); }
+                                echo '</optgroup>';
+                            }
+                            echo '<optgroup label="— Deprecated —">';
+                            foreach ($ttsDeprecated as $opt) { if (in_array($opt, $ttsOptions, true)) $renderOpt($opt); }
+                            echo '</optgroup>';
+                            ?>
                         </select>
                         
                         <div></div>
@@ -1320,9 +1341,32 @@ function current_value(string $flatName, array $currentConf) {
                     <div class="provider-body grid">
                         <label for="STTFUNCTION">STT Selection</label>
                         <select name="STTFUNCTION" id="STTFUNCTION" onchange="document.getElementById('gs_tab').value='tab-stt'; this.form.submit()">
-                            <?php foreach ($sttOptions as $opt): ?>
-                                <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$sttSelRender===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
-                            <?php endforeach; ?>
+                            <?php
+                            $sttDisplayNames = [
+                                'none'        => 'None',
+                                'parakeet'    => 'Parakeet',
+                                'deepgram'    => 'Deepgram',
+                                'whisper'     => 'OpenAI Whisper',
+                                'localwhisper'=> 'Local Whisper',
+                                'azure'       => 'Azure STT',
+                            ];
+                            $sttRecommended = ['parakeet', 'deepgram', 'whisper', 'localwhisper'];
+                            $sttOthers = array_values(array_filter($sttOptions, function($o) use ($sttRecommended) {
+                                return !in_array($o, $sttRecommended, true);
+                            }));
+                            $renderSttOpt = function($opt) use ($sttSelRender, $sttDisplayNames) {
+                                $sel = ((string)$sttSelRender === (string)$opt) ? ' selected' : '';
+                                echo '<option value="'.htmlspecialchars($opt).'"'.$sel.'>'.htmlspecialchars($sttDisplayNames[$opt] ?? $opt).'</option>';
+                            };
+                            echo '<optgroup label="— Recommended —">';
+                            foreach ($sttRecommended as $opt) { if (in_array($opt, $sttOptions, true)) $renderSttOpt($opt); }
+                            echo '</optgroup>';
+                            if (!empty($sttOthers)) {
+                                echo '<optgroup label="— Others —">';
+                                foreach ($sttOthers as $opt) { $renderSttOpt($opt); }
+                                echo '</optgroup>';
+                            }
+                            ?>
                         </select>
                         
                     </div>

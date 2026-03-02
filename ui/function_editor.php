@@ -43,6 +43,13 @@ $npcFunctions = [
     'WaitHere',
     'ComeCloser',
     'TakeGoldFromPlayer',
+    'RentRoom',
+    'HireCarriage',
+    'HireFerry',
+    'AddBounty',
+    'PayBounty',
+    'ArrestPlayer',
+    'ForgiveCrime',
     'FollowPlayer',
     'Brawl',
     'GiveGoldTo',
@@ -77,6 +84,13 @@ $playerFunctions = [
     'SetCurrentTask',
     'ComeCloser',
     'TakeGoldFromPlayer',
+    'RentRoom',
+    'HireCarriage',
+    'HireFerry',
+    'AddBounty',
+    'PayBounty',
+    'ArrestPlayer',
+    'ForgiveCrime',
     'Brawl',
     'GiveGoldTo',
     'GiveItemTo',
@@ -91,7 +105,8 @@ $playerFunctions = [
 $socialFunctions = ['Inspect', 'InspectSurroundings', 'Relax', 'TakeASeat', 'UseSoulGaze','Toast', 'Drink', 'Training','EndRitualCeremony','StartRitualCeremony','Surrender','EndConversation','MoveTo'];
 $movementFunctions = ['TravelTo', 'Follow', 'FollowPlayer', 'ComeCloser', 'WaitHere', 'IncreaseWalkSpeed', 'DecreaseWalkSpeed','MakeFollower'];
 $combatFunctions = ['Attack', 'AttackHunt', 'Brawl', 'SheatheWeapon'];
-$inventoryFunctions = ['OpenInventory', 'OpenInventory2', 'CheckInventory', 'GiveGoldTo', 'GiveItemTo', 'PickupItem', 'TakeGoldFromPlayer', 'CastSpell'];
+$inventoryFunctions = ['OpenInventory', 'OpenInventory2', 'CheckInventory', 'GiveGoldTo', 'GiveItemTo', 'PickupItem', 'TakeGoldFromPlayer', 'RentRoom', 'HireCarriage', 'HireFerry', 'CastSpell'];
+$crimeFunctions = ['AddBounty', 'PayBounty', 'ArrestPlayer', 'ForgiveCrime'];
 $playerOnlyFunctions = ['ReadQuestJournal', 'SetCurrentTask', 'GoToSleep'];
 
 
@@ -109,6 +124,8 @@ require_once($enginePath."lib/utils.php");
 require_once($enginePath."functions/functions.php");
 
 $currentList = $GLOBALS["DEFINED_FUNCTIONS"];
+$alwaysVisibleFunctions = ['RentRoom', 'HireCarriage', 'HireFerry', 'AddBounty', 'PayBounty', 'ArrestPlayer', 'ForgiveCrime'];
+$currentList = array_unique(array_merge($currentList, $alwaysVisibleFunctions));
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -512,9 +529,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         'GiveItemTo' => 'Give items to another character.',
                                         'PickupItem' => 'Pick up items from the ground using RefID from nearby_items',
                                         'TakeGoldFromPlayer' => 'Receive or take gold from player. Requires player confirmation.',
+                                        'RentRoom' => 'Innkeeper-only: rent a room to the player for 10 gold and unlock the inn bed for 24 in-game hours.',
+                                        'HireCarriage' => 'Carriage-driver-only: hire a carriage for player fast travel with vanilla costs (20 major cities, 50 minor towns).',
+                                        'HireFerry' => 'Ferryman-only: hire a ferry for player fast travel with vanilla costs (50 standard routes, 500 Icewater Jetty, free Castle Volkihar).',
                                         'CastSpell' => 'Cast a spell on a target actor (use spell names from known spells).'
                                     ];
                                     echo $descriptions[$func] ?? 'Inventory management function';
+                                    ?>
+                                </div>
+                            </label>
+                        </div>
+                    <?php 
+                        endif;
+                    endforeach; 
+                    ?>
+                </div>
+
+                <!-- Crime & Bounty Functions -->
+                <div class="function-category">
+                    <h3>⚖️ Crime & Bounty (Guard-Only)</h3>
+                    <?php
+                    foreach ($crimeFunctions as $func):
+                        if (in_array($func, $currentList)):
+                    ?>
+                        <div class="function-item">
+                            <input type="checkbox" name="functions[]" value="<?= htmlspecialchars($func) ?>" id="func_<?= $func ?>"
+                                <?= in_array($func, $currentOnes ?? []) ? 'checked' : '' ?>>
+                            <label for="func_<?= $func ?>">
+                                <?= htmlspecialchars($func) ?>
+                                <div class="function-description">
+                                    <?php
+                                    $descriptions = [
+                                        'AddBounty' => 'Guard-only: add crime bounty to player using vanilla crime types (Assault=40, Murder=1000, Theft=100, etc.).',
+                                        'PayBounty' => 'Guard-only: player pays off bounty. Stolen items are confiscated automatically.',
+                                        'ArrestPlayer' => 'Guard-only: arrest player and send to jail. Inventory confiscated.',
+                                        'ForgiveCrime' => 'Guard-only: forgive crimes and clear bounty (persuasion, bribe, thane status).',
+                                    ];
+                                    echo $descriptions[$func] ?? 'Crime-related guard function';
                                     ?>
                                 </div>
                             </label>

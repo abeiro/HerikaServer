@@ -27,7 +27,7 @@ error_log("[OGHMA DEBUG] MINIME_T5=" . var_export($GLOBALS["MINIME_T5"] ?? 'NOT 
 
 if ($minimeEnabled || $oghmaCustomEnabled) {
     if ($oghmaInfiniumEnabled) {
-        if (in_array($gameRequest[0], ["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat", "instruction", "suggestion"])) {
+        if (in_array($gameRequest[0], ["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat", "continue", "instruction", "suggestion"])) {
             
             if ($gameRequest[0] === "rechat") {
                 $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..)
