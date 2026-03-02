@@ -81,7 +81,7 @@ function getPendingStep($db) {
 
 $pendingStep = getPendingStep($db);
 
-// AJAX: running quests
+// Handle AJAX request for running quests
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_running_quests') {
     header('Content-Type: application/json');
     echo json_encode(['quests' => $runningQuests, 'pendingStep' => getPendingStep($GLOBALS['db'])]);
@@ -344,6 +344,15 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
             <div class="snqe-page-title">🧭 AI Quest Manager</div>
 
             <form id="snqeForm">
+                <div class="btn-group">
+                    <button type="button" class="btn-snqe btn-snqe-generate" onclick="generateScenario()">Generate Scenario</button>
+                    <button type="button" class="btn-snqe btn-snqe-create" onclick="submitFormData()">Create 1st Step</button>
+                    <button type="button" class="btn-snqe btn-snqe-clear" onclick="clearAllData()">Clear Data</button>
+                </div>
+
+                <div class="loading-msg" id="loading">Generating scenario...</div>
+
+
                 <div class="form-group">
                     <label for="suggested">User suggestions</label>
                     <textarea name="suggested" id="suggested" placeholder="Enter suggestions here..."></textarea>
@@ -378,13 +387,6 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
                     <select name="locationlist" id="locationlist" multiple></select>
                 </div>
 
-                <div class="btn-group">
-                    <button type="button" class="btn-snqe btn-snqe-generate" onclick="generateScenario()">Generate Scenario</button>
-                    <button type="button" class="btn-snqe btn-snqe-create" onclick="submitFormData()">Create 1st Step</button>
-                    <button type="button" class="btn-snqe btn-snqe-clear" onclick="clearAllData()">Clear Data</button>
-                </div>
-
-                <div class="loading-msg" id="loading">Generating scenario...</div>
             </form>
         </div>
 
