@@ -372,6 +372,7 @@ function CheckNPCSpawn(
         $extData["background_life_enabled"] = true;
         $extData["background_life_last_updated"] = $GLOBALS["last_gamets"];
         $extData["middle_term_enabled"] = 1;
+        $extData["starring_in_quest"] = $quest_id;
         $npcLocalData["dynamic_profile"] = 1;
 
         $npcLocalData["speechstyle"] = getSpeechStyleText(strtolower($npc["race"]), strtolower($npc["class"])) ?? $npc["speechStyle"];
@@ -1782,6 +1783,14 @@ function WaitforCombatEnd(
     }
     // Still pending
     error_log("[WaitforCombatEnd] Combat for NPC <$cnNpc> still ongoing (attempt {$npc["combat_attempts"]})");
+    $GLOBALS["db"]->upsertRowOnConflict(
+        'conf_opts',
+        array(
+            'id' => "snqe_pending_step",
+            'value' => "Defeat NPC <$cnNpc>"
+        ),
+        "id"
+    );
     $npc["in_combat"] = "pending";
     $quest_data["npcs"][$npc_ref] = $npc;
     SNQEQuestManager::updateQuestData($quest_id, ["npcs" => $quest_data["npcs"]]);
@@ -2199,16 +2208,17 @@ function WaitAtLocation(
         WHERE npc_name = '$cn'
         AND (metadata->'last_coords'->>'last_updated')::bigint > {$quest_data["started"]}
         AND COALESCE(metadata->'last_coords'->>'3', '') <> ''";
+        error_log($q);
         $gpsloc = $GLOBALS["db"]->fetchOne($q);
         if ($gpsloc) {
-            $location = $gpsloc["location"];
+            $locationGps = $gpsloc["location"];
 
-            error_log("<$locGuess> vs <$location>");
-            if (strpos($location, $locGuess) !== false) {
+            error_log("<$locationGps> vs <$location>");
+            if (strpos($location, $locationGps) !== false) {
                 $npcAtLocation = true;
             }
 
-            if (strpos($locGuess, $location) !== false) {
+            if (strpos($locationGps, $location) !== false) {
                 $npcAtLocation = true;
             }
         }
@@ -2217,6 +2227,11 @@ function WaitAtLocation(
             $atLocation = false;
         }
 
+    }
+
+    if (isset($npc_ref) && $npcAtLocation) {
+        error_log("[WaitAtLocation] Reference NPC <{$quest_data["npcs"][$npc_ref]["name"]}> is at location <$location>");
+        $atLocation = true;
     }
 
     if ($atLocation) {
@@ -2255,38 +2270,40 @@ function WaitAtLocation(
         }
     }
 
-    if ($quest_data["location_wait"][$wait_key]["attempts"] == 40) {
-        if ($npc_ref && isset($quest_data["npcs"][$npc_ref])) { // Track waiting NPC
-            $npcMaster = new NpcMaster();
-            $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
-            $unsignedInt = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
+    if (!$npc_ref) {
+        if ($quest_data["location_wait"][$wait_key]["attempts"] == 40) {
+            if ($npc_ref && isset($quest_data["npcs"][$npc_ref])) { // Track waiting NPC
+                $npcMaster = new NpcMaster();
+                $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
+                $unsignedInt = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
+                $GLOBALS["db"]->insert(
+                    'responselog',
+                    [
+                        'localts' => time(),
+                        'sent' => 0,
+                        'actor' => "rolemaster",
+                        'text' => "",
+                        'action' => "rolecommand|QuestTrackReference@0x{$currentNpcData["refid"]}",
+                        'tag' => "",
+                    ]
+                );
+            }
+
+            // Remember player where to go
             $GLOBALS["db"]->insert(
                 'responselog',
                 [
+
                     'localts' => time(),
                     'sent' => 0,
                     'actor' => "rolemaster",
                     'text' => "",
-                    'action' => "rolecommand|QuestTrackReference@0x{$currentNpcData["refid"]}",
+                    'action' => "rolecommand|UpdateQuest@{$quest["title"]}@Travel to $location",
                     'tag' => "",
+
                 ]
             );
         }
-
-        // Remember player where to go
-        $GLOBALS["db"]->insert(
-            'responselog',
-            [
-
-                'localts' => time(),
-                'sent' => 0,
-                'actor' => "rolemaster",
-                'text' => "",
-                'action' => "rolecommand|UpdateQuest@{$quest["title"]}@Travel to $location",
-                'tag' => "",
-
-            ]
-        );
     }
 
     // Exceeded attempts → failure
@@ -2298,7 +2315,17 @@ function WaitAtLocation(
     }
 
     // Still pending
-    error_log("[WaitAtLocation] Waiting for player to reach <$location> (attempt {$quest_data["location_wait"][$wait_key]["attempts"]})");
+    error_log("[WaitAtLocation] Waiting for player/$npc_ref to reach <$location> (attempt {$quest_data["location_wait"][$wait_key]["attempts"]})");
+
+    $GLOBALS["db"]->upsertRowOnConflict(
+        'conf_opts',
+        array(
+            'id' => "snqe_pending_step",
+            'value' => " Waiting for $npc_ref to reach <$location>"
+        ),
+        "id"
+    );
+
     SNQEQuestManager::updateQuestData($quest_id, ["location_wait" => $quest_data["location_wait"]]);
     return "pending";
 }

@@ -133,7 +133,16 @@ $baseUrl = "http://localhost/HerikaServer/ui/addons/snqe/cmd"; // Adjust base UR
 // I will assume a default localhost URL structure.
 // A better approach for a CLI script running on the same server might be to require the files, but the prompt is specific about mimicking fetch.
 // Let's try to construct the URL.
-$serverUrl = "http://127.0.0.1/HerikaServer/ui/addons/snqe/cmd";
+
+    
+$hostname = gethostname();
+if ($hostname === false || $hostname === '') {
+    $hostname = php_uname('n');
+}
+if ($hostname == "absws")        
+    $serverUrl = "http://127.0.0.1/HerikaServer/ui/addons/snqe/cmd";
+else
+    $serverUrl = "http://127.0.0.1:8080/HerikaServer/ui/addons/snqe/cmd";
 
 echo "Running in mode: $mode\n";
 
@@ -317,7 +326,16 @@ if ($mode === 'full' || $mode === '2') {
 if ($mode === 'full' || $mode === '3') {
     echo "Step 3: Calling Agent 2...\n";
 
-    $lastJournalEntry = end($state['journallist']);
+    $journals = isset($state['journallist']) && is_array($state['journallist']) ? array_values($state['journallist']) : [];
+    $journalCount = count($journals);
+
+    if ($journalCount >= 2) {
+        $lastJournalEntry = $journals[$journalCount - 2]; // penultimate
+    } elseif ($journalCount === 1) {
+        $lastJournalEntry = "A new quest starts";
+    } else {
+        $lastJournalEntry = "A new quest starts";
+    }
     if ($lastJournalEntry === false) {
         $lastJournalEntry = '';
     }
@@ -330,6 +348,7 @@ if ($mode === 'full' || $mode === '3') {
         'npclist' => $state['npclist'],
         'lastJournalEntry' => $lastJournalEntry,
         'questType' => 'miniquest',
+        'briefing' => $state['briefing'] ?? '',
     ];
 
     if (!empty($state['questtitle'])) {

@@ -5466,6 +5466,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
     $npcMaster=new NpcMaster();
     $currentNpcData=$npcMaster->getByName($FOLLOWER_CONF["HERIKA_NAME"]);
     $metaData=$npcMaster->getMetaData($currentNpcData);
+    $extendedData=$npcMaster->getExtendedData($currentNpcData);
     
     if (isset($metaData["skills"])) {
         // Convert numeric skills to descriptive levels, grouped by category
@@ -5889,6 +5890,16 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
         }
     }
 
+    if (isset($extendedData["starring_in_quest"])&&!empty($extendedData["starring_in_quest"])) {
+        $quest = $GLOBALS["db"]->fetchOne("SELECT * FROM sneq_quests WHERE quest_id='{$extendedData["starring_in_quest"]}'");
+        error_log("[SNQE] Current quest data for quest_id {$extendedData["starring_in_quest"]}: {$quest["briefing"]}");
+        if ($quest) {
+            $questData = json_decode($quest["quest_data"], true);
+            $dynamicBio .= "\n<storyline_starring>\n#Current Quest\nYou are currently starring in the quest: {$questData["briefing"]} \n</storyline_starring>";
+        }
+        
+        
+    }
     return $dynamicBio;
 }
 

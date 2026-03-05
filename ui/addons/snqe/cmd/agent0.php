@@ -24,7 +24,7 @@ $connector->setOldGlobals($currentConnectorData);
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-$MODEL_1 = "bytedance-seed/seed-1.6-flash"; // Initial quest generator
+$MODEL_1 = "x-ai/grok-4.1-fast"; // Initial quest generator
 $MODEL_2 = "google/gemini-3-flash-preview";   // Quest steps generator
 
 

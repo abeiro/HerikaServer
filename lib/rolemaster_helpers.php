@@ -565,6 +565,13 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
             $patchedTaskid = $taskId;
         }
 
+    } else  if (isset($additionalData["disposition"])) {
+        if (in_array($additionalData["disposition"], ["submissive"])) {
+            $patchedTaskid = "2";
+        } else {
+            $patchedTaskid = $taskId;
+        }
+
     }
 
     $GLOBALS["db"]->insert(
