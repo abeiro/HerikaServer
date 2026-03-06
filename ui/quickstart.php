@@ -899,7 +899,7 @@ echo '<script>
 const WEB_ROOT = '.json_encode($webRoot).';
 async function saveQuickstartAndDB(){
   try {
-    const finishUrl = WEB_ROOT + "/home.php";
+    const finishUrl = WEB_ROOT + "/ui/home.php";
     // 1) Save API keys
     const fd = new FormData();
     const orKey = document.getElementById("qs_openrouter_api_key");
