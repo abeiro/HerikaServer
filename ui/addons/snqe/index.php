@@ -64,10 +64,27 @@ function getRunningQuests($db) {
 
 $runningQuests = getRunningQuests($db);
 
-// AJAX: running quests
+// Fetch current pending step
+function getPendingStep($db) {
+    try {
+        $query = "SELECT * FROM conf_opts WHERE id='snqe_pending_step'";
+        $result = $db->fetchAll($query);
+        if (!empty($result)) {
+            return $result[0]['value'];
+        }
+        return 'No pending step';
+    } catch (Exception $e) {
+        Logger::error("Failed to fetch pending step: " . $e->getMessage());
+        return 'Error fetching pending step';
+    }
+}
+
+$pendingStep = getPendingStep($db);
+
+// Handle AJAX request for running quests
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_running_quests') {
     header('Content-Type: application/json');
-    echo json_encode(['quests' => $runningQuests]);
+    echo json_encode(['quests' => $runningQuests, 'pendingStep' => getPendingStep($GLOBALS['db'])]);
     exit;
 }
 
@@ -327,8 +344,17 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
             <div class="snqe-page-title">🧭 AI Quest Manager</div>
 
             <form id="snqeForm">
+                <div class="btn-group">
+                    <button type="button" class="btn-snqe btn-snqe-generate" onclick="generateScenario()">Generate Scenario</button>
+                    <button type="button" class="btn-snqe btn-snqe-create" onclick="submitFormData()">Create 1st Step</button>
+                    <button type="button" class="btn-snqe btn-snqe-clear" onclick="clearAllData()">Clear Data</button>
+                </div>
+
+                <div class="loading-msg" id="loading">Generating scenario...</div>
+
+
                 <div class="form-group">
-                    <label for="suggested">Suggested</label>
+                    <label for="suggested">User suggestions</label>
                     <textarea name="suggested" id="suggested" placeholder="Enter suggestions here..."></textarea>
                 </div>
 
@@ -339,7 +365,7 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
 
                 <div class="form-group">
                     <label for="questtitle">Quest Title</label>
-                    <input type="text" name="questtitle" id="questtitle" placeholder="Quest title will appear here..." />
+                    <input type="text" name="questtitle" id="questtitle" placeholder="Quest title will appear here..."  readonly />
                 </div>
 
                 <div class="form-group">
@@ -361,13 +387,6 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
                     <select name="locationlist" id="locationlist" multiple></select>
                 </div>
 
-                <div class="btn-group">
-                    <button type="button" class="btn-snqe btn-snqe-generate" onclick="generateScenario()">Generate Scenario</button>
-                    <button type="button" class="btn-snqe btn-snqe-create" onclick="submitFormData()">Create 1st Step</button>
-                    <button type="button" class="btn-snqe btn-snqe-clear" onclick="clearAllData()">Clear Data</button>
-                </div>
-
-                <div class="loading-msg" id="loading">Generating scenario...</div>
             </form>
         </div>
 
@@ -389,6 +408,13 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
+            </div>
+            
+            <div class="pending-step-container">
+                <h3>⏳ Current Pending Step</h3>
+                <div class="pending-step-value" id="pendingStepValue">
+                    <?php echo htmlspecialchars($pendingStep); ?>
+                </div>
             </div>
         </div>
     </div>
