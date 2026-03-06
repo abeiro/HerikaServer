@@ -282,7 +282,11 @@ $PROMPTS=array(
     ],
     // Database Prompt (Instruction)
     "instruction"=>[ 
-        "cue"=>["{$gameRequest[3]} Write {$GLOBALS["HERIKA_NAME"]}'s prose/narration. CHARACTER MUST FOLLOW NARRATOR INSTRUCTION"],
+        "cue"=>["{$gameRequest[3]} Write {$GLOBALS["HERIKA_NAME"]}'s dialogue lines. CHARACTER MUST FOLLOW NARRATOR INSTRUCTION"],
+        "player_request"=>["The Narrator: {$gameRequest[3]}"],
+    ],
+    "suggestion"=>[ 
+        "cue"=>["Write {$GLOBALS["HERIKA_NAME"]}'s dialogue lines. "],
         "player_request"=>["The Narrator: {$gameRequest[3]}"],
     ],
     // Database Prompt (Welcome)

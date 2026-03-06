@@ -202,6 +202,7 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
                     <a id="lb_reimage5" href="#" title="Will send image to OpenRouter to create a reimagined version, needs a OpenRouter API key">OR FLUX-2 ($$)</a>
                     <a id="lb_reimage6" href="#" title="Will send image to Replicate to create a reimagined version, needs a Replicate API key">Replicate Kontext NSFW ($)</a>
                     <a id="lb_reimage7" href="#" title="Will send image to Replicate to create a reimagined version, needs a Replicate API key">Replicate Gemini($)</a>
+                    <a id="lb_reimage8" href="#" title="Will send image to Replicate to create a reimagined version, needs a Replicate API key">Replicate KLEIN9B</a>
                 </div>
             </div>
             <button id="lb_close" type="button">Close</button>
@@ -229,6 +230,8 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
   const lb_reimage5 = document.getElementById('lb_reimage5');
   const lb_reimage6 = document.getElementById('lb_reimage6');
   const lb_reimage7 = document.getElementById('lb_reimage7');
+  const lb_reimage8 = document.getElementById('lb_reimage8');
+
   const lb_del = document.getElementById('lb_del');
   const lb_reimagine_toggle = document.getElementById('lb_reimagine_toggle');
   const lb_reimagine_menu = document.getElementById('lb_reimagine_menu');
@@ -452,6 +455,29 @@ function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribut
         if (lb_reimagine_menu) lb_reimagine_menu.style.display = 'none';
         uHint=prompt('Hint','Convert image-0 to a semi-realistic style, like a high-quality CGI render. Reimagine the whole picture, while preserving  details like tattos, skin color, eye color, hair style, hair color, clothing, make-up , body proportions and environment.');
         fetch('cmd/gallery_tool_convert_style_replicate_gemini.php', {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ source: lbImg.src,userhint:uHint })
+
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            close()
+            // Reload the current document to reflect changes
+            window.location.reload();
+            // Handle the response data here
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+     } else if (e.target === lb_reimage8) {
+        showProcessing();
+        if (lb_reimagine_menu) lb_reimagine_menu.style.display = 'none';
+        uHint=prompt('Hint','Skin color/race ... ');
+        fetch('cmd/gallery_tool_convert_style_replicate_klein.php', {
             method: 'POST',
             headers: {
             'Content-Type': 'application/json'

@@ -92,7 +92,7 @@ ignore_user_abort(true);
 set_time_limit(1200);
 
 $momentum=time();
-
+$GLOBALS["runid"]=uniqid("run_",false);
 // Array with sentences talked so far
 $talkedSoFar = array();
 
@@ -204,7 +204,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 $fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
     "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
-    "util_location_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace","combatbark",
+    "util_location_name","util_faction_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace","combatbark",
     "util_location_npc","enable_bg","region","named_cell","snqe","named_cell_static"];
 
 if (isset($GLOBALS["external_fast_commands"])) {
@@ -2102,6 +2102,7 @@ requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"c
 /**********************
 CALL BUILDING
 ***********************/
+error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)."");
 
 if ($gameRequest[0] == "funcret") {
 
@@ -2192,7 +2193,7 @@ if ($gameRequest[0] == "funcret") {
     
 }
 
-error_log("SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
+error_log("*TRACE SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
 
 error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." secs building call");
 //returnLines(["Mmm..let me think"]);

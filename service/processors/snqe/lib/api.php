@@ -100,7 +100,7 @@ function CreateItem(
         throw new Exception("Quest '$quest_id' does not exist. You must create or upsert the quest first.");
     }
 
-    
+
     $quest_data = $quest["quest_data"] ?? [];
 
     // Initialize items container if missing
@@ -1823,7 +1823,7 @@ function WaitForNPCCombatEnd(
          or data like '%$cnTarget died%')
         order by gamets desc limit 1");
 
-    
+
     if (is_array($rows) && isset($rows[0]) && $rows[0]["n"] > 0) {
         $combatEnded = true;
     }
@@ -2088,7 +2088,7 @@ function WaitAtLocation(
     }
     // If npc_ref, also check NPC is present.
 
-    if (strpos($GLOBALS["actors_present"], $quest_data["npcs"][$npc_ref]["name"]) === false) {
+    if (@strpos($GLOBALS["actors_present"], $quest_data["npcs"][$npc_ref]["name"]) === false) {
         error_log("[WaitAtLocation] Reference NPC <{$quest_data["npcs"][$npc_ref]["name"]}> not present  <$location>,{$GLOBALS["actors_present"]}");
 
         if ($quest_data["location_wait"][$wait_key]["attempts"] % 25 == 0) { // Background command if NPC is not around
@@ -2635,7 +2635,7 @@ function WaitForActivation(
         SNQEQuestManager::updateQuestData($quest_id, ["activation_tracking" => $quest_data["activation_tracking"]]);
         return "done";
     }
-    $searchPattern="%activates $activator_name%";
+    $searchPattern = "%activates $activator_name%";
     $rows = $GLOBALS["db"]->fetchAll(
         "SELECT count(*) as n FROM eventlog WHERE type='infoaction' AND data LIKE '" .
         $GLOBALS["db"]->escape($searchPattern) . "'"
@@ -2740,7 +2740,7 @@ function PickUpItem(
     if (!isset($quest_data["items"][$item_ref])) {
         throw new Exception("Item '$item_ref' not declared. Use CreateItem first.");
     }
-    
+
     $npc = $quest_data["npcs"][$npc_ref];
     $item = $quest_data["items"][$item_ref];
 
@@ -2753,26 +2753,26 @@ function PickUpItem(
         if (!isset($quest_data["pickup_tracking"])) {
             $quest_data["pickup_tracking"] = [];
         }
-        
+
         $quest_data["pickup_tracking"][$tracking_key] = [
             "npc_ref" => $npc_ref,
             "item_ref" => $item_ref,
             "picked_up" => true,
             "pickup_time" => time(),
         ];
-        
+
         // Mark item as in NPC inventory
         if (!isset($quest_data["items"][$item_ref]["in_inventory"])) {
             $quest_data["items"][$item_ref]["in_inventory"] = [];
         }
         $quest_data["items"][$item_ref]["in_inventory"][$npc_ref] = true;
-        
+
         // Save updated quest state and return early
         SNQEQuestManager::updateQuestData($quest_id, [
             "pickup_tracking" => $quest_data["pickup_tracking"],
             "items" => $quest_data["items"]
         ]);
-        
+
         error_log("[PickUpItem] Item <$item_ref> already in NPC <$npc_ref>'s pocket, marking as picked up");
         return;
     }
@@ -2857,7 +2857,14 @@ function WaitForPickUpItem(
     $quest_data = $quest["quest_data"] ?? [];
 
     if (!isset($quest_data["npcs"][$npc_ref])) {
-        throw new Exception("NPC '$npc_ref' not declared. Use CreateNPC first.");
+        if ($npc_ref == "player") {
+            error_log("[WaitForPickUpItem] NPC reference is 'player', treating as player character");
+            $quest_data["npcs"][$npc_ref] = [
+                "name" => $GLOBALS["PLAYER_NAME"],
+                "refid" => null,
+            ];
+        } else
+            throw new Exception("NPC '$npc_ref' not declared. Use CreateNPC first.");
     }
 
     if (!isset($quest_data["items"][$item_ref])) {
@@ -2909,7 +2916,7 @@ function WaitForPickUpItem(
         return "failed";
     }
 
-    
+
     // Query event log to see if NPC picked up the item
     $cnItem = $GLOBALS["db"]->escape($item["name"]);
     $cnNpc = $GLOBALS["db"]->escape($npc["name"]);
@@ -2920,14 +2927,26 @@ function WaitForPickUpItem(
     if (is_array($rows) && isset($rows[0]) && $rows[0]["n"] > 0) {
         $pickedUp = true;
     }
-    
-    $npcMaster = new NpcMaster();
-    $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
-    $currentNpcMetaData = $npcMaster->getMetadata($currentNpcData);
-    foreach ($currentNpcMetaData["inventory"] as $itemInIventory) {
-        if ($itemInIventory["name"] == $item["name"]) {
-            $pickedUp = true;
-            break;
+
+    if ($npc_ref == "player") {
+        $player= new Player();
+        $playerInventory = json_decode($player->get("inventory"), true);
+        foreach ($playerInventory as $itemInIventory) {
+            if ($itemInIventory["name"] == $item["name"]) {
+                error_log("[WaitForPickUpItem] Item <$cnItem> found in player inventory");
+                $pickedUp = true;
+                break;
+            }
+        }
+    } else {
+        $npcMaster = new NpcMaster();
+        $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
+        $currentNpcMetaData = $npcMaster->getMetadata($currentNpcData);
+        foreach ($currentNpcMetaData["inventory"] as $itemInIventory) {
+            if ($itemInIventory["name"] == $item["name"]) {
+                $pickedUp = true;
+                break;
+            }
         }
     }
     $rows = $GLOBALS["db"]->fetchOne("select count(*) as n from eventlog where type='itemfound' and data like '%gave%$cnItem%$cnNpc%'");
@@ -2935,8 +2954,8 @@ function WaitForPickUpItem(
     if (is_array($rows) && isset($rows) && $rows["n"] > 0) {
         $pickedUp = true;
     }
-    
-        $rows = $GLOBALS["db"]->fetchOne("select 1 as n,gamets from eventlog where type='death' and (data like '%defeated $cnNpc%' or data like '%killed $cnNpc%') order by gamets desc limit 1");
+
+    $rows = $GLOBALS["db"]->fetchOne("select 1 as n,gamets from eventlog where type='death' and (data like '%defeated $cnNpc%' or data like '%killed $cnNpc%') order by gamets desc limit 1");
 
     if (isset($rows["n"])) {
         $pickedUp = true;

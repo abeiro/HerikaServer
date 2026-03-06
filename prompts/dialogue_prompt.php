@@ -24,14 +24,16 @@ $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next prose/narration as a c
 // (a funcrec event comes, which just write  something into context. )
 // Morgan|ScriptQueue|Wrestling, you say? Now *that* sounds like a fun way to get acquainted.//Vixi Talax//
 //
-$TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next prose/narration." . 
-" Be original, creative, knowledgeable, use your own thoughts. " . 
-" Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines." . 
-"";
+
 
 // Add narration instruction if inline narration is enabled (default to false if not set)
 $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
 if ($inlineNarrationEnabled) {
+    $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next prose/narration." . 
+" Be original, creative, knowledgeable, use your own thoughts. " . 
+" Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.$MAXIMUM_WORDS" . 
+"";
+
     global $db;
     $inlineNarrationPrompt = null;
     try {
@@ -48,6 +50,15 @@ if ($inlineNarrationEnabled) {
         $inlineNarrationPrompt = "You may include brief third-person narration in asterisks (e.g., *She smiles*) before the dialogue.";
     }
     $TEMPLATE_DIALOG .= " " . $inlineNarrationPrompt;
+} else {
+    // Restore old behavior.By default, no narration instruction is included 
+    // 'next prose/narration.' will enforce narrations, and will break oon another use cases (quests/instruction pprompts).
+    // I don't want narrations. If you want narrations, enable inline narration or whatever.
+    
+    $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line." . 
+" Be original, creative, knowledgeable, use your own thoughts. " . 
+" Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.$MAXIMUM_WORDS" . 
+"";
 }
 
 // Legacy format reference (prose-friendly update applied)

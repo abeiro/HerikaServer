@@ -2664,11 +2664,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   <button id="rel_bulk_build_btn" type="button" class="btn-rel-build" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
   <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
 </div>
-<?php if ($narratorExistsInNpcMaster && !isset($_GET['list'])): ?>
-<p style="margin: 12px 0; color: #cfd8e3; font-size: 13px;">
-    ℹ️ The narrator has been moved to the <a href="<?php echo $webRoot; ?>/ui/core/config_hub.php?tab=narrator" style="color: #4a8ab6; text-decoration: underline;">Narrator menu</a>. You can copy over the values from the CHIM NPC narrator profile to here manually. We recommend you delete the NPC entry of the narrator.
-</p>
-<?php endif; ?>
 <div style="margin:10px 0; padding:10px 14px; background:rgba(242,124,17,0.08); border:1px solid rgba(242,124,17,0.25); border-radius:8px; font-size:12.5px; color:#cfd9ea; line-height:1.5;">
   <strong style="color:rgb(242,124,17);">History Pullback:</strong>
   Every time a save game is loaded, CHIM snapshots all NPC profiles and restores <strong>unlocked</strong> NPCs to their state at the save's Tamrielic timestamp.
