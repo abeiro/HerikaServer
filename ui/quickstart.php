@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
     try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) { $GLOBALS['db'] = new sql(); } } catch (Throwable $_e) {}
     // Ensure database schema/tables exist before handling any quicksave actions
     try { require_once($rootPath . "debug" . DIRECTORY_SEPARATOR . "db_updates.php"); } catch (Throwable $_e) {}
+    try { require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "llm_randomizer.php"); } catch (Throwable $_e) {}
     header('Content-Type: application/json');
 
     $action = (string)($_POST['qs_action'] ?? '');
@@ -61,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
         if ($pid <= 0) { echo json_encode(['ok'=>false,'error'=>'No profile found']); exit; }
         $minime = $truthy($_POST['minime_t5'] ?? null);
         $oghma  = $truthy($_POST['oghma_infinium'] ?? null);
+        $player2Force = $truthy($_POST['player2_force_all_llm'] ?? null);
         $row = $GLOBALS['db']->fetchOne("SELECT metadata FROM core_profiles WHERE id=".$pid." LIMIT 1");
         $meta = [];
         if (isset($row['metadata']) && $row['metadata'] !== '') {
@@ -70,7 +72,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
         if ($oghma  !== null) { $meta['OGHMA_INFINIUM'] = $oghma ? true : false; }
         $json = json_encode($meta, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
         $GLOBALS['db']->updateRow('core_profiles', [ 'metadata' => $json ], "id=".$pid);
-        echo json_encode(['ok'=>true, 'id'=>$pid]);
+
+        $player2ConnectorId = null;
+        if ($player2Force !== null) {
+            $player2ConnectorId = LLMRandomizer::setPlayer2ForceEnabled($player2Force ? true : false);
+        }
+
+        echo json_encode(['ok'=>true, 'id'=>$pid, 'player2_connector_id' => $player2ConnectorId]);
         exit;
     }
 
@@ -150,7 +158,7 @@ $webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script lo
 if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
-$TITLE = "⚡ CHIM - Quickstart";
+$TITLE = "CHIM - Quickstart";
 
 require($rootPath . "conf" . DIRECTORY_SEPARATOR . 'conf_loader.php');
 
@@ -206,6 +214,7 @@ require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php"); // D
 if (file_exists($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php")) {
     require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php"); // Current configs
 }
+require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "llm_randomizer.php");
 require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . 'conf_loader.php');
 
 /* DB update logic */
@@ -271,6 +280,14 @@ echo '<div class="container">
 // API Keys section (OpenRouter only here; Deepgram rendered under STT)
 try { $openrouterRow = $db->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='openrouter' LIMIT 1"); } catch (Throwable $_e) { $openrouterRow = []; }
 $openrouterKey = isset($openrouterRow["api_key"]) ? $openrouterRow["api_key"] : "";
+$player2ForceAllLlm = false;
+try { $player2ForceAllLlm = LLMRandomizer::isPlayer2ForceEnabled(); } catch (Throwable $_e) { $player2ForceAllLlm = false; }
+$player2ForceChecked = $player2ForceAllLlm ? " checked" : "";
+$llmNoteDefaultStyle = $player2ForceAllLlm ? ' style="display:none;"' : '';
+$llmNotePlayer2Style = $player2ForceAllLlm ? '' : ' style="display:none;"';
+$llmCardsBaseStyle = 'display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-top:8px;';
+$llmCardsDefaultStyle = $llmCardsBaseStyle . ($player2ForceAllLlm ? ' display:none;' : '');
+$llmCardsPlayer2Style = $llmCardsBaseStyle . ($player2ForceAllLlm ? '' : ' display:none;');
 
 // Preload default profile metadata flags for MiniMe and Oghma (safe if tables missing)
 $minimeChecked = "";
@@ -297,6 +314,24 @@ try {
 
 echo '<div class="container">
         <div class="form-group">
+            <div class="qs-toggle-block">
+                <div class="qs-toggle-header">
+                    <label class="qs-toggle-title" for="qs_player2_force_all_llm">Use Player 2 for LLMs</label>
+                    <div class="qs-toggle-control">
+                        <input class="form-check-input qs-switch-input" type="checkbox" id="qs_player2_force_all_llm" value="1"' . $player2ForceChecked . '>
+                        <label class="form-check-label qs-switch-label" for="qs_player2_force_all_llm">
+                            <span class="qs-switch-track"></span>
+                            <span class="qs-switch-copy" data-off="Off" data-on="On"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <small class="form-text">Route all LLM calls through your local Player2 connector. Model choice stays in the Player2 app.</small>
+        </div>
+      </div>';
+
+echo '<div class="container" id="qs_openrouter_section"' . ($player2ForceAllLlm ? ' style="display:none;"' : '') . '>
+        <div class="form-group">
             <label for="qs_openrouter_api_key">OpenRouter API Key</label>
             <div class="input-group">
                 <input type="password" class="form-control" id="qs_openrouter_api_key" value="' . htmlspecialchars($openrouterKey) . '" style="filter: blur(3px);">
@@ -306,24 +341,37 @@ echo '<div class="container">
             </div>
             <small class="form-text">Paste your OpenRouter API key. <a href="https://openrouter.ai/keys" target="_blank">Create key</a></small>
         </div>
+      </div>';
+
+echo '<div class="container">
         <br>
         <div class="form-group">
-            <label>Enable MiniMe (T5)</label>
-            <div class="mt-2">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="qs_minime_t5" value="1"' . $minimeChecked . '>
-                    <label class="form-check-label" for="qs_minime_t5"></label>
+            <div class="qs-toggle-block">
+                <div class="qs-toggle-header">
+                    <label class="qs-toggle-title" for="qs_minime_t5">Enable MiniMe (T5)</label>
+                    <div class="qs-toggle-control">
+                        <input class="form-check-input qs-switch-input" type="checkbox" id="qs_minime_t5" value="1"' . $minimeChecked . '>
+                        <label class="form-check-label qs-switch-label" for="qs_minime_t5">
+                            <span class="qs-switch-track"></span>
+                            <span class="qs-switch-copy" data-off="Off" data-on="On"></span>
+                        </label>
+                    </div>
                 </div>
             </div>
             <small class="form-text">Turns on MiniMe-T5 LLM for roleplay assitance. Required for Oghma.</small>
         </div>
         <br>
         <div class="form-group">
-            <label>Enable Oghma Infinium</label>
-            <div class="mt-2">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="qs_oghma_infinium" value="1"' . $oghmaChecked . '>
-                    <label class="form-check-label" for="qs_oghma_infinium"></label>
+            <div class="qs-toggle-block">
+                <div class="qs-toggle-header">
+                    <label class="qs-toggle-title" for="qs_oghma_infinium">Enable Oghma Infinium</label>
+                    <div class="qs-toggle-control">
+                        <input class="form-check-input qs-switch-input" type="checkbox" id="qs_oghma_infinium" value="1"' . $oghmaChecked . '>
+                        <label class="form-check-label qs-switch-label" for="qs_oghma_infinium">
+                            <span class="qs-switch-track"></span>
+                            <span class="qs-switch-copy" data-off="Off" data-on="On"></span>
+                        </label>
+                    </div>
                 </div>
             </div>
             <small class="form-text">Requires Minime-T5 enabled. Oghma Infinium improves AI roleplay by adding and restrciting lore to NPCs.</small>
@@ -376,10 +424,23 @@ foreach ($quickstartConf as $pname => $parms) {
         $FORCE_DISABLED = " readonly='true' disabled='true' title='This is a readonly parameter'";
     }
 
-    echo "<div class='form-group' $MAKE_NO_VISIBLE_MARK>";
+    $groupClass = "form-group";
+    if ($pname == "TTSFUNCTION") {
+        $groupClass .= " qs-service-group";
+    } else if ($pname == "STTFUNCTION") {
+        $groupClass .= " qs-service-group qs-service-group-stt";
+    }
+
+    echo "<div class='" . $groupClass . "' $MAKE_NO_VISIBLE_MARK>";
 
     // Label
-    echo "<label for='$fieldName'>" . htmlspecialchars($pname) . "</label>";
+    $displayLabel = $pname;
+    if ($pname == "TTSFUNCTION") {
+        $displayLabel = "TTS Service";
+    } else if ($pname == "STTFUNCTION") {
+        $displayLabel = "STT Service";
+    }
+    echo "<label for='$fieldName'>" . htmlspecialchars($displayLabel) . "</label>";
 
     // Input Types
     if ($parms["type"] == "string") {
@@ -499,27 +560,50 @@ echo '<div class="btn-group-custom text-center">
 
 echo '      <div class="container">
                 <h2 class="qs-section-title">LLM Connectors Note</h2>
-                <p class="form-text">The default CHIM installation comes with 4 predefined LLMs that you can hotswap ingame.</p>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-top:8px;">
+                <p class="form-text" id="qs_llm_connectors_note_default"' . $llmNoteDefaultStyle . '>The default CHIM installation comes with 4 predefined LLMs that you can hotswap ingame.</p>
+                <p class="form-text" id="qs_llm_connectors_note_player2"' . $llmNotePlayer2Style . '>Player2 mode is active. Standard, Fast, Powerful, and Experimental all use the local Player2 connector, and Diary, Formatter, plus Fallback also route through Player2. The actual model stays controlled in the Player2 app.</p>
+                <div id="qs_llm_connectors_cards_default" style="' . $llmCardsDefaultStyle . '">
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
-                        <div style="font-size:14px; color:#cfd9ea;">🕹️ <b>Standard</b></div>
-                        <div style="margin-top:6px; color:#9fb1c9;">Gemini Flash 2</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.30/M input | $2.50/M output</div>
+                        <div style="font-size:14px; color:#cfd9ea;">&#x1F579;&#xFE0F; <b>Standard</b></div>
+                        <div style="margin-top:6px; color:#9fb1c9;">Groq: Llama 3.3 70B Versatile</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Uses the Groq connector, not OpenRouter pricing</div>
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
-                        <div style="font-size:14px; color:#cfd9ea;">🏃‍♂️ <b>Fast</b></div>
-                        <div style="margin-top:6px; color:#9fb1c9;">Gemini Flash 2 (Yes the same as Standard)</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.30/M input | $2.50/M output</div>
+                        <div style="font-size:14px; color:#cfd9ea;">&#x1F3C3;&#x200D;&#x2642;&#xFE0F; <b>Fast</b></div>
+                        <div style="margin-top:6px; color:#9fb1c9;">Gemini 2.0 Flash</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.10/M input | $0.40/M output</div>
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
-                        <div style="font-size:14px; color:#cfd9ea;">💪 <b>Powerful</b></div>
-                        <div style="margin-top:6px; color:#9fb1c9;">Sonnet 4.5</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$3/M input | $15/M output</div>
+                        <div style="font-size:14px; color:#cfd9ea;">&#x1F4AA; <b>Powerful</b></div>
+                        <div style="margin-top:6px; color:#9fb1c9;">Claude Sonnet 4.5</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$3.00/M input | $15.00/M output</div>
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
-                        <div style="font-size:14px; color:#cfd9ea;">🧪 <b>Experimental</b></div>
+                        <div style="font-size:14px; color:#cfd9ea;">&#x1F9EA; <b>Experimental</b></div>
                         <div style="margin-top:6px; color:#9fb1c9;">DeepSeek Chat V3.1</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.25/M input | $1/M output</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.15/M input | $0.75/M output</div>
+                    </div>
+                </div>
+                <div id="qs_llm_connectors_cards_player2" style="' . $llmCardsPlayer2Style . '">
+                    <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
+                        <div style="font-size:14px; color:#cfd9ea;">&#x1F579;&#xFE0F; <b>Standard</b></div>
+                        <div style="margin-top:6px; color:#9fb1c9;">Player2 Local</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Uses the model selected in the Player2 app</div>
+                    </div>
+                    <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
+                        <div style="font-size:14px; color:#cfd9ea;">&#x1F3C3;&#x200D;&#x2642;&#xFE0F; <b>Fast</b></div>
+                        <div style="margin-top:6px; color:#9fb1c9;">Player2 Local</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Same local Player2 connector as Standard</div>
+                    </div>
+                    <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
+                        <div style="font-size:14px; color:#cfd9ea;">&#x1F4AA; <b>Powerful</b></div>
+                        <div style="margin-top:6px; color:#9fb1c9;">Player2 Local</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Same local Player2 connector as Standard</div>
+                    </div>
+                    <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
+                        <div style="font-size:14px; color:#cfd9ea;">&#x1F9EA; <b>Experimental</b></div>
+                        <div style="margin-top:6px; color:#9fb1c9;">Player2 Local</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Same local Player2 connector as Standard</div>
                     </div>
                 </div>
             </div>
@@ -660,6 +744,127 @@ echo '<style>
         color: #bbb;
     }
 
+    .qs-toggle-block {
+        background: linear-gradient(180deg, rgba(34, 34, 34, 0.98), rgba(25, 25, 25, 0.98));
+        border: 1px solid #3b3b3b;
+        border-radius: 12px;
+        padding: 14px 16px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    }
+
+    .qs-toggle-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+    }
+
+    .qs-toggle-title {
+        margin: 0;
+        color: #f1f4fa;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .qs-toggle-control {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        min-width: 112px;
+    }
+
+    .qs-switch-input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .qs-switch-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .qs-switch-track {
+        position: relative;
+        width: 56px;
+        height: 32px;
+        border-radius: 999px;
+        background: #4a3b26;
+        border: 1px solid #735730;
+        transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15);
+    }
+
+    .qs-switch-track::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #f7f3ed;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+        transition: transform 0.2s ease;
+    }
+
+    .qs-switch-copy {
+        min-width: 28px;
+        color: #d7deea;
+        font-size: 0.9rem;
+        text-align: right;
+    }
+
+    .qs-switch-copy::before {
+        content: attr(data-off);
+    }
+
+    .qs-switch-input:checked + .qs-switch-label .qs-switch-track {
+        background: #245c43;
+        border-color: #41a56f;
+        box-shadow: 0 0 0 4px rgba(65,165,111,0.14);
+    }
+
+    .qs-switch-input:checked + .qs-switch-label .qs-switch-track::after {
+        transform: translateX(24px);
+    }
+
+    .qs-switch-input:checked + .qs-switch-label .qs-switch-copy::before {
+        content: attr(data-on);
+    }
+
+    .qs-service-group {
+        margin-bottom: 18px;
+    }
+
+    .qs-service-group-stt {
+        margin-top: 26px;
+    }
+
+    .qs-service-group .form-control {
+        margin-top: 6px;
+    }
+
+    .qs-service-group .form-text {
+        display: block;
+        margin-top: 8px;
+    }
+
+    @media (max-width: 640px) {
+        .qs-toggle-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .qs-toggle-control {
+            min-width: 0;
+        }
+    }
+
     /* Warning Text Styling */
     .warning-text {
         color: #ffcc00;
@@ -694,6 +899,7 @@ echo '<script>
 const WEB_ROOT = '.json_encode($webRoot).';
 async function saveQuickstartAndDB(){
   try {
+    const finishUrl = WEB_ROOT + "/home.php";
     // 1) Save API keys
     const fd = new FormData();
     const orKey = document.getElementById("qs_openrouter_api_key");
@@ -707,6 +913,7 @@ async function saveQuickstartAndDB(){
     const fdm = new FormData();
     try { fdm.append("minime_t5", document.getElementById("qs_minime_t5").checked ? "1" : "0"); } catch(_e){}
     try { fdm.append("oghma_infinium", document.getElementById("qs_oghma_infinium").checked ? "1" : "0"); } catch(_e){}
+    try { fdm.append("player2_force_all_llm", document.getElementById("qs_player2_force_all_llm").checked ? "1" : "0"); } catch(_e){}
     fdm.append("qs_action", "profile_quicksave_metadata");
     await fetch("quickstart.php", { method: "POST", body: fdm, cache: "no-store", credentials: "same-origin" });
 
@@ -718,12 +925,46 @@ async function saveQuickstartAndDB(){
 
     // Notify user, then redirect
     try { alert("Quickstart settings have been saved."); } catch(_a){}
-    window.location.href = WEB_ROOT + "/";
+    window.location.href = finishUrl;
   } catch (_e) {
     try { alert("Save failed or partially completed. Redirecting to home."); } catch(_a){}
-    window.location.href = WEB_ROOT + "/";
+    window.location.href = finishUrl;
   }
 }
+
+function updatePlayer2QuickstartUI(){
+  try {
+    const enabled = !!(document.getElementById("qs_player2_force_all_llm") && document.getElementById("qs_player2_force_all_llm").checked);
+    const openrouterSection = document.getElementById("qs_openrouter_section");
+    const defaultNote = document.getElementById("qs_llm_connectors_note_default");
+    const player2Note = document.getElementById("qs_llm_connectors_note_player2");
+    const defaultCards = document.getElementById("qs_llm_connectors_cards_default");
+    const player2Cards = document.getElementById("qs_llm_connectors_cards_player2");
+    if (openrouterSection) {
+      openrouterSection.style.display = enabled ? "none" : "";
+    }
+    if (defaultNote) {
+      defaultNote.style.display = enabled ? "none" : "";
+    }
+    if (player2Note) {
+      player2Note.style.display = enabled ? "" : "none";
+    }
+    if (defaultCards) {
+      defaultCards.style.display = enabled ? "none" : "grid";
+    }
+    if (player2Cards) {
+      player2Cards.style.display = enabled ? "grid" : "none";
+    }
+  } catch(_e){}
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  const player2Toggle = document.getElementById("qs_player2_force_all_llm");
+  if (player2Toggle) {
+    player2Toggle.addEventListener("change", updatePlayer2QuickstartUI);
+  }
+  updatePlayer2QuickstartUI();
+});
 </script>';
 
 ?>

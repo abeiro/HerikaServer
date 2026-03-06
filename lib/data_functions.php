@@ -3928,7 +3928,10 @@ function call_llm_internal() {
         ];
 
         $connector=new LLMConnector();
-        $currentConnectorData=$connector->getById($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]["llm_formatter_id"]); // Asuming primary id
+        $formatterConnectorId = class_exists('LLMRandomizer')
+            ? LLMRandomizer::getConnectorIdForField($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"], "llm_formatter_id")
+            : ($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]["llm_formatter_id"] ?? null);
+        $currentConnectorData=$connector->getById($formatterConnectorId);
 
 
 
@@ -3995,7 +3998,9 @@ function call_llm_internal() {
             
             if (isset($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"])) {
                 $profileData = $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"];
-                $fallbackConnectorId = $profileData["llm_fallback_id"] ?? null;
+                $fallbackConnectorId = class_exists('LLMRandomizer')
+                    ? LLMRandomizer::getConnectorIdForField($profileData, "llm_fallback_id")
+                    : ($profileData["llm_fallback_id"] ?? null);
                 error_log("[FALLBACK DEBUG] Fallback connector ID from profile: " . ($fallbackConnectorId ?? "NULL"));
                 
                 // Check if fallback is enabled in metadata
@@ -4080,7 +4085,9 @@ function call_llm_internal() {
             
             if (isset($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"])) {
                 $profileData = $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"];
-                $fallbackConnectorId = $profileData["llm_fallback_id"] ?? null;
+                $fallbackConnectorId = class_exists('LLMRandomizer')
+                    ? LLMRandomizer::getConnectorIdForField($profileData, "llm_fallback_id")
+                    : ($profileData["llm_fallback_id"] ?? null);
                 
                 // Check if fallback is enabled in metadata
                 if (!empty($profileData["metadata"])) {

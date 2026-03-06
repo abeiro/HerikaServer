@@ -686,8 +686,11 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         
         // Use diary_connector_id if set, otherwise fall back to regular connector_id
         $connectorId = null;
-        if (isset($currentProfileData["diary_connector_id"]) && !empty($currentProfileData["diary_connector_id"])) {
-            $connectorId = $currentProfileData["diary_connector_id"];
+        $resolvedDiaryConnectorId = class_exists('LLMRandomizer')
+            ? LLMRandomizer::getConnectorIdForField($currentProfileData, "diary_connector_id")
+            : ($currentProfileData["diary_connector_id"] ?? null);
+        if (!empty($resolvedDiaryConnectorId)) {
+            $connectorId = $resolvedDiaryConnectorId;
             Logger::info("generateFollowerDiary: Using diary_connector_id: {$connectorId} for The Narrator");
         } elseif (isset($currentProfileData["connector_id"]) && !empty($currentProfileData["connector_id"])) {
             $connectorId = $currentProfileData["connector_id"];
@@ -723,7 +726,10 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         $currentProfileData = $profile->getById($currentNpcData["profile_id"]);
             
         $connector = new LLMConnector();
-        $currentConnectorData = $connector->getById($currentProfileData["diary_connector_id"]);
+        $diaryConnectorId = class_exists('LLMRandomizer')
+            ? LLMRandomizer::getConnectorIdForField($currentProfileData, "diary_connector_id")
+            : ($currentProfileData["diary_connector_id"] ?? null);
+        $currentConnectorData = $connector->getById($diaryConnectorId);
        
         $connector->setOldGlobals($currentConnectorData);
         $profile->setOldGlobals($currentProfileData);

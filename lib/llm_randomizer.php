@@ -14,6 +14,13 @@ class LLMRandomizer {
     private const BASE_CHANCE = 25;      // 25% initial chance
     private const MULTIPLIER = 2.0;       // 2x multiplier per use
     private const MAX_USES = 5;           // Force switch after 5 uses
+    private const PLAYER2_FORCE_ENABLED_KEY = 'PLAYER2_FORCE_ALL_LLM';
+    private const PLAYER2_FORCE_CONNECTOR_KEY = 'PLAYER2_FORCE_CONNECTOR_ID';
+    private const PLAYER2_DEFAULT_LABEL = 'Player2 Local';
+    private const PLAYER2_DEFAULT_URL = 'http://127.0.0.1:4315/v1/chat/completions';
+
+    private static $player2ForceEnabled = null;
+    private static $player2ForceConnectorId = null;
     
     /**
      * Determine which connector slot to use (1-4)
@@ -131,6 +138,11 @@ class LLMRandomizer {
      * @return int|null Connector ID or null
      */
     public static function getConnectorIdForSlot($profileData, $slot) {
+        $forcedConnectorId = self::getForcedPlayer2ConnectorId();
+        if (!empty($forcedConnectorId)) {
+            return (int)$forcedConnectorId;
+        }
+
         $slotMap = [
             1 => 'llm_primary_id',
             2 => 'llm_secondary_id',
@@ -139,6 +151,19 @@ class LLMRandomizer {
         ];
         
         $fieldName = $slotMap[$slot] ?? 'llm_primary_id';
+        return isset($profileData[$fieldName]) ? (int)$profileData[$fieldName] : null;
+    }
+
+    public static function getConnectorIdForField($profileData, $fieldName) {
+        $forcedConnectorId = self::getForcedPlayer2ConnectorId();
+        if (!empty($forcedConnectorId)) {
+            return (int)$forcedConnectorId;
+        }
+
+        if (!is_array($profileData) || empty($fieldName)) {
+            return null;
+        }
+
         return isset($profileData[$fieldName]) ? (int)$profileData[$fieldName] : null;
     }
     
@@ -156,6 +181,188 @@ class LLMRandomizer {
             4 => 'Experimental'
         ];
         return $names[$slot] ?? 'Unknown';
+    }
+
+    public static function isPlayer2ForceEnabled() {
+        if (self::$player2ForceEnabled !== null) {
+            return self::$player2ForceEnabled;
+        }
+
+        $db = $GLOBALS['db'] ?? null;
+        if (!$db) {
+            self::$player2ForceEnabled = false;
+            return false;
+        }
+
+        $row = $db->fetchOne("SELECT value FROM conf_opts WHERE id='" . self::PLAYER2_FORCE_ENABLED_KEY . "' LIMIT 1");
+        $raw = strtolower(trim((string)($row['value'] ?? '0')));
+        self::$player2ForceEnabled = in_array($raw, ['1', 'true', 'yes', 'on'], true);
+        return self::$player2ForceEnabled;
+    }
+
+    public static function setPlayer2ForceEnabled($enabled) {
+        self::upsertConfOpt(self::PLAYER2_FORCE_ENABLED_KEY, $enabled ? '1' : '0');
+        self::$player2ForceEnabled = (bool)$enabled;
+
+        if ($enabled) {
+            return self::ensurePlayer2ConnectorId();
+        }
+
+        return self::getStoredPlayer2ConnectorId();
+    }
+
+    public static function ensurePlayer2ConnectorId() {
+        $existingId = self::getStoredPlayer2ConnectorId();
+        if (!empty($existingId)) {
+            return (int)$existingId;
+        }
+
+        $db = $GLOBALS['db'] ?? null;
+        if (!$db) {
+            return null;
+        }
+
+        $row = $db->fetchOne(
+            "SELECT id FROM core_llm_connector " .
+            "WHERE driver='player2json' " .
+            "ORDER BY CASE WHEN lower(coalesce(label,''))='player2 local' THEN 0 ELSE 1 END, id ASC LIMIT 1"
+        );
+
+        $connectorId = isset($row['id']) ? intval($row['id']) : 0;
+
+        $player2ApiBadgeId = self::ensurePlayer2ApiBadgeId();
+
+        if ($connectorId <= 0) {
+            $metadata = json_encode(['player2_game_key' => 'CHIM'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $insertedConnectorId = $db->insert('core_llm_connector', [
+                'label' => self::PLAYER2_DEFAULT_LABEL,
+                'metadata' => $metadata,
+                'url' => self::PLAYER2_DEFAULT_URL,
+                'model' => 'player2-app-selected',
+                'driver' => 'player2json',
+                'service' => 'player2',
+                'max_tokens' => 750,
+                'enforce_json' => 1,
+                'prefill_json' => 0,
+                'json_schema' => 1,
+                'api_badge_id' => $player2ApiBadgeId,
+                'temperature' => 1,
+                'presence_penalty' => 0,
+                'frequency_penalty' => 0,
+                'repetition_penalty' => 1,
+                'top_p' => 1,
+                'top_k' => 0,
+                'min_p' => 0,
+                'top_a' => 0
+            ]);
+
+            $connectorId = !empty($insertedConnectorId) ? intval($insertedConnectorId) : 0;
+            if ($connectorId <= 0) {
+                $row = $db->fetchOne(
+                    "SELECT id FROM core_llm_connector " .
+                    "WHERE driver='player2json' " .
+                    "ORDER BY CASE WHEN lower(coalesce(label,''))='player2 local' THEN 0 ELSE 1 END, id ASC LIMIT 1"
+                );
+                $connectorId = isset($row['id']) ? intval($row['id']) : 0;
+            }
+        } elseif (!empty($player2ApiBadgeId)) {
+            $connectorRow = $db->fetchOne("SELECT api_badge_id FROM core_llm_connector WHERE id=" . intval($connectorId) . " LIMIT 1");
+            if (empty($connectorRow['api_badge_id'])) {
+                $db->updateRow('core_llm_connector', ['api_badge_id' => $player2ApiBadgeId], 'id=' . intval($connectorId));
+            }
+        }
+
+        if (!empty($connectorId)) {
+            self::upsertConfOpt(self::PLAYER2_FORCE_CONNECTOR_KEY, (string)$connectorId);
+            self::$player2ForceConnectorId = (int)$connectorId;
+            return (int)$connectorId;
+        }
+
+        return null;
+    }
+
+    private static function getForcedPlayer2ConnectorId() {
+        if (!self::isPlayer2ForceEnabled()) {
+            return null;
+        }
+
+        $connectorId = self::getStoredPlayer2ConnectorId();
+        if (!empty($connectorId)) {
+            return (int)$connectorId;
+        }
+
+        return self::ensurePlayer2ConnectorId();
+    }
+
+    private static function getStoredPlayer2ConnectorId() {
+        if (self::$player2ForceConnectorId !== null) {
+            return self::$player2ForceConnectorId ?: null;
+        }
+
+        $db = $GLOBALS['db'] ?? null;
+        if (!$db) {
+            self::$player2ForceConnectorId = 0;
+            return null;
+        }
+
+        $row = $db->fetchOne("SELECT value FROM conf_opts WHERE id='" . self::PLAYER2_FORCE_CONNECTOR_KEY . "' LIMIT 1");
+        $connectorId = intval($row['value'] ?? 0);
+
+        if ($connectorId > 0) {
+            $connectorRow = $db->fetchOne("SELECT id FROM core_llm_connector WHERE id={$connectorId} AND driver='player2json' LIMIT 1");
+            if (!empty($connectorRow['id'])) {
+                self::$player2ForceConnectorId = (int)$connectorRow['id'];
+                return self::$player2ForceConnectorId;
+            }
+        }
+
+        self::$player2ForceConnectorId = 0;
+        return null;
+    }
+
+    private static function upsertConfOpt($id, $value) {
+        $db = $GLOBALS['db'] ?? null;
+        if (!$db) {
+            return false;
+        }
+
+        $escapedId = $db->escape($id);
+        $row = $db->fetchOne("SELECT id FROM conf_opts WHERE id='{$escapedId}' LIMIT 1");
+        if ($row && isset($row['id'])) {
+            return $db->updateRow('conf_opts', ['value' => (string)$value], "id='" . $escapedId . "'");
+        }
+
+        return $db->insert('conf_opts', ['id' => $id, 'value' => (string)$value]);
+    }
+
+    private static function ensurePlayer2ApiBadgeId() {
+        $db = $GLOBALS['db'] ?? null;
+        if (!$db) {
+            return null;
+        }
+
+        $row = $db->fetchOne("SELECT id FROM core_api_badge WHERE lower(label)='player2' LIMIT 1");
+        $badgeId = isset($row['id']) ? intval($row['id']) : 0;
+        if ($badgeId > 0) {
+            $badgeRow = $db->fetchOne("SELECT api_key FROM core_api_badge WHERE id=" . $badgeId . " LIMIT 1");
+            if (empty($badgeRow['api_key'])) {
+                $db->updateRow('core_api_badge', ['api_key' => 'CHIM'], 'id=' . $badgeId);
+            }
+            return $badgeId;
+        }
+
+        $insertedBadgeId = $db->insert('core_api_badge', [
+            'label' => 'Player2',
+            'api_key' => 'CHIM'
+        ]);
+
+        $badgeId = !empty($insertedBadgeId) ? intval($insertedBadgeId) : 0;
+        if ($badgeId <= 0) {
+            $row = $db->fetchOne("SELECT id FROM core_api_badge WHERE lower(label)='player2' LIMIT 1");
+            $badgeId = isset($row['id']) ? intval($row['id']) : 0;
+        }
+
+        return !empty($badgeId) ? (int)$badgeId : null;
     }
 }
 
