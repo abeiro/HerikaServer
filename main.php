@@ -1113,49 +1113,108 @@ if (is_array($currentParty)) {
 
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"prerequest.php");
 
+$GLOBALS["RECHAT_IS_FINAL_ROUND"] = false;
+$GLOBALS["RECHAT_PRECALCULATED_BUDGET"] = null;
+
 if (in_array($gameRequest[0],["rechat","narration"]) ) {
     
     //RECHAT. Must choose if we continue conversation or no.
     // Note: narration is part of rechat system (random narrator interjections count as rechat rounds)
 
     $rechatHistory=DataRechatHistory();
+    $rechatTurnHistory=DataRechatTurnHistory();
+    $rechatTurnsSoFar=sizeof($rechatTurnHistory);
+    $maxRechatRounds=max(1, intval($GLOBALS["RECHAT_H"]));
+
+    $lastInputEvent = $db->fetchOne("SELECT ts FROM eventlog WHERE type in ('inputtext','inputtext_s','ginputtext','ginputtext_s','narrator_inputtext')
+        and localts>".(time()-600)." ORDER BY rowid DESC LIMIT 1");
+    $lastInputTs = isset($lastInputEvent["ts"]) ? intval($lastInputEvent["ts"]) : 0;
+    $rechatSessionKey = md5(($GLOBALS["HERIKA_NAME"] ?? "unknown")."|".$lastInputTs."|".($_GET["profile"] ?? ""));
+    $rechatBudgetFile = sys_get_temp_dir().DIRECTORY_SEPARATOR."chim_rechat_budget_".$rechatSessionKey.".json";
+    $precalculatedBudget = null;
+
+    if (file_exists($rechatBudgetFile)) {
+        $budgetData = json_decode((string)@file_get_contents($rechatBudgetFile), true);
+        if (is_array($budgetData)
+            && isset($budgetData["budget"], $budgetData["last_input_ts"], $budgetData["created_at"])
+            && intval($budgetData["budget"]) > 0
+            && intval($budgetData["budget"]) <= $maxRechatRounds
+            && intval($budgetData["last_input_ts"]) === $lastInputTs
+            && (time() - intval($budgetData["created_at"])) <= 900) {
+            $precalculatedBudget = intval($budgetData["budget"]);
+        } else {
+            @unlink($rechatBudgetFile);
+        }
+    }
     
-    if (sizeof($rechatHistory)>=(intval($GLOBALS["RECHAT_H"])))    {   // TOO MUCH RECHAT
-        Logger::info("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">={$GLOBALS["RECHAT_H"]}");
+    if ($rechatTurnsSoFar >= $maxRechatRounds) {   // TOO MUCH RECHAT
+        Logger::info("Rechat discarded, rechatTurns:".$rechatTurnsSoFar.">={$maxRechatRounds}");
+        if (file_exists($rechatBudgetFile)) {
+            @unlink($rechatBudgetFile);
+        }
         // Lets try to summarize
         SemaphoreManager::release("MAIN");
         while(ob_get_length() && ob_end_clean());
         require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
         terminate();
     }
-    
-    $rndNumber = rand(1, 100);
-    if ($rndNumber <= intval($GLOBALS["RECHAT_P"])) {
-        // Process Oghma for rechat events using NPC's last dialogue
-        // Use profile-based OGHMA_INFINIUM setting (not legacy conf.php $FEATURES["MISC"]["OGHMA_INFINIUM"])
-        // Use helper function to handle string "false" values from form submissions
-        if (!function_exists('isOghmaSettingEnabled')) {
-            function isOghmaSettingEnabled($value) {
-                if ($value === null) return false;
-                if ($value === false || $value === 'false' || $value === '0' || $value === 0) return false;
-                if ($value === true || $value === 'true' || $value === '1' || $value === 1) return true;
-                return (bool)$value;
+
+    if ($precalculatedBudget === null) {
+        $precalculatedBudget = $rechatTurnsSoFar;
+        for ($i = $rechatTurnsSoFar; $i < $maxRechatRounds; $i++) {
+            if (rand(1, 100) <= intval($GLOBALS["RECHAT_P"])) {
+                $precalculatedBudget++;
+            } else {
+                break;
             }
         }
-        $minimeEnabled = isOghmaSettingEnabled($GLOBALS["MINIME_T5"] ?? false);
-        $oghmaCustomEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_CUSTOM"] ?? false);
-        $oghmaInfiniumEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
-        
-        if (($minimeEnabled || $oghmaCustomEnabled) && $oghmaInfiniumEnabled) {
-            $GLOBALS["OGHMA_CALLED"] = true;
-            require(__DIR__."/processor/oghma.php"); // Process Oghma
+
+        if ($precalculatedBudget <= $rechatTurnsSoFar) {
+            Logger::info("Rechat terminated by pre-calculated budget (0 remaining rounds)");
+            @unlink($rechatBudgetFile);
+            terminate();
         }
+
+        @file_put_contents($rechatBudgetFile, json_encode([
+            "budget" => $precalculatedBudget,
+            "last_input_ts" => $lastInputTs,
+            "created_at" => time()
+        ]));
+
+        Logger::info("Rechat pre-calculated budget={$precalculatedBudget}, turnsSoFar={$rechatTurnsSoFar}, actor={$GLOBALS["HERIKA_NAME"]}");
     }
-    else{
-        Logger::info("Rechat terminated by RECHAT_P probability check (random > {$GLOBALS["RECHAT_P"]}%)");
+
+    if ($rechatTurnsSoFar >= $precalculatedBudget) {
+        Logger::info("Rechat terminated, pre-calculated budget exhausted ({$rechatTurnsSoFar}/{$precalculatedBudget})");
+        @unlink($rechatBudgetFile);
         terminate();
     }
+
+    $GLOBALS["RECHAT_PRECALCULATED_BUDGET"] = $precalculatedBudget;
+    if (($rechatTurnsSoFar + 1) >= $precalculatedBudget) {
+        $GLOBALS["RECHAT_IS_FINAL_ROUND"] = true;
+        Logger::info("Rechat final round detected ({$rechatTurnsSoFar}+1/{$precalculatedBudget})");
+    }
+
+    // Process Oghma for rechat events using NPC's last dialogue
+    // Use profile-based OGHMA_INFINIUM setting (not legacy conf.php $FEATURES["MISC"]["OGHMA_INFINIUM"])
+    // Use helper function to handle string "false" values from form submissions
+    if (!function_exists('isOghmaSettingEnabled')) {
+        function isOghmaSettingEnabled($value) {
+            if ($value === null) return false;
+            if ($value === false || $value === 'false' || $value === '0' || $value === 0) return false;
+            if ($value === true || $value === 'true' || $value === '1' || $value === 1) return true;
+            return (bool)$value;
+        }
+    }
+    $minimeEnabled = isOghmaSettingEnabled($GLOBALS["MINIME_T5"] ?? false);
+    $oghmaCustomEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_CUSTOM"] ?? false);
+    $oghmaInfiniumEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
     
+    if (($minimeEnabled || $oghmaCustomEnabled) && $oghmaInfiniumEnabled) {
+        $GLOBALS["OGHMA_CALLED"] = true;
+        require(__DIR__."/processor/oghma.php"); // Process Oghma
+    }
     
     if (sizeof($rechatHistory)>1) {
         // Lets make rechat wait a bit, so events while NPCs are speaking get into context// disabled if using new rechat fire event
@@ -1185,7 +1244,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     // Trigger after any NPC response (after first NPC responds to player)
     // AND only on "rechat" events (not on events already converted to "narration")
     // AND only if The Narrator wasn't the last speaker (prevent consecutive narrations)
-    if (!empty($GLOBALS["RANDOM_NARATION"]) && $GLOBALS["RANDOM_NARATION"] && $gameRequest[0] === "rechat" && sizeof($rechatHistory) >= 1) {
+    if (!empty($GLOBALS["RANDOM_NARATION"]) && $GLOBALS["RANDOM_NARATION"] && empty($GLOBALS["RECHAT_IS_FINAL_ROUND"]) && $gameRequest[0] === "rechat" && sizeof($rechatHistory) >= 1) {
         // Check if the last event was a narration event (if so, skip to prevent consecutive narrations)
         $lastEvent = $db->fetchOne("SELECT type FROM eventlog WHERE type IN ('rechat', 'narration') ORDER BY gamets DESC, ts DESC LIMIT 1");
         $wasLastNarration = ($lastEvent && $lastEvent['type'] === 'narration');
@@ -1537,6 +1596,11 @@ if ($gameRequest[0] == "narrator_welcome") {
 
 // Take care of override request if needed..
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php");
+
+if (!empty($GLOBALS["RECHAT_IS_FINAL_ROUND"]) && $gameRequest[0] === "rechat" && !empty($request)) {
+    $request .= " This is your final response in this exchange. Conclude naturally for now without abruptly ending the relationship.";
+    Logger::info("Rechat final-round close instruction appended to request (budget={$GLOBALS["RECHAT_PRECALCULATED_BUDGET"]})");
+}
 
 
 

@@ -2814,6 +2814,19 @@ function DataRechatHistory()
 
 }
 
+function DataRechatTurnHistory()
+{
+
+    global $db;
+    // Rechat "turns" should only count AI-to-AI follow-up rounds.
+    // Unlike DataRechatHistory(), this excludes player input rows.
+    $lastRechatTurns=$db->fetchAll("select gamets FROM  eventlog a  WHERE type in ('rechat','narration')
+    and localts>".(time()-120)."  order by gamets desc,ts desc LIMIT 10 OFFSET 0");
+
+    return $lastRechatTurns;
+
+}
+
 
 
 function extractDialogueTarget($string) {
