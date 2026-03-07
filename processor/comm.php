@@ -1140,35 +1140,41 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             $existingRecord = $db->fetchOne("SELECT * FROM locations WHERE formid = '{$splitNameBase[1]}'");
             
             if ($existingRecord) {
-            $db->updateRow(
-                'locations',
-                array(
-                'name' => $splitNameBase[0],
-                'region' => $splitNameBase[2],
-                'hold' => $splitNameBase[3],
-                'tags' => $splitNameBase[4],
-                'is_interior' => intval($splitNameBase[5]),
-                'vanilla_location' => intval($splitNameBase[1]) < 77175193 ? "TRUE" : "FALSE",
-                'factions' => $splitNameBase[6] ?? '',
-                'coords' => (isset($splitNameBase[7]) && isset($splitNameBase[8]) && $splitNameBase[7] && $splitNameBase[8]) ? "(" . floatval($splitNameBase[7]) . "," . floatval($splitNameBase[8]) . ")" : NULL
-                ),
-                "formid = '{$splitNameBase[1]}'"
-            );
+                $db->updateRow(
+                    'locations',
+                    array(
+                    'name' => $splitNameBase[0],
+                    'region' => $splitNameBase[2],
+                    'hold' => $splitNameBase[3],
+                    'tags' => $splitNameBase[4],
+                    'is_interior' => intval($splitNameBase[5]),
+                    'vanilla_location' => intval($splitNameBase[1]) < 77175193 ? "TRUE" : "FALSE",
+                    'factions' => $splitNameBase[6] ?? '',
+                    'coords' => (isset($splitNameBase[7]) && isset($splitNameBase[8]) && $splitNameBase[7] && $splitNameBase[8]) ? "(" . floatval($splitNameBase[7]) . "," . floatval($splitNameBase[8]) . ")" : NULL,
+                    'refs'=>(isset($splitNameBase[9]) && $splitNameBase[9]) ? $splitNameBase[9] : null,
+                    'cleared' => intval($splitNameBase[10]) >0  ? "TRUE" : "FALSE",
+                    'updated_at' => 'NOW()'
+                    ),
+                    "formid = '{$splitNameBase[1]}'"
+                );
             } else {
-            $db->insert(
-                'locations',
-                array(
-                'name' => $splitNameBase[0],
-                'formid' => $splitNameBase[1],
-                'region' => $splitNameBase[2],
-                'hold' => $splitNameBase[3],
-                'tags' => $splitNameBase[4],
-                'is_interior' => intval($splitNameBase[5]),
-                'vanilla_location' => intval($splitNameBase[1]) < 77175193 ? "TRUE" : "FALSE",
-                'factions' => $splitNameBase[6] ?? '',
-                'coords' => (isset($splitNameBase[7]) && isset($splitNameBase[8]) && $splitNameBase[7] && $splitNameBase[8]) ? "(" . floatval($splitNameBase[7]) . "," . floatval($splitNameBase[8]) . ")" : NULL
-                )
-            );
+                $db->insert(
+                    'locations',
+                    array(
+                    'name' => $splitNameBase[0],
+                    'formid' => $splitNameBase[1],
+                    'region' => $splitNameBase[2],
+                    'hold' => $splitNameBase[3],
+                    'tags' => $splitNameBase[4],
+                    'is_interior' => intval($splitNameBase[5]),
+                    'vanilla_location' => intval($splitNameBase[1]) < 77175193 ? "TRUE" : "FALSE",
+                    'factions' => $splitNameBase[6] ?? '',
+                    'coords' => (isset($splitNameBase[7]) && isset($splitNameBase[8]) && $splitNameBase[7] && $splitNameBase[8]) ? "(" . floatval($splitNameBase[7]) . "," . floatval($splitNameBase[8]) . ")" : NULL,
+                    'refs'=>(isset($splitNameBase[9]) && $splitNameBase[9]) ? $splitNameBase[9] : null,
+                    'cleared' => intval($splitNameBase[10]) >0  ? "TRUE" : "FALSE",
+                    'updated_at' => 'NOW()'
+                    )
+                );
             }
         }
     }

@@ -2319,6 +2319,9 @@ $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS factions t
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS is_interior int");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS vanilla_location boolean");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS coords POINT ");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS refs text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS cleared boolean");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS title text");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS stage text");
 $db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS worldspace text");
