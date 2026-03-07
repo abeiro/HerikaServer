@@ -1807,7 +1807,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                         'dest_door_cell_id'=>intval($localData[4]),
                         'dest_door_exterior'=>intval($localData[5]),
                         'door_id'=>intval($localData[6]),
-                        'vanilla_cell'=>(intval($localData[1])<77175193) ? true : false,// IDs below 77175193 are vanilla cells 0x04999999
+                        'vanilla_cell'=>((intval($localData[1]) < 77175193) ? 'true' : 'false'),// IDs below 77175193 are vanilla cells 0x04999999
                         'worldspace'=> $localData[7],
                         'closed'=>intval($localData[8]),
                         'door_name'=> $localData[9],
