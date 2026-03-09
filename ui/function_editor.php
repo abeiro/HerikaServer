@@ -124,7 +124,7 @@ require_once($enginePath."lib/utils.php");
 require_once($enginePath."functions/functions.php");
 
 $currentList = $GLOBALS["DEFINED_FUNCTIONS"];
-$alwaysVisibleFunctions = ['RentRoom', 'HireCarriage', 'HireFerry', 'AddBounty', 'PayBounty', 'ArrestPlayer', 'ForgiveCrime'];
+$alwaysVisibleFunctions = ['RentRoom', 'HireCarriage', 'HireFerry', 'AddBounty', 'PayBounty', 'ArrestPlayer', 'ForgiveCrime','MakeFollower'];
 $currentList = array_unique(array_merge($currentList, $alwaysVisibleFunctions));
 
 // Handle form submission
@@ -424,7 +424,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         'ComeCloser' => 'Move closer to the NPC partner',
                                         'WaitHere' => 'Stay in current location and wait',
                                         'IncreaseWalkSpeed' => 'Move faster during travel',
-                                        'DecreaseWalkSpeed' => 'Move slower, more carefully'
+                                        'DecreaseWalkSpeed' => 'Move slower, more carefully',
+                                        'MakeFollower' => 'Designate another NPC as a follower to follow the player around'
                                     ];
                                     echo $descriptions[$func] ?? 'Movement-related function';
                                     ?>

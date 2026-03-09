@@ -54,7 +54,7 @@ $contextData = $prompt;
 
 $connectionHandler = $connector->getConnector($currentConnectorData);
 
-$MODEL = "qwen/qwen3-coder-next";
+$MODEL = "google/gemini-3-flash-preview";
 //$MODEL = "nex-agi/deepseek-v3.1-nex-n1:free";
 
 $buffer = $connectionHandler->fast_request(
