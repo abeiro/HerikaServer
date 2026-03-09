@@ -2322,6 +2322,16 @@ $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS coords POI
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS refs text");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS cleared boolean");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP");
+$db->execQuery("
+CREATE OR REPLACE VIEW locations_v
+as
+select * FROM  locations
+where
+case 
+  when formid=102771 and cleared=FALSE then FALSE -- Dustman's Cairn is closed until The Companions quest, 'Proving Honor' has been activated
+  ELSE TRUE
+END");
+
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS title text");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS stage text");
 $db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS worldspace text");

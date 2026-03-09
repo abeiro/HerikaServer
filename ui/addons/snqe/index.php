@@ -109,6 +109,22 @@ function getNextObjective($stateFile) {
 
 $nextObjective = getNextObjective($stateFile);
 
+
+function InvolvedNPCs($stateFile) {
+    if (file_exists($stateFile)) {
+        $content = file_get_contents($stateFile);
+        $data = json_decode($content, true);
+        if ($data && isset($data['npclist']) && is_array($data['npclist']) && !empty($data['npclist'])) {
+            return $data['npclist'] ?? [];
+        }
+    } else
+        error_log("State file not found for involved NPCs: " . htmlspecialchars($stateFile));
+
+    return null;
+}
+
+$involvedNPCs = InvolvedNPCs($stateFile);
+
 // Handle AJAX request for running quests
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_running_quests') {
     header('Content-Type: application/json');
@@ -335,13 +351,13 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
     border-radius: 6px;
     color: #e0e0e0;
     font-family: 'Courier New', monospace;
-    font-size: 0.88em;
+    font-size: small;
     resize: vertical;
     transition: border-color 0.2s;
     box-sizing: border-box;
 }
 
-.form-group textarea { min-height: 100px; }
+.form-group textarea { min-height: 50px; }
 
 .form-group textarea:focus,
 .form-group input[type="text"]:focus {
@@ -523,6 +539,14 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
     .snqe-layout { flex-direction: column; }
     .snqe-sidebar { flex: 1 1 100%; }
 }
+
+.small-info {
+    margin: 0 0 8px 0;
+    color: #666;
+    font-size: 0.8em;
+    font-style: italic;
+    line-height: 1.4;
+}
 </style>
 
 <?php if (!$isEmbed): ?>
@@ -537,7 +561,7 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
             <form id="snqeForm">
                 <div class="btn-group">
                     <button type="button" class="btn-snqe btn-snqe-generate" onclick="generateScenario()">Generate Scenario</button>
-                    <button type="button" class="btn-snqe btn-snqe-create" onclick="submitFormData()">Stage quest</button>
+                    <button type="button" class="btn-snqe btn-snqe-create" onclick="submitFormData()">Stage Storyline</button>
                     <button type="button" class="btn-snqe btn-snqe-clear" onclick="clearAllData()">Clear Data</button>
                     <button type="button" class="btn-snqe btn-snqe-clear" id="playQuestBtn" onclick="startQuest()" <?php echo (empty($runningQuests) && $stagedQuestTitle !== 'No staged quest') ? '' : 'disabled'; ?>>Play Quest</button>
                     <button type="button" class="btn-snqe btn-snqe-clear" id="requestEndBtn" onclick="requestEnd()" <?php echo (empty($runningQuests) && $stagedQuestTitle !== 'No staged quest') ? '' : 'disabled'; ?>>Request End</button>
@@ -549,12 +573,14 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
 
                 <div class="form-group" id="suggestedGroup" style="<?php echo ($stagedQuestTitle !== 'No staged quest') ? 'display:none;' : ''; ?>">
                     <label for="suggested">User suggestions</label>
-                    <textarea name="suggested" id="suggested" placeholder="Enter suggestions here..."></textarea>
+                    <p class="small-info">This will affect AI instructions when generating scenario for the first time. E.G. "A quest to retrieve some stolen item" or "action should take place at Silent Moons Camp"</p>
+                    <textarea name="suggested" id="suggested" placeholder="Enter suggestions here..." style="height: 50px;"></textarea>
                 </div>
 
                 <div class="form-group" id="userpromptGroup" style="<?php echo ($stagedQuestTitle !== 'No staged quest') ? 'display:none;' : ''; ?>">
                     <label for="userprompt">AI instructions</label>
-                    <textarea name="userprompt" id="userprompt" ></textarea>
+                    <p class="small-info">These are the instructions sent to AI. You can add here some details. E.G. (spawn several spiders at Broken Fang cave)</p>
+                    <textarea name="userprompt" id="userprompt" style="height: 100px;"></textarea>
                 </div>
 
                 <div class="form-group">
@@ -567,18 +593,24 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
                     <input type="text" name="briefing" id="briefing" placeholder="Briefing will appear here..." readonly />
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" style="display:none;">
                     <label>Agent Log <small style="color:#666;">(last 100 lines)</small></label>
                     <div class="log-box" id="agentLog"><?php echo htmlspecialchars($logRunAgent); ?></div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" style="display:none;">
                     <label>Service Log <small style="color:#666;">(last 100 lines)</small></label>
                     <div class="log-box" id="serviceLog"><?php echo htmlspecialchars($serviceLog); ?></div>
                 </div>
 
-                <div style="">
+                <div style="display:none;">
                     <select name="locationlist" id="locationlist" multiple></select>
+                </div>
+
+                <div style="">
+                    <label>NPCs involved</label>
+                    <div class="log-box" id="involvedNPCs" style="color:#60a5fa;"><?php echo htmlspecialchars(implode(", ", $involvedNPCs??[])); ?>
+                    </div>
                 </div>
 
             </form>
@@ -605,7 +637,7 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
             </div>
             
             <div class="staged-quest-container">
-                <h3>📝 Staged Quest</h3>
+                <h3>📝 Staged StoryLine</h3>
                 <div class="staged-quest-value" id="stagedQuestTitle">
                     <?php echo htmlspecialchars($stagedQuestTitle); ?>
                 </div>
@@ -673,6 +705,10 @@ function refreshRunningQuests() {
                     </div>`).join('');
                 if (pendingStepContainer) pendingStepContainer.style.display = 'block';
             }
+            
+            // Update pending step value
+            const ps = document.getElementById('pendingStepValue');
+            if (data.pendingStep && ps) { ps.textContent = data.pendingStep; }
             
             // Show next objective only if: staged quest exists, no running quests, no pending step, and next objective exists
             if (hasStagedQuest && !hasRunningQuests && !hasPendingStep && hasNextObjective) {
@@ -812,6 +848,7 @@ function clearAllData() {
     document.getElementById('questtitle').value = '';
     document.getElementById('briefing').value   = '';
     document.getElementById('suggested').value  = '';
+    document.getElementById('involvedNPCs').textContent = '';
 }
 
 function startQuest() {
@@ -908,9 +945,7 @@ window.addEventListener('DOMContentLoaded', function() {
     if (b) document.getElementById('briefing').value   = b;
 
     refreshRunningQuests();
-    refreshLogs();
     setInterval(refreshRunningQuests, 5000);
-    setInterval(refreshLogs, 10000);
 });
 </script>
 

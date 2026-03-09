@@ -69,6 +69,16 @@ function CreateNPC(
         "spawn_attempts" => 0,     // Count of spawn checks
     ];
 
+    $npcMaster = new NpcMaster();
+    $npcLocalData = $npcMaster->GetByName($name);
+    if ($npcLocalData) {
+        // If NPC already exists in database, update with quest info
+        $extData = $npcMaster->getExtendedData($npcLocalData);
+        $extData["starring_in_quest"] = $quest_id;
+        $npcLocalData = $npcMaster->setExtendedData($npcLocalData, $extData);
+        $npcMaster->updateByArray($npcLocalData);
+    }
+    
     // Save updated quest state
     SNQEQuestManager::updateQuestData($quest_id, ["npcs" => $quest_data["npcs"]]);
 }
@@ -433,6 +443,8 @@ function CheckNPCSpawn(
 
             } else {
                 // Will order to move to player if disposition is not aggressive or dead
+                // Why? maybe its just patrolling remote location ...review
+                /*
                 $GLOBALS["db"]->insert(
                     'responselog',
                     [
@@ -444,6 +456,7 @@ function CheckNPCSpawn(
                         'tag' => "",
                     ]
                 );
+                */
             }
         }
 
@@ -457,6 +470,10 @@ function CheckNPCSpawn(
         $npc["spawned"] = "done";
         $quest_data["npcs"][$npc_ref] = $npc;
         SNQEQuestManager::updateQuestData($quest_id, ["npcs" => $quest_data["npcs"]]);
+
+        // Enhance NPC profile with more details from quest state (topics, items, etc)
+        enhanceProfileUsingQuestData($quest_data,$npc);
+
         return "done";
     }
 
@@ -963,7 +980,7 @@ function CheckTopicToPlayer(
         'conf_opts',
         array(
             'id' => "snqe_pending_step",
-            'value' => "Waiting for {$topic["info"]}"
+            'value' => "Waiting for topic: '{$topic["name"]}' by '{$quest_data["npcs"][$topic["giver"]]["name"]}'"
         ),
         "id"
     );
@@ -1760,6 +1777,7 @@ function WaitforCombatEnd(
                 ]
             );
         } else {
+            // Review. This will move remove NPCs to player location, which can be out of roleplay
 
             error_log("[WaitforCombatEnd] {$GLOBALS["actors_present"]}");
             $npcMaster = new NpcMaster();
@@ -2013,8 +2031,50 @@ function WaitAtLocation(
                     $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
                     $unsignedInt = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
                     $refHexString = "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
+                   
+                   
+                    // Some locations have same name, so try to pick the nearest one to the player.
+                    // locations.coords is a PostgreSQL POINT. We'll order by distance using the <-> operator.
+                    // Player coords: SELECT b.coords FROM named_cell a LEFT JOIN locations b ON (b.formid=a.location_id) WHERE a.id=0;
+                    $playerCoordsRow = $GLOBALS["db"]->fetchOne(
+                        'SELECT b.coords
+                         FROM "public"."named_cell" a
+                         LEFT JOIN locations b ON (b.formid = a.location_id)
+                         WHERE a.id = 0'
+                    );
 
-                    $locs = $GLOBALS["db"]->fetchOne("SELECT * FROM locations where name='" . $GLOBALS["db"]->escape($location) . "' LIMIT 1");
+                    $playerPoint = $playerCoordsRow["coords"] ?? null;
+
+                    if (!empty($playerPoint)) {
+                        $playerPointEsc = $GLOBALS["db"]->escape($playerPoint); // expected format "(x,y)"
+                        error_log("[WaitAtLocation] Player coords: $playerPointEsc");
+                        $locs = $GLOBALS["db"]->fetchOne(
+                            "SELECT *
+                             FROM locations
+                             WHERE name='" . $GLOBALS["db"]->escape($location) . "'
+                             ORDER BY coords <-> '{$playerPointEsc}'::point
+                             LIMIT 1"
+                        );
+                        error_log("[WaitAtLocation] SELECT *
+                             FROM locations
+                             WHERE name='" . $GLOBALS["db"]->escape($location) . "'
+                             ORDER BY coords <-> '{$playerPointEsc}'::point
+                             LIMIT 1");
+                    } else {
+                        // Fallback if player coords are not available
+                        error_log("[WaitAtLocation] Player coords not available, using first match for location");
+                        $locs = $GLOBALS["db"]->fetchOne(
+                            "SELECT *
+                             FROM locations
+                             WHERE name='" . $GLOBALS["db"]->escape($location) . "'
+                             LIMIT 1"
+                        );
+                    }
+
+                    $locationRef = getLocationReferences($locs["formid"]);
+                    if ($locationRef) {
+                        $locs["formid"] = $locationRef;
+                    }
 
                     if ($locs) {
                         $GLOBALS["db"]->insert(
@@ -2148,7 +2208,45 @@ function WaitAtLocation(
                 $unsignedInt = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
                 $refHexString = "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
 
-                $locs = $GLOBALS["db"]->fetchOne("SELECT * FROM locations where name='" . $GLOBALS["db"]->escape($location) . "' LIMIT 1");
+                // Some locations have same name, so try to pick the nearest one to the player.
+                // locations.coords is a PostgreSQL POINT. We'll order by distance using the <-> operator.
+                // Player coords: SELECT b.coords FROM named_cell a LEFT JOIN locations b ON (b.formid=a.location_id) WHERE a.id=0;
+                $playerCoordsRow = $GLOBALS["db"]->fetchOne(
+                    'SELECT b.coords
+                        FROM "public"."named_cell" a
+                        LEFT JOIN locations b ON (b.formid = a.location_id)
+                        WHERE a.id = 0'
+                );
+
+                $playerPoint = $playerCoordsRow["coords"] ?? null;
+
+                if (!empty($playerPoint)) {
+                    $playerPointEsc = $GLOBALS["db"]->escape($playerPoint); // expected format "(x,y)"
+                    error_log("[WaitAtLocation] Player coords: $playerPointEsc");
+                    $locs = $GLOBALS["db"]->fetchOne(
+                        "SELECT *
+                            FROM locations
+                            WHERE name='" . $GLOBALS["db"]->escape($location) . "'
+                            ORDER BY coords <-> '{$playerPointEsc}'::point
+                            LIMIT 1"
+                    );
+                    error_log("[WaitAtLocation] SELECT *
+                            FROM locations
+                            WHERE name='" . $GLOBALS["db"]->escape($location) . "'
+                            ORDER BY coords <-> '{$playerPointEsc}'::point
+                            LIMIT 1");
+                } else {
+                    // Fallback if player coords are not available
+                    error_log("[WaitAtLocation] Player coords not available, using first match for location");
+                    $locs = $GLOBALS["db"]->fetchOne(
+                        "SELECT *  FROM locations WHERE name='" . $GLOBALS["db"]->escape($location) . "' LIMIT 1"
+                    );
+                }
+
+                $locationRef = getLocationReferences($locs["formid"]);
+                if ($locationRef) {
+                    $locs["formid"] = $locationRef;
+                }
 
                 if ($locs) {
                     $GLOBALS["db"]->insert(
@@ -2162,7 +2260,7 @@ function WaitAtLocation(
                             'tag' => '',
                         ]
                     );
-
+                    
                     //$GLOBALS["last_gamets"]
 
                     $GLOBALS["db"]->insert(
@@ -2196,6 +2294,21 @@ function WaitAtLocation(
                 }
             }
 
+        } else {
+            //GPS track. Should detect if NPC is at remote location.
+            // Review: return tru if NPC is at location, but player did not get there yet.
+            /*$GLOBALS["db"]->insert(
+                'responselog',
+                [
+                    'localts' => time(),
+                    'sent' => 0,
+                    'actor' => "rolemaster",
+                    'text' => "",
+                    'action' => "rolecommand|BackgroundCmd@$refHexString@Track",
+                    'tag' => '',
+                ]
+            );
+            */
         }
 
         // Check by GPS tracking
@@ -2213,7 +2326,7 @@ function WaitAtLocation(
         if ($gpsloc) {
             $locationGps = $gpsloc["location"];
 
-            error_log("<$locationGps> vs <$location>");
+            error_log("[WaitAtLocation] <$locationGps> vs <$location>");
             if (strpos($location, $locationGps) !== false) {
                 $npcAtLocation = true;
             }
@@ -2534,6 +2647,11 @@ function StationAtLocation(
             $refHexString = "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
 
             $locs = $GLOBALS["db"]->fetchOne("SELECT * FROM locations where name='" . $GLOBALS["db"]->escape($location) . "' LIMIT 1");
+
+            $locationRef = getLocationReferences($locs["formid"]);
+            if ($locationRef) {
+                $locs["formid"] = $locationRef;
+            }
 
             if ($locs) {
                 $GLOBALS["db"]->insert(
