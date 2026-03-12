@@ -48,6 +48,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $db->delete("rumors", "gamets>={$gameRequest[2]}  ");
     $db->delete("named_cell", "gamets>={$gameRequest[2]}  ");
     $db->delete("named_cell", "gamets<=({$gameRequest[2]} - 30000000) "); //((24 * 3) / 0.0000024)
+    $db->delete("sneq_quests_saved", "gamets>={$gameRequest[2]}  ");
     /* This is obsolete */
     /*
     if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
@@ -1135,39 +1136,45 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $db->query("truncate table locations");
     else {
         
-        if ($splitNameBase[0] && $splitNameBase[1]) {
+        if ($splitNameBase[0] && $splitNameBase[1] && !in_array($splitNameBase[1],[241641])) { // Exception for Pellagua Farm) {
             $existingRecord = $db->fetchOne("SELECT * FROM locations WHERE formid = '{$splitNameBase[1]}'");
             
             if ($existingRecord) {
-            $db->updateRow(
-                'locations',
-                array(
-                'name' => $splitNameBase[0],
-                'region' => $splitNameBase[2],
-                'hold' => $splitNameBase[3],
-                'tags' => $splitNameBase[4],
-                'is_interior' => intval($splitNameBase[5]),
-                'vanilla_location' => intval($splitNameBase[1]) < 77175193 ? "TRUE" : "FALSE",
-                'factions' => $splitNameBase[6] ?? '',
-                'coords' => (isset($splitNameBase[7]) && isset($splitNameBase[8]) && $splitNameBase[7] && $splitNameBase[8]) ? "(" . floatval($splitNameBase[7]) . "," . floatval($splitNameBase[8]) . ")" : NULL
-                ),
-                "formid = '{$splitNameBase[1]}'"
-            );
+                $db->updateRow(
+                    'locations',
+                    array(
+                    'name' => $splitNameBase[0],
+                    'region' => $splitNameBase[2],
+                    'hold' => $splitNameBase[3],
+                    'tags' => $splitNameBase[4],
+                    'is_interior' => intval($splitNameBase[5]),
+                    'vanilla_location' => intval($splitNameBase[1]) < 77175193 ? "TRUE" : "FALSE",
+                    'factions' => $splitNameBase[6] ?? '',
+                    'coords' => (isset($splitNameBase[7]) && isset($splitNameBase[8]) && $splitNameBase[7] && $splitNameBase[8]) ? "(" . floatval($splitNameBase[7]) . "," . floatval($splitNameBase[8]) . ")" : NULL,
+                    'refs'=>(isset($splitNameBase[9]) && $splitNameBase[9]) ? $splitNameBase[9] : null,
+                    'cleared' => intval($splitNameBase[10]) >0  ? "TRUE" : "FALSE",
+                    'updated_at' => 'NOW()'
+                    ),
+                    "formid = '{$splitNameBase[1]}'"
+                );
             } else {
-            $db->insert(
-                'locations',
-                array(
-                'name' => $splitNameBase[0],
-                'formid' => $splitNameBase[1],
-                'region' => $splitNameBase[2],
-                'hold' => $splitNameBase[3],
-                'tags' => $splitNameBase[4],
-                'is_interior' => intval($splitNameBase[5]),
-                'vanilla_location' => intval($splitNameBase[1]) < 77175193 ? "TRUE" : "FALSE",
-                'factions' => $splitNameBase[6] ?? '',
-                'coords' => (isset($splitNameBase[7]) && isset($splitNameBase[8]) && $splitNameBase[7] && $splitNameBase[8]) ? "(" . floatval($splitNameBase[7]) . "," . floatval($splitNameBase[8]) . ")" : NULL
-                )
-            );
+                $db->insert(
+                    'locations',
+                    array(
+                    'name' => $splitNameBase[0],
+                    'formid' => $splitNameBase[1],
+                    'region' => $splitNameBase[2],
+                    'hold' => $splitNameBase[3],
+                    'tags' => $splitNameBase[4],
+                    'is_interior' => intval($splitNameBase[5]),
+                    'vanilla_location' => intval($splitNameBase[1]) < 77175193 ? "TRUE" : "FALSE",
+                    'factions' => $splitNameBase[6] ?? '',
+                    'coords' => (isset($splitNameBase[7]) && isset($splitNameBase[8]) && $splitNameBase[7] && $splitNameBase[8]) ? "(" . floatval($splitNameBase[7]) . "," . floatval($splitNameBase[8]) . ")" : NULL,
+                    'refs'=>(isset($splitNameBase[9]) && $splitNameBase[9]) ? $splitNameBase[9] : null,
+                    'cleared' => intval($splitNameBase[10]) >0  ? "TRUE" : "FALSE",
+                    'updated_at' => 'NOW()'
+                    )
+                );
             }
         }
     }
@@ -1800,7 +1807,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                         'dest_door_cell_id'=>intval($localData[4]),
                         'dest_door_exterior'=>intval($localData[5]),
                         'door_id'=>intval($localData[6]),
-                        'vanilla_cell'=>(intval($localData[1])<77175193) ? true : false,// IDs below 77175193 are vanilla cells 0x04999999
+                        'vanilla_cell'=>((intval($localData[1]) < 77175193) ? 'true' : 'false'),// IDs below 77175193 are vanilla cells 0x04999999
                         'worldspace'=> $localData[7],
                         'closed'=>intval($localData[8]),
                         'door_name'=> $localData[9],

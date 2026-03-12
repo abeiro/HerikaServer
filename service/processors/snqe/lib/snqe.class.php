@@ -74,7 +74,7 @@ class SNQEQuestManager
         );
         if ($res) {
             $res["quest_data"] = json_decode($res["quest_data"], true);
-            if (sizeof($res["quest_data"]) == 0) {
+            if (!isset($res["quest_data"]["started"])) {
                 $res["quest_data"]["started"] = $GLOBALS["last_gamets"];
             }
             return $res;
@@ -173,7 +173,8 @@ class SNQEQuestManager
                     'updated_at' => $runningQuest["updated_at"],
                 ]
             );
-        }
+        } else 
+            unlink($GLOBALS["ENGINE_PATH"] . "/log/snqe_state.json");
 
     }
 }
