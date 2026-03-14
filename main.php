@@ -1129,34 +1129,56 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         terminate();
     }
     
-    $rndNumber = rand(1, 100);
-    if ($rndNumber <= intval($GLOBALS["RECHAT_P"])) {
-        // Process Oghma for rechat events using NPC's last dialogue
-        // Use profile-based OGHMA_INFINIUM setting (not legacy conf.php $FEATURES["MISC"]["OGHMA_INFINIUM"])
-        // Use helper function to handle string "false" values from form submissions
-        if (!function_exists('isOghmaSettingEnabled')) {
-            function isOghmaSettingEnabled($value) {
-                if ($value === null) return false;
-                if ($value === false || $value === 'false' || $value === '0' || $value === 0) return false;
-                if ($value === true || $value === 'true' || $value === '1' || $value === 1) return true;
-                return (bool)$value;
+    // Pre-calculated rechat budget with final-round closing prompt
+
+    $sessionKey = md5($GLOBALS["HERIKA_NAME"] . "_" . floor(time() / 120));
+    $budgetFile = sys_get_temp_dir() . "/chim_rechat_" . $sessionKey . ".json";
+    $currentRound = sizeof($rechatHistory); // rounds fired so far
+
+    if ($currentRound === 0) {
+        // Pre-roll the entire conversation's rechat chain upfront
+        $budget = 0;
+        for ($i = 0; $i < intval($GLOBALS["RECHAT_H"]); $i++) {
+            if (rand(1, 100) <= intval($GLOBALS["RECHAT_P"])) {
+                $budget++;
+            } else {
+                break; // probability failed — chain ends here
             }
         }
-        $minimeEnabled = isOghmaSettingEnabled($GLOBALS["MINIME_T5"] ?? false);
-        $oghmaCustomEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_CUSTOM"] ?? false);
-        $oghmaInfiniumEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
-        
-        if (($minimeEnabled || $oghmaCustomEnabled) && $oghmaInfiniumEnabled) {
-            $GLOBALS["OGHMA_CALLED"] = true;
-            require(__DIR__."/processor/oghma.php"); // Process Oghma
+        if ($budget === 0) {
+            Logger::info("Rechat: pre-roll determined 0 rounds — terminating");
+            terminate();
+        }
+        file_put_contents($budgetFile, json_encode(['budget' => $budget, 'ts' => time()]));
+        Logger::info("Rechat: pre-rolled budget={$budget} for {$GLOBALS["HERIKA_NAME"]}");
+
+    } else {
+        // Subsequent rounds — check against pre-rolled budget
+        if (!file_exists($budgetFile)) {
+            // No budget file (edge case) — fall back to original CHIM behaviour
+            if (rand(1, 100) > intval($GLOBALS["RECHAT_P"])) {
+                Logger::info("Rechat: fallback probability check failed");
+                terminate();
+            }
+        } else {
+            $data = json_decode(file_get_contents($budgetFile), true);
+            $budget = intval($data['budget']);
+            if ($currentRound >= $budget) {
+                Logger::info("Rechat: pre-roll budget exhausted ({$currentRound}/{$budget}) — terminating");
+                @unlink($budgetFile);
+                terminate();
+            }
         }
     }
-    else{
-        Logger::info("Rechat terminated by RECHAT_P probability check (random > {$GLOBALS["RECHAT_P"]}%)");
-        terminate();
+
+    // All gates passed — detect final round and inject closing prompt
+    $budget = isset($budget) ? $budget : intval($GLOBALS["RECHAT_H"]);
+    if ($currentRound + 1 >= $budget) {
+        $GLOBALS["PROMPT_HEAD"] .= "\n[This is your final response in this exchange. Conclude your current thought naturally — you are not leaving, just finishing what you were saying for now.]";
+        Logger::info("Rechat: final round ({$currentRound}/{$budget}) — closing prompt injected");
     }
-    
-    
+
+
     if (sizeof($rechatHistory)>1) {
         // Lets make rechat wait a bit, so events while NPCs are speaking get into context// disabled if using new rechat fire event
         SemaphoreManager::release("MAIN");
