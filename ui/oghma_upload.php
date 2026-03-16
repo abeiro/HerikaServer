@@ -1391,7 +1391,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <div id="oghma-header-content">
                 <p>The <b>Oghma Infinium</b> is a "Skyrim Encyclopedia" that AI NPC's will use to help them roleplay.</p>
                 <p>This is done by detecting topics during conversations, and injecting the appropriate information into the AI's prompt.</p>
-                <p>To use it you must have <b>[MINIME_T5]</b> and <b>[OGHMA_INFINIUM]</b> enabled in the default profile. You also need Minime-T5 installed and running.</p>
+                <p>To use it you must have <b>[OGHMA_INFINIUM]</b> enabled in the default profile. MiniMe-T5 is auto-detected and used when its service is installed and running.</p>
                 
                 <h3><strong>Ensure all topic titles are lowercase and spaces are replaced with underscores (_).</strong></h3>
                 <h4>Example: "Fishy Stick" becomes "fishy_stick"</h4>

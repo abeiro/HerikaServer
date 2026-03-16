@@ -20,6 +20,137 @@ if (file_exists($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php")) {
     require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php");  // Should contain current ones
 }
 
+function herikaQuickstartMiniMeDefaultUrl(): string {
+    return 'http://127.0.0.1:8082/';
+}
+
+function herikaQuickstartProbeUrl(string $rawUrl): array {
+    $result = [
+        'ok' => false,
+        'http_code' => 0,
+        'latency_ms' => 0,
+        'error' => '',
+    ];
+
+    $start = microtime(true);
+    $parts = @parse_url($rawUrl);
+    $scheme = strtolower(strval($parts['scheme'] ?? ''));
+    $host = trim(strval($parts['host'] ?? ''));
+    $port = intval($parts['port'] ?? 0);
+    $path = strval($parts['path'] ?? '/');
+    $query = strval($parts['query'] ?? '');
+
+    if ($path === '') $path = '/';
+    if ($query !== '') $path .= '?' . $query;
+    if ($port <= 0) $port = ($scheme === 'https') ? 443 : 80;
+
+    if (function_exists('curl_init')) {
+        $ch = @curl_init($rawUrl);
+        if ($ch) {
+            @curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 4,
+                CURLOPT_CONNECTTIMEOUT => 2,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_MAXREDIRS => 2,
+                CURLOPT_HTTPHEADER => ['Accept: application/json, text/plain;q=0.9, */*;q=0.8'],
+            ]);
+            @curl_exec($ch);
+            $httpCode = intval(@curl_getinfo($ch, CURLINFO_HTTP_CODE));
+            $curlError = trim(strval(@curl_error($ch)));
+            @curl_close($ch);
+
+            $result['http_code'] = $httpCode;
+            $result['latency_ms'] = intval(round((microtime(true) - $start) * 1000));
+            if ($httpCode >= 200 && $httpCode < 500) {
+                $result['ok'] = true;
+            } else if ($curlError !== '') {
+                $result['error'] = $curlError;
+            } else {
+                $result['error'] = 'HTTP ' . strval($httpCode) . ' from endpoint probe.';
+            }
+            return $result;
+        }
+    }
+
+    $transport = ($scheme === 'https') ? 'ssl://' : 'tcp://';
+    $target = $transport . $host . ':' . strval($port);
+    $errno = 0;
+    $errstr = '';
+    $socket = @stream_socket_client($target, $errno, $errstr, 2.0, STREAM_CLIENT_CONNECT);
+    if (!$socket) {
+        $result['latency_ms'] = intval(round((microtime(true) - $start) * 1000));
+        $result['error'] = trim($errstr) !== '' ? trim($errstr) : ('Connection failed (' . strval($errno) . ').');
+        return $result;
+    }
+
+    @stream_set_timeout($socket, 4);
+    $request =
+        "GET " . $path . " HTTP/1.1\r\n" .
+        "Host: " . $host . "\r\n" .
+        "User-Agent: HerikaQuickstartProbe/1.0\r\n" .
+        "Accept: */*\r\n" .
+        "Connection: close\r\n\r\n";
+    @fwrite($socket, $request);
+    $statusLine = strval(@fgets($socket, 512));
+    @fclose($socket);
+
+    $result['latency_ms'] = intval(round((microtime(true) - $start) * 1000));
+    if (preg_match('/^HTTP\/\d(?:\.\d)?\s+(\d{3})/i', $statusLine, $matches)) {
+        $httpCode = intval($matches[1] ?? 0);
+        $result['http_code'] = $httpCode;
+        if ($httpCode >= 200 && $httpCode < 500) {
+            $result['ok'] = true;
+            return $result;
+        }
+        $result['error'] = 'HTTP ' . strval($httpCode) . ' from endpoint probe.';
+        return $result;
+    }
+
+    $result['error'] = 'No HTTP response from endpoint.';
+    return $result;
+}
+
+if (isset($_GET['minime_probe']) && strval($_GET['minime_probe']) === '1') {
+    header('Content-Type: application/json; charset=utf-8');
+    $rawUrl = trim(strval($_GET['url'] ?? herikaQuickstartMiniMeDefaultUrl()));
+    $result = [
+        'ok' => false,
+        'url' => $rawUrl,
+        'http_code' => 0,
+        'latency_ms' => 0,
+        'message' => 'Invalid URL',
+    ];
+
+    if ($rawUrl === '') {
+        $result['message'] = 'URL is required.';
+        echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    $parts = @parse_url($rawUrl);
+    $scheme = strtolower(strval($parts['scheme'] ?? ''));
+    $host = trim(strval($parts['host'] ?? ''));
+    if (!in_array($scheme, ['http', 'https'], true) || $host === '') {
+        $result['message'] = 'Use a valid http:// or https:// URL.';
+        echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    $probe = herikaQuickstartProbeUrl($rawUrl);
+    $result['http_code'] = intval($probe['http_code'] ?? 0);
+    $result['latency_ms'] = intval($probe['latency_ms'] ?? 0);
+    $result['ok'] = !empty($probe['ok']);
+    if ($result['ok']) {
+        $result['message'] = 'MiniMe service reachable.';
+    } else {
+        $result['message'] = trim(strval($probe['error'] ?? '')) ?: 'MiniMe service not reachable.';
+    }
+
+    echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 // Inline quicksave handlers
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
     try { require_once($rootPath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php"); } catch (Throwable $_e) {}
@@ -60,7 +191,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
         $rowPid = $GLOBALS['db']->fetchOne("SELECT id FROM core_profiles ORDER BY CASE WHEN lower(label)='default' THEN 0 WHEN default_narrator='1' THEN 1 WHEN default_npc='1' THEN 2 ELSE 3 END, id ASC LIMIT 1");
         $pid = isset($rowPid['id']) ? intval($rowPid['id']) : 0;
         if ($pid <= 0) { echo json_encode(['ok'=>false,'error'=>'No profile found']); exit; }
-        $minime = $truthy($_POST['minime_t5'] ?? null);
         $oghma  = $truthy($_POST['oghma_infinium'] ?? null);
         $player2Force = $truthy($_POST['player2_force_all_llm'] ?? null);
         $row = $GLOBALS['db']->fetchOne("SELECT metadata FROM core_profiles WHERE id=".$pid." LIMIT 1");
@@ -68,7 +198,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
         if (isset($row['metadata']) && $row['metadata'] !== '') {
             try { $tmp = json_decode($row['metadata'], true); if (is_array($tmp)) $meta = $tmp; } catch (Throwable $_) {}
         }
-        if ($minime !== null) { $meta['MINIME_T5'] = $minime ? true : false; }
         if ($oghma  !== null) { $meta['OGHMA_INFINIUM'] = $oghma ? true : false; }
         $json = json_encode($meta, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
         $GLOBALS['db']->updateRow('core_profiles', [ 'metadata' => $json ], "id=".$pid);
@@ -289,8 +418,7 @@ $llmCardsBaseStyle = 'display:grid; grid-template-columns:repeat(auto-fit,minmax
 $llmCardsDefaultStyle = $llmCardsBaseStyle . ($player2ForceAllLlm ? ' display:none;' : '');
 $llmCardsPlayer2Style = $llmCardsBaseStyle . ($player2ForceAllLlm ? '' : ' display:none;');
 
-// Preload default profile metadata flags for MiniMe and Oghma (safe if tables missing)
-$minimeChecked = "";
+// Preload default profile metadata flags for Oghma (safe if tables missing)
 $oghmaChecked = "";
 try {
     $rowPid = $db->fetchOne("SELECT id FROM core_profiles ORDER BY CASE WHEN lower(label)='default' THEN 0 WHEN default_narrator='1' THEN 1 WHEN default_npc='1' THEN 2 ELSE 3 END, id ASC LIMIT 1");
@@ -305,12 +433,20 @@ try {
                     $s = strtolower(trim((string)$v));
                     return in_array($s, ['1','true','yes','on'], true);
                 };
-                if (array_key_exists('MINIME_T5', $meta) && $isTruthy($meta['MINIME_T5'])) { $minimeChecked = " checked"; }
                 if (array_key_exists('OGHMA_INFINIUM', $meta) && $isTruthy($meta['OGHMA_INFINIUM'])) { $oghmaChecked = " checked"; }
             }
         }
     }
 } catch (Throwable $_e) { /* ignore on first-run before tables exist */ }
+
+$minimeProbeUrl = herikaQuickstartMiniMeDefaultUrl();
+$minimeProbeResult = herikaQuickstartProbeUrl($minimeProbeUrl);
+$minimeHealthyInitial = !empty($minimeProbeResult['ok']);
+$minimeStatusText = $minimeHealthyInitial
+    ? ('MiniMe reachable (' . intval($minimeProbeResult['http_code'] ?? 0) . ') in ' . intval($minimeProbeResult['latency_ms'] ?? 0) . ' ms.')
+    : ('MiniMe not reachable (' . intval($minimeProbeResult['http_code'] ?? 0) . ') in ' . intval($minimeProbeResult['latency_ms'] ?? 0) . ' ms. ' . trim(strval($minimeProbeResult['error'] ?? '')));
+$minimeStatusClass = $minimeHealthyInitial ? 'qs-status ok' : 'qs-status err';
+$oghmaContainerStyle = $minimeHealthyInitial ? '' : ' style="display:none;"';
 
 echo '<div class="container">
         <div class="form-group">
@@ -344,22 +480,15 @@ echo '<div class="container" id="qs_openrouter_section"' . ($player2ForceAllLlm 
       </div>';
 
 echo '<div class="container">
-        <br>
         <div class="form-group">
-            <div class="qs-toggle-block">
-                <div class="qs-toggle-header">
-                    <label class="qs-toggle-title" for="qs_minime_t5">Enable MiniMe (T5)</label>
-                    <div class="qs-toggle-control">
-                        <input class="form-check-input qs-switch-input" type="checkbox" id="qs_minime_t5" value="1"' . $minimeChecked . '>
-                        <label class="form-check-label qs-switch-label" for="qs_minime_t5">
-                            <span class="qs-switch-track"></span>
-                            <span class="qs-switch-copy" data-off="Off" data-on="On"></span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-            <small class="form-text">Turns on MiniMe-T5 LLM for roleplay assitance. Required for Oghma.</small>
+            <label>MiniMe Service</label>
+            <small class="form-text">Checks if MiniMe is reachable at the local default endpoint. Oghma is only shown when MiniMe is healthy.</small>
+            <input id="qs_minime_probe_url" type="hidden" value="' . htmlspecialchars($minimeProbeUrl) . '">
+            <div id="qs_minime_probe_status" class="' . $minimeStatusClass . '">' . htmlspecialchars(trim($minimeStatusText)) . '</div>
         </div>
+      </div>';
+
+echo '<div class="container" id="qs_oghma_section"' . $oghmaContainerStyle . '>
         <br>
         <div class="form-group">
             <div class="qs-toggle-block">
@@ -374,7 +503,7 @@ echo '<div class="container">
                     </div>
                 </div>
             </div>
-            <small class="form-text">Requires Minime-T5 enabled. Oghma Infinium improves AI roleplay by adding and restrciting lore to NPCs.</small>
+            <small class="form-text">Uses MiniMe-T5 automatically when service is running. Oghma Infinium improves AI roleplay by adding and restricting lore to NPCs.</small>
         </div>
       </div>';
 
@@ -744,6 +873,28 @@ echo '<style>
         color: #bbb;
     }
 
+    .qs-status {
+        margin-top: 8px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #3b3b3b;
+        background: #222;
+        color: #cfd8e3;
+        font-size: 0.92rem;
+    }
+
+    .qs-status.ok {
+        border-color: #2f7c55;
+        background: rgba(31, 81, 57, 0.28);
+        color: #d7f5e5;
+    }
+
+    .qs-status.err {
+        border-color: #8a4c3d;
+        background: rgba(85, 34, 34, 0.28);
+        color: #ffd3c9;
+    }
+
     .qs-toggle-block {
         background: linear-gradient(180deg, rgba(34, 34, 34, 0.98), rgba(25, 25, 25, 0.98));
         border: 1px solid #3b3b3b;
@@ -897,6 +1048,63 @@ echo '<style>
 
 echo '<script>
 const WEB_ROOT = '.json_encode($webRoot).';
+let qsMinimeHealthy = '.json_encode($minimeHealthyInitial).';
+
+function updateOghmaQuickstartUI(isHealthy){
+  try {
+    qsMinimeHealthy = !!isHealthy;
+    const oghmaSection = document.getElementById("qs_oghma_section");
+    if (oghmaSection) {
+      oghmaSection.style.display = qsMinimeHealthy ? "" : "none";
+    }
+  } catch(_e){}
+}
+
+async function checkMiniMeEndpoint(){
+  try {
+    const input = document.getElementById("qs_minime_probe_url");
+    const status = document.getElementById("qs_minime_probe_status");
+    if (!input || !status) return;
+    const url = String(input.value || "").trim();
+    if (url === "") {
+      status.textContent = "MiniMe endpoint URL is empty.";
+      status.classList.remove("ok");
+      status.classList.add("err");
+      updateOghmaQuickstartUI(false);
+      return;
+    }
+
+    status.textContent = "Checking MiniMe service...";
+    status.classList.remove("ok", "err");
+
+    const probeUrl = "quickstart.php?minime_probe=1&url=" + encodeURIComponent(url);
+    const response = await fetch(probeUrl, { cache: "no-store", credentials: "same-origin" });
+    const result = await response.json();
+    const http = Number(result && result.http_code ? result.http_code : 0);
+    const latency = Number(result && result.latency_ms ? result.latency_ms : 0);
+    const message = String((result && result.message) ? result.message : "MiniMe probe failed.");
+    if (result && result.ok) {
+      status.textContent = `MiniMe reachable (${http}) in ${latency} ms. ${message}`;
+      status.classList.remove("err");
+      status.classList.add("ok");
+      updateOghmaQuickstartUI(true);
+    } else {
+      status.textContent = `MiniMe not reachable (${http || 0}) in ${latency} ms. ${message}`;
+      status.classList.remove("ok");
+      status.classList.add("err");
+      updateOghmaQuickstartUI(false);
+    }
+  } catch (_error) {
+    const status = document.getElementById("qs_minime_probe_status");
+    if (status) {
+      status.textContent = "MiniMe probe failed.";
+      status.classList.remove("ok");
+      status.classList.add("err");
+    }
+    updateOghmaQuickstartUI(false);
+  }
+}
+
 async function saveQuickstartAndDB(){
   try {
     const finishUrl = WEB_ROOT + "/ui/home.php";
@@ -911,8 +1119,12 @@ async function saveQuickstartAndDB(){
 
     // 2) Save profile metadata flags
     const fdm = new FormData();
-    try { fdm.append("minime_t5", document.getElementById("qs_minime_t5").checked ? "1" : "0"); } catch(_e){}
-    try { fdm.append("oghma_infinium", document.getElementById("qs_oghma_infinium").checked ? "1" : "0"); } catch(_e){}
+    try {
+      const oghmaToggle = document.getElementById("qs_oghma_infinium");
+      if (qsMinimeHealthy && oghmaToggle) {
+        fdm.append("oghma_infinium", oghmaToggle.checked ? "1" : "0");
+      }
+    } catch(_e){}
     try { fdm.append("player2_force_all_llm", document.getElementById("qs_player2_force_all_llm").checked ? "1" : "0"); } catch(_e){}
     fdm.append("qs_action", "profile_quicksave_metadata");
     await fetch("quickstart.php", { method: "POST", body: fdm, cache: "no-store", credentials: "same-origin" });
@@ -964,6 +1176,7 @@ document.addEventListener("DOMContentLoaded", function(){
     player2Toggle.addEventListener("change", updatePlayer2QuickstartUI);
   }
   updatePlayer2QuickstartUI();
+  checkMiniMeEndpoint();
 });
 </script>';
 

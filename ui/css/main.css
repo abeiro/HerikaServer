@@ -54,6 +54,14 @@ h4 { font-size: 18px; }
 h5 { font-size: 16px; }
 h6 { font-size: 14px; }
 
+/* Force all primary headings/titles to white across UI pages. */
+h1, h2, h3,
+.title, .Title,
+.page-title, .section-title, .card-title,
+#page-title, #title-text {
+    color: #ffffff !important;
+}
+
 p {
     line-height: 150%;
     margin: 0 0 10px;

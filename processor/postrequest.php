@@ -15,7 +15,7 @@ if (!function_exists('isOghmaSettingEnabled')) {
     }
 }
 
-$minimeEnabled = isOghmaSettingEnabled($GLOBALS["MINIME_T5"] ?? false);
+$minimeEnabled = isMinimeT5Enabled();
 $oghmaInfiniumEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
 
 if ($minimeEnabled) {
@@ -34,7 +34,7 @@ if ($minimeEnabled) {
 }
 
 // POST MEMORY
-if ($GLOBALS["MINIME_T5"]) {
+if ($minimeEnabled) {
     if (in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s"])) {
         if (sizeof($memoryInjectionCtx) == 0) {
             // In case main memory search didnt return resutls because minime activated and user is nt directly asking a question
@@ -183,7 +183,7 @@ foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as 
 require "$configFilepath/conf.php";
 
 // Dynmci set current task
-if ($GLOBALS["MINIME_T5"]) {
+if ($minimeEnabled) {
     if (in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s"])) {
 
         $pattern     = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..

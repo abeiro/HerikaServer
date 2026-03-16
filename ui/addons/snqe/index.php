@@ -132,7 +132,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
         'quests' => $runningQuests,
         'pendingStep' => getPendingStep($GLOBALS['db']),
         'stagedQuestTitle' => getStagedQuestTitle($stateFile),
-        'nextObjective' => getNextObjective($stateFile)
+        'nextObjective' => getNextObjective($stateFile),
+        'involvedNPCs' => InvolvedNPCs($stateFile) ?? []
     ]);
     exit;
 }

@@ -3250,7 +3250,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         $kwStringAny=implode(" | ",$rawstring);
         $kwStringAll=implode(" & ",$rawstring);
         
-    } else if ($GLOBALS["MINIME_T5"]) {
+    } else if (isMinimeT5Enabled()) {
         // MiniMe keyword extraction
         Logger::info("Using minime-t5 context");
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
@@ -3405,7 +3405,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
             $kwStringAny=implode(" ",$rawstring);
             $kwStringAll=implode(" ",$rawstring);
         
-        } else if ($GLOBALS["MINIME_T5"]) {
+        } else if (isMinimeT5Enabled()) {
             // MiniMe keyword extraction
             Logger::info("Using minime-t5 context");
             error_log("[DataSearchMemoryByVector] Using minime-t5 context");

@@ -22,10 +22,6 @@ $localSchemaOverrides = [
         'type' => 'select',
         'description' => 'Custom Language. The lang folder is in the CHIM Server. Leave it blank for English.',
     ],
-    'MINIME_T5' => [
-        'type' => 'boolean',
-        'description' => "Enable Minime-T5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be installed in the CHIM Launcher. Only works for English!",
-    ],
     'BORED_EVENT' => [
         'type' => 'integer',
         'description' => 'Bored Event Probability. Chance of an AI NPC starting a random conversation every couple of minutes. 0 = Never | 50 = 50% | 100 = Always. Note: Bored Event Chance can be configured ingame in the CHIM MCM menu',
@@ -57,7 +53,7 @@ $localSchemaOverrides = [
     ],
     'OGHMA_INFINIUM' => [
         'type' => 'boolean',
-        'description' => "Needs Minime-T5 enabled and running. Tamriel lore information will be added to the prompt, enhancing their understanding on specific topics.",
+        'description' => "Tamriel lore information will be added to the prompt, enhancing understanding on specific topics. MiniMe-T5 is auto-detected when the service is running.",
     ],
     // OGHMA_CUSTOM removed - now only in Global Settings
     'CONTEXT_HISTORY' => [
@@ -105,7 +101,7 @@ $localSchemaOverrides = [
 
 // Visual keys to expose (can be expanded easily)
 $visualKeys = [
-  "RECHAT_H","RECHAT_P","CORE_LANG","MINIME_T5","BORED_EVENT",
+  "RECHAT_H","RECHAT_P","CORE_LANG","BORED_EVENT",
   "DIARY_PROMPT","OGHMA_AMOUNT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN","COMBAT_BARK_COOLDOWN",
   "OGHMA_INFINIUM","CONTEXT_HISTORY","MAX_WORDS_LIMIT",
   "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE","ENFORCE_ACTIONS_PROMPT",
@@ -114,15 +110,14 @@ $visualKeys = [
 
 // Organize visual keys into categories for display
 $visualGroups = [
-  'Core' => ["CORE_LANG","ENFORCE_ACTIONS_PROMPT","REMOVE_ASTERISKS_FROM_OUTPUT","INLINE_NARRATION_ENABLED","MAX_WORDS_LIMIT"],
+  'Core' => ["CORE_LANG","LANG_LLM_XTTS","ENFORCE_ACTIONS_PROMPT","REMOVE_ASTERISKS_FROM_OUTPUT","INLINE_NARRATION_ENABLED","MAX_WORDS_LIMIT"],
   'Rechat' => ["RECHAT_H","RECHAT_P","RECHAT_ALLOW_ACTIONS"],
   'Diary' => ["DIARY_PROMPT","DIARY_COOLDOWN"],
   'Combat' => ["COMBAT_BARK_COOLDOWN"],
-  'Oghma' => ["OGHMA_INFINIUM","OGHMA_AMOUNT","MINIME_T5"],
+  'Oghma' => ["OGHMA_INFINIUM","OGHMA_AMOUNT"],
   'Context' => ["CONTEXT_HISTORY","CONTEXT_HISTORY_DIARY","CONTEXT_HISTORY_DYNAMIC_PROFILE"],
   'Quest' => ["QUEST_COMMENT","QUEST_COMMENT_CHANCE"],
   'Behavior' => ["BORED_EVENT","BORED_EVENT_SERVERSIDE"],
-  'Language/Voice' => ["LANG_LLM_XTTS"],
 ];
 
 // Pretty label similar to global_settings General tab
@@ -146,15 +141,15 @@ function meta_pretty_label(string $name): string {
 // Simple icon mapping for common groups/keys
 function meta_icon_for(string $key): string {
     $u = strtoupper($key);
-    if (strpos($u, 'DIARY') !== false) return '📙';
-    if (strpos($u, 'COMBAT_BARK') !== false) return '⚔️';
-    if (strpos($u, 'RECHAT') === 0) return '🔁';
-    if (strpos($u, 'CONTEXT_HISTORY') === 0) return '🧠';
-    if (strpos($u, 'OGHMA') === 0) return '🧾';
-    if (strpos($u, 'QUEST_') === 0) return '🧭';
-    if (strpos($u, 'LANG_') === 0 || strpos($u, 'CORE_LANG') === 0) return '🌐';
-    if ($u === 'HERIKA_ANIMATIONS') return '🎞️';
-    return '⚙️';
+    if (strpos($u, 'DIARY') !== false) return '&#x1F4D9;';
+    if (strpos($u, 'COMBAT_BARK') !== false) return '&#x2694;&#xFE0F;';
+    if (strpos($u, 'RECHAT') === 0) return '&#x1F501;';
+    if (strpos($u, 'CONTEXT_HISTORY') === 0) return '&#x1F9E0;';
+    if (strpos($u, 'OGHMA') === 0) return '&#x1F9FE;';
+    if (strpos($u, 'QUEST_') === 0) return '&#x1F9ED;';
+    if (strpos($u, 'LANG_') === 0 || strpos($u, 'CORE_LANG') === 0) return '&#x1F310;';
+    if ($u === 'HERIKA_ANIMATIONS') return '&#x1F39E;&#xFE0F;';
+    return '&#x2699;&#xFE0F;';
 }
 
 $metadataCurrent = [];
@@ -162,6 +157,8 @@ if (isset($editItem["metadata"]) && !empty($editItem["metadata"])) {
     $tmp = json_decode($editItem["metadata"], true);
     if (is_array($tmp)) $metadataCurrent = $tmp;
 }
+// Deprecated: MiniMe-T5 is auto-detected at runtime.
+unset($metadataCurrent['MINIME_T5']);
 
 // Show visual controls only on core_profiles page
 $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
@@ -221,8 +218,10 @@ function renderMetaInput($key, $schema, $value, $controlOnly = false) {
             $max = $ranges[$key]['max'];
             $step = $ranges[$key]['step'];
             $safeVal = htmlspecialchars($val);
+            $html .= "<div class=\"range-pair\">";
             $html .= "<input type=\"range\" id=\"$rid\" min=\"$min\" max=\"$max\" step=\"$step\" value=\"$safeVal\" oninput=\"document.getElementById('$nid').value=this.value\">";
-            $html .= "<div style=\"margin-top:6px;\"><input type=\"number\" id=\"$nid\" name=\"meta_vis[$key]\" min=\"$min\" max=\"$max\" step=\"$step\" value=\"$safeVal\" style=\"width:80px;\" oninput=\"metaClamp('$rid','$nid',$min,$max)\"></div>";
+            $html .= "<input type=\"number\" id=\"$nid\" name=\"meta_vis[$key]\" min=\"$min\" max=\"$max\" step=\"$step\" value=\"$safeVal\" oninput=\"metaClamp('$rid','$nid',$min,$max)\">";
+            $html .= "</div>";
         } else if ($type === 'longstring') {
             $html .= "<textarea name=\"meta_vis[$key]\" rows=\"4\" placeholder=\"" . htmlspecialchars($ph) . "\">" . htmlspecialchars($val) . "</textarea>";
         } else if ($type==='integer' || $type==='number') {
@@ -231,6 +230,35 @@ function renderMetaInput($key, $schema, $value, $controlOnly = false) {
             $html .= "<input type=\"text\" name=\"meta_vis[$key]\" value=\"" . htmlspecialchars($val) . "\" placeholder=\"" . htmlspecialchars($ph) . "\">";
         }
     }
+    return $html;
+}
+
+function renderMetaSettingRow(string $key, array $schemaEntry, $value): string {
+    $type = $schemaEntry['type'] ?? 'string';
+    $desc = htmlspecialchars($schemaEntry['description'] ?? '');
+    $label = htmlspecialchars(meta_pretty_label($key));
+    $icon = meta_icon_for($key);
+    $safeKey = htmlspecialchars($key);
+    $html = '<div class="setting-row">';
+    $html .= '<div>';
+    $html .= '<div class="setting-key"><span class="setting-icon">'.$icon.'</span><span>'.$label.'</span></div>';
+    if (!empty($desc)) {
+        $html .= '<div class="setting-desc">'.$desc.'</div>';
+    }
+    $html .= '</div>';
+    $html .= '<div class="setting-control">';
+    if ($type === 'boolean') {
+        $isTrue = ($value === true || $value === 'true' || $value === 1 || $value === '1');
+        $html .= '<input type="hidden" name="meta_vis['.$safeKey.']" value="false">';
+        $html .= '<label class="meta-toggle-inline">';
+        $html .= '<input class="meta-toggle" type="checkbox" value="true" name="meta_vis['.$safeKey.']"'.($isTrue ? ' checked' : '').'>';
+        $html .= '<span class="toggle-text">'.($isTrue ? 'On' : 'Off').'</span>';
+        $html .= '</label>';
+    } else {
+        $html .= renderMetaInput($key, $schemaEntry, $value, true);
+    }
+    $html .= '</div>';
+    $html .= '</div>';
     return $html;
 }
 ?>
@@ -250,7 +278,7 @@ function renderMetaInput($key, $schema, $value, $controlOnly = false) {
                 $rechatP = $metadataCurrent['RECHAT_P'] ?? 50;
                 echo '<div class="provider-card" style="margin-bottom: 12px; background: #1a1a1a; padding: 10px 12px;">';
                 echo   '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">';
-                echo     '<div style="font-size: 18px;">🔁</div>';
+                echo     '<div style="font-size: 18px;">&#x1F501;</div>';
                 echo     '<div style="font-weight: 700; color: rgb(242, 124, 17); font-size: 13px;">Rechat Response Calculator</div>';
                 echo   '</div>';
                 echo   '<div id="rechat-calc-output" style="font-size: 13px; line-height: 1.6;"></div>';
@@ -258,71 +286,27 @@ function renderMetaInput($key, $schema, $value, $controlOnly = false) {
             }
             
             echo '<div class="provider-grid">';
+            echo '<div class="provider-card profile-settings-group-card">';
             foreach ($keysInVisual as $k) {
                 $schemaEntry = $localSchemaOverrides[$k] ?? ($confSchema[$k] ?? []);
-                $type = $schemaEntry['type'] ?? 'string';
-                $desc = htmlspecialchars($schemaEntry['description'] ?? '');
-                $label = meta_pretty_label($k);
-                $icon = meta_icon_for($k);
                 $val = $metadataCurrent[$k] ?? '';
-                echo '<div class="provider-card">';
-                echo   '<div class="provider-head">';
-                echo     '<div class="provider-title">';
-                echo       '<div class="provider-icon">'.htmlspecialchars($icon).'</div>';
-                echo       '<div>'.htmlspecialchars($label).'</div>';
-                if ($type === 'boolean') {
-                    $isTrue = ($val === true || $val === 'true' || $val === 1 || $val === '1');
-                    echo   '<div class="provider-toggle">'
-                         . '<input type="hidden" name="meta_vis['.htmlspecialchars($k).']" value="false">'
-                         . '<input type="checkbox" value="true" name="meta_vis['.htmlspecialchars($k).']"'.($isTrue?' checked':'').'>'
-                         . '</div>';
-                }
-                echo     '</div>';
-                echo   '</div>';
-                echo   '<div class="provider-body">';
-                if ($type !== 'boolean') {
-                    echo renderMetaInput($k, $schemaEntry, $val, true);
-                }
-                echo   '</div>';
-                if (!empty($desc)) echo '<div style="margin-top:6px; color:#bbb; font-size:12px;">'.$desc.'</div>';
-                echo '</div>';
+                echo renderMetaSettingRow($k, $schemaEntry, $val);
                 $rendered[$k] = true;
             }
+            echo '</div>';
             echo '</div>';
         }
         $remaining = array_values(array_diff($visualKeys, array_keys($rendered)));
         if (count($remaining) > 0) {
             echo '<h2 style="font-family: \''."MagicCards".'\', serif; color: rgb(242,124,17); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); word-spacing: 6px; margin: 10px 0 12px; font-size: 1.2em;">Other</h2>';
             echo '<div class="provider-grid">';
+            echo '<div class="provider-card profile-settings-group-card">';
             foreach ($remaining as $k) {
                 $schemaEntry = $localSchemaOverrides[$k] ?? ($confSchema[$k] ?? []);
-                $type = $schemaEntry['type'] ?? 'string';
-                $desc = htmlspecialchars($schemaEntry['description'] ?? '');
-                $label = meta_pretty_label($k);
-                $icon = meta_icon_for($k);
                 $val = $metadataCurrent[$k] ?? '';
-                echo '<div class="provider-card">';
-                echo   '<div class="provider-head">';
-                echo     '<div class="provider-title">';
-                echo       '<div class="provider-icon">'.htmlspecialchars($icon).'</div>';
-                echo       '<div>'.htmlspecialchars($label).'</div>';
-                if (($schemaEntry['type'] ?? '') === 'boolean') {
-                    $isTrue = ($val === true || $val === 'true' || $val === 1 || $val === '1');
-                    echo   '<div class="provider-toggle">'
-                         . '<input type="hidden" name="meta_vis['.htmlspecialchars($k).']" value="false">'
-                         . '<input type="checkbox" value="true" name="meta_vis['.htmlspecialchars($k).']"'.($isTrue?' checked':'').'>'
-                         . '</div>';
-                }
-                echo     '</div>';
-                echo   '</div>';
-                echo   '<div class="provider-body">';
-                if (($schemaEntry['type'] ?? '') !== 'boolean') {
-                    echo renderMetaInput($k, $schemaEntry, $val, true);
-                }
-                echo   '</div>';
-                if (!empty($desc)) echo '<div style="margin-top:6px; color:#bbb; font-size:12px;">'.$desc.'</div>';
-                echo '</div>';
+                echo renderMetaSettingRow($k, $schemaEntry, $val);
             }
+            echo '</div>';
             echo '</div>';
         }
         ?>

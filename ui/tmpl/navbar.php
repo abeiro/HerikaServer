@@ -282,6 +282,7 @@ $serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
                         <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/config_hub.php">Configuration</a></li>
                         <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/immersion.php">Immersion</a></li>
                         <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/control_panel.php">Control Panel</a></li>
+                        <li><a class="dropdown-item" href="/Dwemer-Dashboard/index.php">DwemerDistro Home</a></li>
                     </ul>
                 </div>
 
