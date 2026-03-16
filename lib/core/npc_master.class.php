@@ -609,6 +609,9 @@ class NpcMaster
             }
         }
 
+        // This behavior is now always enabled.
+        $GLOBALS['ENFORCE_ACTIONS_PROMPT'] = true;
+
     }
 
     public function getAllFk($field)

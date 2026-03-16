@@ -1754,7 +1754,7 @@ if ($gameRequest[0] === 'instruction' && isset($gameRequest[3])) {
         }
         
         // Apply RPG_COMMENTS_CHANCE probability
-        $chance = 100;
+        $chance = 50;
         if (isset($GLOBALS["RPG_COMMENTS_CHANCE"])) {
             $chance = intval($GLOBALS["RPG_COMMENTS_CHANCE"]);
         }
@@ -1768,6 +1768,46 @@ if ($gameRequest[0] === 'instruction' && isset($gameRequest[3])) {
             }
         }
     }
+}
+
+// Hard cooldown for RPG comment events (global, fixed to 60 seconds)
+$rpgCommentEventMap = [
+    'combatend'     => 'combat_end',
+    'combatendmighty' => 'combat_end',
+    'bleedout'      => 'bleedout',
+    'rpg_lvlup'     => 'levelup',
+    'rpg_shout'     => 'learn_shout',
+    'rpg_word'      => 'learn_word',
+    'rpg_soul'      => 'absorb_soul',
+    'lockpicked'    => 'lockpick',
+    'goodmorning'   => 'sleep',
+];
+$rpgCommentEventType = $rpgCommentEventMap[$gameRequest[0]] ?? null;
+if ($gameRequest[0] === 'instruction' && isset($gameRequest[3])) {
+    if (stripos($gameRequest[3], 'wounded bleedingout') !== false || stripos($gameRequest[3], 'lost combat') !== false) {
+        $rpgCommentEventType = 'bleedout';
+    }
+}
+if (!empty($rpgCommentEventType)) {
+    $rpgCooldownSeconds = 60;
+    $rpgCooldownKey = 'RPG_COMMENT_LAST_TIMESTAMP';
+    $rpgRecord = $GLOBALS["db"]->fetchAll("SELECT value FROM conf_opts WHERE id='" . $GLOBALS["db"]->escape($rpgCooldownKey) . "'");
+    if (!empty($rpgRecord)) {
+        $lastTrigger = (int)$rpgRecord[0]['value'];
+        $elapsed = time() - $lastTrigger;
+        if ($elapsed < $rpgCooldownSeconds) {
+            Logger::info("RPG comment {$rpgCommentEventType} skipped (hard cooldown active: {$elapsed}/{$rpgCooldownSeconds}s)");
+            terminate();
+        }
+    }
+    $GLOBALS["db"]->upsertRowOnConflict(
+        "conf_opts",
+        [
+            "id" => $rpgCooldownKey,
+            "value" => time(),
+        ],
+        'id'
+    );
 }
 
 
@@ -1853,6 +1893,9 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 // array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
 
+// Action-enforcement prompt is now always enabled.
+$GLOBALS["ENFORCE_ACTIONS_PROMPT"] = true;
+
 
 // Rechat case
 if (in_array($gameRequest[0],["rechat","narration"]) ) {
@@ -1861,13 +1904,11 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     if (isset($GLOBALS["RECHAT_ALLOW_ACTIONS"]) && $GLOBALS["RECHAT_ALLOW_ACTIONS"]) {
         $FUNCTIONS_ARE_ENABLED=true;
 
-        if (isset($GLOBALS["ENFORCE_ACTIONS_PROMPT"]) && $GLOBALS["ENFORCE_ACTIONS_PROMPT"]) {
-            $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-            if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
-                $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
-            else
-                $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
-        }
+        $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
+        if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
+            $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
+        else
+            $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
         
         // MinAI prompts are breaking rechat actor adressing "Respond to #target# as #herika_name#"
         $GLOBALS['action_prompts']=[];
@@ -1922,13 +1963,11 @@ if (in_array($gameRequest[0],["instruction"]) ) {
 }
 
 // Enforce actions
-if (isset($GLOBALS["ENFORCE_ACTIONS_PROMPT"]) && $GLOBALS["ENFORCE_ACTIONS_PROMPT"]) {
-    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-    if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
-        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
-    else
-        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
-}
+$GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
+if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
+    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
+else
+    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
 
 // Cooldown definitions
 $COOLDOWNMAP["ComeCloser"]=120/0.00864;

@@ -28,12 +28,13 @@ class CoreProfile
         // Seed defaults into metadata if not provided
         if (! isset($data['metadata']) || $data['metadata'] === '' || $data['metadata'] === null) {
             $defaultMeta = [
-                'RPG_COMMENTS'           => ['levelup', 'sleep', 'lockpick'],
+                'RPG_COMMENTS'           => ['levelup', 'combat_end', 'bleedout'],
                 'DYNAMIC_PROFILE_FIELDS' => [
-                    'relationships',
+                    'personality',
+                    'speechstyle',
                     'goals',
                 ],
-                'RPG_COMMENTS_CHANCE'    => 100,
+                'RPG_COMMENTS_CHANCE'    => 50,
                 'COMBAT_BARK_COOLDOWN'   => 30,
             ];
             $data['metadata'] = json_encode($defaultMeta, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -287,6 +288,8 @@ class CoreProfile
                 }
             }
         }
+        // This behavior is now always enabled.
+        $GLOBALS["ENFORCE_ACTIONS_PROMPT"] = true;
         if (isset($currentProfileData["prompt"])) {
             $GLOBALS["PROFILE_PROMPT"] = $currentProfileData["prompt"];
         }

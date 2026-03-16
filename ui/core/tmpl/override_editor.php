@@ -23,6 +23,7 @@ $reservedKeys = $overrideEditorConfig['reservedKeys'] ?? [];
 $currentData = $overrideEditorConfig['currentData'] ?? [];
 $systemFields = $overrideEditorConfig['systemFields'] ?? [];
 unset($currentData['MINIME_T5']);
+unset($currentData['ENFORCE_ACTIONS_PROMPT']);
 
 $isNpcMode = ($mode === 'npc');
 $isProfileMode = ($mode === 'profile');
@@ -556,10 +557,14 @@ foreach ($allowedSettings as $key) {
     // Custom label mapping
     function getLabel(key) {
         const customLabels = {
+            'RECHAT_H': 'RECHAT RESPONSE ROUNDS',
+            'RECHAT_P': 'RECHAT PROBAILITY',
+            'OGHMA_AMOUNT': 'OGHMA ARTICLES AMOUNT',
             'BORED_EVENT': 'BORED EVENT CHANCE',
             'CONTEXT_HISTORY': 'CONTEXT HISTORY EVENT COUNT',
             'CONTEXT_HISTORY_DIARY': 'CONTEXT HISTORY DIARY EVENT COUNT',
-            'CONTEXT_HISTORY_DYNAMIC_PROFILE': 'CONTEXT HISTORY DYNAMIC PROFILE EVENT COUNT'
+            'CONTEXT_HISTORY_DYNAMIC_PROFILE': 'CONTEXT HISTORY DYNAMIC PROFILE EVENT COUNT',
+            'INLINE_NARRATION_ENABLED': 'NPC ACTION NARRATION ENABLED'
         };
         return customLabels[key.toUpperCase()] || key.toUpperCase();
     }

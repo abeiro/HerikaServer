@@ -78,7 +78,7 @@ $EMOTEMOODS="sassy,"
     . "sad"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 
 $REMOVE_ASTERISKS_FROM_OUTPUT=true;
-$ENFORCE_ACTIONS_PROMPT=false;
+$ENFORCE_ACTIONS_PROMPT=true;
 $SUMMARY_PROMPT= 'Focus on key events, tagging characters, locations, and factions accurately. Ensure memories align and maintain chronological order while foreshadowing future arcs. Prioritize player agency, and use environmental cues to enhance storytelling and continuity.'; 
 $DYNAMIC_PROMPT = "(LEGACY - Use individual field prompts instead) "
     . "Last in-game date/time found: [date or \"No date\"] "
@@ -89,7 +89,7 @@ $DYNAMIC_PROMPT = "(LEGACY - Use individual field prompts instead) "
     . "3. CONTINUING GOALS, CONFLICTS OR FEELINGS (2–3 bullet points) "
     . "   - List ongoing arcs, dilemmas, objectives and goals with clear facts. Remove items only if resolved.";
 
-$DYNAMIC_PROFILE_FIELDS = ["relationships", "goals"];
+$DYNAMIC_PROFILE_FIELDS = ["personality", "speechstyle", "goals"];
 
 $DYNAMIC_PROMPT_PERSONALITY = "Based on the dialogue history and recent events, update #HERIKA_NAME# personality traits. "
     . "Maintain all existing relevant personality traits and add new ones based on recent experiences. "
@@ -134,7 +134,8 @@ $DIARY_PROMPT = "Please write a short summary of #PLAYER_NAME# and #HERIKA_NAME#
 // Dynamic profile utility button
 $dynamic_profile_b1 = false; // Utility button for updating all dynamic profile fields
 
-$RPG_COMMENTS=["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"]; //AI Service(s).
+$RPG_COMMENTS=["levelup","combat_end","bleedout","keepmechecked"]; //AI Service(s).
+$RPG_COMMENTS_CHANCE=50; //Chance (0-100) for enabled RPG comments to trigger.
 $DETECT_MAGIC_EVENT=true; //Enable detection and logging of NPC spellcasting events.
 $MAGIC_EVENT_BLACKLIST=""; //Comma-separated list of magic events to exclude from logging.
 $LOCATION_BLACKLIST="Dark Brotherhood Sanctuary, Twilight Sepulcher"; //Comma-separated list of location names to exclude from Points of Interest context.

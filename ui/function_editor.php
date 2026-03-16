@@ -19,8 +19,14 @@ if (!$isEmbed) {
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 }
 
-if (file_exists(__DIR__."/../functions/user_pref.json")) {
-    $currentOnes=json_decode(file_get_contents(__DIR__."/../functions/user_pref.json"),true);
+// Persisted action selection (if present)
+$userPrefPath = __DIR__."/../functions/user_pref.json";
+$hasUserPrefs = file_exists($userPrefPath);
+if ($hasUserPrefs) {
+    $currentOnes=json_decode(file_get_contents($userPrefPath),true);
+    if (!is_array($currentOnes)) {
+        $currentOnes = [];
+    }
 } else {
     $currentOnes=[];
 }
@@ -127,12 +133,18 @@ $currentList = $GLOBALS["DEFINED_FUNCTIONS"];
 $alwaysVisibleFunctions = ['RentRoom', 'HireCarriage', 'HireFerry', 'AddBounty', 'PayBounty', 'ArrestPlayer', 'ForgiveCrime','MakeFollower'];
 $currentList = array_unique(array_merge($currentList, $alwaysVisibleFunctions));
 
+// Fresh install UX: default to all commands checked when no saved preferences exist yet.
+if (!$hasUserPrefs) {
+    $currentOnes = array_values($currentList);
+    @file_put_contents($userPrefPath, json_encode($currentOnes));
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $selectedFunctions = $_POST['functions'] ?? [];
     $GLOBALS['ENABLED_FUNCTIONS'] = $selectedFunctions;
     
-    file_put_contents(__DIR__."/../functions/user_pref.json",json_encode($selectedFunctions));
+    file_put_contents($userPrefPath,json_encode($selectedFunctions));
     $currentOnes=$selectedFunctions;
     $message = "Function preferences updated successfully! Selected " . count($selectedFunctions) . " functions.";
 }

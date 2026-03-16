@@ -9,8 +9,8 @@ function shouldTriggerRPGComment($eventType) {
         return false;
     }
     
-    // Get the trigger chance percentage (default 100%)
-    $chance = 100;
+    // Get the trigger chance percentage (default 50%)
+    $chance = 50;
     if (isset($GLOBALS["RPG_COMMENTS_CHANCE"])) {
         $chance = intval($GLOBALS["RPG_COMMENTS_CHANCE"]);
     }
