@@ -146,7 +146,7 @@ function meta_icon_for(string $key): string {
     if (strpos($u, 'RECHAT') === 0) return '&#x1F501;';
     if (strpos($u, 'CONTEXT_HISTORY') === 0) return '&#x1F9E0;';
     if (strpos($u, 'OGHMA') === 0) return '&#x1F9FE;';
-    if (strpos($u, 'QUEST_') === 0) return '&#x1FAED;';
+    if (strpos($u, 'QUEST_') === 0) return '&#x1F9ED;';
     if (strpos($u, 'LANG_') === 0 || strpos($u, 'CORE_LANG') === 0) return '&#x1F310;';
     if ($u === 'HERIKA_ANIMATIONS') return '&#x1F39E;&#xFE0F;';
     return '&#x2699;&#xFE0F;';
