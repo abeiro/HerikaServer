@@ -2282,6 +2282,11 @@ if (isset($GLOBALS["TTSFUNCTION"]) && !empty($GLOBALS["TTSFUNCTION"])) {
 // Check for context overrides on ext dir (plugins) before system prompt build
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context_pre.php");
 
+// Re-sync nearby sections after context_pre plugins, since plugins can mutate PROMPT_NEARBY_SECTIONS.
+if (isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
+    $nearbySections = $GLOBALS["PROMPT_NEARBY_SECTIONS"];
+}
+
 
 if (!empty($GLOBALS["OGHMA_HINT"])) {
 
