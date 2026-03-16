@@ -738,7 +738,108 @@ if (isset($_GET["profile"])) {
         if (!$currentNpcData) {
             error_log(__FILE__.". Using default profile because GET PROFILE NOT EXISTS");
 
-        
+            // Recovery path: when a stale/unknown profile hash is passed, we still need
+            // a valid profile + connector context or call_llm_internal() will terminate.
+            $profile = new CoreProfile();
+
+            $requestText = isset($gameRequest[3]) ? trim((string)$gameRequest[3]) : "";
+            $fallbackNpcName = null;
+            $fallbackNpcData = null;
+            $currentProfileData = null;
+
+            // Highest-confidence target extraction from player text payload.
+            if ($requestText !== "" && preg_match('/\(\s*talking to\s+([^()]+?)\s*\)/i', $requestText, $matches)) {
+                $candidate = trim($matches[1]);
+                if ($candidate !== "") {
+                    $fallbackNpcName = $candidate;
+                }
+            }
+
+            // Rolemaster payloads can include actor targeting as Instruction@NpcName@...
+            if ($fallbackNpcName === null && $requestText !== "" && preg_match('/(?:Instruction|Suggestion)@([^@]+?)@/i', $requestText, $matches)) {
+                $candidate = trim($matches[1]);
+                if ($candidate !== "") {
+                    $fallbackNpcName = $candidate;
+                }
+            }
+
+            $isNarratorScopedRequest = in_array($gameRequest[0], ["narrator_inputtext", "narration", "narrator_welcome"], true)
+                || stripos($requestText, '(Talking to The Narrator)') !== false
+                || ($fallbackNpcName !== null && strcasecmp($fallbackNpcName, "The Narrator") === 0);
+
+            if ($fallbackNpcName !== null && strcasecmp($fallbackNpcName, "The Narrator") !== 0) {
+                $escapedNpcName = $db->escape($fallbackNpcName);
+                $fallbackNpcData = $db->fetchOne("SELECT * FROM core_npc_master WHERE lower(npc_name)=lower('{$escapedNpcName}') LIMIT 1");
+                if ($fallbackNpcData) {
+                    $npcMaster->setOldGlobalsFromCurrentNpcData($fallbackNpcData);
+                    $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $fallbackNpcData;
+                    error_log("[CORE SYSTEM] Resolved unknown profile hash to NPC '{$fallbackNpcData["npc_name"]}' from request payload");
+                } else {
+                    error_log("[CORE SYSTEM] Could not resolve NPC '{$fallbackNpcName}' for unknown profile hash");
+                }
+            }
+
+            // Prefer the resolved NPC profile when available.
+            if ($fallbackNpcData) {
+                if (empty($fallbackNpcData["profile_id"])) {
+                    $defProfile = $profile->getDefaultNpc();
+                    if ($defProfile) {
+                        $fallbackNpcData["profile_id"] = (int)$defProfile["id"];
+                        $npcMaster->updateByArray($fallbackNpcData);
+                        error_log("[CORE SYSTEM] Resolved NPC '{$fallbackNpcData["npc_name"]}' had no profile, assigned default profile #{$defProfile["id"]}");
+                    }
+                }
+                if (!empty($fallbackNpcData["profile_id"])) {
+                    $currentProfileData = $profile->getById((int)$fallbackNpcData["profile_id"]);
+                }
+            }
+
+            if (!$currentProfileData) {
+                // NPC/default profile should win for normal requests; narrator only for narrator-scoped requests.
+                $fallbackProfile = $isNarratorScopedRequest ? $profile->getDefaultNarrator() : $profile->getDefaultNpc();
+                if (!$fallbackProfile) {
+                    $fallbackProfile = $isNarratorScopedRequest ? $profile->getDefaultNpc() : $profile->getDefaultNarrator();
+                }
+                if (!$fallbackProfile) {
+                    $fallbackProfile = $profile->getById(1);
+                }
+
+                if ($fallbackProfile) {
+                    // Ensure we have the full profile row (id/label/connectors/metadata).
+                    $currentProfileData = isset($fallbackProfile["id"])
+                        ? $profile->getById((int)$fallbackProfile["id"])
+                        : $fallbackProfile;
+                }
+            }
+
+            if ($currentProfileData) {
+                $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] = $currentProfileData;
+
+                $connector = new LLMConnector();
+                // Respect current in-game mode when selecting active connector slot.
+                $result = $GLOBALS["db"]->fetchOne("SELECT value FROM conf_opts WHERE id='chim_profile_model'");
+                $connectorSlot = (isset($result['value']) && $result['value'] >= 1 && $result['value'] <= 4)
+                    ? (int)$result['value']
+                    : 1;
+                $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+                $currentConnectorData = $connector->getById($connectorId);
+
+                if ($currentConnectorData) {
+                    $connector->setOldGlobals($currentConnectorData);
+                    $profile->setOldGlobals($currentProfileData);
+                    $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
+                    if ($fallbackNpcData) {
+                        error_log("[CORE SYSTEM] Loaded fallback NPC profile '{$currentProfileData["label"]}' for '{$fallbackNpcData["npc_name"]}'");
+                    } else {
+                        error_log("[CORE SYSTEM] Loaded fallback profile '{$currentProfileData["label"]}' for unknown profile hash");
+                    }
+                } else {
+                    Logger::error("[CORE SYSTEM] Fallback profile loaded but no connector found for slot {$connectorSlot}");
+                }
+            } else {
+                Logger::error("[CORE SYSTEM] No fallback profile available for unknown profile hash");
+            }
+
         } else {
             error_log("[CHIM CORE] USING CORE PROFILE {$currentNpcData["npc_name"]}")    ;
         
