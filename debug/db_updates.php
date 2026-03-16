@@ -2332,6 +2332,11 @@ case
   ELSE TRUE
 END");
 
+$db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS vendor_cont TEXT");
+$db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS stock JSONB");
+$db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS gold numeric");
+$db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS player_rank numeric");
+
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS title text");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS stage text");
 $db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS worldspace text");

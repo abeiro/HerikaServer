@@ -419,6 +419,10 @@ class SkyrimCommandBuilder
             public function EvaluatePackage(string $targetObjectFormId): array {
                 return $this->builder->build(81, compact('targetObjectFormId'));
             }
+
+            public function ShowBarterMenu(string $targetObjectFormId): array {
+                return $this->builder->build(82, compact('targetObjectFormId'));
+            }
         };
 
         $this->ObjectReference = new class($this) {
@@ -683,6 +687,10 @@ class SkyrimCommandBuilder
                 return $this->builder->build(490, compact('targetObjectFormId', 'akTargetRef', 'asName'));
             }
 
+            // 491
+            public function PrintLinkedRef(string $targetObjectFormId, string $akActor): array {
+                return $this->builder->build(491, compact('targetObjectFormId', 'akActor'));
+            }
         };
 
         $this->Faction = new class($this) {
@@ -833,6 +841,12 @@ class SkyrimCommandBuilder
             public function SetReaction(string $targetObjectFormId, string $akOther, int $aiNewValue): array {
                 return $this->builder->build(523, compact('targetObjectFormId', 'akOther', 'aiNewValue'));
             }
+
+            // 524
+            public function GetVendorFactionContainer(string $targetObjectFormId): array {
+                return $this->builder->build(524, compact('targetObjectFormId'));
+            }
+            
         };
     }
     

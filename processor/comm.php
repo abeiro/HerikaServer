@@ -1194,6 +1194,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 array(
                     'name' => $splitNameBase[1],
                     'formid' => strtoupper($splitNameBase[0]),
+                    'vendor_cont' => $splitNameBase[2]?strtoupper($splitNameBase[2]):null,
 
 
                 )

@@ -557,7 +557,6 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
     <div class="snqe-layout">
         <div class="snqe-main">
             <div class="snqe-page-title">🧭 AI Quest Manager</div>
-
             <form id="snqeForm">
                 <div class="btn-group">
                     <button type="button" class="btn-snqe btn-snqe-generate" onclick="generateScenario()">Generate Scenario</button>
@@ -566,6 +565,9 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
                     <button type="button" class="btn-snqe btn-snqe-clear" id="playQuestBtn" onclick="startQuest()" <?php echo (empty($runningQuests) && $stagedQuestTitle !== 'No staged quest') ? '' : 'disabled'; ?>>Play Quest</button>
                     <button type="button" class="btn-snqe btn-snqe-clear" id="requestEndBtn" onclick="requestEnd()" <?php echo (empty($runningQuests) && $stagedQuestTitle !== 'No staged quest') ? '' : 'disabled'; ?>>Request End</button>
                     <button type="button" class="btn-snqe btn-snqe-clear" onclick="cleanAll()">Clean all</button>
+
+                    <a href="https://github.com/abeiro/HerikaServer/discussions/480" target="_blank" style="color:#60a5fa; font-size:0.9em; margin-bottom: 20px; display:inline-block;position:absolute;right:5px;top:-50px">Documentation</a>
+                   
                 </div>
 
                 <div class="loading-msg" id="loading">Generating scenario...</div>
