@@ -22,10 +22,6 @@ $localSchemaOverrides = [
         'type' => 'select',
         'description' => 'Custom Language. The lang folder is in the CHIM Server. Leave it blank for English.',
     ],
-    'MINIME_T5' => [
-        'type' => 'boolean',
-        'description' => "Enable Minime-T5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be installed in the CHIM Launcher. Only works for English!",
-    ],
     'BORED_EVENT' => [
         'type' => 'integer',
         'description' => 'Bored Event Probability. Chance of an AI NPC starting a random conversation every couple of minutes. 0 = Never | 50 = 50% | 100 = Always. Note: Bored Event Chance can be configured ingame in the CHIM MCM menu',
@@ -57,7 +53,7 @@ $localSchemaOverrides = [
     ],
     'OGHMA_INFINIUM' => [
         'type' => 'boolean',
-        'description' => "Needs Minime-T5 enabled and running. Tamriel lore information will be added to the prompt, enhancing their understanding on specific topics.",
+        'description' => "Tamriel lore information will be added to the prompt, enhancing understanding on specific topics. MiniMe-T5 is auto-detected when the service is running.",
     ],
     // OGHMA_CUSTOM removed - now only in Global Settings
     'CONTEXT_HISTORY' => [
@@ -105,7 +101,7 @@ $localSchemaOverrides = [
 
 // Visual keys to expose (can be expanded easily)
 $visualKeys = [
-  "RECHAT_H","RECHAT_P","CORE_LANG","MINIME_T5","BORED_EVENT",
+  "RECHAT_H","RECHAT_P","CORE_LANG","BORED_EVENT",
   "DIARY_PROMPT","OGHMA_AMOUNT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN","COMBAT_BARK_COOLDOWN",
   "OGHMA_INFINIUM","CONTEXT_HISTORY","MAX_WORDS_LIMIT",
   "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE","ENFORCE_ACTIONS_PROMPT",
@@ -118,7 +114,7 @@ $visualGroups = [
   'Rechat' => ["RECHAT_H","RECHAT_P","RECHAT_ALLOW_ACTIONS"],
   'Diary' => ["DIARY_PROMPT","DIARY_COOLDOWN"],
   'Combat' => ["COMBAT_BARK_COOLDOWN"],
-  'Oghma' => ["OGHMA_INFINIUM","OGHMA_AMOUNT","MINIME_T5"],
+  'Oghma' => ["OGHMA_INFINIUM","OGHMA_AMOUNT"],
   'Context' => ["CONTEXT_HISTORY","CONTEXT_HISTORY_DIARY","CONTEXT_HISTORY_DYNAMIC_PROFILE"],
   'Quest' => ["QUEST_COMMENT","QUEST_COMMENT_CHANCE"],
   'Behavior' => ["BORED_EVENT","BORED_EVENT_SERVERSIDE"],
@@ -162,6 +158,8 @@ if (isset($editItem["metadata"]) && !empty($editItem["metadata"])) {
     $tmp = json_decode($editItem["metadata"], true);
     if (is_array($tmp)) $metadataCurrent = $tmp;
 }
+// Deprecated: MiniMe-T5 is auto-detected at runtime.
+unset($metadataCurrent['MINIME_T5']);
 
 // Show visual controls only on core_profiles page
 $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');

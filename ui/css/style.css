@@ -55,6 +55,14 @@ h1, h2, h3, h4, h5, h6 {
 	font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Force all primary headings/titles to white across UI pages. */
+h1, h2, h3,
+.title, .Title,
+.page-title, .section-title, .card-title,
+#page-title, #title-text {
+	color: #ffffff !important;
+}
+
 h1 {
 	font-size: 20px;
 	margin: 0 0 15px;

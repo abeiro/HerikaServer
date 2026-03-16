@@ -1891,7 +1891,7 @@ if (isset($GLOBALS["is_rolemastered"])) {
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     
-    if ($GLOBALS["MINIME_T5"]) {
+    if (isMinimeT5Enabled()) {
         $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $gameRequest[3]); // // assistant vs user war
@@ -1942,13 +1942,12 @@ if (!function_exists('isOghmaSettingEnabled')) {
     }
 }
 
-$minimeEnabled = isOghmaSettingEnabled($GLOBALS["MINIME_T5"] ?? false);
+$minimeEnabled = isMinimeT5Enabled();
 $oghmaCustomEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_CUSTOM"] ?? false);
 $oghmaInfiniumEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
 
 // Debug: Log the actual values being checked BEFORE the conditional
-error_log("[OGHMA CHECK] MINIME_T5=" . var_export($GLOBALS["MINIME_T5"] ?? null, true) 
-    . " (enabled=" . ($minimeEnabled ? 'Y' : 'N') . ")"
+error_log("[OGHMA CHECK] MINIME_T5(auto)=" . ($minimeEnabled ? 'Y' : 'N')
     . " | OGHMA_CUSTOM=" . var_export($GLOBALS["OGHMA_CUSTOM"] ?? null, true)
     . " (enabled=" . ($oghmaCustomEnabled ? 'Y' : 'N') . ")"
     . " | OGHMA_INFINIUM=" . var_export($GLOBALS["OGHMA_INFINIUM"] ?? null, true)

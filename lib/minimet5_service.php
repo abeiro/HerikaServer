@@ -35,6 +35,24 @@ function _minimeServiceAvailable() {
     return $available;
 }
 
+/**
+ * MiniMe auto-mode:
+ * - Enabled by default when service is reachable.
+ * - Automatically considered off when service is unavailable.
+ * - In tests, mock handlers imply enabled.
+ */
+function isMinimeT5Enabled() {
+    if (isset($GLOBALS["mockMinimeCommand"]) ||
+        isset($GLOBALS["mockMinimeExtract"]) ||
+        isset($GLOBALS["mockMinimePostTopic"]) ||
+        isset($GLOBALS["mockMinimeTask"]) ||
+        isset($GLOBALS["mockMinimeTopic"]) ||
+        isset($GLOBALS["mockMinimePostScene"])) {
+        return true;
+    }
+    return _minimeServiceAvailable();
+}
+
 function minimeCommand($text) {
     if (isset($GLOBALS["mockMinimeCommand"])) {
         return call_user_func($GLOBALS["mockMinimeCommand"], $text);
@@ -123,8 +141,14 @@ function minimePostScene($text) {
         return call_user_func($GLOBALS["mockMinimePostScene"], $text);
     }
 
+    // Skip if service not available
+    if (!_minimeServiceAvailable()) {
+        return null;
+    }
+
     $url = "http://127.0.0.1:8082/ambient?text=" . urlencode($text);
-    return file_get_contents($url);
+    $result = @file_get_contents($url);
+    return $result !== false ? $result : null;
 }
 
 ?>

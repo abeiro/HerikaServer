@@ -10,6 +10,14 @@ body
             font-family: 'Arial', Times, serif;
         }
 
+/* Force all primary headings/titles to white across UI pages. */
+h1, h2, h3,
+.title, .Title,
+.page-title, .section-title, .card-title,
+#page-title, #title-text {
+    color: #ffffff !important;
+}
+
         .Title {
             font-weight: bold;
             font-size: 30px;

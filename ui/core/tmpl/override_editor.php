@@ -22,6 +22,7 @@ $allowedSettings = $overrideEditorConfig['allowedSettings'] ?? [];
 $reservedKeys = $overrideEditorConfig['reservedKeys'] ?? [];
 $currentData = $overrideEditorConfig['currentData'] ?? [];
 $systemFields = $overrideEditorConfig['systemFields'] ?? [];
+unset($currentData['MINIME_T5']);
 
 $isNpcMode = ($mode === 'npc');
 $isProfileMode = ($mode === 'profile');
@@ -111,18 +112,13 @@ $fullSchema = [
     ],
     'OGHMA_INFINIUM' => [
         'type' => 'boolean',
-        'description' => 'Enable Oghma knowledge lookups. Needs Minime-T5 enabled.',
+        'description' => 'Enable Oghma knowledge lookups. MiniMe-T5 is auto-detected when the service is running.',
         'category' => 'Oghma'
     ],
     'OGHMA_AMOUNT' => [
         'type' => 'select',
         'values' => ['1','2','3'],
         'description' => 'Number of Oghma keywords to extract from each response.',
-        'category' => 'Oghma'
-    ],
-    'MINIME_T5' => [
-        'type' => 'boolean',
-        'description' => 'Enable Minime-T5 LLM. Helps with action and memory functions. Only works in English!',
         'category' => 'Oghma'
     ],
     'CONTEXT_HISTORY' => [
