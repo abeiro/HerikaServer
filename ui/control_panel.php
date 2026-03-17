@@ -12,6 +12,11 @@ $uiPos = strpos($scriptPath, '/ui/');
 if ($uiPos !== false) { $webRoot = substr($scriptPath, 0, $uiPos); } else { $webRoot = ''; }
 if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
+$distroDashboardRoot = preg_replace('#/(HerikaServer|StobeServer)$#', '/Dwemer-Dashboard', $webRoot);
+if (!is_string($distroDashboardRoot) || trim($distroDashboardRoot) === '' || $distroDashboardRoot === $webRoot) {
+    $distroDashboardRoot = '/Dwemer-Dashboard';
+}
+$distroDebuggerChimEmbedUrl = rtrim($distroDashboardRoot, '/') . '/distro_debugger.php?embed=1&tab=chim';
 
 $TITLE = "Control Panel";
 ob_start();
@@ -129,7 +134,7 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
 
     <div id="srvlogs" class="tab-content active">
         <div class="embed-wrap">
-            <iframe class="embed" loading="eager" src="<?php echo $webRoot; ?>/ui/tests/apache2err.php?embed=1"></iframe>
+            <iframe class="embed" loading="eager" src="<?php echo htmlspecialchars($distroDebuggerChimEmbedUrl, ENT_QUOTES, 'UTF-8'); ?>"></iframe>
         </div>
     </div>
     <div id="cache" class="tab-content">
