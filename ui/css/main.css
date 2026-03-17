@@ -1429,3 +1429,146 @@ code {
     margin: 5px 10px; /* Consistent spacing between CSV buttons */
 }
 
+/* ==========================================================================
+   Generic Plugin Installer (ext/generic_installer.php) Theme Alignment
+   ========================================================================== */
+body .installer-container {
+    max-width: 980px;
+    margin: 36px auto;
+    padding: 28px;
+    border-radius: 12px;
+    border: 1px solid rgba(138, 155, 182, 0.3);
+    background:
+        radial-gradient(circle at top right, rgba(1, 53, 166, 0.18), transparent 42%),
+        radial-gradient(circle at top left, rgba(23, 101, 41, 0.12), transparent 48%),
+        rgba(18, 22, 29, 0.92);
+    box-shadow:
+        0 12px 34px rgba(0, 0, 0, 0.35),
+        inset 0 1px rgba(255, 255, 255, 0.08);
+}
+
+body .installer-container > h1 {
+    margin-bottom: 14px;
+    color: #ffffff;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+body .installer-container .back-button {
+    margin: 0 0 18px !important;
+}
+
+body .installer-container h3 {
+    color: #f8f9fa;
+    border-bottom: 1px solid rgba(138, 155, 182, 0.22);
+    margin-top: 24px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+}
+
+body .installer-container .version-info-block {
+    border: 1px solid rgba(138, 155, 182, 0.26);
+    border-left: 4px solid rgb(1 53 166 / 90%);
+    border-radius: 10px;
+    background-color: rgba(12, 16, 24, 0.75);
+    padding: 18px 20px;
+    margin-bottom: 22px;
+}
+
+body .installer-container .version-info-block p {
+    margin: 8px 0;
+    color: #d6dbe6;
+    font-size: 16px;
+}
+
+body .installer-container .version-info-block strong {
+    color: #ffffff;
+}
+
+body .installer-container .installer-log {
+    border: 1px solid rgba(138, 155, 182, 0.26);
+    border-radius: 10px;
+    background-color: rgba(7, 10, 16, 0.95);
+    color: #d6dbe6;
+    padding: 16px 18px;
+    max-height: 52vh;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+body .installer-container .installer-log p {
+    margin: 5px 0;
+    line-height: 1.45;
+}
+
+body .installer-container .installer-log::-webkit-scrollbar {
+    width: 9px;
+}
+
+body .installer-container .installer-log::-webkit-scrollbar-thumb {
+    background-color: rgba(138, 155, 182, 0.6);
+    border-radius: 999px;
+}
+
+body .installer-container .installer-log::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(138, 155, 182, 0.85);
+}
+
+body .installer-container .log-info {
+    color: #7fd3ff;
+}
+
+body .installer-container .log-action,
+body .installer-container .log-running {
+    color: #f8e08f;
+}
+
+body .installer-container .log-completed,
+body .installer-container .log-success {
+    color: #5ad17f;
+}
+
+body .installer-container .log-skipped {
+    color: #9aa5b5;
+}
+
+body .installer-container .log-error,
+body .installer-container .log-failed {
+    color: #ff8f8f;
+}
+
+body .installer-container .system-command-output {
+    margin: 8px 0 14px 10px;
+    padding: 8px 12px;
+    border-left: 3px solid rgba(138, 155, 182, 0.36);
+    border-radius: 0 8px 8px 0;
+    background-color: rgba(10, 13, 20, 0.88);
+    color: #b8c2d1;
+}
+
+body .installer-container .status-message {
+    margin-top: 18px;
+    border-radius: 10px;
+    border: 1px solid rgba(138, 155, 182, 0.28);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+body .installer-container .status-success {
+    background: linear-gradient(180deg, rgba(23, 101, 41, 0.94), rgba(18, 76, 31, 0.94));
+    border-color: rgba(72, 187, 120, 0.32);
+}
+
+body .installer-container .status-error {
+    background: linear-gradient(180deg, rgba(166, 53, 63, 0.94), rgba(136, 40, 49, 0.94));
+    border-color: rgba(255, 99, 99, 0.34);
+}
+
+@media (max-width: 768px) {
+    body .installer-container {
+        margin: 16px auto;
+        padding: 18px;
+    }
+
+    body .installer-container > h1 {
+        font-size: 26px;
+    }
+}
+
