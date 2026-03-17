@@ -17,6 +17,7 @@ if (!is_string($distroDashboardRoot) || trim($distroDashboardRoot) === '' || $di
     $distroDashboardRoot = '/Dwemer-Dashboard';
 }
 $distroDebuggerChimEmbedUrl = rtrim($distroDashboardRoot, '/') . '/distro_debugger.php?embed=1&tab=chim';
+$distroDatabaseManagerUrl = rtrim($distroDashboardRoot, '/') . '/database_manager.php';
 
 $TITLE = "Control Panel";
 ob_start();
@@ -169,7 +170,7 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
     </div>
     <div id="dbmgr" class="tab-content">
         <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/import_db.php?embed=1"></iframe>
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo htmlspecialchars($distroDatabaseManagerUrl, ENT_QUOTES, 'UTF-8'); ?>"></iframe>
         </div>
     </div>
 </main>
