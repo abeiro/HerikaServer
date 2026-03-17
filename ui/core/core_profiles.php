@@ -327,6 +327,11 @@ h1.api-title {
 .label-with-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; }
 /* Profile Settings (metadata editor) checkbox enhancement */
 .profile-settings-card input[type="checkbox"] { accent-color:#176529; transform: scale(1.6); transform-origin:center; cursor:pointer; }
+/* Profile Core compact rows for Name/Slot */
+.profile-core-compact-field { margin-bottom: 6px; }
+.profile-core-compact-field > label { margin-bottom: 3px; line-height: 1.25; }
+.profile-core-compact-field > .hint,
+.profile-core-compact-field > small.hint { margin-top: 3px; line-height: 1.3; }
 </style>
 
 <main>
@@ -953,8 +958,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["delete_import_rule"])
 if (isset($_GET["create_blank"])) {
     try {
         $defaultMeta = json_encode([
-            'RPG_COMMENTS'=>['levelup','sleep','lockpick'],
-            'DYNAMIC_PROFILE_FIELDS'=>['relationships','goals']
+            'RPG_COMMENTS'=>['levelup','combat_end','bleedout'],
+            'DYNAMIC_PROFILE_FIELDS'=>['personality','speechstyle','goals'],
+            'RPG_COMMENTS_CHANCE'=>50
         ], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
         $row = $GLOBALS["db"]->fetchOne("INSERT INTO core_profiles (label, metadata) VALUES ('New Profile', '".pg_escape_string($defaultMeta)."') RETURNING id");
         $newId = is_array($row) ? ($row['id'] ?? '') : '';
@@ -1074,7 +1080,7 @@ $ittById = $byId($ittRows);
                                 `</div>
                             </div>
                             <div class="pf-lines">
-                                <div class="pf-line"><span class="pf-icon">&#x1F5F9;&#xFE0F;</span><span class="pf-key">Standard LLM</span><span class="pf-val">${llm1||'&mdash;'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">&#x1F579;&#xFE0F;</span><span class="pf-key">Standard LLM</span><span class="pf-val">${llm1||'&mdash;'}</span></div>
                                 <div class="pf-line"><span class="pf-icon">&#x1F3C3;&#x200D;&#x2642;&#xFE0F;&#x200D;&#x27A1;&#xFE0F;</span><span class="pf-key">Fast LLM</span><span class="pf-val">${llm2||'&mdash;'}</span></div>
                                 <div class="pf-line"><span class="pf-icon">&#x1F4AA;</span><span class="pf-key">Powerful LLM</span><span class="pf-val">${llm3||'&mdash;'}</span></div>
                                 <div class="pf-line"><span class="pf-icon">&#x1F9EA;</span><span class="pf-key">Experimental LLM</span><span class="pf-val">${llm4||'&mdash;'}</span></div>
@@ -1197,12 +1203,14 @@ $ittById = $byId($ittRows);
     <div class="connector-card" style="margin-bottom:12px;">
         <div class="connector-title">Profile Core</div>
         <div class="connector-subtitle">&#x24D8; Core identity and runtime toggles for this profile.</div>
-        <label for='label'>Name</label><br>
-        <input type="text" name="label" placeholder="Name" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
-        <small class="hint">Name for the profile.</small>
-        
-        <div style="height:8px;"></div>
-        <label for='slot' title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">Slot <span style="margin-left:6px; color:#9fb1c9; cursor:help;" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">&#x24D8;</span></label><br>
+        <div class="profile-core-compact-field">
+            <label for='label'>Name</label>
+            <input type="text" name="label" placeholder="Name" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
+            <small class="hint">Name for the profile.</small>
+        </div>
+
+        <div class="profile-core-compact-field">
+        <label for='slot' title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">Slot <span style="margin-left:6px; color:#9fb1c9; cursor:help;" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">&#x24D8;</span></label>
         <?php
             $usedSlotsRows = $GLOBALS["db"]->fetchAll("SELECT id, slot FROM core_profiles WHERE slot IS NOT NULL ORDER BY slot ASC");
             $usedSlots = [];
@@ -1221,6 +1229,7 @@ $ittById = $byId($ittRows);
             <?php endfor; ?>
         </select>
         <small class="hint">Optional quick-access slot (1-4). Can be quickchanged ingame.</small>
+        </div>
 
         <div style="height:8px;"></div>
         <label class="label-with-toggle">&#x1F464; Default NPC
@@ -1385,33 +1394,46 @@ const saveAllBtn = document.getElementById('btn_save_all');
         <div class="connector-subtitle">&#x24D8; Choose connector assignments for each role. Saved with Save All.</div>
 
         <?php
-            $connectorRoleRows = [
-                ['field' => 'llm_primary_id',    'icon' => '&#x1F5F9;&#xFE0F;', 'title' => 'Standard LLM',     'desc' => 'General purpose connector for normal roleplay responses.'],
-                ['field' => 'llm_secondary_id',  'icon' => '&#x1F3C3;&#x200D;&#x2642;&#xFE0F;&#x200D;&#x27A1;&#xFE0F;', 'title' => 'Fast LLM',         'desc' => 'Lower-latency connector for quick reactions and lightweight dialogue.'],
-                ['field' => 'llm_tertiary_id',   'icon' => '&#x1F4AA;',         'title' => 'Powerful LLM',     'desc' => 'Higher-quality connector for deeper or more complex responses.'],
-                ['field' => 'llm_quaternary_id', 'icon' => '&#x1F9EA;',         'title' => 'Experimental LLM', 'desc' => 'Optional wildcard connector for experimentation and variety.'],
-                ['field' => 'diary_connector_id','icon' => '&#x1F4D3;',         'title' => 'Diary LLM',        'desc' => 'Connector used for diary generation.'],
-                ['field' => 'llm_formatter_id',  'icon' => '&#x1F9FE;',         'title' => 'Formatter LLM',    'desc' => 'Connector used for JSON formatting and structured background tasks.'],
-                ['field' => 'llm_fallback_id',   'icon' => '&#x1F504;',         'title' => 'Fallback LLM',     'desc' => 'Backup connector used when primary requests fail.'],
+            $connectorRoleSections = [
+                [
+                    'title' => 'Response',
+                    'rows' => [
+                        ['field' => 'llm_primary_id',    'icon' => '&#x1F579;&#xFE0F;', 'title' => 'Standard LLM',     'desc' => 'General purpose connector for normal roleplay responses.'],
+                        ['field' => 'llm_secondary_id',  'icon' => '&#x1F3C3;&#x200D;&#x2642;&#xFE0F;&#x200D;&#x27A1;&#xFE0F;', 'title' => 'Fast LLM',         'desc' => 'Lower-latency connector for quick reactions and lightweight dialogue.'],
+                        ['field' => 'llm_tertiary_id',   'icon' => '&#x1F4AA;',         'title' => 'Powerful LLM',     'desc' => 'Higher-quality connector for deeper or more complex responses.'],
+                        ['field' => 'llm_quaternary_id', 'icon' => '&#x1F9EA;',         'title' => 'Experimental LLM', 'desc' => 'Optional wildcard connector for experimentation and variety.'],
+                    ],
+                ],
+                [
+                    'title' => 'Background',
+                    'rows' => [
+                        ['field' => 'diary_connector_id','icon' => '&#x1F4D3;',         'title' => 'Diary LLM',        'desc' => 'Connector used for diary generation.'],
+                        ['field' => 'llm_formatter_id',  'icon' => '&#x1F9FE;',         'title' => 'Formatter LLM',    'desc' => 'Connector used for JSON formatting and structured background tasks.'],
+                        ['field' => 'llm_fallback_id',   'icon' => '&#x1F504;',         'title' => 'Fallback LLM',     'desc' => 'Backup connector used when primary requests fail.'],
+                    ],
+                ],
             ];
         ?>
-        <?php foreach ($connectorRoleRows as $rowCfg): ?>
-            <?php $selectedId = (string)($editItem[$rowCfg['field']] ?? ''); ?>
-            <div class="setting-row">
-                <div>
-                    <div class="setting-key"><span class="setting-icon"><?= $rowCfg['icon'] ?></span><span><?= htmlspecialchars($rowCfg['title']) ?></span></div>
-                    <div class="setting-desc"><?= htmlspecialchars($rowCfg['desc']) ?></div>
+        <?php foreach ($connectorRoleSections as $sectionCfg): ?>
+            <div class="connector-subtitle" style="margin-top:10px; margin-bottom:4px; color:#ffffff; font-weight:700;"><?= htmlspecialchars($sectionCfg['title']) ?></div>
+            <?php foreach (($sectionCfg['rows'] ?? []) as $rowCfg): ?>
+                <?php $selectedId = (string)($editItem[$rowCfg['field']] ?? ''); ?>
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-key"><span class="setting-icon"><?= $rowCfg['icon'] ?></span><span><?= htmlspecialchars($rowCfg['title']) ?></span></div>
+                        <div class="setting-desc"><?= htmlspecialchars($rowCfg['desc']) ?></div>
+                    </div>
+                    <div class="setting-control">
+                        <select name="<?= htmlspecialchars($rowCfg['field']) ?>" id="<?= htmlspecialchars($rowCfg['field']) ?>">
+                            <option value="">-- None --</option>
+                            <?php foreach (($llmRows ?? []) as $opt): ?>
+                                <?php $optLabel = trim((string)($opt['label'] ?? '')) !== '' ? (string)$opt['label'] : (string)($opt['model'] ?? ('LLM #' . ($opt['id'] ?? ''))); ?>
+                                <option value="<?= htmlspecialchars((string)$opt['id']) ?>" <?= ((string)$opt['id'] === $selectedId ? 'selected' : '') ?>><?= htmlspecialchars($optLabel) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
-                <div class="setting-control">
-                    <select name="<?= htmlspecialchars($rowCfg['field']) ?>" id="<?= htmlspecialchars($rowCfg['field']) ?>">
-                        <option value="">-- None --</option>
-                        <?php foreach (($llmRows ?? []) as $opt): ?>
-                            <?php $optLabel = trim((string)($opt['label'] ?? '')) !== '' ? (string)$opt['label'] : (string)($opt['model'] ?? ('LLM #' . ($opt['id'] ?? ''))); ?>
-                            <option value="<?= htmlspecialchars((string)$opt['id']) ?>" <?= ((string)$opt['id'] === $selectedId ? 'selected' : '') ?>><?= htmlspecialchars($optLabel) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
+            <?php endforeach; ?>
         <?php endforeach; ?>
     </div>
 
@@ -1508,7 +1530,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
                 </div>
                 <?php
                     // Get current RPG_Comments_Chance value from metadata
-                    $rpgChance = 100; // Default to 100%
+                    $rpgChance = 50; // Default to 50%
                     try {
                         if (!empty($editItem["metadata"])) {
                             $tmpMeta = json_decode($editItem["metadata"], true);
@@ -1516,12 +1538,12 @@ const saveAllBtn = document.getElementById('btn_save_all');
                                 $rpgChance = intval($tmpMeta['RPG_COMMENTS_CHANCE']);
                             }
                         }
-                    } catch (Throwable $_e) { $rpgChance = 100; }
+                    } catch (Throwable $_e) { $rpgChance = 50; }
                 ?>
                 <div class="setting-row">
                     <div>
                         <div class="setting-key"><span class="setting-icon">&#x1F501;</span><span>Trigger Chance</span></div>
-                        <div class="setting-desc">Probability that enabled RPG comments trigger when their conditions are met. 0 = Never | 50 = 50% | 100 = Always.</div>
+                        <div class="setting-desc">Probability that enabled RPG comments trigger when their conditions are met. 0 = Never | 50 = 50% | 100 = Always. Hard cooldown: 60 seconds between RPG comment events.</div>
                     </div>
                     <div class="setting-control">
                         <div class="range-pair">

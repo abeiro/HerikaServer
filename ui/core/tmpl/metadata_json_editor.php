@@ -89,10 +89,6 @@ $localSchemaOverrides = [
         'type' => 'boolean',
         'description' => 'Smart Bored Events. Will use the director to generate dynamic bored event topics. It is slower but topics will improve the quality of bored event topics.',
     ],
-    'ENFORCE_ACTIONS_PROMPT' => [
-        'type' => 'boolean',
-        'description' => 'Encourage AI NPCs to use actions more often.',
-    ],
     'CONTEXT_HISTORY_DYNAMIC_PROFILE' => [
         'type' => 'integer',
         'description' => 'Amount of context history (dialogue and events) that will be sent to LLM specifically for dynamic profile updates. If set to 0, will use the regular CONTEXT_HISTORY value instead.',
@@ -104,30 +100,34 @@ $visualKeys = [
   "RECHAT_H","RECHAT_P","CORE_LANG","BORED_EVENT",
   "DIARY_PROMPT","OGHMA_AMOUNT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN","COMBAT_BARK_COOLDOWN",
   "OGHMA_INFINIUM","CONTEXT_HISTORY","MAX_WORDS_LIMIT",
-  "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE","ENFORCE_ACTIONS_PROMPT",
+  "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE",
   "REMOVE_ASTERISKS_FROM_OUTPUT","INLINE_NARRATION_ENABLED","CONTEXT_HISTORY_DYNAMIC_PROFILE"
 ];
 
 // Organize visual keys into categories for display
 $visualGroups = [
-  'Core' => ["CORE_LANG","LANG_LLM_XTTS","ENFORCE_ACTIONS_PROMPT","REMOVE_ASTERISKS_FROM_OUTPUT","INLINE_NARRATION_ENABLED","MAX_WORDS_LIMIT"],
+  'Core' => ["CORE_LANG","LANG_LLM_XTTS","REMOVE_ASTERISKS_FROM_OUTPUT","INLINE_NARRATION_ENABLED","MAX_WORDS_LIMIT"],
   'Rechat' => ["RECHAT_H","RECHAT_P","RECHAT_ALLOW_ACTIONS"],
+  'Bored Event' => ["BORED_EVENT","BORED_EVENT_SERVERSIDE"],
+  'Context' => ["CONTEXT_HISTORY","CONTEXT_HISTORY_DIARY","CONTEXT_HISTORY_DYNAMIC_PROFILE"],
   'Diary' => ["DIARY_PROMPT","DIARY_COOLDOWN"],
   'Combat' => ["COMBAT_BARK_COOLDOWN"],
   'Oghma' => ["OGHMA_INFINIUM","OGHMA_AMOUNT"],
-  'Context' => ["CONTEXT_HISTORY","CONTEXT_HISTORY_DIARY","CONTEXT_HISTORY_DYNAMIC_PROFILE"],
   'Quest' => ["QUEST_COMMENT","QUEST_COMMENT_CHANCE"],
-  'Behavior' => ["BORED_EVENT","BORED_EVENT_SERVERSIDE"],
 ];
 
 // Pretty label similar to global_settings General tab
 function meta_pretty_label(string $name): string {
     // Custom label overrides
     $customLabels = [
+        'RECHAT_H' => 'Rechat Response Rounds',
+        'RECHAT_P' => 'Rechat Probaility',
+        'OGHMA_AMOUNT' => 'Oghma Articles Amount',
         'BORED_EVENT' => 'Bored Event Chance',
         'CONTEXT_HISTORY' => 'Context History Event Count',
         'CONTEXT_HISTORY_DIARY' => 'Context History Diary Event Count',
-        'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 'Context History Dynamic Profile Event Count'
+        'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 'Context History Dynamic Profile Event Count',
+        'INLINE_NARRATION_ENABLED' => 'NPC Action Narration Enabled'
     ];
     
     if (isset($customLabels[$name])) {
@@ -159,6 +159,8 @@ if (isset($editItem["metadata"]) && !empty($editItem["metadata"])) {
 }
 // Deprecated: MiniMe-T5 is auto-detected at runtime.
 unset($metadataCurrent['MINIME_T5']);
+// Enforce actions prompt is always enabled in code and no longer user-editable.
+unset($metadataCurrent['ENFORCE_ACTIONS_PROMPT']);
 
 // Show visual controls only on core_profiles page
 $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
@@ -411,6 +413,7 @@ function consolidation() {
         // Ensure AUTO_DIARY is not stored in profile metadata (global-only)
         if ('AUTO_DIARY' in base) delete base['AUTO_DIARY']
     }
+    if ('ENFORCE_ACTIONS_PROMPT' in base) delete base['ENFORCE_ACTIONS_PROMPT']
 
     // Collect visual fields (explicitly iterate over known keys to capture false for checkboxes)
     const form = document.getElementById('core_profile_form') || document.forms[0]

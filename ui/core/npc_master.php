@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . "../../";
 
@@ -542,6 +542,83 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["bulk_delete_npcs"])) 
     exit;
 }
 
+// Bulk switch NPC profile assignment by source profile (AJAX)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["bulk_switch_profile"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $confirm = trim((string)($_POST['confirm'] ?? ''));
+        if ($confirm !== 'Switch') { echo json_encode(["ok"=>false, "error"=>"Confirmation text mismatch"]); exit; }
+
+        $sourceProfileId = intval($_POST['source_profile_id'] ?? 0);
+        $targetProfileId = intval($_POST['target_profile_id'] ?? 0);
+        if ($sourceProfileId <= 0 || $targetProfileId <= 0) {
+            echo json_encode(["ok"=>false, "error"=>"Invalid source or target profile"]);
+            exit;
+        }
+        if ($sourceProfileId === $targetProfileId) {
+            echo json_encode(["ok"=>false, "error"=>"Source and target profiles must be different"]);
+            exit;
+        }
+
+        $includeLockedRaw = $_POST['include_locked'] ?? '';
+        $includeLocked = (
+            $includeLockedRaw === '1' ||
+            $includeLockedRaw === 1 ||
+            $includeLockedRaw === true ||
+            $includeLockedRaw === 'true'
+        );
+
+        $sourceRow = $GLOBALS['db']->fetchOne("SELECT id, label FROM core_profiles WHERE id = {$sourceProfileId} LIMIT 1");
+        $targetRow = $GLOBALS['db']->fetchOne("SELECT id, label FROM core_profiles WHERE id = {$targetProfileId} LIMIT 1");
+        if (!is_array($sourceRow) || empty($sourceRow['id'])) {
+            echo json_encode(["ok"=>false, "error"=>"Source profile not found"]);
+            exit;
+        }
+        if (!is_array($targetRow) || empty($targetRow['id'])) {
+            echo json_encode(["ok"=>false, "error"=>"Target profile not found"]);
+            exit;
+        }
+
+        $baseWhere = "profile_id = {$sourceProfileId} and id <> 1 and trim(lower(npc_name)) <> 'the narrator'";
+        $countRow = $GLOBALS['db']->fetchOne("SELECT COUNT(*) AS c FROM core_npc_master WHERE {$baseWhere}");
+        $totalMatched = intval($countRow['c'] ?? 0);
+
+        $skippedLocked = 0;
+        if (!$includeLocked) {
+            $skippedRow = $GLOBALS['db']->fetchOne("SELECT COUNT(*) AS c FROM core_npc_master WHERE {$baseWhere} AND COALESCE(lock_profile,0)=1");
+            $skippedLocked = intval($skippedRow['c'] ?? 0);
+        }
+
+        $lockClause = $includeLocked ? "1=1" : "COALESCE(lock_profile,0)=0";
+        $sql = "WITH upd AS (
+                    UPDATE core_npc_master
+                    SET profile_id = {$targetProfileId}
+                    WHERE {$baseWhere}
+                      AND {$lockClause}
+                    RETURNING 1
+                )
+                SELECT COUNT(*) AS c FROM upd";
+        $row = $GLOBALS['db']->fetchOne($sql);
+        $updated = intval($row['c'] ?? 0);
+
+        echo json_encode([
+            "ok" => true,
+            "updated" => $updated,
+            "total_matched" => $totalMatched,
+            "skipped_locked" => $skippedLocked,
+            "include_locked" => $includeLocked,
+            "source_profile_id" => $sourceProfileId,
+            "target_profile_id" => $targetProfileId,
+            "source_profile_label" => (string)($sourceRow['label'] ?? ('Profile #'.$sourceProfileId)),
+            "target_profile_label" => (string)($targetRow['label'] ?? ('Profile #'.$targetProfileId)),
+        ]);
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    }
+    exit;
+}
+
 // Set portrait from gallery (AJAX)
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["set_portrait"])) {
     try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
@@ -789,6 +866,15 @@ foreach (($profileRows ?? []) as $pr) {
     $pid = (string)($pr['id'] ?? '');
     if ($pid !== '') $profilesById[$pid] = $pr['label'] ?? ('Profile #'.$pid);
 }
+$profileOptions = [];
+foreach (($profileRows ?? []) as $pr) {
+    $pid = (string)($pr['id'] ?? '');
+    if ($pid === '') continue;
+    $profileOptions[] = [
+        'id' => $pid,
+        'label' => (string)($pr['label'] ?? ('Profile #'.$pid)),
+    ];
+}
 // Build profile metadata lookup for inherited settings
 $profileMetaById = [];
 foreach (($profileConnRows ?? []) as $prow) {
@@ -917,6 +1003,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
       <button id="npc_import_btn" type="button" title="Import NPC from JSON file">📥 Import NPC</button>
       <button id="rel_bulk_build_btn" type="button" class="btn-rel-build" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
+      <button id="npc_bulk_switch_profile_btn" type="button" class="btn-rel-build" title="Switch all NPCs from one profile to another">🔀 Mass Switch Profile</button>
       <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
     </div>
     <div class="npc-grid">
@@ -2123,7 +2210,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             $overrideEditorConfig = [
                 'mode' => 'npc',
                 'fieldName' => 'extended_data',
-                'allowedSettings' => ['TTSFUNCTION','RECHAT_H','RECHAT_P','RECHAT_ALLOW_ACTIONS','CORE_LANG','ENFORCE_ACTIONS_PROMPT','REMOVE_ASTERISKS_FROM_OUTPUT','MAX_WORDS_LIMIT','DIARY_PROMPT','DIARY_COOLDOWN','COMBAT_BARK_COOLDOWN','OGHMA_INFINIUM','OGHMA_AMOUNT','CONTEXT_HISTORY','CONTEXT_HISTORY_DIARY','CONTEXT_HISTORY_DYNAMIC_PROFILE','QUEST_COMMENT','QUEST_COMMENT_CHANCE','BORED_EVENT','BORED_EVENT_SERVERSIDE','LANG_LLM_XTTS'],
+                'allowedSettings' => ['TTSFUNCTION','RECHAT_H','RECHAT_P','RECHAT_ALLOW_ACTIONS','CORE_LANG','REMOVE_ASTERISKS_FROM_OUTPUT','MAX_WORDS_LIMIT','DIARY_PROMPT','DIARY_COOLDOWN','COMBAT_BARK_COOLDOWN','OGHMA_INFINIUM','OGHMA_AMOUNT','CONTEXT_HISTORY','CONTEXT_HISTORY_DIARY','CONTEXT_HISTORY_DYNAMIC_PROFILE','QUEST_COMMENT','QUEST_COMMENT_CHANCE','BORED_EVENT','BORED_EVENT_SERVERSIDE','LANG_LLM_XTTS'],
                 'reservedKeys' => $reservedKeys,
                 'currentData' => $currentOverrides,
                 'systemFields' => $systemFields,
@@ -2662,12 +2749,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Total <?= $totalRows ?></span>
   <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
   <button id="rel_bulk_build_btn" type="button" class="btn-rel-build" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
+  <button id="npc_bulk_switch_profile_btn" type="button" class="btn-rel-build" title="Switch all NPCs from one profile to another">🔀 Mass Switch Profile</button>
   <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
 </div>
 <div style="margin:10px 0; padding:10px 14px; background:rgba(242,124,17,0.08); border:1px solid rgba(242,124,17,0.25); border-radius:8px; font-size:12.5px; color:#cfd9ea; line-height:1.5;">
   <strong style="color:rgb(242,124,17);">History Pullback:</strong>
   Every time a save game is loaded, CHIM snapshots all NPC profiles and restores <strong>unlocked</strong> NPCs to their state at the save's Tamrielic timestamp.
   Loading an older save will roll back unlocked profiles to that point in time. NPCs created <em>after</em> the save's timestamp may disappear entirely.
+  <br>
   <span style="color:rgb(242,124,17);">Lock a profile (🔒) to protect it from pullback.</span>
   You can view and restore previous versions of any NPC via the <strong>View History</strong> button in the edit modal.
 </div>
@@ -2960,6 +3049,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 <script>
 (function(){
   const PROFILES_BY_ID = <?= json_encode($profilesById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+  const PROFILE_OPTIONS = <?= json_encode($profileOptions ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
   const modal = document.getElementById('npc_modal');
   const iframe = document.getElementById('npc_modal_iframe');
   function openModal(url){
@@ -3672,6 +3762,122 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     window.bindNpcBulkDelete = bindBulk;
     bindBulk(document.getElementById('npc_bulk_delete_btn'));
   })();
+  // Bulk profile switch wiring
+  (function(){
+    const profileOptions = Array.isArray(PROFILE_OPTIONS) ? PROFILE_OPTIONS : [];
+    function escHtml(v){
+      return String(v ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+    }
+    function buildOptions(selectedValue){
+      const selected = String(selectedValue || '');
+      let html = '';
+      profileOptions.forEach(function(pr){
+        const id = String(pr && pr.id ? pr.id : '');
+        if (!id) return;
+        const label = String(pr && pr.label ? pr.label : ('Profile #' + id));
+        const sel = (id === selected) ? ' selected' : '';
+        html += '<option value="' + escHtml(id) + '"' + sel + '>' + escHtml(label) + '</option>';
+      });
+      return html;
+    }
+    function bindBulkSwitch(btn){
+      if (!btn) return;
+      btn.addEventListener('click', function(){
+        if (!profileOptions.length) { alert('No profiles found.'); return; }
+        const filterSel = document.getElementById('npc_profile_filter');
+        const sourcePref = (filterSel && filterSel.value) ? String(filterSel.value) : String((profileOptions[0] && profileOptions[0].id) || '');
+        let targetPref = '';
+        for (let i = 0; i < profileOptions.length; i++) {
+          const pid = String(profileOptions[i] && profileOptions[i].id ? profileOptions[i].id : '');
+          if (pid !== '' && pid !== sourcePref) { targetPref = pid; break; }
+        }
+        if (!targetPref) targetPref = sourcePref;
+
+        const box = document.createElement('div');
+        box.style.position='fixed'; box.style.inset='0'; box.style.zIndex='10050'; box.style.display='flex'; box.style.alignItems='center'; box.style.justifyContent='center'; box.style.background='rgba(0,0,0,0.65)';
+        box.innerHTML = '<div style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:16px; max-width:560px; width:92%; color:#e9efff;">\
+          <div style="font-weight:700; color:rgb(242,124,17); margin-bottom:8px;">Mass Switch NPC Profiles</div>\
+          <div style="font-size:13px; color:#cfd9ea; margin-bottom:12px;">Move every NPC currently on one profile to another profile in one pass.</div>\
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:8px;">\
+            <label style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:#cfd9ea;">From profile\
+              <select id="bulk_switch_source" style="padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff;">' + buildOptions(sourcePref) + '</select>\
+            </label>\
+            <label style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:#cfd9ea;">To profile\
+              <select id="bulk_switch_target" style="padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff;">' + buildOptions(targetPref) + '</select>\
+            </label>\
+          </div>\
+          <label style="display:flex; align-items:center; gap:8px; margin:8px 0 12px 0; color:#cfd9ea; font-size:13px;"><input id="bulk_switch_include_locked" type="checkbox" /> Include locked NPCs</label>\
+          <label style="display:block; font-size:13px; margin:6px 0; color:#cfd9ea;">Type <b style="color:#ffd166">Switch</b> to confirm:</label>\
+          <input id="bulk_switch_confirm" type="text" style="width:100%; padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff;"/>\
+          <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">\
+            <button id="bulk_switch_cancel" class="btn-cancel">Cancel</button>\
+            <button id="bulk_switch_ok" class="btn-rel-build" disabled>Switch Profiles</button>\
+          </div></div>';
+        document.body.appendChild(box);
+
+        const sourceEl = box.querySelector('#bulk_switch_source');
+        const targetEl = box.querySelector('#bulk_switch_target');
+        const includeLockedEl = box.querySelector('#bulk_switch_include_locked');
+        const confirmEl = box.querySelector('#bulk_switch_confirm');
+        const okEl = box.querySelector('#bulk_switch_ok');
+        const cancelEl = box.querySelector('#bulk_switch_cancel');
+
+        function updateState(){
+          const confirmOk = String(confirmEl.value || '').trim() === 'Switch';
+          const hasSource = !!(sourceEl && sourceEl.value);
+          const hasTarget = !!(targetEl && targetEl.value);
+          const different = hasSource && hasTarget && String(sourceEl.value) !== String(targetEl.value);
+          okEl.disabled = !(confirmOk && hasSource && hasTarget && different);
+        }
+        confirmEl.addEventListener('input', updateState);
+        sourceEl.addEventListener('change', updateState);
+        targetEl.addEventListener('change', updateState);
+        updateState();
+        confirmEl.focus();
+
+        cancelEl.addEventListener('click', function(){ document.body.removeChild(box); });
+        okEl.addEventListener('click', async function(){
+          okEl.disabled = true;
+          try {
+            const fd = new FormData();
+            fd.append('bulk_switch_profile', '1');
+            fd.append('source_profile_id', String(sourceEl.value || ''));
+            fd.append('target_profile_id', String(targetEl.value || ''));
+            fd.append('include_locked', includeLockedEl && includeLockedEl.checked ? '1' : '0');
+            fd.append('confirm', String(confirmEl.value || ''));
+            const res = await fetch('npc_master.php', { method:'POST', body: fd });
+            let j = {};
+            try { j = await res.json(); } catch(_){ j = { ok:false, error:'Invalid JSON response' }; }
+            document.body.removeChild(box);
+            if (j && j.ok){
+              let msg = 'Switched ' + String(j.updated || 0) + ' NPCs';
+              if (j.source_profile_label && j.target_profile_label) {
+                msg += ' (' + String(j.source_profile_label) + ' → ' + String(j.target_profile_label) + ')';
+              }
+              if (!j.include_locked && Number(j.skipped_locked || 0) > 0) {
+                msg += '; skipped ' + String(j.skipped_locked) + ' locked';
+              }
+              try {
+                const toast = document.getElementById('toast');
+                if (toast) {
+                  toast.querySelector('.message').textContent = msg;
+                  toast.classList.add('show');
+                  setTimeout(() => toast.classList.remove('show'), 2400);
+                }
+              } catch(_){}
+              refreshList(1);
+            } else {
+              alert('Mass switch failed: ' + (j && j.error ? j.error : 'Unknown'));
+            }
+          } catch(_e){
+            okEl.disabled = false;
+          }
+        });
+      });
+    }
+    window.bindNpcBulkSwitchProfile = bindBulkSwitch;
+    bindBulkSwitch(document.getElementById('npc_bulk_switch_profile_btn'));
+  })();
   let listAbort = null;
   async function refreshList(page){
     const params = new URLSearchParams(window.location.search);
@@ -3755,6 +3961,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       if (newCreate){ newCreate.addEventListener('click', function(){ openModal('npc_master.php?partial=1'); }); }
       // rebind bulk delete in refreshed DOM
       try { if (window.bindNpcBulkDelete) window.bindNpcBulkDelete(document.getElementById('npc_bulk_delete_btn')); } catch(_){}
+      // rebind mass switch in refreshed DOM
+      try { if (window.bindNpcBulkSwitchProfile) window.bindNpcBulkSwitchProfile(document.getElementById('npc_bulk_switch_profile_btn')); } catch(_){}
       // rebind Build Relationships button in refreshed DOM
       try { if (window.bindRelBuildButton) window.bindRelBuildButton(document.getElementById('rel_bulk_build_btn')); } catch(_){}
       // Hook pagination links to AJAX
@@ -4304,4 +4512,6 @@ $title = $TITLE;
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 ?>
+
+
 
