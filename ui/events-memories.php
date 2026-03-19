@@ -1174,8 +1174,6 @@ function getTimeColor($time) {
             $useText2Vec = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['USE_TEXT2VEC'] ?? false;
             $memoryDelay = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['MEMORY_TIME_DELAY'] ?? 'Not set';
             $memoryContextSize = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['MEMORY_CONTEXT_SIZE'] ?? 'Not set';
-            $autoCreateSummary = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['AUTO_CREATE_SUMMARYS'] ?? false;
-            $summaryInterval = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['AUTO_CREATE_SUMMARY_INTERVAL'] ?? 'Not set';
             
             // Status indicator helper
             $statusIcon = function($enabled) {
@@ -1195,13 +1193,6 @@ function getTimeColor($time) {
             echo "<div style='font-weight: bold; margin-bottom: 8px; color: rgb(242, 124, 17); font-size: 14px;'>TXT2VEC (Embeddings)</div>";
             echo "<div style='font-size: 14px;'>" . $statusIcon($useText2Vec) . "</div>";
             echo "<div style='font-size: 12px; color: #aaa; margin-top: 4px;'>URL: " . htmlspecialchars($txtaiUrl) . "</div>";
-            echo "</div>";
-            
-            // Auto-Create Summaries
-            echo "<div style='background: #2a2a2a; padding: 15px; border-radius: 5px; border: 1px solid #3a3a3a;'>";
-            echo "<div style='font-weight: bold; margin-bottom: 8px; color: rgb(242, 124, 17); font-size: 14px;'>Auto-Create Summaries</div>";
-            echo "<div style='font-size: 14px;'>" . $statusIcon($autoCreateSummary) . "</div>";
-            echo "<div style='font-size: 12px; color: #aaa; margin-top: 4px;'>Interval: " . htmlspecialchars($summaryInterval) . " (in-game time units)</div>";
             echo "</div>";
             
             // Memory Context Settings
@@ -1287,7 +1278,7 @@ function getTimeColor($time) {
             
             // Add Memory Management buttons
             echo "<div class='memory-management-actions' style='margin: 15px 0;'>";
-            echo "<button onclick=\"syncMemoriesConfirm()\" class='btn-base btn-primary' style='margin-right: 10px;'>🔄 Sync & Create Memory Summaries</button>";
+            echo "<button onclick=\"syncMemoriesConfirm()\" class='btn-base btn-primary' style='margin-right: 10px;'>🔄 Sync & Create Memory Summaries (Global + Individual)</button>";
             echo "<button onclick=\"deleteAllMemoriesConfirm()\" class='btn-base btn-danger' style='background-color: #dc2626; font-weight: bold;'>⚠️ Delete All Memory Summaries</button>";
             echo "<button onclick=\"fixCompanions()\" class='btn-base btn-primary' style='margin-right: 10px;'>🔄 Fix Companions field</button>";
             echo "</div>";
@@ -1295,7 +1286,7 @@ function getTimeColor($time) {
             // Add JavaScript functions for confirmations
             echo "<script>
             function syncMemoriesConfirm() {
-                if (confirm('Will use tokens from your current AI connector. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')) {
+                if (confirm('Will use tokens from your current AI connector. This now syncs global memories and per-NPC individual memory banks for enabled NPCs. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')) {
                     window.location.href = '" . $webRoot . "/ui/tests/vector-compact-chromadb.php';
                 }
             }

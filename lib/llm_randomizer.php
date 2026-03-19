@@ -156,15 +156,32 @@ class LLMRandomizer {
             return (int)$forcedConnectorId;
         }
 
+        if (!is_array($profileData) || empty($profileData)) {
+            return null;
+        }
+
         $slotMap = [
             1 => 'llm_primary_id',
             2 => 'llm_secondary_id',
             3 => 'llm_tertiary_id',
             4 => 'llm_quaternary_id'
         ];
-        
+
         $fieldName = $slotMap[$slot] ?? 'llm_primary_id';
-        return isset($profileData[$fieldName]) ? (int)$profileData[$fieldName] : null;
+        $selectedConnectorId = isset($profileData[$fieldName]) ? (int)$profileData[$fieldName] : 0;
+        if ($selectedConnectorId > 0) {
+            return $selectedConnectorId;
+        }
+
+        // Fallback: chosen slot is empty/unset, use first configured connector in profile.
+        foreach (['llm_primary_id', 'llm_secondary_id', 'llm_tertiary_id', 'llm_quaternary_id'] as $fallbackField) {
+            $candidateId = isset($profileData[$fallbackField]) ? (int)$profileData[$fallbackField] : 0;
+            if ($candidateId > 0) {
+                return $candidateId;
+            }
+        }
+
+        return null;
     }
 
     public static function getConnectorIdForField($profileData, $fieldName) {

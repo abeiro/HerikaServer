@@ -5,7 +5,10 @@ require_once($GLOBALS["ENGINE_PATH"]."/lib/playthrough_snapshot.php");
 
 $MUST_END=false;
 
-$gameRequest[3] = @mb_convert_encoding($gameRequest[3], 'UTF-8', 'UTF-8');
+if (!isset($gameRequest[3])) {
+    $gameRequest[3] = '';
+}
+$gameRequest[3] = @mb_convert_encoding((string)$gameRequest[3], 'UTF-8', 'UTF-8');
 
 if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about this)
     // avoid a rare case where skyrim briefly reverts to level 1 Prisoner during load

@@ -1323,6 +1323,22 @@ if ($checkVersion("memory_summary")<20250331001) {
     Logger::info("Applied patch memory_summary 20250331001");
 }
 
+// add memory_summary scope support (global by default in current system)
+if ($checkVersion("memory_summary")<20260319001) {
+    $scopeColumn = $db->fetchOne("
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'memory_summary' AND column_name = 'scope'
+    ");
+
+    if (!isset($scopeColumn["column_name"]) || !$scopeColumn["column_name"]) {
+        $db->execQuery('ALTER TABLE "memory_summary" ADD COLUMN "scope" text');
+    }
+
+    $updateVersion("memory_summary",20260319001);
+    Logger::info("Applied patch memory_summary 20260319001");
+}
+
 if ($checkVersion("oghma_dynamic")<20250310001) {
     $db->execQuery(file_get_contents(__DIR__."/../data/oghma_dynamic.sql"));
     $updateVersion("oghma_dynamic",20250310001);

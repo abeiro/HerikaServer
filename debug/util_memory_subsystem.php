@@ -83,6 +83,7 @@ function resyncMemorySummaries($db, $forceAll = false, $onlyFix = false)
 
             // Save extracted tags and update native_vec (FTS vector)
             $db->update("memory_summary", "tags='" . $db->escape($tagsCol) . "'", "rowid={$row["rowid"]}");
+            $db->execQuery("UPDATE memory_summary SET scope='global' WHERE rowid={$row["rowid"]} AND scope IS NULL");
             $db->execQuery("UPDATE memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')), 'A') || setweight(to_tsvector(coalesce(summary, '')), 'B') WHERE rowid={$row["rowid"]}");
 
             $processed_counter++;
@@ -96,8 +97,6 @@ function resyncMemorySummaries($db, $forceAll = false, $onlyFix = false)
     // --- Fix companions field (first method) ---
     echo "Completing companions field (method 1)..." . PHP_EOL;
     $pfi      = ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] + 0) * 100000;
-    $people   = $db->fetchAll("SELECT DISTINCT split_part(data, '@', 1) AS npc FROM eventlog WHERE type='addnpc'");
-    $addednpc = array_column($people, 'npc');
 
     $missingCompanions = $db->fetchAll("SELECT * FROM memory_summary WHERE (companions IS NULL OR companions = '') and classifier<>'diary' ORDER BY gamets_truncated ASC");
     $n=0;
@@ -117,12 +116,15 @@ function resyncMemorySummaries($db, $forceAll = false, $onlyFix = false)
 
         $npcInMemory = [];
         foreach ($npcs as $name => $occurrences) {
-            if (in_array($name, $addednpc) && $occurrences > 1) {
-                if (strpos($row["packed_message"], $name) === false) {
+            $cleanName = trim((string)$name);
+            if ($cleanName === '' || $cleanName === 'unknown' || $cleanName === '--' || $cleanName === '-') {
+                continue;
+            }
+            if ($occurrences > 1) {
+                if (strpos((string)$row["packed_message"], $cleanName) === false) {
                     continue;
                 }
-
-                $npcInMemory[] = $name;
+                $npcInMemory[] = $cleanName;
             }
         }
 
@@ -152,10 +154,9 @@ function resyncMemorySummaries($db, $forceAll = false, $onlyFix = false)
         $npcInMemory = [];
         foreach ($npcs as $name => $occurrences) {
             if ($occurrences > 1) {
-                if (strpos($row["packed_message"], $name) === false) {
+                if (strpos((string)$row["packed_message"], $name) === false) {
                     continue;
                 }
-
                 $npcInMemory[] = $name;
             }
         }
@@ -168,6 +169,288 @@ function resyncMemorySummaries($db, $forceAll = false, $onlyFix = false)
     }
 
     return $processed_counter;
+}
+
+function isNpcIndividualMemoryEnabled($npcRow)
+{
+    if (empty($npcRow["extended_data"])) {
+        return false;
+    }
+
+    $extendedData = json_decode($npcRow["extended_data"], true);
+    if (!is_array($extendedData)) {
+        return false;
+    }
+
+    if (!array_key_exists('individual_memory_enabled', $extendedData)) {
+        return false;
+    }
+
+    return !empty($extendedData['individual_memory_enabled']);
+}
+
+function buildNpcIndividualMemoryBioContext($npcRow)
+{
+    $fields = [
+        "core"           => "Core",
+        "npc_static_bio" => "Static Bio",
+        "personality"    => "Personality",
+        "goals"          => "Goals",
+        "speechstyle"    => "Speech Style",
+    ];
+
+    $lines = [];
+    foreach ($fields as $key => $label) {
+        $value = trim((string)($npcRow[$key] ?? ''));
+        if ($value !== '') {
+            $lines[] = "- {$label}: {$value}";
+        }
+    }
+
+    return implode(PHP_EOL, $lines);
+}
+
+function extractMemoryTagsColumn($text)
+{
+    $tagsCol = '';
+    $pattern = '/#Tags:\s*(.+)/is';
+    preg_match($pattern, $text, $matches);
+    if (isset($matches[1])) {
+        $tagsString = strtr($matches[1], ["*" => ""]);
+        $tagsArray  = array_map('trim', preg_split('/[\s,]+/', $tagsString));
+        $tagsArray  = array_values(array_unique(array_filter($tagsArray, function($tag) {
+            return $tag !== '';
+        })));
+        $tagsCol = implode(" ", $tagsArray);
+    }
+
+    return $tagsCol;
+}
+
+function syncIndividualMemorySummaries($db, $connectionHandler = null, $maxBatchesPerNpc = 3)
+{
+    $threshold = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["INDIVIDUAL_MEMORY_SUMMARY_THRESHOLD"] ?? 3);
+    if ($threshold < 2) {
+        $threshold = 2;
+    }
+    $pfi = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] ?? 10) * 100000;
+    if ($pfi < 1000) {
+        $pfi = 100000;
+    }
+
+    $allNpcs = $db->fetchAll("SELECT id, npc_name, core, npc_static_bio, personality, goals, speechstyle, extended_data FROM core_npc_master WHERE npc_name IS NOT NULL ORDER BY npc_name ASC");
+    $enabledNpcs = [];
+    foreach ($allNpcs as $npcRow) {
+        if (($npcRow["npc_name"] ?? '') === "The Narrator") {
+            continue;
+        }
+        if (isNpcIndividualMemoryEnabled($npcRow)) {
+            $enabledNpcs[] = $npcRow;
+        }
+    }
+
+    if (sizeof($enabledNpcs) === 0) {
+        echo "No NPCs have individual memory bank enabled." . PHP_EOL;
+        return 0;
+    }
+
+    if (!$connectionHandler) {
+        $CONF_SAMPLE_VARS = extract_assignments("{$GLOBALS["ENGINE_ROOT"]}/conf/conf.php");
+        $connector = new LLMConnector();
+        $currentConnectorData = $connector->getById($CONF_SAMPLE_VARS["CORE_CONNECTOR_SUMMARY"]);
+        if (!$currentConnectorData) {
+            echo "No summary connector configured. Skipping individual memory sync." . PHP_EOL;
+            return 0;
+        }
+
+        $connectionHandler = $connector->getConnector($currentConnectorData);
+        $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
+        $GLOBALS["CURRENT_CONNECTOR"] = $currentConnectorData["driver"];
+        $connector->setOldGlobals($currentConnectorData);
+    }
+
+    $summaryPromptValue = '';
+    try {
+        $summaryPromptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'summary_prompt'");
+        if ($summaryPromptData) {
+            $summaryPromptValue = (!empty($summaryPromptData['custom_prompt'])) ? $summaryPromptData['custom_prompt'] : $summaryPromptData['default_prompt'];
+        }
+    } catch (Exception $e) {
+        // keep fallback
+    }
+    if ($summaryPromptValue === '') {
+        $summaryPromptValue = $GLOBALS["SUMMARY_PROMPT"] ?? '';
+    }
+
+    $individualPromptTemplate = null;
+    try {
+        $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'memory_subsystem_summary_individual'");
+        if ($promptData) {
+            $individualPromptTemplate = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+        }
+    } catch (Exception $e) {
+        // keep fallback
+    }
+    if (!$individualPromptTemplate) {
+        $individualPromptTemplate =
+            "You are writing an individual memory bank summary for NPC {NPC_NAME} in Skyrim roleplay.\n".
+            "Write from {NPC_NAME}'s perspective and values.\n".
+            "Only include events where {NPC_NAME} is directly involved.\n".
+            "Ignore game-engine/system messages and focus on roleplay events, people, locations, and motivations.\n".
+            "Character reference:\n{NPC_BIO}\n\n".
+            "Additional instructions: {SUMMARY_PROMPT}";
+    }
+
+    $createdCount = 0;
+    foreach ($enabledNpcs as $npcRow) {
+        $npcName = trim((string)($npcRow["npc_name"] ?? ''));
+        if ($npcName === '') {
+            continue;
+        }
+
+        $npcEsc = $db->escape($npcName);
+        $lastScoped = $db->fetchOne("SELECT COALESCE(MAX(gamets_truncated), 0) AS max_gamets FROM memory_summary WHERE scope='$npcEsc'");
+        $lastScopedGamets = intval($lastScoped["max_gamets"] ?? 0);
+
+        // Individual summaries are selected by NPC presence in source events/dialogue windows,
+        // not by text mention checks in global packed summaries.
+        $pendingRows = $db->fetchAll("
+            SELECT ms.rowid, ms.uid, ms.gamets_truncated, ms.summary, ms.packed_message
+            FROM memory_summary ms
+            WHERE ms.summary IS NOT NULL
+              AND (ms.scope IS NULL OR ms.scope='global')
+              AND ms.gamets_truncated > $lastScopedGamets
+              AND (
+                    EXISTS (
+                        SELECT 1
+                        FROM eventlog ev
+                        WHERE ev.gamets > ms.gamets_truncated - $pfi
+                          AND ev.gamets <= ms.gamets_truncated + $pfi
+                          AND (
+                                (CASE
+                                    WHEN COALESCE(ev.party, '[]') = '[]' THEN COALESCE(ev.people, '')
+                                    ELSE COALESCE(ev.people, ev.party)
+                                 END) ILIKE '%|$npcEsc|%'
+                                OR
+                                (CASE
+                                    WHEN COALESCE(ev.party, '[]') = '[]' THEN COALESCE(ev.people, '')
+                                    ELSE COALESCE(ev.people, ev.party)
+                                 END) ILIKE '%$npcEsc%'
+                              )
+                    )
+                    OR EXISTS (
+                        SELECT 1
+                        FROM memory_v mv
+                        WHERE mv.gamets > ms.gamets_truncated - $pfi
+                          AND mv.gamets <= ms.gamets_truncated + $pfi
+                          AND (
+                                LOWER(COALESCE(mv.speaker, '')) = LOWER('$npcEsc')
+                                OR LOWER(COALESCE(mv.listener, '')) = LOWER('$npcEsc')
+                              )
+                    )
+                  )
+            ORDER BY ms.gamets_truncated ASC, ms.rowid ASC
+            LIMIT 500
+        ");
+
+        if (sizeof($pendingRows) < $threshold) {
+            continue;
+        }
+
+        $npcBioContext = buildNpcIndividualMemoryBioContext($npcRow);
+        $systemPrompt = str_replace(
+            ['{NPC_NAME}', '{NPC_BIO}', '{SUMMARY_PROMPT}'],
+            [$npcName, $npcBioContext, $summaryPromptValue],
+            $individualPromptTemplate
+        );
+
+        $batchCounter = 0;
+        while (sizeof($pendingRows) >= $threshold && $batchCounter < $maxBatchesPerNpc) {
+            $batch = array_slice($pendingRows, 0, $threshold);
+            $maxGamets = 0;
+            $maxUid = 0;
+            $history = "";
+            foreach ($batch as $entry) {
+                $entryGamets = intval($entry["gamets_truncated"] ?? 0);
+                if ($entryGamets > $maxGamets) {
+                    $maxGamets = $entryGamets;
+                }
+                $entryUid = intval($entry["uid"] ?? 0);
+                if ($entryUid > $maxUid) {
+                    $maxUid = $entryUid;
+                }
+
+                // Individual bank should be grounded in raw packed event slices (global-style),
+                // not in already-compressed global summaries.
+                $entryRawSlice = trim((string)($entry["packed_message"] ?? ''));
+                if ($entryRawSlice === '') {
+                    $entryRawSlice = trim((string)($entry["summary"] ?? ''));
+                    if ($entryRawSlice !== '') {
+                        $entryRawSlice = preg_replace('/#Tags:.*$/mi', '', $entryRawSlice);
+                    }
+                }
+                if ($entryRawSlice === '') {
+                    continue;
+                }
+
+                $history .= "===\nMemory entry, date " . convert_gamets2skyrim_date($entryGamets) . PHP_EOL;
+                $history .= trim($entryRawSlice) . PHP_EOL . PHP_EOL;
+            }
+
+            if (trim($history) === '') {
+                break;
+            }
+
+            $previousMemoryReq = $db->fetchOne("SELECT summary FROM memory_summary WHERE scope='$npcEsc' AND summary IS NOT NULL ORDER BY gamets_truncated DESC, rowid DESC LIMIT 1");
+            $previousMemory = trim((string)($previousMemoryReq["summary"] ?? ''));
+
+            $prompt = [];
+            $prompt[] = ['role' => 'system', 'content' => $systemPrompt];
+            if ($previousMemory !== '') {
+                $prompt[] = ['role' => 'user', 'content' => "#PREVIOUS NPC MEMORY SUMMARY#\n{$previousMemory}\n#END OF PREVIOUS NPC MEMORY SUMMARY#"];
+            }
+            $prompt[] = ['role' => 'user', 'content' => "#NPC EVENT HISTORY#\n{$history}\n#END OF NPC EVENT HISTORY#"];
+            $prompt[] = ['role' => 'user', 'content' => "Write one memory summary for {$npcName} using this format:\n#Summary: {summary from {$npcName}'s viewpoint}\n\n#Tags: {hashtags for people, places, and events}"];
+
+            $buffer = $connectionHandler->fast_request($prompt, [], "summary");
+            $summaryText = trim(strtr((string)$buffer, ["**" => ""]));
+            if ($summaryText === '') {
+                break;
+            }
+            if (stripos($summaryText, '#Summary:') === false) {
+                $summaryText = "#Summary: " . $summaryText;
+            }
+
+            $tagsCol = extractMemoryTagsColumn($summaryText);
+            $uidToUse = $maxUid > 0 ? $maxUid : intval($batch[sizeof($batch) - 1]["rowid"] ?? 1);
+
+            $db->insert(
+                'memory_summary',
+                array(
+                    'gamets_truncated' => $maxGamets,
+                    'n' => sizeof($batch),
+                    'packed_message' => $history,
+                    'summary' => $summaryText,
+                    'classifier' => 'individual',
+                    'uid' => $uidToUse,
+                    'companions' => "|{$npcName}|",
+                    'scope' => $npcName,
+                    'tags' => $tagsCol
+                )
+            );
+
+            $createdCount++;
+            $batchCounter++;
+
+            echo "Created individual summary for {$npcName} at gamets {$maxGamets} using " . sizeof($batch) . " events." . PHP_EOL;
+
+            $pendingRows = array_values(array_filter($pendingRows, function($entry) use ($maxGamets) {
+                return intval($entry["gamets_truncated"] ?? 0) > $maxGamets;
+            }));
+        }
+    }
+
+    return $createdCount;
 }
 
 if (! isset($argv[1])) {
@@ -184,7 +467,7 @@ commands:
     sync_oghma	Sync oghma <> Vector embeddings. Needs TEXT2VEC active
 	get 		Get memory. Example: get 56
 	recreate	Recreate memory_summary table,
-	compact	    Recreate memory_summary table, and uses AI (LLM) to summarize data. Use 'compact noembed' to avoid TEXT2VEC sync.
+	compact	    Recreate memory_summary table, and uses AI (LLM) to summarize data. Also builds per-NPC scoped summaries for NPCs with individual memory enabled. Use 'compact noembed' to avoid TEXT2VEC sync.
     query_raw   Query for a memory. Only embedding will be used. (For testing)
     fixcomp     Fix companions field
 
@@ -422,6 +705,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         $entries_to_process_count = $count_result_arr ? (int) $count_result_arr['count'] : 0;
 
         $processed_in_loop_counter = 0;
+        $connectionHandler = null;
 
         if ($entries_to_process_count == 0) {
             echo "No new entries found to summarize and compact." . PHP_EOL;
@@ -597,7 +881,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
                     }
                 }
                 if ($current_summary_to_save) {
-                    $db->execQuery("update memory_summary set summary='" . $db->escape($current_summary_to_save) . "',tags='" . $db->escape($tagsCol) . "' where rowid={$row["rowid"]}");
+                    $db->execQuery("update memory_summary set summary='" . $db->escape($current_summary_to_save) . "',tags='" . $db->escape($tagsCol) . "',scope=COALESCE(scope,'global') where rowid={$row["rowid"]}");
                     $db->execQuery("update memory_summary SET native_vec = setweight(to_tsvector(coalesce(tags, '')),'A')||setweight(to_tsvector(coalesce(summary, '')),'B') where rowid={$row["rowid"]}");
                 }
 
@@ -616,6 +900,14 @@ Note: Memories are stored in memory_summary table, which holds info from events/
                 echo "Found {$entries_to_process_count} entries, but 0 were processed in this run (check logs for details or processing limit if set via third argument)." . PHP_EOL;
             }
         }
+
+        echo "Starting global pre-sync for companions/tags..." . PHP_EOL;
+        resyncMemorySummaries($db, false, true);
+        echo "Global pre-sync finished." . PHP_EOL;
+
+        echo "Starting individual memory bank sync..." . PHP_EOL;
+        $individualCreatedCount = syncIndividualMemorySummaries($db, $connectionHandler);
+        echo "Individual memory bank sync finished. Created {$individualCreatedCount} scoped summaries." . PHP_EOL;
 
         echo "Starting memory vector synchronization..." . PHP_EOL;
         resyncMemorySummaries($db, false); // Only sync missing embeddings

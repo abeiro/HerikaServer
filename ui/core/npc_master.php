@@ -415,8 +415,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
                 if (!is_array($tmp)) {
                     $_POST['extended_data'] = '{}'; // Ensure valid JSON
                 } else {
-                  if ($_POST["middle_term_enabled"]) { // If enabled on NPC form,  but not present in extended_data
+                  if (!empty($_POST["middle_term_enabled"])) { // If enabled on NPC form, but not present in extended_data
                     $tmp["middle_term_enabled"]=1;
+                    $_POST['extended_data']=json_encode($tmp);
+                  }
+                  if (!empty($_POST["individual_memory_enabled"])) {
+                    $tmp["individual_memory_enabled"]=1;
                     $_POST['extended_data']=json_encode($tmp);
                   }
                 }
@@ -1037,6 +1041,12 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
         if (array_key_exists('middle_term_enabled', $extTmp) && $extTmp['middle_term_enabled'] !== null && $extTmp['middle_term_enabled'] !== '') {
             $mtmEnabled = !empty($extTmp['middle_term_enabled']);
         }
+
+        // Individual memory bank is NPC-only (no profile inheritance)
+        $imbEnabled = false;
+        if (array_key_exists('individual_memory_enabled', $extTmp) && $extTmp['individual_memory_enabled'] !== null && $extTmp['individual_memory_enabled'] !== '') {
+            $imbEnabled = !empty($extTmp['individual_memory_enabled']);
+        }
         
         // Auto Diary: check extended_data override, otherwise inherit from profile
         $adEnabled = $profileMeta['ad']; // default to profile
@@ -1074,7 +1084,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                     if (isset($metaTmp['stats']) && is_array($metaTmp['stats']) && isset($metaTmp['stats']['level'])) {
                         $levelDisp = ' ('.intval($metaTmp['stats']['level']).')';
                     }
-                ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($dynEnabled)): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Salutation enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
+            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($dynEnabled)): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($imbEnabled)): ?><span class="npc-imb-icon" title="Individual memory bank enabled">🧠</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Salutation enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
             <div class="npc-title-actions">
                     <?php if ($tagsDisp !== ''): ?>
                     <span class="npc-tags-top" title="<?= htmlspecialchars($tagsDisp) ?>"><?= htmlspecialchars($tagsDisp) ?></span>
@@ -1699,6 +1709,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 $mtmFromProfile = true;
             }
         } catch (Throwable $e) { }
+
+        // Individual Memory Bank: NPC-only (no profile inheritance)
+        $imbChecked = false;
+        try {
+            if (is_array($editItem) && !empty($editItem['extended_data'])) {
+                $tmpEd = json_decode((string)$editItem['extended_data'], true);
+                if (is_array($tmpEd) && array_key_exists('individual_memory_enabled', $tmpEd) && $tmpEd['individual_memory_enabled'] !== null && $tmpEd['individual_memory_enabled'] !== '') {
+                    $imbChecked = !empty($tmpEd['individual_memory_enabled']);
+                }
+            }
+        } catch (Throwable $e) { }
         
         // Auto Diary: check extended_data override or fall back to profile default
         $adChecked = $profileAutoDiaryEnabled;
@@ -1783,6 +1804,13 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <input type="checkbox" id="middle_term_enabled" name="middle_term_enabled" value="1" <?= $mtmChecked ? "checked" : "" ?> data-profile-default="<?= $profileMtmEnabled ? '1' : '0' ?>">
             </label>
             <small class="hint">Saves a list of recent events after every 10 memory summaries. Will be used for NPC context.<?= $mtmFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
+        </div>
+
+        <div class="form-item">
+            <label for="individual_memory_enabled" class="label-with-toggle">🧠Individual Memory Bank
+                <input type="checkbox" id="individual_memory_enabled" name="individual_memory_enabled" value="1" <?= $imbChecked ? "checked" : "" ?> data-profile-default="0">
+            </label>
+            <small class="hint">When enabled, this NPC will build and recall memories from their own scoped memory bank instead of global memory summaries.</small>
         </div>
 
         <div class="form-item">
@@ -2195,7 +2223,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Override global and profile settings for this specific NPC. Changes here take precedence over all other configurations.</small>
             <?php
             // Configure override editor for NPC mode
-            $reservedKeys = [ 'middle_term_enabled', 'auto_diary_enabled', 'auto_diary_wait_enabled', 'chim_core_migrated', 'salutation_after_a_while'];
+            $reservedKeys = [ 'middle_term_enabled', 'individual_memory_enabled', 'auto_diary_enabled', 'auto_diary_wait_enabled', 'chim_core_migrated', 'salutation_after_a_while'];
             $extendedDataRaw = isset($editItem["extended_data"]) ? $editItem["extended_data"] : '{}';
             $extendedDataObj = json_decode($extendedDataRaw, true) ?: [];
             $currentOverrides = [];
@@ -2240,6 +2268,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 // Sync feature checkboxes into extended_data (only save if differs from profile default)
                 try {
                   const mtm = form.querySelector('#middle_term_enabled');
+                  const imb = form.querySelector('#individual_memory_enabled');
                   const ad = form.querySelector('#auto_diary_enabled');
                   const adWait = form.querySelector('#auto_diary_wait_enabled');
                   const sal = form.querySelector('#salutation_after_a_while');
@@ -2255,6 +2284,15 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                         obj.middle_term_enabled = mtm.checked ? 1 : 0;
                       } else {
                         delete obj.middle_term_enabled; // Remove to inherit from profile
+                      }
+                    }
+
+                    // Individual memory bank is NPC-only (no profile inheritance)
+                    if (imb) {
+                      if (imb.checked) {
+                        obj.individual_memory_enabled = 1;
+                      } else {
+                        delete obj.individual_memory_enabled;
                       }
                     }
                     
@@ -2433,6 +2471,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-gender-icon.gender-nb { color:#ffd166; }
 .npc-dyn-icon { margin-left:6px; color:#65d46e; opacity:0.95; }
 .npc-mtm-icon { margin-left:6px; color:#9fb1ff; opacity:0.95; }
+.npc-imb-icon { margin-left:6px; color:#7ec8ff; opacity:0.95; }
 .npc-ad-icon { margin-left:6px; color:#f4d03f; opacity:0.95; }
 .npc-sal-icon { margin-left:6px; color:#ffb347; opacity:0.95; }
 .npc-blc-icon { margin-left:6px; color:#8db4e2; opacity:0.95; }
@@ -2789,6 +2828,12 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     if (array_key_exists('middle_term_enabled', $extTmp) && $extTmp['middle_term_enabled'] !== null && $extTmp['middle_term_enabled'] !== '') {
         $mtmEnabled = !empty($extTmp['middle_term_enabled']);
     }
+
+    // Individual memory bank is NPC-only (no profile inheritance)
+    $imbEnabled = false;
+    if (array_key_exists('individual_memory_enabled', $extTmp) && $extTmp['individual_memory_enabled'] !== null && $extTmp['individual_memory_enabled'] !== '') {
+        $imbEnabled = !empty($extTmp['individual_memory_enabled']);
+    }
     
     // Auto Diary: check extended_data override, otherwise inherit from profile
     $adEnabled = $profileMeta['ad']; // default to profile
@@ -2823,7 +2868,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 if (isset($metaTmp['stats']) && is_array($metaTmp['stats']) && isset($metaTmp['stats']['level'])) {
                     $levelDisp2 = ' ('.intval($metaTmp['stats']['level']).')';
                 }
-            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp2) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Salutation enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
+            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp2) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($imbEnabled)): ?><span class="npc-imb-icon" title="Individual memory bank enabled">🧠</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Salutation enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
             <div class="npc-title-actions">
                 <?php if ($tagsDisp !== ''): ?>
                 <span class="npc-tags-label">Tags:</span>
@@ -4124,6 +4169,19 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           if (left){
             let icon = left.querySelector('.npc-mtm-icon');
             if (mtm){ if (!icon){ icon = document.createElement('span'); icon.className='npc-mtm-icon'; icon.title='Middle-term memory enabled'; icon.textContent='📃'; left.appendChild(icon); } }
+            else { if (icon){ icon.remove(); } }
+          }
+        } catch(_e){}
+        // Toggle Individual Memory Bank icon (🧠) based on extended_data.individual_memory_enabled
+        try {
+          const imb = (function(){
+            const raw = String(data.extended_data||'').trim(); if (!raw) return 0;
+            try { const o = JSON.parse(raw); return (o && Number(o.individual_memory_enabled||0)===1) ? 1 : 0; } catch(_e){ return 0; }
+          })();
+          const left = card.querySelector('.npc-title-left');
+          if (left){
+            let icon = left.querySelector('.npc-imb-icon');
+            if (imb){ if (!icon){ icon = document.createElement('span'); icon.className='npc-imb-icon'; icon.title='Individual memory bank enabled'; icon.textContent='🧠'; left.appendChild(icon); } }
             else { if (icon){ icon.remove(); } }
           }
         } catch(_e){}

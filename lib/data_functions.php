@@ -2757,8 +2757,8 @@ function PackIntoSummary($onlyMissingDiary=false)
     global $db;
     
     if ($onlyMissingDiary) {
-        $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
-        select gamets,1,message,message,'diary',uid,speaker
+        $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions,scope)
+        select gamets,1,message,message,'diary',uid,speaker,'global'
         from memory
         where event in ('diary','auto_diary','backgroundlife_diary')
         and uid not in (select uid from memory_summary where classifier in  ('diary','auto_diary','backgroundlife_diary'))");
@@ -2774,22 +2774,26 @@ function PackIntoSummary($onlyMissingDiary=false)
         $minRowTs = intval($lastGameTsRecord["gamets"] -  ( 1 /0.0000024));
         
         $pfi = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] ?? 10) * 100000;
-        $query="insert into memory_summary select * from ( 
+        $minEventsPerSummary = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_MIN_EVENTS"] ?? 5);
+        if ($minEventsPerSummary < 1) {
+            $minEventsPerSummary = 1;
+        }
+        $query="insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,scope) select * from ( 
                                     select max(gamets) as gamets_truncated,count(*) as n,
                                     STRING_AGG(message, chr(13) || chr(10) || chr(13) || chr(10)) AS packed_message,
-                                    NULL as summary,'dialogue' as classifier,max(uid) as uid
+                                    NULL as summary,'dialogue' as classifier,max(uid) as uid,'global' as scope
                                     from memory_v
                                     where 
                                     message not ilike 'Dear Diary%'
                                     and gamets>$maxRow 
-                                    group by round(gamets/$pfi ,0)  HAVING count(*)>9 order by round(gamets/$pfi ,0) ASC
+                                    group by round(gamets/$pfi ,0)  HAVING count(*)>=$minEventsPerSummary order by round(gamets/$pfi ,0) ASC
                                 ) as T where gamets_truncated>$maxRow and gamets_truncated<$minRowTs";
         //error_log($query);
 
         $results = $db->query($query);
         
-        $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
-                                    select gamets,1,message,message,'diary',uid,speaker
+        $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions,scope)
+                                    select gamets,1,message,message,'diary',uid,speaker,'global'
                                     from memory
                                     where event='diary'
                                     and gamets>$maxRow
@@ -3243,6 +3247,52 @@ function DirectConversationsWith($actor, $speaker="")
     
 }
 
+function isIndividualMemoryEnabledForNpc($npcName)
+{
+    static $cache = [];
+
+    $npcName = trim((string) $npcName);
+    if ($npcName === '' || $npcName === '%' || strpos($npcName, '%') !== false || strpos($npcName, '_') !== false) {
+        return false;
+    }
+
+    if (isset($cache[$npcName])) {
+        return $cache[$npcName];
+    }
+
+    $enabled = false;
+    try {
+        $escaped = $GLOBALS["db"]->escape($npcName);
+        $row = $GLOBALS["db"]->fetchOne("SELECT extended_data FROM core_npc_master WHERE npc_name='$escaped' LIMIT 1");
+        if (is_array($row) && !empty($row["extended_data"])) {
+            $extendedData = json_decode($row["extended_data"], true);
+            if (
+                is_array($extendedData)
+                && array_key_exists('individual_memory_enabled', $extendedData)
+                && $extendedData['individual_memory_enabled'] !== null
+                && $extendedData['individual_memory_enabled'] !== ''
+            ) {
+                $enabled = !empty($extendedData['individual_memory_enabled']);
+            }
+        }
+    } catch (Throwable $e) {
+        Logger::warn("isIndividualMemoryEnabledForNpc failed for {$npcName}: " . $e->getMessage());
+    }
+
+    $cache[$npcName] = $enabled;
+    return $enabled;
+}
+
+function dataGetMemoryScopeConditionSql($npcName)
+{
+    if (isIndividualMemoryEnabledForNpc($npcName)) {
+        $npcEsc = $GLOBALS["db"]->escape($npcName);
+        return "scope='$npcEsc'";
+    }
+
+    return "(scope IS NULL OR scope='global')";
+}
+
 function DataSearchMemory($rawstring,$npcfilter) {
     
     //$kw=explode(" ",($rawstring));
@@ -3359,6 +3409,8 @@ function DataSearchMemory($rawstring,$npcfilter) {
     
     
     
+    $scopeConditionSql = dataGetMemoryScopeConditionSql($npcfilter);
+
     $memory=$GLOBALS["db"]->fetchAll("
         SELECT summary,gamets_truncated,
         ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any,
@@ -3366,6 +3418,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         FROM memory_summary A
         where native_vec @@to_tsquery('$kwStringAny')
         and not (native_vec @@to_tsquery('#Reminiscence'))
+        and $scopeConditionSql
         and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
 
         ORDER BY rank_all DESC, rank_any DESC;
@@ -3546,6 +3599,8 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                 $result=array_merge($result,lastKeyWordsContext(5,$npcfilter));
         }
 
+        $scopeConditionSql = dataGetMemoryScopeConditionSql($npcfilter);
+
         $contextKeywords  = implode(" ", $result);
         $contextKeywords=strtr(internalDumbTranslator($contextKeywords),["remember"=>"","Remember"=>"","do you remember"=>""]);
 
@@ -3611,6 +3666,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                           AS mixed_distance
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
+                    and $scopeConditionSql
                     and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
                     ORDER BY (embedding <-> $vectorString)
                     LIMIT 5 OFFSET 0
@@ -3627,6 +3683,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                          summary
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
+                    and $scopeConditionSql
                     and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
                     and (gamets_truncated<$timeThreshold or $timeThreshold=0)
                     
