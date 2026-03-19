@@ -5,6 +5,7 @@ $PLAYER_NAME="Prisoner"; //Player's current character name.
 $DBDRIVER="postgresql"; //Database - Do not change.
 $HERIKA_NAME="The Narrator"; //NPC name. MUST MATCH their Skyrim in-game NPC name!
 $LOCK_PROFILE=false; //NPC name. MUST MATCH their Skyrim in-game NPC name!
+$AUTO_LOCK_PROFILE=true; //When enabled, saving an NPC profile in CHIM NPC page automatically locks it.
 $PROMPT_HEAD="You are #HERIKA_NAME#, a character in the Universe of Skyrim. This is not a simulation or a game; this is your reality. You will embody this persona with absolute conviction, prioritizing narrative authenticity and psychological consistency.
 
 The director provides scene prompts and narrative catalysts. Integrate these prompts seamlessly as the next logical event in the story. Treat them as established fact and build upon them with your character's authentic reaction.
