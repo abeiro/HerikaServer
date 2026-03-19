@@ -21,6 +21,19 @@ class LLMRandomizer {
 
     private static $player2ForceEnabled = null;
     private static $player2ForceConnectorId = null;
+
+    private static function isTruthy($value) {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return ((int)$value) === 1;
+        }
+
+        $raw = strtolower(trim((string)$value));
+        return in_array($raw, ['1', 'true', 'yes', 'on'], true);
+    }
     
     /**
      * Determine which connector slot to use (1-4)
@@ -40,7 +53,7 @@ class LLMRandomizer {
             }
         }
         
-        $randomizerEnabled = !empty($profileMeta['LLM_RANDOMIZER_ENABLED']);
+        $randomizerEnabled = self::isTruthy($profileMeta['LLM_RANDOMIZER_ENABLED'] ?? false);
         
         if (!$randomizerEnabled) {
             // Randomizer disabled, use global setting (no logging)
@@ -195,8 +208,7 @@ class LLMRandomizer {
         }
 
         $row = $db->fetchOne("SELECT value FROM conf_opts WHERE id='" . self::PLAYER2_FORCE_ENABLED_KEY . "' LIMIT 1");
-        $raw = strtolower(trim((string)($row['value'] ?? '0')));
-        self::$player2ForceEnabled = in_array($raw, ['1', 'true', 'yes', 'on'], true);
+        self::$player2ForceEnabled = self::isTruthy($row['value'] ?? '0');
         return self::$player2ForceEnabled;
     }
 
