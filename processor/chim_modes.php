@@ -58,8 +58,8 @@ if ($EXECUTION_MODE=="STANDARD") {
 
 
 } else if ($EXECUTION_MODE=="WHISPER") {
-    // Define whisper range (300 units = ~4 meters, intimate conversation distance)
-    $GLOBALS["WHISPER_RANGE"] = 300;
+    // Hard whisper range for CHIM whisper mode.
+    $GLOBALS["WHISPER_RANGE"] = 200;
     
     // Send commands to plugin to reduce NPC detection range to whisper distance
     $GLOBALS["db"]->insert(
