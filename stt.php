@@ -31,11 +31,16 @@ if ($STTFUNCTION=="azure") {
     require_once($path."stt/stt-deepgram.php");
     $text= stt($finalName);
     
-} else if ($STTFUNCTION=="localwhisper") { 
+} else if ($STTFUNCTION=="localwhisper") {
 
     require_once($path."stt/stt-localwhisper.php");
     $text= stt($finalName);
-    
+
+} else if ($STTFUNCTION=="gemini") {
+
+    require_once($path."stt/stt-gemini.php");
+    $text= stt($finalName);
+
 }
 
 echo $text;
