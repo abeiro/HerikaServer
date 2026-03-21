@@ -225,13 +225,20 @@ $GLOBALS["all_fast_commands"] = $fast_commands;
 $semaphore_timeout = $GLOBALS["SEMAPHORES_TIMEOUT"] ?? 300;
 
 
-// Use logical id "MAIN" so other code can still find $GLOBALS["SEMAPHORES"]["MAIN"]
+// Per-NPC semaphore: each NPC gets its own lock so different NPCs process in parallel.
+// Same NPC's sequential requests still serialize correctly.
+$_mainSemId = "MAIN";
+if (isset($_GET["profile"]) && !empty($_GET["profile"])) {
+    $_mainSemId = "MAIN_" . substr($_GET["profile"], 0, 8);
+}
+$GLOBALS["_mainSemId"] = $_mainSemId;
+
 if (!in_array($gameRequest[0],$fast_commands)) {
-    if (!SemaphoreWait("MAIN", $semaphore_timeout, 1003, null)) {
-        Logger::warn("[main] main semaphore wait failed for {$gameRequest[0]}");
+    if (!SemaphoreWait($_mainSemId, $semaphore_timeout, 1003, null)) {
+        Logger::warn("[main] main semaphore wait failed for {$gameRequest[0]} (sem: {$_mainSemId})");
         terminate();
     }
-    Logger::info("Audit:Lock acquired by {$gameRequest[0]}");
+    Logger::info("Audit:Lock acquired by {$gameRequest[0]} (sem: {$_mainSemId})");
 } 
 
 // adnpc has its custom semaphore, as it write files
@@ -1234,7 +1241,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     if (sizeof($rechatHistory)>=(intval($GLOBALS["RECHAT_H"])))    {   // TOO MUCH RECHAT
         Logger::info("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">={$GLOBALS["RECHAT_H"]}");
         // Lets try to summarize
-        SemaphoreManager::release("MAIN");
+        SemaphoreManager::release($GLOBALS["_mainSemId"] ?? "MAIN");
         while(ob_get_length() && ob_end_clean());
         require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
         terminate();
@@ -1292,12 +1299,12 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
 
     if (sizeof($rechatHistory)>1) {
         // Lets make rechat wait a bit, so events while NPCs are speaking get into context// disabled if using new rechat fire event
-        SemaphoreManager::release("MAIN");
+        SemaphoreManager::release($GLOBALS["_mainSemId"] ?? "MAIN");
         Logger::info("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
         // Check if this conflicts with smart rechat
         // Is this doing something?
         $semaphore_timeout = $GLOBALS["SEMAPHORES_TIMEOUT"] ?? 300;
-        if (!SemaphoreWait("MAIN", $semaphore_timeout, 1007, function() use ($db, $gameRequest) {
+        if (!SemaphoreWait($GLOBALS["_mainSemId"] ?? "MAIN", $semaphore_timeout, 1007, function() use ($db, $gameRequest) {
             //$user_input_after=$db->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]"); // 72 ms 
             $user_input_after=$db->fetchAll("SELECT rowid as N FROM eventlog WHERE type='user_input' AND ts>{$gameRequest[1]} ORDER BY rowid DESC LIMIT 1 "); // faster, 1.5 ms
             if (isset($user_input_after[0])) {
@@ -2675,7 +2682,7 @@ if (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST')) {
 
 
 // POST PROCESS TASKS
-SemaphoreManager::release("MAIN");
+SemaphoreManager::release($GLOBALS["_mainSemId"] ?? "MAIN");
 SemaphoreManager::release("ADDNPC");
 
 

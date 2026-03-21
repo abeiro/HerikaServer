@@ -423,7 +423,7 @@
   },
   "PLAYER_RESPEECH":{"type":"boolean","description":"Allows the AI to rewrite player speech with Chat Assist & Creation modes.","scope":"global"},
   "STTFUNCTION": {
-    "type":"select","values":["none","whisper","localwhisper","azure","deepgram","parakeet"],"description":"Speech-to-Text service options. Translates your voice to text.", 
+    "type":"select","values":["none","whisper","localwhisper","azure","deepgram","gemini","parakeet"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service","scope":"global"
     },
   "STT": {
@@ -449,6 +449,11 @@
       "API_KEY": {"type":"apikey","description":"Deepgram API key.","code":"DEEPGRAM_API_KEY"},
       "LANG":{"type":"string","description":"Language"},
       "MODEL":{"type":"select","values":["nova-3","nova-2","whisper-medium","enhanced","nova","base"],"description":"Model to use"}
+    }, "GEMINI": {
+      "_title":"Google Gemini STT + Emotion Detection",
+      "API_KEY": {"type":"apikey","description":"Google AI API key (from aistudio.google.com).","code":"GEMINI_API_KEY"},
+      "LANG": {"type":"string","description":"Language (e.g., en, es, ja)"},
+      "MODEL": {"type":"select","values":["gemini-2.5-flash","gemini-2.5-flash-lite","gemini-2.5-pro"],"description":"Gemini model. 2.5 Flash recommended for best speed and quality."}
     }, "PARAKEET": {
       "_title":"parakeet-api-server",
       "LANG": {"type":"string","description":"Language to detect for STT."}
