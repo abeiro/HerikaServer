@@ -142,7 +142,7 @@ if ($hostname === false || $hostname === '') {
 if ($hostname == "absws")        
     $serverUrl = "http://127.0.0.1/HerikaServer/ui/addons/snqe/cmd";
 else
-    $serverUrl = "http://127.0.0.1:8080/HerikaServer/ui/addons/snqe/cmd";
+    $serverUrl = "http://127.0.0.1:8081/HerikaServer/ui/addons/snqe/cmd";
 
 echo "Running in mode: $mode\n";
 
