@@ -1652,8 +1652,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             echo '<table>';
             echo '<tr>
                     <th>Topic</th>
-                    <th>Topic Description</th>
-                    <th>Knowledge Class</th>
+                    <th>Topic Description (Advanced)</th>
+                    <th>Knowledge Class (Advanced)</th>
                     <th>Topic Description (Basic)</th>
                     <th>Knowledge Class (Basic)</th>
                     <th>Tags</th>
