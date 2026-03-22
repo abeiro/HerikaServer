@@ -12,8 +12,8 @@ $MAXIMUM_WORDS=($GLOBALS["MAX_WORDS_LIMIT"]>0)?"(Maximum {$GLOBALS["MAX_WORDS_LI
 
 // Database Prompt (Prose/Narration)
 $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next prose/narration as a casual direct reaction to what was just said." . 
-" Be original, creative, knowledgeable, use your own thoughts. " . 
-" Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines." . 
+" Avoid narrations. " . 
+" Review context history to focus on the current conversation topic." . 
 " {$GLOBALS["HERIKA_NAME"]}'s next lines will use this format \"{$GLOBALS["HERIKA_NAME"]}: ";
 
 // Database Prompt (Prose/Narration)
@@ -30,8 +30,8 @@ $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next prose/narration as a c
 $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
 if ($inlineNarrationEnabled) {
     $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next prose/narration." . 
-" Be original, creative, knowledgeable, use your own thoughts. " . 
-" Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.$MAXIMUM_WORDS" . 
+" Avoid narrations. " . 
+" Review context history to focus on the current conversation topic.$MAXIMUM_WORDS" . 
 "";
 
     global $db;
@@ -56,8 +56,8 @@ if ($inlineNarrationEnabled) {
     // I don't want narrations. If you want narrations, enable inline narration or whatever.
     
     $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line." . 
-" Be original, creative, knowledgeable, use your own thoughts. " . 
-" Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.$MAXIMUM_WORDS" . 
+" Avoid narrations. " .  
+" Review context history to focus on the current conversation topic.$MAXIMUM_WORDS" . 
 "";
 }
 

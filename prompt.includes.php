@@ -17,6 +17,7 @@ if (in_array($gameRequest[0],["ginputtext_s"])) {
 require(__DIR__ . DIRECTORY_SEPARATOR . "prompts/prompts.php");
 
 $PROMPT_HEAD = ($GLOBALS["PROMPT_HEAD"]) ? $GLOBALS["PROMPT_HEAD"] : "Let\'s roleplay in the Universe of Skyrim. I\'m {$GLOBALS["PLAYER_NAME"]} ";
+$PROMPT_HEAD .= "\nNote: The director is a system-level external entity, NOT #PLAYER_NAME# or any other in-world character.";
 
 /* 
  * Info gathering to mangle function definitions. This will enforce some parameters to be fixed-

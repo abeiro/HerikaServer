@@ -116,7 +116,7 @@
         $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
         $messageDescription = "lines of dialogue";
         if ($inlineNarrationEnabled) {
-            $messageDescription = "Include brief third-person narration followed by {$GLOBALS["HERIKA_NAME"]}'s first-person spoken text. Example: *She smiles*. It's good to see you again, my friend!";
+            $messageDescription = "Include brief third-person narration followed by {$GLOBALS["HERIKA_NAME"]}'s spoken dialogue. Example: *She smiles*. It's good to see you again!";
         }
     
         if (isset($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])&&($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])) {
@@ -202,7 +202,7 @@
         $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
         $messageDescription = "lines of {$GLOBALS["HERIKA_NAME"]}'s dialogue";
         if ($inlineNarrationEnabled) {
-            $messageDescription = "Include brief third-person narration followed by {$GLOBALS["HERIKA_NAME"]}'s first-person spoken text. Example: *She smiles*. It's good to see you again, my friend!";
+            $messageDescription = "Include brief third-person narration followed by {$GLOBALS["HERIKA_NAME"]}'s spoken dialogue. Example: *She smiles*. It's good to see you again!";
         }
 
         $GLOBALS["structuredOutputTemplate"] = array(
