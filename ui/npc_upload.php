@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // Get the relative web path from document root to our application
 $scriptPath = $_SERVER['SCRIPT_NAME'];
 $webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
@@ -7,7 +7,7 @@ $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
-$TITLE = "📝CHIM - NPC Biography";
+$TITLE = "ðŸ“CHIM - NPC Biography";
 
 ob_start();
 
@@ -41,9 +41,9 @@ if (!$conn) {
 }
 
 //
-// ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //   INDIVIDUAL UPLOAD
-// ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual'])) {
     $npc_name   = strtolower(trim($_POST['npc_name'] ?? ''));
@@ -118,9 +118,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
 }
 
 //
-// ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //   CSV UPLOAD - Safe Biography Import (same logic as biography_import.php)
-// ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
     // Check if a file was uploaded without errors
@@ -318,22 +318,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                         
                         // Build success message
                         if ($processedCount > 0) {
-                            $toastMessage = "✓ Successfully imported $processedCount NPC record" . ($processedCount > 1 ? 's' : '');
+                            $toastMessage = "âœ“ Successfully imported $processedCount NPC record" . ($processedCount > 1 ? 's' : '');
                             if ($errorCount > 0) {
                                 $toastMessage .= " ($errorCount error" . ($errorCount > 1 ? 's' : '') . ")";
                             }
                         } else {
-                            $toastMessage = "⚠️ No NPC records were imported";
+                            $toastMessage = "âš ï¸ No NPC records were imported";
                         }
                         
                         $message .= '<div class="form-container" style="margin-top:10px; border:2px solid #4ade80;">'
-                            . '<h3 style="color:#4ade80;">✓ CSV Import Successful</h3>'
+                            . '<h3 style="color:#4ade80;">âœ“ CSV Import Successful</h3>'
                             . '<p><strong>' . $processedCount . '</strong> NPC records imported successfully.</p>'
                             . '<p style="font-size:0.9em; color:#888;">Encoding: ' . htmlspecialchars($detectedEncoding) 
                             . ' | Delimiter: ' . htmlspecialchars($delimiterName) . '</p>';
                         
                         if (!empty($errors)) {
-                            $message .= '<details style="margin-top:10px;"><summary style="cursor:pointer; color:#ff6464;">⚠️ ' 
+                            $message .= '<details style="margin-top:10px;"><summary style="cursor:pointer; color:#ff6464;">âš ï¸ ' 
                                 . count($errors) . ' errors occurred</summary>'
                                 . '<pre style="white-space:pre-wrap; background:#1f1f1f; padding:10px; border-radius:4px; margin-top:10px;">'
                                 . htmlspecialchars(implode("\n", $errors))
@@ -355,9 +355,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
 }
 
 //
-// ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //   TRUNCATE NPC TABLE
-// ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['truncate_npc'])) {
     $truncateQuery = "TRUNCATE TABLE $schema.bio_templates_custom RESTART IDENTITY CASCADE";
@@ -371,9 +371,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['truncate_npc'])) {
 }
 
 //
-// ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //   DOWNLOAD EXAMPLE
-// ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //
 if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
     // Define the path to the example CSV file
@@ -397,9 +397,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_example') {
 }
 
 //
-// ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //   EXPORT CUSTOM NPC DATA
-// ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //
 if (isset($_GET['action']) && $_GET['action'] === 'export_custom_npcs') {
     // Query to get all custom NPC data
@@ -936,11 +936,6 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
 
     <div class="page-header">
         <h1>NPC Biography Management 
-            <a href="https://dwemerdynamics.hostwiki.io/en/Profiles" target="_blank" rel="noopener" 
-               style="display: inline-block; margin-left: 15px; color: rgb(242, 124, 17); text-decoration: none; font-size: 0.7em; vertical-align: top; border: 2px solid rgb(242, 124, 17); border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 20px; transition: all 0.3s ease;" 
-               title="View detailed documentation about Profile Management"
-               onmouseover="this.style.background='rgb(242, 124, 17)'; this.style.color='white';" 
-               onmouseout="this.style.background='transparent'; this.style.color='rgb(242, 124, 17)';">ℹ</a>
         </h1>
         <p class="page-subtitle">Create custom character profiles for AI NPCs during roleplay</p>
     </div>
@@ -1721,14 +1716,14 @@ function populateKnowledgeTable(knowledge) {
                 
                 // Category
                 if (item.category) {
-                    extraInfo += `<span style="background: rgba(242, 124, 17, 0.15); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 5px; font-size: 1.5em;">📁 ${item.category}</span>`;
+                    extraInfo += `<span style="background: rgba(242, 124, 17, 0.15); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 5px; font-size: 1.5em;">ðŸ“ ${item.category}</span>`;
                 }
                 
                 // Knowledge Class (Advanced) - Orange tags
                 if (item.knowledge_class) {
                     const knowledgeClasses = item.knowledge_class.split(',').map(tag => tag.trim()).filter(tag => tag);
                     knowledgeClasses.forEach(knowledgeClass => {
-                        extraInfo += `<span style="background: rgba(242, 124, 17, 0.2); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 3px; font-size: 1.5em; font-weight: 500;">🔸 ${knowledgeClass}</span>`;
+                        extraInfo += `<span style="background: rgba(242, 124, 17, 0.2); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 3px; font-size: 1.5em; font-weight: 500;">ðŸ”¸ ${knowledgeClass}</span>`;
                     });
                 }
                 
@@ -1736,7 +1731,7 @@ function populateKnowledgeTable(knowledge) {
                 if (item.knowledge_class_basic) {
                     const basicClasses = item.knowledge_class_basic.split(',').map(tag => tag.trim()).filter(tag => tag);
                     basicClasses.forEach(basicClass => {
-                        extraInfo += `<span style="background: rgba(242, 124, 17, 0.15); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 3px; font-size: 1.5em;">🔹 ${basicClass}</span>`;
+                        extraInfo += `<span style="background: rgba(242, 124, 17, 0.15); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 3px; font-size: 1.5em;">ðŸ”¹ ${basicClass}</span>`;
                     });
                 }
                 
@@ -1744,7 +1739,7 @@ function populateKnowledgeTable(knowledge) {
                 if (item.tags) {
                     const tags = item.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
                     tags.forEach(tag => {
-                        extraInfo += `<span style="background: rgba(74, 158, 255, 0.15); color: #4a9eff; padding: 2px 6px; border-radius: 3px; margin-right: 3px; font-size: 0.75em;">🏷️ ${tag}</span>`;
+                        extraInfo += `<span style="background: rgba(74, 158, 255, 0.15); color: #4a9eff; padding: 2px 6px; border-radius: 3px; margin-right: 3px; font-size: 0.75em;">ðŸ·ï¸ ${tag}</span>`;
                     });
                 }
                 

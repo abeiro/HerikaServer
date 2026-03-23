@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // Get the relative web path from document root to our application
 $scriptPath = $_SERVER['SCRIPT_NAME'];
 $webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
@@ -542,7 +542,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'batch_process' && isset($_GET
     exit;
 }
 
-$TITLE = "🔊 Voice Management";
+$TITLE = "ðŸ”Š Voice Management";
 
 ob_start();
 
@@ -1499,9 +1499,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     function processBatchVoices(provider, voices, index) {
         if (batchCancelled || index >= voices.length) {
             if (batchCancelled) {
-                addBatchStatus(provider, '❌ Batch upload cancelled', 'orange');
+                addBatchStatus(provider, 'âŒ Batch upload cancelled', 'orange');
             } else {
-                addBatchStatus(provider, '✅ Batch upload complete!', 'rgb(247, 231, 16)');
+                addBatchStatus(provider, 'âœ… Batch upload complete!', 'rgb(247, 231, 16)');
                 // Refresh page after completion to show updated voice list
                 setTimeout(() => {
                     window.location.href = WEB_ROOT + '/ui/xtts_clone.php?tab=' + provider;
@@ -1520,7 +1520,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         updateBatchProgress(provider, current, voices.length);
         
         // Add processing status
-        addBatchStatus(provider, '⏳ Processing: ' + voice, '#4a8ab6');
+        addBatchStatus(provider, 'â³ Processing: ' + voice, '#4a8ab6');
         
         // Get delay based on provider
         const delays = {
@@ -1538,15 +1538,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    addBatchStatus(provider, '✓ ' + voice, '#4caf50');
+                    addBatchStatus(provider, 'âœ“ ' + voice, '#4caf50');
                 } else {
                     const errorMsg = data.message || 'Unknown error';
-                    addBatchStatus(provider, '✗ ' + voice + ': ' + errorMsg, '#f44336');
+                    addBatchStatus(provider, 'âœ— ' + voice + ': ' + errorMsg, '#f44336');
                     
                     // If rate limited, stop the batch
                     if (data.rateLimit) {
                         batchCancelled = true;
-                        addBatchStatus(provider, '⚠ Rate limit reached. Please wait before continuing.', 'orange');
+                        addBatchStatus(provider, 'âš  Rate limit reached. Please wait before continuing.', 'orange');
                         const cancelBtn = document.getElementById('cancel-batch-' + provider);
                         if (cancelBtn) cancelBtn.style.display = 'none';
                         return;
@@ -1559,7 +1559,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }, delay);
             })
             .catch(error => {
-                addBatchStatus(provider, '✗ ' + voice + ': ' + error.message, '#f44336');
+                addBatchStatus(provider, 'âœ— ' + voice + ': ' + error.message, '#f44336');
                 
                 // Continue with next voice after delay
                 setTimeout(() => {
@@ -2111,9 +2111,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="page-header">
         <h1>Voice Management 
-            <a href="https://dwemerdynamics.hostwiki.io/en/Auto-TTS-Voices" target="_blank" rel="noopener" 
-               class="info-link" 
-               title="View detailed documentation about TTS Voice Configuration">ℹ</a>
         </h1>
         <p class="page-subtitle">Manage voice samples across multiple TTS providers: XTTS, Chatterbox, PocketTTS, Cartesia, and Inworld</p>
         <p class="page-note"><strong>Note:</strong> XTTS, Chatterbox, and PocketTTS all use the same API endpoint (port 8020). They share the same voice samples - no need to resync when switching between them.</p>
@@ -2176,7 +2173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
             
             <div style="margin-top: 20px; padding: 15px; background: rgba(74, 138, 182, 0.1); border: 1px solid #4a8ab6; border-radius: 6px;">
-                <p style="margin: 0 0 10px 0; font-weight: 600; color: #4a8ab6;">📋 File Requirements:</p>
+                <p style="margin: 0 0 10px 0; font-weight: 600; color: #4a8ab6;">ðŸ“‹ File Requirements:</p>
                 <ul style="margin: 0; padding-left: 20px;">
                     <li>Format: WAV (PCM), 16-bit, Mono, 20500Hz</li>
                     <li>Size: 5MB or less</li>
@@ -2215,15 +2212,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="voice-status-item" onclick="copyToClipboard('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" title="Click to copy voice name">
                         <span class="voice-name"><?php echo htmlspecialchars($voice); ?></span>
                         <span class="status-icon <?php echo $isOnServer ? 'cloned' : 'not-cloned'; ?>">
-                            <?php echo $isOnServer ? '✓' : '✗'; ?>
+                            <?php echo $isOnServer ? 'âœ“' : 'âœ—'; ?>
                         </span>
                         <div class="button-container">
                             <?php if ($isOnServer): ?>
                                 <button onclick="event.stopPropagation(); testVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
-                                        class="play-btn" title="Test voice">▶</button>
+                                        class="play-btn" title="Test voice">â–¶</button>
                             <?php else: ?>
                                 <button onclick="event.stopPropagation(); syncSingleVoice('xtts', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
-                                        class="sync-btn" title="Sync this voice to XTTS server">↻</button>
+                                        class="sync-btn" title="Sync this voice to XTTS server">â†»</button>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -2277,7 +2274,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
             <?php else: ?>
-                <p style="color: #4caf50;">✓ All local voices are already uploaded to XTTS server.</p>
+                <p style="color: #4caf50;">âœ“ All local voices are already uploaded to XTTS server.</p>
             <?php endif; ?>
         </div>
 
@@ -2315,7 +2312,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
             
             <div style="margin-top: 20px; padding: 15px; background: rgba(74, 138, 182, 0.1); border: 1px solid #4a8ab6; border-radius: 6px;">
-                <p style="margin: 0 0 10px 0; font-weight: 600; color: #4a8ab6;">📋 File Requirements:</p>
+                <p style="margin: 0 0 10px 0; font-weight: 600; color: #4a8ab6;">ðŸ“‹ File Requirements:</p>
                 <ul style="margin: 0; padding-left: 20px;">
                     <li>Format: WAV (PCM), 16-bit, Mono, 20500Hz</li>
                     <li>Size: 5MB or less</li>
@@ -2354,15 +2351,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="voice-status-item" onclick="copyToClipboard('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" title="Click to copy voice name">
                         <span class="voice-name"><?php echo htmlspecialchars($voice); ?></span>
                         <span class="status-icon <?php echo $isOnServer ? 'cloned' : 'not-cloned'; ?>">
-                            <?php echo $isOnServer ? '✓' : '✗'; ?>
+                            <?php echo $isOnServer ? 'âœ“' : 'âœ—'; ?>
                         </span>
                         <div class="button-container">
                             <?php if ($isOnServer): ?>
                                 <button onclick="event.stopPropagation(); testVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
-                                        class="play-btn" title="Test voice">▶</button>
+                                        class="play-btn" title="Test voice">â–¶</button>
                             <?php else: ?>
                                 <button onclick="event.stopPropagation(); syncSingleVoice('chatterbox', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
-                                        class="sync-btn" title="Sync this voice to Chatterbox server">↻</button>
+                                        class="sync-btn" title="Sync this voice to Chatterbox server">â†»</button>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -2416,7 +2413,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
             <?php else: ?>
-                <p style="color: #4caf50;">✓ All local voices are already uploaded to Chatterbox server.</p>
+                <p style="color: #4caf50;">âœ“ All local voices are already uploaded to Chatterbox server.</p>
             <?php endif; ?>
         </div>
 
@@ -2454,7 +2451,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
             
             <div style="margin-top: 20px; padding: 15px; background: rgba(74, 138, 182, 0.1); border: 1px solid #4a8ab6; border-radius: 6px;">
-                <p style="margin: 0 0 10px 0; font-weight: 600; color: #4a8ab6;">📋 File Requirements:</p>
+                <p style="margin: 0 0 10px 0; font-weight: 600; color: #4a8ab6;">ðŸ“‹ File Requirements:</p>
                 <ul style="margin: 0; padding-left: 20px;">
                     <li>Format: WAV (PCM), 16-bit, Mono, 20500Hz</li>
                     <li>Size: 5MB or less</li>
@@ -2493,15 +2490,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="voice-status-item" onclick="copyToClipboard('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" title="Click to copy voice name">
                         <span class="voice-name"><?php echo htmlspecialchars($voice); ?></span>
                         <span class="status-icon <?php echo $isOnServer ? 'cloned' : 'not-cloned'; ?>">
-                            <?php echo $isOnServer ? '✓' : '✗'; ?>
+                            <?php echo $isOnServer ? 'âœ“' : 'âœ—'; ?>
                         </span>
                         <div class="button-container">
                             <?php if ($isOnServer): ?>
                                 <button onclick="event.stopPropagation(); testVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
-                                        class="play-btn" title="Test voice">▶</button>
+                                        class="play-btn" title="Test voice">â–¶</button>
                             <?php else: ?>
                                 <button onclick="event.stopPropagation(); syncSingleVoice('pockettts', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
-                                        class="sync-btn" title="Sync this voice to PocketTTS server">↻</button>
+                                        class="sync-btn" title="Sync this voice to PocketTTS server">â†»</button>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -2555,7 +2552,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
             <?php else: ?>
-                <p style="color: #4caf50;">✓ All local voices are already uploaded to PocketTTS server.</p>
+                <p style="color: #4caf50;">âœ“ All local voices are already uploaded to PocketTTS server.</p>
             <?php endif; ?>
         </div>
 
@@ -2592,7 +2589,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
             
             <div style="margin-top: 20px; padding: 15px; background: rgba(74, 138, 182, 0.1); border: 1px solid #4a8ab6; border-radius: 6px;">
-                <p style="margin: 0 0 10px 0; font-weight: 600; color: #4a8ab6;">📋 File Requirements:</p>
+                <p style="margin: 0 0 10px 0; font-weight: 600; color: #4a8ab6;">ðŸ“‹ File Requirements:</p>
                 <ul style="margin: 0; padding-left: 20px;">
                     <li>Format: WAV (PCM), 16-bit, Mono, 20500Hz</li>
                     <li>Size: 5MB or less</li>
@@ -2616,13 +2613,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <?php if (!$cartesiaConfigured): ?>
                 <div style="background: rgba(244, 67, 54, 0.1); border: 2px solid #f44336; border-radius: 8px; padding: 16px; margin: 20px 0; color: #f8f9fa;">
-                    <p style="margin: 0; font-weight: 600; color: #f44336;">⚠️ Cartesia API not configured</p>
+                    <p style="margin: 0; font-weight: 600; color: #f44336;">âš ï¸ Cartesia API not configured</p>
                     <p style="margin: 8px 0 0 0;">Please configure your Cartesia API key in the <a href="<?php echo $webRoot; ?>/ui/core/api_badge.php" style="color: yellow;">API Badge</a> page before syncing voices.</p>
                 </div>
             <?php endif; ?>
             
             <div style="background: rgba(74, 138, 182, 0.1); border: 2px solid #4a8ab6; border-radius: 8px; padding: 16px; margin: 20px 0; color: #f8f9fa;">
-                <p style="margin: 0; font-weight: 600; color: #4a8ab6;">ℹ️ Automatic Voice Generation</p>
+                <p style="margin: 0; font-weight: 600; color: #4a8ab6;">â„¹ï¸ Automatic Voice Generation</p>
                 <p style="margin: 8px 0 0 0;">Voices are automatically generated when you speak to an NPC using that voice in-game, if Cartesia TTS is selected as your TTS provider. You don't need to manually sync all voices upfront.</p>
             </div>
 
@@ -2632,7 +2629,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="voice-status-item" onclick="copyToClipboard('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" title="Click to copy voice name">
                         <span class="voice-name"><?php echo htmlspecialchars($voice); ?></span>
                         <span class="status-icon <?php echo $isCloned ? 'cloned' : 'not-cloned'; ?>">
-                            <?php echo $isCloned ? '✓' : '✗'; ?>
+                            <?php echo $isCloned ? 'âœ“' : 'âœ—'; ?>
                         </span>
                         <?php if ($isCloned): ?>
                             <span class="voice-id" title="<?php echo htmlspecialchars($clonedVoices[$voice]); ?>">
@@ -2642,10 +2639,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="button-container">
                             <?php if ($isCloned): ?>
                                 <button onclick="event.stopPropagation(); testCartesiaVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
-                                        class="play-btn" title="Test voice">▶</button>
+                                        class="play-btn" title="Test voice">â–¶</button>
                             <?php else: ?>
                                 <button onclick="event.stopPropagation(); syncSingleVoice('cartesia', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
-                                        class="sync-btn" title="Sync this voice" <?php echo !$cartesiaConfigured ? 'disabled' : ''; ?>>↻</button>
+                                        class="sync-btn" title="Sync this voice" <?php echo !$cartesiaConfigured ? 'disabled' : ''; ?>>â†»</button>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -2689,7 +2686,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
             <?php else: ?>
-                <p style="color: #4caf50;">✓ All local voices have been generated for Cartesia.</p>
+                <p style="color: #4caf50;">âœ“ All local voices have been generated for Cartesia.</p>
             <?php endif; ?>
         </div>
     </div>
@@ -2711,7 +2708,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
             
             <div style="margin-top: 20px; padding: 15px; background: rgba(74, 138, 182, 0.1); border: 1px solid #4a8ab6; border-radius: 6px;">
-                <p style="margin: 0 0 10px 0; font-weight: 600; color: #4a8ab6;">📋 File Requirements:</p>
+                <p style="margin: 0 0 10px 0; font-weight: 600; color: #4a8ab6;">ðŸ“‹ File Requirements:</p>
                 <ul style="margin: 0; padding-left: 20px;">
                     <li>Format: WAV (PCM), 16-bit, Mono, 20500Hz</li>
                     <li>Size: 5MB or less</li>
@@ -2735,13 +2732,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <?php if (!$inworldConfigured): ?>
                 <div style="background: rgba(244, 67, 54, 0.1); border: 2px solid #f44336; border-radius: 8px; padding: 16px; margin: 20px 0; color: #f8f9fa;">
-                    <p style="margin: 0; font-weight: 600; color: #f44336;">⚠️ Inworld API not configured</p>
+                    <p style="margin: 0; font-weight: 600; color: #f44336;">âš ï¸ Inworld API not configured</p>
                     <p style="margin: 8px 0 0 0;">Please configure your Inworld API credential in the <a href="<?php echo $webRoot; ?>/ui/core/api_badge.php" style="color: yellow;">API Badge</a> page before syncing voices.</p>
                 </div>
             <?php endif; ?>
             
             <div style="background: rgba(74, 138, 182, 0.1); border: 2px solid #4a8ab6; border-radius: 8px; padding: 16px; margin: 20px 0; color: #f8f9fa;">
-                <p style="margin: 0; font-weight: 600; color: #4a8ab6;">ℹ️ Automatic Voice Generation</p>
+                <p style="margin: 0; font-weight: 600; color: #4a8ab6;">â„¹ï¸ Automatic Voice Generation</p>
                 <p style="margin: 8px 0 0 0;">Voices are automatically generated when you speak to an NPC using that voice in-game, if Inworld TTS is selected as your TTS provider. You don't need to manually sync all voices upfront.</p>
             </div>
 
@@ -2751,7 +2748,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="voice-status-item" onclick="copyToClipboard('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" title="Click to copy voice name">
                         <span class="voice-name"><?php echo htmlspecialchars($voice); ?></span>
                         <span class="status-icon <?php echo $isCloned ? 'cloned' : 'not-cloned'; ?>">
-                            <?php echo $isCloned ? '✓' : '✗'; ?>
+                            <?php echo $isCloned ? 'âœ“' : 'âœ—'; ?>
                         </span>
                         <?php if ($isCloned): ?>
                             <span class="voice-id" title="<?php echo htmlspecialchars($clonedVoices[$voice]); ?>">
@@ -2761,10 +2758,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="button-container">
                             <?php if ($isCloned): ?>
                                 <button onclick="event.stopPropagation(); testInworldVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
-                                        class="play-btn" title="Test voice">▶</button>
+                                        class="play-btn" title="Test voice">â–¶</button>
                             <?php else: ?>
                                 <button onclick="event.stopPropagation(); syncSingleVoice('inworld', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
-                                        class="sync-btn" title="Sync this voice" <?php echo !$inworldConfigured ? 'disabled' : ''; ?>>↻</button>
+                                        class="sync-btn" title="Sync this voice" <?php echo !$inworldConfigured ? 'disabled' : ''; ?>>â†»</button>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -2808,7 +2805,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
             <?php else: ?>
-                <p style="color: #4caf50;">✓ All local voices have been generated for Inworld.</p>
+                <p style="color: #4caf50;">âœ“ All local voices have been generated for Inworld.</p>
             <?php endif; ?>
         </div>
     </div>

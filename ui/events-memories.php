@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 error_reporting(E_ERROR);
 session_start();
 
@@ -466,9 +466,9 @@ function getTimeColor($time) {
 <div id="contentModal" class="modal">
     <div class="modal-content">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h2 style="margin: 0; color: rgb(242, 124, 17); font-family: 'MagicCards', sans-serif;">📜 Prompt Viewer</h2>
+            <h2 style="margin: 0; color: rgb(242, 124, 17); font-family: 'MagicCards', sans-serif;">ðŸ“œ Prompt Viewer</h2>
             <div>
-                <button id="copyPromptBtn" class="btn-base btn-primary" style="margin-right: 10px; padding: 8px 16px;">📋 Copy</button>
+                <button id="copyPromptBtn" class="btn-base btn-primary" style="margin-right: 10px; padding: 8px 16px;">ðŸ“‹ Copy</button>
                 <span class="close">&times;</span>
             </div>
         </div>
@@ -487,13 +487,7 @@ function getTimeColor($time) {
                 💬 AI Responses
             </button>
             <button class="tab-button <?php echo $activeTab === 'memory' ? 'active' : ''; ?>" onclick="switchTab('memory')">
-                🧠 Memories 
-                <a href="https://dwemerdynamics.hostwiki.io/en/diaries-memories" target="_blank" rel="noopener" 
-                   style="display: inline-block; margin-left: 8px; color: rgb(242, 124, 17); text-decoration: none; font-size: 0.7em; vertical-align: top; border: 2px solid rgb(242, 124, 17); border-radius: 50%; width: 16px; height: 16px; text-align: center; line-height: 12px; transition: all 0.3s ease;" 
-                   title="View detailed documentation about Diaries and Memory System"
-                   onclick="event.stopPropagation();"
-                   onmouseover="this.style.background='rgb(242, 124, 17)'; this.style.color='white';" 
-                   onmouseout="this.style.background='transparent'; this.style.color='rgb(242, 124, 17)';">ℹ</a>
+                🧠 Memories
             </button>
             <button class="tab-button <?php echo $activeTab === 'quests' ? 'active' : ''; ?>" onclick="switchTab('quests')">
                 🎯 Active Quests
@@ -509,7 +503,7 @@ function getTimeColor($time) {
             <?php
             // Add subtitle description
             echo "<div style='background: #2a2a2a; border-left: 4px solid rgb(242, 124, 17); padding: 12px 15px; border-radius: 5px; margin: 15px 0; font-size: 0.9em;'>";
-            echo "<span style='color: rgb(242, 124, 17); font-weight: bold;'>📝 Events:</span> ";
+            echo "<span style='color: rgb(242, 124, 17); font-weight: bold;'>ðŸ“ Events:</span> ";
             echo "<span style='color: #f8f9fa;'>Raw log of in-game events (combat, deaths, location changes, etc.) that provide context to the AI. These events are filtered and selectively added to AI prompts based on relevance.</span>";
             echo "</div>";
             
@@ -524,28 +518,28 @@ function getTimeColor($time) {
             echo "<div style='display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0;'>";
             
             echo "<button id='live-toggle-btn-eventlog' onclick=\"toggleAutoRefreshEventLog()\" class='btn-base " . ($isAutoRefresh ? "btn-secondary" : "btn-primary") . "' style='padding: 8px 12px; font-size: 0.9em;' title='Toggle live monitoring'>";
-            echo $isAutoRefresh ? "⏸️ Stop Live" : "📡 Monitor Live";
+            echo $isAutoRefresh ? "â¸ï¸ Stop Live" : "ðŸ“¡ Monitor Live";
             echo "</button>";
             
             if ($isAutoRefresh) {
-                echo "<span id='live-indicator-eventlog' style='margin-left: 10px; color: #28a745; font-weight: bold; font-size: 0.9em;'>🔴 LIVE</span>";
+                echo "<span id='live-indicator-eventlog' style='margin-left: 10px; color: #28a745; font-weight: bold; font-size: 0.9em;'>ðŸ”´ LIVE</span>";
             } else {
-                echo "<span id='live-indicator-eventlog' style='margin-left: 10px; color: #28a745; font-weight: bold; font-size: 0.9em; display: none;'>🔴 LIVE</span>";
+                echo "<span id='live-indicator-eventlog' style='margin-left: 10px; color: #28a745; font-weight: bold; font-size: 0.9em; display: none;'>ðŸ”´ LIVE</span>";
             }
             
             // Add delete buttons inline
             echo "<div style='margin-left: auto; display: flex; gap: 5px; flex-wrap: wrap; align-items: center;'>";
-            echo "<button id='deleteSelectedBtn' onclick='deleteSelectedEvents()' class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em; display: none;'>🗑️ Delete Selected (<span id='selectedCount'>0</span>)</button>";
+            echo "<button id='deleteSelectedBtn' onclick='deleteSelectedEvents()' class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em; display: none;'>ðŸ—‘ï¸ Delete Selected (<span id='selectedCount'>0</span>)</button>";
             echo "<button onclick=\"if(confirm('Are you sure you want to delete the last 20 events?')) window.location.href='events-memories.php?tab=eventlog&delete_last=20'\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete Latest 20</button>";
             echo "<button onclick=\"if(confirm('Are you sure you want to delete the last 50 events?')) window.location.href='events-memories.php?tab=eventlog&delete_last=50'\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete Latest 50</button>";
             echo "<button onclick=\"if(confirm('Are you sure you want to delete the last 100 events?')) window.location.href='events-memories.php?tab=eventlog&delete_last=100'\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete Latest 100</button>";
-            echo "<button onclick=\"deleteAllEventsConfirm()\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em; background-color: #dc2626; font-weight: bold;'>⚠️ Delete ALL</button>";
+            echo "<button onclick=\"deleteAllEventsConfirm()\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em; background-color: #dc2626; font-weight: bold;'>âš ï¸ Delete ALL</button>";
             echo "</div>";
             echo "</div>";
             
             // Add informational note about blacklist settings
             echo "<div style='background: #1a4d6d; color: #e0f2ff; padding: 12px 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #3b82f6; font-size: 0.9em;'>";
-            echo "ℹ️ <strong>Note:</strong> Not all events will show up in AI context. Any blacklist settings will not be used for context. This is a raw log of some of the more relevant events.";
+            echo "â„¹ï¸ <strong>Note:</strong> Not all events will show up in AI context. Any blacklist settings will not be used for context. This is a raw log of some of the more relevant events.";
             echo "</div>";
 
             $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 100;
@@ -571,7 +565,7 @@ function getTimeColor($time) {
             $mappedResults = array_map(function ($row) use ($columnHeaders) {
                 $mappedRow = [];
                 // Add checkbox column first (PostgreSQL returns rowid in lowercase)
-                $mappedRow['☑'] = '<input type="checkbox" class="event-checkbox" data-rowid="' . htmlspecialchars($row['rowid'] ?? '') . '" style="cursor: pointer; width: 18px; height: 18px;">';
+                $mappedRow['â˜‘'] = '<input type="checkbox" class="event-checkbox" data-rowid="' . htmlspecialchars($row['rowid'] ?? '') . '" style="cursor: pointer; width: 18px; height: 18px;">';
                 
                 foreach ($row as $key => $value) {
                     if ($key === 'gamets' && !empty($value)) {
@@ -844,7 +838,7 @@ function getTimeColor($time) {
                         return;
                     }
                     
-                    btn.textContent = '⏸️ Stop Live';
+                    btn.textContent = 'â¸ï¸ Stop Live';
                     btn.className = 'btn-base btn-secondary';
                     btn.style.padding = '8px 12px';
                     btn.style.fontSize = '0.9em';
@@ -856,7 +850,7 @@ function getTimeColor($time) {
                     
                     autoRefreshIntervalEventLog = setInterval(updateEventTableEventLog, 5000);
                 } else {
-                    btn.textContent = '📡 Monitor Live';
+                    btn.textContent = 'ðŸ“¡ Monitor Live';
                     btn.className = 'btn-base btn-primary';
                     btn.style.padding = '8px 12px';
                     btn.style.fontSize = '0.9em';
@@ -883,7 +877,7 @@ function getTimeColor($time) {
             <?php
             // Add subtitle description
             echo "<div style='background: #2a2a2a; border-left: 4px solid rgb(242, 124, 17); padding: 12px 15px; border-radius: 5px; margin: 15px 0; font-size: 0.9em;'>";
-            echo "<span style='color: rgb(242, 124, 17); font-weight: bold;'>💬 AI Responses:</span> ";
+            echo "<span style='color: rgb(242, 124, 17); font-weight: bold;'>ðŸ’¬ AI Responses:</span> ";
             echo "<span style='color: #f8f9fa;'>Complete log of all AI-generated responses including the full context (prompts, events, memories) sent to the LLM. Use this to debug conversations and understand what information the AI had access to.</span>";
             echo "</div>";
             
@@ -1041,7 +1035,7 @@ function getTimeColor($time) {
                                     if ($isTruncated) {
                                         $uniqueId = 'msg_' . $msgIndex . '_' . md5($content);
                                         // Expanded by default
-                                        $formattedPrompt .= '<button onclick="toggleContent(\'' . $uniqueId . '\')" style="background: #007acc; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; margin-left: 5px;">▲ Collapse</button>';
+                                        $formattedPrompt .= '<button onclick="toggleContent(\'' . $uniqueId . '\')" style="background: #007acc; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; margin-left: 5px;">â–² Collapse</button>';
                                         $formattedPrompt .= '<div id="' . $uniqueId . '_preview" style="display:none; color: #ce9178; white-space: pre-wrap; margin-top: 5px;">\'' . $escapedPreview . '...\'</div>';
                                         $formattedPrompt .= '<div id="' . $uniqueId . '_full" style="display: block; color: #ce9178; white-space: pre-wrap; margin-top: 5px; max-height: 400px; overflow-y: auto; background: #1e1e1e; padding: 10px; border-radius: 5px;">\'' . $escapedContent . '\'</div>';
                                     } else {
@@ -1067,7 +1061,7 @@ function getTimeColor($time) {
                         // Store formatted prompt in a hidden div and reference it by ID
                         $promptId = 'prompt_' . ($row['ROWID'] ?? $row['rowid'] ?? md5($value));
                         $hiddenPrompt = '<div id="' . $promptId . '" style="display:none;">' . $formattedPrompt . '</div>';
-                        $mappedRow[$columnHeaders[$key] ?? $key] = $hiddenPrompt . '<button class="view-contents-btn" data-prompt-id="' . $promptId . '">🧾 View Prompt</button>';
+                        $mappedRow[$columnHeaders[$key] ?? $key] = $hiddenPrompt . '<button class="view-contents-btn" data-prompt-id="' . $promptId . '">ðŸ§¾ View Prompt</button>';
                     } else if ($key === 'response') {
                         $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . nl2br(htmlspecialchars($value ?? '')) . '</div>';
                         // Insert Oghma Topic column immediately after AI Response
@@ -1164,8 +1158,8 @@ function getTimeColor($time) {
             // Display Memory Configuration Status
             echo "<div style='background: #1a1a1a; border: 1px solid #3a3a3a; border-radius: 8px; padding: 20px; margin: 15px 0;'>";
             echo "<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;'>";
-            echo "<h3 style='margin: 0; color: rgb(242, 124, 17); word-spacing: 5px;'>💭 Memory System Configuration</h3>";
-            echo "<a href='" . $webRoot . "/ui/core/config_hub.php?tab=globals' target='_blank' class='btn-base btn-primary' style='font-size: 13px; padding: 6px 12px;'>⚙️ Configure Settings</a>";
+            echo "<h3 style='margin: 0; color: rgb(242, 124, 17); word-spacing: 5px;'>ðŸ’­ Memory System Configuration</h3>";
+            echo "<a href='" . $webRoot . "/ui/core/config_hub.php?tab=globals' target='_blank' class='btn-base btn-primary' style='font-size: 13px; padding: 6px 12px;'>âš™ï¸ Configure Settings</a>";
             echo "</div>";
             
             // Get memory settings
@@ -1177,7 +1171,7 @@ function getTimeColor($time) {
             
             // Status indicator helper
             $statusIcon = function($enabled) {
-                return $enabled ? "<span style='color: #4caf50;'>✓ Enabled</span>" : "<span style='color: #f44336;'>✗ Disabled</span>";
+                return $enabled ? "<span style='color: #4caf50;'>âœ“ Enabled</span>" : "<span style='color: #f44336;'>âœ— Disabled</span>";
             };
             
             echo "<div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;'>";
@@ -1207,7 +1201,7 @@ function getTimeColor($time) {
             // Warning if TXT2VEC is not enabled
             if (!$useText2Vec) {
                 echo "<div style='background: #2a2a2a; border-left: 4px solid rgb(242, 124, 17); padding: 12px; margin-top: 15px; border-radius: 4px;'>";
-                echo "<strong style='color: rgb(242, 124, 17);'>⚠️ Warning:</strong> <span style='color: #f8f9fa;'>TXT2VEC is disabled. Memory embeddings will not be generated. ";
+                echo "<strong style='color: rgb(242, 124, 17);'>âš ï¸ Warning:</strong> <span style='color: #f8f9fa;'>TXT2VEC is disabled. Memory embeddings will not be generated. ";
                 echo "Mind Map visualization and advanced memory search will not work. ";
                 echo "<a href='" . $webRoot . "/ui/core/config_hub.php?tab=globals' target='_blank' style='color: rgb(242, 124, 17); text-decoration: underline;'>Enable it in Global Settings</a></span>";
                 echo "</div>";
@@ -1278,9 +1272,9 @@ function getTimeColor($time) {
             
             // Add Memory Management buttons
             echo "<div class='memory-management-actions' style='margin: 15px 0;'>";
-            echo "<button onclick=\"syncMemoriesConfirm()\" class='btn-base btn-primary' style='margin-right: 10px;'>🔄 Sync & Create Memory Summaries (Global + Individual)</button>";
-            echo "<button onclick=\"deleteAllMemoriesConfirm()\" class='btn-base btn-danger' style='background-color: #dc2626; font-weight: bold;'>⚠️ Delete All Memory Summaries</button>";
-            echo "<button onclick=\"fixCompanions()\" class='btn-base btn-primary' style='margin-right: 10px;'>🔄 Fix Companions field</button>";
+            echo "<button onclick=\"syncMemoriesConfirm()\" class='btn-base btn-primary' style='margin-right: 10px;'>ðŸ”„ Sync & Create Memory Summaries (Global + Individual)</button>";
+            echo "<button onclick=\"deleteAllMemoriesConfirm()\" class='btn-base btn-danger' style='background-color: #dc2626; font-weight: bold;'>âš ï¸ Delete All Memory Summaries</button>";
+            echo "<button onclick=\"fixCompanions()\" class='btn-base btn-primary' style='margin-right: 10px;'>ðŸ”„ Fix Companions field</button>";
             echo "</div>";
             
             // Add JavaScript functions for confirmations
@@ -1525,7 +1519,7 @@ document.addEventListener("DOMContentLoaded", function() {
             navigator.clipboard.writeText(textToCopy).then(function() {
                 // Show success feedback
                 var originalText = copyBtn.innerHTML;
-                copyBtn.innerHTML = '✅ Copied!';
+                copyBtn.innerHTML = 'âœ… Copied!';
                 copyBtn.style.background = '#28a745';
                 setTimeout(function() {
                     copyBtn.innerHTML = originalText;
@@ -1547,7 +1541,7 @@ document.addEventListener("DOMContentLoaded", function() {
             try {
                 document.execCommand('copy');
                 var originalText = copyBtn.innerHTML;
-                copyBtn.innerHTML = '✅ Copied!';
+                copyBtn.innerHTML = 'âœ… Copied!';
                 copyBtn.style.background = '#28a745';
                 setTimeout(function() {
                     copyBtn.innerHTML = originalText;
@@ -1587,11 +1581,11 @@ function toggleContent(id) {
     if (full.style.display === 'none') {
         preview.style.display = 'none';
         full.style.display = 'block';
-        btn.innerHTML = '▲ Collapse';
+        btn.innerHTML = 'â–² Collapse';
     } else {
         preview.style.display = 'block';
         full.style.display = 'none';
-        btn.innerHTML = '▼ Expand';
+        btn.innerHTML = 'â–¼ Expand';
     }
 }
 
@@ -1692,7 +1686,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const headerRow = firstTable.querySelector('tr.primary');
             if (headerRow) {
                 const firstTh = headerRow.querySelector('th');
-                if (firstTh && firstTh.textContent.trim() === '☑') {
+                if (firstTh && firstTh.textContent.trim() === 'â˜‘') {
                     firstTh.innerHTML = '<input type="checkbox" id="selectAllCheckbox" onchange="toggleAllCheckboxes(this)" style="cursor: pointer; width: 18px; height: 18px;" title="Select/Deselect All">';
                 }
             }

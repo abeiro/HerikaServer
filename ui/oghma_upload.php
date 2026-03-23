@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // Get the relative web path from document root to our application
 $scriptPath = $_SERVER['SCRIPT_NAME'];
 $webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
@@ -7,7 +7,7 @@ $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
-$TITLE = "📙CHIM - Oghma Infinium";
+$TITLE = "ðŸ“™CHIM - Oghma Infinium";
 
 ob_start();
 
@@ -1379,11 +1379,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <h1 id="page-title">
             <img src="<?php echo $webRoot; ?>/ui/images/oghma_infinium.png" alt="Oghma Infinium" style="vertical-align:bottom;" width="32" height="32"> 
             <span id="title-text">Oghma Infinium</span>
-            <a href="https://dwemerdynamics.hostwiki.io/en/Oghma-Infinium-(RAG)" target="_blank" rel="noopener" 
-               style="display: inline-block; margin-left: 15px; color: rgb(242, 124, 17); text-decoration: none; font-size: 0.7em; vertical-align: top; border: 2px solid rgb(242, 124, 17); border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 20px; transition: all 0.3s ease;" 
-               title="View detailed documentation about Oghma Infinium"
-               onmouseover="this.style.background='rgb(242, 124, 17)'; this.style.color='white';" 
-               onmouseout="this.style.background='transparent'; this.style.color='rgb(242, 124, 17)';">ℹ</a>
         </h1>
         
         <div id="header-content">
@@ -1398,7 +1393,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <p>For Knowledge Class, we recommend you read this: <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer">Project Oghma</a></p>
                 
                 <div class="logic-section">
-                    <h3 class="logic-title">🔍 Article Search Logic</h3>
+                    <h3 class="logic-title">ðŸ” Article Search Logic</h3>
                     <div class="logic-steps">
                         <div class="logic-step">
                             <div class="step-number">1</div>
@@ -1448,10 +1443,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <!-- Tab Navigation -->
     <div class="tab-navigation">
         <button class="tab-button active" onclick="switchTab('oghma-tab')">
-            📚 Oghma Infinium
+            ðŸ“š Oghma Infinium
         </button>
         <button class="tab-button" onclick="switchTab('dynamic-tab')">
-            ⚡ Dynamic Oghma
+            âš¡ Dynamic Oghma
         </button>
     </div>
 
@@ -1476,8 +1471,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             <div class="content-section">
                 <h2>Database Management</h2>
-                <p>Verify uploads: <br><b>Server Actions → Database Manager → dwemer → public → oghma</b></p>
-                <p>View conversation usage: <br><b>Server Actions → Database Manager → dwemer → public → audit_memory</b></p>
+                <p>Verify uploads: <br><b>Server Actions â†’ Database Manager â†’ dwemer â†’ public â†’ oghma</b></p>
+                <p>View conversation usage: <br><b>Server Actions â†’ Database Manager â†’ dwemer â†’ public â†’ audit_memory</b></p>
                 
                 <div class="button-group" style="margin-top: 20px;">
                     <form action="" method="post" style="display: inline;">
@@ -1524,7 +1519,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
             ?>
             
-            <h2 id="entries">📋 Oghma Infinium Entries</h2>
+            <h2 id="entries">ðŸ“‹ Oghma Infinium Entries</h2>
             
             <div class="action-container">
                 <button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>
@@ -1557,8 +1552,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     if ($letter) $baseUrl .= 'letter=' . urlencode($letter) . '&';
                     ?>
                     <div style="margin-top: 10px;">
-                        <a class="alphabet-button" href="<?php echo $baseUrl; ?>order=asc#entries">🔼 Ascending</a>
-                        <a class="alphabet-button" href="<?php echo $baseUrl; ?>order=desc#entries">🔽 Descending</a>
+                        <a class="alphabet-button" href="<?php echo $baseUrl; ?>order=asc#entries">ðŸ”¼ Ascending</a>
+                        <a class="alphabet-button" href="<?php echo $baseUrl; ?>order=desc#entries">ðŸ”½ Descending</a>
                     </div>
                 </div>
             </div>
@@ -1770,8 +1765,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             <div class="content-section">
                 <h2>Database Management</h2>
-                <p>Verify uploads: <br><b>Server Actions → Database Manager → dwemer → public → oghma_dynamic</b></p>
-                <p>View conversation usage: <br><b>Server Actions → Database Manager → dwemer → public → audit_memory</b></p>
+                <p>Verify uploads: <br><b>Server Actions â†’ Database Manager â†’ dwemer â†’ public â†’ oghma_dynamic</b></p>
+                <p>View conversation usage: <br><b>Server Actions â†’ Database Manager â†’ dwemer â†’ public â†’ audit_memory</b></p>
                 
                 <div class="button-group" style="margin-top: 20px;">
                     <form action="" method="post" style="display: inline;">
@@ -1782,7 +1777,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </div>
         </div>
         <div class="full-width-section">
-            <h2 id="dynamic">📋 Dynamic Oghma Entries</h2>
+            <h2 id="dynamic">ðŸ“‹ Dynamic Oghma Entries</h2>
             
             <div class="action-container">
                 <button onclick="openNewDynamicEntryModal()" class="action-button add-new">Add New Dynamic Entry</button>
