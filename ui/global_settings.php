@@ -854,6 +854,14 @@ function current_value(string $flatName, array $currentConf) {
         padding: 10px 12px; 
         transition: all 0.2s ease;
     }
+    .provider-body .provider-field-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+        min-width: 0;
+        width: 100%;
+    }
     .provider-body input:focus, .provider-body select:focus, .provider-body textarea:focus {
         border-color: rgba(242, 124, 17, 0.5);
         outline: none;
@@ -1073,7 +1081,7 @@ function current_value(string $flatName, array $currentConf) {
                                         </select>
                                     <?php elseif (strpos($ftype, 'foreign:') === 0): ?>
                                         <?php $rows = $foreignOptions[$fname] ?? []; ?>
-                                        <div style="display:flex; align-items:center; gap:10px;">
+                                        <div class="provider-field-wrap">
                                             <select name="<?php echo htmlspecialchars($fname); ?>" <?php echo $isReadonly ? 'disabled' : ''; ?>>
                                                 <option value="" <?php echo (empty($current) ? 'selected' : ''); ?>>None</option>
                                                 <?php foreach ($rows as $row): ?>
