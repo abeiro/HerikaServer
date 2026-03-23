@@ -182,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     header('Content-Type: application/json');
     echo json_encode([
         'status'    => 'success',
-        'message'   => 'Quest end requested successfully',
+        'message'   => 'Quest stop requested successfully',
         'output'    => $output,
         'timestamp' => date('Y-m-d H:i:s'),
     ]);
@@ -215,7 +215,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     header('Content-Type: application/json');
     echo json_encode([
         'status'    => 'success',
-        'message'   => 'Clean all executed successfully',
+        'message'   => 'Clear running quests executed successfully',
         'output'    => $output ?? '',
         'timestamp' => date('Y-m-d H:i:s'),
     ]);
@@ -251,7 +251,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 $uiPath = $enginePath . "ui" . DIRECTORY_SEPARATOR;
-$TITLE = "🧭 AI Quest Manager";
+$TITLE = "AI Quest Manager V1";
 
 ob_start();
 include($uiPath . "tmpl/head.html");
@@ -302,7 +302,7 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
 .snqe-page-title {
     font-family: "MagicCards", serif;
     font-size: 1.8em;
-    color: rgb(242,124,17);
+    color: #ffffff;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
     word-spacing: 6px;
     margin: 0 0 24px 0;
@@ -311,7 +311,7 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
 .snqe-section-title {
     font-family: "MagicCards", serif;
     font-size: 1.1em;
-    color: rgb(242,124,17);
+    color: #ffffff;
     margin: 0 0 14px 0;
     display: flex;
     align-items: center;
@@ -473,7 +473,7 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
 .staged-quest-container h3 {
     font-family: "MagicCards", serif;
     font-size: 1.1em;
-    color: rgb(242,124,17);
+    color: #ffffff;
     margin: 0 0 14px 0;
 }
 
@@ -497,7 +497,7 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
 .pending-step-container h3 {
     font-family: "MagicCards", serif;
     font-size: 1.1em;
-    color: rgb(242,124,17);
+    color: #ffffff;
     margin: 0 0 14px 0;
 }
 
@@ -521,7 +521,7 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
 .next-objective-container h3 {
     font-family: "MagicCards", serif;
     font-size: 1.1em;
-    color: rgb(242,124,17);
+    color: #ffffff;
     margin: 0 0 14px 0;
 }
 
@@ -557,15 +557,15 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
 <main>
     <div class="snqe-layout">
         <div class="snqe-main">
-            <div class="snqe-page-title">🧭 AI Quest Manager</div>
+            <div class="snqe-page-title">AI Quest Manager V1</div>
             <form id="snqeForm">
                 <div class="btn-group">
                     <button type="button" class="btn-snqe btn-snqe-generate" onclick="generateScenario()">Generate Scenario</button>
                     <button type="button" class="btn-snqe btn-snqe-create" onclick="submitFormData()">Stage Storyline</button>
+                    <button type="button" class="btn-snqe btn-snqe-create" id="playQuestBtn" onclick="startQuest()" <?php echo (empty($runningQuests) && $stagedQuestTitle !== 'No staged quest') ? '' : 'disabled'; ?>>Play Quest</button>
+                    <button type="button" class="btn-snqe btn-snqe-clear" id="requestEndBtn" onclick="requestEnd()" <?php echo !empty($runningQuests) ? '' : 'disabled'; ?>>Stop Quest</button>
                     <button type="button" class="btn-snqe btn-snqe-clear" onclick="clearAllData()">Clear Data</button>
-                    <button type="button" class="btn-snqe btn-snqe-clear" id="playQuestBtn" onclick="startQuest()" <?php echo (empty($runningQuests) && $stagedQuestTitle !== 'No staged quest') ? '' : 'disabled'; ?>>Play Quest</button>
-                    <button type="button" class="btn-snqe btn-snqe-clear" id="requestEndBtn" onclick="requestEnd()" <?php echo (empty($runningQuests) && $stagedQuestTitle !== 'No staged quest') ? '' : 'disabled'; ?>>Request End</button>
-                    <button type="button" class="btn-snqe btn-snqe-clear" onclick="cleanAll()">Clean all</button>
+                    <button type="button" class="btn-snqe btn-snqe-clear" onclick="cleanAll()">Clear Running Quests</button>
 
                     <a href="https://github.com/abeiro/HerikaServer/discussions/480" target="_blank" style="color:#60a5fa; font-size:0.9em; margin-bottom: 20px; display:inline-block;position:absolute;right:5px;top:-50px">Documentation</a>
                    
@@ -736,13 +736,14 @@ function refreshRunningQuests() {
                     if (userpromptGroup) userpromptGroup.style.display = 'block';
                 }
                 
-                // Enable/disable Play Quest and Request End buttons
+                // Enable/disable Play Quest and Stop Quest buttons
                 const playQuestBtn = document.getElementById('playQuestBtn');
                 const requestEndBtn = document.getElementById('requestEndBtn');
-                const shouldEnable = hasStagedQuest && !hasRunningQuests;
+                const canPlayQuest = hasStagedQuest && !hasRunningQuests;
+                const canStopQuest = hasRunningQuests;
                 
-                if (playQuestBtn) playQuestBtn.disabled = !shouldEnable;
-                if (requestEndBtn) requestEndBtn.disabled = !shouldEnable;
+                if (playQuestBtn) playQuestBtn.disabled = !canPlayQuest;
+                if (requestEndBtn) requestEndBtn.disabled = !canStopQuest;
             }
         })
         .catch(() => {});
@@ -884,10 +885,10 @@ function startQuest() {
 }
 
 function requestEnd() {
-    if (!confirm('Request quest end now?')) return;
+    if (!confirm('Stop quest now?')) return;
     
     const loadingEl = document.getElementById('loading');
-    loadingEl.textContent = 'Requesting quest end...';
+    loadingEl.textContent = 'Stopping quest...';
     loadingEl.classList.add('active');
     
     const fd = new FormData();
@@ -897,7 +898,7 @@ function requestEnd() {
         .then(r => r.json())
         .then(data => {
             if (data.status === 'success') {
-                try { alert('Quest end requested!\n' + data.timestamp); } catch(_) {}
+                try { alert('Quest stop requested!\n' + data.timestamp); } catch(_) {}
                 refreshRunningQuests();
                 refreshLogs();
             } else {
@@ -908,15 +909,15 @@ function requestEnd() {
         })
         .catch(() => { 
             loadingEl.classList.remove('active');
-            try { alert('Failed to request quest end'); } catch(_) {}
+            try { alert('Failed to stop quest'); } catch(_) {}
         });
 }
 
 function cleanAll() {
-    if (!confirm('Clean all quest data? This will remove all running quests and state files.')) return;
+    if (!confirm('Clear running quests? This will remove all running quests and state files.')) return;
     
     const loadingEl = document.getElementById('loading');
-    loadingEl.textContent = 'Cleaning all data...';
+    loadingEl.textContent = 'Clearing running quests...';
     loadingEl.classList.add('active');
     
     const fd = new FormData();
@@ -926,7 +927,7 @@ function cleanAll() {
         .then(r => r.json())
         .then(data => {
             if (data.status === 'success') {
-                try { alert('Clean all executed successfully!\n' + data.timestamp); } catch(_) {}
+                try { alert('Clear running quests executed successfully!\n' + data.timestamp); } catch(_) {}
                 refreshRunningQuests();
                 refreshLogs();
             } else {
@@ -937,7 +938,7 @@ function cleanAll() {
         })
         .catch(() => { 
             loadingEl.classList.remove('active');
-            try { alert('Failed to clean all data'); } catch(_) {}
+            try { alert('Failed to clear running quests'); } catch(_) {}
         });
 }
 
