@@ -249,7 +249,7 @@ $SHOW_STATUS_NAV = in_array($currentPageName, ['conf_wizard.php','configuration_
 // Server version and dev-build detection
 // Read version from .version_number.txt
 $versionFile = dirname(__DIR__, 2) . '/.version_number.txt';
-$serverVersionRaw = '2.5.1'; // fallback
+$serverVersionRaw = '2.6.0'; // fallback
 if (file_exists($versionFile)) {
     $versionContent = trim(file_get_contents($versionFile));
     if ($versionContent !== '') {
