@@ -27,8 +27,6 @@ BEGIN
         SELECT *
         FROM (
             VALUES
-                ('quest_master_data_locations', 'location_key', 'quest_master_data_locations_pk'),
-                ('quest_item_locations', 'location_key', 'quest_item_locations_pk'),
                 ('quest_item_types', 'type_key', 'quest_item_types_pk'),
                 ('quest_npc_templates', 'template_key', 'quest_npc_templates_pk'),
                 ('quest_npc_own_templates', 'template_key', 'quest_npc_own_templates_pk'),

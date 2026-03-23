@@ -1,13 +1,3 @@
-ALTER TABLE IF EXISTS public.quest_master_data_locations
-    ADD COLUMN IF NOT EXISTS formids_json jsonb;
-ALTER TABLE IF EXISTS public.quest_master_data_locations
-    ALTER COLUMN formid SET DEFAULT -1;
-
-ALTER TABLE IF EXISTS public.quest_item_locations
-    ADD COLUMN IF NOT EXISTS formids_json jsonb;
-ALTER TABLE IF EXISTS public.quest_item_locations
-    ALTER COLUMN formid SET DEFAULT -1;
-
 ALTER TABLE IF EXISTS public.quest_item_types
     ADD COLUMN IF NOT EXISTS formids_json jsonb;
 ALTER TABLE IF EXISTS public.quest_item_types
@@ -27,32 +17,6 @@ ALTER TABLE IF EXISTS public.quest_outfits
     ADD COLUMN IF NOT EXISTS formids_json jsonb;
 ALTER TABLE IF EXISTS public.quest_outfits
     ALTER COLUMN formid SET DEFAULT -1;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM pg_constraint
-        WHERE conname = 'quest_master_data_locations_formids_json_is_array'
-    ) THEN
-        ALTER TABLE public.quest_master_data_locations
-            ADD CONSTRAINT quest_master_data_locations_formids_json_is_array
-            CHECK (formids_json IS NULL OR jsonb_typeof(formids_json) = 'array');
-    END IF;
-END $$;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM pg_constraint
-        WHERE conname = 'quest_item_locations_formids_json_is_array'
-    ) THEN
-        ALTER TABLE public.quest_item_locations
-            ADD CONSTRAINT quest_item_locations_formids_json_is_array
-            CHECK (formids_json IS NULL OR jsonb_typeof(formids_json) = 'array');
-    END IF;
-END $$;
 
 DO $$
 BEGIN

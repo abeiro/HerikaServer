@@ -114,8 +114,6 @@ if (!empty($missingTables)) {
 }
 
 $datasetToGlobal = [
-    "masterDataLocations" => "masterDataLocations",
-    "itemLocations" => "itemLocations",
     "item_types" => "item_types",
     "npc_templates" => "npc_templates",
     "npc_own_templates" => "npc_own_templates",

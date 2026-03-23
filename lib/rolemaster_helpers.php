@@ -7,27 +7,6 @@ define("TOPIC_TOOEARLY", 4);
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . "quest_reference_data.php";
 
-$GLOBALS["masterDataLocations"] = [
-    "helgen" => [0x00055e4f],
-    "morthal" => [0x000177b0],
-    "skyrim" => [0],
-    "ustengrav" => [0x0001621f],
-    "whiterun" => [0x00029aaf, 0x0002c905, 0x001062a5],
-    "solitude" => [0x0004deb7, 0x0004fef2],
-    "riften" => [0x0001c390],
-
-];
-
-$GLOBALS["itemLocations"] = [
-    "helgen" => [0x00055e4f],
-    "morthal" => [0x000177b0],
-    "skyrim" => [0],
-    "ustengrav" => [0x0001621f],
-    "whiterun" => [0x00029aaf],
-    "solitude" => [0x0004deb7, 0x0004fef2],
-    "riften" => [0x0001c390],
-];
-
 $GLOBALS["item_types"] = [
     "potion" => [0x2481f],    // From AIAgent.esp
     "necklace" => [0x2481d],    // From AIAgent.esp
@@ -233,8 +212,6 @@ if (!function_exists("initializeQuestReferenceData")) {
         }
 
         $defaults = [
-            "masterDataLocations" => $GLOBALS["masterDataLocations"] ?? [],
-            "itemLocations" => $GLOBALS["itemLocations"] ?? [],
             "item_types" => $GLOBALS["item_types"] ?? [],
             "npc_templates" => $GLOBALS["npc_templates"] ?? [],
             "npc_own_templates" => $GLOBALS["npc_own_templates"] ?? [],
@@ -622,10 +599,35 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
         "sword" => [0x00013989],
     ];
 
-    $locations = $GLOBALS["masterDataLocations"];
-    $addedLocs = $GLOBALS["db"]->fetchAll("SELECT * FROM locations where name ilike '%" . $GLOBALS["db"]->escape($location) . "%' LIMIT 1");
-    if (sizeof($addedLocs) > 0) {
-        $locations[$location][] = ($addedLocs[0]["formid"]);
+    $locations = [];
+    $locationRows = $GLOBALS["db"]->fetchAll("SELECT lower(name) AS location_key, formid FROM locations WHERE formid IS NOT NULL");
+    foreach ($locationRows as $locRow) {
+        $locationKey = strtolower(trim((string) ($locRow["location_key"] ?? "")));
+        $locationFormId = quest_reference_normalize_formid($locRow["formid"] ?? null);
+        if ($locationKey === "" || $locationFormId === null || $locationFormId <= 0) {
+            continue;
+        }
+
+        if (!isset($locations[$locationKey])) {
+            $locations[$locationKey] = [];
+        }
+
+        $locations[$locationKey][] = intval($locationFormId);
+    }
+
+    $addedLocs = $GLOBALS["db"]->fetchAll("SELECT lower(name) AS location_key, formid FROM locations WHERE name ilike '%" . $GLOBALS["db"]->escape($location) . "%' LIMIT 5");
+    foreach ($addedLocs as $addedLoc) {
+        $addedKey = strtolower(trim((string) ($addedLoc["location_key"] ?? $location)));
+        $addedFormId = quest_reference_normalize_formid($addedLoc["formid"] ?? null);
+        if ($addedKey === "" || $addedFormId === null || $addedFormId <= 0) {
+            continue;
+        }
+
+        if (!isset($locations[$addedKey])) {
+            $locations[$addedKey] = [];
+        }
+
+        $locations[$addedKey][] = intval($addedFormId);
     }
 
     error_log("Using masterDataTemplates[{$gender}_{$race}]");
@@ -688,7 +690,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
             $parm4 = pickActiveQuestLocationFormId($locations, $location, 0);
             $rumors = true;
         } else {
-            Logger::warn("[npcProfileBase] No active quest_master_data_locations available for random spawn location");
+            Logger::warn("[npcProfileBase] No locations rows available for random spawn location");
             $parm4 = 0;
         }
     } else if (isset($locations[$location])) {
@@ -700,10 +702,19 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
         $locationRef=getLocationReferences($parm4);
         if($locationRef)
             $parm4=$locationRef;
-        
+
 
     } else {
         $parm4 = 0;
+        $locationCn = $GLOBALS["db"]->escape($location);
+        $dbDestination = $GLOBALS["db"]->fetchOne("SELECT refs,name, similarity(name, '$locationCn') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
+        if ($dbDestination) {
+            $parm4 = quest_reference_normalize_formid($dbDestination["formid"] ?? 0) ?? 0;
+            $locationRef = getLocationReferences($parm4);
+            if ($locationRef) {
+                $parm4 = $locationRef;
+            }
+        }
     }
 
     if (isset($additionalData["disposition"])) {
@@ -795,24 +806,20 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
 
     } else {
         if (!is_numeric($localItemPlace)) {
-            if (isset($GLOBALS["masterDataLocations"][$location])) {
-                $localItemPlace = pickActiveQuestLocationFormId($GLOBALS["masterDataLocations"], $location, 0);
+            // Cells
+            $locationCn = $GLOBALS["db"]->escape($location);
+            $dbDestination = $GLOBALS["db"]->fetchOne("SELECT id FROM named_cell where cell_name='$location'");
+            if ($dbDestination) {
+                $localItemPlace = $dbDestination["id"];
             } else {
-                // Cells
-                $locationCn = $GLOBALS["db"]->escape($location);
-                $dbDestination = $GLOBALS["db"]->fetchOne("SELECT id FROM named_cell where cell_name='$location'");
+                // Location
+                $dbDestination = $GLOBALS["db"]->fetchOne("SELECT refs,name, similarity(name, '$locationCn') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
                 if ($dbDestination) {
-                    $localItemPlace = $dbDestination["id"];
-                } else {
-                    // Location
-                    $dbDestination = $GLOBALS["db"]->fetchOne("SELECT refs,name, similarity(name, '$locationCn') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
-                    if ($dbDestination) {
-                        $localItemPlace=$dbDestination["formid"];
-                        $locationRef=getLocationReferences($localItemPlace);
-                        if($locationRef)
-                            $localItemPlace=$locationRef; 
-                            
-                    }
+                    $localItemPlace=$dbDestination["formid"];
+                    $locationRef=getLocationReferences($localItemPlace);
+                    if($locationRef)
+                        $localItemPlace=$locationRef; 
+                        
                 }
             }
 
@@ -1034,68 +1041,64 @@ function createBook($title, $content, $location, $quest_id, $npc_ref = null)
 
     } else {
         if (!is_numeric($localItemPlace)) {
-            if (isset($GLOBALS["masterDataLocations"][$location])) {
-                $localItemPlace = pickActiveQuestLocationFormId($GLOBALS["masterDataLocations"], $location, 0);
-            } else {
-                $locationCn = $GLOBALS["db"]->escape($location);
-                $dbDestination = $GLOBALS["db"]->fetchOne("SELECT refs,name, similarity(name, '$locationCn') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
-                if ($dbDestination) {
-                    if ($dbDestination["refs"] != "") {
-                        // refs are populated when plugin send locations. 
-                        // they have info about markers we can use to place things, as markers are available as refs even if cells where they are placed are unloaded
-                        // refs is string ins this form (refTypeId:formid;refTypeId:formid...): '0x000130f7:0x1901f12b;0x000130f8:0x1901f128;0x000130f8:0x1901f128;0x000130f7:0x1901f12b'
-                        // we must get the the id from type 0x000130f8 or 0x000130fd if any  (0x000130f8 takes precedence over 0x000130fd), 
-                        // if none of them are present -> then $localItemPlace = $dbDestination["formid"];
-                        // if found, return the formid of the refTypeId found
-                        $refsRaw = (string) ($dbDestination["refs"] ?? '');
-                        $refPairs = array_filter(array_map('trim', explode(';', $refsRaw)));
+            $locationCn = $GLOBALS["db"]->escape($location);
+            $dbDestination = $GLOBALS["db"]->fetchOne("SELECT refs,name, similarity(name, '$locationCn') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
+            if ($dbDestination) {
+                if ($dbDestination["refs"] != "") {
+                    // refs are populated when plugin send locations. 
+                    // they have info about markers we can use to place things, as markers are available as refs even if cells where they are placed are unloaded
+                    // refs is string ins this form (refTypeId:formid;refTypeId:formid...): '0x000130f7:0x1901f12b;0x000130f8:0x1901f128;0x000130f8:0x1901f128;0x000130f7:0x1901f12b'
+                    // we must get the the id from type 0x000130f8 or 0x000130fd if any  (0x000130f8 takes precedence over 0x000130fd), 
+                    // if none of them are present -> then $localItemPlace = $dbDestination["formid"];
+                    // if found, return the formid of the refTypeId found
+                    $refsRaw = (string) ($dbDestination["refs"] ?? '');
+                    $refPairs = array_filter(array_map('trim', explode(';', $refsRaw)));
 
-                        $candidates130f8 = [];
-                        $candidates130fd = [];
+                    $candidates130f8 = [];
+                    $candidates130fd = [];
 
-                        foreach ($refPairs as $pair) {
-                            $parts = array_map('trim', explode(':', $pair, 2));
-                            if (count($parts) !== 2) {
-                                continue;
-                            }
-
-                            [$refTypeId, $refFormId] = $parts;
-                            $refTypeId = strtolower($refTypeId);
-
-                            // LocationCenterMarker (0x0001bdf1)
-                            // BossTreasureMarker 0x000130f9
-                            // InsideEntranceMarker (0x000130fc)
-                            if ($refTypeId === '0x000130f9') {
-                                $candidates130f8[] = $refFormId;
-                            } elseif ($refTypeId === '0x0001bdf1') {
-                                $candidates130fd[] = $refFormId;
-                            }
+                    foreach ($refPairs as $pair) {
+                        $parts = array_map('trim', explode(':', $pair, 2));
+                        if (count($parts) !== 2) {
+                            continue;
                         }
 
-                        if (!empty($candidates130f8)) {
-                            $localItemPlaceHex = $candidates130f8[array_rand($candidates130f8)];
-                            $unsignedInt = hexdec($localItemPlaceHex);
-                            // Convert to 32-bit signed integer
-                            if ($unsignedInt >= 0x80000000) {
-                                $unsignedInt -= 0x100000000;
-                            }
-                            $localItemPlace = $unsignedInt;
+                        [$refTypeId, $refFormId] = $parts;
+                        $refTypeId = strtolower($refTypeId);
 
-                        } elseif (!empty($candidates130fd)) {
-                            $localItemPlaceHex = $candidates130fd[array_rand($candidates130fd)];
-                            $unsignedInt = hexdec($localItemPlaceHex);
-                            // Convert to 32-bit signed integer
-                            if ($unsignedInt >= 0x80000000) {
-                                $unsignedInt -= 0x100000000;
-                            }
-                            $localItemPlace = $unsignedInt;
-
-                        } else {
-                            $localItemPlace = $dbDestination["formid"];
+                        // LocationCenterMarker (0x0001bdf1)
+                        // BossTreasureMarker 0x000130f9
+                        // InsideEntranceMarker (0x000130fc)
+                        if ($refTypeId === '0x000130f9') {
+                            $candidates130f8[] = $refFormId;
+                        } elseif ($refTypeId === '0x0001bdf1') {
+                            $candidates130fd[] = $refFormId;
                         }
-                    } else
+                    }
+
+                    if (!empty($candidates130f8)) {
+                        $localItemPlaceHex = $candidates130f8[array_rand($candidates130f8)];
+                        $unsignedInt = hexdec($localItemPlaceHex);
+                        // Convert to 32-bit signed integer
+                        if ($unsignedInt >= 0x80000000) {
+                            $unsignedInt -= 0x100000000;
+                        }
+                        $localItemPlace = $unsignedInt;
+
+                    } elseif (!empty($candidates130fd)) {
+                        $localItemPlaceHex = $candidates130fd[array_rand($candidates130fd)];
+                        $unsignedInt = hexdec($localItemPlaceHex);
+                        // Convert to 32-bit signed integer
+                        if ($unsignedInt >= 0x80000000) {
+                            $unsignedInt -= 0x100000000;
+                        }
+                        $localItemPlace = $unsignedInt;
+
+                    } else {
                         $localItemPlace = $dbDestination["formid"];
                 }
+                } else
+                    $localItemPlace = $dbDestination["formid"];
             }
 
         } else {

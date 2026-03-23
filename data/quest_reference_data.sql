@@ -12,26 +12,6 @@ SET row_security = off;
 SET default_tablespace = '';
 SET default_table_access_method = heap;
 
-CREATE TABLE IF NOT EXISTS public.quest_master_data_locations (
-    location_key text NOT NULL,
-    formid bigint NOT NULL,
-    active boolean NOT NULL DEFAULT true,
-    note text,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now(),
-    CONSTRAINT quest_master_data_locations_pk PRIMARY KEY (location_key, formid)
-);
-
-CREATE TABLE IF NOT EXISTS public.quest_item_locations (
-    location_key text NOT NULL,
-    formid bigint NOT NULL,
-    active boolean NOT NULL DEFAULT true,
-    note text,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now(),
-    CONSTRAINT quest_item_locations_pk PRIMARY KEY (location_key, formid)
-);
-
 CREATE TABLE IF NOT EXISTS public.quest_item_types (
     type_key text NOT NULL,
     formid bigint NOT NULL,
@@ -72,10 +52,6 @@ CREATE TABLE IF NOT EXISTS public.quest_outfits (
     CONSTRAINT quest_outfits_pk PRIMARY KEY (class_key, formid)
 );
 
-CREATE INDEX IF NOT EXISTS idx_quest_master_data_locations_active
-    ON public.quest_master_data_locations (active);
-CREATE INDEX IF NOT EXISTS idx_quest_item_locations_active
-    ON public.quest_item_locations (active);
 CREATE INDEX IF NOT EXISTS idx_quest_item_types_active
     ON public.quest_item_types (active);
 CREATE INDEX IF NOT EXISTS idx_quest_npc_templates_active
@@ -84,4 +60,3 @@ CREATE INDEX IF NOT EXISTS idx_quest_npc_own_templates_active
     ON public.quest_npc_own_templates (active);
 CREATE INDEX IF NOT EXISTS idx_quest_outfits_active
     ON public.quest_outfits (active);
-

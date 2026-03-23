@@ -4,14 +4,6 @@ if (!function_exists('quest_reference_dataset_config')) {
     function quest_reference_dataset_config()
     {
         return [
-            'masterDataLocations' => [
-                'table' => 'quest_master_data_locations',
-                'key_column' => 'location_key',
-            ],
-            'itemLocations' => [
-                'table' => 'quest_item_locations',
-                'key_column' => 'location_key',
-            ],
             'item_types' => [
                 'table' => 'quest_item_types',
                 'key_column' => 'type_key',

@@ -17,14 +17,6 @@ $tabs = [
         "label" => "AI Quest Manager",
         "src" => $webRoot . "/ui/addons/snqe/index.php?embed=1",
     ],
-    "masterDataLocations" => [
-        "label" => "Master Data Locations",
-        "src" => $webRoot . "/ui/addons/snqe/quest_reference_table.php?embed=1&dataset=masterDataLocations",
-    ],
-    "itemLocations" => [
-        "label" => "Item Locations",
-        "src" => $webRoot . "/ui/addons/snqe/quest_reference_table.php?embed=1&dataset=itemLocations",
-    ],
     "item_types" => [
         "label" => "Item Types",
         "src" => $webRoot . "/ui/addons/snqe/quest_reference_table.php?embed=1&dataset=item_types",

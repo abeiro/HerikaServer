@@ -149,14 +149,6 @@ function quest_ref_upsert_entry($db, $tableName, $keyColumn, $keyName, $formids,
 function quest_ref_example_rows($datasetName)
 {
     $examples = [
-        "masterDataLocations" => [
-            ["key_name" => "city", "formids" => ["0x0001676c", "0x00018a4f"], "active" => "true", "note" => "major settlements"],
-            ["key_name" => "dungeon", "formids" => ["0x00018ee2", "0x00018ee3"], "active" => "true", "note" => "dungeon interiors"],
-        ],
-        "itemLocations" => [
-            ["key_name" => "bandit_camp", "formids" => ["0x00018e71", "0x00018ee5"], "active" => "true", "note" => "hostile camp pools"],
-            ["key_name" => "shop", "formids" => ["0x00016774", "0x00016775"], "active" => "true", "note" => "merchant locations"],
-        ],
         "item_types" => [
             ["key_name" => "weapon", "formids" => ["0x0001397e", "0x00013989"], "active" => "true", "note" => "weapons"],
             ["key_name" => "armor", "formids" => ["0x00012e49", "0x00013952"], "active" => "true", "note" => "armor pieces"],
@@ -255,8 +247,6 @@ function quest_ref_csv_cell($row, $index)
 }
 
 $datasetLabels = [
-    "masterDataLocations" => "Master Data Locations",
-    "itemLocations" => "Item Locations",
     "item_types" => "Item Types",
     "npc_templates" => "NPC Templates",
     "npc_own_templates" => "NPC Own Templates",
@@ -264,9 +254,9 @@ $datasetLabels = [
 ];
 
 $datasetCfg = quest_reference_dataset_config();
-$datasetName = isset($_GET["dataset"]) ? trim((string) $_GET["dataset"]) : "masterDataLocations";
+$datasetName = isset($_GET["dataset"]) ? trim((string) $_GET["dataset"]) : "item_types";
 if (!isset($datasetCfg[$datasetName])) {
-    $datasetName = "masterDataLocations";
+    $datasetName = "item_types";
 }
 
 $cfg = $datasetCfg[$datasetName];

@@ -1552,6 +1552,17 @@ if ($checkVersion("quest_reference_data")<20260323006) {
     }
 }
 
+if ($checkVersion("quest_reference_data")<20260323007) {
+    Logger::debug("try patch: quest_reference_data 20260323007 (drop unsupported location datasets)");
+    $a = $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_drop_unused.sql"));
+    if ($a) {
+        $updateVersion("quest_reference_data",20260323007);
+        Logger::info("Applied patch quest_reference_data 20260323007 (drop unsupported location datasets)");
+    } else {
+        Logger::error("Patch quest_reference_data 20260323007 failed!");
+    }
+}
+
 
 if ($checkVersion("audit_request")<20250616001) {
     Logger::debug(" try patch: audit_request 20250616001");

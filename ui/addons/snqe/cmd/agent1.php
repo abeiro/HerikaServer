@@ -67,10 +67,6 @@ if (quest_reference_tables_ready()) {
     $npcTemplatesPrompt = quest_reference_format_dataset_for_prompt('npc_templates', true);
     $npcOwnTemplatesPrompt = quest_reference_format_dataset_for_prompt('npc_own_templates', true);
 
-    $dbItemLocationKeys = quest_reference_active_keys('itemLocations');
-    if (!empty($dbItemLocationKeys)) {
-        $allowedItemLocations = array_values(array_unique(array_merge(['nearby', 'pocket'], $dbItemLocationKeys)));
-    }
 }
 
 $prompt = [];
