@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . "../../";
 
@@ -691,19 +691,19 @@ if (!$isEmbed) {
 
         <div class="page-header">
         <h1>
-            👤 Player Management
+            ðŸ‘¤ Player Management
         </h1>
         <p>Manage your character's information and view in-game statistics</p>
         <p>Changes made here will be used by AI NPCs to understand your character better</p>
     </div>
 
     <form method="post" action="">
-        <button type="submit" class="btn-save" name="save_player" value="1">💾 Save Player Settings</button>
+        <button type="submit" class="btn-save" name="save_player" value="1">ðŸ’¾ Save Player Settings</button>
 
         <div class="content-grid">
             <!-- Player Info Section -->
             <div class="content-section">
-                <h2>🏷️ Player Information</h2>
+                <h2>ðŸ·ï¸ Player Information</h2>
                 <label for="player_name">Player Name</label>
                 <input type="text" id="player_name" name="player_name" value="<?php echo htmlspecialchars($playerName); ?>">
                 <span class="hint">Your character's name.</span>
@@ -711,7 +711,7 @@ if (!$isEmbed) {
 
             <!-- Appearance Section -->
             <div class="content-section">
-                <h2>👤 Player Appearance</h2>
+                <h2>ðŸ‘¤ Player Appearance</h2>
                 <label for="appearance">Physical Description</label>
                 <textarea id="appearance" name="appearance" placeholder="Describe your character's appearance..."><?php echo htmlspecialchars($appearance); ?></textarea>
                 <span class="hint">Physical description of your character used for AI context.</span>
@@ -719,7 +719,7 @@ if (!$isEmbed) {
 
             <!-- Bio Section -->
             <div class="content-section">
-                <h2>📜 Player Bio</h2>
+                <h2>ðŸ“œ Player Bio</h2>
                 <label for="bio">Character Bio</label>
                 <textarea id="bio" name="bio" placeholder="Describe your character's background and story..."><?php echo htmlspecialchars($bio); ?></textarea>
                 <span class="hint">Backstory and character context. Empty by default.</span>
@@ -741,7 +741,7 @@ if (!$isEmbed) {
 
             <!-- Speech Style Section -->
             <div class="content-section">
-                <h2>💬 Speech Style</h2>
+                <h2>ðŸ’¬ Speech Style</h2>
                 <label for="speech_style">How Your Character Speaks</label>
                 <textarea id="speech_style" name="speech_style" placeholder="Describe how your character speaks and communicates..."><?php echo htmlspecialchars($speechStyle); ?></textarea>
                 <span class="hint">Used by Auto Chat mode. The AI rewrites your input into dialogue that matches your character's voice and personality.</span>
@@ -751,60 +751,14 @@ if (!$isEmbed) {
 
     <!-- Read-only Game Data Section -->
     <div class="full-width-section">
-        <h2>📊 Player Statistics</h2>
+        <h2>ðŸ“Š Player Statistics</h2>
     </div>
 
     <div class="content-grid two-col">
-        <!-- Stats Card -->
-        <?php if (!empty($stats)): ?>
-        <div class="content-section">
-            <h2>📈 Character Stats</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-card-title">Level</div>
-                        <div class="stat-card-value"><?php echo intval($stats['level'] ?? 1); ?></div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-card-title">Health</div>
-                        <div class="stat-card-value"><?php 
-                            $hp = floatval($stats['health'] ?? 0);
-                            $hpMax = floatval($stats['health_max'] ?? 1);
-                            echo round($hp) . ' / ' . round($hpMax);
-                        ?></div>
-                        <div class="stat-bar-container">
-                            <div class="stat-bar health" style="width: <?php echo min(100, ($hp / max(1, $hpMax)) * 100); ?>%"></div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-card-title">Magicka</div>
-                        <div class="stat-card-value"><?php 
-                            $mp = floatval($stats['magicka'] ?? 0);
-                            $mpMax = floatval($stats['magicka_max'] ?? 1);
-                            echo round($mp) . ' / ' . round($mpMax);
-                        ?></div>
-                        <div class="stat-bar-container">
-                            <div class="stat-bar magicka" style="width: <?php echo min(100, ($mp / max(1, $mpMax)) * 100); ?>%"></div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-card-title">Stamina</div>
-                        <div class="stat-card-value"><?php 
-                            $sp = floatval($stats['stamina'] ?? 0);
-                            $spMax = floatval($stats['stamina_max'] ?? 1);
-                            echo round($sp) . ' / ' . round($spMax);
-                        ?></div>
-                        <div class="stat-bar-container">
-                            <div class="stat-bar stamina" style="width: <?php echo min(100, ($sp / max(1, $spMax)) * 100); ?>%"></div>
-                        </div>
-                    </div>
-                </div>
-        </div>
-        <?php endif; ?>
-
         <!-- Inventory Card -->
         <?php if (!empty($inventory)): ?>
         <div class="content-section">
-            <h2>🎒 Inventory (<?php echo count($inventory); ?> items)</h2>
+            <h2>Inventory (<?php echo count($inventory); ?> items)</h2>
             <div class="inventory-container">
                 <div class="inventory-list">
                     <?php 
@@ -824,31 +778,26 @@ if (!$isEmbed) {
         </div>
         <?php else: ?>
         <div class="content-section">
-            <h2>🎒 Inventory</h2>
+            <h2>Inventory</h2>
             <div class="no-data">No inventory data available. Play the game to sync your inventory.</div>
         </div>
         <?php endif; ?>
-    </div>
 
-    <!-- Equipment Section -->
-    <?php if (!empty($equipment)): ?>
-    <div class="content-section full-width-section">
-        <h2>⚔️ Equipment</h2>
+        <!-- Equipment Card -->
         <?php
         $equipmentSlots = [
-            'helmet' => '🪖 Helmet',
-            'armor' => '🛡️ Armor',
-            'boots' => '👢 Boots',
-            'gloves' => '🧤 Gloves',
-            'amulet' => '📿 Amulet',
-            'ring' => '💍 Ring',
-            'cape' => '🧥 Cape',
-            'backpack' => '🎒 Backpack',
-            'left_hand' => '🤚 Left Hand',
-            'right_hand' => '✋ Right Hand'
+            'helmet' => 'Helmet',
+            'armor' => 'Armor',
+            'boots' => 'Boots',
+            'gloves' => 'Gloves',
+            'amulet' => 'Amulet',
+            'ring' => 'Ring',
+            'cape' => 'Cape',
+            'backpack' => 'Backpack',
+            'left_hand' => 'Left Hand',
+            'right_hand' => 'Right Hand'
         ];
-        
-        // Check if any equipment is actually equipped
+
         $hasEquipment = false;
         foreach ($equipmentSlots as $slot => $label) {
             $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
@@ -858,46 +807,91 @@ if (!$isEmbed) {
             }
         }
         ?>
-        
-        <?php if ($hasEquipment): ?>
-            <div class="equipment-grid">
-                <?php foreach ($equipmentSlots as $slot => $label):
-                    $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
-                ?>
-                <div class="equipment-slot">
-                    <div class="equipment-slot-name"><?php echo $label; ?></div>
-                    <?php if ($itemName): ?>
-                        <div class="equipment-item-name"><?php echo htmlspecialchars($itemName); ?></div>
-                    <?php else: ?>
-                        <div class="equipment-empty">Empty</div>
-                    <?php endif; ?>
+        <div class="content-section">
+            <h2>Equipment</h2>
+            <?php if (!empty($equipment)): ?>
+                <?php if ($hasEquipment): ?>
+                    <div class="equipment-grid">
+                        <?php foreach ($equipmentSlots as $slot => $label):
+                            $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
+                        ?>
+                        <div class="equipment-slot">
+                            <div class="equipment-slot-name"><?php echo $label; ?></div>
+                            <?php if ($itemName): ?>
+                                <div class="equipment-item-name"><?php echo htmlspecialchars($itemName); ?></div>
+                            <?php else: ?>
+                                <div class="equipment-empty">Empty</div>
+                            <?php endif; ?>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="no-data">
+                        <p><strong>No equipment currently equipped.</strong></p>
+                        <p>If you have items equipped in-game but they are not showing here:</p>
+                        <ul>
+                            <li>Make sure you are in-game (not in a menu)</li>
+                            <li>Talk to any NPC to trigger a sync</li>
+                            <li>Or wait a few seconds for auto-sync</li>
+                            <li>Then refresh this page</li>
+                        </ul>
+                    </div>
+                <?php endif; ?>
+            <?php else: ?>
+                <div class="no-data">No equipment data available. Play the game to sync your equipment.</div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Stats Card -->
+        <?php if (!empty($stats)): ?>
+        <div class="content-section">
+            <h2>Character Stats</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-title">Level</div>
+                    <div class="stat-card-value"><?php echo intval($stats['level'] ?? 1); ?></div>
                 </div>
-                <?php endforeach; ?>
+                <div class="stat-card">
+                    <div class="stat-card-title">Health</div>
+                    <div class="stat-card-value"><?php 
+                        $hp = floatval($stats['health'] ?? 0);
+                        $hpMax = floatval($stats['health_max'] ?? 1);
+                        echo round($hp) . ' / ' . round($hpMax);
+                    ?></div>
+                    <div class="stat-bar-container">
+                        <div class="stat-bar health" style="width: <?php echo min(100, ($hp / max(1, $hpMax)) * 100); ?>%"></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-title">Magicka</div>
+                    <div class="stat-card-value"><?php 
+                        $mp = floatval($stats['magicka'] ?? 0);
+                        $mpMax = floatval($stats['magicka_max'] ?? 1);
+                        echo round($mp) . ' / ' . round($mpMax);
+                    ?></div>
+                    <div class="stat-bar-container">
+                        <div class="stat-bar magicka" style="width: <?php echo min(100, ($mp / max(1, $mpMax)) * 100); ?>%"></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-title">Stamina</div>
+                    <div class="stat-card-value"><?php 
+                        $sp = floatval($stats['stamina'] ?? 0);
+                        $spMax = floatval($stats['stamina_max'] ?? 1);
+                        echo round($sp) . ' / ' . round($spMax);
+                    ?></div>
+                    <div class="stat-bar-container">
+                        <div class="stat-bar stamina" style="width: <?php echo min(100, ($sp / max(1, $spMax)) * 100); ?>%"></div>
+                    </div>
+                </div>
             </div>
-        <?php else: ?>
-            <div class="no-data">
-                <p><strong>No equipment currently equipped.</strong></p>
-                <p>If you have items equipped in-game but they're not showing here:</p>
-                <ul>
-                    <li>Make sure you're in-game (not in a menu)</li>
-                    <li>Talk to any NPC to trigger a sync</li>
-                    <li>Or wait a few seconds for auto-sync</li>
-                    <li>Then refresh this page</li>
-                </ul>
-            </div>
+        </div>
         <?php endif; ?>
     </div>
-    <?php else: ?>
-    <div class="content-section full-width-section">
-        <h2>⚔️ Equipment</h2>
-        <div class="no-data">No equipment data available. Play the game to sync your equipment.</div>
-    </div>
-    <?php endif; ?>
-
     <!-- Skills Section -->
     <?php if (!empty($skills)): ?>
     <div class="content-section full-width-section">
-        <h2>⭐ Skills</h2>
+        <h2>â­ Skills</h2>
             <div class="skills-grid">
                 <?php 
                 // Sort skills by value descending
@@ -926,4 +920,5 @@ if (!$isEmbed) {
     echo $buffer;
 }
 ?>
+
 
