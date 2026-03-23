@@ -2578,6 +2578,102 @@ function isStrictSpatialPeopleModeEnabled()
     return true;
 }
 
+function sanitizeActorTokenFromEventPayload($token)
+{
+    $token = trim((string)$token);
+    if ($token === "") {
+        return "";
+    }
+
+    $token = trim($token, "|");
+    $token = trim($token, " \t\n\r\0\x0B,;/");
+    if ($token === "") {
+        return "";
+    }
+
+    $token = preg_replace('/^\(\s*beings in range:\s*/iu', '', $token);
+    $token = preg_replace('/^\s*beings in range:\s*/iu', '', $token);
+    $token = trim((string)$token);
+    if ($token === "") {
+        return "";
+    }
+
+    $token = trim($token, " \t\n\r\0\x0B,;/");
+    if ($token === "") {
+        return "";
+    }
+
+    if (!shouldIncludeActorNameInPeopleList($token)) {
+        return "";
+    }
+
+    return $token;
+}
+
+function extractActorNamesFromDelimitedEventPayload($eventData, $delimiterPattern)
+{
+    $eventData = trim((string)$eventData);
+    if ($eventData === "") {
+        return [];
+    }
+
+    $eventData = preg_replace('/^\(\s*beings in range:\s*/iu', '', $eventData);
+    $eventData = preg_replace('/^\s*beings in range:\s*/iu', '', $eventData);
+    $eventData = trim((string)$eventData);
+    $eventData = preg_replace('/\)\s*$/u', '', $eventData);
+    $eventData = trim((string)$eventData);
+    if ($eventData === "") {
+        return [];
+    }
+
+    $tokens = preg_split($delimiterPattern, $eventData);
+    if (!is_array($tokens) || empty($tokens)) {
+        return [];
+    }
+
+    $names = [];
+    foreach ($tokens as $token) {
+        $candidate = sanitizeActorTokenFromEventPayload($token);
+        if ($candidate === "") {
+            continue;
+        }
+        appendUniqueActorName($names, $candidate);
+    }
+
+    return $names;
+}
+
+function extractEventPayloadParticipants($eventType, $eventData)
+{
+    $eventType = strtolower(trim((string)$eventType));
+    $eventData = trim((string)$eventData);
+    if ($eventData === "") {
+        return [];
+    }
+
+    if ($eventType === "infonpc_close") {
+        return extractActorNamesFromDelimitedEventPayload($eventData, '/\s*\/\s*/u');
+    }
+
+    if ($eventType === "infonpc") {
+        return extractActorNamesFromDelimitedEventPayload($eventData, '/\s*,\s*/u');
+    }
+
+    if ($eventType === "addnpc") {
+        $nameToken = trim((string)$eventData);
+        if (strpos($nameToken, "@") !== false) {
+            $nameToken = explode("@", $nameToken, 2)[0];
+        }
+        $nameToken = sanitizeActorTokenFromEventPayload($nameToken);
+        if ($nameToken !== "") {
+            return [$nameToken];
+        }
+        return [];
+    }
+
+    return [];
+}
+
 function extractGenericEventParticipants($eventType, $eventData)
 {
     $participants = [];
@@ -2606,6 +2702,13 @@ function extractGenericEventParticipants($eventType, $eventData)
 
     if ($eventType === "narrator_inputtext") {
         appendUniqueActorName($participants, "The Narrator");
+    }
+
+    $payloadParticipants = extractEventPayloadParticipants($eventType, $eventData);
+    if (!empty($payloadParticipants)) {
+        foreach ($payloadParticipants as $payloadName) {
+            appendUniqueActorName($participants, $payloadName);
+        }
     }
 
     return $participants;
