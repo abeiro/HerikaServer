@@ -5,6 +5,8 @@ define("TOPIC_UNCOVERED", 2);
 define("WILL_DO_LATER", 3);
 define("TOPIC_TOOEARLY", 4);
 
+require_once __DIR__ . DIRECTORY_SEPARATOR . "quest_reference_data.php";
+
 $GLOBALS["masterDataLocations"] = [
     "helgen" => [0x00055e4f],
     "morthal" => [0x000177b0],
@@ -222,6 +224,52 @@ $GLOBALS["outfit"] = [
     "merchant" => [0x0009d5e0, 0x000e40dd, 0x000dab74, 0x000dab75, 0x000f8716, 0x000f8717, 0x000f871a, 0x000f8718],
     "forsworn" => [0x00043bd9],
 ];
+
+if (!function_exists("initializeQuestReferenceData")) {
+    function initializeQuestReferenceData()
+    {
+        if (!function_exists("quest_reference_tables_ready") || !quest_reference_tables_ready()) {
+            return;
+        }
+
+        $defaults = [
+            "masterDataLocations" => $GLOBALS["masterDataLocations"] ?? [],
+            "itemLocations" => $GLOBALS["itemLocations"] ?? [],
+            "item_types" => $GLOBALS["item_types"] ?? [],
+            "npc_templates" => $GLOBALS["npc_templates"] ?? [],
+            "npc_own_templates" => $GLOBALS["npc_own_templates"] ?? [],
+            "outfit" => $GLOBALS["outfit"] ?? [],
+        ];
+
+        foreach ($defaults as $datasetName => $valueMap) {
+            quest_reference_seed_dataset_if_empty($datasetName, $valueMap);
+        }
+
+        $activeData = quest_reference_load_all_active();
+        foreach (array_keys($defaults) as $datasetName) {
+            if (isset($activeData[$datasetName]) && is_array($activeData[$datasetName])) {
+                $GLOBALS[$datasetName] = $activeData[$datasetName];
+            } else {
+                $GLOBALS[$datasetName] = [];
+            }
+        }
+    }
+}
+
+if (!function_exists("pickActiveQuestLocationFormId")) {
+    function pickActiveQuestLocationFormId($locations, $location, $default = 0)
+    {
+        $cnLocation = strtolower((string) $location);
+        if (!isset($locations[$cnLocation]) || !is_array($locations[$cnLocation]) || empty($locations[$cnLocation])) {
+            return $default;
+        }
+
+        return $locations[$cnLocation][array_rand($locations[$cnLocation])];
+    }
+}
+
+initializeQuestReferenceData();
+
 function checkHistory($npc)
 {
 
@@ -588,10 +636,16 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
         $dclass = "mage";
     }
 
-    $parm5 = $masterDataTemplates["{$gender}_{$race}"][array_rand($masterDataTemplates["{$gender}_{$race}"])];
-    error_log("Using masterData[{$gender}_{$race}_{$dclass}] => $parm5");
-    if (isset($masterData["{$gender}_{$race}_{$dclass}"])) {
-        $parm1 = $masterData["{$gender}_{$race}_{$dclass}"][array_rand($masterData["{$gender}_{$race}_{$dclass}"])];
+    $templateKey = "{$gender}_{$race}";
+    $classTemplateKey = "{$gender}_{$race}_{$dclass}";
+    $parm5 = quest_reference_pick_random($masterDataTemplates, $templateKey, 0);
+    error_log("Using masterData[{$classTemplateKey}] => $parm5");
+    if ($parm5 === 0) {
+        Logger::warn("[npcProfileBase] No active quest_npc_templates entry for {$templateKey}");
+    }
+
+    if (isset($masterData[$classTemplateKey])) {
+        $parm1 = quest_reference_pick_random($masterData, $classTemplateKey, $parm5);
     } else {
         $parm1 = $parm5;
     }
@@ -603,7 +657,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
     }
 
     if (isset($outfit["{$dclass}"])) {
-        $parm2 = $outfit["{$dclass}"][array_rand($outfit["{$dclass}"])];
+        $parm2 = quest_reference_pick_random($outfit, $dclass, 0);
     } else {
         // Outfit 0 means creature
         $parm2 = 0;
@@ -617,17 +671,31 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
     $rumors = false;
     // TO-DO to have a list of weapons
     $parm3 = $weapon["sword"][0];
+    $patchedTaskid = $taskId;
 
     if ($location == "nearby") {
         $parm4 = 0;
     } else if ($location == "random") {
-        $posibleLoc = array_keys($locations);
-        $location = $posibleLoc[array_rand($posibleLoc)];
-        Logger::debug($location);
-        $parm4 = $locations[$location][array_rand($locations[$location])];
-        $rumors = true;
+        $possibleLoc = [];
+        foreach ($locations as $locKey => $locRefs) {
+            if (is_array($locRefs) && !empty($locRefs)) {
+                $possibleLoc[] = $locKey;
+            }
+        }
+        if (!empty($possibleLoc)) {
+            $location = $possibleLoc[array_rand($possibleLoc)];
+            Logger::debug($location);
+            $parm4 = pickActiveQuestLocationFormId($locations, $location, 0);
+            $rumors = true;
+        } else {
+            Logger::warn("[npcProfileBase] No active quest_master_data_locations available for random spawn location");
+            $parm4 = 0;
+        }
     } else if (isset($locations[$location])) {
-        $parm4 = $locations[$location][array_rand($locations[$location])];
+        $parm4 = pickActiveQuestLocationFormId($locations, $location, 0);
+        if ($parm4 === 0) {
+            Logger::warn("[npcProfileBase] No active reference found for location '{$location}'");
+        }
 
         $locationRef=getLocationReferences($parm4);
         if($locationRef)
@@ -686,12 +754,21 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
 
     error_log("SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref ");
 
+    $basetype = strtolower((string) $basetype);
     $masterData = $GLOBALS["item_types"];
 
     $localItemName = ($name);
     $localItemPlace = ($location);
 
-    $localItemType = $masterData[$basetype][array_rand($masterData[$basetype])];
+    $localItemType = quest_reference_pick_random($masterData, $basetype, 0);
+    if ($localItemType === 0) {
+        Logger::warn("[SkCreateItem] No active quest_item_types entry for '{$basetype}', trying any active type");
+        $localItemType = quest_reference_pick_any_random($masterData, 0);
+    }
+    if ($localItemType === 0) {
+        Logger::warn("[SkCreateItem] Aborting item spawn for '{$name}': no active quest_item_types values available");
+        return;
+    }
 
     if ($localItemPlace == "nearby") {
         $localItemPlace = 0;
@@ -719,7 +796,7 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
     } else {
         if (!is_numeric($localItemPlace)) {
             if (isset($GLOBALS["masterDataLocations"][$location])) {
-                $localItemPlace = $GLOBALS["masterDataLocations"][$location][array_rand($GLOBALS["masterDataLocations"][$location])];
+                $localItemPlace = pickActiveQuestLocationFormId($GLOBALS["masterDataLocations"], $location, 0);
             } else {
                 // Cells
                 $locationCn = $GLOBALS["db"]->escape($location);
@@ -832,14 +909,20 @@ Read the quest context above and write the content of the in-game book/note titl
 
 function CreateItemNpc($basetype, $name, $npc)
 {
-    $masterData = [
-        "potion" => [0x0026921],
-        "necklace" => [0x000b8149],
-    ];
+    $basetype = strtolower((string) $basetype);
+    $masterData = $GLOBALS["item_types"] ?? [];
 
     $localItemName = $GLOBALS["db"]->escape($name);
     $localItemNPC = $GLOBALS["db"]->escape($npc);
-    $localItemType = $masterData["type"][0];
+    $localItemType = quest_reference_pick_random($masterData, $basetype, 0);
+    if ($localItemType === 0) {
+        $localItemType = quest_reference_pick_any_random($masterData, 0);
+    }
+    if ($localItemType === 0) {
+        Logger::warn("[CreateItemNpc] Aborting item spawn for '{$name}': no active quest_item_types values available");
+        return;
+    }
+
     $taskId = "";
     $GLOBALS["db"]->insert(
         'responselog',
@@ -952,7 +1035,7 @@ function createBook($title, $content, $location, $quest_id, $npc_ref = null)
     } else {
         if (!is_numeric($localItemPlace)) {
             if (isset($GLOBALS["masterDataLocations"][$location])) {
-                $localItemPlace = $GLOBALS["masterDataLocations"][$location][array_rand($GLOBALS["masterDataLocations"][$location])];
+                $localItemPlace = pickActiveQuestLocationFormId($GLOBALS["masterDataLocations"], $location, 0);
             } else {
                 $locationCn = $GLOBALS["db"]->escape($location);
                 $dbDestination = $GLOBALS["db"]->fetchOne("SELECT refs,name, similarity(name, '$locationCn') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");

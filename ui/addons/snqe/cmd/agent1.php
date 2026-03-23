@@ -8,10 +8,12 @@ require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "lazy_xml.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "quest_reference_data.php";
 
 $GLOBALS["ENGINE_PATH"] = $enginePath;
 
 $db = new sql();
+$GLOBALS["db"] = $db;
 
 require_once $enginePath . "lib/core/npc_master.class.php";
 require_once $enginePath . "lib/core/api_badge.class.php";
@@ -36,6 +38,41 @@ if (strpos($formInput["userprompt"], "Quest Title") !== false) {
     $formInput["userprompt"] .= "\nNote: this is the first step of the quest, so first topic should be a salutation, and then generate the quest steps. THIS IS THE QUEST BEGINNING, quest will continue later, so no final end.";
 
 }
+
+// Validation Rules (fallback values)
+$allowedRaces = ['nord', 'imperial', 'redguard', 'breton', 'argonian', 'orc', 'draugr', 'elk', 'frost_troll', 'frostbite_spider', 'dwarven_sphere_guardian', 'falmer', 'giant'];
+$allowedClasses = ['beggar', 'warrior', 'assassin', 'mage', 'farmer', 'soldier', 'merchant', 'noble', 'creature', 'forsworn'];
+$allowedItemTypes = ['potion', 'necklace', 'amulet', 'ring', 'book', 'axe', 'note', 'dagger'];
+$allowedItemLocations = ['nearby', 'pocket'];
+$npcTemplatesPrompt = '';
+$npcOwnTemplatesPrompt = '';
+
+if (quest_reference_tables_ready()) {
+    $dbItemTypes = quest_reference_active_keys('item_types');
+    if (!empty($dbItemTypes)) {
+        $allowedItemTypes = array_values(array_unique($dbItemTypes));
+    }
+
+    $dbClasses = quest_reference_active_keys('outfit');
+    if (!empty($dbClasses)) {
+        $allowedClasses = array_values(array_unique(array_merge($dbClasses, ['creature'])));
+    }
+
+    $dbTemplateKeys = quest_reference_active_keys('npc_templates');
+    $dbRaces = quest_reference_derive_races_from_template_keys($dbTemplateKeys);
+    if (!empty($dbRaces)) {
+        $allowedRaces = $dbRaces;
+    }
+
+    $npcTemplatesPrompt = quest_reference_format_dataset_for_prompt('npc_templates', true);
+    $npcOwnTemplatesPrompt = quest_reference_format_dataset_for_prompt('npc_own_templates', true);
+
+    $dbItemLocationKeys = quest_reference_active_keys('itemLocations');
+    if (!empty($dbItemLocationKeys)) {
+        $allowedItemLocations = array_values(array_unique(array_merge(['nearby', 'pocket'], $dbItemLocationKeys)));
+    }
+}
+
 $prompt = [];
 
 
@@ -43,6 +80,25 @@ $fquestTitle = $formInput["questTitle"];
 
 $prompt[] = ['role' => 'system', 'content' => $sysprompt_content];
 $prompt[] = ['role' => 'user', 'content' => $formInput["userprompt"]];
+$prompt[] = [
+    'role' => 'user',
+    'content' => "Use ONLY active quest reference values from database:
+Allowed races: " . implode(', ', $allowedRaces) . "
+Allowed classes: " . implode(', ', $allowedClasses) . "
+Allowed item types: " . implode(', ', $allowedItemTypes) . "
+Allowed item locations: " . implode(', ', $allowedItemLocations) . "
+Any value not in these lists is forbidden."
+];
+$prompt[] = [
+    'role' => 'user',
+    'content' => "Active NPC template pools (grouped by template key; one key per line):
+" . ($npcTemplatesPrompt !== '' ? $npcTemplatesPrompt : '(not available)') . "
+
+Active custom NPC template pools (grouped by template key; one key per line):
+" . ($npcOwnTemplatesPrompt !== '' ? $npcOwnTemplatesPrompt : '(not available)') . "
+
+If database has duplicate rows for a template key, treat them as one combined key with all formids merged."
+];
 $prompt[] = ['role' => 'user', 'content' => "Write XML to acomplish all the quest steps"];
 
 
@@ -70,12 +126,6 @@ $xmlString = $buffer;
 if (preg_match('/```xml\n(.*?)\n```/s', $buffer, $matches)) {
     $xmlString = $matches[1];
 }
-
-// Validation Rules
-$allowedRaces = ['nord', 'imperial', 'redguard', 'breton', 'argonian', 'orc', 'draugr', 'elk', 'frost_troll', 'frostbite_spider', 'dwarven_sphere_guardian', 'falmer', 'giant'];
-$allowedClasses = ['beggar', 'warrior', 'assassin', 'mage', 'farmer', 'soldier', 'merchant', 'noble', 'creature', 'forsworn'];
-$allowedItemTypes = ['potion', 'necklace', 'amulet', 'ring', 'book', 'axe', 'note', 'dagger'];
-$allowedItemLocations = ['nearby', 'pocket'];
 
 // Helper function to extract multiple tag values
 function extract_all_tags($text, $tag)

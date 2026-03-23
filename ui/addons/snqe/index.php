@@ -64,6 +64,42 @@ function getRunningQuests($db) {
 
 $runningQuests = getRunningQuests($db);
 
+function getLocationStats($db) {
+    $default = [
+        'table_exists' => false,
+        'location_count' => 0
+    ];
+
+    try {
+        $existsQuery = "
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                  AND table_name = 'locations'
+            ) AS table_exists
+        ";
+        $existsResult = $db->fetchAll($existsQuery);
+        if (empty($existsResult) || !isset($existsResult[0]['table_exists']) || $existsResult[0]['table_exists'] !== 't') {
+            return $default;
+        }
+
+        $countQuery = "SELECT COUNT(*) AS location_count FROM public.locations";
+        $countResult = $db->fetchAll($countQuery);
+        $count = (!empty($countResult) && isset($countResult[0]['location_count'])) ? intval($countResult[0]['location_count']) : 0;
+
+        return [
+            'table_exists' => true,
+            'location_count' => max(0, $count)
+        ];
+    } catch (Exception $e) {
+        Logger::error("Failed to fetch SNQE location stats: " . $e->getMessage());
+        return $default;
+    }
+}
+
+$locationStats = getLocationStats($db);
+
 // Fetch current pending step
 function getPendingStep($db) {
     try {
@@ -306,6 +342,49 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
     text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
     word-spacing: 6px;
     margin: 0 0 24px 0;
+}
+
+.snqe-title-info {
+    margin: -6px 0 22px 0;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(242,124,17,0.35);
+    background: linear-gradient(135deg, rgba(242,124,17,0.15), rgba(242,124,17,0.05));
+}
+
+.snqe-title-info-text {
+    color: #f6d8ba;
+    font-size: 0.9em;
+    line-height: 1.5;
+    margin: 0 0 10px 0;
+}
+
+.snqe-title-info-text strong {
+    color: #ffd7a8;
+}
+
+.snqe-location-stat {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.28);
+    border: 1px solid rgba(242,124,17,0.25);
+    border-radius: 6px;
+}
+
+.snqe-location-count {
+    color: #fff;
+    font-size: 1.25em;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.snqe-location-label {
+    color: #cfd9ea;
+    font-size: 0.82em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .snqe-section-title {
@@ -558,6 +637,13 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
     <div class="snqe-layout">
         <div class="snqe-main">
             <div class="snqe-page-title">AI Quest Manager V1</div>
+            <div class="snqe-title-info">
+                <p class="snqe-title-info-text">Before generating or staging quests, use <strong>"Send All Locations"</strong> in CHIM MCM under <strong>Tools</strong> so the quest system can target valid travel locations.</p>
+                <div class="snqe-location-stat">
+                    <span class="snqe-location-count"><?php echo intval($locationStats['location_count']); ?></span>
+                    <span class="snqe-location-label">Travel To Locations in Database</span>
+                </div>
+            </div>
             <form id="snqeForm">
                 <div class="btn-group">
                     <button type="button" class="btn-snqe btn-snqe-generate" onclick="generateScenario()">Generate Scenario</button>

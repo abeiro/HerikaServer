@@ -1502,6 +1502,56 @@ if ($checkVersion("rolemaster")<20250528001) {
     Logger::info("Applied patch rolemaster 20250528001");
 }
 
+if ($checkVersion("quest_reference_data")<20260323001) {
+    Logger::debug("try patch: quest_reference_data 20260323001");
+    $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data.sql"));
+    $updateVersion("quest_reference_data",20260323001);
+    Logger::info("Applied patch quest_reference_data 20260323001");
+}
+
+if ($checkVersion("quest_reference_data")<20260323002) {
+    Logger::debug("try patch: quest_reference_data 20260323002 (array support)");
+    $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_arrays.sql"));
+    $updateVersion("quest_reference_data",20260323002);
+    Logger::info("Applied patch quest_reference_data 20260323002 (array support)");
+}
+
+if ($checkVersion("quest_reference_data")<20260323003) {
+    Logger::debug("try patch: quest_reference_data 20260323003 (array insert defaults)");
+    $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_arrays.sql"));
+    $updateVersion("quest_reference_data",20260323003);
+    Logger::info("Applied patch quest_reference_data 20260323003 (array insert defaults)");
+}
+
+if ($checkVersion("quest_reference_data")<20260323004) {
+    Logger::debug("try patch: quest_reference_data 20260323004 (consolidate array rows)");
+    $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_consolidate.sql"));
+    $updateVersion("quest_reference_data",20260323004);
+    Logger::info("Applied patch quest_reference_data 20260323004 (consolidate array rows)");
+}
+
+if ($checkVersion("quest_reference_data")<20260323005) {
+    Logger::debug("try patch: quest_reference_data 20260323005 (canonical hex formids)");
+    $a = $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_hex.sql"));
+    if ($a) {
+        $updateVersion("quest_reference_data",20260323005);
+        Logger::info("Applied patch quest_reference_data 20260323005 (canonical hex formids)");
+    } else {
+        Logger::error("Patch quest_reference_data 20260323005 failed!");
+    }
+}
+
+if ($checkVersion("quest_reference_data")<20260323006) {
+    Logger::debug("try patch: quest_reference_data 20260323006 (json-only formids)");
+    $a = $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_json_only.sql"));
+    if ($a) {
+        $updateVersion("quest_reference_data",20260323006);
+        Logger::info("Applied patch quest_reference_data 20260323006 (json-only formids)");
+    } else {
+        Logger::error("Patch quest_reference_data 20260323006 failed!");
+    }
+}
+
 
 if ($checkVersion("audit_request")<20250616001) {
     Logger::debug(" try patch: audit_request 20250616001");

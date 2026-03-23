@@ -112,10 +112,10 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'diaries';
         <div class="tab-buttons">
             <button class="tab-button <?php echo $activeTab === 'diaries' ? 'active' : ''; ?>" onclick="switchTab('diaries')">📔 CHIM Diaries</button>
             <button class="tab-button <?php echo $activeTab === 'adventure' ? 'active' : ''; ?>" onclick="switchTab('adventure')">📆 Adventure Log</button>
+            <button class="tab-button <?php echo $activeTab === 'questgen' ? 'active' : ''; ?>" onclick="switchTab('questgen')">🧭 AI Quest Manager V1</button>
             <button class="tab-button <?php echo $activeTab === 'backgroundlife' ? 'active' : ''; ?>" onclick="switchTab('backgroundlife')">🗺️ Background Life</button>
             <!-- <button class="tab-button <?php echo $activeTab === 'chat' ? 'active' : ''; ?>" onclick="switchTab('chat')">💬 Chat Testing</button> -->
             <button class="tab-button <?php echo $activeTab === 'soulgaze' ? 'active' : ''; ?>" onclick="switchTab('soulgaze')">🖼️ Soulgaze Gallery</button>
-            <button class="tab-button <?php echo $activeTab === 'questgen' ? 'active' : ''; ?>" onclick="switchTab('questgen')">AI Quest Manager V1</button>
         </div>
 
         <div id="diaries-tab" class="tab-content <?php echo $activeTab === 'diaries' ? 'active' : ''; ?>">
