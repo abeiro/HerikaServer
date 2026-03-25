@@ -85,7 +85,7 @@ function stt($filePath)
         ]],
         'generationConfig' => [
             'temperature' => 0.1,
-            'maxOutputTokens' => 256,
+            'maxOutputTokens' => 1024,
             'responseMimeType' => 'application/json'
         ]
     ];
@@ -158,6 +158,11 @@ function stt($filePath)
     }
 
     error_log("STT Gemini: transcript=\"{$transcript}\" tone=\"{$tone}\"");
+
+    // Inject tone directly into transcript so the LLM sees it in conversation history
+    if (!empty($tone) && $tone !== 'neutral' && !empty($transcript)) {
+        return "({$tone}) {$transcript}";
+    }
     return $transcript;
 }
 
