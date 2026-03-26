@@ -881,14 +881,15 @@ function DataPosibleLocationsToGoWide()
 
     global $db;
     $lastDialogFull = array();
+    $r=[];
     $results = $db->fetchOne("select  a.data  as data  FROM  eventlog a 
     WHERE type in ('region')  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
 
     if ($results) {
         $regCn=$db->escape(trim($results["data"]));
-        error_log("select  name  FROM  locations where region ilike '{$regCn}'");
-        $locs = $db->fetchAll("select  name,tags  FROM  locations where region ilike '{$regCn}'");
-        $r=[];
+        error_log("select  name  FROM  locations_v where region ilike '{$regCn}'");
+        $locs = $db->fetchAll("select  name,tags  FROM  locations_v where region ilike '{$regCn}'");
+        
         foreach ($locs as $loc) {
             if ($loc["tags"])
                 $r[$loc["name"]]=$loc["tags"];
@@ -896,23 +897,22 @@ function DataPosibleLocationsToGoWide()
                 $r[$loc["name"]]="";
 
         }
-        $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO_WIDE"] = $r;
-        return $r;
+        
     } else {
         
         $locs = $db->fetchAll("SELECT L.name,L.tags, 
                 L.coords <-> P.coords AS distance
-            FROM locations L
+            FROM locations_v L
             CROSS JOIN (
                 SELECT B.coords
                 FROM public.named_cell A
-                LEFT JOIN locations B ON B.formid = A.location_id
+                LEFT JOIN locations_v B ON B.formid = A.location_id
                 WHERE A.id = 0
             ) AS P
             WHERE L.coords <-> P.coords < 15000
             ORDER BY distance ASC
         ");
-        $r=[];
+        
         foreach ($locs as $loc) {
             if ($loc["tags"])
                 $r[$loc["name"]]=$loc["tags"];
@@ -923,8 +923,8 @@ function DataPosibleLocationsToGoWide()
         $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO_WIDE"] = $r;
     }
 
-    $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO_WIDE"] = [];
-    return [];
+    $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO_WIDE"] = $r;
+    return $r;
 
 }
 
@@ -2757,8 +2757,8 @@ function PackIntoSummary($onlyMissingDiary=false)
     global $db;
     
     if ($onlyMissingDiary) {
-        $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
-        select gamets,1,message,message,'diary',uid,speaker
+        $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions,scope)
+        select gamets,1,message,message,'diary',uid,speaker,'global'
         from memory
         where event in ('diary','auto_diary','backgroundlife_diary')
         and uid not in (select uid from memory_summary where classifier in  ('diary','auto_diary','backgroundlife_diary'))");
@@ -2774,22 +2774,26 @@ function PackIntoSummary($onlyMissingDiary=false)
         $minRowTs = intval($lastGameTsRecord["gamets"] -  ( 1 /0.0000024));
         
         $pfi = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] ?? 10) * 100000;
-        $query="insert into memory_summary select * from ( 
+        $minEventsPerSummary = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_MIN_EVENTS"] ?? 5);
+        if ($minEventsPerSummary < 1) {
+            $minEventsPerSummary = 1;
+        }
+        $query="insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,scope) select * from ( 
                                     select max(gamets) as gamets_truncated,count(*) as n,
                                     STRING_AGG(message, chr(13) || chr(10) || chr(13) || chr(10)) AS packed_message,
-                                    NULL as summary,'dialogue' as classifier,max(uid) as uid
+                                    NULL as summary,'dialogue' as classifier,max(uid) as uid,'global' as scope
                                     from memory_v
                                     where 
                                     message not ilike 'Dear Diary%'
                                     and gamets>$maxRow 
-                                    group by round(gamets/$pfi ,0)  HAVING count(*)>9 order by round(gamets/$pfi ,0) ASC
+                                    group by round(gamets/$pfi ,0)  HAVING count(*)>=$minEventsPerSummary order by round(gamets/$pfi ,0) ASC
                                 ) as T where gamets_truncated>$maxRow and gamets_truncated<$minRowTs";
         //error_log($query);
 
         $results = $db->query($query);
         
-        $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
-                                    select gamets,1,message,message,'diary',uid,speaker
+        $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions,scope)
+                                    select gamets,1,message,message,'diary',uid,speaker,'global'
                                     from memory
                                     where event='diary'
                                     and gamets>$maxRow
@@ -3243,6 +3247,52 @@ function DirectConversationsWith($actor, $speaker="")
     
 }
 
+function isIndividualMemoryEnabledForNpc($npcName)
+{
+    static $cache = [];
+
+    $npcName = trim((string) $npcName);
+    if ($npcName === '' || $npcName === '%' || strpos($npcName, '%') !== false || strpos($npcName, '_') !== false) {
+        return false;
+    }
+
+    if (isset($cache[$npcName])) {
+        return $cache[$npcName];
+    }
+
+    $enabled = false;
+    try {
+        $escaped = $GLOBALS["db"]->escape($npcName);
+        $row = $GLOBALS["db"]->fetchOne("SELECT extended_data FROM core_npc_master WHERE npc_name='$escaped' LIMIT 1");
+        if (is_array($row) && !empty($row["extended_data"])) {
+            $extendedData = json_decode($row["extended_data"], true);
+            if (
+                is_array($extendedData)
+                && array_key_exists('individual_memory_enabled', $extendedData)
+                && $extendedData['individual_memory_enabled'] !== null
+                && $extendedData['individual_memory_enabled'] !== ''
+            ) {
+                $enabled = !empty($extendedData['individual_memory_enabled']);
+            }
+        }
+    } catch (Throwable $e) {
+        Logger::warn("isIndividualMemoryEnabledForNpc failed for {$npcName}: " . $e->getMessage());
+    }
+
+    $cache[$npcName] = $enabled;
+    return $enabled;
+}
+
+function dataGetMemoryScopeConditionSql($npcName)
+{
+    if (isIndividualMemoryEnabledForNpc($npcName)) {
+        $npcEsc = $GLOBALS["db"]->escape($npcName);
+        return "scope='$npcEsc'";
+    }
+
+    return "(scope IS NULL OR scope='global')";
+}
+
 function DataSearchMemory($rawstring,$npcfilter) {
     
     //$kw=explode(" ",($rawstring));
@@ -3250,7 +3300,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         $kwStringAny=implode(" | ",$rawstring);
         $kwStringAll=implode(" & ",$rawstring);
         
-    } else if ($GLOBALS["MINIME_T5"]) {
+    } else if (isMinimeT5Enabled()) {
         // MiniMe keyword extraction
         Logger::info("Using minime-t5 context");
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
@@ -3359,6 +3409,8 @@ function DataSearchMemory($rawstring,$npcfilter) {
     
     
     
+    $scopeConditionSql = dataGetMemoryScopeConditionSql($npcfilter);
+
     $memory=$GLOBALS["db"]->fetchAll("
         SELECT summary,gamets_truncated,
         ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any,
@@ -3366,6 +3418,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         FROM memory_summary A
         where native_vec @@to_tsquery('$kwStringAny')
         and not (native_vec @@to_tsquery('#Reminiscence'))
+        and $scopeConditionSql
         and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
 
         ORDER BY rank_all DESC, rank_any DESC;
@@ -3405,7 +3458,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
             $kwStringAny=implode(" ",$rawstring);
             $kwStringAll=implode(" ",$rawstring);
         
-        } else if ($GLOBALS["MINIME_T5"]) {
+        } else if (isMinimeT5Enabled()) {
             // MiniMe keyword extraction
             Logger::info("Using minime-t5 context");
             error_log("[DataSearchMemoryByVector] Using minime-t5 context");
@@ -3546,6 +3599,8 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                 $result=array_merge($result,lastKeyWordsContext(5,$npcfilter));
         }
 
+        $scopeConditionSql = dataGetMemoryScopeConditionSql($npcfilter);
+
         $contextKeywords  = implode(" ", $result);
         $contextKeywords=strtr(internalDumbTranslator($contextKeywords),["remember"=>"","Remember"=>"","do you remember"=>""]);
 
@@ -3611,6 +3666,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                           AS mixed_distance
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
+                    and $scopeConditionSql
                     and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
                     ORDER BY (embedding <-> $vectorString)
                     LIMIT 5 OFFSET 0
@@ -3627,6 +3683,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                          summary
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
+                    and $scopeConditionSql
                     and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
                     and (gamets_truncated<$timeThreshold or $timeThreshold=0)
                     
@@ -3928,7 +3985,10 @@ function call_llm_internal() {
         ];
 
         $connector=new LLMConnector();
-        $currentConnectorData=$connector->getById($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]["llm_formatter_id"]); // Asuming primary id
+        $formatterConnectorId = class_exists('LLMRandomizer')
+            ? LLMRandomizer::getConnectorIdForField($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"], "llm_formatter_id")
+            : ($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]["llm_formatter_id"] ?? null);
+        $currentConnectorData=$connector->getById($formatterConnectorId);
 
 
 
@@ -3995,7 +4055,9 @@ function call_llm_internal() {
             
             if (isset($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"])) {
                 $profileData = $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"];
-                $fallbackConnectorId = $profileData["llm_fallback_id"] ?? null;
+                $fallbackConnectorId = class_exists('LLMRandomizer')
+                    ? LLMRandomizer::getConnectorIdForField($profileData, "llm_fallback_id")
+                    : ($profileData["llm_fallback_id"] ?? null);
                 error_log("[FALLBACK DEBUG] Fallback connector ID from profile: " . ($fallbackConnectorId ?? "NULL"));
                 
                 // Check if fallback is enabled in metadata
@@ -4080,7 +4142,9 @@ function call_llm_internal() {
             
             if (isset($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"])) {
                 $profileData = $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"];
-                $fallbackConnectorId = $profileData["llm_fallback_id"] ?? null;
+                $fallbackConnectorId = class_exists('LLMRandomizer')
+                    ? LLMRandomizer::getConnectorIdForField($profileData, "llm_fallback_id")
+                    : ($profileData["llm_fallback_id"] ?? null);
                 
                 // Check if fallback is enabled in metadata
                 if (!empty($profileData["metadata"])) {
@@ -5466,6 +5530,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
     $npcMaster=new NpcMaster();
     $currentNpcData=$npcMaster->getByName($FOLLOWER_CONF["HERIKA_NAME"]);
     $metaData=$npcMaster->getMetaData($currentNpcData);
+    $extendedData=$npcMaster->getExtendedData($currentNpcData);
     
     if (isset($metaData["skills"])) {
         // Convert numeric skills to descriptive levels, grouped by category
@@ -5889,6 +5954,45 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
         }
     }
 
+    if (isset($extendedData["starring_in_quest"])&&!empty($extendedData["starring_in_quest"])) {
+        $quest = $GLOBALS["db"]->fetchOne("SELECT * FROM sneq_quests WHERE quest_id='{$extendedData["starring_in_quest"]}'");
+        error_log("[SNQE] Current quest data for quest_id {$extendedData["starring_in_quest"]}: {$quest["briefing"]}");
+        if ($quest) {
+            $questData = json_decode($quest["quest_data"], true);
+            $dynamicBio .= "\n<storyline_starring>\n#Current Quest\nYou are currently starring in the quest: {$questData["briefing"]} \n</storyline_starring>";
+
+            // Find this NPC's key in the quest npcs list by matching name
+            $thisNpcKey = null;
+            $thisNpcName = $FOLLOWER_CONF["HERIKA_NAME"] ?? '';
+            if (!empty($questData['npcs']) && is_array($questData['npcs'])) {
+                foreach ($questData['npcs'] as $npcKey => $npcData) {
+                    if (isset($npcData['name']) && strcasecmp($npcData['name'], $thisNpcName) === 0) {
+                        $thisNpcKey = $npcKey;
+                        break;
+                    }
+                }
+            }
+
+            // Gather topics this NPC is the giver of
+            if ($thisNpcKey !== null && !empty($questData['topics']) && is_array($questData['topics'])) {
+                $knownTopics = [];
+                foreach ($questData['topics'] as $topicKey => $topic) {
+                    if (isset($topic['giver']) && $topic['giver'] === $thisNpcKey) {
+                        $topicName = $topic['name'] ?? $topicKey;
+                        $topicInfo = $topic['info'] ?? '';
+                        if (!empty($topicInfo)) {
+                            $knownTopics[] = "- {$topicName}: {$topicInfo}";
+                        }
+                    }
+                }
+                if (!empty($knownTopics)) {
+                    $dynamicBio .= "\n<quest_topics>\n#Topics You Know About\n" . implode("\n", $knownTopics) . "\n</quest_topics>";
+                }
+            }
+        }
+        
+        
+    }
     return $dynamicBio;
 }
 

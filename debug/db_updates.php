@@ -1323,6 +1323,22 @@ if ($checkVersion("memory_summary")<20250331001) {
     Logger::info("Applied patch memory_summary 20250331001");
 }
 
+// add memory_summary scope support (global by default in current system)
+if ($checkVersion("memory_summary")<20260319001) {
+    $scopeColumn = $db->fetchOne("
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'memory_summary' AND column_name = 'scope'
+    ");
+
+    if (!isset($scopeColumn["column_name"]) || !$scopeColumn["column_name"]) {
+        $db->execQuery('ALTER TABLE "memory_summary" ADD COLUMN "scope" text');
+    }
+
+    $updateVersion("memory_summary",20260319001);
+    Logger::info("Applied patch memory_summary 20260319001");
+}
+
 if ($checkVersion("oghma_dynamic")<20250310001) {
     $db->execQuery(file_get_contents(__DIR__."/../data/oghma_dynamic.sql"));
     $updateVersion("oghma_dynamic",20250310001);
@@ -1484,6 +1500,67 @@ if ($checkVersion("rolemaster")<20250528001) {
     $db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"text\" TYPE text");
     $updateVersion("rolemaster",20250528001);
     Logger::info("Applied patch rolemaster 20250528001");
+}
+
+if ($checkVersion("quest_reference_data")<20260323001) {
+    Logger::debug("try patch: quest_reference_data 20260323001");
+    $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data.sql"));
+    $updateVersion("quest_reference_data",20260323001);
+    Logger::info("Applied patch quest_reference_data 20260323001");
+}
+
+if ($checkVersion("quest_reference_data")<20260323002) {
+    Logger::debug("try patch: quest_reference_data 20260323002 (array support)");
+    $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_arrays.sql"));
+    $updateVersion("quest_reference_data",20260323002);
+    Logger::info("Applied patch quest_reference_data 20260323002 (array support)");
+}
+
+if ($checkVersion("quest_reference_data")<20260323003) {
+    Logger::debug("try patch: quest_reference_data 20260323003 (array insert defaults)");
+    $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_arrays.sql"));
+    $updateVersion("quest_reference_data",20260323003);
+    Logger::info("Applied patch quest_reference_data 20260323003 (array insert defaults)");
+}
+
+if ($checkVersion("quest_reference_data")<20260323004) {
+    Logger::debug("try patch: quest_reference_data 20260323004 (consolidate array rows)");
+    $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_consolidate.sql"));
+    $updateVersion("quest_reference_data",20260323004);
+    Logger::info("Applied patch quest_reference_data 20260323004 (consolidate array rows)");
+}
+
+if ($checkVersion("quest_reference_data")<20260323005) {
+    Logger::debug("try patch: quest_reference_data 20260323005 (canonical hex formids)");
+    $a = $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_hex.sql"));
+    if ($a) {
+        $updateVersion("quest_reference_data",20260323005);
+        Logger::info("Applied patch quest_reference_data 20260323005 (canonical hex formids)");
+    } else {
+        Logger::error("Patch quest_reference_data 20260323005 failed!");
+    }
+}
+
+if ($checkVersion("quest_reference_data")<20260323006) {
+    Logger::debug("try patch: quest_reference_data 20260323006 (json-only formids)");
+    $a = $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_json_only.sql"));
+    if ($a) {
+        $updateVersion("quest_reference_data",20260323006);
+        Logger::info("Applied patch quest_reference_data 20260323006 (json-only formids)");
+    } else {
+        Logger::error("Patch quest_reference_data 20260323006 failed!");
+    }
+}
+
+if ($checkVersion("quest_reference_data")<20260323007) {
+    Logger::debug("try patch: quest_reference_data 20260323007 (drop unsupported location datasets)");
+    $a = $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_drop_unused.sql"));
+    if ($a) {
+        $updateVersion("quest_reference_data",20260323007);
+        Logger::info("Applied patch quest_reference_data 20260323007 (drop unsupported location datasets)");
+    } else {
+        Logger::error("Patch quest_reference_data 20260323007 failed!");
+    }
 }
 
 
@@ -2319,6 +2396,24 @@ $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS factions t
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS is_interior int");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS vanilla_location boolean");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS coords POINT ");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS refs text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS cleared boolean");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP");
+$db->execQuery("
+CREATE OR REPLACE VIEW locations_v
+as
+select * FROM  locations
+where
+case 
+  when formid=102771 and cleared=FALSE then FALSE -- Dustman's Cairn is closed until The Companions quest, 'Proving Honor' has been activated
+  ELSE TRUE
+END");
+
+$db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS vendor_cont TEXT");
+$db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS stock JSONB");
+$db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS gold numeric");
+$db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS player_rank numeric");
+
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS title text");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS stage text");
 $db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS worldspace text");

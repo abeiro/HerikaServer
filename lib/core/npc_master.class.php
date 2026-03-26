@@ -567,8 +567,8 @@ class NpcMaster
         }
 
         // Apply extended_data overrides (highest precedence - NPC level)
-        // Reserved keys are excluded (middle_term_memory, middle_term_enabled, chim_core_migrated)
-        $reservedKeys = ['middle_term_memory', 'middle_term_enabled', 'chim_core_migrated'];
+        // Reserved keys are excluded (system fields managed by dedicated subsystems/toggles)
+        $reservedKeys = ['middle_term_memory', 'middle_term_enabled', 'individual_memory_enabled', 'chim_core_migrated'];
         $extendedData = json_decode($currentNpcData['extended_data'] ?? '{}', true);
         if (is_array($extendedData)) {
             foreach ($extendedData as $key => $value) {
@@ -608,6 +608,9 @@ class NpcMaster
                 }
             }
         }
+
+        // This behavior is now always enabled.
+        $GLOBALS['ENFORCE_ACTIONS_PROMPT'] = true;
 
     }
 

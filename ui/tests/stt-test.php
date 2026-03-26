@@ -194,7 +194,13 @@ if (php_sapi_name() != "cli") {
 
         if (!empty($transcription)) {
             echo '<div class="status"><span class="label ok">Transcription Successful!</span></div>';
-            echo '<div class="response">Output: ' . nl2br(htmlspecialchars($transcription)) . '</div>';            
+            echo '<div class="response">Output: ' . nl2br(htmlspecialchars($transcription)) . '</div>';
+
+            // Show detected tone if available
+            $detectedTone = function_exists('getPlayerTone') ? getPlayerTone(30) : null;
+            if (!empty($detectedTone)) {
+                echo '<div class="message"><strong style="color: #17a2b8;">Detected tone: ' . htmlspecialchars($detectedTone) . '</strong></div>';
+            }
 
             // Calculate similarity percentage using levenshtein
             $lev_distance = levenshtein(strtolower($expected_transcription), strtolower($transcription));

@@ -90,6 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'MCP/enabled',
             'MCP/port',
             'MCP/model',
+            'MCP/temperature',
             'MCP/api_badge_id',
             'MCP/llm_connector_id',
             'MCP/system_prompt',
@@ -114,11 +115,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         if ($config['port'] === null) {
             $config['port'] = '3100';
         }
-        if ($config['model'] === null) {
-            $config['model'] = 'anthropic/claude-sonnet-4';
+        if ($config['model'] === null || trim((string)$config['model']) === '') {
+            $config['model'] = 'anthropic/claude-sonnet-4.5';
         }
-        if ($config['max_tool_rounds'] === null) {
-            $config['max_tool_rounds'] = '10';
+        if ($config['temperature'] === null || trim((string)$config['temperature']) === '') {
+            $config['temperature'] = '0.7';
+        }
+        if ($config['max_tool_rounds'] === null || trim((string)$config['max_tool_rounds']) === '') {
+            $config['max_tool_rounds'] = '20';
         }
         
         echo json_encode([
@@ -150,6 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'api_badge_id' => 'MCP/api_badge_id',
             'llm_connector_id' => 'MCP/llm_connector_id',
             'model' => 'MCP/model',
+            'temperature' => 'MCP/temperature',
             'system_prompt' => 'MCP/system_prompt',
             'max_tool_rounds' => 'MCP/max_tool_rounds',
         ];
@@ -157,7 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         foreach ($keyMap as $inputKey => $dbKey) {
             if (isset($input[$inputKey])) {
                 $value = $input[$inputKey];
-                
+
                 // Skip empty system prompt (use default)
                 if ($inputKey === 'system_prompt' && trim($value) === '') {
                     // Delete the key so it uses the default
@@ -169,6 +174,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 if ($inputKey === 'llm_connector_id' && trim((string)$value) === '') {
                     $db->delete('conf_opts', "id = '" . $db->escape($dbKey) . "'");
                     continue;
+                }
+
+                if ($inputKey === 'model' && trim((string)$value) === '') {
+                    $value = 'anthropic/claude-sonnet-4.5';
+                }
+
+                if ($inputKey === 'max_tool_rounds') {
+                    $rounds = intval($value);
+                    $value = $rounds >= 1 ? strval($rounds) : '20';
+                }
+
+                if ($inputKey === 'temperature') {
+                    if (trim((string)$value) === '') {
+                        $value = '0.7';
+                    } else {
+                        $temp = floatval($value);
+                        if ($temp < 0.0) {
+                            $temp = 0.0;
+                        } elseif ($temp > 2.0) {
+                            $temp = 2.0;
+                        }
+                        $value = strval($temp);
+                    }
                 }
                 
                 // Upsert the value

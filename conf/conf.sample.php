@@ -5,6 +5,7 @@ $PLAYER_NAME="Prisoner"; //Player's current character name.
 $DBDRIVER="postgresql"; //Database - Do not change.
 $HERIKA_NAME="The Narrator"; //NPC name. MUST MATCH their Skyrim in-game NPC name!
 $LOCK_PROFILE=false; //NPC name. MUST MATCH their Skyrim in-game NPC name!
+$AUTO_LOCK_PROFILE=true; //When enabled, saving an NPC profile in CHIM NPC page automatically locks it.
 $PROMPT_HEAD="You are #HERIKA_NAME#, a character in the Universe of Skyrim. This is not a simulation or a game; this is your reality. You will embody this persona with absolute conviction, prioritizing narrative authenticity and psychological consistency.
 
 The director provides scene prompts and narrative catalysts. Integrate these prompts seamlessly as the next logical event in the story. Treat them as established fact and build upon them with your character's authentic reaction.
@@ -78,7 +79,7 @@ $EMOTEMOODS="sassy,"
     . "sad"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 
 $REMOVE_ASTERISKS_FROM_OUTPUT=true;
-$ENFORCE_ACTIONS_PROMPT=false;
+$ENFORCE_ACTIONS_PROMPT=true;
 $SUMMARY_PROMPT= 'Focus on key events, tagging characters, locations, and factions accurately. Ensure memories align and maintain chronological order while foreshadowing future arcs. Prioritize player agency, and use environmental cues to enhance storytelling and continuity.'; 
 $DYNAMIC_PROMPT = "(LEGACY - Use individual field prompts instead) "
     . "Last in-game date/time found: [date or \"No date\"] "
@@ -89,7 +90,7 @@ $DYNAMIC_PROMPT = "(LEGACY - Use individual field prompts instead) "
     . "3. CONTINUING GOALS, CONFLICTS OR FEELINGS (2–3 bullet points) "
     . "   - List ongoing arcs, dilemmas, objectives and goals with clear facts. Remove items only if resolved.";
 
-$DYNAMIC_PROFILE_FIELDS = ["relationships", "goals"];
+$DYNAMIC_PROFILE_FIELDS = ["personality", "speechstyle", "goals"];
 
 $DYNAMIC_PROMPT_PERSONALITY = "Based on the dialogue history and recent events, update #HERIKA_NAME# personality traits. "
     . "Maintain all existing relevant personality traits and add new ones based on recent experiences. "
@@ -134,11 +135,14 @@ $DIARY_PROMPT = "Please write a short summary of #PLAYER_NAME# and #HERIKA_NAME#
 // Dynamic profile utility button
 $dynamic_profile_b1 = false; // Utility button for updating all dynamic profile fields
 
-$RPG_COMMENTS=["levelup","learn_shout","learn_word","absorb_soul", "bleedout", "combat_end", "lockpick", "sleep", "keepmechecked"]; //AI Service(s).
+$RPG_COMMENTS=["levelup","combat_end","bleedout","keepmechecked"]; //AI Service(s).
+$RPG_COMMENTS_CHANCE=50; //Chance (0-100) for enabled RPG comments to trigger.
 $DETECT_MAGIC_EVENT=true; //Enable detection and logging of NPC spellcasting events.
 $MAGIC_EVENT_BLACKLIST=""; //Comma-separated list of magic events to exclude from logging.
 $LOCATION_BLACKLIST="Dark Brotherhood Sanctuary, Twilight Sepulcher"; //Comma-separated list of location names to exclude from Points of Interest context.
 $ITEM_BLACKLIST=""; //Comma-separated list of item/armor names to exclude from dynamic context.
+$CARRIAGE_DRIVERS="Bjorlam, Alfarinn, Kibell, Sigaar, Thaer, Engar, Gunjar, Markus"; //Comma-separated NPC names that can offer carriage fast travel.
+$FERRY_DRIVERS="Gort, Harlaug, Jolf"; //Comma-separated NPC names that can offer ferry fast travel.
 $EVENT_TYPE_FILTER=""; //Comma-separated list of event types to exclude from context generation.
 $GROUND_ITEMS_DESCRIPTIONS_ONLY=false; //Only show nearby ground items that have descriptions in the database.
 $INVENTORY_ITEMS_DESCRIPTIONS_ONLY=false; //Only show inventory items that have descriptions in the database.
@@ -155,6 +159,7 @@ $CORE_CONNECTOR_PLAYER=2;
 $CORE_CONNECTOR_SUMMARY=5;
 $CORE_CONNECTOR_MEDIUMTERM=5;
 $CORE_CONNECTOR_PROFILES=1;
+$RELLLM_CONNECTOR=5; // Relationship Management default (Mistral Small 3.2 24B)
 
 ;
 //[AI/LLM Connectors]
@@ -539,6 +544,8 @@ $FEATURES["MEMORY_EMBEDDING"]["MEMORY_TIME_DELAY"]=12; //Time in minutes to dela
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]=1; //Amount of memory records that will be injected into the prompt.
 $FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]=true; //Combines individual memory logs into larger ones at the cost of tokens.
 $FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]=10; //Time frame used to pack summary data.
+$FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_MIN_EVENTS"]=5; //Minimum events needed in a packed time bucket to create a global memory summary.
+$FEATURES["MEMORY_EMBEDDING"]["INDIVIDUAL_MEMORY_SUMMARY_THRESHOLD"]=3; //How many global summaries involving an NPC are needed before creating one NPC-scoped memory.
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_A"]=33; //0-100 - Minimal distance to offer memory.
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_B"]=66; //0-100 - Minimal distance to endorse memory.
 //Other Options

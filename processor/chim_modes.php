@@ -58,8 +58,8 @@ if ($EXECUTION_MODE=="STANDARD") {
 
 
 } else if ($EXECUTION_MODE=="WHISPER") {
-    // Define whisper range (300 units = ~4 meters, intimate conversation distance)
-    $GLOBALS["WHISPER_RANGE"] = 300;
+    // Hard whisper range for CHIM whisper mode.
+    $GLOBALS["WHISPER_RANGE"] = 200;
     
     // Send commands to plugin to reduce NPC detection range to whisper distance
     $GLOBALS["db"]->insert(
@@ -151,7 +151,7 @@ if ($EXECUTION_MODE=="STANDARD") {
     
     $cleaned_player_dialogue = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
     $gameRequest[3]="**(".trim($cleaned_player_dialogue).")";
-    // Don't set PLAYER_RESPEECH to avoid name duplication
+    $GLOBALS["PLAYER_RESPEECH"] = true; // Route through player_rewrite.php for bio/speech style context
     
 } else if ($EXECUTION_MODE=="INJECTION_LOG") {
     $cleaned_player_dialogue = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);

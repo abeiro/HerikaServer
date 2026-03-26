@@ -17,12 +17,20 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 ?>
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
+    @font-face {
+        font-family: 'MagicCards';
+        src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+    }
+
     /* Override main container styles */
     main {
         padding-top: 80px; /* Space for navbar */
-        padding-bottom: 40px; /* Reduced space for footer */
+        padding-bottom: 10px;
         padding-left: 10px;
         padding-right: 10px;
+        height: 100vh;
     }
 
     /* Override footer styles */
@@ -36,7 +44,19 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     /* Tabs styling aligned with Events & Memories */
-    .tab-container { margin: 20px 0; }
+    .container-fluid {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .tab-container {
+        margin: 20px 0;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+    }
     
     .tab-buttons {
         display: flex;
@@ -82,11 +102,16 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
     
     .tab-content { display: none; }
-    .tab-content.active { display: block; }
+    .tab-content.active {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+    }
 
     .embed-frame {
         width: 100%;
-        height: 75vh;
+        height: 100%;
+        min-height: 78vh;
         border: 1px solid #3a3a3a;
         border-radius: 8px;
         background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
@@ -95,7 +120,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     @media (max-width: 768px) {
         .tab-button { padding: 10px 14px; font-size: 0.9em; }
-        .embed-frame { height: 75vh; }
+        .embed-frame { min-height: 75vh; }
     }
 </style>
 <?php
@@ -112,6 +137,7 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'diaries';
         <div class="tab-buttons">
             <button class="tab-button <?php echo $activeTab === 'diaries' ? 'active' : ''; ?>" onclick="switchTab('diaries')">📔 CHIM Diaries</button>
             <button class="tab-button <?php echo $activeTab === 'adventure' ? 'active' : ''; ?>" onclick="switchTab('adventure')">📆 Adventure Log</button>
+            <button class="tab-button <?php echo $activeTab === 'questgen' ? 'active' : ''; ?>" onclick="switchTab('questgen')">🧭 AI Quest Manager</button>
             <button class="tab-button <?php echo $activeTab === 'backgroundlife' ? 'active' : ''; ?>" onclick="switchTab('backgroundlife')">🗺️ Background Life</button>
             <!-- <button class="tab-button <?php echo $activeTab === 'chat' ? 'active' : ''; ?>" onclick="switchTab('chat')">💬 Chat Testing</button> -->
             <button class="tab-button <?php echo $activeTab === 'soulgaze' ? 'active' : ''; ?>" onclick="switchTab('soulgaze')">🖼️ Soulgaze Gallery</button>
@@ -126,7 +152,7 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'diaries';
         </div>
 
         <div id="backgroundlife-tab" class="tab-content <?php echo $activeTab === 'backgroundlife' ? 'active' : ''; ?>">
-            <iframe class="embed-frame" src="<?php echo $webRoot; ?>/ui/mapview.php" style="height: 80vh;"></iframe>
+            <iframe class="embed-frame" src="<?php echo $webRoot; ?>/ui/mapview.php" style="height: 100%; min-height: 78vh;"></iframe>
         </div>
 
         <div id="chat-tab" class="tab-content <?php echo $activeTab === 'chat' ? 'active' : ''; ?>">
@@ -134,6 +160,9 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'diaries';
         </div>
         <div id="soulgaze-tab" class="tab-content <?php echo $activeTab === 'soulgaze' ? 'active' : ''; ?>">
             <iframe class="embed-frame" src="<?php echo $webRoot; ?>/ui/soulgaze_gallery.php?embed=1"></iframe>
+        </div>
+        <div id="questgen-tab" class="tab-content <?php echo $activeTab === 'questgen' ? 'active' : ''; ?>">
+            <iframe class="embed-frame" src="<?php echo $webRoot; ?>/ui/addons/snqe/hub.php?embed=1"></iframe>
         </div>
     </div>
 </div>

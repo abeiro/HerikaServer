@@ -24,7 +24,7 @@ $connector->setOldGlobals($currentConnectorData);
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-$MODEL_1 = "bytedance-seed/seed-1.6-flash"; // Initial quest generator
+$MODEL_1 = "x-ai/grok-4.1-fast"; // Initial quest generator
 $MODEL_2 = "google/gemini-3-flash-preview";   // Quest steps generator
 
 
@@ -172,7 +172,7 @@ Restrictions:
  * Avoid conditionals/branchs. Things must be direct and concrete.
 
 Task:
-Given this context, generate the next quest steps. (just generate 4/5 steps)
+Given this context, generate the next quest steps. 
 
 Creation rules:
 
@@ -567,7 +567,7 @@ If no nearby entrances, this means current location has no passages/doors/chambe
 ---
 
 ## Task
-Using the provided context, generate **4–5 next quest steps**.
+Using the provided context, generate **next quest steps**.
 
 Each quest step must:
 1. Follow logically from **Previous Quest Steps**
@@ -578,7 +578,7 @@ Each quest step must:
 ---
 
 ## Output Format
-- Bullet-point list of **4–5 steps**
+- Bullet-point list of **next steps**
 - Each step must describe:
   - What happens
   - Who is involved
