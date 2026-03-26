@@ -457,7 +457,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
         } catch (Throwable $e) {
             $_POST['extended_data'] = '{}';
         }
-        
+
+        // Merge relationship_dynamics from DB into posted extended_data
+        // RelDyn saves via its own AJAX endpoint, so the form textarea has stale data
+        if (file_exists(__DIR__."/../../ext/relationship_dynamics/relationship_dynamics.php")) {
+            try {
+                $_rdPosted = json_decode($_POST['extended_data'] ?? '{}', true) ?: [];
+                $_rdRow = $npcMaster->getByName($_POST['npc_name'] ?? '');
+                $_rdCurrent = json_decode($_rdRow['extended_data'] ?? '{}', true) ?: [];
+                if (isset($_rdCurrent['relationship_dynamics'])) {
+                    $_rdPosted['relationship_dynamics'] = $_rdCurrent['relationship_dynamics'];
+                    $_POST['extended_data'] = json_encode($_rdPosted);
+                }
+            } catch (Throwable $e) {}
+        }
+
         // Handle dynamic_profile: if empty string sent, set to NULL (inherit from profile)
         if (array_key_exists('dynamic_profile', $_POST)) {
             $dynVal = $_POST['dynamic_profile'];
@@ -1913,6 +1927,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             include(__DIR__."/../../ext/relationship_system/relationship_editor.php");
         } ?>
 
+        <?php if (file_exists(__DIR__."/../../ext/relationship_dynamics/npc_editor_section.php")) {
+            include(__DIR__."/../../ext/relationship_dynamics/npc_editor_section.php");
+        } ?>
+
         <div class="form-item">
             <label for="occupation">Occupation</label>
             <textarea id="occupation" name="occupation" placeholder="Role, job, affiliations."><?= htmlspecialchars($editItem["occupation"] ?? "") ?></textarea>
@@ -2258,7 +2276,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Override global and profile settings for this specific NPC. Changes here take precedence over all other configurations.</small>
             <?php
             // Configure override editor for NPC mode
-            $reservedKeys = [ 'middle_term_enabled', 'individual_memory_enabled', 'auto_diary_enabled', 'auto_diary_wait_enabled', 'chim_core_migrated', 'salutation_after_a_while'];
+            $reservedKeys = [ 'middle_term_enabled', 'individual_memory_enabled', 'auto_diary_enabled', 'auto_diary_wait_enabled', 'chim_core_migrated', 'salutation_after_a_while', 'relationship_dynamics', 'relationships'];
             $extendedDataRaw = isset($editItem["extended_data"]) ? $editItem["extended_data"] : '{}';
             $extendedDataObj = json_decode($extendedDataRaw, true) ?: [];
             $currentOverrides = [];

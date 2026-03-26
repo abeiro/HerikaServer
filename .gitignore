@@ -5,6 +5,7 @@
 !/ext/xLifeLink_plugin
 !/ext/generic_installer.php
 !/ext/relationship_system
+!/ext/relationship_dynamics
 /log
 /soundcache
 data/CurrentModel_*.json
