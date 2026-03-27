@@ -3939,7 +3939,10 @@ function call_llm_internal() {
 
 
         $buffer=$connectionHandler->fast_request($contextData,$overrideParameters,'standard');
-        $buffer = preg_replace('/\*([^*]*\s+[^*]*)\*/', '', $buffer);
+        $preserveAsterisksInContext = isset($GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"]) ? (bool)$GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"] : false;
+        if (!$preserveAsterisksInContext) {
+            $buffer = preg_replace('/\*([^*]*\s+[^*]*)\*/', '', $buffer);
+        }
 
         error_log("[STEP 1] Elapsed time: " . (microtime(true) - $startTime) . " seconds");
 

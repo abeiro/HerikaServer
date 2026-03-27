@@ -234,6 +234,7 @@ class Narrator
             'hide_from_context' => ['HIDE_NARRATOR_DIALOGUE', 'bool', false],
             'dynamic_profile' => ['DYNAMIC_PROFILE', 'bool', false],
             'inline_narration_enabled' => ['INLINE_NARRATION_ENABLED', 'bool', false],
+            'preserve_asterisks_in_context' => ['PRESERVE_ASTERISKS_IN_CONTEXT', 'bool', false],
             'remove_asterisks_from_output' => [
                 'REMOVE_ASTERISKS_FROM_OUTPUT',
                 'bool',

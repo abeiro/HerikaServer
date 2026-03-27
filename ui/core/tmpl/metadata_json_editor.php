@@ -407,6 +407,7 @@ function consolidation() {
     // Narrator-managed settings should not live in profile metadata.
     if ('REMOVE_ASTERISKS_FROM_OUTPUT' in base) delete base['REMOVE_ASTERISKS_FROM_OUTPUT']
     if ('INLINE_NARRATION_ENABLED' in base) delete base['INLINE_NARRATION_ENABLED']
+    if ('PRESERVE_ASTERISKS_IN_CONTEXT' in base) delete base['PRESERVE_ASTERISKS_IN_CONTEXT']
     if ('ENFORCE_ACTIONS_PROMPT' in base) delete base['ENFORCE_ACTIONS_PROMPT']
 
     // Collect visual fields (explicitly iterate over known keys to capture false for checkboxes)

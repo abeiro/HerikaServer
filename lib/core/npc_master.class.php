@@ -549,7 +549,7 @@ class NpcMaster
 
         // Decode metadata and extended_data if available
         $metadata = json_decode($currentNpcData['metadata'] ?? '{}', true);
-        $narratorManagedKeys = ['REMOVE_ASTERISKS_FROM_OUTPUT', 'INLINE_NARRATION_ENABLED'];
+        $narratorManagedKeys = ['REMOVE_ASTERISKS_FROM_OUTPUT', 'INLINE_NARRATION_ENABLED', 'PRESERVE_ASTERISKS_IN_CONTEXT'];
         if (is_array($metadata)) {
             foreach ($metadata as $key => $value) {
                 if (in_array(strtoupper((string)$key), $narratorManagedKeys, true)) {
