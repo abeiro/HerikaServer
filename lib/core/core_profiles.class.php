@@ -272,8 +272,12 @@ class CoreProfile
 
         // Decode and apply profile metadata
         $metadata = json_decode($currentProfileData['metadata'] ?? '{}', true);
+        $narratorManagedKeys = ['REMOVE_ASTERISKS_FROM_OUTPUT', 'INLINE_NARRATION_ENABLED'];
         if (is_array($metadata)) {
             foreach ($metadata as $key => $value) {
+                if (in_array(strtoupper((string)$key), $narratorManagedKeys, true)) {
+                    continue;
+                }
                 // Use isset-style check instead of empty() to properly handle boolean false values
                 // empty(false) returns true, which would skip applying false values from profile
                 if ($value !== null && $value !== '') {

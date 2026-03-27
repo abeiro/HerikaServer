@@ -158,12 +158,69 @@ class Narrator
     }
 
     /**
+     * Read a legacy boolean value from default narrator profile metadata.
+     * Returns null when the key is missing or not parseable as boolean.
+     */
+    private function getLegacyDefaultNarratorProfileBool(string $legacyKey): ?bool
+    {
+        $query = "SELECT metadata FROM core_profiles WHERE default_narrator = '1' ORDER BY id ASC LIMIT 1";
+        try {
+            $result = $this->db->fetchOne($query);
+        } catch (\Throwable $e) {
+            return null;
+        }
+        if (!$result || !isset($result['metadata']) || $result['metadata'] === null || $result['metadata'] === '') {
+            return null;
+        }
+
+        $metadata = json_decode($result['metadata'], true);
+        if (!is_array($metadata) || !array_key_exists($legacyKey, $metadata)) {
+            return null;
+        }
+
+        $value = $metadata[$legacyKey];
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_numeric($value)) {
+            return intval($value) !== 0;
+        }
+        if (is_string($value)) {
+            if (strcasecmp($value, 'true') === 0 || $value === '1') {
+                return true;
+            }
+            if (strcasecmp($value, 'false') === 0 || $value === '0') {
+                return false;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Load all narrator settings into GLOBALS with proper type conversion
      * Falls back to existing GLOBALS values if not found in database
      */
     public function loadIntoGlobals(): void
     {
         $allSettings = $this->getAll();
+
+        // One-time compatibility migration from legacy profile metadata.
+        $legacySettingMap = [
+            'inline_narration_enabled' => 'INLINE_NARRATION_ENABLED',
+            'remove_asterisks_from_output' => 'REMOVE_ASTERISKS_FROM_OUTPUT',
+        ];
+        foreach ($legacySettingMap as $dbKey => $legacyMetadataKey) {
+            if (!isset($allSettings[$dbKey])) {
+                $legacyValue = $this->getLegacyDefaultNarratorProfileBool($legacyMetadataKey);
+                if ($legacyValue !== null) {
+                    $serialized = $legacyValue ? '1' : '0';
+                    if ($this->set($dbKey, $serialized)) {
+                        $allSettings[$dbKey] = $serialized;
+                    }
+                }
+            }
+        }
         
         // Map database keys to GLOBALS keys with type conversion
         $keyMapping = [
@@ -177,6 +234,11 @@ class Narrator
             'hide_from_context' => ['HIDE_NARRATOR_DIALOGUE', 'bool', false],
             'dynamic_profile' => ['DYNAMIC_PROFILE', 'bool', false],
             'inline_narration_enabled' => ['INLINE_NARRATION_ENABLED', 'bool', false],
+            'remove_asterisks_from_output' => [
+                'REMOVE_ASTERISKS_FROM_OUTPUT',
+                'bool',
+                isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] : false,
+            ],
             'diary_enabled' => ['NARRATOR_DIARY_ENABLED', 'bool', false],
             'connector_id' => ['NARRATOR_CONNECTOR_ID', 'int', null],
             'diary_connector_id' => ['NARRATOR_DIARY_CONNECTOR_ID', 'int', null],

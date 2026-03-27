@@ -73,14 +73,6 @@ $localSchemaOverrides = [
         'type' => 'boolean',
         'description' => 'Allow AI NPCs to trigger actions between eachother during Rechat. This can cause some chaos...',
     ],
-    'REMOVE_ASTERISKS_FROM_OUTPUT' => [
-        'type' => 'boolean',
-        'description' => 'Remove text between ** when responding (*cough*, *smiles*, etc)',
-    ],
-    'INLINE_NARRATION_ENABLED' => [
-        'type' => 'boolean',
-        'description' => 'Enable inline narration in asterisks (e.g., *She smiles*). Appears in subtitles but not spoken in TTS.',
-    ],
     'CONTEXT_HISTORY_DIARY' => [
         'type' => 'integer',
         'description' => 'Amount of context history (dialogue and events) that will be sent to LLM specifically for diary entries. If set to 0, will use the regular CONTEXT_HISTORY value instead.',
@@ -101,12 +93,12 @@ $visualKeys = [
   "DIARY_PROMPT","OGHMA_AMOUNT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN","COMBAT_BARK_COOLDOWN",
   "OGHMA_INFINIUM","CONTEXT_HISTORY","MAX_WORDS_LIMIT",
   "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE",
-  "REMOVE_ASTERISKS_FROM_OUTPUT","INLINE_NARRATION_ENABLED","CONTEXT_HISTORY_DYNAMIC_PROFILE"
+  "CONTEXT_HISTORY_DYNAMIC_PROFILE"
 ];
 
 // Organize visual keys into categories for display
 $visualGroups = [
-  'Core' => ["CORE_LANG","LANG_LLM_XTTS","REMOVE_ASTERISKS_FROM_OUTPUT","INLINE_NARRATION_ENABLED","MAX_WORDS_LIMIT"],
+  'Language' => ["CORE_LANG","LANG_LLM_XTTS","MAX_WORDS_LIMIT"],
   'Rechat' => ["RECHAT_H","RECHAT_P","RECHAT_ALLOW_ACTIONS"],
   'Bored Event' => ["BORED_EVENT","BORED_EVENT_SERVERSIDE"],
   'Context' => ["CONTEXT_HISTORY","CONTEXT_HISTORY_DIARY","CONTEXT_HISTORY_DYNAMIC_PROFILE"],
@@ -126,8 +118,7 @@ function meta_pretty_label(string $name): string {
         'BORED_EVENT' => 'Bored Event Chance',
         'CONTEXT_HISTORY' => 'Context History Event Count',
         'CONTEXT_HISTORY_DIARY' => 'Context History Diary Event Count',
-        'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 'Context History Dynamic Profile Event Count',
-        'INLINE_NARRATION_ENABLED' => 'NPC Action Narration Enabled'
+        'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 'Context History Dynamic Profile Event Count'
     ];
     
     if (isset($customLabels[$name])) {
@@ -413,6 +404,9 @@ function consolidation() {
         // Ensure AUTO_DIARY is not stored in profile metadata (global-only)
         if ('AUTO_DIARY' in base) delete base['AUTO_DIARY']
     }
+    // Narrator-managed settings should not live in profile metadata.
+    if ('REMOVE_ASTERISKS_FROM_OUTPUT' in base) delete base['REMOVE_ASTERISKS_FROM_OUTPUT']
+    if ('INLINE_NARRATION_ENABLED' in base) delete base['INLINE_NARRATION_ENABLED']
     if ('ENFORCE_ACTIONS_PROMPT' in base) delete base['ENFORCE_ACTIONS_PROMPT']
 
     // Collect visual fields (explicitly iterate over known keys to capture false for checkboxes)

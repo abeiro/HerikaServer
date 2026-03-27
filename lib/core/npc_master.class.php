@@ -549,8 +549,12 @@ class NpcMaster
 
         // Decode metadata and extended_data if available
         $metadata = json_decode($currentNpcData['metadata'] ?? '{}', true);
+        $narratorManagedKeys = ['REMOVE_ASTERISKS_FROM_OUTPUT', 'INLINE_NARRATION_ENABLED'];
         if (is_array($metadata)) {
             foreach ($metadata as $key => $value) {
+                if (in_array(strtoupper((string)$key), $narratorManagedKeys, true)) {
+                    continue;
+                }
                 // Handle boolean false and numeric 0 properly - empty() would skip these
                 if (! empty($value) || is_numeric($value) || is_bool($value)) {
                     // Convert string "true"/"false" to actual booleans for proper PHP evaluation
@@ -574,6 +578,9 @@ class NpcMaster
             foreach ($extendedData as $key => $value) {
                 // Skip reserved system keys
                 if (in_array($key, $reservedKeys, true)) {
+                    continue;
+                }
+                if (in_array(strtoupper((string)$key), $narratorManagedKeys, true)) {
                     continue;
                 }
                 // Apply override to GLOBALS
