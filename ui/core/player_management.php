@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . "../../";
 
@@ -691,19 +691,19 @@ if (!$isEmbed) {
 
         <div class="page-header">
         <h1>
-            ðŸ‘¤ Player Management
+             👤 Player Management
         </h1>
         <p>Manage your character's information and view in-game statistics</p>
         <p>Changes made here will be used by AI NPCs to understand your character better</p>
     </div>
 
     <form method="post" action="">
-        <button type="submit" class="btn-save" name="save_player" value="1">ðŸ’¾ Save Player Settings</button>
+        <button type="submit" class="btn-save" name="save_player" value="1">💾 Save Player Settings</button>
 
         <div class="content-grid">
             <!-- Player Info Section -->
             <div class="content-section">
-                <h2>ðŸ·ï¸ Player Information</h2>
+                <h2>🏷️ Player Information</h2>
                 <label for="player_name">Player Name</label>
                 <input type="text" id="player_name" name="player_name" value="<?php echo htmlspecialchars($playerName); ?>">
                 <span class="hint">Your character's name.</span>
@@ -711,7 +711,7 @@ if (!$isEmbed) {
 
             <!-- Appearance Section -->
             <div class="content-section">
-                <h2>ðŸ‘¤ Player Appearance</h2>
+                <h2>👤 Player Appearance</h2>
                 <label for="appearance">Physical Description</label>
                 <textarea id="appearance" name="appearance" placeholder="Describe your character's appearance..."><?php echo htmlspecialchars($appearance); ?></textarea>
                 <span class="hint">Physical description of your character used for AI context.</span>
@@ -719,7 +719,7 @@ if (!$isEmbed) {
 
             <!-- Bio Section -->
             <div class="content-section">
-                <h2>ðŸ“œ Player Bio</h2>
+                <h2>📜 Player Bio</h2>
                 <label for="bio">Character Bio</label>
                 <textarea id="bio" name="bio" placeholder="Describe your character's background and story..."><?php echo htmlspecialchars($bio); ?></textarea>
                 <span class="hint">Backstory and character context. Empty by default.</span>
@@ -741,7 +741,7 @@ if (!$isEmbed) {
 
             <!-- Speech Style Section -->
             <div class="content-section">
-                <h2>ðŸ’¬ Speech Style</h2>
+                <h2>💬 Speech Style</h2>
                 <label for="speech_style">How Your Character Speaks</label>
                 <textarea id="speech_style" name="speech_style" placeholder="Describe how your character speaks and communicates..."><?php echo htmlspecialchars($speechStyle); ?></textarea>
                 <span class="hint">Used by Auto Chat mode. The AI rewrites your input into dialogue that matches your character's voice and personality.</span>
@@ -751,7 +751,7 @@ if (!$isEmbed) {
 
     <!-- Read-only Game Data Section -->
     <div class="full-width-section">
-        <h2>ðŸ“Š Player Statistics</h2>
+        <h2>📊 Player Statistics</h2>
     </div>
 
     <div class="content-grid two-col">
@@ -891,7 +891,7 @@ if (!$isEmbed) {
     <!-- Skills Section -->
     <?php if (!empty($skills)): ?>
     <div class="content-section full-width-section">
-        <h2>â­ Skills</h2>
+        <h2>⭐ Skills</h2>
             <div class="skills-grid">
                 <?php 
                 // Sort skills by value descending
@@ -920,5 +920,3 @@ if (!$isEmbed) {
     echo $buffer;
 }
 ?>
-
-
