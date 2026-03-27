@@ -348,6 +348,9 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 <div id="service_signup_link" class="orm-note" style="font-size:12px; margin:-6px 0 8px 0; display:none;">
                     <a id="signup_link" href="#" target="_blank" rel="noopener noreferrer" style="color:#ffb862; text-decoration:underline;">Sign up here</a> to get your API key for this service.
                 </div>
+                <div id="service_tos_warning" class="orm-note" style="font-size:12px; margin:-4px 0 8px 0; display:none; color:#ffd2a6;">
+                    Please be warned that OpenAI, Antrhopic and Google have started to enforce stricter terms of service regarding NSFW actitives. <a href="https://openrouter.ai/terms#_6_-prohibited-conduct_" target="_blank" rel="noopener noreferrer" style="color:#ffb862; text-decoration:underline;">More info here</a>.
+                </div>
 
                 <div id="custom_note" class="orm-muted" style="font-size:12px; display:none; margin:-6px 0 8px 0;">
                     Custom allows you to build your own connector setting using one of our API drivers to use non-supported services with CHIM. For advanced users only
@@ -759,6 +762,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     (function(){
         const signupLinkDiv = document.getElementById('service_signup_link');
         const signupLink = document.getElementById('signup_link');
+        const tosWarningDiv = document.getElementById('service_tos_warning');
         const customNote = document.getElementById('custom_note');
         const signupUrls = {
             openrouter: 'https://openrouter.ai/keys',
@@ -770,6 +774,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         function updateSignupLink(){
             const serviceInput = document.getElementById('service_input');
             const service = serviceInput ? String(serviceInput.value || '').toLowerCase() : '';
+            const showTosWarning = ['openrouter', 'openai', 'google'].includes(service);
             if (service === 'custom') {
                 if (signupLinkDiv) signupLinkDiv.style.display = 'none';
                 if (customNote) customNote.style.display = '';
@@ -781,6 +786,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 if (signupLinkDiv) signupLinkDiv.style.display = 'none';
                 if (customNote) customNote.style.display = 'none';
             }
+            if (tosWarningDiv) tosWarningDiv.style.display = showTosWarning ? '' : 'none';
         }
         const icons = document.querySelectorAll('.service-icon');
         icons.forEach(ic=>{ ic.addEventListener('click', ()=> setTimeout(updateSignupLink, 50)); });
@@ -1628,6 +1634,9 @@ if (typeof window.consolidation !== 'function') {
             <div id="service_signup_link" class="orm-note" style="font-size:12px; margin:-6px 0 8px 0; display:none;">
                 <a id="signup_link" href="#" target="_blank" rel="noopener noreferrer" style="color:#ffb862; text-decoration:underline;">Sign up here</a> to get your API key for this service.
             </div>
+            <div id="service_tos_warning" class="orm-note" style="font-size:12px; margin:-4px 0 8px 0; display:none; color:#ffd2a6;">
+                Please be warned that OpenAI, Antrhopic and Google have started to enforce stricter terms of service regarding NSFW actitives. <a href="https://openrouter.ai/terms#_6_-prohibited-conduct_" target="_blank" rel="noopener noreferrer" style="color:#ffb862; text-decoration:underline;">More info here</a>.
+            </div>
 
             <div id="custom_note" class="orm-muted" style="font-size:12px; display:none; margin:-6px 0 8px 0;">
                 Custom allows you to build your own connector setting using one of our API drivers to use non-supported services with CHIM. Depending on the service you may not need to fill out all fields. For advanced users only
@@ -1930,6 +1939,7 @@ if (typeof window.consolidation !== 'function') {
     (function(){
         const signupLinkDiv = document.getElementById('service_signup_link');
         const signupLink = document.getElementById('signup_link');
+        const tosWarningDiv = document.getElementById('service_tos_warning');
         const customNote = document.getElementById('custom_note');
         const signupUrls = {
             openrouter: 'https://openrouter.ai/keys',
@@ -1941,6 +1951,7 @@ if (typeof window.consolidation !== 'function') {
         function updateSignupLink(){
             const serviceInput = document.getElementById('service_input');
             const service = serviceInput ? String(serviceInput.value || '').toLowerCase() : '';
+            const showTosWarning = ['openrouter', 'openai', 'google'].includes(service);
             if (service === 'custom') {
                 if (signupLinkDiv) signupLinkDiv.style.display = 'none';
                 if (customNote) customNote.style.display = '';
@@ -1952,6 +1963,7 @@ if (typeof window.consolidation !== 'function') {
                 if (signupLinkDiv) signupLinkDiv.style.display = 'none';
                 if (customNote) customNote.style.display = 'none';
             }
+            if (tosWarningDiv) tosWarningDiv.style.display = showTosWarning ? '' : 'none';
         }
         const icons = document.querySelectorAll('.service-icon');
         icons.forEach(ic=>{ ic.addEventListener('click', ()=> setTimeout(updateSignupLink, 50)); });
