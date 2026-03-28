@@ -451,13 +451,31 @@ if (isset($_GET["delete"])) {
     // If a replacement was selected, promote it first then delete
     if (isset($_GET["replace_with"]) && is_numeric($_GET["replace_with"])) {
         $replaceId = intval($_GET["replace_with"]);
+        if ($replaceId <= 0 || $replaceId === $deleteId || !$profiles->readOne($replaceId)) {
+            header("Location: core_profiles.php?error=" . urlencode("Invalid replacement profile selected."));
+            exit;
+        }
+
+        $promoteNpcOk = true;
+        $promoteNarratorOk = true;
         if ($isDefaultNpc) {
-            $profiles->promoteToDefaultNpc($replaceId);
+            $promoteNpcOk = (bool)$profiles->promoteToDefaultNpc($replaceId);
         }
         if ($isDefaultNarrator) {
-            $profiles->promoteToDefaultNarrator($replaceId);
+            $promoteNarratorOk = (bool)$profiles->promoteToDefaultNarrator($replaceId);
         }
-        $profiles->delete($deleteId);
+
+        if (!$promoteNpcOk || !$promoteNarratorOk) {
+            header("Location: core_profiles.php?error=" . urlencode("Failed to promote replacement profile before delete."));
+            exit;
+        }
+
+        $deleted = $profiles->delete($deleteId);
+        if (!$deleted) {
+            header("Location: core_profiles.php?error=" . urlencode($profiles->getLastError()));
+            exit;
+        }
+
         header("Location: core_profiles.php");
         exit;
     }
@@ -1022,6 +1040,8 @@ $ittById = $byId($ittRows);
         <script>
         (function(){
             const RAW = <?= json_encode($data ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+            // Expose rows for global handlers (e.g., inline delete action).
+            window.CORE_PROFILES_ROWS = Array.isArray(RAW) ? RAW : [];
             const ACTIVE_ID = <?= json_encode($_GET['edit'] ?? '') ?>;
             const list = document.getElementById('profiles_list');
             const NPC_COUNT = <?= json_encode($profileIdToNpcCount ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
@@ -1029,6 +1049,13 @@ $ittById = $byId($ittRows);
             const TTS = <?= json_encode($ttsById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             const ITT = <?= json_encode($ittById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+            function escapeJsSingleQuoted(s){
+                return (s==null?'':String(s))
+                    .replace(/\\/g, '\\\\')
+                    .replace(/'/g, "\\'")
+                    .replace(/\r/g, '\\r')
+                    .replace(/\n/g, '\\n');
+            }
             function labelOf(map, id){ if (!id) return ''; const k=String(id); const row=map[k]; return row && (row.label||row.model||row.driver) ? (row.label||'') : ''; }
             function pass(_row){ return true; }
             function render(){
@@ -1055,6 +1082,7 @@ $ittById = $byId($ittRows);
                     html += '</div>';
                 }
                 rows.forEach(r=>{
+                    const deleteLabel = escapeJsSingleQuoted(r.label||('Profile #'+r.id));
                     const active = String(r.id)===String(ACTIVE_ID) ? ' active' : '';
                     const llm1 = escapeHtml(labelOf(LLM, r.llm_primary_id));
                     const llm2 = escapeHtml(labelOf(LLM, r.llm_secondary_id));
@@ -1092,7 +1120,7 @@ $ittById = $byId($ittRows);
                                     <input type="hidden" name="export" value="${r.id}">
                                     <button type="submit" class="btn-primary">Export</button>
                                 </form>
-                                <button type="button" class="btn-danger" onclick="handleProfileDelete(${r.id}, ${String(r.default_npc)==='1'}, ${String(r.default_narrator)==='1'}, '${escapeHtml(r.label||'Profile #'+r.id)}')">Delete</button>
+                                <button type="button" class="btn-danger" onclick="handleProfileDelete(${r.id}, ${String(r.default_npc)==='1'}, ${String(r.default_narrator)==='1'}, '${deleteLabel}')">Delete</button>
                                 <form method="get" action="core_profiles.php" style="display:inline">
                                     <input type="hidden" name="clone" value="${r.id}">
                                     <button type="submit" class="btn-primary">Clone</button>
@@ -1120,13 +1148,14 @@ $ittById = $byId($ittRows);
         })();
 
         function handleProfileDelete(id, isDefaultNpc, isDefaultNarrator, label) {
-            if (RAW.length <= 1) {
+            const rows = Array.isArray(window.CORE_PROFILES_ROWS) ? window.CORE_PROFILES_ROWS : [];
+            if (rows.length <= 1) {
                 alert('Cannot delete the last remaining profile.');
                 return;
             }
 
             if (isDefaultNpc || isDefaultNarrator) {
-                const others = RAW.filter(r => String(r.id) !== String(id));
+                const others = rows.filter(r => String(r.id) !== String(id));
                 if (others.length === 0) {
                     alert('Cannot delete the last remaining profile.');
                     return;

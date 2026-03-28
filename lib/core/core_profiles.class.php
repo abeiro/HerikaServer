@@ -41,7 +41,8 @@ class CoreProfile
         }
 
         foreach ($data as $k => $v) {
-            if (empty($v)) {
+            // Preserve explicit 0/false values; only treat empty-string/null as unset.
+            if ($v === '' || $v === null) {
                 $data[$k] = null;
             }
         }
@@ -129,7 +130,8 @@ class CoreProfile
         ];
 
         foreach ($data as $k => $v) {
-            if (empty($v)) {
+            // Preserve explicit 0/false values; only treat empty-string/null as unset.
+            if ($v === '' || $v === null) {
                 $data[$k] = null;
             }
         }
@@ -202,15 +204,15 @@ class CoreProfile
     public function promoteToDefaultNpc($id)
     {
         $id = intval($id);
-        $GLOBALS["db"]->exec("UPDATE {$this->table} SET default_npc = '0' WHERE default_npc = '1'");
-        return $GLOBALS["db"]->updateRow($this->table, ['default_npc' => '1'], "id = {$id}");
+        $GLOBALS["db"]->query("UPDATE {$this->table} SET default_npc = '0' WHERE default_npc = '1'");
+        return $GLOBALS["db"]->query("UPDATE {$this->table} SET default_npc = '1' WHERE id = {$id}");
     }
 
     public function promoteToDefaultNarrator($id)
     {
         $id = intval($id);
-        $GLOBALS["db"]->exec("UPDATE {$this->table} SET default_narrator = '0' WHERE default_narrator = '1'");
-        return $GLOBALS["db"]->updateRow($this->table, ['default_narrator' => '1'], "id = {$id}");
+        $GLOBALS["db"]->query("UPDATE {$this->table} SET default_narrator = '0' WHERE default_narrator = '1'");
+        return $GLOBALS["db"]->query("UPDATE {$this->table} SET default_narrator = '1' WHERE id = {$id}");
     }
 
     public function getProfileCount(): int

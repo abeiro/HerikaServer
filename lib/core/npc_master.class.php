@@ -67,7 +67,8 @@ class NpcMaster
         ];
 
         foreach ($data as $k => $v) {
-            if (empty($v)) {
+            // Preserve explicit 0/false values; only treat empty-string/null as unset.
+            if ($v === '' || $v === null) {
                 $data[$k] = null;
             }
         }
@@ -171,7 +172,8 @@ class NpcMaster
         }
 
         foreach ($data as $k => $v) {
-            if (empty($v)) {
+            // Preserve explicit 0/false values; only treat empty-string/null as unset.
+            if ($v === '' || $v === null) {
                 $data[$k] = null;
             }
         }
