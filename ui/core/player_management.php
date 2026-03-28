@@ -343,6 +343,44 @@ if (!$isEmbed) {
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     }
 
+    .btn-ai-generate {
+        background-color: #1b4f8c;
+        color: #fff;
+        border: 1px solid rgba(120, 170, 235, 0.35);
+        border-radius: 8px;
+        padding: 10px 16px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                    inset 0 1px rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-ai-generate:hover:not(:disabled) {
+        background-color: #2463ab;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25),
+                    inset 0 1px rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-ai-generate:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .speech-style-tools {
+        margin-top: 10px;
+        display: grid;
+        gap: 8px;
+    }
+
+    .speech-style-tools label {
+        margin-top: 4px;
+    }
+
     /* Toast Notification */
     .toast-notification { 
         position: fixed; 
@@ -671,19 +709,70 @@ if (!$isEmbed) {
 
 <main>
     <div class="page-container">
-        <div id="toast" class="toast-notification <?php echo $saveSuccess ? '' : 'error'; ?>">
+        <div id="toast" class="toast-notification <?php echo (!$saveSuccess && $saveMessage) ? 'error' : ''; ?>">
             <span class="message"><?php echo htmlspecialchars($saveMessage); ?></span>
         </div>
+
+        <script>
+        function showToast(message, isError=false, duration=3200) {
+            try {
+                const toast = document.getElementById('toast');
+                if (!toast) return;
+                const messageEl = toast.querySelector('.message');
+                if (messageEl) messageEl.textContent = message || '';
+                toast.classList.toggle('error', !!isError);
+                toast.style.display = 'block';
+                setTimeout(() => { toast.style.display = 'none'; }, duration);
+            } catch (_e) {}
+        }
+
+        async function generatePlayerSpeechStyle() {
+            const btn = document.getElementById('generate_speech_style_btn');
+            const speechStyleEl = document.getElementById('speech_style');
+            const guidanceEl = document.getElementById('speech_style_guidance');
+            if (!btn || !speechStyleEl) return;
+
+            const oldLabel = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+            showToast('Generating speech style from your recent dialogue...', false, 8000);
+
+            try {
+                const payload = {
+                    current_speech_style: speechStyleEl.value || '',
+                    player_guidance: guidanceEl ? (guidanceEl.value || '') : ''
+                };
+
+                const response = await fetch('<?php echo $webRoot; ?>/ui/cmd/action_player_generate_speech_style.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                let data = null;
+                try { data = await response.json(); } catch (_e) {}
+
+                if (!response.ok || !data || data.status !== 'success') {
+                    const err = (data && data.message) ? data.message : ('HTTP ' + response.status);
+                    throw new Error(err);
+                }
+
+                speechStyleEl.value = data.new_value || '';
+                showToast(data.message || 'Speech style generated. Save Player Settings to keep it.', false, 4200);
+            } catch (error) {
+                showToast('Failed to generate speech style: ' + (error.message || 'Unknown error'), true, 5000);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = oldLabel;
+            }
+        }
+        </script>
 
         <?php if ($saveSuccess || $saveMessage): ?>
             <script>
             setTimeout(function(){ 
                 try{ 
-                    const t=document.getElementById('toast'); 
-                    if(t){ 
-                        t.style.display='block'; 
-                        setTimeout(()=>{ t.style.display='none'; }, 3000); 
-                    } 
+                    showToast(<?php echo json_encode((string)$saveMessage); ?>, <?php echo $saveSuccess ? 'false' : 'true'; ?>, 3000);
                 }catch(_e){} 
             }, 50);
             </script>
@@ -697,7 +786,7 @@ if (!$isEmbed) {
         <p>Changes made here will be used by AI NPCs to understand your character better</p>
     </div>
 
-    <form method="post" action="">
+    <form id="player-form" method="post" action="">
         <button type="submit" class="btn-save" name="save_player" value="1">💾 Save Player Settings</button>
 
         <div class="content-grid">
@@ -742,9 +831,14 @@ if (!$isEmbed) {
             <!-- Speech Style Section -->
             <div class="content-section">
                 <h2>💬 Speech Style</h2>
-                <label for="speech_style">How Your Character Speaks</label>
+                <label for="speech_style">Player Speech Style</label>
                 <textarea id="speech_style" name="speech_style" placeholder="Describe how your character speaks and communicates..."><?php echo htmlspecialchars($speechStyle); ?></textarea>
-                <span class="hint">Used by Auto Chat mode. The AI rewrites your input into dialogue that matches your character's voice and personality.</span>
+                <div class="speech-style-tools">
+                    <label for="speech_style_guidance">Optional Guidance For AI Generation</label>
+                    <textarea id="speech_style_guidance" placeholder="Optional: mention traits or tone to prioritize when generating your speech style paragraph."></textarea>
+                    <button id="generate_speech_style_btn" type="button" class="btn-ai-generate" onclick="generatePlayerSpeechStyle()">AI Generate From Last 200 Inputs</button>
+                </div>
+                <span class="hint">Reads up to the last 200 player input events and generates a one-paragraph speech style prompt. Is used for Auto Chat mode.</span>
             </div>
         </div>
     </form>
