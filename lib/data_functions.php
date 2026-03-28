@@ -351,6 +351,13 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     if (!empty($appearance)) {
                         $profileString .= ": " . trim($appearance);
                     }
+
+                    $playerBio = trim((string)($player->get('bio') ?? ''));
+                    $bioKnownByAll = filter_var((string)($player->get('bio_known_by_all') ?? ''), FILTER_VALIDATE_BOOLEAN);
+                    $isNarrator = isset($GLOBALS["HERIKA_NAME"]) && strcasecmp((string)$GLOBALS["HERIKA_NAME"], "The Narrator") === 0;
+                    if ($playerBio !== "" && ($bioKnownByAll || $isNarrator)) {
+                        $profileString .= ". Backstory: " . trim($playerBio);
+                    }
                     
                     // Add equipment if available
                     $equipmentData = $player->getJson('equipment');

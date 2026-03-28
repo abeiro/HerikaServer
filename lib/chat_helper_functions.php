@@ -2990,6 +2990,11 @@ function buildScopedPeopleForChatEvent($eventData, $fallbackPeople = "")
         return $fallbackPeople;
     }
 
+    if (shouldBroadcastNarratorChatToNearbyPeople($eventData, $fallbackPeople)) {
+        error_log("[SCOPE_CHAT] narrator_broadcast_scoped='{$fallbackPeople}'");
+        return $fallbackPeople;
+    }
+
     $targetMeta = extractTalkTargetMetadata($eventData);
     if ($targetMeta["isBroadcast"]) {
         error_log("[SCOPE_CHAT] Broadcast target detected; keeping fallback people");
@@ -3180,8 +3185,11 @@ function buildScopedPeopleForEvent($eventType, $eventData, $listenerName, $fallb
         return $fallbackPeople;
     }
 
+    $keepNarratorNearbyContext = ($eventType === "chat")
+        && shouldBroadcastNarratorChatToNearbyPeople($eventData, $fallbackPeople);
+
     $effectiveFallback = $fallbackPeople;
-    if (isStrictSpatialPeopleModeEnabled() && $eventType !== "infoaction") {
+    if (isStrictSpatialPeopleModeEnabled() && $eventType !== "infoaction" && !$keepNarratorNearbyContext) {
         $strictFallback = buildStrictFallbackPeopleForEvent($eventType, $eventData, $listenerName, $fallbackPeople);
         if ($strictFallback !== "") {
             $effectiveFallback = $strictFallback;
@@ -3204,6 +3212,30 @@ function buildScopedPeopleForEvent($eventType, $eventData, $listenerName, $fallb
     }
 
     return buildScopedPeopleFromSpatialEvidence($eventType, $eventData, $listenerName, $effectiveFallback);
+}
+
+function shouldBroadcastNarratorChatToNearbyPeople($eventData, $fallbackPeople = "")
+{
+    $fallbackPeople = trim((string)$fallbackPeople);
+    if ($fallbackPeople === "") {
+        return false;
+    }
+
+    if (!empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"])) {
+        return false;
+    }
+
+    $speakerName = extractSpeakerNameFromChatEvent($eventData);
+    if (normalizeActorNameForComparison($speakerName) !== "the narrator") {
+        return false;
+    }
+
+    // Keep explicit whispers private.
+    if (stripos((string)$eventData, '(whispering to ') !== false) {
+        return false;
+    }
+
+    return true;
 }
 
 function logEvent($dataArray,$forcePeople='')

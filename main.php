@@ -2276,7 +2276,7 @@ try {
     require_once(__DIR__.DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."core".DIRECTORY_SEPARATOR."player.class.php");
     $playerObj = new Player();
     $playerBio = trim((string)($playerObj->get('bio') ?? ""));
-    $bioKnownByAll = $playerObj->get('bio_known_by_all') === 'true';
+    $bioKnownByAll = filter_var((string)($playerObj->get('bio_known_by_all') ?? ''), FILTER_VALIDATE_BOOLEAN);
     $isNarrator = ($GLOBALS["HERIKA_NAME"] === "The Narrator");
 
     if ($playerBio !== "" && ($bioKnownByAll || $isNarrator)) {

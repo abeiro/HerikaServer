@@ -77,12 +77,14 @@ if (! isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
 
     // Load player data from core_player table
     $playerAppearance = '';
+    $playerBio = '';
     $playerSpeechStyle = '';
     try {
         require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
         $player = new Player();
-        $playerAppearance = $player->get('appearance');
-        $playerSpeechStyle = $player->get('speech_style');
+        $playerAppearance = trim((string)($player->get('appearance') ?? ''));
+        $playerBio = trim((string)($player->get('bio') ?? ''));
+        $playerSpeechStyle = trim((string)($player->get('speech_style') ?? ''));
     } catch (Exception $e) {
         error_log("Could not load player data from core_player: " . $e->getMessage());
     }
@@ -90,11 +92,23 @@ if (! isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
         $playerSpeechStyle = $GLOBALS["PLAYER_SPEECH_STYLE"];
     }
 
+    // Backward compatibility: legacy PLAYER_BIOS acts as fallback backstory.
+    if (empty($playerBio) && isset($GLOBALS["PLAYER_BIOS"]) && !empty(trim((string)$GLOBALS["PLAYER_BIOS"]))) {
+        $playerBio = trim((string)$GLOBALS["PLAYER_BIOS"]);
+    }
+    if (empty($playerBio) && !empty($playerAppearance)) {
+        $playerBio = $playerAppearance;
+    }
+
     // Build player character context block
     $playerContext = "";
-    if (!empty($playerAppearance)) {
-        $bio = strtr($playerAppearance, ["#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"]]);
-        $playerContext .= "Player Character Background: " . $bio . "\n";
+    if (!empty($playerBio)) {
+        $resolvedBio = strtr($playerBio, ["#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"]]);
+        $playerContext .= "Player Backstory: " . $resolvedBio . "\n";
+    }
+    if (!empty($playerAppearance) && trim($playerAppearance) !== trim($playerBio)) {
+        $resolvedAppearance = strtr($playerAppearance, ["#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"]]);
+        $playerContext .= "Player Appearance: " . $resolvedAppearance . "\n";
     }
     if (!empty($playerSpeechStyle)) {
         $playerContext .= "Player Speech Style: " . $playerSpeechStyle . "\n";
