@@ -717,27 +717,38 @@ function current_value(string $flatName, array $currentConf) {
     }
 
     .page-header {
-        margin: 0 0 24px 0;
-        padding: 24px;
+        margin: 0 0 16px 0;
+        padding: 14px 18px;
         background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(28, 28, 28, 0.98));
         border-radius: 10px;
         border: 1px solid #3a3a3a;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        text-align: center;
+        text-align: left;
+    }
+    .page-header-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
     }
     h1.gs-title {
-        margin: 0 0 8px 0;
+        margin: 0;
         font-family: 'MagicCards', serif;
         word-spacing: 8px;
-        font-size: 2em;
+        font-size: 1.75em;
         color: rgb(242, 124, 17);
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     }
-    .page-subtitle {
-        color: #aaa;
-        font-size: 0.95em;
-        line-height: 1.5;
-        margin: 0;
+    .page-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-left: auto;
+    }
+    .page-header-actions .tab-buttons {
+        margin-top: 0;
+        justify-content: flex-start;
     }
 
     .content-grid {
@@ -888,6 +899,8 @@ function current_value(string $flatName, array $currentConf) {
         main { padding-left: 5%; padding-right: 5%; }
         .content-grid { grid-template-columns: 1fr; }
         .provider-grid { grid-template-columns: 1fr; }
+        .page-header-row { align-items: flex-start; }
+        .page-header-actions { margin-left: 0; width: 100%; }
     }
 
     /* Global Settings: enhance native boolean checkboxes (e.g., PLAYER_RESPEECH) */
@@ -978,19 +991,16 @@ function current_value(string $flatName, array $currentConf) {
 
 <main>
     <div class="page-header">
-        <h1 class="gs-title">Global Settings</h1>
-        <p class="page-subtitle">Configure core system settings, connectors, and memory management</p>
-        
-        <div style="display:flex; justify-content:center; margin-top:16px; margin-bottom:12px;">
-            <button type="submit" class="btn-save-green" name="save_all" value="1" form="gs_form">Save All</button>
-        </div>
-        
-        <div class="provider-head" style="justify-content:center;">
-            <div class="tab-buttons">
+        <div class="page-header-row">
+            <h1 class="gs-title">Global Settings</h1>
+            <div class="page-header-actions">
+                <button type="submit" class="btn-save-green" name="save_all" value="1" form="gs_form">Save All</button>
+                <div class="tab-buttons">
                 <button type="button" class="tab-button active" data-gs-tab="tab-global">🌐General</button>
                 <button type="button" class="tab-button" data-gs-tab="tab-tts">🔊TTS</button>
                 <button type="button" class="tab-button" data-gs-tab="tab-stt">🎤STT</button>
                 <button type="button" class="tab-button" data-gs-tab="tab-itt">🖼️ITT</button>
+                </div>
             </div>
         </div>
     </div>
