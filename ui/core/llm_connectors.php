@@ -274,10 +274,12 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     @media (max-width: 1000px) { .two-col-llm { grid-template-columns: 1fr; } }
     .kv-grid { display: grid; grid-template-columns: 220px 1fr; gap: 8px 12px; align-items: center; }
     .inline-num { width: 90px; }
+    .two-col-llm label { color:#fff !important; }
     .service-picker { display:flex; align-items:center; gap:12px; margin: 6px 0 12px; }
     .service-icons { display:flex; gap:8px; align-items:center; }
     .service-icon { width:56px; height:56px; border:1px solid rgba(138,155,182,0.3); border-radius:8px; cursor:pointer; opacity:0.8; }
     .service-icon.active { outline:2px solid rgb(242,124,17); opacity:1; }
+    #service_label { color: #fff !important; }
     .tip-label { position: relative; cursor: help; }
     .tip-label::after { content: attr(data-tip); position: absolute; left: 0; top: 120%; max-width: 560px; padding: 8px 10px; background: #0c0f14; color: #cfe0ff; border: 1px solid rgba(138,155,182,0.35); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); white-space: normal; line-height: 1.3; font-size: 12px; opacity: 0; transform: translateY(-4px); transition: opacity .12s ease, transform .12s ease; pointer-events: none; z-index: 9999; }
     .tip-label:hover::after { opacity: 1; transform: translateY(0); }
@@ -1509,10 +1511,12 @@ if (isset($_GET["edit"])) {
 @media (max-width: 1000px) { .two-col-llm { grid-template-columns: 1fr; } }
 .kv-grid { display: grid; grid-template-columns: 220px 1fr; gap: 8px 12px; align-items: center; }
 .inline-num { width: 90px; }
+.two-col-llm label { color:#fff !important; }
 .service-picker { display:flex; align-items:center; gap:12px; margin: 6px 0 12px; }
 .service-icons { display:flex; gap:8px; align-items:center; }
 .service-icon { width:56px; height:56px; border:1px solid rgba(138,155,182,0.3); border-radius:8px; cursor:pointer; opacity:0.8; }
 .service-icon.active { outline:2px solid rgb(242,124,17); opacity:1; }
+#service_label { color:#fff !important; }
 /* Fancy tooltip for slider labels */
 .tip-label { position: relative; cursor: help; }
 .tip-label::after { content: attr(data-tip); position: absolute; left: 0; top: 120%; max-width: 560px; padding: 8px 10px; background: #0c0f14; color: #cfe0ff; border: 1px solid rgba(138,155,182,0.35); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); white-space: normal; line-height: 1.3; font-size: 12px; opacity: 0; transform: translateY(-4px); transition: opacity .12s ease, transform .12s ease; pointer-events: none; z-index: 9999; }
@@ -1668,7 +1672,7 @@ if (isset($_GET["edit"])) {
     font-family: inherit;
 }
 .form-container label {
-    color: rgb(242, 124, 17);
+    color: #fff;
     font-weight: 600;
     display: inline-block;
     margin-bottom: 6px;

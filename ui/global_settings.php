@@ -410,7 +410,7 @@ function icon_for_field(string $flatName): string {
 
 // Curated, manually-defined global settings (exclude TTS, STT, ITT)
 $gsSections = [
-    'Prompt Settings' => [
+    'Prompt & context Settings' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
         [ 'name' => 'EMOTEMOODS', 'type' => 'longstring' ],
         [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
