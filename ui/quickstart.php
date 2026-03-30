@@ -694,8 +694,9 @@ echo '      <div class="container">
                 <div id="qs_llm_connectors_cards_default" style="' . $llmCardsDefaultStyle . '">
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F579;&#xFE0F; <b>Standard</b></div>
-                        <div style="margin-top:6px; color:#9fb1c9;">Groq: Llama 3.3 70B Versatile</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Uses the Groq connector, not OpenRouter pricing</div>
+                        <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: GLM 4.7 (z-ai/glm-4.7)</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Released Dec 22, 2025 | 202,752 context</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.39/M input | $1.75/M output</div>
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F3C3;&#x200D;&#x2642;&#xFE0F; <b>Fast</b></div>
