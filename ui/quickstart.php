@@ -494,9 +494,10 @@ echo '      <div class="container">
                 <p class="form-text">The default CHIM installation comes with 4 predefined LLMs that you can hotswap ingame.</p>
                 <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-top:8px;">
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
-                        <div style="font-size:14px; color:#cfd9ea;">🕹️ <b>Standard</b></div>
-                        <div style="margin-top:6px; color:#9fb1c9;">Gemini Flash 2</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.30/M input | $2.50/M output</div>
+                        <div style="font-size:14px; color:#cfd9ea;">&#x1F579;&#xFE0F; <b>Standard</b></div>
+                        <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: GLM 4.7 (z-ai/glm-4.7)</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Released Dec 22, 2025 | 202,752 context</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.39/M input | $1.75/M output</div>
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">🏃‍♂️ <b>Fast</b></div>

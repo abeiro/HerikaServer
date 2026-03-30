@@ -413,7 +413,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 ?>
                 </div>
                 <div id="reasoning_row">
-                    <label class="label-with-toggle"><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span>
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Fixes reasoning only models so they do not output <think> and <answer> tags. May be slower then regular models.'>Reasoning Model Fix</span>
                         <input type="hidden" name="reasoning_model" value="0">
                         <input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>>
                     </label>
@@ -1711,7 +1711,7 @@ if (typeof window.consolidation !== 'function') {
             ?>
             </div>
             <div id="reasoning_row">
-                <label class="label-with-toggle"><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span>
+                <label class="label-with-toggle"><span class='tip-label' data-tip='Fixes reasoning only models so they do not output <think> and <answer> tags. May be slower then regular models.'>Reasoning Model Fix</span>
                     <input type="hidden" name="reasoning_model" value="0">
                     <input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>>
                 </label>

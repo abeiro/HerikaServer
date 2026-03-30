@@ -160,8 +160,8 @@ $CORE_CONNECTOR_PROFILES=1;
 //[AI/LLM Connectors]
 //OpenRouter JSON
 $CONNECTOR["openrouterjson"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
-$CONNECTOR["openrouterjson"]["model"]="meta-llama/llama-3.3-70b-instruct"; //LLM model.
-$CONNECTOR["openrouterjson"]["reasoning_model"]=false; //This is a reasoning model, could output CoT.
+$CONNECTOR["openrouterjson"]["model"]="z-ai/glm-4.7"; //LLM model.
+$CONNECTOR["openrouterjson"]["reasoning_model"]=true; //This is a reasoning model, could output CoT.
 $CONNECTOR["openrouterjson"]["fallback_models"]=""; //comma separated models.
 $CONNECTOR["openrouterjson"]["PROVIDER"]=""; //use only this list of providers from OpenRouter
 $CONNECTOR["openrouterjson"]["providers_sort"]="default"; //Prioritize providers on selected attribute.
@@ -184,7 +184,7 @@ $CONNECTOR["openrouterjson"]["MAX_TOKENS_MEMORY"]='1024'; //Maximum tokens to ge
 $CONNECTOR["openrouterjson"]["API_KEY"]=""; //API key.
 $CONNECTOR["openrouterjson"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931"; //Stub needed header.
 $CONNECTOR["openrouterjson"]["xtitle"]="CHIM"; //Stub needed header.
-$CONNECTOR["openrouterjson"]["json_schema"]=false; //Enable OpenRouter JSON schema.
+$CONNECTOR["openrouterjson"]["json_schema"]=true; //Enable OpenRouter JSON schema.
 // Utility buttons for autofilling parameters
 $CONNECTOR["openrouterjson"]["get_parms1"] = false; // Utility button for low randomness parameters
 $CONNECTOR["openrouterjson"]["get_parms5"] = false; // Utility button for medium randomness parameters  
