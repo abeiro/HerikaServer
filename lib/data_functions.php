@@ -2785,16 +2785,93 @@ function PackIntoSummary($onlyMissingDiary=false)
         if ($minEventsPerSummary < 1) {
             $minEventsPerSummary = 1;
         }
-        $query="insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,scope) select * from ( 
-                                    select max(gamets) as gamets_truncated,count(*) as n,
-                                    STRING_AGG(message, chr(13) || chr(10) || chr(13) || chr(10)) AS packed_message,
-                                    NULL as summary,'dialogue' as classifier,max(uid) as uid,'global' as scope
+        // Queue boundaries are hard-cut by location changes.
+        // Unknown location entries are isolated into their own queue to avoid cross-location mixing.
+        $query="insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,scope)
+                                with source_rows as (
+                                    select
+                                        uid,
+                                        gamets,
+                                        coalesce(ts, 0) as ts,
+                                        message,
+                                        round(gamets::numeric/$pfi, 0) as time_bucket,
+                                        trim(regexp_replace(coalesce(
+                                            substring(message from '(?i)\\(context\\s+(?:new\\s+)?location:\\s*([^,\\)]+)'),
+                                            substring(message from '(?i)\\(at\\s+([^\\)]+)\\)'),
+                                            ''
+                                        ), '\\s+', ' ', 'g')) as location_key
                                     from memory_v
-                                    where 
-                                    message not ilike 'Dear Diary%'
-                                    and gamets>$maxRow 
-                                    group by round(gamets/$pfi ,0)  HAVING count(*)>=$minEventsPerSummary order by round(gamets/$pfi ,0) ASC
-                                ) as T where gamets_truncated>$maxRow and gamets_truncated<$minRowTs";
+                                    where message not ilike 'Dear Diary%'
+                                      and gamets>$maxRow
+                                ),
+                                normalized_rows as (
+                                    select
+                                        uid,
+                                        gamets,
+                                        ts,
+                                        message,
+                                        time_bucket,
+                                        case
+                                            when location_key='' then null
+                                            else lower(location_key)
+                                        end as location_key
+                                    from source_rows
+                                ),
+                                queue_boundaries as (
+                                    select
+                                        uid,
+                                        gamets,
+                                        ts,
+                                        message,
+                                        time_bucket,
+                                        location_key,
+                                        lag(location_key) over (order by gamets asc, ts asc, uid asc) as prev_location_key,
+                                        lag(time_bucket) over (order by gamets asc, ts asc, uid asc) as prev_time_bucket
+                                    from normalized_rows
+                                ),
+                                queued_rows as (
+                                    select
+                                        uid,
+                                        gamets,
+                                        ts,
+                                        message,
+                                        case
+                                            when prev_time_bucket is null then 1
+                                            when location_key is null then 1
+                                            when prev_location_key is null then 1
+                                            when location_key<>prev_location_key then 1
+                                            when time_bucket<>prev_time_bucket then 1
+                                            else 0
+                                        end as is_new_queue
+                                    from queue_boundaries
+                                ),
+                                grouped_rows as (
+                                    select
+                                        uid,
+                                        gamets,
+                                        ts,
+                                        message,
+                                        sum(is_new_queue) over (
+                                            order by gamets asc, ts asc, uid asc
+                                            rows between unbounded preceding and current row
+                                        ) as queue_id
+                                    from queued_rows
+                                )
+                                select * from (
+                                    select
+                                        max(gamets) as gamets_truncated,
+                                        count(*) as n,
+                                        STRING_AGG(message, chr(13) || chr(10) || chr(13) || chr(10) order by gamets asc, ts asc, uid asc) AS packed_message,
+                                        NULL as summary,
+                                        'dialogue' as classifier,
+                                        max(uid) as uid,
+                                        'global' as scope
+                                    from grouped_rows
+                                    group by queue_id
+                                    having count(*)>=$minEventsPerSummary
+                                    order by max(gamets) asc
+                                ) as T
+                                where gamets_truncated>$maxRow and gamets_truncated<$minRowTs";
         //error_log($query);
 
         $results = $db->query($query);
