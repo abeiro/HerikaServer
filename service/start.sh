@@ -1,6 +1,18 @@
 #!/bin/bash
 
 PORT=12345
+SERVICE_LOG="/var/www/html/HerikaServer/log/service.log"
+FALLBACK_SERVICE_LOG="/tmp/herika_service.log"
+LOG_DIR="$(dirname "$SERVICE_LOG")"
+
+# Ensure new files are group-readable/writable for dwemer + www-data workflows.
+umask 0002
+
+mkdir -p "$LOG_DIR" 2>/dev/null
+if ! touch "$SERVICE_LOG" 2>/dev/null; then
+    SERVICE_LOG="$FALLBACK_SERVICE_LOG"
+    touch "$SERVICE_LOG" 2>/dev/null || true
+fi
 
 # Check if port is in use
 if nc -z localhost "$PORT" 2>/dev/null; then
@@ -34,6 +46,6 @@ trap "kill $LISTENER_PID 2>/dev/null; pkill -f 'relationship_system/worker.php.*
 
 # Main loop
 while true; do 
-    php /var/www/html/HerikaServer/service/manager.php &>> /var/www/html/HerikaServer/log/service.log
+    php /var/www/html/HerikaServer/service/manager.php &>> "$SERVICE_LOG"
     sleep 5
 done

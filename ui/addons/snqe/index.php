@@ -26,7 +26,10 @@ function getTailOfFile($filepath, $lines = 100) {
     if (!file_exists($filepath)) {
         return "File not found: " . htmlspecialchars($filepath);
     }
-    $file = fopen($filepath, 'r');
+    if (!is_readable($filepath)) {
+        return "Cannot read file (permission denied): " . htmlspecialchars($filepath);
+    }
+    $file = @fopen($filepath, 'r');
     if ($file === false) {
         return "Cannot read file: " . htmlspecialchars($filepath);
     }
