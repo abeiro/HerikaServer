@@ -22,6 +22,8 @@ $allowedSettings = $overrideEditorConfig['allowedSettings'] ?? [];
 $reservedKeys = $overrideEditorConfig['reservedKeys'] ?? [];
 $currentData = $overrideEditorConfig['currentData'] ?? [];
 $systemFields = $overrideEditorConfig['systemFields'] ?? [];
+unset($currentData['MINIME_T5']);
+unset($currentData['ENFORCE_ACTIONS_PROMPT']);
 
 $isNpcMode = ($mode === 'npc');
 $isProfileMode = ($mode === 'profile');
@@ -111,18 +113,13 @@ $fullSchema = [
     ],
     'OGHMA_INFINIUM' => [
         'type' => 'boolean',
-        'description' => 'Enable Oghma knowledge lookups. Needs Minime-T5 enabled.',
+        'description' => 'Enable Oghma knowledge lookups. MiniMe-T5 is auto-detected when the service is running.',
         'category' => 'Oghma'
     ],
     'OGHMA_AMOUNT' => [
         'type' => 'select',
         'values' => ['1','2','3'],
         'description' => 'Number of Oghma keywords to extract from each response.',
-        'category' => 'Oghma'
-    ],
-    'MINIME_T5' => [
-        'type' => 'boolean',
-        'description' => 'Enable Minime-T5 LLM. Helps with action and memory functions. Only works in English!',
         'category' => 'Oghma'
     ],
     'CONTEXT_HISTORY' => [
@@ -560,10 +557,14 @@ foreach ($allowedSettings as $key) {
     // Custom label mapping
     function getLabel(key) {
         const customLabels = {
+            'RECHAT_H': 'RECHAT RESPONSE ROUNDS',
+            'RECHAT_P': 'RECHAT PROBAILITY',
+            'OGHMA_AMOUNT': 'OGHMA ARTICLES AMOUNT',
             'BORED_EVENT': 'BORED EVENT CHANCE',
             'CONTEXT_HISTORY': 'CONTEXT HISTORY EVENT COUNT',
             'CONTEXT_HISTORY_DIARY': 'CONTEXT HISTORY DIARY EVENT COUNT',
-            'CONTEXT_HISTORY_DYNAMIC_PROFILE': 'CONTEXT HISTORY DYNAMIC PROFILE EVENT COUNT'
+            'CONTEXT_HISTORY_DYNAMIC_PROFILE': 'CONTEXT HISTORY DYNAMIC PROFILE EVENT COUNT',
+            'INLINE_NARRATION_ENABLED': 'NPC ACTION NARRATION ENABLED'
         };
         return customLabels[key.toUpperCase()] || key.toUpperCase();
     }

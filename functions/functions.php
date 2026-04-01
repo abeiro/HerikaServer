@@ -44,6 +44,13 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'EndRitualCeremony',
     'Training',
     'Surrender',
+    'RentRoom',
+    'HireCarriage',
+    'HireFerry',
+    'AddBounty',
+    'PayBounty',
+    'ArrestPlayer',
+    'ForgiveCrime',
     'EndConversation'
     //    'WaitHere'
 ];
@@ -107,6 +114,13 @@ $F_TRANSLATIONS_LOCAL["SearchMemory"] = "{$GLOBALS["HERIKA_NAME"]} tries to reme
 $F_TRANSLATIONS_LOCAL["WaitHere"] = "{$GLOBALS["HERIKA_NAME"]} waits and loiters at the current location";
 $F_TRANSLATIONS_LOCAL["GiveItemToPlayer"] = "{$GLOBALS["HERIKA_NAME"]} gives item (property target) to {$GLOBALS["PLAYER_NAME"]} (property listener)";
 $F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"] = "{$GLOBALS["HERIKA_NAME"]} takes amount (property target) of gold from {$GLOBALS["PLAYER_NAME"]}, once {$GLOBALS["PLAYER_NAME"]} is agree. infer amount from context.";
+$F_TRANSLATIONS_LOCAL["RentRoom"] = "{$GLOBALS["HERIKA_NAME"]} rents a room to {$GLOBALS["PLAYER_NAME"]} for 10 gold coins. Only innkeepers can use this action and it only applies to {$GLOBALS["PLAYER_NAME"]}.";
+$F_TRANSLATIONS_LOCAL["HireCarriage"] = "{$GLOBALS["HERIKA_NAME"]} accepts carriage fare and transports {$GLOBALS["PLAYER_NAME"]} to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
+$F_TRANSLATIONS_LOCAL["HireFerry"] = "{$GLOBALS["HERIKA_NAME"]} accepts ferry fare and transports {$GLOBALS["PLAYER_NAME"]} to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
+$F_TRANSLATIONS_LOCAL["AddBounty"] = "{$GLOBALS["HERIKA_NAME"]} adds a crime bounty to {$GLOBALS["PLAYER_NAME"]} for a witnessed or reported crime. Guard-only action.";
+$F_TRANSLATIONS_LOCAL["PayBounty"] = "{$GLOBALS["PLAYER_NAME"]} pays off their bounty to {$GLOBALS["HERIKA_NAME"]}. Stolen items are confiscated and the matter is resolved immediately. Guard-only action.";
+$F_TRANSLATIONS_LOCAL["ArrestPlayer"] = "{$GLOBALS["HERIKA_NAME"]} attempts to arrest {$GLOBALS["PLAYER_NAME"]}. The player can submit or resist. Guard-only action for serious crimes or refusal to pay.";
+$F_TRANSLATIONS_LOCAL["ForgiveCrime"] = "{$GLOBALS["HERIKA_NAME"]} forgives {$GLOBALS["PLAYER_NAME"]}'s crimes and clears their bounty. Guard-only action for persuasion, bribe, or thane status.";
 $F_TRANSLATIONS_LOCAL["FollowPlayer"] = "{$GLOBALS["HERIKA_NAME"]} follows  {$GLOBALS["PLAYER_NAME"]}";
 $F_TRANSLATIONS_LOCAL["ComeCloser"] = "{$GLOBALS["HERIKA_NAME"]} aproaches to {$GLOBALS["PLAYER_NAME"]}";
 $F_TRANSLATIONS_LOCAL["Brawl"] = "{$GLOBALS["HERIKA_NAME"]} engages non lethtal combat with another actor, using weapons";
@@ -155,6 +169,13 @@ $F_RETURNMESSAGES_LOCAL["SearchMemory"] = "{$GLOBALS["HERIKA_NAME"]} tries to re
 $F_RETURNMESSAGES_LOCAL["WaitHere"] = "{$GLOBALS["HERIKA_NAME"]} waits and stands at the place";
 $F_RETURNMESSAGES_LOCAL["GiveItemToPlayer"] = "{$GLOBALS["HERIKA_NAME"]} gave #TARGET# to {$GLOBALS["PLAYER_NAME"]}.If this a transaction, maybe TakeGoldFromPlayer is needed.";
 $F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"] = "{$GLOBALS["PLAYER_NAME"]} gave #TARGET# coins to {$GLOBALS["HERIKA_NAME"]}. If this a transaction, maybe GiveItemToPlayer is needed.";
+$F_RETURNMESSAGES_LOCAL["RentRoom"] = "{$GLOBALS["HERIKA_NAME"]} rented a room to {$GLOBALS["PLAYER_NAME"]} for 10 gold.";
+$F_RETURNMESSAGES_LOCAL["HireCarriage"] = "{$GLOBALS["HERIKA_NAME"]} accepted the fare to #TARGET# and ended the conversation.";
+$F_RETURNMESSAGES_LOCAL["HireFerry"] = "{$GLOBALS["HERIKA_NAME"]} accepted the ferry fare to #TARGET# and ended the conversation.";
+$F_RETURNMESSAGES_LOCAL["AddBounty"] = "{$GLOBALS["HERIKA_NAME"]} added a bounty for #TARGET# to {$GLOBALS["PLAYER_NAME"]}.";
+$F_RETURNMESSAGES_LOCAL["PayBounty"] = "{$GLOBALS["PLAYER_NAME"]} paid off their bounty to {$GLOBALS["HERIKA_NAME"]}, and stolen items were removed from inventory.";
+$F_RETURNMESSAGES_LOCAL["ArrestPlayer"] = "{$GLOBALS["HERIKA_NAME"]} attempted to arrest {$GLOBALS["PLAYER_NAME"]}.";
+$F_RETURNMESSAGES_LOCAL["ForgiveCrime"] = "{$GLOBALS["HERIKA_NAME"]} forgave {$GLOBALS["PLAYER_NAME"]}'s crimes and cleared their bounty.";
 $F_RETURNMESSAGES_LOCAL["FollowPlayer"] = "{$GLOBALS["HERIKA_NAME"]} follows {$GLOBALS["PLAYER_NAME"]}";
 $F_RETURNMESSAGES_LOCAL["Brawl"] = "{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES_LOCAL["ReturnBackHome"] = "{$GLOBALS["HERIKA_NAME"]} goes back home";
@@ -203,6 +224,13 @@ $F_NAMES_LOCAL["SearchMemory"] = "TryToRemember";
 $F_NAMES_LOCAL["WaitHere"] = "WaitHere";
 $F_NAMES_LOCAL["GiveItemToPlayer"] = "GiveItemToPlayer";
 $F_NAMES_LOCAL["TakeGoldFromPlayer"] = "TakeMoneyFrom{$GLOBALS["PLAYER_NAME"]}"; // Mmm
+$F_NAMES_LOCAL["RentRoom"] = "RentRoom";
+$F_NAMES_LOCAL["HireCarriage"] = "HireCarriage";
+$F_NAMES_LOCAL["HireFerry"] = "HireFerry";
+$F_NAMES_LOCAL["AddBounty"] = "AddBounty";
+$F_NAMES_LOCAL["PayBounty"] = "PayBounty";
+$F_NAMES_LOCAL["ArrestPlayer"] = "ArrestPlayer";
+$F_NAMES_LOCAL["ForgiveCrime"] = "ForgiveCrime";
 $F_NAMES_LOCAL["FollowPlayer"] = "FollowPlayer";
 $F_NAMES_LOCAL["ComeCloser"] = "ComeCloser";
 $F_NAMES_LOCAL["Brawl"] = "Fight";
@@ -233,6 +261,39 @@ if (isset($GLOBALS["CORE_LANG"])) {
 $GLOBALS["F_TRANSLATIONS"] = $F_TRANSLATIONS_LOCAL;
 $GLOBALS["F_RETURNMESSAGES"] = $F_RETURNMESSAGES_LOCAL;
 $GLOBALS["F_NAMES"] = $F_NAMES_LOCAL;
+
+$hireCarriageDestinations = [
+    "Whiterun",
+    "Solitude",
+    "Markarth",
+    "Riften",
+    "Windhelm",
+    "Morthal",
+    "Dawnstar",
+    "Falkreath",
+    "Winterhold",
+    "Darkwater Crossing",
+    "Dragon Bridge",
+    "Ivarstead",
+    "Karthwasten",
+    "Kynesgrove",
+    "Old Hroldan",
+    "Riverwood",
+    "Rorikstead",
+    "Shor's Stone",
+    "Stonehills",
+];
+
+$hireFerryDestinations = [
+    "Windhelm",
+    "Dawnstar",
+    "Solitude",
+    "Icewater Jetty",
+    "Castle Volkihar",
+    "Giant's Tooth",
+];
+
+$crimeTypes = ["Assault", "Murder", "Theft", "Pickpocketing", "Trespassing", "Jailbreak", "Custom"];
 
 $GLOBALS["FUNCTIONS"] = [
     [
@@ -609,6 +670,111 @@ $GLOBALS["FUNCTIONS"] = [
                 ],
             ],
             "required" => ["target"],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["RentRoom"],
+        "description" => $F_TRANSLATIONS_LOCAL["RentRoom"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ],
+            ],
+            "required" => [],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["HireCarriage"],
+        "description" => $F_TRANSLATIONS_LOCAL["HireCarriage"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Vanilla carriage destination for {$GLOBALS["PLAYER_NAME"]}",
+                    "enum" => $hireCarriageDestinations,
+                ],
+            ],
+            "required" => ["target"],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["HireFerry"],
+        "description" => $F_TRANSLATIONS_LOCAL["HireFerry"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Vanilla ferry destination for {$GLOBALS["PLAYER_NAME"]}",
+                    "enum" => $hireFerryDestinations,
+                ],
+            ],
+            "required" => ["target"],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["AddBounty"],
+        "description" => $F_TRANSLATIONS_LOCAL["AddBounty"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Crime type for the bounty",
+                    "enum" => $crimeTypes,
+                ],
+                "item" => [
+                    "type" => "string",
+                    "description" => "Custom gold amount (only used when crime_type is Custom)",
+                ],
+            ],
+            "required" => ["target"],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["PayBounty"],
+        "description" => $F_TRANSLATIONS_LOCAL["PayBounty"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ],
+            ],
+            "required" => [""],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["ArrestPlayer"],
+        "description" => $F_TRANSLATIONS_LOCAL["ArrestPlayer"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ],
+            ],
+            "required" => [""],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["ForgiveCrime"],
+        "description" => $F_TRANSLATIONS_LOCAL["ForgiveCrime"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ],
+            ],
+            "required" => [""],
         ],
     ],
     [
@@ -990,7 +1156,7 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         'Inspect',
         //'LookAt',
         'InspectSurroundings',
-        //'MoveTo',
+        'MoveTo',
         'OpenInventory',
         'OpenInventory2',
         'Attack',
@@ -1013,6 +1179,13 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         'ComeCloser',
         //'GiveItemToPlayer',
         'TakeGoldFromPlayer',
+        'RentRoom',
+        'HireCarriage',
+        'HireFerry',
+        'AddBounty',
+        'PayBounty',
+        'ArrestPlayer',
+        'ForgiveCrime',
         'FollowPlayer',
         'Brawl',
         'GiveGoldTo',
@@ -1056,6 +1229,13 @@ if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
         'ComeCloser',
         //'GiveItemToPlayer',
         'TakeGoldFromPlayer',
+        'RentRoom',
+        'HireCarriage',
+        'HireFerry',
+        'AddBounty',
+        'PayBounty',
+        'ArrestPlayer',
+        'ForgiveCrime',
         'Brawl',
         'GiveGoldTo',
         'GiveItemTo',
@@ -1095,6 +1275,91 @@ if ($GLOBALS["ENABLED_FUNCTIONS"]) {
             $GLOBALS["ENABLED_FUNCTIONS"][]="Surrender";
         } else {
             error_log("[DEBUG functions.php] No active combat detected for {$GLOBALS["HERIKA_NAME"]}");
+        }
+
+        if (in_array("RentRoom", $GLOBALS["ENABLED_FUNCTIONS"])) {
+            $npcMaster = new NpcMaster();
+            $npcData = $npcMaster->getByName($GLOBALS["HERIKA_NAME"]);
+            $isInnkeeper = false;
+            if (!empty($npcData)) {
+                $isInnkeeper = $npcMaster->isNpcInFaction($npcData, "0005091B");
+            }
+            if (!$isInnkeeper) {
+                error_log("[DEBUG functions.php] {$GLOBALS["HERIKA_NAME"]} is not innkeeper, removing RentRoom function");
+                unsetFunction('RentRoom');
+            }
+        }
+        if (in_array("HireCarriage", $GLOBALS["ENABLED_FUNCTIONS"])) {
+            $allowedDriversRaw = isset($GLOBALS["CARRIAGE_DRIVERS"]) ? (string) $GLOBALS["CARRIAGE_DRIVERS"] : "";
+            if (trim($allowedDriversRaw) === "") {
+                // Backward-compatible fallback for older conf.php files that don't have CARRIAGE_DRIVERS yet.
+                $allowedDriversRaw = "Bjorlam, Alfarinn, Kibell, Sigaar, Thaer, Engar, Gunjar, Markus";
+            }
+            $allowedDrivers = array_filter(array_map("trim", explode(",", $allowedDriversRaw)));
+            $isAllowedDriver = false;
+
+            foreach ($allowedDrivers as $driverName) {
+                if (strcasecmp($driverName, $GLOBALS["HERIKA_NAME"]) === 0) {
+                    $isAllowedDriver = true;
+                    break;
+                }
+            }
+
+            if (!$isAllowedDriver) {
+                error_log("[DEBUG functions.php] {$GLOBALS["HERIKA_NAME"]} is not in CARRIAGE_DRIVERS, removing HireCarriage function");
+                unsetFunction("HireCarriage");
+            }
+        }
+        if (in_array("HireFerry", $GLOBALS["ENABLED_FUNCTIONS"])) {
+            $allowedFerryDriversRaw = isset($GLOBALS["FERRY_DRIVERS"]) ? (string) $GLOBALS["FERRY_DRIVERS"] : "";
+            if (trim($allowedFerryDriversRaw) === "") {
+                // Backward-compatible fallback for older conf.php files that don't have FERRY_DRIVERS yet.
+                $allowedFerryDriversRaw = "Gort, Harlaug, Jolf";
+            }
+            $allowedFerryDrivers = array_filter(array_map("trim", explode(",", $allowedFerryDriversRaw)));
+            $isAllowedFerryDriver = false;
+
+            foreach ($allowedFerryDrivers as $driverName) {
+                if (strcasecmp($driverName, $GLOBALS["HERIKA_NAME"]) === 0) {
+                    $isAllowedFerryDriver = true;
+                    break;
+                }
+            }
+
+            if (!$isAllowedFerryDriver) {
+                error_log("[DEBUG functions.php] {$GLOBALS["HERIKA_NAME"]} is not in FERRY_DRIVERS, removing HireFerry function");
+                unsetFunction("HireFerry");
+            }
+        }
+    }
+}
+
+$guardActions = ["AddBounty", "PayBounty", "ArrestPlayer", "ForgiveCrime"];
+$hasGuardAction = false;
+foreach ($guardActions as $ga) {
+    if (in_array($ga, $GLOBALS["ENABLED_FUNCTIONS"])) {
+        $hasGuardAction = true;
+        break;
+    }
+}
+if ($hasGuardAction) {
+    $npcMasterGuard = new NpcMaster();
+    $npcDataGuard = $npcMasterGuard->getByName($GLOBALS["HERIKA_NAME"]);
+    $isGuard = false;
+    // Skyrim's IsGuardFaction
+    $guardFactionIds = ["00086EEE"];
+    if (!empty($npcDataGuard)) {
+        foreach ($guardFactionIds as $guardFactionId) {
+            if ($npcMasterGuard->isNpcInFaction($npcDataGuard, $guardFactionId)) {
+                $isGuard = true;
+                break;
+            }
+        }
+    }
+    if (!$isGuard) {
+        error_log("[DEBUG functions.php] {$GLOBALS["HERIKA_NAME"]} is not in GuardFaction, removing guard crime actions");
+        foreach ($guardActions as $ga) {
+            unsetFunction($ga);
         }
     }
 }
@@ -1379,6 +1644,8 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 $json      = $skyrimCmd->Actor->SetRelationshipRank("0x{$npcData["refid"]}", "0x00000014", 0);// Set to Ally
                 $skyrimCmd->send(cmd: $json);
 
+                $json      = $skyrimCmd->Actor->StopCombat("0x{$npcData["refid"]}");
+                $skyrimCmd->send(cmd: $json);
   
                 $GLOBALS["db"]->insert(
                     'eventlog',

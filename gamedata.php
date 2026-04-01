@@ -30,16 +30,21 @@ $data = json_decode($json, true);
 if (!$data || !isset($data['type'])) {
     http_response_code(400);
     echo "Bad Request: Missing type field";
-    Logger::error("[gamedata.php] Bad request - missing type field");
+    Logger::error("[gamedata.php] Bad request - missing type field <$json>");
     exit;
 }
 
-// Validate required fields
-if (!isset($data['actor_name']) || !isset($data['actor_type'])) {
-    http_response_code(400);
-    echo "Bad Request: Missing actor_name or actor_type";
-    Logger::error("[gamedata.php] Bad request - missing actor_name or actor_type");
-    exit;
+// Types that operate on global data and do not require an actor
+$actorlessTypes = ['market_stock'];
+
+// Validate required fields (skipped for actorless types)
+if (!in_array($data['type'], $actorlessTypes)) {
+    if (!isset($data['actor_name']) || !isset($data['actor_type'])) {
+        http_response_code(400);
+        echo "Bad Request: Missing actor_name or actor_type";
+        Logger::error("[gamedata.php] Bad request - missing actor_name or actor_type");
+        exit;
+    }
 }
 
 $npcMaster = new NpcMaster();
@@ -75,6 +80,9 @@ try {
                             $currentData = $npcMaster->setMetadata($currentData, $meta);
                 $npcMaster->updateByArray($currentData);
             }
+            break;
+        case 'market_stock':
+            handleMarketStockUpdate($data);
             break;
         default:
             http_response_code(400);
@@ -569,6 +577,57 @@ function handleSkyrimStatsUpdate(array $data): void {
         
     } catch (Exception $e) {
         Logger::error("[gamedata.php] Failed to save Skyrim stats: " . $e->getMessage());
+    }
+}
+
+/**
+ * Handle market stock update
+ * Updates the stock JSONB column on the factions table for the given faction formid.
+ * Expected payload:
+ *   { "type": "market_stock", "faction": "0x01", "list": [ { "itemid": "0x02", "name": "item_name", "count": 2 } ] }
+ */
+function handleMarketStockUpdate(array $data): void {
+    if (!isset($data['faction']) || !isset($data['list']) || !is_array($data['list'])) {
+        Logger::error("[gamedata.php] market_stock update missing faction or list data");
+        return;
+    }
+
+    $db = $GLOBALS['db'];
+    $factionFormId = $db->escape(strtoupper($data['faction']));
+
+    // Build normalised stock array from the incoming list
+    $stock = [];
+    $gold=0;
+    $rank=isset($data['player_rank']) ? intval($data['player_rank']) : -1;
+    foreach ($data['list'] as $item) {
+        if (isset($item['itemid'], $item['name'], $item['count'])) {
+            $stock[] = [
+                'itemid' => $item['itemid'],
+                'name'   => trim($item['name']),
+                'count'  => intval($item['count']),
+                'gold'  => intval($item['gold']),
+                'enchantment' => isset($item['enchantment']) ? $item['enchantment'] : []
+                
+            ];
+            if (isset($item['gold']) && $item['itemid'] === '0000000F') { // Gold item  
+                $gold=intval($item['count']);
+            } 
+
+        }
+    }
+
+    $stockJson = $db->escape(json_encode($stock));
+
+    $sql = "UPDATE public.factions
+               SET stock = '{$stockJson}'::jsonb,gold=$gold,player_rank=$rank
+             WHERE formid = '{$factionFormId}'";
+
+    $result = $db->execQuery($sql);
+
+    if ($result) {
+        
+        Logger::debug("[gamedata.php] Updated market stock for faction '{$data['faction']}': "
+            . count($stock) . " item(s)");
     }
 }
 

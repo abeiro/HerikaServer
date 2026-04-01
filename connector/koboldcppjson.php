@@ -224,7 +224,12 @@ class koboldcppjson
 
         }
 
-        
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
+            foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
+                $postData[$k]=$v;
+            }
+        }
+
         $GLOBALS["DEBUG_DATA"]["koboldcpp_prompt"]=$postData;
 
         $headers = array(

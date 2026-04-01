@@ -56,6 +56,7 @@ if (! $_GET["speech"]) {
         $_GET["speech"] = $argv[1];
     }
 }
+$targetNpc = isset($argv[2]) && $argv[2] !== '' ? trim($argv[2]) : '';
 
 if (! isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
     error_log("Choose a LLM model and connector. Used connector: '{$GLOBALS["CORE_CONNECTOR_DIRECTOR"]}'", S_LOG_CRITICAL);
@@ -64,23 +65,16 @@ if (! isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
 
     error_log("Using {$GLOBALS["CURRENT_CONNECTOR"]} <{$argv[1]}>");
 
-    $contextDataHistoric = DataLastDataExpandedFor("", -15); // Full context
-
+    $contextDataHistoric = DataLastDataExpandedFor("", -15);
     $contextDataHistoric = array_merge([["role" => "user", "content" => "# HISTORIC DIALOGUE AND EVENTS IN CHRONOLOGICAL ORDER"]], $contextDataHistoric);
 
-    $contextDataWorld = DataLastInfoFor("", -2, $addNPCDescriptions = false, $excludeBusy = true);
+    $contextDataWorld = DataLastInfoFor("", -2, $addNPCDescriptions = true, $excludeBusy = true);
     $contextDataFull  = array_merge($contextDataWorld??[], $contextDataHistoric??[]);
     $historyData      = "";
-
     foreach ($contextDataFull as $element) {
-
         $historyData .= trim("{$element["content"]}") . PHP_EOL . PHP_EOL;
-
     }
 
-    // Build context for player character
-    $playerContext = "";
-    
     // Load player data from core_player table
     $playerAppearance = '';
     $playerSpeechStyle = '';
@@ -92,15 +86,12 @@ if (! isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
     } catch (Exception $e) {
         error_log("Could not load player data from core_player: " . $e->getMessage());
     }
-    
-    // Do not use PLAYER_BIOS from conf.php - it has been migrated to core_player.appearance
-    // Only use appearance from core_player table
-    
-    // Fallback to PLAYER_SPEECH_STYLE if core_player is empty
     if (empty($playerSpeechStyle) && isset($GLOBALS["PLAYER_SPEECH_STYLE"]) && !empty($GLOBALS["PLAYER_SPEECH_STYLE"])) {
         $playerSpeechStyle = $GLOBALS["PLAYER_SPEECH_STYLE"];
     }
 
+    // Build player character context block
+    $playerContext = "";
     if (!empty($playerAppearance)) {
         $bio = strtr($playerAppearance, ["#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"]]);
         $playerContext .= "Player Character Background: " . $bio . "\n";
@@ -109,27 +100,31 @@ if (! isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
         $playerContext .= "Player Speech Style: " . $playerSpeechStyle . "\n";
     }
 
-    $commonprompt = '';
-    if (! $_GET["speech"]) {
-        $sysprompt = "Write dialogue for {$GLOBALS["PLAYER_NAME"]}";
-        if (! empty($playerContext)) {
-            $sysprompt .= "\n\n# Character Context\n" . $playerContext;
-        }
-        $userprompt = "";
-    } else {
-        $sysprompt = "Rewrite dialogue for {$GLOBALS["PLAYER_NAME"]}, using this text as source \"{$GLOBALS["PLAYER_NAME"]}:{$_GET["speech"]}\". Pay attention to comments between brackets, that can guide you in length and verbosity.";
-        if (! empty($playerContext)) {
-            $sysprompt .= "\n\n# Character Context\n" . $playerContext;
-        }
-        $userprompt = "";
+    // Build system message: simple identity + PROMPT_HEAD as roleplay ruleset
+    $npcLine = (!empty($targetNpc) && $targetNpc !== '(actor)') ? " You are currently speaking to {$targetNpc}." : '';
+    $promptHead = '';
+    if (!empty($GLOBALS["PROMPT_HEAD"])) {
+        $promptHead = strtr($GLOBALS["PROMPT_HEAD"], ["#HERIKA_NAME#" => $GLOBALS["PLAYER_NAME"]]);
+    }
+    $systemContent = "You are roleplaying as {$GLOBALS["PLAYER_NAME"]}.{$npcLine}";
+    if (!empty($promptHead)) {
+        $systemContent .= "\n\n" . $promptHead;
+    }
+    if (!empty($playerContext)) {
+        $systemContent .= "\n\n# Character Context\n" . $playerContext;
     }
 
-    $prompt[] = ['role' => 'system', 'content' => "You are an actor/actress roleplaying as {$GLOBALS["PLAYER_NAME"]}, and we are roleplaying Skyrim in the Tamriel universe. "];
-    $prompt[] = ['role' => 'user', 'content' => "# Contextual data\n$historyData"];
-    $prompt[] = ['role' => 'user', 'content' => "
-$sysprompt
-"];
-    $prompt[]                 = ['role' => 'user', 'content' => "Just output dialogue"];
+    // Build instruction
+    if (!$_GET["speech"]) {
+        $instruction = "Write dialogue for {$GLOBALS["PLAYER_NAME"]}.";
+    } else {
+        $instruction = "Rewrite dialogue for {$GLOBALS["PLAYER_NAME"]}, using this text as source \"{$GLOBALS["PLAYER_NAME"]}:{$_GET["speech"]}\". Pay attention to comments between brackets, that can guide you in length and verbosity.";
+    }
+
+    $prompt[] = ['role' => 'system', 'content' => $systemContent];
+    $prompt[] = ['role' => 'user',   'content' => "# Contextual data\n$historyData"];
+    $prompt[] = ['role' => 'user',   'content' => $instruction];
+    $prompt[] = ['role' => 'user',   'content' => "Just output dialogue"];
     $customParm["MAX_TOKENS"] = 4000;
 
     $buffer = $connectionHandler->fast_request($prompt, ["MAX_TOKENS" => 4000]);

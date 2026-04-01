@@ -3,9 +3,9 @@
   "DBDRIVER": {"userlvl":"wip","type":"select","values":["postgresql"],"description":"Do not change."},
   "AUTOMATIC_DATABASE_BACKUPS": {"userlvl":"basic","type":"boolean","scope":"global","description":"Automatically create database backups every time the server starts up. Keeps a maximum of 5 backups, automatically deleting the oldest when the limit is reached."},
   "LOCK_PROFILE": {"userlvl":"basic","type":"boolean","description":"When enabled, this profile will be skipped when using 'Copy to All Profiles' functionality. It will also not be deleted when you Delete All Character Profiles. Can not be toggled for the default profile."},
+  "AUTO_LOCK_PROFILE": {"userlvl":"basic","type":"boolean","scope":"global","description":"When enabled, saving an NPC profile in CHIM NPC page automatically locks it to prevent history updates from overwriting manual edits."},
   "HERIKA_NAME": {"userlvl":"basic","type":"string","description":"NPC Name. MUST MATCH their Skyrim in-game NPC name!<br>If you are in the default profile <b>YOU MUST</b> leave it as <i>The Narrator</i>!<br><b>You can change profiles by clicking the blue button in the top left.</b>"},
   "PROMPT_HEAD": {"userlvl":"pro","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
-  "PLAYER_BIOS": {"userlvl":"pro","type":"longstring","description":"Player character description. Any info here will be known by all AI NPC's."},
   "PLAYER_SPEECH_STYLE":{"type":"longstring","description":"Instructions for how the player character speaks and communicates. This will be used as context when rewriting player dialogue.","scope":"global"},
   "PROMPT_TIMESTAMP": {"userlvl":"basic","type":"boolean","description":"Add rough timestamp subdividers to event context (e.g., 'Moments Ago', 'A while ago') to help the AI NPCs understand when events happend.","scope":"global"},
   "use_emotions_expression": {"userlvl":"basic","type":"boolean","description":"Emotions expression support.","scope":"global"},
@@ -24,8 +24,7 @@
   "DIARY_COOLDOWN": {"userlvl":"basic","type":"integer","description":"Cooldown period in seconds between diary entries to prevent spam. Each NPC has their own independent cooldown timer.","scope":"global"},
   "AUTO_DIARY_ENABLED": {"userlvl":"basic","type":"boolean","description":"Automatically generate diary entries when NPCs are nearby during sleep events. NPCs using this profile will have auto diary enabled by default.","scope":"profile"},
   "AUTO_DIARY_WAIT_ENABLED": {"userlvl":"basic","type":"boolean","description":"When Auto Diary is enabled, this controls whether diary entries are created during wait events. If disabled, auto diary will only trigger on sleep events.","scope":"profile"},
-  "MINIME_T5":{"userlvl":"basic","type":"boolean","scope":"global","description":"Enable Minime-T5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be installed in the CHIM Launcher. <br> <strong> Must be configured in default profile and only works in English!</strong>"},
-  "OGHMA_INFINIUM": {"type":"boolean","userlvl":"basic","description":"Tamriel lore information will be added to the prompt, enhancing their understanding on specific topics. Requires either MINIME_T5 or OGHMA_CUSTOM to be enabled."},
+  "OGHMA_INFINIUM": {"type":"boolean","userlvl":"basic","description":"Tamriel lore information will be added to the prompt, enhancing their understanding on specific topics. MiniMe-T5 is auto-detected when its service is running, or you can use OGHMA_CUSTOM."},
   "OGHMA_CUSTOM": {"type":"boolean","userlvl":"basic","description":"Use custom LLM for Oghma topic extraction instead of MiniMe T5. Allows for custom prompt via Prompts Manager.","scope":"global"},
   "OGHMA_KNOWLEDGE": {"type":"string","userlvl":"basic","description":"Knowledge Classes assigned to the NPC. Effects what articles they can access in the Oghma database. If you want to add more make sure they are comma separated. Recommend to leave as default." ,"helpurl":"https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?gid=338893641#gid=338893641"},
   "OGHMA_AMOUNT": {"type":"select","values":["1","2","3"],"userlvl":"basic","description":"Number of Oghma keywords to extract from each response. More keyword extraction will mean longer response times."},
@@ -57,6 +56,8 @@
   "MAGIC_EVENT_BLACKLIST": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated list of magic event names to exclude from logging (e.g. 'Administer Mixture, [BFCO-AttackSwingFX] 0.5/1.5, Healing')."},
   "LOCATION_BLACKLIST": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated list of location names to exclude from Points of Interest context (e.g. 'Dark Brotherhood Sanctuary, Twilight Sepulcher')."},
   "ITEM_BLACKLIST": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated list of item/armor names to exclude from dynamic context (e.g. 'Iron Sword, Leather Armor, Health Potion')."},
+  "CARRIAGE_DRIVERS": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated NPC names that can offer carriage fast travel (e.g. 'Bjorlam, Alfarinn, Kibell')."},
+  "FERRY_DRIVERS": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated NPC names that can offer ferry fast travel (e.g. 'Gort, Harlaug, Jolf')."},
   "EVENT_TYPE_FILTER": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated list of event types to exclude from context generation (e.g. 'death, itemfound, spellcast')."},
   "GROUND_ITEMS_DESCRIPTIONS_ONLY": {"userlvl":"basic","type":"boolean","scope":"global","description":"Only show nearby ground items in context that have descriptions in the description manager."},
   "INVENTORY_ITEMS_DESCRIPTIONS_ONLY": {"userlvl":"basic","type":"boolean","scope":"global","description":"Only show inventory items in context that have descriptions in the description manager."},
@@ -91,6 +92,7 @@
   "CORE_CONNECTOR_OGHMA_CUSTOM": {"userlvl": "basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for custom Oghma LLM topic extraction. Will be slower than MiniMe T5 and slow down responses. Recommend to use a very very 🏃‍♀️‍➡️Fast LLM.","scope": "global"},
   "RELATIONSHIP_SYSTEM_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","description":"Enable the Relationship Management System. When enabled, NPCs will dynamically form and update relationships based on conversations and events. Requires RELLLM_CONNECTOR to be configured.","_title":"Relationship System"},
   "RELLLM_CONNECTOR": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for Relationship Management system. Analyzes and updates NPC relationships. Recommend to use a 🏃‍♀️‍➡️Fast LLM with ❄️low temperature (0.1-0.3) for consistent evaluations.","scope":"global"},
+  "POWER_AWARENESS_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","description":"NPCs will be aware of relative power levels (based on character level) and react appropriately to threats.","_title":"Power Awareness System"},
   "CLEAN_CONTEXT_FOCUS_CHAT_HISTORY": {"userlvl":"basic","type": "integer","description": "Historic context to use when Focus on Chat mode. Should be lower than normal context.","scope":"global"},
   "BGL_TRIGGER_DAYS": {"userlvl":"basic","type": "integer","description": "RECOMMEND TO NOT GO BELOW 5 DAYS! Number of in-game days between Background Life events. NPCs will generate thoughts and take actions based on this interval. Default: 5 days. Range: 1-30 days.","scope":"global"},
   "CONNECTOR": {
@@ -234,7 +236,7 @@
       "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro! Will connect automatically so do not change the URL. Does not currently support Chat Assist/Creation.","helpurl":"https://dwemerdynamics.hostwiki.io/en/Online-LLMs#player2"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["none","melotts","xtts-fastapi","xvasynth","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","piper-tts","mimic3","deepgram","cartesia","inworld"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["pockettts","chatterbox","xtts-fastapi","inworld","cartesia","piper-tts","xvasynth","none","melotts","mimic3","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","deepgram"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
 
   "TTS": {
     "_title":"Text-to-Speech Service",
@@ -254,6 +256,23 @@
       "PARALINGUISTIC_TAGS_ENABLED":{"type":"boolean","description":"Enable paralinguistic tags like [laugh], [sigh] for expressive TTS output.","scope":"global"},
       "PARALINGUISTIC_TAGS_PROMPT":{"type":"longstring","description":"Prompt snippet instructing the LLM to use paralinguistic tags. Added to system prompt when enabled.","scope":"global"},
       "PARALINGUISTIC_TAGS_LIST":{"type":"string","description":"Comma-separated list of supported paralinguistic tags (e.g., [laugh],[sigh],[gasp]). Tags are case-insensitive.","scope":"global"}
+    },
+    "CHATTERBOX": {
+      "_title":"Chatterbox (Optimized XTTS Fork)",
+      "endpoint":{"type":"url","description":"Chatterbox endpoint. Uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chatterbox"},
+      "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
+      "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
+      "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS CHATTERBOX voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"},
+      "PARALINGUISTIC_TAGS_ENABLED":{"type":"boolean","description":"Enable paralinguistic tags like [laugh], [sigh] for expressive TTS output.","scope":"global"},
+      "PARALINGUISTIC_TAGS_PROMPT":{"type":"longstring","description":"Prompt snippet instructing the LLM to use paralinguistic tags. Added to system prompt when enabled.","scope":"global"},
+      "PARALINGUISTIC_TAGS_LIST":{"type":"string","description":"Comma-separated list of supported paralinguistic tags (e.g., [laugh],[sigh],[gasp]). Tags are case-insensitive.","scope":"global"}
+    },
+    "POCKETTTS": {
+      "_title":"PocketTTS (CPU-based TTS)",
+      "endpoint":{"type":"url","description":"PocketTTS endpoint. CPU-only TTS, uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#pockettts"},
+      "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
+      "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
+      "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS POCKETTTS voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"}
     },
     "MIMIC3": {
       "_title":"MIMIC3 (Installed in DwemerDistro)",
@@ -372,12 +391,12 @@
       "workspace": {"type":"string","description":"Inworld workspace ID (required for voice cloning). Format: workspaces/{workspace} or just the workspace ID.","helpurl":"https://docs.inworld.ai/"},
       "voiceid": {"type":"string","description":"Voice file name. Works the same as CHIM-XTTS voiceid. Will only work with voices in your Voice Cache. Voice will be automatically cloned to Inworld when first used.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "language": {"type":"select","values":["EN_US","ZH_CN","KO_KR","JA_JP","RU_RU","IT_IT","ES_ES","PT_BR","DE_DE","FR_FR","AR_SA","PL_PL","NL_NL","HI_IN","HE_IL"],"description":"Language to use for TTS generation. Uses regional language codes."},
-      "model_id": {"type":"select","values":["inworld-tts-1","inworld-tts-1-max"],"description":"Inworld model to use. inworld-tts-1 is the standard model, inworld-tts-1-max is the higher quality model.","helpurl":"https://docs.inworld.ai/docs/tts/tts-models"},
+      "model_id": {"type":"select","values":["inworld-tts-1","inworld-tts-1-max","inworld-tts-1.5-mini","inworld-tts-1.5-max"],"description":"Inworld model to use. inworld-tts-1 is the standard model, inworld-tts-1.5-max is the higher quality model.","helpurl":"https://docs.inworld.ai/docs/tts/tts-models"},
       "temperature": {"type":"number","description":"Sampling temperature (0-2). Higher values make output more random. Default: 1.1"},
       "speed": {"type":"number","description":"Speaking rate/speed (0.5-1.5). Default: 1.0"}
     }
 },
-  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["none","melotts","xtts-fastapi","xvasynth","mimic3","piper-tts","azure","11labs","openai","kokoro","zonos_gradio","cartesia","inworld"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
+  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["pockettts","chatterbox","xtts-fastapi","inworld","cartesia","piper-tts","xvasynth","none","melotts","mimic3","azure","11labs","openai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
   "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
   "TTSFUNCTION_PLAYER_VOICE_ID": {"type":"integer","userlvl":"pro","scope":"global","description":"Speaker ID to select a voice from multi-voice model."},
   "TTSFUNCTION_PLAYER_LANGUAGE": {"type":"string","userlvl":"basic","scope":"global","description":"Overrides the TTS language for the player character."},
@@ -404,7 +423,7 @@
   },
   "PLAYER_RESPEECH":{"type":"boolean","description":"Allows the AI to rewrite player speech with Chat Assist & Creation modes.","scope":"global"},
   "STTFUNCTION": {
-    "type":"select","values":["none","whisper","localwhisper","azure","deepgram","parakeet"],"description":"Speech-to-Text service options. Translates your voice to text.", 
+    "type":"select","values":["none","whisper","localwhisper","azure","deepgram","gemini","parakeet"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service","scope":"global"
     },
   "STT": {
@@ -430,6 +449,11 @@
       "API_KEY": {"type":"apikey","description":"Deepgram API key.","code":"DEEPGRAM_API_KEY"},
       "LANG":{"type":"string","description":"Language"},
       "MODEL":{"type":"select","values":["nova-3","nova-2","whisper-medium","enhanced","nova","base"],"description":"Model to use"}
+    }, "GEMINI": {
+      "_title":"Google Gemini STT + Emotion Detection",
+      "API_KEY": {"type":"apikey","description":"Google AI API key (from aistudio.google.com).","code":"GEMINI_API_KEY"},
+      "LANG": {"type":"string","description":"Language (e.g., en, es, ja)"},
+      "MODEL": {"type":"select","values":["gemini-2.5-flash","gemini-2.5-flash-lite","gemini-2.5-pro"],"description":"Gemini model. 2.5 Flash recommended for best speed and quality."}
     }, "PARAKEET": {
       "_title":"parakeet-api-server",
       "LANG": {"type":"string","description":"Language to detect for STT."}
@@ -489,6 +513,8 @@
       "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"The amount of the most relevant memory records that will be injected into the prompt."},
       "AUTO_CREATE_SUMMARYS": {"type":"boolean","description":"Will combine individual memory logs into larger ones. Is more accurate for memory recollection but will use up more tokens. If using koboldcpp, use the multiuser mode to avoid locking."},
       "AUTO_CREATE_SUMMARY_INTERVAL": {"type":"integer","description":"Time frame used to pack summary data. 10 = 13 in-game hours | 5 = 7.5 in-game hours etc"},
+      "AUTO_CREATE_SUMMARY_MIN_EVENTS": {"type":"integer","description":"Minimum number of events required in a packed time bucket before creating a global memory summary. Default: 5"},
+      "INDIVIDUAL_MEMORY_SUMMARY_THRESHOLD": {"type":"integer","description":"How many global memory summaries involving an NPC are required before creating one NPC-scoped individual memory summary. Default: 3"},
       "MEMORY_BIAS_A": {"type":"number","description":"From 0 (never) to 100 (always). Minimal distance to offer memory."},
       "MEMORY_BIAS_B": {"type":"number","description":"From 0 (never) to 100 (always). Minimal distance to offer and endorse memory."}
       

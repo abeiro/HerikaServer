@@ -67,7 +67,7 @@ $gameRequest = ["inputtext", "0", $last_gamets, $argv[1]];
 
 $request = $argv[1];
 
-$dynamicBiography = buildDynamicBiography($GLOBALS);
+//$dynamicBiography = buildDynamicBiography($GLOBALS, true, true);
 $npcMaster        = new NpcMaster();
 $currentNpcData   = $npcMaster->getByName($argv[1]);
 $extended_data    = $npcMaster->getExtendedData($currentNpcData);

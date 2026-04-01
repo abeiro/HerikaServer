@@ -69,6 +69,16 @@ function CreateNPC(
         "spawn_attempts" => 0,     // Count of spawn checks
     ];
 
+    $npcMaster = new NpcMaster();
+    $npcLocalData = $npcMaster->GetByName($name);
+    if ($npcLocalData) {
+        // If NPC already exists in database, update with quest info
+        $extData = $npcMaster->getExtendedData($npcLocalData);
+        $extData["starring_in_quest"] = $quest_id;
+        $npcLocalData = $npcMaster->setExtendedData($npcLocalData, $extData);
+        $npcMaster->updateByArray($npcLocalData);
+    }
+    
     // Save updated quest state
     SNQEQuestManager::updateQuestData($quest_id, ["npcs" => $quest_data["npcs"]]);
 }
@@ -100,7 +110,7 @@ function CreateItem(
         throw new Exception("Quest '$quest_id' does not exist. You must create or upsert the quest first.");
     }
 
-    
+
     $quest_data = $quest["quest_data"] ?? [];
 
     // Initialize items container if missing
@@ -372,6 +382,7 @@ function CheckNPCSpawn(
         $extData["background_life_enabled"] = true;
         $extData["background_life_last_updated"] = $GLOBALS["last_gamets"];
         $extData["middle_term_enabled"] = 1;
+        $extData["starring_in_quest"] = $quest_id;
         $npcLocalData["dynamic_profile"] = 1;
 
         $npcLocalData["speechstyle"] = getSpeechStyleText(strtolower($npc["race"]), strtolower($npc["class"])) ?? $npc["speechStyle"];
@@ -432,6 +443,8 @@ function CheckNPCSpawn(
 
             } else {
                 // Will order to move to player if disposition is not aggressive or dead
+                // Why? maybe its just patrolling remote location ...review
+                /*
                 $GLOBALS["db"]->insert(
                     'responselog',
                     [
@@ -443,6 +456,7 @@ function CheckNPCSpawn(
                         'tag' => "",
                     ]
                 );
+                */
             }
         }
 
@@ -456,6 +470,10 @@ function CheckNPCSpawn(
         $npc["spawned"] = "done";
         $quest_data["npcs"][$npc_ref] = $npc;
         SNQEQuestManager::updateQuestData($quest_id, ["npcs" => $quest_data["npcs"]]);
+
+        // Enhance NPC profile with more details from quest state (topics, items, etc)
+        enhanceProfileUsingQuestData($quest_data,$npc);
+
         return "done";
     }
 
@@ -793,6 +811,14 @@ function TellTopicToPlayer(
             );
         }
 
+        $GLOBALS["db"]->upsertRowOnConflict(
+            'conf_opts',
+            array(
+                'id' => "snqe_pending_step",
+                'value' => "Waiting for {$quest_data["npcs"][$npc_ref]["name"]}"
+            ),
+            "id"
+        );
         SNQEQuestManager::updateQuestData($quest_id, $quest_data);
         return "pending";
 
@@ -949,6 +975,15 @@ function CheckTopicToPlayer(
     // Still pending
     $quest_data["topics"][$topic_ref] = $topic;
     SNQEQuestManager::updateQuestData($quest_id, ["topics" => $quest_data["topics"]]);
+
+    $GLOBALS["db"]->upsertRowOnConflict(
+        'conf_opts',
+        array(
+            'id' => "snqe_pending_step",
+            'value' => "Waiting for topic: '{$topic["name"]}' by '{$quest_data["npcs"][$topic["giver"]]["name"]}'"
+        ),
+        "id"
+    );
     return "pending";
 }
 
@@ -1090,6 +1125,14 @@ function WaitToItemBeRecovered(
     $item["recovered"] = "pending";
     $quest_data["items"][$item_ref] = $item;
     SNQEQuestManager::updateQuestData($quest_id, ["items" => $quest_data["items"]]);
+    $GLOBALS["db"]->upsertRowOnConflict(
+        'conf_opts',
+        array(
+            'id' => "snqe_pending_step",
+            'value' => "Waiting for player to get item <{$item["name"]}>"
+        ),
+        "id"
+    );
     return "pending";
 }
 
@@ -1443,6 +1486,14 @@ function CompleteQuest(
     error_log("SELECT gamets FROM speech WHERE speaker = '$playerName' AND gamets > $quest_lastgamets ORDER BY gamets DESC LIMIT 1");
     if (!$playerSpokenAfter) {
         error_log("[CompleteQuest]\tPlayer has not spoken yet after quest event. Deferring completion.");
+        $GLOBALS["db"]->upsertRowOnConflict(
+            'conf_opts',
+            array(
+                'id' => "snqe_pending_step",
+                'value' => "Waiting for player to speak after quest completion event"
+            ),
+            "id"
+        );
         return;
     }
 
@@ -1467,7 +1518,14 @@ function CompleteQuest(
     );
 
     SNQEQuestManager::updateQuestState($quest_id, 'finished');
-
+    $GLOBALS["db"]->upsertRowOnConflict(
+        'conf_opts',
+        array(
+            'id' => "snqe_pending_step",
+            'value' => ""
+        ),
+        "id"
+    );
     error_log("[CompleteQuest]\tQuest '$quest_id' marked as finished");
 }
 
@@ -1719,6 +1777,7 @@ function WaitforCombatEnd(
                 ]
             );
         } else {
+            // Review. This will move remove NPCs to player location, which can be out of roleplay
 
             error_log("[WaitforCombatEnd] {$GLOBALS["actors_present"]}");
             $npcMaster = new NpcMaster();
@@ -1742,6 +1801,14 @@ function WaitforCombatEnd(
     }
     // Still pending
     error_log("[WaitforCombatEnd] Combat for NPC <$cnNpc> still ongoing (attempt {$npc["combat_attempts"]})");
+    $GLOBALS["db"]->upsertRowOnConflict(
+        'conf_opts',
+        array(
+            'id' => "snqe_pending_step",
+            'value' => "Defeat NPC <$cnNpc>"
+        ),
+        "id"
+    );
     $npc["in_combat"] = "pending";
     $quest_data["npcs"][$npc_ref] = $npc;
     SNQEQuestManager::updateQuestData($quest_id, ["npcs" => $quest_data["npcs"]]);
@@ -1823,7 +1890,7 @@ function WaitForNPCCombatEnd(
          or data like '%$cnTarget died%')
         order by gamets desc limit 1");
 
-    
+
     if (is_array($rows) && isset($rows[0]) && $rows[0]["n"] > 0) {
         $combatEnded = true;
     }
@@ -1964,8 +2031,50 @@ function WaitAtLocation(
                     $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
                     $unsignedInt = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
                     $refHexString = "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
+                   
+                   
+                    // Some locations have same name, so try to pick the nearest one to the player.
+                    // locations.coords is a PostgreSQL POINT. We'll order by distance using the <-> operator.
+                    // Player coords: SELECT b.coords FROM named_cell a LEFT JOIN locations b ON (b.formid=a.location_id) WHERE a.id=0;
+                    $playerCoordsRow = $GLOBALS["db"]->fetchOne(
+                        'SELECT b.coords
+                         FROM "public"."named_cell" a
+                         LEFT JOIN locations b ON (b.formid = a.location_id)
+                         WHERE a.id = 0'
+                    );
 
-                    $locs = $GLOBALS["db"]->fetchOne("SELECT * FROM locations where name='" . $GLOBALS["db"]->escape($location) . "' LIMIT 1");
+                    $playerPoint = $playerCoordsRow["coords"] ?? null;
+
+                    if (!empty($playerPoint)) {
+                        $playerPointEsc = $GLOBALS["db"]->escape($playerPoint); // expected format "(x,y)"
+                        error_log("[WaitAtLocation] Player coords: $playerPointEsc");
+                        $locs = $GLOBALS["db"]->fetchOne(
+                            "SELECT *
+                             FROM locations
+                             WHERE name='" . $GLOBALS["db"]->escape($location) . "'
+                             ORDER BY coords <-> '{$playerPointEsc}'::point
+                             LIMIT 1"
+                        );
+                        error_log("[WaitAtLocation] SELECT *
+                             FROM locations
+                             WHERE name='" . $GLOBALS["db"]->escape($location) . "'
+                             ORDER BY coords <-> '{$playerPointEsc}'::point
+                             LIMIT 1");
+                    } else {
+                        // Fallback if player coords are not available
+                        error_log("[WaitAtLocation] Player coords not available, using first match for location");
+                        $locs = $GLOBALS["db"]->fetchOne(
+                            "SELECT *
+                             FROM locations
+                             WHERE name='" . $GLOBALS["db"]->escape($location) . "'
+                             LIMIT 1"
+                        );
+                    }
+
+                    $locationRef = getLocationReferences($locs["formid"]);
+                    if ($locationRef) {
+                        $locs["formid"] = $locationRef;
+                    }
 
                     if ($locs) {
                         $GLOBALS["db"]->insert(
@@ -2088,7 +2197,7 @@ function WaitAtLocation(
     }
     // If npc_ref, also check NPC is present.
 
-    if (strpos($GLOBALS["actors_present"], $quest_data["npcs"][$npc_ref]["name"]) === false) {
+    if (@strpos($GLOBALS["actors_present"], $quest_data["npcs"][$npc_ref]["name"]) === false) {
         error_log("[WaitAtLocation] Reference NPC <{$quest_data["npcs"][$npc_ref]["name"]}> not present  <$location>,{$GLOBALS["actors_present"]}");
 
         if ($quest_data["location_wait"][$wait_key]["attempts"] % 25 == 0) { // Background command if NPC is not around
@@ -2099,7 +2208,45 @@ function WaitAtLocation(
                 $unsignedInt = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
                 $refHexString = "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
 
-                $locs = $GLOBALS["db"]->fetchOne("SELECT * FROM locations where name='" . $GLOBALS["db"]->escape($location) . "' LIMIT 1");
+                // Some locations have same name, so try to pick the nearest one to the player.
+                // locations.coords is a PostgreSQL POINT. We'll order by distance using the <-> operator.
+                // Player coords: SELECT b.coords FROM named_cell a LEFT JOIN locations b ON (b.formid=a.location_id) WHERE a.id=0;
+                $playerCoordsRow = $GLOBALS["db"]->fetchOne(
+                    'SELECT b.coords
+                        FROM "public"."named_cell" a
+                        LEFT JOIN locations b ON (b.formid = a.location_id)
+                        WHERE a.id = 0'
+                );
+
+                $playerPoint = $playerCoordsRow["coords"] ?? null;
+
+                if (!empty($playerPoint)) {
+                    $playerPointEsc = $GLOBALS["db"]->escape($playerPoint); // expected format "(x,y)"
+                    error_log("[WaitAtLocation] Player coords: $playerPointEsc");
+                    $locs = $GLOBALS["db"]->fetchOne(
+                        "SELECT *
+                            FROM locations
+                            WHERE name='" . $GLOBALS["db"]->escape($location) . "'
+                            ORDER BY coords <-> '{$playerPointEsc}'::point
+                            LIMIT 1"
+                    );
+                    error_log("[WaitAtLocation] SELECT *
+                            FROM locations
+                            WHERE name='" . $GLOBALS["db"]->escape($location) . "'
+                            ORDER BY coords <-> '{$playerPointEsc}'::point
+                            LIMIT 1");
+                } else {
+                    // Fallback if player coords are not available
+                    error_log("[WaitAtLocation] Player coords not available, using first match for location");
+                    $locs = $GLOBALS["db"]->fetchOne(
+                        "SELECT *  FROM locations WHERE name='" . $GLOBALS["db"]->escape($location) . "' LIMIT 1"
+                    );
+                }
+
+                $locationRef = getLocationReferences($locs["formid"]);
+                if ($locationRef) {
+                    $locs["formid"] = $locationRef;
+                }
 
                 if ($locs) {
                     $GLOBALS["db"]->insert(
@@ -2113,7 +2260,7 @@ function WaitAtLocation(
                             'tag' => '',
                         ]
                     );
-
+                    
                     //$GLOBALS["last_gamets"]
 
                     $GLOBALS["db"]->insert(
@@ -2147,6 +2294,21 @@ function WaitAtLocation(
                 }
             }
 
+        } else {
+            //GPS track. Should detect if NPC is at remote location.
+            // Review: return tru if NPC is at location, but player did not get there yet.
+            /*$GLOBALS["db"]->insert(
+                'responselog',
+                [
+                    'localts' => time(),
+                    'sent' => 0,
+                    'actor' => "rolemaster",
+                    'text' => "",
+                    'action' => "rolecommand|BackgroundCmd@$refHexString@Track",
+                    'tag' => '',
+                ]
+            );
+            */
         }
 
         // Check by GPS tracking
@@ -2159,16 +2321,17 @@ function WaitAtLocation(
         WHERE npc_name = '$cn'
         AND (metadata->'last_coords'->>'last_updated')::bigint > {$quest_data["started"]}
         AND COALESCE(metadata->'last_coords'->>'3', '') <> ''";
+        error_log($q);
         $gpsloc = $GLOBALS["db"]->fetchOne($q);
         if ($gpsloc) {
-            $location = $gpsloc["location"];
+            $locationGps = $gpsloc["location"];
 
-            error_log("<$locGuess> vs <$location>");
-            if (strpos($location, $locGuess) !== false) {
+            error_log("[WaitAtLocation] <$locationGps> vs <$location>");
+            if (strpos($location, $locationGps) !== false) {
                 $npcAtLocation = true;
             }
 
-            if (strpos($locGuess, $location) !== false) {
+            if (strpos($locationGps, $location) !== false) {
                 $npcAtLocation = true;
             }
         }
@@ -2177,6 +2340,11 @@ function WaitAtLocation(
             $atLocation = false;
         }
 
+    }
+
+    if (isset($npc_ref) && $npcAtLocation) {
+        error_log("[WaitAtLocation] Reference NPC <{$quest_data["npcs"][$npc_ref]["name"]}> is at location <$location>");
+        $atLocation = true;
     }
 
     if ($atLocation) {
@@ -2215,38 +2383,40 @@ function WaitAtLocation(
         }
     }
 
-    if ($quest_data["location_wait"][$wait_key]["attempts"] == 40) {
-        if ($npc_ref && isset($quest_data["npcs"][$npc_ref])) { // Track waiting NPC
-            $npcMaster = new NpcMaster();
-            $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
-            $unsignedInt = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
+    if (!$npc_ref) {
+        if ($quest_data["location_wait"][$wait_key]["attempts"] == 40) {
+            if ($npc_ref && isset($quest_data["npcs"][$npc_ref])) { // Track waiting NPC
+                $npcMaster = new NpcMaster();
+                $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
+                $unsignedInt = hexdec($currentNpcData["refid"]) & 0xFFFFFFFF;
+                $GLOBALS["db"]->insert(
+                    'responselog',
+                    [
+                        'localts' => time(),
+                        'sent' => 0,
+                        'actor' => "rolemaster",
+                        'text' => "",
+                        'action' => "rolecommand|QuestTrackReference@0x{$currentNpcData["refid"]}",
+                        'tag' => "",
+                    ]
+                );
+            }
+
+            // Remember player where to go
             $GLOBALS["db"]->insert(
                 'responselog',
                 [
+
                     'localts' => time(),
                     'sent' => 0,
                     'actor' => "rolemaster",
                     'text' => "",
-                    'action' => "rolecommand|QuestTrackReference@0x{$currentNpcData["refid"]}",
+                    'action' => "rolecommand|UpdateQuest@{$quest["title"]}@Travel to $location",
                     'tag' => "",
+
                 ]
             );
         }
-
-        // Remember player where to go
-        $GLOBALS["db"]->insert(
-            'responselog',
-            [
-
-                'localts' => time(),
-                'sent' => 0,
-                'actor' => "rolemaster",
-                'text' => "",
-                'action' => "rolecommand|UpdateQuest@{$quest["title"]}@Travel to $location",
-                'tag' => "",
-
-            ]
-        );
     }
 
     // Exceeded attempts → failure
@@ -2258,7 +2428,17 @@ function WaitAtLocation(
     }
 
     // Still pending
-    error_log("[WaitAtLocation] Waiting for player to reach <$location> (attempt {$quest_data["location_wait"][$wait_key]["attempts"]})");
+    error_log("[WaitAtLocation] Waiting for player/$npc_ref to reach <$location> (attempt {$quest_data["location_wait"][$wait_key]["attempts"]})");
+
+    $GLOBALS["db"]->upsertRowOnConflict(
+        'conf_opts',
+        array(
+            'id' => "snqe_pending_step",
+            'value' => " Waiting for $npc_ref to reach <$location>"
+        ),
+        "id"
+    );
+
     SNQEQuestManager::updateQuestData($quest_id, ["location_wait" => $quest_data["location_wait"]]);
     return "pending";
 }
@@ -2468,6 +2648,11 @@ function StationAtLocation(
 
             $locs = $GLOBALS["db"]->fetchOne("SELECT * FROM locations where name='" . $GLOBALS["db"]->escape($location) . "' LIMIT 1");
 
+            $locationRef = getLocationReferences($locs["formid"]);
+            if ($locationRef) {
+                $locs["formid"] = $locationRef;
+            }
+
             if ($locs) {
                 $GLOBALS["db"]->insert(
                     'responselog',
@@ -2635,7 +2820,7 @@ function WaitForActivation(
         SNQEQuestManager::updateQuestData($quest_id, ["activation_tracking" => $quest_data["activation_tracking"]]);
         return "done";
     }
-    $searchPattern="%activates $activator_name%";
+    $searchPattern = "%activates $activator_name%";
     $rows = $GLOBALS["db"]->fetchAll(
         "SELECT count(*) as n FROM eventlog WHERE type='infoaction' AND data LIKE '" .
         $GLOBALS["db"]->escape($searchPattern) . "'"
@@ -2740,7 +2925,7 @@ function PickUpItem(
     if (!isset($quest_data["items"][$item_ref])) {
         throw new Exception("Item '$item_ref' not declared. Use CreateItem first.");
     }
-    
+
     $npc = $quest_data["npcs"][$npc_ref];
     $item = $quest_data["items"][$item_ref];
 
@@ -2753,26 +2938,26 @@ function PickUpItem(
         if (!isset($quest_data["pickup_tracking"])) {
             $quest_data["pickup_tracking"] = [];
         }
-        
+
         $quest_data["pickup_tracking"][$tracking_key] = [
             "npc_ref" => $npc_ref,
             "item_ref" => $item_ref,
             "picked_up" => true,
             "pickup_time" => time(),
         ];
-        
+
         // Mark item as in NPC inventory
         if (!isset($quest_data["items"][$item_ref]["in_inventory"])) {
             $quest_data["items"][$item_ref]["in_inventory"] = [];
         }
         $quest_data["items"][$item_ref]["in_inventory"][$npc_ref] = true;
-        
+
         // Save updated quest state and return early
         SNQEQuestManager::updateQuestData($quest_id, [
             "pickup_tracking" => $quest_data["pickup_tracking"],
             "items" => $quest_data["items"]
         ]);
-        
+
         error_log("[PickUpItem] Item <$item_ref> already in NPC <$npc_ref>'s pocket, marking as picked up");
         return;
     }
@@ -2857,7 +3042,14 @@ function WaitForPickUpItem(
     $quest_data = $quest["quest_data"] ?? [];
 
     if (!isset($quest_data["npcs"][$npc_ref])) {
-        throw new Exception("NPC '$npc_ref' not declared. Use CreateNPC first.");
+        if ($npc_ref == "player") {
+            error_log("[WaitForPickUpItem] NPC reference is 'player', treating as player character");
+            $quest_data["npcs"][$npc_ref] = [
+                "name" => $GLOBALS["PLAYER_NAME"],
+                "refid" => null,
+            ];
+        } else
+            throw new Exception("NPC '$npc_ref' not declared. Use CreateNPC first.");
     }
 
     if (!isset($quest_data["items"][$item_ref])) {
@@ -2909,7 +3101,7 @@ function WaitForPickUpItem(
         return "failed";
     }
 
-    
+
     // Query event log to see if NPC picked up the item
     $cnItem = $GLOBALS["db"]->escape($item["name"]);
     $cnNpc = $GLOBALS["db"]->escape($npc["name"]);
@@ -2920,14 +3112,26 @@ function WaitForPickUpItem(
     if (is_array($rows) && isset($rows[0]) && $rows[0]["n"] > 0) {
         $pickedUp = true;
     }
-    
-    $npcMaster = new NpcMaster();
-    $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
-    $currentNpcMetaData = $npcMaster->getMetadata($currentNpcData);
-    foreach ($currentNpcMetaData["inventory"] as $itemInIventory) {
-        if ($itemInIventory["name"] == $item["name"]) {
-            $pickedUp = true;
-            break;
+
+    if ($npc_ref == "player") {
+        $player = new Player();
+        $playerInventory = json_decode($player->get("inventory"), true);
+        foreach ($playerInventory as $itemInIventory) {
+            if ($itemInIventory["name"] == $item["name"]) {
+                error_log("[WaitForPickUpItem] Item <$cnItem> found in player inventory");
+                $pickedUp = true;
+                break;
+            }
+        }
+    } else {
+        $npcMaster = new NpcMaster();
+        $currentNpcData = $npcMaster->getByName($quest_data["npcs"][$npc_ref]["name"]);
+        $currentNpcMetaData = $npcMaster->getMetadata($currentNpcData);
+        foreach ($currentNpcMetaData["inventory"] as $itemInIventory) {
+            if ($itemInIventory["name"] == $item["name"]) {
+                $pickedUp = true;
+                break;
+            }
         }
     }
     $rows = $GLOBALS["db"]->fetchOne("select count(*) as n from eventlog where type='itemfound' and data like '%gave%$cnItem%$cnNpc%'");
@@ -2935,8 +3139,8 @@ function WaitForPickUpItem(
     if (is_array($rows) && isset($rows) && $rows["n"] > 0) {
         $pickedUp = true;
     }
-    
-        $rows = $GLOBALS["db"]->fetchOne("select 1 as n,gamets from eventlog where type='death' and (data like '%defeated $cnNpc%' or data like '%killed $cnNpc%') order by gamets desc limit 1");
+
+    $rows = $GLOBALS["db"]->fetchOne("select 1 as n,gamets from eventlog where type='death' and (data like '%defeated $cnNpc%' or data like '%killed $cnNpc%') order by gamets desc limit 1");
 
     if (isset($rows["n"])) {
         $pickedUp = true;

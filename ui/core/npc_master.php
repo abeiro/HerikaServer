@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . "../../";
 
@@ -379,8 +379,32 @@ if (!function_exists('gender_icon_class')) {
     }
 }
 
+if (!function_exists('chimUiAutoLockProfileEnabled')) {
+    function chimUiAutoLockProfileEnabled(): bool
+    {
+        if (!array_key_exists('AUTO_LOCK_PROFILE', $GLOBALS)) {
+            return true;
+        }
+        $raw = $GLOBALS['AUTO_LOCK_PROFILE'];
+        if (is_bool($raw)) {
+            return $raw;
+        }
+        if (is_int($raw) || is_float($raw)) {
+            return ((int)$raw) !== 0;
+        }
+        if (is_string($raw)) {
+            $value = strtolower(trim($raw));
+            return in_array($value, ['1', 'true', 'yes', 'on'], true);
+        }
+        return !empty($raw);
+    }
+}
+
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
+    if (chimUiAutoLockProfileEnabled()) {
+        $_POST['lock_profile'] = 1;
+    }
     $npc->create($_POST);
     header("Location: npc_master.php");
     exit;
@@ -388,6 +412,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
 
 // Handle Update
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
+    if (chimUiAutoLockProfileEnabled()) {
+        $_POST['lock_profile'] = 1;
+    }
     $_POST["md5"]=md5($_POST["npc_name"]);
     $npc->update($_POST["id"], $_POST);
     header("Location: npc_master.php");
@@ -415,8 +442,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
                 if (!is_array($tmp)) {
                     $_POST['extended_data'] = '{}'; // Ensure valid JSON
                 } else {
-                  if ($_POST["middle_term_enabled"]) { // If enabled on NPC form,  but not present in extended_data
+                  if (!empty($_POST["middle_term_enabled"])) { // If enabled on NPC form, but not present in extended_data
                     $tmp["middle_term_enabled"]=1;
+                    $_POST['extended_data']=json_encode($tmp);
+                  }
+                  if (!empty($_POST["individual_memory_enabled"])) {
+                    $tmp["individual_memory_enabled"]=1;
                     $_POST['extended_data']=json_encode($tmp);
                   }
                 }
@@ -435,6 +466,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
             } else {
                 $_POST['dynamic_profile'] = ($dynVal === '1' || $dynVal === 1 || $dynVal === true) ? 1 : 0;
             }
+        }
+        if (chimUiAutoLockProfileEnabled()) {
+            $_POST['lock_profile'] = 1;
         }
         if ($id <= 0) {
             // Create new NPC and return ID
@@ -536,6 +570,83 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["bulk_delete_npcs"])) 
         $row = $GLOBALS['db']->fetchOne($sql);
         $deleted = intval($row['c'] ?? 0);
         echo json_encode(["ok"=>true, "deleted"=>$deleted]);
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    }
+    exit;
+}
+
+// Bulk switch NPC profile assignment by source profile (AJAX)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["bulk_switch_profile"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $confirm = trim((string)($_POST['confirm'] ?? ''));
+        if ($confirm !== 'Switch') { echo json_encode(["ok"=>false, "error"=>"Confirmation text mismatch"]); exit; }
+
+        $sourceProfileId = intval($_POST['source_profile_id'] ?? 0);
+        $targetProfileId = intval($_POST['target_profile_id'] ?? 0);
+        if ($sourceProfileId <= 0 || $targetProfileId <= 0) {
+            echo json_encode(["ok"=>false, "error"=>"Invalid source or target profile"]);
+            exit;
+        }
+        if ($sourceProfileId === $targetProfileId) {
+            echo json_encode(["ok"=>false, "error"=>"Source and target profiles must be different"]);
+            exit;
+        }
+
+        $includeLockedRaw = $_POST['include_locked'] ?? '';
+        $includeLocked = (
+            $includeLockedRaw === '1' ||
+            $includeLockedRaw === 1 ||
+            $includeLockedRaw === true ||
+            $includeLockedRaw === 'true'
+        );
+
+        $sourceRow = $GLOBALS['db']->fetchOne("SELECT id, label FROM core_profiles WHERE id = {$sourceProfileId} LIMIT 1");
+        $targetRow = $GLOBALS['db']->fetchOne("SELECT id, label FROM core_profiles WHERE id = {$targetProfileId} LIMIT 1");
+        if (!is_array($sourceRow) || empty($sourceRow['id'])) {
+            echo json_encode(["ok"=>false, "error"=>"Source profile not found"]);
+            exit;
+        }
+        if (!is_array($targetRow) || empty($targetRow['id'])) {
+            echo json_encode(["ok"=>false, "error"=>"Target profile not found"]);
+            exit;
+        }
+
+        $baseWhere = "profile_id = {$sourceProfileId} and id <> 1 and trim(lower(npc_name)) <> 'the narrator'";
+        $countRow = $GLOBALS['db']->fetchOne("SELECT COUNT(*) AS c FROM core_npc_master WHERE {$baseWhere}");
+        $totalMatched = intval($countRow['c'] ?? 0);
+
+        $skippedLocked = 0;
+        if (!$includeLocked) {
+            $skippedRow = $GLOBALS['db']->fetchOne("SELECT COUNT(*) AS c FROM core_npc_master WHERE {$baseWhere} AND COALESCE(lock_profile,0)=1");
+            $skippedLocked = intval($skippedRow['c'] ?? 0);
+        }
+
+        $lockClause = $includeLocked ? "1=1" : "COALESCE(lock_profile,0)=0";
+        $sql = "WITH upd AS (
+                    UPDATE core_npc_master
+                    SET profile_id = {$targetProfileId}
+                    WHERE {$baseWhere}
+                      AND {$lockClause}
+                    RETURNING 1
+                )
+                SELECT COUNT(*) AS c FROM upd";
+        $row = $GLOBALS['db']->fetchOne($sql);
+        $updated = intval($row['c'] ?? 0);
+
+        echo json_encode([
+            "ok" => true,
+            "updated" => $updated,
+            "total_matched" => $totalMatched,
+            "skipped_locked" => $skippedLocked,
+            "include_locked" => $includeLocked,
+            "source_profile_id" => $sourceProfileId,
+            "target_profile_id" => $targetProfileId,
+            "source_profile_label" => (string)($sourceRow['label'] ?? ('Profile #'.$sourceProfileId)),
+            "target_profile_label" => (string)($targetRow['label'] ?? ('Profile #'.$targetProfileId)),
+        ]);
     } catch (Throwable $e) {
         echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
     }
@@ -770,6 +881,7 @@ $profileIdFilter = isset($_GET['profile_id']) ? trim((string)$_GET['profile_id']
 $favOnly = (isset($_GET['fav']) && $_GET['fav'] === '1');
 $dynOnly = (isset($_GET['dyn']) && $_GET['dyn'] === '1');
 $mtmOnly = (isset($_GET['mtm']) && $_GET['mtm'] === '1');
+$lockOnly = (isset($_GET['lock']) && $_GET['lock'] === '1');
 $salOnly = (isset($_GET['sal']) && $_GET['sal'] === '1');
 $blcOnly = (isset($_GET['blc']) && $_GET['blc'] === '1');
 $gpsOnly = (isset($_GET['gps']) && $_GET['gps'] === '1');
@@ -788,6 +900,15 @@ $profilesById = [];
 foreach (($profileRows ?? []) as $pr) {
     $pid = (string)($pr['id'] ?? '');
     if ($pid !== '') $profilesById[$pid] = $pr['label'] ?? ('Profile #'.$pid);
+}
+$profileOptions = [];
+foreach (($profileRows ?? []) as $pr) {
+    $pid = (string)($pr['id'] ?? '');
+    if ($pid === '') continue;
+    $profileOptions[] = [
+        'id' => $pid,
+        'label' => (string)($pr['label'] ?? ('Profile #'.$pid)),
+    ];
 }
 // Build profile metadata lookup for inherited settings
 $profileMetaById = [];
@@ -851,6 +972,9 @@ if ($mtmOnly) {
     // Robust match on JSON/text; tolerates whitespace and works for json/jsonb
     $where .= " and coalesce(extended_data::text,'') ~ '\"middle_term_enabled\"\\s*:\\s*(true|1)'";
 }
+if ($lockOnly) {
+    $where .= " and coalesce(lock_profile,0)=1";
+}
 if ($salOnly) {
     $where .= " and coalesce(extended_data::text,'') ~ '\"salutation_after_a_while\"\\s*:\\s*(true|1)'";
 }
@@ -891,6 +1015,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_fav" <?= $favOnly?'checked':'' ?>> ⭐Favorites</label>
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_dyn" <?= $dynOnly?'checked':'' ?>> ♻️Dynamic profile</label>
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_mtm" <?= $mtmOnly?'checked':'' ?>> 📃Middle-term memory</label>
+            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_lock" <?= $lockOnly?'checked':'' ?>> 🔒Locked</label>
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_sal" <?= $salOnly?'checked':'' ?>> 👋Auto Salutations</label>
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_blc" <?= $blcOnly?'checked':'' ?>> 🎮BGL: Auto Actions</label>
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_gps" <?= $gpsOnly?'checked':'' ?>> 📍BGL: GPS track</label>
@@ -917,6 +1042,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
       <button id="npc_import_btn" type="button" title="Import NPC from JSON file">📥 Import NPC</button>
       <button id="rel_bulk_build_btn" type="button" class="btn-rel-build" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
+      <button id="npc_bulk_switch_profile_btn" type="button" class="btn-rel-build" title="Switch all NPCs from one profile to another">🔀 Mass Switch Profile</button>
       <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
     </div>
     <div class="npc-grid">
@@ -949,6 +1075,12 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
         $mtmEnabled = $profileMeta['mtm']; // default to profile
         if (array_key_exists('middle_term_enabled', $extTmp) && $extTmp['middle_term_enabled'] !== null && $extTmp['middle_term_enabled'] !== '') {
             $mtmEnabled = !empty($extTmp['middle_term_enabled']);
+        }
+
+        // Individual memory bank is NPC-only (no profile inheritance)
+        $imbEnabled = false;
+        if (array_key_exists('individual_memory_enabled', $extTmp) && $extTmp['individual_memory_enabled'] !== null && $extTmp['individual_memory_enabled'] !== '') {
+            $imbEnabled = !empty($extTmp['individual_memory_enabled']);
         }
         
         // Auto Diary: check extended_data override, otherwise inherit from profile
@@ -987,14 +1119,14 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                     if (isset($metaTmp['stats']) && is_array($metaTmp['stats']) && isset($metaTmp['stats']['level'])) {
                         $levelDisp = ' ('.intval($metaTmp['stats']['level']).')';
                     }
-                ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($dynEnabled)): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Salutation enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
+            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($dynEnabled)): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($imbEnabled)): ?><span class="npc-imb-icon" title="Individual memory bank enabled">🧠</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Salutation enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
             <div class="npc-title-actions">
                     <?php if ($tagsDisp !== ''): ?>
                     <span class="npc-tags-top" title="<?= htmlspecialchars($tagsDisp) ?>"><?= htmlspecialchars($tagsDisp) ?></span>
                     <?php endif; ?>
                     <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                 <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
-                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
+                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock - Locked profiles are protected from history pullback when loading saves"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
                 <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : "return confirm('Delete this NPC?');" ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">🗑️</a>
                 </div>
             </div>
@@ -1335,7 +1467,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <p style="margin:0; color:rgb(242, 124, 17) ;">Tags:</p>
         <input type="text" id="modal_tags_input" name="tags" value="<?= htmlspecialchars($editItem['tags'] ?? '') ?>" placeholder="tags" style="max-width:240px; font-size:12px; padding:4px 6px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff;" title="Tags help with searching and grouping" />
         <a id="modal_fav_btn" class="btn btn-toggle<?= $isFav? ' active':'' ?>" href="#" title="Toggle favorite" data-favorite><?= $isFav? '★' : '☆' ?></a>
-        <a id="modal_lock_btn" class="btn btn-toggle<?= $isLock? ' active':'' ?>" href="#" title="Toggle lock" data-lock><?= $isLock? '🔒' : '🔓' ?></a>
+        <a id="modal_lock_btn" class="btn btn-toggle<?= $isLock? ' active':'' ?>" href="#" title="Toggle lock - Locked profiles are protected from history pullback when loading saves" data-lock><?= $isLock? '🔒' : '🔓' ?></a>
     </div>
     <?php
     // Render LLM summary container (will live-update via JS)
@@ -1612,6 +1744,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 $mtmFromProfile = true;
             }
         } catch (Throwable $e) { }
+
+        // Individual Memory Bank: NPC-only (no profile inheritance)
+        $imbChecked = false;
+        try {
+            if (is_array($editItem) && !empty($editItem['extended_data'])) {
+                $tmpEd = json_decode((string)$editItem['extended_data'], true);
+                if (is_array($tmpEd) && array_key_exists('individual_memory_enabled', $tmpEd) && $tmpEd['individual_memory_enabled'] !== null && $tmpEd['individual_memory_enabled'] !== '') {
+                    $imbChecked = !empty($tmpEd['individual_memory_enabled']);
+                }
+            }
+        } catch (Throwable $e) { }
         
         // Auto Diary: check extended_data override or fall back to profile default
         $adChecked = $profileAutoDiaryEnabled;
@@ -1696,6 +1839,13 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <input type="checkbox" id="middle_term_enabled" name="middle_term_enabled" value="1" <?= $mtmChecked ? "checked" : "" ?> data-profile-default="<?= $profileMtmEnabled ? '1' : '0' ?>">
             </label>
             <small class="hint">Saves a list of recent events after every 10 memory summaries. Will be used for NPC context.<?= $mtmFromProfile ? ' <strong style="color:rgb(242,124,17);">(Inherited from profile)</strong>' : '' ?></small>
+        </div>
+
+        <div class="form-item">
+            <label for="individual_memory_enabled" class="label-with-toggle">🧠Individual Memory Bank
+                <input type="checkbox" id="individual_memory_enabled" name="individual_memory_enabled" value="1" <?= $imbChecked ? "checked" : "" ?> data-profile-default="0">
+            </label>
+            <small class="hint">When enabled, this NPC will build and recall memories from their own scoped memory bank instead of global memory summaries.</small>
         </div>
 
         <div class="form-item">
@@ -2108,7 +2258,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Override global and profile settings for this specific NPC. Changes here take precedence over all other configurations.</small>
             <?php
             // Configure override editor for NPC mode
-            $reservedKeys = [ 'middle_term_enabled', 'auto_diary_enabled', 'auto_diary_wait_enabled', 'chim_core_migrated', 'salutation_after_a_while'];
+            $reservedKeys = [ 'middle_term_enabled', 'individual_memory_enabled', 'auto_diary_enabled', 'auto_diary_wait_enabled', 'chim_core_migrated', 'salutation_after_a_while'];
             $extendedDataRaw = isset($editItem["extended_data"]) ? $editItem["extended_data"] : '{}';
             $extendedDataObj = json_decode($extendedDataRaw, true) ?: [];
             $currentOverrides = [];
@@ -2123,7 +2273,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             $overrideEditorConfig = [
                 'mode' => 'npc',
                 'fieldName' => 'extended_data',
-                'allowedSettings' => ['TTSFUNCTION','RECHAT_H','RECHAT_P','RECHAT_ALLOW_ACTIONS','CORE_LANG','ENFORCE_ACTIONS_PROMPT','REMOVE_ASTERISKS_FROM_OUTPUT','MAX_WORDS_LIMIT','DIARY_PROMPT','DIARY_COOLDOWN','COMBAT_BARK_COOLDOWN','OGHMA_INFINIUM','OGHMA_AMOUNT','MINIME_T5','CONTEXT_HISTORY','CONTEXT_HISTORY_DIARY','CONTEXT_HISTORY_DYNAMIC_PROFILE','QUEST_COMMENT','QUEST_COMMENT_CHANCE','BORED_EVENT','BORED_EVENT_SERVERSIDE','LANG_LLM_XTTS'],
+                'allowedSettings' => ['TTSFUNCTION','RECHAT_H','RECHAT_P','RECHAT_ALLOW_ACTIONS','CORE_LANG','REMOVE_ASTERISKS_FROM_OUTPUT','MAX_WORDS_LIMIT','DIARY_PROMPT','DIARY_COOLDOWN','COMBAT_BARK_COOLDOWN','OGHMA_INFINIUM','OGHMA_AMOUNT','CONTEXT_HISTORY','CONTEXT_HISTORY_DIARY','CONTEXT_HISTORY_DYNAMIC_PROFILE','QUEST_COMMENT','QUEST_COMMENT_CHANCE','BORED_EVENT','BORED_EVENT_SERVERSIDE','LANG_LLM_XTTS'],
                 'reservedKeys' => $reservedKeys,
                 'currentData' => $currentOverrides,
                 'systemFields' => $systemFields,
@@ -2153,6 +2303,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 // Sync feature checkboxes into extended_data (only save if differs from profile default)
                 try {
                   const mtm = form.querySelector('#middle_term_enabled');
+                  const imb = form.querySelector('#individual_memory_enabled');
                   const ad = form.querySelector('#auto_diary_enabled');
                   const adWait = form.querySelector('#auto_diary_wait_enabled');
                   const sal = form.querySelector('#salutation_after_a_while');
@@ -2168,6 +2319,15 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                         obj.middle_term_enabled = mtm.checked ? 1 : 0;
                       } else {
                         delete obj.middle_term_enabled; // Remove to inherit from profile
+                      }
+                    }
+
+                    // Individual memory bank is NPC-only (no profile inheritance)
+                    if (imb) {
+                      if (imb.checked) {
+                        obj.individual_memory_enabled = 1;
+                      } else {
+                        delete obj.individual_memory_enabled;
                       }
                     }
                     
@@ -2346,6 +2506,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-gender-icon.gender-nb { color:#ffd166; }
 .npc-dyn-icon { margin-left:6px; color:#65d46e; opacity:0.95; }
 .npc-mtm-icon { margin-left:6px; color:#9fb1ff; opacity:0.95; }
+.npc-imb-icon { margin-left:6px; color:#7ec8ff; opacity:0.95; }
 .npc-ad-icon { margin-left:6px; color:#f4d03f; opacity:0.95; }
 .npc-sal-icon { margin-left:6px; color:#ffb347; opacity:0.95; }
 .npc-blc-icon { margin-left:6px; color:#8db4e2; opacity:0.95; }
@@ -2637,6 +2798,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_fav_top" <?= $favOnly?'checked':'' ?>> ⭐Favorites</label>
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_dyn_top" <?= $dynOnly?'checked':'' ?>> ♻️Dynamic profile</label>
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_mtm_top" <?= $mtmOnly?'checked':'' ?>> 📃Middle-term memory</label>
+        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_lock_top" <?= $lockOnly?'checked':'' ?>> 🔒Locked</label>
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_sal_top" <?= $salOnly?'checked':'' ?>> 👋Auto Salutations</label>
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_blc_top" <?= $blcOnly?'checked':'' ?>> 🎮Auto Actions</label>
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_gps_top" <?= $gpsOnly?'checked':'' ?>> 📍Hourly Tracking</label>
@@ -2662,13 +2824,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Total <?= $totalRows ?></span>
   <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
   <button id="rel_bulk_build_btn" type="button" class="btn-rel-build" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
+  <button id="npc_bulk_switch_profile_btn" type="button" class="btn-rel-build" title="Switch all NPCs from one profile to another">🔀 Mass Switch Profile</button>
   <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
 </div>
-<?php if ($narratorExistsInNpcMaster && !isset($_GET['list'])): ?>
-<p style="margin: 12px 0; color: #cfd8e3; font-size: 13px;">
-    ℹ️ The narrator has been moved to the <a href="<?php echo $webRoot; ?>/ui/core/config_hub.php?tab=narrator" style="color: #4a8ab6; text-decoration: underline;">Narrator menu</a>. You can copy over the values from the CHIM NPC narrator profile to here manually. We recommend you delete the NPC entry of the narrator.
-</p>
-<?php endif; ?>
+<div style="margin:10px 0; padding:10px 14px; background:rgba(242,124,17,0.08); border:1px solid rgba(242,124,17,0.25); border-radius:8px; font-size:12.5px; color:#cfd9ea; line-height:1.5;">
+  <strong style="color:rgb(242,124,17);">History Pullback:</strong>
+  Every time a save game is loaded, CHIM snapshots all NPC profiles and restores <strong>unlocked</strong> NPCs to their state at the save's Tamrielic timestamp.
+  Loading an older save will roll back unlocked profiles to that point in time. NPCs created <em>after</em> the save's timestamp may disappear entirely.
+  <br>
+  <span style="color:rgb(242,124,17);">Lock a profile (🔒) to protect it from pullback.</span>
+  You can view and restore previous versions of any NPC via the <strong>View History</strong> button in the edit modal.
+</div>
 <div class="npc-grid">
     <?php foreach ($data as $row): ?>
     <?php 
@@ -2697,6 +2863,12 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     $mtmEnabled = $profileMeta['mtm']; // default to profile
     if (array_key_exists('middle_term_enabled', $extTmp) && $extTmp['middle_term_enabled'] !== null && $extTmp['middle_term_enabled'] !== '') {
         $mtmEnabled = !empty($extTmp['middle_term_enabled']);
+    }
+
+    // Individual memory bank is NPC-only (no profile inheritance)
+    $imbEnabled = false;
+    if (array_key_exists('individual_memory_enabled', $extTmp) && $extTmp['individual_memory_enabled'] !== null && $extTmp['individual_memory_enabled'] !== '') {
+        $imbEnabled = !empty($extTmp['individual_memory_enabled']);
     }
     
     // Auto Diary: check extended_data override, otherwise inherit from profile
@@ -2732,7 +2904,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 if (isset($metaTmp['stats']) && is_array($metaTmp['stats']) && isset($metaTmp['stats']['level'])) {
                     $levelDisp2 = ' ('.intval($metaTmp['stats']['level']).')';
                 }
-            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp2) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Salutation enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
+            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp2) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($imbEnabled)): ?><span class="npc-imb-icon" title="Individual memory bank enabled">🧠</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Salutation enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
             <div class="npc-title-actions">
                 <?php if ($tagsDisp !== ''): ?>
                 <span class="npc-tags-label">Tags:</span>
@@ -2740,7 +2912,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <?php endif; ?>
                 <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                 <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
-                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
+                <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock - Locked profiles are protected from history pullback when loading saves"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
                 <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : "return confirm('Delete this NPC?');" ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">🗑️</a>
             </div>
         </div>
@@ -2958,6 +3130,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 <script>
 (function(){
   const PROFILES_BY_ID = <?= json_encode($profilesById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+  const PROFILE_OPTIONS = <?= json_encode($profileOptions ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
   const modal = document.getElementById('npc_modal');
   const iframe = document.getElementById('npc_modal_iframe');
   function openModal(url){
@@ -3670,6 +3843,122 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     window.bindNpcBulkDelete = bindBulk;
     bindBulk(document.getElementById('npc_bulk_delete_btn'));
   })();
+  // Bulk profile switch wiring
+  (function(){
+    const profileOptions = Array.isArray(PROFILE_OPTIONS) ? PROFILE_OPTIONS : [];
+    function escHtml(v){
+      return String(v ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+    }
+    function buildOptions(selectedValue){
+      const selected = String(selectedValue || '');
+      let html = '';
+      profileOptions.forEach(function(pr){
+        const id = String(pr && pr.id ? pr.id : '');
+        if (!id) return;
+        const label = String(pr && pr.label ? pr.label : ('Profile #' + id));
+        const sel = (id === selected) ? ' selected' : '';
+        html += '<option value="' + escHtml(id) + '"' + sel + '>' + escHtml(label) + '</option>';
+      });
+      return html;
+    }
+    function bindBulkSwitch(btn){
+      if (!btn) return;
+      btn.addEventListener('click', function(){
+        if (!profileOptions.length) { alert('No profiles found.'); return; }
+        const filterSel = document.getElementById('npc_profile_filter');
+        const sourcePref = (filterSel && filterSel.value) ? String(filterSel.value) : String((profileOptions[0] && profileOptions[0].id) || '');
+        let targetPref = '';
+        for (let i = 0; i < profileOptions.length; i++) {
+          const pid = String(profileOptions[i] && profileOptions[i].id ? profileOptions[i].id : '');
+          if (pid !== '' && pid !== sourcePref) { targetPref = pid; break; }
+        }
+        if (!targetPref) targetPref = sourcePref;
+
+        const box = document.createElement('div');
+        box.style.position='fixed'; box.style.inset='0'; box.style.zIndex='10050'; box.style.display='flex'; box.style.alignItems='center'; box.style.justifyContent='center'; box.style.background='rgba(0,0,0,0.65)';
+        box.innerHTML = '<div style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:16px; max-width:560px; width:92%; color:#e9efff;">\
+          <div style="font-weight:700; color:rgb(242,124,17); margin-bottom:8px;">Mass Switch NPC Profiles</div>\
+          <div style="font-size:13px; color:#cfd9ea; margin-bottom:12px;">Move every NPC currently on one profile to another profile in one pass.</div>\
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:8px;">\
+            <label style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:#cfd9ea;">From profile\
+              <select id="bulk_switch_source" style="padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff;">' + buildOptions(sourcePref) + '</select>\
+            </label>\
+            <label style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:#cfd9ea;">To profile\
+              <select id="bulk_switch_target" style="padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff;">' + buildOptions(targetPref) + '</select>\
+            </label>\
+          </div>\
+          <label style="display:flex; align-items:center; gap:8px; margin:8px 0 12px 0; color:#cfd9ea; font-size:13px;"><input id="bulk_switch_include_locked" type="checkbox" /> Include locked NPCs</label>\
+          <label style="display:block; font-size:13px; margin:6px 0; color:#cfd9ea;">Type <b style="color:#ffd166">Switch</b> to confirm:</label>\
+          <input id="bulk_switch_confirm" type="text" style="width:100%; padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff;"/>\
+          <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">\
+            <button id="bulk_switch_cancel" class="btn-cancel">Cancel</button>\
+            <button id="bulk_switch_ok" class="btn-rel-build" disabled>Switch Profiles</button>\
+          </div></div>';
+        document.body.appendChild(box);
+
+        const sourceEl = box.querySelector('#bulk_switch_source');
+        const targetEl = box.querySelector('#bulk_switch_target');
+        const includeLockedEl = box.querySelector('#bulk_switch_include_locked');
+        const confirmEl = box.querySelector('#bulk_switch_confirm');
+        const okEl = box.querySelector('#bulk_switch_ok');
+        const cancelEl = box.querySelector('#bulk_switch_cancel');
+
+        function updateState(){
+          const confirmOk = String(confirmEl.value || '').trim() === 'Switch';
+          const hasSource = !!(sourceEl && sourceEl.value);
+          const hasTarget = !!(targetEl && targetEl.value);
+          const different = hasSource && hasTarget && String(sourceEl.value) !== String(targetEl.value);
+          okEl.disabled = !(confirmOk && hasSource && hasTarget && different);
+        }
+        confirmEl.addEventListener('input', updateState);
+        sourceEl.addEventListener('change', updateState);
+        targetEl.addEventListener('change', updateState);
+        updateState();
+        confirmEl.focus();
+
+        cancelEl.addEventListener('click', function(){ document.body.removeChild(box); });
+        okEl.addEventListener('click', async function(){
+          okEl.disabled = true;
+          try {
+            const fd = new FormData();
+            fd.append('bulk_switch_profile', '1');
+            fd.append('source_profile_id', String(sourceEl.value || ''));
+            fd.append('target_profile_id', String(targetEl.value || ''));
+            fd.append('include_locked', includeLockedEl && includeLockedEl.checked ? '1' : '0');
+            fd.append('confirm', String(confirmEl.value || ''));
+            const res = await fetch('npc_master.php', { method:'POST', body: fd });
+            let j = {};
+            try { j = await res.json(); } catch(_){ j = { ok:false, error:'Invalid JSON response' }; }
+            document.body.removeChild(box);
+            if (j && j.ok){
+              let msg = 'Switched ' + String(j.updated || 0) + ' NPCs';
+              if (j.source_profile_label && j.target_profile_label) {
+                msg += ' (' + String(j.source_profile_label) + ' → ' + String(j.target_profile_label) + ')';
+              }
+              if (!j.include_locked && Number(j.skipped_locked || 0) > 0) {
+                msg += '; skipped ' + String(j.skipped_locked) + ' locked';
+              }
+              try {
+                const toast = document.getElementById('toast');
+                if (toast) {
+                  toast.querySelector('.message').textContent = msg;
+                  toast.classList.add('show');
+                  setTimeout(() => toast.classList.remove('show'), 2400);
+                }
+              } catch(_){}
+              refreshList(1);
+            } else {
+              alert('Mass switch failed: ' + (j && j.error ? j.error : 'Unknown'));
+            }
+          } catch(_e){
+            okEl.disabled = false;
+          }
+        });
+      });
+    }
+    window.bindNpcBulkSwitchProfile = bindBulkSwitch;
+    bindBulkSwitch(document.getElementById('npc_bulk_switch_profile_btn'));
+  })();
   let listAbort = null;
   async function refreshList(page){
     const params = new URLSearchParams(window.location.search);
@@ -3685,12 +3974,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       const fav = (document.getElementById('npc_filter_fav_top')||document.getElementById('npc_filter_fav'));
       const dyn = (document.getElementById('npc_filter_dyn_top')||document.getElementById('npc_filter_dyn'));
       const mtm = (document.getElementById('npc_filter_mtm_top')||document.getElementById('npc_filter_mtm'));
+      const locked = (document.getElementById('npc_filter_lock_top')||document.getElementById('npc_filter_lock'));
       const sal = (document.getElementById('npc_filter_sal_top')||document.getElementById('npc_filter_sal'));
       const blc = (document.getElementById('npc_filter_blc_top')||document.getElementById('npc_filter_blc'));
       const gps = (document.getElementById('npc_filter_gps_top')||document.getElementById('npc_filter_gps'));
       params.set('fav', fav && fav.checked ? '1' : '');
       params.set('dyn', dyn && dyn.checked ? '1' : '');
       params.set('mtm', mtm && mtm.checked ? '1' : '');
+      params.set('lock', locked && locked.checked ? '1' : '');
       params.set('sal', sal && sal.checked ? '1' : '');
       params.set('blc', blc && blc.checked ? '1' : '');
       params.set('gps', gps && gps.checked ? '1' : '');
@@ -3753,6 +4044,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       if (newCreate){ newCreate.addEventListener('click', function(){ openModal('npc_master.php?partial=1'); }); }
       // rebind bulk delete in refreshed DOM
       try { if (window.bindNpcBulkDelete) window.bindNpcBulkDelete(document.getElementById('npc_bulk_delete_btn')); } catch(_){}
+      // rebind mass switch in refreshed DOM
+      try { if (window.bindNpcBulkSwitchProfile) window.bindNpcBulkSwitchProfile(document.getElementById('npc_bulk_switch_profile_btn')); } catch(_){}
       // rebind Build Relationships button in refreshed DOM
       try { if (window.bindRelBuildButton) window.bindRelBuildButton(document.getElementById('rel_bulk_build_btn')); } catch(_){}
       // Hook pagination links to AJAX
@@ -3862,7 +4155,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
               <div class="npc-title-actions">
                 <span class="npc-tags-top" style="display:none"></span>
                 <a class="btn btn-toggle" href="#" data-favorite-id="${id}" title="Toggle favorite">☆</a>
-                <a class="btn btn-toggle" href="#" data-lock-id="${id}" title="Toggle lock">🔓</a>
+                <a class="btn btn-toggle" href="#" data-lock-id="${id}" title="Toggle lock - Locked profiles are protected from history pullback when loading saves">🔓</a>
                 <a class="btn btn-trash" href="?delete=${id}" onclick="return confirm('Delete this NPC?');" title="Delete">🗑️</a>
               </div>
             </div>
@@ -3914,6 +4207,19 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           if (left){
             let icon = left.querySelector('.npc-mtm-icon');
             if (mtm){ if (!icon){ icon = document.createElement('span'); icon.className='npc-mtm-icon'; icon.title='Middle-term memory enabled'; icon.textContent='📃'; left.appendChild(icon); } }
+            else { if (icon){ icon.remove(); } }
+          }
+        } catch(_e){}
+        // Toggle Individual Memory Bank icon (🧠) based on extended_data.individual_memory_enabled
+        try {
+          const imb = (function(){
+            const raw = String(data.extended_data||'').trim(); if (!raw) return 0;
+            try { const o = JSON.parse(raw); return (o && Number(o.individual_memory_enabled||0)===1) ? 1 : 0; } catch(_e){ return 0; }
+          })();
+          const left = card.querySelector('.npc-title-left');
+          if (left){
+            let icon = left.querySelector('.npc-imb-icon');
+            if (imb){ if (!icon){ icon = document.createElement('span'); icon.className='npc-imb-icon'; icon.title='Individual memory bank enabled'; icon.textContent='🧠'; left.appendChild(icon); } }
             else { if (icon){ icon.remove(); } }
           }
         } catch(_e){}
@@ -4302,4 +4608,6 @@ $title = $TITLE;
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 ?>
+
+
 

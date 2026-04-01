@@ -134,6 +134,17 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	
 	
 } else if ($gameRequest[0] == "diary") {
+	// Check if this is a narrator diary request and if narrator diary is disabled
+	if (isset($GLOBALS["HERIKA_NAME"]) && $GLOBALS["HERIKA_NAME"] === "The Narrator") {
+		if (!isset($GLOBALS["NARRATOR_DIARY_ENABLED"]) || !$GLOBALS["NARRATOR_DIARY_ENABLED"]) {
+			Logger::info("[DIARY] Narrator diary is disabled, skipping");
+			echo "The Narrator|rolecommand|DebugNotification@The Narrator's diary is disabled".PHP_EOL;
+			@ob_flush();
+			@flush();
+			die();
+		}
+	}
+	
 	// Use configurable DIARY_PROMPT or fallback to default
 	$diaryPrompt = isset($GLOBALS["DIARY_PROMPT"]) && !empty($GLOBALS["DIARY_PROMPT"]) 
 		? strtr($GLOBALS["DIARY_PROMPT"],['{$GLOBALS["HERIKA_NAME"]}'=>$GLOBALS["HERIKA_NAME"],'{$GLOBALS["PLAYER_NAME"]}'=>$GLOBALS["PLAYER_NAME"],'#HERIKA_NAME#'=>$GLOBALS["HERIKA_NAME"],'#PLAYER_NAME#'=>$GLOBALS["PLAYER_NAME"]])

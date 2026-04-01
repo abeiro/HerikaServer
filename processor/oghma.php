@@ -13,13 +13,12 @@ if (!function_exists('isOghmaEnabled')) {
     }
 }
 
-$minimeEnabled = isOghmaEnabled($GLOBALS["MINIME_T5"] ?? false);
+$minimeEnabled = isMinimeT5Enabled();
 $oghmaCustomEnabled = isOghmaEnabled($GLOBALS["OGHMA_CUSTOM"] ?? false);
 $oghmaInfiniumEnabled = isOghmaEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
 
 // Debug: Log the actual values being checked
-error_log("[OGHMA DEBUG] MINIME_T5=" . var_export($GLOBALS["MINIME_T5"] ?? 'NOT SET', true) 
-    . " (enabled=" . ($minimeEnabled ? 'Y' : 'N') . ")"
+error_log("[OGHMA DEBUG] MINIME_T5(auto)=" . ($minimeEnabled ? 'Y' : 'N')
     . " | OGHMA_CUSTOM=" . var_export($GLOBALS["OGHMA_CUSTOM"] ?? 'NOT SET', true)
     . " (enabled=" . ($oghmaCustomEnabled ? 'Y' : 'N') . ")"
     . " | OGHMA_INFINIUM=" . var_export($GLOBALS["OGHMA_INFINIUM"] ?? 'NOT SET', true)
@@ -27,7 +26,7 @@ error_log("[OGHMA DEBUG] MINIME_T5=" . var_export($GLOBALS["MINIME_T5"] ?? 'NOT 
 
 if ($minimeEnabled || $oghmaCustomEnabled) {
     if ($oghmaInfiniumEnabled) {
-        if (in_array($gameRequest[0], ["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat", "instruction", "suggestion"])) {
+        if (in_array($gameRequest[0], ["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat", "continue", "instruction", "suggestion"])) {
             
             if ($gameRequest[0] === "rechat") {
                 $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..)
@@ -372,6 +371,6 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
         error_log("[OGHMA] OGHMA_INFINIUM disabled: {$GLOBALS["OGHMA_INFINIUM"]}");
     }
 }  else {
-        error_log("[OGHMA] Both MINIME_T5 and OGHMA_CUSTOM are disabled");
+        error_log("[OGHMA] MiniMe service unavailable and OGHMA_CUSTOM is disabled");
 }
 ?>

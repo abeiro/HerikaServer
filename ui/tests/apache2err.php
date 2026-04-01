@@ -16,6 +16,18 @@ $password = 'dwemer';
 // Connect to the database
 $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
 
+// Resolve MCP host from conf_opts (fallback to localhost)
+$mcpHost = 'localhost';
+if ($conn) {
+    $mcpRes = @pg_query($conn, "SELECT value FROM conf_opts WHERE id='Network/WSL_IP' LIMIT 1");
+    if ($mcpRes && pg_num_rows($mcpRes) > 0) {
+        $mcpRow = pg_fetch_assoc($mcpRes);
+        if (!empty($mcpRow['value'])) {
+            $mcpHost = trim((string)$mcpRow['value']);
+        }
+    }
+}
+
 $TITLE = "🌲 CHIM Server Logs";
 
 // Auto-trim logs setting (chim_meta.settings)
@@ -157,6 +169,23 @@ function readRegularLog($logPath, $logName) {
         echo '<div class="search-container">';
         echo '<input type="text" class="search-input" placeholder="Search in ' . htmlspecialchars($logName) . '..." data-target="' . $sanitizedId . 'Container">';
         echo '</div>';
+        
+        // Add log level filter controls
+        echo '<div class="log-filter-container" id="' . $sanitizedId . 'FilterContainer">';
+        echo '<div class="filter-header">Filter by Level:</div>';
+        echo '<div class="filter-controls">';
+        echo '<button class="filter-btn filter-btn-sm" onclick="selectAllLevels(\'' . $sanitizedId . '\')">All</button>';
+        echo '<button class="filter-btn filter-btn-sm" onclick="selectNoLevels(\'' . $sanitizedId . '\')">None</button>';
+        echo '</div>';
+        echo '<div class="filter-checkboxes">';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="' . $sanitizedId . '" data-level="error" checked><span class="filter-badge error-badge">Error <span class="level-count" id="' . $sanitizedId . '-error-count">0</span></span></label>';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="' . $sanitizedId . '" data-level="warn" checked><span class="filter-badge warn-badge">Warn <span class="level-count" id="' . $sanitizedId . '-warn-count">0</span></span></label>';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="' . $sanitizedId . '" data-level="info"><span class="filter-badge info-badge">Info <span class="level-count" id="' . $sanitizedId . '-info-count">0</span></span></label>';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="' . $sanitizedId . '" data-level="debug"><span class="filter-badge debug-badge">Debug <span class="level-count" id="' . $sanitizedId . '-debug-count">0</span></span></label>';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="' . $sanitizedId . '" data-level="trace"><span class="filter-badge trace-badge">Trace <span class="level-count" id="' . $sanitizedId . '-trace-count">0</span></span></label>';
+        echo '</div>';
+        echo '</div>';
+        
         echo '<div class="log-container" id="' . $sanitizedId . 'Container">';
 
         if (empty($log)) {
@@ -211,7 +240,7 @@ function readRegularLog($logPath, $logName) {
                             break;
                     }
 
-                    echo '<div class="log-entry ' . $levelClass . '">';
+                    echo '<div class="log-entry ' . $levelClass . '" data-level="' . htmlspecialchars($entry['level']) . '">';
                     $isoTimestamp = timestampToISO8601($entry['timestamp']);
                     if ($isoTimestamp !== null) {
                         echo '<div class="timestamp" data-utc="' . htmlspecialchars($isoTimestamp) . '">' . htmlspecialchars($entry['timestamp']) . '</div>';
@@ -483,7 +512,7 @@ function outputLLMContextBlock($block) {
 }
 
 // Function to read and filter the error log from a given path
-function readErrorLog($errorLogPath, $logType, $showAllEntries = false) {
+function readErrorLog($errorLogPath, $logType) {
     if (file_exists($errorLogPath) && is_readable($errorLogPath)) {
         $errorLog = tail($errorLogPath, 2000); // Get last 2000 lines
 
@@ -495,12 +524,24 @@ function readErrorLog($errorLogPath, $logType, $showAllEntries = false) {
         echo '</div>';
         echo '<div class="search-container">';
         echo '<input type="text" class="search-input" placeholder="Search in Apache Error Log..." data-target="errorLogContainer">';
-        echo '<label class="toggle-switch-inline">';
-        echo '<input type="checkbox" id="apacheLogToggle" ' . ($showAllEntries ? 'checked' : '') . '>';
-        echo '<span class="toggle-slider-inline"></span>';
-        echo '<span class="toggle-label-inline">Show All</span>';
-        echo '</label>';
         echo '</div>';
+        
+        // Add log level filter controls for Apache error log
+        echo '<div class="log-filter-container" id="errorLogFilterContainer">';
+        echo '<div class="filter-header">Filter by Level:</div>';
+        echo '<div class="filter-controls">';
+        echo '<button class="filter-btn filter-btn-sm" onclick="selectAllLevels(\'errorLog\')">All</button>';
+        echo '<button class="filter-btn filter-btn-sm" onclick="selectNoLevels(\'errorLog\')">None</button>';
+        echo '</div>';
+        echo '<div class="filter-checkboxes">';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="errorLog" data-level="error" checked><span class="filter-badge error-badge">Error <span class="level-count" id="errorLog-error-count">0</span></span></label>';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="errorLog" data-level="warn" checked><span class="filter-badge warn-badge">Warn <span class="level-count" id="errorLog-warn-count">0</span></span></label>';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="errorLog" data-level="notice"><span class="filter-badge notice-badge">Notice <span class="level-count" id="errorLog-notice-count">0</span></span></label>';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="errorLog" data-level="info"><span class="filter-badge info-badge">Info <span class="level-count" id="errorLog-info-count">0</span></span></label>';
+        echo '<label class="filter-checkbox"><input type="checkbox" class="level-filter" data-container="errorLog" data-level="debug"><span class="filter-badge debug-badge">Debug <span class="level-count" id="errorLog-debug-count">0</span></span></label>';
+        echo '</div>';
+        echo '</div>';
+        
         echo '<div class="log-container" id="errorLogContainer">';
         
         $entries = [];
@@ -542,18 +583,16 @@ function readErrorLog($errorLogPath, $logType, $showAllEntries = false) {
                     $levelClass = 'debug-level';
                 }
 
-                // Show entry based on toggle state
-                if ($showAllEntries || $level === 'error') {
-                    $entries[] = [
-                        'timestamp' => $timestamp,
-                        'module' => $module,
-                        'message' => $message,
-                        'level' => $level,
-                        'level_class' => $levelClass,
-                        'raw_time' => $rawTime,
-                        'line_order' => $lineNumber // Preserve file order as secondary sort
-                    ];
-                }
+                // Always add entry to array (no filtering at PHP level)
+                $entries[] = [
+                    'timestamp' => $timestamp,
+                    'module' => $module,
+                    'message' => $message,
+                    'level' => $level,
+                    'level_class' => $levelClass,
+                    'raw_time' => $rawTime,
+                    'line_order' => $lineNumber // Preserve file order as secondary sort
+                ];
             }
         }
 
@@ -567,7 +606,7 @@ function readErrorLog($errorLogPath, $logType, $showAllEntries = false) {
         });
 
         foreach ($entries as $entry) {
-            echo '<div class="log-entry ' . $entry['level_class'] . '">';
+            echo '<div class="log-entry ' . $entry['level_class'] . '" data-level="' . htmlspecialchars($entry['level']) . '">';
             $isoTimestamp = timestampToISO8601($entry['timestamp']);
             if ($isoTimestamp !== null) {
                 echo '<div class="timestamp" data-utc="' . htmlspecialchars($isoTimestamp) . '">' . htmlspecialchars($entry['timestamp']) . '</div>';
@@ -804,7 +843,306 @@ if (isset($_GET['download_logs'])) {
             width: 100%;
             margin: 0 auto;
             box-sizing: border-box;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .logs-kagrenac-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+            align-items: start;
+        }
+
+        .logs-column {
+            min-width: 0;
+        }
+
+        .kagrenac-panel {
+            position: sticky;
+            top: 86px;
+            align-self: start;
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+            border: 1px solid #3a3a3a;
+            border-radius: 10px;
+            min-height: 300px;
+            height: calc(100vh - 110px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .kagrenac-header {
+            padding: 12px 14px;
+            border-bottom: 1px solid #3a3a3a;
+            background: rgba(30, 30, 30, 0.85);
+        }
+
+        .kagrenac-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .kagrenac-header h2 {
+            margin: 0 0 6px 0;
+            padding: 0;
+            border: 0;
+            font-size: 1.1em;
+        }
+
+        .kagrenac-subtitle {
+            color: #c8c8c8;
+            font-size: 12px;
+        }
+
+        .kagrenac-toggle-settings {
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            background: rgba(20, 20, 20, 0.85);
+            color: #ddd;
+            font-size: 11px;
+            line-height: 1;
+            padding: 6px 8px;
+            cursor: pointer;
+        }
+
+        .kagrenac-toggle-settings:hover {
+            border-color: rgba(242, 124, 17, 0.5);
+            color: rgb(242, 124, 17);
+        }
+
+        .kagrenac-settings {
+            padding: 10px 14px;
+            border-bottom: 1px solid #3a3a3a;
+            display: grid;
+            gap: 8px;
+            background: rgba(30, 30, 30, 0.6);
+        }
+
+        .kagrenac-settings.hidden {
+            display: none;
+        }
+
+        .kagrenac-settings label {
+            color: #d4d4d4;
+            font-size: 12px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .kagrenac-settings input,
+        .kagrenac-settings select,
+        .kagrenac-settings textarea {
+            width: 100%;
+            padding: 7px 9px;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            background: rgba(26, 26, 26, 0.8);
+            color: #d4d4d4;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+
+        .kagrenac-settings textarea {
+            min-height: 64px;
+            resize: vertical;
+        }
+
+        .kagrenac-settings .settings-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .kagrenac-settings .settings-btn {
+            border: 1px solid #3a3a3a;
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+            color: #f8f9fa;
+            border-radius: 6px;
+            padding: 7px 10px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .kagrenac-settings .settings-btn:hover {
+            border-color: rgba(242, 124, 17, 0.5);
+            color: rgb(242, 124, 17);
+        }
+
+        .kagrenac-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .kagrenac-chat-history {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            background: radial-gradient(circle at top left, rgba(40, 40, 40, 0.35), rgba(20, 20, 20, 0.9));
+        }
+
+        .kag-msg-row {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .kag-msg-row.user {
+            justify-content: flex-end;
+        }
+
+        .kag-msg-row.assistant,
+        .kag-msg-row.error {
+            justify-content: flex-start;
+        }
+
+        .kag-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid rgba(242, 124, 17, 0.65);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            background: rgba(35, 35, 35, 0.9);
+            flex: 0 0 30px;
+        }
+
+        .kag-msg {
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-width: 88%;
+            border: 1px solid rgba(242, 124, 17, 0.35);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+        }
+
+        .kag-msg.user {
+            background: linear-gradient(135deg, rgba(66, 66, 155, 0.55), rgba(42, 42, 120, 0.65));
+            border-color: rgba(110, 110, 190, 0.45);
+        }
+
+        .kag-msg.assistant {
+            background: linear-gradient(135deg, rgba(242, 124, 17, 0.5), rgba(184, 92, 13, 0.55));
+            border-color: rgba(242, 124, 17, 0.65);
+            color: #fff4e8;
+        }
+
+        .kag-msg.error {
+            background: linear-gradient(135deg, rgba(145, 40, 40, 0.5), rgba(95, 20, 20, 0.6));
+            border-color: rgba(190, 70, 70, 0.5);
+            color: #ffd0d0;
+        }
+
+        .kag-msg-meta {
+            margin-top: 4px;
+            font-size: 10px;
+            color: #a0a0a0;
+            text-align: right;
+            opacity: 0.9;
+        }
+
+        .kag-msg-row.thinking .kag-msg {
+            background: linear-gradient(135deg, rgba(58, 58, 58, 0.85), rgba(42, 42, 42, 0.9));
+            border-style: dashed;
+            color: #dddddd;
+        }
+
+        .kag-typing-dots {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+
+        .kag-typing-dots span {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: rgba(242, 124, 17, 0.95);
+            animation: kagDotsPulse 1s infinite ease-in-out;
+        }
+
+        .kag-typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+        .kag-typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes kagDotsPulse {
+            0%, 80%, 100% { transform: scale(0.7); opacity: 0.6; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .kagrenac-chat-input {
+            border-top: 1px solid #3a3a3a;
+            padding: 10px;
+            display: grid;
+            gap: 8px;
+            background: rgba(34, 34, 34, 0.95);
+        }
+
+        .kagrenac-chat-input textarea {
+            width: 100%;
+            min-height: 58px;
+            max-height: 150px;
+            padding: 8px 10px;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            background: rgba(26, 26, 26, 0.8);
+            color: #d4d4d4;
+            font-size: 12px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        .kag-processing-hint {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            color: #bfbfbf;
+            font-size: 11px;
+        }
+
+        .kag-processing-hint.active {
+            display: inline-flex;
+        }
+
+        .kag-processing-spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid #555;
+            border-top-color: rgba(242, 124, 17, 0.95);
+            border-radius: 50%;
+            animation: kagSpin 0.8s linear infinite;
+        }
+
+        @keyframes kagSpin {
+            to { transform: rotate(360deg); }
+        }
+
+        .kagrenac-send {
+            justify-self: end;
+            border: 1px solid #3a3a3a;
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+            color: #f8f9fa;
+            border-radius: 6px;
+            padding: 7px 12px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .kagrenac-send:hover:not(:disabled) {
+            border-color: rgba(242, 124, 17, 0.5);
+            color: rgb(242, 124, 17);
+        }
+
+        .kagrenac-send:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .log-section {
@@ -923,11 +1261,30 @@ if (isset($_GET['download_logs'])) {
         }
 
         .trace-level {
+            border-left: 4px solid #9370DB;
+        }
+        .trace-level .log-level {
+            background-color: #9370DB;
+            color: white;
+        }
+
+        .trace-level {
             border-left: 4px solid #28a745;
         }
         .trace-level .log-level {
             background-color: #28a745;
             color: white;
+        }
+
+        @media (max-width: 1200px) {
+            .logs-kagrenac-layout {
+                grid-template-columns: 1fr;
+            }
+            .kagrenac-panel {
+                position: static;
+                height: auto;
+                max-height: none;
+            }
         }
 
         @media (max-width: 1200px) {
@@ -1038,6 +1395,155 @@ if (isset($_GET['download_logs'])) {
             display: flex;
             gap: 10px;
             align-items: center;
+        }
+
+        /* Compact per-panel header layout: title + search on one line */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: nowrap;
+            margin-bottom: 6px;
+        }
+
+        .section-header h2 {
+            margin: 0;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .section-header .search-container {
+            margin: 0;
+            flex: 0 0 clamp(260px, 42%, 520px);
+            min-width: 220px;
+            justify-content: flex-end;
+        }
+
+        .section-header .search-input {
+            width: 100%;
+        }
+
+        /* Log Filter Styles */
+        .log-filter-container {
+            background: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            padding: 12px 15px;
+            margin: 10px 0;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .filter-header {
+            font-weight: 600;
+            color: #fff;
+            font-size: 14px;
+            margin-right: 5px;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-btn-sm {
+            padding: 4px 12px;
+            font-size: 12px;
+            background: #3a3a3a;
+            border: 1px solid #4a4a4a;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn-sm:hover {
+            background: #4a4a4a;
+            border-color: #5a5a5a;
+        }
+
+        .filter-checkboxes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .filter-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .filter-checkbox input[type="checkbox"] {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        .filter-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+
+        .filter-checkbox input[type="checkbox"]:not(:checked) + .filter-badge {
+            opacity: 0.4;
+        }
+
+        .level-count {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .error-badge {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .warn-badge {
+            background-color: #ffc107;
+            color: black;
+        }
+
+        .notice-badge {
+            background-color: #20c997;
+            color: white;
+        }
+
+        .info-badge {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        .debug-badge {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .trace-badge {
+            background-color: #9370DB;
+            color: white;
+        }
+
+        /* Hide filtered log entries */
+        .log-entry.hidden-by-filter,
+        .log-entry.hidden-by-search {
+            display: none !important;
         }
 
         .search-input {
@@ -1268,10 +1774,14 @@ if (isset($_GET['download_logs'])) {
             margin-right: 4px;
         }
 
-        .section-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+        @media (max-width: 980px) {
+            .section-header {
+                flex-wrap: wrap;
+            }
+            .section-header .search-container {
+                flex-basis: 100%;
+                min-width: 100%;
+            }
         }
 
         .log-module {
@@ -1458,233 +1968,8 @@ if (isset($_GET['download_logs'])) {
             color: white;
         }
 
-        /* AI Assistant Sidebar Styles */
-        .ai-sidebar {
-            position: fixed;
-            top: 0;
-            right: -450px;
-            width: 450px;
-            height: 100vh;
-            background-color: #1a1a1a;
-            border-left: 1px solid #4a4a4a;
-            z-index: 2000;
-            transition: right 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.5);
-        }
-
-        .ai-sidebar.open {
-            right: 0;
-        }
-
-        body.ai-sidebar-open {
-            overflow: hidden;
-        }
-
-        body.ai-sidebar-open main {
-            margin-right: 450px;
-            transition: margin-right 0.3s ease;
-        }
-
         main {
             transition: margin-right 0.3s ease;
-        }
-
-        body.ai-sidebar-open .grid-container {
-            margin-right: 0;
-        }
-
-        .ai-sidebar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            border-bottom: 1px solid #4a4a4a;
-            background-color: #252526;
-        }
-
-        .ai-sidebar-header h2 {
-            margin: 0;
-            color: rgb(242, 124, 17);
-            font-size: 1.4em;
-            border: none;
-            padding: 0;
-        }
-
-        .ai-sidebar-close {
-            background: none;
-            border: none;
-            color: #f8f9fa;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-        }
-
-        .ai-sidebar-close:hover {
-            background-color: #444;
-        }
-
-        .ai-sidebar-body {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-            overflow: hidden;
-        }
-
-        .ai-model-selector {
-            margin-bottom: 15px;
-        }
-
-        .ai-model-selector label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 0.9em;
-            color: #d4d4d4;
-        }
-
-        .ai-model-selector select {
-            width: 100%;
-            padding: 8px;
-            background-color: #2c2c2c;
-            color: #f8f9fa;
-            border: 1px solid #4a4a4a;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .ai-chat-history {
-            flex: 1;
-            overflow-y: auto;
-            margin-bottom: 15px;
-            padding: 10px;
-            background-color: #2c2c2c;
-            border-radius: 6px;
-            border: 1px solid #3a3a3a;
-        }
-
-        .ai-chat-message {
-            margin-bottom: 15px;
-            padding: 10px;
-            border-radius: 6px;
-            line-height: 1.5;
-        }
-
-        .ai-chat-message.user {
-            background-color: #204e7a;
-            margin-left: 20px;
-        }
-
-        .ai-chat-message.assistant {
-            background-color: #2a3a2a;
-            margin-right: 20px;
-        }
-
-        .ai-chat-message.error {
-            background-color: #4a2a2a;
-            color: #ff6b6b;
-        }
-
-        .ai-chat-message-role {
-            font-weight: bold;
-            margin-bottom: 5px;
-            font-size: 0.9em;
-            opacity: 0.8;
-        }
-
-        .ai-chat-message-content {
-            font-size: 0.95em;
-        }
-
-        .ai-chat-message-content pre {
-            background-color: #1a1a1a;
-            padding: 10px;
-            border-radius: 4px;
-            overflow-x: auto;
-            margin: 10px 0;
-        }
-
-        .ai-chat-message-content code {
-            background-color: #1a1a1a;
-            padding: 2px 6px;
-            border-radius: 3px;
-        }
-
-        .ai-chat-message-content ul,
-        .ai-chat-message-content ol {
-            margin: 10px 0;
-            padding-left: 20px;
-        }
-
-        .ai-chat-input-container {
-            display: flex;
-            gap: 10px;
-        }
-
-        .ai-chat-input {
-            flex: 1;
-            padding: 10px;
-            background-color: #2c2c2c;
-            color: #f8f9fa;
-            border: 1px solid #4a4a4a;
-            border-radius: 4px;
-            resize: vertical;
-            min-height: 60px;
-            max-height: 150px;
-            font-family: 'Futura CondensedLight', Arial, sans-serif;
-        }
-
-        .ai-send-button {
-            padding: 10px 20px;
-            background-color: #176529;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.2s;
-            align-self: flex-end;
-        }
-
-        .ai-send-button:hover:not(:disabled) {
-            background-color: #125121;
-        }
-
-        .ai-send-button:disabled {
-            background-color: #555;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        .ai-loading-indicator {
-            text-align: center;
-            padding: 10px;
-            color: #9fb1c9;
-            font-style: italic;
-        }
-
-        .ai-chat-history::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .ai-chat-history::-webkit-scrollbar-track {
-            background: #2c2c2c;
-        }
-
-        .ai-chat-history::-webkit-scrollbar-thumb {
-            background: #555;
-            border-radius: 4px;
-        }
-
-        .ai-chat-history::-webkit-scrollbar-thumb:hover {
-            background: #666;
         }
     </style>
 </head>
@@ -1729,21 +2014,15 @@ if (isset($_GET['download_logs'])) {
             </svg>
             Timezone: UTC
         </button>
-        <button class="refresh-button" id="aiAssistantToggle" style="margin-left: 10px;" title="Open AI Analyzer">
-            <img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" width="20" height="20" style="margin-right:6px; vertical-align: middle; border-radius: 3px;">
-            AI Analyzer
-        </button>
     </div>
-    <h2>Last 2000 lines from each log are displayed here. The full logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">View the log folder.</a></h2>
-
-    <div class="grid-container" id="logGrid">
+    <div class="logs-kagrenac-layout">
+        <div class="logs-column">
+            <h2>Last 2000 lines from each log are displayed here. The full logs can be found in the /log folder of the CHIM server. <a href="/HerikaServer/log" target="_blank">View the log folder.</a></h2>
+            <div class="grid-container" id="logGrid">
         <div class="log-section">
             <?php
-            // Check if we should show all entries based on GET parameter
-            $showAllApacheEntries = isset($_GET['show_all_apache']) && $_GET['show_all_apache'] === '1';
             // Display Apache error log
-            $apacheLogTitle = $showAllApacheEntries ? "Apache Log [All Entries] (apache_error.log)" : "Apache Log [Errors Only] (apache_error.log)";
-            readErrorLog($distroLogPath, $apacheLogTitle, $showAllApacheEntries);
+            readErrorLog($distroLogPath, "Apache Log (apache_error.log)");
             ?>
         </div>
 
@@ -1869,48 +2148,57 @@ if (isset($_GET['download_logs'])) {
             readRegularLog($debugStreamLogPath, "Debug Stream Log (debugstream.log)");
             ?>
         </div>
+            </div>
+        </div>
+        <aside class="kagrenac-panel" id="kagrenacPanel">
+            <div class="kagrenac-header">
+                <div class="kagrenac-header-row">
+                    <h2>Ask Kagrenac</h2>
+                    <button id="kagToggleSettingsBtn" type="button" class="kagrenac-toggle-settings">Settings</button>
+                </div>
+                <div class="kagrenac-subtitle">Analyze logs and files with MCP tools.</div>
+            </div>
+            <div class="kagrenac-settings">
+                <div>
+                    <label for="kagConnector">LLM Connector</label>
+                    <select id="kagConnector"></select>
+                </div>
+                <div>
+                    <label for="kagApiBadge">API Badge</label>
+                    <select id="kagApiBadge"></select>
+                </div>
+                <div>
+                    <label for="kagModel">Model</label>
+                    <input id="kagModel" type="text" placeholder="anthropic/claude-sonnet-4">
+                </div>
+                <div>
+                    <label for="kagMaxRounds">Max Tool Rounds</label>
+                    <input id="kagMaxRounds" type="number" min="1" max="30" step="1" placeholder="10">
+                </div>
+                <div>
+                    <label for="kagSystemPrompt">System Prompt Override</label>
+                    <textarea id="kagSystemPrompt" placeholder="Leave blank to use server default prompt"></textarea>
+                </div>
+                <div class="settings-actions">
+                    <button class="settings-btn" id="kagSaveSettingsBtn" type="button">Save Settings</button>
+                    <button class="settings-btn" id="kagReloadSettingsBtn" type="button">Reload</button>
+                </div>
+            </div>
+            <div class="kagrenac-chat">
+                <div class="kagrenac-chat-history" id="kagChatHistory"></div>
+                <div class="kagrenac-chat-input">
+                    <textarea id="kagUserInput" placeholder="Ask about current errors, log patterns, or config issues..."></textarea>
+                    <div id="kagProcessingHint" class="kag-processing-hint" aria-live="polite">
+                        <span class="kag-processing-spinner"></span>
+                        <span>Kagrenac is analyzing your request...</span>
+                    </div>
+                    <button class="kagrenac-send" id="kagSendBtn" type="button">Send</button>
+                </div>
+            </div>
+        </aside>
     </div>
 </div>
 </main>
-
-<!-- AI Assistant Sidebar -->
-<div class="ai-sidebar" id="aiSidebar">
-    <div class="ai-sidebar-header">
-        <h2><img src="<?php echo $webRoot; ?>/ui/images/DwemerDynamics.png" width="28" height="28" style="vertical-align: middle; margin-right: 8px; border-radius: 4px;"> AI Analyzer</h2>
-        <button class="ai-sidebar-close" id="aiSidebarClose">&times;</button>
-    </div>
-    <div class="ai-sidebar-body">
-        <div class="ai-model-selector">
-            <label for="ai-model-select">Model (Requires OpenRouter API Key):</label>
-            <select id="ai-model-select">
-                <option value="anthropic/claude-sonnet-4">Claude Sonnet 4.5</option>
-                <option value="anthropic/claude-opus-4">Claude Opus 4.5</option>
-            </select>
-        </div>
-        
-        <div class="ai-chat-history" id="ai-chat-history">
-            <div class="ai-chat-message assistant">
-                <div class="ai-chat-message-role">CHIM</div>
-                <div class="ai-chat-message-content">
-                    Hello! I an a AI Analyzer, your log analysis assistant. I can help you:
-                    <ul>
-                        <li>Debug LLM connection issues</li>
-                        <li>Analyze failed requests</li>
-                        <li>Query the database with SQL</li>
-                        <li>Review log files</li>
-                        <li>Find patterns and errors</li>
-                    </ul>
-                    Ask me anything about the logs!
-                </div>
-            </div>
-        </div>
-        
-        <div class="ai-chat-input-container">
-            <textarea id="ai-chat-input" class="ai-chat-input" placeholder="Ask about logs, request SQL queries, or ask for help debugging..."></textarea>
-            <button id="ai-send-button" class="ai-send-button">Send</button>
-        </div>
-    </div>
-</div>
 
 <!-- Modals -->
 <div id="errorLogModal" class="modal">
@@ -2175,10 +2463,11 @@ document.querySelectorAll('.search-input, .modal-search-input').forEach(input =>
         // Get all entries
         const entries = container.querySelectorAll('.log-entry, .error-entry, .llm-block');
         
-        // If search is empty, show all entries and remove highlights
+        // If search is empty, show all entries (except those hidden by filters) and remove highlights
         if (!searchTerm) {
             entries.forEach(entry => {
-                entry.style.display = '';
+                // Remove search hiding, but keep filter hiding
+                entry.classList.remove('hidden-by-search');
                 // Remove all highlights
                 entry.querySelectorAll('.highlight').forEach(highlight => {
                     const text = highlight.textContent;
@@ -2204,13 +2493,13 @@ document.querySelectorAll('.search-input, .modal-search-input').forEach(input =>
             const entryText = entry.textContent.toLowerCase();
             
             if (entryText.includes(searchLower)) {
-                entry.style.display = '';
+                entry.classList.remove('hidden-by-search');
                 hasMatches = true;
                 
                 // Highlight matches in text nodes only, preserving structure
                 highlightInElement(entry, searchTerm);
             } else {
-                entry.style.display = 'none';
+                entry.classList.add('hidden-by-search');
             }
         });
 
@@ -2735,209 +3024,458 @@ document.body.addEventListener('click', function(event) {
     });
 })();
 
-// Apache log toggle functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const apacheToggle = document.getElementById('apacheLogToggle');
-    if (apacheToggle) {
-        apacheToggle.addEventListener('change', function() {
-            const url = new URL(window.location);
-            if (this.checked) {
-                url.searchParams.set('show_all_apache', '1');
-            } else {
-                url.searchParams.delete('show_all_apache');
-            }
-            // Remove download parameter if it exists
-            url.searchParams.delete('download_logs');
-            window.location.href = url.toString();
-        });
-    }
-});
-</script>
-
-<!-- AI Assistant JavaScript -->
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script>
+// Log Level Filtering System
 (function() {
-    const aiSidebar = document.getElementById('aiSidebar');
-    const aiToggleBtn = document.getElementById('aiAssistantToggle');
-    const aiCloseBtn = document.getElementById('aiSidebarClose');
-    const aiChatHistory = document.getElementById('ai-chat-history');
-    const aiChatInput = document.getElementById('ai-chat-input');
-    const aiSendButton = document.getElementById('ai-send-button');
-    const aiModelSelect = document.getElementById('ai-model-select');
+    const STORAGE_KEY_PREFIX = 'logLevelFilters_';
     
-    let conversationHistory = [];
-    let isLoading = false;
-    
-    // Determine webRoot from current script context
-    const webRoot = (function() {
-        const scriptPath = window.location.pathname;
-        const uiPos = scriptPath.indexOf('/ui/');
-        if (uiPos !== -1) {
-            return scriptPath.substring(0, uiPos);
-        }
-        return '';
-    })();
-    
-    // Marked configuration for safe HTML
-    if (typeof marked !== 'undefined') {
-        marked.setOptions({
-            breaks: true,
-            gfm: true
+    // Initialize filter counts and set up listeners
+    function initializeLogFilters() {
+        // Get all unique container IDs from filter checkboxes
+        const containers = new Set();
+        document.querySelectorAll('.level-filter').forEach(checkbox => {
+            containers.add(checkbox.dataset.container);
+        });
+        
+        // Initialize each container
+        containers.forEach(containerId => {
+            updateLogCounts(containerId);
+            loadFilterPreferences(containerId);
+            applyFilters(containerId);
+        });
+        
+        // Set up event listeners for all filter checkboxes
+        document.querySelectorAll('.level-filter').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const containerId = this.dataset.container;
+                applyFilters(containerId);
+                saveFilterPreferences(containerId);
+            });
         });
     }
     
-    // Toggle sidebar
-    function openSidebar() {
-        aiSidebar.classList.add('open');
-        document.body.classList.add('ai-sidebar-open');
-        aiChatInput.focus();
-    }
-    
-    function closeSidebar() {
-        aiSidebar.classList.remove('open');
-        document.body.classList.remove('ai-sidebar-open');
-    }
-    
-    aiToggleBtn.addEventListener('click', openSidebar);
-    aiCloseBtn.addEventListener('click', closeSidebar);
-    
-    // Close sidebar with Escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && aiSidebar.classList.contains('open')) {
-            closeSidebar();
-        }
-    });
-    
-    function addMessage(role, content, isError = false) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'ai-chat-message ' + (isError ? 'error' : role);
+    // Count log entries by level and update badges
+    function updateLogCounts(containerId) {
+        const container = document.getElementById(containerId + 'Container');
+        if (!container) return;
         
-        const roleDiv = document.createElement('div');
-        roleDiv.className = 'ai-chat-message-role';
-        roleDiv.textContent = role === 'user' ? 'You' : (isError ? 'Error' : 'CHIM');
+        const counts = {
+            error: 0,
+            warn: 0,
+            warning: 0,
+            notice: 0,
+            info: 0,
+            debug: 0,
+            trace: 0
+        };
         
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'ai-chat-message-content';
-        
-        // Use marked for markdown if available, otherwise plain text
-        if (typeof marked !== 'undefined' && !isError) {
-            contentDiv.innerHTML = marked.parse(content);
-        } else {
-            contentDiv.textContent = content;
-        }
-        
-        messageDiv.appendChild(roleDiv);
-        messageDiv.appendChild(contentDiv);
-        aiChatHistory.appendChild(messageDiv);
-        
-        // Scroll to bottom
-        aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
-    }
-    
-    function addLoadingIndicator() {
-        const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'ai-loading-indicator';
-        loadingDiv.id = 'ai-loading-indicator';
-        loadingDiv.textContent = 'AI is thinking...';
-        aiChatHistory.appendChild(loadingDiv);
-        aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
-    }
-    
-    function removeLoadingIndicator() {
-        const loadingDiv = document.getElementById('ai-loading-indicator');
-        if (loadingDiv) {
-            loadingDiv.remove();
-        }
-    }
-    
-    async function sendMessage() {
-        if (isLoading) return;
-        
-        const message = aiChatInput.value.trim();
-        if (!message) return;
-        
-        isLoading = true;
-        aiSendButton.disabled = true;
-        aiChatInput.disabled = true;
-        
-        // Add user message to UI
-        addMessage('user', message);
-        
-        // Add to conversation history
-        conversationHistory.push({
-            role: 'user',
-            content: message
+        // Count entries
+        container.querySelectorAll('.log-entry[data-level]').forEach(entry => {
+            const level = entry.dataset.level.toLowerCase();
+            if (counts.hasOwnProperty(level)) {
+                counts[level]++;
+            }
         });
         
-        // Clear input
-        aiChatInput.value = '';
+        // Combine warn and warning counts
+        counts.warn += counts.warning;
         
-        // Show loading
-        addLoadingIndicator();
+        // Update count displays
+        Object.keys(counts).forEach(level => {
+            if (level !== 'warning') { // Skip warning as it's combined with warn
+                const countEl = document.getElementById(`${containerId}-${level}-count`);
+                if (countEl) {
+                    countEl.textContent = counts[level];
+                }
+            }
+        });
+    }
+    
+    // Apply filters based on checkbox states
+    function applyFilters(containerId) {
+        const container = document.getElementById(containerId + 'Container');
+        if (!container) return;
+        
+        // Get enabled levels
+        const enabledLevels = new Set();
+        document.querySelectorAll(`.level-filter[data-container="${containerId}"]`).forEach(checkbox => {
+            if (checkbox.checked) {
+                enabledLevels.add(checkbox.dataset.level.toLowerCase());
+            }
+        });
+        
+        // Apply filters to log entries
+        let visibleCount = 0;
+        container.querySelectorAll('.log-entry[data-level]').forEach(entry => {
+            const level = entry.dataset.level.toLowerCase();
+            // Handle both 'warn' and 'warning' levels
+            const shouldShow = enabledLevels.has(level) || 
+                             (level === 'warning' && enabledLevels.has('warn'));
+            
+            if (shouldShow) {
+                entry.classList.remove('hidden-by-filter');
+                visibleCount++;
+            } else {
+                entry.classList.add('hidden-by-filter');
+            }
+        });
+        
+        // Show "no results" message if all entries are filtered out
+        const existingMessage = container.querySelector('.no-filter-results');
+        if (visibleCount === 0 && container.querySelectorAll('.log-entry[data-level]').length > 0) {
+            if (!existingMessage) {
+                const message = document.createElement('p');
+                message.className = 'no-filter-results info-message';
+                message.style.cssText = 'color: #888; padding: 20px; text-align: center;';
+                message.textContent = 'No log entries match the selected filters.';
+                container.appendChild(message);
+            }
+        } else if (existingMessage) {
+            existingMessage.remove();
+        }
+    }
+    
+    // Save filter preferences to localStorage
+    function saveFilterPreferences(containerId) {
+        const preferences = {};
+        document.querySelectorAll(`.level-filter[data-container="${containerId}"]`).forEach(checkbox => {
+            preferences[checkbox.dataset.level] = checkbox.checked;
+        });
+        localStorage.setItem(STORAGE_KEY_PREFIX + containerId, JSON.stringify(preferences));
+    }
+    
+    // Load filter preferences from localStorage
+    function loadFilterPreferences(containerId) {
+        const stored = localStorage.getItem(STORAGE_KEY_PREFIX + containerId);
+        if (!stored) return;
         
         try {
-            const response = await fetch(webRoot + '/ui/cmd/ai_log_assistant.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: message,
-                    model: aiModelSelect.value,
-                    history: conversationHistory
-                })
+            const preferences = JSON.parse(stored);
+            document.querySelectorAll(`.level-filter[data-container="${containerId}"]`).forEach(checkbox => {
+                const level = checkbox.dataset.level;
+                if (preferences.hasOwnProperty(level)) {
+                    checkbox.checked = preferences[level];
+                }
             });
-            
-            removeLoadingIndicator();
-            
-            if (!response.ok) {
-                throw new Error('Network response was not ok: ' + response.statusText);
-            }
-            
-            const data = await response.json();
-            
-            if (data.error) {
-                addMessage('assistant', 'Error: ' + data.error, true);
-            } else if (data.success && data.message) {
-                addMessage('assistant', data.message);
-                
-                // Add to conversation history
-                conversationHistory.push({
-                    role: 'assistant',
-                    content: data.message
-                });
-            } else {
-                addMessage('assistant', 'Received unexpected response format', true);
-            }
-            
-        } catch (error) {
-            removeLoadingIndicator();
-            addMessage('assistant', 'Failed to communicate with AI: ' + error.message, true);
-            console.error('AI request error:', error);
-        } finally {
-            isLoading = false;
-            aiSendButton.disabled = false;
-            aiChatInput.disabled = false;
-            aiChatInput.focus();
+        } catch (e) {
+            console.error('Failed to load filter preferences:', e);
         }
     }
     
-    // Event listeners
-    aiSendButton.addEventListener('click', sendMessage);
+    // Global functions for select all/none buttons
+    window.selectAllLevels = function(containerId) {
+        document.querySelectorAll(`.level-filter[data-container="${containerId}"]`).forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        applyFilters(containerId);
+        saveFilterPreferences(containerId);
+    };
     
-    aiChatInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
+    window.selectNoLevels = function(containerId) {
+        document.querySelectorAll(`.level-filter[data-container="${containerId}"]`).forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        applyFilters(containerId);
+        saveFilterPreferences(containerId);
+    };
+    
+    // Initialize on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeLogFilters);
+    } else {
+        initializeLogFilters();
+    }
+})();
+</script>
+
+<!-- Ask Kagrenac embedded panel -->
+<script>
+(function() {
+    const mcpServerUrl = 'http://<?php echo htmlspecialchars($mcpHost, ENT_QUOTES, 'UTF-8'); ?>:3100';
+    const configApiUrl = '<?php echo $webRoot; ?>/ui/api/chim_mcp_config.php';
+    const kagAvatarUrl = '<?php echo $webRoot; ?>/ui/images/metaphysics.png';
+    const sendBtn = document.getElementById('kagSendBtn');
+    const inputEl = document.getElementById('kagUserInput');
+    const historyEl = document.getElementById('kagChatHistory');
+    const connectorEl = document.getElementById('kagConnector');
+    const apiBadgeEl = document.getElementById('kagApiBadge');
+    const modelEl = document.getElementById('kagModel');
+    const maxRoundsEl = document.getElementById('kagMaxRounds');
+    const systemPromptEl = document.getElementById('kagSystemPrompt');
+    const saveSettingsBtn = document.getElementById('kagSaveSettingsBtn');
+    const reloadSettingsBtn = document.getElementById('kagReloadSettingsBtn');
+    const toggleSettingsBtn = document.getElementById('kagToggleSettingsBtn');
+    const settingsContainer = document.querySelector('.kagrenac-settings');
+    const processingHintEl = document.getElementById('kagProcessingHint');
+
+    if (!sendBtn || !inputEl || !historyEl) {
+        return;
+    }
+
+    let isSending = false;
+    let thinkingRow = null;
+
+    function addMessage(role, text) {
+        const row = document.createElement('div');
+        row.className = 'kag-msg-row ' + role;
+
+        if (role === 'assistant') {
+            const avatar = document.createElement('img');
+            avatar.className = 'kag-avatar';
+            avatar.src = kagAvatarUrl;
+            avatar.alt = 'Kagrenac';
+            row.appendChild(avatar);
+        }
+
+        const msg = document.createElement('div');
+        msg.className = 'kag-msg ' + role;
+        const body = document.createElement('div');
+        body.textContent = text;
+        msg.appendChild(body);
+
+        const meta = document.createElement('div');
+        meta.className = 'kag-msg-meta';
+        meta.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        msg.appendChild(meta);
+
+        row.appendChild(msg);
+        historyEl.appendChild(row);
+        historyEl.scrollTop = historyEl.scrollHeight;
+    }
+
+    function setSendingState(sending) {
+        isSending = sending;
+        sendBtn.disabled = sending;
+        inputEl.disabled = sending;
+        sendBtn.textContent = sending ? 'Processing...' : 'Send';
+        if (processingHintEl) {
+            processingHintEl.classList.toggle('active', sending);
+        }
+        if (sending) {
+            showThinkingMessage();
+        } else {
+            hideThinkingMessage();
+        }
+    }
+
+    function showThinkingMessage() {
+        if (thinkingRow) {
+            return;
+        }
+
+        const row = document.createElement('div');
+        row.className = 'kag-msg-row assistant thinking';
+
+        const avatar = document.createElement('img');
+        avatar.className = 'kag-avatar';
+        avatar.src = kagAvatarUrl;
+        avatar.alt = 'Kagrenac';
+        row.appendChild(avatar);
+
+        const msg = document.createElement('div');
+        msg.className = 'kag-msg assistant';
+
+        const body = document.createElement('div');
+        body.textContent = 'Kagrenac is calibrating tonal resonators';
+
+        const dots = document.createElement('span');
+        dots.className = 'kag-typing-dots';
+        dots.innerHTML = '<span></span><span></span><span></span>';
+        body.appendChild(dots);
+        msg.appendChild(body);
+
+        row.appendChild(msg);
+        historyEl.appendChild(row);
+        historyEl.scrollTop = historyEl.scrollHeight;
+        thinkingRow = row;
+    }
+
+    function hideThinkingMessage() {
+        if (!thinkingRow) {
+            return;
+        }
+        thinkingRow.remove();
+        thinkingRow = null;
+    }
+
+    async function loadApiBadges() {
+        if (!apiBadgeEl) {
+            return;
+        }
+        apiBadgeEl.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Select API Badge';
+        apiBadgeEl.appendChild(placeholder);
+
+        const response = await fetch(configApiUrl + '?badges=1');
+        const payload = await response.json();
+        if (!payload || !payload.success || !payload.data || !Array.isArray(payload.data.badges)) {
+            throw new Error('Failed to load API badges');
+        }
+
+        payload.data.badges.forEach((badge) => {
+            const option = document.createElement('option');
+            option.value = String(badge.id);
+            option.textContent = badge.label;
+            apiBadgeEl.appendChild(option);
+        });
+    }
+
+    async function loadConnectors() {
+        if (!connectorEl) {
+            return;
+        }
+        connectorEl.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Use MCP default / API Badge';
+        connectorEl.appendChild(placeholder);
+
+        const response = await fetch(configApiUrl + '?connectors=1');
+        const payload = await response.json();
+        if (!payload || !payload.success || !payload.data || !Array.isArray(payload.data.connectors)) {
+            throw new Error('Failed to load connectors');
+        }
+
+        payload.data.connectors.forEach((connector) => {
+            const option = document.createElement('option');
+            option.value = String(connector.id);
+            const service = connector.service ? String(connector.service).toUpperCase() : 'UNKNOWN';
+            const label = connector.label ? String(connector.label) : ('Connector #' + String(connector.id));
+            option.textContent = '[' + service + '] ' + label;
+            connectorEl.appendChild(option);
+        });
+    }
+
+    async function loadSettings() {
+        const response = await fetch(configApiUrl);
+        const payload = await response.json();
+        if (!payload || !payload.success || !payload.data) {
+            throw new Error('Failed to load MCP settings');
+        }
+        const cfg = payload.data;
+        if (connectorEl) {
+            connectorEl.value = cfg.llm_connector_id || '';
+        }
+        if (apiBadgeEl) {
+            apiBadgeEl.value = cfg.api_badge_id || '';
+        }
+        if (modelEl) {
+            modelEl.value = cfg.model || '';
+        }
+        if (maxRoundsEl) {
+            maxRoundsEl.value = cfg.max_tool_rounds || '10';
+        }
+        if (systemPromptEl) {
+            systemPromptEl.value = cfg.system_prompt || '';
+        }
+    }
+
+    async function saveSettings() {
+        const body = {
+            llm_connector_id: connectorEl ? connectorEl.value : '',
+            api_badge_id: apiBadgeEl ? apiBadgeEl.value : '',
+            model: modelEl ? modelEl.value.trim() : '',
+            max_tool_rounds: maxRoundsEl ? maxRoundsEl.value : '10',
+            system_prompt: systemPromptEl ? systemPromptEl.value : '',
+        };
+
+        const response = await fetch(configApiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const payload = await response.json();
+        if (!payload || !payload.success) {
+            throw new Error(payload && payload.error ? payload.error : 'Failed to save settings');
+        }
+    }
+
+    async function sendMessage() {
+        const content = inputEl.value.trim();
+        if (!content || isSending) {
+            return;
+        }
+
+        addMessage('user', content);
+        inputEl.value = '';
+        setSendingState(true);
+
+        try {
+            const response = await fetch(mcpServerUrl + '/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: content }),
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text || ('MCP request failed (' + response.status + ')'));
+            }
+
+            const payload = await response.json();
+            const answer = payload && payload.response ? String(payload.response) : 'No response received.';
+            addMessage('assistant', answer);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            addMessage('error', 'Error: ' + message);
+        } finally {
+            setSendingState(false);
+        }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    inputEl.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
             sendMessage();
         }
     });
-    
-    // Auto-resize textarea
-    aiChatInput.addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = Math.min(this.scrollHeight, 150) + 'px';
-    });
+
+    if (saveSettingsBtn) {
+        saveSettingsBtn.addEventListener('click', async function() {
+            try {
+                await saveSettings();
+                addMessage('assistant', 'Settings saved.');
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Unknown error';
+                addMessage('error', 'Error saving settings: ' + message);
+            }
+        });
+    }
+
+    if (reloadSettingsBtn) {
+        reloadSettingsBtn.addEventListener('click', async function() {
+            try {
+                await loadConnectors();
+                await loadApiBadges();
+                await loadSettings();
+                addMessage('assistant', 'Settings reloaded.');
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Unknown error';
+                addMessage('error', 'Error loading settings: ' + message);
+            }
+        });
+    }
+
+    if (toggleSettingsBtn && settingsContainer) {
+        toggleSettingsBtn.addEventListener('click', function() {
+            settingsContainer.classList.toggle('hidden');
+            toggleSettingsBtn.textContent = settingsContainer.classList.contains('hidden') ? 'Settings' : 'Hide';
+        });
+    }
+
+    (async function initKagrenacPanel() {
+        addMessage('assistant', 'Ask Kagrenac is ready. I can inspect logs, MCP config, and HerikaServer files.');
+        try {
+            await loadConnectors();
+            await loadApiBadges();
+            await loadSettings();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            addMessage('error', 'Settings unavailable: ' + message);
+        }
+    })();
 })();
 </script>
 

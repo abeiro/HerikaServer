@@ -222,25 +222,28 @@ function processAutoDiary($gameRequest, $eventType) {
     $nearbyNpcsStr = DataBeingsInCloseRange();
     Logger::info("AUTO_DIARY: DataBeingsInCloseRange returned: " . var_export($nearbyNpcsStr, true));
     
-    if (empty($nearbyNpcsStr)) {
-        Logger::info("AUTO_DIARY: No nearby NPCs found (empty string)");
-        return;
+    $nearbyNpcs = [];
+    
+    if (!empty($nearbyNpcsStr)) {
+        Logger::debug("AUTO_DIARY: Raw nearby data: " . $nearbyNpcsStr);
+        
+        // Parse nearby NPCs (pipe-delimited string like "|Lydia|Serana|")
+        $nearbyNpcsStr = trim($nearbyNpcsStr, '|');
+        if (!empty($nearbyNpcsStr)) {
+            $nearbyNpcs = explode('|', $nearbyNpcsStr);
+            $nearbyNpcs = array_filter(array_map('trim', $nearbyNpcs));
+        }
     }
     
-    Logger::debug("AUTO_DIARY: Raw nearby data: " . $nearbyNpcsStr);
-    
-    // Parse nearby NPCs (pipe-delimited string like "|Lydia|Serana|")
-    $nearbyNpcsStr = trim($nearbyNpcsStr, '|');
-    if (empty($nearbyNpcsStr)) {
-        Logger::info("AUTO_DIARY: No nearby NPCs after parsing");
-        return;
+    // Add The Narrator if diary is enabled for narrator
+    // The Narrator is always "nearby" (conceptually omnipresent)
+    if (isset($GLOBALS["NARRATOR_DIARY_ENABLED"]) && $GLOBALS["NARRATOR_DIARY_ENABLED"]) {
+        $nearbyNpcs[] = "The Narrator";
+        Logger::info("AUTO_DIARY: Added The Narrator to auto diary processing (toggle enabled)");
     }
-    
-    $nearbyNpcs = explode('|', $nearbyNpcsStr);
-    $nearbyNpcs = array_filter(array_map('trim', $nearbyNpcs));
     
     if (empty($nearbyNpcs)) {
-        Logger::info("AUTO_DIARY: No valid nearby NPCs");
+        Logger::info("AUTO_DIARY: No nearby NPCs (including narrator) to process");
         return;
     }
     
@@ -248,13 +251,59 @@ function processAutoDiary($gameRequest, $eventType) {
     $generatedCount = 0;
     $diaryCooldownPeriod = isset($GLOBALS["DIARY_COOLDOWN"]) ? intval($GLOBALS["DIARY_COOLDOWN"]) : 30;
     
-    Logger::info("AUTO_DIARY: Processing $eventType event for " . count($nearbyNpcs) . " nearby NPCs");
+    Logger::info("AUTO_DIARY: Processing $eventType event for " . count($nearbyNpcs) . " nearby NPCs/entities");
     
     foreach ($nearbyNpcs as $npcName) {
         if (empty($npcName)) {
             continue;
         }
         
+        // Special handling for The Narrator
+        if ($npcName === "The Narrator") {
+            // Check if narrator diary is enabled
+            if (!isset($GLOBALS["NARRATOR_DIARY_ENABLED"]) || !$GLOBALS["NARRATOR_DIARY_ENABLED"]) {
+                Logger::debug("AUTO_DIARY: The Narrator diary is disabled, skipping");
+                continue;
+            }
+            
+            // Check narrator's diary cooldown
+            $cooldownKey = "DIARY_LAST_TIMESTAMP_The_Narrator";
+            $diaryRecord = $db->fetchAll("SELECT value FROM conf_opts WHERE id='" . $db->escape($cooldownKey) . "'");
+            
+            if (!empty($diaryRecord) && isset($diaryRecord[0]['value'])) {
+                $lastTimestamp = intval($diaryRecord[0]['value']);
+                $timeSinceLastDiary = time() - $lastTimestamp;
+                
+                if ($timeSinceLastDiary < $diaryCooldownPeriod) {
+                    $remaining = $diaryCooldownPeriod - $timeSinceLastDiary;
+                    Logger::debug("AUTO_DIARY: The Narrator is on diary cooldown (remaining: {$remaining}s), skipping");
+                    continue;
+                }
+            }
+            
+            $processedCount++;
+            
+            // Generate diary for The Narrator
+            Logger::info("AUTO_DIARY: Generating diary for The Narrator");
+            $success = generateFollowerDiary("The Narrator", $gameRequest, $eventType);
+            
+            if ($success) {
+                $generatedCount++;
+                // Update cooldown timestamp
+                $db->query("DELETE FROM conf_opts WHERE id='" . $db->escape($cooldownKey) . "'");
+                $db->insert('conf_opts', [
+                    'id' => $cooldownKey,
+                    'value' => (string)time()
+                ]);
+                Logger::info("AUTO_DIARY: Successfully generated diary for The Narrator");
+            } else {
+                Logger::warn("AUTO_DIARY: Failed to generate diary for The Narrator");
+            }
+            
+            continue; // Skip to next NPC
+        }
+        
+        // Regular NPC processing
         // Get NPC data from database
         $npcMaster = new NpcMaster();
         $currentNpcData = $npcMaster->getByName($npcName);
@@ -602,23 +651,93 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
     global $db;
     
     error_log("generateFollowerDiary called for $followerName");
-    $npcMaster=new NpcMaster();
-    $currentNpcData=$npcMaster->getByName($followerName);
     
-    $profile=new CoreProfile();
-    $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
+    // Special handling for The Narrator
+    if ($followerName === "The Narrator") {
+        // Load narrator data
+        require_once(__DIR__ . "/core/narrator.class.php");
+        $narrator = new Narrator();
         
-    $connector=new LLMConnector();
-    $currentConnectorData=$connector->getById($currentProfileData["diary_connector_id"]);
-   
-    $connector->setOldGlobals($currentConnectorData);
-    $profile->setOldGlobals($currentProfileData);
-    $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+        // Load settings into GLOBALS first
+        $narrator->loadIntoGlobals();
+        
+        // Get narrator data for profile/connector lookup
+        $narratorData = $narrator->getNarratorData();
+        
+        if (empty($narratorData) || !isset($narratorData["profile_id"])) {
+            Logger::warn("generateFollowerDiary: Failed to load narrator data or no profile_id");
+            return false;
+        }
+        
+        // Load narrator character data (HERIKA_NAME, HERIKA_PERS, etc.)
+        $narrator->loadCharacterIntoGlobals();
+        
+        // Load the profile to get connector information
+        $profile = new CoreProfile();
+        $currentProfileData = $profile->getById($narratorData["profile_id"]);
+        
+        if (empty($currentProfileData)) {
+            Logger::warn("generateFollowerDiary: Failed to load narrator profile");
+            return false;
+        }
+        
+        // Load the narrator's connector for diary generation
+        $connector = new LLMConnector();
+        
+        // Use diary_connector_id if set, otherwise fall back to regular connector_id
+        $connectorId = null;
+        $resolvedDiaryConnectorId = class_exists('LLMRandomizer')
+            ? LLMRandomizer::getConnectorIdForField($currentProfileData, "diary_connector_id")
+            : ($currentProfileData["diary_connector_id"] ?? null);
+        if (!empty($resolvedDiaryConnectorId)) {
+            $connectorId = $resolvedDiaryConnectorId;
+            Logger::info("generateFollowerDiary: Using diary_connector_id: {$connectorId} for The Narrator");
+        } elseif (isset($currentProfileData["connector_id"]) && !empty($currentProfileData["connector_id"])) {
+            $connectorId = $currentProfileData["connector_id"];
+            Logger::info("generateFollowerDiary: Using connector_id: {$connectorId} for The Narrator");
+        } else {
+            Logger::warn("generateFollowerDiary: No connector configured in narrator profile");
+            return false;
+        }
+        
+        $currentConnectorData = $connector->getById($connectorId);
+        
+        if (empty($currentConnectorData)) {
+            Logger::warn("generateFollowerDiary: Failed to load connector data for The Narrator");
+            return false;
+        }
+        
+        $connector->setOldGlobals($currentConnectorData);
+        $profile->setOldGlobals($currentProfileData);
+        $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
+        unset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["stop"]);
+        
+    } else {
+        // Regular NPC processing
+        $npcMaster = new NpcMaster();
+        $currentNpcData = $npcMaster->getByName($followerName);
+        
+        if (empty($currentNpcData)) {
+            Logger::warn("generateFollowerDiary: NPC '$followerName' not found in database");
+            return false;
+        }
+        
+        $profile = new CoreProfile();
+        $currentProfileData = $profile->getById($currentNpcData["profile_id"]);
+            
+        $connector = new LLMConnector();
+        $diaryConnectorId = class_exists('LLMRandomizer')
+            ? LLMRandomizer::getConnectorIdForField($currentProfileData, "diary_connector_id")
+            : ($currentProfileData["diary_connector_id"] ?? null);
+        $currentConnectorData = $connector->getById($diaryConnectorId);
+       
+        $connector->setOldGlobals($currentConnectorData);
+        $profile->setOldGlobals($currentProfileData);
+        $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
 
-
-    $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
-
-    unset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["stop"]);
+        $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
+        unset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["stop"]);
+    }
 
         
     // Use the same prompt system as regular diary entries

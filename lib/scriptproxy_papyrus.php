@@ -29,6 +29,9 @@ class SkyrimCommandBuilder
     // === ActorUtil Commands (cmdID 400-499) ===
     public $ActorUtil;
 
+    // === Faction Commands (cmdID 500-599) ===
+    public $Faction;
+
 
 
     public function __construct()
@@ -416,6 +419,10 @@ class SkyrimCommandBuilder
             public function EvaluatePackage(string $targetObjectFormId): array {
                 return $this->builder->build(81, compact('targetObjectFormId'));
             }
+
+            public function ShowBarterMenu(string $targetObjectFormId): array {
+                return $this->builder->build(82, compact('targetObjectFormId'));
+            }
         };
 
         $this->ObjectReference = new class($this) {
@@ -680,9 +687,169 @@ class SkyrimCommandBuilder
                 return $this->builder->build(490, compact('targetObjectFormId', 'akTargetRef', 'asName'));
             }
 
+            // 491
+            public function PrintLinkedRef(string $targetObjectFormId, string $akActor): array {
+                return $this->builder->build(491, compact('targetObjectFormId', 'akActor'));
+            }
+        };
+
+        $this->Faction = new class($this) {
+            private $builder;
+
+            public function __construct($builder) {
+                $this->builder = $builder;
+            }
+
+            // 500
+            public function CanPayCrimeGold(string $targetObjectFormId): array {
+                return $this->builder->build(500, compact('targetObjectFormId'));
+            }
+
+            // 501
+            public function GetCrimeGold(string $targetObjectFormId): array {
+                return $this->builder->build(501, compact('targetObjectFormId'));
+            }
+
+            // 502
+            public function GetCrimeGoldNonViolent(string $targetObjectFormId): array {
+                return $this->builder->build(502, compact('targetObjectFormId'));
+            }
+
+            // 503
+            public function GetCrimeGoldViolent(string $targetObjectFormId): array {
+                return $this->builder->build(503, compact('targetObjectFormId'));
+            }
+
+            // 504
+            public function GetInfamy(string $targetObjectFormId): array {
+                return $this->builder->build(504, compact('targetObjectFormId'));
+            }
+
+            // 505
+            public function GetInfamyNonViolent(string $targetObjectFormId): array {
+                return $this->builder->build(505, compact('targetObjectFormId'));
+            }
+
+            // 506
+            public function GetInfamyViolent(string $targetObjectFormId): array {
+                return $this->builder->build(506, compact('targetObjectFormId'));
+            }
+
+            // 507
+            public function GetReaction(string $targetObjectFormId, string $akOther): array {
+                return $this->builder->build(507, compact('targetObjectFormId', 'akOther'));
+            }
+
+            // 508
+            public function GetStolenItemValueCrime(string $targetObjectFormId): array {
+                return $this->builder->build(508, compact('targetObjectFormId'));
+            }
+
+            // 509
+            public function GetStolenItemValueNoCrime(string $targetObjectFormId): array {
+                return $this->builder->build(509, compact('targetObjectFormId'));
+            }
+
+            // 510
+            public function IsFactionInCrimeGroup(string $targetObjectFormId, string $akOther): array {
+                return $this->builder->build(510, compact('targetObjectFormId', 'akOther'));
+            }
+
+            // 511
+            public function IsPlayerExpelled(string $targetObjectFormId): array {
+                return $this->builder->build(511, compact('targetObjectFormId'));
+            }
+
+            // 512
+            public function ModCrimeGold(string $targetObjectFormId, int $aiAmount, bool $abViolent = false): array {
+                return $this->builder->build(512, [
+                    'targetObjectFormId' => $targetObjectFormId,
+                    'aiAmount' => $aiAmount,
+                    'abViolent' => (int)$abViolent
+                ]);
+            }
+
+            // 513
+            public function ModReaction(string $targetObjectFormId, string $akOther, int $aiAmount): array {
+                return $this->builder->build(513, compact('targetObjectFormId', 'akOther', 'aiAmount'));
+            }
+
+            // 514
+            public function PlayerPayCrimeGold(string $targetObjectFormId, bool $abRemoveStolenItems = false, bool $abGoToJail = false): array {
+                return $this->builder->build(514, [
+                    'targetObjectFormId' => $targetObjectFormId,
+                    'abRemoveStolenItems' => (int)$abRemoveStolenItems,
+                    'abGoToJail' => (int)$abGoToJail
+                ]);
+            }
+
+            // 515
+            public function SendAssaultAlarm(string $targetObjectFormId): array {
+                return $this->builder->build(515, compact('targetObjectFormId'));
+            }
+
+            // 516
+            public function SendPlayerToJail(string $targetObjectFormId, bool $abRemoveInventory = false, bool $abRealJail = false): array {
+                return $this->builder->build(516, [
+                    'targetObjectFormId' => $targetObjectFormId,
+                    'abRemoveInventory' => (int)$abRemoveInventory,
+                    'abRealJail' => (int)$abRealJail
+                ]);
+            }
+
+            // 517
+            public function SetAlly(string $targetObjectFormId, string $akOther, bool $abSelfIsFriendToOther = false, bool $abOtherIsFriendToSelf = false): array {
+                return $this->builder->build(517, [
+                    'targetObjectFormId' => $targetObjectFormId,
+                    'akOther' => $akOther,
+                    'abSelfIsFriendToOther' => (int)$abSelfIsFriendToOther,
+                    'abOtherIsFriendToSelf' => (int)$abOtherIsFriendToSelf
+                ]);
+            }
+
+            // 518
+            public function SetCrimeGold(string $targetObjectFormId, int $aiGold): array {
+                return $this->builder->build(518, compact('targetObjectFormId', 'aiGold'));
+            }
+
+            // 519
+            public function SetCrimeGoldViolent(string $targetObjectFormId, int $aiGold): array {
+                return $this->builder->build(519, compact('targetObjectFormId', 'aiGold'));
+            }
+
+            // 520
+            public function SetEnemy(string $targetObjectFormId, string $akOther, bool $abSelfIsNeutralToOther = false, bool $abOtherIsNeutralToSelf = false): array {
+                return $this->builder->build(520, [
+                    'targetObjectFormId' => $targetObjectFormId,
+                    'akOther' => $akOther,
+                    'abSelfIsNeutralToOther' => (int)$abSelfIsNeutralToOther,
+                    'abOtherIsNeutralToSelf' => (int)$abOtherIsNeutralToSelf
+                ]);
+            }
+
+            // 521
+            public function SetPlayerEnemy(string $targetObjectFormId, bool $abIsEnemy = true): array {
+                return $this->builder->build(521, ['targetObjectFormId' => $targetObjectFormId, 'abIsEnemy' => (int)$abIsEnemy]);
+            }
+
+            // 522
+            public function SetPlayerExpelled(string $targetObjectFormId, bool $abIsExpelled = true): array {
+                return $this->builder->build(522, ['targetObjectFormId' => $targetObjectFormId, 'abIsExpelled' => (int)$abIsExpelled]);
+            }
+
+            // 523
+            public function SetReaction(string $targetObjectFormId, string $akOther, int $aiNewValue): array {
+                return $this->builder->build(523, compact('targetObjectFormId', 'akOther', 'aiNewValue'));
+            }
+
+            // 524
+            public function GetVendorFactionContainer(string $targetObjectFormId): array {
+                return $this->builder->build(524, compact('targetObjectFormId'));
+            }
+            
         };
     }
-
+    
     public function build(int $cmdID, array $params): array {
         return array_merge(['cmdID' => $cmdID], $params);
     }

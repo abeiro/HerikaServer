@@ -23,6 +23,7 @@ class openaijson
     private $_is_mistral_ai;
     private $_is_cohere_ai;
     private $_is_cerebras_ai;
+    private $_is_nvidia_com;
     private $_is_streaming;
     private $_is_reasoning;
     private $_is_grok;
@@ -50,6 +51,7 @@ class openaijson
         $this->_is_mistral_ai=false;
         $this->_is_cohere_ai=false;
         $this->_is_cerebras_ai=false;
+        $this->_is_nvidia_com=false;
         $this->_is_streaming=true;
         $this->_is_reasoning=false;
         $this->_is_grok=false;
@@ -84,12 +86,12 @@ class openaijson
                 $i_pos = stripos($s_model, "-reasoning");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "MAI-DS-R1");
-            if ($i_pos === false) 
-                $i_pos = stripos($s_model, "qwen3-235b-a22b");
-            if ($i_pos === false) 
-                $i_pos = stripos($s_model, "qwen3-30b-a3b");
-            if ($i_pos === false) 
-                $i_pos = stripos($s_model, "qwen3-32b");
+            //if ($i_pos === false) 
+            //    $i_pos = stripos($s_model, "qwen3-235b-a22b");
+            //if ($i_pos === false) 
+            //    $i_pos = stripos($s_model, "qwen3-30b-a3b");
+            //if ($i_pos === false) 
+            //    $i_pos = stripos($s_model, "qwen3-32b");
             if ($i_pos === false) 
                 $i_pos = stripos($s_model, "openai/o3");
             if ($i_pos === false) 
@@ -191,6 +193,8 @@ class openaijson
             $default_model = 'command-r-08-2024';
         } elseif (stripos($this->_url, "cerebras.ai") > 0 ) {  //api.cerebras.ai
             $this->_is_cerebras_ai = true;
+        } elseif (stripos($this->_url, "api.nvidia.com") > 0 ) {  // https://integrate.api.nvidia.com/v1/chat/completions
+            $this->_is_nvidia_com=true;     
         }
 
         $this->_model = $GLOBALS["CONNECTOR"][$this->name]["model"] ?? $default_model;
@@ -253,7 +257,7 @@ class openaijson
         
         $contextData[]=[
             'role' => 'user',
-            'content' => "{$prefix}. $speechReinforcement \nUse only this JSON object to give your answer and do not send any other characters outside of this JSON structure: \n".json_encode($GLOBALS["responseTemplate"],JSON_PRETTY_PRINT) // groq.com and others ask for pretty printed JSON
+            'content' => "{$prefix} $speechReinforcement \nUse only this JSON object to give your answer and do not send any other characters outside of this JSON structure: \n".json_encode($GLOBALS["responseTemplate"],JSON_PRETTY_PRINT) // groq.com and others ask for pretty printed JSON
         ];
     
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
@@ -445,6 +449,7 @@ class openaijson
             'response_format'=>["type"=>"json_object"]
         );
 
+        $b_think = !$this->_disable_reasoning;
         if ($this->_is_openai_com) {
             // OpenAI safeguard: remove unsupported top_p for gpt-5 models regardless of reasoning flag
 
@@ -510,7 +515,7 @@ class openaijson
                     $data['reasoning_format'] = "hidden";  
                 }
             }
-            //error_log(" dbg resoning: " . var_export($this->_is_reasoning, true) . " - " . var_export($data, true));
+            //Logger::debug(" dbg resoning: " . var_export($this->_is_reasoning, true) . " - " . var_export($data, true));
         
         } elseif ($this->_is_x_ai) {
             unset($data["presence_penalty"]); 
@@ -523,6 +528,35 @@ class openaijson
         } elseif ($this->_is_cohere_ai) {
             unset($data["max_completion_tokens"]);
             $data['max_tokens'] = $MAX_TOKENS;
+        } elseif ($this->_is_nvidia_com) {
+            $data['max_tokens'] = $MAX_TOKENS;
+            unset($data['max_completion_tokens']);
+
+            if ($this->_is_reasoning) { // generic reasoning settings
+                $data["chat_template_kwargs"] = array('thinking'=>$b_think, 'enable_thinking'=>$b_think); 
+            }
+
+            if (stripos($this->_model, "moonshotai/kimi-k2.5") !== false) { //moonshotai/kimi-k2.5
+                if ($this->_is_reasoning) { 
+                    $data["chat_template_kwargs"] = array('thinking'=>$b_think); 
+                }
+            } elseif (stripos($this->_model, "z-ai/glm4.7") !== false) { //z-ai/glm4.7
+                if ($this->_is_reasoning) { 
+                    if ($this->_disable_reasoning)
+                        $data["chat_template_kwargs"] = ['enable_thinking'=>false,'clear_thinking' => true];
+                    else
+                        $data["chat_template_kwargs"] = ['enable_thinking'=>true,'clear_thinking' => true];
+                }
+            } elseif (stripos($this->_model, "deepseek-ai/deepseek-v3.2") !== false) { //deepseek-ai/deepseek-v3.2
+                if ($this->_is_reasoning) { 
+                    $data["chat_template_kwargs"] = array('thinking'=>$b_think); 
+                }
+            } elseif (stripos($this->_model, "nvidia/nemotron-3-nano-30b-a3b") !== false) { //nvidia/nemotron-3-nano-30b-a3b
+                if ($this->_is_reasoning) { 
+                    $data["chat_template_kwargs"] = array('enable_thinking'=>$b_think); 
+                }
+            }
+            
         } else {
             if ($this->_is_reasoning) { 
                 if ($this->_disable_reasoning)
@@ -532,17 +566,38 @@ class openaijson
 
                 $data["chat_format"]="tidy"; 
                 $data["reasoning_effort"] = "low";
+                
                 if (!$this->_is_openai_model)
                     $data['reasoning_format'] = "hidden";
-                if (!(stripos($this->_model, "qwen3-") === false)) //is qwen3
-                    $data["enable_thinking"] = false;
+                if (!(stripos($this->_model, "qwen3-") === false)) {//is qwen3
+                    //$data["enable_thinking"] = false;
+                    $data["enable_thinking"] = $b_think;
+                    unset($data["reasoning_effort"]);
+                } else if (!(stripos($this->_model, "qwen3.5-") === false)) { // qwen/qwen3.5-397b-a17b
+                    unset($data["reasoning_effort"]);
+                    $data["enable_thinking"] = $b_think;
+                } else if (!(stripos($this->_model, "zai-org/glm-4.7") === false)) {//is glm 4.7
+                    if ($this->_disable_reasoning)
+                        $data["thinking"] = array ('type' => 'disabled'); // "thinking":{"type": "disabled"}
+                    else
+                        $data["thinking"] = array ('type' => 'enabled'); 
+                } else if (!(stripos($this->_model, "zai-org/glm-5") === false)) {//is glm 4.7
+                    if ($this->_disable_reasoning)
+                        $data["thinking"] = array ('type' => 'disabled'); // "thinking":{"type": "disabled"}
+                    else
+                        $data["thinking"] = array ('type' => 'enabled'); 
+                }
             }
 
         } // --- endif provider
         
         if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
             $data["response_format"]=$GLOBALS["structuredOutputTemplate"];
-        }
+        } else if (isset($GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) && $GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) {
+            error_log("Enforcing JSON output for {$this->name} connector");
+            ;//It's enabled by default
+        } else 
+            unset($data["response_format"]);
 
         if ($MAX_TOKENS<1) {
             unset($data["max_completion_tokens"]); 
@@ -780,7 +835,7 @@ class openaijson
         $buffer="";
 
         if (!empty($this->_buffer))
-            $finalData=__jpd_decode_lazy($this->_buffer, true);
+            $finalData=__jpd_decode_lazy($this->_buffer);
             if (is_array($finalData)) {
                 
                 
@@ -800,7 +855,7 @@ class openaijson
                         if (isset($finalData["listener"])) {
                             $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["listener"];
                         }
-                        if (isset($finalData["target"]) && !empty($finalData["target"]) && $finalData["action"]=="Talk") {
+                        if (isset($finalData["target"]) && !empty($finalData["target"]) && isset($finalData["action"]) && $finalData["action"]=="Talk") {
                             // Cover the case where action is talk, and LLM hast pointed a target
                             $GLOBALS["SCRIPTLINE_LISTENER"]=$finalData["target"];
                         }
@@ -1206,7 +1261,7 @@ class openaijson
                 return $text_response["choices"][0]["message"]["content"];    
             }
             else {
-                log_msg("Error in openai request '$url':$json_response", 3);
+                log_msg("Error in openai request '{$this->_url}':$json_response", 3);
                 return "";
             }
         }

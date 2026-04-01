@@ -25,6 +25,7 @@ class player2json
     private $_is_reasoning;
     private $_model;
     private $_url;
+    private $_game_key;
     private $_remove_cot;
     private $_cot_tag_base;
     private $_output_buffer; 
@@ -46,6 +47,7 @@ class player2json
         $this->_is_reasoning=false;
         $this->_model="";
         $this->_url="";
+        $this->_game_key="CHIM";
         $this->_remove_cot=true;
         $this->_cot_tag_base="think";
         $this->_output_buffer="";
@@ -82,8 +84,85 @@ class player2json
         return $b_res;
     }
 
+    private function normalizeConnectorUrl($url) {
+        $url = trim((string)$url);
+        if ($url === "") {
+            return "http://127.0.0.1:4315/v1/chat/completions";
+        }
+
+        if (preg_match('#^https?://[^/]+/?$#i', $url)) {
+            return rtrim($url, "/") . "/v1/chat/completions";
+        }
+
+        if (preg_match('#/docs/?$#i', $url)) {
+            return preg_replace('#/docs/?$#i', '/v1/chat/completions', $url);
+        }
+
+        if (preg_match('#/v1/?$#i', $url)) {
+            return rtrim($url, "/") . "/chat/completions";
+        }
+
+        return $url;
+    }
+
+    private function buildHeaders() {
+        return array(
+            'Content-Type: application/json',
+            'player2-game-key: ' . $this->_game_key
+        );
+    }
+
+    private function buildRequestPayload($contextData, $customParms, $forceJson = true) {
+        $maxTokens = intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 250));
+        if (isset($customParms["MAX_TOKENS"])) {
+            $maxTokens = intval($customParms["MAX_TOKENS"]);
+            unset($customParms["MAX_TOKENS"]);
+        }
+        if (isset($GLOBALS["FORCE_MAX_TOKENS"])) {
+            $maxTokens = intval($GLOBALS["FORCE_MAX_TOKENS"]);
+        }
+
+        $temperature = floatval(($GLOBALS["CONNECTOR"][$this->name]["temperature"]) ?? 1.0);
+        if ($temperature < 0.0) {
+            $temperature = 0.0;
+        } else if ($temperature > 2.0) {
+            $temperature = 2.0;
+        }
+
+        $data = array(
+            'messages' => $contextData,
+            'stream' => false,
+            'max_tokens' => $maxTokens,
+            'temperature' => $temperature
+        );
+
+        if ($forceJson) {
+            if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"] && isset($GLOBALS["structuredOutputTemplate"])) {
+                $data["response_format"] = $GLOBALS["structuredOutputTemplate"];
+            } else if (!isset($GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) || $GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) {
+                $data["response_format"] = array("type" => "json_object");
+            }
+        }
+
+        foreach ($customParms as $k => $v) {
+            $data[$k] = $v;
+        }
+
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
+            foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k => $v) {
+                $data[$k] = $v;
+            }
+        }
+
+        if ($maxTokens < 1) {
+            unset($data["max_tokens"]);
+        }
+
+        return $data;
+    }
+
     private function init_connector() {
-        $this->_url = (isset($GLOBALS["CONNECTOR"][$this->name]["url"])) ? $GLOBALS["CONNECTOR"][$this->name]["url"] : "";
+        $this->_url = $this->normalizeConnectorUrl((isset($GLOBALS["CONNECTOR"][$this->name]["url"])) ? $GLOBALS["CONNECTOR"][$this->name]["url"] : "");
         if (strlen($this->_url) < 6)
             Logger::error("{$this->name} connector - missing url!");
 
@@ -150,10 +229,11 @@ class player2json
             }
         }
 
-        $default_model = 'gpt-4o-mini';
-
-        
-
+        $this->_model = (isset($GLOBALS["CONNECTOR"][$this->name]["model"])) ? trim((string)$GLOBALS["CONNECTOR"][$this->name]["model"]) : "";
+        $this->_game_key = trim((string)($GLOBALS["CONNECTOR"][$this->name]["player2_game_key"] ?? $GLOBALS["CONNECTOR"][$this->name]["API_KEY"] ?? "CHIM"));
+        if ($this->_game_key === "") {
+            $this->_game_key = "CHIM";
+        }
         $this->_is_streaming = false; 
 
     }
@@ -370,30 +450,13 @@ class player2json
      
         // Forcing JSON output
 
-        $data = array(
-            'model' => $this->_model,
-            'messages' => $contextData,
-            'response_format'=>["type"=>"json_object"]
-        );
-
-
-        $data = array(
-            'messages' => $contextData,
-            'response_format'=>["type"=>"json_object"]
-        );
+        $data = $this->buildRequestPayload($contextData, $customParms, true);
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
-        foreach ($customParms as $k=>$v) {
-            $data[$k]=$v;
-        }
-
         file_put_contents(__DIR__."/../log/context_sent_to_llm.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
 
-        $headers = array(
-            'Content-Type: application/json',
-            'player2-game-key: CHIM'
-        );
+        $headers = $this->buildHeaders();
         
         $options = array(
             'http' => array(
@@ -433,7 +496,7 @@ class player2json
 
             if ($status_code >= 300) {
                 $response = stream_get_contents($this->primary_handler);
-                $error_message = "Request to openaijson connector failed: {$status_line}.\n Response body: {$response}.\n model: {$this->_model}";
+                $error_message = "Request to player2json connector failed: {$status_line}.\n Response body: {$response}.\n model: {$this->_model}";
                 trigger_error($error_message, E_USER_WARNING);
 
                 if ($GLOBALS["db"]) {
@@ -720,6 +783,59 @@ class player2json
     public function isDone()
     {
         return !$this->primary_handler || feof($this->primary_handler);
+    }
+
+    public function fast_request($contextData, $customParms,$callName='')
+    {
+        $this->init_connector();
+
+        if (empty($callName))
+            $callName=$this->name;
+        else
+            $callName=$this->name."/".$callName;
+
+        $forceJson = false;
+        if (!empty($callName) && stripos($callName, "formatter") !== false) {
+            $forceJson = true;
+        }
+
+        $data = $this->buildRequestPayload($contextData, $customParms, $forceJson);
+        $GLOBALS["DEBUG_DATA"]["full"]=($data);
+
+        $headers = $this->buildHeaders();
+        $timeout = max(intval(($GLOBALS["HTTP_TIMEOUT"]) ?? 30), $this->_timeout);
+        $options = array(
+            'http' => array(
+                'method' => 'POST',
+                'header' => implode("\r\n", $headers),
+                'content' => json_encode($data),
+                'timeout' => $timeout,
+                'ignore_errors' => true
+            )
+        );
+
+        $context = stream_context_create($options);
+
+        file_put_contents(__DIR__."/../log/context_sent_to_llm_fast.log",date(DATE_ATOM)."\n=\n".var_export($data,true)."\n=\n", FILE_APPEND);
+        $json_response=file_get_contents($this->_url, false, $context);
+        file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\n{$json_response}\n=\n", FILE_APPEND);
+
+        if ($json_response) {
+            $text_response=json_decode($json_response,true);
+            if (is_valid_array($text_response) && isset($text_response["choices"][0]["message"]["content"])) {
+                return $text_response["choices"][0]["message"]["content"];
+            } else {
+                $errorMessage = "Error in player2 request '{$this->_url}':$json_response";
+                if (function_exists('log_msg')) {
+                    log_msg($errorMessage, 3);
+                } else {
+                    error_log($errorMessage);
+                }
+                return "";
+            }
+        }
+
+        return "";
     }
 
 }

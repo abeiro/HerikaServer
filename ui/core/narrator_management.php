@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
         $narrator->set('books_only_narrator', isset($_POST['books_only_narrator']) && $_POST['books_only_narrator'] === '1' ? '1' : '0');
         $narrator->set('hide_from_context', isset($_POST['hide_from_context']) && $_POST['hide_from_context'] === '1' ? '1' : '0');
         $narrator->set('inline_narration_enabled', isset($_POST['inline_narration_enabled']) && $_POST['inline_narration_enabled'] === '1' ? '1' : '0');
+        $narrator->set('diary_enabled', isset($_POST['diary_enabled']) && $_POST['diary_enabled'] === '1' ? '1' : '0');
         
         // Save integer settings
         if (isset($_POST['random_chance'])) {
@@ -137,6 +138,7 @@ $questCommentCooldown = $narrator->getInt('quest_comment_cooldown', 3);
 $booksOnlyNarrator = $narrator->getBool('books_only_narrator', false);
 $hideFromContext = $narrator->getBool('hide_from_context', false);
 $inlineNarrationEnabled = $narrator->getBool('inline_narration_enabled', false);
+$diaryEnabled = $narrator->getBool('diary_enabled', true);
 $dynamicProfileEnabled = $narrator->getBool('dynamic_profile', false);
 $dynamicProfileFields = $narrator->getDynamicProfileFields();
 
@@ -154,6 +156,26 @@ $promptHead = $narrator->get('prompt_head') ?? '';
 // Load profiles for dropdown
 $profileMgr = new CoreProfile();
 $allProfiles = $profileMgr->readAll();
+
+// Load connector data for display
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "llm_connector.class.php");
+$connectorMgr = new LLMConnector();
+$allConnectors = $connectorMgr->readAll();
+
+// Build lookup maps
+$llmById = [];
+foreach ($allConnectors as $conn) {
+    $llmById[$conn['id']] = $conn['label'] ?? 'Connector ' . $conn['id'];
+}
+
+// Build profile connector map
+$profilesConnById = [];
+foreach ($allProfiles as $prof) {
+    $profilesConnById[$prof['id']] = $prof;
+}
+
+// Get current profile data
+$currentProfileData = $profilesConnById[$profileId] ?? null;
 
 $isEmbed = isset($_GET['embed']) && $_GET['embed'] == '1';
 
@@ -717,6 +739,15 @@ if (!$isEmbed) {
                         <span class="toggle-label">Enable Inline Narration</span>
                     </label>
                     <span class="hint">Include brief third-person narration in asterisks (e.g., *She smiles*).</span>
+                    
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="diary_enabled" name="diary_enabled" value="1" <?php echo $diaryEnabled ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Narrator Diary</span>
+                    </label>
+                    <span class="hint">Allow The Narrator to write diary entries. Will trigger on autodiary, all nearby npc diary hotkey & if you look up in the sky and press the diary hotkey.</span>
                 </div>
 
                 <!-- Welcome Message Section -->
@@ -805,7 +836,79 @@ if (!$isEmbed) {
                     <input type="text" id="oghma_knowledge" name="oghma_knowledge" placeholder="Comma-separated knowledge tags (e.g., knowall, knowsome, knownone)" value="<?php echo htmlspecialchars($oghmaKnowledge); ?>">
                     <span class="hint">Comma-separated knowledge tags used by Oghma systems for knowledge lookup restrictions.</span>
                 </div>
+                
+                <div class="content-section">
+                    <h2>Selected Profile Connectors</h2>
+                    <?php
+                    // Helper function to get connector label
+                    $getConnectorLabel = function($id) use ($llmById) {
+                        return htmlspecialchars($llmById[$id] ?? '—');
+                    };
+                    ?>
+                    <div id="profile_llm_summary" style="display:grid; grid-template-columns: auto 1fr; gap:8px; color:#cfd9ea; font-size: 13px; line-height: 1.6;">
+                        <div style="color:rgb(242,124,17); font-weight:600;">🕹️ Standard:</div>
+                        <div><?= $getConnectorLabel($currentProfileData['llm_primary_id'] ?? null) ?></div>
+                        
+                        <div style="color:rgb(242,124,17); font-weight:600;">🏃‍♂️‍➡️ Fast:</div>
+                        <div><?= $getConnectorLabel($currentProfileData['llm_secondary_id'] ?? null) ?></div>
+                        
+                        <div style="color:rgb(242,124,17); font-weight:600;">💪 Power:</div>
+                        <div><?= $getConnectorLabel($currentProfileData['llm_tertiary_id'] ?? null) ?></div>
+                        
+                        <div style="color:rgb(242,124,17); font-weight:600;">🧪 Experimental:</div>
+                        <div><?= $getConnectorLabel($currentProfileData['llm_quaternary_id'] ?? null) ?></div>
+                        
+                        <div style="color:rgb(242,124,17); font-weight:600;">📓 Diary:</div>
+                        <div><?= $getConnectorLabel($currentProfileData['diary_connector_id'] ?? null) ?></div>
+                        
+                        <div style="color:rgb(242,124,17); font-weight:600;">🧾 Formatter:</div>
+                        <div><?= $getConnectorLabel($currentProfileData['llm_formatter_id'] ?? null) ?></div>
+                    </div>
+                    <span class="hint" style="margin-top: 8px;">These connectors are configured in the selected profile and will be used for The Narrator's AI responses.</span>
+                </div>
             </div>
+            
+            <script>
+            (function(){
+                const PROFILE_CONN = <?= json_encode($profilesConnById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+                const LLM_LABELS = <?= json_encode($llmById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+                
+                function labelOf(id){ 
+                    const k = String(id || ''); 
+                    return (k && LLM_LABELS[k]) ? String(LLM_LABELS[k]) : '—'; 
+                }
+                
+                function renderProfileConnectors(pid){
+                    const box = document.getElementById('profile_llm_summary');
+                    if (!box) return;
+                    const pc = PROFILE_CONN[String(pid || '')] || null;
+                    
+                    const rows = [
+                        ['🕹️ Standard:', labelOf(pc ? pc.llm_primary_id : null)],
+                        ['🏃‍♂️‍➡️ Fast:', labelOf(pc ? pc.llm_secondary_id : null)],
+                        ['💪 Power:', labelOf(pc ? pc.llm_tertiary_id : null)],
+                        ['🧪 Experimental:', labelOf(pc ? pc.llm_quaternary_id : null)],
+                        ['📓 Diary:', labelOf(pc ? pc.diary_connector_id : null)],
+                        ['🧾 Formatter:', labelOf(pc ? pc.llm_formatter_id : null)]
+                    ];
+                    
+                    let html = '';
+                    rows.forEach(([k, v]) => {
+                        html += '<div style="color:rgb(242,124,17); font-weight:600;">' + k + '</div>';
+                        html += '<div>' + String(v || '—') + '</div>';
+                    });
+                    box.innerHTML = html;
+                }
+                
+                // Update on profile change
+                const profileSelect = document.getElementById('profile_id');
+                if (profileSelect) {
+                    profileSelect.addEventListener('change', function() {
+                        renderProfileConnectors(this.value);
+                    });
+                }
+            })();
+            </script>
             
             <!-- Prompt Head Override Section -->
             <div class="content-section full-width-section">

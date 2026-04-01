@@ -22,8 +22,6 @@ function SaveOriginalHerikaName() {
         if ((strlen($herika) > 0) && ($herika != "Player") && ($herika != "LLMFallback") && (stripos($herika, "Narrator") === false) && (stripos($herika, "actor") === false) && (stripos($herika, "everyone") === false) && (stripos($herika, "*") === false) && (stripos($herika, "none") === false) ) {
             $GLOBALS["ORIGINAL_HERIKA_NAME"] = $herika;
             $GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] = true;
-        } else {
-            Logger::debug("SaveOriginalHerikaName: ignored new value for HERIKA_NAME {$herika}");
         }
     }
 }
@@ -296,6 +294,7 @@ function DataLastDataFor($actor, $lastNelements = -10)
 function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescriptions=false,$excludeBusy=false)
 {
     
+    $lastDialog = array(); // Initialize the return array
     $followers=[];
     $actorsInRangeList=DataBeingsInCloseRange();
     $actorsInRange=strtr($actorsInRangeList,["|"=>"\n* "]);
@@ -372,6 +371,24 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         }
                     }
                     
+                    // Power Awareness: Add relative power assessment for player
+                    if (isset($GLOBALS["POWER_AWARENESS_ENABLED"]) && $GLOBALS["POWER_AWARENESS_ENABLED"]) {
+                        require_once(__DIR__ . DIRECTORY_SEPARATOR . "power_awareness.php");
+                        
+                        // Get player's level
+                        $playerLevel = getPlayerLevel();
+                        
+                        // Get assessing actor's level (the NPC looking at the player)
+                        if (!empty($GLOBALS["HERIKA_NAME"])) {
+                            $assessorLevel = getNpcLevel($GLOBALS["HERIKA_NAME"]);
+                            
+                            if ($assessorLevel !== null && $playerLevel !== null) {
+                                $powerComparison = calculatePowerComparison($assessorLevel, $playerLevel);
+                                $profileString .= " ({$powerComparison})";
+                            }
+                        }
+                    }
+                    
                 } catch (Exception $e) {
                     Logger::debug("Could not load player data for context: " . $e->getMessage());
                 }
@@ -435,6 +452,24 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $heightDesc = getHeightDescription(floatval($metaData["stats"]["scale"]));
                         if (!empty($heightDesc)) {
                             $profileString .= ". " . $heightDesc;
+                        }
+                    }
+                    
+                    // Power Awareness: Add relative power assessment
+                    if (isset($GLOBALS["POWER_AWARENESS_ENABLED"]) && $GLOBALS["POWER_AWARENESS_ENABLED"]) {
+                        require_once(__DIR__ . DIRECTORY_SEPARATOR . "power_awareness.php");
+                        
+                        // Get current NPC's level
+                        $npcLevel = isset($metaData["stats"]["level"]) ? intval($metaData["stats"]["level"]) : null;
+                        
+                        // Get assessing actor's level (the NPC looking at this person)
+                        if (!empty($GLOBALS["HERIKA_NAME"])) {
+                            $assessorLevel = getNpcLevel($GLOBALS["HERIKA_NAME"]);
+                            
+                            if ($assessorLevel !== null && $npcLevel !== null) {
+                                $powerComparison = calculatePowerComparison($assessorLevel, $npcLevel);
+                                $profileString .= " ({$powerComparison})";
+                            }
                         }
                     }
                     
@@ -723,8 +758,10 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     }
         
 
-    //$lastDialog[]=array('role' => 'user', 'content' => $GLOBALS["PROMPT_NEARBY_SECTIONS"]);
-    // this is going to return nothing
+    $lastDialog=[];
+    // This function originally returned an array, now it's directly filling PROMPT_NEARBY_SECTIONS.
+    // MUST return an array, even if empty; Review where is called to ensure it's handled properly
+    // Proposal: $lastDialog[]=array('role' => 'user', 'content' => $GLOBALS["PROMPT_NEARBY_SECTIONS"]);
     return $lastDialog;
 
 }
@@ -779,18 +816,22 @@ function DataPosibleLocationsToGo()
     }
 
     // Location blacklist // $LOCATION_BLACKLIST
-    $LOCATION_BLACKLIST_ARRAY=explode(",", $GLOBALS["LOCATION_BLACKLIST"] ?: []);
-    if (count($LOCATION_BLACKLIST_ARRAY) > 0) {
-        foreach ($retData as $k => $v) {
-            foreach ($LOCATION_BLACKLIST_ARRAY as $blacklistedLocation) {
-                $blacklistedLocationTrimmed = trim($blacklistedLocation);
-                if (!empty($blacklistedLocationTrimmed) && (stripos($v, $blacklistedLocationTrimmed) !== false)) {
-                    unset($retData[$k]);
-                    break; // No need to check other blacklisted locations
+    if (isset($GLOBALS["LOCATION_BLACKLIST"]) && (strlen($GLOBALS["LOCATION_BLACKLIST"])>0)) {
+        $LOCATION_BLACKLIST_ARRAY = explode(",", $GLOBALS["LOCATION_BLACKLIST"]); 
+        //$LOCATION_BLACKLIST_ARRAY = empty($GLOBALS["LOCATION_BLACKLIST"]) ? [] : explode(",", $GLOBALS["LOCATION_BLACKLIST"]); 
+        if (count($LOCATION_BLACKLIST_ARRAY) > 0) {
+            foreach ($retData as $k => $v) {
+                foreach ($LOCATION_BLACKLIST_ARRAY as $blacklistedLocation) {
+                    $blacklistedLocationTrimmed = trim($blacklistedLocation);
+                    if (!empty($blacklistedLocationTrimmed) && (stripos($v, $blacklistedLocationTrimmed) !== false)) {
+                        unset($retData[$k]);
+                        break; // No need to check other blacklisted locations
+                    }
                 }
             }
         }
     }
+    
     foreach ($retData as $k => $v) {
         if ($v=="Skyrim") {
             $retData[$k].=" (exit)";
@@ -840,14 +881,38 @@ function DataPosibleLocationsToGoWide()
 
     global $db;
     $lastDialogFull = array();
+    $r=[];
     $results = $db->fetchOne("select  a.data  as data  FROM  eventlog a 
     WHERE type in ('region')  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
 
     if ($results) {
         $regCn=$db->escape(trim($results["data"]));
-        error_log("select  name  FROM  locations where region ilike'{$regCn}'");
-        $locs = $db->fetchAll("select  name,tags  FROM  locations where region ilike '{$regCn}'");
-        $r=[];
+        error_log("select  name  FROM  locations_v where region ilike '{$regCn}'");
+        $locs = $db->fetchAll("select  name,tags  FROM  locations_v where region ilike '{$regCn}'");
+        
+        foreach ($locs as $loc) {
+            if ($loc["tags"])
+                $r[$loc["name"]]=$loc["tags"];
+            else
+                $r[$loc["name"]]="";
+
+        }
+        
+    } else {
+        
+        $locs = $db->fetchAll("SELECT L.name,L.tags, 
+                L.coords <-> P.coords AS distance
+            FROM locations_v L
+            CROSS JOIN (
+                SELECT B.coords
+                FROM public.named_cell A
+                LEFT JOIN locations_v B ON B.formid = A.location_id
+                WHERE A.id = 0
+            ) AS P
+            WHERE L.coords <-> P.coords < 15000
+            ORDER BY distance ASC
+        ");
+        
         foreach ($locs as $loc) {
             if ($loc["tags"])
                 $r[$loc["name"]]=$loc["tags"];
@@ -856,11 +921,10 @@ function DataPosibleLocationsToGoWide()
 
         }
         $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO_WIDE"] = $r;
-        return $r;
     }
 
-    $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO_WIDE"] = [];
-    return [];
+    $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO_WIDE"] = $r;
+    return $r;
 
 }
 
@@ -1459,6 +1523,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
      or people like '$actorEscaped' 
      or people like '%|$actorEscaped (busy)|%'
      OR people LIKE '%|$actorEscaped (hostile)|%' 
+     OR people LIKE '%|$actorEscaped (in combat)|%' 
      or type='info_timeforward' )
     ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
@@ -2692,8 +2757,8 @@ function PackIntoSummary($onlyMissingDiary=false)
     global $db;
     
     if ($onlyMissingDiary) {
-        $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
-        select gamets,1,message,message,'diary',uid,speaker
+        $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions,scope)
+        select gamets,1,message,message,'diary',uid,speaker,'global'
         from memory
         where event in ('diary','auto_diary','backgroundlife_diary')
         and uid not in (select uid from memory_summary where classifier in  ('diary','auto_diary','backgroundlife_diary'))");
@@ -2709,22 +2774,26 @@ function PackIntoSummary($onlyMissingDiary=false)
         $minRowTs = intval($lastGameTsRecord["gamets"] -  ( 1 /0.0000024));
         
         $pfi = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] ?? 10) * 100000;
-        $query="insert into memory_summary select * from ( 
+        $minEventsPerSummary = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_MIN_EVENTS"] ?? 5);
+        if ($minEventsPerSummary < 1) {
+            $minEventsPerSummary = 1;
+        }
+        $query="insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,scope) select * from ( 
                                     select max(gamets) as gamets_truncated,count(*) as n,
                                     STRING_AGG(message, chr(13) || chr(10) || chr(13) || chr(10)) AS packed_message,
-                                    NULL as summary,'dialogue' as classifier,max(uid) as uid
+                                    NULL as summary,'dialogue' as classifier,max(uid) as uid,'global' as scope
                                     from memory_v
                                     where 
                                     message not ilike 'Dear Diary%'
                                     and gamets>$maxRow 
-                                    group by round(gamets/$pfi ,0)  HAVING count(*)>9 order by round(gamets/$pfi ,0) ASC
+                                    group by round(gamets/$pfi ,0)  HAVING count(*)>=$minEventsPerSummary order by round(gamets/$pfi ,0) ASC
                                 ) as T where gamets_truncated>$maxRow and gamets_truncated<$minRowTs";
         //error_log($query);
 
         $results = $db->query($query);
         
-        $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions)
-                                    select gamets,1,message,message,'diary',uid,speaker
+        $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions,scope)
+                                    select gamets,1,message,message,'diary',uid,speaker,'global'
                                     from memory
                                     where event='diary'
                                     and gamets>$maxRow
@@ -3178,6 +3247,52 @@ function DirectConversationsWith($actor, $speaker="")
     
 }
 
+function isIndividualMemoryEnabledForNpc($npcName)
+{
+    static $cache = [];
+
+    $npcName = trim((string) $npcName);
+    if ($npcName === '' || $npcName === '%' || strpos($npcName, '%') !== false || strpos($npcName, '_') !== false) {
+        return false;
+    }
+
+    if (isset($cache[$npcName])) {
+        return $cache[$npcName];
+    }
+
+    $enabled = false;
+    try {
+        $escaped = $GLOBALS["db"]->escape($npcName);
+        $row = $GLOBALS["db"]->fetchOne("SELECT extended_data FROM core_npc_master WHERE npc_name='$escaped' LIMIT 1");
+        if (is_array($row) && !empty($row["extended_data"])) {
+            $extendedData = json_decode($row["extended_data"], true);
+            if (
+                is_array($extendedData)
+                && array_key_exists('individual_memory_enabled', $extendedData)
+                && $extendedData['individual_memory_enabled'] !== null
+                && $extendedData['individual_memory_enabled'] !== ''
+            ) {
+                $enabled = !empty($extendedData['individual_memory_enabled']);
+            }
+        }
+    } catch (Throwable $e) {
+        Logger::warn("isIndividualMemoryEnabledForNpc failed for {$npcName}: " . $e->getMessage());
+    }
+
+    $cache[$npcName] = $enabled;
+    return $enabled;
+}
+
+function dataGetMemoryScopeConditionSql($npcName)
+{
+    if (isIndividualMemoryEnabledForNpc($npcName)) {
+        $npcEsc = $GLOBALS["db"]->escape($npcName);
+        return "scope='$npcEsc'";
+    }
+
+    return "(scope IS NULL OR scope='global')";
+}
+
 function DataSearchMemory($rawstring,$npcfilter) {
     
     //$kw=explode(" ",($rawstring));
@@ -3185,7 +3300,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         $kwStringAny=implode(" | ",$rawstring);
         $kwStringAll=implode(" & ",$rawstring);
         
-    } else if ($GLOBALS["MINIME_T5"]) {
+    } else if (isMinimeT5Enabled()) {
         // MiniMe keyword extraction
         Logger::info("Using minime-t5 context");
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
@@ -3294,6 +3409,8 @@ function DataSearchMemory($rawstring,$npcfilter) {
     
     
     
+    $scopeConditionSql = dataGetMemoryScopeConditionSql($npcfilter);
+
     $memory=$GLOBALS["db"]->fetchAll("
         SELECT summary,gamets_truncated,
         ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any,
@@ -3301,6 +3418,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         FROM memory_summary A
         where native_vec @@to_tsquery('$kwStringAny')
         and not (native_vec @@to_tsquery('#Reminiscence'))
+        and $scopeConditionSql
         and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
 
         ORDER BY rank_all DESC, rank_any DESC;
@@ -3340,7 +3458,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
             $kwStringAny=implode(" ",$rawstring);
             $kwStringAll=implode(" ",$rawstring);
         
-        } else if ($GLOBALS["MINIME_T5"]) {
+        } else if (isMinimeT5Enabled()) {
             // MiniMe keyword extraction
             Logger::info("Using minime-t5 context");
             error_log("[DataSearchMemoryByVector] Using minime-t5 context");
@@ -3481,6 +3599,8 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                 $result=array_merge($result,lastKeyWordsContext(5,$npcfilter));
         }
 
+        $scopeConditionSql = dataGetMemoryScopeConditionSql($npcfilter);
+
         $contextKeywords  = implode(" ", $result);
         $contextKeywords=strtr(internalDumbTranslator($contextKeywords),["remember"=>"","Remember"=>"","do you remember"=>""]);
 
@@ -3546,6 +3666,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                           AS mixed_distance
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
+                    and $scopeConditionSql
                     and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
                     ORDER BY (embedding <-> $vectorString)
                     LIMIT 5 OFFSET 0
@@ -3562,6 +3683,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                          summary
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
+                    and $scopeConditionSql
                     and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
                     and (gamets_truncated<$timeThreshold or $timeThreshold=0)
                     
@@ -3863,7 +3985,10 @@ function call_llm_internal() {
         ];
 
         $connector=new LLMConnector();
-        $currentConnectorData=$connector->getById($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]["llm_formatter_id"]); // Asuming primary id
+        $formatterConnectorId = class_exists('LLMRandomizer')
+            ? LLMRandomizer::getConnectorIdForField($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"], "llm_formatter_id")
+            : ($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]["llm_formatter_id"] ?? null);
+        $currentConnectorData=$connector->getById($formatterConnectorId);
 
 
 
@@ -3930,7 +4055,9 @@ function call_llm_internal() {
             
             if (isset($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"])) {
                 $profileData = $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"];
-                $fallbackConnectorId = $profileData["llm_fallback_id"] ?? null;
+                $fallbackConnectorId = class_exists('LLMRandomizer')
+                    ? LLMRandomizer::getConnectorIdForField($profileData, "llm_fallback_id")
+                    : ($profileData["llm_fallback_id"] ?? null);
                 error_log("[FALLBACK DEBUG] Fallback connector ID from profile: " . ($fallbackConnectorId ?? "NULL"));
                 
                 // Check if fallback is enabled in metadata
@@ -4015,7 +4142,9 @@ function call_llm_internal() {
             
             if (isset($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"])) {
                 $profileData = $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"];
-                $fallbackConnectorId = $profileData["llm_fallback_id"] ?? null;
+                $fallbackConnectorId = class_exists('LLMRandomizer')
+                    ? LLMRandomizer::getConnectorIdForField($profileData, "llm_fallback_id")
+                    : ($profileData["llm_fallback_id"] ?? null);
                 
                 // Check if fallback is enabled in metadata
                 if (!empty($profileData["metadata"])) {
@@ -4126,18 +4255,20 @@ function call_llm_internal() {
             $extractedData="";
             $buffer=$remainingData;
             //$user_input_after=$GLOBALS["db"]->fetchAll("select count(*) as N from eventlog where type='user_input' and ts>$gameRequest[1]"); //9.0ms
-            $user_input_after=$GLOBALS["db"]->fetchAll("select rowid as N from eventlog where type='user_input' and ts>$gameRequest[1] LIMIT 1"); // 2.1ms, faster than count(*)
-            if (isset($user_input_after[0]))
-                if (isset($user_input_after[0]["N"]))
-
-                    if ($user_input_after[0]["N"]>0) {
-                        
-                        Logger::info("Generation stopped because user_input. ".__FILE__." ".__LINE__." ".__FUNCTION__);
-                        die('X-CUSTOM-CLOSE');
-                        // Abort , user input detected
-                    }
+            
 
         }
+        // This is intended to stop the generation as soon as user input is detected, so we will attend new request instead of keeping generating this
+        $user_input_after=$GLOBALS["db"]->fetchAll("select rowid as N from eventlog where type='user_input' and ts>$gameRequest[1] LIMIT 1"); // 2.1ms, faster than count(*)
+        if (isset($user_input_after[0]))
+            if (isset($user_input_after[0]["N"]))
+                if ($user_input_after[0]["N"]>0) {
+                    Logger::info("Generation stopped because user_input. ".__FILE__." ".__LINE__." ".__FUNCTION__);
+                    error_log("Generation stopped because user_input. ".__FILE__." ".__LINE__." ".__FUNCTION__);
+                    $connectionHandler->close();
+                    die('X-CUSTOM-CLOSE');
+                    // Abort , user input detected
+                }
 
     } // --- end while
     
@@ -4385,6 +4516,63 @@ function call_llm_internal() {
                                 } else if (stripos($destination,"outside")!==false) {
                                     $destination=DataLastKnownLocationHuman(true,false);
                                     error_log("[ACTION POSTFILTER TravelTo] reference to outside detected , $localtarget => $destination");
+                                    
+                                } else
+                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$destination";
+                            }
+                            
+                        } else if ($actionParts2[0]=="MoveTo") {
+                            // Lets polish the parammeters
+                            $localtarget=$actionParts2[1];
+                            $mang1=explode(",",$localtarget);
+                            $mang2=explode(" and ",$mang1[0]);
+                            $mang3=explode("(",$mang2[0]);
+                            $mang4=explode("--",$mang3[0]);
+                            
+                            $destination=$mang4[0];
+
+                            error_log("[ACTION POSTFILTER MoveTo]  $localtarget => {$mang4[0]} => $destination");
+
+                            //MoveTo will be rewritten as TravelTo with some post-filtering, to avoid confusion with Follow action and also to be able to apply some heuristics to polish the destination parameter, which is usually the most error-prone one.
+
+                            $destinationName=$GLOBALS["db"]->escape(trim($destination));
+                            $dbDestination=$GLOBALS["db"]->fetchOne("SELECT name, similarity(name, '$destinationName') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
+                            $dbDestinationRegion=$GLOBALS["db"]->fetchOne("SELECT name, similarity(region, '$destinationName') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
+
+                            $contextDestinations=DataPosibleLocationsToGo();
+
+                            if (in_array(trim($localtarget),$contextDestinations)) {
+                                // Perfect match
+                                error_log("[ACTION POSTFILTER MoveTo] Seems valid as-is (context destination): <$localtarget> => $localtarget");
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$localtarget";
+
+                            } else if (in_array($destination,$contextDestinations)) {
+                                error_log("[ACTION POSTFILTER MoveTo] Seemd valid (context destination): $localtarget => $destination");
+                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$destination";
+
+                            } else {
+                                if (isset($GLOBALS["NPC_ROLEMASTERED"]) && $GLOBALS["NPC_ROLEMASTERED"]) {
+                                    if (stripos($destination,"home")===0) {
+                                        // Rolemastered NPC wants to return back home
+                                        $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|ReturnBackHome@"; 
+                                        continue;
+
+                                    }
+
+                                } 
+                                if (is_array($dbDestination) && isset($dbDestination["formid"])) {
+                                    $destination=$dbDestination["formid"];
+                                    error_log("[ACTION POSTFILTER MoveTo] found database entry for $localtarget => $destination => {$dbDestination["name"]}, similarity ({$dbDestination["sim"]})");
+                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelToRaw@$destination";    
+                                
+                                } else if (is_array($dbDestinationRegion) && isset($dbDestinationRegion["formid"])) {
+
+                                    $destination=$dbDestinationRegion["formid"];
+                                    error_log("[ACTION POSTFILTER MoveTo] found database (searching by region) entry for $localtarget => $destination => {$dbDestinationRegion["name"]}, similarity ({$dbDestinationRegion["sim"]})");
+                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelToRaw@$destination";    
+                                } else if (stripos($destination,"outside")!==false) {
+                                    $destination=DataLastKnownLocationHuman(true,false);
+                                    error_log("[ACTION POSTFILTER MoveTo] reference to outside detected , $localtarget => $destination");
                                     
                                 } else
                                     $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$destination";
@@ -5286,9 +5474,13 @@ function getConfFileFor($npcname) {
     
 }
 
-function buildDynamicBiography(array $FOLLOWER_CONF) {
+function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bool $forThought = false)
+{
     /**
      * Build dynamic biography from new HERIKA fields, with fallback to legacy HERIKA_DYNAMIC
+     * @param array $FOLLOWER_CONF Configuration array containing HERIKA fields
+     * @param bool $forLetter If false, removes <letter_guidance> sections from HERIKA_SPEECHSTYLE
+     * @param bool $forThought If false, removes <inner_thought_guidance> sections from HERIKA_SPEECHSTYLE
      * @return string The dynamic biography content
      */
     $dynamicBio = '';
@@ -5338,6 +5530,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
     $npcMaster=new NpcMaster();
     $currentNpcData=$npcMaster->getByName($FOLLOWER_CONF["HERIKA_NAME"]);
     $metaData=$npcMaster->getMetaData($currentNpcData);
+    $extendedData=$npcMaster->getExtendedData($currentNpcData);
     
     if (isset($metaData["skills"])) {
         // Convert numeric skills to descriptive levels, grouped by category
@@ -5656,7 +5849,24 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
     foreach ($herikaFields as $fieldName => $label) {
         if (isset($FOLLOWER_CONF[$fieldName]) && !empty(trim($FOLLOWER_CONF[$fieldName]))) {
             $xmlLabel=strtr(strtolower($label),[" "=>"_"]);
-            $dynamicBio .= "\n<$xmlLabel>\n" . trim($FOLLOWER_CONF[$fieldName])."\n</$xmlLabel>";
+            $fieldValue = trim($FOLLOWER_CONF[$fieldName]);
+
+            // Apply conditional XML tag removal for HERIKA_SPEECHSTYLE field
+            if ($fieldName === 'HERIKA_SPEECHSTYLE') {
+                if (!$forLetter) {
+                    // Remove <letter_guidance>...</letter_guidance> and its content
+                    $fieldValue = preg_replace('/<letter_guidance>.*?<\/letter_guidance>/is', '', $fieldValue);
+                }
+                if (!$forThought) {
+                    // Remove <inner_thought_guidance>...</inner_thought_guidance> and its content
+                    $fieldValue = preg_replace('/<inner_thought_guidance>.*?<\/inner_thought_guidance>/is', '', $fieldValue);
+                }
+                // Clean up any excessive whitespace left after removal
+                $fieldValue = trim(preg_replace('/\n{3,}/', "\n\n", $fieldValue));
+            }
+
+
+            $dynamicBio .= "\n<$xmlLabel>\n" . $fieldValue ."\n</$xmlLabel>";
             
             // Add groups (factions) right after HERIKA_BACKGROUND (basic_summary) section
             if ($fieldName=="HERIKA_BACKGROUND") {
@@ -5744,6 +5954,45 @@ function buildDynamicBiography(array $FOLLOWER_CONF) {
         }
     }
 
+    if (isset($extendedData["starring_in_quest"])&&!empty($extendedData["starring_in_quest"])) {
+        $quest = $GLOBALS["db"]->fetchOne("SELECT * FROM sneq_quests WHERE quest_id='{$extendedData["starring_in_quest"]}'");
+        error_log("[SNQE] Current quest data for quest_id {$extendedData["starring_in_quest"]}: {$quest["briefing"]}");
+        if ($quest) {
+            $questData = json_decode($quest["quest_data"], true);
+            $dynamicBio .= "\n<storyline_starring>\n#Current Quest\nYou are currently starring in the quest: {$questData["briefing"]} \n</storyline_starring>";
+
+            // Find this NPC's key in the quest npcs list by matching name
+            $thisNpcKey = null;
+            $thisNpcName = $FOLLOWER_CONF["HERIKA_NAME"] ?? '';
+            if (!empty($questData['npcs']) && is_array($questData['npcs'])) {
+                foreach ($questData['npcs'] as $npcKey => $npcData) {
+                    if (isset($npcData['name']) && strcasecmp($npcData['name'], $thisNpcName) === 0) {
+                        $thisNpcKey = $npcKey;
+                        break;
+                    }
+                }
+            }
+
+            // Gather topics this NPC is the giver of
+            if ($thisNpcKey !== null && !empty($questData['topics']) && is_array($questData['topics'])) {
+                $knownTopics = [];
+                foreach ($questData['topics'] as $topicKey => $topic) {
+                    if (isset($topic['giver']) && $topic['giver'] === $thisNpcKey) {
+                        $topicName = $topic['name'] ?? $topicKey;
+                        $topicInfo = $topic['info'] ?? '';
+                        if (!empty($topicInfo)) {
+                            $knownTopics[] = "- {$topicName}: {$topicInfo}";
+                        }
+                    }
+                }
+                if (!empty($knownTopics)) {
+                    $dynamicBio .= "\n<quest_topics>\n#Topics You Know About\n" . implode("\n", $knownTopics) . "\n</quest_topics>";
+                }
+            }
+        }
+        
+        
+    }
     return $dynamicBio;
 }
 
@@ -6237,6 +6486,8 @@ limit 1";
             $locationDetailedName.=" (interior)";
         } 
         
+    } else {
+        $locationDetailedName=$locData["cell_name"] ?? "Unknown Location";
     }
 
     return $locationDetailedName;

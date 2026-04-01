@@ -37,10 +37,12 @@ function insertNoise($inputString, $noiseArray) {
     return implode(' ', $words);
 }
 
-function normalize_endpoint_url($url) {
-    // Remove trailing slashes
-    $url = rtrim($url, '/');
-    return $url;
+if (!function_exists('normalize_endpoint_url')) {
+    function normalize_endpoint_url($url) {
+        // Remove trailing slashes
+        $url = rtrim($url, '/');
+        return $url;
+    }
 }
 
 function xtts_fastapi_settings($settings,$resetAfter=false) {

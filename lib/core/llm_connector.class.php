@@ -32,7 +32,7 @@ class LLMConnector
         ];
 
         foreach ($data as $k => $v) {
-            if (empty("$v") && $v !== "0") {
+            if (($v === "" || $v === null) && $v !== "0" && $v !== false && $v !== 0) {
                 $data[$k] = null;
             }
         }
@@ -88,7 +88,7 @@ class LLMConnector
         ];
 
         foreach ($data as $k => $v) {
-            if (empty("$v") && $v !== "0") {
+            if (($v === "" || $v === null) && $v !== "0" && $v !== false && $v !== 0) {
                 $data[$k] = null;
             }
         }
@@ -277,6 +277,42 @@ class LLMConnector
             if (is_array($metadata)) {
                 foreach ($metadata as $key => $value) {
                     $GLOBALS["CONNECTOR"]["groqjson"][$key] = $value;
+                }
+            }
+
+        } else if ($currentConnectorData["driver"] == "player2json") {
+
+            $gameKey = "CHIM";
+            if (!empty($currentConnectorData["api_badge_id"])) {
+                $apiBadge = new ApiBadge();
+                $apiKeyData = $apiBadge->getById($currentConnectorData["api_badge_id"]);
+                if (!empty($apiKeyData["api_key"])) {
+                    $gameKey = $apiKeyData["api_key"];
+                }
+            }
+
+            $GLOBALS["CONNECTOR"]["player2json"]["url"] = $currentConnectorData["url"] ?? 'http://127.0.0.1:4315/v1/chat/completions';
+            $GLOBALS["CONNECTOR"]["player2json"]["model"] = $currentConnectorData["model"] ?? '';
+            $GLOBALS["CONNECTOR"]["player2json"]["reasoning_model"] = $currentConnectorData["reasoning_model"] ?? false;
+            $GLOBALS["CONNECTOR"]["player2json"]["max_tokens"] = $currentConnectorData["max_tokens"] ?? '1024';
+            $GLOBALS["CONNECTOR"]["player2json"]["temperature"] = $currentConnectorData["temperature"] ?? 1.0;
+            $GLOBALS["CONNECTOR"]["player2json"]["presence_penalty"] = $currentConnectorData["presence_penalty"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["player2json"]["frequency_penalty"] = $currentConnectorData["frequency_penalty"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["player2json"]["repetition_penalty"] = $currentConnectorData["repetition_penalty"] ?? 1.0;
+            $GLOBALS["CONNECTOR"]["player2json"]["top_p"] = $currentConnectorData["top_p"] ?? 1.0;
+            $GLOBALS["CONNECTOR"]["player2json"]["top_k"] = $currentConnectorData["top_k"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["player2json"]["min_p"] = $currentConnectorData["min_p"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["player2json"]["top_a"] = $currentConnectorData["top_a"] ?? 0.0;
+            $GLOBALS["CONNECTOR"]["player2json"]["ENFORCE_JSON"] = $currentConnectorData["enforce_json"] ?? true;
+            $GLOBALS["CONNECTOR"]["player2json"]["PREFILL_JSON"] = $currentConnectorData["prefill_json"] ?? false;
+            $GLOBALS["CONNECTOR"]["player2json"]["API_KEY"] = $gameKey;
+            $GLOBALS["CONNECTOR"]["player2json"]["player2_game_key"] = $gameKey;
+            $GLOBALS["CONNECTOR"]["player2json"]["json_schema"] = $currentConnectorData["json_schema"] ?? false;
+
+            $metadata = json_decode($currentConnectorData['metadata'] ?? '{}', true);
+            if (is_array($metadata)) {
+                foreach ($metadata as $key => $value) {
+                    $GLOBALS["CONNECTOR"]["player2json"][$key] = $value;
                 }
             }
 

@@ -185,8 +185,8 @@ try {
     // The AI-generated code contains a line like: $quest_id = "merchant_request";
     // We need to replace it with the dynamically calculated questId before inserting into database
     $phpCode = preg_replace('/\$quest_id\s*=\s*["\'].*?["\'];/', "\$quest_id = \"{$questId}\";", $phpCode);
-
-    SNQEQuestManager::createNewQuest($questId, $phpCode, [], "not_running", $formInput["questTitle"], $formInput["lastJournalEntry"]);
+    $questdata["briefing"] = $formInput["briefing"] ?? "";  
+    SNQEQuestManager::createNewQuest($questId, $phpCode, $questdata, "not_running", $formInput["questTitle"], $formInput["lastJournalEntry"]);
     $result['success'] = true;
     $result['message'] = "Quest created successfully with ID: " . $questId;
 } catch (\Exception $e) {

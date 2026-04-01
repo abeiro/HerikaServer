@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 error_reporting(E_ERROR);
 session_start();
 
@@ -398,10 +398,10 @@ if (isset($_POST["animation"])) {
         echo "<h1 class='my-2' style='margin-right: 15px;'>Event Log</h1>";
         
         if ($isAutoRefresh) {
-            echo "<button onclick=\"window.location.href='?table=eventlog&page=1'\" class='btn-base btn-secondary' style='padding: 8px 12px; font-size: 0.9em;' title='Stop monitoring events'>⏸️ Stop Live</button>";
-            echo "<span style='margin-left: 10px; color: #28a745; font-weight: bold; font-size: 0.9em;'>🔴 LIVE</span>";
+            echo "<button onclick=\"window.location.href='?table=eventlog&page=1'\" class='btn-base btn-secondary' style='padding: 8px 12px; font-size: 0.9em;' title='Stop monitoring events'>â¸ï¸ Stop Live</button>";
+            echo "<span style='margin-left: 10px; color: #28a745; font-weight: bold; font-size: 0.9em;'>ðŸ”´ LIVE</span>";
         } else {
-            echo "<button onclick=\"window.location.href='?table=eventlog&page=1&autorefresh=true'\" class='btn-base btn-primary' style='padding: 8px 12px; font-size: 0.9em;' title='Start monitoring events with auto-refresh'>📡 Monitor Live</button>";
+            echo "<button onclick=\"window.location.href='?table=eventlog&page=1&autorefresh=true'\" class='btn-base btn-primary' style='padding: 8px 12px; font-size: 0.9em;' title='Start monitoring events with auto-refresh'>ðŸ“¡ Monitor Live</button>";
         }
         echo "</div>";
         
@@ -497,7 +497,7 @@ if (isset($_POST["animation"])) {
         echo "<button 
                 onclick=\"deleteAllEventsConfirm()\" 
                 class='btn-base btn-danger' style='margin-left: 20px; background-color: #dc2626; font-weight: bold;'>
-                ⚠️ Delete ALL Events
+                âš ï¸ Delete ALL Events
             </button>";
         
         // Add JavaScript function for secure confirmation
@@ -661,7 +661,7 @@ if (isset($_POST["animation"])) {
                 if ($key === 'prompt') {
                     // For prompt column, show as a button
                     $escapedContent = htmlspecialchars($value, ENT_QUOTES);
-                    $mappedRow[$columnHeaders[$key] ?? $key] = '<button class="view-contents-btn" data-full-content="' . $escapedContent . '">🧾</button>';
+                    $mappedRow[$columnHeaders[$key] ?? $key] = '<button class="view-contents-btn" data-full-content="' . $escapedContent . '">ðŸ§¾</button>';
                 } else if ($key === 'response') {
                     // For response column, show full content directly
                     $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . nl2br(htmlspecialchars($value)) . '</div>';
@@ -986,7 +986,7 @@ if (isset($_POST["animation"])) {
                     $mappedRow[$columnHeaders[$key] ?? $key] = 
                         '<div style="display: flex; align-items: center; gap: 10px;">' .
                         '<span style="flex-grow: 1;">' . $preview . '</span>' .
-                        '<button class="view-contents-btn btn-base btn-primary" data-full-content="' . $escapedContent . '">📄 View Full</button>' .
+                        '<button class="view-contents-btn btn-base btn-primary" data-full-content="' . $escapedContent . '">ðŸ“„ View Full</button>' .
                         '</div>';
                 } else if ($key === 'created_at' && !empty($value)) {
                     // Format timestamp to UTC time
@@ -1207,8 +1207,8 @@ if (isset($_POST["animation"])) {
         
         // Add Memory Management buttons
         echo "<div class='memory-management-actions' style='margin: 15px 0;'>";
-        echo "<button onclick=\"syncMemoriesConfirm()\" class='btn-base btn-primary' style='margin-right: 10px;'>🔄 Sync & Create Memory Summaries</button>";
-        echo "<button onclick=\"deleteAllMemoriesConfirm()\" class='btn-base btn-danger' style='background-color: #dc2626; font-weight: bold;'>⚠️ Delete All Memory Summaries</button>";
+        echo "<button onclick=\"syncMemoriesConfirm()\" class='btn-base btn-primary' style='margin-right: 10px;'>ðŸ”„ Sync & Create Memory Summaries</button>";
+        echo "<button onclick=\"deleteAllMemoriesConfirm()\" class='btn-base btn-danger' style='background-color: #dc2626; font-weight: bold;'>âš ï¸ Delete All Memory Summaries</button>";
         echo "</div>";
         
         // Add JavaScript functions for confirmations
@@ -1368,11 +1368,6 @@ if (isset($_POST["animation"])) {
         echo '<body>';
         echo '<br>';
         echo '<h1>Installed Server Plugins 
-            <a href="https://dwemerdynamics.hostwiki.io/en/CHIM-Plugins" target="_blank" rel="noopener" 
-               style="display: inline-block; margin-left: 15px; color: rgb(242, 124, 17); text-decoration: none; font-size: 0.7em; vertical-align: top; border: 2px solid rgb(242, 124, 17); border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 20px; transition: all 0.3s ease;" 
-               title="View detailed documentation about CHIM Plugins"
-               onmouseover="this.style.background=\'rgb(242, 124, 17)\'; this.style.color=\'white\';" 
-               onmouseout="this.style.background=\'transparent\'; this.style.color=\'rgb(242, 124, 17)\';">ℹ</a>
         </h1>';
         echo '<form method="post" style="margin: 0;">
         <input type="hidden" name="refresh_plugins" value="1">
@@ -1459,7 +1454,7 @@ if (isset($_POST["animation"])) {
                 
                 // Display latest version with color if different from current
                 if (!empty($latestVersion) && !empty($version) && version_compare($latestVersion, $version, '>')) {
-                    echo '<td style="color: #ff4444; font-weight: bold;">' . htmlspecialchars($latestVersion) . ' <span title="Update Available">⬆️</span></td>';
+                    echo '<td style="color: #ff4444; font-weight: bold;">' . htmlspecialchars($latestVersion) . ' <span title="Update Available">â¬†ï¸</span></td>';
                 } else {
                     echo '<td>' . htmlspecialchars($latestVersion) . '</td>';
                 }

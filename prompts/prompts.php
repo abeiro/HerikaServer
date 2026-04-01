@@ -9,8 +9,8 @@ function shouldTriggerRPGComment($eventType) {
         return false;
     }
     
-    // Get the trigger chance percentage (default 100%)
-    $chance = 100;
+    // Get the trigger chance percentage (default 50%)
+    $chance = 50;
     if (isset($GLOBALS["RPG_COMMENTS_CHANCE"])) {
         $chance = intval($GLOBALS["RPG_COMMENTS_CHANCE"]);
     }
@@ -226,9 +226,15 @@ $PROMPTS=array(
         ]
         
     ],
+    "continue"=>[
+        "cue"=>[
+            "Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Continue the ongoing discussion. Build on what was just said. {$GLOBALS["TEMPLATE_DIALOG"]}"
+        ],
+        "player_request"=>["{$GLOBALS["PLAYER_NAME"]} gestures for {$GLOBALS['HERIKA_NAME']} to continue."]
+    ],
     // Database Prompt (Diary)
     "diary"=>[ 
-        "cue"=>["Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}s diary . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}."],
+        "cue"=>["Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}s recent interactions and events written above into {$GLOBALS["HERIKA_NAME"]}s diary. WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}."],
         "extra"=>["force_tokens_max"=>0]
     ],
     // Database Prompt (Soulgaze)
@@ -282,12 +288,16 @@ $PROMPTS=array(
     ],
     // Database Prompt (Instruction)
     "instruction"=>[ 
-        "cue"=>["{$gameRequest[3]} write {$GLOBALS["HERIKA_NAME"]}'s dialogue lines without narrations. CHARACTER MUST FOLLOW NARRATOR INSTRUCTION"],
+        "cue"=>["{$gameRequest[3]} Write {$GLOBALS["HERIKA_NAME"]}'s dialogue lines. CHARACTER MUST FOLLOW NARRATOR INSTRUCTION"],
+        "player_request"=>["The Narrator: {$gameRequest[3]}"],
+    ],
+    "suggestion"=>[ 
+        "cue"=>["Write {$GLOBALS["HERIKA_NAME"]}'s dialogue lines. "],
         "player_request"=>["The Narrator: {$gameRequest[3]}"],
     ],
     // Database Prompt (Welcome)
     "welcome"=>[ 
-        "cue"=>["{$gameRequest[3]}. {$GLOBALS["HERIKA_NAME"]} should Inspect surroundings to see who is in scene. Write {$GLOBALS["HERIKA_NAME"]}'s dialogue lines without narrations."],
+        "cue"=>["{$gameRequest[3]}. {$GLOBALS["HERIKA_NAME"]} should Inspect surroundings to see who is in scene. Write {$GLOBALS["HERIKA_NAME"]}'s prose/narration."],
         "player_request"=>["The Narrator: {$gameRequest[3]}"],
     ],
     "cheatmode"=>[

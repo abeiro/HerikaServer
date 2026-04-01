@@ -591,6 +591,12 @@ class openrouterjson
                 ],
             'transforms'=>[]
         );
+
+        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
+            foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
+                $data[$k]=$v;
+            }
+        }
         
         if ($GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) {
             if (isset($GLOBALS["CONNECTOR"][$this->name]["json_schema"]) && $GLOBALS["CONNECTOR"][$this->name]["json_schema"]) {
@@ -704,10 +710,11 @@ class openrouterjson
             if (!($i_pos === false)) {
                 $target = substr($this->_websearch_text, 0, $i_pos);
                 $search_text = substr($this->_websearch_text,strlen($target)+1);
-                $i_pos2 = strripos($search_text, "(Talking to");
-                if (!($i_pos2 === false)) {
-                    $search_text = substr($search_text, 0, $i_pos2); 
-                }
+                $search_text = preg_replace(
+                    '/\s*\(\s*(?:(?:talking|whispering)\s+to|speaking\s+loudly\s+to)\s+[^()]+(?:\s+from\s+far\s+away)?\s*\)\s*$/i',
+                    '',
+                    $search_text
+                );
             }
             if (stripos($search_text, "Skyrim") === false) 
                 $s_prefix = "Skyrim lore ";
