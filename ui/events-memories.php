@@ -348,6 +348,35 @@ require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."uti
 
 $db = new sql();
 
+// Keep a single source of truth for which event types are visible/deletable in this page.
+$eventLogExcludedTypes = [
+    'prechat',
+    'rechat',
+    'infonpc',
+    'request',
+    'infonpc_close',
+    'addnpc',
+    'user_input',
+    'infosave',
+    'init',
+    'playerinfo',
+    'oghma_import',
+    'biography_import',
+    'dynamic_oghma_import',
+    'infoitems',
+    'description_import',
+    'backgroundaction',
+    'innerchat',
+    'npc_reanimated'
+];
+$eventLogExcludedTypesSql = implode(
+    ',',
+    array_map(function ($type) use ($db) {
+        return "'" . $db->escape($type) . "'";
+    }, $eventLogExcludedTypes)
+);
+$eventLogVisibleWhereClause = "type NOT IN ($eventLogExcludedTypesSql)";
+
 // Handle actions
 if (isset($_GET["clean"]) && $_GET["clean"]) {
     $db->delete("responselog", "sent=1");
@@ -365,17 +394,29 @@ if (isset($_GET["cleanlog"]) && $_GET["cleanlog"]) {
 if (isset($_GET['delete_last'])) {
     $delCount = (int)$_GET['delete_last'];
     if (in_array($delCount, [20, 50, 100])) {
-        $db->query("
-            DELETE FROM eventlog
-            WHERE rowid IN (
-                SELECT rowid
-                FROM eventlog
-                WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','infoitems','description_import','backgroundaction','innerchat','npc_reanimated')
-                ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
-                LIMIT $delCount
-            )
+        $targetRows = $db->fetchAll("
+            SELECT rowid
+            FROM eventlog
+            WHERE $eventLogVisibleWhereClause
+            ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
+            LIMIT $delCount
         ");
-        header("Location: events-memories.php?tab=eventlog");
+
+        $targetRowids = [];
+        foreach ($targetRows as $targetRow) {
+            $targetRowid = intval($targetRow['rowid'] ?? 0);
+            if ($targetRowid > 0) {
+                $targetRowids[] = $targetRowid;
+            }
+        }
+
+        if (!empty($targetRowids)) {
+            $targetRowidsStr = implode(',', $targetRowids);
+            $db->query("DELETE FROM eventlog WHERE rowid IN ($targetRowidsStr)");
+        }
+
+        $deletedCount = count($targetRowids);
+        header("Location: events-memories.php?tab=eventlog&deleted=$deletedCount");
         exit;
     }
 }
@@ -397,15 +438,28 @@ if (isset($_POST['delete_selected']) && !empty($_POST['rowids'])) {
         
         if (count($sanitizedRowids) > 0) {
             $rowidsStr = implode(',', $sanitizedRowids);
-            $query = "DELETE FROM eventlog WHERE rowid IN ($rowidsStr)";
-            Logger::info("Executing delete query: $query");
+            $existingRows = $db->fetchAll("SELECT rowid FROM eventlog WHERE rowid IN ($rowidsStr)");
+            $existingRowids = [];
+            foreach ($existingRows as $existingRow) {
+                $existingRowid = intval($existingRow['rowid'] ?? 0);
+                if ($existingRowid > 0) {
+                    $existingRowids[] = $existingRowid;
+                }
+            }
+
+            Logger::info("Existing rowids before delete: " . json_encode($existingRowids));
+
+            if (count($existingRowids) > 0) {
+                $existingRowidsStr = implode(',', $existingRowids);
+                $query = "DELETE FROM eventlog WHERE rowid IN ($existingRowidsStr)";
+                Logger::info("Executing delete query: $query");
+                $db->query($query);
+            }
+
+            $deletedCount = count($existingRowids);
+            Logger::info("Bulk delete executed: $deletedCount events deleted.");
             
-            $result = $db->query($query);
-            
-            // Log the deletion for debugging
-            Logger::info("Bulk delete executed: " . count($sanitizedRowids) . " events deleted.");
-            
-            header("Location: events-memories.php?tab=eventlog&deleted=" . count($sanitizedRowids));
+            header("Location: events-memories.php?tab=eventlog&deleted=" . $deletedCount);
             exit;
         } else {
             Logger::warn("Bulk delete attempted but no valid rowids after sanitization");
@@ -547,9 +601,9 @@ function getTimeColor($time) {
             $offset = ($page - 1) * $limit;
             
             $results = $db->fetchAll(
-                "SELECT type, data, people, gamets, localts, ts, ROWID
+                "SELECT type, data, people, gamets, localts, ts, rowid
                  FROM eventlog a
-                 WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import','backgroundaction','innerchat','npc_reanimated')
+                 WHERE $eventLogVisibleWhereClause
                  ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
                  LIMIT $limit OFFSET $offset"
             );
@@ -623,7 +677,7 @@ function getTimeColor($time) {
             $nextPage = $page + 1;
             
             // Get total count for pagination
-            $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','infoitems','description_import','backgroundaction','innerchat','npc_reanimated')";
+            $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE $eventLogVisibleWhereClause";
             $countResult = $db->fetchAll($countQuery);
             $totalRecords = $countResult[0]['total'];
             $totalPages = ceil($totalRecords / $limit);
