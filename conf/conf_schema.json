@@ -423,7 +423,7 @@
   },
   "PLAYER_RESPEECH":{"type":"boolean","description":"Allows the AI to rewrite player speech with Chat Assist & Creation modes.","scope":"global"},
   "STTFUNCTION": {
-    "type":"select","values":["none","whisper","localwhisper","azure","deepgram","gemini","parakeet"],"description":"Speech-to-Text service options. Translates your voice to text.", 
+    "type":"select","values":["none","whisper","localwhisper","azure","deepgram","gemini","parakeet","inworld"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service","scope":"global"
     },
   "STT": {
@@ -457,6 +457,11 @@
     }, "PARAKEET": {
       "_title":"parakeet-api-server",
       "LANG": {"type":"string","description":"Language to detect for STT."}
+    }, "INWORLD": {
+      "_title":"Inworld STT",
+      "API_KEY": {"type":"apikey","description":"Inworld API key. Can also be managed from API Badge under Inworld.","code":"INWORLD_API_KEY"},
+      "MODEL_ID": {"type":"string","description":"Model identifier in provider/model format, e.g. groq/whisper-large-v3."},
+      "LANGUAGE": {"type":"string","description":"Language code in BCP-47 format, e.g. en-US. Leave blank for auto-detect."}
     }
   },
   "ITTFUNCTION": {

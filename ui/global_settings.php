@@ -46,14 +46,14 @@ $providersTts = is_array($rawSchema['TTS'] ?? null) ? $rawSchema['TTS'] : [];
 $providersStt = is_array($rawSchema['STT'] ?? null) ? $rawSchema['STT'] : [];
 $ittProviders = is_array($rawSchema['ITT'] ?? null) ? $rawSchema['ITT'] : [];
 $ttsOptions = $rawSchema['TTSFUNCTION']['values'] ?? [ 'mimic3','melotts','xtts-fastapi','xvasynth','azure','11labs','openai','koboldcpp','zonos_gradio','piper-tts','kokoro','deepgram','cartesia','inworld' ];
-$sttOptions = $rawSchema['STTFUNCTION']['values'] ?? [ 'none','whisper','localwhisper','azure','deepgram' ];
+$sttOptions = $rawSchema['STTFUNCTION']['values'] ?? [ 'none','whisper','localwhisper','azure','deepgram','gemini','parakeet','inworld' ];
 $ittOptionsRaw = $rawSchema['ITTFUNCTION']['values'] ?? [ 'openai','google_openai','openrouter','llamacpp' ];
 // Exclude llamacpp per existing ITT page behavior
 $ittOptions = array_values(array_filter($ittOptionsRaw, function($v){ return strtolower($v) !== 'llamacpp'; }));
 
 // Mappings
 $ttsMap = [ 'melotts' => 'MELOTTS','xtts-fastapi' => 'XTTSFASTAPI','chatterbox' => 'CHATTERBOX','pockettts' => 'POCKETTTS','mimic3' => 'MIMIC3','xvasynth' => 'XVASYNTH','azure' => 'AZURE','11labs' => 'ELEVEN_LABS','openai' => 'openai','kokoro' => 'KOKORO','koboldcpp' => 'koboldcpp','zonos_gradio' => 'ZONOS_GRADIO','piper-tts' => 'PIPERTTS','deepgram' => 'deepgram','cartesia' => 'CARTESIA','inworld' => 'INWORLD' ];
-$sttMap = [ 'whisper' => 'WHISPER','localwhisper' => 'LOCALWHISPER','azure' => 'AZURE','deepgram' => 'DEEPGRAM','parakeet'=>"PARAKEET" ];
+$sttMap = [ 'whisper' => 'WHISPER','localwhisper' => 'LOCALWHISPER','azure' => 'AZURE','deepgram' => 'DEEPGRAM','parakeet' => 'PARAKEET','gemini' => 'GEMINI','inworld' => 'INWORLD' ];
 $ittMap = [ 'openai' => 'openai','google_openai' => 'google_openai','openrouter' => 'openrouter' ];
 // Display name mappings for UI labels
 $ttsDisplayNames = [ 
@@ -1411,11 +1411,13 @@ function current_value(string $flatName, array $currentConf) {
                                 'none'        => 'None',
                                 'parakeet'    => 'Parakeet',
                                 'deepgram'    => 'Deepgram',
+                                'inworld'     => 'Inworld',
                                 'whisper'     => 'OpenAI Whisper',
                                 'localwhisper'=> 'Local Whisper',
                                 'azure'       => 'Azure STT',
+                                'gemini'      => 'Gemini STT',
                             ];
-                            $sttRecommended = ['parakeet', 'deepgram', 'whisper', 'localwhisper'];
+                            $sttRecommended = ['parakeet', 'deepgram', 'inworld', 'whisper', 'localwhisper'];
                             $sttOthers = array_values(array_filter($sttOptions, function($o) use ($sttRecommended) {
                                 return !in_array($o, $sttRecommended, true);
                             }));
@@ -1451,8 +1453,15 @@ function current_value(string $flatName, array $currentConf) {
                         try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) { $GLOBALS['db'] = new sql(); } $apiBadges = $GLOBALS['db']->fetchAll("SELECT id,label,api_key FROM core_api_badge ORDER BY label ASC"); } catch (Throwable $_e) {}
                         foreach ($sttSchemaCur as $fname => $def): if (!is_array($def)) continue; $ftype=$def['type']??'string'; $plain='STT '.$sttKeyCur.' '.$fname; $current=$currentConf[$plain]['currentValue']??''; $help=$def['description']??'';
                             $lnameProv = strtolower($sttKeyCur);
-                            if ($fname === 'API_KEY' && in_array($lnameProv, ['whisper','azure','deepgram'])) {
-                                $badgeName = ($lnameProv==='whisper') ? 'OpenAI' : ucfirst($lnameProv);
+                            $providerBadgeMap = [
+                                'whisper' => 'OpenAI',
+                                'azure' => 'Azure',
+                                'deepgram' => 'Deepgram',
+                                'gemini' => 'Google',
+                                'inworld' => 'Inworld',
+                            ];
+                            if ($fname === 'API_KEY' && isset($providerBadgeMap[$lnameProv])) {
+                                $badgeName = $providerBadgeMap[$lnameProv];
                                 $hasKey=false; foreach ($apiBadges as $r){ if (strtolower((string)($r['label']??''))===strtolower($badgeName) && trim((string)($r['api_key']??''))!==''){ $hasKey=true; break; } }
                                 echo '<div>API Badge ('.htmlspecialchars($badgeName).')</div>';
                                 echo '<div>'.($hasKey?'<span style="color:#6dd19c">Configured</span>':'<span style="color:#ffb862">Missing</span>').' — <a href="#" onclick="try{ if(window.top){ window.top.location.href=\''.htmlspecialchars($webRoot).'/ui/core/config_hub.php?tab=keys\'; } else { window.location.href=\''.htmlspecialchars($webRoot).'/ui/core/api_badge.php?embed=1\'; } }catch(e){ window.location.href=\''.htmlspecialchars($webRoot).'/ui/core/api_badge.php?embed=1\'; } return false;">Manage Keys</a></div>';

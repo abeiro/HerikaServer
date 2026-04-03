@@ -491,6 +491,11 @@ $STT["DEEPGRAM"]["MODEL"]="nova-3"; //Model to use.
 
 $STT["PARAKEET"]["LANG"]="en";
 
+//Inworld STT
+$STT["INWORLD"]["API_KEY"]=""; //Inworld API key. Can be managed from API Badge as "Inworld".
+$STT["INWORLD"]["MODEL_ID"]="groq/whisper-large-v3"; //Provider/model identifier.
+$STT["INWORLD"]["LANGUAGE"]="en-US"; //BCP-47 language code, blank for auto-detect.
+
 
 
 //[Image to Text (Soulgaze)]
