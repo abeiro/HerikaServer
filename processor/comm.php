@@ -1507,13 +1507,13 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $profile=new CoreProfile();
         $profData=json_decode($profile->getById($currentNpcData["profile_id"])["metadata"],true);
 
-        $doSalute=(isset($profData["SALUTATION_AFTER_1_DAY"]) && $profData["SALUTATION_AFTER_1_DAY"] || isset($meta["SALUTATION_AFTER_1_DAY"]) && $meta["SALUTATION_AFTER_1_DAY"] );
-        if ($doSalute) {
-            error_log("[salutation_after_a_while] enabled for {$currentNpcData["npc_name"]}, profile:{$profData["SALUTATION_AFTER_1_DAY"]} ,npc:{$meta["SALUTATION_AFTER_1_DAY"]}");
+        $doAutoGreeting=(isset($profData["SALUTATION_AFTER_1_DAY"]) && $profData["SALUTATION_AFTER_1_DAY"] || isset($meta["SALUTATION_AFTER_1_DAY"]) && $meta["SALUTATION_AFTER_1_DAY"] );
+        if ($doAutoGreeting) {
+            error_log("[auto_greeting] enabled for {$currentNpcData["npc_name"]}, profile:{$profData["SALUTATION_AFTER_1_DAY"]} ,npc:{$meta["SALUTATION_AFTER_1_DAY"]}");
             $lit=GetLastInteraction($GLOBALS["PLAYER_NAME"],$currentNpcData["npc_name"]);
             if (gamets2days_between($lit,$gameRequest[2]) > 1) {
-                // If salutation_after_a_while is enable for this NPC, if 1 day has passed between last iteration, force a salutation.
-                $instructionText="should salutate {$GLOBALS["PLAYER_NAME"]}, as more than 1 day passed with no talking.";
+                // If auto greeting is enabled for this NPC and enough time has passed, force a greeting.
+                $instructionText="should greet {$GLOBALS["PLAYER_NAME"]}, as more than 1 day passed with no talking.";
                 $roleMasterAction = "rolecommand|Instruction@{$currentNpcData["npc_name"]}@{$instructionText}@0";
         
                 // Insert into database
@@ -1529,10 +1529,10 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     )
                 );
             } else {
-                error_log("[salutation_after_a_while] {$currentNpcData["npc_name"]} gamets2days_between($lit,$gameRequest[2]) > 1");
+                error_log("[auto_greeting] {$currentNpcData["npc_name"]} gamets2days_between($lit,$gameRequest[2]) > 1");
             }
         } else {
-            error_log("[salutation_after_a_while] disabled for {$currentNpcData["npc_name"]}");
+            error_log("[auto_greeting] disabled for {$currentNpcData["npc_name"]}");
         }
     }
 

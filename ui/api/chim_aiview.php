@@ -195,14 +195,14 @@ try {
         $autoDiaryWait = ['value' => !empty($profileMetadata['AUTO_DIARY_WAIT_ENABLED']), 'source' => 'profile'];
     }
     
-    // Auto Salutations - stored in extended_data JSON
-    $autoSalutations = ['value' => false, 'source' => 'default'];
+    // Auto Greeting - stored in extended_data JSON
+    $autoGreeting = ['value' => false, 'source' => 'default'];
     if (isset($extendedData['salutation_after_a_while']) && $extendedData['salutation_after_a_while'] !== null && $extendedData['salutation_after_a_while'] !== '') {
         // NPC has explicit override
-        $autoSalutations = ['value' => !empty($extendedData['salutation_after_a_while']), 'source' => 'npc'];
+        $autoGreeting = ['value' => !empty($extendedData['salutation_after_a_while']), 'source' => 'npc'];
     } else if (isset($profileMetadata['SALUTATION_AFTER_A_WHILE'])) {
         // Inherit from profile
-        $autoSalutations = ['value' => !empty($profileMetadata['SALUTATION_AFTER_A_WHILE']), 'source' => 'profile'];
+        $autoGreeting = ['value' => !empty($profileMetadata['SALUTATION_AFTER_A_WHILE']), 'source' => 'profile'];
     }
 
     // Get relationship affinity data
@@ -244,7 +244,8 @@ try {
                 'middle_term_memory' => $middleTermEnabled,
                 'auto_diary' => $autoDiary,
                 'auto_diary_wait' => $autoDiaryWait,
-                'auto_salutations' => $autoSalutations
+                'auto_greeting' => $autoGreeting,
+                'auto_salutations' => $autoGreeting // Backward compatibility for existing UI/API consumers.
             ],
             
             // Bio fields
