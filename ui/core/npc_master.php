@@ -249,6 +249,40 @@ h1.api-title {
     border-color: rgba(239, 68, 68, 0.5);
     color: #f87171;
 }
+
+.npc-metadata-collapse {
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    background: rgba(20, 20, 20, 0.7);
+    overflow: hidden;
+}
+.npc-metadata-collapse > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 10px 12px;
+    color: rgb(242, 124, 17);
+    font-weight: 700;
+    user-select: none;
+    border-bottom: 1px solid transparent;
+}
+.npc-metadata-collapse > summary::-webkit-details-marker {
+    display: none;
+}
+.npc-metadata-collapse > summary::after {
+    content: '▸';
+    float: right;
+    color: #9fb1c9;
+    transition: transform 0.15s ease;
+}
+.npc-metadata-collapse[open] > summary::after {
+    transform: rotate(90deg);
+}
+.npc-metadata-collapse[open] > summary {
+    border-bottom-color: #3a3a3a;
+}
+.npc-metadata-collapse-body {
+    padding: 12px;
+}
 </style>
 
 <main>
@@ -2247,10 +2281,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         </div>
 
         <div class="form-item span-2">
-            <label for="metadata">Metadata (JSON)</label>
-            <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
-            <small class="hint">General NPC metadata used by systems.</small>
-            <div id="metadata"></div>
+            <details class="npc-metadata-collapse" id="npc_metadata_collapse">
+                <summary>Metadata (JSON)</summary>
+                <div class="npc-metadata-collapse-body">
+                    <textarea name="metadata" style="display:none"><?= htmlspecialchars($editItem["metadata"] ?? "") ?></textarea>
+                    <small class="hint">General NPC metadata used by systems.</small>
+                    <div id="metadata"></div>
+                </div>
+            </details>
         </div>
 
         <div class="form-item span-2">
@@ -2403,7 +2441,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                   }
                 } catch(_e){ console.error('Failed to sync middle term memory:', _e); }
                 */
-                if (form.metadata!=undefined) {
+                if (form.metadata!=undefined && typeof jsonEditor !== 'undefined' && jsonEditor && typeof jsonEditor.get === 'function') {
                   const content = jsonEditor.get()
 
                   try {
