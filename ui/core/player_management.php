@@ -803,7 +803,7 @@ if (!$isEmbed) {
     </div>
 
     <form id="player-form" method="post" action="">
-        <button type="submit" class="btn-save" name="save_player" value="1">💾 Save Player Settings</button>
+        <button type="submit" class="btn-save" name="save_player" value="1">Save Player Settings</button>
 
         <div class="content-grid player-overview-grid">
             <!-- Player Info Section -->

@@ -698,9 +698,9 @@ if (!$isEmbed) {
 
         <div class="page-header">
             <h1>
-                Narrator Management
+                🗣️ Narrator Management
             </h1>
-            <p>Configure narrator behavior and settings.</p>
+            <p>Configure narrator behavior and settings</p>
         </div>
 
         <form method="post" action="">
