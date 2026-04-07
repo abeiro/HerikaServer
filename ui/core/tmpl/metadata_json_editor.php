@@ -62,7 +62,7 @@ $localSchemaOverrides = [
     ],
     'MAX_WORDS_LIMIT' => [
         'type' => 'integer',
-        'description' => "Enforce a word limit for AI's responses. Leave as 0 to have no limit.",
+        'description' => "Attempt to enforce a word limit for AI's responses. Leave as 0 to have no limit.",
     ],
     'QUEST_COMMENT_CHANCE' => [
         'type' => 'select',
@@ -263,7 +263,7 @@ function renderMetaSettingRow(string $key, array $schemaEntry, $value): string {
         foreach ($visualGroups as $title => $keys) {
             $keysInVisual = array_values(array_intersect($keys, $visualKeys));
             if (count($keysInVisual) === 0) continue;
-            echo '<h2 style="font-family: \''."MagicCards".'\', serif; color: rgb(242,124,17); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); word-spacing: 6px; margin: 10px 0 12px; font-size: 1.2em;">'.htmlspecialchars($title).'</h2>';
+            echo '<h2 style="font-family: \''."MagicCards".'\', serif; color: rgb(242,124,17); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); word-spacing: 6px; margin: 10px 0 12px; font-size: 1.2em; padding-top: 20px;">'.htmlspecialchars($title).'</h2>';
             
             // Add Rechat Calculator before Rechat section
             if ($title === 'Rechat') {
@@ -291,7 +291,7 @@ function renderMetaSettingRow(string $key, array $schemaEntry, $value): string {
         }
         $remaining = array_values(array_diff($visualKeys, array_keys($rendered)));
         if (count($remaining) > 0) {
-            echo '<h2 style="font-family: \''."MagicCards".'\', serif; color: rgb(242,124,17); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); word-spacing: 6px; margin: 10px 0 12px; font-size: 1.2em;">Other</h2>';
+            echo '<h2 style="font-family: \''."MagicCards".'\', serif; color: rgb(242,124,17); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); word-spacing: 6px; margin: 10px 0 12px; font-size: 1.2em; padding-top: 20px;">Other</h2>';
             echo '<div class="provider-grid">';
             echo '<div class="provider-card profile-settings-group-card">';
             foreach ($remaining as $k) {

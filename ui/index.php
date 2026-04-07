@@ -127,6 +127,7 @@ require_once(LIB_PATH .DIRECTORY_SEPARATOR."logger.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."misc_ui_functions.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."chat_helper_functions.php");
+require_once(LIB_PATH .DIRECTORY_SEPARATOR."background_processor.php");
 
 $db = new sql();
 
@@ -135,23 +136,9 @@ if (sizeof($_GET)==0) {
     require_once(__DIR__."/../debug/db_updates.php");
     require_once(__DIR__."/../debug/npc_removal.php");
     
-    // helper daemon
-    $port = 12345;
-    $connection = @fsockopen('127.0.0.1', $port, $errno, $errstr, 1);
-
-    if (!$connection) {
-        error_log("[HELPER] connection attempt: $errstr. Starting service.");
-        $startScript = __DIR__ . "/../service/start.sh";
-        if (file_exists($startScript) && is_executable($startScript)) {
-            error_log("[HELPER] Launching Helper Service. $startScript ");
-            $s_exec = shell_exec($startScript . " > /dev/null 2>&1 &") ?? "no return code";
-            error_log("[HELPER] Helper Service started: $s_exec ");
-        } else {
-            error_log("[HELPER] ERROR, Helper Service script missing or wrong permissions: $startScript ");
-        }
-    } else {
-        error_log("[HELPER] Helper Service already started. Closing.");
-        fclose($connection);
+    // Ensure helper daemon is running (self-heals when it is down).
+    if (function_exists('herikaEnsureBackgroundProcessorRunning')) {
+        herikaEnsureBackgroundProcessorRunning(true);
     }
 
     // manage CHIM log files 

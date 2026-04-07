@@ -410,25 +410,36 @@ function icon_for_field(string $flatName): string {
 
 // Curated, manually-defined global settings (exclude TTS, STT, ITT)
 $gsSections = [
-    'Prompt & context Settings' => [
+    'General' => [
+        [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
+        [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
+        [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
+        [ 'name' => 'CARRIAGE_DRIVERS', 'type' => 'longstring' ],
+        [ 'name' => 'FERRY_DRIVERS', 'type' => 'longstring' ],
+        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean', 'subsection' => 'Memory' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean', 'subsection' => 'Memory' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer', 'subsection' => 'Memory' ],
+        // Hidden from Global Settings UI:
+        // - MEMORY_TIME_DELAY
+        // - MEMORY_CONTEXT_SIZE
+        // - MEMORY_BIAS_A / MEMORY_BIAS_B
+    ],
+    'Prompt' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
         [ 'name' => 'EMOTEMOODS', 'type' => 'longstring' ],
-        [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
-        [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
         [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'ITEM_BLACKLIST', 'type' => 'longstring' ],
-        [ 'name' => 'CARRIAGE_DRIVERS', 'type' => 'longstring' ],
-        [ 'name' => 'FERRY_DRIVERS', 'type' => 'longstring' ],
         [ 'name' => 'EVENT_TYPE_FILTER', 'type' => 'longstring' ],
+    ],
+    'Context' => [
         [ 'name' => 'GROUND_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'INVENTORY_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
         [ 'name' => 'DISABLE_REANIMATION_TRACKING', 'type' => 'boolean', 'action' => 'clear_reanimation' ],
-        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
-        [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
-        [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
+        [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
     ],
     // NOTE: Diary section removed - AUTO_DIARY is now configured per-profile in Profile Settings
     'Global Connectors' => [
@@ -450,17 +461,6 @@ $gsSections = [
     //     // [ 'name' => 'DYNAMIC_PROMPT_GOALS', 'type' => 'longstring' ],
     // ],
     // 'Narrator' section removed - now managed via Narrator Management page (Config Hub > Narrator)
-    'Memory' => [
-        // SUMMARY_PROMPT moved to Prompts Manager
-        // [ 'name' => 'SUMMARY_PROMPT', 'type' => 'longstring' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@MEMORY_TIME_DELAY', 'type' => 'integer' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@MEMORY_CONTEXT_SIZE', 'type' => 'integer' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@MEMORY_BIAS_A', 'type' => 'number' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@MEMORY_BIAS_B', 'type' => 'number' ]
-    ],
     'Translation' => [
         [ 'name' => 'TRANSLATION_FUNCTION', 'type' => 'select', 'values' => ['none','DeepL'] ],
         [ 'name' => 'TRANSLATION@settings@translate_audio', 'type' => 'boolean' ],
@@ -826,6 +826,17 @@ function current_value(string $flatName, array $currentConf) {
         border-bottom: 1px solid rgba(242, 124, 17, 0.2);
     }
     .provider-grid { display:grid; grid-template-columns: 1fr; gap:12px; align-items:start; }
+    .provider-subsection-title {
+        grid-column: 1 / -1;
+        margin: 8px 0 2px;
+        padding: 4px 2px 8px;
+        font-family: 'MagicCards', serif;
+        color: rgb(242,124,17);
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        letter-spacing: 0.3px;
+        border-bottom: 1px solid rgba(242, 124, 17, 0.2);
+        font-size: 1.05em;
+    }
     .provider-card { 
         background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.95)); 
         border: 1px solid #3a3a3a; 
@@ -1018,8 +1029,16 @@ function current_value(string $flatName, array $currentConf) {
                 <div class="content-section">
                     <h2><?php echo htmlspecialchars($sectionTitle); ?></h2>
                     <div class="provider-grid">
+                        <?php $lastSubsection = null; ?>
                         <?php foreach ($fields as $f): ?>
                             <?php
+                                $subsection = isset($f['subsection']) ? (string)$f['subsection'] : null;
+                                if ($subsection !== $lastSubsection) {
+                                    if (!empty($subsection)) {
+                                        echo '<div class="provider-subsection-title">' . htmlspecialchars($subsection) . '</div>';
+                                    }
+                                    $lastSubsection = $subsection;
+                                }
                                 $fname = $f['name'];
                                 $ftype = $f['type'];
                                 $current = current_value($fname, $currentConf);

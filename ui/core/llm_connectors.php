@@ -297,7 +297,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     .orm-info-box { border:1px solid rgba(138,155,182,0.3); background:#0d1117; border-radius:8px; padding:8px 10px; margin-top:8px; max-width: 800px; }
     /* Inline title + toggle styling */
     .label-with-toggle { display:flex; align-items:center; gap:24px; margin-bottom: 12px; }
-    .label-with-toggle input[type="checkbox"] { accent-color: #176529; transform: scale(1.8); transform-origin:center; cursor:pointer; margin: 0; }
+    .label-with-toggle input[type="checkbox"] { accent-color: #176529; transform: scale(1.8); transform-origin:center; cursor:pointer; margin: 0 0 0 8px; }
     .label-with-toggle .tip-label { flex: 1; }
     </style>
     <script>
@@ -1170,7 +1170,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
     $payload['temperature'] = 1;
     $payload['url'] = 'https://openrouter.ai/api/v1/chat/completions';
     $payload['reasoning_model'] = 0;
-    $payload['max_tokens'] = 250;
+    $payload['max_tokens'] = 500;
     $payload['api_badge_id'] = 1;
     $payload['enforce_json'] = 1;
     $payload['json_schema'] = 1;
@@ -1282,7 +1282,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import"])) {
                 $payload['driver'] = ($svc==='openrouter') ? 'openrouterjson' : (($svc==='openai') ? 'openaijson' : (($svc==='google') ? 'google_openaijson' : (($svc==='groq') ? 'groqjson' : (($svc==='nanogpt') ? 'openrouterjson' : (($svc==='player2') ? 'player2json' : 'openaijson')))));
             }
             if (!isset($payload['temperature']) || $payload['temperature']===null) $payload['temperature'] = 1;
-            if (!isset($payload['max_tokens']) || $payload['max_tokens']===null) $payload['max_tokens'] = 250;
+            if (!isset($payload['max_tokens']) || $payload['max_tokens']===null) $payload['max_tokens'] = 500;
 
             // Ensure label present
             if ($payload['label'] === '') { $payload['label'] = 'Imported Connector'; }
@@ -1322,7 +1322,7 @@ if (isset($_GET["create_blank"])) {
         'temperature' => 1,
         'url' => 'https://openrouter.ai/api/v1/chat/completions',
         'reasoning_model' => 0,
-        'max_tokens' => 250,
+        'max_tokens' => 500,
         'api_badge_id' => 1,
         'enforce_json' => 1,
         'json_schema' => 1,
@@ -1640,7 +1640,7 @@ if (isset($_GET["edit"])) {
 .collapsible-content { padding:12px; }
 /* Inline title + toggle styling */
 .label-with-toggle { display:flex; align-items:center; gap:24px; margin-bottom: 12px; }
-.label-with-toggle input[type="checkbox"] { accent-color: #176529; transform: scale(1.8); transform-origin:center; cursor:pointer; margin: 0; }
+.label-with-toggle input[type="checkbox"] { accent-color: #176529; transform: scale(1.8); transform-origin:center; cursor:pointer; margin: 0 0 0 8px; }
 .label-with-toggle .tip-label { flex: 1; }
 
 /* Form inputs styling */

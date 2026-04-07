@@ -1866,7 +1866,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <label for="salutation_after_a_while" class="label-with-toggle">👋Auto Greeting
                 <input type="checkbox" id="salutation_after_a_while" name="salutation_after_a_while" value="1" <?= $salChecked ? "checked" : "" ?> data-profile-default="<?= $profileSalEnabled ? '1' : '0' ?>">
             </label>
-            <small class="hint">NPC will automatically greet you after a while.</small>
+            <small class="hint">NPC will automatically greet you after you have been away for a while.</small>
         </div>
 
         <div class="form-item span-2">

@@ -324,7 +324,7 @@ h1.api-title {
 .section-title { font-weight:800; color:#e9efff; border-bottom:1px solid #4a4a4a; padding-bottom:4px; margin:10px 0 6px; }
 /* Inline title + toggle styling */
 .label-with-toggle { display:flex; align-items:center; gap:10px; color:#fff; }
-.label-with-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; }
+.label-with-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; margin-left:8px; }
 /* Profile Settings (metadata editor) checkbox enhancement */
 .profile-settings-card input[type="checkbox"] { accent-color:#176529; transform: scale(1.6); transform-origin:center; cursor:pointer; }
 /* Profile Core compact rows for Name/Slot */
@@ -1469,7 +1469,6 @@ const saveAllBtn = document.getElementById('btn_save_all');
     <!-- Visual Profile Settings (first chunk) -->
     <div class="connector-card profile-settings-card" style="margin-bottom:10px;">
         <div class="connector-title">Profile Settings</div>
-        <div class="connector-subtitle">&#x24D8; Extended profile metadata controls for this profile.</div>
         <?php
             // Resolve current selected RPG comments from metadata
             $rpgSelected = [];
@@ -1571,7 +1570,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
                 ?>
                 <div class="setting-row">
                     <div>
-                        <div class="setting-key"><span class="setting-icon">&#x1F501;</span><span>Trigger Chance</span></div>
+                        <div class="setting-key"><span class="setting-icon">&#x1F501;</span><span>RPG Comment Trigger Chance</span></div>
                         <div class="setting-desc">Probability that enabled RPG comments trigger when their conditions are met. 0 = Never | 50 = 50% | 100 = Always. Hard cooldown: 60 seconds between RPG comment events.</div>
                     </div>
                     <div class="setting-control">

@@ -17,6 +17,7 @@ $password = 'dwemer';
 // Include game timestamp utilities
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/utils_game_timestamp.php");
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/logger.php");
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/background_processor.php");
 
 // Get the relative web path from document root to our application
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -25,6 +26,10 @@ if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+
+if (count($_GET) === 0 && function_exists('herikaEnsureBackgroundProcessorRunning')) {
+    herikaEnsureBackgroundProcessorRunning(true);
+}
 
 $TITLE = "Dwemer Dashboard";
 
@@ -906,12 +911,16 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                 $chimModelLabel = isset($chimModelLabelMap[(string)$chimModel]) ? $chimModelLabelMap[(string)$chimModel] : (string)$chimModel;
 
 
-                $port = 12345;
-                $connection = @fsockopen('127.0.0.1', $port, $errno, $errstr, 1);
-                if (!$connection) {
-                    $helperServiceRunning=false;
+                $helperServiceRunning = false;
+                if (function_exists('herikaBackgroundProcessorIsRunning')) {
+                    $helperServiceRunning = herikaBackgroundProcessorIsRunning();
                 } else {
-                    $helperServiceRunning=true;
+                    $port = 12345;
+                    $connection = @fsockopen('127.0.0.1', $port, $errno, $errstr, 1);
+                    if ($connection) {
+                        $helperServiceRunning = true;
+                        fclose($connection);
+                    }
                 }
 
                 if (!isset($questsCheck['error']) && !empty($questsCheck) && isset($questsCheck[0]['table_exists']) && $questsCheck[0]['table_exists'] === 't') {

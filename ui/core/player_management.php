@@ -217,6 +217,18 @@ if (!$isEmbed) {
         grid-template-columns: 1fr 1fr;
     }
 
+    .content-grid.player-overview-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .content-grid.player-overview-grid .speech-style-section {
+        order: 3;
+    }
+
+    .content-grid.player-overview-grid .player-bio-section {
+        order: 4;
+    }
+
     .content-section {
         background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
         padding: 22px;
@@ -658,6 +670,10 @@ if (!$isEmbed) {
         .content-grid.two-col {
             grid-template-columns: 1fr;
         }
+
+        .content-grid.player-overview-grid {
+            grid-template-columns: 1fr;
+        }
         
         .page-header {
             padding: 18px 15px;
@@ -789,7 +805,7 @@ if (!$isEmbed) {
     <form id="player-form" method="post" action="">
         <button type="submit" class="btn-save" name="save_player" value="1">💾 Save Player Settings</button>
 
-        <div class="content-grid">
+        <div class="content-grid player-overview-grid">
             <!-- Player Info Section -->
             <div class="content-section">
                 <h2>🏷️ Player Information</h2>
@@ -807,7 +823,7 @@ if (!$isEmbed) {
             </div>
 
             <!-- Bio Section -->
-            <div class="content-section">
+            <div class="content-section player-bio-section">
                 <h2>📜 Player Bio</h2>
                 <label for="bio">Character Bio</label>
                 <textarea id="bio" name="bio" placeholder="Describe your character's background and story..."><?php echo htmlspecialchars($bio); ?></textarea>
@@ -829,7 +845,7 @@ if (!$isEmbed) {
             </div>
 
             <!-- Speech Style Section -->
-            <div class="content-section">
+            <div class="content-section speech-style-section">
                 <h2>💬 Speech Style</h2>
                 <label for="speech_style">Player Speech Style</label>
                 <textarea id="speech_style" name="speech_style" placeholder="Describe how your character speaks and communicates..."><?php echo htmlspecialchars($speechStyle); ?></textarea>
