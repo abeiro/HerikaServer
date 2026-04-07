@@ -1214,8 +1214,6 @@ function getTimeColor($time) {
             $memoryEnabled = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['ENABLED'] ?? false;
             $txtaiUrl = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['TXTAI_URL'] ?? 'Not set';
             $useText2Vec = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['USE_TEXT2VEC'] ?? false;
-            $memoryDelay = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['MEMORY_TIME_DELAY'] ?? 'Not set';
-            $memoryContextSize = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['MEMORY_CONTEXT_SIZE'] ?? 'Not set';
 
             $statusIcon = function ($enabled) {
                 return $enabled
@@ -1253,11 +1251,6 @@ function getTimeColor($time) {
                         <div style="font-size: 12px; color: #aaa; margin-top: 4px;">URL: <?php echo htmlspecialchars($txtaiUrl); ?></div>
                     </div>
 
-                    <div style="background: #2a2a2a; padding: 15px; border-radius: 5px; border: 1px solid #3a3a3a;">
-                        <div style="font-weight: bold; margin-bottom: 8px; color: rgb(242, 124, 17); font-size: 14px;">Context Settings</div>
-                        <div style="font-size: 12px; color: #f8f9fa;">Time Delay: <?php echo htmlspecialchars((string)$memoryDelay); ?> minutes</div>
-                        <div style="font-size: 12px; color: #f8f9fa; margin-top: 4px;">Context Size: <?php echo htmlspecialchars((string)$memoryContextSize); ?> memories</div>
-                    </div>
                 </div>
 
                 <?php if (!$useText2Vec): ?>
