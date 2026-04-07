@@ -20,6 +20,137 @@ if (file_exists($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php")) {
     require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php");  // Should contain current ones
 }
 
+function herikaQuickstartMiniMeDefaultUrl(): string {
+    return 'http://127.0.0.1:8082/';
+}
+
+function herikaQuickstartProbeUrl(string $rawUrl): array {
+    $result = [
+        'ok' => false,
+        'http_code' => 0,
+        'latency_ms' => 0,
+        'error' => '',
+    ];
+
+    $start = microtime(true);
+    $parts = @parse_url($rawUrl);
+    $scheme = strtolower(strval($parts['scheme'] ?? ''));
+    $host = trim(strval($parts['host'] ?? ''));
+    $port = intval($parts['port'] ?? 0);
+    $path = strval($parts['path'] ?? '/');
+    $query = strval($parts['query'] ?? '');
+
+    if ($path === '') $path = '/';
+    if ($query !== '') $path .= '?' . $query;
+    if ($port <= 0) $port = ($scheme === 'https') ? 443 : 80;
+
+    if (function_exists('curl_init')) {
+        $ch = @curl_init($rawUrl);
+        if ($ch) {
+            @curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 4,
+                CURLOPT_CONNECTTIMEOUT => 2,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_MAXREDIRS => 2,
+                CURLOPT_HTTPHEADER => ['Accept: application/json, text/plain;q=0.9, */*;q=0.8'],
+            ]);
+            @curl_exec($ch);
+            $httpCode = intval(@curl_getinfo($ch, CURLINFO_HTTP_CODE));
+            $curlError = trim(strval(@curl_error($ch)));
+            @curl_close($ch);
+
+            $result['http_code'] = $httpCode;
+            $result['latency_ms'] = intval(round((microtime(true) - $start) * 1000));
+            if ($httpCode >= 200 && $httpCode < 500) {
+                $result['ok'] = true;
+            } else if ($curlError !== '') {
+                $result['error'] = $curlError;
+            } else {
+                $result['error'] = 'HTTP ' . strval($httpCode) . ' from endpoint probe.';
+            }
+            return $result;
+        }
+    }
+
+    $transport = ($scheme === 'https') ? 'ssl://' : 'tcp://';
+    $target = $transport . $host . ':' . strval($port);
+    $errno = 0;
+    $errstr = '';
+    $socket = @stream_socket_client($target, $errno, $errstr, 2.0, STREAM_CLIENT_CONNECT);
+    if (!$socket) {
+        $result['latency_ms'] = intval(round((microtime(true) - $start) * 1000));
+        $result['error'] = trim($errstr) !== '' ? trim($errstr) : ('Connection failed (' . strval($errno) . ').');
+        return $result;
+    }
+
+    @stream_set_timeout($socket, 4);
+    $request =
+        "GET " . $path . " HTTP/1.1\r\n" .
+        "Host: " . $host . "\r\n" .
+        "User-Agent: HerikaQuickstartProbe/1.0\r\n" .
+        "Accept: */*\r\n" .
+        "Connection: close\r\n\r\n";
+    @fwrite($socket, $request);
+    $statusLine = strval(@fgets($socket, 512));
+    @fclose($socket);
+
+    $result['latency_ms'] = intval(round((microtime(true) - $start) * 1000));
+    if (preg_match('/^HTTP\/\d(?:\.\d)?\s+(\d{3})/i', $statusLine, $matches)) {
+        $httpCode = intval($matches[1] ?? 0);
+        $result['http_code'] = $httpCode;
+        if ($httpCode >= 200 && $httpCode < 500) {
+            $result['ok'] = true;
+            return $result;
+        }
+        $result['error'] = 'HTTP ' . strval($httpCode) . ' from endpoint probe.';
+        return $result;
+    }
+
+    $result['error'] = 'No HTTP response from endpoint.';
+    return $result;
+}
+
+if (isset($_GET['minime_probe']) && strval($_GET['minime_probe']) === '1') {
+    header('Content-Type: application/json; charset=utf-8');
+    $rawUrl = trim(strval($_GET['url'] ?? herikaQuickstartMiniMeDefaultUrl()));
+    $result = [
+        'ok' => false,
+        'url' => $rawUrl,
+        'http_code' => 0,
+        'latency_ms' => 0,
+        'message' => 'Invalid URL',
+    ];
+
+    if ($rawUrl === '') {
+        $result['message'] = 'URL is required.';
+        echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    $parts = @parse_url($rawUrl);
+    $scheme = strtolower(strval($parts['scheme'] ?? ''));
+    $host = trim(strval($parts['host'] ?? ''));
+    if (!in_array($scheme, ['http', 'https'], true) || $host === '') {
+        $result['message'] = 'Use a valid http:// or https:// URL.';
+        echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    $probe = herikaQuickstartProbeUrl($rawUrl);
+    $result['http_code'] = intval($probe['http_code'] ?? 0);
+    $result['latency_ms'] = intval($probe['latency_ms'] ?? 0);
+    $result['ok'] = !empty($probe['ok']);
+    if ($result['ok']) {
+        $result['message'] = 'MiniMe service reachable.';
+    } else {
+        $result['message'] = trim(strval($probe['error'] ?? '')) ?: 'MiniMe service not reachable.';
+    }
+
+    echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 // Inline quicksave handlers
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
     try { require_once($rootPath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php"); } catch (Throwable $_e) {}
@@ -297,6 +428,15 @@ echo '<section class="qs-section" id="qs_openrouter_section"' . ($player2ForceAl
                 </div>
             </div>
             <small class="form-text">Paste your OpenRouter API key. <a href="https://openrouter.ai/keys" target="_blank">Create key</a></small>
+        </div>
+      </section>';
+
+echo '<section class="qs-section" id="qs_minime_section">
+        <h2 class="qs-section-title">MiniMe Service</h2>
+        <div class="form-group qs-field">
+            <small class="form-text">Checks if MiniMe is reachable at the local default endpoint.</small>
+            <input id="qs_minime_probe_url" type="hidden" value="' . htmlspecialchars(herikaQuickstartMiniMeDefaultUrl()) . '">
+            <div id="qs_minime_probe_status" class="qs-status">Checking MiniMe service...</div>
         </div>
       </section>';
 
@@ -952,6 +1092,47 @@ async function saveQuickstartAndDB(){
   }
 }
 
+async function checkMiniMeEndpoint(){
+  try {
+    const input = document.getElementById("qs_minime_probe_url");
+    const status = document.getElementById("qs_minime_probe_status");
+    if (!input || !status) return;
+    const url = String(input.value || "").trim();
+    if (url === "") {
+      status.textContent = "MiniMe endpoint URL is empty.";
+      status.classList.remove("ok");
+      status.classList.add("err");
+      return;
+    }
+
+    status.textContent = "Checking MiniMe service...";
+    status.classList.remove("ok", "err");
+
+    const probeUrl = "quickstart.php?minime_probe=1&url=" + encodeURIComponent(url);
+    const response = await fetch(probeUrl, { cache: "no-store", credentials: "same-origin" });
+    const result = await response.json();
+    const http = Number(result && result.http_code ? result.http_code : 0);
+    const latency = Number(result && result.latency_ms ? result.latency_ms : 0);
+    const message = String((result && result.message) ? result.message : "MiniMe probe failed.");
+    if (result && result.ok) {
+      status.textContent = `MiniMe reachable (${http}) in ${latency} ms. ${message}`;
+      status.classList.remove("err");
+      status.classList.add("ok");
+    } else {
+      status.textContent = `MiniMe not reachable (${http || 0}) in ${latency} ms. ${message}`;
+      status.classList.remove("ok");
+      status.classList.add("err");
+    }
+  } catch (_error) {
+    const status = document.getElementById("qs_minime_probe_status");
+    if (status) {
+      status.textContent = "MiniMe probe failed.";
+      status.classList.remove("ok");
+      status.classList.add("err");
+    }
+  }
+}
+
 function updatePlayer2QuickstartUI(){
   try {
     const enabled = !!(document.getElementById("qs_player2_force_all_llm") && document.getElementById("qs_player2_force_all_llm").checked);
@@ -984,6 +1165,7 @@ document.addEventListener("DOMContentLoaded", function(){
     player2Toggle.addEventListener("change", updatePlayer2QuickstartUI);
   }
   updatePlayer2QuickstartUI();
+  checkMiniMeEndpoint();
 });
 </script>';
 
