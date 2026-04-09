@@ -46,6 +46,50 @@ if (!function_exists("resolvePeopleForIncomingEvent")) {
     }
 }
 
+if (!function_exists("extractPlayerMenuDialogueLine")) {
+    function extractPlayerMenuDialogueLine($rawLine)
+    {
+        $line = @mb_convert_encoding((string)$rawLine, 'UTF-8', 'UTF-8');
+        $line = trim($line);
+        if ($line === "") {
+            return "";
+        }
+
+        $split = explode(":", $line, 2);
+        if (count($split) === 2) {
+            $line = trim($split[1]);
+        }
+
+        $line = str_replace(["\r", "\n", "|"], " ", $line);
+        $line = preg_replace('/\s+/', ' ', $line);
+        return trim($line);
+    }
+}
+
+if (!function_exists("playerMenuTtsCachePath")) {
+    function playerMenuTtsCachePath($line)
+    {
+        return __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache" . DIRECTORY_SEPARATOR . md5(trim((string)$line)) . ".wav";
+    }
+}
+
+if (!function_exists("emitPlayerMenuScriptQueueLine")) {
+    function emitPlayerMenuScriptQueueLine($line)
+    {
+        $subtitle = str_replace(["\r", "\n", "|"], " ", (string)$line);
+        $subtitle = trim(preg_replace('/\s+/', ' ', $subtitle));
+        if ($subtitle === "") {
+            return;
+        }
+
+        echo "Player|ScriptQueue|{$subtitle}/////1.0\r\n";
+        if (ob_get_level()) {
+            @ob_flush();
+        }
+        @flush();
+    }
+}
+
 if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about this)
     // avoid a rare case where skyrim briefly reverts to level 1 Prisoner during load
     // Moved Dynamic Updates functions here
@@ -1123,6 +1167,59 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 } elseif ($gameRequest[0] == "recover_last_task") {
 
     $db->delete("currentmission", "rowid=(select max(rowid) from currentmission)");
+
+    $MUST_END=true;
+
+    
+} elseif ($gameRequest[0] == "player_menu_tts_prefetch" || $gameRequest[0] == "player_menu_tts_play") {
+    $playerMenuLine = extractPlayerMenuDialogueLine($gameRequest[3] ?? "");
+
+    if ($playerMenuLine !== "") {
+        $cachePath = playerMenuTtsCachePath($playerMenuLine);
+        $cacheExists = file_exists($cachePath);
+        $shouldWriteOutput = ($gameRequest[0] == "player_menu_tts_play");
+
+        if ($cacheExists) {
+            if ($shouldWriteOutput) {
+                emitPlayerMenuScriptQueueLine($playerMenuLine);
+            }
+        } else {
+            $originalRequestText = $gameRequest[3];
+
+            $hadPlayerTtsWriteOutput = array_key_exists("PLAYER_TTS_WRITE_OUTPUT", $GLOBALS);
+            $originalPlayerTtsWriteOutput = $hadPlayerTtsWriteOutput ? $GLOBALS["PLAYER_TTS_WRITE_OUTPUT"] : null;
+
+            $hadAvoidTtsCache = array_key_exists("AVOID_TTS_CACHE", $GLOBALS);
+            $originalAvoidTtsCache = $hadAvoidTtsCache ? $GLOBALS["AVOID_TTS_CACHE"] : null;
+
+            try {
+                $playerPrefix = isset($GLOBALS["PLAYER_NAME"]) ? trim((string)$GLOBALS["PLAYER_NAME"]) : "Player";
+                if ($playerPrefix === "") {
+                    $playerPrefix = "Player";
+                }
+
+                $gameRequest[3] = $playerPrefix . ": " . $playerMenuLine;
+                $GLOBALS["PLAYER_TTS_WRITE_OUTPUT"] = $shouldWriteOutput;
+                $GLOBALS["AVOID_TTS_CACHE"] = false;
+
+                require(__DIR__.DIRECTORY_SEPARATOR."player_tts.php");
+            } finally {
+                $gameRequest[3] = $originalRequestText;
+
+                if ($hadPlayerTtsWriteOutput) {
+                    $GLOBALS["PLAYER_TTS_WRITE_OUTPUT"] = $originalPlayerTtsWriteOutput;
+                } else {
+                    unset($GLOBALS["PLAYER_TTS_WRITE_OUTPUT"]);
+                }
+
+                if ($hadAvoidTtsCache) {
+                    $GLOBALS["AVOID_TTS_CACHE"] = $originalAvoidTtsCache;
+                } else {
+                    unset($GLOBALS["AVOID_TTS_CACHE"]);
+                }
+            }
+        }
+    }
 
     $MUST_END=true;
 

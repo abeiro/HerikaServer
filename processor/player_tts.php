@@ -23,7 +23,8 @@
     Translation::translate($cleaned_dialogue);
     Translation::$sentences = [Translation::$response];
 
-    $ownspeech=returnlines([$cleaned_dialogue]);
+    $writeOutput = isset($GLOBALS["PLAYER_TTS_WRITE_OUTPUT"]) ? (bool)$GLOBALS["PLAYER_TTS_WRITE_OUTPUT"] : true;
+    $ownspeech=returnlines([$cleaned_dialogue], $writeOutput);
     
     // Clear Player TTS processing status
     pipeline_status_set('player_tts', false);
