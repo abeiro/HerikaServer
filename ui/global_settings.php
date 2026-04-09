@@ -686,6 +686,63 @@ function current_value(string $flatName, array $currentConf) {
     if (!$parms) return '';
     return $parms['currentValue'] ?? '';
 }
+
+function render_tts_grouped_options(array $options, string $selectedValue, array $displayNames, bool $includeDisabledGroup = false): void {
+    $recommended = ['pockettts', 'chatterbox', 'xtts-fastapi', 'inworld'];
+    $deprecated = ['mimic3', 'azure', 'deepgram', 'koboldcpp', 'kokoro'];
+    $disabled = $includeDisabledGroup ? array_values(array_filter($options, function($opt) {
+        return strtolower((string)$opt) === 'none';
+    })) : [];
+    $others = array_values(array_filter($options, function($opt) use ($recommended, $deprecated, $includeDisabledGroup) {
+        $value = strtolower((string)$opt);
+        if ($includeDisabledGroup && $value === 'none') {
+            return false;
+        }
+        return !in_array($opt, $recommended, true) && !in_array($opt, $deprecated, true);
+    }));
+    $renderOption = function($opt) use ($selectedValue, $displayNames) {
+        $selected = ((string)$selectedValue === (string)$opt) ? ' selected' : '';
+        echo '<option value="' . htmlspecialchars((string)$opt) . '"' . $selected . '>' . htmlspecialchars($displayNames[$opt] ?? $opt) . '</option>';
+    };
+
+    if (!empty($disabled)) {
+        echo '<optgroup label="— Disabled —">';
+        foreach ($disabled as $opt) {
+            $renderOption($opt);
+        }
+        echo '</optgroup>';
+    }
+
+    $recommendedAvailable = array_values(array_filter($recommended, function($opt) use ($options) {
+        return in_array($opt, $options, true);
+    }));
+    if (!empty($recommendedAvailable)) {
+        echo '<optgroup label="— Recommended —">';
+        foreach ($recommendedAvailable as $opt) {
+            $renderOption($opt);
+        }
+        echo '</optgroup>';
+    }
+
+    if (!empty($others)) {
+        echo '<optgroup label="— Others —">';
+        foreach ($others as $opt) {
+            $renderOption($opt);
+        }
+        echo '</optgroup>';
+    }
+
+    $deprecatedAvailable = array_values(array_filter($deprecated, function($opt) use ($options) {
+        return in_array($opt, $options, true);
+    }));
+    if (!empty($deprecatedAvailable)) {
+        echo '<optgroup label="— Deprecated —">';
+        foreach ($deprecatedAvailable as $opt) {
+            $renderOption($opt);
+        }
+        echo '</optgroup>';
+    }
+}
 ?>
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css?v=gs1">
@@ -1146,28 +1203,7 @@ function current_value(string $flatName, array $currentConf) {
                     <div class="provider-body grid">
                         <label for="TTSFUNCTION">TTS Selection</label>
                         <select name="TTSFUNCTION" id="TTSFUNCTION" onchange="document.getElementById('gs_tab').value='tab-tts'; this.form.submit()">
-                            <?php
-                            $ttsRecommended = ['pockettts', 'chatterbox', 'xtts-fastapi', 'inworld'];
-                            $ttsDeprecated  = ['mimic3', 'azure', 'deepgram', 'koboldcpp', 'kokoro'];
-                            $ttsOthers = array_values(array_filter($ttsOptions, function($o) use ($ttsRecommended, $ttsDeprecated) {
-                                return !in_array($o, $ttsRecommended, true) && !in_array($o, $ttsDeprecated, true);
-                            }));
-                            $renderOpt = function($opt) use ($ttsSelRender, $ttsDisplayNames) {
-                                $sel = ((string)$ttsSelRender === (string)$opt) ? ' selected' : '';
-                                echo '<option value="'.htmlspecialchars($opt).'"'.$sel.'>'.htmlspecialchars($ttsDisplayNames[$opt] ?? $opt).'</option>';
-                            };
-                            echo '<optgroup label="— Recommended —">';
-                            foreach ($ttsRecommended as $opt) { if (in_array($opt, $ttsOptions, true)) $renderOpt($opt); }
-                            echo '</optgroup>';
-                            if (!empty($ttsOthers)) {
-                                echo '<optgroup label="— Others —">';
-                                foreach ($ttsOthers as $opt) { $renderOpt($opt); }
-                                echo '</optgroup>';
-                            }
-                            echo '<optgroup label="— Deprecated —">';
-                            foreach ($ttsDeprecated as $opt) { if (in_array($opt, $ttsOptions, true)) $renderOpt($opt); }
-                            echo '</optgroup>';
-                            ?>
+                            <?php render_tts_grouped_options($ttsOptions, $ttsSelRender, $ttsDisplayNames); ?>
                         </select>
                         
                         <div></div>
@@ -1338,9 +1374,7 @@ function current_value(string $flatName, array $currentConf) {
                         <label for="TTSFUNCTION_PLAYER">Player TTS Selection</label>
                         <?php $playerTtsOptions = $rawSchema['TTSFUNCTION_PLAYER']['values'] ?? [ 'none','melotts','xtts-fastapi','chatterbox','pockettts','xvasynth','mimic3','piper-tts','azure','11labs','openai','kokoro','zonos_gradio','cartesia','inworld' ]; ?>
                         <select name="TTSFUNCTION_PLAYER" id="TTSFUNCTION_PLAYER">
-                            <?php foreach ($playerTtsOptions as $opt): ?>
-                                <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$playerFunctionSaved===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($ttsDisplayNames[$opt] ?? $opt); ?></option>
-                            <?php endforeach; ?>
+                            <?php render_tts_grouped_options($playerTtsOptions, (string)$playerFunctionSaved, $ttsDisplayNames, true); ?>
                         </select>
                         <?php if (!empty($descTtsPlayer)): ?><div class="help"><?php echo $descTtsPlayer; ?></div><?php endif; ?>
                         <label for="TTSFUNCTION_PLAYER_VOICE">Player Voice</label>

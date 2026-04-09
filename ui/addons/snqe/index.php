@@ -366,6 +366,17 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
     color: #ffd7a8;
 }
 
+.snqe-alpha-note {
+    margin: 12px 0 0 0;
+    color: #ffd7a8;
+    font-size: 0.85em;
+    line-height: 1.45;
+}
+
+.snqe-alpha-note strong {
+    color: #fff0d8;
+}
+
 .snqe-location-stat {
     display: inline-flex;
     align-items: baseline;
@@ -642,6 +653,7 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
             <div class="snqe-page-title">AI Quest Manager V1</div>
             <div class="snqe-title-info">
                 <p class="snqe-title-info-text">Before generating or staging quests, use <strong>"Send All Locations"</strong> in CHIM MCM under <strong>Tools</strong> so the quest system can target valid travel locations.</p>
+                <p class="snqe-alpha-note"><strong>Alpha:</strong> AI Quest Manager is still in alpha and requires OpenRouter to be configured for this to work.</p>
                 <div class="snqe-location-stat">
                     <span class="snqe-location-count"><?php echo intval($locationStats['location_count']); ?></span>
                     <span class="snqe-location-label">Travel To Locations in Database</span>
