@@ -67,7 +67,7 @@
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the CHIM Server. Leave it blank for English."},
   "LANG_LLM_XTTS": {"userlvl":"pro","type":"boolean","description":"XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language."},
   "HTTP_TIMEOUT": {"userlvl":"pro","type":"integer","description":"Timeout for AI requests. "},
-  "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for AI's responses. Leave as 0 to have no limit."},
+  "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Attempt to enforce a word limit for AI's responses. Leave as 0 to have no limit."},
   "JSON_DIALOGUE_FORMAT_REORDER": {"type":"boolean","userlvl":"pro","description":"Reorders properties in the output JSON schema. AI generates an action first, then a dialogue comment. Some users report this improves actions performance."},
   "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"Default list of moods passed to LLM (comma separated). Can be overridden per-NPC in CHIM NPCs. Some moods will trigger animations if enabled.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features"},
   "REMOVE_ASTERISKS_FROM_OUTPUT": {"userlvl":"basic","type":"boolean","description":"Remove text between **, like *couch*, *smiles*...", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features"},
@@ -82,11 +82,11 @@
   "DYNAMIC_PROMPT_GOALS": {"userlvl":"basic","type":"longstring","description":"Instructions for updating NPC goals and aspirations based on story developments and achievements.","scope":"global"},
   "DIARY_PROMPT": {"userlvl":"basic","type":"longstring","description":"Instructions for generating diary entries. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the DIARY connector you are using.","scope":"global"},
   "CONNECTORS": {"type":"selectmultiple","values":["openaijson","google_openaijson","web_connector","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter","player2json"],"description":"AI Service(s) to be used for most AI features.<br>Select the service(s) you have configured for AI/LLM Connectors below.<br><strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong><br><br>Make sure to click the <strong>Current AI Service</strong> button at the top of the page if you change connectors!","_title":"AI/LLM Connectors Selection"},
-  "CONNECTORS_DIARY": {"type":"select","values":["openrouter","openai","google_openaijson","koboldcpp"],"description":"Is one of the SUMMARY connectors. Used for creating diary entries, dynamic profiles and summarized memories!<br><br><strong>You will need to place your API key in the (SUMMARY) connector for this to work!</strong>"},
+  "CONNECTORS_DIARY": {"type":"select","values":["openrouter","openai","google_openaijson","koboldcpp"],"description":"Connector used for diary-related generation (manual diary, auto-diary, and dynamic profile updates).<br><br><strong>This is separate from long-term memory recall and memory summary compaction.</strong>"},
   "HERIKA_DYNAMIC": {"userlvl":"basic","type": "longstring","description": "Deprecated. Use the new fields listed above instead."},
   "CORE_CONNECTOR_DIRECTOR": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for Director mode. Recommend to use a 💪Powerful LLM."},
   "CORE_CONNECTOR_PLAYER": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for player re-speech. Recommend to use a very 🏃‍♀️‍➡️Fast LLM."},
-  "CORE_CONNECTOR_SUMMARY": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for creating memory summaries. Recommend to use a smaller LLM."},
+  "CORE_CONNECTOR_SUMMARY": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for generating and compacting memory summaries that power long-term memory recall. Recommend using a smaller LLM."},
   "CORE_CONNECTOR_MEDIUMTERM": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to generate longer memories summaries after every 10 memory summaries. Can be enabled in CHIM NPC page. Recommend to user a smaller LLM."},
   "CORE_CONNECTOR_PROFILES": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to update CHIM NPC Dynamic Profiles. Recommend to use a 🕹️Standard LLM.","scope":"global"},
   "CORE_CONNECTOR_OGHMA_CUSTOM": {"userlvl": "basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for custom Oghma LLM topic extraction. Will be slower than MiniMe T5 and slow down responses. Recommend to use a very very 🏃‍♀️‍➡️Fast LLM.","scope": "global"},
@@ -423,7 +423,7 @@
   },
   "PLAYER_RESPEECH":{"type":"boolean","description":"Allows the AI to rewrite player speech with Chat Assist & Creation modes.","scope":"global"},
   "STTFUNCTION": {
-    "type":"select","values":["none","whisper","localwhisper","azure","deepgram","gemini","parakeet"],"description":"Speech-to-Text service options. Translates your voice to text.", 
+    "type":"select","values":["none","whisper","localwhisper","azure","deepgram","gemini","parakeet","inworld"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service","scope":"global"
     },
   "STT": {
@@ -457,6 +457,11 @@
     }, "PARAKEET": {
       "_title":"parakeet-api-server",
       "LANG": {"type":"string","description":"Language to detect for STT."}
+    }, "INWORLD": {
+      "_title":"Inworld STT",
+      "API_KEY": {"type":"apikey","description":"Inworld API key. Can also be managed from API Badge under Inworld.","code":"INWORLD_API_KEY"},
+      "MODEL_ID": {"type":"string","description":"Model identifier in provider/model format, e.g. groq/whisper-large-v3."},
+      "LANGUAGE": {"type":"string","description":"Language code in BCP-47 format, e.g. en-US. Leave blank for auto-detect."}
     }
   },
   "ITTFUNCTION": {
@@ -506,7 +511,7 @@
     "_title":"Memory Configuration",
     "MEMORY_EMBEDDING": {
       "_title":"Memory Settings",
-      "ENABLED": {"type":"boolean","description":"<Strong>Make sure CONNECTORS_DIARY is setup!</strong> Enable long term memory. It will provide the most relevant memory with every AI response to be used as context."},
+      "ENABLED": {"type":"boolean","description":"Enable long-term memory recall. The system injects relevant memory summaries into AI context for responses."},
       "TXTAI_URL": {"type":"url","description":"TXT2VEC from DwemerDistro. Make sure its set to http://127.0.0.1:8082"},
       "USE_TEXT2VEC": {"type":"boolean","description":"Use TXT2VEC to create embeddings for memories. These are more accurate than keywords."},
       "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to delay before using a memory in a prompt. Used to avoid pushing recent dialogues as memories."},

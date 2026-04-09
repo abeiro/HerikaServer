@@ -128,7 +128,7 @@ main { padding: 80px 10px 10px; height: 100vh; }
             <button class="tab-button" data-tab="llm">🧠LLM Connectors</button>
             <button class="tab-button" data-tab="keys">🔑API Keys</button>
             <button class="tab-button" data-tab="player">👤Player</button>
-            <button class="tab-button" data-tab="narrator">🗣️ Narrator</button>
+            <button class="tab-button" data-tab="narrator">🗣️ Narration</button>
             <button class="tab-button" data-tab="oghma">🐙Oghma Infinium</button>
             <button class="tab-button" data-tab="npcbio">🪪NPC Biographies</button>
             <button class="tab-button" data-tab="items">📜 Descriptions</button>

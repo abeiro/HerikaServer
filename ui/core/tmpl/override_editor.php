@@ -81,16 +81,6 @@ $fullSchema = [
         'description' => 'Encourage using actions more often.',
         'category' => 'Core Settings'
     ],
-    'REMOVE_ASTERISKS_FROM_OUTPUT' => [
-        'type' => 'boolean',
-        'description' => 'Remove text between ** when responding (*cough*, *smiles*, etc)',
-        'category' => 'Core Settings'
-    ],
-    'INLINE_NARRATION_ENABLED' => [
-        'type' => 'boolean',
-        'description' => 'Enable inline narration in asterisks (e.g., *She smiles*). Appears in subtitles but not spoken in TTS.',
-        'category' => 'Core Settings'
-    ],
     'MAX_WORDS_LIMIT' => [
         'type' => 'integer',
         'description' => 'Enforce a word limit for responses. Leave as 0 for no limit.',
@@ -563,8 +553,7 @@ foreach ($allowedSettings as $key) {
             'BORED_EVENT': 'BORED EVENT CHANCE',
             'CONTEXT_HISTORY': 'CONTEXT HISTORY EVENT COUNT',
             'CONTEXT_HISTORY_DIARY': 'CONTEXT HISTORY DIARY EVENT COUNT',
-            'CONTEXT_HISTORY_DYNAMIC_PROFILE': 'CONTEXT HISTORY DYNAMIC PROFILE EVENT COUNT',
-            'INLINE_NARRATION_ENABLED': 'NPC ACTION NARRATION ENABLED'
+            'CONTEXT_HISTORY_DYNAMIC_PROFILE': 'CONTEXT HISTORY DYNAMIC PROFILE EVENT COUNT'
         };
         return customLabels[key.toUpperCase()] || key.toUpperCase();
     }

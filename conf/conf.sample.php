@@ -165,8 +165,8 @@ $RELLLM_CONNECTOR=5; // Relationship Management default (Mistral Small 3.2 24B)
 //[AI/LLM Connectors]
 //OpenRouter JSON
 $CONNECTOR["openrouterjson"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
-$CONNECTOR["openrouterjson"]["model"]="meta-llama/llama-3.3-70b-instruct"; //LLM model.
-$CONNECTOR["openrouterjson"]["reasoning_model"]=false; //This is a reasoning model, could output CoT.
+$CONNECTOR["openrouterjson"]["model"]="z-ai/glm-4.7"; //LLM model.
+$CONNECTOR["openrouterjson"]["reasoning_model"]=true; //This is a reasoning model, could output CoT.
 $CONNECTOR["openrouterjson"]["fallback_models"]=""; //comma separated models.
 $CONNECTOR["openrouterjson"]["PROVIDER"]=""; //use only this list of providers from OpenRouter
 $CONNECTOR["openrouterjson"]["providers_sort"]="default"; //Prioritize providers on selected attribute.
@@ -189,7 +189,7 @@ $CONNECTOR["openrouterjson"]["MAX_TOKENS_MEMORY"]='1024'; //Maximum tokens to ge
 $CONNECTOR["openrouterjson"]["API_KEY"]=""; //API key.
 $CONNECTOR["openrouterjson"]["xreferer"]="https://www.nexusmods.com/skyrimspecialedition/mods/89931"; //Stub needed header.
 $CONNECTOR["openrouterjson"]["xtitle"]="CHIM"; //Stub needed header.
-$CONNECTOR["openrouterjson"]["json_schema"]=false; //Enable OpenRouter JSON schema.
+$CONNECTOR["openrouterjson"]["json_schema"]=true; //Enable OpenRouter JSON schema.
 // Utility buttons for autofilling parameters
 $CONNECTOR["openrouterjson"]["get_parms1"] = false; // Utility button for low randomness parameters
 $CONNECTOR["openrouterjson"]["get_parms5"] = false; // Utility button for medium randomness parameters  
@@ -491,6 +491,11 @@ $STT["DEEPGRAM"]["MODEL"]="nova-3"; //Model to use.
 
 $STT["PARAKEET"]["LANG"]="en";
 
+//Inworld STT
+$STT["INWORLD"]["API_KEY"]=""; //Inworld API key. Can be managed from API Badge as "Inworld".
+$STT["INWORLD"]["MODEL_ID"]="groq/whisper-large-v3"; //Provider/model identifier.
+$STT["INWORLD"]["LANGUAGE"]="en-US"; //BCP-47 language code, blank for auto-detect.
+
 
 
 //[Image to Text (Soulgaze)]
@@ -552,11 +557,11 @@ $FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_B"]=66; //0-100 - Minimal distance to
 $FEATURES["MISC"]["ADD_TIME_MARKS"]=false; //Add timestamps to the context logs. Assists with memory recollection.
 $FEATURES["MISC"]["ITT_QUALITY"]=90; //0-100 - Image compression and comprehension. Only for Soulgaze HD.
 $FEATURES["MISC"]["TTS_RANDOM_PITCH"]=false; //Adjusting the pitch when generating the voice for this actor will add variation.
-$FEATURES["MISC"]["OGHMA_INFINIUM"]=false;	//Skyrim context information will be added to the prompt. Use for small weight LLMs.
+$FEATURES["MISC"]["OGHMA_INFINIUM"]=true;	//Skyrim context information will be added to the prompt. Use for small weight LLMs.
 $FEATURES["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"]=false; //Reorders properties in the offered JSON schema.
 $FEATURES["EXPERIMENTAL"]["KOBOLDCPP_ACTIONS"]=false; //KoboldCPP Actions.
 
-$OGHMA_INFINIUM=false;
+$OGHMA_INFINIUM=true;
 
 $FEATURES["MISC"]["LIFE_LINK_PLUGIN"]=false; // WIP. Use life link plugin for dynamic profiles
 

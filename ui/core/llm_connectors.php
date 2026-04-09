@@ -274,10 +274,12 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     @media (max-width: 1000px) { .two-col-llm { grid-template-columns: 1fr; } }
     .kv-grid { display: grid; grid-template-columns: 220px 1fr; gap: 8px 12px; align-items: center; }
     .inline-num { width: 90px; }
+    .two-col-llm label { color:#fff !important; }
     .service-picker { display:flex; align-items:center; gap:12px; margin: 6px 0 12px; }
     .service-icons { display:flex; gap:8px; align-items:center; }
     .service-icon { width:56px; height:56px; border:1px solid rgba(138,155,182,0.3); border-radius:8px; cursor:pointer; opacity:0.8; }
     .service-icon.active { outline:2px solid rgb(242,124,17); opacity:1; }
+    #service_label { color: #fff !important; }
     .tip-label { position: relative; cursor: help; }
     .tip-label::after { content: attr(data-tip); position: absolute; left: 0; top: 120%; max-width: 560px; padding: 8px 10px; background: #0c0f14; color: #cfe0ff; border: 1px solid rgba(138,155,182,0.35); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); white-space: normal; line-height: 1.3; font-size: 12px; opacity: 0; transform: translateY(-4px); transition: opacity .12s ease, transform .12s ease; pointer-events: none; z-index: 9999; }
     .tip-label:hover::after { opacity: 1; transform: translateY(0); }
@@ -295,7 +297,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     .orm-info-box { border:1px solid rgba(138,155,182,0.3); background:#0d1117; border-radius:8px; padding:8px 10px; margin-top:8px; max-width: 800px; }
     /* Inline title + toggle styling */
     .label-with-toggle { display:flex; align-items:center; gap:24px; margin-bottom: 12px; }
-    .label-with-toggle input[type="checkbox"] { accent-color: #176529; transform: scale(1.8); transform-origin:center; cursor:pointer; margin: 0; }
+    .label-with-toggle input[type="checkbox"] { accent-color: #176529; transform: scale(1.8); transform-origin:center; cursor:pointer; margin: 0 0 0 8px; }
     .label-with-toggle .tip-label { flex: 1; }
     </style>
     <script>
@@ -414,6 +416,9 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 <div id="service_signup_link" class="orm-note" style="font-size:12px; margin:-6px 0 8px 0; display:none;">
                     <a id="signup_link" href="#" target="_blank" rel="noopener noreferrer" style="color:#ffb862; text-decoration:underline;">Sign up here</a> to get your API key for this service.
                 </div>
+                <div id="service_tos_warning" class="orm-note" style="font-size:12px; margin:-4px 0 8px 0; display:none; color:#ffd2a6;">
+                    Please be warned that OpenAI, Antrhopic and Google have started to enforce stricter terms of service regarding NSFW actitives. <a href="https://openrouter.ai/terms#_6_-prohibited-conduct_" target="_blank" rel="noopener noreferrer" style="color:#ffb862; text-decoration:underline;">More info here</a>.
+                </div>
 
                 <div id="custom_note" class="orm-muted" style="font-size:12px; display:none; margin:-6px 0 8px 0;">
                     Custom allows you to build your own connector setting using one of our API drivers to use non-supported services with CHIM. For advanced users only
@@ -479,7 +484,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 ?>
                 </div>
                 <div id="reasoning_row">
-                    <label class="label-with-toggle"><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span>
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Fixes reasoning only models so they do not output <think> and <answer> tags. May be slower then regular models.'>Reasoning Model Fix</span>
                         <input type="hidden" name="reasoning_model" value="0">
                         <input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>>
                     </label>
@@ -843,6 +848,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     (function(){
         const signupLinkDiv = document.getElementById('service_signup_link');
         const signupLink = document.getElementById('signup_link');
+        const tosWarningDiv = document.getElementById('service_tos_warning');
         const customNote = document.getElementById('custom_note');
         const signupUrls = {
             openrouter: 'https://openrouter.ai/keys',
@@ -854,6 +860,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         function updateSignupLink(){
             const serviceInput = document.getElementById('service_input');
             const service = serviceInput ? String(serviceInput.value || '').toLowerCase() : '';
+            const showTosWarning = ['openrouter', 'openai', 'google'].includes(service);
             if (service === 'custom') {
                 if (signupLinkDiv) signupLinkDiv.style.display = 'none';
                 if (customNote) customNote.style.display = '';
@@ -865,6 +872,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 if (signupLinkDiv) signupLinkDiv.style.display = 'none';
                 if (customNote) customNote.style.display = 'none';
             }
+            if (tosWarningDiv) tosWarningDiv.style.display = showTosWarning ? '' : 'none';
         }
         const icons = document.querySelectorAll('.service-icon');
         icons.forEach(ic=>{ ic.addEventListener('click', ()=> setTimeout(updateSignupLink, 50)); });
@@ -1162,7 +1170,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
     $payload['temperature'] = 1;
     $payload['url'] = 'https://openrouter.ai/api/v1/chat/completions';
     $payload['reasoning_model'] = 0;
-    $payload['max_tokens'] = 250;
+    $payload['max_tokens'] = 500;
     $payload['api_badge_id'] = 1;
     $payload['enforce_json'] = 1;
     $payload['json_schema'] = 1;
@@ -1274,7 +1282,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import"])) {
                 $payload['driver'] = ($svc==='openrouter') ? 'openrouterjson' : (($svc==='openai') ? 'openaijson' : (($svc==='google') ? 'google_openaijson' : (($svc==='groq') ? 'groqjson' : (($svc==='nanogpt') ? 'openrouterjson' : (($svc==='player2') ? 'player2json' : 'openaijson')))));
             }
             if (!isset($payload['temperature']) || $payload['temperature']===null) $payload['temperature'] = 1;
-            if (!isset($payload['max_tokens']) || $payload['max_tokens']===null) $payload['max_tokens'] = 250;
+            if (!isset($payload['max_tokens']) || $payload['max_tokens']===null) $payload['max_tokens'] = 500;
 
             // Ensure label present
             if ($payload['label'] === '') { $payload['label'] = 'Imported Connector'; }
@@ -1314,7 +1322,7 @@ if (isset($_GET["create_blank"])) {
         'temperature' => 1,
         'url' => 'https://openrouter.ai/api/v1/chat/completions',
         'reasoning_model' => 0,
-        'max_tokens' => 250,
+        'max_tokens' => 500,
         'api_badge_id' => 1,
         'enforce_json' => 1,
         'json_schema' => 1,
@@ -1503,10 +1511,12 @@ if (isset($_GET["edit"])) {
 @media (max-width: 1000px) { .two-col-llm { grid-template-columns: 1fr; } }
 .kv-grid { display: grid; grid-template-columns: 220px 1fr; gap: 8px 12px; align-items: center; }
 .inline-num { width: 90px; }
+.two-col-llm label { color:#fff !important; }
 .service-picker { display:flex; align-items:center; gap:12px; margin: 6px 0 12px; }
 .service-icons { display:flex; gap:8px; align-items:center; }
 .service-icon { width:56px; height:56px; border:1px solid rgba(138,155,182,0.3); border-radius:8px; cursor:pointer; opacity:0.8; }
 .service-icon.active { outline:2px solid rgb(242,124,17); opacity:1; }
+#service_label { color:#fff !important; }
 /* Fancy tooltip for slider labels */
 .tip-label { position: relative; cursor: help; }
 .tip-label::after { content: attr(data-tip); position: absolute; left: 0; top: 120%; max-width: 560px; padding: 8px 10px; background: #0c0f14; color: #cfe0ff; border: 1px solid rgba(138,155,182,0.35); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); white-space: normal; line-height: 1.3; font-size: 12px; opacity: 0; transform: translateY(-4px); transition: opacity .12s ease, transform .12s ease; pointer-events: none; z-index: 9999; }
@@ -1630,7 +1640,7 @@ if (isset($_GET["edit"])) {
 .collapsible-content { padding:12px; }
 /* Inline title + toggle styling */
 .label-with-toggle { display:flex; align-items:center; gap:24px; margin-bottom: 12px; }
-.label-with-toggle input[type="checkbox"] { accent-color: #176529; transform: scale(1.8); transform-origin:center; cursor:pointer; margin: 0; }
+.label-with-toggle input[type="checkbox"] { accent-color: #176529; transform: scale(1.8); transform-origin:center; cursor:pointer; margin: 0 0 0 8px; }
 .label-with-toggle .tip-label { flex: 1; }
 
 /* Form inputs styling */
@@ -1662,7 +1672,7 @@ if (isset($_GET["edit"])) {
     font-family: inherit;
 }
 .form-container label {
-    color: rgb(242, 124, 17);
+    color: #fff;
     font-weight: 600;
     display: inline-block;
     margin-bottom: 6px;
@@ -1716,6 +1726,9 @@ if (typeof window.consolidation !== 'function') {
 
             <div id="service_signup_link" class="orm-note" style="font-size:12px; margin:-6px 0 8px 0; display:none;">
                 <a id="signup_link" href="#" target="_blank" rel="noopener noreferrer" style="color:#ffb862; text-decoration:underline;">Sign up here</a> to get your API key for this service.
+            </div>
+            <div id="service_tos_warning" class="orm-note" style="font-size:12px; margin:-4px 0 8px 0; display:none; color:#ffd2a6;">
+                Please be warned that OpenAI, Antrhopic and Google have started to enforce stricter terms of service regarding NSFW actitives. <a href="https://openrouter.ai/terms#_6_-prohibited-conduct_" target="_blank" rel="noopener noreferrer" style="color:#ffb862; text-decoration:underline;">More info here</a>.
             </div>
 
             <div id="custom_note" class="orm-muted" style="font-size:12px; display:none; margin:-6px 0 8px 0;">
@@ -1794,7 +1807,7 @@ if (typeof window.consolidation !== 'function') {
             ?>
             </div>
             <div id="reasoning_row">
-                <label class="label-with-toggle"><span class='tip-label' data-tip='Use a reasoning-capable model. May be slower and cost more; can improve complex tasks.'>Reasoning Model</span>
+                <label class="label-with-toggle"><span class='tip-label' data-tip='Fixes reasoning only models so they do not output <think> and <answer> tags. May be slower then regular models.'>Reasoning Model Fix</span>
                     <input type="hidden" name="reasoning_model" value="0">
                     <input type="checkbox" name="reasoning_model" value="1" <?= isset($editItem["reasoning_model"]) && $editItem["reasoning_model"] == 1 ? "checked" : "" ?>>
                 </label>
@@ -2025,6 +2038,7 @@ if (typeof window.consolidation !== 'function') {
     (function(){
         const signupLinkDiv = document.getElementById('service_signup_link');
         const signupLink = document.getElementById('signup_link');
+        const tosWarningDiv = document.getElementById('service_tos_warning');
         const customNote = document.getElementById('custom_note');
         const signupUrls = {
             openrouter: 'https://openrouter.ai/keys',
@@ -2036,6 +2050,7 @@ if (typeof window.consolidation !== 'function') {
         function updateSignupLink(){
             const serviceInput = document.getElementById('service_input');
             const service = serviceInput ? String(serviceInput.value || '').toLowerCase() : '';
+            const showTosWarning = ['openrouter', 'openai', 'google'].includes(service);
             if (service === 'custom') {
                 if (signupLinkDiv) signupLinkDiv.style.display = 'none';
                 if (customNote) customNote.style.display = '';
@@ -2047,6 +2062,7 @@ if (typeof window.consolidation !== 'function') {
                 if (signupLinkDiv) signupLinkDiv.style.display = 'none';
                 if (customNote) customNote.style.display = 'none';
             }
+            if (tosWarningDiv) tosWarningDiv.style.display = showTosWarning ? '' : 'none';
         }
         const icons = document.querySelectorAll('.service-icon');
         icons.forEach(ic=>{ ic.addEventListener('click', ()=> setTimeout(updateSignupLink, 50)); });

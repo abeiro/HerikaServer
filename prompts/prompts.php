@@ -162,6 +162,11 @@ $PROMPTS=array(
             // Prompt is implicit
 
     ],
+    "narrator_inputtext"=>[
+        "cue"=>[
+            "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+        ]
+    ],
     "inputtext_s"=>[
         "cue"=>[
             "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"

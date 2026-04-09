@@ -20,7 +20,7 @@ $schemaPath = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_schema.json";
 $rawSchema = @json_decode(@file_get_contents($schemaPath), true);
 if (!is_array($rawSchema)) $rawSchema = [];
 $providersAll = is_array($rawSchema['STT'] ?? null) ? $rawSchema['STT'] : [];
-$sttOptions = $rawSchema['STTFUNCTION']['values'] ?? [ 'none','whisper','localwhisper','azure','deepgram' ];
+$sttOptions = $rawSchema['STTFUNCTION']['values'] ?? [ 'none','whisper','localwhisper','azure','deepgram','gemini','parakeet','inworld' ];
 
 // Current configuration
 $currentConf = conf_loader_load();
@@ -40,6 +40,8 @@ $sttMap = [
 	'azure' => 'AZURE',
 	'deepgram' => 'DEEPGRAM',
 	'parakeet' => 'PARAKEET',
+	'gemini' => 'GEMINI',
+	'inworld' => 'INWORLD',
 ];
 
 // Selected provider
@@ -202,8 +204,15 @@ h1.stt-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:
 							foreach ($providerSchema as $fname => $def): if (!is_array($def)) continue; $ftype = $def['type'] ?? 'string'; $plainName = 'STT ' . $providerKey . ' ' . $fname; $current = $currentConf[$plainName]['currentValue'] ?? ''; $help = $def['description'] ?? '';
 								// If API_KEY field, show badge status instead of input
 								$lnameProv = strtolower($providerKey);
-								if ($fname === 'API_KEY' && in_array($lnameProv, ['whisper','azure','deepgram'])) {
-									$badgeName = ($lnameProv==='whisper') ? 'OpenAI' : ucfirst($lnameProv);
+								$providerBadgeMap = [
+									'whisper' => 'OpenAI',
+									'azure' => 'Azure',
+									'deepgram' => 'Deepgram',
+									'gemini' => 'Google',
+									'inworld' => 'Inworld',
+								];
+								if ($fname === 'API_KEY' && isset($providerBadgeMap[$lnameProv])) {
+									$badgeName = $providerBadgeMap[$lnameProv];
 									$hasKey = false;
 									foreach ($apiBadges as $r){ if (strtolower((string)($r['label']??''))===strtolower($badgeName) && trim((string)($r['api_key']??''))!==''){ $hasKey=true; break; } }
 									echo '<div>API Badge ('.htmlspecialchars($badgeName).')</div>';

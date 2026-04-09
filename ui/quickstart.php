@@ -369,18 +369,16 @@ $quickstartConf = array_filter($currentConf, function($key) use ($quickstartKeys
 
 // Start of Form
 echo '<link rel="stylesheet" href="'.$webRoot.'/ui/css/main.css">';
-echo '<main>';
-echo '<div class="container">
+echo '<main class="qs-page">';
+echo '<div class="qs-shell">
         <form action="" method="post" name="mainC" class="confwizard" id="top">
             <input type="hidden" name="profile" value="' . htmlspecialchars($_SESSION["PROFILE"]) . '" />
       ';
 
 // Main Heading
-echo '<div class="container">
-      <h1 class="qs-title text-center mb-4">Quickstart Menu</h1>
-      <h2 class="qs-subtitle text-center mb-4">Only to be used for the initial setup!</h2>
-      <h3 class="qs-note text-center mb-4">If you want to make more advanced changes before playing go to the Configuration tab above.</h3>
-    </div>';
+echo '<section class="qs-section qs-header-card">
+        <h1 class="qs-title">Quickstart Menu</h1>
+      </section>';
 
 // PLAYER_NAME at top
 $playerNameVal = 'Prisoner'; // Default value
@@ -398,13 +396,14 @@ try {
         $playerNameVal = (string)$currentConf['PLAYER_NAME']['currentValue'];
     }
 }
-echo '<div class="container">
-        <div class="form-group">
+echo '<section class="qs-section">
+        <h2 class="qs-section-title">Player</h2>
+        <div class="form-group qs-field">
             <label for="PLAYER_NAME">Player Name</label>
             <input type="text" class="form-control" id="PLAYER_NAME" name="PLAYER_NAME" value="' . htmlspecialchars($playerNameVal) . '">
             <small class="form-text">Your in-game character name. Defaults to "Prisoner" and is automatically updated when you load a save. You can also manage player settings in <a href="' . $webRoot . '/ui/core/config_hub.php?tab=player" target="_blank" style="color:#4a8ab6;">Player Management</a>.</small>
         </div>
-      </div>';
+      </section>';
 
 // API Keys section (OpenRouter only here; Deepgram rendered under STT)
 try { $openrouterRow = $db->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='openrouter' LIMIT 1"); } catch (Throwable $_e) { $openrouterRow = []; }
@@ -418,56 +417,9 @@ $llmCardsBaseStyle = 'display:grid; grid-template-columns:repeat(auto-fit,minmax
 $llmCardsDefaultStyle = $llmCardsBaseStyle . ($player2ForceAllLlm ? ' display:none;' : '');
 $llmCardsPlayer2Style = $llmCardsBaseStyle . ($player2ForceAllLlm ? '' : ' display:none;');
 
-// Preload default profile metadata flags for Oghma (safe if tables missing)
-$oghmaChecked = "";
-try {
-    $rowPid = $db->fetchOne("SELECT id FROM core_profiles ORDER BY CASE WHEN lower(label)='default' THEN 0 WHEN default_narrator='1' THEN 1 WHEN default_npc='1' THEN 2 ELSE 3 END, id ASC LIMIT 1");
-    $pid = isset($rowPid['id']) ? intval($rowPid['id']) : 0;
-    if ($pid > 0) {
-        $rowMeta = $db->fetchOne("SELECT metadata FROM core_profiles WHERE id=".$pid." LIMIT 1");
-        if (isset($rowMeta['metadata']) && $rowMeta['metadata'] !== '') {
-            $meta = json_decode($rowMeta['metadata'], true);
-            if (is_array($meta)) {
-                $isTruthy = function($v){
-                    if ($v === true || $v === 1) return true;
-                    $s = strtolower(trim((string)$v));
-                    return in_array($s, ['1','true','yes','on'], true);
-                };
-                if (array_key_exists('OGHMA_INFINIUM', $meta) && $isTruthy($meta['OGHMA_INFINIUM'])) { $oghmaChecked = " checked"; }
-            }
-        }
-    }
-} catch (Throwable $_e) { /* ignore on first-run before tables exist */ }
-
-$minimeProbeUrl = herikaQuickstartMiniMeDefaultUrl();
-$minimeProbeResult = herikaQuickstartProbeUrl($minimeProbeUrl);
-$minimeHealthyInitial = !empty($minimeProbeResult['ok']);
-$minimeStatusText = $minimeHealthyInitial
-    ? ('MiniMe reachable (' . intval($minimeProbeResult['http_code'] ?? 0) . ') in ' . intval($minimeProbeResult['latency_ms'] ?? 0) . ' ms.')
-    : ('MiniMe not reachable (' . intval($minimeProbeResult['http_code'] ?? 0) . ') in ' . intval($minimeProbeResult['latency_ms'] ?? 0) . ' ms. ' . trim(strval($minimeProbeResult['error'] ?? '')));
-$minimeStatusClass = $minimeHealthyInitial ? 'qs-status ok' : 'qs-status err';
-$oghmaContainerStyle = $minimeHealthyInitial ? '' : ' style="display:none;"';
-
-echo '<div class="container">
-        <div class="form-group">
-            <div class="qs-toggle-block">
-                <div class="qs-toggle-header">
-                    <label class="qs-toggle-title" for="qs_player2_force_all_llm">Use Player 2 for LLMs</label>
-                    <div class="qs-toggle-control">
-                        <input class="form-check-input qs-switch-input" type="checkbox" id="qs_player2_force_all_llm" value="1"' . $player2ForceChecked . '>
-                        <label class="form-check-label qs-switch-label" for="qs_player2_force_all_llm">
-                            <span class="qs-switch-track"></span>
-                            <span class="qs-switch-copy" data-off="Off" data-on="On"></span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-            <small class="form-text">Route all LLM calls through your local Player2 connector. Model choice stays in the Player2 app.</small>
-        </div>
-      </div>';
-
-echo '<div class="container" id="qs_openrouter_section"' . ($player2ForceAllLlm ? ' style="display:none;"' : '') . '>
-        <div class="form-group">
+echo '<section class="qs-section" id="qs_openrouter_section"' . ($player2ForceAllLlm ? ' style="display:none;"' : '') . '>
+        <h2 class="qs-section-title">OpenRouter</h2>
+        <div class="form-group qs-field">
             <label for="qs_openrouter_api_key">OpenRouter API Key</label>
             <div class="input-group">
                 <input type="password" class="form-control" id="qs_openrouter_api_key" value="' . htmlspecialchars($openrouterKey) . '" style="filter: blur(3px);">
@@ -477,35 +429,16 @@ echo '<div class="container" id="qs_openrouter_section"' . ($player2ForceAllLlm 
             </div>
             <small class="form-text">Paste your OpenRouter API key. <a href="https://openrouter.ai/keys" target="_blank">Create key</a></small>
         </div>
-      </div>';
+      </section>';
 
-echo '<div class="container">
-        <div class="form-group">
-            <label>MiniMe Service</label>
-            <small class="form-text">Checks if MiniMe is reachable at the local default endpoint. Oghma is only shown when MiniMe is healthy.</small>
-            <input id="qs_minime_probe_url" type="hidden" value="' . htmlspecialchars($minimeProbeUrl) . '">
-            <div id="qs_minime_probe_status" class="' . $minimeStatusClass . '">' . htmlspecialchars(trim($minimeStatusText)) . '</div>
+echo '<section class="qs-section" id="qs_minime_section">
+        <h2 class="qs-section-title">MiniMe Service</h2>
+        <div class="form-group qs-field">
+            <small class="form-text">Checks if MiniMe is reachable at the local default endpoint.</small>
+            <input id="qs_minime_probe_url" type="hidden" value="' . htmlspecialchars(herikaQuickstartMiniMeDefaultUrl()) . '">
+            <div id="qs_minime_probe_status" class="qs-status">Checking MiniMe service...</div>
         </div>
-      </div>';
-
-echo '<div class="container" id="qs_oghma_section"' . $oghmaContainerStyle . '>
-        <br>
-        <div class="form-group">
-            <div class="qs-toggle-block">
-                <div class="qs-toggle-header">
-                    <label class="qs-toggle-title" for="qs_oghma_infinium">Enable Oghma Infinium</label>
-                    <div class="qs-toggle-control">
-                        <input class="form-check-input qs-switch-input" type="checkbox" id="qs_oghma_infinium" value="1"' . $oghmaChecked . '>
-                        <label class="form-check-label qs-switch-label" for="qs_oghma_infinium">
-                            <span class="qs-switch-track"></span>
-                            <span class="qs-switch-copy" data-off="Off" data-on="On"></span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-            <small class="form-text">Uses MiniMe-T5 automatically when service is running. Oghma Infinium improves AI roleplay by adding and restricting lore to NPCs.</small>
-        </div>
-      </div>';
+      </section>';
 
 if ($_SESSION["PROFILE"] == "$configFilepath/conf.php") {
     $DEFAULT_PROFILE = true;
@@ -560,8 +493,6 @@ foreach ($quickstartConf as $pname => $parms) {
         $groupClass .= " qs-service-group qs-service-group-stt";
     }
 
-    echo "<div class='" . $groupClass . "' $MAKE_NO_VISIBLE_MARK>";
-
     // Label
     $displayLabel = $pname;
     if ($pname == "TTSFUNCTION") {
@@ -569,6 +500,10 @@ foreach ($quickstartConf as $pname => $parms) {
     } else if ($pname == "STTFUNCTION") {
         $displayLabel = "STT Service";
     }
+
+    echo "<section class='qs-section qs-service-card' $MAKE_NO_VISIBLE_MARK>";
+    echo "<h2 class='qs-section-title'>" . htmlspecialchars($displayLabel) . "</h2>";
+    echo "<div class='" . $groupClass . "'>";
     echo "<label for='$fieldName'>" . htmlspecialchars($displayLabel) . "</label>";
 
     // Input Types
@@ -594,18 +529,52 @@ foreach ($quickstartConf as $pname => $parms) {
             'deepgram'     => 'Deepgram',
             'localwhisper' => 'Local Whisper',
         ];
+        $recommendedValues = [];
         if ($pname == "TTSFUNCTION") {
             $parms["values"] = ["pockettts","chatterbox","xtts-fastapi","melotts"];
-            $parms["description"] = "Select the TTS service you wish to use. <br>You can install PocketTTS, Chatterbox, XTTS and MeloTTS in the CHIM Launcher under <b>Install Components.</b>";
+            $recommendedValues = ["pockettts", "chatterbox"];
+            $parms["description"] = "Select the TTS service you wish to use. Recommended: PocketTTS or Chatterbox. <br>You can install PocketTTS, Chatterbox, XTTS and MeloTTS in the CHIM Launcher under <b>Install Components.</b>";
         } else if ($pname == "STTFUNCTION") {
             $parms["values"] = ["parakeet","deepgram","localwhisper"];
-            $parms["description"] = "Select the STT service you wish to use.";
+            $recommendedValues = ["parakeet", "deepgram"];
+            $parms["description"] = "Select the STT service you wish to use. Recommended: Parakeet or Deepgram.";
         }
+        $recommendedValues = array_values(array_filter(
+            $recommendedValues,
+            function($value) use ($parms) {
+                return in_array($value, $parms["values"], true);
+            }
+        ));
+        $otherValues = array_values(array_filter(
+            $parms["values"],
+            function($value) use ($recommendedValues) {
+                return !in_array($value, $recommendedValues, true);
+            }
+        ));
         echo "<select class='form-control' id='$fieldName' name='" . htmlspecialchars($fieldName) . "' $FORCE_DISABLED>";
-        foreach ($parms["values"] as $item) {
-            $selected = ($item == $parms["currentValue"]) ? "selected" : "";
-            $displayName = $selectDisplayNames[$item] ?? $item;
-            echo "<option value='" . htmlspecialchars($item) . "' $selected>" . htmlspecialchars($displayName) . "</option>";
+        if (count($recommendedValues) > 0) {
+            echo "<optgroup label='Recommended'>";
+            foreach ($recommendedValues as $item) {
+                $selected = ($item == $parms["currentValue"]) ? "selected" : "";
+                $displayName = $selectDisplayNames[$item] ?? $item;
+                echo "<option value='" . htmlspecialchars($item) . "' $selected>" . htmlspecialchars($displayName . " (Recommended)") . "</option>";
+            }
+            echo "</optgroup>";
+        }
+        if (count($otherValues) > 0) {
+            $otherLabel = "Other Services";
+            if ($pname == "TTSFUNCTION") {
+                $otherLabel = "Other TTS Services";
+            } else if ($pname == "STTFUNCTION") {
+                $otherLabel = "Other STT Services";
+            }
+            echo "<optgroup label='" . htmlspecialchars($otherLabel) . "'>";
+            foreach ($otherValues as $item) {
+                $selected = ($item == $parms["currentValue"]) ? "selected" : "";
+                $displayName = $selectDisplayNames[$item] ?? $item;
+                echo "<option value='" . htmlspecialchars($item) . "' $selected>" . htmlspecialchars($displayName) . "</option>";
+            }
+            echo "</optgroup>";
         }
         echo "</select>";
         
@@ -674,28 +643,38 @@ foreach ($quickstartConf as $pname => $parms) {
     }
 
     echo "</div>";
+    echo "</section>";
 }
 
+echo '<section class="qs-section">
+        <h2 class="qs-section-title">Player2 Connector</h2>
+        <div class="form-group qs-field">
+            <div class="qs-toggle-block">
+                <div class="qs-toggle-header">
+                    <label class="qs-toggle-title" for="qs_player2_force_all_llm">Use Player 2 for LLMs</label>
+                    <div class="qs-toggle-control">
+                        <input class="form-check-input qs-switch-input" type="checkbox" id="qs_player2_force_all_llm" value="1"' . $player2ForceChecked . '>
+                        <label class="form-check-label qs-switch-label" for="qs_player2_force_all_llm">
+                            <span class="qs-switch-track"></span>
+                            <span class="qs-switch-copy" data-off="Off" data-on="On"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <small class="form-text">Route all LLM calls through your local Player2 connector. Model choice stays in the Player2 app.</small>
+        </div>
+      </section>';
 
-echo "<br>";
-echo '<div class="btn-group-custom text-center">
-        <div class="btn-group-custom text-center">
-            <div class="btn-group-custom text-center">
-                <h3 class="warning-text3">
-                    Once done click Save and startup Skyrim with the AIAgent mod installed. Please read the <a href="https://dwemerdynamics.hostwiki.io/" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Wiki</a> to learn more about how CHIM works.
-                </h3>
-            </div>';
-
-
-echo '      <div class="container">
+echo '<section class="qs-section">
                 <h2 class="qs-section-title">LLM Connectors Note</h2>
                 <p class="form-text" id="qs_llm_connectors_note_default"' . $llmNoteDefaultStyle . '>The default CHIM installation comes with 4 predefined LLMs that you can hotswap ingame.</p>
                 <p class="form-text" id="qs_llm_connectors_note_player2"' . $llmNotePlayer2Style . '>Player2 mode is active. Standard, Fast, Powerful, and Experimental all use the local Player2 connector, and Diary, Formatter, plus Fallback also route through Player2. The actual model stays controlled in the Player2 app.</p>
                 <div id="qs_llm_connectors_cards_default" style="' . $llmCardsDefaultStyle . '">
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F579;&#xFE0F; <b>Standard</b></div>
-                        <div style="margin-top:6px; color:#9fb1c9;">Groq: Llama 3.3 70B Versatile</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Uses the Groq connector, not OpenRouter pricing</div>
+                        <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: GLM 4.7 (z-ai/glm-4.7)</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Released Dec 22, 2025 | 202,752 context</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.39/M input | $1.75/M output</div>
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F3C3;&#x200D;&#x2642;&#xFE0F; <b>Fast</b></div>
@@ -735,24 +714,26 @@ echo '      <div class="container">
                         <div style="margin-top:4px; color:#bbb; font-size:12px;">Same local Player2 connector as Standard</div>
                     </div>
                 </div>
-            </div>
+                <p class="qs-note warning-text3">
+                    Once done click Save and startup Skyrim with the AIAgent mod installed. Please read the <a href="https://dwemerdynamics.hostwiki.io/" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Wiki</a> to learn more about how CHIM works.
+                </p>
+                <div class="qs-actions">
+                    <button
+                        type="button"
+                        class="btn-primary qs-save-btn"
+                        name="save"
+                        value="Save"
+                        style="background-color: #28a745 !important;"
+                        onclick="saveQuickstartAndDB()"
+                    >
+                        Save and Continue
+                    </button>
+                </div>
+          </section>';
 
-            <button
-                type="button"
-                class="btn-primary"
-                name="save"
-                value="Save"
-                style="background-color: #28a745 !important;"
-                onclick="saveQuickstartAndDB()"
-            >
-                Save
-            </button>
-        </div>
-    </div>';
-
-
-
-echo '</main>'; // End of container/main
+echo '      </form>
+      </div>
+</main>'; // End of shell/main
 
 include("tmpl/footer.html");
 
@@ -764,11 +745,17 @@ echo $buffer;
 
 echo '<style>
     @font-face { font-family: "MagicCards"; src: url("css/font/MagicCardsNormal.ttf") format("truetype"); font-weight: normal; font-style: normal; }
-    /* Override main container styles */
-    main {
+    /* Page shell */
+    .qs-page {
         padding-top: 80px;
         padding-bottom: 40px;
         padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .qs-shell {
+        max-width: 980px;
+        margin: 0 auto;
     }
     
     /* Override footer styles */
@@ -781,16 +768,29 @@ echo '<style>
         z-index: 100;
     }
 
-    /* Additional quickstart-specific styles */
-    .container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
+    .confwizard {
+        background: transparent;
+        padding: 0;
+        margin: 0;
+        border: 0;
+        box-shadow: none;
+    }
+
+    .qs-section {
+        border: 1px solid #3a3a3a;
+        border-radius: 10px;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        padding: 16px;
+        margin-bottom: 14px;
+    }
+
+    .qs-header-card {
+        text-align: center;
     }
 
     /* Headings styled like Oghma */
     .qs-title {
-        margin: 0 0 12px 0;
+        margin: 0;
         font-family: "MagicCards", serif;
         word-spacing: 8px;
         font-size: 2.2em;
@@ -798,6 +798,7 @@ echo '<style>
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         text-align: center;
     }
+
     .qs-subtitle {
         font-family: "MagicCards", serif;
         color: rgb(242, 124, 17);
@@ -807,6 +808,7 @@ echo '<style>
         font-size: 1.4em;
         text-align: center;
     }
+
     .qs-note {
         color: #cfd8e3;
         margin-bottom: 18px;
@@ -818,15 +820,23 @@ echo '<style>
         color: rgb(242, 124, 17);
         text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         word-spacing: 6px;
-        margin: 12px 0 10px 0;
+        margin: 0 0 10px 0;
         font-size: 1.4em;
     }
 
-    .confwizard {
-        background-color: #1e1e1e;
-        padding: 30px 30px 24px 30px;
-        border-radius: 8px;
-        box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    .qs-field {
+        margin-bottom: 0;
+    }
+
+    .qs-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        margin-top: 14px;
+    }
+
+    .qs-save-btn {
+        min-width: 180px;
     }
 
     /* Button overrides */
@@ -1048,62 +1058,6 @@ echo '<style>
 
 echo '<script>
 const WEB_ROOT = '.json_encode($webRoot).';
-let qsMinimeHealthy = '.json_encode($minimeHealthyInitial).';
-
-function updateOghmaQuickstartUI(isHealthy){
-  try {
-    qsMinimeHealthy = !!isHealthy;
-    const oghmaSection = document.getElementById("qs_oghma_section");
-    if (oghmaSection) {
-      oghmaSection.style.display = qsMinimeHealthy ? "" : "none";
-    }
-  } catch(_e){}
-}
-
-async function checkMiniMeEndpoint(){
-  try {
-    const input = document.getElementById("qs_minime_probe_url");
-    const status = document.getElementById("qs_minime_probe_status");
-    if (!input || !status) return;
-    const url = String(input.value || "").trim();
-    if (url === "") {
-      status.textContent = "MiniMe endpoint URL is empty.";
-      status.classList.remove("ok");
-      status.classList.add("err");
-      updateOghmaQuickstartUI(false);
-      return;
-    }
-
-    status.textContent = "Checking MiniMe service...";
-    status.classList.remove("ok", "err");
-
-    const probeUrl = "quickstart.php?minime_probe=1&url=" + encodeURIComponent(url);
-    const response = await fetch(probeUrl, { cache: "no-store", credentials: "same-origin" });
-    const result = await response.json();
-    const http = Number(result && result.http_code ? result.http_code : 0);
-    const latency = Number(result && result.latency_ms ? result.latency_ms : 0);
-    const message = String((result && result.message) ? result.message : "MiniMe probe failed.");
-    if (result && result.ok) {
-      status.textContent = `MiniMe reachable (${http}) in ${latency} ms. ${message}`;
-      status.classList.remove("err");
-      status.classList.add("ok");
-      updateOghmaQuickstartUI(true);
-    } else {
-      status.textContent = `MiniMe not reachable (${http || 0}) in ${latency} ms. ${message}`;
-      status.classList.remove("ok");
-      status.classList.add("err");
-      updateOghmaQuickstartUI(false);
-    }
-  } catch (_error) {
-    const status = document.getElementById("qs_minime_probe_status");
-    if (status) {
-      status.textContent = "MiniMe probe failed.";
-      status.classList.remove("ok");
-      status.classList.add("err");
-    }
-    updateOghmaQuickstartUI(false);
-  }
-}
 
 async function saveQuickstartAndDB(){
   try {
@@ -1119,12 +1073,6 @@ async function saveQuickstartAndDB(){
 
     // 2) Save profile metadata flags
     const fdm = new FormData();
-    try {
-      const oghmaToggle = document.getElementById("qs_oghma_infinium");
-      if (qsMinimeHealthy && oghmaToggle) {
-        fdm.append("oghma_infinium", oghmaToggle.checked ? "1" : "0");
-      }
-    } catch(_e){}
     try { fdm.append("player2_force_all_llm", document.getElementById("qs_player2_force_all_llm").checked ? "1" : "0"); } catch(_e){}
     fdm.append("qs_action", "profile_quicksave_metadata");
     await fetch("quickstart.php", { method: "POST", body: fdm, cache: "no-store", credentials: "same-origin" });
@@ -1141,6 +1089,47 @@ async function saveQuickstartAndDB(){
   } catch (_e) {
     try { alert("Save failed or partially completed. Redirecting to home."); } catch(_a){}
     window.location.href = finishUrl;
+  }
+}
+
+async function checkMiniMeEndpoint(){
+  try {
+    const input = document.getElementById("qs_minime_probe_url");
+    const status = document.getElementById("qs_minime_probe_status");
+    if (!input || !status) return;
+    const url = String(input.value || "").trim();
+    if (url === "") {
+      status.textContent = "MiniMe endpoint URL is empty.";
+      status.classList.remove("ok");
+      status.classList.add("err");
+      return;
+    }
+
+    status.textContent = "Checking MiniMe service...";
+    status.classList.remove("ok", "err");
+
+    const probeUrl = "quickstart.php?minime_probe=1&url=" + encodeURIComponent(url);
+    const response = await fetch(probeUrl, { cache: "no-store", credentials: "same-origin" });
+    const result = await response.json();
+    const http = Number(result && result.http_code ? result.http_code : 0);
+    const latency = Number(result && result.latency_ms ? result.latency_ms : 0);
+    const message = String((result && result.message) ? result.message : "MiniMe probe failed.");
+    if (result && result.ok) {
+      status.textContent = `MiniMe reachable (${http}) in ${latency} ms. ${message}`;
+      status.classList.remove("err");
+      status.classList.add("ok");
+    } else {
+      status.textContent = `MiniMe not reachable (${http || 0}) in ${latency} ms. ${message}`;
+      status.classList.remove("ok");
+      status.classList.add("err");
+    }
+  } catch (_error) {
+    const status = document.getElementById("qs_minime_probe_status");
+    if (status) {
+      status.textContent = "MiniMe probe failed.";
+      status.classList.remove("ok");
+      status.classList.add("err");
+    }
   }
 }
 

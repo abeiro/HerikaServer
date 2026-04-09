@@ -3372,6 +3372,37 @@ if ($checkVersion("prompts")<20260203001) {
 }
 
 //----------------------------------------------------
+// PLAYER SPEECH STYLE GENERATION PROMPT
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20260327001) {
+    Logger::debug("Applying prompts table 20260327001 - Adding player_speech_style_prompt");
+    
+    $playerSpeechStylePrompt = $db->escape(
+        "Generate a practical speech style prompt for {PLAYER_NAME} using recent dialogue and optional guidance. "
+        . "Write exactly one paragraph (3-5 sentences) that can be used directly to rewrite player dialogue in roleplay. "
+        . "Capture vocabulary, tone, cadence, formality, recurring phrases, and interpersonal style. "
+        . "Stay grounded in the dialogue samples and guidance. Do not use bullet points, labels, or headings."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'player_speech_style_prompt',
+            '$playerSpeechStylePrompt',
+            'Prompt for generating player speech style from recent player input events and optional user guidance. Supports placeholders: {PLAYER_NAME}, {PLAYER_GUIDANCE}, {CURRENT_SPEECH_STYLE}, {DIALOGUE_SAMPLES}. Used in: ui/cmd/action_player_generate_speech_style.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20260327001);
+    Logger::info("Applied patch prompts 20260327001 - Added player_speech_style_prompt");
+}
+
+//----------------------------------------------------
 // emotions expression
 //----------------------------------------------------
 

@@ -348,6 +348,35 @@ require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."uti
 
 $db = new sql();
 
+// Keep a single source of truth for which event types are visible/deletable in this page.
+$eventLogExcludedTypes = [
+    'prechat',
+    'rechat',
+    'infonpc',
+    'request',
+    'infonpc_close',
+    'addnpc',
+    'user_input',
+    'infosave',
+    'init',
+    'playerinfo',
+    'oghma_import',
+    'biography_import',
+    'dynamic_oghma_import',
+    'infoitems',
+    'description_import',
+    'backgroundaction',
+    'innerchat',
+    'npc_reanimated'
+];
+$eventLogExcludedTypesSql = implode(
+    ',',
+    array_map(function ($type) use ($db) {
+        return "'" . $db->escape($type) . "'";
+    }, $eventLogExcludedTypes)
+);
+$eventLogVisibleWhereClause = "type NOT IN ($eventLogExcludedTypesSql)";
+
 // Handle actions
 if (isset($_GET["clean"]) && $_GET["clean"]) {
     $db->delete("responselog", "sent=1");
@@ -365,17 +394,29 @@ if (isset($_GET["cleanlog"]) && $_GET["cleanlog"]) {
 if (isset($_GET['delete_last'])) {
     $delCount = (int)$_GET['delete_last'];
     if (in_array($delCount, [20, 50, 100])) {
-        $db->query("
-            DELETE FROM eventlog
-            WHERE rowid IN (
-                SELECT rowid
-                FROM eventlog
-                WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','infoitems','description_import','backgroundaction','innerchat','npc_reanimated')
-                ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
-                LIMIT $delCount
-            )
+        $targetRows = $db->fetchAll("
+            SELECT rowid
+            FROM eventlog
+            WHERE $eventLogVisibleWhereClause
+            ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
+            LIMIT $delCount
         ");
-        header("Location: events-memories.php?tab=eventlog");
+
+        $targetRowids = [];
+        foreach ($targetRows as $targetRow) {
+            $targetRowid = intval($targetRow['rowid'] ?? 0);
+            if ($targetRowid > 0) {
+                $targetRowids[] = $targetRowid;
+            }
+        }
+
+        if (!empty($targetRowids)) {
+            $targetRowidsStr = implode(',', $targetRowids);
+            $db->query("DELETE FROM eventlog WHERE rowid IN ($targetRowidsStr)");
+        }
+
+        $deletedCount = count($targetRowids);
+        header("Location: events-memories.php?tab=eventlog&deleted=$deletedCount");
         exit;
     }
 }
@@ -397,15 +438,28 @@ if (isset($_POST['delete_selected']) && !empty($_POST['rowids'])) {
         
         if (count($sanitizedRowids) > 0) {
             $rowidsStr = implode(',', $sanitizedRowids);
-            $query = "DELETE FROM eventlog WHERE rowid IN ($rowidsStr)";
-            Logger::info("Executing delete query: $query");
+            $existingRows = $db->fetchAll("SELECT rowid FROM eventlog WHERE rowid IN ($rowidsStr)");
+            $existingRowids = [];
+            foreach ($existingRows as $existingRow) {
+                $existingRowid = intval($existingRow['rowid'] ?? 0);
+                if ($existingRowid > 0) {
+                    $existingRowids[] = $existingRowid;
+                }
+            }
+
+            Logger::info("Existing rowids before delete: " . json_encode($existingRowids));
+
+            if (count($existingRowids) > 0) {
+                $existingRowidsStr = implode(',', $existingRowids);
+                $query = "DELETE FROM eventlog WHERE rowid IN ($existingRowidsStr)";
+                Logger::info("Executing delete query: $query");
+                $db->query($query);
+            }
+
+            $deletedCount = count($existingRowids);
+            Logger::info("Bulk delete executed: $deletedCount events deleted.");
             
-            $result = $db->query($query);
-            
-            // Log the deletion for debugging
-            Logger::info("Bulk delete executed: " . count($sanitizedRowids) . " events deleted.");
-            
-            header("Location: events-memories.php?tab=eventlog&deleted=" . count($sanitizedRowids));
+            header("Location: events-memories.php?tab=eventlog&deleted=" . $deletedCount);
             exit;
         } else {
             Logger::warn("Bulk delete attempted but no valid rowids after sanitization");
@@ -547,9 +601,9 @@ function getTimeColor($time) {
             $offset = ($page - 1) * $limit;
             
             $results = $db->fetchAll(
-                "SELECT type, data, people, gamets, localts, ts, ROWID
+                "SELECT type, data, people, gamets, localts, ts, rowid
                  FROM eventlog a
-                 WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import','backgroundaction','innerchat','npc_reanimated')
+                 WHERE $eventLogVisibleWhereClause
                  ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
                  LIMIT $limit OFFSET $offset"
             );
@@ -623,7 +677,7 @@ function getTimeColor($time) {
             $nextPage = $page + 1;
             
             // Get total count for pagination
-            $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','infoitems','description_import','backgroundaction','innerchat','npc_reanimated')";
+            $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE $eventLogVisibleWhereClause";
             $countResult = $db->fetchAll($countQuery);
             $totalRecords = $countResult[0]['total'];
             $totalPages = ceil($totalRecords / $limit);
@@ -1156,153 +1210,65 @@ function getTimeColor($time) {
             }
 
             // Display Memory Configuration Status
-            echo "<div style='background: #1a1a1a; border: 1px solid #3a3a3a; border-radius: 8px; padding: 20px; margin: 15px 0;'>";
-            echo "<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;'>";
-            echo "<h3 style='margin: 0; color: rgb(242, 124, 17); word-spacing: 5px;'>💭 Memory System Configuration</h3>";
-            echo "<a href='" . $webRoot . "/ui/core/config_hub.php?tab=globals' target='_blank' class='btn-base btn-primary' style='font-size: 13px; padding: 6px 12px;'>⚙️ Configure Settings</a>";
-            echo "</div>";
-            
             // Get memory settings
             $memoryEnabled = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['ENABLED'] ?? false;
             $txtaiUrl = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['TXTAI_URL'] ?? 'Not set';
             $useText2Vec = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['USE_TEXT2VEC'] ?? false;
-            $memoryDelay = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['MEMORY_TIME_DELAY'] ?? 'Not set';
-            $memoryContextSize = $GLOBALS['FEATURES']['MEMORY_EMBEDDING']['MEMORY_CONTEXT_SIZE'] ?? 'Not set';
-            
-            // Status indicator helper
-            $statusIcon = function($enabled) {
-                return $enabled ? "<span style='color: #4caf50;'>✓ Enabled</span>" : "<span style='color: #f44336;'>✗ Disabled</span>";
+
+            $statusIcon = function ($enabled) {
+                return $enabled
+                    ? "<span style='color: #4caf50;'>Enabled</span>"
+                    : "<span style='color: #f44336;'>Disabled</span>";
             };
-            
-            echo "<div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;'>";
-            
-            // Memory System Status
-            echo "<div style='background: #2a2a2a; padding: 15px; border-radius: 5px; border: 1px solid #3a3a3a;'>";
-            echo "<div style='font-weight: bold; margin-bottom: 8px; color: rgb(242, 124, 17); font-size: 14px;'>Memory System</div>";
-            echo "<div style='font-size: 14px;'>" . $statusIcon($memoryEnabled) . "</div>";
-            echo "</div>";
-            
-            // TXT2VEC Status
-            echo "<div style='background: #2a2a2a; padding: 15px; border-radius: 5px; border: 1px solid #3a3a3a;'>";
-            echo "<div style='font-weight: bold; margin-bottom: 8px; color: rgb(242, 124, 17); font-size: 14px;'>TXT2VEC (Embeddings)</div>";
-            echo "<div style='font-size: 14px;'>" . $statusIcon($useText2Vec) . "</div>";
-            echo "<div style='font-size: 12px; color: #aaa; margin-top: 4px;'>URL: " . htmlspecialchars($txtaiUrl) . "</div>";
-            echo "</div>";
-            
-            // Memory Context Settings
-            echo "<div style='background: #2a2a2a; padding: 15px; border-radius: 5px; border: 1px solid #3a3a3a;'>";
-            echo "<div style='font-weight: bold; margin-bottom: 8px; color: rgb(242, 124, 17); font-size: 14px;'>Context Settings</div>";
-            echo "<div style='font-size: 12px; color: #f8f9fa;'>Time Delay: " . htmlspecialchars($memoryDelay) . " minutes</div>";
-            echo "<div style='font-size: 12px; color: #f8f9fa; margin-top: 4px;'>Context Size: " . htmlspecialchars($memoryContextSize) . " memories</div>";
-            echo "</div>";
-            
-            echo "</div>"; // Close grid
-            
-            // Warning if TXT2VEC is not enabled
-            if (!$useText2Vec) {
-                echo "<div style='background: #2a2a2a; border-left: 4px solid rgb(242, 124, 17); padding: 12px; margin-top: 15px; border-radius: 4px;'>";
-                echo "<strong style='color: rgb(242, 124, 17);'>⚠️ Warning:</strong> <span style='color: #f8f9fa;'>TXT2VEC is disabled. Memory embeddings will not be generated. ";
-                echo "Mind Map visualization and advanced memory search will not work. ";
-                echo "<a href='" . $webRoot . "/ui/core/config_hub.php?tab=globals' target='_blank' style='color: rgb(242, 124, 17); text-decoration: underline;'>Enable it in Global Settings</a></span>";
-                echo "</div>";
-            }
-            
-            echo "</div>"; // Close configuration panel
 
-            $results = $db->fetchAll("SELECT gamets_truncated, n, summary, companions, tags, classifier, uid, ROWID as rowid, packed_message, native_vec 
-                                    FROM memory_summary 
-                                    ORDER BY gamets_truncated DESC, rowid DESC 
-                                    LIMIT 150");
+            $results = $db->fetchAll(
+                "SELECT gamets_truncated, n, summary, companions, tags, classifier, scope, ROWID as rowid, packed_message, native_vec
+                 FROM memory_summary
+                 ORDER BY gamets_truncated DESC, rowid DESC
+                 LIMIT 150"
+            );
+            ?>
+            <div style="background: #2a2a2a; border-left: 4px solid rgb(242, 124, 17); padding: 12px 15px; border-radius: 5px; margin: 15px 0; font-size: 0.9em;">
+                <span style="color: rgb(242, 124, 17); font-weight: bold;">🧠 Memories:</span>
+                <span style="color: #f8f9fa;">Complete log of memory summaries with scope, participants, and period coverage. Use this to verify memory continuity and long-term context quality.</span>
+            </div>
 
-            $processedResults = [];
-            foreach ($results as $row) {
-                $displayHtml = "<div id='display-{$row['rowid']}'>
-                    <div class='summary-section'>
-                        <span class='summary-content'>" . nl2br(htmlspecialchars($row['summary'] ?? '')) . "</span>
-                    </div>
-                    <div class='summary-section'>
-                        <span class='summary-label'>People:</span>
-                        <span class='summary-content'>" . htmlspecialchars($row['companions'] ?? '') . "</span>
-                    </div>
-                    <div class='subcategory-section'>
-                        <span class='summary-label subcategory-label'>Tags:</span>
-                        <span class='summary-content subcategory-content'>" . htmlspecialchars($row['tags'] ?? '') . "</span>
-                    </div>
-                    <div class='subcategory-section'>
-                        <span class='summary-label subcategory-label'>Embedding:</span>
-                        <span class='summary-content subcategory-content'>" . htmlspecialchars($row['native_vec'] ?? '') . "</span>
-                    </div>
-                    <div class='button-group' style='margin-top: 10px;'>
-                        <button class='btn-base action-button edit' onclick='toggleEdit({$row['rowid']})'>Edit</button>
-                        <button class='btn-base btn-danger' onclick=\"if(confirm('Are you sure you want to delete this memory summary?')) window.location.href='events-memories.php?tab=memory&delete_memory={$row['rowid']}'\">Delete</button>
-                    </div>
-                    <div class='mt-2'>
-                        <span class='summary-label'>Packed Memory Content:</span>
-                    </div>
-                    <div class='memory-cell'>
-                        <textarea readonly class='memory-content'>" . htmlspecialchars($row['packed_message'] ?? '') . "</textarea>
-                    </div>
-                </div>";
-                
-                $displayHtml .= "<form id='edit-form-{$row['rowid']}' class='edit-form' method='post' action='events-memories.php?tab=memory'>
-                    <input type='hidden' name='rowid' value='{$row['rowid']}'>
-                    <input type='hidden' name='save_memory_edit' value='1'>
-                    <label>Summary:</label>
-                    <textarea name='summary' class='edit-textarea form-control'>" . htmlspecialchars($row['summary'] ?? '') . "</textarea>
-                    <label>Tags:</label>
-                    <input type='text' name='tags' class='edit-input form-control' value='" . htmlspecialchars($row['tags'] ?? '') . "'>
-                    <label>People:</label>
-                    <input type='text' name='companions' class='edit-input form-control' value='" . htmlspecialchars($row['companions'] ?? '') . "'>
-                    <div class='button-group' style='margin-top: 10px;'>
-                        <button type='submit' class='btn-base action-button add-new'>Save</button>
-                        <button type='button' class='btn-base btn-cancel' onclick='cancelEdit({$row['rowid']})'>Cancel</button>
-                    </div>
-                </form>";
+            <div style="background: #1a1a1a; border: 1px solid #3a3a3a; border-radius: 8px; padding: 20px; margin: 15px 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px; flex-wrap: wrap;">
+                    <h3 style="margin: 0; color: rgb(242, 124, 17); word-spacing: 5px;">Memory System Configuration</h3>
+                    <a href="<?php echo $webRoot; ?>/ui/core/config_hub.php?tab=globals" target="_blank" class="btn-base btn-primary" style="font-size: 13px; padding: 6px 12px;">Configure Settings</a>
+                </div>
 
-                $processedRow = [
-                    'RowID' => $row['rowid'],
-                    '<a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrielic Time</a>' => !empty($row['gamets_truncated']) ? convert_gamets2skyrim_long_date2($row['gamets_truncated']) : '',
-                    'ID' => $row['n'],
-                    'Classifier' => $row['classifier'],
-                    'Summary' => $displayHtml
-                ];
-                
-                $processedResults[] = $processedRow;
-            }
-            
-            // Add Memory Management buttons
-            echo "<div class='memory-management-actions' style='margin: 15px 0;'>";
-            echo "<button onclick=\"syncMemoriesConfirm()\" class='btn-base btn-primary' style='margin-right: 10px;'>🔄 Sync & Create Memory Summaries (Global + Individual)</button>";
-            echo "<button onclick=\"deleteAllMemoriesConfirm()\" class='btn-base btn-danger' style='background-color: #dc2626; font-weight: bold;'>⚠️ Delete All Memory Summaries</button>";
-            echo "<button onclick=\"fixCompanions()\" class='btn-base btn-primary' style='margin-right: 10px;'>🔄 Fix Companions field</button>";
-            echo "</div>";
-            
-            // Add JavaScript functions for confirmations
-            echo "<script>
-            function syncMemoriesConfirm() {
-                if (confirm('Will use tokens from your current AI connector. This now syncs global memories and per-NPC individual memory banks for enabled NPCs. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')) {
-                    window.location.href = '" . $webRoot . "/ui/tests/vector-compact-chromadb.php';
-                }
-            }
-            
-            function fixCompanions() {
-                if (confirm('Will NOT use tokens from your current AI connector. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')) {
-                    window.location.href = '" . $webRoot . "/ui/tests/fix_companins_field.php';
-                }
-            }
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+                    <div style="background: #2a2a2a; padding: 15px; border-radius: 5px; border: 1px solid #3a3a3a;">
+                        <div style="font-weight: bold; margin-bottom: 8px; color: rgb(242, 124, 17); font-size: 14px;">Memory System</div>
+                        <div style="font-size: 14px;"><?php echo $statusIcon($memoryEnabled); ?></div>
+                    </div>
 
-            function deleteAllMemoriesConfirm() {
-                var userInput = prompt('THIS WILL DELETE ALL SUMMARIZED MEMORIES!\\n\\nThis action cannot be undone and will remove all AI memory summaries.\\n\\nTo confirm this dangerous operation, please type exactly: Delete');
-                if (userInput === 'Delete') {
-                    window.location.href = '" . $webRoot . "/ui/tests/vector-delete-memory_summary.php';
-                } else if (userInput !== null) {
-                    alert('Operation cancelled. You must type exactly \"Delete\" to confirm.');
-                }
-            }
-            </script>";
-            
-            // Add the necessary styles
-            echo "<style>
+                    <div style="background: #2a2a2a; padding: 15px; border-radius: 5px; border: 1px solid #3a3a3a;">
+                        <div style="font-weight: bold; margin-bottom: 8px; color: rgb(242, 124, 17); font-size: 14px;">TXT2VEC (Embeddings)</div>
+                        <div style="font-size: 14px;"><?php echo $statusIcon($useText2Vec); ?></div>
+                        <div style="font-size: 12px; color: #aaa; margin-top: 4px;">URL: <?php echo htmlspecialchars($txtaiUrl); ?></div>
+                    </div>
+
+                </div>
+
+                <?php if (!$useText2Vec): ?>
+                    <div style="background: #2a2a2a; border-left: 4px solid rgb(242, 124, 17); padding: 12px; margin-top: 15px; border-radius: 4px;">
+                        <strong style="color: rgb(242, 124, 17);">Warning:</strong>
+                        <span style="color: #f8f9fa;">TXT2VEC is disabled. Memory embeddings and vector search features are unavailable.</span>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 15px 0; flex-wrap: wrap;">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" onclick="syncMemoriesConfirm()" class="btn-base action-button add-new" style="font-weight: bold;">Sync Memory Summaries Now</button>
+                </div>
+                <button type="button" onclick="deleteAllMemoriesConfirm()" class="btn-base btn-danger" style="background-color: #dc2626; font-weight: bold;">Delete All Memory Summaries</button>
+            </div>
+
+            <style>
                 .edit-form {
                     display: none;
                     padding: 15px;
@@ -1312,12 +1278,13 @@ function getTimeColor($time) {
                 }
                 .edit-textarea {
                     width: 100%;
-                    min-height: 100px;
+                    min-height: 120px;
                     margin-bottom: 5px;
-                    height: 300px;
                     background-color: #333;
                     color: #fff;
                     border: 1px solid #444;
+                    padding: 8px;
+                    border-radius: 4px;
                 }
                 .edit-input {
                     width: 100%;
@@ -1325,35 +1292,38 @@ function getTimeColor($time) {
                     background-color: #333;
                     color: #fff;
                     border: 1px solid #444;
-                    padding: 5px;
+                    padding: 8px;
+                    border-radius: 4px;
                 }
                 .memory-content {
-                    height: 100%;
-                    min-height: 150px;
+                    min-height: 120px;
+                    width: 100%;
                     overflow-y: auto;
-                    padding: 5px;
+                    padding: 8px;
                     white-space: pre-wrap;
                     word-wrap: break-word;
                     border: 1px solid #444;
                     background-color: #333;
                     color: #fff;
-                    width: 100%;
+                    border-radius: 4px;
                 }
                 .summary-section {
-                    max-width: 75vw;
                     margin-bottom: 8px;
                     padding: 5px;
                     border-bottom: 1px solid #444;
                 }
                 .subcategory-section {
-                    margin-bottom: 6px;
-                    padding: 3px 5px 3px 15px;
-                    border-bottom: 1px dotted #555;
+                    margin-top: 6px;
+                    padding: 6px 8px;
+                    border: 1px solid #444;
+                    border-radius: 4px;
                     font-size: 0.85em;
+                    background: rgba(0, 0, 0, 0.15);
                 }
                 .subcategory-label {
                     color: #aaa;
                     font-size: 0.9em;
+                    margin-right: 5px;
                 }
                 .subcategory-content {
                     color: #ddd;
@@ -1366,34 +1336,141 @@ function getTimeColor($time) {
                 }
                 .summary-content {
                     color: #fff;
+                    white-space: pre-wrap;
                 }
-            </style>";
+                .memory-details {
+                    margin-top: 8px;
+                }
+                .memory-details summary {
+                    cursor: pointer;
+                    color: #aaa;
+                    user-select: none;
+                }
+            </style>
 
-            // Add the JavaScript for edit functionality
-            echo "<script>
-                function toggleEdit(rowid) {
-                    const displayDiv = document.getElementById('display-' + rowid);
-                    const editForm = document.getElementById('edit-form-' + rowid);
-                    displayDiv.style.display = 'none';
-                    editForm.style.display = 'block';
-                }
-                
-                function cancelEdit(rowid) {
-                    const displayDiv = document.getElementById('display-' + rowid);
-                    const editForm = document.getElementById('edit-form-' + rowid);
-                    displayDiv.style.display = 'block';
-                    editForm.style.display = 'none';
-                }
-            </script>";
+            <div class="table-container">
+                <table>
+                    <thead>
+                    <tr>
+                        <th style="width:6%">ID</th>
+                        <th style="width:12%">Scope</th>
+                        <th style="width:12%">People</th>
+                        <th style="width:16%"><a href="https://en.uesp.net/wiki/Lore:Calendar" target="_blank" style="color: yellow;">Tamrielic Time</a></th>
+                        <th style="width:54%">Summary</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php if (!empty($results)): ?>
+                        <?php foreach ($results as $row): ?>
+                            <?php
+                            $rowId = intval($row['rowid'] ?? 0);
+                            $scope = trim((string)($row['scope'] ?? ''));
+                            $scope = $scope !== '' ? $scope : 'global';
+                            $people = trim((string)($row['companions'] ?? ''));
+                            $people = $people !== '' ? $people : '-';
+                            $tamrielicTime = !empty($row['gamets_truncated']) ? convert_gamets2skyrim_long_date2($row['gamets_truncated']) : '-';
+                            ?>
+                            <tr>
+                                <td><?php echo $rowId; ?></td>
+                                <td><?php echo htmlspecialchars($scope); ?></td>
+                                <td><?php echo htmlspecialchars($people); ?></td>
+                                <td><?php echo htmlspecialchars($tamrielicTime); ?></td>
+                                <td>
+                                    <div id="display-<?php echo $rowId; ?>">
+                                        <div class="summary-section">
+                                            <span class="summary-content"><?php echo nl2br(htmlspecialchars($row['summary'] ?? '')); ?></span>
+                                        </div>
 
-            if (!empty($processedResults)) {
-                print_array_as_table($processedResults);
-            } else {
-                echo "<div class='table-container'>";
-                echo "<p style='text-align: center; color: #6c757d; padding: 20px;'>No memory summaries found. Enable AUTO_CREATE_SUMMARYS to generate memory summaries.</p>";
-                echo "</div>";
+                                        <details class="memory-details">
+                                            <summary>Details</summary>
+                                            <div class="subcategory-section">
+                                                <span class="summary-label subcategory-label">Tags:</span>
+                                                <span class="summary-content subcategory-content"><?php echo htmlspecialchars($row['tags'] ?? ''); ?></span>
+                                            </div>
+                                            <div class="subcategory-section">
+                                                <span class="summary-label subcategory-label">Embedding:</span>
+                                                <span class="summary-content subcategory-content"><?php echo htmlspecialchars($row['native_vec'] ?? ''); ?></span>
+                                            </div>
+                                            <div class="subcategory-section">
+                                                <span class="summary-label subcategory-label">Packed Memory Content:</span>
+                                                <textarea readonly class="memory-content"><?php echo htmlspecialchars($row['packed_message'] ?? ''); ?></textarea>
+                                            </div>
+                                        </details>
+
+                                        <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+                                            <button type="button" class="btn-base action-button edit" onclick="toggleEdit(<?php echo $rowId; ?>)">Edit</button>
+                                            <button type="button" class="btn-base btn-danger" onclick="deleteMemoryRow(<?php echo $rowId; ?>)">Delete</button>
+                                        </div>
+                                    </div>
+
+                                    <form id="edit-form-<?php echo $rowId; ?>" class="edit-form" method="post" action="events-memories.php?tab=memory">
+                                        <input type="hidden" name="rowid" value="<?php echo $rowId; ?>">
+                                        <input type="hidden" name="save_memory_edit" value="1">
+                                        <label>Summary:</label>
+                                        <textarea name="summary" class="edit-textarea form-control"><?php echo htmlspecialchars($row['summary'] ?? ''); ?></textarea>
+                                        <label>Tags:</label>
+                                        <input type="text" name="tags" class="edit-input form-control" value="<?php echo htmlspecialchars($row['tags'] ?? ''); ?>">
+                                        <label>People:</label>
+                                        <input type="text" name="companions" class="edit-input form-control" value="<?php echo htmlspecialchars($row['companions'] ?? ''); ?>">
+                                        <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+                                            <button type="submit" class="btn-base action-button add-new">Save</button>
+                                            <button type="button" class="btn-base btn-cancel" onclick="cancelEdit(<?php echo $rowId; ?>)">Cancel</button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #6c757d; padding: 20px;">No memory summaries found.</td>
+                        </tr>
+                    <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <script>
+            function syncMemoriesConfirm() {
+                if (confirm('Will use tokens from your current AI connector. This now syncs global memories and per-NPC individual memory banks for enabled NPCs. May take a few minutes to process. DO NOT REFRESH THE WEBPAGE!')) {
+                    window.location.href = '<?php echo $webRoot; ?>/ui/tests/vector-compact-chromadb.php';
+                }
             }
-            ?>
+
+            function deleteAllMemoriesConfirm() {
+                var userInput = prompt('THIS WILL DELETE ALL SUMMARIZED MEMORIES!\n\nThis action cannot be undone and will remove all AI memory summaries.\n\nTo confirm this dangerous operation, please type exactly: Delete');
+                if (userInput === 'Delete') {
+                    window.location.href = '<?php echo $webRoot; ?>/ui/tests/vector-delete-memory_summary.php';
+                } else if (userInput !== null) {
+                    alert('Operation cancelled. You must type exactly "Delete" to confirm.');
+                }
+            }
+
+            function toggleEdit(rowid) {
+                const displayDiv = document.getElementById('display-' + String(rowid));
+                const editForm = document.getElementById('edit-form-' + String(rowid));
+                if (!displayDiv || !editForm) {
+                    return;
+                }
+                displayDiv.style.display = 'none';
+                editForm.style.display = 'block';
+            }
+
+            function cancelEdit(rowid) {
+                const displayDiv = document.getElementById('display-' + String(rowid));
+                const editForm = document.getElementById('edit-form-' + String(rowid));
+                if (!displayDiv || !editForm) {
+                    return;
+                }
+                displayDiv.style.display = 'block';
+                editForm.style.display = 'none';
+            }
+
+            function deleteMemoryRow(rowid) {
+                if (confirm('Are you sure you want to delete this memory summary?')) {
+                    window.location.href = 'events-memories.php?tab=memory&delete_memory=' + String(rowid);
+                }
+            }
+            </script>
         </div>
 
         <!-- Active Quests Tab -->

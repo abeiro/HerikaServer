@@ -46,14 +46,14 @@ $providersTts = is_array($rawSchema['TTS'] ?? null) ? $rawSchema['TTS'] : [];
 $providersStt = is_array($rawSchema['STT'] ?? null) ? $rawSchema['STT'] : [];
 $ittProviders = is_array($rawSchema['ITT'] ?? null) ? $rawSchema['ITT'] : [];
 $ttsOptions = $rawSchema['TTSFUNCTION']['values'] ?? [ 'mimic3','melotts','xtts-fastapi','xvasynth','azure','11labs','openai','koboldcpp','zonos_gradio','piper-tts','kokoro','deepgram','cartesia','inworld' ];
-$sttOptions = $rawSchema['STTFUNCTION']['values'] ?? [ 'none','whisper','localwhisper','azure','deepgram' ];
+$sttOptions = $rawSchema['STTFUNCTION']['values'] ?? [ 'none','whisper','localwhisper','azure','deepgram','gemini','parakeet','inworld' ];
 $ittOptionsRaw = $rawSchema['ITTFUNCTION']['values'] ?? [ 'openai','google_openai','openrouter','llamacpp' ];
 // Exclude llamacpp per existing ITT page behavior
 $ittOptions = array_values(array_filter($ittOptionsRaw, function($v){ return strtolower($v) !== 'llamacpp'; }));
 
 // Mappings
 $ttsMap = [ 'melotts' => 'MELOTTS','xtts-fastapi' => 'XTTSFASTAPI','chatterbox' => 'CHATTERBOX','pockettts' => 'POCKETTTS','mimic3' => 'MIMIC3','xvasynth' => 'XVASYNTH','azure' => 'AZURE','11labs' => 'ELEVEN_LABS','openai' => 'openai','kokoro' => 'KOKORO','koboldcpp' => 'koboldcpp','zonos_gradio' => 'ZONOS_GRADIO','piper-tts' => 'PIPERTTS','deepgram' => 'deepgram','cartesia' => 'CARTESIA','inworld' => 'INWORLD' ];
-$sttMap = [ 'whisper' => 'WHISPER','localwhisper' => 'LOCALWHISPER','azure' => 'AZURE','deepgram' => 'DEEPGRAM','parakeet'=>"PARAKEET" ];
+$sttMap = [ 'whisper' => 'WHISPER','localwhisper' => 'LOCALWHISPER','azure' => 'AZURE','deepgram' => 'DEEPGRAM','parakeet' => 'PARAKEET','gemini' => 'GEMINI','inworld' => 'INWORLD' ];
 $ittMap = [ 'openai' => 'openai','google_openai' => 'google_openai','openrouter' => 'openrouter' ];
 // Display name mappings for UI labels
 $ttsDisplayNames = [ 
@@ -410,25 +410,36 @@ function icon_for_field(string $flatName): string {
 
 // Curated, manually-defined global settings (exclude TTS, STT, ITT)
 $gsSections = [
-    'Prompt Settings' => [
+    'General' => [
+        [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
+        [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
+        [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
+        [ 'name' => 'CARRIAGE_DRIVERS', 'type' => 'longstring' ],
+        [ 'name' => 'FERRY_DRIVERS', 'type' => 'longstring' ],
+        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean', 'subsection' => 'Memory' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean', 'subsection' => 'Memory' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer', 'subsection' => 'Memory' ],
+        // Hidden from Global Settings UI:
+        // - MEMORY_TIME_DELAY
+        // - MEMORY_CONTEXT_SIZE
+        // - MEMORY_BIAS_A / MEMORY_BIAS_B
+    ],
+    'Prompt' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
         [ 'name' => 'EMOTEMOODS', 'type' => 'longstring' ],
-        [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
-        [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
         [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'ITEM_BLACKLIST', 'type' => 'longstring' ],
-        [ 'name' => 'CARRIAGE_DRIVERS', 'type' => 'longstring' ],
-        [ 'name' => 'FERRY_DRIVERS', 'type' => 'longstring' ],
         [ 'name' => 'EVENT_TYPE_FILTER', 'type' => 'longstring' ],
+    ],
+    'Context' => [
         [ 'name' => 'GROUND_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'INVENTORY_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
         [ 'name' => 'DISABLE_REANIMATION_TRACKING', 'type' => 'boolean', 'action' => 'clear_reanimation' ],
-        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
-        [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
-        [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
+        [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
     ],
     // NOTE: Diary section removed - AUTO_DIARY is now configured per-profile in Profile Settings
     'Global Connectors' => [
@@ -450,17 +461,6 @@ $gsSections = [
     //     // [ 'name' => 'DYNAMIC_PROMPT_GOALS', 'type' => 'longstring' ],
     // ],
     // 'Narrator' section removed - now managed via Narrator Management page (Config Hub > Narrator)
-    'Memory' => [
-        // SUMMARY_PROMPT moved to Prompts Manager
-        // [ 'name' => 'SUMMARY_PROMPT', 'type' => 'longstring' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@MEMORY_TIME_DELAY', 'type' => 'integer' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@MEMORY_CONTEXT_SIZE', 'type' => 'integer' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@MEMORY_BIAS_A', 'type' => 'number' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@MEMORY_BIAS_B', 'type' => 'number' ]
-    ],
     'Translation' => [
         [ 'name' => 'TRANSLATION_FUNCTION', 'type' => 'select', 'values' => ['none','DeepL'] ],
         [ 'name' => 'TRANSLATION@settings@translate_audio', 'type' => 'boolean' ],
@@ -686,6 +686,63 @@ function current_value(string $flatName, array $currentConf) {
     if (!$parms) return '';
     return $parms['currentValue'] ?? '';
 }
+
+function render_tts_grouped_options(array $options, string $selectedValue, array $displayNames, bool $includeDisabledGroup = false): void {
+    $recommended = ['pockettts', 'chatterbox', 'xtts-fastapi', 'inworld'];
+    $deprecated = ['mimic3', 'azure', 'deepgram', 'koboldcpp', 'kokoro'];
+    $disabled = $includeDisabledGroup ? array_values(array_filter($options, function($opt) {
+        return strtolower((string)$opt) === 'none';
+    })) : [];
+    $others = array_values(array_filter($options, function($opt) use ($recommended, $deprecated, $includeDisabledGroup) {
+        $value = strtolower((string)$opt);
+        if ($includeDisabledGroup && $value === 'none') {
+            return false;
+        }
+        return !in_array($opt, $recommended, true) && !in_array($opt, $deprecated, true);
+    }));
+    $renderOption = function($opt) use ($selectedValue, $displayNames) {
+        $selected = ((string)$selectedValue === (string)$opt) ? ' selected' : '';
+        echo '<option value="' . htmlspecialchars((string)$opt) . '"' . $selected . '>' . htmlspecialchars($displayNames[$opt] ?? $opt) . '</option>';
+    };
+
+    if (!empty($disabled)) {
+        echo '<optgroup label="— Disabled —">';
+        foreach ($disabled as $opt) {
+            $renderOption($opt);
+        }
+        echo '</optgroup>';
+    }
+
+    $recommendedAvailable = array_values(array_filter($recommended, function($opt) use ($options) {
+        return in_array($opt, $options, true);
+    }));
+    if (!empty($recommendedAvailable)) {
+        echo '<optgroup label="— Recommended —">';
+        foreach ($recommendedAvailable as $opt) {
+            $renderOption($opt);
+        }
+        echo '</optgroup>';
+    }
+
+    if (!empty($others)) {
+        echo '<optgroup label="— Others —">';
+        foreach ($others as $opt) {
+            $renderOption($opt);
+        }
+        echo '</optgroup>';
+    }
+
+    $deprecatedAvailable = array_values(array_filter($deprecated, function($opt) use ($options) {
+        return in_array($opt, $options, true);
+    }));
+    if (!empty($deprecatedAvailable)) {
+        echo '<optgroup label="— Deprecated —">';
+        foreach ($deprecatedAvailable as $opt) {
+            $renderOption($opt);
+        }
+        echo '</optgroup>';
+    }
+}
 ?>
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css?v=gs1">
@@ -717,27 +774,38 @@ function current_value(string $flatName, array $currentConf) {
     }
 
     .page-header {
-        margin: 0 0 24px 0;
-        padding: 24px;
+        margin: 0 0 16px 0;
+        padding: 14px 18px;
         background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(28, 28, 28, 0.98));
         border-radius: 10px;
         border: 1px solid #3a3a3a;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        text-align: center;
+        text-align: left;
+    }
+    .page-header-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
     }
     h1.gs-title {
-        margin: 0 0 8px 0;
+        margin: 0;
         font-family: 'MagicCards', serif;
         word-spacing: 8px;
-        font-size: 2em;
+        font-size: 1.75em;
         color: rgb(242, 124, 17);
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     }
-    .page-subtitle {
-        color: #aaa;
-        font-size: 0.95em;
-        line-height: 1.5;
-        margin: 0;
+    .page-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-left: auto;
+    }
+    .page-header-actions .tab-buttons {
+        margin-top: 0;
+        justify-content: flex-start;
     }
 
     .content-grid {
@@ -815,6 +883,17 @@ function current_value(string $flatName, array $currentConf) {
         border-bottom: 1px solid rgba(242, 124, 17, 0.2);
     }
     .provider-grid { display:grid; grid-template-columns: 1fr; gap:12px; align-items:start; }
+    .provider-subsection-title {
+        grid-column: 1 / -1;
+        margin: 8px 0 2px;
+        padding: 4px 2px 8px;
+        font-family: 'MagicCards', serif;
+        color: rgb(242,124,17);
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        letter-spacing: 0.3px;
+        border-bottom: 1px solid rgba(242, 124, 17, 0.2);
+        font-size: 1.05em;
+    }
     .provider-card { 
         background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.95)); 
         border: 1px solid #3a3a3a; 
@@ -888,6 +967,8 @@ function current_value(string $flatName, array $currentConf) {
         main { padding-left: 5%; padding-right: 5%; }
         .content-grid { grid-template-columns: 1fr; }
         .provider-grid { grid-template-columns: 1fr; }
+        .page-header-row { align-items: flex-start; }
+        .page-header-actions { margin-left: 0; width: 100%; }
     }
 
     /* Global Settings: enhance native boolean checkboxes (e.g., PLAYER_RESPEECH) */
@@ -978,19 +1059,16 @@ function current_value(string $flatName, array $currentConf) {
 
 <main>
     <div class="page-header">
-        <h1 class="gs-title">Global Settings</h1>
-        <p class="page-subtitle">Configure core system settings, connectors, and memory management</p>
-        
-        <div style="display:flex; justify-content:center; margin-top:16px; margin-bottom:12px;">
-            <button type="submit" class="btn-save-green" name="save_all" value="1" form="gs_form">Save All</button>
-        </div>
-        
-        <div class="provider-head" style="justify-content:center;">
-            <div class="tab-buttons">
+        <div class="page-header-row">
+            <h1 class="gs-title">Global Settings</h1>
+            <div class="page-header-actions">
+                <button type="submit" class="btn-save-green" name="save_all" value="1" form="gs_form">Save All</button>
+                <div class="tab-buttons">
                 <button type="button" class="tab-button active" data-gs-tab="tab-global">🌐General</button>
                 <button type="button" class="tab-button" data-gs-tab="tab-tts">🔊TTS</button>
                 <button type="button" class="tab-button" data-gs-tab="tab-stt">🎤STT</button>
                 <button type="button" class="tab-button" data-gs-tab="tab-itt">🖼️ITT</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1008,8 +1086,16 @@ function current_value(string $flatName, array $currentConf) {
                 <div class="content-section">
                     <h2><?php echo htmlspecialchars($sectionTitle); ?></h2>
                     <div class="provider-grid">
+                        <?php $lastSubsection = null; ?>
                         <?php foreach ($fields as $f): ?>
                             <?php
+                                $subsection = isset($f['subsection']) ? (string)$f['subsection'] : null;
+                                if ($subsection !== $lastSubsection) {
+                                    if (!empty($subsection)) {
+                                        echo '<div class="provider-subsection-title">' . htmlspecialchars($subsection) . '</div>';
+                                    }
+                                    $lastSubsection = $subsection;
+                                }
                                 $fname = $f['name'];
                                 $ftype = $f['type'];
                                 $current = current_value($fname, $currentConf);
@@ -1117,28 +1203,7 @@ function current_value(string $flatName, array $currentConf) {
                     <div class="provider-body grid">
                         <label for="TTSFUNCTION">TTS Selection</label>
                         <select name="TTSFUNCTION" id="TTSFUNCTION" onchange="document.getElementById('gs_tab').value='tab-tts'; this.form.submit()">
-                            <?php
-                            $ttsRecommended = ['pockettts', 'chatterbox', 'xtts-fastapi', 'inworld'];
-                            $ttsDeprecated  = ['mimic3', 'azure', 'deepgram', 'koboldcpp', 'kokoro'];
-                            $ttsOthers = array_values(array_filter($ttsOptions, function($o) use ($ttsRecommended, $ttsDeprecated) {
-                                return !in_array($o, $ttsRecommended, true) && !in_array($o, $ttsDeprecated, true);
-                            }));
-                            $renderOpt = function($opt) use ($ttsSelRender, $ttsDisplayNames) {
-                                $sel = ((string)$ttsSelRender === (string)$opt) ? ' selected' : '';
-                                echo '<option value="'.htmlspecialchars($opt).'"'.$sel.'>'.htmlspecialchars($ttsDisplayNames[$opt] ?? $opt).'</option>';
-                            };
-                            echo '<optgroup label="— Recommended —">';
-                            foreach ($ttsRecommended as $opt) { if (in_array($opt, $ttsOptions, true)) $renderOpt($opt); }
-                            echo '</optgroup>';
-                            if (!empty($ttsOthers)) {
-                                echo '<optgroup label="— Others —">';
-                                foreach ($ttsOthers as $opt) { $renderOpt($opt); }
-                                echo '</optgroup>';
-                            }
-                            echo '<optgroup label="— Deprecated —">';
-                            foreach ($ttsDeprecated as $opt) { if (in_array($opt, $ttsOptions, true)) $renderOpt($opt); }
-                            echo '</optgroup>';
-                            ?>
+                            <?php render_tts_grouped_options($ttsOptions, $ttsSelRender, $ttsDisplayNames); ?>
                         </select>
                         
                         <div></div>
@@ -1309,9 +1374,7 @@ function current_value(string $flatName, array $currentConf) {
                         <label for="TTSFUNCTION_PLAYER">Player TTS Selection</label>
                         <?php $playerTtsOptions = $rawSchema['TTSFUNCTION_PLAYER']['values'] ?? [ 'none','melotts','xtts-fastapi','chatterbox','pockettts','xvasynth','mimic3','piper-tts','azure','11labs','openai','kokoro','zonos_gradio','cartesia','inworld' ]; ?>
                         <select name="TTSFUNCTION_PLAYER" id="TTSFUNCTION_PLAYER">
-                            <?php foreach ($playerTtsOptions as $opt): ?>
-                                <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$playerFunctionSaved===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($ttsDisplayNames[$opt] ?? $opt); ?></option>
-                            <?php endforeach; ?>
+                            <?php render_tts_grouped_options($playerTtsOptions, (string)$playerFunctionSaved, $ttsDisplayNames, true); ?>
                         </select>
                         <?php if (!empty($descTtsPlayer)): ?><div class="help"><?php echo $descTtsPlayer; ?></div><?php endif; ?>
                         <label for="TTSFUNCTION_PLAYER_VOICE">Player Voice</label>
@@ -1401,11 +1464,13 @@ function current_value(string $flatName, array $currentConf) {
                                 'none'        => 'None',
                                 'parakeet'    => 'Parakeet',
                                 'deepgram'    => 'Deepgram',
+                                'inworld'     => 'Inworld',
                                 'whisper'     => 'OpenAI Whisper',
                                 'localwhisper'=> 'Local Whisper',
                                 'azure'       => 'Azure STT',
+                                'gemini'      => 'Gemini STT',
                             ];
-                            $sttRecommended = ['parakeet', 'deepgram', 'whisper', 'localwhisper'];
+                            $sttRecommended = ['parakeet', 'deepgram', 'inworld', 'whisper', 'localwhisper'];
                             $sttOthers = array_values(array_filter($sttOptions, function($o) use ($sttRecommended) {
                                 return !in_array($o, $sttRecommended, true);
                             }));
@@ -1441,8 +1506,15 @@ function current_value(string $flatName, array $currentConf) {
                         try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) { $GLOBALS['db'] = new sql(); } $apiBadges = $GLOBALS['db']->fetchAll("SELECT id,label,api_key FROM core_api_badge ORDER BY label ASC"); } catch (Throwable $_e) {}
                         foreach ($sttSchemaCur as $fname => $def): if (!is_array($def)) continue; $ftype=$def['type']??'string'; $plain='STT '.$sttKeyCur.' '.$fname; $current=$currentConf[$plain]['currentValue']??''; $help=$def['description']??'';
                             $lnameProv = strtolower($sttKeyCur);
-                            if ($fname === 'API_KEY' && in_array($lnameProv, ['whisper','azure','deepgram'])) {
-                                $badgeName = ($lnameProv==='whisper') ? 'OpenAI' : ucfirst($lnameProv);
+                            $providerBadgeMap = [
+                                'whisper' => 'OpenAI',
+                                'azure' => 'Azure',
+                                'deepgram' => 'Deepgram',
+                                'gemini' => 'Google',
+                                'inworld' => 'Inworld',
+                            ];
+                            if ($fname === 'API_KEY' && isset($providerBadgeMap[$lnameProv])) {
+                                $badgeName = $providerBadgeMap[$lnameProv];
                                 $hasKey=false; foreach ($apiBadges as $r){ if (strtolower((string)($r['label']??''))===strtolower($badgeName) && trim((string)($r['api_key']??''))!==''){ $hasKey=true; break; } }
                                 echo '<div>API Badge ('.htmlspecialchars($badgeName).')</div>';
                                 echo '<div>'.($hasKey?'<span style="color:#6dd19c">Configured</span>':'<span style="color:#ffb862">Missing</span>').' — <a href="#" onclick="try{ if(window.top){ window.top.location.href=\''.htmlspecialchars($webRoot).'/ui/core/config_hub.php?tab=keys\'; } else { window.location.href=\''.htmlspecialchars($webRoot).'/ui/core/api_badge.php?embed=1\'; } }catch(e){ window.location.href=\''.htmlspecialchars($webRoot).'/ui/core/api_badge.php?embed=1\'; } return false;">Manage Keys</a></div>';

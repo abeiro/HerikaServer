@@ -26,8 +26,10 @@ if ($STTFUNCTION == "azure") {
     require_once($enginePath . "stt" . DIRECTORY_SEPARATOR . "stt-localwhisper.php");
 } else if ($STTFUNCTION == "deepgram") {
     require_once($enginePath . "stt" . DIRECTORY_SEPARATOR . "stt-deepgram.php");
+} else if (file_exists($enginePath . "stt" . DIRECTORY_SEPARATOR . "stt-{$STTFUNCTION}.php")) {
+    require_once($enginePath . "stt" . DIRECTORY_SEPARATOR . "stt-{$STTFUNCTION}.php");
 } else {
-    $error_message = "Unknown STT function: $STTFUNCTION";
+    require_once($enginePath . "stt" . DIRECTORY_SEPARATOR . "stt-none.php");
 }
 
 ini_set('display_errors', 1);
