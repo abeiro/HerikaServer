@@ -82,7 +82,7 @@ if (!function_exists("emitPlayerMenuScriptQueueLine")) {
             return;
         }
 
-        echo "Player|ScriptQueue|{$subtitle}/////1.0\r\n";
+        echo "Player|ScriptQueue|{$subtitle}//__player_menu_tts///1.0\r\n";
         if (ob_get_level()) {
             @ob_flush();
         }
@@ -1199,10 +1199,14 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 }
 
                 $gameRequest[3] = $playerPrefix . ": " . $playerMenuLine;
-                $GLOBALS["PLAYER_TTS_WRITE_OUTPUT"] = $shouldWriteOutput;
+                $GLOBALS["PLAYER_TTS_WRITE_OUTPUT"] = false;
                 $GLOBALS["AVOID_TTS_CACHE"] = false;
 
                 require(__DIR__.DIRECTORY_SEPARATOR."player_tts.php");
+
+                if ($shouldWriteOutput && file_exists($cachePath)) {
+                    emitPlayerMenuScriptQueueLine($playerMenuLine);
+                }
             } finally {
                 $gameRequest[3] = $originalRequestText;
 
