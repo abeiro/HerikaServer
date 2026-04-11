@@ -474,20 +474,54 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
             if ($postedExt !== '') {
                 $tmp = json_decode($postedExt, true);
                 if (!is_array($tmp)) {
-                    $_POST['extended_data'] = '{}'; // Ensure valid JSON
-                } else {
-                  if (!empty($_POST["middle_term_enabled"])) { // If enabled on NPC form, but not present in extended_data
-                    $tmp["middle_term_enabled"]=1;
-                    $_POST['extended_data']=json_encode($tmp);
-                  }
-                  if (!empty($_POST["individual_memory_enabled"])) {
-                    $tmp["individual_memory_enabled"]=1;
-                    $_POST['extended_data']=json_encode($tmp);
-                  }
+                    $tmp = [];
                 }
             } else {
-                $_POST['extended_data'] = '{}';
+                $tmp = [];
             }
+
+            if (!empty($_POST["middle_term_enabled"])) { // If enabled on NPC form, but not present in extended_data
+                $tmp["middle_term_enabled"] = 1;
+            }
+
+            if (!empty($_POST["individual_memory_enabled"])) {
+                $tmp["individual_memory_enabled"] = 1;
+            }
+
+            // The UI exposes only the latest middle-term memory entry. Persist edits back into the
+            // timestamp-keyed structure used by the middle-term generator, and allow clearing it.
+            if (array_key_exists('middle_term_latest', $_POST)) {
+                $editedMiddleTerm = trim((string)$_POST['middle_term_latest']);
+                $middleTermMemory = [];
+
+                if (isset($tmp['middle_term_memory']) && is_array($tmp['middle_term_memory'])) {
+                    $middleTermMemory = $tmp['middle_term_memory'];
+                }
+
+                if (!empty($middleTermMemory)) {
+                    $latestKey = array_key_last($middleTermMemory);
+                    if ($latestKey !== null) {
+                        if ($editedMiddleTerm === '') {
+                            unset($middleTermMemory[$latestKey]);
+                        } else {
+                            $middleTermMemory[$latestKey] = $editedMiddleTerm;
+                        }
+                    }
+                } elseif ($editedMiddleTerm !== '') {
+                    // Preserve the generator's expected timestamp-keyed object shape without blocking
+                    // future summaries. A synthetic 0 key behaves as "no previous summary" for regen.
+                    $middleTermMemory = ['0' => $editedMiddleTerm];
+                }
+
+                if (!empty($middleTermMemory)) {
+                    $tmp['middle_term_memory'] = $middleTermMemory;
+                } else {
+                    unset($tmp['middle_term_memory']);
+                }
+
+            }
+
+            $_POST['extended_data'] = json_encode($tmp);
         } catch (Throwable $e) {
             $_POST['extended_data'] = '{}';
         }
@@ -1996,7 +2030,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <div class="form-item span-2">
             <label for="middle_term_latest">Recent Middle Term Memory</label>
             <textarea id="middle_term_latest" name="middle_term_latest" placeholder="No middle term memory yet."><?= htmlspecialchars($mtmLatest) ?></textarea>
-            <small class="hint">Edit the most recent middle term memory entry. Changes are saved to Extended Data → middle_term_memory (latest).</small>
+            <small class="hint">Manual edits save to the latest middle-term memory entry. Future auto-generated summaries continue appending after your edit.</small>
         </div>
 
         <?php

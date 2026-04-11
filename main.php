@@ -2228,6 +2228,16 @@ if (sizeof($memoryInjectionCtx)>0) {
 
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
+if ($GLOBALS["HERIKA_NAME"] !== "The Narrator") {
+    $contextDataHistoric = array_values(array_filter($contextDataHistoric, function($entry) {
+        if (!is_array($entry)) return true;
+        $content = isset($entry['content']) ? (string)$entry['content'] : '';
+        if (preg_match('/\(\s*(?:Talking|Whispering|Speaking loudly)\s+to\s+The Narrator(?:\s+from\s+far\s+away)?\s*\)/i', $content)) return false;
+        return true;
+    }));
+    $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
+}
+
 // If enabled, hide narrator dialogue lines from NPC prompts, but keep narrator context
 if (!empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) && $GLOBALS["HERIKA_NAME"] !== "The Narrator") {
     $isContextNarratorLine = function(string $content): bool {
