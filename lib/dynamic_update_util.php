@@ -892,12 +892,14 @@ function getDynamicProfileHistoryData($npcName) {
     }
     
     foreach (json_decode(DataSpeechJournal($npcName, $dynamicProfileContextHistory), true) as $element) {
-        if ($element["listener"] == "The Narrator") {
+        $listenerName = trim((string)($element["listener"] ?? ""));
+        $speakerName = trim((string)($element["speaker"] ?? ""));
+        if ($listenerName == "The Narrator" || $speakerName == "The Narrator") {
             continue;
         }
-        if ($lastListener != $element["listener"]) {
-            $listener = " (talking to {$element["listener"]})";
-            $lastListener = $element["listener"];
+        if ($lastListener != $listenerName) {
+            $listener = " (talking to {$listenerName})";
+            $lastListener = $listenerName;
         } else {
             $listener = "";
         }
@@ -918,7 +920,7 @@ function getDynamicProfileHistoryData($npcName) {
             $dateTime = "";
         }
         
-        $historyData .= trim("{$element["speaker"]}:".trim($element["speech"])." $listener $place $dateTime").PHP_EOL;
+        $historyData .= trim("{$speakerName}:".trim((string)($element["speech"] ?? ""))." $listener $place $dateTime").PHP_EOL;
     }
     
     return $historyData;
