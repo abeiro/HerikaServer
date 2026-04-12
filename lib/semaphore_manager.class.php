@@ -3,6 +3,11 @@
 
 class SemaphoreManager {
     protected static $semaphores = [];
+    protected static $acquired = [];
+
+    protected static function runId(): string {
+        return isset($GLOBALS["runid"]) ? (string)$GLOBALS["runid"] : '-';
+    }
 
     protected static function keyFromId(string $id): int {
         return abs(crc32($id));
@@ -13,10 +18,13 @@ class SemaphoreManager {
         if (!isset(self::$semaphores[$key]) || !self::$semaphores[$key]) {
             $sem = sem_get($key);
             if ($sem === false) {
-                Logger::warn("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} sem_get failed for key {$key} (id={$id})");
+                Logger::warn("*TRACE: [SemaphoreManager] " . self::runId() . " sem_get failed for key {$key} (id={$id})");
                 return null;
             }
             self::$semaphores[$key] = $sem;
+            if (!isset(self::$acquired[$key])) {
+                self::$acquired[$key] = false;
+            }
             // expose under given id to keep backward compatibility
             $GLOBALS["SEMAPHORES"][$id] = self::$semaphores[$key];
         }
@@ -34,7 +42,7 @@ class SemaphoreManager {
     public static function wait(string $id, int $timeout = 300, int $tick_ms = 1003, $callback = null): bool {
         $semaphore = self::get($id);
         if (!$semaphore) {
-            error_log("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} Failed to get semaphore for id '{$id}'");
+            error_log("*TRACE: [SemaphoreManager] " . self::runId() . " Failed to get semaphore for id '{$id}'");
             return false;
         }
 
@@ -48,17 +56,17 @@ class SemaphoreManager {
                 try {
                     $cb = $callback();
                     if ($cb === false) {
-                        Logger::warn("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} callback returned false, aborting wait for '{$id}'");
+                        Logger::warn("*TRACE: [SemaphoreManager] " . self::runId() . " callback returned false, aborting wait for '{$id}'");
                         return false;
                     }
                 } catch (\Throwable $e) {
-                    Logger::warn("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} callback threw: ".$e->getMessage());
+                    Logger::warn("*TRACE: [SemaphoreManager] " . self::runId() . " callback threw: ".$e->getMessage());
                 }
             }
             if ($ix > 2000) {
                 $dt = time() - $t0;
                 if ($dt > $timeout) {
-                    Logger::warn("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} wait loop break after {$dt} sec for semaphore '{$id}'");
+                    Logger::warn("*TRACE: [SemaphoreManager] " . self::runId() . " wait loop break after {$dt} sec for semaphore '{$id}'");
                     return false;
                 } else {
                     $ix = 0;
@@ -66,25 +74,35 @@ class SemaphoreManager {
             }
 
             if ($ix % 10 ===  1) {
-                Logger::warn("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} still waiting for $id after {$ix} attempts and " . (time() - $t0) . " seconds");
+                Logger::warn("*TRACE: [SemaphoreManager] " . self::runId() . " still waiting for $id after {$ix} attempts and " . (time() - $t0) . " seconds");
             }
 
             usleep($tick_us);
         }
-        Logger::info("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} Lock acquired by '{$id}'");
+        $key = self::keyFromId($id);
+        self::$acquired[$key] = true;
+        Logger::info("*TRACE: [SemaphoreManager] " . self::runId() . " Lock acquired by '{$id}'");
         return true;
     }
 
     public static function release(string $id): bool {
+        $key = self::keyFromId($id);
         $semaphore = self::get($id);
-        if ($semaphore) {
-            if (@sem_release($semaphore)) 
-                Logger::info("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} Lock released for '{$id}'");
-            /*else
-                Logger::info("*TRACE: [SemaphoreManager] {$GLOBALS["runid"]} Failed to release lock for '{$id}'");
-                */
+        if (!$semaphore) {
+            return false;
+        }
+
+        // Prevent sem_release warning when lock was never acquired in this process.
+        if (empty(self::$acquired[$key])) {
+            return false;
+        }
+
+        if (@sem_release($semaphore)) {
+            self::$acquired[$key] = false;
+            Logger::info("*TRACE: [SemaphoreManager] " . self::runId() . " Lock released for '{$id}'");
             return true;
         }
+
         return false;
     }
 }

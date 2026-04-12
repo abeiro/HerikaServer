@@ -67,7 +67,8 @@ class NpcMaster
         ];
 
         foreach ($data as $k => $v) {
-            if (empty($v)) {
+            // Preserve explicit 0/false values; only treat empty-string/null as unset.
+            if ($v === '' || $v === null) {
                 $data[$k] = null;
             }
         }
@@ -171,7 +172,8 @@ class NpcMaster
         }
 
         foreach ($data as $k => $v) {
-            if (empty($v)) {
+            // Preserve explicit 0/false values; only treat empty-string/null as unset.
+            if ($v === '' || $v === null) {
                 $data[$k] = null;
             }
         }
@@ -549,8 +551,12 @@ class NpcMaster
 
         // Decode metadata and extended_data if available
         $metadata = json_decode($currentNpcData['metadata'] ?? '{}', true);
+        $narratorManagedKeys = ['REMOVE_ASTERISKS_FROM_OUTPUT', 'INLINE_NARRATION_ENABLED', 'PRESERVE_ASTERISKS_IN_CONTEXT'];
         if (is_array($metadata)) {
             foreach ($metadata as $key => $value) {
+                if (in_array(strtoupper((string)$key), $narratorManagedKeys, true)) {
+                    continue;
+                }
                 // Handle boolean false and numeric 0 properly - empty() would skip these
                 if (! empty($value) || is_numeric($value) || is_bool($value)) {
                     // Convert string "true"/"false" to actual booleans for proper PHP evaluation
@@ -567,13 +573,16 @@ class NpcMaster
         }
 
         // Apply extended_data overrides (highest precedence - NPC level)
-        // Reserved keys are excluded (middle_term_memory, middle_term_enabled, chim_core_migrated)
-        $reservedKeys = ['middle_term_memory', 'middle_term_enabled', 'chim_core_migrated'];
+        // Reserved keys are excluded (system fields managed by dedicated subsystems/toggles)
+        $reservedKeys = ['middle_term_memory', 'middle_term_enabled', 'individual_memory_enabled', 'chim_core_migrated'];
         $extendedData = json_decode($currentNpcData['extended_data'] ?? '{}', true);
         if (is_array($extendedData)) {
             foreach ($extendedData as $key => $value) {
                 // Skip reserved system keys
                 if (in_array($key, $reservedKeys, true)) {
+                    continue;
+                }
+                if (in_array(strtoupper((string)$key), $narratorManagedKeys, true)) {
                     continue;
                 }
                 // Apply override to GLOBALS
@@ -608,6 +617,9 @@ class NpcMaster
                 }
             }
         }
+
+        // This behavior is now always enabled.
+        $GLOBALS['ENFORCE_ACTIONS_PROMPT'] = true;
 
     }
 

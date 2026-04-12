@@ -1323,6 +1323,22 @@ if ($checkVersion("memory_summary")<20250331001) {
     Logger::info("Applied patch memory_summary 20250331001");
 }
 
+// add memory_summary scope support (global by default in current system)
+if ($checkVersion("memory_summary")<20260319001) {
+    $scopeColumn = $db->fetchOne("
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'memory_summary' AND column_name = 'scope'
+    ");
+
+    if (!isset($scopeColumn["column_name"]) || !$scopeColumn["column_name"]) {
+        $db->execQuery('ALTER TABLE "memory_summary" ADD COLUMN "scope" text');
+    }
+
+    $updateVersion("memory_summary",20260319001);
+    Logger::info("Applied patch memory_summary 20260319001");
+}
+
 if ($checkVersion("oghma_dynamic")<20250310001) {
     $db->execQuery(file_get_contents(__DIR__."/../data/oghma_dynamic.sql"));
     $updateVersion("oghma_dynamic",20250310001);
@@ -1484,6 +1500,67 @@ if ($checkVersion("rolemaster")<20250528001) {
     $db->execQuery("ALTER TABLE public.responselog ALTER COLUMN \"text\" TYPE text");
     $updateVersion("rolemaster",20250528001);
     Logger::info("Applied patch rolemaster 20250528001");
+}
+
+if ($checkVersion("quest_reference_data")<20260323001) {
+    Logger::debug("try patch: quest_reference_data 20260323001");
+    $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data.sql"));
+    $updateVersion("quest_reference_data",20260323001);
+    Logger::info("Applied patch quest_reference_data 20260323001");
+}
+
+if ($checkVersion("quest_reference_data")<20260323002) {
+    Logger::debug("try patch: quest_reference_data 20260323002 (array support)");
+    $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_arrays.sql"));
+    $updateVersion("quest_reference_data",20260323002);
+    Logger::info("Applied patch quest_reference_data 20260323002 (array support)");
+}
+
+if ($checkVersion("quest_reference_data")<20260323003) {
+    Logger::debug("try patch: quest_reference_data 20260323003 (array insert defaults)");
+    $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_arrays.sql"));
+    $updateVersion("quest_reference_data",20260323003);
+    Logger::info("Applied patch quest_reference_data 20260323003 (array insert defaults)");
+}
+
+if ($checkVersion("quest_reference_data")<20260323004) {
+    Logger::debug("try patch: quest_reference_data 20260323004 (consolidate array rows)");
+    $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_consolidate.sql"));
+    $updateVersion("quest_reference_data",20260323004);
+    Logger::info("Applied patch quest_reference_data 20260323004 (consolidate array rows)");
+}
+
+if ($checkVersion("quest_reference_data")<20260323005) {
+    Logger::debug("try patch: quest_reference_data 20260323005 (canonical hex formids)");
+    $a = $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_hex.sql"));
+    if ($a) {
+        $updateVersion("quest_reference_data",20260323005);
+        Logger::info("Applied patch quest_reference_data 20260323005 (canonical hex formids)");
+    } else {
+        Logger::error("Patch quest_reference_data 20260323005 failed!");
+    }
+}
+
+if ($checkVersion("quest_reference_data")<20260323006) {
+    Logger::debug("try patch: quest_reference_data 20260323006 (json-only formids)");
+    $a = $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_json_only.sql"));
+    if ($a) {
+        $updateVersion("quest_reference_data",20260323006);
+        Logger::info("Applied patch quest_reference_data 20260323006 (json-only formids)");
+    } else {
+        Logger::error("Patch quest_reference_data 20260323006 failed!");
+    }
+}
+
+if ($checkVersion("quest_reference_data")<20260323007) {
+    Logger::debug("try patch: quest_reference_data 20260323007 (drop unsupported location datasets)");
+    $a = $db->execQuery(file_get_contents(__DIR__."/../data/quest_reference_data_drop_unused.sql"));
+    if ($a) {
+        $updateVersion("quest_reference_data",20260323007);
+        Logger::info("Applied patch quest_reference_data 20260323007 (drop unsupported location datasets)");
+    } else {
+        Logger::error("Patch quest_reference_data 20260323007 failed!");
+    }
 }
 
 
@@ -2319,6 +2396,24 @@ $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS factions t
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS is_interior int");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS vanilla_location boolean");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS coords POINT ");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS refs text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS cleared boolean");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP");
+$db->execQuery("
+CREATE OR REPLACE VIEW locations_v
+as
+select * FROM  locations
+where
+case 
+  when formid=102771 and cleared=FALSE then FALSE -- Dustman's Cairn is closed until The Companions quest, 'Proving Honor' has been activated
+  ELSE TRUE
+END");
+
+$db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS vendor_cont TEXT");
+$db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS stock JSONB");
+$db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS gold numeric");
+$db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS player_rank numeric");
+
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS title text");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS stage text");
 $db->execQuery("ALTER TABLE public.named_cell ADD COLUMN IF NOT EXISTS worldspace text");
@@ -2380,6 +2475,28 @@ WHERE gamets > 0");
 // Prompts Table - System for managing default and custom prompts
 // Version 20251110001
 //----------------------------------------------------
+
+try {
+    if ($checkTableExists("prompts") == 1) {
+        $db->execQuery("DELETE FROM public.prompts WHERE prompt_key IS NULL OR btrim(prompt_key) = ''");
+        $db->execQuery("
+            DELETE FROM public.prompts a
+            USING public.prompts b
+            WHERE a.prompt_key = b.prompt_key
+              AND a.ctid < b.ctid
+        ");
+        $db->execQuery("CREATE UNIQUE INDEX IF NOT EXISTS idx_prompts_prompt_key_unique ON public.prompts (prompt_key)");
+
+        $promptCountRow = $db->fetchOne("SELECT COUNT(*) AS count FROM public.prompts");
+        $promptCount = intval($promptCountRow["count"] ?? 0);
+        if ($promptCount === 0 && $checkVersion("prompts") >= 20251110001) {
+            Logger::warn("Prompts table is empty but migration version is marked as applied. Clearing prompts version entry so seed migrations can rerun.");
+            $db->execQuery("DELETE FROM public.database_versioning WHERE tablename='prompts'");
+        }
+    }
+} catch (Throwable $e) {
+    Logger::warn("Prompts migration self-heal check failed: " . $e->getMessage());
+}
 
 if ($checkVersion("prompts")<20251110001) {
     Logger::debug("Applying prompts table 20251110001");
@@ -3274,6 +3391,37 @@ if ($checkVersion("prompts")<20260203001) {
     
     $updateVersion("prompts", 20260203001);
     Logger::info("Applied patch prompts 20260203001 - Added inline_narration_prompt");
+}
+
+//----------------------------------------------------
+// PLAYER SPEECH STYLE GENERATION PROMPT
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20260327001) {
+    Logger::debug("Applying prompts table 20260327001 - Adding player_speech_style_prompt");
+    
+    $playerSpeechStylePrompt = $db->escape(
+        "Generate a practical speech style prompt for {PLAYER_NAME} using recent dialogue and optional guidance. "
+        . "Write exactly one paragraph (3-5 sentences) that can be used directly to rewrite player dialogue in roleplay. "
+        . "Capture vocabulary, tone, cadence, formality, recurring phrases, and interpersonal style. "
+        . "Stay grounded in the dialogue samples and guidance. Do not use bullet points, labels, or headings."
+    );
+    
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'player_speech_style_prompt',
+            '$playerSpeechStylePrompt',
+            'Prompt for generating player speech style from recent player input events and optional user guidance. Supports placeholders: {PLAYER_NAME}, {PLAYER_GUIDANCE}, {CURRENT_SPEECH_STYLE}, {DIALOGUE_SAMPLES}. Used in: ui/cmd/action_player_generate_speech_style.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $updateVersion("prompts", 20260327001);
+    Logger::info("Applied patch prompts 20260327001 - Added player_speech_style_prompt");
 }
 
 //----------------------------------------------------

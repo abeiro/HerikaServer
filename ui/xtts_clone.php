@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // Get the relative web path from document root to our application
 $scriptPath = $_SERVER['SCRIPT_NAME'];
 $webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
@@ -2111,9 +2111,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="page-header">
         <h1>Voice Management 
-            <a href="https://dwemerdynamics.hostwiki.io/en/Auto-TTS-Voices" target="_blank" rel="noopener" 
-               class="info-link" 
-               title="View detailed documentation about TTS Voice Configuration">ℹ</a>
         </h1>
         <p class="page-subtitle">Manage voice samples across multiple TTS providers: XTTS, Chatterbox, PocketTTS, Cartesia, and Inworld</p>
         <p class="page-note"><strong>Note:</strong> XTTS, Chatterbox, and PocketTTS all use the same API endpoint (port 8020). They share the same voice samples - no need to resync when switching between them.</p>
@@ -2823,3 +2820,4 @@ $title = $TITLE;
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 ?>
+

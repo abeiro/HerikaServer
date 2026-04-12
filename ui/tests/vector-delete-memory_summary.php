@@ -37,11 +37,6 @@ if (isset($_SESSION["PROFILE"])) {
 
 error_reporting(E_ALL);
 
-$embedding = $FEATURES["MEMORY_EMBEDDING"]["TEXT2VEC_PROVIDER"];
-
-//Run the Compact Command
-$commandcompact = 'php /var/www/html/HerikaServer/debug/util_memory_subsystem.php compact noembed';
-$commandcompact = shell_exec($commandcompact);
 echo '<link rel="stylesheet" type="text/css" href="../css/main.css">';
 
 session_start();

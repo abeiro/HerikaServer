@@ -75,7 +75,7 @@ if ($method === "POST") {
         }
 
         foreach ($journalArray as $element) {
-            if ($element["listener"] == "The Narrator") {
+            if (($element["listener"] ?? '') == "The Narrator" || ($element["speaker"] ?? '') == "The Narrator") {
                 continue;
             }
             if ($lastListener != $element["listener"]) {

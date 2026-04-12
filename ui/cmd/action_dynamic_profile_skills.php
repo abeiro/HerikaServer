@@ -66,7 +66,7 @@ if ($method === "POST") {
         $lastDateTime = "";
  
         foreach (json_decode(DataSpeechJournal($jsonDataInput["HERIKA_NAME"], $dynamicProfileContextHistory), true) as $element) {
-            if ($element["listener"] == "The Narrator") {
+            if (($element["listener"] ?? '') == "The Narrator" || ($element["speaker"] ?? '') == "The Narrator") {
                 continue;
             }
             if ($lastListener != $element["listener"]) {

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // Get the relative web path from document root to our application
 $scriptPath = $_SERVER['SCRIPT_NAME'];
 $webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
@@ -7,7 +7,7 @@ $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
-$TITLE = "📙CHIM - Oghma Infinium";
+$TITLE = "&#x1F4D9; CHIM - Oghma Infinium";
 
 ob_start();
 
@@ -1379,11 +1379,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <h1 id="page-title">
             <img src="<?php echo $webRoot; ?>/ui/images/oghma_infinium.png" alt="Oghma Infinium" style="vertical-align:bottom;" width="32" height="32"> 
             <span id="title-text">Oghma Infinium</span>
-            <a href="https://dwemerdynamics.hostwiki.io/en/Oghma-Infinium-(RAG)" target="_blank" rel="noopener" 
-               style="display: inline-block; margin-left: 15px; color: rgb(242, 124, 17); text-decoration: none; font-size: 0.7em; vertical-align: top; border: 2px solid rgb(242, 124, 17); border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 20px; transition: all 0.3s ease;" 
-               title="View detailed documentation about Oghma Infinium"
-               onmouseover="this.style.background='rgb(242, 124, 17)'; this.style.color='white';" 
-               onmouseout="this.style.background='transparent'; this.style.color='rgb(242, 124, 17)';">ℹ</a>
         </h1>
         
         <div id="header-content">
@@ -1391,14 +1386,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <div id="oghma-header-content">
                 <p>The <b>Oghma Infinium</b> is a "Skyrim Encyclopedia" that AI NPC's will use to help them roleplay.</p>
                 <p>This is done by detecting topics during conversations, and injecting the appropriate information into the AI's prompt.</p>
-                <p>To use it you must have <b>[MINIME_T5]</b> and <b>[OGHMA_INFINIUM]</b> enabled in the default profile. You also need Minime-T5 installed and running.</p>
                 
                 <h3><strong>Ensure all topic titles are lowercase and spaces are replaced with underscores (_).</strong></h3>
                 <h4>Example: "Fishy Stick" becomes "fishy_stick"</h4>
                 <p>For Knowledge Class, we recommend you read this: <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer">Project Oghma</a></p>
                 
                 <div class="logic-section">
-                    <h3 class="logic-title">🔍 Article Search Logic</h3>
+                    <h3 class="logic-title">&#x1F50D; Article Search Logic</h3>
                     <div class="logic-steps">
                         <div class="logic-step">
                             <div class="step-number">1</div>
@@ -1448,10 +1442,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <!-- Tab Navigation -->
     <div class="tab-navigation">
         <button class="tab-button active" onclick="switchTab('oghma-tab')">
-            📚 Oghma Infinium
+            &#x1F4DA; Oghma Infinium
         </button>
         <button class="tab-button" onclick="switchTab('dynamic-tab')">
-            ⚡ Dynamic Oghma
+            &#x26A1; Dynamic Oghma
         </button>
     </div>
 
@@ -1476,8 +1470,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             <div class="content-section">
                 <h2>Database Management</h2>
-                <p>Verify uploads: <br><b>Server Actions → Database Manager → dwemer → public → oghma</b></p>
-                <p>View conversation usage: <br><b>Server Actions → Database Manager → dwemer → public → audit_memory</b></p>
+                <p>Verify uploads: <br><b>Server Actions &rarr; Database Manager &rarr; dwemer &rarr; public &rarr; oghma</b></p>
+                <p>View conversation usage: <br><b>Server Actions &rarr; Database Manager &rarr; dwemer &rarr; public &rarr; audit_memory</b></p>
                 
                 <div class="button-group" style="margin-top: 20px;">
                     <form action="" method="post" style="display: inline;">
@@ -1524,7 +1518,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
             ?>
             
-            <h2 id="entries">📋 Oghma Infinium Entries</h2>
+            <h2 id="entries">&#x1F4CB; Oghma Infinium Entries</h2>
             
             <div class="action-container">
                 <button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>
@@ -1557,8 +1551,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     if ($letter) $baseUrl .= 'letter=' . urlencode($letter) . '&';
                     ?>
                     <div style="margin-top: 10px;">
-                        <a class="alphabet-button" href="<?php echo $baseUrl; ?>order=asc#entries">🔼 Ascending</a>
-                        <a class="alphabet-button" href="<?php echo $baseUrl; ?>order=desc#entries">🔽 Descending</a>
+                        <a class="alphabet-button" href="<?php echo $baseUrl; ?>order=asc#entries">&#x1F53C; Ascending</a>
+                        <a class="alphabet-button" href="<?php echo $baseUrl; ?>order=desc#entries">&#x1F53D; Descending</a>
                     </div>
                 </div>
             </div>
@@ -1652,8 +1646,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             echo '<table>';
             echo '<tr>
                     <th>Topic</th>
-                    <th>Topic Description</th>
-                    <th>Knowledge Class</th>
+                    <th>Topic Description (Advanced)</th>
+                    <th>Knowledge Class (Advanced)</th>
                     <th>Topic Description (Basic)</th>
                     <th>Knowledge Class (Basic)</th>
                     <th>Tags</th>
@@ -1770,8 +1764,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             <div class="content-section">
                 <h2>Database Management</h2>
-                <p>Verify uploads: <br><b>Server Actions → Database Manager → dwemer → public → oghma_dynamic</b></p>
-                <p>View conversation usage: <br><b>Server Actions → Database Manager → dwemer → public → audit_memory</b></p>
+                <p>Verify uploads: <br><b>Server Actions &rarr; Database Manager &rarr; dwemer &rarr; public &rarr; oghma_dynamic</b></p>
+                <p>View conversation usage: <br><b>Server Actions &rarr; Database Manager &rarr; dwemer &rarr; public &rarr; audit_memory</b></p>
                 
                 <div class="button-group" style="margin-top: 20px;">
                     <form action="" method="post" style="display: inline;">
@@ -1782,7 +1776,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </div>
         </div>
         <div class="full-width-section">
-            <h2 id="dynamic">📋 Dynamic Oghma Entries</h2>
+            <h2 id="dynamic">&#x1F4CB; Dynamic Oghma Entries</h2>
             
             <div class="action-container">
                 <button onclick="openNewDynamicEntryModal()" class="action-button add-new">Add New Dynamic Entry</button>

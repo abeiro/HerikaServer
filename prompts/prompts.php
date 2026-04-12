@@ -9,8 +9,8 @@ function shouldTriggerRPGComment($eventType) {
         return false;
     }
     
-    // Get the trigger chance percentage (default 100%)
-    $chance = 100;
+    // Get the trigger chance percentage (default 50%)
+    $chance = 50;
     if (isset($GLOBALS["RPG_COMMENTS_CHANCE"])) {
         $chance = intval($GLOBALS["RPG_COMMENTS_CHANCE"]);
     }
@@ -162,6 +162,11 @@ $PROMPTS=array(
             // Prompt is implicit
 
     ],
+    "narrator_inputtext"=>[
+        "cue"=>[
+            "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+        ]
+    ],
     "inputtext_s"=>[
         "cue"=>[
             "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
@@ -225,6 +230,12 @@ $PROMPTS=array(
                 :"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Focus on one actor. {$GLOBALS["TEMPLATE_DIALOG"]}"
         ]
         
+    ],
+    "continue"=>[
+        "cue"=>[
+            "Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Continue the ongoing discussion. Build on what was just said. {$GLOBALS["TEMPLATE_DIALOG"]}"
+        ],
+        "player_request"=>["{$GLOBALS["PLAYER_NAME"]} gestures for {$GLOBALS['HERIKA_NAME']} to continue."]
     ],
     // Database Prompt (Diary)
     "diary"=>[ 

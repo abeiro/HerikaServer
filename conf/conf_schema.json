@@ -3,9 +3,9 @@
   "DBDRIVER": {"userlvl":"wip","type":"select","values":["postgresql"],"description":"Do not change."},
   "AUTOMATIC_DATABASE_BACKUPS": {"userlvl":"basic","type":"boolean","scope":"global","description":"Automatically create database backups every time the server starts up. Keeps a maximum of 5 backups, automatically deleting the oldest when the limit is reached."},
   "LOCK_PROFILE": {"userlvl":"basic","type":"boolean","description":"When enabled, this profile will be skipped when using 'Copy to All Profiles' functionality. It will also not be deleted when you Delete All Character Profiles. Can not be toggled for the default profile."},
+  "AUTO_LOCK_PROFILE": {"userlvl":"basic","type":"boolean","scope":"global","description":"When enabled, saving an NPC profile in CHIM NPC page automatically locks it to prevent history updates from overwriting manual edits."},
   "HERIKA_NAME": {"userlvl":"basic","type":"string","description":"NPC Name. MUST MATCH their Skyrim in-game NPC name!<br>If you are in the default profile <b>YOU MUST</b> leave it as <i>The Narrator</i>!<br><b>You can change profiles by clicking the blue button in the top left.</b>"},
   "PROMPT_HEAD": {"userlvl":"pro","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
-  "PLAYER_BIOS": {"userlvl":"pro","type":"longstring","description":"Player character description. Any info here will be known by all AI NPC's."},
   "PLAYER_SPEECH_STYLE":{"type":"longstring","description":"Instructions for how the player character speaks and communicates. This will be used as context when rewriting player dialogue.","scope":"global"},
   "PROMPT_TIMESTAMP": {"userlvl":"basic","type":"boolean","description":"Add rough timestamp subdividers to event context (e.g., 'Moments Ago', 'A while ago') to help the AI NPCs understand when events happend.","scope":"global"},
   "use_emotions_expression": {"userlvl":"basic","type":"boolean","description":"Emotions expression support.","scope":"global"},
@@ -24,8 +24,7 @@
   "DIARY_COOLDOWN": {"userlvl":"basic","type":"integer","description":"Cooldown period in seconds between diary entries to prevent spam. Each NPC has their own independent cooldown timer.","scope":"global"},
   "AUTO_DIARY_ENABLED": {"userlvl":"basic","type":"boolean","description":"Automatically generate diary entries when NPCs are nearby during sleep events. NPCs using this profile will have auto diary enabled by default.","scope":"profile"},
   "AUTO_DIARY_WAIT_ENABLED": {"userlvl":"basic","type":"boolean","description":"When Auto Diary is enabled, this controls whether diary entries are created during wait events. If disabled, auto diary will only trigger on sleep events.","scope":"profile"},
-  "MINIME_T5":{"userlvl":"basic","type":"boolean","scope":"global","description":"Enable Minime-T5 LLM. Helps dumber LLM's be more accurate with action and memory functions. Must be installed in the CHIM Launcher. <br> <strong> Must be configured in default profile and only works in English!</strong>"},
-  "OGHMA_INFINIUM": {"type":"boolean","userlvl":"basic","description":"Tamriel lore information will be added to the prompt, enhancing their understanding on specific topics. Requires either MINIME_T5 or OGHMA_CUSTOM to be enabled."},
+  "OGHMA_INFINIUM": {"type":"boolean","userlvl":"basic","description":"Tamriel lore information will be added to the prompt, enhancing their understanding on specific topics. MiniMe-T5 is auto-detected when its service is running, or you can use OGHMA_CUSTOM."},
   "OGHMA_CUSTOM": {"type":"boolean","userlvl":"basic","description":"Use custom LLM for Oghma topic extraction instead of MiniMe T5. Allows for custom prompt via Prompts Manager.","scope":"global"},
   "OGHMA_KNOWLEDGE": {"type":"string","userlvl":"basic","description":"Knowledge Classes assigned to the NPC. Effects what articles they can access in the Oghma database. If you want to add more make sure they are comma separated. Recommend to leave as default." ,"helpurl":"https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?gid=338893641#gid=338893641"},
   "OGHMA_AMOUNT": {"type":"select","values":["1","2","3"],"userlvl":"basic","description":"Number of Oghma keywords to extract from each response. More keyword extraction will mean longer response times."},
@@ -57,6 +56,8 @@
   "MAGIC_EVENT_BLACKLIST": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated list of magic event names to exclude from logging (e.g. 'Administer Mixture, [BFCO-AttackSwingFX] 0.5/1.5, Healing')."},
   "LOCATION_BLACKLIST": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated list of location names to exclude from Points of Interest context (e.g. 'Dark Brotherhood Sanctuary, Twilight Sepulcher')."},
   "ITEM_BLACKLIST": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated list of item/armor names to exclude from dynamic context (e.g. 'Iron Sword, Leather Armor, Health Potion')."},
+  "CARRIAGE_DRIVERS": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated NPC names that can offer carriage fast travel (e.g. 'Bjorlam, Alfarinn, Kibell')."},
+  "FERRY_DRIVERS": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated NPC names that can offer ferry fast travel (e.g. 'Gort, Harlaug, Jolf')."},
   "EVENT_TYPE_FILTER": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated list of event types to exclude from context generation (e.g. 'death, itemfound, spellcast')."},
   "GROUND_ITEMS_DESCRIPTIONS_ONLY": {"userlvl":"basic","type":"boolean","scope":"global","description":"Only show nearby ground items in context that have descriptions in the description manager."},
   "INVENTORY_ITEMS_DESCRIPTIONS_ONLY": {"userlvl":"basic","type":"boolean","scope":"global","description":"Only show inventory items in context that have descriptions in the description manager."},
@@ -66,7 +67,7 @@
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the CHIM Server. Leave it blank for English."},
   "LANG_LLM_XTTS": {"userlvl":"pro","type":"boolean","description":"XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language."},
   "HTTP_TIMEOUT": {"userlvl":"pro","type":"integer","description":"Timeout for AI requests. "},
-  "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Enforce a word limit for AI's responses. Leave as 0 to have no limit."},
+  "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Attempt to enforce a word limit for AI's responses. Leave as 0 to have no limit."},
   "JSON_DIALOGUE_FORMAT_REORDER": {"type":"boolean","userlvl":"pro","description":"Reorders properties in the output JSON schema. AI generates an action first, then a dialogue comment. Some users report this improves actions performance."},
   "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"Default list of moods passed to LLM (comma separated). Can be overridden per-NPC in CHIM NPCs. Some moods will trigger animations if enabled.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features"},
   "REMOVE_ASTERISKS_FROM_OUTPUT": {"userlvl":"basic","type":"boolean","description":"Remove text between **, like *couch*, *smiles*...", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features"},
@@ -81,11 +82,11 @@
   "DYNAMIC_PROMPT_GOALS": {"userlvl":"basic","type":"longstring","description":"Instructions for updating NPC goals and aspirations based on story developments and achievements.","scope":"global"},
   "DIARY_PROMPT": {"userlvl":"basic","type":"longstring","description":"Instructions for generating diary entries. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the DIARY connector you are using.","scope":"global"},
   "CONNECTORS": {"type":"selectmultiple","values":["openaijson","google_openaijson","web_connector","koboldcppjson","openrouterjson","openai","koboldcpp","openrouter","player2json"],"description":"AI Service(s) to be used for most AI features.<br>Select the service(s) you have configured for AI/LLM Connectors below.<br><strong>Non JSON connectors are legacy and no longer supported. We can not debug or fix any issues you have with them!</strong><br><br>Make sure to click the <strong>Current AI Service</strong> button at the top of the page if you change connectors!","_title":"AI/LLM Connectors Selection"},
-  "CONNECTORS_DIARY": {"type":"select","values":["openrouter","openai","google_openaijson","koboldcpp"],"description":"Is one of the SUMMARY connectors. Used for creating diary entries, dynamic profiles and summarized memories!<br><br><strong>You will need to place your API key in the (SUMMARY) connector for this to work!</strong>"},
+  "CONNECTORS_DIARY": {"type":"select","values":["openrouter","openai","google_openaijson","koboldcpp"],"description":"Connector used for diary-related generation (manual diary, auto-diary, and dynamic profile updates).<br><br><strong>This is separate from long-term memory recall and memory summary compaction.</strong>"},
   "HERIKA_DYNAMIC": {"userlvl":"basic","type": "longstring","description": "Deprecated. Use the new fields listed above instead."},
   "CORE_CONNECTOR_DIRECTOR": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for Director mode. Recommend to use a 💪Powerful LLM."},
   "CORE_CONNECTOR_PLAYER": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for player re-speech. Recommend to use a very 🏃‍♀️‍➡️Fast LLM."},
-  "CORE_CONNECTOR_SUMMARY": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for creating memory summaries. Recommend to use a smaller LLM."},
+  "CORE_CONNECTOR_SUMMARY": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for generating and compacting memory summaries that power long-term memory recall. Recommend using a smaller LLM."},
   "CORE_CONNECTOR_MEDIUMTERM": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to generate longer memories summaries after every 10 memory summaries. Can be enabled in CHIM NPC page. Recommend to user a smaller LLM."},
   "CORE_CONNECTOR_PROFILES": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to update CHIM NPC Dynamic Profiles. Recommend to use a 🕹️Standard LLM.","scope":"global"},
   "CORE_CONNECTOR_OGHMA_CUSTOM": {"userlvl": "basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for custom Oghma LLM topic extraction. Will be slower than MiniMe T5 and slow down responses. Recommend to use a very very 🏃‍♀️‍➡️Fast LLM.","scope": "global"},
@@ -422,7 +423,7 @@
   },
   "PLAYER_RESPEECH":{"type":"boolean","description":"Allows the AI to rewrite player speech with Chat Assist & Creation modes.","scope":"global"},
   "STTFUNCTION": {
-    "type":"select","values":["none","whisper","localwhisper","azure","deepgram","parakeet"],"description":"Speech-to-Text service options. Translates your voice to text.", 
+    "type":"select","values":["none","whisper","localwhisper","azure","deepgram","gemini","parakeet","inworld"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service","scope":"global"
     },
   "STT": {
@@ -448,9 +449,19 @@
       "API_KEY": {"type":"apikey","description":"Deepgram API key.","code":"DEEPGRAM_API_KEY"},
       "LANG":{"type":"string","description":"Language"},
       "MODEL":{"type":"select","values":["nova-3","nova-2","whisper-medium","enhanced","nova","base"],"description":"Model to use"}
+    }, "GEMINI": {
+      "_title":"Google Gemini STT + Emotion Detection",
+      "API_KEY": {"type":"apikey","description":"Google AI API key (from aistudio.google.com).","code":"GEMINI_API_KEY"},
+      "LANG": {"type":"string","description":"Language (e.g., en, es, ja)"},
+      "MODEL": {"type":"select","values":["gemini-2.5-flash","gemini-2.5-flash-lite","gemini-2.5-pro"],"description":"Gemini model. 2.5 Flash recommended for best speed and quality."}
     }, "PARAKEET": {
       "_title":"parakeet-api-server",
       "LANG": {"type":"string","description":"Language to detect for STT."}
+    }, "INWORLD": {
+      "_title":"Inworld STT",
+      "API_KEY": {"type":"apikey","description":"Inworld API key. Can also be managed from API Badge under Inworld.","code":"INWORLD_API_KEY"},
+      "MODEL_ID": {"type":"string","description":"Model identifier in provider/model format, e.g. groq/whisper-large-v3."},
+      "LANGUAGE": {"type":"string","description":"Language code in BCP-47 format, e.g. en-US. Leave blank for auto-detect."}
     }
   },
   "ITTFUNCTION": {
@@ -500,13 +511,15 @@
     "_title":"Memory Configuration",
     "MEMORY_EMBEDDING": {
       "_title":"Memory Settings",
-      "ENABLED": {"type":"boolean","description":"<Strong>Make sure CONNECTORS_DIARY is setup!</strong> Enable long term memory. It will provide the most relevant memory with every AI response to be used as context."},
+      "ENABLED": {"type":"boolean","description":"Enable long-term memory recall. The system injects relevant memory summaries into AI context for responses."},
       "TXTAI_URL": {"type":"url","description":"TXT2VEC from DwemerDistro. Make sure its set to http://127.0.0.1:8082"},
       "USE_TEXT2VEC": {"type":"boolean","description":"Use TXT2VEC to create embeddings for memories. These are more accurate than keywords."},
       "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to delay before using a memory in a prompt. Used to avoid pushing recent dialogues as memories."},
       "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"The amount of the most relevant memory records that will be injected into the prompt."},
       "AUTO_CREATE_SUMMARYS": {"type":"boolean","description":"Will combine individual memory logs into larger ones. Is more accurate for memory recollection but will use up more tokens. If using koboldcpp, use the multiuser mode to avoid locking."},
       "AUTO_CREATE_SUMMARY_INTERVAL": {"type":"integer","description":"Time frame used to pack summary data. 10 = 13 in-game hours | 5 = 7.5 in-game hours etc"},
+      "AUTO_CREATE_SUMMARY_MIN_EVENTS": {"type":"integer","description":"Minimum number of events required in a packed time bucket before creating a global memory summary. Default: 5"},
+      "INDIVIDUAL_MEMORY_SUMMARY_THRESHOLD": {"type":"integer","description":"How many global memory summaries involving an NPC are required before creating one NPC-scoped individual memory summary. Default: 3"},
       "MEMORY_BIAS_A": {"type":"number","description":"From 0 (never) to 100 (always). Minimal distance to offer memory."},
       "MEMORY_BIAS_B": {"type":"number","description":"From 0 (never) to 100 (always). Minimal distance to offer and endorse memory."}
       

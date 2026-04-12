@@ -1043,6 +1043,7 @@ CREATE TABLE public.memory_summary (
     companions text,
     embedding768 public.vector(768),
     tags text,
+    scope text,
     native_vec tsvector
 );
 
@@ -1667,7 +1668,7 @@ INSERT INTO public.animations VALUES ('sarcastic', 'IdleDialogueExpressiveStart,
 
 INSERT INTO public.database_versioning VALUES ('sql_gamets_convert_functions', 20250226001);
 INSERT INTO public.database_versioning VALUES ('questlog', 20250310001);
-INSERT INTO public.database_versioning VALUES ('memory_summary', 20250331001);
+INSERT INTO public.database_versioning VALUES ('memory_summary', 20260319001);
 INSERT INTO public.database_versioning VALUES ('oghma_dynamic', 20250310001);
 INSERT INTO public.database_versioning VALUES ('actions_issued', 20250525001);
 INSERT INTO public.database_versioning VALUES ('moods_issued', 20250526001);

@@ -42,10 +42,14 @@ if ($STTFUNCTION=="azure") {
     require_once($path."stt/stt-localwhisper.php");
     $text= stt($finalName);
     
-} else if ($STTFUNCTION=="deepgram") { 
+} else if ($STTFUNCTION=="deepgram") {
     require_once($path."stt/stt-deepgram.php");
     $text= stt($finalName);
-    
+
+} else if ($STTFUNCTION=="gemini") {
+    require_once($path."stt/stt-gemini.php");
+    $text= stt($finalName);
+
 } else if (file_exists($path . "stt" . DIRECTORY_SEPARATOR . "stt-{$STTFUNCTION}.php")){
     require_once($path . "stt" . DIRECTORY_SEPARATOR . "stt-{$STTFUNCTION}.php");
     $text= stt($finalName);

@@ -686,8 +686,11 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         
         // Use diary_connector_id if set, otherwise fall back to regular connector_id
         $connectorId = null;
-        if (isset($currentProfileData["diary_connector_id"]) && !empty($currentProfileData["diary_connector_id"])) {
-            $connectorId = $currentProfileData["diary_connector_id"];
+        $resolvedDiaryConnectorId = class_exists('LLMRandomizer')
+            ? LLMRandomizer::getConnectorIdForField($currentProfileData, "diary_connector_id")
+            : ($currentProfileData["diary_connector_id"] ?? null);
+        if (!empty($resolvedDiaryConnectorId)) {
+            $connectorId = $resolvedDiaryConnectorId;
             Logger::info("generateFollowerDiary: Using diary_connector_id: {$connectorId} for The Narrator");
         } elseif (isset($currentProfileData["connector_id"]) && !empty($currentProfileData["connector_id"])) {
             $connectorId = $currentProfileData["connector_id"];
@@ -723,7 +726,10 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         $currentProfileData = $profile->getById($currentNpcData["profile_id"]);
             
         $connector = new LLMConnector();
-        $currentConnectorData = $connector->getById($currentProfileData["diary_connector_id"]);
+        $diaryConnectorId = class_exists('LLMRandomizer')
+            ? LLMRandomizer::getConnectorIdForField($currentProfileData, "diary_connector_id")
+            : ($currentProfileData["diary_connector_id"] ?? null);
+        $currentConnectorData = $connector->getById($diaryConnectorId);
        
         $connector->setOldGlobals($currentConnectorData);
         $profile->setOldGlobals($currentProfileData);
@@ -886,12 +892,14 @@ function getDynamicProfileHistoryData($npcName) {
     }
     
     foreach (json_decode(DataSpeechJournal($npcName, $dynamicProfileContextHistory), true) as $element) {
-        if ($element["listener"] == "The Narrator") {
+        $listenerName = trim((string)($element["listener"] ?? ""));
+        $speakerName = trim((string)($element["speaker"] ?? ""));
+        if ($listenerName == "The Narrator" || $speakerName == "The Narrator") {
             continue;
         }
-        if ($lastListener != $element["listener"]) {
-            $listener = " (talking to {$element["listener"]})";
-            $lastListener = $element["listener"];
+        if ($lastListener != $listenerName) {
+            $listener = " (talking to {$listenerName})";
+            $lastListener = $listenerName;
         } else {
             $listener = "";
         }
@@ -912,7 +920,7 @@ function getDynamicProfileHistoryData($npcName) {
             $dateTime = "";
         }
         
-        $historyData .= trim("{$element["speaker"]}:".trim($element["speech"])." $listener $place $dateTime").PHP_EOL;
+        $historyData .= trim("{$speakerName}:".trim((string)($element["speech"] ?? ""))." $listener $place $dateTime").PHP_EOL;
     }
     
     return $historyData;

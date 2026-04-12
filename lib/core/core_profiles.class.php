@@ -28,19 +28,21 @@ class CoreProfile
         // Seed defaults into metadata if not provided
         if (! isset($data['metadata']) || $data['metadata'] === '' || $data['metadata'] === null) {
             $defaultMeta = [
-                'RPG_COMMENTS'           => ['levelup', 'sleep', 'lockpick'],
+                'RPG_COMMENTS'           => ['levelup', 'combat_end', 'bleedout'],
                 'DYNAMIC_PROFILE_FIELDS' => [
-                    'relationships',
+                    'personality',
+                    'speechstyle',
                     'goals',
                 ],
-                'RPG_COMMENTS_CHANCE'    => 100,
+                'RPG_COMMENTS_CHANCE'    => 50,
                 'COMBAT_BARK_COOLDOWN'   => 30,
             ];
             $data['metadata'] = json_encode($defaultMeta, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         }
 
         foreach ($data as $k => $v) {
-            if (empty($v)) {
+            // Preserve explicit 0/false values; only treat empty-string/null as unset.
+            if ($v === '' || $v === null) {
                 $data[$k] = null;
             }
         }
@@ -128,7 +130,8 @@ class CoreProfile
         ];
 
         foreach ($data as $k => $v) {
-            if (empty($v)) {
+            // Preserve explicit 0/false values; only treat empty-string/null as unset.
+            if ($v === '' || $v === null) {
                 $data[$k] = null;
             }
         }
@@ -158,7 +161,64 @@ class CoreProfile
     public function delete($id)
     {
         $id = intval($id);
+
+        $allProfiles = $this->readAll();
+        if (count($allProfiles) <= 1) {
+            $this->lastError = 'Cannot delete the last remaining profile';
+            return false;
+        }
+
+        $profile = $this->readOne($id);
+        if (!$profile) {
+            $this->lastError = 'Profile not found';
+            return false;
+        }
+
+        if ($profile['default_npc'] == '1') {
+            $this->lastError = 'Cannot delete the default NPC profile. Set another profile as default first.';
+            return false;
+        }
+
+        if ($profile['default_narrator'] == '1') {
+            $this->lastError = 'Cannot delete the default Narrator profile. Set another profile as default first.';
+            return false;
+        }
+
         return $GLOBALS["db"]->delete($this->table, "id = {$id}");
+    }
+
+    public function isDefaultNpc($id): bool
+    {
+        $id = intval($id);
+        $profile = $this->readOne($id);
+        return $profile && $profile['default_npc'] == '1';
+    }
+
+    public function isDefaultNarrator($id): bool
+    {
+        $id = intval($id);
+        $profile = $this->readOne($id);
+        return $profile && $profile['default_narrator'] == '1';
+    }
+
+    public function promoteToDefaultNpc($id)
+    {
+        $id = intval($id);
+        $GLOBALS["db"]->query("UPDATE {$this->table} SET default_npc = '0' WHERE default_npc = '1'");
+        return $GLOBALS["db"]->query("UPDATE {$this->table} SET default_npc = '1' WHERE id = {$id}");
+    }
+
+    public function promoteToDefaultNarrator($id)
+    {
+        $id = intval($id);
+        $GLOBALS["db"]->query("UPDATE {$this->table} SET default_narrator = '0' WHERE default_narrator = '1'");
+        return $GLOBALS["db"]->query("UPDATE {$this->table} SET default_narrator = '1' WHERE id = {$id}");
+    }
+
+    public function getProfileCount(): int
+    {
+        $row = $GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM {$this->table}");
+        return $row ? (int)$row['c'] : 0;
     }
 
     public function truncate($restart = false, $cascade = false)
@@ -214,8 +274,12 @@ class CoreProfile
 
         // Decode and apply profile metadata
         $metadata = json_decode($currentProfileData['metadata'] ?? '{}', true);
+        $narratorManagedKeys = ['REMOVE_ASTERISKS_FROM_OUTPUT', 'INLINE_NARRATION_ENABLED', 'PRESERVE_ASTERISKS_IN_CONTEXT'];
         if (is_array($metadata)) {
             foreach ($metadata as $key => $value) {
+                if (in_array(strtoupper((string)$key), $narratorManagedKeys, true)) {
+                    continue;
+                }
                 // Use isset-style check instead of empty() to properly handle boolean false values
                 // empty(false) returns true, which would skip applying false values from profile
                 if ($value !== null && $value !== '') {
@@ -230,6 +294,8 @@ class CoreProfile
                 }
             }
         }
+        // This behavior is now always enabled.
+        $GLOBALS["ENFORCE_ACTIONS_PROMPT"] = true;
         if (isset($currentProfileData["prompt"])) {
             $GLOBALS["PROFILE_PROMPT"] = $currentProfileData["prompt"];
         }

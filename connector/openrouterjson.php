@@ -710,10 +710,11 @@ class openrouterjson
             if (!($i_pos === false)) {
                 $target = substr($this->_websearch_text, 0, $i_pos);
                 $search_text = substr($this->_websearch_text,strlen($target)+1);
-                $i_pos2 = strripos($search_text, "(Talking to");
-                if (!($i_pos2 === false)) {
-                    $search_text = substr($search_text, 0, $i_pos2); 
-                }
+                $search_text = preg_replace(
+                    '/\s*\(\s*(?:(?:talking|whispering)\s+to|speaking\s+loudly\s+to)\s+[^()]+(?:\s+from\s+far\s+away)?\s*\)\s*$/i',
+                    '',
+                    $search_text
+                );
             }
             if (stripos($search_text, "Skyrim") === false) 
                 $s_prefix = "Skyrim lore ";

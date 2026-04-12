@@ -116,7 +116,8 @@ function trimFileToLastLines($filePath, $maxLines) {
     }
     fclose($out);
     @rename($tmp, $filePath);
-    @chmod($filePath,1777);
+    // Keep logs readable/writable for owner+group; use octal literal (not decimal).
+    @chmod($filePath, 0664);
 }
 
 /**

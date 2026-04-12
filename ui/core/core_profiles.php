@@ -33,7 +33,7 @@ $webRoot = rtrim($webRoot, '/');
 
 // Site chrome
 require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
-$TITLE = "👤 CHIM - Profiles";
+$TITLE = "CHIM - Profiles";
 ob_start();
 include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 ?>
@@ -94,13 +94,14 @@ h1.api-title {
 }
 .connector-title { 
     font-family: 'MagicCards', serif; 
-    color: rgb(242, 124, 17); 
+    color: #fff; 
     margin-bottom: 12px; 
     font-size: 1.2em; 
     letter-spacing: 0.6px; 
     word-spacing: 10px;
     font-weight: 600;
 }
+.connector-subtitle { color:#fff; font-size:12px; line-height:1.35; margin-top:-4px; margin-bottom:10px; }
 @media (max-width: 1000px) { .two-col-grid { grid-template-columns: 1fr; } }
 /* Split layout like LLM Connectors */
 .llm-layout { display:grid; grid-template-columns: minmax(240px, 340px) 1fr; gap:16px; align-items:stretch; }
@@ -181,7 +182,7 @@ h1.api-title {
 .pf-flag { display:inline-flex; align-items:center; font-size:12px; padding:2px 8px; border:1px solid #4a4a4a; border-radius:0; color:#cfd9ea; background:rgba(255,255,255,0.04); line-height:1.4; }
 /* Active Slots block rows */
 .slot-row { display:flex; align-items:center; justify-content:flex-start; gap:10px; padding:2px 0; }
-.slot-key { color: rgb(242,124,17); font-weight:700; min-width:70px; white-space:nowrap; }
+.slot-key { color:#fff; font-weight:700; min-width:70px; white-space:nowrap; }
 .slot-val { color:#cfd9ea; overflow-wrap:anywhere; }
 .pf-tabs { display:flex; gap:6px; flex-wrap:wrap; margin: 8px 0 10px; border-bottom: 2px solid #3a3a3a; }
 .pf-tab { 
@@ -249,7 +250,7 @@ h1.api-title {
     font-family: inherit;
 }
 .connector-card label {
-    color: rgb(242, 124, 17);
+    color: #fff;
     font-weight: 600;
     display: block;
     margin-bottom: 6px;
@@ -277,6 +278,33 @@ h1.api-title {
 .provider-body.grid .help { grid-column: 1 / -1; margin-top:6px; color:#bbb; font-size:12px; }
 .provider-title .provider-toggle { margin-left: 10px; display:flex; align-items:center; }
 .provider-title .provider-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; }
+.profile-settings-group-card { padding-top: 6px; padding-bottom: 6px; }
+.setting-row { display:grid; grid-template-columns: minmax(260px, 1fr) minmax(280px, 420px); gap:10px 14px; align-items:center; padding:8px 0; border-top:1px solid rgba(255,255,255,0.05); }
+.setting-row:first-child { border-top: 0; }
+.setting-key { font-size: 12px; color:#f0f5ff; font-weight:700; margin-bottom:2px; display:flex; align-items:center; gap:8px; }
+.setting-icon { width:20px; text-align:center; color: rgb(242, 124, 17); }
+.setting-desc { font-size: 12px; color:#9fb1c9; line-height:1.35; }
+.setting-control { justify-self:end; width:100%; max-width:420px; }
+.setting-control-wide { max-width:620px; }
+.setting-control input[type="text"],
+.setting-control input[type="number"],
+.setting-control select,
+.setting-control textarea { width:100%; }
+.setting-control textarea { min-height: 88px; }
+.range-pair { display:flex; align-items:center; gap:8px; }
+.range-pair input[type="range"] { flex:1; accent-color: rgb(242,124,17); }
+.range-pair input[type="number"] { width:86px; min-width:86px; text-align:right; }
+.meta-toggle-inline { display:inline-flex; align-items:center; justify-content:flex-end; gap:10px; width:100%; color:#e9efff; font-weight:600; }
+.meta-toggle-inline input[type="checkbox"] { transform: scale(1.2); transform-origin:center; }
+.profile-setting-chips { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
+.profile-setting-chip { display:inline-flex; align-items:center; gap:6px; background:#1f2a36; border:1px solid #33485f; padding:6px 10px; border-radius:8px; color:#dfe6f4; font-size:12px; }
+.profile-setting-chip input[type="checkbox"] { transform: scale(1.0); transform-origin:center; }
+@media (max-width: 980px) {
+    .setting-row { grid-template-columns: 1fr; }
+    .setting-control,
+    .setting-control-wide { max-width: none; justify-self: stretch; }
+    .profile-setting-chips { justify-content:flex-start; }
+}
 /* Toast notification */
 .toast-notification { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: white; font-weight: 500; z-index: 10000; opacity: 0; transform: translateX(400px); transition: all 0.3s ease; max-width: 400px; }
 .toast-notification.show { opacity: 1; transform: translateX(0); }
@@ -295,10 +323,15 @@ h1.api-title {
 .collapsible-content { padding:10px; }
 .section-title { font-weight:800; color:#e9efff; border-bottom:1px solid #4a4a4a; padding-bottom:4px; margin:10px 0 6px; }
 /* Inline title + toggle styling */
-.label-with-toggle { display:flex; align-items:center; gap:10px; }
-.label-with-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; }
+.label-with-toggle { display:flex; align-items:center; gap:10px; color:#fff; }
+.label-with-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; margin-left:8px; }
 /* Profile Settings (metadata editor) checkbox enhancement */
 .profile-settings-card input[type="checkbox"] { accent-color:#176529; transform: scale(1.6); transform-origin:center; cursor:pointer; }
+/* Profile Core compact rows for Name/Slot */
+.profile-core-compact-field { margin-bottom: 6px; }
+.profile-core-compact-field > label { margin-bottom: 3px; line-height: 1.25; }
+.profile-core-compact-field > .hint,
+.profile-core-compact-field > small.hint { margin-top: 3px; line-height: 1.3; }
 </style>
 
 <main>
@@ -404,7 +437,61 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
 
 // Handle Delete
 if (isset($_GET["delete"])) {
-    $profiles->delete($_GET["delete"]);
+    $deleteId = intval($_GET["delete"]);
+    $profileToDelete = $profiles->readOne($deleteId);
+
+    if (!$profileToDelete) {
+        header("Location: core_profiles.php");
+        exit;
+    }
+
+    $isDefaultNpc = $profileToDelete['default_npc'] == '1';
+    $isDefaultNarrator = $profileToDelete['default_narrator'] == '1';
+
+    // If a replacement was selected, promote it first then delete
+    if (isset($_GET["replace_with"]) && is_numeric($_GET["replace_with"])) {
+        $replaceId = intval($_GET["replace_with"]);
+        if ($replaceId <= 0 || $replaceId === $deleteId || !$profiles->readOne($replaceId)) {
+            header("Location: core_profiles.php?error=" . urlencode("Invalid replacement profile selected."));
+            exit;
+        }
+
+        $promoteNpcOk = true;
+        $promoteNarratorOk = true;
+        if ($isDefaultNpc) {
+            $promoteNpcOk = (bool)$profiles->promoteToDefaultNpc($replaceId);
+        }
+        if ($isDefaultNarrator) {
+            $promoteNarratorOk = (bool)$profiles->promoteToDefaultNarrator($replaceId);
+        }
+
+        if (!$promoteNpcOk || !$promoteNarratorOk) {
+            header("Location: core_profiles.php?error=" . urlencode("Failed to promote replacement profile before delete."));
+            exit;
+        }
+
+        $deleted = $profiles->delete($deleteId);
+        if (!$deleted) {
+            header("Location: core_profiles.php?error=" . urlencode($profiles->getLastError()));
+            exit;
+        }
+
+        header("Location: core_profiles.php");
+        exit;
+    }
+
+    // If it's a default profile, redirect to the picker instead of deleting
+    if ($isDefaultNpc || $isDefaultNarrator) {
+        header("Location: core_profiles.php?pick_replacement={$deleteId}");
+        exit;
+    }
+
+    // Non-default profile: delete directly
+    $result = $profiles->delete($deleteId);
+    if (!$result) {
+        header("Location: core_profiles.php?error=" . urlencode($profiles->getLastError()));
+        exit;
+    }
     header("Location: core_profiles.php");
     exit;
 }
@@ -889,8 +976,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["delete_import_rule"])
 if (isset($_GET["create_blank"])) {
     try {
         $defaultMeta = json_encode([
-            'RPG_COMMENTS'=>['levelup','sleep','lockpick'],
-            'DYNAMIC_PROFILE_FIELDS'=>['relationships','goals']
+            'RPG_COMMENTS'=>['levelup','combat_end','bleedout'],
+            'DYNAMIC_PROFILE_FIELDS'=>['personality','speechstyle','goals'],
+            'RPG_COMMENTS_CHANCE'=>50
         ], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
         $row = $GLOBALS["db"]->fetchOne("INSERT INTO core_profiles (label, metadata) VALUES ('New Profile', '".pg_escape_string($defaultMeta)."') RETURNING id");
         $newId = is_array($row) ? ($row['id'] ?? '') : '';
@@ -952,6 +1040,8 @@ $ittById = $byId($ittRows);
         <script>
         (function(){
             const RAW = <?= json_encode($data ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+            // Expose rows for global handlers (e.g., inline delete action).
+            window.CORE_PROFILES_ROWS = Array.isArray(RAW) ? RAW : [];
             const ACTIVE_ID = <?= json_encode($_GET['edit'] ?? '') ?>;
             const list = document.getElementById('profiles_list');
             const NPC_COUNT = <?= json_encode($profileIdToNpcCount ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
@@ -959,6 +1049,13 @@ $ittById = $byId($ittRows);
             const TTS = <?= json_encode($ttsById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             const ITT = <?= json_encode($ittById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
             function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+            function escapeJsSingleQuoted(s){
+                return (s==null?'':String(s))
+                    .replace(/\\/g, '\\\\')
+                    .replace(/'/g, "\\'")
+                    .replace(/\r/g, '\\r')
+                    .replace(/\n/g, '\\n');
+            }
             function labelOf(map, id){ if (!id) return ''; const k=String(id); const row=map[k]; return row && (row.label||row.model||row.driver) ? (row.label||'') : ''; }
             function pass(_row){ return true; }
             function render(){
@@ -972,19 +1069,20 @@ $ittById = $byId($ittRows);
                         if (s>=1 && s<=4 && slotToProfile[s]===null) slotToProfile[s] = r;
                     });
                     html += '<div class="connector-card" style="padding:8px;">';
-                    html += '<div class="connector-title" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">Profile Slots <span style="margin-left:6px; color:#9fb1c9; cursor:help;" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">ⓘ</span></div>';
+                    html += '<div class="connector-title" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">Profile Slots <span style="margin-left:6px; color:#9fb1c9; cursor:help;" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">&#x24D8;</span></div>';
                     [1,2,3,4].forEach(s=>{
                         const r = slotToProfile[s];
                         if (r){
                             const title = escapeHtml(r.label||('Profile #'+r.id));
                             html += `<div class=\"slot-row\" style=\"cursor:pointer;\" data-jump-id=\"${String(r.id)}\" title=\"Can be assigned to NPCs ingame with the Settings Wheel hotkey\"><span class=\"slot-key\">Slot ${String(s)}</span><span class=\"slot-val\">${title}</span></div>`;
                         } else {
-                            html += `<div class=\"slot-row\" style=\"opacity:.75;\" title=\"Can be assigned to NPCs ingame with the Settings Wheel hotkey\"><span class=\"slot-key\">Slot ${String(s)}</span><span class=\"slot-val\">— Empty —</span></div>`;
+                            html += `<div class=\"slot-row\" style=\"opacity:.75;\" title=\"Can be assigned to NPCs ingame with the Settings Wheel hotkey\"><span class=\"slot-key\">Slot ${String(s)}</span><span class=\"slot-val\">&mdash; Empty &mdash;</span></div>`;
                         }
                     });
                     html += '</div>';
                 }
                 rows.forEach(r=>{
+                    const deleteLabel = escapeJsSingleQuoted(r.label||('Profile #'+r.id));
                     const active = String(r.id)===String(ACTIVE_ID) ? ' active' : '';
                     const llm1 = escapeHtml(labelOf(LLM, r.llm_primary_id));
                     const llm2 = escapeHtml(labelOf(LLM, r.llm_secondary_id));
@@ -996,7 +1094,7 @@ $ittById = $byId($ittRows);
                     const formatter = escapeHtml(labelOf(LLM, r.llm_formatter_id));
                     const npcCount = Number((NPC_COUNT||{})[String(r.id)]||0);
                     const row1 = [];
-                    if (String(r.default_npc)==='1') row1.push('<span class="pf-flag">👤 NPC</span>');
+                    if (String(r.default_npc)==='1') row1.push('<span class="pf-flag">&#x1F464; NPC</span>');
                     const row2 = [];
                     // Slot badge removed from list items
                     if (npcCount > 0) row2.push('<span class="pf-flag">'+npcCount+' NPCs</span>');
@@ -1010,22 +1108,19 @@ $ittById = $byId($ittRows);
                                 `</div>
                             </div>
                             <div class="pf-lines">
-                                <div class="pf-line"><span class="pf-icon">🕹️</span><span class="pf-key">Standard LLM</span><span class="pf-val">${llm1||'—'}</span></div>
-                                <div class="pf-line"><span class="pf-icon">🏃‍♂️‍➡️</span><span class="pf-key">Fast LLM</span><span class="pf-val">${llm2||'—'}</span></div>
-                                <div class="pf-line"><span class="pf-icon">💪</span><span class="pf-key">Powerful LLM</span><span class="pf-val">${llm3||'—'}</span></div>
-                                <div class="pf-line"><span class="pf-icon">🧪</span><span class="pf-key">Experimental LLM</span><span class="pf-val">${llm4||'—'}</span></div>
-                                <div class="pf-line"><span class="pf-icon">📓</span><span class="pf-key">Diary LLM</span><span class="pf-val">${diary||'—'}</span></div>
-                                <div class="pf-line"><span class="pf-icon">🧾</span><span class="pf-key">Formatter LLM</span><span class="pf-val">${formatter||'—'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">&#x1F579;&#xFE0F;</span><span class="pf-key">Standard LLM</span><span class="pf-val">${llm1||'&mdash;'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">&#x1F3C3;&#x200D;&#x2642;&#xFE0F;&#x200D;&#x27A1;&#xFE0F;</span><span class="pf-key">Fast LLM</span><span class="pf-val">${llm2||'&mdash;'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">&#x1F4AA;</span><span class="pf-key">Powerful LLM</span><span class="pf-val">${llm3||'&mdash;'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">&#x1F9EA;</span><span class="pf-key">Experimental LLM</span><span class="pf-val">${llm4||'&mdash;'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">&#x1F4D3;</span><span class="pf-key">Diary LLM</span><span class="pf-val">${diary||'&mdash;'}</span></div>
+                                <div class="pf-line"><span class="pf-icon">&#x1F9FE;</span><span class="pf-key">Formatter LLM</span><span class="pf-val">${formatter||'&mdash;'}</span></div>
                             </div>
                             <div class="actions">
                                 <form method="get" action="core_profiles.php" style="display:inline">
                                     <input type="hidden" name="export" value="${r.id}">
                                     <button type="submit" class="btn-primary">Export</button>
                                 </form>
-                                <form method="get" action="core_profiles.php" onsubmit="return confirm('Delete this profile?');" style="display:inline">
-                                    <input type="hidden" name="delete" value="${r.id}">
-                                    <button type="submit" class="btn-danger">Delete</button>
-                                </form>
+                                <button type="button" class="btn-danger" onclick="handleProfileDelete(${r.id}, ${String(r.default_npc)==='1'}, ${String(r.default_narrator)==='1'}, '${deleteLabel}')">Delete</button>
                                 <form method="get" action="core_profiles.php" style="display:inline">
                                     <input type="hidden" name="clone" value="${r.id}">
                                     <button type="submit" class="btn-primary">Clone</button>
@@ -1051,7 +1146,73 @@ $ittById = $byId($ittRows);
             }
             render();
         })();
+
+        function handleProfileDelete(id, isDefaultNpc, isDefaultNarrator, label) {
+            const rows = Array.isArray(window.CORE_PROFILES_ROWS) ? window.CORE_PROFILES_ROWS : [];
+            if (rows.length <= 1) {
+                alert('Cannot delete the last remaining profile.');
+                return;
+            }
+
+            if (isDefaultNpc || isDefaultNarrator) {
+                const others = rows.filter(r => String(r.id) !== String(id));
+                if (others.length === 0) {
+                    alert('Cannot delete the last remaining profile.');
+                    return;
+                }
+
+                let defaultTypes = [];
+                if (isDefaultNpc) defaultTypes.push('NPC');
+                if (isDefaultNarrator) defaultTypes.push('Narrator');
+
+                const modal = document.getElementById('replace-profile-modal');
+                document.getElementById('replace-modal-title').textContent =
+                    'Replace Default ' + defaultTypes.join(' & ') + ' Profile';
+                document.getElementById('replace-modal-desc').textContent =
+                    '"' + label + '" is the default ' + defaultTypes.join(' & ').toLowerCase() +
+                    ' profile. Choose which profile should become the new default before deleting it.';
+
+                const select = document.getElementById('replace-profile-select');
+                select.innerHTML = '';
+                others.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.id;
+                    opt.textContent = r.label || ('Profile #' + r.id);
+                    select.appendChild(opt);
+                });
+
+                document.getElementById('replace-confirm-btn').onclick = function() {
+                    const replaceWith = select.value;
+                    if (!replaceWith) return;
+                    window.location.href = 'core_profiles.php?delete=' + id + '&replace_with=' + replaceWith;
+                };
+
+                modal.style.display = 'flex';
+                return;
+            }
+
+            if (confirm('Delete profile "' + label + '"? NPCs using this profile will be unassigned.')) {
+                window.location.href = 'core_profiles.php?delete=' + id;
+            }
+        }
+
+        function closeReplaceModal() {
+            document.getElementById('replace-profile-modal').style.display = 'none';
+        }
         </script>
+
+        <div id="replace-profile-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+            <div style="background:#1e1e1e; border:1px solid #4a4a4a; border-radius:12px; padding:24px; max-width:420px; width:90%; color:#e9efff;">
+                <div id="replace-modal-title" style="font-size:16px; font-weight:700; margin-bottom:8px;"></div>
+                <div id="replace-modal-desc" style="font-size:13px; color:#9fb1c9; margin-bottom:16px;"></div>
+                <label style="font-size:13px; font-weight:600; margin-bottom:4px; display:block;">New default profile:</label>
+                <select id="replace-profile-select" style="width:100%; padding:8px; background:#2a2a2a; color:#e9efff; border:1px solid #4a4a4a; border-radius:6px; margin-bottom:16px;"></select>
+                <div style="display:flex; gap:8px; justify-content:flex-end;">
+                    <button type="button" onclick="closeReplaceModal()" style="background:#3a3a3a; color:#e9efff; border:1px solid #4a4a4a; border-radius:6px; padding:8px 16px; cursor:pointer;">Cancel</button>
+                    <button type="button" id="replace-confirm-btn" style="background:#8b0000; color:#fff; border:1px solid #660000; border-radius:6px; padding:8px 16px; cursor:pointer; font-weight:700;">Delete & Replace</button>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="llm-right">
         <div class="form-container wide-centered">
@@ -1070,12 +1231,15 @@ $ittById = $byId($ittRows);
 
     <div class="connector-card" style="margin-bottom:12px;">
         <div class="connector-title">Profile Core</div>
-        <label for='label'>Name</label><br>
-        <input type="text" name="label" placeholder="Name" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
-        <small class="hint">Name for the profile.</small>
-        
-        <div style="height:8px;"></div>
-        <label for='slot' title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">Slot <span style="margin-left:6px; color:#9fb1c9; cursor:help;" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">ⓘ</span></label><br>
+        <div class="connector-subtitle">&#x24D8; Core identity and runtime toggles for this profile.</div>
+        <div class="profile-core-compact-field">
+            <label for='label'>Name</label>
+            <input type="text" name="label" placeholder="Name" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
+            <small class="hint">Name for the profile.</small>
+        </div>
+
+        <div class="profile-core-compact-field">
+        <label for='slot' title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">Slot <span style="margin-left:6px; color:#9fb1c9; cursor:help;" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">&#x24D8;</span></label>
         <?php
             $usedSlotsRows = $GLOBALS["db"]->fetchAll("SELECT id, slot FROM core_profiles WHERE slot IS NOT NULL ORDER BY slot ASC");
             $usedSlots = [];
@@ -1084,7 +1248,7 @@ $ittById = $byId($ittRows);
             $currentSlot = isset($editItem['slot']) ? (int)$editItem['slot'] : 0;
         ?>
         <select name="slot" id="slot" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">
-            <option value="">—</option>
+            <option value="">&mdash;</option>
             <?php for($s=1;$s<=4;$s++):
                 $takenBy = $usedSlots[$s] ?? null;
                 $disabled = ($takenBy !== null && $takenBy !== $currentId) ? ' disabled' : '';
@@ -1093,10 +1257,11 @@ $ittById = $byId($ittRows);
             <option value="<?= $s ?>"<?= $sel.$disabled ?>><?= $s ?></option>
             <?php endfor; ?>
         </select>
-        <small class="hint">Optional quick-access slot (1–4). Can be quickchanged ingame.</small>
+        <small class="hint">Optional quick-access slot (1-4). Can be quickchanged ingame.</small>
+        </div>
 
         <div style="height:8px;"></div>
-        <label class="label-with-toggle">👤Default NPC
+        <label class="label-with-toggle">&#x1F464; Default NPC
             <input type="hidden" name="default_npc" value="0">
             <input type="checkbox" name="default_npc" value="1" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 1 ? "checked" : "" ?>>
             <span class="toggle-text">On</span>
@@ -1115,7 +1280,7 @@ $ittById = $byId($ittRows);
                 }
             } catch (Throwable $e) {}
         ?>
-        <label class="label-with-toggle">♻️ Dynamic Profile
+        <label class="label-with-toggle">&#x267B;&#xFE0F; Dynamic Profile
             <input type="hidden" name="meta_vis[DYNAMIC_PROFILE_ENABLED]" value="">
             <input type="checkbox" name="meta_vis[DYNAMIC_PROFILE_ENABLED]" value="1" <?= $dynamicProfileEnabled ? "checked" : "" ?>>
             <span class="toggle-text">Off</span>
@@ -1134,7 +1299,7 @@ $ittById = $byId($ittRows);
                 }
             } catch (Throwable $e) {}
         ?>
-        <label class="label-with-toggle">📃 Middle Term Memory
+        <label class="label-with-toggle">&#x1F4C3; Middle Term Memory
             <input type="hidden" name="meta_vis[MIDDLE_TERM_MEMORY_ENABLED]" value="">
             <input type="checkbox" name="meta_vis[MIDDLE_TERM_MEMORY_ENABLED]" value="1" <?= $mtmEnabled ? "checked" : "" ?>>
             <span class="toggle-text">Off</span>
@@ -1153,7 +1318,7 @@ $ittById = $byId($ittRows);
                 }
             } catch (Throwable $e) {}
         ?>
-        <label class="label-with-toggle">📙 Auto Diary
+        <label class="label-with-toggle">&#x1F4D9; Auto Diary
             <input type="hidden" name="meta_vis[AUTO_DIARY_ENABLED]" value="">
             <input type="checkbox" name="meta_vis[AUTO_DIARY_ENABLED]" value="1" <?= $autoDiaryEnabled ? "checked" : "" ?>>
             <span class="toggle-text">Off</span>
@@ -1172,7 +1337,7 @@ $ittById = $byId($ittRows);
                 }
             } catch (Throwable $e) {}
         ?>
-        <label class="label-with-toggle">⏳ Auto Diary Wait
+        <label class="label-with-toggle">&#x23F3; Auto Diary Wait
             <input type="hidden" name="meta_vis[AUTO_DIARY_WAIT_ENABLED]" value="">
             <input type="checkbox" name="meta_vis[AUTO_DIARY_WAIT_ENABLED]" value="1" <?= $autoDiaryWaitEnabled ? "checked" : "" ?>>
             <span class="toggle-text">Off</span>
@@ -1215,7 +1380,7 @@ $ittById = $byId($ittRows);
                 }
             } catch (Throwable $e) {}
         ?>
-        <label class="label-with-toggle">🔄 LLM Fallback
+        <label class="label-with-toggle">&#x1F504; LLM Fallback
             <input type="hidden" name="meta_vis[LLM_FALLBACK_ENABLED]" value="">
             <input type="checkbox" name="meta_vis[LLM_FALLBACK_ENABLED]" value="1" <?= $fallbackEnabled ? "checked" : "" ?>>
             <span class="toggle-text">Off</span>
@@ -1223,7 +1388,7 @@ $ittById = $byId($ittRows);
         <small class="hint">Automatically retry with fallback connector when primary connector fails. Please use a reliable, ideally cheaper connector. Response time will be longer when fallback is used.</small>
 
         <div style="margin-top:8px; display:flex; gap:8px;">
-            <button type="button" id="btn_save_profile_settings" class="btn-save">Save Profile Settings</button>
+            <button type="button" id="btn_save_profile_settings" class="btn-save">Save All</button>
         </div>
     </div>
 
@@ -1241,167 +1406,69 @@ $ittById = $byId($ittRows);
         });
         const basicBtn = document.getElementById('btn_save_profile_settings');
         if (basicBtn){ basicBtn.addEventListener('click', function(ev){ try{ if (typeof showToast==='function') showToast('Saving...'); saveProfileAjax(ev, 'core_profile_form'); }catch(_e){} }); }
-        const metaBtn = document.getElementById('btn_save_meta_settings');
-        if (metaBtn){ metaBtn.addEventListener('click', function(ev){ try{ if (typeof showToast==='function') showToast('Saving...'); saveProfileAjax(ev, 'core_profile_form'); }catch(_e){} }); }
-        const saveAllBtn = document.getElementById('btn_save_all');
+const saveAllBtn = document.getElementById('btn_save_all');
         if (saveAllBtn){ saveAllBtn.addEventListener('click', function(ev){ try{ if (typeof showToast==='function') showToast('Saving all settings...'); saveProfileAjax(ev, 'core_profile_form'); }catch(_e){} }); }
         const backTopBtn = document.getElementById('btn_back_to_top');
         if (backTopBtn){ backTopBtn.addEventListener('click', function(){
             try { window.scrollTo({ top: 0, behavior: 'smooth' }); }
             catch(_) { window.scrollTo(0, 0); }
         }); }
-
-        // Responsive iframe heights for embedded editors
-        function sizeIframes(){
-            try {
-                const panes = ['frame_llm_primary_id','frame_llm_secondary_id','frame_llm_tertiary_id','frame_llm_quaternary_id','frame_diary_connector_id','frame_llm_formatter_id','frame_llm_fallback_id'];
-                const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
-                const available = Math.max(400, vh - 260);
-                panes.forEach(id=>{ const f=document.getElementById(id); if (f) f.style.minHeight = available + 'px'; });
-            } catch(_){ }
-        }
-        sizeIframes();
-        window.addEventListener('resize', sizeIframes);
-    });
+});
     </script>
 
     <?php /* connector details preloaded above for both panes */ ?>
 
     <div class="connector-card">
-        <div class="connector-title" title="Can swap the models all NPC use ingame with the Settings Wheel hotkey.">Connector Selection <span style="margin-left:6px; color:#9fb1c9; cursor:help;" title="Can swap the models all NPC use ingame with the Settings Wheel hotkey.">ⓘ</span></div>
-        <div class="pf-tabs" id="pf_tabs">
-            <button type="button" class="pf-tab active" data-pane="pane_llm1">🕹️ Standard LLM</button>
-            <button type="button" class="pf-tab" data-pane="pane_llm2">🏃‍♂️‍➡️ Fast LLM</button>
-            <button type="button" class="pf-tab" data-pane="pane_llm3">💪 Powerful LLM</button>
-            <button type="button" class="pf-tab" data-pane="pane_llm4">🧪 Experimental LLM</button>
-            <button type="button" class="pf-tab" data-pane="pane_diary">📓 Diary LLM</button>
-            <button type="button" class="pf-tab" data-pane="pane_llm_formatter">🧾 Formatter LLM</button>
-            <button type="button" class="pf-tab" data-pane="pane_llm_fallback">🔄 Fallback LLM</button>
-            
-        </div>
-        <div class="pf-pane active" id="pane_llm1">
-            <div class="select-row">
-                <?= renderSelect($profiles, "llm_primary_id", "🕹️ Standard LLM", $editItem["llm_primary_id"] ?? "") ?>
-                <button type="button" class="btn-apply btn-primary" data-apply-select="llm_primary_id">Set</button>
-            </div>
-            <div class="connector-help">
-                General purpose LLM for general roleplay.
-                <ul>
-                    <li>meta-llama/llama-3.3-70b-instruct</li>
-                    <li>deepseek/deepseek-chat-v3.1</li>
-                    <li>qwen/qwen3-235b-a22b</li>
-                </ul>
-            </div>
-            <div style="margin-top:8px;">
-                <iframe id="frame_llm_primary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
-            </div>
-        </div>
-        <div class="pf-pane" id="pane_llm2">
-            <div class="select-row">
-                <?= renderSelect($profiles, "llm_secondary_id", "🏃‍♂️‍➡️ Fast LLM", $editItem["llm_secondary_id"] ?? "") ?>
-                <button type="button" class="btn-apply btn-primary" data-apply-select="llm_secondary_id">Set</button>
-            </div>
-            <div class="connector-help">
-                Fast and lesspowerful LLM for quick responses. Good for combat.
-                <ul>
-                    <li>google/gemini-2.5-flash-lite</li>
-                    <li>Google Gemini 1.5 Flash</li>
-                    <li>OpenRouter Llama-3.1-70B-Instruct</li>
-                </ul>
-            </div>
-            <div style="margin-top:8px;">
-                <iframe id="frame_llm_secondary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
-            </div>
-        </div>
-        <div class="pf-pane" id="pane_llm3">
-            <div class="select-row">
-                <?= renderSelect($profiles, "llm_tertiary_id", "💪 Powerful LLM", $editItem["llm_tertiary_id"] ?? "") ?>
-                <button type="button" class="btn-apply btn-primary" data-apply-select="llm_tertiary_id">Set</button>
-            </div>
-            <div class="connector-help">
-                Smarter and more expensive LLM for indepth conversations.
-                <ul>
-                    <li>anthropic/claude-3.7-sonnet</li>
-                    <li>deepseek/deepseek-r1-0528</li>
-                    <li>openai/gpt-5</li>
-                </ul>
-            </div>
-            <div style="margin-top:8px;">
-                <iframe id="frame_llm_tertiary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
-            </div>
-        </div>
-        <div class="pf-pane" id="pane_llm4">
-            <div class="select-row">
-                <?= renderSelect($profiles, "llm_quaternary_id", "🧪 Experimental LLM", $editItem["llm_quaternary_id"] ?? "") ?>
-                <button type="button" class="btn-apply btn-primary" data-apply-select="llm_quaternary_id">Set</button>
-            </div>
-            <div class="connector-help">
-                Wildcard and uncensored LLM's.
-                <ul>
-                    <li>qwen/qwen3-235b-a22b</li>
-                    <li>deepseek/deepseek-chat-v3.1</li>
-                    <li>anthropic/claude-3.7-sonnet</li>
-                </ul>
-            </div>
-            <div style="margin-top:8px;">
-                <iframe id="frame_llm_quaternary_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
-            </div>
-        </div>
-        <div class="pf-pane" id="pane_diary">
-            <div class="select-row">
-                <?= renderSelect($profiles, "diary_connector_id", "📓 Diary LLM", $editItem["diary_connector_id"] ?? "") ?>
-                <button type="button" class="btn-apply btn-primary" data-apply-select="diary_connector_id">Set</button>
-            </div>
-            <div class="connector-help">
-                LLM good for writing character based diary entries.
-                <ul>
-                    <li>meta-llama/llama-3.3-70b-instruct</li>
-                    <li>google/gemini-2.5-pro</li>
-                    <li>Anthropic Claude 3.5 Sonnet</li>
-                </ul>
-            </div>
-            <div style="margin-top:8px;">
-                <iframe id="frame_diary_connector_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
-            </div>
-        </div>
-        <div class="pf-pane" id="pane_llm_formatter">
-            <div class="select-row">
-                <?= renderSelect($profiles, "llm_formatter_id", "🧾 Formatter LLM", $editItem["llm_formatter_id"] ?? "") ?>
-                <button type="button" class="btn-apply btn-primary" data-apply-select="llm_formatter_id">Set</button>
-            </div>
-            <div class="connector-help">
-                Used to help format JSON responses for background tasks. Can be a very small model.
-                <ul>
-                    <li>OpenAI o3-mini / GPT-4o-mini</li>
-                    <li>Anthropic Claude 3.5 Sonnet</li>
-                    <li>OpenRouter Mistral-Nemo / Llama-3.1-70B</li>
-                </ul>
-            </div>
-            <div style="margin-top:8px;">
-                <iframe id="frame_llm_formatter_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
-            </div>
-        </div>
-        <div class="pf-pane" id="pane_llm_fallback">
-            <div class="select-row">
-                <?= renderSelect($profiles, "llm_fallback_id", "🔄 Fallback LLM", $editItem["llm_fallback_id"] ?? "") ?>
-                <button type="button" class="btn-apply btn-primary" data-apply-select="llm_fallback_id">Set</button>
-            </div>
-            <div class="connector-help">
-                Backup connector used automatically when primary connectors fail due to network errors (connection failures, timeouts, HTTP errors). Must enable "🔄 LLM Fallback" toggle in Profile Core settings above.
-                <ul>
-                    <li>Choose a reliable, ideally cheaper connector</li>
-                </ul>
-            </div>
-            <div style="margin-top:8px;">
-                <iframe id="frame_llm_fallback_id" src="about:blank" style="width:100%; min-height:900px; border:1px solid #4a4a4a; border-radius:10px; background:transparent;"></iframe>
-            </div>
-        </div>
-        
+        <div class="connector-title">Connector Selection</div>
+        <div class="connector-subtitle">&#x24D8; Choose connector assignments for each role. Saved with Save All.</div>
+
+        <?php
+            $connectorRoleSections = [
+                [
+                    'title' => 'Response',
+                    'rows' => [
+                        ['field' => 'llm_primary_id',    'icon' => '&#x1F579;&#xFE0F;', 'title' => 'Standard LLM',     'desc' => 'General purpose connector for normal roleplay responses.'],
+                        ['field' => 'llm_secondary_id',  'icon' => '&#x1F3C3;&#x200D;&#x2642;&#xFE0F;&#x200D;&#x27A1;&#xFE0F;', 'title' => 'Fast LLM',         'desc' => 'Lower-latency connector for quick reactions and lightweight dialogue.'],
+                        ['field' => 'llm_tertiary_id',   'icon' => '&#x1F4AA;',         'title' => 'Powerful LLM',     'desc' => 'Higher-quality connector for deeper or more complex responses.'],
+                        ['field' => 'llm_quaternary_id', 'icon' => '&#x1F9EA;',         'title' => 'Experimental LLM', 'desc' => 'Optional wildcard connector for experimentation and variety.'],
+                    ],
+                ],
+                [
+                    'title' => 'Background',
+                    'rows' => [
+                        ['field' => 'diary_connector_id','icon' => '&#x1F4D3;',         'title' => 'Diary LLM',        'desc' => 'Connector used for diary generation.'],
+                        ['field' => 'llm_formatter_id',  'icon' => '&#x1F9FE;',         'title' => 'Formatter LLM',    'desc' => 'Connector used for JSON formatting and structured background tasks.'],
+                        ['field' => 'llm_fallback_id',   'icon' => '&#x1F504;',         'title' => 'Fallback LLM',     'desc' => 'Backup connector used when primary requests fail.'],
+                    ],
+                ],
+            ];
+        ?>
+        <?php foreach ($connectorRoleSections as $sectionCfg): ?>
+            <div class="connector-subtitle" style="margin-top:10px; margin-bottom:4px; color:#ffffff; font-weight:700;"><?= htmlspecialchars($sectionCfg['title']) ?></div>
+            <?php foreach (($sectionCfg['rows'] ?? []) as $rowCfg): ?>
+                <?php $selectedId = (string)($editItem[$rowCfg['field']] ?? ''); ?>
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-key"><span class="setting-icon"><?= $rowCfg['icon'] ?></span><span><?= htmlspecialchars($rowCfg['title']) ?></span></div>
+                        <div class="setting-desc"><?= htmlspecialchars($rowCfg['desc']) ?></div>
+                    </div>
+                    <div class="setting-control">
+                        <select name="<?= htmlspecialchars($rowCfg['field']) ?>" id="<?= htmlspecialchars($rowCfg['field']) ?>">
+                            <option value="">-- None --</option>
+                            <?php foreach (($llmRows ?? []) as $opt): ?>
+                                <?php $optLabel = trim((string)($opt['label'] ?? '')) !== '' ? (string)$opt['label'] : (string)($opt['model'] ?? ('LLM #' . ($opt['id'] ?? ''))); ?>
+                                <option value="<?= htmlspecialchars((string)$opt['id']) ?>" <?= ((string)$opt['id'] === $selectedId ? 'selected' : '') ?>><?= htmlspecialchars($optLabel) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php endforeach; ?>
     </div>
 
     <!-- Visual Profile Settings (first chunk) -->
     <div class="connector-card profile-settings-card" style="margin-bottom:10px;">
-        <div class="connector-title">Profile  Settings</div>
+        <div class="connector-title">Profile Settings</div>
         <?php
             // Resolve current selected RPG comments from metadata
             $rpgSelected = [];
@@ -1430,21 +1497,32 @@ $ittById = $byId($ittRows);
         <div class="provider-card" style="margin-bottom:8px;">
             <div class="provider-head">
                 <div class="provider-title">
-                    <div class="provider-icon">🛠️</div>
+                    <div class="provider-icon">&#x1F6E0;&#xFE0F;</div>
                     <div>Dynamic Profile Fields</div>
                 </div>
             </div>
-            <div class="provider-body grid">
-                <div style="grid-column: 1 / -1; display:flex; flex-wrap:wrap; gap:10px;">
-                    <input type="hidden" name="meta_vis[DYNAMIC_PROFILE_FIELDS][]" value="">
-                    <?php foreach ($__dynOptions as $opt): $val=(string)$opt; $checked = in_array($val, $dynSelected, true) ? ' checked' : ''; ?>
-                        <label style="display:inline-flex; align-items:center; gap:6px; background:#1f2a36; border:1px solid #33485f; padding:6px 10px; border-radius:8px;">
-                            <input type="checkbox" name="meta_vis[DYNAMIC_PROFILE_FIELDS][]" value="<?= htmlspecialchars($val) ?>"<?= $checked ?>>
-                            <span><?= htmlspecialchars($val) ?></span>
-                        </label>
-                    <?php endforeach; ?>
+            <div class="provider-body" style="display:block;">
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-key"><span class="setting-icon">&#x1F6E0;&#xFE0F;</span><span>Editable Fields</span></div>
+                        <?php if (!empty($__dynHelp)): ?>
+                            <div class="setting-desc"><?= htmlspecialchars($__dynHelp) ?></div>
+                        <?php else: ?>
+                            <div class="setting-desc">Choose which profile fields dynamic updates are allowed to rewrite.</div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="setting-control setting-control-wide">
+                        <input type="hidden" name="meta_vis[DYNAMIC_PROFILE_FIELDS][]" value="">
+                        <div class="profile-setting-chips">
+                            <?php foreach ($__dynOptions as $opt): $val=(string)$opt; $checked = in_array($val, $dynSelected, true) ? ' checked' : ''; ?>
+                                <label class="profile-setting-chip">
+                                    <input type="checkbox" name="meta_vis[DYNAMIC_PROFILE_FIELDS][]" value="<?= htmlspecialchars($val) ?>"<?= $checked ?>>
+                                    <span><?= htmlspecialchars($val) ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
                 </div>
-                <?php if (!empty($__dynHelp)): ?><div class="help" style="grid-column:1/-1;"><?= htmlspecialchars($__dynHelp) ?></div><?php endif; ?>
             </div>
         </div>
         <?php endif; ?>
@@ -1452,24 +1530,35 @@ $ittById = $byId($ittRows);
         <div class="provider-card" style="margin-bottom:8px;">
             <div class="provider-head">
                 <div class="provider-title">
-                    <div class="provider-icon">🎲</div>
+                    <div class="provider-icon">&#x1F3B2;</div>
                     <div>RPG Comments</div>
                 </div>
             </div>
-            <div class="provider-body grid">
-                <div style="grid-column: 1 / -1; display:flex; flex-wrap:wrap; gap:10px;">
-                    <input type="hidden" name="meta_vis[RPG_COMMENTS][]" value="">
-                    <?php foreach ($__rpgOptions as $opt): $val=(string)$opt; $checked = in_array($val, $rpgSelected, true) ? ' checked' : ''; ?>
-                        <label style="display:inline-flex; align-items:center; gap:6px; background:#1f2a36; border:1px solid #33485f; padding:6px 10px; border-radius:8px;">
-                            <input type="checkbox" name="meta_vis[RPG_COMMENTS][]" value="<?= htmlspecialchars($val) ?>"<?= $checked ?>>
-                            <span><?= htmlspecialchars($val) ?></span>
-                        </label>
-                    <?php endforeach; ?>
+            <div class="provider-body" style="display:block;">
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-key"><span class="setting-icon">&#x1F3B2;</span><span>Comment Types</span></div>
+                        <?php if (!empty($__rpgHelp)): ?>
+                            <div class="setting-desc"><?= htmlspecialchars($__rpgHelp) ?></div>
+                        <?php else: ?>
+                            <div class="setting-desc">Choose when RPG-style comments are allowed to trigger.</div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="setting-control setting-control-wide">
+                        <input type="hidden" name="meta_vis[RPG_COMMENTS][]" value="">
+                        <div class="profile-setting-chips">
+                            <?php foreach ($__rpgOptions as $opt): $val=(string)$opt; $checked = in_array($val, $rpgSelected, true) ? ' checked' : ''; ?>
+                                <label class="profile-setting-chip">
+                                    <input type="checkbox" name="meta_vis[RPG_COMMENTS][]" value="<?= htmlspecialchars($val) ?>"<?= $checked ?>>
+                                    <span><?= htmlspecialchars($val) ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
                 </div>
-                <?php if (!empty($__rpgHelp)): ?><div class="help" style="grid-column:1/-1;"><?= htmlspecialchars($__rpgHelp) ?></div><?php endif; ?>
                 <?php
                     // Get current RPG_Comments_Chance value from metadata
-                    $rpgChance = 100; // Default to 100%
+                    $rpgChance = 50; // Default to 50%
                     try {
                         if (!empty($editItem["metadata"])) {
                             $tmpMeta = json_decode($editItem["metadata"], true);
@@ -1477,16 +1566,18 @@ $ittById = $byId($ittRows);
                                 $rpgChance = intval($tmpMeta['RPG_COMMENTS_CHANCE']);
                             }
                         }
-                    } catch (Throwable $_e) { $rpgChance = 100; }
+                    } catch (Throwable $_e) { $rpgChance = 50; }
                 ?>
-                <div style="grid-column: 1 / -1; margin-top: 12px; padding-top: 12px; border-top: 1px solid #33485f;">
-                    <div style="color: #e9efff;">
-                        <div style="font-weight: 600; margin-bottom: 6px;">🔁 Trigger Chance</div>
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <input type="range" id="rpg_chance_range" min="0" max="100" step="1" value="<?= htmlspecialchars($rpgChance) ?>" oninput="document.getElementById('rpg_chance_num').value=this.value" style="flex: 1;">
-                            <input type="number" id="rpg_chance_num" name="meta_vis[RPG_COMMENTS_CHANCE]" min="0" max="100" step="1" value="<?= htmlspecialchars($rpgChance) ?>" style="width:80px;" oninput="metaClamp('rpg_chance_range','rpg_chance_num',0,100)">
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-key"><span class="setting-icon">&#x1F501;</span><span>RPG Comment Trigger Chance</span></div>
+                        <div class="setting-desc">Probability that enabled RPG comments trigger when their conditions are met. 0 = Never | 50 = 50% | 100 = Always. Hard cooldown: 60 seconds between RPG comment events.</div>
+                    </div>
+                    <div class="setting-control">
+                        <div class="range-pair">
+                            <input type="range" id="rpg_chance_range" min="0" max="100" step="1" value="<?= htmlspecialchars($rpgChance) ?>" oninput="document.getElementById('rpg_chance_num').value=this.value">
+                            <input type="number" id="rpg_chance_num" name="meta_vis[RPG_COMMENTS_CHANCE]" min="0" max="100" step="1" value="<?= htmlspecialchars($rpgChance) ?>" oninput="metaClamp('rpg_chance_range','rpg_chance_num',0,100)">
                         </div>
-                        <div style="color: #9fb1c9; font-size: 12px; margin-top: 6px;">Probability that enabled RPG comments will trigger when their conditions are met. 0 = Never | 50 = 50% | 100 = Always</div>
                     </div>
                 </div>
             </div>
@@ -1495,9 +1586,8 @@ $ittById = $byId($ittRows);
         
         <?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
         <div style="margin-top:8px; display:flex; gap:8px;">
-            <button type="button" id="btn_save_meta_settings" class="btn-save">Save Profile Settings</button>
-            <button type="button" id="btn_save_all" class="btn-save">💾 Save All</button>
-            <button type="button" id="btn_back_to_top" class="btn-primary" title="Scroll to top">↑ Back to top</button>
+<button type="button" id="btn_save_all" class="btn-save">Save All</button>
+            <button type="button" id="btn_back_to_top" class="btn-primary" title="Scroll to top">Back to top</button>
         </div>
     </div>
     
@@ -1505,7 +1595,7 @@ $ittById = $byId($ittRows);
     <div class="provider-card" style="margin-bottom:8px;">
         <div class="provider-head">
             <div class="provider-title">
-                <div class="provider-icon">🌐</div>
+                <div class="provider-icon">&#x1F310;</div>
                 <div>Global Settings Overrides</div>
             </div>
         </div>
@@ -1717,7 +1807,7 @@ $ittById = $byId($ittRows);
         let html = '<div style="display:grid; grid-template-columns: 220px 1fr; gap:6px;">';
         for (let i=0;i<keys.length;i++){
             const k = keys[i], lab = labels[i];
-            const val = (obj[k]===null||obj[k]===undefined||obj[k]==='') ? '<span style="color:#888">—</span>' : String(obj[k]);
+            const val = (obj[k]===null||obj[k]===undefined||obj[k]==='' ) ? '<span style="color:#888">&mdash;</span>' : String(obj[k]);
             html += `<div style="color:rgb(242,124,17); font-weight:bold;">${lab}</div><div style="overflow-wrap:anywhere;">${val}</div>`;
         }
         html += '</div>';
@@ -1857,7 +1947,7 @@ $ittById = $byId($ittRows);
             lines.forEach(line=>{
                 const k = line.querySelector('.pf-key');
                 const v = line.querySelector('.pf-val');
-                if (k && v && (k.textContent||'').trim()===key){ v.textContent = label || '—'; }
+                if (k && v && (k.textContent||'').trim()===key){ v.textContent = label || '&mdash;'; }
             });
         }
 
@@ -2366,7 +2456,7 @@ $ittById = $byId($ittRows);
             if (isEditing) {
                 fieldHtml = `<input type="checkbox" class="rule-checkbox rule-input-${name}" ${checked ? 'checked' : ''}>`;
             } else {
-                fieldHtml = `<span class="rule-value">${checked ? '✓ Yes' : '✗ No'}</span>`;
+                fieldHtml = `<span class="rule-value">${checked ? 'Yes' : 'No'}</span>`;
             }
         } else if (type === 'select') {
             if (isEditing) {
