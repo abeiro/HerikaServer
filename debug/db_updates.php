@@ -2476,6 +2476,28 @@ WHERE gamets > 0");
 // Version 20251110001
 //----------------------------------------------------
 
+try {
+    if ($checkTableExists("prompts") == 1) {
+        $db->execQuery("DELETE FROM public.prompts WHERE prompt_key IS NULL OR btrim(prompt_key) = ''");
+        $db->execQuery("
+            DELETE FROM public.prompts a
+            USING public.prompts b
+            WHERE a.prompt_key = b.prompt_key
+              AND a.ctid < b.ctid
+        ");
+        $db->execQuery("CREATE UNIQUE INDEX IF NOT EXISTS idx_prompts_prompt_key_unique ON public.prompts (prompt_key)");
+
+        $promptCountRow = $db->fetchOne("SELECT COUNT(*) AS count FROM public.prompts");
+        $promptCount = intval($promptCountRow["count"] ?? 0);
+        if ($promptCount === 0 && $checkVersion("prompts") >= 20251110001) {
+            Logger::warn("Prompts table is empty but migration version is marked as applied. Clearing prompts version entry so seed migrations can rerun.");
+            $db->execQuery("DELETE FROM public.database_versioning WHERE tablename='prompts'");
+        }
+    }
+} catch (Throwable $e) {
+    Logger::warn("Prompts migration self-heal check failed: " . $e->getMessage());
+}
+
 if ($checkVersion("prompts")<20251110001) {
     Logger::debug("Applying prompts table 20251110001");
     
