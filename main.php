@@ -1765,7 +1765,7 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
             $GLOBALS["CACHE_PEOPLE"] = $eventPeople;
         }
 
-        $isPlayerInputEvent = in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"], true);
+        $isPlayerInputEvent = in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s"], true);
         if ($isPlayerInputEvent) {
 
             // Race-safe spatial scope: if _speech arrived before inputtext, expand to audible companions now.

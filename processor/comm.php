@@ -776,7 +776,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
             if ($isPlayerSpeech) {
                 $latestInputRow = $db->fetchOne(
-                    "SELECT rowid, people, data
+                    "SELECT rowid, type, people, data
                      FROM eventlog
                      WHERE gamets={$speechGamets}
                        AND type IN ('inputtext','inputtext_s','ginputtext','ginputtext_s','narrator_inputtext')
@@ -786,9 +786,14 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
                 if (is_array($latestInputRow) && isset($latestInputRow["rowid"])) {
                     $rowId = intval($latestInputRow["rowid"]);
-                    $escapedPeople = $db->escape($audiblePeoplePipe);
-                    $db->update("eventlog", "people='{$escapedPeople}'", "rowid={$rowId}");
-                    error_log("[SPATIAL_SCOPE] Updated input eventlog row {$rowId} people={$audiblePeoplePipe}");
+                    $latestInputType = strtolower(trim((string)($latestInputRow["type"] ?? "")));
+                    if ($latestInputType === "narrator_inputtext") {
+                        error_log("[SPATIAL_SCOPE] Preserved narrator_inputtext row {$rowId} private scope");
+                    } else {
+                        $escapedPeople = $db->escape($audiblePeoplePipe);
+                        $db->update("eventlog", "people='{$escapedPeople}'", "rowid={$rowId}");
+                        error_log("[SPATIAL_SCOPE] Updated input eventlog row {$rowId} people={$audiblePeoplePipe}");
+                    }
                 } else {
                     error_log("[SPATIAL_SCOPE] No inputtext row found for gamets {$speechGamets} to update");
                 }
