@@ -2285,9 +2285,9 @@ $playerBioSection = "";
 try {
     require_once(__DIR__.DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."core".DIRECTORY_SEPARATOR."player.class.php");
     $playerObj = new Player();
-    $playerBio = trim((string)($playerObj->get('bio') ?? ""));
+    $playerBio = ResolvePlayerBackstory($playerObj);
     $bioKnownByAll = filter_var((string)($playerObj->get('bio_known_by_all') ?? ''), FILTER_VALIDATE_BOOLEAN);
-    $isNarrator = ($GLOBALS["HERIKA_NAME"] === "The Narrator");
+    $isNarrator = isset($GLOBALS["HERIKA_NAME"]) && strcasecmp((string)$GLOBALS["HERIKA_NAME"], "The Narrator") === 0;
 
     if ($playerBio !== "" && ($bioKnownByAll || $isNarrator)) {
         $playerBioSection = "\n\n<player_character>\n# Player Character: {$GLOBALS["PLAYER_NAME"]}\n{$playerBio}\n</player_character>";

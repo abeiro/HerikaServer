@@ -352,7 +352,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $profileString .= ": " . trim($appearance);
                     }
 
-                    $playerBio = trim((string)($player->get('bio') ?? ''));
+                    $playerBio = ResolvePlayerBackstory($player);
                     $bioKnownByAll = filter_var((string)($player->get('bio_known_by_all') ?? ''), FILTER_VALIDATE_BOOLEAN);
                     $isNarrator = isset($GLOBALS["HERIKA_NAME"]) && strcasecmp((string)$GLOBALS["HERIKA_NAME"], "The Narrator") === 0;
                     if ($playerBio !== "" && ($bioKnownByAll || $isNarrator)) {
@@ -2973,6 +2973,51 @@ function DataGetTrackedStat($stat) {
     $results = $db->fetchAll("select * from conf_opts where id='{$escapedStat}'");
     
     return json_encode($results);
+}
+
+function ResolvePlayerBackstory($player = null): string
+{
+    $playerBio = '';
+
+    if ($player === null) {
+        try {
+            require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+            $player = new Player();
+        } catch (Throwable $e) {
+            Logger::debug("Could not initialize Player while resolving backstory: " . $e->getMessage());
+        }
+    }
+
+    if ($player instanceof Player) {
+        try {
+            $playerBio = trim((string)($player->get('bio') ?? ''));
+        } catch (Throwable $e) {
+            Logger::debug("Could not read player bio from core_player: " . $e->getMessage());
+        }
+    }
+
+    if ($playerBio !== '') {
+        return $playerBio;
+    }
+
+    $legacyPlayerBio = trim((string)($GLOBALS["PLAYER_BIOS"] ?? ''));
+    if ($legacyPlayerBio !== '') {
+        return $legacyPlayerBio;
+    }
+
+    if (isset($GLOBALS["db"]) && is_object($GLOBALS["db"]) && method_exists($GLOBALS["db"], 'fetchOne')) {
+        try {
+            $legacyPlayerBioRow = $GLOBALS["db"]->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_BIOS' LIMIT 1");
+            $legacyPlayerBio = trim((string)($legacyPlayerBioRow['value'] ?? ''));
+            if ($legacyPlayerBio !== '') {
+                return $legacyPlayerBio;
+            }
+        } catch (Throwable $e) {
+            Logger::debug("Could not read legacy PLAYER_BIOS from conf_opts: " . $e->getMessage());
+        }
+    }
+
+    return '';
 }
 
 function DataGetCurrentPartyConf() {
