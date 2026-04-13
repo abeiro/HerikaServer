@@ -3425,6 +3425,55 @@ if ($checkVersion("prompts")<20260327001) {
 }
 
 //----------------------------------------------------
+// BASE DIALOGUE RESPONSE PROMPTS
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20260412001) {
+    Logger::debug("Applying prompts table 20260412001 - Adding dialogue response prompts");
+
+    $dialogueLineResponsePrompt = $db->escape(
+        " Write {HERIKA_NAME}'s next dialogue line."
+        . " Be original, creative, knowledgeable, use your own thoughts. "
+        . " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}"
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'dialogue_line_response',
+            '$dialogueLineResponsePrompt',
+            'Base response instruction used for standard NPC dialogue when inline narration is disabled. Supports placeholders: {HERIKA_NAME}, {MAXIMUM_WORDS}. Used in: prompts/dialogue_prompt.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $dialogueLineInlineResponsePrompt = $db->escape(
+        " Write {HERIKA_NAME}'s next prose/narration."
+        . " Be original, creative, knowledgeable, use your own thoughts. "
+        . " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}"
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'dialogue_line_inline_response',
+            '$dialogueLineInlineResponsePrompt',
+            'Base response instruction used for NPC dialogue when inline narration is enabled. Supports placeholders: {HERIKA_NAME}, {MAXIMUM_WORDS}. Used in: prompts/dialogue_prompt.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $updateVersion("prompts", 20260412001);
+    Logger::info("Applied patch prompts 20260412001 - Added dialogue response prompts");
+}
+
+//----------------------------------------------------
 // emotions expression
 //----------------------------------------------------
 
