@@ -83,7 +83,7 @@ if (! isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
         require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
         $player = new Player();
         $playerAppearance = trim((string)($player->get('appearance') ?? ''));
-        $playerBio = trim((string)($player->get('bio') ?? ''));
+        $playerBio = ResolvePlayerBackstory($player);
         $playerSpeechStyle = trim((string)($player->get('speech_style') ?? ''));
     } catch (Exception $e) {
         error_log("Could not load player data from core_player: " . $e->getMessage());
@@ -92,10 +92,6 @@ if (! isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
         $playerSpeechStyle = $GLOBALS["PLAYER_SPEECH_STYLE"];
     }
 
-    // Backward compatibility: legacy PLAYER_BIOS acts as fallback backstory.
-    if (empty($playerBio) && isset($GLOBALS["PLAYER_BIOS"]) && !empty(trim((string)$GLOBALS["PLAYER_BIOS"]))) {
-        $playerBio = trim((string)$GLOBALS["PLAYER_BIOS"]);
-    }
     if (empty($playerBio) && !empty($playerAppearance)) {
         $playerBio = $playerAppearance;
     }

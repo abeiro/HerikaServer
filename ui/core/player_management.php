@@ -70,6 +70,15 @@ $bio = $allPlayerData['bio'] ?? '';
 $bioKnownByAll = ($allPlayerData['bio_known_by_all'] ?? 'false') === 'true';
 $speechStyle = $allPlayerData['speech_style'] ?? '';
 
+if ($bio === '' && !empty(trim((string)($GLOBALS["PLAYER_BIOS"] ?? '')))) {
+    $bio = trim((string)$GLOBALS["PLAYER_BIOS"]);
+}
+
+if ($bio === '') {
+    $legacyBioRow = $GLOBALS["db"]->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_BIOS' LIMIT 1");
+    $bio = trim((string)($legacyBioRow['value'] ?? ''));
+}
+
 // Load JSON data (equipment, inventory, skills, stats)
 $equipment = $player->getJson('equipment') ?? [];
 $inventory = $player->getJson('inventory') ?? [];
