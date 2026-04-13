@@ -774,11 +774,12 @@ if (isset($_GET["profile"])) {
 
             $isNarratorScopedRequest = in_array($gameRequest[0], ["narrator_inputtext", "narration", "narrator_welcome"], true)
                 || stripos($requestText, '(Talking to The Narrator)') !== false
-                || stripos($requestText, '(Whispering to The Narrator)') !== false
+                || stripos($requestText, '(Whispering to The Narrator)') !== false;
 
             if ($fallbackNpcName !== null && strcasecmp($fallbackNpcName, "The Narrator") !== 0) {
+                $fallbackNpcName = preg_replace('/\s+/', ' ', trim($fallbackNpcName));
                 $escapedNpcName = $db->escape($fallbackNpcName);
-                $fallbackNpcData = $db->fetchOne("SELECT * FROM core_npc_master WHERE lower(npc_name)=lower('{$escapedNpcName}') LIMIT 1");
+                $fallbackNpcData = $db->fetchOne("SELECT * FROM core_npc_master WHERE trim(lower(npc_name)) = trim(lower('{$escapedNpcName}')) LIMIT 1");
                 if ($fallbackNpcData) {
                     $npcMaster->setOldGlobalsFromCurrentNpcData($fallbackNpcData);
                     $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $fallbackNpcData;
