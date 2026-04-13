@@ -3139,7 +3139,20 @@ function buildScopedPeopleForPlayerInput($eventType, $eventData, $listenerName, 
     }
 
     if ($eventType === "narrator_inputtext") {
-        return "|The Narrator|";
+        $participants = [];
+        $speakerName = extractSpeakerNameFromInputEvent($eventData);
+        if ($speakerName === "" && !empty($GLOBALS["PLAYER_NAME"])) {
+            $speakerName = trim((string)$GLOBALS["PLAYER_NAME"]);
+        }
+        if ($speakerName !== "") {
+            $participants[] = $speakerName;
+        }
+        if ($listenerName !== "") {
+            $participants[] = $listenerName;
+        } else {
+            $participants[] = "The Narrator";
+        }
+        return normalizePeoplePipeList($participants);
     }
 
     $targetMeta = extractTalkTargetMetadata($eventData);
@@ -3232,6 +3245,11 @@ function shouldBroadcastNarratorChatToNearbyPeople($eventData, $fallbackPeople =
 
     // Keep explicit whispers private.
     if (stripos((string)$eventData, '(whispering to ') !== false) {
+        return false;
+    }
+
+    $targetMeta = extractTalkTargetMetadata((string)$eventData);
+    if ($targetMeta["hasExplicitTarget"] && !$targetMeta["isBroadcast"]) {
         return false;
     }
 
