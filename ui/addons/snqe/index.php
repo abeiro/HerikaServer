@@ -10,6 +10,7 @@ require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
 
 $GLOBALS["ENGINE_PATH"] = $enginePath;
 $stateFile = "{$enginePath}log/snqe_state.json";
+$logTailLines = 400;
 
 $db = new sql();
 
@@ -52,8 +53,33 @@ function getTailOfFile($filepath, $lines = 100) {
     return implode("\n", $lastLines);
 }
 
-$logRunAgent = getTailOfFile("{$enginePath}log/log_run_agent.log", 100);
-$serviceLog  = getTailOfFile("{$enginePath}log/service.log", 100);
+function buildCombinedLog($agentLog, $serviceLog) {
+    return implode("\n", [
+        "===== Quest Runner (log_run_agent.log) =====",
+        trim((string) $agentLog) !== '' ? $agentLog : 'No quest runner log data available.',
+        "",
+        "===== Service (service.log) =====",
+        trim((string) $serviceLog) !== '' ? $serviceLog : 'No service log data available.',
+    ]);
+}
+
+function getFileContentsSafe($filepath) {
+    if (!file_exists($filepath)) {
+        return "File not found: " . htmlspecialchars($filepath);
+    }
+    if (!is_readable($filepath)) {
+        return "Cannot read file (permission denied): " . htmlspecialchars($filepath);
+    }
+    $content = @file_get_contents($filepath);
+    if ($content === false) {
+        return "Cannot read file: " . htmlspecialchars($filepath);
+    }
+    return $content;
+}
+
+$logRunAgent = getTailOfFile("{$enginePath}log/log_run_agent.log", $logTailLines);
+$serviceLog  = getTailOfFile("{$enginePath}log/service.log", $logTailLines);
+$combinedLog = buildCombinedLog($logRunAgent, $serviceLog);
 
 function getRunningQuests($db) {
     try {
@@ -179,12 +205,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
 
 // AJAX: logs
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_logs') {
+    $agentLog = getTailOfFile("{$enginePath}log/log_run_agent.log", $logTailLines);
+    $serviceLog = getTailOfFile("{$enginePath}log/service.log", $logTailLines);
+
     header('Content-Type: application/json');
     echo json_encode([
-        'agentLog'   => getTailOfFile("{$enginePath}log/log_run_agent.log", 100),
-        'serviceLog' => getTailOfFile("{$enginePath}log/service.log", 100),
-        'pendingStep' => getPendingStep($GLOBALS['db'])
+        'agentLog' => $agentLog,
+        'serviceLog' => $serviceLog,
+        'combinedLog' => buildCombinedLog($agentLog, $serviceLog),
+        'pendingStep' => getPendingStep($GLOBALS['db']),
+        'updatedAt' => date('H:i:s'),
+        'tailLines' => $logTailLines,
     ]);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'download_logs') {
+    $agentLogFull = getFileContentsSafe("{$enginePath}log/log_run_agent.log");
+    $serviceLogFull = getFileContentsSafe("{$enginePath}log/service.log");
+    $downloadBody = implode("\n", [
+        "Quest System Server Logs Export",
+        "Generated: " . date('Y-m-d H:i:s'),
+        "",
+        buildCombinedLog($agentLogFull, $serviceLogFull),
+        "",
+    ]);
+    $downloadName = 'quest_system_server_logs_' . date('Ymd_His') . '.txt';
+
+    header('Content-Type: text/plain; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="' . $downloadName . '"');
+    header('Content-Length: ' . strlen($downloadBody));
+    echo $downloadBody;
     exit;
 }
 
@@ -290,7 +341,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 $uiPath = $enginePath . "ui" . DIRECTORY_SEPARATOR;
-$TITLE = "AI Quest Manager V1";
+$viewMode = isset($_GET['view']) ? (string) $_GET['view'] : 'manager';
+$isLogsView = ($viewMode === 'logs');
+$TITLE = $isLogsView ? "Quest System Server Logs" : "AI Quest Manager V1";
 
 ob_start();
 include($uiPath . "tmpl/head.html");
@@ -343,7 +396,8 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
     font-size: 1.8em;
     color: #ffffff;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
-    word-spacing: 6px;
+    letter-spacing: 1px;
+    word-spacing: 8px;
     margin: 0 0 24px 0;
 }
 
@@ -409,6 +463,8 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
     display: flex;
     align-items: center;
     gap: 8px;
+    letter-spacing: 0.7px;
+    word-spacing: 6px;
 }
 
 .pulse-dot {
@@ -482,6 +538,119 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
     line-height: 1.4;
     resize: vertical;
     box-sizing: border-box;
+}
+
+.snqe-log-menu {
+    margin: 18px 0 22px 0;
+    padding: 16px;
+    border: 1px solid rgba(242,124,17,0.22);
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(17,17,17,0.92), rgba(25,25,25,0.98));
+}
+
+.snqe-log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.snqe-log-header .snqe-section-title {
+    margin-bottom: 4px;
+}
+
+.snqe-log-caption {
+    margin: 0;
+    color: #b4bdc9;
+    font-size: 0.85em;
+    line-height: 1.45;
+}
+
+.snqe-log-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.snqe-log-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(96,165,250,0.25);
+    background: rgba(15,23,42,0.8);
+    color: #93c5fd;
+    font-size: 0.78em;
+    letter-spacing: 0.2px;
+}
+
+.snqe-log-download {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(96,165,250,0.35);
+    background: linear-gradient(135deg, rgba(37,99,235,0.82), rgba(29,78,216,0.75));
+    color: #ffffff;
+    font-size: 0.82em;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    letter-spacing: 0.3px;
+}
+
+.snqe-log-download:hover {
+    background: linear-gradient(135deg, rgba(59,130,246,0.92), rgba(37,99,235,0.85));
+    transform: translateY(-1px);
+}
+
+.snqe-log-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.snqe-log-tab {
+    border: 1px solid rgba(242,124,17,0.2);
+    border-radius: 999px;
+    background: rgba(0,0,0,0.28);
+    color: #cfd9ea;
+    padding: 8px 12px;
+    font-size: 0.84em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.snqe-log-tab:hover {
+    color: rgb(242,124,17);
+    border-color: rgba(242,124,17,0.4);
+}
+
+.snqe-log-tab.active {
+    color: #1b1205;
+    background: linear-gradient(135deg, rgba(242,124,17,0.95), rgba(245,158,11,0.9));
+    border-color: rgba(245,158,11,0.7);
+}
+
+.snqe-log-panel {
+    display: none;
+}
+
+.snqe-log-panel.active {
+    display: block;
+}
+
+.snqe-log-panel .log-box {
+    min-height: 240px;
+    max-height: 360px;
 }
 
 .btn-group { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
@@ -568,6 +737,8 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
     font-size: 1.1em;
     color: #ffffff;
     margin: 0 0 14px 0;
+    letter-spacing: 0.7px;
+    word-spacing: 6px;
 }
 
 .staged-quest-value {
@@ -592,6 +763,8 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
     font-size: 1.1em;
     color: #ffffff;
     margin: 0 0 14px 0;
+    letter-spacing: 0.7px;
+    word-spacing: 6px;
 }
 
 .pending-step-value {
@@ -616,6 +789,8 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
     font-size: 1.1em;
     color: #ffffff;
     margin: 0 0 14px 0;
+    letter-spacing: 0.7px;
+    word-spacing: 6px;
 }
 
 .next-objective-value {
@@ -650,76 +825,114 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
 <main>
     <div class="snqe-layout">
         <div class="snqe-main">
-            <div class="snqe-page-title">AI Quest Manager V1</div>
-            <div class="snqe-title-info">
-                <p class="snqe-title-info-text">Before generating or staging quests, use <strong>"Send All Locations"</strong> in CHIM MCM under <strong>Tools</strong> so the quest system can target valid travel locations.</p>
-                <p class="snqe-alpha-note"><strong>Alpha:</strong> AI Quest Manager is still in alpha and requires OpenRouter to be configured for this to work.</p>
-                <div class="snqe-location-stat">
-                    <span class="snqe-location-count"><?php echo intval($locationStats['location_count']); ?></span>
-                    <span class="snqe-location-label">Travel To Locations in Database</span>
+            <div class="snqe-page-title"><?php echo $isLogsView ? 'Quest System Server Logs' : 'AI Quest Manager V1'; ?></div>
+            <?php if ($isLogsView): ?>
+                <div class="snqe-title-info">
+                    <p class="snqe-title-info-text">Live quest-system server output from the runner and service logs. Use this tab to inspect what the server-side quest processor is doing.</p>
+                    <p class="snqe-alpha-note"><strong>Source:</strong> `log_run_agent.log` and `service.log`, refreshed automatically every 5 seconds.</p>
                 </div>
-            </div>
-            <form id="snqeForm">
-                <div class="btn-group">
-                    <button type="button" class="btn-snqe btn-snqe-generate" onclick="generateScenario()">Generate Scenario</button>
-                    <button type="button" class="btn-snqe btn-snqe-create" onclick="submitFormData()">Stage Storyline</button>
-                    <button type="button" class="btn-snqe btn-snqe-create" id="playQuestBtn" onclick="startQuest()" <?php echo (empty($runningQuests) && $stagedQuestTitle !== 'No staged quest') ? '' : 'disabled'; ?>>Play Quest</button>
-                    <button type="button" class="btn-snqe btn-snqe-clear" id="requestEndBtn" onclick="requestEnd()" <?php echo !empty($runningQuests) ? '' : 'disabled'; ?>>Stop Quest</button>
-                    <button type="button" class="btn-snqe btn-snqe-clear" onclick="clearAllData()">Clear Data</button>
-                    <button type="button" class="btn-snqe btn-snqe-clear" onclick="cleanAll()">Clear Running Quests</button>
-
-                    <a href="https://github.com/abeiro/HerikaServer/discussions/480" target="_blank" style="color:#60a5fa; font-size:0.9em; margin-bottom: 20px; display:inline-block;position:absolute;right:5px;top:-50px">Documentation</a>
-                   
-                </div>
-
-                <div class="loading-msg" id="loading">Generating scenario...</div>
-                <br />
-
-                <div class="form-group" id="suggestedGroup" style="<?php echo ($stagedQuestTitle !== 'No staged quest') ? 'display:none;' : ''; ?>">
-                    <label for="suggested">User suggestions</label>
-                    <p class="small-info">This will affect AI instructions when generating scenario for the first time. E.G. "A quest to retrieve some stolen item" or "action should take place at Silent Moons Camp"</p>
-                    <textarea name="suggested" id="suggested" placeholder="Enter suggestions here..." style="height: 50px;"></textarea>
-                </div>
-
-                <div class="form-group" id="userpromptGroup" style="<?php echo ($stagedQuestTitle !== 'No staged quest') ? 'display:none;' : ''; ?>">
-                    <label for="userprompt">AI instructions</label>
-                    <p class="small-info">These are the instructions sent to AI. You can add here some details. E.G. (spawn several spiders at Broken Fang cave)</p>
-                    <textarea name="userprompt" id="userprompt" style="height: 100px;"></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="questtitle">Quest Title</label>
-                    <input type="text" name="questtitle" id="questtitle" placeholder="Quest title will appear here..."  readonly />
-                </div>
-
-                <div class="form-group">
-                    <label for="briefing">Quest Briefing</label>
-                    <input type="text" name="briefing" id="briefing" placeholder="Briefing will appear here..." readonly />
-                </div>
-
-                <div class="form-group" style="display:none;">
-                    <label>Agent Log <small style="color:#666;">(last 100 lines)</small></label>
-                    <div class="log-box" id="agentLog"><?php echo htmlspecialchars($logRunAgent); ?></div>
-                </div>
-
-                <div class="form-group" style="display:none;">
-                    <label>Service Log <small style="color:#666;">(last 100 lines)</small></label>
-                    <div class="log-box" id="serviceLog"><?php echo htmlspecialchars($serviceLog); ?></div>
-                </div>
-
-                <div style="display:none;">
-                    <select name="locationlist" id="locationlist" multiple></select>
-                </div>
-
-                <div style="">
-                    <label>NPCs involved</label>
-                    <div class="log-box" id="involvedNPCs" style="color:#60a5fa;"><?php echo htmlspecialchars(implode(", ", $involvedNPCs??[])); ?>
+            <?php else: ?>
+                <div class="snqe-title-info">
+                    <p class="snqe-title-info-text">Before generating or staging quests, use <strong>"Send All Locations"</strong> in CHIM MCM under <strong>Tools</strong> so the quest system can target valid travel locations.</p>
+                    <p class="snqe-alpha-note"><strong>Alpha:</strong> AI Quest Manager is still in alpha and requires OpenRouter to be configured for this to work.</p>
+                    <div class="snqe-location-stat">
+                        <span class="snqe-location-count"><?php echo intval($locationStats['location_count']); ?></span>
+                        <span class="snqe-location-label">Travel To Locations in Database</span>
                     </div>
                 </div>
+            <?php endif; ?>
+            <form id="snqeForm">
+                <?php if (!$isLogsView): ?>
+                    <div class="btn-group">
+                        <button type="button" class="btn-snqe btn-snqe-generate" onclick="generateScenario()">Generate Scenario</button>
+                        <button type="button" class="btn-snqe btn-snqe-create" onclick="submitFormData()">Stage Storyline</button>
+                        <button type="button" class="btn-snqe btn-snqe-create" id="playQuestBtn" onclick="startQuest()" <?php echo (empty($runningQuests) && $stagedQuestTitle !== 'No staged quest') ? '' : 'disabled'; ?>>Play Quest</button>
+                        <button type="button" class="btn-snqe btn-snqe-clear" id="requestEndBtn" onclick="requestEnd()" <?php echo !empty($runningQuests) ? '' : 'disabled'; ?>>Stop Quest</button>
+                        <button type="button" class="btn-snqe btn-snqe-clear" onclick="clearAllData()">Clear Data</button>
+                        <button type="button" class="btn-snqe btn-snqe-clear" onclick="cleanAll()">Clear Running Quests</button>
+
+                        <a href="https://github.com/abeiro/HerikaServer/discussions/480" target="_blank" style="color:#60a5fa; font-size:0.9em; margin-bottom: 20px; display:inline-block;position:absolute;right:5px;top:-50px">Documentation</a>
+                    </div>
+
+                    <div class="loading-msg" id="loading">Generating scenario...</div>
+                    <br />
+                <?php endif; ?>
+
+                <?php if ($isLogsView): ?>
+                    <div class="snqe-log-menu">
+                        <div class="snqe-log-header">
+                            <div>
+                                <div class="snqe-section-title">
+                                    <span class="pulse-dot"></span>
+                                    Quest System Server Logs
+                                </div>
+                                <p class="snqe-log-caption">Live quest-system server output from the runner and service logs. Refreshes automatically every 5 seconds.</p>
+                            </div>
+                            <div class="snqe-log-meta">
+                                <button type="button" class="snqe-log-download" onclick="downloadLogs()">Download Logs</button>
+                                <span class="snqe-log-badge">Latest <?php echo intval($logTailLines); ?> lines per stream</span>
+                                <span class="snqe-log-badge" id="logUpdatedAt">Updated <?php echo date('H:i:s'); ?></span>
+                            </div>
+                        </div>
+
+                        <div class="snqe-log-tabs" role="tablist" aria-label="Quest system server log sources">
+                            <button type="button" class="snqe-log-tab active" data-log-tab="combined">All Server Logs</button>
+                            <button type="button" class="snqe-log-tab" data-log-tab="agent">Quest Runner</button>
+                            <button type="button" class="snqe-log-tab" data-log-tab="service">Service</button>
+                        </div>
+
+                        <div class="snqe-log-panel active" data-log-panel="combined">
+                            <div class="log-box" id="combinedLog"><?php echo htmlspecialchars($combinedLog); ?></div>
+                        </div>
+
+                        <div class="snqe-log-panel" data-log-panel="agent">
+                            <div class="log-box" id="agentLog"><?php echo htmlspecialchars($logRunAgent); ?></div>
+                        </div>
+
+                        <div class="snqe-log-panel" data-log-panel="service">
+                            <div class="log-box" id="serviceLog"><?php echo htmlspecialchars($serviceLog); ?></div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!$isLogsView): ?>
+                    <div class="form-group" id="suggestedGroup" style="<?php echo ($stagedQuestTitle !== 'No staged quest') ? 'display:none;' : ''; ?>">
+                        <label for="suggested">User suggestions</label>
+                        <p class="small-info">This will affect AI instructions when generating scenario for the first time. E.G. "A quest to retrieve some stolen item" or "action should take place at Silent Moons Camp"</p>
+                        <textarea name="suggested" id="suggested" placeholder="Enter suggestions here..." style="height: 50px;"></textarea>
+                    </div>
+
+                    <div class="form-group" id="userpromptGroup" style="<?php echo ($stagedQuestTitle !== 'No staged quest') ? 'display:none;' : ''; ?>">
+                        <label for="userprompt">AI instructions</label>
+                        <p class="small-info">These are the instructions sent to AI. You can add here some details. E.G. (spawn several spiders at Broken Fang cave)</p>
+                        <textarea name="userprompt" id="userprompt" style="height: 100px;"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="questtitle">Quest Title</label>
+                        <input type="text" name="questtitle" id="questtitle" placeholder="Quest title will appear here..."  readonly />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="briefing">Quest Briefing</label>
+                        <input type="text" name="briefing" id="briefing" placeholder="Briefing will appear here..." readonly />
+                    </div>
+
+                    <div style="display:none;">
+                        <select name="locationlist" id="locationlist" multiple></select>
+                    </div>
+
+                    <div>
+                        <label>NPCs involved</label>
+                        <div class="log-box" id="involvedNPCs" style="color:#60a5fa;"><?php echo htmlspecialchars(implode(", ", $involvedNPCs??[])); ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
 
             </form>
         </div>
 
+        <?php if (!$isLogsView): ?>
         <div class="snqe-sidebar">
             <div class="snqe-section-title">
                 <span class="pulse-dot"></span>
@@ -767,11 +980,13 @@ footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031
                 </div>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 </main>
 
 <script>
 const SNQE_SELF = '<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>';
+const LOG_REFRESH_MS = 5000;
 
 function escapeHtml(text) {
     const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' };
@@ -782,7 +997,48 @@ function formatTime(ts) {
     return new Date(ts).toLocaleTimeString('en-US', { hour12: false });
 }
 
+function activateLogTab(tabName) {
+    document.querySelectorAll('.snqe-log-tab').forEach((tab) => {
+        tab.classList.toggle('active', tab.dataset.logTab === tabName);
+    });
+    document.querySelectorAll('.snqe-log-panel').forEach((panel) => {
+        panel.classList.toggle('active', panel.dataset.logPanel === tabName);
+    });
+}
+
+function shouldStickToBottom(element) {
+    if (!element) {
+        return false;
+    }
+    return (element.scrollHeight - element.scrollTop - element.clientHeight) < 24;
+}
+
+function updateLogElement(element, content) {
+    if (!element) {
+        return;
+    }
+    const stickToBottom = shouldStickToBottom(element) || !element.textContent;
+    element.textContent = content || '';
+    if (stickToBottom) {
+        element.scrollTop = element.scrollHeight;
+    }
+}
+
+function buildCombinedLog(agentLog, serviceLog) {
+    const sections = [
+        '===== Quest Runner (log_run_agent.log) =====',
+        agentLog || 'No quest runner log data available.',
+        '',
+        '===== Service (service.log) =====',
+        serviceLog || 'No service log data available.'
+    ];
+    return sections.join('\n');
+}
+
 function refreshRunningQuests() {
+    if (<?php echo $isLogsView ? 'true' : 'false'; ?>) {
+        return;
+    }
     fetch(SNQE_SELF + '?action=get_running_quests')
         .then(r => r.json())
         .then(data => {
@@ -856,16 +1112,29 @@ function refreshLogs() {
         .then(data => {
             const al = document.getElementById('agentLog');
             const sl = document.getElementById('serviceLog');
+            const cl = document.getElementById('combinedLog');
             const ps = document.getElementById('pendingStepValue');
-            if (data.agentLog)   { al.textContent = data.agentLog;   al.scrollTop = al.scrollHeight; }
-            if (data.serviceLog) { sl.textContent = data.serviceLog; sl.scrollTop = sl.scrollHeight; }
+            const updatedAt = document.getElementById('logUpdatedAt');
+            updateLogElement(al, data.agentLog || '');
+            updateLogElement(sl, data.serviceLog || '');
+            updateLogElement(cl, data.combinedLog || buildCombinedLog(data.agentLog || '', data.serviceLog || ''));
             if (data.pendingStep && ps) { ps.textContent = data.pendingStep; }
+            if (updatedAt) {
+                updatedAt.textContent = 'Updated ' + (data.updatedAt || '--:--:--');
+            }
         })
         .catch(() => {});
 }
 
+function downloadLogs() {
+    window.location.href = SNQE_SELF + '?action=download_logs';
+}
+
 function updateSelectBox(elementId, items) {
     const select = document.getElementById(elementId);
+    if (!select) {
+        return;
+    }
     const existing = Array.from(select.options).map(o => o.textContent);
     items.forEach((item, i) => {
         if (!existing.includes(item)) {
@@ -879,6 +1148,9 @@ function updateSelectBox(elementId, items) {
 }
 
 function generateScenario() {
+    if (<?php echo $isLogsView ? 'true' : 'false'; ?>) {
+        return;
+    }
     const userprompt = document.getElementById('userprompt').value;
     const questTitle = document.getElementById('questtitle').value;
     const briefing   = document.getElementById('briefing').value;
@@ -909,6 +1181,9 @@ function generateScenario() {
 }
 
 function submitFormData() {
+    if (<?php echo $isLogsView ? 'true' : 'false'; ?>) {
+        return;
+    }
     const userprompt  = document.getElementById('userprompt').value;
     const questTitle  = document.getElementById('questtitle').value;
     const briefing    = document.getElementById('briefing').value;
@@ -946,6 +1221,9 @@ function submitFormData() {
 }
 
 function clearAllData() {
+    if (<?php echo $isLogsView ? 'true' : 'false'; ?>) {
+        return;
+    }
     if (!confirm('Clear all data?')) return;
     localStorage.removeItem('snqe_questtitle');
     localStorage.removeItem('snqe_briefing');
@@ -957,6 +1235,9 @@ function clearAllData() {
 }
 
 function startQuest() {
+    if (<?php echo $isLogsView ? 'true' : 'false'; ?>) {
+        return;
+    }
     if (!confirm('Start the quest now?')) return;
     
     const loadingEl = document.getElementById('loading');
@@ -986,6 +1267,9 @@ function startQuest() {
 }
 
 function requestEnd() {
+    if (<?php echo $isLogsView ? 'true' : 'false'; ?>) {
+        return;
+    }
     if (!confirm('Stop quest now?')) return;
     
     const loadingEl = document.getElementById('loading');
@@ -1015,6 +1299,9 @@ function requestEnd() {
 }
 
 function cleanAll() {
+    if (<?php echo $isLogsView ? 'true' : 'false'; ?>) {
+        return;
+    }
     if (!confirm('Clear running quests? This will remove all running quests and state files.')) return;
     
     const loadingEl = document.getElementById('loading');
@@ -1044,13 +1331,26 @@ function cleanAll() {
 }
 
 window.addEventListener('DOMContentLoaded', function() {
-    const t = localStorage.getItem('snqe_questtitle');
-    const b = localStorage.getItem('snqe_briefing');
-    if (t) document.getElementById('questtitle').value = t;
-    if (b) document.getElementById('briefing').value   = b;
+    if (!<?php echo $isLogsView ? 'true' : 'false'; ?>) {
+        const t = localStorage.getItem('snqe_questtitle');
+        const b = localStorage.getItem('snqe_briefing');
+        if (t) document.getElementById('questtitle').value = t;
+        if (b) document.getElementById('briefing').value   = b;
+    }
 
-    refreshRunningQuests();
-    setInterval(refreshRunningQuests, 5000);
+    document.querySelectorAll('.snqe-log-tab').forEach((tab) => {
+        tab.addEventListener('click', function() {
+            activateLogTab(this.dataset.logTab);
+        });
+    });
+
+    refreshLogs();
+    activateLogTab('combined');
+    if (!<?php echo $isLogsView ? 'true' : 'false'; ?>) {
+        refreshRunningQuests();
+        setInterval(refreshRunningQuests, 5000);
+    }
+    setInterval(refreshLogs, LOG_REFRESH_MS);
 });
 </script>
 

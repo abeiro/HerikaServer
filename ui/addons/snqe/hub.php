@@ -33,6 +33,10 @@ $tabs = [
         "label" => "Outfits",
         "src" => $webRoot . "/ui/addons/snqe/quest_reference_table.php?embed=1&dataset=outfit",
     ],
+    "server_logs" => [
+        "label" => "Server Logs",
+        "src" => $webRoot . "/ui/addons/snqe/index.php?embed=1&view=logs",
+    ],
 ];
 
 $activeTab = isset($_GET["tab"]) ? (string) $_GET["tab"] : "manager";
@@ -80,8 +84,8 @@ footer {
     background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
     color: rgb(242, 124, 17);
     font-family: "MagicCards", sans-serif;
-    letter-spacing: 1.2px;
-    word-spacing: 6px;
+    letter-spacing: 1.5px;
+    word-spacing: 8px;
     font-size: 1.5em;
 }
 
@@ -113,8 +117,8 @@ footer {
     font-size: 0.95em;
     white-space: nowrap;
     font-family: "MagicCards", sans-serif;
-    word-spacing: 5px;
-    letter-spacing: 1px;
+    word-spacing: 8px;
+    letter-spacing: 1.5px;
     margin-bottom: -2px;
 }
 
