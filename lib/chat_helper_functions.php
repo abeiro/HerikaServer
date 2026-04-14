@@ -579,26 +579,26 @@ function unmoodSentence($sentence) {
     if ($processAsterisks === true ) {
         error_log("[unmoodSentence] REMOVE_ASTERISKS_FROM_OUTPUT FULL is active! $sentence <" . ($GLOBALS['strip_emotes_from_output'] ?? 'N/A') . "> <" . ($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] ?? 'N/A') . ">" );
 
+        // Remove a few explicit emote/action tokens first; emphasis like *my* should keep the inner text.
+        $output = strtr($output, [
+            "*Smirks*" => "", "*smirks*" => "",
+            "*winks*" => "", "*wink*" => "", "*smirk*" => "", "*gasps*" => "", "*chuckles*" => "", "*giggles*" => "", "*Giggles*" => "", "*laughs*" => "",
+            "*gasp*" => "", "*moans*" => "", "*whispers*" => "", "*moan*" => "",
+            "*pant*" => "", "*cough*" => "", "*hiccup*" => "", "*whimper*" => ""
+        ]);
+
         // If the entire message is wrapped in asterisks, strip them from both ends
         if (str_starts_with($output, '*') && str_ends_with($output, '*')) {
             $output = trim($output, '*'); // correct trimming of leading/trailing asterisks
         } else {
-            // Remove text between single-pair asterisks
-            $output = preg_replace('/\*([^*]+)\*/', '', $output);
+            // For emphasis, keep the inner text and strip only the asterisk characters.
+            $output = preg_replace('/\*([^*]+)\*/', '$1', $output);
         }
     }
     // is this the users intention if they set REMOVE_ASTERISKS false?
     else {
         error_log("[unmoodSentence] REMOVE_ASTERISKS_FROM_OUTPUT PARTIAL is active! preserving raw asterisk blocks");
     }
-
-    // Remove common emote tokens wrapped in asterisks (user intention?)
-    $output = strtr($output, [
-        "*Smirks*" => "", "*smirks*" => "",
-        "*winks*" => "", "*wink*" => "", "*smirk*" => "", "*gasps*" => "", "*chuckles*" => "", "*giggles*" => "", "*Giggles*" => "", "*laughs*" => "",
-        "*gasp*" => "", "*moans*" => "", "*whispers*" => "", "*moan*" => "",
-        "*pant*" => "", "*cough*" => "", "*hiccup*" => "", "*whimper*" => ""
-    ]);
 
     // Non-asterisk-related cleanup always applies
     $output = strtr($output, [
