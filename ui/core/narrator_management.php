@@ -725,9 +725,9 @@ if (!$isEmbed) {
                             <input type="checkbox" id="books_only_narrator" name="books_only_narrator" value="1" <?php echo $booksOnlyNarrator ? 'checked' : ''; ?>>
                             <span class="toggle-slider"></span>
                         </div>
-                        <span class="toggle-label">Only Narrator Summarizes Books</span>
+                        <span class="toggle-label">Only the Narrator can Summarize Books</span>
                     </label>
-                    <span class="hint">The Narrator will be the only one to summarize books.</span>
+                    <span class="hint">The Narrator will be the only one to summarize books when you trigger the book summary feature.</span>
                     
                     <label class="toggle-row">
                         <div class="toggle-switch">
@@ -775,9 +775,9 @@ if (!$isEmbed) {
                             <input type="checkbox" id="preserve_asterisks_in_context" name="preserve_asterisks_in_context" value="1" <?php echo $preserveAsterisksInContext ? 'checked' : ''; ?>>
                             <span class="toggle-slider"></span>
                         </div>
-                        <span class="toggle-label">Keep Asterisk Narration in Context</span>
+                        <span class="toggle-label">Keep NPC Narration Description in Context History</span>
                     </label>
-                    <span class="hint">Keep *narration* intact in subtitles, chat events, and LLM context history (also works when inline narration is disabled).</span>
+                    <span class="hint">Keep *narration* descriptions intact in the eventlog context history. NPCs will be able to see these descriptions in their prompts..</span>
                 </div>
 
                 <!-- Welcome Message Section -->

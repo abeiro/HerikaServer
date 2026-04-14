@@ -53,7 +53,7 @@ if ($inlineNarrationEnabled) {
 
     $inlineNarrationPrompt = chimLoadManagedPromptTemplate(
         'inline_narration_prompt',
-        "You may include brief third-person narration in asterisks (e.g., *She smiles*) before the dialogue.",
+        "You may include one brief third-person narration block in single asterisks before the dialogue (e.g., *She smiles*). Do not wrap the entire reply in asterisks; keep any spoken dialogue outside the asterisks.",
         [],
         "INLINE_NARRATION"
     );
