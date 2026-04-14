@@ -47,7 +47,7 @@ if ($inlineNarrationEnabled) {
     
     // Hardcoded fallback if database query failed or returned no results
     if (!$inlineNarrationPrompt) {
-        $inlineNarrationPrompt = "You may include brief third-person narration in asterisks (e.g., *She smiles*) before the dialogue.";
+        $inlineNarrationPrompt = "You may include one brief third-person narration block in single asterisks before the dialogue (e.g., *She smiles*). Do not wrap the entire reply in asterisks; keep any spoken dialogue outside the asterisks.";
     }
     $TEMPLATE_DIALOG .= " " . $inlineNarrationPrompt;
 } else {

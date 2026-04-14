@@ -116,7 +116,7 @@
         $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
         $messageDescription = "lines of dialogue";
         if ($inlineNarrationEnabled) {
-            $messageDescription = "Include brief third-person narration followed by {$GLOBALS["HERIKA_NAME"]}'s first-person spoken text. Example: *She smiles*. It's good to see you again, my friend!";
+            $messageDescription = "If needed, start with one brief third-person narration block in single asterisks, then put {$GLOBALS["HERIKA_NAME"]}'s spoken text after it. Example: *She smiles* It's good to see you again, my friend! Do not wrap the entire reply in asterisks, and keep spoken dialogue outside the asterisks.";
         }
     
         if (isset($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])&&($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])) {
@@ -202,7 +202,7 @@
         $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
         $messageDescription = "lines of {$GLOBALS["HERIKA_NAME"]}'s dialogue";
         if ($inlineNarrationEnabled) {
-            $messageDescription = "Include brief third-person narration followed by {$GLOBALS["HERIKA_NAME"]}'s first-person spoken text. Example: *She smiles*. It's good to see you again, my friend!";
+            $messageDescription = "If needed, start with one brief third-person narration block in single asterisks, then put {$GLOBALS["HERIKA_NAME"]}'s spoken text after it. Example: *She smiles* It's good to see you again, my friend! Do not wrap the entire reply in asterisks, and keep spoken dialogue outside the asterisks.";
         }
 
         $GLOBALS["structuredOutputTemplate"] = array(

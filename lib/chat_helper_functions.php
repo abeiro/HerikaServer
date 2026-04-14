@@ -181,10 +181,18 @@ function findFastSentencePosition($s_string) {
     // "Don't split after ellipses either... Thanks :-)" -for example
     $splitSentenceRegex = "/([" . $eosPunc . "])(?<!\.\.)(?<!\.\.\.)\s+/u";
 
-    // Find the first match and return the position of the EOS punctuation
-    if (preg_match($splitSentenceRegex, $s_string, $matches, PREG_OFFSET_CAPTURE)) {
-        // Return the position of the EOS punctuation character (to match findDotPosition behavior)
-        return $matches[1][1];
+    // Find the first safe match and return the position of the EOS punctuation.
+    // Do not split while a single-asterisk narration span is still open.
+    if (preg_match_all($splitSentenceRegex, $s_string, $matches, PREG_OFFSET_CAPTURE)) {
+        foreach ($matches[1] as $match) {
+            $position = $match[1];
+            $candidate = substr($s_string, 0, $position + 1);
+            if (hasUnclosedSingleAsteriskBlock($candidate)) {
+                continue;
+            }
+
+            return $position;
+        }
     }
 
     return false;
@@ -237,9 +245,34 @@ function split_at_end_of_sentence($paragraph) {
     // "Don't split after ellipses either... Thanks :-)" -for example
     $splitSentenceRegex = "/(?<=[" . $eosPunc . "])(?<!\.\.)(?<!\.\.\.)\s+/u";
 
-    $sentences = preg_split($splitSentenceRegex, $paragraph, -1, PREG_SPLIT_NO_EMPTY);
+    if (!preg_match_all($splitSentenceRegex, $paragraph, $matches, PREG_OFFSET_CAPTURE)) {
+        return [$paragraph];
+    }
 
-    return $sentences;
+    $sentences = [];
+    $chunkStart = 0;
+
+    foreach ($matches[0] as $match) {
+        $splitOffset = $match[1];
+        $candidate = substr($paragraph, 0, $splitOffset);
+        if (hasUnclosedSingleAsteriskBlock($candidate)) {
+            continue;
+        }
+
+        $sentence = trim(substr($paragraph, $chunkStart, $splitOffset - $chunkStart));
+        if ($sentence !== '') {
+            $sentences[] = $sentence;
+        }
+
+        $chunkStart = $splitOffset + strlen($match[0]);
+    }
+
+    $tail = trim(substr($paragraph, $chunkStart));
+    if ($tail !== '') {
+        $sentences[] = $tail;
+    }
+
+    return $sentences ?: [$paragraph];
 }
 
 function split_sentences($paragraph)
@@ -282,9 +315,10 @@ function split_sentences_stream($paragraph)
             $currentSentence = $sentence;
         } else {
             $combined = $currentSentence . ' ' . $sentence;
+            $currentHasOpenAsteriskBlock = hasUnclosedSingleAsteriskBlock($currentSentence);
 
-            // If adding this sentence would exceed maximum, flush current and start new
-            if (strlen($combined) > MAXIMUM_SENTENCE_SIZE) {
+            // Keep multi-sentence *...* spans intact even if they temporarily exceed the normal max size.
+            if (strlen($combined) > MAXIMUM_SENTENCE_SIZE && !$currentHasOpenAsteriskBlock) {
                 $splitSentences[] = $currentSentence;
                 $currentSentence = $sentence;
             } else {
@@ -408,6 +442,24 @@ function checkOAIComplains($responseTextUnmooded)
     }
 
     return $scoring;
+}
+
+/**
+ * Count standalone single-asterisk markers while ignoring double-asterisk markup.
+ */
+function countSingleAsteriskMarkers($text) {
+    if (!preg_match_all('/(?<!\*)\*(?!\*)/', (string)$text, $matches)) {
+        return 0;
+    }
+
+    return count($matches[0]);
+}
+
+/**
+ * Detect whether a single-asterisk span is still open.
+ */
+function hasUnclosedSingleAsteriskBlock($text) {
+    return (countSingleAsteriskMarkers($text) % 2) !== 0;
 }
 
 /**
@@ -560,10 +612,10 @@ function unmoodSentence($sentence) {
         // Remove all leading occurrences of "PLAYERNAME:" or "PLAYERNAME: " (case-insensitive)
         $output = preg_replace('/^(?:' . $playerName . '\s*:\s*)+/i', '', $output);
     }
-    
+
     // Remove AUTOCHAT mode wrapper pattern **(...)** (after player name is cleaned)
     $output = preg_replace('/^\*\*\([^)]*\)\*\*\s*/i', '', $output);
-
+    
     $output = preg_replace('/\s*# ?ACTIONS.*/', '', $output);  // Remove "#ACTIONS ..."
     $output = preg_replace('/#[A-Za-z]+/', '', $output);       // Remove "#<text>"
 
@@ -646,8 +698,10 @@ function returnLines($lines,$writeOutput=true)
         $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
         $sentenceForSubtitles = $sentence; // Keep the original with narration
 
-        // Strip "(Talking to ...)" from player speech for cleaner subtitles
-        if ($inlineNarrationEnabled) {
+        // Strip "(Talking to ...)" from player speech for cleaner subtitles,
+        // regardless of inline narration mode.
+        $isPlayerSpeech = isset($GLOBALS["HERIKA_NAME"]) && strcasecmp((string)$GLOBALS["HERIKA_NAME"], "Player") === 0;
+        if ($inlineNarrationEnabled || $isPlayerSpeech) {
             $sentence = preg_replace('/\s*\(Talking to [^)]+\)\s*$/i', '', $sentence);
             $sentenceForSubtitles = preg_replace('/\s*\(Talking to [^)]+\)\s*$/i', '', $sentenceForSubtitles);
         }
