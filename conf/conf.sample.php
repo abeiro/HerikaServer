@@ -548,7 +548,7 @@ $FEATURES["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]=true; //NOT FUNCTIONAL CURRENTLY. 
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_TIME_DELAY"]=12; //Time in minutes to delay before using a memory in a prompt.
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]=1; //Amount of memory records that will be injected into the prompt.
 $FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]=true; //Combines individual memory logs into larger ones at the cost of tokens.
-$FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]=10; //Time frame used to pack summary data.
+$FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]=10; //Time frame used to pack summary data. Each point is about 0.24 in-game hours (10 = 2.4h, 50 = 12h).
 $FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_MIN_EVENTS"]=5; //Minimum events needed in a packed time bucket to create a global memory summary.
 $FEATURES["MEMORY_EMBEDDING"]["INDIVIDUAL_MEMORY_SUMMARY_THRESHOLD"]=3; //How many global summaries involving an NPC are needed before creating one NPC-scoped memory.
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_A"]=33; //0-100 - Minimal distance to offer memory.

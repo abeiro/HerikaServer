@@ -517,7 +517,7 @@
       "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to delay before using a memory in a prompt. Used to avoid pushing recent dialogues as memories."},
       "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"The amount of the most relevant memory records that will be injected into the prompt."},
       "AUTO_CREATE_SUMMARYS": {"type":"boolean","description":"Will combine individual memory logs into larger ones. Is more accurate for memory recollection but will use up more tokens. If using koboldcpp, use the multiuser mode to avoid locking."},
-      "AUTO_CREATE_SUMMARY_INTERVAL": {"type":"integer","description":"Time frame used to pack summary data. 10 = 13 in-game hours | 5 = 7.5 in-game hours etc"},
+      "AUTO_CREATE_SUMMARY_INTERVAL": {"type":"integer","description":"Time frame used to pack summary data. Each point is about 0.24 in-game hours. Examples: 5 = 1.2 in-game hours | 10 = 2.4 in-game hours | 50 = 12 in-game hours"},
       "AUTO_CREATE_SUMMARY_MIN_EVENTS": {"type":"integer","description":"Minimum number of events required in a packed time bucket before creating a global memory summary. Default: 5"},
       "INDIVIDUAL_MEMORY_SUMMARY_THRESHOLD": {"type":"integer","description":"How many global memory summaries involving an NPC are required before creating one NPC-scoped individual memory summary. Default: 3"},
       "MEMORY_BIAS_A": {"type":"number","description":"From 0 (never) to 100 (always). Minimal distance to offer memory."},
