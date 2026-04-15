@@ -285,6 +285,7 @@ function split_sentences($paragraph)
     }
 
     $paragraphNcr = br2nl($paragraph); // Remove any BR tags
+    $paragraphNcr = preg_replace('/([。！？])(?=\S)/u', '$1 ', $paragraphNcr);
 
     $sentences = split_at_end_of_sentence($paragraphNcr);
 
@@ -297,6 +298,7 @@ function split_sentences_stream($paragraph)
         return [$paragraph];
     }
 
+    $paragraph = preg_replace('/([。！？])(?=\S)/u', '$1 ', $paragraph);
     // Split at sentence boundaries
     $sentences = split_at_end_of_sentence($paragraph);
 
