@@ -350,8 +350,16 @@ function askLLMForTopic($npc, $topic, $last_llm_call)
     error_log(print_r($buffer, true));
     $res = false;
     if (is_array($parsedbuffer)) {
-        $score = $parsedbuffer[0]["score"];
-        $hint = $parsedbuffer[0]["hint"];
+        if (isset($parsedbuffer[0]["score"])) {
+            $score = $parsedbuffer[0]["score"];
+            $hint = $parsedbuffer[0]["hint"];
+        } else if (isset($parsedbuffer["score"])){
+            $score = $parsedbuffer["score"];
+            $hint = $parsedbuffer["hint"];
+        } else {
+            error_log("Score not found in parsed buffer: " . print_r($parsedbuffer, true));
+        }
+        
         if ($score >= 6) {
             $res = true;
         }
@@ -1274,7 +1282,7 @@ function convertSignedToUnsignedHex($signedInt)
 {
     // Convert signed to unsigned using bitwise AND
     $unsignedInt = $signedInt & 0xFFFFFFFF;
-    return "0x" . dechex($unsignedInt);
+    return "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
 
 }
 
