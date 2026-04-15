@@ -202,7 +202,9 @@ function CreateTopic(
         "target" => $target,
         "important" => $important, // Whether topic requires verification checks
         "delivered" => false,      // Track if topic has been delivered
-        "delivery_attempts" => 0,          // Count attempts for delivery checks
+        "delivery_attempts" => 0,  // Count attempts for delivery checks
+        "attempts" => 0,           // Count retries while the speaker is not nearby
+        "created" => 0,            // Set when the suggestion is actually issued
     ];
 
     // Save updated quest state
@@ -789,8 +791,9 @@ function TellTopicToPlayer(
 
     if (strpos($GLOBALS["actors_present"], $quest_data["npcs"][$npc_ref]["name"]) === false) {
         // NPC not present
-        error_log("[TellTopicToPlayer] Topic <$topic_ref> NPC <{$quest_data["npcs"][$npc_ref]["name"]}>  not present, close npcs: {$GLOBALS["actors_present"]}, {$quest_data["topics"][$topic_ref]["attempts"]}");
-        $quest_data["topics"][$topic_ref]["attempts"] = $quest_data["topics"][$topic_ref]["attempts"] + 1;
+        $attempts = (int) ($quest_data["topics"][$topic_ref]["attempts"] ?? 0);
+        error_log("[TellTopicToPlayer] Topic <$topic_ref> NPC <{$quest_data["npcs"][$npc_ref]["name"]}>  not present, close npcs: {$GLOBALS["actors_present"]}, {$attempts}");
+        $quest_data["topics"][$topic_ref]["attempts"] = $attempts + 1;
 
         if ($quest_data["topics"][$topic_ref]["attempts"] % 10 == 0) { // Will move to player every 10 attempts if actor still not present.
             $npcMaster = new NpcMaster();
@@ -908,6 +911,11 @@ function CheckTopicToPlayer(
         $quest_data["topics"][$topic_ref] = $topic;
         SNQEQuestManager::updateQuestData($quest_id, ["topics" => $quest_data["topics"]]);
         return "done";
+    }
+
+    if (empty($topic["created"])) {
+        error_log("[CheckTopicToPlayer]\tTopic <$topic_ref> has not been created yet. Waiting.");
+        return "pending";
     }
 
     if ((time() - $topic["created"]) < 10) {

@@ -944,6 +944,8 @@ if ($page < 1) $page = 1;
 $q = trim($_GET['q'] ?? '');
 $alpha = strtolower($_GET['alpha'] ?? 'asc');
 if (!in_array($alpha, ['asc','desc'], true)) { $alpha = 'asc'; }
+$nameLetterFilter = strtoupper(trim((string)($_GET['letter'] ?? '')));
+if (!preg_match('/^[A-Z]$/', $nameLetterFilter)) { $nameLetterFilter = ''; }
 $profileIdFilter = isset($_GET['profile_id']) ? trim((string)$_GET['profile_id']) : '';
 // New: checkbox filters
 $favOnly = (isset($_GET['fav']) && $_GET['fav'] === '1');
@@ -1026,6 +1028,10 @@ if ($q !== ''){
     // Match by name primarily; include a few related fields
     $where .= " and (npc_name ilike '".$qEsc."' or coalesce(race,'') ilike '".$qEsc."' or coalesce(voiceid,'') ilike '".$qEsc."' or coalesce(refid,'') ilike '".$qEsc."' or coalesce(tags,'') ilike '".$qEsc."')";
 }
+if ($nameLetterFilter !== '') {
+    $letterEsc = $GLOBALS['db']->escape(strtolower($nameLetterFilter));
+    $where .= " and lower(npc_name) like '".$letterEsc."%'";
+}
 if ($profileIdFilter !== ''){
     $where .= " and profile_id = ".intval($profileIdFilter);
 }
@@ -1066,6 +1072,24 @@ error_log("{$where} {$order} limit {$perPage} offset {$offset}");
 $data = $npc->getAll("{$where} {$order} limit {$perPage} offset {$offset}");
 $editItem = null;
 
+if (!function_exists('renderNpcLetterFilter')) {
+    function renderNpcLetterFilter($selectedLetter = '')
+    {
+        $selectedLetter = strtoupper(trim((string)$selectedLetter));
+        if (!preg_match('/^[A-Z]$/', $selectedLetter)) {
+            $selectedLetter = '';
+        }
+        echo '<div class="npc-letter-filter">';
+        echo '<input type="hidden" id="npc_letter_filter" value="'.htmlspecialchars($selectedLetter, ENT_QUOTES).'" />';
+        echo '<button type="button" class="npc-letter-btn'.($selectedLetter === '' ? ' active' : '').'" data-letter="">All</button>';
+        foreach (range('A', 'Z') as $char) {
+            $active = ($selectedLetter === $char) ? ' active' : '';
+            echo '<button type="button" class="npc-letter-btn'.$active.'" data-letter="'.htmlspecialchars($char, ENT_QUOTES).'">'.htmlspecialchars($char).'</button>';
+        }
+        echo '</div>';
+    }
+}
+
 if (isset($_GET["edit"])) {
     $editItem = $npc->getById($_GET["edit"]);
 }
@@ -1079,7 +1103,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       <div class="filter-inline">
         <div class="npc-filter-dropdown" style="position:relative;">
           <button type="button" id="npc_filter_btn" class="btn" style="margin-right:6px;">Filters ▾</button>
-          <div id="npc_filter_menu" class="npc-filter-menu" style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:8px; min-width:220px; box-shadow:0 6px 18px rgba(0,0,0,0.35); z-index:15;">
+          <div id="npc_filter_menu" class="npc-filter-menu" style="display:none; position:absolute; left:0; top:calc(100% + 6px); background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:8px; min-width:220px; box-shadow:0 6px 18px rgba(0,0,0,0.35); z-index:15;">
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_fav" <?= $favOnly?'checked':'' ?>> ⭐Favorites</label>
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_dyn" <?= $dynOnly?'checked':'' ?>> ♻️Dynamic profile</label>
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_mtm" <?= $mtmOnly?'checked':'' ?>> 📃Middle-term memory</label>
@@ -1112,6 +1136,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       <button id="rel_bulk_build_btn" type="button" class="btn-rel-build" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
       <button id="npc_bulk_switch_profile_btn" type="button" class="btn-rel-build" title="Switch all NPCs from one profile to another">🔀 Mass Switch Profile</button>
       <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
+      <?php renderNpcLetterFilter($nameLetterFilter); ?>
     </div>
     <div class="npc-grid">
     <?php foreach ($data as $row): ?>
@@ -2846,6 +2871,38 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     outline: none;
     box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
 }
+.npc-letter-filter {
+    display:flex;
+    gap:6px;
+    align-items:center;
+    justify-content:center;
+    flex-wrap:wrap;
+    width:100%;
+    margin-top:10px;
+}
+.npc-letter-btn {
+    background:#2a2a2a;
+    border:1px solid #4a4a4a;
+    color:#cfd9ea;
+    border-radius:999px;
+    padding:6px 10px;
+    min-width:34px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+.npc-letter-btn:hover {
+    background:#333333;
+    border-color:#5a5a5a;
+    transform: translateY(-1px);
+}
+.npc-letter-btn.active {
+    background:rgba(242,124,17,0.16);
+    border-color:rgba(242,124,17,0.7);
+    color:rgb(242, 124, 17);
+    box-shadow: inset 0 0 0 1px rgba(242,124,17,0.18);
+}
 .filter-inline .btn { 
     padding:8px 14px; 
     border-radius:6px; 
@@ -2866,7 +2923,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   <div class="filter-inline">
     <div class="npc-filter-dropdown" style="position:relative;">
       <button type="button" id="npc_filter_btn_top" class="btn" style="margin-right:6px;">Filters ▾</button>
-      <div id="npc_filter_menu_top" class="npc-filter-menu" style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:8px; min-width:220px; box-shadow:0 6px 18px rgba(0,0,0,0.35); z-index:15;">
+      <div id="npc_filter_menu_top" class="npc-filter-menu" style="display:none; position:absolute; left:0; top:calc(100% + 6px); background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:8px; min-width:220px; box-shadow:0 6px 18px rgba(0,0,0,0.35); z-index:15;">
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_fav_top" <?= $favOnly?'checked':'' ?>> ⭐Favorites</label>
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_dyn_top" <?= $dynOnly?'checked':'' ?>> ♻️Dynamic profile</label>
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_mtm_top" <?= $mtmOnly?'checked':'' ?>> 📃Middle-term memory</label>
@@ -2898,6 +2955,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   <button id="rel_bulk_build_btn" type="button" class="btn-rel-build" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
   <button id="npc_bulk_switch_profile_btn" type="button" class="btn-rel-build" title="Switch all NPCs from one profile to another">🔀 Mass Switch Profile</button>
   <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
+  <?php renderNpcLetterFilter($nameLetterFilter); ?>
 </div>
 <div style="margin:10px 0; padding:10px 14px; background:rgba(242,124,17,0.08); border:1px solid rgba(242,124,17,0.25); border-radius:8px; font-size:12.5px; color:#cfd9ea; line-height:1.5;">
   <strong style="color:rgb(242,124,17);">History Pullback:</strong>
@@ -4032,6 +4090,21 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     bindBulkSwitch(document.getElementById('npc_bulk_switch_profile_btn'));
   })();
   let listAbort = null;
+  function bindNpcLetterButtons(root){
+    const scope = root || document;
+    scope.querySelectorAll('.npc-letter-btn[data-letter]').forEach(btn=>{
+      btn.addEventListener('click', function(e){
+        e.preventDefault();
+        const nextLetter = String(this.getAttribute('data-letter') || '').toUpperCase();
+        const hidden = document.getElementById('npc_letter_filter');
+        if (hidden) hidden.value = nextLetter;
+        document.querySelectorAll('.npc-letter-btn[data-letter]').forEach(other=>{
+          other.classList.toggle('active', other === this);
+        });
+        refreshList(1);
+      });
+    });
+  }
   async function refreshList(page){
     const params = new URLSearchParams(window.location.search);
     const si = document.getElementById('npc_search');
@@ -4039,6 +4112,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     const caretStart = wasFocused && si && typeof si.selectionStart === 'number' ? si.selectionStart : null;
     const caretEnd = wasFocused && si && typeof si.selectionEnd === 'number' ? si.selectionEnd : null;
     if (si) params.set('q', si.value || '');
+    const lf = document.getElementById('npc_letter_filter');
+    params.set('letter', lf ? (lf.value || '') : '');
     const pf = document.getElementById('npc_profile_filter');
     if (pf) params.set('profile_id', pf.value || '');
     // Collect checkbox filters (prefer top bar if present else bottom)
@@ -4131,6 +4206,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           const m = this.href.match(/page=(\d+)/); const p = m?parseInt(m[1],10):1; refreshList(p);
         });
       });
+      bindNpcLetterButtons(newPag);
       const newSearch = document.getElementById('npc_search');
       if (newSearch){
         // Rebind with debounce and restore focus/caret
@@ -4155,6 +4231,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   if (searchInput){ searchInput.addEventListener('input', function(){ refreshListDebounced(1); }); }
   const profileSel = document.getElementById('npc_profile_filter');
   if (profileSel){ profileSel.addEventListener('change', function(){ refreshList(1); }); }
+  bindNpcLetterButtons(document);
   // Removed alpha toggle; default remains ascending (favorites first)
   // Hook existing pagination for AJAX
   document.querySelectorAll('.pagination a[href]').forEach(a=>{
