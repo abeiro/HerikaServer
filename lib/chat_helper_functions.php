@@ -508,6 +508,20 @@ function extractNarrationAndDialogue($text) {
     ];
 }
 
+function stripPlayerAsteriskActions($text) {
+    $strippedText = preg_replace('/\*[^*]*\*/', ' ', $text);
+    $strippedText = str_replace('*', '', $strippedText);
+    return trim(preg_replace('/\s+/', ' ', $strippedText));
+}
+
+function formatPlayerSubtitleText($text) {
+    $subtitleText = preg_replace('/\s*\(Talking to [^)]+\)\s*$/i', '', $text);
+    $subtitleText = preg_replace('/"/', '', $subtitleText);
+    $subtitleText = preg_replace('/\s*# ?ACTIONS.*/', '', $subtitleText);
+    $subtitleText = preg_replace('/#[A-Za-z]+/', '', $subtitleText);
+    return trim(preg_replace('/\s+/', ' ', $subtitleText));
+}
+
 /**
  * Save current TTS voice settings
  * @return array Current TTS settings
@@ -561,6 +575,12 @@ function unmoodSentence($sentence) {
     global $forceMood;
 
     $output = $sentence;
+    $isPlayerSpeech = isset($GLOBALS["HERIKA_NAME"]) && strcasecmp((string)$GLOBALS["HERIKA_NAME"], "Player") === 0;
+
+    if ($isPlayerSpeech) {
+        // Player-side *action* markers are always non-spoken context, regardless of narrator output settings.
+        $output = stripPlayerAsteriskActions($output);
+    }
 
     // Determine whether to process asterisks:
     // This function is used to prepare text for TTS, so we ALWAYS want to strip asterisks
@@ -579,19 +599,16 @@ function unmoodSentence($sentence) {
     if ($processAsterisks === true ) {
         error_log("[unmoodSentence] REMOVE_ASTERISKS_FROM_OUTPUT FULL is active! $sentence <" . ($GLOBALS['strip_emotes_from_output'] ?? 'N/A') . "> <" . ($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] ?? 'N/A') . ">" );
 
-        // Remove a few explicit emote/action tokens first; emphasis like *my* should keep the inner text.
-        $output = strtr($output, [
-            "*Smirks*" => "", "*smirks*" => "",
-            "*winks*" => "", "*wink*" => "", "*smirk*" => "", "*gasps*" => "", "*chuckles*" => "", "*giggles*" => "", "*Giggles*" => "", "*laughs*" => "",
-            "*gasp*" => "", "*moans*" => "", "*whispers*" => "", "*moan*" => "",
-            "*pant*" => "", "*cough*" => "", "*hiccup*" => "", "*whimper*" => ""
-        ]);
+        if (!$isPlayerSpeech) {
+            // Remove a few explicit emote/action tokens first; emphasis like *my* should keep the inner text.
+            $output = strtr($output, [
+                "*Smirks*" => "", "*smirks*" => "",
+                "*winks*" => "", "*wink*" => "", "*smirk*" => "", "*gasps*" => "", "*chuckles*" => "", "*giggles*" => "", "*Giggles*" => "", "*laughs*" => "",
+                "*gasp*" => "", "*moans*" => "", "*whispers*" => "", "*moan*" => "",
+                "*pant*" => "", "*cough*" => "", "*hiccup*" => "", "*whimper*" => ""
+            ]);
 
-        // If the entire message is wrapped in asterisks, strip them from both ends
-        if (str_starts_with($output, '*') && str_ends_with($output, '*')) {
-            $output = trim($output, '*'); // correct trimming of leading/trailing asterisks
-        } else {
-            // For emphasis, keep the inner text and strip only the asterisk characters.
+            // For NPC output, preserve emphasized text but strip the asterisk markers.
             $output = preg_replace('/\*([^*]+)\*/', '$1', $output);
         }
     }
@@ -624,7 +641,7 @@ function unmoodSentence($sentence) {
 
     // Remove parenthesized content and trim the result
     $output = preg_replace('/\((.*?)\)/i', '', $output);
-    $responseTextUnmooded = trim($output);
+    $responseTextUnmooded = trim(preg_replace('/\s+/', ' ', $output));
 
     // Handle whispering mood marker
     if (stripos($responseTextUnmooded, "whispering:") !== false) {
@@ -709,7 +726,7 @@ function returnLines($lines,$writeOutput=true)
         // Check if we should split narration to The Narrator BEFORE unmoodSentence strips asterisks
         $splitNarration = false;
         $narrationParts = null;
-        if ($inlineNarrationEnabled) {
+        if ($inlineNarrationEnabled && !$isPlayerSpeech) {
             $narrationParts = extractNarrationAndDialogue($sentenceForSubtitles);
             $splitNarration = $narrationParts['has_narration'];
 
@@ -722,7 +739,7 @@ function returnLines($lines,$writeOutput=true)
                 Logger::info("[INLINE_NARRATION] Dialogue: " . $narrationParts['dialogue']);
             }
         } else {
-            Logger::info("[INLINE_NARRATION] Disabled or not set");
+            Logger::info("[INLINE_NARRATION] Disabled, not set, or skipped for player speech");
         }
 
         $responseTextUnmooded=unmoodSentence($sentence);
@@ -777,7 +794,10 @@ function returnLines($lines,$writeOutput=true)
         $responseForTTS = $responseTextUnmooded; // TTS gets the "unmooded" version (narration stripped)
 
         // Set up subtitles based on whether inline narration is enabled
-        if (!$splitNarration && ($inlineNarrationEnabled || $preserveAsterisksInContext)) {
+        if ($isPlayerSpeech) {
+            // Player subtitles keep action markers so the player can confirm contextual actions were captured.
+            $responseForSubtitles = formatPlayerSubtitleText($sentenceForSubtitles);
+        } elseif (!$splitNarration && ($inlineNarrationEnabled || $preserveAsterisksInContext)) {
             // Preserve narration in subtitles - use the original sentence
             $responseForSubtitles = $sentenceForSubtitles;
             $responseForSubtitles = preg_replace("/{$GLOBALS["HERIKA_NAME"]}\s*:\s*/", '', $responseForSubtitles);
