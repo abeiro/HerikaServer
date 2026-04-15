@@ -882,7 +882,51 @@ FROM restore
         $this->updateByArray($currentNpcData);
     }
 
-      /**
+    /**
+     * Retrieve all rows from the factions table.
+     *
+     * @param string $where Optional SQL WHERE clause (defaults to TRUE = all rows).
+     * @return array        Array of faction rows from the factions table.
+     */
+    public function getAllfactions($where = "TRUE")
+    {
+        $query = "SELECT * FROM factions WHERE $where";
+        return $this->db->fetchAll($query);
+    }
+
+    /**
+     * Extract the factions an NPC belongs to from their extended_data JSON.
+     *
+     * Returns the raw factions array stored in extended_data, optionally filtered
+     * to only active memberships (rank > -1).
+     *
+     * @param array $npcData        The NPC data array (must contain 'extended_data').
+     * @param bool  $activeOnly     When true, only factions with rank > -1 are returned.
+     * @return array                Array of faction entries (each with 'formid' and 'rank'),
+     *                              or an empty array when none are found.
+     */
+    public function getNpcFactions(array $npcData, bool $activeOnly = true): array
+    {
+        if (empty($npcData['extended_data'])) {
+            return [];
+        }
+
+        $extendedData = json_decode($npcData['extended_data'], true);
+
+        if (!is_array($extendedData) || !isset($extendedData['factions']) || !is_array($extendedData['factions'])) {
+            return [];
+        }
+
+        if (!$activeOnly) {
+            return $extendedData['factions'];
+        }
+
+        return array_values(array_filter($extendedData['factions'], function ($faction) {
+            return isset($faction['rank']) && $faction['rank'] > -1;
+        }));
+    }
+
+    /**
      * Check if an NPC is in a specific faction by formid
      * 
      * @param array $npcData The NPC data array
