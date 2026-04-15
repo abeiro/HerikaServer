@@ -28,4 +28,55 @@ final class AsteriskParsingTest extends TestCase
             $parts['narrations'][0]
         );
     }
+
+    public function testPlayerSpeechStripsAsteriskActionBlocksFromTts(): void
+    {
+        $GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] = true;
+        $GLOBALS['HERIKA_NAME'] = 'Player';
+
+        $result = unmoodSentence('*draws close* Hello there *smiles softly*');
+
+        $this->assertSame('Hello there', $result);
+    }
+
+    public function testPlayerSpeechStripsRepeatedInlineActionBlocks(): void
+    {
+        $this->assertSame(
+            'hello how are you',
+            stripPlayerAsteriskActions('*wave* hello *wave* how *wave* are *wave* you')
+        );
+    }
+
+    public function testPlayerSpeechActionOnlyBecomesSilent(): void
+    {
+        $this->assertSame('', stripPlayerAsteriskActions('*wave*'));
+    }
+
+    public function testPlayerSpeechStillStripsActionsWhenRemoveAsterisksToggleIsOff(): void
+    {
+        $GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] = false;
+        $GLOBALS['HERIKA_NAME'] = 'Player';
+
+        $result = unmoodSentence('*wave* hello *wave* dude');
+
+        $this->assertSame('hello dude', $result);
+    }
+
+    public function testPlayerSubtitleTextPreservesAsteriskActions(): void
+    {
+        $this->assertSame(
+            'hello *wave* how are you *wave*',
+            formatPlayerSubtitleText('hello *wave* how are you *wave* (Talking to Jon Battle-Born)')
+        );
+    }
+
+    public function testNpcSpeechKeepsInlineEmphasisTextWhenRemovingAsterisks(): void
+    {
+        $GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] = true;
+        $GLOBALS['HERIKA_NAME'] = 'Carlotta Valentia';
+
+        $result = unmoodSentence("You find *my* humble produce stall 'wow-worthy,' Your Majesty?");
+
+        $this->assertSame("You find my humble produce stall 'wow-worthy,' Your Majesty?", $result);
+    }
 }
