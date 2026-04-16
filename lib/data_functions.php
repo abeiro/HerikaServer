@@ -5,6 +5,7 @@ require_once(__DIR__."/utils.php");
 
 require_once(__DIR__."/utils_game_timestamp.php");
 require_once(__DIR__."/model_dynmodel.php");
+require_once(__DIR__."/emote_moods.php");
 require_once(__DIR__."/core/npc_master.class.php");
 
 
@@ -4089,7 +4090,7 @@ function call_llm_internal() {
         $jsonformat= json_encode(["character"=>$GLOBALS["HERIKA_NAME"],
         "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
         "message"=>"lines of dialogue",
-        "mood"=>"One of :".implode("|",explode(",",$GLOBALS["EMOTEMOODS"])),
+        "mood"=>"One of :".implode("|",normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "")),
         "action"=>"One of :".implode("|",$GLOBALS["FUNC_LIST"]),
         "target"=>"action target actor|action destination location name",
         "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem - use exact name from inventory or nearby_items)",

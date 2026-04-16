@@ -38,22 +38,29 @@ $GLOBALS["EMOTEMOODS"]="sassy,"
     . "lovely,"
     . "seductive,"
     . "sarcastic,"
-    . "sardonic,"
     . "smirking,"
     . "amused,"
-    . "default,"
-    . "assisting,"
     . "irritated,"
     . "playful,"
     . "neutral,"
     . "teasing,"
-    . "mocking"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
+    . "desperate,"
+    . "scared,"
+    . "pleading,"
+    . "sad,"
+    . "happy,"
+    . "angry,"
+    . "drunk,"
+    . "shy,"
+    . "surprised"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 $GLOBALS["SUMMARY_PROMPT"]=''; //Instructions added when generating summaries for memories and other features.
 $GLOBALS["DIARY_PROMPT"]=''; //Instructions added when generating diary entries.
 
 //[AI/LLM Service Selection]
 $GLOBALS["CONNECTORS"]=["openrouterjson"]; //AI Service(s).
 $GLOBALS["CONNECTORS_DIARY"]='openrouter';
+$GLOBALS["CORE_CONNECTOR_SUMMARY"]=4;
+$GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]=4;
 
 $GLOBALS["HERIKA_DYNAMIC"]='';
 $GLOBALS["DYNAMIC_PROMPT"]='Dynamic prompt here';
@@ -81,7 +88,7 @@ $GLOBALS["CONNECTOR"]["openrouterjson"]["xtitle"]="Skyrim AI Follower Framework"
 $GLOBALS["CONNECTOR"]["openrouterjson"]["json_schema"]=false; //Enable OpenRouter JSON schema.
 //OpenRouter (Legacy)
 $GLOBALS["CONNECTOR"]["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
-$GLOBALS["CONNECTOR"]["openrouter"]["model"]="meta-llama/llama-3.1-8b-instruct"; //LLM model.
+$GLOBALS["CONNECTOR"]["openrouter"]["model"]="deepseek/deepseek-v3.2"; //LLM model.
 $GLOBALS["CONNECTOR"]["openrouter"]["max_tokens"]=1024; //Maximum tokens to generate.
 $GLOBALS["CONNECTOR"]["openrouter"]["temperature"]=0.9; //LLM parameter temperature.
 $GLOBALS["CONNECTOR"]["openrouter"]["presence_penalty"]=0;	//LLM parameter presence_penalty.
