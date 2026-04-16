@@ -70,7 +70,8 @@ foreach ($quests as $questRow) {
 
     if (isset($quest["quest_data"]["lastgamets"]) && $quest["quest_data"]["lastgamets"] >= $GLOBALS["last_gamets"]) {
         error_log("[GAME PAUSED?] last: {$GLOBALS["last_gamets"]} quest last:{$quest["quest_data"]["lastgamets"]}");
-        continue;
+        // Do not run quest code if the last gamets we have processed is greater or equal to the last gamets processed by this quest, to avoid running quest code when game is not running.
+        return;
     } else {
         if (isset($quest["quest_data"]["lastgamets"])) {
             error_log("[GAME PAUSED?] last: {$GLOBALS["last_gamets"]} quest last:{$quest["quest_data"]["lastgamets"]}");
