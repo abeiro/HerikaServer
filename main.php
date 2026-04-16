@@ -2274,26 +2274,11 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
 }
 
 
-// Player character section removed - player appearance now handled elsewhere
+// Player bio/appearance is surfaced through the nearby actors section.
 
 
 // Use centralized function from data_functions.php
 $dynamicBiography = buildDynamicBiography($GLOBALS);
-
-$playerBioSection = "";
-try {
-    require_once(__DIR__.DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."core".DIRECTORY_SEPARATOR."player.class.php");
-    $playerObj = new Player();
-    $playerBio = ResolvePlayerBackstory($playerObj);
-    $bioKnownByAll = filter_var((string)($playerObj->get('bio_known_by_all') ?? ''), FILTER_VALIDATE_BOOLEAN);
-    $isNarrator = isset($GLOBALS["HERIKA_NAME"]) && strcasecmp((string)$GLOBALS["HERIKA_NAME"], "The Narrator") === 0;
-
-    if ($playerBio !== "" && ($bioKnownByAll || $isNarrator)) {
-        $playerBioSection = "\n\n<player_character>\n# Player Character: {$GLOBALS["PLAYER_NAME"]}\n{$playerBio}\n</player_character>";
-    }
-} catch (Exception $e) {
-    Logger::debug("Could not load player bio for prompt: " . $e->getMessage());
-}
 
 
 if (isset($GLOBALS["PROFILE_PROMPT"])) {
@@ -2419,7 +2404,7 @@ if (isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
 if (!empty($GLOBALS["OGHMA_HINT"])) {
 
     $head[] = array('role' => 'system', 'content' =>  
-        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>".$playerBioSection."\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
+        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
 
     );
@@ -2427,7 +2412,7 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
     $GLOBALS["COMMAND_PROMPT"] = "";
 } else {
     $head[] = array('role' => 'system', 'content' =>  
-        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>".$playerBioSection."\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
+        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
     );
     //avoid reinjecting command prompt that we have already appended
