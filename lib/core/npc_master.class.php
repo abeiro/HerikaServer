@@ -530,6 +530,7 @@ class NpcMaster
 
         // Check this
         if (isset($currentNpcData['voiceid']) && $currentNpcData['voiceid']) {
+            $GLOBALS['PATCH_OVERRIDE_VOICE']          = $currentNpcData['voiceid'];
 
             $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']  = $currentNpcData['voiceid'];
             $GLOBALS['TTS']['CHATTERBOX']['voiceid']   = $currentNpcData['voiceid'];
@@ -547,6 +548,8 @@ class NpcMaster
             $GLOBALS['TTS']['CARTESIA']['voiceid']     = $currentNpcData['voiceid'];
             $GLOBALS['TTS']['INWORLD']['voiceid']      = $currentNpcData['voiceid'];
 
+        } else {
+            unset($GLOBALS['PATCH_OVERRIDE_VOICE']);
         }
 
         // Decode metadata and extended_data if available

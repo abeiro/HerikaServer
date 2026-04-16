@@ -1,245 +1,231 @@
 <?php
 
-require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
-require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."logger.php");
-require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."online_translation.php");
-
-$TITLE = "🔊CHIM - TTS Test - CHIM Server";
-
-ob_start();
-
-include("../tmpl/head.html");
-
-$debugPaneLink = false;
-include("../tmpl/navbar.php");
-
-$startTime = microtime(true);
-
-$localPath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-$enginePath = $localPath;
+$enginePath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR;
+$GLOBALS["ENGINE_PATH"] = $enginePath;
 
 require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "$DBDRIVER.class.php");
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php"); // API KEY must be there
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS['DBDRIVER']}.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "online_translation.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "api_badge.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
 
-$GLOBALS["ENGINE_PATH"]=$enginePath;
-
-$db = new sql();
-
-require_once $enginePath . "lib/core/npc_master.class.php";
-require_once $enginePath . "lib/core/api_badge.class.php";
-require_once $enginePath . "lib/core/core_profiles.class.php";
-require_once $enginePath . "lib/core/llm_connector.class.php";
-require_once $enginePath . "lib/core/tts_connector.class.php";
-
-requireFilesRecursively($enginePath . "ext" . DIRECTORY_SEPARATOR, "globals.php");
-
-if (isset($_SESSION["PROFILE"])) {
-    require_once($_SESSION["PROFILE"]);
-} else {
-    $_SESSION["PROFILE"] = "$configFilepath/conf.php";
+$scriptPath = $_SERVER['SCRIPT_NAME'] ?? '';
+$uiPos = strpos($scriptPath, '/ui/');
+$webRoot = ($uiPos !== false) ? substr($scriptPath, 0, $uiPos) : '';
+if ($webRoot === '/') {
+    $webRoot = '';
 }
+$webRoot = rtrim($webRoot, '/');
+$isEmbed = isset($_GET['embed']) && strval($_GET['embed']) === '1';
 
-error_reporting(E_ALL);
+$GLOBALS["db"] = new sql();
+$ttsConnector = new TTSConnector();
 
-$testString = "In Skyrim's land of snow and ice, Where dragons soar and souls entwine, Heroes rise, their fate unveiled, As ancient tales, the land does bind.";
-
-if (isset($_POST["customstring"]) && $_POST["customstring"]) {
-    $testString = $_POST["customstring"];
+if (function_exists('requireFilesRecursively')) {
+    requireFilesRecursively($enginePath . "ext" . DIRECTORY_SEPARATOR, "globals.php");
 }
-
-
-
 require_once($enginePath . "prompt.includes.php");
 
-$GLOBALS["AVOID_TTS_CACHE"] = true;
-$DEBUG_DATA = [];
-$cleanString = $testString;
-
-Translation::translate($cleanString);
-Translation::$sentences = [Translation::$response];
-
-$melotts_pronunciation_file = $enginePath . "tts" . DIRECTORY_SEPARATOR ."tts-melotts_pronunciation.php";
-$b_conf_melotts = file_exists($melotts_pronunciation_file);
-if ($b_conf_melotts) {
-    include_once($melotts_pronunciation_file);
+function h($value): string
+{
+    return htmlspecialchars(strval($value), ENT_QUOTES, 'UTF-8');
 }
 
-$b_melotts = (strtolower($TTSFUNCTION) == 'melotts');
-if ($b_melotts) {
-    if ($b_conf_melotts && (pronunciation_adjust_enabled())) {
-        $testString .= $s_pronunciation_test;
-        $cleanString = adjust_pronunciation($testString);
+$connectorId = intval($_GET['connector_id'] ?? $_POST['connector_id'] ?? 0);
+$connector = $connectorId > 0 ? $ttsConnector->getById($connectorId) : null;
+$connectorDriver = $ttsConnector->normalizeDriverValue($connector['driver'] ?? 'none');
+$connectorMetadata = $ttsConnector->decodeMetadata($connector['metadata'] ?? '{}');
+if (isset($connectorMetadata['API_KEY']) && trim(strval($connectorMetadata['API_KEY'])) !== '') {
+    $connectorMetadata['API_KEY'] = '***redacted***';
+}
+$testStringDefault = "In Skyrim's land of snow and ice, where dragons soar and snowstorms bind the roads, a steady voice can still cut through the cold.";
+$testString = trim(strval($_POST['customstring'] ?? $_GET['customstring'] ?? $testStringDefault));
+$voiceId = trim(strval($_POST['voiceid'] ?? $_GET['voiceid'] ?? $_POST['voice_override'] ?? $_GET['voice_override'] ?? 'TheNarrator'));
+$audioUrl = '';
+$debugData = [];
+$errorText = '';
+$requestPreview = [];
+
+if (!$isEmbed) {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "profile_loader.php");
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $connector) {
+    $originalTtsFunction = $GLOBALS["TTSFUNCTION"] ?? '';
+    $originalName = $GLOBALS["HERIKA_NAME"] ?? '';
+    $hadVoiceOverride = array_key_exists("PATCH_OVERRIDE_VOICE", $GLOBALS);
+    $oldVoiceOverride = $GLOBALS["PATCH_OVERRIDE_VOICE"] ?? null;
+    $hadVoiceIdGlobal = array_key_exists("PATCH_OVERRIDE_VOICE_ID", $GLOBALS);
+    $hadLanguageGlobal = array_key_exists("PATCH_OVERRIDE_TTS_LANGUAGE", $GLOBALS);
+    $oldVoiceIdGlobal = $GLOBALS["PATCH_OVERRIDE_VOICE_ID"] ?? null;
+    $oldLanguageGlobal = $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"] ?? null;
+
+    try {
+        $ttsConnector->setOldGlobals($connector);
+        $GLOBALS["HERIKA_NAME"] = "The Narrator";
+        $GLOBALS["AVOID_TTS_CACHE"] = true;
+        $GLOBALS["TTS_FFMPEG_FILTERS"] = [];
+        $GLOBALS["HERIKA_ANIMATIONS"] = false;
+        $GLOBALS["SCRIPTLINE_LISTENER"] = '';
+        $GLOBALS["SCRIPTLINE_EXPRESSION"] = '';
+        $GLOBALS["DEBUG_DATA"] = [];
+        $GLOBALS["FEATURES"] = $GLOBALS["FEATURES"] ?? [];
+        if (!isset($GLOBALS["FEATURES"]["MISC"])) {
+            $GLOBALS["FEATURES"]["MISC"] = [];
+        }
+        if (!isset($GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"])) {
+            $GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"] = false;
+        }
+        $GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"] = true;
+
+        if ($voiceId !== '') {
+            $GLOBALS["PATCH_OVERRIDE_VOICE"] = $voiceId;
+        } else {
+            unset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
+        }
+        unset($GLOBALS["PATCH_OVERRIDE_VOICE_ID"]);
+        unset($GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]);
+
+        Translation::translate($testString);
+        Translation::$sentences = [Translation::$response];
+        $cleanString = Translation::$response ?: $testString;
+
+        returnLines([$cleanString], false);
+        $file = isset($GLOBALS["TRACK"]["FILES_GENERATED"][0]) ? basename(strval($GLOBALS["TRACK"]["FILES_GENERATED"][0])) : '';
+        if ($file !== '') {
+            $audioUrl = $webRoot . '/soundcache/' . $file . '?ts=' . time();
+        } else {
+            $errorText = 'No audio was produced. Check the connector settings, API badge, endpoint, and provider logs.';
+        }
+
+        $debugData = $GLOBALS["DEBUG_DATA"] ?? [];
+        $requestPreview = [
+            'connector_id' => $connectorId,
+            'connector_label' => strval($connector['label'] ?? ''),
+            'driver' => $connectorDriver,
+            'url' => strval($connector['url'] ?? ''),
+            'voiceid' => $voiceId,
+            'metadata' => $connectorMetadata,
+        ];
+        Translation::reset();
+    } catch (Throwable $e) {
+        $errorText = $e->getMessage();
+    } finally {
+        if ($hadVoiceOverride) {
+            $GLOBALS["PATCH_OVERRIDE_VOICE"] = $oldVoiceOverride;
+        } else {
+            unset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
+        }
+        if ($hadVoiceIdGlobal) {
+            $GLOBALS["PATCH_OVERRIDE_VOICE_ID"] = $oldVoiceIdGlobal;
+        } else {
+            unset($GLOBALS["PATCH_OVERRIDE_VOICE_ID"]);
+        }
+        if ($hadLanguageGlobal) {
+            $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"] = $oldLanguageGlobal;
+        } else {
+            unset($GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]);
+        }
+        $GLOBALS["TTSFUNCTION"] = $originalTtsFunction;
+        $GLOBALS["HERIKA_NAME"] = $originalName;
+        unset($GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]);
+        unset($GLOBALS["SCRIPTLINE_ANIMATION_SENT"]);
     }
 }
 
-$soundFile = returnLines([$cleanString], false); 
-
-$s_sample = $db->escape(trim(substr($cleanString, 14, 92)));
-if (strlen($s_sample) > 48) { 
-    $s_time = (time() - 180);
-    $s_SQL = "DELETE FROM eventlog WHERE (data LIKE '%" .$s_sample. "%') AND (type in ('chat','prechat')) AND (localts > " .$s_time. ") ";
-    $db->query($s_SQL);
-    $s_SQL = "DELETE FROM log WHERE (response LIKE '%" .$db->escape($s_sample). "%') AND (localts > " .$s_time. ") ";
-    $db->query($s_SQL);
+$TITLE = "TTS Test";
+ob_start();
+include(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "head.html");
+if (!$isEmbed) {
+    include(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "navbar.php");
 }
-
-$db->close();
-unset($db);
-
-$file = basename($GLOBALS["TRACK"]["FILES_GENERATED"][0]);
-$ts = time();
-
-if (Translation::isTextEnabled()) {
-    $testString = Translation::$response;;
-}
-
 ?>
 
-<link rel="stylesheet" href="../css/main.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
-    /* Override main container styles */
-    main {
-        padding-top: 80px; /* Space for navbar */
-        padding-bottom: 40px; /* Reduced space for footer */
-        padding-left: 10px;
-    }
-    
-    /* Override footer styles */
-    footer {
-        position: fixed;
-        bottom: 0;
-        width: 100%;
-        height: 20px; /* Reduced footer height */
-        background: #031633;
-        z-index: 100;
-    }
-
-    /* Custom styles for TTS test */
-    textarea {
-        background-color:rgb(255, 255, 255);
-        border: 1px solid #555555;
-        color:rgb(0, 0, 0);
-        padding: 10px;
-        border-radius: 4px;
-        margin-bottom: 10px;
-    }
-
-    audio {
-        width: 100%;
-        max-width: 500px;
-        margin: 20px 0;
-        color:rgb(255, 255, 255);
-    }
+main { padding: <?php echo $isEmbed ? '20px' : '80px'; ?> 10px 30px; }
+.shell { max-width: 1100px; margin: 0 auto; }
+.card { background: linear-gradient(180deg, rgba(42,42,42,.95), rgba(34,34,34,.98)); border: 1px solid #3a3a3a; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+.card h1, .card h2 { margin-top: 0; color: rgb(242,124,17); }
+.field { margin-bottom: 12px; }
+.field label { display: block; margin-bottom: 6px; color: rgb(242,124,17); font-weight: 600; }
+.field input[type=text], .field input[type=number], .field textarea { width: 100%; box-sizing: border-box; background: rgba(26,26,26,.82); color: #eef3ff; border: 1px solid #3a3a3a; border-radius: 6px; padding: 10px 12px; }
+.field textarea { min-height: 120px; resize: vertical; }
+.field-help { color: #8fa0bb; font-size: 12px; margin-top: 4px; }
+.btn-save { padding: 10px 14px; color: #fff; border-radius: 8px; border: 1px solid rgba(72,187,120,.35); background: #176529; cursor: pointer; }
+.error { color: #ff9898; }
+.ok { color: #9be29b; }
+pre { white-space: pre-wrap; word-wrap: break-word; background: rgba(18,18,18,.9); border: 1px solid #2f2f2f; border-radius: 8px; padding: 12px; color: #d7dfef; }
+audio { width: 100%; margin-top: 10px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
 </style>
 
 <main>
-    <div class="indent5">
-        <h1>🔊CHIM Text-to-Speech Test</h1>
+    <div class="shell">
+        <div class="card">
+            <h1>TTS Connector Test</h1>
+            <?php if ($connector): ?>
+                <div><strong>Connector:</strong> <?php echo h($connector['label'] ?? ('Connector #' . $connectorId)); ?></div>
+                <div><strong>Provider:</strong> <?php echo h($ttsConnector->getDisplayName($connectorDriver)); ?></div>
+                <div><strong>Endpoint:</strong> <?php echo h($connector['url'] ?? ''); ?></div>
+            <?php else: ?>
+                <div class="error">Connector not found.</div>
+            <?php endif; ?>
+        </div>
 
-        <div class="section" style="background-color: #3a3a3a; border-radius: 8px; padding: 15px; margin-bottom: 15px; border: 1px solid #555555; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-            <?php
-            if ($file) {
-                echo '<h2>Current Speaker: <b>' . htmlspecialchars($GLOBALS['CURRENT_PROFILE_CHAR']) . '</b></h2>';
-                echo '<h3><i>Output: ' . htmlspecialchars($testString) . '</i></h3>';
-                if ($b_melotts && $b_conf_melotts && pronunciation_debug_enabled()) 
-                    echo '<h3>' . htmlspecialchars($cleanString) . '</h3>'; 
-                echo '<audio controls>';
-                echo '<source src="../../soundcache/' . htmlspecialchars($file) . '?ts=' . htmlspecialchars($ts) . '" type="audio/wav">';
-                echo 'Your browser does not support the audio element.';
-                echo '</audio>';
-                echo '<p>Debug Info:<pre>'.print_r($GLOBALS["DEBUG_DATA"],true).'</pre></p>';
-            } else {
-                echo '<div class="error-message"><strong>Error:</strong><br/>';
-                $errorFilePath = $enginePath . 'soundcache' . DIRECTORY_SEPARATOR . md5(trim($testString)) . '.err';
-                if (file_exists($errorFilePath)) {
-                    echo nl2br(htmlspecialchars(file_get_contents($errorFilePath)));
-                } else {
-                    echo 'An unknown error occurred.';
-                }
-                echo '</div>';
-            }
-            ?>
+        <?php if ($connector): ?>
+            <form method="post" class="card">
+                <input type="hidden" name="connector_id" value="<?php echo h($connectorId); ?>">
+                <div class="field">
+                    <label for="customstring">Text To Synthesize</label>
+                    <textarea id="customstring" name="customstring"><?php echo h($testString); ?></textarea>
+                </div>
 
-            <form action="" method="POST">
-                <textarea name="customstring" placeholder="Write your own text" style="width:100%; max-width:500px; height:100px;"><?=($_POST["customstring"] ?? "")?></textarea><br/>
-                <input type="submit" class="action-button edit" value="Test TTS" />
-                <?php if ($file): ?>
-                    <a href="../../soundcache/<?php echo htmlspecialchars($file); ?>?ts=<?php echo htmlspecialchars($ts); ?>" 
-                       download="<?php echo htmlspecialchars($GLOBALS['CURRENT_PROFILE_CHAR'] . '_' . substr(preg_replace('/[^a-zA-Z0-9]+/', '_', $testString), 0, 50) . '.wav'); ?>" 
-                       class="action-button download-csv" 
-                       style="text-decoration: none;">
-                        Download WAV
-                    </a>
-                <?php endif; ?>
+                <div class="field">
+                    <label for="voiceid">VoiceId</label>
+                    <input type="text" id="voiceid" name="voiceid" value="<?php echo h($voiceId); ?>">
+                    <div class="field-help">Connector-specific voice ID for this test run. Defaults to <code>TheNarrator</code>.</div>
+                </div>
+
+                <button type="submit" class="btn-save">Run Test</button>
             </form>
-        </div>
+        <?php endif; ?>
 
-        <div class="status" style="background-color: #3a3a3a; border-radius: 8px; padding: 15px; margin-bottom: 15px; border: 1px solid #555555; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-            <span class="label" style="font-weight: bold; color: yellow; padding: 5px; display: inline-block;">
-                TROUBLESHOOTING FIXES
-            </span>
-            <ul class="error-list" style="margin-top: 15px; list-style-type: none; padding-left: 0;">
-                <li style="margin-bottom: 20px;">
-                    <strong>500 = Internal Server Error</strong>
-                    <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
-                        <li>The audio file for the voice ID does not exist</li>
-                        <li>XTTS/Chatterbox = Sync Voices in XTTS/Chatterbox Management page</li>
-                        <li>MeloTTS= Use one of the 
-                            <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options#melotts-voice-ids" target="_blank">approved voice IDs</a>
-                        </li>
-                        <li>xVASynth = Make sure you have the voice ID installed</li>
-                    </ul>
-                </li>
-                <li style="margin-bottom: 20px;">
-                    <strong>404 = Not Found</strong>
-                    <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
-                        <li>The URL is not valid for your TTS server</li>
-                        <li>XTTS/Chatterbox = If locally installed make sure it is http://127.0.0.1:8020. If its on the cloud verify the URL from the cloud provider </li>
-                        <li>MeloTTS= Make sure it is http://127.0.0.1:8084</li>
-                        <li>xVASynth = Make sure you have the URL pointed to your PC's IP address. 
-                            <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options" target="_blank">Read this guide.</a>
-                        </li>
-                        <li>Using a 2nd PC = Make sure your local network and firewall is not blocking the connections. 
-                            <a href="https://dwemerdynamics.hostwiki.io/en/2nd-PC-Guide" target="_blank">Read this guide.</a>
-                        </li>
-                    </ul>
-                </li>
-                <li style="margin-bottom: 20px;">
-                    <strong>If it's not the voice you expected</strong>
-                    <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
-                        <li>Change the profile (Blue Button) in the top left on the CHIM server page. Select the NPC you want to hear</li>
-                        <li>If their voice is still wrong, check their voiceID field and the TTSFUNCTION you have selected</li>
-                    </ul>
-                </li>
-                <li style="margin-bottom: 20px;">
-                    <strong>Error: An Unknown error occurred</strong>
-                    <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
-                        <li>Make sure the TTS service is installed and running correctly.</li>
-                    </ul>
-                </li>
-                <li style="margin-bottom: 20px;">
-                    <strong>The audio test works here but you hear nothing ingame</strong>
-                    <ul class="subpoints" style="margin-left: 20px; list-style-type: circle;">
-                        <li>Make sure AIAgent.ini is in SKSE/Plugins </li>
-                        <li>Make sure you Windows "System Sounds" is not muted. All the AI dialogue audio is actually played through here. </li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
+        <?php if ($_SERVER['REQUEST_METHOD'] === 'POST' && $connector): ?>
+            <div class="card">
+                <h2>Status</h2>
+                <?php if ($audioUrl !== ''): ?>
+                    <div class="ok">Synthesis completed.</div>
+                    <audio controls autoplay>
+                        <source src="<?php echo h($audioUrl); ?>" type="audio/wav">
+                    </audio>
+                <?php else: ?>
+                    <div class="error"><?php echo h($errorText !== '' ? $errorText : 'The test did not return audio.'); ?></div>
+                <?php endif; ?>
+            </div>
+
+            <div class="card">
+                <h2>Request Preview</h2>
+                <pre><?php echo h(json_encode($requestPreview, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)); ?></pre>
+            </div>
+
+            <div class="card">
+                <h2>Debug Output</h2>
+                <pre><?php echo h(json_encode($debugData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)); ?></pre>
+            </div>
+        <?php endif; ?>
     </div>
 </main>
 
 <?php
-include("../tmpl/footer.html");
-
+include(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "footer.html");
 $buffer = ob_get_contents();
 ob_end_clean();
-$title = $TITLE;
-$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $TITLE . '$3', $buffer);
 echo $buffer;
 ?>

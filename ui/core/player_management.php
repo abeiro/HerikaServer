@@ -5,7 +5,9 @@ $enginePath = __DIR__ . DIRECTORY_SEPARATOR . "../../";
 require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "api_badge.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
 
 // Determine web root
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -19,6 +21,7 @@ if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
 $GLOBALS["db"] = new sql();
+$ttsConnector = new TTSConnector();
 $player = new Player();
 
 $saveSuccess = false;
@@ -43,6 +46,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_player'])) {
         if (isset($_POST['speech_style'])) {
             $player->set('speech_style', $_POST['speech_style']);
         }
+        $player->set('tts_connector_id', trim(strval($_POST['tts_connector_id'] ?? '')));
+        $player->set('tts_voice_override', trim(strval($_POST['tts_voice_override'] ?? '')));
+        $player->set('tts_voice_id_override', trim(strval($_POST['tts_voice_id_override'] ?? '')));
+        $player->set('tts_language_override', trim(strval($_POST['tts_language_override'] ?? '')));
         
         // Save any editable stats if provided
         foreach ($_POST as $key => $value) {
@@ -69,6 +76,18 @@ $appearance = $allPlayerData['appearance'] ?? '';
 $bio = $allPlayerData['bio'] ?? '';
 $bioKnownByAll = ($allPlayerData['bio_known_by_all'] ?? 'false') === 'true';
 $speechStyle = $allPlayerData['speech_style'] ?? '';
+$playerTtsConnectorId = trim(strval($allPlayerData['tts_connector_id'] ?? ''));
+$playerTtsVoiceId = strval($allPlayerData['tts_voice_override'] ?? '');
+$playerTtsVoiceIdOverride = strval($allPlayerData['tts_voice_id_override'] ?? '');
+$playerTtsLanguageOverride = strval($allPlayerData['tts_language_override'] ?? '');
+$ttsConnectorRows = $ttsConnector->readAll();
+$ttsConnectorMeta = [];
+foreach ($ttsConnectorRows as $row) {
+    $ttsConnectorMeta[strval($row['id'] ?? '')] = [
+        'driver' => strval($row['driver'] ?? ''),
+        'label' => strval($row['label'] ?? ''),
+    ];
+}
 
 if ($bio === '' && !empty(trim((string)($GLOBALS["PLAYER_BIOS"] ?? '')))) {
     $bio = trim((string)$GLOBALS["PLAYER_BIOS"]);
@@ -230,11 +249,11 @@ if (!$isEmbed) {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .content-grid.player-overview-grid .speech-style-section {
+    .content-grid.player-overview-grid .player-bio-section {
         order: 3;
     }
 
-    .content-grid.player-overview-grid .player-bio-section {
+    .content-grid.player-overview-grid .player-tts-section {
         order: 4;
     }
 
@@ -300,8 +319,10 @@ if (!$isEmbed) {
         margin-top: 0;
     }
 
-    .content-section input[type="text"], 
-    .content-section textarea { 
+    .content-section input[type="text"],
+    .content-section input[type="number"],
+    .content-section select,
+    .content-section textarea {
         background-color: rgba(26, 26, 26, 0.8);
         color: #e9efff;
         border: 1px solid #3a3a3a;
@@ -313,6 +334,8 @@ if (!$isEmbed) {
     }
 
     .content-section input[type="text"]:focus,
+    .content-section input[type="number"]:focus,
+    .content-section select:focus,
     .content-section textarea:focus {
         border-color: rgba(242, 124, 17, 0.5);
         outline: none;
@@ -853,17 +876,34 @@ if (!$isEmbed) {
                 <span class="hint">If enabled, all NPCs know this bio. If disabled, only The Narrator knows it.</span>
             </div>
 
-            <!-- Speech Style Section -->
-            <div class="content-section speech-style-section">
-                <h2>💬 Speech Style</h2>
+            <div class="content-section player-tts-section">
+                <h2>Player TTS</h2>
+                <label for="tts_connector_id">TTS Connector</label>
+                <select id="tts_connector_id" name="tts_connector_id">
+                    <option value="">Disabled</option>
+                    <?php foreach ($ttsConnectorRows as $row): ?>
+                        <?php $rowId = strval($row['id'] ?? ''); ?>
+                        <option value="<?php echo htmlspecialchars($rowId); ?>" <?php echo ($playerTtsConnectorId === $rowId) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars(strval($row['label'] ?? ('Connector #' . $rowId))); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <span class="hint">Select the connector used when Player TTS generates spoken responses.</span>
+
+                <label for="tts_voice_override">VoiceID</label>
+                <input type="text" id="tts_voice_override" name="tts_voice_override" value="<?php echo htmlspecialchars($playerTtsVoiceId); ?>" placeholder="TheNarrator">
+                <span class="hint">Dedicated voice identifier used for Player TTS.</span>
+
                 <label for="speech_style">Player Speech Style</label>
                 <textarea id="speech_style" name="speech_style" placeholder="Describe how your character speaks and communicates..."><?php echo htmlspecialchars($speechStyle); ?></textarea>
+                <span class="hint">Used for Auto Chat mode and player-style generation prompts.</span>
+
                 <div class="speech-style-tools">
-                    <label for="speech_style_guidance">Optional Guidance For AI Generation</label>
+                    <label for="speech_style_guidance">AI Generation</label>
                     <textarea id="speech_style_guidance" placeholder="Optional: mention traits or tone to prioritize when generating your speech style paragraph."></textarea>
                     <button id="generate_speech_style_btn" type="button" class="btn-ai-generate" onclick="generatePlayerSpeechStyle()">AI Generate From Last 200 Inputs</button>
                 </div>
-                <span class="hint">Reads up to the last 200 player input events and generates a one-paragraph speech style prompt. Is used for Auto Chat mode.</span>
+                <span class="hint">Reads up to the last 200 player input events and generates a one-paragraph speech style prompt.</span>
             </div>
         </div>
     </form>

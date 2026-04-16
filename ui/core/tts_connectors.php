@@ -2,347 +2,872 @@
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . "../../";
 
+require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
-// Load schema/helpers without requiring a potentially broken conf.php
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_loader.php");
-// Seed defaults from sample so UI has baseline values even if conf.php is broken
-@include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "api_badge.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
 
-// Determine web root (match other core pages)
-$scriptPath = $_SERVER['SCRIPT_NAME'];
+$scriptPath = $_SERVER['SCRIPT_NAME'] ?? '';
 $uiPos = strpos($scriptPath, '/ui/');
-if ($uiPos !== false) {
-	$webRoot = substr($scriptPath, 0, $uiPos);
-} else {
-	$webRoot = '';
+$webRoot = ($uiPos !== false) ? substr($scriptPath, 0, $uiPos) : '';
+if ($webRoot === '/') {
+    $webRoot = '';
 }
-if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
+$isEmbed = isset($_GET['embed']) && strval($_GET['embed']) === '1';
 
-// Do NOT include profile_loader or conf.php here to avoid fatal parse errors when conf.php is broken
-
-// Load schema and current configuration
-$confSchema = conf_loader_load_schema();
-$currentConf = conf_loader_load();
-
-// Helpers copied from global_settings.php to write back to conf.php consistently
-function tts_flatten_current_conf(array $currentConf, array $confSchema): array {
-	$flat = [];
-	foreach ($currentConf as $pname => $parms) {
-		$fieldName = strtr($pname, [" " => "@"]); // e.g., TTS AZURE voice -> TTS@AZURE@voice
-		$type = $parms["type"] ?? ($confSchema[$pname]["type"] ?? 'string');
-		$val = $parms["currentValue"] ?? '';
-		if ($type === 'boolean') {
-			$flat[$fieldName] = $val ? 'true' : 'false';
-		} else if ($type === 'selectmultiple') {
-			$flat[$fieldName] = is_array($val) ? $val : [];
-		} else if ($type === 'number' || $type === 'integer') {
-			$flat[$fieldName] = (string)($val === '' ? '' : $val);
-		} else {
-			if (is_array($val)) {
-				$flat[$fieldName] = [];
-			} else {
-				$flat[$fieldName] = (string)$val;
-			}
-		}
-	}
-	return $flat;
+$GLOBALS["db"] = new sql();
+try {
+    require_once($enginePath . "debug" . DIRECTORY_SEPARATOR . "db_updates.php");
+} catch (Throwable $_e) {
 }
 
-function tts_build_conf_php_from_pairs(array $pairs, array $confSchema): string {
-	$buffer = "<?php" . PHP_EOL;
-	$oldGroup = '';
-	$oldSubGroup = '';
+$ttsConnector = new TTSConnector();
 
-	$process_slashes = function(string $s_input): string {
-		$sx = str_replace("\\'", "'", $s_input);
-		return addcslashes($sx, "'");
-	};
-
-	foreach ($pairs as $k => $v) {
-		$fullNameHierch = explode("@", $k);
-		$plainNameHierch = strtr($k, ["@" => " "]);
-		$type = $confSchema[$plainNameHierch]["type"] ?? 'string';
-
-		if (is_array($v)) {
-			$value = json_encode($v, true);
-		} else if ($type === 'number') {
-			if ($v === '') continue; else $value = "" . addcslashes($v, "'") . "";
-		} else if ($type === 'boolean') {
-			$value = ($v === 'true') ? 'true' : 'false';
-		} else {
-			$value = "'" . $process_slashes((string)$v) . "'";
-		}
-
-		if ($oldGroup != $fullNameHierch[0]) {
-			$buffer .= PHP_EOL . PHP_EOL;
-			$oldGroup = $fullNameHierch[0];
-		}
-		if (isset($fullNameHierch[1])) {
-			if ($oldSubGroup != $fullNameHierch[1]) {
-				$buffer .= PHP_EOL;
-				$oldSubGroup = $fullNameHierch[1];
-			}
-		}
-
-		if (sizeof($fullNameHierch) == 1) {
-			if (isset($confSchema[$plainNameHierch]["description"]))
-				$buffer .= "//" . $confSchema[$plainNameHierch]["description"] . PHP_EOL;
-			$buffer .= '$' . $fullNameHierch[0] . '=' . $value . ';' . PHP_EOL;
-		} else if (sizeof($fullNameHierch) == 2) {
-			$inlineComment = '';
-			if (isset($confSchema[$plainNameHierch]["description"]))
-				$inlineComment = "//" . $confSchema[$plainNameHierch]["description"];
-			$buffer .= '$' . $fullNameHierch[0] . '["' . $fullNameHierch[1] . '"]=' . $value . ';' . "\t" . $inlineComment . PHP_EOL;
-		} else if (sizeof($fullNameHierch) == 3) {
-			$inlineComment = '';
-			if (isset($confSchema[$plainNameHierch]["description"]))
-				$inlineComment = "//" . $confSchema[$plainNameHierch]["description"];
-			$buffer .= '$' . $fullNameHierch[0] . '["' . $fullNameHierch[1] . '"]["' . $fullNameHierch[2] . '"]=' . $value . ';' . "\t" . $inlineComment . PHP_EOL;
-		}
-	}
-
-	$buffer .= "?>" . PHP_EOL;
-	return $buffer;
+function h($value): string
+{
+    return htmlspecialchars(strval($value), ENT_QUOTES, 'UTF-8');
 }
 
-// Map TTSFUNCTION values to TTS schema provider keys
-$ttsMap = [
-	'melotts' => 'MELOTTS',
-	'xtts-fastapi' => 'XTTSFASTAPI',
-	'mimic3' => 'MIMIC3',
-	'xvasynth' => 'XVASYNTH',
-	'azure' => 'AZURE',
-	'11labs' => 'ELEVEN_LABS',
-	'openai' => 'openai',
-	'kokoro' => 'KOKORO',
-	'koboldcpp' => 'koboldcpp',
-	'zonos_gradio' => 'ZONOS_GRADIO',
-	'piper-tts' => 'PIPERTTS',
-	'deepgram' => 'deepgram',
-	'cartesia' => 'CARTESIA',
-	'inworld' => 'INWORLD',
-];
-// Display name mappings for UI labels
-$ttsDisplayNames = [ 'xtts-fastapi' => 'xtts/chatterbox' ];
-
-// Values for TTSFUNCTION select from schema
-$ttsFunctionValues = $confSchema['TTSFUNCTION']['values'] ?? array_keys($ttsMap);
-
-// Current selected TTSFUNCTION value
-function tts_current_value(string $flatName, array $currentConf) {
-	$plain = strtr($flatName, ["@" => " "]);
-	$parms = $currentConf[$plain] ?? null;
-	if (!$parms) return '';
-	return $parms['currentValue'] ?? '';
+function ttsPageUrl(array $params = []): string
+{
+    global $isEmbed;
+    $base = 'tts_connectors.php';
+    if ($isEmbed && !isset($params['embed'])) {
+        $params['embed'] = '1';
+    }
+    $query = http_build_query($params);
+    return $query !== '' ? ($base . '?' . $query) : $base;
 }
 
-$selectedFunction = tts_current_value('TTSFUNCTION', $currentConf);
-// Honor immediate dropdown change without requiring Save
-if (isset($_POST['TTSFUNCTION']) && is_string($_POST['TTSFUNCTION'])) {
-	$selectedFunction = (string)$_POST['TTSFUNCTION'];
-}
-if ($selectedFunction === '' && !empty($ttsFunctionValues)) {
-	$selectedFunction = $ttsFunctionValues[0];
+function ttsNoticeUrl(string $notice, array $params = []): string
+{
+    $params['notice'] = $notice;
+    return ttsPageUrl($params);
 }
 
-// Handle Save
-$saveSuccess = false;
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
-	$allPairs = tts_flatten_current_conf($currentConf, $confSchema);
-
-	// Save TTSFUNCTION
-	if (isset($_POST['TTSFUNCTION'])) {
-		$allPairs['TTSFUNCTION'] = (string)$_POST['TTSFUNCTION'];
-		$selectedFunction = (string)$_POST['TTSFUNCTION'];
-	}
-
-	// Determine provider key
-	$providerKey = $ttsMap[$selectedFunction] ?? '';
-	$providerSchema = [];
-	if ($providerKey !== '' && isset($confSchema['TTS'][$providerKey]) && is_array($confSchema['TTS'][$providerKey])) {
-		$providerSchema = $confSchema['TTS'][$providerKey];
-	}
-
-	// Collect boolean defaults for unchecked boxes
-	$booleanFields = [];
-	foreach ($providerSchema as $fieldName => $def) {
-		if (!is_array($def)) continue;
-		$type = $def['type'] ?? '';
-		if ($type === 'boolean') $booleanFields[] = $fieldName;
-	}
-
-	// Apply posted provider fields
-	foreach ($providerSchema as $fieldName => $def) {
-		if (!is_array($def)) continue;
-		$type = $def['type'] ?? 'string';
-		$key = 'TTS@' . $providerKey . '@' . $fieldName;
-		if ($type === 'boolean') {
-			$val = isset($_POST[$fieldName]) && $_POST[$fieldName] === 'true' ? 'true' : 'false';
-			$allPairs[$key] = $val;
-		} else if ($type === 'selectmultiple') {
-			$vals = isset($_POST[$fieldName]) && is_array($_POST[$fieldName]) ? array_values($_POST[$fieldName]) : [];
-			$allPairs[$key] = $vals;
-		} else {
-			if (isset($_POST[$fieldName])) {
-				$allPairs[$key] = (string)$_POST[$fieldName];
-			}
-		}
-	}
-
-	$buffer = tts_build_conf_php_from_pairs($allPairs, $confSchema);
-	$target = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
-	$result = @file_put_contents($target, $buffer);
-	$saveSuccess = $result !== false;
-	if ($saveSuccess) {
-		Logger::info("TTS settings saved to conf.php by UI");
-		$currentConf = conf_loader_load();
-	} else {
-		Logger::error("Failed writing conf.php from TTS Connectors UI");
-	}
+function ttsVisibleDriverOptions(TTSConnector $ttsConnector): array
+{
+    return array_values(array_filter(
+        $ttsConnector->getDriverOptions(),
+        function ($driverOption) use ($ttsConnector) {
+            return $ttsConnector->normalizeDriverValue($driverOption) !== 'none';
+        }
+    ));
 }
 
-// Resolve current provider schema for rendering
-// If a provider is selected, show just that provider’s settings; otherwise show all providers
-$providerKey = $ttsMap[$selectedFunction] ?? '';
-$allProviderSchemas = is_array($confSchema['TTS'] ?? null) ? $confSchema['TTS'] : [];
-$providerSchema = [];
-if ($providerKey !== '' && isset($allProviderSchemas[$providerKey]) && is_array($allProviderSchemas[$providerKey])) {
-	$providerSchema = $allProviderSchemas[$providerKey];
+function ttsGroupedDriverOptions(TTSConnector $ttsConnector, array $driverOptions): array
+{
+    $recommendedOrder = ['pockettts', 'chatterbox', 'xtts-fastapi', 'inworld', 'cartesia'];
+    $available = [];
+    foreach ($driverOptions as $driverOption) {
+        $normalized = $ttsConnector->normalizeDriverValue($driverOption);
+        if ($normalized !== '') {
+            $available[$normalized] = true;
+        }
+    }
+
+    $recommended = [];
+    foreach ($recommendedOrder as $driverValue) {
+        if (isset($available[$driverValue])) {
+            $recommended[] = $driverValue;
+            unset($available[$driverValue]);
+        }
+    }
+
+    $others = array_keys($available);
+    return [
+        'Recommended' => $recommended,
+        'Others' => $others,
+    ];
 }
 
-// Helper: description
-$desc = function(string $plainName) use ($confSchema): string {
-	return $confSchema[$plainName]['description'] ?? '';
-};
-
-// Helper: get current provider field value
-function tts_field_value(string $providerKey, string $fieldName, array $currentConf) {
-	$plain = 'TTS ' . $providerKey . ' ' . $fieldName;
-	$parms = $currentConf[$plain] ?? null;
-	if (!$parms) return '';
-	return $parms['currentValue'] ?? '';
+function ttsShouldRenderField(string $fieldName, $definition, TTSConnector $ttsConnector, string $driver): bool
+{
+    if ($fieldName === '_title' || !is_array($definition)) {
+        return false;
+    }
+    if (in_array($fieldName, ['endpoint', 'url', 'URL', 'API_KEY'], true)) {
+        return false;
+    }
+    if ($ttsConnector->isDriverVoiceMetadataField($driver, $fieldName)) {
+        return false;
+    }
+    if (in_array($ttsConnector->normalizeDriverValue($driver), ['xtts-fastapi', 'chatterbox', 'pockettts'], true)
+        && in_array($fieldName, ['language', 'voicelogic'], true)) {
+        return false;
+    }
+    return true;
 }
 
-$TITLE = "🔊 CHIM - TTS Connectors";
+function ttsParseMetadataFromPost(array $source, string $driver, array $existingMetadata, TTSConnector $ttsConnector): array
+{
+    $schema = $ttsConnector->getProviderFieldSchema($driver);
+    $metadata = $existingMetadata;
+    foreach ($schema as $fieldName => $definition) {
+        if (!ttsShouldRenderField($fieldName, $definition, $ttsConnector, $driver)) {
+            continue;
+        }
+
+        $postKey = 'meta__' . $driver . '__' . $fieldName;
+        $type = $definition['type'] ?? 'string';
+        if ($type !== 'boolean' && !array_key_exists($postKey, $source)) {
+            continue;
+        }
+
+        if ($type === 'boolean') {
+            $metadata[$fieldName] = isset($source[$postKey]) && strval($source[$postKey]) === 'true';
+        } elseif ($type === 'integer') {
+            $raw = trim(strval($source[$postKey] ?? ''));
+            $metadata[$fieldName] = ($raw === '') ? 0 : intval($raw);
+        } elseif ($type === 'number') {
+            $raw = trim(strval($source[$postKey] ?? ''));
+            $metadata[$fieldName] = ($raw === '') ? 0 : floatval($raw);
+        } elseif ($type === 'selectmultiple') {
+            $metadata[$fieldName] = isset($source[$postKey]) && is_array($source[$postKey]) ? array_values($source[$postKey]) : [];
+        } else {
+            $metadata[$fieldName] = is_array($source[$postKey] ?? null) ? [] : trim(strval($source[$postKey] ?? ''));
+        }
+    }
+
+    return $ttsConnector->applyForcedMetadataDefaults(
+        $driver,
+        $ttsConnector->stripVoiceMetadataForDriver($driver, $metadata)
+    );
+}
+
+function ttsShouldShowUrlField(TTSConnector $ttsConnector, string $driver): bool
+{
+    return $ttsConnector->driverSupportsEditableUrl($driver);
+}
+
+function ttsFormatFieldLabel(string $fieldName): string
+{
+    $label = str_replace(['_', '-'], ' ', trim($fieldName));
+    $label = preg_replace('/\s+/', ' ', $label ?? '');
+    return ucwords(strtolower($label));
+}
+
+function ttsApiBadgeHasConfiguredKey($value): bool
+{
+    $raw = trim(strval($value));
+    if ($raw === '') {
+        return false;
+    }
+    if (preg_match('/^(?:\*+|null|none|n\/a)$/i', $raw)) {
+        return false;
+    }
+    if (preg_match('/^[^A-Za-z0-9]+$/', $raw)) {
+        return false;
+    }
+    return true;
+}
+
+if (isset($_GET['export'])) {
+    $exportId = intval($_GET['export']);
+    $row = $ttsConnector->getById($exportId);
+    if (!$row) {
+        header('HTTP/1.1 404 Not Found');
+        echo 'Not found';
+        exit;
+    }
+
+    $columns = ['id', 'label', 'driver', 'metadata', 'api_badge_id', 'url', 'voice_field'];
+    $filenameBase = trim(strval($row['label'] ?? ('tts_connector_' . $exportId)));
+    if ($filenameBase === '') {
+        $filenameBase = 'tts_connector_' . $exportId;
+    }
+    $filename = $filenameBase . '.csv';
+    $asciiName = str_replace(["\r", "\n", '"'], '', $filename);
+
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . str_replace(['\\', '"'], '', $asciiName) . '"; filename*=UTF-8\'\'' . rawurlencode($filename));
+
+    $out = fopen('php://output', 'w');
+    fputcsv($out, $columns);
+    $values = [];
+    foreach ($columns as $column) {
+        $value = $row[$column] ?? '';
+        if ($column === 'metadata' && is_array($value)) {
+            $value = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        $values[] = $value;
+    }
+    fputcsv($out, $values);
+    fclose($out);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
+    $redirectUrl = ttsPageUrl();
+    $importedIds = [];
+
+    try {
+        if (!isset($_FILES['import_file']) || !isset($_FILES['import_file']['tmp_name'])) {
+            header('Location: ' . $redirectUrl);
+            exit;
+        }
+
+        $files = $_FILES['import_file'];
+        $fileCount = is_array($files['tmp_name']) ? count($files['tmp_name']) : 1;
+
+        for ($fileIndex = 0; $fileIndex < $fileCount; $fileIndex++) {
+            $tmp = is_array($files['tmp_name']) ? $files['tmp_name'][$fileIndex] : $files['tmp_name'];
+            if (!is_uploaded_file($tmp)) {
+                continue;
+            }
+
+            $fh = fopen($tmp, 'r');
+            if (!$fh) {
+                continue;
+            }
+
+            $header = false;
+            while (($line = fgetcsv($fh)) !== false) {
+                if (!empty(array_filter($line, function ($v) { return trim((string)$v) !== ''; }))) {
+                    $header = $line;
+                    break;
+                }
+            }
+            if ($header === false) {
+                fclose($fh);
+                continue;
+            }
+
+            $columns = array_map(function ($value) {
+                return strtolower(trim((string)$value));
+            }, $header);
+
+            $row = false;
+            while (($line = fgetcsv($fh)) !== false) {
+                if (!empty(array_filter($line, function ($v) { return trim((string)$v) !== ''; }))) {
+                    $row = $line;
+                    break;
+                }
+            }
+            fclose($fh);
+            if ($row === false) {
+                continue;
+            }
+
+            $dataMap = [];
+            for ($i = 0; $i < count($columns); $i++) {
+                $key = $columns[$i] ?? '';
+                if ($key === '') {
+                    continue;
+                }
+                $dataMap[$key] = $row[$i] ?? '';
+            }
+
+            $driver = $ttsConnector->normalizeDriverValue($dataMap['driver'] ?? '');
+            $visibleOptions = ttsVisibleDriverOptions($ttsConnector);
+            $visibleMap = [];
+            foreach ($visibleOptions as $visibleOption) {
+                $visibleMap[$ttsConnector->normalizeDriverValue($visibleOption)] = true;
+            }
+            if ($driver === '' || !isset($visibleMap[$driver])) {
+                $driver = $ttsConnector->normalizeDriverValue($visibleOptions[0] ?? 'xtts-fastapi');
+            }
+
+            $metadataRaw = trim(strval($dataMap['metadata'] ?? '{}'));
+            $metadata = json_decode($metadataRaw, true);
+            if (!is_array($metadata)) {
+                $metadata = [];
+            }
+
+            $payload = [
+                'driver' => $driver,
+                'label' => $ttsConnector->uniqueLabel(trim(strval($dataMap['label'] ?? '')) !== '' ? trim(strval($dataMap['label'])) : 'Imported TTS Connector'),
+                'metadata' => json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                'api_badge_id' => intval($dataMap['api_badge_id'] ?? 0) > 0 ? intval($dataMap['api_badge_id']) : null,
+                'url' => trim(strval($dataMap['url'] ?? '')) !== '' ? trim(strval($dataMap['url'])) : null,
+                'voice_field' => trim(strval($dataMap['voice_field'] ?? '')) !== '' ? trim(strval($dataMap['voice_field'])) : $ttsConnector->getVoiceFieldForDriver($driver),
+            ];
+
+            $newId = $ttsConnector->create($payload);
+            if ($newId > 0) {
+                $importedIds[] = $newId;
+            }
+        }
+
+        if (!empty($importedIds)) {
+            $redirectUrl = ttsPageUrl(['edit' => $importedIds[0]]);
+        }
+    } catch (Throwable $e) {
+        error_log('[TTS CSV Import Error] ' . $e->getMessage());
+        error_log('[TTS CSV Import Error] Stack trace: ' . $e->getTraceAsString());
+        $redirectUrl = ttsNoticeUrl('Import failed: ' . $e->getMessage());
+    }
+
+    header('Location: ' . $redirectUrl);
+    exit;
+}
+
+if (isset($_GET['create_blank'])) {
+    $options = ttsVisibleDriverOptions($ttsConnector);
+    $newDriver = 'xtts-fastapi';
+    foreach ($options as $option) {
+        $candidate = $ttsConnector->normalizeDriverValue($option);
+        if ($candidate !== '') {
+            $newDriver = $candidate;
+            break;
+        }
+    }
+
+    $newId = $ttsConnector->create([
+        'driver' => $newDriver,
+        'label' => $ttsConnector->uniqueLabel('New TTS Connector'),
+        'metadata' => json_encode([], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        'api_badge_id' => $ttsConnector->getDefaultApiBadgeIdForDriver($newDriver),
+        'url' => $ttsConnector->getDefaultUrlForDriver($newDriver),
+        'voice_field' => $ttsConnector->getVoiceFieldForDriver($newDriver),
+    ]);
+
+    header('Location: ' . ttsPageUrl(['edit' => $newId]));
+    exit;
+}
+
+if (isset($_GET['clone'])) {
+    $newId = $ttsConnector->clone(intval($_GET['clone']));
+    header('Location: ' . ttsPageUrl($newId > 0 ? ['edit' => $newId] : []));
+    exit;
+}
+
+if (isset($_GET['delete'])) {
+    $deleteId = intval($_GET['delete']);
+    $inUseProfiles = $GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM core_profiles WHERE tts_connector_id = {$deleteId}");
+    $inUsePlayer = $GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM core_player WHERE id = 'tts_connector_id' AND value = '" . $GLOBALS["db"]->escape(strval($deleteId)) . "'");
+    $totalUse = intval($inUseProfiles['c'] ?? 0) + intval($inUsePlayer['c'] ?? 0);
+    if ($totalUse > 0) {
+        header('Location: ' . ttsNoticeUrl('Cannot delete a connector that is still assigned.', ['edit' => $deleteId]));
+        exit;
+    }
+    $ttsConnector->delete($deleteId);
+    header('Location: ' . ttsPageUrl());
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_connector'])) {
+    $editId = intval($_POST['id'] ?? 0);
+    $driver = $ttsConnector->normalizeDriverValue($_POST['driver'] ?? 'none');
+    $visibleDriverOptions = ttsVisibleDriverOptions($ttsConnector);
+    $visibleDriverMap = [];
+    foreach ($visibleDriverOptions as $visibleDriverOption) {
+        $visibleDriverMap[$ttsConnector->normalizeDriverValue($visibleDriverOption)] = true;
+    }
+    if ($driver === '' || !isset($visibleDriverMap[$driver])) {
+        $driver = $ttsConnector->normalizeDriverValue($visibleDriverOptions[0] ?? 'xtts-fastapi');
+    }
+
+    $existing = $editId > 0 ? $ttsConnector->getById($editId) : null;
+    $existingDriver = $ttsConnector->normalizeDriverValue($existing['driver'] ?? '');
+    $existingMetadata = ($existing && $existingDriver === $driver)
+        ? $ttsConnector->decodeMetadata($existing['metadata'] ?? '{}')
+        : [];
+    $metadata = ttsParseMetadataFromPost($_POST, $driver, $existingMetadata, $ttsConnector);
+    $apiBadgeId = $ttsConnector->driverUsesApiBadge($driver)
+        ? $ttsConnector->getDefaultApiBadgeIdForDriver($driver)
+        : 0;
+    if ($ttsConnector->driverUsesApiBadge($driver)) {
+        $postedApiBadgeId = intval($_POST['api_badge_id'] ?? 0);
+        if ($postedApiBadgeId > 0) {
+            $apiBadgeId = $postedApiBadgeId;
+        }
+    }
+    $label = trim(strval($_POST['label'] ?? ''));
+    if ($label === '') {
+        $label = 'Default ' . $ttsConnector->getDisplayName($driver);
+    }
+
+    $payload = [
+        'driver' => $driver,
+        'label' => $ttsConnector->uniqueLabel($label, $editId),
+        'metadata' => json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        'api_badge_id' => $apiBadgeId > 0 ? $apiBadgeId : null,
+        'url' => ttsShouldShowUrlField($ttsConnector, $driver)
+            ? (trim(strval($_POST['url'] ?? '')) !== '' ? trim(strval($_POST['url'])) : null)
+            : null,
+        'voice_field' => $ttsConnector->getVoiceFieldForDriver($driver),
+    ];
+
+    if ($editId > 0) {
+        $savedId = $ttsConnector->update($editId, $payload);
+    } else {
+        $savedId = $ttsConnector->create($payload);
+    }
+
+    header('Location: ' . ttsNoticeUrl('Connector saved.', ['edit' => $savedId]));
+    exit;
+}
+
+$rows = $ttsConnector->readAll();
+$usageRows = $GLOBALS["db"]->fetchAll("SELECT tts_connector_id, COUNT(*) AS c FROM core_profiles WHERE tts_connector_id IS NOT NULL GROUP BY tts_connector_id");
+$usageMap = [];
+foreach ($usageRows as $row) {
+    $usageMap[strval($row['tts_connector_id'] ?? '')] = intval($row['c'] ?? 0);
+}
+$playerTtsValue = $GLOBALS["db"]->fetchOne("SELECT value FROM core_player WHERE id = 'tts_connector_id' LIMIT 1");
+$playerConnectorId = trim(strval($playerTtsValue['value'] ?? ''));
+if ($playerConnectorId !== '') {
+    if (!isset($usageMap[$playerConnectorId])) {
+        $usageMap[$playerConnectorId] = 0;
+    }
+    $usageMap[$playerConnectorId] += 1;
+}
+
+$apiRows = $GLOBALS["db"]->fetchAll("SELECT id, label, api_key FROM core_api_badge ORDER BY LOWER(label) ASC");
+$editId = intval($_GET['edit'] ?? 0);
+$editItem = $editId > 0 ? $ttsConnector->getById($editId) : false;
+$currentDriver = $ttsConnector->normalizeDriverValue($editItem['driver'] ?? '');
+$currentMetadata = $ttsConnector->decodeMetadata($editItem['metadata'] ?? '{}');
+$driverOptions = ttsVisibleDriverOptions($ttsConnector);
+$groupedDriverOptions = ttsGroupedDriverOptions($ttsConnector, $driverOptions);
+if ($currentDriver === '' || $currentDriver === 'none') {
+    $currentDriver = $ttsConnector->normalizeDriverValue($driverOptions[0] ?? 'xtts-fastapi');
+}
+
+if (!$isEmbed) {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "profile_loader.php");
+}
+
+$TITLE = "TTS Connectors";
 ob_start();
-include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
+include(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "head.html");
+if (!$isEmbed) {
+    include(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "navbar.php");
+}
 ?>
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
-main {
-	padding-top: 40px;
-	padding-bottom: 40px;
-	padding-left: 10%;
-	padding-right: 10%;
-	width: 100%;
-	margin: 0;
+@font-face {
+    font-family: 'MagicCards';
+    src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
 }
-footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031633; z-index: 100; }
-@font-face { font-family: 'MagicCards'; src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype'); font-weight: normal; font-style: normal; }
-h1.tts-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:8px; font-size:2.2em; color:rgb(242,124,17); text-shadow:2px 2px 4px rgba(0,0,0,0.5); text-align:center; }
-.content-section { background:#2a2a2a; padding:25px; border-radius:8px; border:1px solid #4a4a4a; }
-.provider-grid { display:grid; grid-template-columns: 1fr; gap:12px; }
-.provider-card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:12px; }
-.provider-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
-.provider-title { display:flex; align-items:center; gap:10px; color:#e0e0e0; }
-.provider-icon { width:28px; height:28px; border-radius:6px; background:#3a3a3a; display:flex; align-items:center; justify-content:center; font-size:16px; }
-.provider-body { display:grid; grid-template-columns: 220px 1fr; gap:8px 12px; align-items:center; }
-.provider-body input[type="text"], .provider-body input[type="url"], .provider-body input[type="number"], .provider-body input[type="password"], .provider-body select, .provider-body textarea { background-color:#333; color:#fff; border:1px solid #444; border-radius:4px; padding:8px; }
-.actions { display:flex; justify-content:flex-end; margin-top:10px; }
-.btn-primary { background:#204e7a; color:#fff; border:1px solid rgba(138,155,182,0.4); border-radius:8px; padding:8px 14px; cursor:pointer; }
-.btn-primary:hover { background:#285c8f; }
-.help { margin-top:6px; color:#bbb; font-size:12px; grid-column: 1 / -1; }
-@media (max-width: 900px) { main { padding-left: 5%; padding-right: 5%; } .provider-body { grid-template-columns: 1fr; } }
+main { padding: <?php echo $isEmbed ? '20px 5px 5px' : '30px 5px 5px'; ?>; }
+.page-shell { max-width: 1450px; margin: 0 auto; }
+.page-header { background: linear-gradient(180deg, rgba(42,42,42,.95), rgba(34,34,34,.98)); padding: 20px; border-radius: 10px; border: 1px solid #3a3a3a; box-shadow: 0 2px 8px rgba(0,0,0,.15), inset 0 1px rgba(255,255,255,.03); text-align: center; margin-bottom: 30px; }
+.page-header h1.api-title { margin-bottom: 8px; }
+h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacing: 8px; font-size: 2.2em; color: rgb(242,124,17); text-shadow: 2px 2px 4px rgba(0,0,0,.5); text-align: center; }
+.page-subtitle { color: #bbb; font-size: 1.1em; margin: 0; }
+.notice { margin-bottom: 14px; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(242,124,17,.25); background: rgba(42,42,42,.9); color: #e7cfac; }
+.layout { display: grid; grid-template-columns: minmax(280px, 340px) 1fr; gap: 18px; align-items: start; }
+.left-col, .right-col { background: linear-gradient(180deg, rgba(42,42,42,.95), rgba(34,34,34,.98)); border: 1px solid #3a3a3a; border-radius: 10px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.15), inset 0 1px rgba(255,255,255,.03); }
+.left-col { position: sticky; top: 90px; max-height: calc(100vh - 110px); overflow: hidden; }
+.list-wrap { display: flex; flex-direction: column; gap: 10px; overflow: auto; max-height: calc(100vh - 190px); padding-right: 4px; }
+.conn-card { border: 1px solid #3a3a3a; border-radius: 10px; background: linear-gradient(135deg, rgba(42,42,42,.95), rgba(34,34,34,.98)); padding: 12px; cursor: pointer; transition: all .2s ease; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+.conn-card:hover { background: linear-gradient(135deg, rgba(58,58,58,.95), rgba(48,48,48,.98)); transform: translateY(-2px); border-color: #4a4a4a; box-shadow: 0 3px 8px rgba(0,0,0,.2); }
+.conn-card.active { outline: 2px solid rgb(242,124,17); background: linear-gradient(135deg, rgba(52,42,32,.95), rgba(44,34,24,.98)); box-shadow: 0 4px 12px rgba(242,124,17,.3); }
+.conn-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.conn-name { color: #e9efff; font-family: 'MagicCards', serif; word-spacing: 6px; font-size: 1.05em; }
+.conn-badge { color: #9fb1c9; font-size: 11px; border: 1px solid #4a4a4a; border-radius: 999px; padding: 2px 8px; }
+.conn-sub { color: #9fb1c9; font-size: 12px; margin-top: 4px; overflow-wrap: anywhere; }
+.conn-usage { color: #9fb1c9; font-size: 12px; margin-top: 8px; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.btn-row .btn-save, .btn-row .btn-primary, .btn-row .btn-danger { margin: 0; }
+.placeholder { padding: 24px; border: 1px dashed #4a4a4a; border-radius: 10px; background: rgba(20,20,20,.65); color: #9fb1c9; }
+.editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.field-block { margin-bottom: 12px; }
+.field-block label { display: block; color: #fff; font-weight: 700; margin-bottom: 6px; }
+.field-block input[type=text], .field-block input[type=url], .field-block input[type=number], .field-block select, .field-block textarea { width: 100%; box-sizing: border-box; background: rgba(26,26,26,.82); color: #eef3ff; border: 1px solid #3a3a3a; border-radius: 6px; padding: 10px 12px; }
+.field-block input:focus, .field-block select:focus, .field-block textarea:focus { outline: none; border-color: rgba(242,124,17,.45); box-shadow: 0 0 0 3px rgba(242,124,17,.09); }
+.field-block textarea { min-height: 90px; resize: vertical; }
+.field-help { color: #8fa0bb; font-size: 12px; margin-top: 5px; line-height: 1.45; }
+.api-key-notice { margin-top: 6px; font-size: 12px; }
+.api-key-notice.warn { color: #ffb862; }
+.api-key-notice.ok { color: #6dd19c; }
+.orm-note { padding: 6px 10px; font-size: 12px; color: #97a6ba; border-bottom: 1px dashed rgba(138,155,182,.25); background: #0c0f14; border-radius: 8px; margin-bottom: 12px; }
+.meta-group { display: none; border-top: 1px solid rgba(242,124,17,.12); margin-top: 8px; padding-top: 16px; }
+.meta-group.active { display: block; }
+.meta-group h3 { font-family: 'MagicCards', serif; word-spacing: 6px; font-size: 1.2em; font-weight: normal; }
+.settings-empty-note { padding: 10px 12px; border: 1px dashed rgba(138,155,182,.25); border-radius: 8px; background: #0c0f14; color: #97a6ba; font-size: 12px; }
+.inline-two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+#tts_test_modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.66); z-index: 9999; }
+#tts_test_modal .inner { width: min(1100px, 94vw); height: min(820px, 92vh); background: #0f1724; border: 1px solid #3a3a3a; border-radius: 10px; position: relative; overflow: hidden; }
+#tts_test_modal iframe { width: 100%; height: 100%; border: 0; background: #111; }
+#tts_test_close { position: absolute; top: 10px; right: 10px; z-index: 2; }
+@media (max-width: 980px) {
+    .layout { grid-template-columns: 1fr; }
+    .left-col { position: relative; top: auto; max-height: none; }
+    .list-wrap { max-height: 420px; }
+    .editor-grid, .inline-two { grid-template-columns: 1fr; }
+}
 </style>
 
 <main>
-	<h1 class="tts-title">TTS Connectors</h1>
-	<div id="toast" class="toast-notification" style="display:none;"><span class="message"></span></div>
+    <div class="page-shell">
+        <div class="page-header">
+            <h1 class="api-title">TTS Connectors</h1>
+            <p class="page-subtitle">Text-to-Speech Setup Options.</p>
+        </div>
 
-	<?php if ($saveSuccess): ?>
-		<script>setTimeout(function(){ try{ const t=document.getElementById('toast'); if(t){ t.style.display='block'; t.textContent='Settings saved to conf.php'; setTimeout(()=>{ t.style.display='none'; }, 2500); } }catch(_e){} }, 50);</script>
-	<?php endif; ?>
+        <?php if (!empty($_GET['notice'])): ?>
+            <div class="notice"><?php echo h($_GET['notice']); ?></div>
+        <?php endif; ?>
 
-	<form method="post" action="">
-		<div class="content-section">
-			<div class="provider-grid">
-				<div class="provider-card">
-					<div class="provider-head">
-						<div class="provider-title">
-							<div class="provider-icon">🔊</div>
-							<div>TTS Provider</div>
-						</div>
-					</div>
-					<div class="provider-body">
-						<label for="TTSFUNCTION">TTS Selection</label>
-						<select name="TTSFUNCTION" id="TTSFUNCTION" onchange="this.form.submit()">
-							<?php foreach ($ttsFunctionValues as $opt): ?>
-								<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$selectedFunction===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($ttsDisplayNames[$opt] ?? $opt); ?></option>
-							<?php endforeach; ?>
-						</select>
-						<div class="help">Will be saved as <code>TTSFUNCTION</code> in <code>conf.php</code>.</div>
-					</div>
-				</div>
+        <div class="layout">
+            <div class="left-col">
+                <div class="btn-row">
+                    <a class="btn-save" href="<?php echo h(ttsPageUrl(['create_blank' => 1])); ?>">New Connector</a>
+                    <form method="post" action="<?php echo h(ttsPageUrl()); ?>" enctype="multipart/form-data" id="tts_import_form" style="display:inline;">
+                        <input type="hidden" name="import" value="1">
+                        <input type="file" name="import_file[]" id="tts_import_file" accept=".csv" multiple style="display:none;">
+                        <button type="button" class="btn-primary" id="tts_import_btn">Import</button>
+                    </form>
+                </div>
+                <div class="list-wrap" id="tts_connector_list">
+                    <?php foreach ($rows as $row): ?>
+                        <?php
+                            $rowId = intval($row['id'] ?? 0);
+                            $rowDriver = $ttsConnector->normalizeDriverValue($row['driver'] ?? 'none');
+                            $rowActive = ($editItem && intval($editItem['id'] ?? 0) === $rowId) ? ' active' : '';
+                            $rowUseCount = intval($usageMap[strval($rowId)] ?? 0);
+                        ?>
+                        <div class="conn-card<?php echo $rowActive; ?>" data-edit-id="<?php echo h($rowId); ?>">
+                            <div class="conn-head">
+                                <div class="conn-name"><?php echo h($row['label'] ?? ('Connector #' . $rowId)); ?></div>
+                                <div class="conn-badge"><?php echo h($ttsConnector->getDisplayName($rowDriver)); ?></div>
+                            </div>
+                            <div class="conn-sub"><?php echo h($row['url'] ?? ''); ?></div>
+                            <div class="conn-usage"><?php echo h($rowUseCount); ?> assignment<?php echo $rowUseCount === 1 ? '' : 's'; ?></div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
 
-				<?php if (!empty($providerSchema)): ?>
-					<div class="provider-card">
-						<div class="provider-head">
-							<div class="provider-title">
-								<div class="provider-icon">⚙️</div>
-								<div><?php $providerDisplayName = ($providerKey === 'XTTSFASTAPI') ? 'XTTS/Chatterbox API' : $providerKey; echo htmlspecialchars($providerDisplayName); ?> Settings</div>
-							</div>
-						</div>
-						<div class="provider-body">
-							<?php foreach ($providerSchema as $fname => $def): if (!is_array($def)) continue; $ftype = $def['type'] ?? 'string'; $current = tts_field_value($providerKey, $fname, $currentConf); $help = $def['description'] ?? ''; ?>
-								<label for="f_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars($fname); ?></label>
-								<?php if ($ftype === 'boolean'): ?>
-									<input type="hidden" name="<?php echo htmlspecialchars($fname); ?>" value="false">
-									<input type="checkbox" id="f_<?php echo htmlspecialchars($fname); ?>" name="<?php echo htmlspecialchars($fname); ?>" value="true" <?php echo ($current ? 'checked' : ''); ?> style="width:auto;">
-								<?php elseif ($ftype === 'integer'): ?>
-									<input type="number" step="1" id="f_<?php echo htmlspecialchars($fname); ?>" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
-								<?php elseif ($ftype === 'number'): ?>
-									<input type="number" step="0.01" id="f_<?php echo htmlspecialchars($fname); ?>" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
-								<?php elseif ($ftype === 'longstring'): ?>
-									<textarea id="f_<?php echo htmlspecialchars($fname); ?>" name="<?php echo htmlspecialchars($fname); ?>" rows="3"><?php echo htmlspecialchars((string)$current); ?></textarea>
-								<?php elseif ($ftype === 'url'): ?>
-									<input type="url" id="f_<?php echo htmlspecialchars($fname); ?>" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
-								<?php elseif ($ftype === 'select'): $values = $def['values'] ?? []; ?>
-									<select id="f_<?php echo htmlspecialchars($fname); ?>" name="<?php echo htmlspecialchars($fname); ?>">
-										<?php foreach ($values as $opt): ?>
-											<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$current===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
-										<?php endforeach; ?>
-									</select>
-								<?php elseif ($ftype === 'apikey'): ?>
-									<input type="password" id="f_<?php echo htmlspecialchars($fname); ?>" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" placeholder="Paste API key">
-								<?php else: ?>
-									<input type="text" id="f_<?php echo htmlspecialchars($fname); ?>" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
-								<?php endif; ?>
-								<?php if (!empty($help)): ?><div class="help"><?php echo $help; ?></div><?php endif; ?>
-							<?php endforeach; ?>
-						</div>
-					</div>
-				<?php else: ?>
-					<div class="provider-card">
-						<div class="provider-body"><div></div><div>No settings available for this provider.</div></div>
-					</div>
-				<?php endif; ?>
-			</div>
-			<div class="actions">
-				<button type="submit" class="btn-primary" name="save_all" value="1">Save</button>
-			</div>
-		</div>
-	</form>
+            <div class="right-col">
+                <?php if (!$editItem): ?>
+                    <div class="placeholder">
+                        Select a connector from the left to edit it. New installs will already have the currently selected legacy TTS provider migrated into this table.
+                    </div>
+                <?php else: ?>
+                    <form method="post" action="<?php echo h(ttsPageUrl()); ?>" id="tts_connector_form">
+                        <input type="hidden" name="id" value="<?php echo h($editItem['id']); ?>">
+
+                        <div class="btn-row">
+                            <button type="submit" class="btn-save" name="save_connector" value="1">Save</button>
+                            <button type="button" class="btn-primary" id="btn_test_connector">Test</button>
+                            <button type="submit" class="btn-primary" formmethod="get" formaction="<?php echo h(ttsPageUrl()); ?>" name="export" value="<?php echo h($editItem['id']); ?>">Export</button>
+                            <a class="btn-primary" href="<?php echo h(ttsPageUrl(['clone' => $editItem['id']])); ?>">Clone</a>
+                            <a class="btn-danger" href="<?php echo h(ttsPageUrl(['delete' => $editItem['id']])); ?>" onclick="return confirm('Delete this TTS connector?');">Delete</a>
+                        </div>
+                        <div class="orm-note">Please save any changes before testing to ensure the latest settings are used.</div>
+
+                        <div class="editor-grid">
+                            <div class="field-block">
+                                <label for="label">Name</label>
+                                <input type="text" id="label" name="label" value="<?php echo h($editItem['label'] ?? ''); ?>">
+                                <div class="field-help">This label appears in profile and player connector pickers.</div>
+                            </div>
+                            <div class="field-block">
+                                <label for="driver">Service</label>
+                                <select id="driver" name="driver">
+                                    <?php foreach ($groupedDriverOptions as $groupLabel => $groupDrivers): ?>
+                                        <?php if (empty($groupDrivers)) { continue; } ?>
+                                        <optgroup label="<?php echo h($groupLabel); ?>">
+                                            <?php foreach ($groupDrivers as $driverValue): ?>
+                                                <option value="<?php echo h($driverValue); ?>" <?php echo $currentDriver === $driverValue ? 'selected' : ''; ?>>
+                                                    <?php echo h($ttsConnector->getDisplayName($driverValue)); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </optgroup>
+                                    <?php endforeach; ?>
+                                </select>
+                                <div class="field-help">The provider driver this connector loads at runtime.</div>
+                            </div>
+                            <?php $showUrlField = ttsShouldShowUrlField($ttsConnector, $currentDriver); ?>
+                            <div class="field-block" id="url_block" style="<?php echo $showUrlField ? '' : 'display:none;'; ?>">
+                                <label for="url">URL</label>
+                                <input type="url" id="url" name="url" value="<?php echo h($editItem['url'] ?? ''); ?>">
+                                <div class="field-help">Used for providers that expose a local or remote HTTP endpoint.</div>
+                            </div>
+                            <div class="field-block" id="api_badge_block" style="<?php echo $ttsConnector->driverUsesApiBadge($currentDriver) ? '' : 'display:none;'; ?>">
+                                <label for="api_badge_id">API Badge</label>
+                                <?php
+                                    $selectedApi = $editItem['api_badge_id'] ?? '';
+                                    $withKey = [];
+                                    $noKey = [];
+                                    foreach ($apiRows as $apiRow) {
+                                        if (ttsApiBadgeHasConfiguredKey($apiRow['api_key'] ?? '')) {
+                                            $withKey[] = $apiRow;
+                                        } else {
+                                            $noKey[] = $apiRow;
+                                        }
+                                    }
+                                ?>
+                                <select id="api_badge_id" name="api_badge_id">
+                                    <option value="">-- None --</option>
+                                    <?php foreach ($withKey as $apiRow): ?>
+                                        <?php
+                                            $apiRowId = intval($apiRow['id'] ?? 0);
+                                            $selected = strval($selectedApi) === strval($apiRowId) ? 'selected' : '';
+                                            $labelText = '🟢 ' . strval($apiRow['label'] ?? ('Key #' . $apiRowId));
+                                        ?>
+                                        <option value="<?php echo h($apiRowId); ?>" data-empty="0" <?php echo $selected; ?>>
+                                            <?php echo h($labelText); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                    <?php if (!empty($noKey)): ?>
+                                        <option value="" disabled>— Missing Key —</option>
+                                        <?php foreach ($noKey as $apiRow): ?>
+                                            <?php
+                                                $apiRowId = intval($apiRow['id'] ?? 0);
+                                                $selected = strval($selectedApi) === strval($apiRowId) ? 'selected' : '';
+                                                $labelText = '🔴 ' . strval($apiRow['label'] ?? ('Key #' . $apiRowId)) . ' — No key';
+                                            ?>
+                                            <option value="<?php echo h($apiRowId); ?>" data-empty="1" <?php echo $selected; ?>>
+                                                <?php echo h($labelText); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
+                                <div id="api_key_notice" class="api-key-notice"></div>
+                                <div class="field-help">Cloud TTS providers require an API key.</div>
+                            </div>
+                        </div>
+
+                        <?php foreach ($driverOptions as $driverOption): ?>
+                            <?php
+                                $groupDriver = $ttsConnector->normalizeDriverValue($driverOption);
+                                $groupSchema = $ttsConnector->getProviderFieldSchema($groupDriver);
+                                $groupMetadata = $ttsConnector->applyForcedMetadataDefaults(
+                                    $groupDriver,
+                                    ($groupDriver === $currentDriver) ? $currentMetadata : []
+                                );
+                                $visibleFieldNames = [];
+                                foreach ($groupSchema as $fieldName => $definition) {
+                                    if (ttsShouldRenderField($fieldName, $definition, $ttsConnector, $groupDriver)) {
+                                        $visibleFieldNames[] = $fieldName;
+                                    }
+                                }
+                            ?>
+                            <div class="meta-group<?php echo $groupDriver === $currentDriver ? ' active' : ''; ?>" data-driver-fields="<?php echo h($groupDriver); ?>">
+                                <h3 style="margin:0 0 14px;color:#f3d6a8;"><?php echo h($ttsConnector->getProviderTitle($groupDriver)); ?> Settings</h3>
+                                <?php if (empty($visibleFieldNames)): ?>
+                                    <div class="settings-empty-note">This TTS provider does not have any connector-level settings to configure here.</div>
+                                <?php else: ?>
+                                    <div class="inline-two">
+                                        <?php foreach ($groupSchema as $fieldName => $definition): ?>
+                                            <?php if (!ttsShouldRenderField($fieldName, $definition, $ttsConnector, $groupDriver)) { continue; } ?>
+                                            <?php
+                                                $fieldType = $definition['type'] ?? 'string';
+                                                $fieldValue = $groupMetadata[$fieldName] ?? '';
+                                                $fieldKey = 'meta__' . $groupDriver . '__' . $fieldName;
+                                            ?>
+                                            <div class="field-block">
+                                                <label for="<?php echo h($fieldKey); ?>"><?php echo h(ttsFormatFieldLabel($fieldName)); ?></label>
+                                                <?php if ($fieldType === 'boolean'): ?>
+                                                    <input type="hidden" name="<?php echo h($fieldKey); ?>" value="false">
+                                                    <select id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>">
+                                                        <option value="true" <?php echo $fieldValue ? 'selected' : ''; ?>>Enabled</option>
+                                                        <option value="false" <?php echo !$fieldValue ? 'selected' : ''; ?>>Disabled</option>
+                                                    </select>
+                                                <?php elseif ($fieldType === 'integer'): ?>
+                                                    <input type="number" step="1" id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>" value="<?php echo h($fieldValue); ?>">
+                                                <?php elseif ($fieldType === 'number'): ?>
+                                                    <input type="number" step="0.01" id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>" value="<?php echo h($fieldValue); ?>">
+                                                <?php elseif ($fieldType === 'longstring'): ?>
+                                                    <textarea id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>"><?php echo h($fieldValue); ?></textarea>
+                                                <?php elseif ($fieldType === 'select'): ?>
+                                                    <select id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>">
+                                                        <?php foreach (($definition['values'] ?? []) as $valueOption): ?>
+                                                            <option value="<?php echo h($valueOption); ?>" <?php echo strval($fieldValue) === strval($valueOption) ? 'selected' : ''; ?>>
+                                                                <?php echo h($valueOption); ?>
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                <?php elseif ($fieldType === 'selectmultiple'): ?>
+                                                    <select id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>[]" multiple>
+                                                        <?php $selectedValues = is_array($fieldValue) ? $fieldValue : []; ?>
+                                                        <?php foreach (($definition['values'] ?? []) as $valueOption): ?>
+                                                            <option value="<?php echo h($valueOption); ?>" <?php echo in_array($valueOption, $selectedValues, true) ? 'selected' : ''; ?>>
+                                                                <?php echo h($valueOption); ?>
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                <?php else: ?>
+                                                    <input type="text" id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>" value="<?php echo h($fieldValue); ?>">
+                                                <?php endif; ?>
+                                                <?php if (!empty($definition['description'])): ?>
+                                                    <div class="field-help"><?php echo $definition['description']; ?></div>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </form>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <div id="tts_test_modal">
+        <div class="inner">
+            <button type="button" class="btn-danger" id="tts_test_close">Close</button>
+            <iframe id="tts_test_iframe" src="about:blank"></iframe>
+        </div>
+    </div>
 </main>
 
+<script>
+(function(){
+    const importBtn = document.getElementById('tts_import_btn');
+    const importFile = document.getElementById('tts_import_file');
+    const importForm = document.getElementById('tts_import_form');
+    if (importBtn && importFile && importForm) {
+        importBtn.addEventListener('click', function() {
+            importFile.click();
+        });
+        importFile.addEventListener('change', function() {
+            if (importFile.files && importFile.files.length > 0) {
+                importForm.submit();
+            }
+        });
+    }
+
+    const editCards = document.querySelectorAll('.conn-card[data-edit-id]');
+    editCards.forEach(function(card){
+        card.addEventListener('click', function(){
+            const id = card.getAttribute('data-edit-id');
+            if (!id) return;
+            window.location.href = <?php echo json_encode(ttsPageUrl()); ?>.replace(/(\?.*)?$/, '') + '?edit=' + encodeURIComponent(id) + <?php echo json_encode($isEmbed ? '&embed=1' : ''); ?>;
+        });
+    });
+
+    const driverSelect = document.getElementById('driver');
+    const apiBadgeBlock = document.getElementById('api_badge_block');
+    const apiBadgeSelect = document.getElementById('api_badge_id');
+    const apiKeyNotice = document.getElementById('api_key_notice');
+    const urlBlock = document.getElementById('url_block');
+    const apiDrivers = <?php echo json_encode(array_values(array_filter($driverOptions, function ($driver) use ($ttsConnector) { return $ttsConnector->driverUsesApiBadge($driver); })), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+    const urlDrivers = <?php echo json_encode(array_values(array_filter($driverOptions, function ($driver) use ($ttsConnector) { return $ttsConnector->driverSupportsEditableUrl($driver); })), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+    const defaultApiBadgeIds = <?php
+        $defaultApiBadgeIds = [];
+        foreach ($driverOptions as $driverOption) {
+            $normalizedDriver = $ttsConnector->normalizeDriverValue($driverOption);
+            $defaultApiBadgeIds[$normalizedDriver] = $ttsConnector->getDefaultApiBadgeIdForDriver($normalizedDriver);
+        }
+        echo json_encode($defaultApiBadgeIds, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    ?>;
+    const defaultUrls = <?php
+        $defaultUrls = [];
+        foreach ($driverOptions as $driverOption) {
+            $normalizedDriver = $ttsConnector->normalizeDriverValue($driverOption);
+            $defaultUrls[$normalizedDriver] = $ttsConnector->getDefaultUrlForDriver($normalizedDriver);
+        }
+        echo json_encode($defaultUrls, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    ?>;
+    const urlInput = document.getElementById('url');
+    let previousDriver = driverSelect ? String(driverSelect.value || '') : '';
+
+    function syncDriverFields() {
+        if (!driverSelect) return;
+        const selected = String(driverSelect.value || '');
+        document.querySelectorAll('[data-driver-fields]').forEach(function(group){
+            group.classList.toggle('active', group.getAttribute('data-driver-fields') === selected);
+        });
+        if (apiBadgeBlock) {
+            const usesApiBadge = apiDrivers.indexOf(selected) >= 0;
+            apiBadgeBlock.style.display = usesApiBadge ? '' : 'none';
+            if (apiBadgeSelect) {
+                const currentValue = String(apiBadgeSelect.value || '').trim();
+                const previousDefault = String(defaultApiBadgeIds[previousDriver] || '').trim();
+                const nextDefault = String(defaultApiBadgeIds[selected] || '').trim();
+                if (usesApiBadge) {
+                    if (currentValue === '' || currentValue === previousDefault) {
+                        apiBadgeSelect.value = nextDefault;
+                    }
+                } else if (currentValue === previousDefault) {
+                    apiBadgeSelect.value = '';
+                }
+            }
+        }
+        if (urlBlock) {
+            const supportsUrl = urlDrivers.indexOf(selected) >= 0;
+            urlBlock.style.display = supportsUrl ? '' : 'none';
+            if (urlInput) {
+                if (supportsUrl) {
+                    const currentValue = String(urlInput.value || '').trim();
+                    const previousDefault = String(defaultUrls[previousDriver] || '').trim();
+                    const nextDefault = String(defaultUrls[selected] || '').trim();
+                    if ((currentValue === '' || currentValue === previousDefault) && nextDefault) {
+                        urlInput.value = nextDefault;
+                    }
+                } else {
+                    urlInput.value = '';
+                }
+            }
+        }
+        previousDriver = selected;
+        updateApiBadgeNotice();
+    }
+
+    function updateApiBadgeNotice() {
+        if (!apiBadgeSelect || !apiKeyNotice) return;
+        const selectedOption = apiBadgeSelect.options[apiBadgeSelect.selectedIndex];
+        const isEmpty = selectedOption ? selectedOption.getAttribute('data-empty') === '1' : true;
+        if (!selectedOption || String(apiBadgeSelect.value || '') === '') {
+            apiKeyNotice.className = 'api-key-notice warn';
+            apiKeyNotice.textContent = 'No API key selected. Some services require a key.';
+            return;
+        }
+        if (isEmpty) {
+            apiKeyNotice.className = 'api-key-notice warn';
+            apiKeyNotice.textContent = 'Selected API badge does not have a configured key yet.';
+            return;
+        }
+        apiKeyNotice.className = 'api-key-notice ok';
+        apiKeyNotice.textContent = 'Selected API badge is configured.';
+    }
+
+    if (driverSelect) {
+        driverSelect.addEventListener('change', syncDriverFields);
+        syncDriverFields();
+    }
+    if (apiBadgeSelect) {
+        apiBadgeSelect.addEventListener('change', updateApiBadgeNotice);
+        updateApiBadgeNotice();
+    }
+
+    const modal = document.getElementById('tts_test_modal');
+    const iframe = document.getElementById('tts_test_iframe');
+    const closeBtn = document.getElementById('tts_test_close');
+    const testBtn = document.getElementById('btn_test_connector');
+    if (testBtn && modal && iframe) {
+        testBtn.addEventListener('click', function(){
+            const idInput = document.querySelector('input[name="id"]');
+            const connectorId = idInput ? idInput.value : '';
+            if (!connectorId) {
+                return;
+            }
+            iframe.src = <?php echo json_encode($webRoot . '/ui/tests/tts-test.php'); ?> + '?connector_id=' + encodeURIComponent(connectorId) + <?php echo json_encode($isEmbed ? '&embed=1' : ''); ?>;
+            modal.style.display = 'flex';
+        });
+    }
+    if (closeBtn && modal && iframe) {
+        closeBtn.addEventListener('click', function(){
+            modal.style.display = 'none';
+            iframe.src = 'about:blank';
+        });
+        modal.addEventListener('click', function(event){
+            if (event.target === modal) {
+                modal.style.display = 'none';
+                iframe.src = 'about:blank';
+            }
+        });
+    }
+})();
+</script>
+
 <?php
-include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/footer.html");
+include(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "footer.html");
 $buffer = ob_get_contents();
 ob_end_clean();
-$title = $TITLE;
-$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $TITLE . '$3', $buffer);
 echo $buffer;
 ?>
-
-

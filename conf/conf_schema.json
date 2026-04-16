@@ -241,14 +241,14 @@
   "TTS": {
     "_title":"Text-to-Speech Service",
     "MELOTTS": {
-      "_title":"MeloTTS (Installed in DwemerDistro)",
+      "_title":"MeloTTS",
       "endpoint":{"type":"url","description":"Endpoint URL. Leave as is.","helpurl":"https://github.com/myshell-ai/MeloTTS"},
       "language":{"type":"select","values":["EN","ES","FR","ZH","JP","KR"],"description":"Language Model. Should be EN if using default installation"},
       "speed":{"type":"number","description":"Speech Speed"},
       "voiceid":{"type":"string","description":"Voice ID. Should be set automatically for most Vanilla Skyrim NPCs. Uses Skyrim VoiceType ID, e.g. femaleeventoned.<b> Click the help/doc link for full list of voiceids!</b>", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#melotts-voice-ids"}
     },
     "XTTSFASTAPI": {
-      "_title":"CHIM XTTS (Installed in DwemerDistro)",
+      "_title":"CHIM XTTS",
       "endpoint":{"type":"url","description":"Leave as is if using CHIM XTTS. If you want to use Mantella XTTS then click[HOST PC IP]. [WSL IP] will set it back to point to CHIM XTTS.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chim-xtts"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
@@ -258,7 +258,7 @@
       "PARALINGUISTIC_TAGS_LIST":{"type":"string","description":"Comma-separated list of supported paralinguistic tags (e.g., [laugh],[sigh],[gasp]). Tags are case-insensitive.","scope":"global"}
     },
     "CHATTERBOX": {
-      "_title":"Chatterbox (Optimized XTTS Fork)",
+      "_title":"Chatterbox",
       "endpoint":{"type":"url","description":"Chatterbox endpoint. Uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chatterbox"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
@@ -268,14 +268,14 @@
       "PARALINGUISTIC_TAGS_LIST":{"type":"string","description":"Comma-separated list of supported paralinguistic tags (e.g., [laugh],[sigh],[gasp]). Tags are case-insensitive.","scope":"global"}
     },
     "POCKETTTS": {
-      "_title":"PocketTTS (CPU-based TTS)",
+      "_title":"PocketTTS",
       "endpoint":{"type":"url","description":"PocketTTS endpoint. CPU-only TTS, uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#pockettts"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS POCKETTTS voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"}
     },
     "MIMIC3": {
-      "_title":"MIMIC3 (Installed in DwemerDistro)",
+      "_title":"MIMIC3",
       "URL": {"type":"url","description":"MIMIC3 Service URL."},
       "voice": {"type":"string","description":"Voice ID code"},
       "rate": {"type":"number","description":"Voice speed"},
