@@ -91,7 +91,7 @@ INSERT INTO public.core_llm_connector (
     (3, 'Sonnet 4.5',          '{}', 'https://openrouter.ai/api/v1/chat/completions', 'anthropic/claude-sonnet-4.5', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 1, 'openrouter'),
     (4, 'DeepSeek Chat V3.1',          '{}', 'https://openrouter.ai/api/v1/chat/completions', 'deepseek/deepseek-chat-v3.1', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 0.6, 'openrouter'),
     (5, 'Mistral Small 3.2 24B', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'mistralai/mistral-small-3.2-24b-instruct', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 1, 'openrouter'),
-    (6, 'Ministral 8B',   '{}', 'https://openrouter.ai/api/v1/chat/completions', 'mistralai/ministral-8b', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 1, 'openrouter');
+    (6, 'Ministral 8B',   '{}', 'https://openrouter.ai/api/v1/chat/completions', 'mistralai/ministral-8b-2512', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 1, 'openrouter');
 
 
 --

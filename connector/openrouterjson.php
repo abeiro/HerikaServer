@@ -188,6 +188,41 @@ class openrouterjson
         //Logger::debug("[OPENROUTER] is openai $s_model / $i_pos ". ($b_res ? "Y" : "N") ); //debug
         return $b_res;
     }
+
+    private function normalizeOpenRouterModel($s_model="") {
+        $normalizedModel = trim((string)$s_model);
+        if ($normalizedModel === "") {
+            return $normalizedModel;
+        }
+
+        $deprecatedModels = [
+            "mistralai/ministral-8b" => "mistralai/ministral-8b-2512",
+        ];
+
+        if (isset($deprecatedModels[$normalizedModel])) {
+            $replacementModel = $deprecatedModels[$normalizedModel];
+            Logger::info("openrouterjson: remapping deprecated model {$normalizedModel} to {$replacementModel}");
+            return $replacementModel;
+        }
+
+        return $normalizedModel;
+    }
+
+    private function normalizeOpenRouterModelList($models) {
+        if (!is_array($models)) {
+            return $models;
+        }
+
+        $normalizedModels = [];
+        foreach ($models as $model) {
+            $normalizedModel = $this->normalizeOpenRouterModel($model);
+            if ($normalizedModel !== "") {
+                $normalizedModels[] = $normalizedModel;
+            }
+        }
+
+        return $normalizedModels;
+    }
    
     private function init_connector($customParms) {
         $this->_url = (isset($GLOBALS["CONNECTOR"][$this->name]["url"])) ? $GLOBALS["CONNECTOR"][$this->name]["url"] : "";
@@ -201,7 +236,7 @@ class openrouterjson
 
         $s_fallback = trim($GLOBALS["CONNECTOR"][$this->name]["fallback_models"] ?? ""); //"google/gemini-2.0-flash-001,google/gemini-2.5-flash-lite,meta-llama/llama-4-scout"
         if (strlen($s_fallback) > 1)
-            $this->_fallback_models = explode(",",$s_fallback); 
+            $this->_fallback_models = $this->normalizeOpenRouterModelList(explode(",",$s_fallback)); 
 
         $this->_providers_sort = strtolower(trim($GLOBALS["CONNECTOR"][$this->name]["providers_sort"] ?? ""));
 
@@ -238,6 +273,7 @@ class openrouterjson
         
         // We shoud be able to overwrite model.
         $this->_model = isset($customParms["model"]) ?$customParms["model"] :  $this->_model;
+        $this->_model = $this->normalizeOpenRouterModel($this->_model);
 
         $this->_is_grok = (stripos($this->_model, "grok") > 0 ); 
         $this->_is_openai = $this->isOpenAIModel($this->_model);
@@ -253,6 +289,13 @@ class openrouterjson
     {
 
         $this->init_connector($customParms);
+
+        if (isset($customParms["model"])) {
+            $customParms["model"] = $this->normalizeOpenRouterModel($customParms["model"]);
+        }
+        if (isset($customParms["models"])) {
+            $customParms["models"] = $this->normalizeOpenRouterModelList($customParms["models"]);
+        }
 
         $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48));
 
