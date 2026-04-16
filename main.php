@@ -2279,6 +2279,7 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
 
 // Use centralized function from data_functions.php
 $dynamicBiography = buildDynamicBiography($GLOBALS);
+$worldPrompt = buildWorldPrompt($gameRequest[2] ?? 0);
 
 
 if (isset($GLOBALS["PROFILE_PROMPT"])) {
@@ -2404,7 +2405,7 @@ if (isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
 if (!empty($GLOBALS["OGHMA_HINT"])) {
 
     $head[] = array('role' => 'system', 'content' =>  
-        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
+        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>".$worldPrompt."\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
 
     );
@@ -2412,7 +2413,7 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
     $GLOBALS["COMMAND_PROMPT"] = "";
 } else {
     $head[] = array('role' => 'system', 'content' =>  
-        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
+        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>".$worldPrompt."\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
         ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
     );
     //avoid reinjecting command prompt that we have already appended

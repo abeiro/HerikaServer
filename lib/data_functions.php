@@ -2758,6 +2758,109 @@ function DataLastKnownLocationHuman($hold=false,$cached=false)
 
 }
 
+function buildWorldPrompt($gamets = 0)
+{
+    $worldLines = [];
+
+    $currentLoc = trim(DataLastKnownLocationHuman(false, false));
+    if ($currentLoc !== "") {
+        $worldLines[] = "Current location: {$currentLoc}";
+    }
+
+    $currentHold = trim(DataLastKnownLocationHuman(true, false));
+    if ($currentHold !== "") {
+        $worldLines[] = "Current hold: {$currentHold}";
+    }
+
+    $currentWeather = trim(DataLastKnownWeatherHuman());
+    if ($currentWeather !== "") {
+        $worldLines[] = "Current weather: {$currentWeather}";
+    }
+
+    $f_gamets = floatval($gamets);
+    if ($f_gamets <= 0.0) {
+        $f_gamets = floatval(DataLastKnownGameTS());
+    }
+
+    if ($f_gamets > 0.0) {
+        $tsTime = gamets2timestamp($f_gamets);
+        $currentDate = trim(convert_gamets2skyrim_long_date_no_time($f_gamets));
+        $currentTime = date('g:i A', $tsTime);
+        $dayPart = hour2part_of_day(date('H', $tsTime));
+
+        if ($currentDate !== "") {
+            $worldLines[] = "Current date: {$currentDate}";
+        }
+        $worldLines[] = "Current time: {$currentTime}, {$dayPart}";
+    }
+
+    if (empty($worldLines)) {
+        return "";
+    }
+
+    return "\n\n<world>\n" . implode("\n", $worldLines) . "\n</world>";
+}
+
+function DataLastKnownWeatherHuman()
+{
+    $cacheKey = "WEATHER";
+    if (isset($GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey])) {
+        return $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey];
+    }
+
+    global $db;
+
+    $lastWeather = $db->fetchAll("select a.data as data FROM eventlog a WHERE type in ('location','infoloc','request') and lower(data) like '%current weather:%' order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+    if (!is_array($lastWeather) || sizeof($lastWeather) == 0) {
+        $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey] = "";
+        return "";
+    }
+
+    $weatherValue = "";
+    if (preg_match('/current weather:\s*([^\)]+)/i', $lastWeather[0]["data"], $matches) && isset($matches[1])) {
+        $rawWeather = trim($matches[1]);
+        $prefix = "";
+        if (stripos($rawWeather, 'outdoors it is ') === 0) {
+            $prefix = 'outdoors it is ';
+            $rawWeather = trim(substr($rawWeather, strlen($prefix)));
+        }
+
+        $rawParts = array_filter(array_map('trim', explode(',', $rawWeather)), function ($part) {
+            return $part !== "";
+        });
+
+        $weatherMap = [
+            'pleasant' => 'Pleasant',
+            'clear' => 'Clear',
+            'cloudy' => 'Cloudy',
+            'rainy' => 'Raining',
+            'raining' => 'Raining',
+            'snowy' => 'Snowning',
+            'snowning' => 'Snowning',
+            'foggy' => 'Foggy',
+            'unknown' => 'Unknown',
+        ];
+
+        if (!empty($rawParts)) {
+            $weatherParts = [];
+            foreach ($rawParts as $part) {
+                $normalizedPart = strtolower($part);
+                $displayPart = $weatherMap[$normalizedPart] ?? $part;
+                if (!in_array($displayPart, $weatherParts, true)) {
+                    $weatherParts[] = $displayPart;
+                }
+            }
+            $weatherValue = $prefix . implode(', ', $weatherParts);
+        } else {
+            $normalizedWeather = strtolower(trim($rawWeather, " ,"));
+            $weatherValue = $prefix . ($weatherMap[$normalizedWeather] ?? $rawWeather);
+        }
+    }
+
+    $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey] = $weatherValue;
+    return $weatherValue;
+}
+
 
 function PackIntoSummary($onlyMissingDiary=false)
 {
