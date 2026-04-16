@@ -88,10 +88,10 @@ INSERT INTO public.core_llm_connector (
 ) VALUES
     (1, 'GLM 4.7', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'z-ai/glm-4.7', 'openrouter', 'openrouterjson', 1, 750, 1, 0, 1, 1, 1, 'openrouter'),
     (2, 'Gemini 2.5 Flash Lite', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'google/gemini-2.5-flash-lite', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 1, 'openrouter'),
-    (3, 'Sonnet 4.5',          '{}', 'https://openrouter.ai/api/v1/chat/completions', 'anthropic/claude-sonnet-4.5', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 1, 'openrouter'),
-    (4, 'DeepSeek Chat V3.1',          '{}', 'https://openrouter.ai/api/v1/chat/completions', 'deepseek/deepseek-chat-v3.1', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 0.6, 'openrouter'),
+    (3, 'GLM 5',               '{}', 'https://openrouter.ai/api/v1/chat/completions', 'z-ai/glm-5', 'openrouter', 'openrouterjson', 1, 750, 1, 0, 1, 1, 1, 'openrouter'),
+    (4, 'DeepSeek Chat V3.2',          '{}', 'https://openrouter.ai/api/v1/chat/completions', 'deepseek/deepseek-v3.2', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 0.6, 'openrouter'),
     (5, 'Mistral Small 3.2 24B', '{}', 'https://openrouter.ai/api/v1/chat/completions', 'mistralai/mistral-small-3.2-24b-instruct', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 1, 'openrouter'),
-    (6, 'Ministral 8B',   '{}', 'https://openrouter.ai/api/v1/chat/completions', 'mistralai/ministral-8b', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 1, 'openrouter');
+    (6, 'Ministral 8B',   '{}', 'https://openrouter.ai/api/v1/chat/completions', 'mistralai/ministral-8b-2512', 'openrouter', 'openrouterjson', NULL, 750, 1, 0, 1, 1, 1, 'openrouter');
 
 
 --

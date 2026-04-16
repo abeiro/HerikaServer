@@ -93,7 +93,7 @@
   "RELATIONSHIP_SYSTEM_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","description":"Enable the Relationship Management System. When enabled, NPCs will dynamically form and update relationships based on conversations and events. Requires RELLLM_CONNECTOR to be configured.","_title":"Relationship System"},
   "RELLLM_CONNECTOR": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for Relationship Management system. Analyzes and updates NPC relationships. Recommend to use a 🏃‍♀️‍➡️Fast LLM with ❄️low temperature (0.1-0.3) for consistent evaluations.","scope":"global"},
   "POWER_AWARENESS_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","description":"NPCs will be aware of relative power levels (based on character level) and react appropriately to threats.","_title":"Power Awareness System"},
-  "CLEAN_CONTEXT_FOCUS_CHAT_HISTORY": {"userlvl":"basic","type": "integer","description": "Historic context to use when Focus on Chat mode. Should be lower than normal context.","scope":"global"},
+  "CLEAN_CONTEXT_FOCUS_CHAT_HISTORY": {"userlvl":"basic","type": "integer","description": "Context history length with only conversations. Ideally set it to 20-30.","scope":"global"},
   "BGL_TRIGGER_DAYS": {"userlvl":"basic","type": "integer","description": "RECOMMEND TO NOT GO BELOW 5 DAYS! Number of in-game days between Background Life events. NPCs will generate thoughts and take actions based on this interval. Default: 5 days. Range: 1-30 days.","scope":"global"},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",

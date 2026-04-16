@@ -1,4 +1,5 @@
 <?php
+    require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."emote_moods.php");
 
     global $FUNC_LIST;
     global $responseTemplate;
@@ -89,7 +90,7 @@
 
     // specify the json object that will be requested from the LLM (via prompt, not enforced)
     Function setResponseTemplate() {
-        $moods=explode(",",trim($GLOBALS["EMOTEMOODS"] ?? ""));
+        $moods=normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "");
         shuffle($moods);
     
         // Auto-detect language from TTS config if LLM_LANG not set
@@ -195,7 +196,7 @@
     
     // for use with openai and openrouter providers that support structured outputs to enforce a json schema
     Function setStructuredOutputTemplate() {
-        $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
+        $moods=normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "");
         shuffle($moods);
 
         // Determine message description based on INLINE_NARRATION_ENABLED setting (default to false if not set)
@@ -374,7 +375,7 @@
     Function setGBNFGrammar() {
         // build the string for moods
         // should look like: ("\"playful\"" | "\"default\"" | ...)
-        $moods=explode(",",$GLOBALS["EMOTEMOODS"]);
+        $moods=normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "");
         shuffle($moods);
 
         $moods_quoted = [];
