@@ -63,20 +63,21 @@ $EMOTEMOODS="sassy,"
     . "lovely,"
     . "seductive,"
     . "sarcastic,"
-    . "sardonic,"
     . "smirking,"
     . "amused,"
-    . "default,"
-    . "assisting,"
     . "irritated,"
     . "playful,"
     . "neutral,"
     . "teasing,"
-    . "mocking"
-    . "desperate"
-    . "distressed"
-    . "pleading"
-    . "sad"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
+    . "desperate,"
+    . "scared,"
+    . "pleading,"
+    . "sad,"
+    . "happy,"
+    . "angry,"
+    . "drunk,"
+    . "shy,"
+    . "surprised"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 
 $REMOVE_ASTERISKS_FROM_OUTPUT=true;
 $ENFORCE_ACTIONS_PROMPT=true;
@@ -151,13 +152,13 @@ $DISABLE_REANIMATION_TRACKING=true; //Disable reanimation tracking. NPCs marked 
 
 //[AI/LLM Service Selection]
 $CONNECTORS=["openrouterjson","openaijson","koboldcppjson"]; //AI Service(s).
-$CONNECTORS_DIARY=["openrouter","openai","google_openaijson","koboldcpp","player2"]; //Creates diary entries and memories.
+$CONNECTORS_DIARY="openrouter"; //Creates diary entries and memories.
 
 // Core LLM connector defaults (IDs from core_llm_connector table)
 $CORE_CONNECTOR_DIRECTOR=1;
 $CORE_CONNECTOR_PLAYER=2;
-$CORE_CONNECTOR_SUMMARY=5;
-$CORE_CONNECTOR_MEDIUMTERM=5;
+$CORE_CONNECTOR_SUMMARY=4;
+$CORE_CONNECTOR_MEDIUMTERM=4;
 $CORE_CONNECTOR_PROFILES=1;
 $RELLLM_CONNECTOR=5; // Relationship Management default (Mistral Small 3.2 24B)
 
@@ -196,7 +197,7 @@ $CONNECTOR["openrouterjson"]["get_parms5"] = false; // Utility button for medium
 $CONNECTOR["openrouterjson"]["get_parms9"] = false; // Utility button for high randomness parameters
 //OpenRouter (Legacy)
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
-$CONNECTOR["openrouter"]["model"]="meta-llama/llama-3.1-8b-instruct"; //LLM model.
+$CONNECTOR["openrouter"]["model"]="deepseek/deepseek-v3.2"; //LLM model.
 $CONNECTOR["openrouter"]["reasoning_model"]=false; //This is a reasoning model, could output CoT.
 $CONNECTOR["openrouter"]["fallback_models"]=""; //comma separated models.
 $CONNECTOR["openrouter"]["PROVIDER"]=""; //select a list of providers from OpenRouter

@@ -417,7 +417,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                     <a id="signup_link" href="#" target="_blank" rel="noopener noreferrer" style="color:#ffb862; text-decoration:underline;">Sign up here</a> to get your API key for this service.
                 </div>
                 <div id="service_tos_warning" class="orm-note" style="font-size:12px; margin:-4px 0 8px 0; display:none; color:#ffd2a6;">
-                    Please be warned that OpenAI, Antrhopic and Google have started to enforce stricter terms of service regarding NSFW actitives. <a href="https://openrouter.ai/terms#_6_-prohibited-conduct_" target="_blank" rel="noopener noreferrer" style="color:#ffb862; text-decoration:underline;">More info here</a>.
+                    Please be warned that OpenAI, Anthropic and Google have started to enforce stricter terms of service regarding NSFW actitives. <a href="https://openrouter.ai/terms#_6_-prohibited-conduct_" target="_blank" rel="noopener noreferrer" style="color:#ffb862; text-decoration:underline;">More info here</a>.
                 </div>
 
                 <div id="custom_note" class="orm-muted" style="font-size:12px; display:none; margin:-6px 0 8px 0;">
@@ -1728,7 +1728,7 @@ if (typeof window.consolidation !== 'function') {
                 <a id="signup_link" href="#" target="_blank" rel="noopener noreferrer" style="color:#ffb862; text-decoration:underline;">Sign up here</a> to get your API key for this service.
             </div>
             <div id="service_tos_warning" class="orm-note" style="font-size:12px; margin:-4px 0 8px 0; display:none; color:#ffd2a6;">
-                Please be warned that OpenAI, Antrhopic and Google have started to enforce stricter terms of service regarding NSFW actitives. <a href="https://openrouter.ai/terms#_6_-prohibited-conduct_" target="_blank" rel="noopener noreferrer" style="color:#ffb862; text-decoration:underline;">More info here</a>.
+                Please be warned that OpenAI, Anthropic and Google have started to enforce stricter terms of service regarding NSFW actitives. <a href="https://openrouter.ai/terms#_6_-prohibited-conduct_" target="_blank" rel="noopener noreferrer" style="color:#ffb862; text-decoration:underline;">More info here</a>.
             </div>
 
             <div id="custom_note" class="orm-muted" style="font-size:12px; display:none; margin:-6px 0 8px 0;">
