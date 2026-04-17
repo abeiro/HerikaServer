@@ -62,6 +62,7 @@ try {
             }
             
             $profileSlots[$slot] = [
+                'profile_id' => intval($profile['id']),
                 'profile_name' => $profile['label'],
                 'connectors' => $connectors
             ];
