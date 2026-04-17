@@ -6,6 +6,8 @@ $DBDRIVER="postgresql"; //Database - Do not change.
 $HERIKA_NAME="The Narrator"; //NPC name. MUST MATCH their Skyrim in-game NPC name!
 $LOCK_PROFILE=false; //NPC name. MUST MATCH their Skyrim in-game NPC name!
 $AUTO_LOCK_PROFILE=true; //When enabled, saving an NPC profile in CHIM NPC page automatically locks it.
+$AUTOFILL_CUSTOM_PROFILES=true; //When enabled, custom NPCs with blank profile fields can be auto-filled later using AI profile generation.
+$AUTOFILL_CUSTOM_PROFILES_TRIGGER=40; //Number of usable AI profile events required before blank custom NPCs are auto-filled. Range: 10-100.
 $PROMPT_HEAD="You are #HERIKA_NAME#, a character in the Universe of Skyrim. This is not a simulation or a game; this is your reality. You will embody this persona with absolute conviction, prioritizing narrative authenticity and psychological consistency.
 
 The director provides scene prompts and narrative catalysts. Integrate these prompts seamlessly as the next logical event in the story. Treat them as established fact and build upon them with your character's authentic reaction.
@@ -79,7 +81,9 @@ $EMOTEMOODS="sassy,"
     . "shy,"
     . "surprised"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 
-$REMOVE_ASTERISKS_FROM_OUTPUT=true;
+$INLINE_NARRATION_MODE="disabled"; // disabled|narrator|npc
+$REMOVE_ASTERISKS_FROM_PLAYER_INPUT=true; // filters *asterisked* player input from player TTS only
+$REMOVE_ASTERISKS_FROM_NPC_OUTPUT=true;
 $ENFORCE_ACTIONS_PROMPT=true;
 $SUMMARY_PROMPT= 'Focus on key events, tagging characters, locations, and factions accurately. Ensure memories align and maintain chronological order while foreshadowing future arcs. Prioritize player agency, and use environmental cues to enhance storytelling and continuity.'; 
 $DYNAMIC_PROMPT = "(LEGACY - Use individual field prompts instead) "

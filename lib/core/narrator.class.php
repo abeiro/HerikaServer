@@ -205,20 +205,72 @@ class Narrator
     {
         $allSettings = $this->getAll();
 
-        // One-time compatibility migration from legacy profile metadata.
-        $legacySettingMap = [
-            'inline_narration_enabled' => 'INLINE_NARRATION_ENABLED',
-            'remove_asterisks_from_output' => 'REMOVE_ASTERISKS_FROM_OUTPUT',
-        ];
-        foreach ($legacySettingMap as $dbKey => $legacyMetadataKey) {
-            if (!isset($allSettings[$dbKey])) {
-                $legacyValue = $this->getLegacyDefaultNarratorProfileBool($legacyMetadataKey);
-                if ($legacyValue !== null) {
-                    $serialized = $legacyValue ? '1' : '0';
-                    if ($this->set($dbKey, $serialized)) {
-                        $allSettings[$dbKey] = $serialized;
+        if (!isset($allSettings['inline_narration_mode'])) {
+            $legacyInlineNarrationMode = null;
+            $currentGlobalMode = strtolower(trim((string)($GLOBALS['INLINE_NARRATION_MODE'] ?? '')));
+            if (in_array($currentGlobalMode, ['disabled', 'narrator', 'npc'], true)) {
+                $legacyInlineNarrationMode = $currentGlobalMode;
+            } else {
+                $legacyInlineNarrationEnabled = null;
+                if (isset($allSettings['inline_narration_enabled'])) {
+                    $legacyInlineNarrationEnabled = filter_var($allSettings['inline_narration_enabled'], FILTER_VALIDATE_BOOLEAN);
+                } else {
+                    $legacyInlineNarrationEnabled = $this->getLegacyDefaultNarratorProfileBool('INLINE_NARRATION_ENABLED');
+                    if ($legacyInlineNarrationEnabled === null && isset($GLOBALS['INLINE_NARRATION_ENABLED'])) {
+                        $legacyInlineNarrationEnabled = (bool)$GLOBALS['INLINE_NARRATION_ENABLED'];
                     }
                 }
+
+                if ($legacyInlineNarrationEnabled !== null) {
+                    $legacyInlineNarrationMode = $legacyInlineNarrationEnabled ? 'narrator' : 'disabled';
+                }
+            }
+
+            if ($legacyInlineNarrationMode !== null && $this->set('inline_narration_mode', $legacyInlineNarrationMode)) {
+                $allSettings['inline_narration_mode'] = $legacyInlineNarrationMode;
+            }
+        }
+
+        if (!isset($allSettings['remove_asterisks_from_npc_output'])) {
+            $legacyNpcOutputSetting = null;
+            if (isset($allSettings['remove_asterisks_from_output'])) {
+                $legacyNpcOutputSetting = filter_var($allSettings['remove_asterisks_from_output'], FILTER_VALIDATE_BOOLEAN);
+            } else {
+                $legacyNpcOutputSetting = $this->getLegacyDefaultNarratorProfileBool('REMOVE_ASTERISKS_FROM_OUTPUT');
+                if ($legacyNpcOutputSetting === null) {
+                    if (isset($GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'])) {
+                        $legacyNpcOutputSetting = (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'];
+                    } elseif (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'])) {
+                        $legacyNpcOutputSetting = (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'];
+                    }
+                }
+            }
+
+            if ($legacyNpcOutputSetting !== null) {
+                $serialized = $legacyNpcOutputSetting ? '1' : '0';
+                if ($this->set('remove_asterisks_from_npc_output', $serialized)) {
+                    $allSettings['remove_asterisks_from_npc_output'] = $serialized;
+                }
+            }
+        }
+
+        if (!isset($allSettings['remove_asterisks_from_player_input'])) {
+            $legacyPlayerInputSetting = null;
+            if (isset($GLOBALS['REMOVE_ASTERISKS_FROM_PLAYER_INPUT'])) {
+                $legacyPlayerInputSetting = (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_PLAYER_INPUT'];
+            } elseif (isset($allSettings['remove_asterisks_from_output'])) {
+                $legacyPlayerInputSetting = filter_var($allSettings['remove_asterisks_from_output'], FILTER_VALIDATE_BOOLEAN);
+            } elseif (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'])) {
+                $legacyPlayerInputSetting = (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'];
+            }
+
+            if ($legacyPlayerInputSetting === null) {
+                $legacyPlayerInputSetting = true;
+            }
+
+            $serialized = $legacyPlayerInputSetting ? '1' : '0';
+            if ($this->set('remove_asterisks_from_player_input', $serialized)) {
+                $allSettings['remove_asterisks_from_player_input'] = $serialized;
             }
         }
         
@@ -233,12 +285,17 @@ class Narrator
             'books_only_narrator' => ['BOOK_EVENT_ALWAYS_NARRATOR', 'bool', false],
             'hide_from_context' => ['HIDE_NARRATOR_DIALOGUE', 'bool', false],
             'dynamic_profile' => ['DYNAMIC_PROFILE', 'bool', false],
-            'inline_narration_enabled' => ['INLINE_NARRATION_ENABLED', 'bool', false],
+            'inline_narration_mode' => ['INLINE_NARRATION_MODE', 'string', isset($GLOBALS['INLINE_NARRATION_MODE']) ? $GLOBALS['INLINE_NARRATION_MODE'] : 'disabled'],
             'preserve_asterisks_in_context' => ['PRESERVE_ASTERISKS_IN_CONTEXT', 'bool', false],
-            'remove_asterisks_from_output' => [
-                'REMOVE_ASTERISKS_FROM_OUTPUT',
+            'remove_asterisks_from_player_input' => [
+                'REMOVE_ASTERISKS_FROM_PLAYER_INPUT',
                 'bool',
-                isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] : false,
+                isset($GLOBALS['REMOVE_ASTERISKS_FROM_PLAYER_INPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_PLAYER_INPUT'] : (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] : true),
+            ],
+            'remove_asterisks_from_npc_output' => [
+                'REMOVE_ASTERISKS_FROM_NPC_OUTPUT',
+                'bool',
+                isset($GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'] : (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] : true),
             ],
             'diary_enabled' => ['NARRATOR_DIARY_ENABLED', 'bool', false],
             'connector_id' => ['NARRATOR_CONNECTOR_ID', 'int', null],
@@ -261,6 +318,14 @@ class Narrator
                 $GLOBALS[$globalKey] = $default;
             }
         }
+
+        $inlineNarrationMode = strtolower(trim((string)($GLOBALS['INLINE_NARRATION_MODE'] ?? 'disabled')));
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+            $inlineNarrationMode = 'disabled';
+        }
+        $GLOBALS['INLINE_NARRATION_MODE'] = $inlineNarrationMode;
+        $GLOBALS['INLINE_NARRATION_ENABLED'] = $inlineNarrationMode !== 'disabled';
+        $GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] = isset($GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'] : true;
         
         // NOTE: Character data (HERIKA_NAME, HERIKA_PERS, PROMPT_HEAD, etc.) is NOT loaded here.
         // loadCharacterIntoGlobals() should only be called when The Narrator is confirmed

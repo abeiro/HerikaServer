@@ -113,8 +113,12 @@
             $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to. Address whoever just spoke - can be any person in the conversation.";
         }
     
-        // Determine message description based on INLINE_NARRATION_ENABLED setting (default to false if not set)
-        $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
+        // Determine message description based on inline narration mode.
+        $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+            $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
+        }
+        $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
         $messageDescription = "lines of dialogue";
         if ($inlineNarrationEnabled) {
             $messageDescription = "If needed, start with one brief third-person narration block in single asterisks, then put {$GLOBALS["HERIKA_NAME"]}'s spoken text after it. Example: *She smiles* It's good to see you again, my friend! Do not wrap the entire reply in asterisks, and keep spoken dialogue outside the asterisks.";
@@ -199,8 +203,12 @@
         $moods=normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "");
         shuffle($moods);
 
-        // Determine message description based on INLINE_NARRATION_ENABLED setting (default to false if not set)
-        $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
+        // Determine message description based on inline narration mode.
+        $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+            $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
+        }
+        $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
         $messageDescription = "lines of {$GLOBALS["HERIKA_NAME"]}'s dialogue";
         if ($inlineNarrationEnabled) {
             $messageDescription = "If needed, start with one brief third-person narration block in single asterisks, then put {$GLOBALS["HERIKA_NAME"]}'s spoken text after it. Example: *She smiles* It's good to see you again, my friend! Do not wrap the entire reply in asterisks, and keep spoken dialogue outside the asterisks.";

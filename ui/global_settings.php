@@ -412,6 +412,8 @@ function icon_for_field(string $flatName): string {
 $gsSections = [
     'General' => [
         [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
+        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES', 'type' => 'boolean' ],
+        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES_TRIGGER', 'type' => 'integer', 'min' => 10, 'max' => 100 ],
         [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
         [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
         [ 'name' => 'CARRIAGE_DRIVERS', 'type' => 'longstring' ],

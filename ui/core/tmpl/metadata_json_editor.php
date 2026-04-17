@@ -406,7 +406,10 @@ function consolidation() {
     }
     // Narrator-managed settings should not live in profile metadata.
     if ('REMOVE_ASTERISKS_FROM_OUTPUT' in base) delete base['REMOVE_ASTERISKS_FROM_OUTPUT']
+    if ('REMOVE_ASTERISKS_FROM_PLAYER_INPUT' in base) delete base['REMOVE_ASTERISKS_FROM_PLAYER_INPUT']
+    if ('REMOVE_ASTERISKS_FROM_NPC_OUTPUT' in base) delete base['REMOVE_ASTERISKS_FROM_NPC_OUTPUT']
     if ('INLINE_NARRATION_ENABLED' in base) delete base['INLINE_NARRATION_ENABLED']
+    if ('INLINE_NARRATION_MODE' in base) delete base['INLINE_NARRATION_MODE']
     if ('PRESERVE_ASTERISKS_IN_CONTEXT' in base) delete base['PRESERVE_ASTERISKS_IN_CONTEXT']
     if ('ENFORCE_ACTIONS_PROMPT' in base) delete base['ENFORCE_ACTIONS_PROMPT']
 
