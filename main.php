@@ -2360,17 +2360,19 @@ if ($GLOBALS["HERIKA_NAME"] !== "The Narrator" && isset($_GET["profile"])) {
 $rumorsText="";
 $currentHold=trim(DataLastKnownLocationHuman(true,false));
 $currentLoc=trim(DataLastKnownLocationHuman(false,false));
-$rumorsLookbackGamets = round($gameRequest[2]- ( 7 * 24 /0.0000024));
+$rumorGametsPerDay = (int) round(24 / 0.0000024);
+$currentRumorGamets = (int) $gameRequest[2];
+$rumorActiveClause = "(gamets + (COALESCE(rumor_length_days, 7) * {$rumorGametsPerDay})) > {$currentRumorGamets}";
 if ($currentHold) {
     error_log("[RUMORS] Current hold {$currentHold}, currentLoc {$currentLoc}");
     $currentHoldEsc=$db->escape($currentHold);
     $currentLocEsc=$db->escape($currentLoc);
-    $query="SELECT * FROM rumors WHERE (hold like '{$currentLocEsc}%{$currentHoldEsc}%' OR hold='Skyrim') and gamets>{$rumorsLookbackGamets}";
+    $query="SELECT * FROM rumors WHERE (hold like '{$currentLocEsc}%{$currentHoldEsc}%' OR hold='Skyrim') and {$rumorActiveClause}";
     error_log($query);
     $rumors = $db->fetchAll($query);
 
     if (empty($rumors)) {
-        $query="SELECT * FROM rumors WHERE (hold like '{$currentHoldEsc}%' OR hold='Skyrim') and gamets>{$rumorsLookbackGamets}";
+        $query="SELECT * FROM rumors WHERE (hold like '{$currentHoldEsc}%' OR hold='Skyrim') and {$rumorActiveClause}";
         error_log($query);
         $rumors = $db->fetchAll($query);
     }
@@ -2387,7 +2389,7 @@ if ($currentHold) {
     }
 } else {
     error_log("[RUMORS] Current hold {$currentHold} empty");
-    $query="SELECT * FROM rumors WHERE hold='Skyrim' and gamets>{$rumorsLookbackGamets}";
+    $query="SELECT * FROM rumors WHERE hold='Skyrim' and {$rumorActiveClause}";
     error_log($query);
     $rumors = $db->fetchAll($query);
     foreach ($rumors as $n=>$rumor) {

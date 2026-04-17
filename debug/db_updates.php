@@ -2358,6 +2358,8 @@ if ($checkTableExists("rumors") == -1) {
 } else
     Logger::info(__FILE__." rumors exists");
 
+$db->execQuery("ALTER TABLE public.rumors ADD COLUMN IF NOT EXISTS rumor_length_days integer");
+
 if ($checkTableExists("named_cell") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/named_cell.sql"));
 } else
