@@ -1376,6 +1376,59 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
     $MUST_END=true;
 
+} elseif (strpos($gameRequest[0], "npcvoice_refresh")===0) {    // npcvoice_refresh
+
+    logEvent($gameRequest);
+
+    $splitVoiceData = explode("@", $gameRequest[3]);
+    $localName = trim($splitVoiceData[0] ?? "");
+    $refId = trim($splitVoiceData[1] ?? "");
+    $voiceId = trim($splitVoiceData[2] ?? "");
+
+    if ($voiceId !== "") {
+        $npcMaster = new NpcMaster();
+        $currentNpcData = null;
+
+        $refIdCandidates = array_unique(array_filter([
+            $refId,
+            preg_replace('/^0x/i', '', $refId),
+            (stripos($refId, '0x') === 0 ? strtoupper(substr($refId, 2)) : strtoupper($refId)),
+            (stripos($refId, '0x') === 0 ? strtolower(substr($refId, 2)) : strtolower($refId)),
+        ], static function ($value) {
+            return $value !== null && $value !== "";
+        }));
+
+        foreach ($refIdCandidates as $refIdCandidate) {
+            $currentNpcData = $npcMaster->getByRefId($refIdCandidate);
+            if ($currentNpcData) {
+                break;
+            }
+        }
+
+        if (!$currentNpcData && $localName !== "") {
+            $currentNpcData = $npcMaster->getByName($localName);
+        }
+
+        if ($currentNpcData) {
+            $extended = $npcMaster->getExtendedData($currentNpcData);
+            unset($extended["voice_refresh_requested_at"]);
+            $extended["voice_refresh_last_result"] = "resolved";
+            $extended["voice_refresh_last_resolved_at"] = time();
+
+            if (empty(trim((string)($currentNpcData["voiceid"] ?? "")))) {
+                $currentNpcData["voiceid"] = $voiceId;
+            }
+
+            $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extended);
+            $npcMaster->updateByArray($currentNpcData);
+            error_log("[NPCVOICE_REFRESH] Updated voiceid for {$currentNpcData["npc_name"]} to {$voiceId}");
+        } else {
+            error_log("[NPCVOICE_REFRESH] Could not resolve NPC for {$localName} / {$refId}");
+        }
+    }
+
+    $MUST_END=true;
+
     
 } elseif (strpos($gameRequest[0], "addnpc")===0) {    // addnpc 
     logEvent($gameRequest);

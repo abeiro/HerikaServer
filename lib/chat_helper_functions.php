@@ -10,6 +10,82 @@ require_once(__DIR__."/online_translation.php");
 require_once(__DIR__."/utils_game_timestamp.php");
 require_once(__DIR__."/pipeline_status.php");
 
+function callConfiguredTts($textString, $mood, $stringforhash)
+{
+    $ttsFunction = strval($GLOBALS["TTSFUNCTION"] ?? '');
+    if ($ttsFunction === '') {
+        return false;
+    }
+
+    $specialFiles = [
+        'stylettsv2' => __DIR__ . "/../tts/tts-stylettsv2-2.php",
+    ];
+
+    $ttsFile = $specialFiles[$ttsFunction] ?? (__DIR__ . "/../tts/tts-" . $ttsFunction . ".php");
+    if (!file_exists($ttsFile)) {
+        return false;
+    }
+
+    require_once($ttsFile);
+    if (!isset($GLOBALS["TTS_IN_USE"]) || !is_callable($GLOBALS["TTS_IN_USE"])) {
+        return false;
+    }
+
+    return $GLOBALS["TTS_IN_USE"]($textString, $mood, $stringforhash);
+}
+
+function canRetryNpcTtsWithFallback(): bool
+{
+    $currentNpcData = $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] ?? null;
+    $currentName = trim(strval($GLOBALS["HERIKA_NAME"] ?? ''));
+    $originalVoice = trim(strval($GLOBALS["TTS_NPC_ORIGINAL_VOICE"] ?? ''));
+    $fallbackVoice = trim(strval($GLOBALS["TTS_NPC_FALLBACK_VOICE"] ?? ''));
+
+    if (!is_array($currentNpcData) || $currentName === '' || $originalVoice === '' || $fallbackVoice === '') {
+        return false;
+    }
+    if (strcasecmp($currentName, 'The Narrator') === 0) {
+        return false;
+    }
+    if (strcasecmp(trim(strval($currentNpcData['npc_name'] ?? '')), $currentName) !== 0) {
+        return false;
+    }
+
+    return strcasecmp($originalVoice, $fallbackVoice) !== 0;
+}
+
+function callNpcTtsWithFallback($textString, $mood, $stringforhash)
+{
+    $ttsOutput = callConfiguredTts($textString, $mood, $stringforhash);
+    if ($ttsOutput || !canRetryNpcTtsWithFallback()) {
+        return $ttsOutput;
+    }
+
+    $fallbackVoice = trim(strval($GLOBALS["TTS_NPC_FALLBACK_VOICE"] ?? ''));
+    $originalVoice = $GLOBALS["PATCH_OVERRIDE_VOICE"] ?? null;
+    if ($fallbackVoice === '') {
+        return $ttsOutput;
+    }
+
+    Logger::warn("[TTS FALLBACK] Retrying NPC TTS for {$GLOBALS["HERIKA_NAME"]} with fallback voice '{$fallbackVoice}' after initial synthesis failure.");
+
+    $GLOBALS["PATCH_OVERRIDE_VOICE"] = $fallbackVoice;
+    $retryOutput = callConfiguredTts($textString, $mood, $stringforhash);
+
+    if ($retryOutput) {
+        $GLOBALS["TTS_NPC_RESOLVED_VOICE"] = $fallbackVoice;
+        return $retryOutput;
+    }
+
+    if ($originalVoice === null || trim(strval($originalVoice)) === '') {
+        unset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
+    } else {
+        $GLOBALS["PATCH_OVERRIDE_VOICE"] = $originalVoice;
+    }
+
+    return $ttsOutput;
+}
+
 function randomReplaceShortWordsWithPoints($inputString, $distance)
 {
     // Split the input string into words
@@ -898,58 +974,7 @@ function returnLines($lines,$writeOutput=true)
                     Logger::info("[INLINE_NARRATION] Generating TTS with function: " . $GLOBALS["TTSFUNCTION"]);
 
                     // Generate TTS for narration using the configured TTS function
-                    $narratorTtsOutput = null;
-                    if ($GLOBALS["TTSFUNCTION"] == "azure") {
-                        require_once(__DIR__."/../tts/tts-azure.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "mimic3") {
-                        require_once(__DIR__."/../tts/tts-mimic3.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "piper-tts") {
-                        require_once(__DIR__."/../tts/tts-piper-tts.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "11labs") {
-                        require_once(__DIR__."/../tts/tts-11labs.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "gcp") {
-                        require_once(__DIR__."/../tts/tts-gcp.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "coqui-ai") {
-                        require_once(__DIR__."/../tts/tts-coqui-ai.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "xvasynth") {
-                        require_once(__DIR__."/../tts/tts-xvasynth.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "openai") {
-                        require_once(__DIR__."/../tts/tts-openai.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "convai") {
-                        require_once(__DIR__."/../tts/tts-convai.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "xtts") {
-                        require_once(__DIR__."/../tts/tts-xtts.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
-                        require_once(__DIR__."/../tts/tts-stylettsv2-2.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "koboldcpp") {
-                        require_once(__DIR__."/../tts/tts-koboldcpp.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "zonos_gradio") {
-                        require_once(__DIR__."/../tts/tts-zonos_gradio.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "cartesia") {
-                        require_once(__DIR__."/../tts/tts-cartesia.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "inworld") {
-                        require_once(__DIR__."/../tts/tts-inworld.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else {
-                        if (file_exists(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php")) {
-                            require_once(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php");
-                            $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                        }
-                    }
+                    $narratorTtsOutput = callConfiguredTts($narrationForTTS, "default", $narrationForSubtitles);
 
                     // Track narrator TTS output
                     if ($narratorTtsOutput) {
@@ -1004,93 +1029,7 @@ function returnLines($lines,$writeOutput=true)
                 pipeline_status_set('tts', true);
 
                 // Generate regular TTS (either full text if no narration, or just dialogue after narration)
-                if ($GLOBALS["TTSFUNCTION"] == "azure") {
-
-                    require_once(__DIR__."/../tts/tts-azure.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "mimic3") {
-
-                    require_once(__DIR__."/../tts/tts-mimic3.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "piper-tts") {
-
-                    require_once(__DIR__."/../tts/tts-piper-tts.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "11labs") {
-
-                    require_once(__DIR__."/../tts/tts-11labs.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "gcp") {
-
-                    require_once(__DIR__."/../tts/tts-gcp.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "coqui-ai") {
-
-                    require_once(__DIR__."/../tts/tts-coqui-ai.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "xvasynth") {
-
-                    require_once(__DIR__."/../tts/tts-xvasynth.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "openai") {
-
-                    require_once(__DIR__."/../tts/tts-openai.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "convai") {
-
-                    require_once(__DIR__."/../tts/tts-convai.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "xtts") {
-
-                    require_once(__DIR__."/../tts/tts-xtts.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
-
-                    require_once(__DIR__."/../tts/tts-stylettsv2-2.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
-
-                    require_once(__DIR__."/../tts/tts-stylettsv2-2.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "koboldcpp") {
-
-                    require_once(__DIR__."/../tts/tts-koboldcpp.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "zonos_gradio") {
-
-                    require_once(__DIR__."/../tts/tts-zonos_gradio.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "cartesia") {
-
-                    require_once(__DIR__."/../tts/tts-cartesia.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "inworld") {
-
-                    require_once(__DIR__."/../tts/tts-inworld.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                }
-                else {
-                    if (file_exists(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php")) {
-                        require_once(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php");
-                        $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-                    }
-                }
+                $ttsOutput = callNpcTtsWithFallback($responseForTTS, $mood, $responseForSubtitles);
                 if (!$ttsOutput) {
                     if (isset($GLOBALS["TTS_FALLBACK_FNCT"]))
                         $ttsOutput = $GLOBALS["TTS_FALLBACK_FNCT"]($responseForTTS, $mood, $responseForSubtitles);

@@ -85,6 +85,11 @@ class TTSConnector
         'zonos_gradio' => 'http://127.0.0.1:7860',
     ];
 
+    private static $sharedMetadataDefaultMap = [
+        'fallback_male' => 'malenord',
+        'fallback_female' => 'femalenord',
+    ];
+
     private static $metadataDefaultMap = [
         'melotts' => [
             'language' => 'EN',
@@ -351,12 +356,55 @@ class TTSConnector
     public function applyForcedMetadataDefaults($driver, array $metadata): array
     {
         $driver = $this->normalizeDriver($driver);
+        $metadata = $this->mergeMissingMetadataDefaults($metadata, self::$sharedMetadataDefaultMap);
         $metadata = $this->mergeMissingMetadataDefaults($metadata, self::$metadataDefaultMap[$driver] ?? []);
         if (in_array($driver, ['xtts-fastapi', 'chatterbox', 'pockettts'], true)) {
             $metadata['voicelogic'] = 'voicetype';
         }
 
         return $metadata;
+    }
+
+    public function getConnectorMetadataFieldSchema(): array
+    {
+        return [
+            'fallback_male' => [
+                'type' => 'string',
+                'description' => 'NPC male fallback VoiceID if the NPC voice is blank or the provider rejects it.',
+            ],
+            'fallback_female' => [
+                'type' => 'string',
+                'description' => 'NPC female fallback VoiceID if the NPC voice is blank or the provider rejects it.',
+            ],
+        ];
+    }
+
+    public function getFallbackVoiceForGender($connectorData, $gender): string
+    {
+        $metadata = $this->applyForcedMetadataDefaults(
+            is_array($connectorData) ? ($connectorData['driver'] ?? '') : '',
+            $this->decodeMetadata(is_array($connectorData) ? ($connectorData['metadata'] ?? '{}') : '{}')
+        );
+
+        if ($this->isFemaleGender($gender)) {
+            return trim(strval($metadata['fallback_female'] ?? self::$sharedMetadataDefaultMap['fallback_female']));
+        }
+
+        return trim(strval($metadata['fallback_male'] ?? self::$sharedMetadataDefaultMap['fallback_male']));
+    }
+
+    public function resolveNpcVoiceForConnector(array $currentNpcData, $connectorData = null): array
+    {
+        $originalVoice = trim(strval($currentNpcData['voiceid'] ?? ''));
+        $fallbackVoice = $this->getFallbackVoiceForGender($connectorData, $currentNpcData['gender'] ?? '');
+        $resolvedVoice = $originalVoice !== '' ? $originalVoice : $fallbackVoice;
+
+        return [
+            'original_voice' => $originalVoice,
+            'fallback_voice' => $fallbackVoice,
+            'resolved_voice' => $resolvedVoice,
+            'used_fallback' => ($originalVoice === '' && $fallbackVoice !== ''),
+        ];
     }
 
     public function driverSupportsLanguageOverride($driver): bool
@@ -701,6 +749,12 @@ class TTSConnector
             return empty($value);
         }
         return false;
+    }
+
+    private function isFemaleGender($gender): bool
+    {
+        $gender = strtolower(trim(strval($gender)));
+        return in_array($gender, ['f', 'female', 'woman', 'girl'], true);
     }
 
     private function loadRawSchema(): array

@@ -103,8 +103,31 @@ function ttsShouldRenderField(string $fieldName, $definition, TTSConnector $ttsC
 
 function ttsParseMetadataFromPost(array $source, string $driver, array $existingMetadata, TTSConnector $ttsConnector): array
 {
-    $schema = $ttsConnector->getProviderFieldSchema($driver);
     $metadata = $existingMetadata;
+    $sharedSchema = $ttsConnector->getConnectorMetadataFieldSchema();
+    foreach ($sharedSchema as $fieldName => $definition) {
+        $postKey = 'meta__shared__' . $fieldName;
+        $type = $definition['type'] ?? 'string';
+        if ($type !== 'boolean' && !array_key_exists($postKey, $source)) {
+            continue;
+        }
+
+        if ($type === 'boolean') {
+            $metadata[$fieldName] = isset($source[$postKey]) && strval($source[$postKey]) === 'true';
+        } elseif ($type === 'integer') {
+            $raw = trim(strval($source[$postKey] ?? ''));
+            $metadata[$fieldName] = ($raw === '') ? 0 : intval($raw);
+        } elseif ($type === 'number') {
+            $raw = trim(strval($source[$postKey] ?? ''));
+            $metadata[$fieldName] = ($raw === '') ? 0 : floatval($raw);
+        } elseif ($type === 'selectmultiple') {
+            $metadata[$fieldName] = isset($source[$postKey]) && is_array($source[$postKey]) ? array_values($source[$postKey]) : [];
+        } else {
+            $metadata[$fieldName] = is_array($source[$postKey] ?? null) ? [] : trim(strval($source[$postKey] ?? ''));
+        }
+    }
+
+    $schema = $ttsConnector->getProviderFieldSchema($driver);
     foreach ($schema as $fieldName => $definition) {
         if (!ttsShouldRenderField($fieldName, $definition, $ttsConnector, $driver)) {
             continue;
@@ -626,6 +649,41 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
                                 </select>
                                 <div id="api_key_notice" class="api-key-notice"></div>
                                 <div class="field-help">Cloud TTS providers require an API key.</div>
+                            </div>
+                        </div>
+
+                        <?php $sharedMetadataSchema = $ttsConnector->getConnectorMetadataFieldSchema(); ?>
+                        <div class="meta-group active">
+                            <h3 style="margin:0 0 14px;color:#f3d6a8;">NPC Fallbacks</h3>
+                            <div class="inline-two">
+                                <?php foreach ($sharedMetadataSchema as $fieldName => $definition): ?>
+                                    <?php
+                                        $fieldType = $definition['type'] ?? 'string';
+                                        $fieldValue = $currentMetadata[$fieldName] ?? '';
+                                        $fieldKey = 'meta__shared__' . $fieldName;
+                                    ?>
+                                    <div class="field-block">
+                                        <label for="<?php echo h($fieldKey); ?>"><?php echo h(ttsFormatFieldLabel($fieldName)); ?></label>
+                                        <?php if ($fieldType === 'boolean'): ?>
+                                            <input type="hidden" name="<?php echo h($fieldKey); ?>" value="false">
+                                            <select id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>">
+                                                <option value="true" <?php echo $fieldValue ? 'selected' : ''; ?>>Enabled</option>
+                                                <option value="false" <?php echo !$fieldValue ? 'selected' : ''; ?>>Disabled</option>
+                                            </select>
+                                        <?php elseif ($fieldType === 'integer'): ?>
+                                            <input type="number" step="1" id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>" value="<?php echo h($fieldValue); ?>">
+                                        <?php elseif ($fieldType === 'number'): ?>
+                                            <input type="number" step="0.01" id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>" value="<?php echo h($fieldValue); ?>">
+                                        <?php elseif ($fieldType === 'longstring'): ?>
+                                            <textarea id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>"><?php echo h($fieldValue); ?></textarea>
+                                        <?php else: ?>
+                                            <input type="text" id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>" value="<?php echo h($fieldValue); ?>">
+                                        <?php endif; ?>
+                                        <?php if (!empty($definition['description'])): ?>
+                                            <div class="field-help"><?php echo $definition['description']; ?></div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endforeach; ?>
                             </div>
                         </div>
 
