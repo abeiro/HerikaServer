@@ -6,6 +6,7 @@ ini_set('log_errors', 1);
 header('Content-Type: application/json');
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+$GLOBALS["ENGINE_PATH"] = $enginePath;
 require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
@@ -17,6 +18,7 @@ require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "lazy_xml.php";
 require_once __DIR__ . DIRECTORY_SEPARATOR . "ai_profile_generation_service.php";
 
 $db = new sql();
+$GLOBALS["db"] = $db;
 $jsonDataInput = aiProfileMergeRequestData();
 
 $selectedEvents = [];
@@ -38,4 +40,3 @@ $result = aiProfileGenerate([
 ]);
 
 echo json_encode($result);
-
