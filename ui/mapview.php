@@ -27,6 +27,116 @@ if (! $adminConn) {
     exit;
 }
 
+$rumorFlash = null;
+$rumorFormData = [
+    'hold' => '',
+    'type' => '',
+    'content' => '',
+];
+
+function getRumorHoldOptions() {
+    return [
+        'Skyrim',
+        'Whiterun',
+        'Eastmarch',
+        'Haafingar',
+        'The Reach',
+        'Hjaalmarch',
+        'The Pale',
+        'Falkreath',
+        'The Rift',
+        'Winterhold',
+        'Solstheim',
+    ];
+}
+
+function redirectToRumorSection($status, $message) {
+    $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    if (!$path) {
+        $path = $_SERVER['SCRIPT_NAME'];
+    }
+
+    $query = http_build_query([
+        'rumor_status' => $status,
+        'rumor_message' => $message,
+    ]);
+
+    header('Location: ' . $path . '?' . $query . '#create-rumor');
+    exit;
+}
+
+function handleCreateRumor() {
+    global $adminConn;
+
+    $hold = trim((string)($_POST['rumor_hold'] ?? ''));
+    $type = trim((string)($_POST['rumor_type'] ?? ''));
+    $content = trim((string)($_POST['rumor_content'] ?? ''));
+
+    $formData = [
+        'hold' => $hold,
+        'type' => $type,
+        'content' => $content,
+    ];
+
+    if (!in_array($hold, getRumorHoldOptions(), true)) {
+        return [
+            ['type' => 'error', 'message' => 'Please select a valid hold.'],
+            $formData,
+        ];
+    }
+
+    if ($content === '') {
+        return [
+            ['type' => 'error', 'message' => 'Rumor content is required.'],
+            $formData,
+        ];
+    }
+
+    if ($type === '') {
+        $type = 'General';
+        $formData['type'] = $type;
+    }
+
+    $lastGametsResult = pg_query($adminConn, "SELECT max(gamets) as last_gamets FROM eventlog");
+    if (!$lastGametsResult || pg_num_rows($lastGametsResult) === 0) {
+        error_log('[RUMORS] Failed to resolve latest game timestamp for manual rumor creation');
+        return [
+            ['type' => 'error', 'message' => 'Could not determine the current game time.'],
+            $formData,
+        ];
+    }
+
+    $lastGametsRow = pg_fetch_assoc($lastGametsResult);
+    $gamets = isset($lastGametsRow['last_gamets']) ? (int)$lastGametsRow['last_gamets'] : 0;
+    if ($gamets <= 0) {
+        return [
+            ['type' => 'error', 'message' => 'Could not determine the current game time.'],
+            $formData,
+        ];
+    }
+
+    $ts = (int) round(microtime(true) * 1000);
+    $insertQuery = "INSERT INTO rumors (gamets, ts, hold, content, type) VALUES ($1, $2, $3, $4, $5)";
+    $insertResult = pg_query_params($adminConn, $insertQuery, [$gamets, $ts, $hold, $content, $type]);
+
+    if (!$insertResult) {
+        error_log('[RUMORS] Failed to create rumor: ' . pg_last_error($adminConn));
+        return [
+            ['type' => 'error', 'message' => 'Failed to create rumor.'],
+            $formData,
+        ];
+    }
+
+    redirectToRumorSection('success', 'Rumor created successfully.');
+}
+
+if (isset($_GET['rumor_status']) && isset($_GET['rumor_message'])) {
+    $rumorFlash = [
+        'type' => ($_GET['rumor_status'] === 'success') ? 'success' : 'error',
+        'message' => trim((string) $_GET['rumor_message']),
+    ];
+}
+
 // Helper function to resolve NPC portrait path (same as npc_master.php)
 if (!function_exists('race_icon_web_path')) {
     function race_icon_web_path($race, $webRoot, $refid, $md5 = '', $npcName = '', $portraitRel = ''){
@@ -131,6 +241,8 @@ if (!function_exists('race_icon_web_path')) {
         } elseif ($_POST['action'] === 'toggle_bg_life_setting') {
             handleToggleBgLifeSetting();
             exit;
+        } elseif ($_POST['action'] === 'create_rumor') {
+            [$rumorFlash, $rumorFormData] = handleCreateRumor();
         }
     }
 
@@ -2056,6 +2168,18 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             <h1>📰 Rumors</h1>
         </div>
         
+        <?php if (!empty($rumorFlash['message'])): ?>
+            <?php
+                $isSuccessFlash = ($rumorFlash['type'] ?? '') === 'success';
+                $flashBg = $isSuccessFlash ? 'rgba(42, 122, 59, 0.22)' : 'rgba(122, 42, 42, 0.24)';
+                $flashBorder = $isSuccessFlash ? '#4caf50' : '#d65c5c';
+                $flashText = $isSuccessFlash ? '#d6ffd9' : '#ffd6d6';
+            ?>
+            <div class="info-panel" style="margin-bottom: 20px; background: <?php echo $flashBg; ?>; border: 1px solid <?php echo $flashBorder; ?>; color: <?php echo $flashText; ?>;">
+                <?php echo htmlspecialchars($rumorFlash['message']); ?>
+            </div>
+        <?php endif; ?>
+
         <!-- Current Rumors -->
         <div class="info-panel" style="margin-bottom: 30px;">
             <h3>🔥 Current Rumors (Last 7 In-Game Days)</h3>
@@ -2128,6 +2252,51 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     </table>
                 </div>
             <?php endif; ?>
+        </div>
+
+        <div class="info-panel" id="create-rumor" style="margin-top: 30px;">
+            <h3>Create Rumor</h3>
+            <form method="post" action="">
+                <input type="hidden" name="action" value="create_rumor">
+                <div style="display: grid; grid-template-columns: minmax(220px, 280px) minmax(220px, 1fr); gap: 18px; margin-top: 16px;">
+                    <div>
+                        <label for="rumor_hold" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Hold</label>
+                        <select id="rumor_hold" name="rumor_hold" required style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px;">
+                            <option value="">Select hold</option>
+                            <?php foreach (getRumorHoldOptions() as $holdOption): ?>
+                                <option value="<?php echo htmlspecialchars($holdOption); ?>" <?php echo (($rumorFormData['hold'] ?? '') === $holdOption) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($holdOption); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="rumor_type" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Type</label>
+                        <input
+                            id="rumor_type"
+                            name="rumor_type"
+                            type="text"
+                            value="<?php echo htmlspecialchars($rumorFormData['type'] ?? ''); ?>"
+                            placeholder="General"
+                            style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                    </div>
+                </div>
+                <div style="margin-top: 18px;">
+                    <label for="rumor_content" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Content</label>
+                    <textarea
+                        id="rumor_content"
+                        name="rumor_content"
+                        rows="4"
+                        required
+                        placeholder="Write the rumor text here..."
+                        style="width: 100%; padding: 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; resize: vertical;"><?php echo htmlspecialchars($rumorFormData['content'] ?? ''); ?></textarea>
+                </div>
+                <div style="margin-top: 18px; display: flex; justify-content: flex-end;">
+                    <button type="submit" style="padding: 10px 18px; border-radius: 8px; border: 1px solid rgb(242, 124, 17); background: rgb(242, 124, 17); color: #121212; font-weight: 700; cursor: pointer;">
+                        Create Rumor
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </main>

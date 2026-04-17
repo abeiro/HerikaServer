@@ -2360,16 +2360,17 @@ if ($GLOBALS["HERIKA_NAME"] !== "The Narrator" && isset($_GET["profile"])) {
 $rumorsText="";
 $currentHold=trim(DataLastKnownLocationHuman(true,false));
 $currentLoc=trim(DataLastKnownLocationHuman(false,false));
+$rumorsLookbackGamets = round($gameRequest[2]- ( 7 * 24 /0.0000024));
 if ($currentHold) {
     error_log("[RUMORS] Current hold {$currentHold}, currentLoc {$currentLoc}");
     $currentHoldEsc=$db->escape($currentHold);
     $currentLocEsc=$db->escape($currentLoc);
-    $query="SELECT * FROM rumors WHERE hold like '{$currentLocEsc}%{$currentHoldEsc}%' and gamets>".round($gameRequest[2]- ( 7 * 24 /0.0000024));
+    $query="SELECT * FROM rumors WHERE (hold like '{$currentLocEsc}%{$currentHoldEsc}%' OR hold='Skyrim') and gamets>{$rumorsLookbackGamets}";
     error_log($query);
     $rumors = $db->fetchAll($query);
 
-    if (empty($umors)) {
-        $query="SELECT * FROM rumors WHERE hold like '{$currentHoldEsc}%' and gamets>".round($gameRequest[2]- ( 7 * 24 /0.0000024));
+    if (empty($rumors)) {
+        $query="SELECT * FROM rumors WHERE (hold like '{$currentHoldEsc}%' OR hold='Skyrim') and gamets>{$rumorsLookbackGamets}";
         error_log($query);
         $rumors = $db->fetchAll($query);
     }
@@ -2386,6 +2387,18 @@ if ($currentHold) {
     }
 } else {
     error_log("[RUMORS] Current hold {$currentHold} empty");
+    $query="SELECT * FROM rumors WHERE hold='Skyrim' and gamets>{$rumorsLookbackGamets}";
+    error_log($query);
+    $rumors = $db->fetchAll($query);
+    foreach ($rumors as $n=>$rumor) {
+       if (isset($rumor["content"])) {
+            $tag=strtolower(str_replace(" ","_",$rumor["type"]));
+            $rumorsText.="\n<$tag>\n{$rumor["content"]}\n</$tag>";
+        }
+        if ($n>=2) {
+            break;
+        }
+    }
 }
 
 // For narration events, simplify the command prompt (no actions needed for atmospheric descriptions)
