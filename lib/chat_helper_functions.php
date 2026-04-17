@@ -186,12 +186,15 @@ function findFastSentencePosition($s_string) {
     if (preg_match_all($splitSentenceRegex, $s_string, $matches, PREG_OFFSET_CAPTURE)) {
         foreach ($matches[1] as $match) {
             $position = $match[1];
-            $candidate = substr($s_string, 0, $position + 1);
+            // Use the end of the matched punctuation so that multi-byte characters
+            // (e.g. Japanese 。！？ which are 3 bytes in UTF-8) are not split mid-character.
+            $endPosition = $position + strlen($match[0]) - 1;
+            $candidate = substr($s_string, 0, $endPosition + 1);
             if (hasUnclosedSingleAsteriskBlock($candidate)) {
                 continue;
             }
 
-            return $position;
+            return $endPosition;
         }
     }
 
