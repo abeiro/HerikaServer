@@ -1,335 +1,41 @@
 <?php
 
-// Ensure clean JSON output - no PHP warnings/notices to stdout
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
-
-// Set JSON content type early
 header('Content-Type: application/json');
-
-$startTime = microtime(true);
-
-define("MAXIMUM_SENTENCE_SIZE", 125);
-define("MINIMUM_SENTENCE_SIZE", 15);
-
-$GLOBALS["SCRIPTLINE_EXPRESSION"] = "";
-$GLOBALS["SCRIPTLINE_LISTENER"]   = "";
-$GLOBALS["SCRIPTLINE_ANIMATION"]  = "";
-$file       = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . 'CurrentModel_.json';
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "rolemaster_helpers.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "dynamic_update_util.php";
-$GLOBALS["ENGINE_PATH"] = $enginePath;
-
-$db = new sql();
-
 require_once $enginePath . "lib/core/npc_master.class.php";
-require_once $enginePath . "lib/core/api_badge.class.php";
 require_once $enginePath . "lib/core/core_profiles.class.php";
 require_once $enginePath . "lib/core/llm_connector.class.php";
-require_once $enginePath . "lib/core/tts_connector.class.php";
-
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "lazy_xml.php";
-require_once __DIR__ . DIRECTORY_SEPARATOR . "ai_profile_generation_helper.php";
+require_once __DIR__ . DIRECTORY_SEPARATOR . "ai_profile_generation_service.php";
 
+$db = new sql();
 $jsonDataInput = aiProfileMergeRequestData();
 
-$name = trim((string)($jsonDataInput["name"] ?? ""));
-if ($name === '') {
-    echo json_encode([
-        "done" => false,
-        "error" => "Missing NPC name.",
-        "error_type" => "missing_name",
-    ]);
-    exit;
-}
-
-$npcMaster = new NpcMaster();
-
-$connector = new LLMConnector();
-
-// Use user-selected connector if provided, otherwise fall back to global CORE_CONNECTOR_PROFILES
-$connectorId = isset($jsonDataInput["connector_id"]) && trim((string)$jsonDataInput["connector_id"]) !== '' 
-    ? intval($jsonDataInput["connector_id"]) 
-    : $GLOBALS["CORE_CONNECTOR_PROFILES"];
-
-$currentConnectorData = $connector->getById($connectorId);
-$currentNpcData       = $npcMaster->getByName($name);
-if (!$currentNpcData) {
-    echo json_encode([
-        "done" => false,
-        "error" => "NPC not found.",
-        "error_type" => "npc_missing",
-    ]);
-    exit;
-}
-
-$profile            = new CoreProfile();
-$currentProfileData = $profile->getById($currentNpcData["profile_id"]);
-$connector->setOldGlobals($currentConnectorData);
-$npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
-
-$CLEAN_CONTEXT_FOCUS_CHAT = false;
-
-$COMMAND_PROMPT = '';
-
-$dbNpcName = $db->escape($name);
-
-$momentum = time();
-
-$GLOBALS["HERIKA_NAME"] = $name;
-
-$res  = $db->fetchAll("select max(gamets) as last_gamets from eventlog");
-$res2 = $db->fetchAll("select max(ts) as ts from eventlog where gamets='{$res[0]["last_gamets"]}'");
-
-$last_gamets = $res[0]["last_gamets"] + 1;
-$last_ts     = $res2[0]["ts"];
-
-$gameRequest = ["inputtext", "0", $last_gamets, $name];
-
-$dynamicBiography = buildDynamicBiography($GLOBALS);
-$npcMaster        = new NpcMaster();
-$currentNpcData   = $npcMaster->getByName($name);
-$extended_data    = $npcMaster->getExtendedData($currentNpcData);
-
-if (isset($extended_data["middle_term_memory"])) {
-    $middle_term_memory = end($extended_data["middle_term_memory"]);
-    $dynamicBiography .= "\n\n<middle_term_memory>\nPast events\n{$middle_term_memory}\n</middle_term_memory>";
-
-}
-
-$task                = "";
-$eventLimit = isset($jsonDataInput["event_limit"]) ? intval($jsonDataInput["event_limit"]) : 100;
-$eventLimit = max(10, min(200, $eventLimit));
 $selectedEvents = [];
-if (isset($jsonDataInput["selected_events"]) && trim((string)$jsonDataInput["selected_events"]) !== '') {
-    $decodedSelectedEvents = json_decode((string)$jsonDataInput["selected_events"], true);
+if (isset($jsonDataInput['selected_events']) && trim((string)$jsonDataInput['selected_events']) !== '') {
+    $decodedSelectedEvents = json_decode((string)$jsonDataInput['selected_events'], true);
     if (json_last_error() === JSON_ERROR_NONE) {
-        $selectedEvents = aiProfileNormalizeSelectedEvents($decodedSelectedEvents);
+        $selectedEvents = $decodedSelectedEvents;
     }
 }
 
-if (empty($selectedEvents)) {
-    $previewBundle = aiProfileBuildPreviewEvents($name, $currentNpcData, $db, $eventLimit);
-    $selectedEvents = $previewBundle["events"];
-}
-
-if (empty($selectedEvents)) {
-    echo json_encode([
-        "done" => false,
-        "error" => "No events available for profile generation. Increase the event slider or try again after the NPC has more history.",
-        "error_type" => "no_events",
-    ]);
-    exit;
-}
-
-$history = aiProfileBuildHistoryFromSelectedEvents($selectedEvents, $name);
-
-//$head[] = ['role' => 'system', 'content' => "You're an AI writer. Examine this character's logbook from a story in the Skyrim universe."];
-$head["en"][] = ['role' => 'system', 'content' => "You are a writing assistant.
-Examine this text containing events that occurred in the fictional universe of Skyrim (The Elder Scrolls)."];
-
-// Extract NPC gender and race for query seed
-$npcGender = isset($currentNpcData["gender"]) && trim((string)$currentNpcData["gender"]) !== "" ? trim((string)$currentNpcData["gender"]) : "";
-$npcRace = isset($currentNpcData["race"]) && trim((string)$currentNpcData["race"]) !== "" ? trim((string)$currentNpcData["race"]) : "";
-$characterSeed = "";
-if ($npcGender !== "" && $npcRace !== "") {
-    $characterSeed = " This character is {$npcRace} {$npcGender}.";
-} else if ($npcGender !== "") {
-    $characterSeed = " This character is {$npcGender}.";
-} else if ($npcRace !== "") {
-    $characterSeed = " This character is {$npcRace}.";
-}
-
-// Get optional user prompt for custom generation instructions
-$userCustomPrompt = isset($jsonDataInput["user_prompt"]) ? trim((string)$jsonDataInput["user_prompt"]) : "";
-
-// Load profile generation prompt from database with fallback to hardcoded default
-$profilePrompt = null;
-try {
-    $promptData = $GLOBALS["db"]->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'character_profile_generation'");
-    if ($promptData) {
-        // Use custom_prompt if set, otherwise use default_prompt
-        $profilePrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
-    }
-} catch (Exception $e) {
-    Logger::warn("Failed to load profile generation prompt from database, using hardcoded fallback: " . $e->getMessage());
-}
-
-// Hardcoded fallback if database query failed or returned no results
-if (!$profilePrompt) {
-    $profilePrompt = 
-        "The main character in this logbook is {HERIKA_NAME}.{CHARACTER_SEED}\n".
-        "Read the context history (context_history) and the recent memories (middle_term_memory),\n".
-        " paying attention to notable events and the names of relevant characters.\n\n\n".
-        "Based on all this information, generate an character sheet for {HERIKA_NAME}.\n\n".
-        "This profile must be in XML format and have these fields.\n\n".
-        "<core>              Text. Core Identity, name,race an gender, and most remarkable job. Should be in the form of a sentence. e.g. 'Rose. Imperial female warrior.'\n".
-        "<npc_static_bio>    Text. Basic Summary, and bio. Create if not info available in <context_history>\n".
-        "<personality>       Text. Personality Traits. How the characters behave. Traumas. Likes.\n".
-        "<appearance>        Text. Physical Appearance. Infer from info available in <context_history>\n".
-        "<relationships>     Text. relationships with other actors.\n".
-        "<occupation>        Text. Main Occupation & Role\n".
-        "<skills>            Text. Skills & Abilities\n".
-        "<speechstyle>       Text. Speech Style\n".
-        "<goals>             Text. Long term Goals & Aspirations'\n";
-}
-
-// Replace placeholders with actual values
-$profilePromptProcessed = str_replace(
-    ['{HERIKA_NAME}', '{CHARACTER_SEED}'],
-    [$GLOBALS["HERIKA_NAME"], $characterSeed],
-    $profilePrompt
-);
-
-$userprompt["en"] = $profilePromptProcessed;
-
-// Append user's custom instructions if provided
-if ($userCustomPrompt !== "") {
-    $userprompt["en"] .= "\n\nADDITIONAL INSTRUCTIONS FROM USER:\n{$userCustomPrompt}\n\nMake sure to incorporate these specific details and instructions into the generated character sheet where appropriate.";
-}
-
-$metadata   = json_decode($currentNpcData["metadata"], true);
-$metadata_p = json_decode($currentProfileData["metadata"], true);
-
-if ($metadata["CORE_LANG"] == "es" || $metadata_p["CORE_LANG"] == "es") {
-    $LANG = "es";
-} else {
-    $LANG = "en";
-}
-
-$LANG = "en";
-
-if (true); // Use actual
-$prompt[] = ['role' => 'user', 'content' => "<character_sheet>\n{$GLOBALS["HERIKA_NAME"]}:\n$dynamicBiography\n</character_sheet>"];
-
-$prompt[] = ['role' => 'user', 'content' => "<context_history>\nContext History\n$history\n$task\n</context_history>"];
-
-$prompt[] = ['role' => 'user', 'content' => $userprompt[$LANG]];
-
-$contextData = array_merge($head[$LANG], $prompt);
-
-Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
-
-$connectionHandler = $connector->getConnector($currentConnectorData);
-
-// Check if connector was successfully retrieved
-if (!$connectionHandler) {
-    Logger::error("AI Profile Generation: Failed to get connector handler");
-    echo json_encode([
-        "done" => false, 
-        "error" => "Failed to initialize LLM connector. Check your connector configuration.",
-        "error_type" => "connector_init"
-    ]);
-    exit;
-}
-
-$buffer = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 2048, "temperature" => 0.9], "profile_generation");
-Logger::debug(__LINE__ . " " . (microtime(true) - $startTime));
-
-error_log("[AI Profile Generation] Response buffer: " . print_r($buffer, true));
-
-// Check if we got an empty or null response from the LLM
-if (empty($buffer)) {
-    Logger::error("AI Profile Generation: LLM returned empty response for NPC '{$name}'");
-    
-    // Try to get more details from the audit_request table
-    $lastError = "";
-    try {
-        $auditQuery = "SELECT result, url, connector FROM audit_request ORDER BY id DESC LIMIT 1";
-        $auditResult = $db->fetchOne($auditQuery);
-        if ($auditResult && strpos($auditResult["result"], "ERROR") === 0) {
-            $lastError = $auditResult["result"];
-            Logger::error("AI Profile Generation: Last audit error - {$lastError} from {$auditResult["connector"]} at {$auditResult["url"]}");
-        }
-    } catch (Exception $e) {
-        // Ignore audit lookup errors
-    }
-    
-    $errorMessage = "LLM did not return a response. ";
-    
-    // Parse the error details from the audit result
-    $errorParts = explode("|", $lastError);
-    $apiErrorMessage = "";
-    if (count($errorParts) >= 3) {
-        $apiErrorMessage = trim($errorParts[2]);
-    }
-    
-    if (strpos($lastError, "API_ERROR") !== false && $apiErrorMessage) {
-        // Display the actual API error message
-        $errorMessage = "API Error: " . $apiErrorMessage;
-    } else if (strpos($lastError, "NO RESPONSE") !== false) {
-        if ($apiErrorMessage) {
-            $errorMessage .= "Network error: " . $apiErrorMessage;
-        } else {
-            $errorMessage .= "The API request failed or timed out. Check your network connection, VPN settings, and API key.";
-        }
-    } else if (strpos($lastError, "INVALID JSON") !== false) {
-        $errorMessage .= "The API returned an invalid response. The model may be overloaded or rate-limited.";
-        if ($apiErrorMessage) {
-            $errorMessage .= " Response: " . $apiErrorMessage;
-        }
-    } else {
-        $errorMessage .= "Check the LLM connector settings and ensure the API is accessible.";
-    }
-    
-    echo json_encode([
-        "done" => false, 
-        "error" => $errorMessage,
-        "error_type" => "no_response",
-        "audit_detail" => $lastError
-    ]);
-    exit;
-}
-
-$profileFields = [
-    'core'           => 'Core Identity',
-    'npc_static_bio' => 'Basic Summary',
-    'personality'    => 'Personality Traits',
-    'appearance'     => 'Physical Appearance',
-    'relationships'  => 'Relationships',
-    'occupation'     => 'Occupation & Role',
-    'skills'         => 'Skills & Abilities',
-    'speechstyle'    => 'Speech Style',
-    'goals'          => 'Goals & Aspirations',
-];
-
-$cs = [];
-$parsedFieldCount = 0;
-foreach (array_keys($profileFields) as $field) {
-    $fieldContent = strip_tags(current(manual_get_all_tag_contents($buffer, $field)));
-    $cs[$field] = $fieldContent;
-    if (!empty(trim($fieldContent))) {
-        $parsedFieldCount++;
-    }
-}
-
-// Check if we actually parsed any useful content
-if ($parsedFieldCount === 0) {
-    Logger::warn("AI Profile Generation: LLM response did not contain expected XML fields for NPC '{$name}'");
-    echo json_encode([
-        "done" => false,
-        "error" => "The LLM response did not contain the expected profile fields. The response may have been incomplete or in an unexpected format. Try again or use a different LLM.",
-        "error_type" => "parse_error",
-        "raw_length" => strlen($buffer)
-    ]);
-    exit;
-}
-
-saveDynamicProfileUpdates($GLOBALS["HERIKA_NAME"], $cs, $db, false);
-Logger::info("AI Profile Generation: Successfully generated profile for NPC '{$name}' with {$parsedFieldCount} fields");
-echo json_encode([
-    "done" => true, 
-    "fields_updated" => $parsedFieldCount,
-    "npc_name" => $name,
-    "events_used" => count($selectedEvents),
+$result = aiProfileGenerate([
+    'db' => $db,
+    'name' => $jsonDataInput['name'] ?? '',
+    'connector_id' => $jsonDataInput['connector_id'] ?? '',
+    'user_prompt' => $jsonDataInput['user_prompt'] ?? '',
+    'event_limit' => $jsonDataInput['event_limit'] ?? 100,
+    'selected_events' => $selectedEvents,
+    'source' => 'manual',
 ]);
+
+echo json_encode($result);
+

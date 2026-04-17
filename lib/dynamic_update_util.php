@@ -1101,7 +1101,7 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     }
 }
 
-function saveDynamicProfileUpdates($npcName, $updatedFields, $db,$updateTimeStamp=true) {
+function saveDynamicProfileUpdates($npcName, $updatedFields, $db, $updateTimeStamp = true, $generationSource = null) {
     $newConfFile = md5($npcName);
     $path = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
     $configFile = $path . "conf" . DIRECTORY_SEPARATOR . "conf_$newConfFile.php";
@@ -1124,6 +1124,16 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db,$updateTimeStam
         if ($currentNpcData) {
             foreach ($updatedFields as $field => $newValue) {
                 $currentNpcData[$field]=$newValue;
+            }
+
+            if ($generationSource === 'manual' || $generationSource === 'auto') {
+                $extended = $npcMaster->getExtendedData($currentNpcData);
+                $extended['auto_profile_pending'] = false;
+                $extended['auto_profile_generated'] = true;
+                $extended['auto_profile_generated_by'] = $generationSource;
+                $extended['auto_profile_generated_at_gamets'] = DataLastKnownGameTS();
+                unset($extended['auto_profile_last_error'], $extended['auto_profile_last_attempt_ts']);
+                $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extended);
             }
             
             // Backup NPC.

@@ -708,6 +708,25 @@ if (isset($_GET["profile"])) {
 
         $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
         $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]=$currentProfileData;
+        if (!empty($GLOBALS['AUTOFILL_CUSTOM_PROFILES'])) {
+            require_once __DIR__ . DIRECTORY_SEPARATOR . "ui" . DIRECTORY_SEPARATOR . "cmd" . DIRECTORY_SEPARATOR . "ai_profile_generation_service.php";
+            if (aiProfileShouldAttemptAutofill($currentNpcData, $npcMaster)) {
+                $trigger = aiProfileGetAutofillTrigger($currentNpcData, $npcMaster);
+                $previewBundle = aiProfileBuildPreviewEvents($currentNpcData["npc_name"], $currentNpcData, $GLOBALS["db"], $trigger);
+                if (count($previewBundle["events"]) >= $trigger) {
+                    $autoProfileResult = aiProfileGenerate([
+                        'db' => $GLOBALS["db"],
+                        'name' => $currentNpcData["npc_name"],
+                        'event_limit' => $trigger,
+                        'selected_events' => $previewBundle["events"],
+                        'source' => 'auto',
+                    ]);
+                    if (!empty($autoProfileResult['done'])) {
+                        $currentNpcData = $npcMaster->getById($currentNpcData["id"]);
+                    }
+                }
+            }
+        }
         $connector=new LLMConnector();
         
         // Use randomizer to determine which connector slot to use
@@ -873,6 +892,26 @@ if (isset($_GET["profile"])) {
             $currentProfileData=$profile->getById($currentNpcData["profile_id"]);
         
             $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]=$currentProfileData;
+
+            if (!empty($GLOBALS['AUTOFILL_CUSTOM_PROFILES'])) {
+                require_once __DIR__ . DIRECTORY_SEPARATOR . "ui" . DIRECTORY_SEPARATOR . "cmd" . DIRECTORY_SEPARATOR . "ai_profile_generation_service.php";
+                if (aiProfileShouldAttemptAutofill($currentNpcData, $npcMaster)) {
+                    $trigger = aiProfileGetAutofillTrigger($currentNpcData, $npcMaster);
+                    $previewBundle = aiProfileBuildPreviewEvents($currentNpcData["npc_name"], $currentNpcData, $GLOBALS["db"], $trigger);
+                    if (count($previewBundle["events"]) >= $trigger) {
+                        $autoProfileResult = aiProfileGenerate([
+                            'db' => $GLOBALS["db"],
+                            'name' => $currentNpcData["npc_name"],
+                            'event_limit' => $trigger,
+                            'selected_events' => $previewBundle["events"],
+                            'source' => 'auto',
+                        ]);
+                        if (!empty($autoProfileResult['done'])) {
+                            $currentNpcData = $npcMaster->getById($currentNpcData["id"]);
+                        }
+                    }
+                }
+            }
 
             $connector=new LLMConnector();
             

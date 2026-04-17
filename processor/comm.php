@@ -1608,6 +1608,14 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         
         $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extended);
 
+        if (!empty($GLOBALS['AUTOFILL_CUSTOM_PROFILES'])) {
+            require_once $GLOBALS["ENGINE_PATH"] . "ui" . DIRECTORY_SEPARATOR . "cmd" . DIRECTORY_SEPARATOR . "ai_profile_generation_service.php";
+            if (!aiProfileHasMeaningfulAutofillData($currentNpcData)) {
+                $trigger = intval($GLOBALS['AUTOFILL_CUSTOM_PROFILES_TRIGGER'] ?? 20);
+                $currentNpcData = aiProfileMarkPendingAutofill($currentNpcData, $npcMaster, $trigger);
+            }
+        }
+
         $npcMaster->updateByArray($currentNpcData);
         
         $profile=new CoreProfile();

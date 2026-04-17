@@ -1975,7 +1975,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         </div>
 
         <div class="form-item span-2">
-            <label for="npc_static_bio">Static Bio</label>
+            <label for="npc_static_bio">Backstory</label>
             <textarea id="npc_static_bio" name="npc_static_bio" placeholder="Fixed background, history, and facts."><?= htmlspecialchars($editItem["npc_static_bio"] ?? "") ?></textarea>
             <small class="hint">Historical facts and background information.</small>
         </div>
@@ -3764,7 +3764,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       voiceid: 'Voice ID',
       refid: 'Ref ID',
       core: 'Core',
-      npc_static_bio: 'Static Bio',
+      npc_static_bio: 'Backstory',
       appearance: 'Appearance',
       personality: 'Personality',
       relationships: 'Relationships',
@@ -3947,7 +3947,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <div style="font-size:18px; font-weight:700; color:#e9efff;">${escapeHtml(d.npc_name||'')}</div>
         <div style="margin-top:8px; color:#cfd9ea;"><b style="color:rgb(242,124,17)">Core:</b><br>${escapeHtml(d.core||'')}</div>
         <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:10px; margin-top:8px;">
-          ${kv('Static', d.npc_static_bio)}
+          ${kv('Backstory', d.npc_static_bio)}
           ${kv('Personality', d.personality)}
           ${kv('Appearance', d.appearance)}
           ${kv('Relationships', d.relationships)}
