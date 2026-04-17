@@ -433,7 +433,9 @@ class NpcMaster
                  "BORED_EVENT_SERVERSIDE", "CONTEXT_HISTORY", "CONTEXT_HISTORY_DIARY", "CONTEXT_HISTORY_DYNAMIC_PROFILE",
                  "ALIVE_MESSAGE", "TIME_AWARENESS", "QUEST_COMMENT", "QUEST_COMMENT_CHANCE", "CURRENT_TASK",
                  "CORE_LANG", "LANG_LLM_XTTS", "MAX_WORDS_LIMIT",
-                 "REMOVE_ASTERISKS_FROM_OUTPUT", "ENFORCE_ACTIONS_PROMPT", "DIARY_PROMPT"]))
+                 "REMOVE_ASTERISKS_FROM_OUTPUT", "REMOVE_ASTERISKS_FROM_PLAYER_INPUT", "REMOVE_ASTERISKS_FROM_NPC_OUTPUT",
+                 "INLINE_NARRATION_ENABLED", "INLINE_NARRATION_MODE",
+                 "ENFORCE_ACTIONS_PROMPT", "DIARY_PROMPT"]))
                     if (!empty($v))
                         $overrides[$k]=$v;
             }
@@ -551,7 +553,14 @@ class NpcMaster
 
         // Decode metadata and extended_data if available
         $metadata = json_decode($currentNpcData['metadata'] ?? '{}', true);
-        $narratorManagedKeys = ['REMOVE_ASTERISKS_FROM_OUTPUT', 'INLINE_NARRATION_ENABLED', 'PRESERVE_ASTERISKS_IN_CONTEXT'];
+        $narratorManagedKeys = [
+            'REMOVE_ASTERISKS_FROM_OUTPUT',
+            'REMOVE_ASTERISKS_FROM_PLAYER_INPUT',
+            'REMOVE_ASTERISKS_FROM_NPC_OUTPUT',
+            'INLINE_NARRATION_ENABLED',
+            'INLINE_NARRATION_MODE',
+            'PRESERVE_ASTERISKS_IN_CONTEXT'
+        ];
         if (is_array($metadata)) {
             foreach ($metadata as $key => $value) {
                 if (in_array(strtoupper((string)$key), $narratorManagedKeys, true)) {

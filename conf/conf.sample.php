@@ -79,7 +79,9 @@ $EMOTEMOODS="sassy,"
     . "shy,"
     . "surprised"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 
-$REMOVE_ASTERISKS_FROM_OUTPUT=true;
+$INLINE_NARRATION_MODE="disabled"; // disabled|narrator|npc
+$REMOVE_ASTERISKS_FROM_PLAYER_INPUT=true; // filters *asterisked* player input from player TTS only
+$REMOVE_ASTERISKS_FROM_NPC_OUTPUT=true;
 $ENFORCE_ACTIONS_PROMPT=true;
 $SUMMARY_PROMPT= 'Focus on key events, tagging characters, locations, and factions accurately. Ensure memories align and maintain chronological order while foreshadowing future arcs. Prioritize player agency, and use environmental cues to enhance storytelling and continuity.'; 
 $DYNAMIC_PROMPT = "(LEGACY - Use individual field prompts instead) "

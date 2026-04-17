@@ -4173,7 +4173,11 @@ function call_llm_internal() {
 
         $buffer=$connectionHandler->fast_request($contextData,$overrideParameters,'standard');
         $preserveAsterisksInContext = isset($GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"]) ? (bool)$GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"] : false;
-        if (!$preserveAsterisksInContext) {
+        $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+            $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
+        }
+        if ($inlineNarrationMode === 'disabled' && !$preserveAsterisksInContext) {
             $buffer = preg_replace('/\*([^*]*\s+[^*]*)\*/', '', $buffer);
         }
 

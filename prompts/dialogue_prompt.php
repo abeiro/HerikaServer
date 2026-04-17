@@ -36,8 +36,12 @@ if (!function_exists('chimLoadManagedPromptTemplate')) {
 }
 
 
-// Add narration instruction if inline narration is enabled (default to false if not set)
-$inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
+// Add narration instruction when inline narration mode expects leading asterisk narration blocks.
+$inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
+if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+    $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
+}
+$inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
 if ($inlineNarrationEnabled) {
     $TEMPLATE_DIALOG = chimLoadManagedPromptTemplate(
         'dialogue_line_inline_response',
