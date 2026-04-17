@@ -197,12 +197,92 @@ class Narrator
         return null;
     }
 
+    private function getDefaultNarratorProfileId(): string
+    {
+        try {
+            $defaultProfile = $this->db->fetchOne("SELECT id FROM core_profiles WHERE default_narrator = '1' ORDER BY id ASC LIMIT 1");
+            if ($defaultProfile && isset($defaultProfile['id']) && $defaultProfile['id'] !== null && $defaultProfile['id'] !== '') {
+                return (string)intval($defaultProfile['id']);
+            }
+        } catch (\Throwable $e) {
+            // Fall through to hardcoded fallback
+        }
+
+        return '1';
+    }
+
+    private function getDefaultNarratorCharacterData(): array
+    {
+        $coreDefault = isset($GLOBALS['HERIKA_PERS']) && trim((string)$GLOBALS['HERIKA_PERS']) !== ''
+            ? trim((string)$GLOBALS['HERIKA_PERS'])
+            : "You are The Narrator in a Skyrim adventure. You will only talk to #PLAYER_NAME#. You refer to yourself as 'The Narrator'. Only #PLAYER_NAME# can hear you. Your goal is to comment on #PLAYER_NAME#'s playthrough, and occasionally give hints. NO SPOILERS. Talk about quests and last events. When #PLAYER_NAME# speaks to you directly, answer them as a private voice in their mind using plain spoken dialogue rather than third-person scene narration.";
+
+        $backgroundDefault = isset($GLOBALS['HERIKA_BACKGROUND']) && trim((string)$GLOBALS['HERIKA_BACKGROUND']) !== ''
+            ? trim((string)$GLOBALS['HERIKA_BACKGROUND'])
+            : "A guiding voice within the player's mind that comments on events, describes transitions, and offers insight without being a physical character in the world.";
+
+        $personalityDefault = isset($GLOBALS['HERIKA_PERSONALITY']) && trim((string)$GLOBALS['HERIKA_PERSONALITY']) !== ''
+            ? trim((string)$GLOBALS['HERIKA_PERSONALITY'])
+            : 'Detached, observant, witty, and helpful. Acts as a private guide to #PLAYER_NAME#, offering spoiler-free insight and commentary without turning direct conversation into narrated prose.';
+
+        $speechstyleDefault = isset($GLOBALS['HERIKA_SPEECHSTYLE']) && trim((string)$GLOBALS['HERIKA_SPEECHSTYLE']) !== ''
+            ? trim((string)$GLOBALS['HERIKA_SPEECHSTYLE'])
+            : 'Speaks clearly and directly with concise, evocative phrasing and occasional dry wit. When addressing #PLAYER_NAME# directly, respond in plain spoken dialogue and avoid stage directions, scene description, or text in asterisks.';
+
+        $goalsDefault = isset($GLOBALS['HERIKA_GOALS']) && trim((string)$GLOBALS['HERIKA_GOALS']) !== ''
+            ? trim((string)$GLOBALS['HERIKA_GOALS'])
+            : '';
+
+        $oghmaDefault = isset($GLOBALS['OGHMA_KNOWLEDGE']) && trim((string)$GLOBALS['OGHMA_KNOWLEDGE']) !== ''
+            ? trim((string)$GLOBALS['OGHMA_KNOWLEDGE'])
+            : 'knowall';
+
+        $genderDefault = isset($GLOBALS['NARRATOR_GENDER']) && trim((string)$GLOBALS['NARRATOR_GENDER']) !== ''
+            ? trim((string)$GLOBALS['NARRATOR_GENDER'])
+            : 'male';
+
+        return [
+            'profile_id' => $this->getDefaultNarratorProfileId(),
+            'voiceid' => 'TheNarrator',
+            'core' => $coreDefault,
+            'background' => $backgroundDefault,
+            'personality' => $personalityDefault,
+            'speechstyle' => $speechstyleDefault,
+            'goals' => $goalsDefault,
+            'oghma_knowledge' => $oghmaDefault,
+            'gender' => $genderDefault,
+        ];
+    }
+
+    public function ensureDefaultCharacterData(): bool
+    {
+        $allSettings = $this->getAll();
+        $defaults = $this->getDefaultNarratorCharacterData();
+        $updated = false;
+
+        foreach ($defaults as $key => $value) {
+            if ($value === null || trim((string)$value) === '') {
+                continue;
+            }
+
+            if (!isset($allSettings[$key]) || trim((string)$allSettings[$key]) === '') {
+                if ($this->set($key, (string)$value)) {
+                    $allSettings[$key] = (string)$value;
+                    $updated = true;
+                }
+            }
+        }
+
+        return $updated;
+    }
+
     /**
      * Load all narrator settings into GLOBALS with proper type conversion
      * Falls back to existing GLOBALS values if not found in database
      */
     public function loadIntoGlobals(): void
     {
+        $this->ensureDefaultCharacterData();
         $allSettings = $this->getAll();
 
         if (!isset($allSettings['inline_narration_mode'])) {
@@ -338,6 +418,7 @@ class Narrator
      */
     public function loadCharacterIntoGlobals(): void
     {
+        $this->ensureDefaultCharacterData();
         $allSettings = $this->getAll();
         
         // Set HERIKA_NAME to The Narrator
@@ -421,6 +502,7 @@ class Narrator
      */
     public function getNarratorData(): array
     {
+        $this->ensureDefaultCharacterData();
         $allSettings = $this->getAll();
         
         return [

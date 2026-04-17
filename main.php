@@ -578,6 +578,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 try {
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
     $narrator = new Narrator();
+    $narrator->ensureDefaultCharacterData();
     
     // Ensure narrator has a profile_id set (default to profile 1 if not set)
     $profileId = $narrator->getProfileId();
@@ -1646,6 +1647,8 @@ if ($EXECUTION_MODE=="INJECTION_LOG") {
  CONTEXT DATA BUILDING
 ***********************/
 
+$GLOBALS["DIRECT_NARRATOR_DIALOGUE"] = ($gameRequest[0] === "narrator_inputtext");
+
 // Include prompts, command prompts and functions.
 require(__DIR__.DIRECTORY_SEPARATOR."prompt.includes.php");
 $gameRequest[0] = strtolower($gameRequest[0]); // one more time in case it was changed by an extension
@@ -2049,8 +2052,8 @@ if (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_
 
 // array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
 
-// Action-enforcement prompt is now always enabled.
-$GLOBALS["ENFORCE_ACTIONS_PROMPT"] = true;
+// Action-enforcement prompt is disabled for direct narrator dialogue.
+$GLOBALS["ENFORCE_ACTIONS_PROMPT"] = empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]);
 
 
 // Rechat case
@@ -2119,11 +2122,16 @@ if (in_array($gameRequest[0],["instruction"]) ) {
 }
 
 // Enforce actions
-$GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
-    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
-else
-    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
+if (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) {
+    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
+    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
+} else {
+    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
+    if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
+        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
+    else
+        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
+}
 
 // Cooldown definitions
 $COOLDOWNMAP["ComeCloser"]=120/0.00864;
@@ -2222,6 +2230,11 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     }
     //command prompt function now injected in json_response.php with actions
     //$GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
+}
+
+if (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) {
+    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"] = false;
+    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"] = "";
 }
 
 
@@ -2440,7 +2453,6 @@ if (isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
     $nearbySections = $GLOBALS["PROMPT_NEARBY_SECTIONS"];
 }
 
-
 if (!empty($GLOBALS["OGHMA_HINT"])) {
 
     $head[] = array('role' => 'system', 'content' =>  
@@ -2540,7 +2552,23 @@ if ($gameRequest[0] == "funcret") {
         
         
     } else {
+        $explicitDirectNarratorInput = false;
+        if (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]) && $gameRequest[0] === "narrator_inputtext" && !empty($gameRequest[3])) {
+            $explicitDirectNarratorInput = true;
+            if (!empty($contextDataFull)) {
+                $lastContextEntry = end($contextDataFull);
+                if (is_array($lastContextEntry)
+                    && (($lastContextEntry["role"] ?? "") === "user")
+                    && trim((string)($lastContextEntry["content"] ?? "")) === trim((string)$gameRequest[3])) {
+                    $explicitDirectNarratorInput = false;
+                }
+                reset($contextDataFull);
+            }
+        }
         if (!empty($request)) {
+            if ($explicitDirectNarratorInput) {
+                $prompt[] = array('role' => 'user', 'content' => $gameRequest[3]);
+            }
             $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
             if (sizeof($memoryInjectionCtx)>0) {
                 array_splice($prompt, -1, 0, $memoryInjectionCtx); // add memory as second-to-last entry

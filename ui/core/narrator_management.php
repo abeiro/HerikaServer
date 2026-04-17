@@ -21,6 +21,7 @@ $webRoot = rtrim($webRoot, '/');
 
 $GLOBALS["db"] = new sql();
 $narrator = new Narrator();
+$narrator->ensureDefaultCharacterData();
 
 $saveSuccess = false;
 $saveMessage = '';
