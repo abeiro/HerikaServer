@@ -22,7 +22,6 @@ $webRoot = rtrim($webRoot, '/');
 
 $GLOBALS["db"] = new sql();
 $narrator = new Narrator();
-$narrator->ensureDefaultCharacterData();
 
 $saveSuccess = false;
 $saveMessage = '';
@@ -1045,6 +1044,10 @@ if (!$isEmbed) {
                 <label for="goals">Goals</label>
                 <textarea id="goals" name="goals" rows="3" placeholder="Current objectives..."><?php echo htmlspecialchars($goals); ?></textarea>
                 <span class="hint">Current goals and objectives for The Narrator.</span>
+            </div>
+
+            <div style="display:flex; justify-content:flex-start; margin-top:20px;">
+                <button type="submit" class="btn-save" name="save_narrator" value="1">Save Narration Settings</button>
             </div>
         </form>
     </div>

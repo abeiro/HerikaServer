@@ -573,12 +573,11 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 
 
-// Narrator initialization - ensure narrator data exists
+// Narrator initialization
 // Narrator is now managed via core_narrator table, not core_npc_master
 try {
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
     $narrator = new Narrator();
-    $narrator->ensureDefaultCharacterData();
     
     // Ensure narrator has a profile_id set (default to profile 1 if not set)
     $profileId = $narrator->getProfileId();
