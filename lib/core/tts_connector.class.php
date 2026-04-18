@@ -145,6 +145,11 @@ class TTSConnector
             'stability' => 0.75,
             'similarity_boost' => 0.75,
             'style' => 0.0,
+            'speed' => 1.0,
+            'use_speaker_boost' => true,
+            'apply_text_normalization' => 'auto',
+            'apply_language_text_normalization' => false,
+            'v3_audio_tags' => '',
         ],
     ];
 

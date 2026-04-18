@@ -343,13 +343,18 @@
     },
     "ELEVEN_LABS": {
       "_title":"ElevenLabs Text-To-Speech",
-      "voice_id": {"type":"string","description":"Voice code","helpurl":"https://elevenlabs.io/docs/api-reference/voices/get"},
-      "optimize_streaming_latency": {"type":"string","description":"Optimize Streaming Latency","helpurl":"https://docs.elevenlabs.io/api-reference/text-to-speech"},
-      "model_id": {"type":"string","description":"Model ID","helpurl":"https://beta.elevenlabs.io/speech-synthesis"},
-      "stability":{"userlvl":"pro","type":"number","description":"Stability"},
-      "similarity_boost": {"userlvl":"pro","type":"number","description":"Similarity_Boost"},
-      "style": {"type":"number","description":"Style"},
-      "API_KEY": {"type":"apikey","description":"Eleven Labs API key.","code":"11LABS_API_KEY"}
+      "voice_id": {"type":"string","description":"ElevenLabs voice ID to speak with.","helpurl":"https://elevenlabs.io/docs/api-reference/voices/get"},
+      "optimize_streaming_latency": {"type":"string","description":"Reduces response delay at some cost to quality and text handling. Use 0 for default behavior; higher values favor speed more aggressively.","helpurl":"https://docs.elevenlabs.io/api-reference/text-to-speech"},
+      "model_id": {"type":"string","description":"ElevenLabs model to use for this connector. Use eleven_v3 if you want V3 enhancers or audio tags.","helpurl":"https://elevenlabs.io/docs/api-reference/text-to-speech/convert"},
+      "stability":{"userlvl":"pro","type":"number","description":"Controls how consistent each generation sounds. Lower values are more expressive, while higher values are steadier and less varied."},
+      "similarity_boost": {"userlvl":"pro","type":"number","description":"Controls how closely the output sticks to the selected voice. Higher values usually sound more like the source voice, but can reduce flexibility."},
+      "style": {"type":"number","description":"Adds extra stylization and exaggeration to the delivery. Higher values can sound more dramatic, but may increase latency."},
+      "speed": {"type":"number","description":"Adjusts the speaking rate of the generated audio. 1.0 is normal speed."},
+      "use_speaker_boost": {"type":"boolean","description":"Boosts resemblance to the original voice at a small latency cost. Ignored by eleven_v3."},
+      "apply_text_normalization": {"type":"select","description":"Controls whether numbers, dates, abbreviations, and similar text are rewritten before speech. Auto lets ElevenLabs decide, on always normalizes, and off keeps the raw text.","values":["auto","on","off"]},
+      "apply_language_text_normalization": {"type":"boolean","description":"Enables extra language-specific cleanup before synthesis. This is mainly useful for languages that need special text handling, such as Japanese."},
+      "v3_audio_tags": {"type":"longstring","description":"Optional Eleven v3 prompt tags added before the text, such as [whispers] or [curious]. Only used when model_id is eleven_v3."},
+      "API_KEY": {"type":"apikey","description":"Legacy ElevenLabs API key setting. Prefer assigning an ElevenLabs API Badge to the connector instead.","code":"11LABS_API_KEY"}
     },
     "GCP": {
       "_title":"Google Cloud Platform Text-To-Speech",

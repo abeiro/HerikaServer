@@ -50,6 +50,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_player'])) {
         $player->set('tts_voice_override', trim(strval($_POST['tts_voice_override'] ?? '')));
         $player->set('tts_voice_id_override', trim(strval($_POST['tts_voice_id_override'] ?? '')));
         $player->set('tts_language_override', trim(strval($_POST['tts_language_override'] ?? '')));
+        $player->set('tts_elevenlabs_model_id', trim(strval($_POST['tts_elevenlabs_model_id'] ?? '')));
+        $player->set('tts_elevenlabs_speed', trim(strval($_POST['tts_elevenlabs_speed'] ?? '')));
+        $player->set('tts_elevenlabs_stability', trim(strval($_POST['tts_elevenlabs_stability'] ?? '')));
+        $player->set('tts_elevenlabs_similarity_boost', trim(strval($_POST['tts_elevenlabs_similarity_boost'] ?? '')));
+        $player->set('tts_elevenlabs_style', trim(strval($_POST['tts_elevenlabs_style'] ?? '')));
+        $player->set('tts_elevenlabs_use_speaker_boost', trim(strval($_POST['tts_elevenlabs_use_speaker_boost'] ?? '')));
+        $player->set('tts_elevenlabs_v3_audio_tags', trim(strval($_POST['tts_elevenlabs_v3_audio_tags'] ?? '')));
         
         // Save any editable stats if provided
         foreach ($_POST as $key => $value) {
@@ -80,6 +87,13 @@ $playerTtsConnectorId = trim(strval($allPlayerData['tts_connector_id'] ?? ''));
 $playerTtsVoiceId = strval($allPlayerData['tts_voice_override'] ?? '');
 $playerTtsVoiceIdOverride = strval($allPlayerData['tts_voice_id_override'] ?? '');
 $playerTtsLanguageOverride = strval($allPlayerData['tts_language_override'] ?? '');
+$playerTtsElevenModelId = strval($allPlayerData['tts_elevenlabs_model_id'] ?? '');
+$playerTtsElevenSpeed = strval($allPlayerData['tts_elevenlabs_speed'] ?? '');
+$playerTtsElevenStability = strval($allPlayerData['tts_elevenlabs_stability'] ?? '');
+$playerTtsElevenSimilarityBoost = strval($allPlayerData['tts_elevenlabs_similarity_boost'] ?? '');
+$playerTtsElevenStyle = strval($allPlayerData['tts_elevenlabs_style'] ?? '');
+$playerTtsElevenUseSpeakerBoost = strval($allPlayerData['tts_elevenlabs_use_speaker_boost'] ?? '');
+$playerTtsElevenV3AudioTags = strval($allPlayerData['tts_elevenlabs_v3_audio_tags'] ?? '');
 $ttsConnectorRows = $ttsConnector->readAll();
 $ttsConnectorMeta = [];
 foreach ($ttsConnectorRows as $row) {
@@ -421,6 +435,27 @@ if (!$isEmbed) {
         gap: 8px;
     }
 
+    .player-provider-panel {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 8px;
+        border: 1px solid rgba(242, 124, 17, 0.18);
+        background: rgba(18, 18, 18, 0.42);
+    }
+
+    .player-provider-panel h3 {
+        margin: 0 0 10px;
+        color: #f3d6a8;
+        font-size: 1em;
+        font-weight: 700;
+    }
+
+    .player-provider-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
     .speech-style-tools label {
         margin-top: 4px;
     }
@@ -706,6 +741,10 @@ if (!$isEmbed) {
         .content-grid.player-overview-grid {
             grid-template-columns: 1fr;
         }
+
+        .player-provider-grid {
+            grid-template-columns: 1fr;
+        }
         
         .page-header {
             padding: 18px 15px;
@@ -814,6 +853,19 @@ if (!$isEmbed) {
                 btn.textContent = oldLabel;
             }
         }
+
+        const PLAYER_TTS_CONNECTOR_META = <?php echo json_encode($ttsConnectorMeta, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+
+        function syncPlayerProviderPanels() {
+            const connectorSelect = document.getElementById('tts_connector_id');
+            const elevenPanel = document.getElementById('player_tts_elevenlabs_panel');
+            if (!connectorSelect || !elevenPanel) return;
+
+            const selectedId = connectorSelect.value || '';
+            const selectedMeta = PLAYER_TTS_CONNECTOR_META[selectedId] || null;
+            const selectedDriver = selectedMeta && selectedMeta.driver ? String(selectedMeta.driver).toLowerCase() : '';
+            elevenPanel.style.display = selectedDriver === '11labs' ? 'block' : 'none';
+        }
         </script>
 
         <?php if ($saveSuccess || $saveMessage): ?>
@@ -893,6 +945,49 @@ if (!$isEmbed) {
                 <label for="tts_voice_override">VoiceID</label>
                 <input type="text" id="tts_voice_override" name="tts_voice_override" value="<?php echo htmlspecialchars($playerTtsVoiceId); ?>" placeholder="TheNarrator">
                 <span class="hint">Dedicated voice identifier used for Player TTS.</span>
+
+                <div id="player_tts_elevenlabs_panel" class="player-provider-panel" style="display:none;">
+                    <h3>ElevenLabs Player Overrides</h3>
+                    <span class="hint">Only used when the selected Player TTS connector is ElevenLabs. Leave a field blank to inherit the connector default.</span>
+                    <div class="player-provider-grid">
+                        <div>
+                            <label for="tts_elevenlabs_model_id">Model ID</label>
+                            <input type="text" id="tts_elevenlabs_model_id" name="tts_elevenlabs_model_id" value="<?php echo htmlspecialchars($playerTtsElevenModelId); ?>" placeholder="eleven_v3">
+                            <span class="hint">Examples: <code>eleven_multilingual_v2</code>, <code>eleven_v3</code>.</span>
+                        </div>
+                        <div>
+                            <label for="tts_elevenlabs_speed">Speed</label>
+                            <input type="number" step="0.05" id="tts_elevenlabs_speed" name="tts_elevenlabs_speed" value="<?php echo htmlspecialchars($playerTtsElevenSpeed); ?>" placeholder="1.0">
+                            <span class="hint">Player-only speed override for ElevenLabs.</span>
+                        </div>
+                        <div>
+                            <label for="tts_elevenlabs_stability">Stability</label>
+                            <input type="number" step="0.05" id="tts_elevenlabs_stability" name="tts_elevenlabs_stability" value="<?php echo htmlspecialchars($playerTtsElevenStability); ?>" placeholder="0.75">
+                        </div>
+                        <div>
+                            <label for="tts_elevenlabs_similarity_boost">Similarity Boost</label>
+                            <input type="number" step="0.05" id="tts_elevenlabs_similarity_boost" name="tts_elevenlabs_similarity_boost" value="<?php echo htmlspecialchars($playerTtsElevenSimilarityBoost); ?>" placeholder="0.75">
+                        </div>
+                        <div>
+                            <label for="tts_elevenlabs_style">Style</label>
+                            <input type="number" step="0.05" id="tts_elevenlabs_style" name="tts_elevenlabs_style" value="<?php echo htmlspecialchars($playerTtsElevenStyle); ?>" placeholder="0.0">
+                        </div>
+                        <div>
+                            <label for="tts_elevenlabs_use_speaker_boost">Speaker Boost</label>
+                            <select id="tts_elevenlabs_use_speaker_boost" name="tts_elevenlabs_use_speaker_boost">
+                                <option value="" <?php echo $playerTtsElevenUseSpeakerBoost === '' ? 'selected' : ''; ?>>Use Connector Default</option>
+                                <option value="true" <?php echo $playerTtsElevenUseSpeakerBoost === 'true' ? 'selected' : ''; ?>>Enabled</option>
+                                <option value="false" <?php echo $playerTtsElevenUseSpeakerBoost === 'false' ? 'selected' : ''; ?>>Disabled</option>
+                            </select>
+                            <span class="hint">Eleven v3 ignores Speaker Boost.</span>
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label for="tts_elevenlabs_v3_audio_tags">V3 Enhancers</label>
+                            <textarea id="tts_elevenlabs_v3_audio_tags" name="tts_elevenlabs_v3_audio_tags" placeholder="[whispers] [curious]"><?php echo htmlspecialchars($playerTtsElevenV3AudioTags); ?></textarea>
+                            <span class="hint">Prepended to the Player TTS input when the effective model is <code>eleven_v3</code>. Use ElevenLabs-style audio tags here.</span>
+                        </div>
+                    </div>
+                </div>
 
                 <label for="speech_style">Player Speech Style</label>
                 <textarea id="speech_style" name="speech_style" placeholder="Describe how your character speaks and communicates..."><?php echo htmlspecialchars($speechStyle); ?></textarea>
@@ -1068,6 +1163,16 @@ if (!$isEmbed) {
     <?php endif; ?>
     </div>
 </main>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    syncPlayerProviderPanels();
+    const connectorSelect = document.getElementById('tts_connector_id');
+    if (connectorSelect) {
+        connectorSelect.addEventListener('change', syncPlayerProviderPanels);
+    }
+});
+</script>
 
 <?php
 if (!$isEmbed) {

@@ -20,9 +20,11 @@ $origName = $GLOBALS["HERIKA_NAME"] ?? '';
 $hadPatchOverrideVoice = array_key_exists("PATCH_OVERRIDE_VOICE", $GLOBALS);
 $hadPatchOverrideVoiceId = array_key_exists("PATCH_OVERRIDE_VOICE_ID", $GLOBALS);
 $hadPatchOverrideLanguage = array_key_exists("PATCH_OVERRIDE_TTS_LANGUAGE", $GLOBALS);
+$hadPatchOverrideTtsOptions = array_key_exists("PATCH_OVERRIDE_TTS_OPTIONS", $GLOBALS);
 $oldPatchOverrideVoice = $GLOBALS["PATCH_OVERRIDE_VOICE"] ?? null;
 $oldPatchOverrideVoiceId = $GLOBALS["PATCH_OVERRIDE_VOICE_ID"] ?? null;
 $oldPatchOverrideLanguage = $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"] ?? null;
+$oldPatchOverrideTtsOptions = $GLOBALS["PATCH_OVERRIDE_TTS_OPTIONS"] ?? null;
 
 try {
     $player = new Player();
@@ -38,6 +40,7 @@ try {
 
     $ttsConnector->setOldGlobals($currentConnector);
     $GLOBALS["TTSFUNCTION_PLAYER"] = strval($currentConnector['driver'] ?? '');
+    $playerDriver = strtolower(trim(strval($currentConnector['driver'] ?? '')));
 
     $playerVoiceId = trim(strval($player->get('tts_voice_override') ?? ''));
     $voiceIdOverride = trim(strval($player->get('tts_voice_id_override') ?? ''));
@@ -63,6 +66,39 @@ try {
         $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"] = $languageOverride;
     } else {
         unset($GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]);
+    }
+
+    if ($playerDriver === '11labs') {
+        $playerElevenLabsOverrides = [];
+        foreach ([
+            'model_id' => 'tts_elevenlabs_model_id',
+            'speed' => 'tts_elevenlabs_speed',
+            'stability' => 'tts_elevenlabs_stability',
+            'similarity_boost' => 'tts_elevenlabs_similarity_boost',
+            'style' => 'tts_elevenlabs_style',
+            'v3_audio_tags' => 'tts_elevenlabs_v3_audio_tags',
+        ] as $metadataKey => $playerKey) {
+            $rawValue = trim(strval($player->get($playerKey) ?? ''));
+            if ($rawValue !== '') {
+                $playerElevenLabsOverrides[$metadataKey] = $rawValue;
+            }
+        }
+
+        $speakerBoostValue = trim(strval($player->get('tts_elevenlabs_use_speaker_boost') ?? ''));
+        if ($speakerBoostValue !== '') {
+            $playerElevenLabsOverrides['use_speaker_boost'] = strtolower($speakerBoostValue) === 'true';
+        }
+
+        if (!empty($playerElevenLabsOverrides)) {
+            $GLOBALS["PATCH_OVERRIDE_TTS_OPTIONS"] = [
+                'driver' => $playerDriver,
+                'metadata' => $playerElevenLabsOverrides,
+            ];
+        } else {
+            unset($GLOBALS["PATCH_OVERRIDE_TTS_OPTIONS"]);
+        }
+    } else {
+        unset($GLOBALS["PATCH_OVERRIDE_TTS_OPTIONS"]);
     }
 
     $GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"] = true;
@@ -97,6 +133,12 @@ try {
         $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"] = $oldPatchOverrideLanguage;
     } else {
         unset($GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]);
+    }
+
+    if ($hadPatchOverrideTtsOptions) {
+        $GLOBALS["PATCH_OVERRIDE_TTS_OPTIONS"] = $oldPatchOverrideTtsOptions;
+    } else {
+        unset($GLOBALS["PATCH_OVERRIDE_TTS_OPTIONS"]);
     }
 
     $GLOBALS["TTSFUNCTION"] = $origTTS;
