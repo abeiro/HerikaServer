@@ -373,6 +373,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         overflow-x: auto;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
     }
+
+    .prompts-search-section {
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-radius: 10px;
+        padding: 18px 20px;
+        margin-bottom: 18px;
+        border: 1px solid #3a3a3a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+    }
+
+    .prompts-search-label {
+        display: block;
+        margin-bottom: 8px;
+        color: rgb(242, 124, 17);
+        font-family: 'MagicCards', serif;
+        font-size: 1.15em;
+        letter-spacing: 1px;
+        word-spacing: 6px;
+    }
+
+    .prompts-search-help {
+        color: #b0b0b0;
+        margin: 0 0 12px 0;
+        font-size: 0.95em;
+    }
+
+    .prompts-search-input {
+        width: 100%;
+        max-width: 540px;
+        padding: 12px 14px;
+        background: rgba(26, 26, 26, 0.85);
+        border: 1px solid #3a3a3a;
+        border-radius: 6px;
+        color: #e0e0e0;
+        font-size: 1em;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+    }
+
+    .prompts-search-input:focus {
+        outline: none;
+        border-color: rgb(242, 124, 17);
+        box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+        background: rgba(26, 26, 26, 0.95);
+    }
+
+    .prompts-search-empty {
+        display: none;
+        margin-top: 14px;
+        padding: 14px 16px;
+        border: 1px solid rgba(242, 124, 17, 0.25);
+        border-radius: 6px;
+        background: rgba(242, 124, 17, 0.06);
+        color: #d8d8d8;
+    }
+
+    .prompts-search-empty.show {
+        display: block;
+    }
     
     /* Sticky table header */
     .table-container thead {
@@ -880,6 +938,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         </div>
     </div>
 
+    <div class="prompts-search-section">
+        <label class="prompts-search-label" for="promptsSearch">Search Prompts</label>
+        <p class="prompts-search-help">Filter by prompt key, description, status, or preview text.</p>
+        <input
+            type="text"
+            id="promptsSearch"
+            class="prompts-search-input"
+            placeholder="Search prompts..."
+            autocomplete="off"
+            oninput="filterPromptsTable(this.value)"
+        >
+        <div id="promptsSearchEmpty" class="prompts-search-empty">No prompts match your current search.</div>
+    </div>
+
     <?php
     /********************************************************************
      *  3) DISPLAY ALL PROMPTS IN TABLE
@@ -915,8 +987,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $is_custom = !empty($custom_prompt);
                     $active_prompt = $is_custom ? $custom_prompt : $default_prompt;
                     $preview = strlen($active_prompt) > 150 ? substr($active_prompt, 0, 150) . '...' : $active_prompt;
+                    $search_text = strtolower(
+                        $row['prompt_key'] . ' ' .
+                        ($row['description'] ?? '') . ' ' .
+                        ($is_custom ? 'custom' : 'default') . ' ' .
+                        $preview
+                    );
                 ?>
-                <tr>
+                <tr data-search-text="<?php echo htmlspecialchars($search_text, ENT_QUOTES); ?>">
                     <td class="prompt-key-cell">
                         <code><?php echo $prompt_key; ?></code>
                     </td>
@@ -1166,8 +1244,44 @@ function updateTableRow(promptKey) {
                     </button>
                 `;
             }
+
+            row.dataset.searchText = buildPromptSearchText(promptKey, data, isCustom, preview);
         }
     });
+
+    const searchInput = document.getElementById('promptsSearch');
+    if (searchInput && searchInput.value.trim() !== '') {
+        filterPromptsTable(searchInput.value);
+    }
+}
+
+function buildPromptSearchText(promptKey, data, isCustom, preview) {
+    return [
+        promptKey,
+        data.description || '',
+        isCustom ? 'custom' : 'default',
+        preview || ''
+    ].join(' ').toLowerCase();
+}
+
+function filterPromptsTable(query) {
+    const normalizedQuery = (query || '').trim().toLowerCase();
+    const rows = document.querySelectorAll('.prompts-table tbody tr[data-search-text]');
+    const emptyState = document.getElementById('promptsSearchEmpty');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const haystack = row.dataset.searchText || '';
+        const shouldShow = normalizedQuery === '' || haystack.indexOf(normalizedQuery) !== -1;
+        row.style.display = shouldShow ? 'table-row' : 'none';
+        if (shouldShow) {
+            visibleCount++;
+        }
+    });
+
+    if (emptyState) {
+        emptyState.classList.toggle('show', normalizedQuery !== '' && visibleCount === 0);
+    }
 }
 
 function clearCustomPrompt(promptKey) {
