@@ -1090,6 +1090,84 @@ if (!function_exists('renderNpcLetterFilter')) {
     }
 }
 
+if (!function_exists('renderNpcToolbar')) {
+    function renderNpcToolbar($args = [])
+    {
+        $top = !empty($args['top']);
+        $suffix = $top ? '_top' : '';
+        $q = (string)($args['q'] ?? '');
+        $profileRows = is_array($args['profileRows'] ?? null) ? $args['profileRows'] : [];
+        $profileIdFilter = (string)($args['profileIdFilter'] ?? '');
+        $page = max(1, (int)($args['page'] ?? 1));
+        $totalPages = max(1, (int)($args['totalPages'] ?? 1));
+        $totalRows = max(0, (int)($args['totalRows'] ?? 0));
+        $nameLetterFilter = (string)($args['nameLetterFilter'] ?? '');
+        $favOnly = !empty($args['favOnly']);
+        $dynOnly = !empty($args['dynOnly']);
+        $mtmOnly = !empty($args['mtmOnly']);
+        $lockOnly = !empty($args['lockOnly']);
+        $salOnly = !empty($args['salOnly']);
+        $blcOnly = !empty($args['blcOnly']);
+        $gpsOnly = !empty($args['gpsOnly']);
+        $pageWindow = min(10, $totalPages);
+        $pageStart = max(1, min($page - 4, $totalPages - $pageWindow + 1));
+        $pageEnd = min($totalPages, $pageStart + $pageWindow - 1);
+
+        ?>
+        <div class="pagination npc-toolbar">
+          <div class="npc-toolbar-main">
+            <div class="npc-toolbar-actions">
+              <div class="npc-filter-dropdown">
+                <button type="button" id="npc_filter_btn<?= $suffix ?>" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action npc-toolbar-filter-btn" title="Filters" aria-label="Filters">▾ Filters</button>
+                <div id="npc_filter_menu<?= $suffix ?>" class="npc-filter-menu" style="display:none;">
+                  <label><input type="checkbox" id="npc_filter_fav<?= $suffix ?>" <?= $favOnly ? 'checked' : '' ?>> ⭐ Favorites</label>
+                  <label><input type="checkbox" id="npc_filter_dyn<?= $suffix ?>" <?= $dynOnly ? 'checked' : '' ?>> ♻️ Dynamic profile</label>
+                  <label><input type="checkbox" id="npc_filter_mtm<?= $suffix ?>" <?= $mtmOnly ? 'checked' : '' ?>> 📃 Middle-term memory</label>
+                  <label><input type="checkbox" id="npc_filter_lock<?= $suffix ?>" <?= $lockOnly ? 'checked' : '' ?>> 🔒 Locked</label>
+                  <label><input type="checkbox" id="npc_filter_sal<?= $suffix ?>" <?= $salOnly ? 'checked' : '' ?>> 👋 Auto Greeting</label>
+                  <label><input type="checkbox" id="npc_filter_blc<?= $suffix ?>" <?= $blcOnly ? 'checked' : '' ?>> 🎮 BGL: Auto Actions</label>
+                  <label><input type="checkbox" id="npc_filter_gps<?= $suffix ?>" <?= $gpsOnly ? 'checked' : '' ?>> 📍 BGL: GPS track</label>
+                </div>
+              </div>
+              <button id="npc_create_btn" type="button" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action">+ Create NPC</button>
+              <button id="npc_import_btn" type="button" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action" title="Import NPC from JSON file">📥 Import NPC</button>
+              <button id="rel_bulk_build_btn" type="button" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
+              <button id="npc_bulk_switch_profile_btn" type="button" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action npc-toolbar-btn-switch" title="Switch all NPCs from one profile to another">🔀 Mass Switch Profile</button>
+              <button id="npc_bulk_delete_btn" type="button" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">❌ Delete All Profiles</button>
+            </div>
+            <div class="npc-toolbar-tools">
+              <input id="npc_search" type="text" placeholder="Search..." value="<?= htmlspecialchars($q) ?>" />
+              <select id="npc_profile_filter" title="Filter by profile">
+                <option value="">All Profiles</option>
+                <?php foreach ($profileRows as $pr): ?>
+                  <?php $pid = (string)($pr['id'] ?? ''); $lbl = $pr['label'] ?? ('Profile #' . $pid); ?>
+                  <option value="<?= htmlspecialchars($pid) ?>" <?= ($profileIdFilter !== '' && $profileIdFilter === $pid) ? 'selected' : '' ?>><?= htmlspecialchars($lbl) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          </div>
+          <div class="npc-toolbar-subrow">
+            <div class="npc-toolbar-pager">
+              <button type="button" class="npc-letter-btn npc-page-link<?= $page <= 1 ? ' disabled' : '' ?>" data-page="1" <?= $page <= 1 ? 'disabled aria-disabled="true"' : '' ?>>First</button>
+              <button type="button" class="npc-letter-btn npc-page-link<?= $page <= 1 ? ' disabled' : '' ?>" data-page="<?= max(1, $page - 1) ?>" <?= $page <= 1 ? 'disabled aria-disabled="true"' : '' ?>>Prev</button>
+              <?php for ($p = $pageStart; $p <= $pageEnd; $p++): ?>
+                <button type="button" class="npc-letter-btn npc-page-link<?= $p === $page ? ' active' : '' ?>" data-page="<?= $p ?>" <?= $p === $page ? 'disabled aria-current="page"' : '' ?>><?= $p ?></button>
+              <?php endfor; ?>
+              <button type="button" class="npc-letter-btn npc-page-link<?= $page >= $totalPages ? ' disabled' : '' ?>" data-page="<?= min($totalPages, $page + 1) ?>" <?= $page >= $totalPages ? 'disabled aria-disabled="true"' : '' ?>>Next</button>
+              <button type="button" class="npc-letter-btn npc-page-link<?= $page >= $totalPages ? ' disabled' : '' ?>" data-page="<?= $totalPages ?>" <?= $page >= $totalPages ? 'disabled aria-disabled="true"' : '' ?>>Last</button>
+              <div class="npc-page-indicator" title="Current page"><?= $page ?>/<?= $totalPages ?></div>
+            </div>
+            <div class="npc-total-pill" title="Total NPC profiles">
+              <div class="npc-total-pill-icon">👥</div>
+              <div class="npc-total-pill-value"><?= $totalRows ?></div>
+            </div>
+          </div>
+          <?php renderNpcLetterFilter($nameLetterFilter); ?>
+        </div>
+        <?php
+    }
+}
+
 if (isset($_GET["edit"])) {
     $editItem = $npc->getById($_GET["edit"]);
 }
@@ -1098,46 +1176,24 @@ if (isset($_GET["edit"])) {
 if (isset($_GET['list']) && $_GET['list'] === '1') {
     try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
     header('Content-Type: text/html; charset=utf-8');
+    renderNpcToolbar([
+        'top' => false,
+        'q' => $q,
+        'profileRows' => $profileRows ?? [],
+        'profileIdFilter' => $profileIdFilter,
+        'page' => $page,
+        'totalPages' => $totalPages,
+        'totalRows' => $totalRows,
+        'nameLetterFilter' => $nameLetterFilter,
+        'favOnly' => $favOnly,
+        'dynOnly' => $dynOnly,
+        'mtmOnly' => $mtmOnly,
+        'lockOnly' => $lockOnly,
+        'salOnly' => $salOnly,
+        'blcOnly' => $blcOnly,
+        'gpsOnly' => $gpsOnly,
+    ]);
     ?>
-    <div class="pagination">
-      <div class="filter-inline">
-        <div class="npc-filter-dropdown" style="position:relative;">
-          <button type="button" id="npc_filter_btn" class="btn" style="margin-right:6px;">Filters ▾</button>
-          <div id="npc_filter_menu" class="npc-filter-menu" style="display:none; position:absolute; left:0; top:calc(100% + 6px); background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:8px; min-width:220px; box-shadow:0 6px 18px rgba(0,0,0,0.35); z-index:15;">
-            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_fav" <?= $favOnly?'checked':'' ?>> ⭐Favorites</label>
-            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_dyn" <?= $dynOnly?'checked':'' ?>> ♻️Dynamic profile</label>
-            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_mtm" <?= $mtmOnly?'checked':'' ?>> 📃Middle-term memory</label>
-            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_lock" <?= $lockOnly?'checked':'' ?>> 🔒Locked</label>
-            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_sal" <?= $salOnly?'checked':'' ?>> 👋Auto Greeting</label>
-            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_blc" <?= $blcOnly?'checked':'' ?>> 🎮BGL: Auto Actions</label>
-            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_gps" <?= $gpsOnly?'checked':'' ?>> 📍BGL: GPS track</label>
-          </div>
-        </div>
-        <input id="npc_search" type="text" placeholder="Search..." value="<?= htmlspecialchars($q) ?>" />
-        <select id="npc_profile_filter" title="Filter by profile">
-          <option value="">All Profiles</option>
-          <?php foreach (($profileRows ?? []) as $pr): $pid=(string)($pr['id']??''); $lbl=$pr['label']??('Profile #'.$pid); ?>
-            <option value="<?= htmlspecialchars($pid) ?>" <?= ($profileIdFilter!=='' && (string)$profileIdFilter===$pid)?'selected':'' ?>><?= htmlspecialchars($lbl) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <?php $qbase = strtok($_SERVER['REQUEST_URI'], '?'); $make = function($p) use ($qbase){ return htmlspecialchars($qbase.'?page='.$p); }; ?>
-      <a class="<?= $page<=1?'disabled':'' ?>" href="<?= $make(1) ?>">First</a>
-      <a class="<?= $page<=1?'disabled':'' ?>" href="<?= $make(max(1,$page-1)) ?>">Prev</a>
-      <?php for ($p=max(1,$page-2); $p<=min($totalPages,$page+2); $p++): ?>
-        <?php if ($p === $page): ?><span class="active"><?= $p ?></span><?php else: ?><a href="<?= $make($p) ?>"><?= $p ?></a><?php endif; ?>
-      <?php endfor; ?>
-      <a class="<?= $page>=$totalPages?'disabled':'' ?>" href="<?= $make(min($totalPages,$page+1)) ?>">Next</a>
-      <a class="<?= $page>=$totalPages?'disabled':'' ?>" href="<?= $make($totalPages) ?>">Last</a>
-      <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Page <?= $page ?> / <?= $totalPages ?></span>
-      <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Total <?= $totalRows ?></span>
-      <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
-      <button id="npc_import_btn" type="button" title="Import NPC from JSON file">📥 Import NPC</button>
-      <button id="rel_bulk_build_btn" type="button" class="btn-rel-build" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
-      <button id="npc_bulk_switch_profile_btn" type="button" class="btn-rel-build" title="Switch all NPCs from one profile to another">🔀 Mass Switch Profile</button>
-      <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
-      <?php renderNpcLetterFilter($nameLetterFilter); ?>
-    </div>
     <div class="npc-grid">
     <?php foreach ($data as $row): ?>
         <?php 
@@ -1220,7 +1276,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                     <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                 <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
                 <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock - Locked profiles are protected from history pullback when loading saves"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
-                <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : "return confirm('Delete this NPC?');" ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">🗑️</a>
+                <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : "return confirm('Delete this NPC?');" ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">❌</a>
                 </div>
             </div>
             <div class="npc-divider"></div>
@@ -2805,7 +2861,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 <?php if ($totalPages >= 1): ?>
 <style>
 .pagination { display:flex; gap:8px; align-items:center; justify-content:center; margin:16px 0 0 0; flex-wrap:wrap; }
-.pagination a, .pagination span { 
+.pagination:not(.npc-toolbar) a, .pagination:not(.npc-toolbar) span { 
     padding:8px 12px; 
     border-radius:6px; 
     border:1px solid #3a3a3a; 
@@ -2814,19 +2870,19 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     text-decoration:none; 
     transition: all 0.2s ease;
 }
-.pagination a:hover { 
+.pagination:not(.npc-toolbar) a:hover { 
     background: rgba(58, 58, 58, 0.9); 
     border-color: #4a4a4a;
     transform: translateY(-1px);
 }
-.pagination .active { 
+.pagination:not(.npc-toolbar) .active { 
     background: linear-gradient(135deg, rgba(242, 124, 17, 0.2), rgba(242, 124, 17, 0.1)); 
     color: rgb(242, 124, 17); 
     border-color: rgba(242, 124, 17, 0.5); 
     font-weight:700; 
     box-shadow: inset 0 -2px 0 rgb(242, 124, 17);
 }
-.pagination .disabled { opacity:0.4; pointer-events:none; }
+.pagination:not(.npc-toolbar) .disabled { opacity:0.4; pointer-events:none; }
 .pagination button { 
     padding:8px 14px; 
     border-radius:6px; 
@@ -2875,7 +2931,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     display:flex;
     gap:6px;
     align-items:center;
-    justify-content:center;
+    justify-content:flex-start;
     flex-wrap:wrap;
     width:100%;
     margin-top:10px;
@@ -2884,7 +2940,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     background:#2a2a2a;
     border:1px solid #4a4a4a;
     color:#cfd9ea;
-    border-radius:999px;
+    border-radius:6px;
     padding:6px 10px;
     min-width:34px;
     font-size:12px;
@@ -2918,45 +2974,229 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     border-color: #4a4a4a;
     transform: translateY(-1px);
 }
+.pagination.npc-toolbar {
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:flex-start;
+    gap:12px;
+    padding:14px;
+    margin:16px 0 0 0;
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+    border-radius: 10px;
+    border: 1px solid #3a3a3a;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.pagination.npc-toolbar .npc-toolbar-main,
+.pagination.npc-toolbar .npc-toolbar-subrow {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+}
+.pagination.npc-toolbar .npc-toolbar-actions,
+.pagination.npc-toolbar .npc-toolbar-tools,
+.pagination.npc-toolbar .npc-toolbar-pager {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+}
+.pagination.npc-toolbar .npc-toolbar-actions {
+    flex:1 1 1192px;
+    min-width:1192px;
+    flex-wrap:nowrap;
+}
+.pagination.npc-toolbar .npc-toolbar-tools {
+    flex:1 1 320px;
+    justify-content:flex-end;
+}
+.pagination.npc-toolbar .npc-toolbar-pager {
+    flex:1 1 auto;
+}
+.pagination.npc-toolbar .npc-toolbar-btn {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    box-sizing:border-box;
+    margin:0;
+    padding:8px 14px;
+    border-radius:8px;
+    border:1px solid rgba(242, 124, 17, 0.32);
+    font-size:14px;
+    font-weight:600;
+    line-height:1.2;
+    font-family:inherit;
+    cursor:pointer;
+    transition:background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    white-space:nowrap;
+}
+.pagination.npc-toolbar .npc-toolbar-btn:hover {
+    transform:translateY(-1px);
+}
+.pagination.npc-toolbar .npc-toolbar-btn-uniform {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 228px;
+    width:228px;
+    min-width:228px;
+    max-width:228px;
+    box-sizing:border-box;
+    margin:0;
+    padding:8px 14px;
+    text-align:center;
+}
+.pagination.npc-toolbar .npc-toolbar-btn-action {
+    background:rgba(42, 42, 42, 0.8);
+    border-color:rgba(242, 124, 17, 0.48);
+    color:#ffffff;
+    box-shadow:0 4px 10px rgba(0, 0, 0, 0.18);
+}
+.pagination.npc-toolbar .npc-toolbar-btn-action:hover {
+    background:rgba(54, 54, 54, 0.92);
+    border-color:rgba(242, 124, 17, 0.72);
+    color:#ffffff;
+}
+.pagination.npc-toolbar .npc-toolbar-btn-danger {
+    background: linear-gradient(135deg, rgba(150, 36, 36, 0.96), rgba(110, 22, 22, 0.96));
+    border-color: rgba(255, 115, 115, 0.45);
+    color: #fff1f1;
+    box-shadow: 0 4px 10px rgba(126, 24, 24, 0.22);
+}
+.pagination.npc-toolbar .npc-toolbar-btn-danger:hover {
+    background: linear-gradient(135deg, rgba(168, 42, 42, 1), rgba(126, 26, 26, 1));
+    border-color: rgba(255, 145, 145, 0.6);
+}
+.pagination.npc-toolbar .npc-filter-dropdown {
+    position:relative;
+    flex:0 0 228px;
+    width:228px;
+}
+.pagination.npc-toolbar .npc-toolbar-filter-btn {
+    width:100%;
+}
+.pagination.npc-toolbar .npc-filter-menu {
+    position:absolute;
+    left:0;
+    top:calc(100% + 6px);
+    min-width:220px;
+    display:none;
+    background:#2a2a2a;
+    border:1px solid #4a4a4a;
+    border-radius:8px;
+    padding:8px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.35);
+    z-index:15;
+}
+.pagination.npc-toolbar .npc-filter-menu label {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:4px 0;
+    color:#e9efff;
+    font-size:13px;
+}
+.pagination.npc-toolbar .npc-toolbar-tools input[type="text"] {
+    flex:0 0 320px;
+    width:320px;
+    min-width:320px;
+    max-width:320px;
+}
+.pagination.npc-toolbar .npc-toolbar-tools select {
+    flex:0 0 295px;
+    width:295px;
+    min-width:295px;
+    max-width:295px;
+}
+.pagination.npc-toolbar .npc-page-link {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    box-sizing:border-box;
+    margin:0;
+    font-family:inherit;
+    appearance:none;
+    cursor:pointer;
+}
+.pagination.npc-toolbar .npc-page-link.disabled,
+.pagination.npc-toolbar .npc-page-link:disabled {
+    opacity:0.4;
+    pointer-events:none;
+    transform:none;
+}
+.pagination.npc-toolbar .npc-page-indicator {
+    color:rgb(242, 124, 17);
+    font-weight:700;
+    padding:0 4px;
+}
+.pagination.npc-toolbar .npc-total-pill {
+    margin-left:auto;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:8px 12px;
+    border-radius:8px;
+    border:1px solid #3a3a3a;
+    background:rgba(26, 26, 26, 0.78);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+}
+.pagination.npc-toolbar .npc-total-pill-icon {
+    font-size:15px;
+    opacity:0.9;
+}
+.pagination.npc-toolbar .npc-total-pill-value {
+    color:#e9efff;
+    font-weight:700;
+    font-size:22px;
+    line-height:1;
+}
+@media (max-width: 1200px) {
+    .pagination.npc-toolbar .npc-toolbar-actions {
+        min-width:0;
+        flex-wrap:wrap;
+    }
+    .pagination.npc-toolbar .npc-toolbar-tools {
+        justify-content:flex-start;
+    }
+    .pagination.npc-toolbar .npc-total-pill {
+        margin-left:0;
+    }
+}
+@media (max-width: 780px) {
+    .pagination.npc-toolbar .npc-toolbar-tools,
+    .pagination.npc-toolbar .npc-toolbar-actions,
+    .pagination.npc-toolbar .npc-toolbar-pager {
+        width:100%;
+    }
+    .pagination.npc-toolbar .npc-toolbar-tools input[type="text"],
+    .pagination.npc-toolbar .npc-toolbar-tools select {
+        flex:1 1 100%;
+        min-width:0;
+    }
+    .pagination.npc-toolbar .npc-toolbar-subrow {
+        align-items:flex-start;
+    }
+}
 </style>
-<div class="pagination" style="padding: 14px; background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98)); border-radius: 10px; border: 1px solid #3a3a3a; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); margin-bottom: 16px;">
-  <div class="filter-inline">
-    <div class="npc-filter-dropdown" style="position:relative;">
-      <button type="button" id="npc_filter_btn_top" class="btn" style="margin-right:6px;">Filters ▾</button>
-      <div id="npc_filter_menu_top" class="npc-filter-menu" style="display:none; position:absolute; left:0; top:calc(100% + 6px); background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:8px; min-width:220px; box-shadow:0 6px 18px rgba(0,0,0,0.35); z-index:15;">
-        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_fav_top" <?= $favOnly?'checked':'' ?>> ⭐Favorites</label>
-        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_dyn_top" <?= $dynOnly?'checked':'' ?>> ♻️Dynamic profile</label>
-        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_mtm_top" <?= $mtmOnly?'checked':'' ?>> 📃Middle-term memory</label>
-        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_lock_top" <?= $lockOnly?'checked':'' ?>> 🔒Locked</label>
-        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_sal_top" <?= $salOnly?'checked':'' ?>> 👋Auto Greeting</label>
-        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_blc_top" <?= $blcOnly?'checked':'' ?>> 🎮Auto Actions</label>
-        <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_gps_top" <?= $gpsOnly?'checked':'' ?>> 📍Hourly Tracking</label>
-      </div>
-    </div>
-    <input id="npc_search" type="text" placeholder="Search..." value="<?= htmlspecialchars($q) ?>" />
-    <select id="npc_profile_filter" title="Filter by profile">
-      <option value="">All Profiles</option>
-      <?php foreach (($profileRows ?? []) as $pr): $pid=(string)($pr['id']??''); $lbl=$pr['label']??('Profile #'.$pid); ?>
-        <option value="<?= htmlspecialchars($pid) ?>" <?= ($profileIdFilter!=='' && (string)$profileIdFilter===$pid)?'selected':'' ?>><?= htmlspecialchars($lbl) ?></option>
-      <?php endforeach; ?>
-    </select>
-  </div>
-  <?php $qbase = strtok($_SERVER['REQUEST_URI'], '?'); $make = function($p) use ($qbase){ return htmlspecialchars($qbase.'?page='.$p); }; ?>
-  <a class="<?= $page<=1?'disabled':'' ?>" href="<?= $make(1) ?>">First</a>
-  <a class="<?= $page<=1?'disabled':'' ?>" href="<?= $make(max(1,$page-1)) ?>">Prev</a>
-  <?php for ($p=max(1,$page-2); $p<=min($totalPages,$page+2); $p++): ?>
-    <?php if ($p === $page): ?><span class="active"><?= $p ?></span><?php else: ?><a href="<?= $make($p) ?>"><?= $p ?></a><?php endif; ?>
-  <?php endfor; ?>
-  <a class="<?= $page>=$totalPages?'disabled':'' ?>" href="<?= $make(min($totalPages,$page+1)) ?>">Next</a>
-  <a class="<?= $page>=$totalPages?'disabled':'' ?>" href="<?= $make($totalPages) ?>">Last</a>
-  <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Page <?= $page ?> / <?= $totalPages ?></span>
-  <span style="border:none; background:transparent; color:rgb(242, 124, 17);">Total <?= $totalRows ?></span>
-  <button id="npc_create_btn" type="button" style="margin-left:8px;">+ Create NPC</button>
-  <button id="rel_bulk_build_btn" type="button" class="btn-rel-build" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
-  <button id="npc_bulk_switch_profile_btn" type="button" class="btn-rel-build" title="Switch all NPCs from one profile to another">🔀 Mass Switch Profile</button>
-  <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
-  <?php renderNpcLetterFilter($nameLetterFilter); ?>
-</div>
+<?php renderNpcToolbar([
+    'top' => true,
+    'q' => $q,
+    'profileRows' => $profileRows ?? [],
+    'profileIdFilter' => $profileIdFilter,
+    'page' => $page,
+    'totalPages' => $totalPages,
+    'totalRows' => $totalRows,
+    'nameLetterFilter' => $nameLetterFilter,
+    'favOnly' => $favOnly,
+    'dynOnly' => $dynOnly,
+    'mtmOnly' => $mtmOnly,
+    'lockOnly' => $lockOnly,
+    'salOnly' => $salOnly,
+    'blcOnly' => $blcOnly,
+    'gpsOnly' => $gpsOnly,
+]); ?>
 <div style="margin:10px 0; padding:10px 14px; background:rgba(242,124,17,0.08); border:1px solid rgba(242,124,17,0.25); border-radius:8px; font-size:12.5px; color:#cfd9ea; line-height:1.5;">
   <strong style="color:rgb(242,124,17);">History Pullback:</strong>
   Every time a save game is loaded, CHIM snapshots all NPC profiles and restores <strong>unlocked</strong> NPCs to their state at the save's Tamrielic timestamp.
@@ -3043,7 +3283,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                 <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
                 <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock - Locked profiles are protected from history pullback when loading saves"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
-                <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : "return confirm('Delete this NPC?');" ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">🗑️</a>
+                <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : "return confirm('Delete this NPC?');" ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">❌</a>
             </div>
         </div>
         <div class="npc-divider"></div>
@@ -4269,6 +4509,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       });
     });
   }
+  function bindNpcPageButtons(root){
+    const scope = root || document;
+    scope.querySelectorAll('.npc-page-link[data-page]').forEach(btn=>{
+      if (btn.disabled) return;
+      btn.addEventListener('click', function(e){
+        e.preventDefault();
+        const nextPage = parseInt(this.getAttribute('data-page') || '1', 10);
+        refreshList(Number.isFinite(nextPage) ? nextPage : 1);
+      });
+    });
+  }
   async function refreshList(page){
     const params = new URLSearchParams(window.location.search);
     const si = document.getElementById('npc_search');
@@ -4353,6 +4604,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       });
       const newCreate = document.getElementById('npc_create_btn');
       if (newCreate){ newCreate.addEventListener('click', function(){ openModal('npc_master.php?partial=1'); }); }
+      try { if (window.bindNpcImportButton) window.bindNpcImportButton(document.getElementById('npc_import_btn')); } catch(_){}
       // rebind bulk delete in refreshed DOM
       try { if (window.bindNpcBulkDelete) window.bindNpcBulkDelete(document.getElementById('npc_bulk_delete_btn')); } catch(_){}
       // rebind mass switch in refreshed DOM
@@ -4364,13 +4616,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       document.querySelectorAll('[data-pick-picture-id]').forEach(btn=>{
         btn.addEventListener('click', function(e){ e.preventDefault(); const id = this.getAttribute('data-pick-picture-id'); if (!id) return; if (typeof window.OPEN_GALLERY_PICKER_FOR === 'function') window.OPEN_GALLERY_PICKER_FOR(id); });
       });
-      document.querySelectorAll('.pagination a[href]').forEach(a=>{
-        a.addEventListener('click', function(e){
-          e.preventDefault();
-          const m = this.href.match(/page=(\d+)/); const p = m?parseInt(m[1],10):1; refreshList(p);
-        });
-      });
       bindNpcLetterButtons(newPag);
+      bindNpcPageButtons(newPag);
       const newSearch = document.getElementById('npc_search');
       if (newSearch){
         // Rebind with debounce and restore focus/caret
@@ -4396,11 +4643,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   const profileSel = document.getElementById('npc_profile_filter');
   if (profileSel){ profileSel.addEventListener('change', function(){ refreshList(1); }); }
   bindNpcLetterButtons(document);
+  bindNpcPageButtons(document);
   // Removed alpha toggle; default remains ascending (favorites first)
-  // Hook existing pagination for AJAX
-  document.querySelectorAll('.pagination a[href]').forEach(a=>{
-    a.addEventListener('click', function(e){ e.preventDefault(); const m = this.href.match(/page=(\d+)/); const p = m?parseInt(m[1],10):1; refreshList(p); });
-  });
   // Toggle buttons
   // Filter dropdown toggles
   (function(){
@@ -4469,7 +4713,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <span class="npc-tags-top" style="display:none"></span>
                 <a class="btn btn-toggle" href="#" data-favorite-id="${id}" title="Toggle favorite">☆</a>
                 <a class="btn btn-toggle" href="#" data-lock-id="${id}" title="Toggle lock - Locked profiles are protected from history pullback when loading saves">🔓</a>
-                <a class="btn btn-trash" href="?delete=${id}" onclick="return confirm('Delete this NPC?');" title="Delete">🗑️</a>
+                <a class="btn btn-trash" href="?delete=${id}" onclick="return confirm('Delete this NPC?');" title="Delete">❌</a>
               </div>
             </div>
             <div class="npc-divider"></div>
@@ -4831,9 +5075,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   }
   
   // Import NPC button in toolbar (create new NPC from JSON)
-  const importBtn = document.getElementById('npc_import_btn');
-  if (importBtn) {
-    importBtn.addEventListener('click', function(){
+  function bindNpcImportButton(btn){
+    if (!btn) return;
+    btn.addEventListener('click', function(){
       // Create file input
       const input = document.createElement('input');
       input.type = 'file';
@@ -4893,6 +5137,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       input.click();
     });
   }
+  window.bindNpcImportButton = bindNpcImportButton;
+  bindNpcImportButton(document.getElementById('npc_import_btn'));
 })();
 
 </script>
