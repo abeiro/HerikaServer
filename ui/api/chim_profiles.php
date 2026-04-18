@@ -4,11 +4,31 @@
  * Returns profile information with LLM connector details
  */
 
+error_reporting(E_ERROR);
+session_start();
+
+define('BASE_PATH', dirname(dirname(__DIR__)));
+define('CONFIG_PATH', BASE_PATH . DIRECTORY_SEPARATOR . 'conf');
+define('LIB_PATH', BASE_PATH . DIRECTORY_SEPARATOR . 'lib');
+
+$configFilepath = CONFIG_PATH . DIRECTORY_SEPARATOR;
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
-require_once(__DIR__ . "/../../conf/conf.php");
-require_once(__DIR__ . "/../../lib/db/{$GLOBALS["DBDRIVER"]}.class.php");
+if (!file_exists($configFilepath . "conf.php")) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Configuration file not found',
+        'profile_slots' => []
+    ]);
+    exit;
+}
+
+require_once(dirname(__DIR__) . DIRECTORY_SEPARATOR . "profile_loader.php");
+require_once(LIB_PATH . DIRECTORY_SEPARATOR . "logger.php");
+require_once(LIB_PATH . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
 
 try {
     $db = new sql();
