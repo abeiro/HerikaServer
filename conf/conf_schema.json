@@ -245,14 +245,14 @@
   "TTS": {
     "_title":"Text-to-Speech Service",
     "MELOTTS": {
-      "_title":"MeloTTS (Installed in DwemerDistro)",
+      "_title":"MeloTTS",
       "endpoint":{"type":"url","description":"Endpoint URL. Leave as is.","helpurl":"https://github.com/myshell-ai/MeloTTS"},
       "language":{"type":"select","values":["EN","ES","FR","ZH","JP","KR"],"description":"Language Model. Should be EN if using default installation"},
       "speed":{"type":"number","description":"Speech Speed"},
       "voiceid":{"type":"string","description":"Voice ID. Should be set automatically for most Vanilla Skyrim NPCs. Uses Skyrim VoiceType ID, e.g. femaleeventoned.<b> Click the help/doc link for full list of voiceids!</b>", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#melotts-voice-ids"}
     },
     "XTTSFASTAPI": {
-      "_title":"CHIM XTTS (Installed in DwemerDistro)",
+      "_title":"CHIM XTTS",
       "endpoint":{"type":"url","description":"Leave as is if using CHIM XTTS. If you want to use Mantella XTTS then click[HOST PC IP]. [WSL IP] will set it back to point to CHIM XTTS.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chim-xtts"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
@@ -262,7 +262,7 @@
       "PARALINGUISTIC_TAGS_LIST":{"type":"string","description":"Comma-separated list of supported paralinguistic tags (e.g., [laugh],[sigh],[gasp]). Tags are case-insensitive.","scope":"global"}
     },
     "CHATTERBOX": {
-      "_title":"Chatterbox (Optimized XTTS Fork)",
+      "_title":"Chatterbox",
       "endpoint":{"type":"url","description":"Chatterbox endpoint. Uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chatterbox"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
@@ -272,14 +272,14 @@
       "PARALINGUISTIC_TAGS_LIST":{"type":"string","description":"Comma-separated list of supported paralinguistic tags (e.g., [laugh],[sigh],[gasp]). Tags are case-insensitive.","scope":"global"}
     },
     "POCKETTTS": {
-      "_title":"PocketTTS (CPU-based TTS)",
+      "_title":"PocketTTS",
       "endpoint":{"type":"url","description":"PocketTTS endpoint. CPU-only TTS, uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#pockettts"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS POCKETTTS voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"}
     },
     "MIMIC3": {
-      "_title":"MIMIC3 (Installed in DwemerDistro)",
+      "_title":"MIMIC3",
       "URL": {"type":"url","description":"MIMIC3 Service URL."},
       "voice": {"type":"string","description":"Voice ID code"},
       "rate": {"type":"number","description":"Voice speed"},
@@ -347,13 +347,18 @@
     },
     "ELEVEN_LABS": {
       "_title":"ElevenLabs Text-To-Speech",
-      "voice_id": {"type":"string","description":"Voice code","helpurl":"https://elevenlabs.io/docs/api-reference/voices/get"},
-      "optimize_streaming_latency": {"type":"string","description":"Optimize Streaming Latency","helpurl":"https://docs.elevenlabs.io/api-reference/text-to-speech"},
-      "model_id": {"type":"string","description":"Model ID","helpurl":"https://beta.elevenlabs.io/speech-synthesis"},
-      "stability":{"userlvl":"pro","type":"number","description":"Stability"},
-      "similarity_boost": {"userlvl":"pro","type":"number","description":"Similarity_Boost"},
-      "style": {"type":"number","description":"Style"},
-      "API_KEY": {"type":"apikey","description":"Eleven Labs API key.","code":"11LABS_API_KEY"}
+      "voice_id": {"type":"string","description":"ElevenLabs voice ID to speak with.","helpurl":"https://elevenlabs.io/docs/api-reference/voices/get"},
+      "optimize_streaming_latency": {"type":"string","description":"Reduces response delay at some cost to quality and text handling. Use 0 for default behavior; higher values favor speed more aggressively.","helpurl":"https://docs.elevenlabs.io/api-reference/text-to-speech"},
+      "model_id": {"type":"string","description":"ElevenLabs model to use for this connector. Use eleven_v3 if you want V3 enhancers or audio tags.","helpurl":"https://elevenlabs.io/docs/api-reference/text-to-speech/convert"},
+      "stability":{"userlvl":"pro","type":"number","description":"Controls how consistent each generation sounds. Lower values are more expressive, while higher values are steadier and less varied."},
+      "similarity_boost": {"userlvl":"pro","type":"number","description":"Controls how closely the output sticks to the selected voice. Higher values usually sound more like the source voice, but can reduce flexibility."},
+      "style": {"type":"number","description":"Adds extra stylization and exaggeration to the delivery. Higher values can sound more dramatic, but may increase latency."},
+      "speed": {"type":"number","description":"Adjusts the speaking rate of the generated audio. 1.0 is normal speed."},
+      "use_speaker_boost": {"type":"boolean","description":"Boosts resemblance to the original voice at a small latency cost. Ignored by eleven_v3."},
+      "apply_text_normalization": {"type":"select","description":"Controls whether numbers, dates, abbreviations, and similar text are rewritten before speech. Auto lets ElevenLabs decide, on always normalizes, and off keeps the raw text.","values":["auto","on","off"]},
+      "apply_language_text_normalization": {"type":"boolean","description":"Enables extra language-specific cleanup before synthesis. This is mainly useful for languages that need special text handling, such as Japanese."},
+      "v3_audio_tags": {"type":"longstring","description":"Optional Eleven v3 prompt tags added before the text, such as [whispers] or [curious]. Only used when model_id is eleven_v3."},
+      "API_KEY": {"type":"apikey","description":"Legacy ElevenLabs API key setting. Prefer assigning an ElevenLabs API Badge to the connector instead.","code":"11LABS_API_KEY"}
     },
     "GCP": {
       "_title":"Google Cloud Platform Text-To-Speech",

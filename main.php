@@ -602,6 +602,49 @@ try {
     Logger::warn("Narrator initialization failed: " . $e->getMessage());
 } 
 
+function maybeQueueNpcVoiceRefresh($currentNpcData, $npcMaster)
+{
+    if (!$currentNpcData || !($npcMaster instanceof NpcMaster)) {
+        return $currentNpcData;
+    }
+
+    $npcName = trim((string)($currentNpcData["npc_name"] ?? ""));
+    if ($npcName === "" || strcasecmp($npcName, "The Narrator") === 0) {
+        return $currentNpcData;
+    }
+
+    $voiceId = trim((string)($currentNpcData["voiceid"] ?? ""));
+    if ($voiceId !== "") {
+        return $currentNpcData;
+    }
+
+    $extended = $npcMaster->getExtendedData($currentNpcData);
+    $lastRequestedAt = intval($extended["voice_refresh_requested_at"] ?? 0);
+    $cooldownSeconds = 300;
+    $now = time();
+
+    if ($lastRequestedAt > 0 && ($now - $lastRequestedAt) < $cooldownSeconds) {
+        return $currentNpcData;
+    }
+
+    $extended["voice_refresh_requested_at"] = $now;
+    $extended["voice_refresh_attempts"] = intval($extended["voice_refresh_attempts"] ?? 0) + 1;
+    $extended["voice_refresh_last_result"] = "requested";
+
+    $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extended);
+    $npcMaster->updateByArray($currentNpcData);
+
+    $refId = trim((string)($currentNpcData["refid"] ?? ""));
+    if ($refId !== "" && stripos($refId, "0x") !== 0) {
+        $refId = "0x{$refId}";
+    }
+
+    echo "{$npcName}|rolecommand|RefreshNPCVoice@{$refId}@{$npcName}\r\n";
+    error_log("[NPCVOICE_REFRESH] Requested refresh for {$npcName} ({$refId})");
+
+    return $currentNpcData;
+}
+
 
 // Profile loading
 if (isset($_GET["profile"])) {
@@ -612,6 +655,7 @@ if (isset($_GET["profile"])) {
     $OVERRIDES["STTFUNCTION"] = isset($GLOBALS["STTFUNCTION"]) ? $GLOBALS["STTFUNCTION"] : "";
     $OVERRIDES["TTSFUNCTION_PLAYER"] = isset($GLOBALS["TTSFUNCTION_PLAYER"]) ? $GLOBALS["TTSFUNCTION_PLAYER"] : "";
     $OVERRIDES["TTSFUNCTION_PLAYER_VOICE"] = isset($GLOBALS["TTSFUNCTION_PLAYER_VOICE"]) ? $GLOBALS["TTSFUNCTION_PLAYER_VOICE"] : "";
+    $OVERRIDES["TTSFUNCTION_PLAYER_VOICE_ID"] = isset($GLOBALS["TTSFUNCTION_PLAYER_VOICE_ID"]) ? $GLOBALS["TTSFUNCTION_PLAYER_VOICE_ID"] : "";
     $OVERRIDES["TTSFUNCTION_PLAYER_LANGUAGE"] = isset($GLOBALS["TTSFUNCTION_PLAYER_LANGUAGE"]) ? $GLOBALS["TTSFUNCTION_PLAYER_LANGUAGE"] : "";
     
     // Check if this is The Narrator (by MD5)
@@ -943,6 +987,7 @@ if (isset($_GET["profile"])) {
     $GLOBALS["STTFUNCTION"]=$OVERRIDES["STTFUNCTION"];
     $GLOBALS["TTSFUNCTION_PLAYER"]=$OVERRIDES["TTSFUNCTION_PLAYER"];
     $GLOBALS["TTSFUNCTION_PLAYER_VOICE"]=$OVERRIDES["TTSFUNCTION_PLAYER_VOICE"];
+    $GLOBALS["TTSFUNCTION_PLAYER_VOICE_ID"]=$OVERRIDES["TTSFUNCTION_PLAYER_VOICE_ID"];
     $GLOBALS["TTSFUNCTION_PLAYER_LANGUAGE"]=$OVERRIDES["TTSFUNCTION_PLAYER_LANGUAGE"];
     
     // $GLOBALS["PROMPT_HEAD"]=$OVERRIDES["PROMPT_HEAD"];
@@ -951,6 +996,16 @@ if (isset($_GET["profile"])) {
 } else {
     //error_log(__FILE__.". Using default profile because NO GET PROFILE SPECIFIED");
     $GLOBALS["USING_DEFAULT_PROFILE"]=true;
+}
+
+if (isset($GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"]) && $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] && ($GLOBALS["HERIKA_NAME"] ?? "") !== "The Narrator") {
+    $npcMasterForVoiceRefresh = isset($npcMaster) && ($npcMaster instanceof NpcMaster)
+        ? $npcMaster
+        : new NpcMaster();
+    $refreshedNpcData = maybeQueueNpcVoiceRefresh($GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"], $npcMasterForVoiceRefresh);
+    if ($refreshedNpcData) {
+        $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $refreshedNpcData;
+    }
 }
 
 

@@ -269,7 +269,11 @@ class CoreProfile
 
         // Load TTS connector configuration
         $ttsConMgr = new TTSConnector();
-        $ttsCon    = $ttsConMgr->getById($currentProfileData["tts_connector_id"]);
+        $ttsConnectorId = intval($currentProfileData['tts_connector_id'] ?? 0);
+        $ttsCon = $ttsConnectorId > 0 ? $ttsConMgr->getById($ttsConnectorId) : null;
+        if (!$ttsCon) {
+            $ttsCon = ['driver' => 'none', 'metadata' => '{}'];
+        }
         $ttsConMgr->setOldGlobals($ttsCon);
 
         // Decode and apply profile metadata

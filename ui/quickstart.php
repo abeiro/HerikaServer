@@ -273,6 +273,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
         $buffer .= "?>" . PHP_EOL;
         $target = $rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
         $result = @file_put_contents($target, $buffer);
+        if ($result !== false) {
+            try {
+                include($target);
+                require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "api_badge.class.php");
+                require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
+                $ttsConnector = new TTSConnector();
+                $ttsConnector->ensureLegacyConnectorMigration(true);
+                $ttsConnector->importLegacyPlayerSettings();
+            } catch (Throwable $_e) {
+                // Keep quickstart save successful even if connector sync is unavailable.
+            }
+        }
         echo json_encode([ 'ok' => $result !== false ]);
         exit;
     }

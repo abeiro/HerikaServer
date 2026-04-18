@@ -73,8 +73,14 @@ if ($voicelogic === 'voicetype' || true) { // force
     if ($currentNpcData) {
         if (empty($currentNpcData["voiceid"])) {
             $currentNpcData["voiceid"] = $codename;
-            $currentNpcData            = $npcMaster->updateByArray($currentNpcData);
         }
+
+        $extended = $npcMaster->getExtendedData($currentNpcData);
+        unset($extended["voice_refresh_requested_at"]);
+        $extended["voice_refresh_last_result"] = "sample_uploaded";
+        $extended["voice_refresh_last_resolved_at"] = time();
+        $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extended);
+        $currentNpcData = $npcMaster->updateByArray($currentNpcData);
     }
 
     $db->close();

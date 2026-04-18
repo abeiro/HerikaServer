@@ -7,6 +7,7 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "core_profiles.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
 
 // Determine web root
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -185,11 +186,17 @@ $allProfiles = $profileMgr->readAll();
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "llm_connector.class.php");
 $connectorMgr = new LLMConnector();
 $allConnectors = $connectorMgr->readAll();
+$ttsConnectorMgr = new TTSConnector();
+$allTtsConnectors = $ttsConnectorMgr->readAll();
 
 // Build lookup maps
 $llmById = [];
 foreach ($allConnectors as $conn) {
     $llmById[$conn['id']] = $conn['label'] ?? 'Connector ' . $conn['id'];
+}
+$ttsById = [];
+foreach ($allTtsConnectors as $conn) {
+    $ttsById[$conn['id']] = $conn['label'] ?? 'Connector ' . $conn['id'];
 }
 
 // Build profile connector map
@@ -901,6 +908,8 @@ if (!$isEmbed) {
                     };
                     ?>
                     <div id="profile_llm_summary" style="display:grid; grid-template-columns: auto 1fr; gap:8px; color:#cfd9ea; font-size: 13px; line-height: 1.6;">
+                        <div style="color:rgb(242,124,17); font-weight:600;">🔊 TTS:</div>
+                        <div><?= htmlspecialchars($ttsById[$currentProfileData['tts_connector_id'] ?? null] ?? '—') ?></div>
                         <div style="color:rgb(242,124,17); font-weight:600;">🕹️ Standard:</div>
                         <div><?= $getConnectorLabel($currentProfileData['llm_primary_id'] ?? null) ?></div>
                         
@@ -927,10 +936,16 @@ if (!$isEmbed) {
             (function(){
                 const PROFILE_CONN = <?= json_encode($profilesConnById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
                 const LLM_LABELS = <?= json_encode($llmById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+                const TTS_LABELS = <?= json_encode($ttsById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
                 
                 function labelOf(id){ 
                     const k = String(id || ''); 
                     return (k && LLM_LABELS[k]) ? String(LLM_LABELS[k]) : '—'; 
+                }
+                
+                function ttsLabelOf(id){
+                    const k = String(id || '');
+                    return (k && TTS_LABELS[k]) ? String(TTS_LABELS[k]) : '—';
                 }
                 
                 function renderProfileConnectors(pid){
@@ -939,6 +954,7 @@ if (!$isEmbed) {
                     const pc = PROFILE_CONN[String(pid || '')] || null;
                     
                     const rows = [
+                        ['🔊 TTS:', ttsLabelOf(pc ? pc.tts_connector_id : null)],
                         ['🕹️ Standard:', labelOf(pc ? pc.llm_primary_id : null)],
                         ['🏃‍♂️‍➡️ Fast:', labelOf(pc ? pc.llm_secondary_id : null)],
                         ['💪 Power:', labelOf(pc ? pc.llm_tertiary_id : null)],

@@ -373,12 +373,17 @@ $TTS["openai"]["voice"]='nova';	//Voice ID.
 $TTS["openai"]["model_id"]='tts-1';	//Model.
 //ElevenLabs TTS
 $TTS["ELEVEN_LABS"]["voice_id"]="EXAVITQu4vr4xnSDxMaL";	//Voice ID.
-$TTS["ELEVEN_LABS"]["optimize_streaming_latency"]="0"; //Optimize streaming latency.
-$TTS["ELEVEN_LABS"]["model_id"]="eleven_monolingual_v1"; //Model ID.
-$TTS["ELEVEN_LABS"]["stability"]="0.75"; //Stability.
-$TTS["ELEVEN_LABS"]["similarity_boost"]="0.75"; //Similarity boost.
-$TTS["ELEVEN_LABS"]["style"]=0.0; //Style.
-$TTS["ELEVEN_LABS"]["API_KEY"]=""; //API key.
+$TTS["ELEVEN_LABS"]["optimize_streaming_latency"]="0"; //Latency optimization level. 0 keeps default quality/latency balance.
+$TTS["ELEVEN_LABS"]["model_id"]="eleven_monolingual_v1"; //ElevenLabs model to use. Set to eleven_v3 to use V3 enhancers/audio tags.
+$TTS["ELEVEN_LABS"]["stability"]="0.75"; //Higher values sound steadier and less varied.
+$TTS["ELEVEN_LABS"]["similarity_boost"]="0.75"; //Higher values cling more closely to the selected voice.
+$TTS["ELEVEN_LABS"]["style"]=0.0; //Adds extra style exaggeration. Higher values can increase latency.
+$TTS["ELEVEN_LABS"]["speed"]=1.0; //Speaking rate. 1.0 is normal speed.
+$TTS["ELEVEN_LABS"]["use_speaker_boost"]=true; //Boosts resemblance to the original voice. Ignored by eleven_v3.
+$TTS["ELEVEN_LABS"]["apply_text_normalization"]="auto"; //Rewrites numbers, dates, abbreviations, etc. before speech. auto|on|off
+$TTS["ELEVEN_LABS"]["apply_language_text_normalization"]=false; //Adds extra language-specific cleanup before synthesis.
+$TTS["ELEVEN_LABS"]["v3_audio_tags"]=""; //Optional Eleven v3 prompt tags prefixed to the text, such as [whispers].
+$TTS["ELEVEN_LABS"]["API_KEY"]=""; //Legacy API key. Prefer using an ElevenLabs API Badge in connectors.
 //Google Cloud Platform TTS
 $TTS["GCP"]["GCP_SA_FILEPATH"]="meta-chassis-391906-122bdf85aa6f.json"; //Google Cloud Platform auth file.
 $TTS["GCP"]["voice_name"]="en-GB-Neural2-C"; //Voice ID.

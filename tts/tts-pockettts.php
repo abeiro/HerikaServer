@@ -186,13 +186,12 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 	
 			}
 		}
-		$voice=isset($GLOBALS["TTS"]["FORCED_VOICE_DEV"])?$GLOBALS["TTS"]["FORCED_VOICE_DEV"]:$GLOBALS["TTS"]["POCKETTTS"]["voiceid"];
-		
+		$voice = $GLOBALS["PATCH_OVERRIDE_VOICE"]
+			?? $GLOBALS["TTS"]["FORCED_VOICE_DEV"]
+			?? ($GLOBALS["TTS"]["POCKETTTS"]["voiceid"] ?? '');
+
 		if (empty($voice))
-			$voice=$GLOBALS["TTS"]["POCKETTTS"]["voiceid"];
-	
-		if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]))
-			$voice=$GLOBALS["PATCH_OVERRIDE_VOICE"];
+			$voice = $GLOBALS["TTS"]["POCKETTTS"]["voiceid"] ?? '';
 
 		if ($GLOBALS)	
 			$data = array(

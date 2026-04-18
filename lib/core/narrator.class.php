@@ -462,6 +462,7 @@ class Narrator
         }
 
         if (isset($allSettings['voiceid']) && $allSettings['voiceid']) {
+            $GLOBALS['PATCH_OVERRIDE_VOICE']          = $allSettings['voiceid'];
 
             $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']  = $allSettings['voiceid'];
             $GLOBALS['TTS']['CHATTERBOX']['voiceid']   = $allSettings['voiceid'];
@@ -479,6 +480,8 @@ class Narrator
             $GLOBALS['TTS']['CARTESIA']['voiceid']     = $allSettings['voiceid'];
             $GLOBALS['TTS']['INWORLD']['voiceid']      = $allSettings['voiceid'];
 
+        } else {
+            unset($GLOBALS['PATCH_OVERRIDE_VOICE']);
         }
     }
     
