@@ -237,6 +237,12 @@ $PROMPTS=array(
         ],
         "player_request"=>["{$GLOBALS["PLAYER_NAME"]} gestures for {$GLOBALS['HERIKA_NAME']} to continue."]
     ],
+    "continue_group"=>[
+        "cue"=>[
+            "Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Continue the ongoing group discussion. Build on what was just said and stay with the current topic. {$GLOBALS["TEMPLATE_DIALOG"]}"
+        ],
+        "player_request"=>["{$GLOBALS["PLAYER_NAME"]} gestures for the conversation to continue."]
+    ],
     // Database Prompt (Diary)
     "diary"=>[ 
         "cue"=>["Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}s recent interactions and events written above into {$GLOBALS["HERIKA_NAME"]}s diary. WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}."],
