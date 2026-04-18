@@ -7,6 +7,7 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "core_profiles.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
 
 // Determine web root
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -21,6 +22,7 @@ $webRoot = rtrim($webRoot, '/');
 
 $GLOBALS["db"] = new sql();
 $narrator = new Narrator();
+$narrator->ensureDefaultCharacterData();
 
 $saveSuccess = false;
 $saveMessage = '';
@@ -34,9 +36,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
         $narrator->set('random_enabled', isset($_POST['random_enabled']) && $_POST['random_enabled'] === '1' ? '1' : '0');
         $narrator->set('books_only_narrator', isset($_POST['books_only_narrator']) && $_POST['books_only_narrator'] === '1' ? '1' : '0');
         $narrator->set('hide_from_context', isset($_POST['hide_from_context']) && $_POST['hide_from_context'] === '1' ? '1' : '0');
-        $narrator->set('inline_narration_enabled', isset($_POST['inline_narration_enabled']) && $_POST['inline_narration_enabled'] === '1' ? '1' : '0');
+        $inlineNarrationMode = isset($_POST['inline_narration_mode']) ? strtolower(trim((string)$_POST['inline_narration_mode'])) : 'disabled';
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+            $inlineNarrationMode = 'disabled';
+        }
+        $narrator->set('inline_narration_mode', $inlineNarrationMode);
         $narrator->set('preserve_asterisks_in_context', isset($_POST['preserve_asterisks_in_context']) && $_POST['preserve_asterisks_in_context'] === '1' ? '1' : '0');
-        $narrator->set('remove_asterisks_from_output', isset($_POST['remove_asterisks_from_output']) && $_POST['remove_asterisks_from_output'] === '1' ? '1' : '0');
+        $narrator->set('remove_asterisks_from_player_input', isset($_POST['remove_asterisks_from_player_input']) && $_POST['remove_asterisks_from_player_input'] === '1' ? '1' : '0');
+        $narrator->set('remove_asterisks_from_npc_output', isset($_POST['remove_asterisks_from_npc_output']) && $_POST['remove_asterisks_from_npc_output'] === '1' ? '1' : '0');
         $narrator->set('diary_enabled', isset($_POST['diary_enabled']) && $_POST['diary_enabled'] === '1' ? '1' : '0');
         
         // Save integer settings
@@ -139,11 +146,22 @@ $questCommentChance = $narrator->getInt('quest_comment_chance', 10);
 $questCommentCooldown = $narrator->getInt('quest_comment_cooldown', 3);
 $booksOnlyNarrator = $narrator->getBool('books_only_narrator', false);
 $hideFromContext = $narrator->getBool('hide_from_context', false);
-$inlineNarrationEnabled = $narrator->getBool('inline_narration_enabled', false);
+$inlineNarrationMode = strtolower(trim((string)($narrator->get('inline_narration_mode') ?? '')));
+if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+    if (isset($GLOBALS['INLINE_NARRATION_MODE']) && in_array(strtolower(trim((string)$GLOBALS['INLINE_NARRATION_MODE'])), ['disabled', 'narrator', 'npc'], true)) {
+        $inlineNarrationMode = strtolower(trim((string)$GLOBALS['INLINE_NARRATION_MODE']));
+    } else {
+        $inlineNarrationMode = $narrator->getBool('inline_narration_enabled', isset($GLOBALS['INLINE_NARRATION_ENABLED']) ? (bool)$GLOBALS['INLINE_NARRATION_ENABLED'] : false) ? 'narrator' : 'disabled';
+    }
+}
 $preserveAsterisksInContext = $narrator->getBool('preserve_asterisks_in_context', false);
-$removeAsterisksFromOutput = $narrator->getBool(
-    'remove_asterisks_from_output',
-    isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] : false
+$removeAsterisksFromPlayerInput = $narrator->getBool(
+    'remove_asterisks_from_player_input',
+    isset($GLOBALS['REMOVE_ASTERISKS_FROM_PLAYER_INPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_PLAYER_INPUT'] : (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] : true)
+);
+$removeAsterisksFromNpcOutput = $narrator->getBool(
+    'remove_asterisks_from_npc_output',
+    isset($GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'] : (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] : true)
 );
 $diaryEnabled = $narrator->getBool('diary_enabled', true);
 $dynamicProfileEnabled = $narrator->getBool('dynamic_profile', false);
@@ -168,11 +186,17 @@ $allProfiles = $profileMgr->readAll();
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "llm_connector.class.php");
 $connectorMgr = new LLMConnector();
 $allConnectors = $connectorMgr->readAll();
+$ttsConnectorMgr = new TTSConnector();
+$allTtsConnectors = $ttsConnectorMgr->readAll();
 
 // Build lookup maps
 $llmById = [];
 foreach ($allConnectors as $conn) {
     $llmById[$conn['id']] = $conn['label'] ?? 'Connector ' . $conn['id'];
+}
+$ttsById = [];
+foreach ($allTtsConnectors as $conn) {
+    $ttsById[$conn['id']] = $conn['label'] ?? 'Connector ' . $conn['id'];
 }
 
 // Build profile connector map
@@ -725,9 +749,9 @@ if (!$isEmbed) {
                             <input type="checkbox" id="books_only_narrator" name="books_only_narrator" value="1" <?php echo $booksOnlyNarrator ? 'checked' : ''; ?>>
                             <span class="toggle-slider"></span>
                         </div>
-                        <span class="toggle-label">Only Narrator Summarizes Books</span>
+                        <span class="toggle-label">Only the Narrator can Summarize Books</span>
                     </label>
-                    <span class="hint">The Narrator will be the only one to summarize books.</span>
+                    <span class="hint">The Narrator will be the only one to summarize books when you trigger the book summary feature.</span>
                     
                     <label class="toggle-row">
                         <div class="toggle-switch">
@@ -752,32 +776,40 @@ if (!$isEmbed) {
                 <div class="content-section">
                     <h2>Inline Narration</h2>
 
-                    <label class="toggle-row">
-                        <div class="toggle-switch">
-                            <input type="checkbox" id="inline_narration_enabled" name="inline_narration_enabled" value="1" <?php echo $inlineNarrationEnabled ? 'checked' : ''; ?>>
-                            <span class="toggle-slider"></span>
-                        </div>
-                        <span class="toggle-label">Enable Inline Narration</span>
-                    </label>
-                    <span class="hint">Enable inline narration in asterisks (e.g., *She smiles*). Narration is spoken by The Narrator voice and shown in subtitles, while the dialogue line remains in the NPC's voice.</span>
+                    <label for="inline_narration_mode">Inline Narration Mode</label>
+                    <select id="inline_narration_mode" name="inline_narration_mode">
+                        <option value="disabled" <?php echo $inlineNarrationMode === 'disabled' ? 'selected' : ''; ?>>Disabled</option>
+                        <option value="narrator" <?php echo $inlineNarrationMode === 'narrator' ? 'selected' : ''; ?>>Narrator</option>
+                        <option value="npc" <?php echo $inlineNarrationMode === 'npc' ? 'selected' : ''; ?>>NPC</option>
+                    </select>
+                    <span class="hint">Controls who voices leading *narration* blocks. Narrator sends the asterisked section to The Narrator voice, NPC keeps the full line on the NPC voice, and Disabled turns off special inline narration routing.</span>
 
                     <label class="toggle-row">
                         <div class="toggle-switch">
-                            <input type="checkbox" id="remove_asterisks_from_output" name="remove_asterisks_from_output" value="1" <?php echo $removeAsterisksFromOutput ? 'checked' : ''; ?>>
+                            <input type="checkbox" id="remove_asterisks_from_player_input" name="remove_asterisks_from_player_input" value="1" <?php echo $removeAsterisksFromPlayerInput ? 'checked' : ''; ?>>
                             <span class="toggle-slider"></span>
                         </div>
-                        <span class="toggle-label">Remove Asterisks From Output</span>
+                        <span class="toggle-label">Remove Player Input Asterisks From TTS</span>
                     </label>
-                    <span class="hint">Remove text between ** when responding (*cough*, *smiles*, etc).</span>
+                    <span class="hint">Filters *asterisked* player actions/emphasis from player TTS only. The in-game player subtitle echo keeps the visible *text* either way. Turn this off if you want the player voice to speak asterisked text too.</span>
+
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="remove_asterisks_from_npc_output" name="remove_asterisks_from_npc_output" value="1" <?php echo $removeAsterisksFromNpcOutput ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Remove NPC Output Asterisks</span>
+                    </label>
+                    <span class="hint">Filters *asterisked* NPC narration/emotes from NPC speech and subtitles. Turn this off if you want NPCs to keep or speak their own asterisked text.</span>
 
                     <label class="toggle-row">
                         <div class="toggle-switch">
                             <input type="checkbox" id="preserve_asterisks_in_context" name="preserve_asterisks_in_context" value="1" <?php echo $preserveAsterisksInContext ? 'checked' : ''; ?>>
                             <span class="toggle-slider"></span>
                         </div>
-                        <span class="toggle-label">Keep Asterisk Narration in Context</span>
+                        <span class="toggle-label">Keep NPC Narration Description in Context History</span>
                     </label>
-                    <span class="hint">Keep *narration* intact in subtitles, chat events, and LLM context history (also works when inline narration is disabled).</span>
+                    <span class="hint">Keep *narration* descriptions intact in the eventlog context history. NPCs will be able to see these descriptions in their prompts..</span>
                 </div>
 
                 <!-- Welcome Message Section -->
@@ -876,6 +908,8 @@ if (!$isEmbed) {
                     };
                     ?>
                     <div id="profile_llm_summary" style="display:grid; grid-template-columns: auto 1fr; gap:8px; color:#cfd9ea; font-size: 13px; line-height: 1.6;">
+                        <div style="color:rgb(242,124,17); font-weight:600;">🔊 TTS:</div>
+                        <div><?= htmlspecialchars($ttsById[$currentProfileData['tts_connector_id'] ?? null] ?? '—') ?></div>
                         <div style="color:rgb(242,124,17); font-weight:600;">🕹️ Standard:</div>
                         <div><?= $getConnectorLabel($currentProfileData['llm_primary_id'] ?? null) ?></div>
                         
@@ -902,10 +936,16 @@ if (!$isEmbed) {
             (function(){
                 const PROFILE_CONN = <?= json_encode($profilesConnById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
                 const LLM_LABELS = <?= json_encode($llmById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+                const TTS_LABELS = <?= json_encode($ttsById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
                 
                 function labelOf(id){ 
                     const k = String(id || ''); 
                     return (k && LLM_LABELS[k]) ? String(LLM_LABELS[k]) : '—'; 
+                }
+                
+                function ttsLabelOf(id){
+                    const k = String(id || '');
+                    return (k && TTS_LABELS[k]) ? String(TTS_LABELS[k]) : '—';
                 }
                 
                 function renderProfileConnectors(pid){
@@ -914,6 +954,7 @@ if (!$isEmbed) {
                     const pc = PROFILE_CONN[String(pid || '')] || null;
                     
                     const rows = [
+                        ['🔊 TTS:', ttsLabelOf(pc ? pc.tts_connector_id : null)],
                         ['🕹️ Standard:', labelOf(pc ? pc.llm_primary_id : null)],
                         ['🏃‍♂️‍➡️ Fast:', labelOf(pc ? pc.llm_secondary_id : null)],
                         ['💪 Power:', labelOf(pc ? pc.llm_tertiary_id : null)],

@@ -5,7 +5,9 @@ $enginePath = __DIR__ . DIRECTORY_SEPARATOR . "../../";
 require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "api_badge.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
 
 // Determine web root
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -19,6 +21,7 @@ if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
 $GLOBALS["db"] = new sql();
+$ttsConnector = new TTSConnector();
 $player = new Player();
 
 $saveSuccess = false;
@@ -43,6 +46,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_player'])) {
         if (isset($_POST['speech_style'])) {
             $player->set('speech_style', $_POST['speech_style']);
         }
+        $player->set('tts_connector_id', trim(strval($_POST['tts_connector_id'] ?? '')));
+        $player->set('tts_voice_override', trim(strval($_POST['tts_voice_override'] ?? '')));
+        $player->set('tts_voice_id_override', trim(strval($_POST['tts_voice_id_override'] ?? '')));
+        $player->set('tts_language_override', trim(strval($_POST['tts_language_override'] ?? '')));
+        $player->set('tts_elevenlabs_model_id', trim(strval($_POST['tts_elevenlabs_model_id'] ?? '')));
+        $player->set('tts_elevenlabs_speed', trim(strval($_POST['tts_elevenlabs_speed'] ?? '')));
+        $player->set('tts_elevenlabs_stability', trim(strval($_POST['tts_elevenlabs_stability'] ?? '')));
+        $player->set('tts_elevenlabs_similarity_boost', trim(strval($_POST['tts_elevenlabs_similarity_boost'] ?? '')));
+        $player->set('tts_elevenlabs_style', trim(strval($_POST['tts_elevenlabs_style'] ?? '')));
+        $player->set('tts_elevenlabs_use_speaker_boost', trim(strval($_POST['tts_elevenlabs_use_speaker_boost'] ?? '')));
+        $player->set('tts_elevenlabs_v3_audio_tags', trim(strval($_POST['tts_elevenlabs_v3_audio_tags'] ?? '')));
         
         // Save any editable stats if provided
         foreach ($_POST as $key => $value) {
@@ -69,6 +83,34 @@ $appearance = $allPlayerData['appearance'] ?? '';
 $bio = $allPlayerData['bio'] ?? '';
 $bioKnownByAll = ($allPlayerData['bio_known_by_all'] ?? 'false') === 'true';
 $speechStyle = $allPlayerData['speech_style'] ?? '';
+$playerTtsConnectorId = trim(strval($allPlayerData['tts_connector_id'] ?? ''));
+$playerTtsVoiceId = strval($allPlayerData['tts_voice_override'] ?? '');
+$playerTtsVoiceIdOverride = strval($allPlayerData['tts_voice_id_override'] ?? '');
+$playerTtsLanguageOverride = strval($allPlayerData['tts_language_override'] ?? '');
+$playerTtsElevenModelId = strval($allPlayerData['tts_elevenlabs_model_id'] ?? '');
+$playerTtsElevenSpeed = strval($allPlayerData['tts_elevenlabs_speed'] ?? '');
+$playerTtsElevenStability = strval($allPlayerData['tts_elevenlabs_stability'] ?? '');
+$playerTtsElevenSimilarityBoost = strval($allPlayerData['tts_elevenlabs_similarity_boost'] ?? '');
+$playerTtsElevenStyle = strval($allPlayerData['tts_elevenlabs_style'] ?? '');
+$playerTtsElevenUseSpeakerBoost = strval($allPlayerData['tts_elevenlabs_use_speaker_boost'] ?? '');
+$playerTtsElevenV3AudioTags = strval($allPlayerData['tts_elevenlabs_v3_audio_tags'] ?? '');
+$ttsConnectorRows = $ttsConnector->readAll();
+$ttsConnectorMeta = [];
+foreach ($ttsConnectorRows as $row) {
+    $ttsConnectorMeta[strval($row['id'] ?? '')] = [
+        'driver' => strval($row['driver'] ?? ''),
+        'label' => strval($row['label'] ?? ''),
+    ];
+}
+
+if ($bio === '' && !empty(trim((string)($GLOBALS["PLAYER_BIOS"] ?? '')))) {
+    $bio = trim((string)$GLOBALS["PLAYER_BIOS"]);
+}
+
+if ($bio === '') {
+    $legacyBioRow = $GLOBALS["db"]->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_BIOS' LIMIT 1");
+    $bio = trim((string)($legacyBioRow['value'] ?? ''));
+}
 
 // Load JSON data (equipment, inventory, skills, stats)
 $equipment = $player->getJson('equipment') ?? [];
@@ -221,11 +263,11 @@ if (!$isEmbed) {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .content-grid.player-overview-grid .speech-style-section {
+    .content-grid.player-overview-grid .player-bio-section {
         order: 3;
     }
 
-    .content-grid.player-overview-grid .player-bio-section {
+    .content-grid.player-overview-grid .player-tts-section {
         order: 4;
     }
 
@@ -291,8 +333,10 @@ if (!$isEmbed) {
         margin-top: 0;
     }
 
-    .content-section input[type="text"], 
-    .content-section textarea { 
+    .content-section input[type="text"],
+    .content-section input[type="number"],
+    .content-section select,
+    .content-section textarea {
         background-color: rgba(26, 26, 26, 0.8);
         color: #e9efff;
         border: 1px solid #3a3a3a;
@@ -304,6 +348,8 @@ if (!$isEmbed) {
     }
 
     .content-section input[type="text"]:focus,
+    .content-section input[type="number"]:focus,
+    .content-section select:focus,
     .content-section textarea:focus {
         border-color: rgba(242, 124, 17, 0.5);
         outline: none;
@@ -387,6 +433,27 @@ if (!$isEmbed) {
         margin-top: 10px;
         display: grid;
         gap: 8px;
+    }
+
+    .player-provider-panel {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 8px;
+        border: 1px solid rgba(242, 124, 17, 0.18);
+        background: rgba(18, 18, 18, 0.42);
+    }
+
+    .player-provider-panel h3 {
+        margin: 0 0 10px;
+        color: #f3d6a8;
+        font-size: 1em;
+        font-weight: 700;
+    }
+
+    .player-provider-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
     }
 
     .speech-style-tools label {
@@ -674,6 +741,10 @@ if (!$isEmbed) {
         .content-grid.player-overview-grid {
             grid-template-columns: 1fr;
         }
+
+        .player-provider-grid {
+            grid-template-columns: 1fr;
+        }
         
         .page-header {
             padding: 18px 15px;
@@ -782,6 +853,19 @@ if (!$isEmbed) {
                 btn.textContent = oldLabel;
             }
         }
+
+        const PLAYER_TTS_CONNECTOR_META = <?php echo json_encode($ttsConnectorMeta, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+
+        function syncPlayerProviderPanels() {
+            const connectorSelect = document.getElementById('tts_connector_id');
+            const elevenPanel = document.getElementById('player_tts_elevenlabs_panel');
+            if (!connectorSelect || !elevenPanel) return;
+
+            const selectedId = connectorSelect.value || '';
+            const selectedMeta = PLAYER_TTS_CONNECTOR_META[selectedId] || null;
+            const selectedDriver = selectedMeta && selectedMeta.driver ? String(selectedMeta.driver).toLowerCase() : '';
+            elevenPanel.style.display = selectedDriver === '11labs' ? 'block' : 'none';
+        }
         </script>
 
         <?php if ($saveSuccess || $saveMessage): ?>
@@ -844,17 +928,77 @@ if (!$isEmbed) {
                 <span class="hint">If enabled, all NPCs know this bio. If disabled, only The Narrator knows it.</span>
             </div>
 
-            <!-- Speech Style Section -->
-            <div class="content-section speech-style-section">
-                <h2>💬 Speech Style</h2>
+            <div class="content-section player-tts-section">
+                <h2>Player TTS</h2>
+                <label for="tts_connector_id">TTS Connector</label>
+                <select id="tts_connector_id" name="tts_connector_id">
+                    <option value="">Disabled</option>
+                    <?php foreach ($ttsConnectorRows as $row): ?>
+                        <?php $rowId = strval($row['id'] ?? ''); ?>
+                        <option value="<?php echo htmlspecialchars($rowId); ?>" <?php echo ($playerTtsConnectorId === $rowId) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars(strval($row['label'] ?? ('Connector #' . $rowId))); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <span class="hint">Select the connector used when Player TTS generates spoken responses.</span>
+
+                <label for="tts_voice_override">VoiceID</label>
+                <input type="text" id="tts_voice_override" name="tts_voice_override" value="<?php echo htmlspecialchars($playerTtsVoiceId); ?>" placeholder="TheNarrator">
+                <span class="hint">Dedicated voice identifier used for Player TTS.</span>
+
+                <div id="player_tts_elevenlabs_panel" class="player-provider-panel" style="display:none;">
+                    <h3>ElevenLabs Player Overrides</h3>
+                    <span class="hint">Only used when the selected Player TTS connector is ElevenLabs. Leave a field blank to inherit the connector default.</span>
+                    <div class="player-provider-grid">
+                        <div>
+                            <label for="tts_elevenlabs_model_id">Model ID</label>
+                            <input type="text" id="tts_elevenlabs_model_id" name="tts_elevenlabs_model_id" value="<?php echo htmlspecialchars($playerTtsElevenModelId); ?>" placeholder="eleven_v3">
+                            <span class="hint">Examples: <code>eleven_multilingual_v2</code>, <code>eleven_v3</code>.</span>
+                        </div>
+                        <div>
+                            <label for="tts_elevenlabs_speed">Speed</label>
+                            <input type="number" step="0.05" id="tts_elevenlabs_speed" name="tts_elevenlabs_speed" value="<?php echo htmlspecialchars($playerTtsElevenSpeed); ?>" placeholder="1.0">
+                            <span class="hint">Player-only speed override for ElevenLabs.</span>
+                        </div>
+                        <div>
+                            <label for="tts_elevenlabs_stability">Stability</label>
+                            <input type="number" step="0.05" id="tts_elevenlabs_stability" name="tts_elevenlabs_stability" value="<?php echo htmlspecialchars($playerTtsElevenStability); ?>" placeholder="0.75">
+                        </div>
+                        <div>
+                            <label for="tts_elevenlabs_similarity_boost">Similarity Boost</label>
+                            <input type="number" step="0.05" id="tts_elevenlabs_similarity_boost" name="tts_elevenlabs_similarity_boost" value="<?php echo htmlspecialchars($playerTtsElevenSimilarityBoost); ?>" placeholder="0.75">
+                        </div>
+                        <div>
+                            <label for="tts_elevenlabs_style">Style</label>
+                            <input type="number" step="0.05" id="tts_elevenlabs_style" name="tts_elevenlabs_style" value="<?php echo htmlspecialchars($playerTtsElevenStyle); ?>" placeholder="0.0">
+                        </div>
+                        <div>
+                            <label for="tts_elevenlabs_use_speaker_boost">Speaker Boost</label>
+                            <select id="tts_elevenlabs_use_speaker_boost" name="tts_elevenlabs_use_speaker_boost">
+                                <option value="" <?php echo $playerTtsElevenUseSpeakerBoost === '' ? 'selected' : ''; ?>>Use Connector Default</option>
+                                <option value="true" <?php echo $playerTtsElevenUseSpeakerBoost === 'true' ? 'selected' : ''; ?>>Enabled</option>
+                                <option value="false" <?php echo $playerTtsElevenUseSpeakerBoost === 'false' ? 'selected' : ''; ?>>Disabled</option>
+                            </select>
+                            <span class="hint">Eleven v3 ignores Speaker Boost.</span>
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label for="tts_elevenlabs_v3_audio_tags">V3 Enhancers</label>
+                            <textarea id="tts_elevenlabs_v3_audio_tags" name="tts_elevenlabs_v3_audio_tags" placeholder="[whispers] [curious]"><?php echo htmlspecialchars($playerTtsElevenV3AudioTags); ?></textarea>
+                            <span class="hint">Prepended to the Player TTS input when the effective model is <code>eleven_v3</code>. Use ElevenLabs-style audio tags here.</span>
+                        </div>
+                    </div>
+                </div>
+
                 <label for="speech_style">Player Speech Style</label>
                 <textarea id="speech_style" name="speech_style" placeholder="Describe how your character speaks and communicates..."><?php echo htmlspecialchars($speechStyle); ?></textarea>
+                <span class="hint">Used for Auto Chat mode and player-style generation prompts.</span>
+
                 <div class="speech-style-tools">
-                    <label for="speech_style_guidance">Optional Guidance For AI Generation</label>
+                    <label for="speech_style_guidance">AI Generation</label>
                     <textarea id="speech_style_guidance" placeholder="Optional: mention traits or tone to prioritize when generating your speech style paragraph."></textarea>
                     <button id="generate_speech_style_btn" type="button" class="btn-ai-generate" onclick="generatePlayerSpeechStyle()">AI Generate From Last 200 Inputs</button>
                 </div>
-                <span class="hint">Reads up to the last 200 player input events and generates a one-paragraph speech style prompt. Is used for Auto Chat mode.</span>
+                <span class="hint">Reads up to the last 200 player input events and generates a one-paragraph speech style prompt.</span>
             </div>
         </div>
     </form>
@@ -1019,6 +1163,16 @@ if (!$isEmbed) {
     <?php endif; ?>
     </div>
 </main>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    syncPlayerProviderPanels();
+    const connectorSelect = document.getElementById('tts_connector_id');
+    if (connectorSelect) {
+        connectorSelect.addEventListener('change', syncPlayerProviderPanels);
+    }
+});
+</script>
 
 <?php
 if (!$isEmbed) {

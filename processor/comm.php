@@ -776,7 +776,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
             if ($isPlayerSpeech) {
                 $latestInputRow = $db->fetchOne(
-                    "SELECT rowid, people, data
+                    "SELECT rowid, type, people, data
                      FROM eventlog
                      WHERE gamets={$speechGamets}
                        AND type IN ('inputtext','inputtext_s','ginputtext','ginputtext_s','narrator_inputtext')
@@ -786,9 +786,14 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
                 if (is_array($latestInputRow) && isset($latestInputRow["rowid"])) {
                     $rowId = intval($latestInputRow["rowid"]);
-                    $escapedPeople = $db->escape($audiblePeoplePipe);
-                    $db->update("eventlog", "people='{$escapedPeople}'", "rowid={$rowId}");
-                    error_log("[SPATIAL_SCOPE] Updated input eventlog row {$rowId} people={$audiblePeoplePipe}");
+                    $latestInputType = strtolower(trim((string)($latestInputRow["type"] ?? "")));
+                    if ($latestInputType === "narrator_inputtext") {
+                        error_log("[SPATIAL_SCOPE] Preserved narrator_inputtext row {$rowId} private scope");
+                    } else {
+                        $escapedPeople = $db->escape($audiblePeoplePipe);
+                        $db->update("eventlog", "people='{$escapedPeople}'", "rowid={$rowId}");
+                        error_log("[SPATIAL_SCOPE] Updated input eventlog row {$rowId} people={$audiblePeoplePipe}");
+                    }
                 } else {
                     error_log("[SPATIAL_SCOPE] No inputtext row found for gamets {$speechGamets} to update");
                 }
@@ -1371,6 +1376,59 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
     $MUST_END=true;
 
+} elseif (strpos($gameRequest[0], "npcvoice_refresh")===0) {    // npcvoice_refresh
+
+    logEvent($gameRequest);
+
+    $splitVoiceData = explode("@", $gameRequest[3]);
+    $localName = trim($splitVoiceData[0] ?? "");
+    $refId = trim($splitVoiceData[1] ?? "");
+    $voiceId = trim($splitVoiceData[2] ?? "");
+
+    if ($voiceId !== "") {
+        $npcMaster = new NpcMaster();
+        $currentNpcData = null;
+
+        $refIdCandidates = array_unique(array_filter([
+            $refId,
+            preg_replace('/^0x/i', '', $refId),
+            (stripos($refId, '0x') === 0 ? strtoupper(substr($refId, 2)) : strtoupper($refId)),
+            (stripos($refId, '0x') === 0 ? strtolower(substr($refId, 2)) : strtolower($refId)),
+        ], static function ($value) {
+            return $value !== null && $value !== "";
+        }));
+
+        foreach ($refIdCandidates as $refIdCandidate) {
+            $currentNpcData = $npcMaster->getByRefId($refIdCandidate);
+            if ($currentNpcData) {
+                break;
+            }
+        }
+
+        if (!$currentNpcData && $localName !== "") {
+            $currentNpcData = $npcMaster->getByName($localName);
+        }
+
+        if ($currentNpcData) {
+            $extended = $npcMaster->getExtendedData($currentNpcData);
+            unset($extended["voice_refresh_requested_at"]);
+            $extended["voice_refresh_last_result"] = "resolved";
+            $extended["voice_refresh_last_resolved_at"] = time();
+
+            if (empty(trim((string)($currentNpcData["voiceid"] ?? "")))) {
+                $currentNpcData["voiceid"] = $voiceId;
+            }
+
+            $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extended);
+            $npcMaster->updateByArray($currentNpcData);
+            error_log("[NPCVOICE_REFRESH] Updated voiceid for {$currentNpcData["npc_name"]} to {$voiceId}");
+        } else {
+            error_log("[NPCVOICE_REFRESH] Could not resolve NPC for {$localName} / {$refId}");
+        }
+    }
+
+    $MUST_END=true;
+
     
 } elseif (strpos($gameRequest[0], "addnpc")===0) {    // addnpc 
     logEvent($gameRequest);
@@ -1602,6 +1660,14 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $extended['class'] = $classData;
         
         $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extended);
+
+        if (!empty($GLOBALS['AUTOFILL_CUSTOM_PROFILES'])) {
+            require_once $GLOBALS["ENGINE_PATH"] . "ui" . DIRECTORY_SEPARATOR . "cmd" . DIRECTORY_SEPARATOR . "ai_profile_generation_service.php";
+            if (!aiProfileHasMeaningfulAutofillData($currentNpcData)) {
+                $trigger = intval($GLOBALS['AUTOFILL_CUSTOM_PROFILES_TRIGGER'] ?? 20);
+                $currentNpcData = aiProfileMarkPendingAutofill($currentNpcData, $npcMaster, $trigger);
+            }
+        }
 
         $npcMaster->updateByArray($currentNpcData);
         

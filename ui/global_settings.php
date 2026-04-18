@@ -412,6 +412,8 @@ function icon_for_field(string $flatName): string {
 $gsSections = [
     'General' => [
         [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
+        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES', 'type' => 'boolean' ],
+        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES_TRIGGER', 'type' => 'integer', 'min' => 10, 'max' => 100 ],
         [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
         [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
         [ 'name' => 'CARRIAGE_DRIVERS', 'type' => 'longstring' ],
@@ -602,11 +604,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
 			}
 		}
 	}
-	if (isset($_POST['TTSFUNCTION_PLAYER'])) { $allPairs['TTSFUNCTION_PLAYER'] = (string)$_POST['TTSFUNCTION_PLAYER']; }
-	if (isset($_POST['TTSFUNCTION_PLAYER_VOICE'])) { $allPairs['TTSFUNCTION_PLAYER_VOICE'] = (string)$_POST['TTSFUNCTION_PLAYER_VOICE']; }
-	if (isset($_POST['TTSFUNCTION_PLAYER_VOICE_ID'])) { $allPairs['TTSFUNCTION_PLAYER_VOICE_ID'] = (string)$_POST['TTSFUNCTION_PLAYER_VOICE_ID']; }
-	if (isset($_POST['TTSFUNCTION_PLAYER_LANGUAGE'])) { $allPairs['TTSFUNCTION_PLAYER_LANGUAGE'] = (string)$_POST['TTSFUNCTION_PLAYER_LANGUAGE']; }
-
 	// Apply STT overrides
 	if (isset($_POST['STTFUNCTION'])) {
 		$sttSel = (string)$_POST['STTFUNCTION'];
@@ -1365,78 +1362,17 @@ function render_tts_grouped_options(array $options, string $selectedValue, array
                 <div class="provider-card">
                     <div class="provider-head">
                         <div class="provider-title">
-                            <div class="provider-icon">🧑‍🎤</div>
-                            <div>Player TTS</div>
-                        </div>
-                    </div>
-                        <?php $playerFunctionSaved = current_value('TTSFUNCTION_PLAYER',$currentConf); $descTtsPlayer = (string)($rawSchema['TTSFUNCTION_PLAYER']['description'] ?? ''); $descPlayerVoice = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE']['description'] ?? ''); $descPlayerVoiceId = (string)($rawSchema['TTSFUNCTION_PLAYER_VOICE_ID']['description'] ?? ''); $descPlayerLang = (string)($rawSchema['TTSFUNCTION_PLAYER_LANGUAGE']['description'] ?? ''); $playerLangSupported = ['melotts','xtts-fastapi','chatterbox','pockettts','xvasynth','piper-tts','zonos_gradio','cartesia','inworld']; $showPlayerLang = in_array(strtolower((string)$playerFunctionSaved), $playerLangSupported, true); ?>
-                    <div class="provider-body grid">
-                        <label for="TTSFUNCTION_PLAYER">Player TTS Selection</label>
-                        <?php $playerTtsOptions = $rawSchema['TTSFUNCTION_PLAYER']['values'] ?? [ 'none','melotts','xtts-fastapi','chatterbox','pockettts','xvasynth','mimic3','piper-tts','azure','11labs','openai','kokoro','zonos_gradio','cartesia','inworld' ]; ?>
-                        <select name="TTSFUNCTION_PLAYER" id="TTSFUNCTION_PLAYER">
-                            <?php render_tts_grouped_options($playerTtsOptions, (string)$playerFunctionSaved, $ttsDisplayNames, true); ?>
-                        </select>
-                        <?php if (!empty($descTtsPlayer)): ?><div class="help"><?php echo $descTtsPlayer; ?></div><?php endif; ?>
-                        <label for="TTSFUNCTION_PLAYER_VOICE">Player Voice</label>
-                        <input type="text" id="TTSFUNCTION_PLAYER_VOICE" name="TTSFUNCTION_PLAYER_VOICE" value="<?php echo htmlspecialchars((string)current_value('TTSFUNCTION_PLAYER_VOICE',$currentConf)); ?>">
-                        <?php if (!empty($descPlayerVoice)): ?><div class="help"><?php echo $descPlayerVoice; ?></div><?php endif; ?>
-						<label for="TTSFUNCTION_PLAYER_VOICE_ID" class="player-voice-id-only" style="<?php echo (strtolower((string)$playerFunctionSaved)==='piper-tts') ? '' : 'display:none;'; ?>">Player Voice ID</label>
-						<input type="number" step="1" id="TTSFUNCTION_PLAYER_VOICE_ID" name="TTSFUNCTION_PLAYER_VOICE_ID" class="player-voice-id-only" style="<?php echo (strtolower((string)$playerFunctionSaved)==='piper-tts') ? '' : 'display:none;'; ?>" value="<?php echo htmlspecialchars((string)current_value('TTSFUNCTION_PLAYER_VOICE_ID',$currentConf)); ?>">
-						<?php if (!empty($descPlayerVoiceId)): ?><div class="help player-voice-id-only" style="<?php echo (strtolower((string)$playerFunctionSaved)==='piper-tts') ? '' : 'display:none;'; ?>"><?php echo $descPlayerVoiceId; ?></div><?php endif; ?>
-					<label for="TTSFUNCTION_PLAYER_LANGUAGE" class="player-language-only" style="<?php echo ($showPlayerLang ? '' : 'display:none;'); ?>">Player Language Override</label>
-					<input type="text" id="TTSFUNCTION_PLAYER_LANGUAGE" name="TTSFUNCTION_PLAYER_LANGUAGE" class="player-language-only" style="<?php echo ($showPlayerLang ? '' : 'display:none;'); ?>" value="<?php echo htmlspecialchars((string)current_value('TTSFUNCTION_PLAYER_LANGUAGE',$currentConf)); ?>">
-					<?php if (!empty($descPlayerLang)): ?><div class="help player-language-only" style="<?php echo ($showPlayerLang ? '' : 'display:none;'); ?>"><?php echo $descPlayerLang; ?></div><?php endif; ?>
-                    </div>
-                </div>
-
-                <div class="provider-card">
-                    <div class="provider-head">
-                        <div class="provider-title">
-                            <div class="provider-icon">🧪</div>
-                            <div>TTS Test</div>
+                            <div class="provider-icon">INFO</div>
+                            <div>TTS Connector Management</div>
                         </div>
                     </div>
                     <div class="provider-body grid">
-                        <label for="tts_text">Text to synthesize</label>
-                        <textarea id="tts_text" name="tts_text" rows="3" placeholder="Write a sample line to synthesize..."><?php echo htmlspecialchars($ttsTestText); ?></textarea>
-                        <div></div>
-                        <div>
-                            <label for="tts_voiceid">Voice ID (optional)</label>
-                            <input type="text" id="tts_voiceid" name="tts_voiceid" value="<?php echo htmlspecialchars($ttsTestVoice); ?>" placeholder="e.g. TheNarrator or malenord" style="width:100%">
-                            <script>
-                            (function(){
-                                try {
-                                    var sel = document.getElementById('TTSFUNCTION');
-                                    var voice = document.getElementById('tts_voiceid');
-                                    if (sel && voice && !voice.value) {
-                                        var v = (sel.value||'').toLowerCase();
-                                        if (v==='xtts-fastapi' || v==='chatterbox' || v==='pockettts' || v==='cartesia' || v==='inworld') voice.placeholder = 'TheNarrator';
-                                        else if (v==='melotts' || v==='piper-tts' || v==='xvasynth') voice.placeholder = 'malenord';
-                                    }
-                                    if (sel && voice){
-                                        sel.addEventListener('change', function(){
-                                            if (voice && !voice.value){
-                                                var vv = String(sel.value||'').toLowerCase();
-                                                voice.placeholder = (vv==='xtts-fastapi' || vv==='chatterbox' || vv==='pockettts' || vv==='cartesia' || vv==='inworld') ? 'TheNarrator' : (['melotts','piper-tts','xvasynth'].indexOf(vv)>=0 ? 'malenord' : '');
-                                            }
-                                        });
-                                    }
-                                } catch(e){}
-                            })();
-                            </script>
-                        </div>
-                        <div>
-                            <button type="button" id="btn_test_tts_gs" class="btn-primary">Test</button>
-                        </div>
-                        <div></div>
-                        <div>
-                            <?php if (!empty($ttsTestOutputUrl)): ?>
-                                <audio controls style="width:100%; max-width:500px"><source src="<?php echo htmlspecialchars($ttsTestOutputUrl); ?>" type="audio/wav"></audio>
-                                <input type="hidden" id="tts_test_audio_url_hidden" value="<?php echo htmlspecialchars($ttsTestOutputUrl); ?>">
-                            <?php elseif (isset($_POST['tts_quick_test'])): ?>
-                                <div style="color:#ffb862">No audio produced. Check connector settings and logs.</div>
-                                <input type="hidden" id="tts_test_audio_url_hidden" value="">
-                            <?php endif; ?>
+                        <div style="grid-column: 1 / -1; color: #cfd8e3;">
+                            TTS connectors, Player TTS overrides, and the TTS test now live in the dedicated
+                            <a href="<?php echo htmlspecialchars($webRoot . '/ui/core/config_hub.php?tab=ttscfg'); ?>" target="_blank" style="color:#ffcc00;">TTS Connectors</a>
+                            and
+                            <a href="<?php echo htmlspecialchars($webRoot . '/ui/core/config_hub.php?tab=player'); ?>" target="_blank" style="color:#ffcc00;">Player</a>
+                            pages.
                         </div>
                     </div>
                 </div>

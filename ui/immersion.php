@@ -80,7 +80,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         font-size: 1em;
         white-space: nowrap;
         font-family: 'MagicCards', sans-serif;
-        word-spacing: 5px;
+        word-spacing: 8px;
         letter-spacing: 1.5px;
         margin-bottom: -2px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);

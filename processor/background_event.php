@@ -2,12 +2,21 @@
 
 
 
-function convertSignedToUnsignedHexLocal($signedInt) {
-    // Keep only the lower 24 bits (force leading 00)
+function convertSignedToUnsignedHexTrunc($signedInt) {
+    
     $masked = $signedInt & 0x00FFFFFF;
 
     // Format as 8-character zero-padded hex
     return "0x" . strtoupper(sprintf("%08x", $masked));
+}
+
+function convertSignedToUnsignedHexLocal($signedInt,$preprend0x=true) {
+    
+    $masked = $signedInt & 0xFFFFFFFF;
+
+    // Format as 8-character zero-padded hex
+    $hex = strtoupper(sprintf("%08x", $masked));
+    return $preprend0x ? "0x" . $hex : $hex;
 }
 
 // Handle npc_reanimated event
@@ -68,7 +77,7 @@ if ($gameRequest[0] === 'npc_reanimated') {
 // Handle backgroundaction event
 $bgevent=json_decode($gameRequest[3],true);
 if (is_array($bgevent)) {
-    $bgevent["pkgformid"] = convertSignedToUnsignedHexLocal($bgevent["pkgformid"]);
+    $bgevent["pkgformid"] = convertSignedToUnsignedHexTrunc($bgevent["pkgformid"]);
 
     $packageDesc=$GLOBALS["db"]->fetchOne("select * from master_packages where mod ~* '{$bgevent["source"]}' and formid='{$bgevent["pkgformid"]}'");
 
@@ -84,6 +93,32 @@ if (is_array($bgevent)) {
         ];
         foreach ($ubstitutions as $key => $value) {
             $bgevent["description"] = str_replace("{" . $key . "}", $value, $bgevent["description"]);
+        }
+
+        if (is_array($bgevent["debug"])) {
+            foreach ($bgevent["debug"] as $key => $value) {
+                if (is_array($value)) {
+                    error_log("Debug array for key {$key}: " . print_r($value, true));
+                    if ($value[0]=="62") {// Linked refrence is a NPC, try to get its name
+                        $targetRefid=convertSignedToUnsignedHexLocal($value[1],false);
+                        $npcManager      = new NpcMaster();
+                        $targetNpcData         = $npcManager->getByRefid($targetRefid);
+                        if (isset($targetNpcData) && isset($targetNpcData["npc_name"])) {
+                            $npcDestinationname=$targetNpcData["npc_name"];
+                            if ($bgevent["description"])
+                                if ($bgevent["event"]=="start")
+                                    $bgevent["description"].= " (target is: {$npcDestinationname})";
+                                if ($bgevent["event"]=="end")
+                                    $bgevent["description"].="(target was: {$npcDestinationname})";
+                        }
+                    }
+                    
+                } else {
+                    error_log("Debug value for key {$key}: " . $value);
+                }
+            }
+        } else {
+            error_log("No debug information for this event.");
         }
         
         if ($bgevent["actor"]) {

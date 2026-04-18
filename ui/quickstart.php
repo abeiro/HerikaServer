@@ -273,6 +273,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
         $buffer .= "?>" . PHP_EOL;
         $target = $rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
         $result = @file_put_contents($target, $buffer);
+        if ($result !== false) {
+            try {
+                include($target);
+                require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "api_badge.class.php");
+                require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
+                $ttsConnector = new TTSConnector();
+                $ttsConnector->ensureLegacyConnectorMigration(true);
+                $ttsConnector->importLegacyPlayerSettings();
+            } catch (Throwable $_e) {
+                // Keep quickstart save successful even if connector sync is unavailable.
+            }
+        }
         echo json_encode([ 'ok' => $result !== false ]);
         exit;
     }
@@ -667,7 +679,7 @@ echo '<section class="qs-section">
 
 echo '<section class="qs-section">
                 <h2 class="qs-section-title">LLM Connectors Note</h2>
-                <p class="form-text" id="qs_llm_connectors_note_default"' . $llmNoteDefaultStyle . '>The default CHIM installation comes with 4 predefined LLMs that you can hotswap ingame.</p>
+                <p class="form-text" id="qs_llm_connectors_note_default"' . $llmNoteDefaultStyle . '>The default CHIM installation comes with 4 predefined LLMs that you can hotswap ingame. Diary, summary, and middle-term memory defaults use OpenRouter DeepSeek Chat V3.2.</p>
                 <p class="form-text" id="qs_llm_connectors_note_player2"' . $llmNotePlayer2Style . '>Player2 mode is active. Standard, Fast, Powerful, and Experimental all use the local Player2 connector, and Diary, Formatter, plus Fallback also route through Player2. The actual model stays controlled in the Player2 app.</p>
                 <div id="qs_llm_connectors_cards_default" style="' . $llmCardsDefaultStyle . '">
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
@@ -678,18 +690,19 @@ echo '<section class="qs-section">
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F3C3;&#x200D;&#x2642;&#xFE0F; <b>Fast</b></div>
-                        <div style="margin-top:6px; color:#9fb1c9;">Gemini 2.0 Flash</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.10/M input | $0.40/M output</div>
+                        <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: Gemini 2.5 Flash Lite (google/gemini-2.5-flash-lite)</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Check OpenRouter for current pricing and context details.</div>
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F4AA; <b>Powerful</b></div>
-                        <div style="margin-top:6px; color:#9fb1c9;">Claude Sonnet 4.5</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$3.00/M input | $15.00/M output</div>
+                        <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: GLM 5 (z-ai/glm-5)</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Check OpenRouter for current pricing and context details.</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Reasoning Model Fix is enabled by default.</div>
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F9EA; <b>Experimental</b></div>
-                        <div style="margin-top:6px; color:#9fb1c9;">DeepSeek Chat V3.1</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.15/M input | $0.75/M output</div>
+                        <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: DeepSeek Chat V3.2 (deepseek/deepseek-v3.2)</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Check OpenRouter for current pricing and context details.</div>
                     </div>
                 </div>
                 <div id="qs_llm_connectors_cards_player2" style="' . $llmCardsPlayer2Style . '">

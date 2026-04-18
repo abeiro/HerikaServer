@@ -2358,6 +2358,8 @@ if ($checkTableExists("rumors") == -1) {
 } else
     Logger::info(__FILE__." rumors exists");
 
+$db->execQuery("ALTER TABLE public.rumors ADD COLUMN IF NOT EXISTS rumor_length_days integer");
+
 if ($checkTableExists("named_cell") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/named_cell.sql"));
 } else
@@ -3179,6 +3181,69 @@ if ($checkVersion("core_narrator")<20260209001) {
 }
 
 //----------------------------------------------------
+// CORE_NARRATOR DEFAULT CHARACTER BACKFILL
+// Version 20260417001
+//----------------------------------------------------
+
+if ($checkVersion("core_narrator")<20260417001) {
+    Logger::debug("Applying core_narrator migration 20260417001 - Backfilling narrator character defaults when missing");
+
+    $defaultProfile = $db->fetchOne("SELECT id FROM public.core_profiles WHERE default_narrator = '1' ORDER BY id ASC LIMIT 1");
+    $profileId = $defaultProfile && isset($defaultProfile['id']) ? (string)intval($defaultProfile['id']) : '1';
+
+    $coreDefault = isset($GLOBALS['HERIKA_PERS']) && trim((string)$GLOBALS['HERIKA_PERS']) !== ''
+        ? trim((string)$GLOBALS['HERIKA_PERS'])
+        : "You are The Narrator in a Skyrim adventure. You will only talk to #PLAYER_NAME#. You refer to yourself as 'The Narrator'. Only #PLAYER_NAME# can hear you. Your goal is to comment on #PLAYER_NAME#'s playthrough, and occasionally give hints. NO SPOILERS. Talk about quests and last events. When #PLAYER_NAME# speaks to you directly, answer them as a private voice in their mind using plain spoken dialogue rather than third-person scene narration.";
+
+    $backgroundDefault = isset($GLOBALS['HERIKA_BACKGROUND']) && trim((string)$GLOBALS['HERIKA_BACKGROUND']) !== ''
+        ? trim((string)$GLOBALS['HERIKA_BACKGROUND'])
+        : "A guiding voice within the player's mind that comments on events, describes transitions, and offers insight without being a physical character in the world.";
+
+    $personalityDefault = isset($GLOBALS['HERIKA_PERSONALITY']) && trim((string)$GLOBALS['HERIKA_PERSONALITY']) !== ''
+        ? trim((string)$GLOBALS['HERIKA_PERSONALITY'])
+        : 'Detached, observant, witty, and helpful. Acts as a private guide to #PLAYER_NAME#, offering spoiler-free insight and commentary without turning direct conversation into narrated prose.';
+
+    $speechstyleDefault = isset($GLOBALS['HERIKA_SPEECHSTYLE']) && trim((string)$GLOBALS['HERIKA_SPEECHSTYLE']) !== ''
+        ? trim((string)$GLOBALS['HERIKA_SPEECHSTYLE'])
+        : 'Speaks clearly and directly with concise, evocative phrasing and occasional dry wit. When addressing #PLAYER_NAME# directly, respond in plain spoken dialogue and avoid stage directions, scene description, or text in asterisks.';
+
+    $defaults = [
+        'profile_id' => $profileId,
+        'voiceid' => 'TheNarrator',
+        'core' => $coreDefault,
+        'background' => $backgroundDefault,
+        'personality' => $personalityDefault,
+        'speechstyle' => $speechstyleDefault,
+        'goals' => '',
+        'oghma_knowledge' => isset($GLOBALS['OGHMA_KNOWLEDGE']) && trim((string)$GLOBALS['OGHMA_KNOWLEDGE']) !== '' ? trim((string)$GLOBALS['OGHMA_KNOWLEDGE']) : 'knowall',
+        'gender' => 'male',
+    ];
+
+    foreach ($defaults as $key => $value) {
+        if ($value === null || trim((string)$value) === '') {
+            continue;
+        }
+
+        $escapedKey = $db->escape($key);
+        $existing = $db->fetchOne("SELECT value FROM public.core_narrator WHERE id = '{$escapedKey}' LIMIT 1");
+        if ($existing && isset($existing['value']) && trim((string)$existing['value']) !== '') {
+            continue;
+        }
+
+        $escapedValue = $db->escape((string)$value);
+        $db->execQuery("
+            INSERT INTO public.core_narrator (id, value)
+            VALUES ('{$escapedKey}', '{$escapedValue}')
+            ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
+        ");
+        Logger::debug("Backfilled narrator.{$key} default");
+    }
+
+    $updateVersion("core_narrator", 20260417001);
+    Logger::info("Applied patch core_narrator 20260417001 - Backfilled narrator character defaults when missing");
+}
+
+//----------------------------------------------------
 // Background Life Prompts - Style prompts for letters and inner thoughts
 // Version 20260118001 (fixed: was 20251207001 which was out of order and never applied)
 //----------------------------------------------------
@@ -3422,6 +3487,55 @@ if ($checkVersion("prompts")<20260327001) {
     
     $updateVersion("prompts", 20260327001);
     Logger::info("Applied patch prompts 20260327001 - Added player_speech_style_prompt");
+}
+
+//----------------------------------------------------
+// BASE DIALOGUE RESPONSE PROMPTS
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20260412001) {
+    Logger::debug("Applying prompts table 20260412001 - Adding dialogue response prompts");
+
+    $dialogueLineResponsePrompt = $db->escape(
+        " Write {HERIKA_NAME}'s next dialogue line."
+        . " Be original, creative, knowledgeable, use your own thoughts. "
+        . " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}"
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'dialogue_line_response',
+            '$dialogueLineResponsePrompt',
+            'Base response instruction used for standard NPC dialogue when inline narration is disabled. Supports placeholders: {HERIKA_NAME}, {MAXIMUM_WORDS}. Used in: prompts/dialogue_prompt.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $dialogueLineInlineResponsePrompt = $db->escape(
+        " Write {HERIKA_NAME}'s next prose/narration."
+        . " Be original, creative, knowledgeable, use your own thoughts. "
+        . " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}"
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'dialogue_line_inline_response',
+            '$dialogueLineInlineResponsePrompt',
+            'Base response instruction used for NPC dialogue when inline narration is enabled. Supports placeholders: {HERIKA_NAME}, {MAXIMUM_WORDS}. Used in: prompts/dialogue_prompt.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $updateVersion("prompts", 20260412001);
+    Logger::info("Applied patch prompts 20260412001 - Added dialogue response prompts");
 }
 
 //----------------------------------------------------

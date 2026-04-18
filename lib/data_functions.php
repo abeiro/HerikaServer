@@ -5,6 +5,7 @@ require_once(__DIR__."/utils.php");
 
 require_once(__DIR__."/utils_game_timestamp.php");
 require_once(__DIR__."/model_dynmodel.php");
+require_once(__DIR__."/emote_moods.php");
 require_once(__DIR__."/core/npc_master.class.php");
 
 
@@ -352,7 +353,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $profileString .= ": " . trim($appearance);
                     }
 
-                    $playerBio = trim((string)($player->get('bio') ?? ''));
+                    $playerBio = ResolvePlayerBackstory($player);
                     $bioKnownByAll = filter_var((string)($player->get('bio_known_by_all') ?? ''), FILTER_VALIDATE_BOOLEAN);
                     $isNarrator = isset($GLOBALS["HERIKA_NAME"]) && strcasecmp((string)$GLOBALS["HERIKA_NAME"], "The Narrator") === 0;
                     if ($playerBio !== "" && ($bioKnownByAll || $isNarrator)) {
@@ -1523,7 +1524,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc' and type<>'infoitems'  
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
-    and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region' and type<>'named_cell' and type<>'narrator_inputtext'
+    and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region' and type<>'named_cell'
     ".(($actorEscaped)?" 
     and (
      people like '%|$actorEscaped|%' 
@@ -2757,6 +2758,109 @@ function DataLastKnownLocationHuman($hold=false,$cached=false)
 
 }
 
+function buildWorldPrompt($gamets = 0)
+{
+    $worldLines = [];
+
+    $currentLoc = trim(DataLastKnownLocationHuman(false, false));
+    if ($currentLoc !== "") {
+        $worldLines[] = "Current location: {$currentLoc}";
+    }
+
+    $currentHold = trim(DataLastKnownLocationHuman(true, false));
+    if ($currentHold !== "") {
+        $worldLines[] = "Current hold: {$currentHold}";
+    }
+
+    $currentWeather = trim(DataLastKnownWeatherHuman());
+    if ($currentWeather !== "") {
+        $worldLines[] = "Current weather: {$currentWeather}";
+    }
+
+    $f_gamets = floatval($gamets);
+    if ($f_gamets <= 0.0) {
+        $f_gamets = floatval(DataLastKnownGameTS());
+    }
+
+    if ($f_gamets > 0.0) {
+        $tsTime = gamets2timestamp($f_gamets);
+        $currentDate = trim(convert_gamets2skyrim_long_date_no_time($f_gamets));
+        $currentTime = date('g:i A', $tsTime);
+        $dayPart = hour2part_of_day(date('H', $tsTime));
+
+        if ($currentDate !== "") {
+            $worldLines[] = "Current date: {$currentDate}";
+        }
+        $worldLines[] = "Current time: {$currentTime}, {$dayPart}";
+    }
+
+    if (empty($worldLines)) {
+        return "";
+    }
+
+    return "\n\n<world>\n" . implode("\n", $worldLines) . "\n</world>";
+}
+
+function DataLastKnownWeatherHuman()
+{
+    $cacheKey = "WEATHER";
+    if (isset($GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey])) {
+        return $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey];
+    }
+
+    global $db;
+
+    $lastWeather = $db->fetchAll("select a.data as data FROM eventlog a WHERE type in ('location','infoloc','request') and lower(data) like '%current weather:%' order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+    if (!is_array($lastWeather) || sizeof($lastWeather) == 0) {
+        $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey] = "";
+        return "";
+    }
+
+    $weatherValue = "";
+    if (preg_match('/current weather:\s*([^\)]+)/i', $lastWeather[0]["data"], $matches) && isset($matches[1])) {
+        $rawWeather = trim($matches[1]);
+        $prefix = "";
+        if (stripos($rawWeather, 'outdoors it is ') === 0) {
+            $prefix = 'outdoors it is ';
+            $rawWeather = trim(substr($rawWeather, strlen($prefix)));
+        }
+
+        $rawParts = array_filter(array_map('trim', explode(',', $rawWeather)), function ($part) {
+            return $part !== "";
+        });
+
+        $weatherMap = [
+            'pleasant' => 'Pleasant',
+            'clear' => 'Clear',
+            'cloudy' => 'Cloudy',
+            'rainy' => 'Raining',
+            'raining' => 'Raining',
+            'snowy' => 'Snowning',
+            'snowning' => 'Snowning',
+            'foggy' => 'Foggy',
+            'unknown' => 'Unknown',
+        ];
+
+        if (!empty($rawParts)) {
+            $weatherParts = [];
+            foreach ($rawParts as $part) {
+                $normalizedPart = strtolower($part);
+                $displayPart = $weatherMap[$normalizedPart] ?? $part;
+                if (!in_array($displayPart, $weatherParts, true)) {
+                    $weatherParts[] = $displayPart;
+                }
+            }
+            $weatherValue = $prefix . implode(', ', $weatherParts);
+        } else {
+            $normalizedWeather = strtolower(trim($rawWeather, " ,"));
+            $weatherValue = $prefix . ($weatherMap[$normalizedWeather] ?? $rawWeather);
+        }
+    }
+
+    $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey] = $weatherValue;
+    return $weatherValue;
+}
+
 
 function PackIntoSummary($onlyMissingDiary=false)
 {
@@ -2973,6 +3077,51 @@ function DataGetTrackedStat($stat) {
     $results = $db->fetchAll("select * from conf_opts where id='{$escapedStat}'");
     
     return json_encode($results);
+}
+
+function ResolvePlayerBackstory($player = null): string
+{
+    $playerBio = '';
+
+    if ($player === null) {
+        try {
+            require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+            $player = new Player();
+        } catch (Throwable $e) {
+            Logger::debug("Could not initialize Player while resolving backstory: " . $e->getMessage());
+        }
+    }
+
+    if ($player instanceof Player) {
+        try {
+            $playerBio = trim((string)($player->get('bio') ?? ''));
+        } catch (Throwable $e) {
+            Logger::debug("Could not read player bio from core_player: " . $e->getMessage());
+        }
+    }
+
+    if ($playerBio !== '') {
+        return $playerBio;
+    }
+
+    $legacyPlayerBio = trim((string)($GLOBALS["PLAYER_BIOS"] ?? ''));
+    if ($legacyPlayerBio !== '') {
+        return $legacyPlayerBio;
+    }
+
+    if (isset($GLOBALS["db"]) && is_object($GLOBALS["db"]) && method_exists($GLOBALS["db"], 'fetchOne')) {
+        try {
+            $legacyPlayerBioRow = $GLOBALS["db"]->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_BIOS' LIMIT 1");
+            $legacyPlayerBio = trim((string)($legacyPlayerBioRow['value'] ?? ''));
+            if ($legacyPlayerBio !== '') {
+                return $legacyPlayerBio;
+            }
+        } catch (Throwable $e) {
+            Logger::debug("Could not read legacy PLAYER_BIOS from conf_opts: " . $e->getMessage());
+        }
+    }
+
+    return '';
 }
 
 function DataGetCurrentPartyConf() {
@@ -4024,7 +4173,11 @@ function call_llm_internal() {
 
         $buffer=$connectionHandler->fast_request($contextData,$overrideParameters,'standard');
         $preserveAsterisksInContext = isset($GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"]) ? (bool)$GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"] : false;
-        if (!$preserveAsterisksInContext) {
+        $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+            $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
+        }
+        if ($inlineNarrationMode === 'disabled' && !$preserveAsterisksInContext) {
             $buffer = preg_replace('/\*([^*]*\s+[^*]*)\*/', '', $buffer);
         }
 
@@ -4044,7 +4197,7 @@ function call_llm_internal() {
         $jsonformat= json_encode(["character"=>$GLOBALS["HERIKA_NAME"],
         "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
         "message"=>"lines of dialogue",
-        "mood"=>"One of :".implode("|",explode(",",$GLOBALS["EMOTEMOODS"])),
+        "mood"=>"One of :".implode("|",normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "")),
         "action"=>"One of :".implode("|",$GLOBALS["FUNC_LIST"]),
         "target"=>"action target actor|action destination location name",
         "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem - use exact name from inventory or nearby_items)",

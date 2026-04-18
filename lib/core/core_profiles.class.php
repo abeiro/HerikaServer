@@ -269,12 +269,23 @@ class CoreProfile
 
         // Load TTS connector configuration
         $ttsConMgr = new TTSConnector();
-        $ttsCon    = $ttsConMgr->getById($currentProfileData["tts_connector_id"]);
+        $ttsConnectorId = intval($currentProfileData['tts_connector_id'] ?? 0);
+        $ttsCon = $ttsConnectorId > 0 ? $ttsConMgr->getById($ttsConnectorId) : null;
+        if (!$ttsCon) {
+            $ttsCon = ['driver' => 'none', 'metadata' => '{}'];
+        }
         $ttsConMgr->setOldGlobals($ttsCon);
 
         // Decode and apply profile metadata
         $metadata = json_decode($currentProfileData['metadata'] ?? '{}', true);
-        $narratorManagedKeys = ['REMOVE_ASTERISKS_FROM_OUTPUT', 'INLINE_NARRATION_ENABLED', 'PRESERVE_ASTERISKS_IN_CONTEXT'];
+        $narratorManagedKeys = [
+            'REMOVE_ASTERISKS_FROM_OUTPUT',
+            'REMOVE_ASTERISKS_FROM_PLAYER_INPUT',
+            'REMOVE_ASTERISKS_FROM_NPC_OUTPUT',
+            'INLINE_NARRATION_ENABLED',
+            'INLINE_NARRATION_MODE',
+            'PRESERVE_ASTERISKS_IN_CONTEXT'
+        ];
         if (is_array($metadata)) {
             foreach ($metadata as $key => $value) {
                 if (in_array(strtoupper((string)$key), $narratorManagedKeys, true)) {

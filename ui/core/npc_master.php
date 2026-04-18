@@ -944,6 +944,8 @@ if ($page < 1) $page = 1;
 $q = trim($_GET['q'] ?? '');
 $alpha = strtolower($_GET['alpha'] ?? 'asc');
 if (!in_array($alpha, ['asc','desc'], true)) { $alpha = 'asc'; }
+$nameLetterFilter = strtoupper(trim((string)($_GET['letter'] ?? '')));
+if (!preg_match('/^[A-Z]$/', $nameLetterFilter)) { $nameLetterFilter = ''; }
 $profileIdFilter = isset($_GET['profile_id']) ? trim((string)$_GET['profile_id']) : '';
 // New: checkbox filters
 $favOnly = (isset($_GET['fav']) && $_GET['fav'] === '1');
@@ -1026,6 +1028,10 @@ if ($q !== ''){
     // Match by name primarily; include a few related fields
     $where .= " and (npc_name ilike '".$qEsc."' or coalesce(race,'') ilike '".$qEsc."' or coalesce(voiceid,'') ilike '".$qEsc."' or coalesce(refid,'') ilike '".$qEsc."' or coalesce(tags,'') ilike '".$qEsc."')";
 }
+if ($nameLetterFilter !== '') {
+    $letterEsc = $GLOBALS['db']->escape(strtolower($nameLetterFilter));
+    $where .= " and lower(npc_name) like '".$letterEsc."%'";
+}
 if ($profileIdFilter !== ''){
     $where .= " and profile_id = ".intval($profileIdFilter);
 }
@@ -1066,6 +1072,24 @@ error_log("{$where} {$order} limit {$perPage} offset {$offset}");
 $data = $npc->getAll("{$where} {$order} limit {$perPage} offset {$offset}");
 $editItem = null;
 
+if (!function_exists('renderNpcLetterFilter')) {
+    function renderNpcLetterFilter($selectedLetter = '')
+    {
+        $selectedLetter = strtoupper(trim((string)$selectedLetter));
+        if (!preg_match('/^[A-Z]$/', $selectedLetter)) {
+            $selectedLetter = '';
+        }
+        echo '<div class="npc-letter-filter">';
+        echo '<input type="hidden" id="npc_letter_filter" value="'.htmlspecialchars($selectedLetter, ENT_QUOTES).'" />';
+        echo '<button type="button" class="npc-letter-btn'.($selectedLetter === '' ? ' active' : '').'" data-letter="">All</button>';
+        foreach (range('A', 'Z') as $char) {
+            $active = ($selectedLetter === $char) ? ' active' : '';
+            echo '<button type="button" class="npc-letter-btn'.$active.'" data-letter="'.htmlspecialchars($char, ENT_QUOTES).'">'.htmlspecialchars($char).'</button>';
+        }
+        echo '</div>';
+    }
+}
+
 if (isset($_GET["edit"])) {
     $editItem = $npc->getById($_GET["edit"]);
 }
@@ -1079,7 +1103,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       <div class="filter-inline">
         <div class="npc-filter-dropdown" style="position:relative;">
           <button type="button" id="npc_filter_btn" class="btn" style="margin-right:6px;">Filters ▾</button>
-          <div id="npc_filter_menu" class="npc-filter-menu" style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:8px; min-width:220px; box-shadow:0 6px 18px rgba(0,0,0,0.35); z-index:15;">
+          <div id="npc_filter_menu" class="npc-filter-menu" style="display:none; position:absolute; left:0; top:calc(100% + 6px); background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:8px; min-width:220px; box-shadow:0 6px 18px rgba(0,0,0,0.35); z-index:15;">
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_fav" <?= $favOnly?'checked':'' ?>> ⭐Favorites</label>
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_dyn" <?= $dynOnly?'checked':'' ?>> ♻️Dynamic profile</label>
             <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_mtm" <?= $mtmOnly?'checked':'' ?>> 📃Middle-term memory</label>
@@ -1112,6 +1136,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
       <button id="rel_bulk_build_btn" type="button" class="btn-rel-build" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
       <button id="npc_bulk_switch_profile_btn" type="button" class="btn-rel-build" title="Switch all NPCs from one profile to another">🔀 Mass Switch Profile</button>
       <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
+      <?php renderNpcLetterFilter($nameLetterFilter); ?>
     </div>
     <div class="npc-grid">
     <?php foreach ($data as $row): ?>
@@ -1950,7 +1975,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         </div>
 
         <div class="form-item span-2">
-            <label for="npc_static_bio">Static Bio</label>
+            <label for="npc_static_bio">Backstory</label>
             <textarea id="npc_static_bio" name="npc_static_bio" placeholder="Fixed background, history, and facts."><?= htmlspecialchars($editItem["npc_static_bio"] ?? "") ?></textarea>
             <small class="hint">Historical facts and background information.</small>
         </div>
@@ -2846,6 +2871,38 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     outline: none;
     box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
 }
+.npc-letter-filter {
+    display:flex;
+    gap:6px;
+    align-items:center;
+    justify-content:center;
+    flex-wrap:wrap;
+    width:100%;
+    margin-top:10px;
+}
+.npc-letter-btn {
+    background:#2a2a2a;
+    border:1px solid #4a4a4a;
+    color:#cfd9ea;
+    border-radius:999px;
+    padding:6px 10px;
+    min-width:34px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+.npc-letter-btn:hover {
+    background:#333333;
+    border-color:#5a5a5a;
+    transform: translateY(-1px);
+}
+.npc-letter-btn.active {
+    background:rgba(242,124,17,0.16);
+    border-color:rgba(242,124,17,0.7);
+    color:rgb(242, 124, 17);
+    box-shadow: inset 0 0 0 1px rgba(242,124,17,0.18);
+}
 .filter-inline .btn { 
     padding:8px 14px; 
     border-radius:6px; 
@@ -2866,7 +2923,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   <div class="filter-inline">
     <div class="npc-filter-dropdown" style="position:relative;">
       <button type="button" id="npc_filter_btn_top" class="btn" style="margin-right:6px;">Filters ▾</button>
-      <div id="npc_filter_menu_top" class="npc-filter-menu" style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:8px; min-width:220px; box-shadow:0 6px 18px rgba(0,0,0,0.35); z-index:15;">
+      <div id="npc_filter_menu_top" class="npc-filter-menu" style="display:none; position:absolute; left:0; top:calc(100% + 6px); background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:8px; min-width:220px; box-shadow:0 6px 18px rgba(0,0,0,0.35); z-index:15;">
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_fav_top" <?= $favOnly?'checked':'' ?>> ⭐Favorites</label>
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_dyn_top" <?= $dynOnly?'checked':'' ?>> ♻️Dynamic profile</label>
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0; color:#e9efff;"><input type="checkbox" id="npc_filter_mtm_top" <?= $mtmOnly?'checked':'' ?>> 📃Middle-term memory</label>
@@ -2898,6 +2955,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   <button id="rel_bulk_build_btn" type="button" class="btn-rel-build" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
   <button id="npc_bulk_switch_profile_btn" type="button" class="btn-rel-build" title="Switch all NPCs from one profile to another">🔀 Mass Switch Profile</button>
   <button id="npc_bulk_delete_btn" type="button" class="btn-danger" title="Delete all unlocked NPCs (excludes The Narrator and locked)">Delete All Profiles</button>
+  <?php renderNpcLetterFilter($nameLetterFilter); ?>
 </div>
 <div style="margin:10px 0; padding:10px 14px; background:rgba(242,124,17,0.08); border:1px solid rgba(242,124,17,0.25); border-radius:8px; font-size:12.5px; color:#cfd9ea; line-height:1.5;">
   <strong style="color:rgb(242,124,17);">History Pullback:</strong>
@@ -3347,36 +3405,94 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   (function(){
     const regenBtn = document.getElementById('npc_modal_regen');
     if (!regenBtn) return;
+
+    const escapeHtml = function(value) {
+      return String(value || '').replace(/[&<>"']/g, function(c){
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+      });
+    };
+
+    const buildConnectorOptions = function(defaultConnectorId) {
+      let llmOptions = '<option value="">-- Use Global Connector --</option>';
+      AI_GEN_LLM_CONNECTORS.forEach(function(c){
+        const cid = String(c.id || '');
+        const lbl = c.label || ('Connector #' + cid);
+        const sel = (cid === String(defaultConnectorId || '')) ? ' selected' : '';
+        llmOptions += '<option value="' + cid + '"' + sel + '>' + escapeHtml(lbl) + '</option>';
+      });
+      return llmOptions;
+    };
+
+    const showAIGenerateResult = function(success, message, npcName) {
+      const resultBox = document.createElement('div');
+      resultBox.style.position = 'fixed';
+      resultBox.style.inset = '0';
+      resultBox.style.zIndex = '10050';
+      resultBox.style.display = 'flex';
+      resultBox.style.alignItems = 'center';
+      resultBox.style.justifyContent = 'center';
+      resultBox.style.background = 'rgba(0,0,0,0.65)';
+
+      const iconColor = success ? '#4ade80' : '#f87171';
+      const iconSymbol = success ? '✓' : '✕';
+      const title = success ? 'Profile Generated Successfully' : 'Profile Generation Failed';
+
+      resultBox.innerHTML = '<div style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:20px; max-width:500px; width:92%; color:#e9efff;">\
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">\
+          <div style="width:32px; height:32px; border-radius:50%; background:' + iconColor + '; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:bold; color:#111;">' + iconSymbol + '</div>\
+          <div style="font-weight:700; color:' + iconColor + '; font-size:18px;">' + title + '</div>\
+        </div>\
+        <div style="font-size:14px; color:#cfd9ea; margin-bottom:16px; line-height:1.5;">' + escapeHtml(message) + '</div>\
+        <div style="display:flex; gap:8px; justify-content:flex-end;">\
+          ' + (success ? '' : '<button id="ai_result_retry" style="padding:10px 20px; color:#fff; background:rgba(85,95,109,0.9); border:1px solid rgba(156,163,175,0.3); border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; transition:all 0.2s ease;">Try Again</button>') + '\
+          <button id="ai_result_ok" style="padding:10px 20px; color:#111; background:' + (success ? 'rgb(242,124,17)' : 'rgba(85,95,109,0.9)') + '; border:1px solid ' + (success ? 'rgb(242,124,17)' : 'rgba(156,163,175,0.3)') + '; border-radius:8px; cursor:pointer; font-size:14px; font-weight:700; ' + (success ? 'color:#111;' : 'color:#fff;') + ' transition:all 0.2s ease;">' + (success ? 'Reload to View' : 'Close') + '</button>\
+        </div></div>';
+      document.body.appendChild(resultBox);
+
+      const okBtn = resultBox.querySelector('#ai_result_ok');
+      const retryBtn = resultBox.querySelector('#ai_result_retry');
+
+      okBtn.addEventListener('click', function(){
+        document.body.removeChild(resultBox);
+        if (success) {
+          document.location.reload();
+        }
+      });
+
+      if (retryBtn) {
+        retryBtn.addEventListener('click', function(){
+          document.body.removeChild(resultBox);
+          const retryTarget = document.getElementById('npc_modal_regen');
+          if (retryTarget) retryTarget.click();
+        });
+      }
+
+      resultBox.addEventListener('click', function(e){
+        if (e.target === resultBox) {
+          document.body.removeChild(resultBox);
+        }
+      });
+    };
+
     regenBtn.addEventListener('click', async function(e){
       e.preventDefault();
       try {
         const doc = iframe && iframe.contentDocument;
         const nameEl = doc ? doc.getElementById('npc_name') : null;
         const npcName = nameEl ? String(nameEl.value||'').trim() : '';
-        
+
         if (!npcName) { alert('Enter NPC Name to generate profile.'); return; }
-        
-        // Get the NPC's profile ID to determine default LLM connector
+
         const profileIdEl = doc ? doc.getElementById('profile_id') : null;
         const profileId = profileIdEl ? String(profileIdEl.value||'').trim() : '';
-        
-        // Determine default connector: profile's primary LLM > global CORE_CONNECTOR_PROFILES
+
         let defaultConnectorId = AI_GEN_DEFAULT_CONNECTOR;
         if (profileId && AI_GEN_PROFILE_CONN[profileId]) {
           const pc = AI_GEN_PROFILE_CONN[profileId];
           if (pc.llm_primary_id) defaultConnectorId = String(pc.llm_primary_id);
         }
-        
-        // Build LLM connector dropdown options
-        let llmOptions = '<option value="">-- Use Global Connector --</option>';
-        AI_GEN_LLM_CONNECTORS.forEach(function(c){
-          const cid = String(c.id||'');
-          const lbl = c.label || ('Connector #'+cid);
-          const sel = (cid === String(defaultConnectorId)) ? ' selected' : '';
-          llmOptions += '<option value="'+cid+'"'+sel+'>'+lbl.replace(/[<>&"]/g, x=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[x]))+'</option>';
-        });
-        
-        // Show prompt dialog for user to add custom instructions
+
+        const llmOptions = buildConnectorOptions(defaultConnectorId);
         const promptBox = document.createElement('div');
         promptBox.style.position='fixed';
         promptBox.style.inset='0';
@@ -3385,37 +3501,186 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         promptBox.style.alignItems='center';
         promptBox.style.justifyContent='center';
         promptBox.style.background='rgba(0,0,0,0.65)';
-        promptBox.innerHTML = '<div style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:16px; max-width:600px; width:92%; color:#e9efff;">\
-          <div style="font-weight:700; color:rgb(242,124,17); margin-bottom:8px; font-size:18px;">AI Generate Profile for "' + npcName.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) + '"</div>\
-          <div style="font-size:13px; color:#cfd9ea; margin-bottom:12px;">Add any specific information or instructions for the AI to consider when generating this profile. Leave blank to use default generation.</div>\
+        promptBox.innerHTML = '<div style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:16px; max-width:900px; width:94%; color:#e9efff; max-height:92vh; overflow:auto;">\
+          <div style="font-weight:700; color:rgb(242,124,17); margin-bottom:8px; font-size:18px;">AI Generate Profile for "' + escapeHtml(npcName) + '"</div>\
+          <div style="font-size:13px; color:#cfd9ea; margin-bottom:12px;">Add any specific information or instructions for the AI to consider when generating this profile, then review the events that will be used before generating.</div>\
           <label style="display:block; font-size:13px; margin:6px 0 4px; color:#cfd9ea; font-weight:600;">LLM Connector:</label>\
           <select id="ai_llm_connector" style="width:100%; padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#333; color:#e9efff; font-family:inherit; margin-bottom:8px;">'+llmOptions+'</select>\
           <label style="display:block; font-size:13px; margin:6px 0 4px; color:#cfd9ea; font-weight:600;">Custom Instructions (optional):</label>\
-          <textarea id="ai_user_prompt" placeholder="Example: This NPC should be a merchant specializing in enchanted weapons, with a mysterious past..." style="width:100%; min-height:120px; padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; resize:vertical; font-family:inherit;"></textarea>\
+          <textarea id="ai_user_prompt" placeholder="Example: This NPC should be a merchant specializing in enchanted weapons, with a mysterious past..." style="width:100%; min-height:96px; padding:8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; resize:vertical; font-family:inherit;"></textarea>\
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; flex-wrap:wrap;">\
+            <div style="flex:1 1 260px;">\
+              <label for="ai_event_limit" style="display:block; font-size:13px; margin:0 0 4px; color:#cfd9ea; font-weight:600;">Events To Use: <span id="ai_event_limit_value">100</span></label>\
+              <input id="ai_event_limit" type="range" min="10" max="200" step="10" value="100" style="width:100%;">\
+            </div>\
+            <div id="ai_event_meta" style="font-size:12px; color:#9fb2cc; text-align:right; min-width:220px;">Loading event preview...</div>\
+          </div>\
+          <div id="ai_event_memory_note" style="display:none; font-size:12px; color:#9fb2cc; margin-top:6px;">Middle-term memory will also be included automatically if it exists for this NPC.</div>\
+          <div style="margin-top:14px;">\
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:6px; flex-wrap:wrap;">\
+              <label style="display:block; font-size:13px; color:#cfd9ea; font-weight:600;">Events That Will Be Used</label>\
+              <button id="ai_event_reset" type="button" style="padding:6px 10px; color:#fff; background:rgba(85,95,109,0.9); border:1px solid rgba(156,163,175,0.3); border-radius:8px; cursor:pointer; font-size:12px; font-weight:600;">Reset To Slider Selection</button>\
+            </div>\
+            <div id="ai_event_list" style="max-height:330px; overflow:auto; border:1px solid #454545; border-radius:8px; background:#232323; padding:10px;">\
+              <div style="font-size:13px; color:#9fb2cc;">Loading event preview...</div>\
+            </div>\
+          </div>\
           <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">\
             <button id="ai_prompt_cancel" style="padding:10px 20px; color:#fff; background:rgba(85,95,109,0.9); border:1px solid rgba(156,163,175,0.3); border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; transition:all 0.2s ease;">Cancel</button>\
             <button id="ai_prompt_ok" style="padding:10px 20px; color:#111; background:rgb(242,124,17); border:1px solid rgb(242,124,17); border-radius:8px; cursor:pointer; font-size:14px; font-weight:700; transition:all 0.2s ease;">Generate Profile</button>\
           </div></div>';
         document.body.appendChild(promptBox);
-        
+
         const promptInput = promptBox.querySelector('#ai_user_prompt');
+        const slider = promptBox.querySelector('#ai_event_limit');
+        const sliderValue = promptBox.querySelector('#ai_event_limit_value');
+        const eventMeta = promptBox.querySelector('#ai_event_meta');
+        const eventList = promptBox.querySelector('#ai_event_list');
+        const eventReset = promptBox.querySelector('#ai_event_reset');
+        const memoryNote = promptBox.querySelector('#ai_event_memory_note');
         const okBtn = promptBox.querySelector('#ai_prompt_ok');
         const cancelBtn = promptBox.querySelector('#ai_prompt_cancel');
-        
+        let previewEvents = [];
+        let selectedEvents = [];
+        let previewTotalAvailable = 0;
+        let previewMiddleTermIncluded = false;
+        let previewRequestToken = 0;
+
         promptInput.focus();
-        
-        cancelBtn.addEventListener('click', function(){
-          document.body.removeChild(promptBox);
+
+        const closePromptBox = function() {
+          if (promptBox.parentNode) {
+            document.body.removeChild(promptBox);
+          }
+        };
+
+        const updateEventMeta = function(totalAvailable, middleTermIncluded) {
+          const currentCount = selectedEvents.length;
+          eventMeta.textContent = currentCount + ' selected';
+          if (typeof totalAvailable === 'number') {
+            eventMeta.textContent += ' of ' + totalAvailable + ' available events';
+          }
+          memoryNote.style.display = middleTermIncluded ? 'block' : 'none';
+        };
+
+        const renderSelectedEvents = function() {
+          updateEventMeta(previewTotalAvailable, previewMiddleTermIncluded);
+          if (!selectedEvents.length) {
+            eventList.innerHTML = '<div style="font-size:13px; color:#f5b1b1;">No events selected. Increase the slider or reset the selection.</div>';
+            okBtn.disabled = true;
+            okBtn.style.opacity = '0.6';
+            okBtn.style.cursor = 'not-allowed';
+            return;
+          }
+
+          okBtn.disabled = false;
+          okBtn.style.opacity = '';
+          okBtn.style.cursor = 'pointer';
+
+          eventList.innerHTML = selectedEvents.map(function(evt, idx){
+            const label = escapeHtml(evt.label || 'Event');
+            const content = escapeHtml(evt.content || '');
+            return '<div style="display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:' + (idx === selectedEvents.length - 1 ? 'none' : '1px solid #383838') + ';">\
+              <div style="flex:1 1 auto; min-width:0;">\
+                <div style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#f1a54d; font-weight:700; margin-bottom:4px;">' + label + '</div>\
+                <div style="font-size:13px; line-height:1.45; color:#e9efff; white-space:pre-wrap;">' + content + '</div>\
+              </div>\
+              <button type="button" class="ai-event-remove" data-event-id="' + escapeHtml(evt.id || String(idx)) + '" title="Remove event" style="flex:0 0 auto; width:30px; height:30px; border-radius:8px; border:1px solid rgba(248,113,113,0.35); background:rgba(127,29,29,0.25); color:#fca5a5; cursor:pointer; font-size:16px; line-height:1;">🗑</button>\
+            </div>';
+          }).join('');
+
+          Array.from(eventList.querySelectorAll('.ai-event-remove')).forEach(function(btn){
+            btn.addEventListener('click', function(){
+              const eventId = String(btn.getAttribute('data-event-id') || '');
+              selectedEvents = selectedEvents.filter(function(evt){ return String(evt.id || '') !== eventId; });
+              renderSelectedEvents();
+            });
+          });
+        };
+
+        const loadPreview = async function() {
+          const requestToken = ++previewRequestToken;
+          const eventLimit = Number(slider.value || 100);
+          sliderValue.textContent = String(eventLimit);
+          eventMeta.textContent = 'Loading event preview...';
+          eventList.innerHTML = '<div style="font-size:13px; color:#9fb2cc;">Loading event preview...</div>';
+          okBtn.disabled = true;
+          okBtn.style.opacity = '0.6';
+          okBtn.style.cursor = 'wait';
+
+          const params = new URLSearchParams();
+          params.append('name', npcName);
+          params.append('event_limit', String(eventLimit));
+
+          let responseJson = null;
+          try {
+            const res = await fetch('../cmd/action_ai_profile_context_preview.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+              body: params.toString()
+            });
+            responseJson = await res.json();
+          } catch (err) {
+            if (requestToken !== previewRequestToken) return;
+            eventMeta.textContent = 'Failed to load event preview';
+            eventList.innerHTML = '<div style="font-size:13px; color:#f5b1b1;">' + escapeHtml(String((err && err.message) || err || 'Failed to load preview.')) + '</div>';
+            okBtn.disabled = true;
+            okBtn.style.cursor = 'not-allowed';
+            return;
+          }
+
+          if (requestToken !== previewRequestToken) return;
+
+          if (!responseJson || !responseJson.done) {
+            eventMeta.textContent = 'Failed to load event preview';
+            eventList.innerHTML = '<div style="font-size:13px; color:#f5b1b1;">' + escapeHtml((responseJson && responseJson.error) ? responseJson.error : 'Failed to load preview.') + '</div>';
+            okBtn.disabled = true;
+            okBtn.style.cursor = 'not-allowed';
+            return;
+          }
+
+          previewEvents = Array.isArray(responseJson.events) ? responseJson.events.slice() : [];
+          selectedEvents = previewEvents.slice();
+          previewTotalAvailable = Number(responseJson.total_available || previewEvents.length);
+          previewMiddleTermIncluded = !!responseJson.middle_term_memory_included;
+          renderSelectedEvents();
+        };
+
+        cancelBtn.addEventListener('click', closePromptBox);
+
+        promptBox.addEventListener('click', function(ev){
+          if (ev.target === promptBox) {
+            closePromptBox();
+          }
         });
-        
+
+        slider.addEventListener('input', function() {
+          sliderValue.textContent = String(slider.value || '100');
+        });
+
+        slider.addEventListener('change', function() {
+          loadPreview();
+        });
+
+        eventReset.addEventListener('click', function() {
+          selectedEvents = previewEvents.slice();
+          renderSelectedEvents();
+        });
+
         okBtn.addEventListener('click', async function(){
+          if (!selectedEvents.length) {
+            alert('At least one event must be selected to generate a profile.');
+            return;
+          }
+
           const userPrompt = String(promptInput.value||'').trim();
           const connectorSelect = promptBox.querySelector('#ai_llm_connector');
           const selectedConnector = connectorSelect ? String(connectorSelect.value||'').trim() : '';
-          document.body.removeChild(promptBox);
-          
+          const eventLimit = Number(slider.value || 100);
+          closePromptBox();
+
           document.getElementById("npc_modal").style.cursor="wait";
-          
+
           const processingMessage = document.createElement('div');
           processingMessage.innerHTML = '<div style="display:flex;align-items:center;gap:10px;"><div class="spinner" style="width:20px;height:20px;border:3px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite;"></div><span>Generating profile with AI...</span></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
           processingMessage.style.position = 'fixed';
@@ -3431,14 +3696,21 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           processingMessage.id="processing_wheel";
           document.body.appendChild(processingMessage);
 
-          const params = new URLSearchParams({ name: npcName });
+          const params = new URLSearchParams();
+          params.append('name', npcName);
+          params.append('event_limit', String(eventLimit));
+          params.append('selected_events', JSON.stringify(selectedEvents));
           if (userPrompt) params.append('user_prompt', userPrompt);
           if (selectedConnector) params.append('connector_id', selectedConnector);
-          
+
           let j = {};
           let fetchError = null;
           try {
-            const res = await fetch('../cmd/action_ai_regen_profile.php?' + params.toString());
+            const res = await fetch('../cmd/action_ai_regen_profile.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+              body: params.toString()
+            });
             if (!res.ok) {
               fetchError = 'Server returned status ' + res.status;
             } else {
@@ -3452,72 +3724,22 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           const procEl = document.getElementById('processing_wheel');
           if (procEl) procEl.remove();
           document.getElementById("npc_modal").style.cursor = "";
-          
+
           if (fetchError) {
             showAIGenerateResult(false, fetchError, npcName);
             return;
           }
-          
+
           if (j && j.done) {
-            showAIGenerateResult(true, 'Profile successfully generated with ' + (j.fields_updated || 'multiple') + ' fields updated.', npcName);
+            const eventsUsed = Number(j.events_used || selectedEvents.length || 0);
+            showAIGenerateResult(true, 'Profile successfully generated with ' + (j.fields_updated || 'multiple') + ' fields updated using ' + eventsUsed + ' selected events.', npcName);
           } else {
             const errMsg = (j && j.error) ? j.error : 'Unknown error occurred. Check the server logs for details.';
             showAIGenerateResult(false, errMsg, npcName);
           }
         });
-        
-        function showAIGenerateResult(success, message, npcName) {
-          const resultBox = document.createElement('div');
-          resultBox.style.position = 'fixed';
-          resultBox.style.inset = '0';
-          resultBox.style.zIndex = '10050';
-          resultBox.style.display = 'flex';
-          resultBox.style.alignItems = 'center';
-          resultBox.style.justifyContent = 'center';
-          resultBox.style.background = 'rgba(0,0,0,0.65)';
-          
-          const iconColor = success ? '#4ade80' : '#f87171';
-          const iconSymbol = success ? '✓' : '✕';
-          const title = success ? 'Profile Generated Successfully' : 'Profile Generation Failed';
-          
-          resultBox.innerHTML = '<div style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; padding:20px; max-width:500px; width:92%; color:#e9efff;">\
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">\
-              <div style="width:32px; height:32px; border-radius:50%; background:' + iconColor + '; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:bold; color:#111;">' + iconSymbol + '</div>\
-              <div style="font-weight:700; color:' + iconColor + '; font-size:18px;">' + title + '</div>\
-            </div>\
-            <div style="font-size:14px; color:#cfd9ea; margin-bottom:16px; line-height:1.5;">' + message.replace(/[<>]/g, c=>({'<':'&lt;','>':'&gt;'}[c])) + '</div>\
-            <div style="display:flex; gap:8px; justify-content:flex-end;">\
-              ' + (success ? '' : '<button id="ai_result_retry" style="padding:10px 20px; color:#fff; background:rgba(85,95,109,0.9); border:1px solid rgba(156,163,175,0.3); border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; transition:all 0.2s ease;">Try Again</button>') + '\
-              <button id="ai_result_ok" style="padding:10px 20px; color:#111; background:' + (success ? 'rgb(242,124,17)' : 'rgba(85,95,109,0.9)') + '; border:1px solid ' + (success ? 'rgb(242,124,17)' : 'rgba(156,163,175,0.3)') + '; border-radius:8px; cursor:pointer; font-size:14px; font-weight:700; ' + (success ? 'color:#111;' : 'color:#fff;') + ' transition:all 0.2s ease;">' + (success ? 'Reload to View' : 'Close') + '</button>\
-            </div></div>';
-          document.body.appendChild(resultBox);
-          
-          const okBtn = resultBox.querySelector('#ai_result_ok');
-          const retryBtn = resultBox.querySelector('#ai_result_retry');
-          
-          okBtn.addEventListener('click', function(){
-            document.body.removeChild(resultBox);
-            if (success) {
-              document.location.reload();
-            }
-          });
-          
-          if (retryBtn) {
-            retryBtn.addEventListener('click', function(){
-              document.body.removeChild(resultBox);
-              // Re-trigger the regenerate button click
-              const regenBtn = document.getElementById('npc_modal_regen');
-              if (regenBtn) regenBtn.click();
-            });
-          }
-          
-          // Close on background click
-          resultBox.addEventListener('click', function(e){
-            if (e.target === resultBox) {
-              document.body.removeChild(resultBox);
-            }
-          });
-        }
+
+        loadPreview();
 
       } catch(_e){console.log(_e)}
     });
@@ -3542,7 +3764,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       voiceid: 'Voice ID',
       refid: 'Ref ID',
       core: 'Core',
-      npc_static_bio: 'Static Bio',
+      npc_static_bio: 'Backstory',
       appearance: 'Appearance',
       personality: 'Personality',
       relationships: 'Relationships',
@@ -3725,7 +3947,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <div style="font-size:18px; font-weight:700; color:#e9efff;">${escapeHtml(d.npc_name||'')}</div>
         <div style="margin-top:8px; color:#cfd9ea;"><b style="color:rgb(242,124,17)">Core:</b><br>${escapeHtml(d.core||'')}</div>
         <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:10px; margin-top:8px;">
-          ${kv('Static', d.npc_static_bio)}
+          ${kv('Backstory', d.npc_static_bio)}
           ${kv('Personality', d.personality)}
           ${kv('Appearance', d.appearance)}
           ${kv('Relationships', d.relationships)}
@@ -4032,6 +4254,21 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     bindBulkSwitch(document.getElementById('npc_bulk_switch_profile_btn'));
   })();
   let listAbort = null;
+  function bindNpcLetterButtons(root){
+    const scope = root || document;
+    scope.querySelectorAll('.npc-letter-btn[data-letter]').forEach(btn=>{
+      btn.addEventListener('click', function(e){
+        e.preventDefault();
+        const nextLetter = String(this.getAttribute('data-letter') || '').toUpperCase();
+        const hidden = document.getElementById('npc_letter_filter');
+        if (hidden) hidden.value = nextLetter;
+        document.querySelectorAll('.npc-letter-btn[data-letter]').forEach(other=>{
+          other.classList.toggle('active', other === this);
+        });
+        refreshList(1);
+      });
+    });
+  }
   async function refreshList(page){
     const params = new URLSearchParams(window.location.search);
     const si = document.getElementById('npc_search');
@@ -4039,6 +4276,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     const caretStart = wasFocused && si && typeof si.selectionStart === 'number' ? si.selectionStart : null;
     const caretEnd = wasFocused && si && typeof si.selectionEnd === 'number' ? si.selectionEnd : null;
     if (si) params.set('q', si.value || '');
+    const lf = document.getElementById('npc_letter_filter');
+    params.set('letter', lf ? (lf.value || '') : '');
     const pf = document.getElementById('npc_profile_filter');
     if (pf) params.set('profile_id', pf.value || '');
     // Collect checkbox filters (prefer top bar if present else bottom)
@@ -4131,6 +4370,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           const m = this.href.match(/page=(\d+)/); const p = m?parseInt(m[1],10):1; refreshList(p);
         });
       });
+      bindNpcLetterButtons(newPag);
       const newSearch = document.getElementById('npc_search');
       if (newSearch){
         // Rebind with debounce and restore focus/caret
@@ -4155,6 +4395,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   if (searchInput){ searchInput.addEventListener('input', function(){ refreshListDebounced(1); }); }
   const profileSel = document.getElementById('npc_profile_filter');
   if (profileSel){ profileSel.addEventListener('change', function(){ refreshList(1); }); }
+  bindNpcLetterButtons(document);
   // Removed alpha toggle; default remains ascending (favorites first)
   // Hook existing pagination for AJAX
   document.querySelectorAll('.pagination a[href]').forEach(a=>{

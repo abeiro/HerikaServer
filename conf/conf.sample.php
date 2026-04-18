@@ -6,6 +6,8 @@ $DBDRIVER="postgresql"; //Database - Do not change.
 $HERIKA_NAME="The Narrator"; //NPC name. MUST MATCH their Skyrim in-game NPC name!
 $LOCK_PROFILE=false; //NPC name. MUST MATCH their Skyrim in-game NPC name!
 $AUTO_LOCK_PROFILE=true; //When enabled, saving an NPC profile in CHIM NPC page automatically locks it.
+$AUTOFILL_CUSTOM_PROFILES=true; //When enabled, custom NPCs with blank profile fields can be auto-filled later using AI profile generation.
+$AUTOFILL_CUSTOM_PROFILES_TRIGGER=40; //Number of usable AI profile events required before blank custom NPCs are auto-filled. Range: 10-100.
 $PROMPT_HEAD="You are #HERIKA_NAME#, a character in the Universe of Skyrim. This is not a simulation or a game; this is your reality. You will embody this persona with absolute conviction, prioritizing narrative authenticity and psychological consistency.
 
 The director provides scene prompts and narrative catalysts. Integrate these prompts seamlessly as the next logical event in the story. Treat them as established fact and build upon them with your character's authentic reaction.
@@ -16,7 +18,10 @@ $HERIKA_PERS="You are The Narrator in a Skyrim adventure. You will only talk to 
     . "You refer to yourself as 'The Narrator'. "
     . "Only #PLAYER_NAME# can hear you. "
     . "Your goal is to comment on #PLAYER_NAME#'s playthrough, and occasionally give hints. NO SPOILERS. " 
-    . "Talk about quests and last events."; //NPC personality.
+    . "Talk about quests and last events. "
+    . "When #PLAYER_NAME# speaks to you directly, answer them as a private voice in their mind using plain spoken dialogue rather than third-person scene narration."; //NPC personality.
+$HERIKA_PERSONALITY="Detached, observant, witty, and helpful. Acts as a private guide to #PLAYER_NAME#, offering spoiler-free insight and commentary without turning direct conversation into narrated prose."; //NPC personality traits.
+$HERIKA_SPEECHSTYLE="Speaks clearly and directly with concise, evocative phrasing and occasional dry wit. When addressing #PLAYER_NAME# directly, respond in plain spoken dialogue and avoid stage directions, scene description, or text in asterisks."; //NPC speech style.
 $HERIKA_DYNAMIC=''; //Split Biography for information to be changed dynamically. 
 $DIARY_COOLDOWN=120; //Cooldown period in seconds between diary entries to prevent spam. If a diary hotkey is pressed within this time period, the request will be ignored.
 $DYNAMIC_PROFILE=false; //Dynamic profile updates using a timer system.
@@ -63,22 +68,25 @@ $EMOTEMOODS="sassy,"
     . "lovely,"
     . "seductive,"
     . "sarcastic,"
-    . "sardonic,"
     . "smirking,"
     . "amused,"
-    . "default,"
-    . "assisting,"
     . "irritated,"
     . "playful,"
     . "neutral,"
     . "teasing,"
-    . "mocking"
-    . "desperate"
-    . "distressed"
-    . "pleading"
-    . "sad"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
+    . "desperate,"
+    . "scared,"
+    . "pleading,"
+    . "sad,"
+    . "happy,"
+    . "angry,"
+    . "drunk,"
+    . "shy,"
+    . "surprised"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 
-$REMOVE_ASTERISKS_FROM_OUTPUT=true;
+$INLINE_NARRATION_MODE="disabled"; // disabled|narrator|npc
+$REMOVE_ASTERISKS_FROM_PLAYER_INPUT=true; // filters *asterisked* player input from player TTS only
+$REMOVE_ASTERISKS_FROM_NPC_OUTPUT=true;
 $ENFORCE_ACTIONS_PROMPT=true;
 $SUMMARY_PROMPT= 'Focus on key events, tagging characters, locations, and factions accurately. Ensure memories align and maintain chronological order while foreshadowing future arcs. Prioritize player agency, and use environmental cues to enhance storytelling and continuity.'; 
 $DYNAMIC_PROMPT = "(LEGACY - Use individual field prompts instead) "
@@ -151,13 +159,13 @@ $DISABLE_REANIMATION_TRACKING=true; //Disable reanimation tracking. NPCs marked 
 
 //[AI/LLM Service Selection]
 $CONNECTORS=["openrouterjson","openaijson","koboldcppjson"]; //AI Service(s).
-$CONNECTORS_DIARY=["openrouter","openai","google_openaijson","koboldcpp","player2"]; //Creates diary entries and memories.
+$CONNECTORS_DIARY="openrouter"; //Creates diary entries and memories.
 
 // Core LLM connector defaults (IDs from core_llm_connector table)
 $CORE_CONNECTOR_DIRECTOR=1;
 $CORE_CONNECTOR_PLAYER=2;
-$CORE_CONNECTOR_SUMMARY=5;
-$CORE_CONNECTOR_MEDIUMTERM=5;
+$CORE_CONNECTOR_SUMMARY=4;
+$CORE_CONNECTOR_MEDIUMTERM=4;
 $CORE_CONNECTOR_PROFILES=1;
 $RELLLM_CONNECTOR=5; // Relationship Management default (Mistral Small 3.2 24B)
 
@@ -196,7 +204,7 @@ $CONNECTOR["openrouterjson"]["get_parms5"] = false; // Utility button for medium
 $CONNECTOR["openrouterjson"]["get_parms9"] = false; // Utility button for high randomness parameters
 //OpenRouter (Legacy)
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
-$CONNECTOR["openrouter"]["model"]="meta-llama/llama-3.1-8b-instruct"; //LLM model.
+$CONNECTOR["openrouter"]["model"]="deepseek/deepseek-v3.2"; //LLM model.
 $CONNECTOR["openrouter"]["reasoning_model"]=false; //This is a reasoning model, could output CoT.
 $CONNECTOR["openrouter"]["fallback_models"]=""; //comma separated models.
 $CONNECTOR["openrouter"]["PROVIDER"]=""; //select a list of providers from OpenRouter
@@ -365,12 +373,17 @@ $TTS["openai"]["voice"]='nova';	//Voice ID.
 $TTS["openai"]["model_id"]='tts-1';	//Model.
 //ElevenLabs TTS
 $TTS["ELEVEN_LABS"]["voice_id"]="EXAVITQu4vr4xnSDxMaL";	//Voice ID.
-$TTS["ELEVEN_LABS"]["optimize_streaming_latency"]="0"; //Optimize streaming latency.
-$TTS["ELEVEN_LABS"]["model_id"]="eleven_monolingual_v1"; //Model ID.
-$TTS["ELEVEN_LABS"]["stability"]="0.75"; //Stability.
-$TTS["ELEVEN_LABS"]["similarity_boost"]="0.75"; //Similarity boost.
-$TTS["ELEVEN_LABS"]["style"]=0.0; //Style.
-$TTS["ELEVEN_LABS"]["API_KEY"]=""; //API key.
+$TTS["ELEVEN_LABS"]["optimize_streaming_latency"]="0"; //Latency optimization level. 0 keeps default quality/latency balance.
+$TTS["ELEVEN_LABS"]["model_id"]="eleven_monolingual_v1"; //ElevenLabs model to use. Set to eleven_v3 to use V3 enhancers/audio tags.
+$TTS["ELEVEN_LABS"]["stability"]="0.75"; //Higher values sound steadier and less varied.
+$TTS["ELEVEN_LABS"]["similarity_boost"]="0.75"; //Higher values cling more closely to the selected voice.
+$TTS["ELEVEN_LABS"]["style"]=0.0; //Adds extra style exaggeration. Higher values can increase latency.
+$TTS["ELEVEN_LABS"]["speed"]=1.0; //Speaking rate. 1.0 is normal speed.
+$TTS["ELEVEN_LABS"]["use_speaker_boost"]=true; //Boosts resemblance to the original voice. Ignored by eleven_v3.
+$TTS["ELEVEN_LABS"]["apply_text_normalization"]="auto"; //Rewrites numbers, dates, abbreviations, etc. before speech. auto|on|off
+$TTS["ELEVEN_LABS"]["apply_language_text_normalization"]=false; //Adds extra language-specific cleanup before synthesis.
+$TTS["ELEVEN_LABS"]["v3_audio_tags"]=""; //Optional Eleven v3 prompt tags prefixed to the text, such as [whispers].
+$TTS["ELEVEN_LABS"]["API_KEY"]=""; //Legacy API key. Prefer using an ElevenLabs API Badge in connectors.
 //Google Cloud Platform TTS
 $TTS["GCP"]["GCP_SA_FILEPATH"]="meta-chassis-391906-122bdf85aa6f.json"; //Google Cloud Platform auth file.
 $TTS["GCP"]["voice_name"]="en-GB-Neural2-C"; //Voice ID.
@@ -548,7 +561,7 @@ $FEATURES["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]=true; //NOT FUNCTIONAL CURRENTLY. 
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_TIME_DELAY"]=12; //Time in minutes to delay before using a memory in a prompt.
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_CONTEXT_SIZE"]=1; //Amount of memory records that will be injected into the prompt.
 $FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]=true; //Combines individual memory logs into larger ones at the cost of tokens.
-$FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]=10; //Time frame used to pack summary data.
+$FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"]=10; //Time frame used to pack summary data. Each point is about 0.24 in-game hours (10 = 2.4h, 50 = 12h).
 $FEATURES["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_MIN_EVENTS"]=5; //Minimum events needed in a packed time bucket to create a global memory summary.
 $FEATURES["MEMORY_EMBEDDING"]["INDIVIDUAL_MEMORY_SUMMARY_THRESHOLD"]=3; //How many global summaries involving an NPC are needed before creating one NPC-scoped memory.
 $FEATURES["MEMORY_EMBEDDING"]["MEMORY_BIAS_A"]=33; //0-100 - Minimal distance to offer memory.

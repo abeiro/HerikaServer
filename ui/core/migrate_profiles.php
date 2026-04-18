@@ -77,6 +77,7 @@ foreach ($files as $mconf) {
         'STTFUNCTION',
         'TTSFUNCTION_PLAYER',
         'TTSFUNCTION_PLAYER_VOICE',
+        'TTSFUNCTION_PLAYER_VOICE_ID',
         'TTSFUNCTION_PLAYER_LANGUAGE'
     ];
     $OVERRIDES = [];

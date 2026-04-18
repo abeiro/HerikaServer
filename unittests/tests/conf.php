@@ -38,22 +38,29 @@ $GLOBALS["EMOTEMOODS"]="sassy,"
     . "lovely,"
     . "seductive,"
     . "sarcastic,"
-    . "sardonic,"
     . "smirking,"
     . "amused,"
-    . "default,"
-    . "assisting,"
     . "irritated,"
     . "playful,"
     . "neutral,"
     . "teasing,"
-    . "mocking"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
+    . "desperate,"
+    . "scared,"
+    . "pleading,"
+    . "sad,"
+    . "happy,"
+    . "angry,"
+    . "drunk,"
+    . "shy,"
+    . "surprised"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 $GLOBALS["SUMMARY_PROMPT"]=''; //Instructions added when generating summaries for memories and other features.
 $GLOBALS["DIARY_PROMPT"]=''; //Instructions added when generating diary entries.
 
 //[AI/LLM Service Selection]
 $GLOBALS["CONNECTORS"]=["openrouterjson"]; //AI Service(s).
 $GLOBALS["CONNECTORS_DIARY"]='openrouter';
+$GLOBALS["CORE_CONNECTOR_SUMMARY"]=4;
+$GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]=4;
 
 $GLOBALS["HERIKA_DYNAMIC"]='';
 $GLOBALS["DYNAMIC_PROMPT"]='Dynamic prompt here';
@@ -81,7 +88,7 @@ $GLOBALS["CONNECTOR"]["openrouterjson"]["xtitle"]="Skyrim AI Follower Framework"
 $GLOBALS["CONNECTOR"]["openrouterjson"]["json_schema"]=false; //Enable OpenRouter JSON schema.
 //OpenRouter (Legacy)
 $GLOBALS["CONNECTOR"]["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
-$GLOBALS["CONNECTOR"]["openrouter"]["model"]="meta-llama/llama-3.1-8b-instruct"; //LLM model.
+$GLOBALS["CONNECTOR"]["openrouter"]["model"]="deepseek/deepseek-v3.2"; //LLM model.
 $GLOBALS["CONNECTOR"]["openrouter"]["max_tokens"]=1024; //Maximum tokens to generate.
 $GLOBALS["CONNECTOR"]["openrouter"]["temperature"]=0.9; //LLM parameter temperature.
 $GLOBALS["CONNECTOR"]["openrouter"]["presence_penalty"]=0;	//LLM parameter presence_penalty.
@@ -213,12 +220,17 @@ $GLOBALS["TTS"]["openai"]["voice"]='nova';	//Voice ID.
 $GLOBALS["TTS"]["openai"]["model_id"]='tts-1';	//Model.
 //ElevenLabs TTS
 $GLOBALS["TTS"]["ELEVEN_LABS"]["voice_id"]="EXAVITQu4vr4xnSDxMaL";	//Voice ID.
-$GLOBALS["TTS"]["ELEVEN_LABS"]["optimize_streaming_latency"]="0"; //Optimize streaming latency.
-$GLOBALS["TTS"]["ELEVEN_LABS"]["model_id"]="eleven_monolingual_v1"; //Model ID.
-$GLOBALS["TTS"]["ELEVEN_LABS"]["stability"]="0.75"; //Stability.
-$GLOBALS["TTS"]["ELEVEN_LABS"]["similarity_boost"]="0.75"; //Similarity boost.
-$GLOBALS["TTS"]["ELEVEN_LABS"]["style"]=0.0; //Style.
-$GLOBALS["TTS"]["ELEVEN_LABS"]["API_KEY"]=""; //API key.
+$GLOBALS["TTS"]["ELEVEN_LABS"]["optimize_streaming_latency"]="0"; //Latency optimization level. 0 keeps default quality/latency balance.
+$GLOBALS["TTS"]["ELEVEN_LABS"]["model_id"]="eleven_monolingual_v1"; //ElevenLabs model to use. Set to eleven_v3 to use V3 enhancers/audio tags.
+$GLOBALS["TTS"]["ELEVEN_LABS"]["stability"]="0.75"; //Higher values sound steadier and less varied.
+$GLOBALS["TTS"]["ELEVEN_LABS"]["similarity_boost"]="0.75"; //Higher values cling more closely to the selected voice.
+$GLOBALS["TTS"]["ELEVEN_LABS"]["style"]=0.0; //Adds extra style exaggeration. Higher values can increase latency.
+$GLOBALS["TTS"]["ELEVEN_LABS"]["speed"]=1.0; //Speaking rate. 1.0 is normal speed.
+$GLOBALS["TTS"]["ELEVEN_LABS"]["use_speaker_boost"]=true; //Boosts resemblance to the original voice. Ignored by eleven_v3.
+$GLOBALS["TTS"]["ELEVEN_LABS"]["apply_text_normalization"]="auto"; //Rewrites numbers, dates, abbreviations, etc. before speech. auto|on|off
+$GLOBALS["TTS"]["ELEVEN_LABS"]["apply_language_text_normalization"]=false; //Adds extra language-specific cleanup before synthesis.
+$GLOBALS["TTS"]["ELEVEN_LABS"]["v3_audio_tags"]=""; //Optional Eleven v3 prompt tags prefixed to the text, such as [whispers].
+$GLOBALS["TTS"]["ELEVEN_LABS"]["API_KEY"]=""; //Legacy API key. Prefer using an ElevenLabs API Badge in connectors.
 //Google Cloud Platform TTS
 $GLOBALS["TTS"]["GCP"]["GCP_SA_FILEPATH"]="meta-chassis-391906-122bdf85aa6f.json"; //Google Cloud Platform auth file.
 $GLOBALS["TTS"]["GCP"]["voice_name"]="en-GB-Neural2-C"; //Voice ID.
