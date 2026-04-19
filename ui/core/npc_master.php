@@ -1157,12 +1157,14 @@ if (!function_exists('renderNpcToolbar')) {
               <button type="button" class="npc-letter-btn npc-page-link<?= $page >= $totalPages ? ' disabled' : '' ?>" data-page="<?= $totalPages ?>" <?= $page >= $totalPages ? 'disabled aria-disabled="true"' : '' ?>>Last</button>
               <div class="npc-page-indicator" title="Current page"><?= $page ?>/<?= $totalPages ?></div>
             </div>
+          </div>
+          <div class="npc-toolbar-letter-row">
+            <?php renderNpcLetterFilter($nameLetterFilter); ?>
             <div class="npc-total-pill" title="Total NPC profiles">
               <div class="npc-total-pill-icon">👥</div>
               <div class="npc-total-pill-value"><?= $totalRows ?></div>
             </div>
           </div>
-          <?php renderNpcLetterFilter($nameLetterFilter); ?>
         </div>
         <?php
     }
@@ -2988,7 +2990,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 .pagination.npc-toolbar .npc-toolbar-main,
-.pagination.npc-toolbar .npc-toolbar-subrow {
+.pagination.npc-toolbar .npc-toolbar-subrow,
+.pagination.npc-toolbar .npc-toolbar-letter-row {
     display:flex;
     align-items:center;
     justify-content:space-between;
@@ -3009,11 +3012,18 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     flex-wrap:nowrap;
 }
 .pagination.npc-toolbar .npc-toolbar-tools {
-    flex:1 1 320px;
-    justify-content:flex-end;
+    flex:0 0 320px;
+    width:320px;
+    min-width:320px;
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:flex-start;
 }
 .pagination.npc-toolbar .npc-toolbar-pager {
     flex:1 1 auto;
+}
+.pagination.npc-toolbar .npc-toolbar-letter-row {
+    align-items:flex-end;
 }
 .pagination.npc-toolbar .npc-toolbar-btn {
     display:inline-flex;
@@ -3099,16 +3109,16 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     font-size:13px;
 }
 .pagination.npc-toolbar .npc-toolbar-tools input[type="text"] {
-    flex:0 0 320px;
-    width:320px;
-    min-width:320px;
-    max-width:320px;
+    flex:0 0 auto;
+    width:100%;
+    min-width:0;
+    max-width:none;
 }
 .pagination.npc-toolbar .npc-toolbar-tools select {
-    flex:0 0 295px;
-    width:295px;
-    min-width:295px;
-    max-width:295px;
+    flex:0 0 auto;
+    width:100%;
+    min-width:0;
+    max-width:none;
 }
 .pagination.npc-toolbar .npc-page-link {
     display:inline-flex;
@@ -3142,6 +3152,11 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     background:rgba(26, 26, 26, 0.78);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
 }
+.pagination.npc-toolbar .npc-toolbar-letter-row .npc-letter-filter {
+    flex:1 1 auto;
+    width:auto;
+    margin:0;
+}
 .pagination.npc-toolbar .npc-total-pill-icon {
     font-size:15px;
     opacity:0.9;
@@ -3167,7 +3182,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 @media (max-width: 780px) {
     .pagination.npc-toolbar .npc-toolbar-tools,
     .pagination.npc-toolbar .npc-toolbar-actions,
-    .pagination.npc-toolbar .npc-toolbar-pager {
+    .pagination.npc-toolbar .npc-toolbar-pager,
+    .pagination.npc-toolbar .npc-toolbar-letter-row {
         width:100%;
     }
     .pagination.npc-toolbar .npc-toolbar-tools input[type="text"],
@@ -3177,6 +3193,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     }
     .pagination.npc-toolbar .npc-toolbar-subrow {
         align-items:flex-start;
+    }
+    .pagination.npc-toolbar .npc-toolbar-tools {
+        flex:1 1 100%;
+        width:100%;
+        min-width:0;
+    }
+    .pagination.npc-toolbar .npc-toolbar-letter-row {
+        align-items:flex-start;
+    }
+    .pagination.npc-toolbar .npc-toolbar-letter-row .npc-letter-filter {
+        width:100%;
     }
 }
 </style>
