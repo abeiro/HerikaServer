@@ -1117,18 +1117,6 @@ if (!function_exists('renderNpcToolbar')) {
         <div class="pagination npc-toolbar">
           <div class="npc-toolbar-main">
             <div class="npc-toolbar-actions">
-              <div class="npc-filter-dropdown">
-                <button type="button" id="npc_filter_btn<?= $suffix ?>" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action npc-toolbar-filter-btn" title="Filters" aria-label="Filters">▾ Filters</button>
-                <div id="npc_filter_menu<?= $suffix ?>" class="npc-filter-menu" style="display:none;">
-                  <label><input type="checkbox" id="npc_filter_fav<?= $suffix ?>" <?= $favOnly ? 'checked' : '' ?>> ⭐ Favorites</label>
-                  <label><input type="checkbox" id="npc_filter_dyn<?= $suffix ?>" <?= $dynOnly ? 'checked' : '' ?>> ♻️ Dynamic profile</label>
-                  <label><input type="checkbox" id="npc_filter_mtm<?= $suffix ?>" <?= $mtmOnly ? 'checked' : '' ?>> 📃 Middle-term memory</label>
-                  <label><input type="checkbox" id="npc_filter_lock<?= $suffix ?>" <?= $lockOnly ? 'checked' : '' ?>> 🔒 Locked</label>
-                  <label><input type="checkbox" id="npc_filter_sal<?= $suffix ?>" <?= $salOnly ? 'checked' : '' ?>> 👋 Auto Greeting</label>
-                  <label><input type="checkbox" id="npc_filter_blc<?= $suffix ?>" <?= $blcOnly ? 'checked' : '' ?>> 🎮 BGL: Auto Actions</label>
-                  <label><input type="checkbox" id="npc_filter_gps<?= $suffix ?>" <?= $gpsOnly ? 'checked' : '' ?>> 📍 BGL: GPS track</label>
-                </div>
-              </div>
               <button id="npc_create_btn" type="button" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action">+ Create NPC</button>
               <button id="npc_import_btn" type="button" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action" title="Import NPC from JSON file">📥 Import NPC</button>
               <button id="rel_bulk_build_btn" type="button" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
@@ -1160,9 +1148,23 @@ if (!function_exists('renderNpcToolbar')) {
           </div>
           <div class="npc-toolbar-letter-row">
             <?php renderNpcLetterFilter($nameLetterFilter); ?>
-            <div class="npc-total-pill" title="Total NPC profiles">
-              <div class="npc-total-pill-icon">👥</div>
-              <div class="npc-total-pill-value"><?= $totalRows ?></div>
+            <div class="npc-toolbar-summary">
+              <div class="npc-filter-dropdown">
+                <button type="button" id="npc_filter_btn<?= $suffix ?>" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action npc-toolbar-filter-btn" title="Filters" aria-label="Filters">▾ Filters</button>
+                <div id="npc_filter_menu<?= $suffix ?>" class="npc-filter-menu" style="display:none;">
+                  <label><input type="checkbox" id="npc_filter_fav<?= $suffix ?>" <?= $favOnly ? 'checked' : '' ?>> ⭐ Favorites</label>
+                  <label><input type="checkbox" id="npc_filter_dyn<?= $suffix ?>" <?= $dynOnly ? 'checked' : '' ?>> ♻️ Dynamic profile</label>
+                  <label><input type="checkbox" id="npc_filter_mtm<?= $suffix ?>" <?= $mtmOnly ? 'checked' : '' ?>> 📃 Middle-term memory</label>
+                  <label><input type="checkbox" id="npc_filter_lock<?= $suffix ?>" <?= $lockOnly ? 'checked' : '' ?>> 🔒 Locked</label>
+                  <label><input type="checkbox" id="npc_filter_sal<?= $suffix ?>" <?= $salOnly ? 'checked' : '' ?>> 👋 Auto Greeting</label>
+                  <label><input type="checkbox" id="npc_filter_blc<?= $suffix ?>" <?= $blcOnly ? 'checked' : '' ?>> 🎮 BGL: Auto Actions</label>
+                  <label><input type="checkbox" id="npc_filter_gps<?= $suffix ?>" <?= $gpsOnly ? 'checked' : '' ?>> 📍 BGL: GPS track</label>
+                </div>
+              </div>
+              <div class="npc-total-pill" title="Total NPC profiles">
+                <div class="npc-total-pill-icon">👥</div>
+                <div class="npc-total-pill-value"><?= $totalRows ?></div>
+              </div>
             </div>
           </div>
         </div>
@@ -3025,6 +3027,13 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .pagination.npc-toolbar .npc-toolbar-letter-row {
     align-items:flex-end;
 }
+.pagination.npc-toolbar .npc-toolbar-summary {
+    margin-left:auto;
+    display:flex;
+    align-items:flex-end;
+    gap:8px;
+    flex-wrap:wrap;
+}
 .pagination.npc-toolbar .npc-toolbar-btn {
     display:inline-flex;
     align-items:center;
@@ -3142,7 +3151,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     padding:0 4px;
 }
 .pagination.npc-toolbar .npc-total-pill {
-    margin-left:auto;
     display:flex;
     align-items:center;
     gap:10px;
@@ -3183,6 +3191,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     .pagination.npc-toolbar .npc-toolbar-tools,
     .pagination.npc-toolbar .npc-toolbar-actions,
     .pagination.npc-toolbar .npc-toolbar-pager,
+    .pagination.npc-toolbar .npc-toolbar-summary,
     .pagination.npc-toolbar .npc-toolbar-letter-row {
         width:100%;
     }
@@ -3204,6 +3213,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     }
     .pagination.npc-toolbar .npc-toolbar-letter-row .npc-letter-filter {
         width:100%;
+    }
+    .pagination.npc-toolbar .npc-toolbar-summary {
+        margin-left:0;
+        align-items:flex-start;
     }
 }
 </style>
