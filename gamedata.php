@@ -15,6 +15,7 @@ require_once(__DIR__ . "/lib/{$GLOBALS["DBDRIVER"]}.class.php");
 $GLOBALS["db"] = new sql();
 require_once(__DIR__ . "/lib/core/npc_master.class.php");
 require_once(__DIR__ . "/lib/logger.php");
+require_once(__DIR__ . "/lib/chim_quest_engine.php");
 
 // Only accept POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -35,7 +36,15 @@ if (!$data || !isset($data['type'])) {
 }
 
 // Types that operate on global data and do not require an actor
-$actorlessTypes = ['market_stock'];
+$actorlessTypes = [
+    'market_stock',
+    'quest_event',
+    'quest_action_poll',
+    'quest_action_ack',
+    'quest_import_bundled',
+    'quest_reset_runtime',
+    'quest_status'
+];
 
 // Validate required fields (skipped for actorless types)
 if (!in_array($data['type'], $actorlessTypes)) {
@@ -48,6 +57,8 @@ if (!in_array($data['type'], $actorlessTypes)) {
 }
 
 $npcMaster = new NpcMaster();
+$responseBody = "OK";
+$responseIsJson = false;
 
 try {
     switch ($data['type']) {
@@ -84,14 +95,56 @@ try {
         case 'market_stock':
             handleMarketStockUpdate($data);
             break;
+        case 'quest_event':
+            $responseBody = chimQuestEngineJsonEncode(chimQuestEngineHandleEvent(
+                $data['event_type'] ?? '',
+                (isset($data['payload']) && is_array($data['payload'])) ? $data['payload'] : $data
+            ));
+            $responseIsJson = true;
+            break;
+        case 'quest_action_poll':
+            $responseBody = chimQuestEngineJsonEncode(array(
+                'ok' => true,
+                'actions' => chimQuestEngineFetchPendingActions($data['limit'] ?? 25),
+            ));
+            $responseIsJson = true;
+            break;
+        case 'quest_action_ack':
+            $responseBody = chimQuestEngineJsonEncode(chimQuestEngineAcknowledgeAction(
+                $data['action_id'] ?? 0,
+                $data['status'] ?? 'applied',
+                (isset($data['result']) && is_array($data['result'])) ? $data['result'] : array()
+            ));
+            $responseIsJson = true;
+            break;
+        case 'quest_import_bundled':
+            $responseBody = chimQuestEngineJsonEncode(array(
+                'ok' => true,
+                'imported' => chimQuestEngineImportBundledDefinitions(),
+            ));
+            $responseIsJson = true;
+            break;
+        case 'quest_reset_runtime':
+            $responseBody = chimQuestEngineJsonEncode(array(
+                'ok' => chimQuestEngineResetRuntime(true),
+            ));
+            $responseIsJson = true;
+            break;
+        case 'quest_status':
+            $responseBody = chimQuestEngineJsonEncode(chimQuestEngineStatus());
+            $responseIsJson = true;
+            break;
         default:
             http_response_code(400);
             echo "Bad Request: Unknown type";
             Logger::error("[gamedata.php] Bad request - unknown type: {$data['type']}");
             exit;
     }
-    
-    echo "OK";
+
+    if ($responseIsJson) {
+        header('Content-Type: application/json');
+    }
+    echo $responseBody;
 } catch (Exception $e) {
     http_response_code(500);
     echo "Internal Server Error";
@@ -202,22 +255,20 @@ function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void {
     
     // If this is a player, save directly to core_player table (player doesn't need NPC record)
     if ($actorType === 'player') {
+        $inventoryData = [];
+        foreach ($items as $item) {
+            if (isset($item['name']) && isset($item['baseid']) && isset($item['count'])) {
+                $inventoryData[] = [
+                    'name' => $item['name'],
+                    'baseid' => $item['baseid'],
+                    'count' => intval($item['count'])
+                ];
+            }
+        }
+
         try {
             require_once(__DIR__ . "/lib/core/player.class.php");
             $player = new Player();
-            
-            // Format inventory data for storage
-            $inventoryData = [];
-            foreach ($items as $item) {
-                if (isset($item['name']) && isset($item['baseid']) && isset($item['count'])) {
-                    $inventoryData[] = [
-                        'name' => $item['name'],
-                        'baseid' => $item['baseid'],
-                        'count' => intval($item['count'])
-                    ];
-                }
-            }
-            
             $player->setJson('inventory', $inventoryData);
             Logger::debug("[gamedata.php] Saved player inventory to core_player table");
         } catch (Exception $e) {
@@ -249,6 +300,8 @@ function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void {
             $currentData = $npcMaster->setMetadata($currentData, $meta);
             $npcMaster->updateByArray($currentData);
         }
+
+        chimQuestEngineSyncPlayerInventory($inventoryData);
         
         $itemCount = count($items);
         Logger::debug("[gamedata.php] Updated inventory for player: {$actorName} ({$itemCount} items)");

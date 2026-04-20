@@ -2389,6 +2389,11 @@ if ($checkTableExists("sneq_quests_saved") == -1) {
 } else
     Logger::info(__FILE__." sneq_quests_saved exists");
 
+if ($checkTableExists("skyrim_quest_definitions") == -1 || $checkTableExists("chim_quest_definitions") != -1) {
+    $db->execQuery(file_get_contents(__DIR__."/../data/chim_quest_engine.sql"));
+} else
+    Logger::info(__FILE__." skyrim_quest_definitions exists");
+
 
 
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS region text");

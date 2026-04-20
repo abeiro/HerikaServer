@@ -1,0 +1,903 @@
+{
+    "skeleton_type": "quest",
+    "quest_form_id": "0x00039645",
+    "quest_plugin": "Skyrim.esm",
+    "quest_editor_id": "MS13",
+    "description": "The Golden Claw — POC v3.2 (two-phase dialogue: discovery gate + commitment trigger)",
+    "npc_facts": {
+        "Lucan Valerius": {
+            "base_facts": [
+                "You are Lucan Valerius, owner of the Riverwood Trader, a general goods store in Riverwood.",
+                "Your sister Camilla Valerius helps you run the shop.",
+                "Your shop was recently broken into. The thieves stole the GOLDEN CLAW.",
+                "You suspect the bandits at Bleak Falls Barrow are responsible.",
+                "You are desperate to get the Golden Claw back and will offer a reward."
+            ],
+            "beat_facts": {
+                "QUEST_ACCEPTED": [
+                    "A traveler has agreed to retrieve the Golden Claw from Bleak Falls Barrow."
+                ],
+                "RETURN_TO_LUCAN": [
+                    "The traveler has returned with the Golden Claw! You are overjoyed."
+                ]
+            }
+        },
+        "Camilla Valerius": {
+            "base_facts": [
+                "You are Camilla Valerius, sister of Lucan Valerius.",
+                "Your brother's shop was broken into and the Golden Claw was stolen.",
+                "You know the path to Bleak Falls Barrow and could show someone the way."
+            ],
+            "beat_facts": {
+                "QUEST_ACCEPTED": [
+                    "A traveler has agreed to retrieve the Golden Claw."
+                ]
+            }
+        },
+        "Arvel the Swift": {
+            "base_facts": [
+                "You are Arvel the Swift, a Dunmer thief who stole the Golden Claw.",
+                "You are trapped in a giant frostbite spider's web in Bleak Falls Barrow.",
+                "The Golden Claw is on your person. You will betray whoever frees you."
+            ],
+            "beat_facts": {}
+        }
+    },
+    "beats": [
+        {
+            "id": "SHOP_TROUBLE",
+            "focus_npc": "Lucan Valerius",
+            "comment": "GATE ONLY — player learns about the robbery. No quest start, no stage set. Serves as prerequisite for QUEST_ACCEPTED. Lucan tells his story via CHIM AI naturally.",
+            "action": {
+                "type": "gate"
+            },
+            "downstream": [],
+            "triggers": [
+                {
+                    "type": "dialogue",
+                    "keywords": [
+                        "what happened",
+                        "what's wrong",
+                        "what is wrong",
+                        "something going on",
+                        "what's the matter",
+                        "what is the matter",
+                        "you seem upset",
+                        "you seem worried",
+                        "is something wrong",
+                        "everything okay",
+                        "everything alright",
+                        "are you okay",
+                        "are you alright",
+                        "what's the problem",
+                        "what is the problem",
+                        "been robbed",
+                        "break-in",
+                        "break in",
+                        "broken into",
+                        "looking for work",
+                        "any work",
+                        "got any work",
+                        "need a hand",
+                        "anything i can do",
+                        "need any help",
+                        "got a job",
+                        "any jobs",
+                        "got anything for me",
+                        "something to do",
+                        "need anything done",
+                        "any problems",
+                        "what's going on",
+                        "hear any rumors",
+                        "any trouble"
+                    ],
+                    "min_matches": 1
+                }
+            ],
+            "prerequisites": []
+        },
+        {
+            "id": "QUEST_ACCEPTED",
+            "focus_npc": "Lucan Valerius",
+            "comment": "Player explicitly commits to helping. THIS is where the quest fires. Requires SHOP_TROUBLE gate.",
+            "action": {
+                "type": "set_stage",
+                "quest_form_id": "0x00039645",
+                "quest_plugin": "Skyrim.esm",
+                "stage": 10
+            },
+            "downstream": [
+                {
+                    "type": "set_objective_displayed",
+                    "index": 10
+                },
+                {
+                    "type": "start_scene",
+                    "form_id": "0x000383A3",
+                    "plugin": "Skyrim.esm",
+                    "comment": "MS13CamillaStage10Scene — Camilla offers to show the way",
+                    "conditions": [
+                        {
+                            "type": "actor_alive",
+                            "form_id": "0x0001347A",
+                            "plugin": "Skyrim.esm"
+                        },
+                        {
+                            "type": "actor_alive",
+                            "form_id": "0x0001347B",
+                            "plugin": "Skyrim.esm"
+                        }
+                    ]
+                },
+                {
+                    "type": "cross_quest_set_objective_completed",
+                    "quest_form_id": "0x000B6031",
+                    "quest_plugin": "Skyrim.esm",
+                    "index": 10,
+                    "comment": "MS13Intro objective 10"
+                }
+            ],
+            "triggers": [
+                {
+                    "type": "dialogue",
+                    "keywords": [
+                        "i'll help",
+                        "i can help",
+                        "i will help",
+                        "i'll get it",
+                        "i'll find it",
+                        "i'll retrieve it",
+                        "i'll get the claw",
+                        "i'll find the claw",
+                        "i can get it",
+                        "i can get the claw",
+                        "get it back for you",
+                        "bring it back",
+                        "retrieve it",
+                        "get the claw back",
+                        "do you need help",
+                        "need some help",
+                        "want me to help",
+                        "let me help",
+                        "i'll do it",
+                        "i'll take care of it",
+                        "consider it done",
+                        "count on me",
+                        "leave it to me",
+                        "i'm on it",
+                        "i'll handle it",
+                        "you can count on me",
+                        "i'll go get it",
+                        "i could help",
+                        "retrieve the claw",
+                        "retrieve the golden claw",
+                        "recover the claw",
+                        "recover the golden claw",
+                        "reclaim the claw",
+                        "reclaim the golden claw",
+                        "claim the golden claw",
+                        "seize the claw",
+                        "seize the golden claw",
+                        "return the claw",
+                        "return the golden claw",
+                        "bring back the claw",
+                        "bring back the golden claw",
+                        "i will retrieve",
+                        "i'll recover",
+                        "i will recover",
+                        "i'll reclaim",
+                        "i will reclaim",
+                        "slay the bandits",
+                        "kill the bandits",
+                        "crush the bandits",
+                        "destroy the bandits",
+                        "end the bandits",
+                        "slay those bandits",
+                        "kill those bandits",
+                        "the bandits will die",
+                        "the bandits shall die",
+                        "the bandits shall fall",
+                        "the bandits will fall",
+                        "so be it",
+                        "it shall be done",
+                        "it will be done",
+                        "i accept",
+                        "leave them to me",
+                        "the claw shall be mine",
+                        "the claw will be mine",
+                        "have a deal",
+                        "we have a deal"
+                    ],
+                    "min_matches": 1
+                }
+            ],
+            "trigger_mode": "any",
+            "prerequisites": [
+                "SHOP_TROUBLE"
+            ]
+        },
+        {
+            "id": "SPIDER_ENCOUNTER",
+            "action": {
+                "type": "set_stage",
+                "quest_form_id": "0x00039645",
+                "quest_plugin": "Skyrim.esm",
+                "stage": 20
+            },
+            "downstream": [
+                {
+                    "type": "start_scene",
+                    "form_id": "0x0003A17B",
+                    "plugin": "Skyrim.esm",
+                    "comment": "MS13SpiderScene"
+                }
+            ],
+            "triggers": [
+                {
+                    "type": "location_entered",
+                    "form_id": "0x000371DD",
+                    "plugin": "Skyrim.esm",
+                    "comment": "BleakFallsBarrow interior near spider"
+                },
+                {
+                    "type": "quest_stage",
+                    "quest_form_id": "0x00039645",
+                    "quest_plugin": "Skyrim.esm",
+                    "min_stage": 20,
+                    "comment": "Fallback: fires when vanilla MS13 advances to stage 20"
+                }
+            ],
+            "prerequisites": [
+                "QUEST_ACCEPTED"
+            ]
+        },
+        {
+            "id": "ARVEL_ENCOUNTER",
+            "focus_npc": "Arvel the Swift",
+            "action": {
+                "type": "set_stage",
+                "quest_form_id": "0x00039645",
+                "quest_plugin": "Skyrim.esm",
+                "stage": 25
+            },
+            "downstream": [
+                {
+                    "type": "set_objective_completed",
+                    "index": 15
+                },
+                {
+                    "type": "set_objective_displayed",
+                    "index": 10,
+                    "force_displayed": true
+                },
+                {
+                    "type": "set_actor_value",
+                    "actor_form_id": "0x00039646",
+                    "plugin": "Skyrim.esm",
+                    "av": "Variable01",
+                    "value": 1.0,
+                    "comment": "Arvel combat variable"
+                },
+                {
+                    "type": "evaluate_package",
+                    "actor_form_id": "0x00039646",
+                    "plugin": "Skyrim.esm",
+                    "comment": "Arvel"
+                },
+                {
+                    "type": "start_scene",
+                    "form_id": "0x0003A1E4",
+                    "plugin": "Skyrim.esm",
+                    "comment": "MS13ArvelRunsScene"
+                },
+                {
+                    "type": "set_ghost",
+                    "actor_form_id": "0x00039646",
+                    "plugin": "Skyrim.esm",
+                    "ghost": false,
+                    "comment": "Arvel no longer ghost"
+                }
+            ],
+            "triggers": [
+                {
+                    "type": "dialogue",
+                    "keywords": [
+                        "cut you down",
+                        "cut down",
+                        "free you",
+                        "let you go",
+                        "let you out",
+                        "get you out",
+                        "get you down",
+                        "help you down",
+                        "the claw",
+                        "give me the claw",
+                        "hand it over",
+                        "hand over the claw",
+                        "where's the claw",
+                        "where is the claw",
+                        "free me",
+                        "help me"
+                    ],
+                    "min_matches": 1
+                },
+                {
+                    "type": "actor_dead",
+                    "form_id": "0x00039646",
+                    "plugin": "Skyrim.esm",
+                    "comment": "Arvel dies before player can talk to him"
+                }
+            ],
+            "trigger_mode": "any",
+            "prerequisites": [
+                "SPIDER_ENCOUNTER"
+            ]
+        },
+        {
+            "id": "CLAW_ACQUIRED",
+            "action": {
+                "type": "set_stage",
+                "quest_form_id": "0x00039645",
+                "quest_plugin": "Skyrim.esm",
+                "stage": 30
+            },
+            "downstream": [
+                {
+                    "type": "set_objective_completed",
+                    "index": 10
+                },
+                {
+                    "type": "set_objective_displayed",
+                    "index": 30
+                }
+            ],
+            "triggers": [
+                {
+                    "type": "item_acquired",
+                    "form_id": "0x00039647",
+                    "plugin": "Skyrim.esm",
+                    "comment": "GoldenClaw"
+                }
+            ],
+            "prerequisites": [
+                "ARVEL_ENCOUNTER"
+            ]
+        },
+        {
+            "id": "PUZZLE_SOLVED",
+            "action": {
+                "type": "set_stage",
+                "quest_form_id": "0x00039645",
+                "quest_plugin": "Skyrim.esm",
+                "stage": 50
+            },
+            "downstream": [
+                {
+                    "type": "set_objective_completed",
+                    "index": 30
+                },
+                {
+                    "type": "set_objective_displayed",
+                    "index": 35,
+                    "conditions": [
+                        {
+                            "type": "stage_not_done",
+                            "quest_form_id": "0x00039645",
+                            "quest_plugin": "Skyrim.esm",
+                            "stage": 10
+                        }
+                    ]
+                },
+                {
+                    "type": "set_objective_displayed",
+                    "index": 40,
+                    "conditions": [
+                        {
+                            "type": "stage_done",
+                            "quest_form_id": "0x00039645",
+                            "quest_plugin": "Skyrim.esm",
+                            "stage": 10
+                        },
+                        {
+                            "type": "actor_alive",
+                            "form_id": "0x0001347A",
+                            "plugin": "Skyrim.esm"
+                        }
+                    ]
+                },
+                {
+                    "type": "set_objective_displayed",
+                    "index": 45,
+                    "conditions": [
+                        {
+                            "type": "stage_done",
+                            "quest_form_id": "0x00039645",
+                            "quest_plugin": "Skyrim.esm",
+                            "stage": 10
+                        },
+                        {
+                            "type": "actor_dead",
+                            "form_id": "0x0001347A",
+                            "plugin": "Skyrim.esm"
+                        }
+                    ]
+                }
+            ],
+            "triggers": [
+                {
+                    "type": "location_entered",
+                    "form_id": "0x000371DD",
+                    "plugin": "Skyrim.esm",
+                    "comment": "BleakFallsBarrow02 sanctum past puzzle door"
+                },
+                {
+                    "type": "quest_stage",
+                    "quest_form_id": "0x00039645",
+                    "quest_plugin": "Skyrim.esm",
+                    "min_stage": 50,
+                    "comment": "Fallback: fires when vanilla MS13 advances to stage 50"
+                }
+            ],
+            "prerequisites": [
+                "CLAW_ACQUIRED"
+            ]
+        },
+        {
+            "id": "CAMILLA_LUCAN_PACKAGES",
+            "action": {
+                "type": "set_stage",
+                "quest_form_id": "0x00039645",
+                "quest_plugin": "Skyrim.esm",
+                "stage": 60
+            },
+            "downstream": [
+                {
+                    "type": "evaluate_package",
+                    "actor_form_id": "0x0001347B",
+                    "plugin": "Skyrim.esm",
+                    "comment": "Camilla"
+                },
+                {
+                    "type": "evaluate_package",
+                    "actor_form_id": "0x0001347A",
+                    "plugin": "Skyrim.esm",
+                    "comment": "Lucan"
+                }
+            ],
+            "triggers": [
+                {
+                    "type": "quest_stage",
+                    "quest_form_id": "0x00039645",
+                    "quest_plugin": "Skyrim.esm",
+                    "min_stage": 50
+                }
+            ],
+            "prerequisites": [
+                "PUZZLE_SOLVED"
+            ]
+        },
+        {
+            "id": "ARVEL_SHOUT_1",
+            "action": {
+                "type": "set_stage",
+                "quest_form_id": "0x00039645",
+                "quest_plugin": "Skyrim.esm",
+                "stage": 75
+            },
+            "downstream": [
+                {
+                    "type": "start_scene",
+                    "form_id": "0x0004940E",
+                    "plugin": "Skyrim.esm",
+                    "comment": "MS13ArvelShouts1"
+                }
+            ],
+            "triggers": [
+                {
+                    "type": "location_entered",
+                    "form_id": "0x0003BC7A",
+                    "plugin": "Skyrim.esm",
+                    "comment": "BFShoutTrigger01 ref as cell proxy"
+                },
+                {
+                    "type": "quest_stage",
+                    "quest_form_id": "0x00039645",
+                    "quest_plugin": "Skyrim.esm",
+                    "min_stage": 75,
+                    "comment": "Fallback: fires when vanilla MS13 advances to stage 75"
+                }
+            ],
+            "prerequisites": [
+                "ARVEL_ENCOUNTER"
+            ]
+        },
+        {
+            "id": "ARVEL_SHOUT_2",
+            "action": {
+                "type": "set_stage",
+                "quest_form_id": "0x00039645",
+                "quest_plugin": "Skyrim.esm",
+                "stage": 80
+            },
+            "downstream": [
+                {
+                    "type": "start_scene",
+                    "form_id": "0x0004940F",
+                    "plugin": "Skyrim.esm",
+                    "comment": "MS13ArvelShouts2"
+                }
+            ],
+            "triggers": [
+                {
+                    "type": "location_entered",
+                    "form_id": "0x0003BC79",
+                    "plugin": "Skyrim.esm",
+                    "comment": "BFShoutTrigger02 ref as cell proxy"
+                },
+                {
+                    "type": "quest_stage",
+                    "quest_form_id": "0x00039645",
+                    "quest_plugin": "Skyrim.esm",
+                    "min_stage": 80,
+                    "comment": "Fallback: fires when vanilla MS13 advances to stage 80"
+                }
+            ],
+            "prerequisites": [
+                "ARVEL_SHOUT_1"
+            ]
+        },
+        {
+            "id": "ARVEL_SHOUT_3",
+            "action": {
+                "type": "set_stage",
+                "quest_form_id": "0x00039645",
+                "quest_plugin": "Skyrim.esm",
+                "stage": 85
+            },
+            "downstream": [
+                {
+                    "type": "start_scene",
+                    "form_id": "0x00049410",
+                    "plugin": "Skyrim.esm",
+                    "comment": "MS13ArvelShouts3"
+                }
+            ],
+            "triggers": [
+                {
+                    "type": "location_entered",
+                    "form_id": "0x0004940D",
+                    "plugin": "Skyrim.esm",
+                    "comment": "BFShoutTrigger02000 ref as cell proxy"
+                },
+                {
+                    "type": "quest_stage",
+                    "quest_form_id": "0x00039645",
+                    "quest_plugin": "Skyrim.esm",
+                    "min_stage": 85,
+                    "comment": "Fallback: fires when vanilla MS13 advances to stage 85"
+                }
+            ],
+            "prerequisites": [
+                "ARVEL_SHOUT_2"
+            ]
+        },
+        {
+            "id": "RETURN_TO_LUCAN",
+            "focus_npc": "Lucan Valerius",
+            "action": {
+                "type": "set_stage_cascade",
+                "quest_form_id": "0x00039645",
+                "quest_plugin": "Skyrim.esm",
+                "stage": 100,
+                "comment": "Cascade: fires all unfired intermediate set_stage beats in ascending stage order before setting target. Prereqs bypassed; required_item (Golden Claw) remains the anti-cheese gate."
+            },
+            "downstream": [
+                {
+                    "type": "set_objective_completed",
+                    "index": 35
+                },
+                {
+                    "type": "set_objective_completed",
+                    "index": 40
+                },
+                {
+                    "type": "remove_item",
+                    "target": "player",
+                    "item_form_id": "0x00039647",
+                    "plugin": "Skyrim.esm",
+                    "count": 1,
+                    "comment": "Remove Golden Claw"
+                },
+                {
+                    "type": "enable_ref",
+                    "form_id": "0x000AC9B6",
+                    "plugin": "Skyrim.esm",
+                    "comment": "Enable LucanClaw display"
+                },
+                {
+                    "type": "add_item",
+                    "target": "player",
+                    "item_form_id": "0x000C0405",
+                    "plugin": "Skyrim.esm",
+                    "count": 1,
+                    "comment": "LvlQuestReward02Medium"
+                },
+                {
+                    "type": "set_relationship_rank",
+                    "actor_form_id": "0x0001347A",
+                    "plugin": "Skyrim.esm",
+                    "target": "player",
+                    "rank": 1,
+                    "comment": "Lucan likes player"
+                },
+                {
+                    "type": "set_relationship_rank",
+                    "actor_form_id": "0x0001347B",
+                    "plugin": "Skyrim.esm",
+                    "target": "player",
+                    "rank": 1,
+                    "comment": "Camilla likes player",
+                    "conditions": [
+                        {
+                            "type": "actor_alive",
+                            "form_id": "0x0001347B",
+                            "plugin": "Skyrim.esm"
+                        }
+                    ]
+                },
+                {
+                    "type": "cross_quest_start",
+                    "quest_form_id": "0x0003DD29",
+                    "quest_plugin": "Skyrim.esm",
+                    "comment": "Start MS13FIN"
+                },
+                {
+                    "type": "stop_quest"
+                }
+            ],
+            "triggers": [
+                {
+                    "type": "dialogue",
+                    "keywords": [
+                        "got your claw",
+                        "have your claw",
+                        "here's your claw",
+                        "here is your claw",
+                        "brought the claw",
+                        "brought your claw",
+                        "here it is",
+                        "golden claw",
+                        "got it back",
+                        "got the claw",
+                        "claw back",
+                        "here's the claw",
+                        "returning the claw",
+                        "found your claw",
+                        "retrieved the claw",
+                        "recovered the claw",
+                        "recovered the golden claw",
+                        "i have recovered",
+                        "i've recovered",
+                        "reclaimed the claw",
+                        "reclaimed the golden claw",
+                        "your claw back",
+                        "your claw is back",
+                        "your golden claw back",
+                        "your golden claw is back",
+                        "returned your claw",
+                        "returned the claw",
+                        "returned the golden claw",
+                        "return your claw",
+                        "bring you the claw",
+                        "brought you the claw",
+                        "bringing the claw",
+                        "here's your golden claw",
+                        "here is your golden claw",
+                        "my reward",
+                        "the reward",
+                        "agreed reward",
+                        "the agreed reward",
+                        "pay up",
+                        "pay me",
+                        "i got your claw",
+                        "i got the claw",
+                        "i got the golden claw",
+                        "got the golden claw",
+                        "your treasure returns",
+                        "the claw is yours",
+                        "behold the claw",
+                        "behold the golden claw",
+                        "claw is returned"
+                    ],
+                    "min_matches": 1
+                }
+            ],
+            "required_item": {
+                "form_id": "0x00039647",
+                "plugin": "Skyrim.esm",
+                "comment": "Must have Golden Claw"
+            },
+            "conditions": [
+                {
+                    "type": "actor_alive",
+                    "form_id": "0x0001347A",
+                    "plugin": "Skyrim.esm"
+                }
+            ],
+            "prerequisites": [
+                "CLAW_ACQUIRED"
+            ]
+        },
+        {
+            "id": "RETURN_TO_LUCAN_DEAD",
+            "focus_npc": "Camilla Valerius",
+            "action": {
+                "type": "set_stage_cascade",
+                "quest_form_id": "0x00039645",
+                "quest_plugin": "Skyrim.esm",
+                "stage": 110,
+                "comment": "Cascade: fires all unfired intermediate set_stage beats in ascending stage order before setting target. Prereqs bypassed; required_item (Golden Claw) remains the anti-cheese gate."
+            },
+            "downstream": [
+                {
+                    "type": "set_objective_completed",
+                    "index": 35
+                },
+                {
+                    "type": "set_objective_completed",
+                    "index": 45
+                },
+                {
+                    "type": "remove_item",
+                    "target": "player",
+                    "item_form_id": "0x00039647",
+                    "plugin": "Skyrim.esm",
+                    "count": 1,
+                    "comment": "Remove Golden Claw"
+                },
+                {
+                    "type": "enable_ref",
+                    "form_id": "0x000AC9B6",
+                    "plugin": "Skyrim.esm",
+                    "comment": "Enable LucanClaw display"
+                },
+                {
+                    "type": "add_item",
+                    "target": "player",
+                    "item_form_id": "0x000C0405",
+                    "plugin": "Skyrim.esm",
+                    "count": 1,
+                    "comment": "LvlQuestReward02Medium"
+                },
+                {
+                    "type": "set_relationship_rank",
+                    "actor_form_id": "0x0001347B",
+                    "plugin": "Skyrim.esm",
+                    "target": "player",
+                    "rank": 1,
+                    "comment": "Camilla likes player"
+                },
+                {
+                    "type": "cross_quest_start",
+                    "quest_form_id": "0x0003DD29",
+                    "quest_plugin": "Skyrim.esm",
+                    "comment": "Start MS13FIN"
+                },
+                {
+                    "type": "stop_quest"
+                }
+            ],
+            "triggers": [
+                {
+                    "type": "dialogue",
+                    "keywords": [
+                        "got your claw",
+                        "have your claw",
+                        "here's your claw",
+                        "here is your claw",
+                        "brought the claw",
+                        "brought your claw",
+                        "here it is",
+                        "golden claw",
+                        "got it back",
+                        "got the claw",
+                        "claw back",
+                        "here's the claw",
+                        "returning the claw",
+                        "found your claw",
+                        "retrieved the claw",
+                        "recovered the claw",
+                        "recovered the golden claw",
+                        "i have recovered",
+                        "i've recovered",
+                        "reclaimed the claw",
+                        "reclaimed the golden claw",
+                        "your claw back",
+                        "your claw is back",
+                        "your golden claw back",
+                        "your golden claw is back",
+                        "returned your claw",
+                        "returned the claw",
+                        "returned the golden claw",
+                        "return your claw",
+                        "bring you the claw",
+                        "brought you the claw",
+                        "bringing the claw",
+                        "here's your golden claw",
+                        "here is your golden claw",
+                        "my reward",
+                        "the reward",
+                        "agreed reward",
+                        "the agreed reward",
+                        "pay up",
+                        "pay me",
+                        "i got your claw",
+                        "i got the claw",
+                        "i got the golden claw",
+                        "got the golden claw",
+                        "your treasure returns",
+                        "the claw is yours",
+                        "behold the claw",
+                        "behold the golden claw",
+                        "claw is returned"
+                    ],
+                    "min_matches": 1
+                }
+            ],
+            "required_item": {
+                "form_id": "0x00039647",
+                "plugin": "Skyrim.esm"
+            },
+            "conditions": [
+                {
+                    "type": "actor_dead",
+                    "form_id": "0x0001347A",
+                    "plugin": "Skyrim.esm"
+                },
+                {
+                    "type": "actor_alive",
+                    "form_id": "0x0001347B",
+                    "plugin": "Skyrim.esm"
+                }
+            ],
+            "prerequisites": [
+                "CLAW_ACQUIRED"
+            ]
+        },
+        {
+            "id": "QUEST_FAILED",
+            "action": {
+                "type": "set_stage",
+                "quest_form_id": "0x00039645",
+                "quest_plugin": "Skyrim.esm",
+                "stage": 200
+            },
+            "downstream": [
+                {
+                    "type": "fail_all_objectives"
+                },
+                {
+                    "type": "stop_quest"
+                }
+            ],
+            "triggers": [
+                {
+                    "type": "actor_dead",
+                    "form_id": "0x0001347A",
+                    "plugin": "Skyrim.esm",
+                    "comment": "Lucan dies"
+                },
+                {
+                    "type": "actor_dead",
+                    "form_id": "0x0001347B",
+                    "plugin": "Skyrim.esm",
+                    "comment": "Camilla dies"
+                }
+            ],
+            "trigger_mode": "all",
+            "prerequisites": [
+                "SHOP_TROUBLE"
+            ]
+        }
+    ]
+}
