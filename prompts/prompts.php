@@ -164,7 +164,7 @@ $PROMPTS=array(
     ],
     "narrator_inputtext"=>[
         "cue"=>[
-            "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+            "The Narrator replies directly to {$GLOBALS["PLAYER_NAME"]} in plain spoken dialogue only. {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
         ]
     ],
     "inputtext_s"=>[
@@ -236,6 +236,12 @@ $PROMPTS=array(
             "Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Continue the ongoing discussion. Build on what was just said. {$GLOBALS["TEMPLATE_DIALOG"]}"
         ],
         "player_request"=>["{$GLOBALS["PLAYER_NAME"]} gestures for {$GLOBALS['HERIKA_NAME']} to continue."]
+    ],
+    "continue_group"=>[
+        "cue"=>[
+            "Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Continue the ongoing group discussion. Build on what was just said and stay with the current topic. {$GLOBALS["TEMPLATE_DIALOG"]}"
+        ],
+        "player_request"=>["{$GLOBALS["PLAYER_NAME"]} gestures for the conversation to continue."]
     ],
     // Database Prompt (Diary)
     "diary"=>[ 

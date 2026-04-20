@@ -530,25 +530,34 @@ class NpcMaster
             $GLOBALS['HERIKA_PERS'] = "Roleplay as {$GLOBALS['HERIKA_NAME']}";
         }
 
-        // Check this
-        if (isset($currentNpcData['voiceid']) && $currentNpcData['voiceid']) {
+        $voiceResolution = $this->resolveNpcTtsVoice($currentNpcData);
+        $resolvedVoice = $voiceResolution['resolved_voice'];
+        $originalVoice = $voiceResolution['original_voice'];
+        $fallbackVoice = $voiceResolution['fallback_voice'];
 
-            $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']  = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['CHATTERBOX']['voiceid']   = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['POCKETTTS']['voiceid']    = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['MELOTTS']['voiceid']      = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['MIMIC3']['voice']         = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['XVASYNTH']['model']       = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['ZONOS_GRADIO']['voiceid'] = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['PIPERTTS']['voiceid']     = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['ELEVEN_LABS']['voice_id'] = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['AZURE']['voice']          = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['KOKORO']['voiceid']       = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['openai']['voice']         = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['deepgram']['model']       = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['CARTESIA']['voiceid']     = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['INWORLD']['voiceid']      = $currentNpcData['voiceid'];
+        if ($resolvedVoice !== '') {
+            $GLOBALS['PATCH_OVERRIDE_VOICE'] = $resolvedVoice;
+            $this->applyNpcVoiceToTtsGlobals($resolvedVoice);
+        } else {
+            unset($GLOBALS['PATCH_OVERRIDE_VOICE']);
+        }
 
+        if ($originalVoice !== '') {
+            $GLOBALS['TTS_NPC_ORIGINAL_VOICE'] = $originalVoice;
+        } else {
+            unset($GLOBALS['TTS_NPC_ORIGINAL_VOICE']);
+        }
+
+        if ($fallbackVoice !== '') {
+            $GLOBALS['TTS_NPC_FALLBACK_VOICE'] = $fallbackVoice;
+        } else {
+            unset($GLOBALS['TTS_NPC_FALLBACK_VOICE']);
+        }
+
+        if ($resolvedVoice !== '') {
+            $GLOBALS['TTS_NPC_RESOLVED_VOICE'] = $resolvedVoice;
+        } else {
+            unset($GLOBALS['TTS_NPC_RESOLVED_VOICE']);
         }
 
         // Decode metadata and extended_data if available
@@ -967,5 +976,48 @@ FROM restore
         }
 
         return false;
+    }
+
+    private function resolveNpcTtsVoice(array $currentNpcData): array
+    {
+        if (!class_exists('TTSConnector')) {
+            require_once(__DIR__ . DIRECTORY_SEPARATOR . "tts_connector.class.php");
+        }
+
+        $connectorData = null;
+        $profileData = $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] ?? [];
+        $connectorId = intval($profileData['tts_connector_id'] ?? 0);
+        if ($connectorId > 0) {
+            $ttsConnector = new TTSConnector();
+            $connectorData = $ttsConnector->getById($connectorId);
+            return $ttsConnector->resolveNpcVoiceForConnector($currentNpcData, $connectorData);
+        }
+
+        $voiceId = trim(strval($currentNpcData['voiceid'] ?? ''));
+        return [
+            'original_voice' => $voiceId,
+            'fallback_voice' => '',
+            'resolved_voice' => $voiceId,
+            'used_fallback' => false,
+        ];
+    }
+
+    private function applyNpcVoiceToTtsGlobals(string $voiceId): void
+    {
+        $GLOBALS['TTS']['XTTSFASTAPI']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['CHATTERBOX']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['POCKETTTS']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['MELOTTS']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['MIMIC3']['voice'] = $voiceId;
+        $GLOBALS['TTS']['XVASYNTH']['model'] = $voiceId;
+        $GLOBALS['TTS']['ZONOS_GRADIO']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['PIPERTTS']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['ELEVEN_LABS']['voice_id'] = $voiceId;
+        $GLOBALS['TTS']['AZURE']['voice'] = $voiceId;
+        $GLOBALS['TTS']['KOKORO']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['openai']['voice'] = $voiceId;
+        $GLOBALS['TTS']['deepgram']['model'] = $voiceId;
+        $GLOBALS['TTS']['CARTESIA']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['INWORLD']['voiceid'] = $voiceId;
     }
 }

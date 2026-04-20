@@ -21,7 +21,7 @@ $oghmaInfiniumEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_INFINIUM"] ?? fals
 if ($minimeEnabled) {
     // Use profile-based OGHMA_INFINIUM setting (not legacy conf.php $FEATURES["MISC"]["OGHMA_INFINIUM"])
     if ($oghmaInfiniumEnabled) {
-        if (in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "rechat", "continue"])) {
+        if (in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "rechat", "continue", "continue_group"])) {
 
             //$TEST_TEXT=lastSpeech($GLOBALS["HERIKA_NAME"]);
             //$TEST_TEXT="{$GLOBALS["HERIKA_NAME"]}:".implode(" ",$GLOBALS["talkedSoFar"]);

@@ -2358,6 +2358,8 @@ if ($checkTableExists("rumors") == -1) {
 } else
     Logger::info(__FILE__." rumors exists");
 
+$db->execQuery("ALTER TABLE public.rumors ADD COLUMN IF NOT EXISTS rumor_length_days integer");
+
 if ($checkTableExists("named_cell") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../data/named_cell.sql"));
 } else
@@ -3176,6 +3178,17 @@ if ($checkVersion("core_narrator")<20260209001) {
     
     $updateVersion("core_narrator", 20260209001);
     Logger::info("Applied patch core_narrator 20260209001 - Added diary_enabled toggle");
+}
+
+//----------------------------------------------------
+// CORE_NARRATOR DEFAULT CHARACTER BACKFILL
+// Version 20260417001
+//----------------------------------------------------
+
+if ($checkVersion("core_narrator")<20260417001) {
+    Logger::debug("Skipping removed core_narrator backfill migration 20260417001");
+    $updateVersion("core_narrator", 20260417001);
+    Logger::info("Applied patch core_narrator 20260417001 - Backfill removed");
 }
 
 //----------------------------------------------------

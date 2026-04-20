@@ -952,9 +952,15 @@ function getTimeColor($time) {
 
                     $text = '';
                     if (is_array($decoded)) {
-                        // Prefer messages inside ['full']['messages'] when available
-                        if (isset($decoded['full']) && is_array($decoded['full']) && isset($decoded['full']['messages']) && is_array($decoded['full']['messages'])) {
-                            foreach ($decoded['full']['messages'] as $msg) {
+                        $promptPayload = null;
+                        if (isset($decoded['response_full']) && is_array($decoded['response_full'])) {
+                            $promptPayload = $decoded['response_full'];
+                        } elseif (isset($decoded['full']) && is_array($decoded['full'])) {
+                            $promptPayload = $decoded['full'];
+                        }
+
+                        if (is_array($promptPayload) && isset($promptPayload['messages']) && is_array($promptPayload['messages'])) {
+                            foreach ($promptPayload['messages'] as $msg) {
                                 if (isset($msg['content']) && is_string($msg['content'])) {
                                     $text .= $msg['content'] . "\n";
                                 }
@@ -1005,6 +1011,197 @@ function getTimeColor($time) {
                 }
             }
 
+            if (!function_exists('normalizeResponseLogText')) {
+                function normalizeResponseLogText($value) {
+                    if ($value === null) {
+                        return '';
+                    }
+
+                    if (!is_string($value)) {
+                        if (is_array($value) || is_object($value)) {
+                            $value = json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                        } else {
+                            $value = (string)$value;
+                        }
+                    }
+
+                    $value = str_replace(["<br />", "<br>", "<br/>"], "\n", $value);
+                    $value = html_entity_decode(strip_tags($value), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                    $value = str_replace(['\/', '\r\n', '\n', '\r'], ['/', "\n", "\n", "\n"], $value);
+
+                    return trim($value);
+                }
+            }
+
+            if (!function_exists('normalizeDisplayedAiResponse')) {
+                function normalizeDisplayedAiResponse($value) {
+                    $value = normalizeResponseLogText($value);
+                    if ($value === '') {
+                        return '';
+                    }
+
+                    return trim(str_replace("''", "'", $value));
+                }
+            }
+
+            if (!function_exists('decodeStoredDebugPayload')) {
+                function decodeStoredDebugPayload($value) {
+                    if ($value === null) {
+                        return null;
+                    }
+
+                    if (!is_string($value)) {
+                        if (is_array($value) || is_object($value)) {
+                            return $value;
+                        }
+                        $value = (string)$value;
+                    }
+
+                    $clean = str_replace(["<br />", "<br>", "<br/>"], "\n", $value);
+                    $clean = html_entity_decode(strip_tags($clean), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                    $decoded = json_decode($clean, true);
+
+                    return is_array($decoded) ? $decoded : null;
+                }
+            }
+
+            if (!function_exists('looksLikeStructuredResponsePayload')) {
+                function looksLikeStructuredResponsePayload($value) {
+                    $value = ltrim(normalizeResponseLogText($value));
+                    if ($value === '') {
+                        return true;
+                    }
+
+                    if (preg_match('/^(Array\s*\(|array\s*\(|\{|\[)/u', $value)) {
+                        return true;
+                    }
+
+                    return strpos($value, '"response_connector"') !== false
+                        || strpos($value, "'response_connector'") !== false
+                        || strpos($value, '"OUTPUT_LOG"') !== false
+                        || strpos($value, "'OUTPUT_LOG'") !== false;
+                }
+            }
+
+            if (!function_exists('extractSubtitleFromScriptQueue')) {
+                function extractSubtitleFromScriptQueue($value) {
+                    $value = normalizeResponseLogText($value);
+                    if ($value === '') {
+                        return '';
+                    }
+
+                    if (preg_match('/\|ScriptQueue\|(.+?)(?:\/|\r|\n|$)/us', $value, $matches)) {
+                        return normalizeDisplayedAiResponse($matches[1]);
+                    }
+
+                    if (preg_match('/\|Talk\|(.+?)(?:\r|\n|$)/us', $value, $matches)) {
+                        return normalizeDisplayedAiResponse($matches[1]);
+                    }
+
+                    return '';
+                }
+            }
+
+            if (!function_exists('extractTextFromDecodedResponsePayload')) {
+                function extractTextFromDecodedResponsePayload($payload) {
+                    if (!is_array($payload)) {
+                        return '';
+                    }
+
+                    if (isset($payload['response']) && is_array($payload['response'])) {
+                        $parts = [];
+                        foreach ($payload['response'] as $responseEntry) {
+                            if (is_array($responseEntry) && isset($responseEntry['processed'])) {
+                                $processed = normalizeDisplayedAiResponse($responseEntry['processed']);
+                                if ($processed !== '') {
+                                    $parts[] = str_replace('|', "\n", $processed);
+                                }
+                            }
+                        }
+
+                        if (!empty($parts)) {
+                            return implode("\n", array_values(array_unique($parts)));
+                        }
+                    }
+
+                    if (isset($payload['OUTPUT_LOG'])) {
+                        $subtitle = extractSubtitleFromScriptQueue($payload['OUTPUT_LOG']);
+                        if ($subtitle !== '') {
+                            return $subtitle;
+                        }
+                    }
+
+                    $candidatePaths = [
+                        ['choices', 0, 'message', 'content'],
+                        ['full', 'choices', 0, 'message', 'content'],
+                        ['response_full', 'choices', 0, 'message', 'content'],
+                        ['candidates', 0, 'content', 'parts', 0, 'text'],
+                        ['full', 'candidates', 0, 'content', 'parts', 0, 'text'],
+                        ['response_full', 'candidates', 0, 'content', 'parts', 0, 'text'],
+                        ['message'],
+                        ['content'],
+                        ['text'],
+                    ];
+
+                    foreach ($candidatePaths as $path) {
+                        $cursor = $payload;
+                        foreach ($path as $segment) {
+                            if (!is_array($cursor) || !array_key_exists($segment, $cursor)) {
+                                $cursor = null;
+                                break;
+                            }
+                            $cursor = $cursor[$segment];
+                        }
+
+                        if (is_string($cursor)) {
+                            $text = normalizeDisplayedAiResponse($cursor);
+                            if ($text !== '' && !looksLikeStructuredResponsePayload($text)) {
+                                return $text;
+                            }
+                        }
+                    }
+
+                    return '';
+                }
+            }
+
+            if (!function_exists('extractBestAiResponseText')) {
+                function extractBestAiResponseText($rawResponseValue, $rawPromptValue = '') {
+                    $responseText = normalizeDisplayedAiResponse($rawResponseValue);
+                    if ($responseText !== '' && !looksLikeStructuredResponsePayload($responseText)) {
+                        return $responseText;
+                    }
+
+                    $subtitleFromResponse = extractSubtitleFromScriptQueue($rawResponseValue);
+                    if ($subtitleFromResponse !== '') {
+                        return $subtitleFromResponse;
+                    }
+
+                    $decodedResponse = decodeStoredDebugPayload($rawResponseValue);
+                    if (is_array($decodedResponse)) {
+                        $decodedText = extractTextFromDecodedResponsePayload($decodedResponse);
+                        if ($decodedText !== '') {
+                            return $decodedText;
+                        }
+                    }
+
+                    $decodedPrompt = decodeStoredDebugPayload($rawPromptValue);
+                    if (is_array($decodedPrompt)) {
+                        $decodedPromptText = extractTextFromDecodedResponsePayload($decodedPrompt);
+                        if ($decodedPromptText !== '') {
+                            return $decodedPromptText;
+                        }
+                    }
+
+                    $subtitleFromPrompt = extractSubtitleFromScriptQueue($rawPromptValue);
+                    if ($subtitleFromPrompt !== '') {
+                        return $subtitleFromPrompt;
+                    }
+
+                    return $responseText;
+                }
+            }
+
             $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 50;
             $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
             $offset = ($page - 1) * $limit;
@@ -1023,152 +1220,155 @@ function getTimeColor($time) {
                 'url' => 'HTTP Request'
             ];
         
-            $mappedResults = array_map(function ($row) use ($columnHeaders) {
+            $promptModalContentById = [];
+            $mappedResults = array_map(function ($row) use ($columnHeaders, &$promptModalContentById) {
                 $mappedRow = [];
-                foreach ($row as $key => $value) {
-                    if ($key === 'prompt') {
-                        // Parse and format like context_sent_to_llm with HTML for better display
-                        $formattedPrompt = '';
-                        $rawPrompt = $value ?? '';
-                        
-                        // Clean HTML artifacts first (fixes <br /> spam) and decode entities
-                        $rawPromptHtmlClean = str_replace(["<br />","<br>","<br/>"] , "\n", (string)$rawPrompt);
-                        $rawPromptDecoded = html_entity_decode($rawPromptHtmlClean, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                        
-                        // Try to decode JSON from cleaned/decoded content
-                        $decoded = json_decode($rawPromptDecoded, true);
-                        if (is_array($decoded)) {
-                            // Extract model info
-                            $model = isset($decoded['full']['model']) ? $decoded['full']['model'] : 'unknown';
-                            
-                            // Start with HTML formatted array
-                            $formattedPrompt = '<div style="font-family: \'Consolas\', monospace; line-height: 1.6;">';
-                            $formattedPrompt .= '<div style="color: #569cd6;">array</div> (';
-                            $formattedPrompt .= '<div style="padding-left: 20px;">';
-                            $formattedPrompt .= '<div style="color: #9cdcfe;">\'model\'</div> <span style="color: #d4d4d4;">=></span> <span style="color: #ce9178;">\''. htmlspecialchars($model) .'\'</span>,</div>';
-                            $formattedPrompt .= '<div style="padding-left: 20px;"><div style="color: #9cdcfe;">\'messages\'</div> <span style="color: #d4d4d4;">=></span></div>';
-                            $formattedPrompt .= '<div style="padding-left: 20px;"><div style="color: #569cd6;">array</div> (</div>';
-                            
-                            // Get messages
-                            $messages = [];
-                            if (isset($decoded['full']) && is_array($decoded['full'])) {
-                                if (isset($decoded['full']['messages']) && is_array($decoded['full']['messages'])) {
-                                    $messages = $decoded['full']['messages'];
-                                }
-                            } else if (isset($decoded['messages']) && is_array($decoded['messages'])) {
-                                $messages = $decoded['messages'];
-                            }
-                            
-                            // Format each message with collapsible sections
-                            foreach ($messages as $msgIndex => $msg) {
-                                if (isset($msg['role']) && isset($msg['content'])) {
-                                    $role = $msg['role'];
-                                    $content = $msg['content'];
-                                    
-                                    // Convert content to string if it's an array
-                                    if (is_array($content)) {
-                                        $content = json_encode($content, JSON_PRETTY_PRINT);
-                                    } else {
-                                        $content = (string)$content;
-                                    }
-                                    
-                                    $escapedContent = htmlspecialchars($content);
-                                    $contentPreview = mb_substr($content, 0, 100);
-                                    $escapedPreview = htmlspecialchars($contentPreview);
-                                    $isTruncated = strlen($content) > 100;
-                                    
-                                    $roleColor = $role === 'system' ? '#4ec9b0' : ($role === 'user' ? '#dcdcaa' : '#c586c0');
-                                    
-                                    $formattedPrompt .= '<div style="padding-left: 40px; margin: 10px 0; border-left: 3px solid ' . $roleColor . '; padding-left: 15px;">';
-                                    $formattedPrompt .= '<div style="color: #b5cea8;">' . $msgIndex . '</div> <span style="color: #d4d4d4;">=></span>';
-                                    $formattedPrompt .= '<div style="padding-left: 20px;"><div style="color: #569cd6;">array</div> (</div>';
-                                    $formattedPrompt .= '<div style="padding-left: 40px;"><span style="color: #9cdcfe;">\'role\'</span> <span style="color: #d4d4d4;">=></span> <span style="color: #ce9178; font-weight: bold;">\'' . htmlspecialchars($role) . '\'</span>,</div>';
-                                    $formattedPrompt .= '<div style="padding-left: 40px;">';
-                                    $formattedPrompt .= '<span style="color: #9cdcfe;">\'content\'</span> <span style="color: #d4d4d4;">=></span> ';
-                                    
-                                    if ($isTruncated) {
-                                        $uniqueId = 'msg_' . $msgIndex . '_' . md5($content);
-                                        // Expanded by default
-                                        $formattedPrompt .= '<button onclick="toggleContent(\'' . $uniqueId . '\')" style="background: #007acc; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; margin-left: 5px;">▲ Collapse</button>';
-                                        $formattedPrompt .= '<div id="' . $uniqueId . '_preview" style="display:none; color: #ce9178; white-space: pre-wrap; margin-top: 5px;">\'' . $escapedPreview . '...\'</div>';
-                                        $formattedPrompt .= '<div id="' . $uniqueId . '_full" style="display: block; color: #ce9178; white-space: pre-wrap; margin-top: 5px; max-height: 400px; overflow-y: auto; background: #1e1e1e; padding: 10px; border-radius: 5px;">\'' . $escapedContent . '\'</div>';
-                                    } else {
-                                        $formattedPrompt .= '<div style="color: #ce9178; white-space: pre-wrap; margin-top: 5px;">\'' . $escapedContent . '\'</div>';
-                                    }
-                                    
-                                    $formattedPrompt .= '</div>';
-                                    $formattedPrompt .= '<div style="padding-left: 20px;">),</div>';
-                                    $formattedPrompt .= '</div>';
-                                }
-                            }
-                            
-                            $formattedPrompt .= '<div style="padding-left: 20px;">),</div>';
-                            $formattedPrompt .= '<div>)</div>';
-                            $formattedPrompt .= '</div>';
-                        }
-                        
-                        // Fallback to cleaned raw if parsing failed
-                        if (empty($formattedPrompt)) {
-                            $formattedPrompt = '<pre style="white-space: pre-wrap; word-wrap: break-word;">' . htmlspecialchars($rawPromptDecoded, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</pre>';
-                        }
-                        
-                        // Store formatted prompt in a hidden div and reference it by ID
-                        $promptId = 'prompt_' . ($row['ROWID'] ?? $row['rowid'] ?? md5($value));
-                        $hiddenPrompt = '<div id="' . $promptId . '" style="display:none;">' . $formattedPrompt . '</div>';
-                        $mappedRow[$columnHeaders[$key] ?? $key] = $hiddenPrompt . '<button class="view-contents-btn" data-prompt-id="' . $promptId . '">🧾 View Prompt</button>';
-                    } else if ($key === 'response') {
-                        $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . nl2br(htmlspecialchars($value ?? '')) . '</div>';
-                        // Insert Oghma Topic column immediately after AI Response
-                        list($oghmaTopic, $oghmaLevel) = extractOghmaTopicAndLevel($row['prompt'] ?? '');
-                        if ($oghmaTopic) {
-                            $mappedRow['Oghma Topic'] = htmlspecialchars($oghmaTopic) . ' (' . htmlspecialchars($oghmaLevel) . ')';
-                        } else {
-                            $mappedRow['Oghma Topic'] = 'None';
-                        }
-                    } else if ($key === 'localts' && !empty($value)) {
-                        $dt = new DateTime("@$value");
-                        $dt->setTimezone(new DateTimeZone('UTC'));
-                        $mappedRow[$columnHeaders[$key]] = $dt->format('d-m-Y H:i:s');
-                    } else if ($key === 'url') {
-                        if (strpos($row['response'], 'Array') === 0) {
-                            $mappedRow[$columnHeaders[$key] ?? $key] = preg_replace('/ in \d+\.?\d* secs$/', '', $value);
-                        }
-                        else if (strpos($value, '[AI secs]') !== false) {
-                            $pattern = '/\[AI secs\]\s+([\d.]+)\s+\[TTS secs\]\s+([\d.]+)/';
-                            if (preg_match($pattern, $value, $matches)) {
-                                $aiTime = floatval($matches[1]);
-                                $totalTtsTime = floatval($matches[2]);
-                                $actualTtsTime = $totalTtsTime - $aiTime;
-                                
-                                $aiTimeFormatted = number_format($aiTime, 2);
-                                $ttsTimeFormatted = number_format($actualTtsTime, 2);
-                                
-                                $aiColor = getTimeColor($aiTime);
-                                $ttsColor = getTimeColor($actualTtsTime);
-                                $totalColor = getTimeColor($totalTtsTime);
-                                
-                                $baseText = substr($value, 0, strpos($value, '[AI secs]'));
-                                
-                                $mappedRow[$columnHeaders[$key] ?? $key] = 
-                                    $baseText . 
-                                    "<br>[LLM] <span style='color: " . $aiColor . "'>" . $aiTimeFormatted . "</span>" .
-                                    " [TTS] <span style='color: " . $ttsColor . "'>" . $ttsTimeFormatted . "</span>" .
-                                    " [Total]: <span style='color: " . $totalColor . "'>" . $totalTtsTime . "</span>";
-                            } else {
-                                $mappedRow[$columnHeaders[$key] ?? $key] = $value;
-                            }
-                        } else {
-                            $mappedRow[$columnHeaders[$key] ?? $key] = $value;
-                        }
-                    } else {
-                        // Map ROWID to lowercase rowid for delete functionality
-                        if ($key === 'ROWID') {
-                            $mappedRow['rowid'] = $value;
-                        } else {
-                            $mappedRow[$columnHeaders[$key] ?? $key] = $value;
-                        }
-                    }
+                $handledKeys = ['localts' => true, 'response' => true, 'prompt' => true, 'url' => true, 'ROWID' => true, 'rowid' => true];
+
+                $localts = $row['localts'] ?? null;
+                if (!empty($localts)) {
+                    $dt = new DateTime("@$localts");
+                    $dt->setTimezone(new DateTimeZone('UTC'));
+                    $mappedRow[$columnHeaders['localts']] = $dt->format('d-m-Y H:i:s');
+                } else {
+                    $mappedRow[$columnHeaders['localts']] = '';
                 }
+
+                $responseValue = (string)($row['response'] ?? '');
+                $displayResponseValue = extractBestAiResponseText($responseValue, $row['prompt'] ?? '');
+                $mappedRow[$columnHeaders['response']] = '<div class="full-content">' . nl2br(htmlspecialchars($displayResponseValue, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) . '</div>';
+
+                list($oghmaTopic, $oghmaLevel) = extractOghmaTopicAndLevel($row['prompt'] ?? '');
+                if ($oghmaTopic) {
+                    $mappedRow['Oghma Topic'] = htmlspecialchars($oghmaTopic) . ' (' . htmlspecialchars($oghmaLevel) . ')';
+                } else {
+                    $mappedRow['Oghma Topic'] = 'None';
+                }
+
+                $formattedPrompt = '';
+                $rawPrompt = (string)($row['prompt'] ?? '');
+                $rawPromptHtmlClean = str_replace(["<br />", "<br>", "<br/>"], "\n", $rawPrompt);
+                $rawPromptDecoded = html_entity_decode($rawPromptHtmlClean, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+                $decoded = json_decode($rawPromptDecoded, true);
+                if (is_array($decoded)) {
+                    $promptPayload = null;
+                    if (isset($decoded['response_full']) && is_array($decoded['response_full'])) {
+                        $promptPayload = $decoded['response_full'];
+                    } elseif (isset($decoded['full']) && is_array($decoded['full'])) {
+                        $promptPayload = $decoded['full'];
+                    }
+
+                    $responseConnector = isset($decoded['response_connector']) && is_array($decoded['response_connector'])
+                        ? $decoded['response_connector']
+                        : [];
+                    $responseConnectorLabel = trim((string)($responseConnector['label'] ?? ''));
+                    $responseConnectorDriver = trim((string)($responseConnector['driver'] ?? ''));
+                    $model = (is_array($promptPayload) && isset($promptPayload['model']))
+                        ? (string)$promptPayload['model']
+                        : 'unknown';
+
+                    $formattedPrompt = '<div style="font-family: \'Consolas\', monospace; line-height: 1.6;">';
+                    $metaBits = [];
+                    if ($responseConnectorLabel !== '') {
+                        $metaBits[] = '<span style="display:inline-block; padding: 3px 8px; border-radius: 999px; background: #1f2937; color: #e5e7eb;">' . htmlspecialchars($responseConnectorLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>';
+                    }
+                    if ($responseConnectorDriver !== '') {
+                        $metaBits[] = '<span style="display:inline-block; padding: 3px 8px; border-radius: 999px; background: #111827; color: #93c5fd;">' . htmlspecialchars($responseConnectorDriver, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>';
+                    }
+                    if ($model !== 'unknown') {
+                        $metaBits[] = '<span style="display:inline-block; padding: 3px 8px; border-radius: 999px; background: #0f172a; color: #cbd5e1;">' . htmlspecialchars($model, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>';
+                    }
+                    if (!empty($metaBits)) {
+                        $formattedPrompt .= '<div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;">' . implode('', $metaBits) . '</div>';
+                    }
+
+                    $messages = [];
+                    if (is_array($promptPayload) && isset($promptPayload['messages']) && is_array($promptPayload['messages'])) {
+                        $messages = $promptPayload['messages'];
+                    } elseif (isset($decoded['messages']) && is_array($decoded['messages'])) {
+                        $messages = $decoded['messages'];
+                    }
+
+                    foreach ($messages as $msgIndex => $msg) {
+                        if (!isset($msg['role']) || !isset($msg['content'])) {
+                            continue;
+                        }
+
+                        $role = $msg['role'];
+                        $content = $msg['content'];
+                        if (is_array($content)) {
+                            $content = json_encode($content, JSON_PRETTY_PRINT);
+                        } else {
+                            $content = (string)$content;
+                        }
+
+                        $escapedContent = htmlspecialchars($content);
+                        $roleColor = $role === 'system' ? '#4ec9b0' : ($role === 'user' ? '#dcdcaa' : '#c586c0');
+
+                        $formattedPrompt .= '<div style="margin: 10px 0; border-left: 3px solid ' . $roleColor . '; padding-left: 15px;">';
+                        $formattedPrompt .= '<div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">';
+                        $formattedPrompt .= '<span style="color: ' . $roleColor . '; font-weight: bold; text-transform: uppercase;">' . htmlspecialchars($role, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>';
+                        $formattedPrompt .= '<span style="color: #6b7280; font-size: 12px;">#' . intval($msgIndex) . '</span>';
+                        $formattedPrompt .= '</div>';
+                        $formattedPrompt .= '<div style="color: #ce9178; white-space: pre-wrap; margin-top: 5px; max-height: 400px; overflow-y: auto; background: #1e1e1e; padding: 10px; border-radius: 5px;">' . $escapedContent . '</div>';
+
+                        $formattedPrompt .= '</div>';
+                    }
+
+                    $formattedPrompt .= '</div>';
+                }
+
+                if ($formattedPrompt === '') {
+                    $formattedPrompt = '<pre style="white-space: pre-wrap; word-wrap: break-word;">' . htmlspecialchars($rawPromptDecoded, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</pre>';
+                }
+
+                $promptIdSeed = $row['ROWID'] ?? $row['rowid'] ?? md5($rawPrompt);
+                $promptId = 'prompt_' . preg_replace('/[^A-Za-z0-9_\-]/', '_', (string)$promptIdSeed);
+                $promptModalContentById[$promptId] = $formattedPrompt;
+                $mappedRow[$columnHeaders['prompt']] = '<button class="view-contents-btn" data-prompt-id="' . htmlspecialchars($promptId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">🧾 View Prompt</button>';
+
+                $urlValue = (string)($row['url'] ?? '');
+                if (strpos($responseValue, 'Array') === 0) {
+                    $mappedRow[$columnHeaders['url']] = preg_replace('/ in \d+\.?\d* secs$/', '', $urlValue);
+                } elseif (strpos($urlValue, '[AI secs]') !== false) {
+                    $pattern = '/\[AI secs\]\s+([\d.]+)\s+\[TTS secs\]\s+([\d.]+)/';
+                    if (preg_match($pattern, $urlValue, $matches)) {
+                        $aiTime = floatval($matches[1]);
+                        $totalTtsTime = floatval($matches[2]);
+                        $actualTtsTime = $totalTtsTime - $aiTime;
+
+                        $aiTimeFormatted = number_format($aiTime, 2);
+                        $ttsTimeFormatted = number_format($actualTtsTime, 2);
+
+                        $aiColor = getTimeColor($aiTime);
+                        $ttsColor = getTimeColor($actualTtsTime);
+                        $totalColor = getTimeColor($totalTtsTime);
+
+                        $baseText = substr($urlValue, 0, strpos($urlValue, '[AI secs]'));
+                        $mappedRow[$columnHeaders['url']] =
+                            $baseText .
+                            "<br>[LLM] <span style='color: " . $aiColor . "'>" . $aiTimeFormatted . "</span>" .
+                            " [TTS] <span style='color: " . $ttsColor . "'>" . $ttsTimeFormatted . "</span>" .
+                            " [Total]: <span style='color: " . $totalColor . "'>" . $totalTtsTime . "</span>";
+                    } else {
+                        $mappedRow[$columnHeaders['url']] = $urlValue;
+                    }
+                } else {
+                    $mappedRow[$columnHeaders['url']] = $urlValue;
+                }
+
+                if (isset($row['ROWID']) || isset($row['rowid'])) {
+                    $mappedRow['rowid'] = $row['ROWID'] ?? $row['rowid'];
+                }
+
+                foreach ($row as $key => $value) {
+                    if (isset($handledKeys[$key])) {
+                        continue;
+                    }
+                    $mappedRow[$columnHeaders[$key] ?? $key] = $value;
+                }
+
                 return $mappedRow;
             }, $results);
             
@@ -1194,6 +1394,13 @@ function getTimeColor($time) {
             echo "</div>";
         
             print_array_as_table($mappedResults);
+            if (!empty($promptModalContentById)) {
+                echo '<div id="prompt-modal-store" style="display:none;">';
+                foreach ($promptModalContentById as $promptId => $promptHtml) {
+                    echo '<div id="' . htmlspecialchars($promptId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">' . $promptHtml . '</div>';
+                }
+                echo '</div>';
+            }
             ?>
         </div>
 
@@ -1648,23 +1855,6 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 });
-
-// Toggle content expand/collapse
-function toggleContent(id) {
-    var preview = document.getElementById(id + '_preview');
-    var full = document.getElementById(id + '_full');
-    var btn = event.target;
-    
-    if (full.style.display === 'none') {
-        preview.style.display = 'none';
-        full.style.display = 'block';
-        btn.innerHTML = '▲ Collapse';
-    } else {
-        preview.style.display = 'block';
-        full.style.display = 'none';
-        btn.innerHTML = '▼ Expand';
-    }
-}
 
 function switchTab(tabName) {
     // Hide all tab contents

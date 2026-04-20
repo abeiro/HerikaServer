@@ -51,11 +51,26 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
     transition: all 0.3s ease;
     font-size: 1em;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: -2px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tab-button .tab-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+    font-size: 1.1em;
+    line-height: 1;
+}
+
+.tab-button .tab-label {
     font-family: 'MagicCards', sans-serif;
     word-spacing: 5px;
     letter-spacing: 1.5px;
-    margin-bottom: -2px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .tab-button:hover {
@@ -123,14 +138,14 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
         </div>
     </div>
     <div class="tab-buttons">
-        <button class="tab-button active" data-tab="srvlogs">🌲Server Logs</button>
-        <button class="tab-button" data-tab="cache">🎼Audio & Image Cache</button>
-        <button class="tab-button" data-tab="requests">🔍Request Logs</button>
-        <button class="tab-button" data-tab="audit">📊Cost Breakdown</button>
-        <button class="tab-button" data-tab="responses">💬Response Queue</button>
-        <button class="tab-button" data-tab="rellogs">🔗Relationship Logs</button>
-        <button class="tab-button" data-tab="playthrough">🎮Playthrough Manager</button>
-        <button class="tab-button" data-tab="dbmgr">🗄️Database Manager</button>
+        <button class="tab-button active" data-tab="srvlogs"><span class="tab-icon" aria-hidden="true">&#x1F332;</span><span class="tab-label">Server Logs</span></button>
+        <button class="tab-button" data-tab="cache"><span class="tab-icon" aria-hidden="true">&#x1F3BC;</span><span class="tab-label">Audio &amp; Image Cache</span></button>
+        <button class="tab-button" data-tab="requests"><span class="tab-icon" aria-hidden="true">&#x1F50D;</span><span class="tab-label">Request Logs</span></button>
+        <button class="tab-button" data-tab="audit"><span class="tab-icon" aria-hidden="true">&#x1F4CA;</span><span class="tab-label">Cost Breakdown</span></button>
+        <button class="tab-button" data-tab="responses"><span class="tab-icon" aria-hidden="true">&#x1F4AC;</span><span class="tab-label">Response Queue</span></button>
+        <button class="tab-button" data-tab="rellogs"><span class="tab-icon" aria-hidden="true">&#x1F517;</span><span class="tab-label">Relationship Logs</span></button>
+        <button class="tab-button" data-tab="playthrough"><span class="tab-icon" aria-hidden="true">&#x1F3AE;</span><span class="tab-label">Playthrough Manager</span></button>
+        <button class="tab-button" data-tab="dbmgr"><span class="tab-icon" aria-hidden="true">&#x1F5C4;&#xFE0F;</span><span class="tab-label">Database Manager</span></button>
     </div>
 
     <div id="srvlogs" class="tab-content active">

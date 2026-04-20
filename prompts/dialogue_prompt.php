@@ -10,6 +10,15 @@
 // Common patterns to use in most functions
 $MAXIMUM_WORDS=($GLOBALS["MAX_WORDS_LIMIT"]>0)?"(Maximum {$GLOBALS["MAX_WORDS_LIMIT"]} words)":"";
 
+$directNarratorDialogue = false;
+if (isset($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) {
+    $directNarratorDialogue = (bool)$GLOBALS["DIRECT_NARRATOR_DIALOGUE"];
+} elseif (isset($GLOBALS["gameRequest"][0])) {
+    $directNarratorDialogue = ($GLOBALS["gameRequest"][0] === 'narrator_inputtext');
+} elseif (isset($gameRequest[0])) {
+    $directNarratorDialogue = ($gameRequest[0] === 'narrator_inputtext');
+}
+
 if (!function_exists('chimLoadManagedPromptTemplate')) {
     function chimLoadManagedPromptTemplate($promptKey, $fallbackPrompt, array $replacements = [], $logContext = "PROMPT")
     {
@@ -41,6 +50,7 @@ $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"
 if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
     $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
 }
+$inlineNarrationMode = $directNarratorDialogue ? 'disabled' : $inlineNarrationMode;
 $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
 if ($inlineNarrationEnabled) {
     $TEMPLATE_DIALOG = chimLoadManagedPromptTemplate(
@@ -74,6 +84,11 @@ if ($inlineNarrationEnabled) {
         ],
         "DIALOGUE_LINE_RESPONSE"
     );
+}
+
+if ($directNarratorDialogue) {
+    $TEMPLATE_DIALOG .= " Reply directly to {$GLOBALS["PLAYER_NAME"]} in plain spoken dialogue only." .
+        " Do not include third-person narration, scene description, stage directions, or text in asterisks.";
 }
 
 if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) &&  sizeof($GLOBALS["TTS"]["AZURE"]["validMoods"])>0) 

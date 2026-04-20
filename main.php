@@ -181,7 +181,7 @@ require_once($path . "processor" .DIRECTORY_SEPARATOR."chim_modes.php");
 // "(whispering to X)" instead of "(talking to X)".
 if (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_EXECUTION_MODE"]) === "WHISPER") {
     if (isset($gameRequest[3]) && is_string($gameRequest[3]) &&
-        in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext", "chat", "prechat", "rechat", "continue"], true)) {
+        in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext", "chat", "prechat", "rechat", "continue", "continue_group"], true)) {
         $gameRequest[3] = convertTalkingTagsToWhispering($gameRequest[3]);
     }
 }
@@ -573,7 +573,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 
 
 
-// Narrator initialization - ensure narrator data exists
+// Narrator initialization
 // Narrator is now managed via core_narrator table, not core_npc_master
 try {
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
@@ -601,6 +601,49 @@ try {
     Logger::warn("Narrator initialization failed: " . $e->getMessage());
 } 
 
+function maybeQueueNpcVoiceRefresh($currentNpcData, $npcMaster)
+{
+    if (!$currentNpcData || !($npcMaster instanceof NpcMaster)) {
+        return $currentNpcData;
+    }
+
+    $npcName = trim((string)($currentNpcData["npc_name"] ?? ""));
+    if ($npcName === "" || strcasecmp($npcName, "The Narrator") === 0) {
+        return $currentNpcData;
+    }
+
+    $voiceId = trim((string)($currentNpcData["voiceid"] ?? ""));
+    if ($voiceId !== "") {
+        return $currentNpcData;
+    }
+
+    $extended = $npcMaster->getExtendedData($currentNpcData);
+    $lastRequestedAt = intval($extended["voice_refresh_requested_at"] ?? 0);
+    $cooldownSeconds = 300;
+    $now = time();
+
+    if ($lastRequestedAt > 0 && ($now - $lastRequestedAt) < $cooldownSeconds) {
+        return $currentNpcData;
+    }
+
+    $extended["voice_refresh_requested_at"] = $now;
+    $extended["voice_refresh_attempts"] = intval($extended["voice_refresh_attempts"] ?? 0) + 1;
+    $extended["voice_refresh_last_result"] = "requested";
+
+    $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extended);
+    $npcMaster->updateByArray($currentNpcData);
+
+    $refId = trim((string)($currentNpcData["refid"] ?? ""));
+    if ($refId !== "" && stripos($refId, "0x") !== 0) {
+        $refId = "0x{$refId}";
+    }
+
+    echo "{$npcName}|rolecommand|RefreshNPCVoice@{$refId}@{$npcName}\r\n";
+    error_log("[NPCVOICE_REFRESH] Requested refresh for {$npcName} ({$refId})");
+
+    return $currentNpcData;
+}
+
 
 // Profile loading
 if (isset($_GET["profile"])) {
@@ -611,6 +654,7 @@ if (isset($_GET["profile"])) {
     $OVERRIDES["STTFUNCTION"] = isset($GLOBALS["STTFUNCTION"]) ? $GLOBALS["STTFUNCTION"] : "";
     $OVERRIDES["TTSFUNCTION_PLAYER"] = isset($GLOBALS["TTSFUNCTION_PLAYER"]) ? $GLOBALS["TTSFUNCTION_PLAYER"] : "";
     $OVERRIDES["TTSFUNCTION_PLAYER_VOICE"] = isset($GLOBALS["TTSFUNCTION_PLAYER_VOICE"]) ? $GLOBALS["TTSFUNCTION_PLAYER_VOICE"] : "";
+    $OVERRIDES["TTSFUNCTION_PLAYER_VOICE_ID"] = isset($GLOBALS["TTSFUNCTION_PLAYER_VOICE_ID"]) ? $GLOBALS["TTSFUNCTION_PLAYER_VOICE_ID"] : "";
     $OVERRIDES["TTSFUNCTION_PLAYER_LANGUAGE"] = isset($GLOBALS["TTSFUNCTION_PLAYER_LANGUAGE"]) ? $GLOBALS["TTSFUNCTION_PLAYER_LANGUAGE"] : "";
     
     // Check if this is The Narrator (by MD5)
@@ -942,6 +986,7 @@ if (isset($_GET["profile"])) {
     $GLOBALS["STTFUNCTION"]=$OVERRIDES["STTFUNCTION"];
     $GLOBALS["TTSFUNCTION_PLAYER"]=$OVERRIDES["TTSFUNCTION_PLAYER"];
     $GLOBALS["TTSFUNCTION_PLAYER_VOICE"]=$OVERRIDES["TTSFUNCTION_PLAYER_VOICE"];
+    $GLOBALS["TTSFUNCTION_PLAYER_VOICE_ID"]=$OVERRIDES["TTSFUNCTION_PLAYER_VOICE_ID"];
     $GLOBALS["TTSFUNCTION_PLAYER_LANGUAGE"]=$OVERRIDES["TTSFUNCTION_PLAYER_LANGUAGE"];
     
     // $GLOBALS["PROMPT_HEAD"]=$OVERRIDES["PROMPT_HEAD"];
@@ -950,6 +995,16 @@ if (isset($_GET["profile"])) {
 } else {
     //error_log(__FILE__.". Using default profile because NO GET PROFILE SPECIFIED");
     $GLOBALS["USING_DEFAULT_PROFILE"]=true;
+}
+
+if (isset($GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"]) && $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] && ($GLOBALS["HERIKA_NAME"] ?? "") !== "The Narrator") {
+    $npcMasterForVoiceRefresh = isset($npcMaster) && ($npcMaster instanceof NpcMaster)
+        ? $npcMaster
+        : new NpcMaster();
+    $refreshedNpcData = maybeQueueNpcVoiceRefresh($GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"], $npcMasterForVoiceRefresh);
+    if ($refreshedNpcData) {
+        $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $refreshedNpcData;
+    }
 }
 
 
@@ -1646,6 +1701,8 @@ if ($EXECUTION_MODE=="INJECTION_LOG") {
  CONTEXT DATA BUILDING
 ***********************/
 
+$GLOBALS["DIRECT_NARRATOR_DIALOGUE"] = ($gameRequest[0] === "narrator_inputtext");
+
 // Include prompts, command prompts and functions.
 require(__DIR__.DIRECTORY_SEPARATOR."prompt.includes.php");
 $gameRequest[0] = strtolower($gameRequest[0]); // one more time in case it was changed by an extension
@@ -2018,7 +2075,7 @@ if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[
 // Offer memory in CONTEXT 
 
 
-if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext","rechat","narration","continue"]) ) {
+if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext","rechat","narration","continue","continue_group"]) ) {
 
     $memoryInjection=offerMemory($gameRequest);
     //Logger::info("Memory injection:".json_encode($memoryInjection));
@@ -2049,8 +2106,8 @@ if (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_
 
 // array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
 
-// Action-enforcement prompt is now always enabled.
-$GLOBALS["ENFORCE_ACTIONS_PROMPT"] = true;
+// Action-enforcement prompt is disabled for direct narrator dialogue.
+$GLOBALS["ENFORCE_ACTIONS_PROMPT"] = empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]);
 
 
 // Rechat case
@@ -2119,11 +2176,16 @@ if (in_array($gameRequest[0],["instruction"]) ) {
 }
 
 // Enforce actions
-$GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
-    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
-else
-    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
+if (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) {
+    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
+    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
+} else {
+    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
+    if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
+        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
+    else
+        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
+}
 
 // Cooldown definitions
 $COOLDOWNMAP["ComeCloser"]=120/0.00864;
@@ -2222,6 +2284,11 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     }
     //command prompt function now injected in json_response.php with actions
     //$GLOBALS["COMMAND_PROMPT"].=$GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
+}
+
+if (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) {
+    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"] = false;
+    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"] = "";
 }
 
 
@@ -2347,16 +2414,19 @@ if ($GLOBALS["HERIKA_NAME"] !== "The Narrator" && isset($_GET["profile"])) {
 $rumorsText="";
 $currentHold=trim(DataLastKnownLocationHuman(true,false));
 $currentLoc=trim(DataLastKnownLocationHuman(false,false));
+$rumorGametsPerDay = (int) round(24 / 0.0000024);
+$currentRumorGamets = (int) $gameRequest[2];
+$rumorActiveClause = "(gamets + (COALESCE(rumor_length_days, 7) * {$rumorGametsPerDay})) > {$currentRumorGamets}";
 if ($currentHold) {
     error_log("[RUMORS] Current hold {$currentHold}, currentLoc {$currentLoc}");
     $currentHoldEsc=$db->escape($currentHold);
     $currentLocEsc=$db->escape($currentLoc);
-    $query="SELECT * FROM rumors WHERE hold like '{$currentLocEsc}%{$currentHoldEsc}%' and gamets>".round($gameRequest[2]- ( 7 * 24 /0.0000024));
+    $query="SELECT * FROM rumors WHERE (hold like '{$currentLocEsc}%{$currentHoldEsc}%' OR hold='Skyrim') and {$rumorActiveClause}";
     error_log($query);
     $rumors = $db->fetchAll($query);
 
-    if (empty($umors)) {
-        $query="SELECT * FROM rumors WHERE hold like '{$currentHoldEsc}%' and gamets>".round($gameRequest[2]- ( 7 * 24 /0.0000024));
+    if (empty($rumors)) {
+        $query="SELECT * FROM rumors WHERE (hold like '{$currentHoldEsc}%' OR hold='Skyrim') and {$rumorActiveClause}";
         error_log($query);
         $rumors = $db->fetchAll($query);
     }
@@ -2373,6 +2443,18 @@ if ($currentHold) {
     }
 } else {
     error_log("[RUMORS] Current hold {$currentHold} empty");
+    $query="SELECT * FROM rumors WHERE hold='Skyrim' and {$rumorActiveClause}";
+    error_log($query);
+    $rumors = $db->fetchAll($query);
+    foreach ($rumors as $n=>$rumor) {
+       if (isset($rumor["content"])) {
+            $tag=strtolower(str_replace(" ","_",$rumor["type"]));
+            $rumorsText.="\n<$tag>\n{$rumor["content"]}\n</$tag>";
+        }
+        if ($n>=2) {
+            break;
+        }
+    }
 }
 
 // For narration events, simplify the command prompt (no actions needed for atmospheric descriptions)
@@ -2439,7 +2521,6 @@ requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"c
 if (isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
     $nearbySections = $GLOBALS["PROMPT_NEARBY_SECTIONS"];
 }
-
 
 if (!empty($GLOBALS["OGHMA_HINT"])) {
 
@@ -2540,7 +2621,23 @@ if ($gameRequest[0] == "funcret") {
         
         
     } else {
+        $explicitDirectNarratorInput = false;
+        if (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]) && $gameRequest[0] === "narrator_inputtext" && !empty($gameRequest[3])) {
+            $explicitDirectNarratorInput = true;
+            if (!empty($contextDataFull)) {
+                $lastContextEntry = end($contextDataFull);
+                if (is_array($lastContextEntry)
+                    && (($lastContextEntry["role"] ?? "") === "user")
+                    && trim((string)($lastContextEntry["content"] ?? "")) === trim((string)$gameRequest[3])) {
+                    $explicitDirectNarratorInput = false;
+                }
+                reset($contextDataFull);
+            }
+        }
         if (!empty($request)) {
+            if ($explicitDirectNarratorInput) {
+                $prompt[] = array('role' => 'user', 'content' => $gameRequest[3]);
+            }
             $prompt[] = array('role' => $LAST_ROLE, 'content' => $request);
             if (sizeof($memoryInjectionCtx)>0) {
                 array_splice($prompt, -1, 0, $memoryInjectionCtx); // add memory as second-to-last entry
