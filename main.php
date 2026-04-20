@@ -566,6 +566,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
         $escapedNpc = escapeshellarg($npcTarget);
         $player_rewrite_speech=`php player_rewrite.php $escapedDialogue $escapedNpc`;
         $player_rewrite_speech=cleanResponse($player_rewrite_speech);
+        $player_rewrite_speech=sanitizePlayerRespeechText($player_rewrite_speech, $GLOBALS["PLAYER_NAME"] ?? null);
         $gameRequest[3]="{$GLOBALS["PLAYER_NAME"]}:$player_rewrite_speech";
         $GLOBALS["CHIM_EXECUTION_MODE"] = "AUTOCHAT"; //required when using STANDARD/WHISPER and ** prefix triggers speech database fix
     }

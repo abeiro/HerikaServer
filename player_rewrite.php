@@ -128,13 +128,13 @@ if (! isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
     if (!$_GET["speech"]) {
         $instruction = "Write dialogue for {$GLOBALS["PLAYER_NAME"]}.";
     } else {
-        $instruction = "Rewrite dialogue for {$GLOBALS["PLAYER_NAME"]}, using this text as source \"{$GLOBALS["PLAYER_NAME"]}:{$_GET["speech"]}\". Pay attention to comments between brackets, that can guide you in length and verbosity.";
+        $instruction = "Rewrite dialogue for {$GLOBALS["PLAYER_NAME"]}, using this text as source \"{$GLOBALS["PLAYER_NAME"]}:{$_GET["speech"]}\". Use comments between brackets only as guidance for tone, target, length, and verbosity. Do not repeat bracketed comments, stage directions, narration, or speaker names in the output.";
     }
 
     $prompt[] = ['role' => 'system', 'content' => $systemContent];
     $prompt[] = ['role' => 'user',   'content' => "# Contextual data\n$historyData"];
     $prompt[] = ['role' => 'user',   'content' => $instruction];
-    $prompt[] = ['role' => 'user',   'content' => "Just output dialogue"];
+    $prompt[] = ['role' => 'user',   'content' => "Output only the final spoken dialogue line. No narration. No stage directions. No speaker names. No bracketed comments."];
     $customParm["MAX_TOKENS"] = 4000;
 
     $buffer = $connectionHandler->fast_request($prompt, ["MAX_TOKENS" => 4000]);
