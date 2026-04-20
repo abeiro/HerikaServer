@@ -843,6 +843,28 @@ if (isset($_POST["animation"])) {
         $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 50;
         $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
         $offset = ($page - 1) * $limit;
+        $escapeAuditRequestText = static function ($text) {
+            return htmlspecialchars((string)$text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        };
+        $clipAuditRequestText = static function ($text, $limit = 400) {
+            $text = (string)$text;
+
+            if (function_exists('grapheme_strlen') && function_exists('grapheme_substr')) {
+                $length = grapheme_strlen($text);
+                if ($length !== false) {
+                    return [grapheme_substr($text, 0, $limit), $length > $limit];
+                }
+            }
+
+            if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+                return [
+                    mb_substr($text, 0, $limit, 'UTF-8'),
+                    mb_strlen($text, 'UTF-8') > $limit
+                ];
+            }
+
+            return [substr($text, 0, $limit), strlen($text) > $limit];
+        };
 
         // Add modal HTML structure if not already present
         if (strpos($buffer ?? '', 'id="contentModal"') === false) {
@@ -908,6 +930,17 @@ if (isset($_POST["animation"])) {
                 font-size: 12px;
             }
 
+            .view-contents-btn {
+                gap: 8px;
+                white-space: nowrap;
+            }
+
+            .view-contents-btn .btn-icon {
+                font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+                font-size: 1.05em;
+                line-height: 1;
+            }
+
             /* Prevent background interaction when modal is open */
             body.modal-open {
                 overflow: hidden;
@@ -963,17 +996,21 @@ if (isset($_POST["animation"])) {
             'url' => 'URL'
         ];
 
-        $mappedResults = array_map(function ($row) use ($columnHeaders) {
+        $mappedResults = array_map(function ($row) use ($columnHeaders, $clipAuditRequestText, $escapeAuditRequestText) {
             $mappedRow = [];
             foreach ($row as $key => $value) {
                 if ($key === 'request') {
-                    // For request column, show as a button with preview (400 characters)
-                    $escapedContent = htmlspecialchars($value, ENT_QUOTES);
-                    $preview = htmlspecialchars(substr($value, 0, 400)) . (strlen($value) > 400 ? '...' : '');
+                    // Keep previews emoji-safe by clipping on grapheme clusters, not bytes.
+                    [$previewText, $isTruncated] = $clipAuditRequestText($value, 400);
+                    $escapedContent = $escapeAuditRequestText($value);
+                    $preview = $escapeAuditRequestText($previewText) . ($isTruncated ? '...' : '');
                     $mappedRow[$columnHeaders[$key] ?? $key] = 
                         '<div style="display: flex; align-items: center; gap: 10px;">' .
                         '<span style="flex-grow: 1;">' . $preview . '</span>' .
-                        '<button class="view-contents-btn btn-base btn-primary" data-full-content="' . $escapedContent . '">ðŸ“„ View Full</button>' .
+                        '<button class="view-contents-btn btn-base btn-primary" data-full-content="' . $escapedContent . '">' .
+                        '<span class="btn-icon" aria-hidden="true">&#x1F4C4;</span>' .
+                        '<span>View Full</span>' .
+                        '</button>' .
                         '</div>';
                 } else if ($key === 'created_at' && !empty($value)) {
                     // Format timestamp to UTC time
@@ -983,17 +1020,18 @@ if (isset($_POST["animation"])) {
                 } else if ($key === 'result') {
                     // Format result with color coding - green for OK, red for others
                     $resultColor = (strtoupper(trim($value)) === 'OK') ? '#4CAF50' : '#f44336';
-                    $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content" style="color: ' . $resultColor . '; font-weight: bold;">' . nl2br(htmlspecialchars($value)) . '</div>';
+                    $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content" style="color: ' . $resultColor . '; font-weight: bold;">' . nl2br($escapeAuditRequestText($value)) . '</div>';
                 } else if ($key === 'usage') {
                     // Render compact JSON preview
-                    $jsonText = is_string($value) ? $value : json_encode($value);
-                    $preview = htmlspecialchars(substr($jsonText, 0, 400)) . (strlen($jsonText) > 400 ? '...' : '');
+                    $jsonText = is_string($value) ? $value : json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    [$previewText, $isTruncated] = $clipAuditRequestText($jsonText, 400);
+                    $preview = $escapeAuditRequestText($previewText) . ($isTruncated ? '...' : '');
                     $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . $preview . '</div>';
                 } else if ($key === 'url') {
                     // Format URL column
-                    $mappedRow[$columnHeaders[$key] ?? $key] = htmlspecialchars($value);
+                    $mappedRow[$columnHeaders[$key] ?? $key] = $escapeAuditRequestText($value);
                 } else {
-                    $mappedRow[$columnHeaders[$key] ?? $key] = htmlspecialchars($value);
+                    $mappedRow[$columnHeaders[$key] ?? $key] = $escapeAuditRequestText($value);
                 }
             }
             return $mappedRow;

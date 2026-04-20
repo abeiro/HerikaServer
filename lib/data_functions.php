@@ -4129,6 +4129,44 @@ function FastCallOAI($question) {
     
 }
 
+function snapshot_response_prompt_debug_data($connectorData = null) {
+    if (!isset($GLOBALS["DEBUG_DATA"]) || !is_array($GLOBALS["DEBUG_DATA"])) {
+        $GLOBALS["DEBUG_DATA"] = [];
+    }
+
+    if (isset($GLOBALS["DEBUG_DATA"]["full"]) && is_array($GLOBALS["DEBUG_DATA"]["full"])) {
+        $GLOBALS["DEBUG_DATA"]["response_full"] = $GLOBALS["DEBUG_DATA"]["full"];
+    } else {
+        unset($GLOBALS["DEBUG_DATA"]["response_full"]);
+    }
+
+    if ($connectorData === null
+        && isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])
+        && is_array($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
+        $connectorData = $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"];
+    }
+
+    if (!is_array($connectorData)) {
+        unset($GLOBALS["DEBUG_DATA"]["response_connector"]);
+        return;
+    }
+
+    $responseConnector = array_filter([
+        'id' => $connectorData['id'] ?? null,
+        'label' => $connectorData['label'] ?? null,
+        'driver' => $connectorData['driver'] ?? null,
+        'model' => $connectorData['model'] ?? null,
+    ], function ($value) {
+        return $value !== null && $value !== '';
+    });
+
+    if (!empty($responseConnector)) {
+        $GLOBALS["DEBUG_DATA"]["response_connector"] = $responseConnector;
+    } else {
+        unset($GLOBALS["DEBUG_DATA"]["response_connector"]);
+    }
+}
+
 function call_llm() {
     global $contextData, $gameRequest, $receivedData, $startTime, $db;
     global $ERROR_TRIGGERED, $talkedSoFar, $alreadysent, $FUNCTIONS_ARE_ENABLED;
@@ -4172,6 +4210,7 @@ function call_llm_internal() {
 
 
         $buffer=$connectionHandler->fast_request($contextData,$overrideParameters,'standard');
+        snapshot_response_prompt_debug_data($currentConnectorData);
         $preserveAsterisksInContext = isset($GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"]) ? (bool)$GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"] : false;
         $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
         if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
@@ -4268,6 +4307,7 @@ function call_llm_internal() {
         }
 
         $connectionHandler->open($contextData,$overrideParameters);
+        snapshot_response_prompt_debug_data();
     }
 
 

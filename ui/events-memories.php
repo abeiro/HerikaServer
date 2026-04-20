@@ -952,9 +952,15 @@ function getTimeColor($time) {
 
                     $text = '';
                     if (is_array($decoded)) {
-                        // Prefer messages inside ['full']['messages'] when available
-                        if (isset($decoded['full']) && is_array($decoded['full']) && isset($decoded['full']['messages']) && is_array($decoded['full']['messages'])) {
-                            foreach ($decoded['full']['messages'] as $msg) {
+                        $promptPayload = null;
+                        if (isset($decoded['response_full']) && is_array($decoded['response_full'])) {
+                            $promptPayload = $decoded['response_full'];
+                        } elseif (isset($decoded['full']) && is_array($decoded['full'])) {
+                            $promptPayload = $decoded['full'];
+                        }
+
+                        if (is_array($promptPayload) && isset($promptPayload['messages']) && is_array($promptPayload['messages'])) {
+                            foreach ($promptPayload['messages'] as $msg) {
                                 if (isset($msg['content']) && is_string($msg['content'])) {
                                     $text .= $msg['content'] . "\n";
                                 }
@@ -1038,23 +1044,40 @@ function getTimeColor($time) {
                         // Try to decode JSON from cleaned/decoded content
                         $decoded = json_decode($rawPromptDecoded, true);
                         if (is_array($decoded)) {
-                            // Extract model info
-                            $model = isset($decoded['full']['model']) ? $decoded['full']['model'] : 'unknown';
+                            $promptPayload = null;
+                            if (isset($decoded['response_full']) && is_array($decoded['response_full'])) {
+                                $promptPayload = $decoded['response_full'];
+                            } elseif (isset($decoded['full']) && is_array($decoded['full'])) {
+                                $promptPayload = $decoded['full'];
+                            }
+
+                            $responseConnector = isset($decoded['response_connector']) && is_array($decoded['response_connector'])
+                                ? $decoded['response_connector']
+                                : [];
+                            $responseConnectorLabel = trim((string)($responseConnector['label'] ?? ''));
+                            $responseConnectorDriver = trim((string)($responseConnector['driver'] ?? ''));
+                            $model = (is_array($promptPayload) && isset($promptPayload['model']))
+                                ? (string)$promptPayload['model']
+                                : 'unknown';
                             
                             // Start with HTML formatted array
                             $formattedPrompt = '<div style="font-family: \'Consolas\', monospace; line-height: 1.6;">';
                             $formattedPrompt .= '<div style="color: #569cd6;">array</div> (';
                             $formattedPrompt .= '<div style="padding-left: 20px;">';
+                            if ($responseConnectorLabel !== '') {
+                                $formattedPrompt .= '<div style="color: #9cdcfe;">\'response_connector\'</div> <span style="color: #d4d4d4;">=></span> <span style="color: #ce9178;">\''. htmlspecialchars($responseConnectorLabel) .'\'</span>,</div>';
+                            }
+                            if ($responseConnectorDriver !== '') {
+                                $formattedPrompt .= '<div style="color: #9cdcfe;">\'connector_driver\'</div> <span style="color: #d4d4d4;">=></span> <span style="color: #ce9178;">\''. htmlspecialchars($responseConnectorDriver) .'\'</span>,</div>';
+                            }
                             $formattedPrompt .= '<div style="color: #9cdcfe;">\'model\'</div> <span style="color: #d4d4d4;">=></span> <span style="color: #ce9178;">\''. htmlspecialchars($model) .'\'</span>,</div>';
                             $formattedPrompt .= '<div style="padding-left: 20px;"><div style="color: #9cdcfe;">\'messages\'</div> <span style="color: #d4d4d4;">=></span></div>';
                             $formattedPrompt .= '<div style="padding-left: 20px;"><div style="color: #569cd6;">array</div> (</div>';
                             
                             // Get messages
                             $messages = [];
-                            if (isset($decoded['full']) && is_array($decoded['full'])) {
-                                if (isset($decoded['full']['messages']) && is_array($decoded['full']['messages'])) {
-                                    $messages = $decoded['full']['messages'];
-                                }
+                            if (is_array($promptPayload) && isset($promptPayload['messages']) && is_array($promptPayload['messages'])) {
+                                $messages = $promptPayload['messages'];
                             } else if (isset($decoded['messages']) && is_array($decoded['messages'])) {
                                 $messages = $decoded['messages'];
                             }
