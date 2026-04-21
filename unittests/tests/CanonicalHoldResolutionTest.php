@@ -145,8 +145,8 @@ final class CanonicalHoldResolutionTest extends DatabaseTestCase
 
         $worldPrompt = buildWorldPrompt(100);
 
-        $this->assertStringContainsString("Current location: Riverwood Trader", $worldPrompt);
-        $this->assertStringContainsString("Current hold: Whiterun Hold", $worldPrompt);
-        $this->assertStringNotContainsString("Current hold: Riverwood", $worldPrompt);
+        $this->assertStringContainsString("<location>Riverwood Trader</location>", $worldPrompt);
+        $this->assertStringContainsString("<hold>Whiterun Hold</hold>", $worldPrompt);
+        $this->assertStringNotContainsString("<hold>Riverwood</hold>", $worldPrompt);
     }
 }

@@ -4,6 +4,7 @@ require_once(__DIR__."/utils.php");
 // used for openai_token_count table
 
 require_once(__DIR__."/utils_game_timestamp.php");
+require_once(__DIR__."/lazy_xml.php");
 require_once(__DIR__."/model_dynmodel.php");
 require_once(__DIR__."/emote_moods.php");
 require_once(__DIR__."/core/npc_master.class.php");
@@ -2961,17 +2962,17 @@ function buildWorldPrompt($gamets = 0)
 
     $currentLoc = trim(DataLastKnownLocationHuman(false, false));
     if ($currentLoc !== "") {
-        $worldLines[] = "Current location: {$currentLoc}";
+        $worldLines[] = "  <location>" . xml_fragment_escape_text($currentLoc) . "</location>";
     }
 
     $currentHold = trim(DataLastKnownCanonicalHoldHuman(false));
     if ($currentHold !== "") {
-        $worldLines[] = "Current hold: {$currentHold}";
+        $worldLines[] = "  <hold>" . xml_fragment_escape_text($currentHold) . "</hold>";
     }
 
     $currentWeather = trim(DataLastKnownWeatherHuman());
     if ($currentWeather !== "") {
-        $worldLines[] = "Current weather: {$currentWeather}";
+        $worldLines[] = "  <weather>" . xml_fragment_escape_text($currentWeather) . "</weather>";
     }
 
     $f_gamets = floatval($gamets);
@@ -2986,9 +2987,9 @@ function buildWorldPrompt($gamets = 0)
         $dayPart = hour2part_of_day(date('H', $tsTime));
 
         if ($currentDate !== "") {
-            $worldLines[] = "Current date: {$currentDate}";
+            $worldLines[] = "  <date>" . xml_fragment_escape_text($currentDate) . "</date>";
         }
-        $worldLines[] = "Current time: {$currentTime}, {$dayPart}";
+        $worldLines[] = "  <time>" . xml_fragment_escape_text("{$currentTime}, {$dayPart}") . "</time>";
     }
 
     if (empty($worldLines)) {
