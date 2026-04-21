@@ -601,9 +601,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
         if ($id <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid id"]); exit; }
 
         $allowed = [
-            'label','service','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema','api_badge_id','extra_parameters_yaml'
+            'label','service','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema','api_badge_id','extra_parameters_yaml','extra_parameters_enabled'
         ];
         $data = [];
+        $readConnectorMetadata = function() use (&$data, $llm, $id) {
+            if (isset($data['metadata'])) {
+                $metadata = json_decode(strval($data['metadata']), true);
+                if (is_array($metadata)) {
+                    return $metadata;
+                }
+            }
+            $row = $llm->getById($id);
+            $metadata = is_string($row['metadata'] ?? '') ? json_decode($row['metadata'], true) : ($row['metadata'] ?? []);
+            return is_array($metadata) ? $metadata : [];
+        };
+        $writeConnectorMetadata = function(array $metadata) use (&$data) {
+            $data['metadata'] = json_encode($metadata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        };
         foreach ($allowed as $k) {
             if (!array_key_exists($k, $_POST)) continue;
             $v = $_POST[$k];
@@ -619,22 +633,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
                 // Parse YAML and store as metadata.extra_parameters
                 require_once __DIR__ . '/../../connector/parse_simple_yaml.php';
                 $extra_parameters = parse_simple_yaml($v);
+                $metadata = $readConnectorMetadata();
                 if (is_array($extra_parameters)) {
-                    // Get current metadata
-                    $row = $llm->getById($id);
-                    $metadata = is_string($row['metadata'] ?? '') ? json_decode($row['metadata'], true) : ($row['metadata'] ?? []);
-                    if (!is_array($metadata)) $metadata = [];
                     $metadata['extra_parameters'] = $extra_parameters;
-                    $data['metadata'] = json_encode($metadata);
                 } else {
-                    // Invalid YAML, remove extra_parameters
-                    $row = $llm->getById($id);
-                    $metadata = is_string($row['metadata'] ?? '') ? json_decode($row['metadata'], true) : ($row['metadata'] ?? []);
-                    if (!is_array($metadata)) $metadata = [];
                     unset($metadata['extra_parameters']);
-                    $data['metadata'] = json_encode($metadata);
                 }
+                $writeConnectorMetadata($metadata);
                 // Don't add extra_parameters_yaml to $data directly
+                continue;
+            } else if ($k === 'extra_parameters_enabled') {
+                $metadata = $readConnectorMetadata();
+                $metadata['extra_parameters_enabled'] = ($v === '1' || $v === 'true' || $v === 1);
+                $writeConnectorMetadata($metadata);
                 continue;
             } else {
                 $data[$k] = ($v === '' ? null : $v);
