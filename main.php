@@ -33,6 +33,7 @@ $GLOBALS["db"] = new sql();
 require_once($path . "lib/minimet5_service.php");
 require_once($path . "lib/data_functions.php");
 require_once($path . "lib/chat_helper_functions.php");
+require_once($path . "lib/lazy_xml.php");
 require_once($path . "lib/memory_helper_vectordb.php");
 require_once($path . "lib/llm_randomizer.php");
 require_once($path . "lib/utils_game_timestamp.php");
@@ -2413,49 +2414,43 @@ if ($GLOBALS["HERIKA_NAME"] !== "The Narrator" && isset($_GET["profile"])) {
 
 // Rumors and breaking news
 $rumorsText="";
-$currentHold=trim(DataLastKnownLocationHuman(true,false));
-$currentLoc=trim(DataLastKnownLocationHuman(false,false));
+$currentHold=trim(DataLastKnownCanonicalHoldHuman(false));
+$currentLoc=trim(DataLastKnownLocationBaseHuman(false));
 $rumorGametsPerDay = (int) round(24 / 0.0000024);
 $currentRumorGamets = (int) $gameRequest[2];
 $rumorActiveClause = "(gamets + (COALESCE(rumor_length_days, 7) * {$rumorGametsPerDay})) > {$currentRumorGamets}";
 if ($currentHold) {
     error_log("[RUMORS] Current hold {$currentHold}, currentLoc {$currentLoc}");
-    $currentHoldEsc=$db->escape($currentHold);
-    $currentLocEsc=$db->escape($currentLoc);
-    $query="SELECT * FROM rumors WHERE (hold like '{$currentLocEsc}%{$currentHoldEsc}%' OR hold='Skyrim') and {$rumorActiveClause}";
+    $rumorLocationHoldClauses = ["hold='Skyrim'"];
+    $rumorHoldClauses = ["hold='Skyrim'"];
+    foreach (getCanonicalHoldAliases($currentHold) as $holdAlias) {
+        $holdAliasEsc = $db->escape($holdAlias);
+        $rumorHoldClauses[] = "hold ILIKE '{$holdAliasEsc}'";
+
+        if ($currentLoc !== "") {
+            $currentLocEsc = $db->escape($currentLoc);
+            $rumorLocationHoldClauses[] = "hold ILIKE '{$currentLocEsc}%{$holdAliasEsc}%'";
+        }
+    }
+
+    $query="SELECT * FROM rumors WHERE (" . implode(" OR ", array_unique(array_merge($rumorLocationHoldClauses, $rumorHoldClauses))) . ") and {$rumorActiveClause}";
     error_log($query);
     $rumors = $db->fetchAll($query);
 
     if (empty($rumors)) {
-        $query="SELECT * FROM rumors WHERE (hold like '{$currentHoldEsc}%' OR hold='Skyrim') and {$rumorActiveClause}";
+        $query="SELECT * FROM rumors WHERE (" . implode(" OR ", array_unique($rumorHoldClauses)) . ") and {$rumorActiveClause}";
         error_log($query);
         $rumors = $db->fetchAll($query);
     }
 
 
-    foreach ($rumors as $n=>$rumor) {
-       if (isset($rumor["content"])) {
-            $tag=strtolower(str_replace(" ","_",$rumor["type"]));
-            $rumorsText.="\n<$tag>\n{$rumor["content"]}\n</$tag>";
-        }
-        if ($n>=2) {
-            break;
-        }
-    }
+    $rumorsText = build_rumor_prompt_xml($rumors);
 } else {
     error_log("[RUMORS] Current hold {$currentHold} empty");
     $query="SELECT * FROM rumors WHERE hold='Skyrim' and {$rumorActiveClause}";
     error_log($query);
     $rumors = $db->fetchAll($query);
-    foreach ($rumors as $n=>$rumor) {
-       if (isset($rumor["content"])) {
-            $tag=strtolower(str_replace(" ","_",$rumor["type"]));
-            $rumorsText.="\n<$tag>\n{$rumor["content"]}\n</$tag>";
-        }
-        if ($n>=2) {
-            break;
-        }
-    }
+    $rumorsText = build_rumor_prompt_xml($rumors);
 }
 
 // For narration events, simplify the command prompt (no actions needed for atmospheric descriptions)
