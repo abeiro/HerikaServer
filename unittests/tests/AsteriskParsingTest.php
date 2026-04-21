@@ -114,6 +114,33 @@ final class AsteriskParsingTest extends TestCase
         );
     }
 
+    // Regression note: PLAYER_RESPEECH/autochat can emit leading parenthetical narration
+    // and a duplicated player-name prefix (for example "(A shiver...) Rangroo: ...").
+    // Keep these tests server-side so rewritten player text entering context and subtitles
+    // stays as spoken dialogue only.
+    public function testPlayerSubtitleTextStripsPlayerSpeakerPrefixAndTalkingTag(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'Rangroo';
+
+        $this->assertSame(
+            "Sven. The air bites today, doesn't it?",
+            formatPlayerSubtitleText("Rangroo: Sven. The air bites today, doesn't it? (Talking to Sven)")
+        );
+    }
+
+    public function testSanitizePlayerRespeechTextStripsLeadingNarrationAndPlayerPrefix(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'Rangroo';
+
+        $this->assertSame(
+            "Sven. The air bites today, doesn't it? (Talking to Sven)",
+            sanitizePlayerRespeechText(
+                "(A shiver runs down Rangroo's spine, despite his heavy furs.) Rangroo: Sven. The air bites today, doesn't it? (Talking to Sven)",
+                $GLOBALS['PLAYER_NAME']
+            )
+        );
+    }
+
     public function testNpcSpeechFiltersKnownAsteriskEmotesWhenNpcOutputFilterEnabled(): void
     {
         $GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'] = true;

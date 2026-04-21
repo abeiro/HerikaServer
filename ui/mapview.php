@@ -45,7 +45,7 @@ function getRumorPagePath() {
     return $path;
 }
 
-function redirectToRumorSection($status, $message) {
+function redirectToRumorSection($status, $message, $anchor = 'create-rumor') {
     $path = getRumorPagePath();
 
     $query = http_build_query([
@@ -53,7 +53,12 @@ function redirectToRumorSection($status, $message) {
         'rumor_message' => $message,
     ]);
 
-    header('Location: ' . $path . '?' . $query . '#create-rumor');
+    $anchor = trim((string) $anchor);
+    if ($anchor !== '') {
+        $anchor = '#' . ltrim($anchor, '#');
+    }
+
+    header('Location: ' . $path . '?' . $query . $anchor);
     exit;
 }
 
@@ -131,6 +136,22 @@ function handleUpdateRumor() {
     }
 
     redirectToRumorSection('success', $result['message'] ?? 'Rumor updated successfully.');
+}
+
+function handleDeleteRumor() {
+    global $adminConn;
+
+    $rumorId = (int) ($_POST['rumor_id'] ?? 0);
+    $result = chimDeleteRumorEntry($adminConn, $rumorId);
+
+    if (!($result['ok'] ?? false)) {
+        return [
+            'type' => 'error',
+            'message' => $result['message'] ?? 'Failed to delete rumor.',
+        ];
+    }
+
+    redirectToRumorSection('success', $result['message'] ?? 'Rumor deleted successfully.', 'rumors-section');
 }
 
 if (isset($_GET['rumor_status']) && isset($_GET['rumor_message'])) {
@@ -248,6 +269,8 @@ if (!function_exists('race_icon_web_path')) {
             [$rumorFlash, $rumorFormData] = handleCreateRumor();
         } elseif ($_POST['action'] === 'update_rumor') {
             [$rumorFlash, $rumorFormData, $editingRumorId] = handleUpdateRumor();
+        } elseif ($_POST['action'] === 'delete_rumor') {
+            $rumorFlash = handleDeleteRumor();
         }
     }
 
@@ -2213,7 +2236,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
     ?>
     
-    <div style="margin-top: 40px;">
+    <div id="rumors-section" style="margin-top: 40px;">
         <div class="page-header" style="margin-bottom: 20px;">
             <h1>📰 Rumors</h1>
         </div>
@@ -2264,6 +2287,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                     <td style="padding: 12px; color: #888; font-size: 12px; white-space: nowrap;"><?php echo $hoursAgo; ?> hours ago</td>
                                     <td style="padding: 12px;">
                                         <a href="<?php echo htmlspecialchars(getRumorPagePath() . '?edit_rumor_id=' . urlencode((string)($rumor['id'] ?? '')) . '#create-rumor'); ?>" style="color: rgb(242, 124, 17); font-weight: 600; text-decoration: none;">Edit</a>
+                                        <form method="post" action="" style="display: inline; margin-left: 12px;" onsubmit="return confirm('Delete this rumor?');">
+                                            <input type="hidden" name="action" value="delete_rumor">
+                                            <input type="hidden" name="rumor_id" value="<?php echo (int) ($rumor['id'] ?? 0); ?>">
+                                            <button type="submit" style="background: none; border: none; padding: 0; color: #d65c5c; font-weight: 600; text-decoration: none; cursor: pointer;">Delete</button>
+                                        </form>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -2307,6 +2335,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                     <td style="padding: 12px; color: #666; font-size: 12px; white-space: nowrap;"><?php echo $hoursAgo; ?> hours ago</td>
                                     <td style="padding: 12px;">
                                         <a href="<?php echo htmlspecialchars(getRumorPagePath() . '?edit_rumor_id=' . urlencode((string)($rumor['id'] ?? '')) . '#create-rumor'); ?>" style="color: #bbb; font-weight: 600; text-decoration: none;">Edit</a>
+                                        <form method="post" action="" style="display: inline; margin-left: 12px;" onsubmit="return confirm('Delete this rumor?');">
+                                            <input type="hidden" name="action" value="delete_rumor">
+                                            <input type="hidden" name="rumor_id" value="<?php echo (int) ($rumor['id'] ?? 0); ?>">
+                                            <button type="submit" style="background: none; border: none; padding: 0; color: #d65c5c; font-weight: 600; text-decoration: none; cursor: pointer;">Delete</button>
+                                        </form>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

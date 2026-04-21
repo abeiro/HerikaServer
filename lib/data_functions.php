@@ -4,6 +4,7 @@ require_once(__DIR__."/utils.php");
 // used for openai_token_count table
 
 require_once(__DIR__."/utils_game_timestamp.php");
+require_once(__DIR__."/lazy_xml.php");
 require_once(__DIR__."/model_dynmodel.php");
 require_once(__DIR__."/emote_moods.php");
 require_once(__DIR__."/core/npc_master.class.php");
@@ -2724,37 +2725,234 @@ function DataLastKnownLocation()
 
 }
 
+function normalizeLocationContextToken($value, $stripStateSuffix = false)
+{
+    $value = trim((string) $value);
+    if ($value === "") {
+        return "";
+    }
+
+    $value = preg_replace('/\s+/u', ' ', $value);
+    $value = trim((string) $value, " \t\n\r\0\x0B,");
+
+    if ($stripStateSuffix) {
+        $value = preg_replace('/\s+(outdoors|interior)\s*$/iu', '', $value);
+        $value = trim((string) $value, " \t\n\r\0\x0B,");
+    }
+
+    return $value;
+}
+
+function getCanonicalHoldGroups()
+{
+    return [
+        "Eastmarch" => ["Eastmarch"],
+        "Falkreath Hold" => ["Falkreath Hold", "Falkreath"],
+        "Haafingar" => ["Haafingar"],
+        "Hjaalmarch" => ["Hjaalmarch"],
+        "The Pale" => ["The Pale", "the Pale"],
+        "The Reach" => ["The Reach"],
+        "The Rift" => ["The Rift"],
+        "Whiterun Hold" => ["Whiterun Hold", "Whiterun"],
+        "Winterhold" => ["Winterhold"],
+    ];
+}
+
+function canonicalizeHoldName($value)
+{
+    static $aliasMap = null;
+
+    if ($aliasMap === null) {
+        $aliasMap = [];
+        foreach (getCanonicalHoldGroups() as $canonical => $aliases) {
+            foreach ($aliases as $alias) {
+                $aliasKey = strtolower(normalizeLocationContextToken($alias, true));
+                if ($aliasKey !== "") {
+                    $aliasMap[$aliasKey] = $canonical;
+                }
+            }
+        }
+    }
+
+    $valueKey = strtolower(normalizeLocationContextToken($value, true));
+    if ($valueKey === "") {
+        return "";
+    }
+
+    return $aliasMap[$valueKey] ?? "";
+}
+
+function getCanonicalHoldAliases($value)
+{
+    $canonical = canonicalizeHoldName($value);
+    $groups = getCanonicalHoldGroups();
+
+    if ($canonical !== "" && isset($groups[$canonical])) {
+        return $groups[$canonical];
+    }
+
+    $value = normalizeLocationContextToken($value, true);
+    return $value !== "" ? [$value] : [];
+}
+
+function DataLastKnownLocationContextParts($cached = false)
+{
+    if (isset($GLOBALS["CACHE_LAST_KNOWN_LOCATION_CONTEXT_PARTS"])) {
+        return $GLOBALS["CACHE_LAST_KNOWN_LOCATION_CONTEXT_PARTS"];
+    }
+
+    global $db;
+
+    $lastLoc = $db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc','location','request') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+    if (!is_array($lastLoc) || sizeof($lastLoc) == 0) {
+        $GLOBALS["CACHE_LAST_KNOWN_LOCATION_CONTEXT_PARTS"] = [
+            "location" => "",
+            "location_base" => "",
+            "hold_raw" => "",
+        ];
+        return $GLOBALS["CACHE_LAST_KNOWN_LOCATION_CONTEXT_PARTS"];
+    }
+
+    $location = "";
+    $holdRaw = "";
+    if (preg_match('/Context\s*(?:new\s*)?location:\s*([^,]+?)(?:,|$)/u', $lastLoc[0]["data"], $locationMatch) && isset($locationMatch[1])) {
+        $location = normalizeLocationContextToken($locationMatch[1], false);
+    }
+
+    if (preg_match('/Hold:\s*([^,\)]+?)(?:,|\)|$)/u', $lastLoc[0]["data"], $holdMatch) && isset($holdMatch[1])) {
+        $holdRaw = normalizeLocationContextToken($holdMatch[1], false);
+    }
+
+    $GLOBALS["CACHE_LAST_KNOWN_LOCATION_CONTEXT_PARTS"] = [
+        "location" => $location,
+        "location_base" => normalizeLocationContextToken($location, true),
+        "hold_raw" => $holdRaw,
+    ];
+
+    return $GLOBALS["CACHE_LAST_KNOWN_LOCATION_CONTEXT_PARTS"];
+}
+
+function DataLastKnownLocationBaseHuman($cached = false)
+{
+    $parts = DataLastKnownLocationContextParts($cached);
+    return $parts["location_base"] ?? "";
+}
+
+function locationFieldMatchesCandidate($row, $field, $candidateKey)
+{
+    if (!isset($row[$field])) {
+        return false;
+    }
+
+    return strtolower(normalizeLocationContextToken($row[$field], true)) === $candidateKey;
+}
+
+function resolveCanonicalHoldFromLocationRows($rows, $candidateKey)
+{
+    if (!is_array($rows) || empty($rows) || $candidateKey === "") {
+        return "";
+    }
+
+    $prioritizedMatches = [
+        ["matchField" => "name", "valueField" => "hold"],
+        ["matchField" => "name", "valueField" => "region"],
+        ["matchField" => "region", "valueField" => "hold"],
+        ["matchField" => "hold", "valueField" => "hold"],
+    ];
+
+    foreach ($prioritizedMatches as $rule) {
+        foreach ($rows as $row) {
+            if (locationFieldMatchesCandidate($row, $rule["matchField"], $candidateKey)) {
+                $canonical = canonicalizeHoldName($row[$rule["valueField"]] ?? "");
+                if ($canonical !== "") {
+                    return $canonical;
+                }
+            }
+        }
+    }
+
+    foreach (["hold", "region", "name"] as $field) {
+        foreach ($rows as $row) {
+            $canonical = canonicalizeHoldName($row[$field] ?? "");
+            if ($canonical !== "") {
+                return $canonical;
+            }
+        }
+    }
+
+    return "";
+}
+
+function lookupCanonicalHoldByLocationCandidate($candidate)
+{
+    global $db;
+
+    $candidateKey = strtolower(normalizeLocationContextToken($candidate, true));
+    if ($candidateKey === "") {
+        return "";
+    }
+
+    if (isset($GLOBALS["CACHE_CANONICAL_HOLD_BY_LOCATION_CANDIDATE"][$candidateKey])) {
+        return $GLOBALS["CACHE_CANONICAL_HOLD_BY_LOCATION_CANDIDATE"][$candidateKey];
+    }
+
+    $candidateEsc = $db->escape($candidateKey);
+    $rows = $db->fetchAll(
+        "SELECT name, region, hold
+           FROM locations
+          WHERE LOWER(name) = '{$candidateEsc}'
+             OR LOWER(region) = '{$candidateEsc}'
+             OR LOWER(hold) = '{$candidateEsc}'"
+    );
+
+    $canonical = resolveCanonicalHoldFromLocationRows($rows, $candidateKey);
+    $GLOBALS["CACHE_CANONICAL_HOLD_BY_LOCATION_CANDIDATE"][$candidateKey] = $canonical;
+
+    return $canonical;
+}
+
+function DataLastKnownCanonicalHoldHuman($cached = false)
+{
+    $cacheKey = "HOLD_CANONICAL";
+    if (isset($GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey])) {
+        return $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey];
+    }
+
+    $parts = DataLastKnownLocationContextParts($cached);
+    $canonical = "";
+
+    $currentLocation = $parts["location_base"] ?? "";
+    if ($currentLocation !== "") {
+        $canonical = lookupCanonicalHoldByLocationCandidate($currentLocation);
+    }
+
+    $reportedHold = $parts["hold_raw"] ?? "";
+    if ($canonical === "" && $reportedHold !== "") {
+        $canonical = canonicalizeHoldName($reportedHold);
+    }
+    if ($canonical === "" && $reportedHold !== "") {
+        $canonical = lookupCanonicalHoldByLocationCandidate($reportedHold);
+    }
+    if ($canonical === "" && $reportedHold !== "") {
+        $canonical = normalizeLocationContextToken($reportedHold, true);
+    }
+
+    $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey] = $canonical;
+    return $canonical;
+}
+
 function DataLastKnownLocationHuman($hold=false,$cached=false)
 {
 
-    global $db;
-    
     $cache_key = $hold ? "HOLD" : "LOC";
     if (isset($GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key]))
         return $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key];
 
-    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc','location','request') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
-    if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
-        $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key] = "";
-        return "";
-    }
-    
-    if (!$hold) {
-        $re = '/Context (?:new )?location: ([\w\ \']*)/';
-        preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0);
-        $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key]=$matches[1][0];
-        return $matches[1][0];
-    } else {
-        preg_match('/Hold:\s*(\w+)/', $lastLoc[0]["data"], $matches);
-        if (isset($matches[1])) {
-            $val = $matches[1];
-        }
-        else 
-            $val = "";
-        
-        $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key] = $val;
-        return $val;
-    }
+    $parts = DataLastKnownLocationContextParts($cached);
+    $val = $hold ? ($parts["hold_raw"] ?? "") : ($parts["location"] ?? "");
+
+    $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key] = $val;
+    return $val;
 
 }
 
@@ -2764,17 +2962,17 @@ function buildWorldPrompt($gamets = 0)
 
     $currentLoc = trim(DataLastKnownLocationHuman(false, false));
     if ($currentLoc !== "") {
-        $worldLines[] = "Current location: {$currentLoc}";
+        $worldLines[] = "  <location>" . xml_fragment_escape_text($currentLoc) . "</location>";
     }
 
-    $currentHold = trim(DataLastKnownLocationHuman(true, false));
+    $currentHold = trim(DataLastKnownCanonicalHoldHuman(false));
     if ($currentHold !== "") {
-        $worldLines[] = "Current hold: {$currentHold}";
+        $worldLines[] = "  <hold>" . xml_fragment_escape_text($currentHold) . "</hold>";
     }
 
     $currentWeather = trim(DataLastKnownWeatherHuman());
     if ($currentWeather !== "") {
-        $worldLines[] = "Current weather: {$currentWeather}";
+        $worldLines[] = "  <weather>" . xml_fragment_escape_text($currentWeather) . "</weather>";
     }
 
     $f_gamets = floatval($gamets);
@@ -2789,9 +2987,9 @@ function buildWorldPrompt($gamets = 0)
         $dayPart = hour2part_of_day(date('H', $tsTime));
 
         if ($currentDate !== "") {
-            $worldLines[] = "Current date: {$currentDate}";
+            $worldLines[] = "  <date>" . xml_fragment_escape_text($currentDate) . "</date>";
         }
-        $worldLines[] = "Current time: {$currentTime}, {$dayPart}";
+        $worldLines[] = "  <time>" . xml_fragment_escape_text("{$currentTime}, {$dayPart}") . "</time>";
     }
 
     if (empty($worldLines)) {

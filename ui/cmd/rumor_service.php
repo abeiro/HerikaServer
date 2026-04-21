@@ -188,3 +188,43 @@ function chimUpdateRumorEntry($pgConn, $rumorId, $hold, $type, $content, $length
         'rumor_length_days' => $prepared['rumor_length_days'],
     ];
 }
+
+function chimDeleteRumorEntry($pgConn, $rumorId) {
+    $rumorId = (int) $rumorId;
+    if ($rumorId <= 0) {
+        return [
+            'ok' => false,
+            'error_type' => 'validation',
+            'message' => 'Invalid rumor selected for deletion.',
+        ];
+    }
+
+    $deleteResult = pg_query_params(
+        $pgConn,
+        "DELETE FROM rumors WHERE id = $1",
+        [$rumorId]
+    );
+
+    if (!$deleteResult) {
+        error_log('[RUMORS] Failed to delete rumor: ' . pg_last_error($pgConn));
+        return [
+            'ok' => false,
+            'error_type' => 'server',
+            'message' => 'Failed to delete rumor.',
+        ];
+    }
+
+    if (pg_affected_rows($deleteResult) < 1) {
+        return [
+            'ok' => false,
+            'error_type' => 'validation',
+            'message' => 'Rumor not found.',
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'message' => 'Rumor deleted successfully.',
+        'id' => $rumorId,
+    ];
+}

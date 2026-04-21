@@ -686,6 +686,18 @@ function stripOutputSpeakerPrefix($text, $speakerName = null) {
     return preg_replace('/^' . preg_quote((string)$speakerName, '/') . '\s*:\s*/i', '', (string)$text);
 }
 
+function stripLeadingParentheticalBlocks($text) {
+    return preg_replace('/^\s*(?:\([^)]*\)\s*)+/', '', (string)$text);
+}
+
+function sanitizePlayerRespeechText($text, $speakerName = null) {
+    $speechText = str_replace(["\r", "\n"], ' ', (string)$text);
+    $speechText = stripLeadingParentheticalBlocks($speechText);
+    $speechText = stripOutputSpeakerPrefix($speechText, $speakerName);
+    $speechText = stripLeadingParentheticalBlocks($speechText);
+    return trim(preg_replace('/\s+/', ' ', $speechText));
+}
+
 function cleanupDisplayText($text, $speakerName = null) {
     $displayText = stripOutputSpeakerPrefix((string)$text, $speakerName);
     $displayText = strtr($displayText, [
@@ -699,9 +711,10 @@ function cleanupDisplayText($text, $speakerName = null) {
     return trim(preg_replace('/\s+/', ' ', $displayText));
 }
 
-function formatPlayerSubtitleText($text) {
+function formatPlayerSubtitleText($text, $speakerName = null) {
+    $speakerName = $speakerName ?? ($GLOBALS["PLAYER_NAME"] ?? null);
     $subtitleText = preg_replace('/\s*\(Talking to [^)]+\)\s*$/i', '', $text);
-    return cleanupDisplayText($subtitleText);
+    return cleanupDisplayText($subtitleText, $speakerName);
 }
 
 function formatNpcSubtitleText($text) {
