@@ -22,7 +22,10 @@ final class AsteriskParsingTest extends TestCase
             $GLOBALS['REMOVE_ASTERISKS_FROM_PLAYER_INPUT'],
             $GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'],
             $GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'],
-            $GLOBALS['strip_emotes_from_output']
+            $GLOBALS['strip_emotes_from_output'],
+            $GLOBALS['PATCH_OVERRIDE_VOICE'],
+            $GLOBALS['PATCH_OVERRIDE_VOICE_ID'],
+            $GLOBALS['TTS']
         );
     }
 
@@ -246,5 +249,37 @@ final class AsteriskParsingTest extends TestCase
         $GLOBALS['PRESERVE_ASTERISKS_IN_CONTEXT'] = false;
 
         $this->assertTrue(shouldStripAsterisksFromCleanContextBuffer());
+    }
+
+    public function testApplyVoiceIdToTtsGlobalsSetsNarratorOverrideAndClearsSpeakerId(): void
+    {
+        $GLOBALS['PATCH_OVERRIDE_VOICE_ID'] = 12;
+
+        applyVoiceIdToTtsGlobals('TheNarrator');
+
+        $this->assertSame('TheNarrator', $GLOBALS['PATCH_OVERRIDE_VOICE']);
+        $this->assertFalse(array_key_exists('PATCH_OVERRIDE_VOICE_ID', $GLOBALS));
+        $this->assertSame('TheNarrator', $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']);
+        $this->assertSame('TheNarrator', $GLOBALS['TTS']['PIPERTTS']['voiceid']);
+    }
+
+    public function testRestoreVoiceSettingsRestoresNpcVoiceOverridesAfterNarratorSwap(): void
+    {
+        $GLOBALS['TTS'] = [
+            'XTTSFASTAPI' => ['voiceid' => 'lydia'],
+            'PIPERTTS' => ['voiceid' => 'lydia', 'speaker_id' => 9],
+        ];
+        $GLOBALS['PATCH_OVERRIDE_VOICE'] = 'lydia';
+        $GLOBALS['PATCH_OVERRIDE_VOICE_ID'] = 9;
+
+        $savedSettings = saveCurrentVoiceSettings();
+
+        applyVoiceIdToTtsGlobals('TheNarrator');
+        restoreVoiceSettings($savedSettings);
+
+        $this->assertSame('lydia', $GLOBALS['PATCH_OVERRIDE_VOICE']);
+        $this->assertSame(9, $GLOBALS['PATCH_OVERRIDE_VOICE_ID']);
+        $this->assertSame('lydia', $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']);
+        $this->assertSame('lydia', $GLOBALS['TTS']['PIPERTTS']['voiceid']);
     }
 }

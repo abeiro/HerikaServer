@@ -744,22 +744,20 @@ function shouldStripAsterisksFromCleanContextBuffer() {
  * @return array Current TTS settings
  */
 function saveCurrentVoiceSettings() {
-    return isset($GLOBALS['TTS']) ? $GLOBALS['TTS'] : [];
+    return [
+        'tts' => isset($GLOBALS['TTS']) ? $GLOBALS['TTS'] : [],
+        'has_patch_override_voice' => array_key_exists('PATCH_OVERRIDE_VOICE', $GLOBALS),
+        'patch_override_voice' => $GLOBALS['PATCH_OVERRIDE_VOICE'] ?? null,
+        'has_patch_override_voice_id' => array_key_exists('PATCH_OVERRIDE_VOICE_ID', $GLOBALS),
+        'patch_override_voice_id' => $GLOBALS['PATCH_OVERRIDE_VOICE_ID'] ?? null,
+    ];
 }
 
-/**
- * Load The Narrator's voice settings into GLOBALS
- */
-function loadNarratorVoiceSettings() {
-    require_once(__DIR__ . "/core/narrator.class.php");
-    $narrator = new Narrator();
-    $voiceid = $narrator->get('voiceid');
+function applyVoiceIdToTtsGlobals(string $voiceid): void
+{
+    $GLOBALS['PATCH_OVERRIDE_VOICE'] = $voiceid;
+    unset($GLOBALS['PATCH_OVERRIDE_VOICE_ID']);
 
-    if (!$voiceid) {
-        $voiceid = 'TheNarrator'; // Fallback default
-    }
-
-    // Apply Narrator voice to all TTS providers
     $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']  = $voiceid;
     $GLOBALS['TTS']['CHATTERBOX']['voiceid']   = $voiceid;
     $GLOBALS['TTS']['POCKETTTS']['voiceid']    = $voiceid;
@@ -778,12 +776,46 @@ function loadNarratorVoiceSettings() {
 }
 
 /**
+ * Load The Narrator's voice settings into GLOBALS
+ */
+function loadNarratorVoiceSettings() {
+    require_once(__DIR__ . "/core/narrator.class.php");
+    $narrator = new Narrator();
+    $voiceid = $narrator->get('voiceid');
+
+    if (!$voiceid) {
+        $voiceid = 'TheNarrator'; // Fallback default
+    }
+
+    applyVoiceIdToTtsGlobals($voiceid);
+}
+
+/**
  * Restore previously saved voice settings
  * @param array $savedSettings The settings to restore
  */
 function restoreVoiceSettings($savedSettings) {
-    if (!empty($savedSettings)) {
+    if (!is_array($savedSettings)) {
+        return;
+    }
+
+    if (array_key_exists('tts', $savedSettings)) {
+        $GLOBALS['TTS'] = $savedSettings['tts'];
+    } elseif (!empty($savedSettings)) {
+        // Backward compatibility with older callers that saved only the TTS array.
         $GLOBALS['TTS'] = $savedSettings;
+    }
+
+    if (!empty($savedSettings['has_patch_override_voice'])) {
+        $GLOBALS['PATCH_OVERRIDE_VOICE'] = $savedSettings['patch_override_voice'];
+    } else {
+        unset($GLOBALS['PATCH_OVERRIDE_VOICE']);
+    }
+
+    if (!empty($savedSettings['has_patch_override_voice_id'])) {
+        $GLOBALS['PATCH_OVERRIDE_VOICE_ID'] = $savedSettings['patch_override_voice_id'];
+    } else {
+        unset($GLOBALS['PATCH_OVERRIDE_VOICE_ID']);
     }
 }
 
