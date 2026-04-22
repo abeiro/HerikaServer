@@ -359,10 +359,8 @@ class openrouter
         }
         */
         
-        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
-            foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
+        foreach (chimGetEnabledConnectorExtraParameters($GLOBALS["CONNECTOR"][$this->name] ?? []) as $k => $v) {
                 $data[$k]=$v;
-            }
         }
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);

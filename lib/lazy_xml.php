@@ -60,6 +60,55 @@ function parse_xml_fragment_rumors(string $fragment): array
     return manual_extract_tags($fragment, ['type', 'location', 'content']);
 }
 
+function xml_fragment_escape_text($value): string
+{
+    return htmlspecialchars(trim((string) $value), ENT_QUOTES | ENT_XML1, 'UTF-8');
+}
+
+function build_rumor_prompt_xml(array $rumors, int $maxRumors = 3): string
+{
+    $blocks = [];
+    $seen = [];
+
+    foreach ($rumors as $rumor) {
+        $content = trim((string) ($rumor['content'] ?? ''));
+        if ($content === '') {
+            continue;
+        }
+
+        $type = trim((string) ($rumor['type'] ?? 'General'));
+        if ($type === '') {
+            $type = 'General';
+        }
+
+        $location = trim((string) ($rumor['hold'] ?? ($rumor['location'] ?? 'Skyrim')));
+        if ($location === '') {
+            $location = 'Skyrim';
+        }
+
+        $dedupeKey = strtolower(
+            preg_replace('/\s+/u', ' ', $type . '|' . $location . '|' . $content)
+        );
+
+        if (isset($seen[$dedupeKey])) {
+            continue;
+        }
+        $seen[$dedupeKey] = true;
+
+        $blocks[] = "\n<rumor>\n"
+            . "<type>" . xml_fragment_escape_text($type) . "</type>\n"
+            . "<location>" . xml_fragment_escape_text($location) . "</location>\n"
+            . "<content>" . xml_fragment_escape_text($content) . "</content>\n"
+            . "</rumor>";
+
+        if (count($blocks) >= $maxRumors) {
+            break;
+        }
+    }
+
+    return implode('', $blocks);
+}
+
 function manual_extract_tags(string $text, array $tags): array
 {
     $result = [];

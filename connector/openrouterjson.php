@@ -635,10 +635,8 @@ class openrouterjson
             'transforms'=>[]
         );
 
-        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
-            foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
+        foreach (chimGetEnabledConnectorExtraParameters($GLOBALS["CONNECTOR"][$this->name] ?? []) as $k => $v) {
                 $data[$k]=$v;
-            }
         }
         
         if ($GLOBALS["CONNECTOR"][$this->name]["ENFORCE_JSON"]) {
@@ -796,11 +794,9 @@ class openrouterjson
 
         } // --- end online search request
 
-        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
-            foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
+        foreach (chimGetEnabledConnectorExtraParameters($GLOBALS["CONNECTOR"][$this->name] ?? []) as $k => $v) {
                 $data[$k]=$v;
-            }
-        }        
+        }
 
         if (stripos($data["model"], "openai/gpt-5-nano")===0) {
             unset($data["temperature"]);

@@ -17,6 +17,28 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "misc_ui_functions.php");
 
 $db = new sql();
+$escapeRequestLogText = static function ($text) {
+    return htmlspecialchars((string)$text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+};
+$clipRequestLogText = static function ($text, $limit = 400) {
+    $text = (string)$text;
+
+    if (function_exists('grapheme_strlen') && function_exists('grapheme_substr')) {
+        $length = grapheme_strlen($text);
+        if ($length !== false) {
+            return [grapheme_substr($text, 0, $limit), $length > $limit];
+        }
+    }
+
+    if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+        return [
+            mb_substr($text, 0, $limit, 'UTF-8'),
+            mb_strlen($text, 'UTF-8') > $limit
+        ];
+    }
+
+    return [substr($text, 0, $limit), strlen($text) > $limit];
+};
 
 $TITLE = "CHIM - Request Logs";
 ob_start();
@@ -62,12 +84,12 @@ footer { display: <?php echo $isEmbedded? 'none' : 'block'; ?>; }
         'url' => 'URL'
     ];
 
-    $mappedResults = array_map(function ($row) use ($columnHeaders) {
+    $mappedResults = array_map(function ($row) use ($columnHeaders, $clipRequestLogText, $escapeRequestLogText) {
         $mappedRow = [];
         foreach ($row as $key => $value) {
             if ($key === 'request') {
-                $escapedContent = htmlspecialchars($value, ENT_QUOTES);
-                $preview = htmlspecialchars(substr($value, 0, 400)) . (strlen($value) > 400 ? '...' : '');
+                [$previewText, $isTruncated] = $clipRequestLogText($value, 400);
+                $preview = $escapeRequestLogText($previewText) . ($isTruncated ? '...' : '');
                 $mappedRow[$columnHeaders[$key] ?? $key] = 
                     '<div style="display: flex; align-items: center; gap: 10px;">' .
                     '<span style="flex-grow: 1;">' . $preview . '</span>' .
@@ -78,15 +100,16 @@ footer { display: <?php echo $isEmbedded? 'none' : 'block'; ?>; }
                 $mappedRow[$columnHeaders[$key]] = $dt->format('d-m-Y H:i:s');
             } else if ($key === 'result') {
                 $resultColor = (strtoupper(trim($value)) === 'OK') ? '#4CAF50' : '#f44336';
-                $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content" style="color: ' . $resultColor . '; font-weight: bold;">' . nl2br(htmlspecialchars($value)) . '</div>';
+                $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content" style="color: ' . $resultColor . '; font-weight: bold;">' . nl2br($escapeRequestLogText($value)) . '</div>';
             } else if ($key === 'usage') {
-                $jsonText = is_string($value) ? $value : json_encode($value);
-                $preview = htmlspecialchars(substr($jsonText, 0, 400)) . (strlen($jsonText) > 400 ? '...' : '');
+                $jsonText = is_string($value) ? $value : json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                [$previewText, $isTruncated] = $clipRequestLogText($jsonText, 400);
+                $preview = $escapeRequestLogText($previewText) . ($isTruncated ? '...' : '');
                 $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . $preview . '</div>';
             } else if ($key === 'url') {
-                $mappedRow[$columnHeaders[$key] ?? $key] = htmlspecialchars($value);
+                $mappedRow[$columnHeaders[$key] ?? $key] = $escapeRequestLogText($value);
             } else {
-                $mappedRow[$columnHeaders[$key] ?? $key] = htmlspecialchars($value);
+                $mappedRow[$columnHeaders[$key] ?? $key] = $escapeRequestLogText($value);
             }
         }
         return $mappedRow;

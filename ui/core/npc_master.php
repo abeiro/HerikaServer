@@ -1117,18 +1117,6 @@ if (!function_exists('renderNpcToolbar')) {
         <div class="pagination npc-toolbar">
           <div class="npc-toolbar-main">
             <div class="npc-toolbar-actions">
-              <div class="npc-filter-dropdown">
-                <button type="button" id="npc_filter_btn<?= $suffix ?>" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action npc-toolbar-filter-btn" title="Filters" aria-label="Filters">▾ Filters</button>
-                <div id="npc_filter_menu<?= $suffix ?>" class="npc-filter-menu" style="display:none;">
-                  <label><input type="checkbox" id="npc_filter_fav<?= $suffix ?>" <?= $favOnly ? 'checked' : '' ?>> ⭐ Favorites</label>
-                  <label><input type="checkbox" id="npc_filter_dyn<?= $suffix ?>" <?= $dynOnly ? 'checked' : '' ?>> ♻️ Dynamic profile</label>
-                  <label><input type="checkbox" id="npc_filter_mtm<?= $suffix ?>" <?= $mtmOnly ? 'checked' : '' ?>> 📃 Middle-term memory</label>
-                  <label><input type="checkbox" id="npc_filter_lock<?= $suffix ?>" <?= $lockOnly ? 'checked' : '' ?>> 🔒 Locked</label>
-                  <label><input type="checkbox" id="npc_filter_sal<?= $suffix ?>" <?= $salOnly ? 'checked' : '' ?>> 👋 Auto Greeting</label>
-                  <label><input type="checkbox" id="npc_filter_blc<?= $suffix ?>" <?= $blcOnly ? 'checked' : '' ?>> 🎮 BGL: Auto Actions</label>
-                  <label><input type="checkbox" id="npc_filter_gps<?= $suffix ?>" <?= $gpsOnly ? 'checked' : '' ?>> 📍 BGL: GPS track</label>
-                </div>
-              </div>
               <button id="npc_create_btn" type="button" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action">+ Create NPC</button>
               <button id="npc_import_btn" type="button" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action" title="Import NPC from JSON file">📥 Import NPC</button>
               <button id="rel_bulk_build_btn" type="button" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action" title="Build JSONB relationships from Oghma text data for all NPCs">🔗 Build Relationships</button>
@@ -1157,12 +1145,28 @@ if (!function_exists('renderNpcToolbar')) {
               <button type="button" class="npc-letter-btn npc-page-link<?= $page >= $totalPages ? ' disabled' : '' ?>" data-page="<?= $totalPages ?>" <?= $page >= $totalPages ? 'disabled aria-disabled="true"' : '' ?>>Last</button>
               <div class="npc-page-indicator" title="Current page"><?= $page ?>/<?= $totalPages ?></div>
             </div>
-            <div class="npc-total-pill" title="Total NPC profiles">
-              <div class="npc-total-pill-icon">👥</div>
-              <div class="npc-total-pill-value"><?= $totalRows ?></div>
+          </div>
+          <div class="npc-toolbar-letter-row">
+            <?php renderNpcLetterFilter($nameLetterFilter); ?>
+            <div class="npc-toolbar-summary">
+              <div class="npc-filter-dropdown">
+                <button type="button" id="npc_filter_btn<?= $suffix ?>" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action npc-toolbar-filter-btn" title="Filters" aria-label="Filters">▾ Filters</button>
+                <div id="npc_filter_menu<?= $suffix ?>" class="npc-filter-menu" style="display:none;">
+                  <label><input type="checkbox" id="npc_filter_fav<?= $suffix ?>" <?= $favOnly ? 'checked' : '' ?>> ⭐ Favorites</label>
+                  <label><input type="checkbox" id="npc_filter_dyn<?= $suffix ?>" <?= $dynOnly ? 'checked' : '' ?>> ♻️ Dynamic profile</label>
+                  <label><input type="checkbox" id="npc_filter_mtm<?= $suffix ?>" <?= $mtmOnly ? 'checked' : '' ?>> 📃 Middle-term memory</label>
+                  <label><input type="checkbox" id="npc_filter_lock<?= $suffix ?>" <?= $lockOnly ? 'checked' : '' ?>> 🔒 Locked</label>
+                  <label><input type="checkbox" id="npc_filter_sal<?= $suffix ?>" <?= $salOnly ? 'checked' : '' ?>> 👋 Auto Greeting</label>
+                  <label><input type="checkbox" id="npc_filter_blc<?= $suffix ?>" <?= $blcOnly ? 'checked' : '' ?>> 🎮 BGL: Auto Actions</label>
+                  <label><input type="checkbox" id="npc_filter_gps<?= $suffix ?>" <?= $gpsOnly ? 'checked' : '' ?>> 📍 BGL: GPS track</label>
+                </div>
+              </div>
+              <div class="npc-total-pill" title="Total NPC profiles">
+                <div class="npc-total-pill-icon">👥</div>
+                <div class="npc-total-pill-value"><?= $totalRows ?></div>
+              </div>
             </div>
           </div>
-          <?php renderNpcLetterFilter($nameLetterFilter); ?>
         </div>
         <?php
     }
@@ -2988,7 +2992,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 .pagination.npc-toolbar .npc-toolbar-main,
-.pagination.npc-toolbar .npc-toolbar-subrow {
+.pagination.npc-toolbar .npc-toolbar-subrow,
+.pagination.npc-toolbar .npc-toolbar-letter-row {
     display:flex;
     align-items:center;
     justify-content:space-between;
@@ -3009,11 +3014,25 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     flex-wrap:nowrap;
 }
 .pagination.npc-toolbar .npc-toolbar-tools {
-    flex:1 1 320px;
-    justify-content:flex-end;
+    flex:0 0 320px;
+    width:320px;
+    min-width:320px;
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:flex-start;
 }
 .pagination.npc-toolbar .npc-toolbar-pager {
     flex:1 1 auto;
+}
+.pagination.npc-toolbar .npc-toolbar-letter-row {
+    align-items:flex-end;
+}
+.pagination.npc-toolbar .npc-toolbar-summary {
+    margin-left:auto;
+    display:flex;
+    align-items:flex-end;
+    gap:8px;
+    flex-wrap:wrap;
 }
 .pagination.npc-toolbar .npc-toolbar-btn {
     display:inline-flex;
@@ -3099,16 +3118,16 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     font-size:13px;
 }
 .pagination.npc-toolbar .npc-toolbar-tools input[type="text"] {
-    flex:0 0 320px;
-    width:320px;
-    min-width:320px;
-    max-width:320px;
+    flex:0 0 auto;
+    width:100%;
+    min-width:0;
+    max-width:none;
 }
 .pagination.npc-toolbar .npc-toolbar-tools select {
-    flex:0 0 295px;
-    width:295px;
-    min-width:295px;
-    max-width:295px;
+    flex:0 0 auto;
+    width:100%;
+    min-width:0;
+    max-width:none;
 }
 .pagination.npc-toolbar .npc-page-link {
     display:inline-flex;
@@ -3132,7 +3151,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     padding:0 4px;
 }
 .pagination.npc-toolbar .npc-total-pill {
-    margin-left:auto;
     display:flex;
     align-items:center;
     gap:10px;
@@ -3141,6 +3159,11 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     border:1px solid #3a3a3a;
     background:rgba(26, 26, 26, 0.78);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+}
+.pagination.npc-toolbar .npc-toolbar-letter-row .npc-letter-filter {
+    flex:1 1 auto;
+    width:auto;
+    margin:0;
 }
 .pagination.npc-toolbar .npc-total-pill-icon {
     font-size:15px;
@@ -3167,7 +3190,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 @media (max-width: 780px) {
     .pagination.npc-toolbar .npc-toolbar-tools,
     .pagination.npc-toolbar .npc-toolbar-actions,
-    .pagination.npc-toolbar .npc-toolbar-pager {
+    .pagination.npc-toolbar .npc-toolbar-pager,
+    .pagination.npc-toolbar .npc-toolbar-summary,
+    .pagination.npc-toolbar .npc-toolbar-letter-row {
         width:100%;
     }
     .pagination.npc-toolbar .npc-toolbar-tools input[type="text"],
@@ -3176,6 +3201,21 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         min-width:0;
     }
     .pagination.npc-toolbar .npc-toolbar-subrow {
+        align-items:flex-start;
+    }
+    .pagination.npc-toolbar .npc-toolbar-tools {
+        flex:1 1 100%;
+        width:100%;
+        min-width:0;
+    }
+    .pagination.npc-toolbar .npc-toolbar-letter-row {
+        align-items:flex-start;
+    }
+    .pagination.npc-toolbar .npc-toolbar-letter-row .npc-letter-filter {
+        width:100%;
+    }
+    .pagination.npc-toolbar .npc-toolbar-summary {
+        margin-left:0;
         align-items:flex-start;
     }
 }
