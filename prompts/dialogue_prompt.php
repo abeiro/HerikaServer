@@ -53,11 +53,27 @@ if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
 $inlineNarrationMode = $directNarratorDialogue ? 'disabled' : $inlineNarrationMode;
 $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
 if ($inlineNarrationEnabled) {
+    if ($inlineNarrationMode === 'npc') {
+        $inlineDialoguePromptKey = 'dialogue_line_inline_response_npc';
+        $inlineDialogueFallback = " Write {HERIKA_NAME}'s next dialogue line."
+            . " If needed, you may include one brief third-person narration block in single asterisks before the dialogue."
+            . " Keep any spoken dialogue outside the asterisks, and do not wrap the entire reply in asterisks."
+            . " Be original, creative, knowledgeable, use your own thoughts."
+            . " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}";
+        $inlineNarrationPromptKey = 'inline_narration_prompt_npc';
+        $inlineNarrationFallback = "You may include one brief third-person narration block in single asterisks before the dialogue (e.g., *She smiles softly*). Keep any spoken dialogue outside the asterisks. Do not wrap the entire reply in asterisks.";
+    } else {
+        $inlineDialoguePromptKey = 'dialogue_line_inline_response_narrator';
+        $inlineDialogueFallback = " Write {HERIKA_NAME}'s next prose/narration."
+            . " Be original, creative, knowledgeable, use your own thoughts. "
+            . " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}";
+        $inlineNarrationPromptKey = 'inline_narration_prompt_narrator';
+        $inlineNarrationFallback = "You may include one brief third-person narration block in single asterisks before the dialogue (e.g., *She smiles*). Do not wrap the entire reply in asterisks; keep any spoken dialogue outside the asterisks.";
+    }
+
     $TEMPLATE_DIALOG = chimLoadManagedPromptTemplate(
-        'dialogue_line_inline_response',
-        " Write {HERIKA_NAME}'s next prose/narration." .
-        " Be original, creative, knowledgeable, use your own thoughts. " .
-        " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}",
+        $inlineDialoguePromptKey,
+        $inlineDialogueFallback,
         [
             "{HERIKA_NAME}" => $GLOBALS["HERIKA_NAME"],
             "{MAXIMUM_WORDS}" => $MAXIMUM_WORDS,
@@ -66,8 +82,8 @@ if ($inlineNarrationEnabled) {
     );
 
     $inlineNarrationPrompt = chimLoadManagedPromptTemplate(
-        'inline_narration_prompt',
-        "You may include one brief third-person narration block in single asterisks before the dialogue (e.g., *She smiles*). Do not wrap the entire reply in asterisks; keep any spoken dialogue outside the asterisks.",
+        $inlineNarrationPromptKey,
+        $inlineNarrationFallback,
         [],
         "INLINE_NARRATION"
     );
