@@ -544,6 +544,79 @@ function hasUnclosedSingleAsteriskBlock($text) {
 }
 
 /**
+ * Normalize the leading text from a candidate dialogue segment salvaged out of
+ * a malformed fully wrapped *...* reply.
+ */
+function normalizeWrappedDialogueLead($text) {
+    $normalized = trim((string)$text);
+    return preg_replace('/^[\s"\'\(\[\{]+/', '', $normalized);
+}
+
+/**
+ * Detect whether the text after the first sentence in a malformed fully
+ * wrapped *...* reply looks like spoken dialogue rather than more narration.
+ */
+function isLikelyWrappedDialogueLead($text) {
+    $lead = normalizeWrappedDialogueLead($text);
+    if ($lead === '') {
+        return false;
+    }
+
+    if (preg_match('/\b(?:you|he|she|they)\s+(?:say|says|said|ask|asks|asked|reply|replies|replied|whisper|whispers|whispered|murmur|murmurs|murmured)\b/i', $lead)) {
+        return false;
+    }
+
+    if (preg_match('/^(?:indeed|yes|no|of course|certainly|very well|as you wish|understood|ready|i am|i\'m|i will|i\'ll|i can|i cannot|i do|i did|i have|i\'ve|i understand|i obey|i serve|forgive me|thank you)\b/i', $lead)) {
+        return true;
+    }
+
+    if (preg_match('/,\s*(?:my lord|milord|my lady|your majesty|your highness|my friend|sister|brother)\b/i', $lead)) {
+        return true;
+    }
+
+    if (preg_match('/\b(?:if i do say so myself|i suppose|i think|i know|i dare say)\b/i', $lead)) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Salvage a malformed reply where the model wrapped both narration and speech
+ * inside a single *...* block. This only splits after the first sentence when
+ * the remaining text strongly resembles spoken dialogue.
+ */
+function trySplitFullyWrappedNarrationReply($text) {
+    $wrappedText = trim((string)$text);
+    if ($wrappedText === '') {
+        return null;
+    }
+
+    $sentences = split_at_end_of_sentence($wrappedText);
+    if (count($sentences) < 2) {
+        return null;
+    }
+
+    $narrationCandidate = trim($sentences[0]);
+    $dialogueCandidate = trim(implode(' ', array_slice($sentences, 1)));
+    if ($narrationCandidate === '' || $dialogueCandidate === '') {
+        return null;
+    }
+
+    if (!isLikelyWrappedDialogueLead($dialogueCandidate)) {
+        return null;
+    }
+
+    Logger::info("[extractNarrationAndDialogue] Salvaged malformed wrapped reply into narration + dialogue: " . substr($wrappedText, 0, 100));
+
+    return [
+        'narrations' => [$narrationCandidate],
+        'dialogue' => $dialogueCandidate,
+        'has_narration' => true
+    ];
+}
+
+/**
  * Extract narration (text in asterisks) from dialogue
  * Handles multiple narration blocks throughout the text
  *
@@ -564,9 +637,20 @@ function extractNarrationAndDialogue($text) {
     }
     // Try to extract paired asterisks at the START of the sentence: *narration* dialogue
     else if (preg_match('/^\*([^*]+)\*(?:\s*[.!?,;:-])?\s*(.*)$/s', $text, $matches)) {
-        // Only extract narration if it's at the beginning, followed by dialogue
-        $narrations = [trim($matches[1])];
+        // Only extract narration if it's at the beginning, followed by dialogue.
+        // If the entire reply is wrapped in one *...* block, try to salvage the
+        // first sentence as narration when the remainder clearly looks spoken.
+        $wrappedText = trim($matches[1]);
         $remainingText = trim($matches[2]);
+
+        if ($remainingText === '') {
+            $wrappedSplit = trySplitFullyWrappedNarrationReply($wrappedText);
+            if ($wrappedSplit !== null) {
+                return $wrappedSplit;
+            }
+        }
+
+        $narrations = [$wrappedText];
 
         Logger::info("[extractNarrationAndDialogue] Found narration at start (paired asterisks): " . substr($narrations[0], 0, 50));
     }

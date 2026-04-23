@@ -200,6 +200,7 @@ function aiProfileGenerate(array $options): array
     $eventLimit = max(10, min(200, $eventLimit));
     $userCustomPrompt = trim((string)($options['user_prompt'] ?? ''));
     $selectedEvents = $options['selected_events'] ?? [];
+    $selectedEventsProvided = (bool)($options['selected_events_provided'] ?? false);
     if (!is_array($selectedEvents)) {
         $selectedEvents = [];
     }
@@ -222,19 +223,13 @@ function aiProfileGenerate(array $options): array
         ];
     }
 
-    if (empty($selectedEvents)) {
+    if ($selectedEventsProvided) {
+        $selectedEvents = aiProfileNormalizeSelectedEvents($selectedEvents);
+    } elseif (empty($selectedEvents)) {
         $previewBundle = aiProfileBuildPreviewEvents($name, $currentNpcData, $db, $eventLimit);
         $selectedEvents = $previewBundle['events'];
     } else {
         $selectedEvents = aiProfileNormalizeSelectedEvents($selectedEvents);
-    }
-
-    if (empty($selectedEvents)) {
-        return [
-            'done' => false,
-            'error' => 'No events available for profile generation. Increase the event slider or try again after the NPC has more history.',
-            'error_type' => 'no_events',
-        ];
     }
 
     $connector = new LLMConnector();
@@ -287,7 +282,7 @@ function aiProfileGenerate(array $options): array
     $prompt = [];
     $head = [[
         'role' => 'system',
-        'content' => "You are a writing assistant. Examine this text containing events that occurred in the fictional universe of Skyrim (The Elder Scrolls)."
+        'content' => "You are a writing assistant. Examine this character sheet and any dialogue or events provided from the fictional universe of Skyrim (The Elder Scrolls)."
     ]];
 
     $prompt[] = ['role' => 'user', 'content' => "<character_sheet>\n{$name}:\n{$dynamicBiography}\n</character_sheet>"];

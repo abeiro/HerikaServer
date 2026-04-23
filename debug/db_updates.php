@@ -3486,6 +3486,132 @@ if ($checkVersion("prompts")<20260412001) {
     Logger::info("Applied patch prompts 20260412001 - Added dialogue response prompts");
 }
 
+if ($checkVersion("prompts")<20260422001) {
+    Logger::debug("Applying prompts table 20260422001 - Adding mode-specific inline narration prompts");
+
+    $legacyInlineNarrationPromptRow = $db->fetchOne("SELECT custom_prompt FROM public.prompts WHERE prompt_key = 'inline_narration_prompt' LIMIT 1");
+    $legacyInlineDialoguePromptRow = $db->fetchOne("SELECT custom_prompt FROM public.prompts WHERE prompt_key = 'dialogue_line_inline_response' LIMIT 1");
+
+    $legacyInlineNarrationCustomPrompt = '';
+    if ($legacyInlineNarrationPromptRow && isset($legacyInlineNarrationPromptRow['custom_prompt'])) {
+        $legacyInlineNarrationCustomPrompt = trim((string)$legacyInlineNarrationPromptRow['custom_prompt']);
+    }
+
+    $legacyInlineDialogueCustomPrompt = '';
+    if ($legacyInlineDialoguePromptRow && isset($legacyInlineDialoguePromptRow['custom_prompt'])) {
+        $legacyInlineDialogueCustomPrompt = trim((string)$legacyInlineDialoguePromptRow['custom_prompt']);
+    }
+
+    $legacyInlineNarrationCustomPromptSql = $legacyInlineNarrationCustomPrompt === ''
+        ? "NULL"
+        : $db->escapeLiteral($legacyInlineNarrationCustomPrompt);
+    $legacyInlineDialogueCustomPromptSql = $legacyInlineDialogueCustomPrompt === ''
+        ? "NULL"
+        : $db->escapeLiteral($legacyInlineDialogueCustomPrompt);
+
+    $dialogueLineInlineResponseNarratorPrompt = $db->escape(
+        " Write {HERIKA_NAME}'s next prose/narration."
+        . " Be original, creative, knowledgeable, use your own thoughts. "
+        . " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}"
+    );
+    $inlineNarrationPromptNarrator = $db->escape(
+        "You may include one brief third-person narration block in single asterisks before the dialogue (e.g., *She smiles*). Do not wrap the entire reply in asterisks; keep any spoken dialogue outside the asterisks."
+    );
+    $dialogueLineInlineResponseNpcPrompt = $db->escape(
+        " Write {HERIKA_NAME}'s next dialogue line."
+        . " If needed, you may include one brief third-person narration block in single asterisks before the dialogue."
+        . " Keep any spoken dialogue outside the asterisks, and do not wrap the entire reply in asterisks."
+        . " Be original, creative, knowledgeable, use your own thoughts."
+        . " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}"
+    );
+    $inlineNarrationPromptNpc = $db->escape(
+        "You may include one brief third-person narration block in single asterisks before the dialogue (e.g., *She smiles softly*). Keep any spoken dialogue outside the asterisks. Do not wrap the entire reply in asterisks."
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, custom_prompt, description)
+        VALUES (
+            'dialogue_line_inline_response_narrator',
+            '$dialogueLineInlineResponseNarratorPrompt',
+            $legacyInlineDialogueCustomPromptSql,
+            'Base response instruction used when inline narration mode is narrator. Supports placeholders: {HERIKA_NAME}, {MAXIMUM_WORDS}. Used in: prompts/dialogue_prompt.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            custom_prompt = CASE
+                WHEN (public.prompts.custom_prompt IS NULL OR public.prompts.custom_prompt = '')
+                    AND EXCLUDED.custom_prompt IS NOT NULL
+                THEN EXCLUDED.custom_prompt
+                ELSE public.prompts.custom_prompt
+            END,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, custom_prompt, description)
+        VALUES (
+            'inline_narration_prompt_narrator',
+            '$inlineNarrationPromptNarrator',
+            $legacyInlineNarrationCustomPromptSql,
+            'Additional narration formatting instruction used when inline narration mode is narrator. Used in: prompts/dialogue_prompt.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            custom_prompt = CASE
+                WHEN (public.prompts.custom_prompt IS NULL OR public.prompts.custom_prompt = '')
+                    AND EXCLUDED.custom_prompt IS NOT NULL
+                THEN EXCLUDED.custom_prompt
+                ELSE public.prompts.custom_prompt
+            END,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, custom_prompt, description)
+        VALUES (
+            'dialogue_line_inline_response_npc',
+            '$dialogueLineInlineResponseNpcPrompt',
+            $legacyInlineDialogueCustomPromptSql,
+            'Base response instruction used when inline narration mode is npc. Supports placeholders: {HERIKA_NAME}, {MAXIMUM_WORDS}. Used in: prompts/dialogue_prompt.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            custom_prompt = CASE
+                WHEN (public.prompts.custom_prompt IS NULL OR public.prompts.custom_prompt = '')
+                    AND EXCLUDED.custom_prompt IS NOT NULL
+                THEN EXCLUDED.custom_prompt
+                ELSE public.prompts.custom_prompt
+            END,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, custom_prompt, description)
+        VALUES (
+            'inline_narration_prompt_npc',
+            '$inlineNarrationPromptNpc',
+            $legacyInlineNarrationCustomPromptSql,
+            'Additional narration formatting instruction used when inline narration mode is npc. Used in: prompts/dialogue_prompt.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            custom_prompt = CASE
+                WHEN (public.prompts.custom_prompt IS NULL OR public.prompts.custom_prompt = '')
+                    AND EXCLUDED.custom_prompt IS NOT NULL
+                THEN EXCLUDED.custom_prompt
+                ELSE public.prompts.custom_prompt
+            END,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $updateVersion("prompts", 20260422001);
+    Logger::info("Applied patch prompts 20260422001 - Added mode-specific inline narration prompts");
+}
+
 //----------------------------------------------------
 // emotions expression
 //----------------------------------------------------

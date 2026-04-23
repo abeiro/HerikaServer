@@ -22,10 +22,23 @@ $GLOBALS["db"] = $db;
 $jsonDataInput = aiProfileMergeRequestData();
 
 $selectedEvents = [];
-if (isset($jsonDataInput['selected_events']) && trim((string)$jsonDataInput['selected_events']) !== '') {
-    $decodedSelectedEvents = json_decode((string)$jsonDataInput['selected_events'], true);
-    if (json_last_error() === JSON_ERROR_NONE) {
-        $selectedEvents = $decodedSelectedEvents;
+$selectedEventsProvided = array_key_exists('selected_events', $jsonDataInput);
+if ($selectedEventsProvided) {
+    $rawSelectedEvents = trim((string)$jsonDataInput['selected_events']);
+    if ($rawSelectedEvents !== '') {
+        $decodedSelectedEvents = json_decode($rawSelectedEvents, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            echo json_encode([
+                'done' => false,
+                'error' => 'Invalid selected event payload.',
+                'error_type' => 'invalid_selected_events',
+            ]);
+            exit;
+        }
+
+        if (is_array($decodedSelectedEvents)) {
+            $selectedEvents = $decodedSelectedEvents;
+        }
     }
 }
 
@@ -36,6 +49,7 @@ $result = aiProfileGenerate([
     'user_prompt' => $jsonDataInput['user_prompt'] ?? '',
     'event_limit' => $jsonDataInput['event_limit'] ?? 100,
     'selected_events' => $selectedEvents,
+    'selected_events_provided' => $selectedEventsProvided,
     'source' => 'manual',
 ]);
 

@@ -262,6 +262,10 @@ function aiProfileNormalizeSelectedEvents($selectedEvents): array
 
 function aiProfileBuildHistoryFromSelectedEvents(array $selectedEvents, string $npcName): string
 {
+    if (empty($selectedEvents)) {
+        return "No recent dialogue or event history was selected for {$npcName}. Use the character sheet, saved memory, and any custom instructions to infer the profile.";
+    }
+
     $history = "\n<last_dialogue>\n";
 
     foreach ($selectedEvents as $event) {

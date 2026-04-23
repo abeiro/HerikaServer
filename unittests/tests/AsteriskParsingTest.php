@@ -47,6 +47,37 @@ final class AsteriskParsingTest extends TestCase
         );
     }
 
+    public function testFullWrappedMixedReplySplitsNarrationFromDialogueWhenSpeechCueAppears(): void
+    {
+        $wrappedReply = "*A satisfied sigh escapes her lips as she surveys the fallen undead. Indeed, my Lord. A rather efficient clearing, if I do say so myself*";
+
+        $parts = extractNarrationAndDialogue($wrappedReply);
+
+        $this->assertTrue($parts['has_narration']);
+        $this->assertSame(
+            ['A satisfied sigh escapes her lips as she surveys the fallen undead.'],
+            $parts['narrations']
+        );
+        $this->assertSame(
+            'Indeed, my Lord. A rather efficient clearing, if I do say so myself',
+            $parts['dialogue']
+        );
+    }
+
+    public function testFullWrappedReplySplitsAfterNarrationLeadWhenDialogueStartsWithIM(): void
+    {
+        $wrappedReply = "*My grip tightens on my bowstring, the familiar tension a welcome sensation. I am ready, my lord.*";
+
+        $parts = extractNarrationAndDialogue($wrappedReply);
+
+        $this->assertTrue($parts['has_narration']);
+        $this->assertSame(
+            ['My grip tightens on my bowstring, the familiar tension a welcome sensation.'],
+            $parts['narrations']
+        );
+        $this->assertSame('I am ready, my lord.', $parts['dialogue']);
+    }
+
     public function testLegacyInlineNarrationToggleFallsBackToNarratorMode(): void
     {
         $GLOBALS['INLINE_NARRATION_ENABLED'] = true;
