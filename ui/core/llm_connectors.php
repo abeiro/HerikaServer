@@ -58,6 +58,12 @@ function chim_llm_apply_connector_metadata_post_overrides(array $metadata, array
         unset($metadata["remove_action_prompt"]);
     }
 
+    if (isset($post["disable_streaming"])) {
+        $metadata["disable_streaming"] = ($post["disable_streaming"] === "1" || $post["disable_streaming"] === 1);
+    } else {
+        unset($metadata["disable_streaming"]);
+    }
+
     if (isset($post["extra_parameters_enabled"])) {
         $metadata["extra_parameters_enabled"] = ($post["extra_parameters_enabled"] === "1" || $post["extra_parameters_enabled"] === 1);
     } else {
@@ -535,6 +541,18 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
                 </div>
                 
                 <div id="remove_action_prompt" style="margin-top:12px;">
+                    <label class="label-with-toggle"><span class='tip-label' data-tip='Disable SSE streaming for this connector and wait for the full JSON reply before parsing. Useful for local LM Studio or other OpenAI-compatible servers that stream slowly or emit long reasoning chunks first.'>Disable Streaming</span>
+                        <input type="hidden" name="disable_streaming" value="0">
+                        <input type="checkbox" name="disable_streaming" value="1" <?php 
+                            $metadata = [];
+                            if (isset($editItem["metadata"]) && !empty($editItem["metadata"])) {
+                                $metadata = is_string($editItem["metadata"]) ? json_decode($editItem["metadata"], true) : $editItem["metadata"];
+                                if (!is_array($metadata)) $metadata = [];
+                            }
+                            echo (isset($metadata["disable_streaming"]) && $metadata["disable_streaming"]) ? "checked" : "";
+                        ?>>
+                    </label>
+                    <div style="height:6px;"></div>
                     <label class="label-with-toggle"><span class='tip-label' data-tip='Option to disable the action enforcement prompt. Some models like gemini-3-flash tend to use actions a lot.'>Remove Action Prompt</span>
                         <input type="hidden" name="remove_action_prompt" value="0">
                         <input type="checkbox" name="remove_action_prompt" value="1" <?php 
@@ -843,7 +861,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
     }
     // Sync On/Off labels for checkboxes
     (function(){
-        const names = ['reasoning_model','enforce_json','json_schema','prefill_json','remove_action_prompt','extra_parameters_enabled'];
+        const names = ['reasoning_model','enforce_json','json_schema','prefill_json','remove_action_prompt','disable_streaming','extra_parameters_enabled'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
@@ -1369,6 +1387,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import"])) {
 if (isset($_GET["create_blank"])) {
     $newId = $llm->create([
         "label" => "New Connector",
+        "metadata" => json_encode([
+            "extra_parameters_enabled" => false,
+        ]),
         'driver' => 'openrouterjson',
         'temperature' => 1,
         'url' => 'https://openrouter.ai/api/v1/chat/completions',
@@ -1378,7 +1399,6 @@ if (isset($_GET["create_blank"])) {
         'enforce_json' => 1,
         'json_schema' => 1,
         'service' => 'openrouter',
-        'extra_parameters_enabled' => 0,
     ]);
     $redir = 'llm_connectors.php' . ($newId ? ('?edit=' . urlencode($newId)) : '');
     header("Location: $redir");
@@ -1866,6 +1886,18 @@ if (typeof window.consolidation !== 'function') {
             </div>
             
             <div id="remove_action_prompt_main" style="margin-top:12px;">
+                <label class="label-with-toggle"><span class='tip-label' data-tip='Disable SSE streaming for this connector and wait for the full JSON reply before parsing. Useful for local LM Studio or other OpenAI-compatible servers that stream slowly or emit long reasoning chunks first.'>Disable Streaming</span>
+                    <input type="hidden" name="disable_streaming" value="0">
+                    <input type="checkbox" name="disable_streaming" value="1" <?php 
+                        $metadataMain = [];
+                        if (isset($editItem["metadata"]) && !empty($editItem["metadata"])) {
+                            $metadataMain = is_string($editItem["metadata"]) ? json_decode($editItem["metadata"], true) : $editItem["metadata"];
+                            if (!is_array($metadataMain)) $metadataMain = [];
+                        }
+                        echo (isset($metadataMain["disable_streaming"]) && $metadataMain["disable_streaming"]) ? "checked" : "";
+                    ?>>
+                </label>
+                <div style="height:6px;"></div>
                 <label class="label-with-toggle"><span class='tip-label' data-tip='Option to disable the action enforcement prompt. Some models like gemini-3-flash tend to use actions a lot.'>Remove Action Prompt</span>
                     <input type="hidden" name="remove_action_prompt" value="0">
                     <input type="checkbox" name="remove_action_prompt" value="1" <?php 
@@ -2013,7 +2045,7 @@ if (typeof window.consolidation !== 'function') {
 <script>
 // Sync On/Off labels for checkboxes
 (function(){
-    const names = ['reasoning_model','enforce_json','json_schema','prefill_json','extra_parameters_enabled'];
+    const names = ['reasoning_model','enforce_json','json_schema','prefill_json','disable_streaming','extra_parameters_enabled'];
     names.forEach(n=>{
         const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
         if (!cb) return;

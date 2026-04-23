@@ -52,6 +52,40 @@ class LLMConnector
 
     private $table = "core_llm_connector";
 
+    private function normalizeConnectorUrlValue($value)
+    {
+        if (!is_string($value)) {
+            return $value;
+        }
+
+        $trimmed = trim($value);
+        return $trimmed === "" ? null : $trimmed;
+    }
+
+    private function normalizeConnectorRecord(array $data, bool $forWrite = false): array
+    {
+        if (array_key_exists("url", $data)) {
+            $normalizedUrl = $this->normalizeConnectorUrlValue($data["url"]);
+            if (!$forWrite && $normalizedUrl === null) {
+                $normalizedUrl = "";
+            }
+            $data["url"] = $normalizedUrl;
+        }
+
+        return $data;
+    }
+
+    private function normalizeConnectorRecords(array $rows): array
+    {
+        foreach ($rows as $index => $row) {
+            if (is_array($row)) {
+                $rows[$index] = $this->normalizeConnectorRecord($row);
+            }
+        }
+
+        return $rows;
+    }
+
     public function create($data)
     {
         $fields = [
@@ -78,6 +112,8 @@ class LLMConnector
             "top_a"
         ];
 
+        $data = $this->normalizeConnectorRecord($data, true);
+
         foreach ($data as $k => $v) {
             if (($v === "" || $v === null) && $v !== "0" && $v !== false && $v !== 0) {
                 $data[$k] = null;
@@ -91,7 +127,7 @@ class LLMConnector
     public function readAll()
     {
         $query = "SELECT * FROM {$this->table} ORDER BY LOWER(COALESCE(NULLIF(label,''), model)) ASC";
-        return $GLOBALS["db"]->fetchAll($query);
+        return $this->normalizeConnectorRecords($GLOBALS["db"]->fetchAll($query));
     }
 
     public function readOne($id)
@@ -100,7 +136,11 @@ class LLMConnector
         $query = "SELECT * FROM {$this->table} WHERE id = {$id} LIMIT 1";
         $data = $GLOBALS["db"]->fetchOne($query);
 
-        return $data;
+        if (!is_array($data)) {
+            return $data;
+        }
+
+        return $this->normalizeConnectorRecord($data);
     }
 
     public function getById($id)
@@ -133,6 +173,8 @@ class LLMConnector
             "min_p",
             "top_a"
         ];
+
+        $data = $this->normalizeConnectorRecord($data, true);
 
         foreach ($data as $k => $v) {
             if (($v === "" || $v === null) && $v !== "0" && $v !== false && $v !== 0) {
@@ -203,6 +245,9 @@ class LLMConnector
 
     public function setOldGlobals($currentConnectorData)
     {
+        if (is_array($currentConnectorData)) {
+            $currentConnectorData = $this->normalizeConnectorRecord($currentConnectorData);
+        }
 
         if ($currentConnectorData["driver"] == "openaijson") {
 
