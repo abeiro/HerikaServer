@@ -601,7 +601,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
         if ($id <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid id"]); exit; }
 
         $allowed = [
-            'label','service','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema','api_badge_id','extra_parameters_yaml','extra_parameters_enabled'
+            'label','service','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema','api_badge_id','extra_parameters_yaml','extra_parameters_enabled','disable_streaming'
         ];
         $data = [];
         $readConnectorMetadata = function() use (&$data, $llm, $id) {
@@ -645,6 +645,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
             } else if ($k === 'extra_parameters_enabled') {
                 $metadata = $readConnectorMetadata();
                 $metadata['extra_parameters_enabled'] = ($v === '1' || $v === 'true' || $v === 1);
+                $writeConnectorMetadata($metadata);
+                continue;
+            } else if ($k === 'disable_streaming') {
+                $metadata = $readConnectorMetadata();
+                $metadata['disable_streaming'] = ($v === '1' || $v === 'true' || $v === 1);
                 $writeConnectorMetadata($metadata);
                 continue;
             } else {
