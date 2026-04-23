@@ -24,7 +24,10 @@ $GLOBALS["db"] = new sql();
 $narrator = new Narrator();
 
 $advancedPromptKeys = [
-    'inline_narration_prompt',
+    'dialogue_line_inline_response_narrator',
+    'inline_narration_prompt_narrator',
+    'dialogue_line_inline_response_npc',
+    'inline_narration_prompt_npc',
     'narrator_welcome_prompt',
     'player_speech_style_prompt',
     'random_narration_prompt',
