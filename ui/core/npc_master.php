@@ -3846,10 +3846,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         const renderSelectedEvents = function() {
           updateEventMeta(previewTotalAvailable, previewMiddleTermIncluded);
           if (!selectedEvents.length) {
-            eventList.innerHTML = '<div style="font-size:13px; color:#f5b1b1;">No events selected. Increase the slider or reset the selection.</div>';
-            okBtn.disabled = true;
-            okBtn.style.opacity = '0.6';
-            okBtn.style.cursor = 'not-allowed';
+            eventList.innerHTML = '<div style="font-size:13px; color:#f3d38a;">No events selected. You can still generate a profile using the current character sheet, saved memory, and any custom instructions.</div>';
+            okBtn.disabled = false;
+            okBtn.style.opacity = '';
+            okBtn.style.cursor = 'pointer';
             return;
           }
 
@@ -3948,11 +3948,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         });
 
         okBtn.addEventListener('click', async function(){
-          if (!selectedEvents.length) {
-            alert('At least one event must be selected to generate a profile.');
-            return;
-          }
-
           const userPrompt = String(promptInput.value||'').trim();
           const connectorSelect = promptBox.querySelector('#ai_llm_connector');
           const selectedConnector = connectorSelect ? String(connectorSelect.value||'').trim() : '';
