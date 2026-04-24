@@ -50,6 +50,116 @@ function ReplacePlayerNamePlaceholder($s_input) {
     return $s_res;
 }
 
+if (!function_exists('chimAppendDiaryConnectorCandidate')) {
+    function chimAppendDiaryConnectorCandidate(array &$candidates, string $candidate): void
+    {
+        $normalized = strtolower(trim($candidate));
+        if ($normalized === '' || $normalized === 'array') {
+            return;
+        }
+
+        switch ($normalized) {
+            case 'openrouterjson':
+                $normalized = 'openrouter';
+                break;
+            case 'openaijson':
+                $normalized = 'openai';
+                break;
+            case 'koboldcppjson':
+                $normalized = 'koboldcpp';
+                break;
+        }
+
+        if (!in_array($normalized, $candidates, true)) {
+            $candidates[] = $normalized;
+        }
+    }
+}
+
+if (!function_exists('chimExtractDiaryConnectorCandidates')) {
+    function chimExtractDiaryConnectorCandidates($value): array
+    {
+        $candidates = [];
+
+        $pushValue = function ($candidate) use (&$candidates, &$pushValue): void {
+            if (is_array($candidate)) {
+                foreach ($candidate as $nestedCandidate) {
+                    $pushValue($nestedCandidate);
+                }
+                return;
+            }
+
+            if (!is_scalar($candidate)) {
+                return;
+            }
+
+            $stringValue = trim((string)$candidate);
+            if ($stringValue === '') {
+                return;
+            }
+
+            if (($stringValue[0] === '[' || $stringValue[0] === '{')) {
+                $decoded = json_decode($stringValue, true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $decodedCandidate) {
+                        $pushValue($decodedCandidate);
+                    }
+                    return;
+                }
+            }
+
+            if (strpos($stringValue, ',') !== false) {
+                foreach (explode(',', $stringValue) as $splitCandidate) {
+                    $pushValue($splitCandidate);
+                }
+                return;
+            }
+
+            chimAppendDiaryConnectorCandidate($candidates, $stringValue);
+        };
+
+        $pushValue($value);
+
+        return $candidates;
+    }
+}
+
+if (!function_exists('chimResolveDiaryConnectorName')) {
+    function chimResolveDiaryConnectorName($rawValue = null, bool $persistGlobal = true): ?string
+    {
+        $connectorDir = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "connector" . DIRECTORY_SEPARATOR;
+        $sourceValue = func_num_args() > 0 ? $rawValue : ($GLOBALS["CONNECTORS_DIARY"] ?? null);
+
+        $candidates = chimExtractDiaryConnectorCandidates($sourceValue);
+        foreach (chimExtractDiaryConnectorCandidates($GLOBALS["CONNECTORS"] ?? null) as $candidate) {
+            if (!in_array($candidate, $candidates, true)) {
+                $candidates[] = $candidate;
+            }
+        }
+
+        foreach (['openrouter', 'openai', 'google_openaijson', 'koboldcpp'] as $fallbackCandidate) {
+            if (!in_array($fallbackCandidate, $candidates, true)) {
+                $candidates[] = $fallbackCandidate;
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            if (file_exists($connectorDir . $candidate . ".php")) {
+                if ($persistGlobal) {
+                    $originalValue = is_scalar($sourceValue) ? trim((string)$sourceValue) : json_encode($sourceValue);
+                    if ($originalValue !== $candidate) {
+                        Logger::warn("DIARY: Resolved CONNECTORS_DIARY value " . var_export($sourceValue, true) . " to '{$candidate}'");
+                    }
+                    $GLOBALS["CONNECTORS_DIARY"] = $candidate;
+                }
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+}
+
 function getGoldFromMetadata($npcName = null) {
     if ($npcName === null) {
         $npcName = isset($GLOBALS["HERIKA_NAME"]) ? $GLOBALS["HERIKA_NAME"] : "";

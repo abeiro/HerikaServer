@@ -45,16 +45,28 @@ foreach ($_POST as $k=>$v) {
     
     $fullNameHierch=explode("@",$k);
     $plainNameHierch=strtr($k,array("@"=>" "));
+    $type = $confSchema[$plainNameHierch]["type"] ?? 'string';
     
+    if ($type !== 'selectmultiple' && is_array($v)) {
+        $firstScalar = '';
+        foreach ($v as $candidate) {
+            if (is_scalar($candidate)) {
+                $firstScalar = (string)$candidate;
+                break;
+            }
+        }
+        $v = $firstScalar;
+    }
+
     if (is_array($v))
         $value=json_encode($v,true);
-    else if ($confSchema[$plainNameHierch]["type"]=="number") {
+    else if ($type=="number") {
         if ($v==="")
             continue;
         else
             $value="".addcslashes($v,"'")."";
     }
-    else if ($confSchema[$plainNameHierch]["type"]=="boolean")
+    else if ($type=="boolean")
         $value=($v=="true")?"true":"false";
     else
         $value="'".process_slashes($v)."'";
