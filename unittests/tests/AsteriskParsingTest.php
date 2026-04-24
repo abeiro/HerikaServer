@@ -151,7 +151,7 @@ final class AsteriskParsingTest extends TestCase
     // Regression note: PLAYER_RESPEECH/autochat can emit leading parenthetical narration
     // and a duplicated player-name prefix (for example "(A shiver...) Rangroo: ...").
     // Keep these tests server-side so rewritten player text entering context and subtitles
-    // stays as spoken dialogue only.
+    // respects inline narration mode instead of stripping narration unconditionally.
     public function testPlayerSubtitleTextStripsPlayerSpeakerPrefixAndTalkingTag(): void
     {
         $GLOBALS['PLAYER_NAME'] = 'Rangroo';
@@ -165,9 +165,24 @@ final class AsteriskParsingTest extends TestCase
     public function testSanitizePlayerRespeechTextStripsLeadingNarrationAndPlayerPrefix(): void
     {
         $GLOBALS['PLAYER_NAME'] = 'Rangroo';
+        $GLOBALS['INLINE_NARRATION_MODE'] = 'disabled';
 
         $this->assertSame(
             "Sven. The air bites today, doesn't it? (Talking to Sven)",
+            sanitizePlayerRespeechText(
+                "(A shiver runs down Rangroo's spine, despite his heavy furs.) Rangroo: Sven. The air bites today, doesn't it? (Talking to Sven)",
+                $GLOBALS['PLAYER_NAME']
+            )
+        );
+    }
+
+    public function testSanitizePlayerRespeechTextConvertsLeadingNarrationToInlineAsterisksWhenEnabled(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'Rangroo';
+        $GLOBALS['INLINE_NARRATION_MODE'] = 'narrator';
+
+        $this->assertSame(
+            "*A shiver runs down Rangroo's spine, despite his heavy furs.* Sven. The air bites today, doesn't it? (Talking to Sven)",
             sanitizePlayerRespeechText(
                 "(A shiver runs down Rangroo's spine, despite his heavy furs.) Rangroo: Sven. The air bites today, doesn't it? (Talking to Sven)",
                 $GLOBALS['PLAYER_NAME']
