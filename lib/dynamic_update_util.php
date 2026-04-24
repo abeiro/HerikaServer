@@ -547,7 +547,7 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
 function processNarratorDynamicProfile($db) {
     require_once(__DIR__ . "/core/narrator.class.php");
     require_once(__DIR__ . "/core/core_profiles.class.php");
-    require_once(__DIR__ . "/core/llm_connectors.class.php");
+    require_once(__DIR__ . "/core/llm_connector.class.php");
     
     if (!function_exists('DataSpeechJournal') || !function_exists('buildDynamicProfileDisplay')) {
         require_once(__DIR__ . "/../lib/data_functions.php");
@@ -882,6 +882,7 @@ function getDynamicProfileHistoryData($npcName) {
     $lastPlace = "";
     $lastListener = "";
     $lastDateTime = "";
+    $isNarratorTarget = ($npcName === "The Narrator");
     
     // Determine how much context history to use for dynamic profiles
     $dynamicProfileContextHistory = 50; // Default value
@@ -894,7 +895,7 @@ function getDynamicProfileHistoryData($npcName) {
     foreach (json_decode(DataSpeechJournal($npcName, $dynamicProfileContextHistory), true) as $element) {
         $listenerName = trim((string)($element["listener"] ?? ""));
         $speakerName = trim((string)($element["speaker"] ?? ""));
-        if ($listenerName == "The Narrator" || $speakerName == "The Narrator") {
+        if (!$isNarratorTarget && ($listenerName == "The Narrator" || $speakerName == "The Narrator")) {
             continue;
         }
         if ($lastListener != $listenerName) {
@@ -943,8 +944,18 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         return false;
     }
 
-    $npcMaster=new NpcMaster();
-    $npcData=$npcMaster->getByName($npcName);
+    $isNarrator = ($npcName === "The Narrator");
+
+    if ($isNarrator) {
+        require_once(__DIR__ . "/core/narrator.class.php");
+        $narrator = new Narrator();
+        $npcData = $narrator->getNarratorData();
+    } else {
+        require_once(__DIR__ . "/core/npc_master.class.php");
+        $npcMaster = new NpcMaster();
+        $npcData = $npcMaster->getByName($npcName);
+    }
+
     if (!$npcData) {
         Logger::debug("updateDynamicProfileField: No profile found for $npcName");
         return false;
@@ -994,17 +1005,28 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     try {
         // Collect other profile fields for context (excluding the current field)
         $profileContext = [];
-        $profileFields = [
-            'core' => 'Core Identity',
-            'npc_static_bio' => 'Basic Summary',
-            'personality' => 'Personality Traits',
-            'appearance' => 'Physical Appearance',
-            'relationships' => 'Relationships',
-            'occupation' => 'Occupation & Role',
-            'skills' => 'Skills & Abilities',
-            'speechstyle' => 'Speech Style',
-            'goals' => 'Goals & Aspirations'
-        ];
+        if ($isNarrator) {
+            $profileFields = [
+                'core' => 'Core Identity',
+                'npc_static_bio' => 'Basic Summary',
+                'prompt_head' => 'Prompt Head / Style Rules',
+                'personality' => 'Personality Traits',
+                'speechstyle' => 'Speech Style',
+                'goals' => 'Goals & Aspirations'
+            ];
+        } else {
+            $profileFields = [
+                'core' => 'Core Identity',
+                'npc_static_bio' => 'Basic Summary',
+                'personality' => 'Personality Traits',
+                'appearance' => 'Physical Appearance',
+                'relationships' => 'Relationships',
+                'occupation' => 'Occupation & Role',
+                'skills' => 'Skills & Abilities',
+                'speechstyle' => 'Speech Style',
+                'goals' => 'Goals & Aspirations'
+            ];
+        }
 
         // Remove the current field from context
         unset($profileFields[$field]);
