@@ -1877,6 +1877,160 @@ if (!$existsColumn || !$existsColumn[0]["column_name"]) {
     echo '<script>alert("A patch (add service column to core_llm_connector) has been applied to Database")</script>';
 }
 
+if ($checkVersion("core_llm_connector") < 20260423001) {
+    Logger::debug("Applying core_llm_connector 20260423001 - Seeding dedicated scene classifier connector");
+    try {
+        $sceneClassifierLabel = "Gemma 3N E4B";
+        $sceneClassifierLabelEscaped = $db->escape($sceneClassifierLabel);
+        $existingSceneClassifier = $db->fetchOne(
+            "SELECT id FROM public.core_llm_connector WHERE LOWER(COALESCE(label,'')) = LOWER('{$sceneClassifierLabelEscaped}') LIMIT 1"
+        );
+
+        if (!$existingSceneClassifier || !isset($existingSceneClassifier["id"])) {
+            $openRouterBadge = $db->fetchOne("SELECT id FROM public.core_api_badge WHERE LOWER(label) = 'openrouter' LIMIT 1");
+            $openRouterBadgeId = intval($openRouterBadge["id"] ?? 0);
+
+            $insertPayload = [
+                "label" => $sceneClassifierLabel,
+                "metadata" => "{}",
+                "url" => "https://openrouter.ai/api/v1/chat/completions",
+                "model" => "google/gemma-3n-e4b-it",
+                "provider" => "openrouter",
+                "driver" => "openrouterjson",
+                "max_tokens" => 128,
+                "enforce_json" => 1,
+                "prefill_json" => 0,
+                "json_schema" => 1,
+                "temperature" => 0.2,
+                "service" => "openrouter"
+            ];
+            if ($openRouterBadgeId > 0) {
+                $insertPayload["api_badge_id"] = $openRouterBadgeId;
+            }
+
+            $db->insert("core_llm_connector", $insertPayload);
+            Logger::info("Inserted dedicated scene classifier connector '{$sceneClassifierLabel}'");
+        } else {
+            Logger::info("Dedicated scene classifier connector already exists with ID " . intval($existingSceneClassifier["id"]));
+        }
+
+        $updateVersion("core_llm_connector", 20260423001);
+        Logger::info("Applied patch core_llm_connector 20260423001");
+    } catch (Exception $e) {
+        Logger::error("Error applying core_llm_connector 20260423001: " . $e->getMessage());
+    }
+}
+
+if ($checkVersion("core_llm_connector") < 20260423002) {
+    Logger::debug("Applying core_llm_connector 20260423002 - Migrating scene classifier default to Gemma 3N E4B");
+    try {
+        $sceneClassifierLabel = "Gemma 3N E4B";
+        $legacySceneClassifierLabel = "Scene Classifier (Gemma 3N E4B)";
+        $legacySceneClassifierLabel2 = "Scene Classifier (Gemini 2.5 Flash Lite)";
+        $sceneClassifierLabelEscaped = $db->escape($sceneClassifierLabel);
+        $legacySceneClassifierLabelEscaped = $db->escape($legacySceneClassifierLabel);
+        $legacySceneClassifierLabelEscaped2 = $db->escape($legacySceneClassifierLabel2);
+
+        $sceneClassifierRow = $db->fetchOne(
+            "SELECT id FROM public.core_llm_connector
+             WHERE LOWER(COALESCE(label,'')) = LOWER('{$sceneClassifierLabelEscaped}')
+                OR LOWER(COALESCE(label,'')) = LOWER('{$legacySceneClassifierLabelEscaped}')
+                OR LOWER(COALESCE(label,'')) = LOWER('{$legacySceneClassifierLabelEscaped2}')
+             ORDER BY id ASC
+             LIMIT 1"
+        );
+
+        $openRouterBadge = $db->fetchOne("SELECT id FROM public.core_api_badge WHERE LOWER(label) = 'openrouter' LIMIT 1");
+        $openRouterBadgeId = intval($openRouterBadge["id"] ?? 0);
+
+        $sceneClassifierPayload = [
+            "label" => $sceneClassifierLabel,
+            "metadata" => "{}",
+            "url" => "https://openrouter.ai/api/v1/chat/completions",
+            "model" => "google/gemma-3n-e4b-it",
+            "provider" => "openrouter",
+            "driver" => "openrouterjson",
+            "max_tokens" => 128,
+            "enforce_json" => 1,
+            "prefill_json" => 0,
+            "json_schema" => 1,
+            "temperature" => 0.2,
+            "service" => "openrouter"
+        ];
+        if ($openRouterBadgeId > 0) {
+            $sceneClassifierPayload["api_badge_id"] = $openRouterBadgeId;
+        }
+
+        if ($sceneClassifierRow && isset($sceneClassifierRow["id"])) {
+            $db->updateRow("core_llm_connector", $sceneClassifierPayload, "id=" . intval($sceneClassifierRow["id"]));
+            Logger::info("Updated dedicated scene classifier connector ID " . intval($sceneClassifierRow["id"]) . " to Gemma 3N E4B");
+        } else {
+            $db->insert("core_llm_connector", $sceneClassifierPayload);
+            Logger::info("Inserted dedicated scene classifier connector '{$sceneClassifierLabel}'");
+        }
+
+        $updateVersion("core_llm_connector", 20260423002);
+        Logger::info("Applied patch core_llm_connector 20260423002");
+    } catch (Exception $e) {
+        Logger::error("Error applying core_llm_connector 20260423002: " . $e->getMessage());
+    }
+}
+
+if ($checkVersion("core_llm_connector") < 20260423003) {
+    Logger::debug("Applying core_llm_connector 20260423003 - Shortening scene classifier connector label");
+    try {
+        $sceneClassifierLabel = "Gemma 3N E4B";
+        $legacySceneClassifierLabels = [
+            "Scene Classifier (Gemma 3N E4B)",
+            "Scene Classifier (Gemini 2.5 Flash Lite)"
+        ];
+
+        $conditions = [];
+        $conditions[] = "LOWER(COALESCE(label,'')) = LOWER('" . $db->escape($sceneClassifierLabel) . "')";
+        foreach ($legacySceneClassifierLabels as $legacyLabel) {
+            $conditions[] = "LOWER(COALESCE(label,'')) = LOWER('" . $db->escape($legacyLabel) . "')";
+        }
+
+        $sceneClassifierRow = $db->fetchOne(
+            "SELECT id FROM public.core_llm_connector WHERE " . implode(" OR ", $conditions) . " ORDER BY id ASC LIMIT 1"
+        );
+
+        $openRouterBadge = $db->fetchOne("SELECT id FROM public.core_api_badge WHERE LOWER(label) = 'openrouter' LIMIT 1");
+        $openRouterBadgeId = intval($openRouterBadge["id"] ?? 0);
+
+        $sceneClassifierPayload = [
+            "label" => $sceneClassifierLabel,
+            "metadata" => "{}",
+            "url" => "https://openrouter.ai/api/v1/chat/completions",
+            "model" => "google/gemma-3n-e4b-it",
+            "provider" => "openrouter",
+            "driver" => "openrouterjson",
+            "max_tokens" => 128,
+            "enforce_json" => 1,
+            "prefill_json" => 0,
+            "json_schema" => 1,
+            "temperature" => 0.2,
+            "service" => "openrouter"
+        ];
+        if ($openRouterBadgeId > 0) {
+            $sceneClassifierPayload["api_badge_id"] = $openRouterBadgeId;
+        }
+
+        if ($sceneClassifierRow && isset($sceneClassifierRow["id"])) {
+            $db->updateRow("core_llm_connector", $sceneClassifierPayload, "id=" . intval($sceneClassifierRow["id"]));
+            Logger::info("Renamed scene classifier connector ID " . intval($sceneClassifierRow["id"]) . " to '{$sceneClassifierLabel}'");
+        } else {
+            $db->insert("core_llm_connector", $sceneClassifierPayload);
+            Logger::info("Inserted dedicated scene classifier connector '{$sceneClassifierLabel}'");
+        }
+
+        $updateVersion("core_llm_connector", 20260423003);
+        Logger::info("Applied patch core_llm_connector 20260423003");
+    } catch (Exception $e) {
+        Logger::error("Error applying core_llm_connector 20260423003: " . $e->getMessage());
+    }
+}
+
 if ($checkTableExists("core_npc_master_history") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master_history.sql"));
 } else
