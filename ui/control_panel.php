@@ -160,7 +160,7 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
     </div>
     <div id="requests" class="tab-content">
         <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/index.php?table=audit_request&embed=1"></iframe>
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/request_logs.php?embed=1"></iframe>
         </div>
     </div>
     <div id="audit" class="tab-content">

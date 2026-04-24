@@ -325,7 +325,7 @@ $serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
                                          <li><hr class="dropdown-divider"></li>
                      <li><h6 class="dropdown-header">Debugging</h6></li>
                      <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=responselog' title="">Response Queue</a></li>
-                     <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/index.php?table=audit_request' title="">Request Logs</a></li>
+                     <li><a class="dropdown-item" href='<?php echo $webRoot; ?>/ui/request_logs.php' title="">Request Logs</a></li>
 
                      <li><hr class="dropdown-divider"></li>
                      <li><h6 class="dropdown-header">Utilities</h6></li>
