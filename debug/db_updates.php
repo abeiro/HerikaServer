@@ -3827,6 +3827,65 @@ if ($checkVersion("emotions_expression")<20251230001) {
 
 //----------------------------------------------------
 
+if ($checkVersion("prompts")<20260423001) {
+    Logger::debug(" try patch: prompts 20260423001");
+
+    // Fresh installs only seed the consolidated prompt entry.
+
+    $directorSuggestionSystemSingle = $db->escape(
+        "You are a game director, and we are roleplaying Skyrim in the Tamriel universe. You must create a instruction for an actor to generate new content/events on game.\n\n"
+        . "# Examples\n\n"
+        . "user request: actor \"a\" leaves the place \n"
+        . "{\"instructions\":[{\n"
+        . "  \"character\": \"actor a\",\n"
+        . "  \"instruction\": \"actor a should say goodbye to everyone, hinting that they may not return for a long time\",\n"
+        . "  \"action\": \"ExitLocation\",\n"
+        . "  \"target\": \"everyone\",\n"
+        . "  \"scene_note\": \"The mood is somber as actor a prepares to leave. Actor b watches in silence, perhaps with regret or longing.\"\n"
+        . "},\n"
+        . "{\n"
+        . "  \"character\": \"actor b\",\n"
+        . "  \"instruction\": \"actor b should say goodbye to b\",\n"
+        . "  \"action\": \"JustTalk\",\n"
+        . "  \"target\": \"Actor a\",\n"
+        . "  \"scene_note\": \"\"\n"
+        . "}\n"
+        . "]\n"
+        . "}\n\n"
+        . "(no user request, randomly generated content)\n"
+        . "{\"instructions\":[\n"
+        . " {\n"
+        . "  \"character\": \"actor a\",\n"
+        . "  \"instruction\": \"actor a should ask actor b for a few coins, claiming they desperately need a drink.\",\n"
+        . "  \"action\": \"Talk\",\n"
+        . "  \"target\": \"actor b\",\n"
+        . "  \"scene_note\": \"actor a looks disheveled but charming, half-joking and half-serious. Actor b is unsure whether to laugh, help, or walk away.\"\n"
+        . " }\n"
+        . "]\n"
+        . "}\n\n"
+        . "Just provide instructions! You can also provide more than one instruction, but one per actor (keep limit at 2 or 3 max actors)\n"
+        . "In addition, follow these general scene rules as a game director:\n"
+        . " * Use any actor in NEARBY ACTORS/NPC IN THE SCENE list ({PLAYER_NAME}, busy actors and far away actors are excluded)\n"
+        . " * Continue the scene as naturally and fully as possible, unless the user explicitly requests a new one. You can specify actions to reinforce the actors' dialogue.\n"
+        . " * If there are more actors in the room, try to involve them in the conversation.\n"
+        . " * When dialogue becomes repetitive, make a plot twist.\n"
+        . " * If a character reuses the same argument too often, nudge the scene towards a new topic.\n"
+        . " * Occasionally introduce subtle foreshadowing or hint at future events, dangers, or quests.\n"
+        . " * Do not resolve everything neatly - keep room for ongoing tension or future continuation.\n"
+        . " * You must always provide dialogue instructions for the character, as every request requires a dialogue response.\n"
+        . " * Here are a list of actions that can be used:\n{FUNCTION_LIST}\n  ** JustTalk\n"
+        . " * Add a Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality.\n"
+        . " * If scene is getting boring, add a plot twist"
+    );
+
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('directorSuggestionSystem', '$directorSuggestionSystemSingle', 'Single prompt-manager entry for rolemaster suggestion generation. Includes system framing, examples, and suggestion rules. Supports {PLAYER_NAME} and {FUNCTION_LIST} placeholders. Used in: service/processors/rolemaster/cmd/suggestion.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+
+    $updateVersion("prompts", 20260423001);
+    Logger::info("Applied patch prompts 20260423001 - Added directorSuggestionSystem prompt");
+}
+
+//----------------------------------------------------
+
 // Relationship Evaluation and Initialization Queues
 $db->execQuery("CREATE TABLE IF NOT EXISTS relationship_eval_queue (
                 id SERIAL PRIMARY KEY,
