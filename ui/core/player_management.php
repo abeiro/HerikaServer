@@ -46,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_player'])) {
         if (isset($_POST['speech_style'])) {
             $player->set('speech_style', $_POST['speech_style']);
         }
+        $player->set('diary_enabled', isset($_POST['diary_enabled']) && $_POST['diary_enabled'] === '1' ? '1' : '0');
         $player->set('tts_connector_id', trim(strval($_POST['tts_connector_id'] ?? '')));
         $player->set('tts_voice_override', trim(strval($_POST['tts_voice_override'] ?? '')));
         $player->set('tts_voice_id_override', trim(strval($_POST['tts_voice_id_override'] ?? '')));
@@ -83,6 +84,7 @@ $appearance = $allPlayerData['appearance'] ?? '';
 $bio = $allPlayerData['bio'] ?? '';
 $bioKnownByAll = ($allPlayerData['bio_known_by_all'] ?? 'false') === 'true';
 $speechStyle = $allPlayerData['speech_style'] ?? '';
+$playerDiaryEnabled = $player->getBool('diary_enabled', false);
 $playerTtsConnectorId = trim(strval($allPlayerData['tts_connector_id'] ?? ''));
 $playerTtsVoiceId = strval($allPlayerData['tts_voice_override'] ?? '');
 $playerTtsVoiceIdOverride = strval($allPlayerData['tts_voice_id_override'] ?? '');
@@ -320,7 +322,7 @@ if (!$isEmbed) {
     }
 
     /* Form Styling */
-    .content-section label {
+    .content-section > label:not(.toggle-row) {
         display: block;
         font-size: 13px;
         color: rgb(242, 124, 17);
@@ -329,7 +331,7 @@ if (!$isEmbed) {
         margin-top: 14px;
     }
 
-    .content-section label:first-of-type {
+    .content-section > label:not(.toggle-row):first-of-type {
         margin-top: 0;
     }
 
@@ -370,6 +372,104 @@ if (!$isEmbed) {
         display: block;
         padding-left: 2px;
         line-height: 1.4;
+    }
+
+    .toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        background: rgba(26, 26, 26, 0.6);
+        border: 1px solid #3a3a3a;
+        border-radius: 8px;
+        margin-top: 0;
+        margin-bottom: 10px;
+        transition: all 0.2s ease;
+    }
+
+    .toggle-row:hover {
+        background: rgba(36, 36, 36, 0.8);
+        border-color: #4a4a4a;
+    }
+
+    .toggle-switch {
+        position: relative;
+        width: 48px;
+        height: 24px;
+        flex-shrink: 0;
+    }
+
+    .toggle-switch input[type="checkbox"] {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+        margin: 0;
+        z-index: 2;
+    }
+
+    .toggle-slider {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #3a3a3a;
+        border-radius: 24px;
+        transition: all 0.3s ease;
+        border: 1px solid #555;
+    }
+
+    .toggle-slider::before {
+        content: '';
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        left: 3px;
+        top: 50%;
+        transform: translateY(-50%);
+        background-color: #888;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .toggle-switch input[type="checkbox"]:checked + .toggle-slider {
+        background-color: rgba(32, 122, 74, 0.9);
+        border-color: rgba(72, 187, 120, 0.5);
+    }
+
+    .toggle-switch input[type="checkbox"]:checked + .toggle-slider::before {
+        transform: translateY(-50%) translateX(22px);
+        background-color: #fff;
+    }
+
+    .toggle-switch input[type="checkbox"]:focus + .toggle-slider {
+        box-shadow: 0 0 0 3px rgba(32, 122, 74, 0.25);
+    }
+
+    .toggle-label {
+        flex: 1;
+        color: #e0e0e0;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .toggle-label:hover {
+        color: #fff;
+    }
+
+    .toggle-row + .hint {
+        margin-left: 62px;
+        margin-top: -2px;
+        margin-bottom: 12px;
+    }
+
+    .toggle-row + .hint + label:not(.toggle-row) {
+        margin-top: 8px;
     }
 
     /* Button Styling */
@@ -775,6 +875,14 @@ if (!$isEmbed) {
             font-size: 0.85em;
         }
 
+        .toggle-row {
+            padding: 10px 12px;
+        }
+
+        .toggle-label {
+            font-size: 13px;
+        }
+
         .content-section {
             padding: 15px;
         }
@@ -783,6 +891,10 @@ if (!$isEmbed) {
         .equipment-grid,
         .skills-grid {
             grid-template-columns: 1fr;
+        }
+
+        .toggle-row + .hint {
+            margin-left: 0;
         }
     }
 </style>
@@ -903,7 +1015,7 @@ if (!$isEmbed) {
                 <h2>👤 Player Appearance</h2>
                 <label for="appearance">Physical Description</label>
                 <textarea id="appearance" name="appearance" placeholder="Describe your character's appearance..."><?php echo htmlspecialchars($appearance); ?></textarea>
-                <span class="hint">Physical description of your character used for AI context.</span>
+                <span class="hint">Physical description of your character used for AI context. NPC will be aware of your appereance.</span>
             </div>
 
             <!-- Bio Section -->
@@ -911,7 +1023,7 @@ if (!$isEmbed) {
                 <h2>📜 Player Bio</h2>
                 <label for="bio">Character Bio</label>
                 <textarea id="bio" name="bio" placeholder="Describe your character's background and story..."><?php echo htmlspecialchars($bio); ?></textarea>
-                <span class="hint">Backstory and character context. Empty by default.</span>
+                <span class="hint">Backstory and character context.</span>
                 <div style="margin-top: 10px;">
                     <input type="hidden" name="bio_known_by_all" value="false">
                     <label for="bio_known_by_all" style="display: inline-flex; align-items: center; gap: 8px; margin: 0;">
@@ -999,6 +1111,25 @@ if (!$isEmbed) {
                     <button id="generate_speech_style_btn" type="button" class="btn-ai-generate" onclick="generatePlayerSpeechStyle()">AI Generate From Last 200 Inputs</button>
                 </div>
                 <span class="hint">Reads up to the last 200 player input events and generates a one-paragraph speech style prompt.</span>
+            </div>
+
+            <div class="content-section">
+                <h2>📙 Player Diary</h2>
+                <input type="hidden" name="diary_enabled" value="0">
+                <label class="toggle-row">
+                    <div class="toggle-switch">
+                        <input
+                            type="checkbox"
+                            id="diary_enabled"
+                            name="diary_enabled"
+                            value="1"
+                            <?php echo $playerDiaryEnabled ? 'checked' : ''; ?>
+                        >
+                        <span class="toggle-slider"></span>
+                    </div>
+                    <span class="toggle-label">Enable <?php echo htmlspecialchars($playerName); ?>'s Diary</span>
+                </label>
+                <span class="hint">Allows <?php echo htmlspecialchars($playerName); ?> to write diary entries. This can be triggered by the Prisma Actions menu or Auto Diary.</span>
             </div>
         </div>
     </form>

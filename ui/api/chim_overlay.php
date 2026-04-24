@@ -20,6 +20,7 @@ require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."profile_loader.php");
 
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."logger.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+require_once(LIB_PATH .DIRECTORY_SEPARATOR."core".DIRECTORY_SEPARATOR."player.class.php");
 
 $db = new sql();
 
@@ -129,6 +130,15 @@ $slotNames = ['Standard LLM', 'Fast LLM', 'Powerful LLM', 'Experimental LLM'];
 $slotLabels = ['Standard', 'Fast', 'Powerful', 'Experimental'];
 $activeModelName = 'Unknown';
 $activeSlotLabel = 'Unknown';
+$player = new Player();
+$playerName = trim((string)($player->get('player_name') ?? ''));
+if ($playerName === '') {
+    $playerNameResult = $db->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME' LIMIT 1");
+    $playerName = trim((string)($playerNameResult['value'] ?? ''));
+}
+if ($playerName === '') {
+    $playerName = 'Player';
+}
 
 // Map the slot number (1-4) to the label
 if ($activeModelSlot >= 1 && $activeModelSlot <= 4) {
@@ -151,6 +161,7 @@ $response = [
     'success' => true,
     'data' => [
         'mode' => $currentMode,
+        'player_name' => $playerName,
         'focus_chat' => $focusChat,
         'active_model_slot' => $activeModelSlot,
         'active_model_label' => $activeSlotLabel,

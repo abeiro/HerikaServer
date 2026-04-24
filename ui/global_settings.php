@@ -210,6 +210,16 @@ function flatten_current_conf(array $currentConf, array $confSchema): array {
         $fieldName = strtr($pname, [" " => "@"]); // HERIKA NAME -> HERIKA@NAME
         $type = $parms["type"] ?? ($confSchema[$pname]["type"] ?? 'string');
         $val = $parms["currentValue"] ?? '';
+        if ($type !== 'selectmultiple' && is_array($val)) {
+            $firstScalar = '';
+            foreach ($val as $candidate) {
+                if (is_scalar($candidate)) {
+                    $firstScalar = (string)$candidate;
+                    break;
+                }
+            }
+            $val = $firstScalar;
+        }
         if ($type === 'boolean') {
             $flat[$fieldName] = $val ? 'true' : 'false';
         } else if ($type === 'selectmultiple') {
@@ -218,12 +228,7 @@ function flatten_current_conf(array $currentConf, array $confSchema): array {
             $flat[$fieldName] = (string)($val === '' ? '' : $val);
         } else {
             // strings, longstring, url, apikey, foreign, etc.
-            if (is_array($val)) {
-                // Defensive: unexpected arrays default to empty
-                $flat[$fieldName] = [];
-            } else {
-                $flat[$fieldName] = (string)$val;
-            }
+            $flat[$fieldName] = (string)$val;
         }
     }
     return $flat;
@@ -278,6 +283,17 @@ function build_conf_php_from_pairs(array $pairs, array $confSchema): string {
         $fullNameHierch = explode("@", $k);
         $plainNameHierch = strtr($k, ["@" => " "]);
         $type = $confSchema[$plainNameHierch]["type"] ?? 'string';
+
+        if ($type !== 'selectmultiple' && is_array($v)) {
+            $firstScalar = '';
+            foreach ($v as $candidate) {
+                if (is_scalar($candidate)) {
+                    $firstScalar = (string)$candidate;
+                    break;
+                }
+            }
+            $v = $firstScalar;
+        }
 
         if (is_array($v)) {
             $value = json_encode($v, true);

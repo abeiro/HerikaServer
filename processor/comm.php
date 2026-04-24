@@ -2084,11 +2084,12 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     }
     
     
-    if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
+    $diaryConnector = function_exists('chimResolveDiaryConnectorName') ? chimResolveDiaryConnectorName() : null;
+    if ($diaryConnector === null) {
             ;
 	}
 	 else {
-		require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php");
+		require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$diaryConnector}.php");
         
         $historyData="";
         $lastPlace="";
@@ -2152,13 +2153,13 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $prompt[] = ["role" => "user", "content" => "Character to update:"  . $GLOBALS["HERIKA_NAME"] . "\nCharacter biography information:\n" . $GLOBALS["HERIKA_PERS"] . "\n" ."Character dynamic biography (this is what you are updating):\n" . $currentDynamicProfile];
 		$prompt[] = ["role"=> "user", "content"	=> $updateProfilePrompt, ];
 		$contextData       = array_merge($head, $prompt);
-        $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
+        $connectionHandler = new $diaryConnector();
         // Prefer connector-configured max_tokens for diary; then legacy memory; else default
         $maxTokens = null;
-        if (isset($GLOBALS["CONNECTOR"][DMgetCurrentModel()]["max_tokens"])) {
-            $maxTokens = (int)$GLOBALS["CONNECTOR"][DMgetCurrentModel()]["max_tokens"];
-        } elseif (isset($GLOBALS["CONNECTOR"][DMgetCurrentModel()]["MAX_TOKENS_MEMORY"])) {
-            $maxTokens = (int)$GLOBALS["CONNECTOR"][DMgetCurrentModel()]["MAX_TOKENS_MEMORY"];
+        if (isset($GLOBALS["CONNECTOR"][$diaryConnector]["max_tokens"])) {
+            $maxTokens = (int)$GLOBALS["CONNECTOR"][$diaryConnector]["max_tokens"];
+        } elseif (isset($GLOBALS["CONNECTOR"][$diaryConnector]["MAX_TOKENS_MEMORY"])) {
+            $maxTokens = (int)$GLOBALS["CONNECTOR"][$diaryConnector]["MAX_TOKENS_MEMORY"];
         } else {
             $maxTokens = 2048;
         }
@@ -2362,6 +2363,44 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     } catch (Throwable $e) {
         echo "The Narrator|rolecommand|DebugNotification@The Narrator diary update failed." . PHP_EOL;
         Logger::error("diary_narrator: Error generating narrator diary entry: " . $e->getMessage());
+    }
+    
+    terminate();
+    
+} elseif (strpos($gameRequest[0], "diary_player")===0) {
+    
+    Logger::info("diary_player: Direct player diary request received");
+    
+    if (!isPlayerDiaryEnabled()) {
+        $playerName = isset($GLOBALS["PLAYER_NAME"]) && trim((string)$GLOBALS["PLAYER_NAME"]) !== ''
+            ? trim((string)$GLOBALS["PLAYER_NAME"])
+            : "Player";
+        echo $playerName . "|rolecommand|DebugNotification@" . $playerName . " diary is disabled." . PHP_EOL;
+        Logger::warn("diary_player: Player diary is disabled");
+        terminate();
+    }
+    
+    if (!class_exists('Player')) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+    }
+    $player = new Player();
+    $playerName = getConfiguredPlayerDiaryName($player);
+    
+    echo $playerName . "|rolecommand|DebugNotification@Writing diary entry for " . $playerName . PHP_EOL;
+    @ob_flush();
+    @flush();
+    
+    try {
+        $success = generatePlayerDiary($gameRequest, "manual_player");
+        if (!$success) {
+            echo $playerName . "|rolecommand|DebugNotification@" . $playerName . " diary update failed." . PHP_EOL;
+            Logger::warn("diary_player: Failed to generate player diary entry");
+        } else {
+            Logger::info("diary_player: Successfully generated player diary entry");
+        }
+    } catch (Throwable $e) {
+        echo $playerName . "|rolecommand|DebugNotification@" . $playerName . " diary update failed." . PHP_EOL;
+        Logger::error("diary_player: Error generating player diary entry: " . $e->getMessage());
     }
     
     terminate();

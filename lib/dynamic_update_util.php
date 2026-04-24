@@ -16,9 +16,9 @@ function processNearbyDiary($gameRequest, $eventType) {
 // Function to generate diary entry for a nearby NPC (similar to followers but for any NPC)
 function generateNearbyDiary($npcName, $gameRequest, $eventType) {
     global $db;
-    
-    // Check if we have the diary connector configured
-    if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
+
+    $defaultDiaryConnector = function_exists('chimResolveDiaryConnectorName') ? chimResolveDiaryConnectorName() : null;
+    if ($defaultDiaryConnector === null) {
         Logger::info("DIARY_NEARBY: No diary connector configured for $npcName");
         return false;
     }
@@ -69,10 +69,19 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
                 "COMMAND_PROMPT" => isset($GLOBALS["COMMAND_PROMPT"]) ? $GLOBALS["COMMAND_PROMPT"] : "",
                 "CONTEXT_HISTORY" => isset($GLOBALS["CONTEXT_HISTORY"]) ? $GLOBALS["CONTEXT_HISTORY"] : 25,
                 "CONTEXT_HISTORY_DIARY" => isset($GLOBALS["CONTEXT_HISTORY_DIARY"]) ? $GLOBALS["CONTEXT_HISTORY_DIARY"] : 0,
-                "CONNECTORS_DIARY" => $GLOBALS["CONNECTORS_DIARY"]
+                "CONNECTORS_DIARY" => $defaultDiaryConnector
             ];
             Logger::info("DIARY_NEARBY: Using default profile for $npcName");
         }
+
+        $resolvedDiaryConnector = function_exists('chimResolveDiaryConnectorName')
+            ? chimResolveDiaryConnectorName($NPC_CONF["CONNECTORS_DIARY"] ?? $defaultDiaryConnector)
+            : $defaultDiaryConnector;
+        if ($resolvedDiaryConnector === null) {
+            Logger::warn("DIARY_NEARBY: Unable to resolve diary connector for $npcName");
+            return false;
+        }
+        $NPC_CONF["CONNECTORS_DIARY"] = $resolvedDiaryConnector;
 
         // Always enforce PLAYER_NAME from database-synced global, overriding any stale value in profiles
         // Ensures all '#PLAYER_NAME#' replacements resolve to current in-game name
@@ -120,13 +129,13 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
         // Generate diary entry using LLM
         require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."connector".DIRECTORY_SEPARATOR."{$NPC_CONF["CONNECTORS_DIARY"]}.php");
         
-        $connectionHandler = new $NPC_CONF["CONNECTORS_DIARY"];
+        $connectionHandler = new $resolvedDiaryConnector();
         // Prefer connector's configured max_tokens; fallback to legacy MAX_TOKENS_MEMORY; then a sane default
         $maxTokens = null;
-        if (isset($GLOBALS["CONNECTOR"][$NPC_CONF["CONNECTORS_DIARY"]]["max_tokens"]) && $GLOBALS["CONNECTOR"][$NPC_CONF["CONNECTORS_DIARY"]]["max_tokens"] !== '') {
-            $maxTokens = (int)$GLOBALS["CONNECTOR"][$NPC_CONF["CONNECTORS_DIARY"]]["max_tokens"];
-        } elseif (isset($GLOBALS["CONNECTOR"][$NPC_CONF["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"])) {
-            $maxTokens = (int)$GLOBALS["CONNECTOR"][$NPC_CONF["CONNECTORS_DIARY"]]["MAX_TOKENS_MEMORY"];
+        if (isset($GLOBALS["CONNECTOR"][$resolvedDiaryConnector]["max_tokens"]) && $GLOBALS["CONNECTOR"][$resolvedDiaryConnector]["max_tokens"] !== '') {
+            $maxTokens = (int)$GLOBALS["CONNECTOR"][$resolvedDiaryConnector]["max_tokens"];
+        } elseif (isset($GLOBALS["CONNECTOR"][$resolvedDiaryConnector]["MAX_TOKENS_MEMORY"])) {
+            $maxTokens = (int)$GLOBALS["CONNECTOR"][$resolvedDiaryConnector]["MAX_TOKENS_MEMORY"];
         } else {
             $maxTokens = 2048;
         }
@@ -213,10 +222,273 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
 }
 
 // Function to process AUTO_DIARY for nearby NPCs with auto_diary_enabled
+function buildPlayerDiaryPrompt(string $playerName): string
+{
+    $template = trim((string)($GLOBALS["PLAYER_DIARY_PROMPT"] ?? ''));
+    if ($template === '') {
+        $template = "Please write a short summary of #PLAYER_NAME#'s recent dialogues and events written above into #PLAYER_NAME#'s diary. WRITE AS IF YOU WERE #PLAYER_NAME#. Use first person and start the diary entry with the current date and time.";
+    }
+
+    return strtr($template, ['#PLAYER_NAME#' => $playerName]);
+}
+
+function getConfiguredPlayerDiaryName(Player $player): string
+{
+    $playerName = trim((string)($player->get('player_name') ?? ($GLOBALS["PLAYER_NAME"] ?? '')));
+    if ($playerName === '') {
+        $playerName = 'Player';
+    }
+
+    return $playerName;
+}
+
+function isPlayerDiaryEnabled(): bool
+{
+    if (!class_exists('Player')) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+    }
+
+    try {
+        $player = new Player();
+        return $player->getBool('diary_enabled', false);
+    } catch (Throwable $e) {
+        Logger::error("PLAYER_DIARY: Failed to read player diary setting: " . $e->getMessage());
+        return false;
+    }
+}
+
+function generatePlayerDiary($gameRequest, $eventType)
+{
+    global $db;
+
+    if (!class_exists('Player')) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+    }
+    if (!class_exists('LLMConnector')) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "llm_connector.class.php");
+    }
+
+    $player = new Player();
+    $playerName = getConfiguredPlayerDiaryName($player);
+    $allPlayerData = $player->getAll();
+
+    $playerAppearance = trim((string)($allPlayerData['appearance'] ?? ''));
+    $playerBackground = trim((string)($allPlayerData['background'] ?? ''));
+    if ($playerBackground === '') {
+        $playerBackground = trim((string)($allPlayerData['bio'] ?? ''));
+    }
+    $playerSpeechStyle = trim((string)($allPlayerData['speech_style'] ?? ''));
+
+    if ($playerBackground === '' && !empty(trim((string)($GLOBALS["PLAYER_BIOS"] ?? '')))) {
+        $playerBackground = trim((string)$GLOBALS["PLAYER_BIOS"]);
+    }
+
+    $playerAppearance = strtr($playerAppearance, ['#PLAYER_NAME#' => $playerName]);
+    $playerBackground = strtr($playerBackground, ['#PLAYER_NAME#' => $playerName]);
+    $playerSpeechStyle = strtr($playerSpeechStyle, ['#PLAYER_NAME#' => $playerName]);
+
+    $systemParts = [
+        "You are writing {$playerName}'s private diary in the world of Skyrim.",
+        "Write in first person as {$playerName}.",
+        "Do not write as The Narrator or as any NPC companion.",
+        "Ground the entry in the recent dialogue and events provided.",
+        "Use the provided background and speech style details to keep the entry consistent with {$playerName}'s history and voice."
+    ];
+
+    $resolvedPromptHead = trim(strtr((string)($GLOBALS["PROMPT_HEAD"] ?? ''), [
+        '#PLAYER_NAME#' => $playerName,
+        '#HERIKA_NAME#' => $playerName
+    ]));
+    if ($resolvedPromptHead !== '') {
+        $systemParts[] = $resolvedPromptHead;
+    }
+
+    $playerDetails = [];
+    if ($playerAppearance !== '') {
+        $playerDetails[] = "#Appearance\n{$playerAppearance}";
+    }
+    if ($playerBackground !== '') {
+        $playerDetails[] = "#Background\n{$playerBackground}";
+    }
+    if ($playerSpeechStyle !== '') {
+        $playerDetails[] = "#Speech Style\n{$playerSpeechStyle}";
+    }
+    if (!empty($playerDetails)) {
+        $systemParts[] = "#Character Details\n" . implode("\n\n", $playerDetails);
+    }
+
+    $head[] = [
+        'role' => 'system',
+        'content' => implode("\n\n", $systemParts)
+    ];
+
+    if (isset($GLOBALS["CONTEXT_HISTORY_DIARY"]) && $GLOBALS["CONTEXT_HISTORY_DIARY"] > 0) {
+        $lastNDataForContext = $GLOBALS["CONTEXT_HISTORY_DIARY"] + 0;
+    } else {
+        $lastNDataForContext = isset($GLOBALS["CONTEXT_HISTORY"]) ? ($GLOBALS["CONTEXT_HISTORY"] + 0) : 25;
+    }
+
+    $sqlfilter = " and type<>'prechat' and type<>'itemfound' and type<>'infoaction' and type<>'npcspellcast' ";
+    $contextDataHistoric = DataLastDataExpandedFor($playerName, $lastNDataForContext * -1, $sqlfilter);
+    $historyData = "";
+    foreach ($contextDataHistoric as $element) {
+        $historyData .= trim((string)($element["content"] ?? '')) . PHP_EOL . PHP_EOL;
+    }
+
+    $prompt = [];
+    if (!empty($contextDataHistoric)) {
+        $prompt[] = ["role" => "user", "content" => "Recent context: " . $historyData];
+    }
+
+    $prompt[] = [
+        "role" => "user",
+        "content" => buildPlayerDiaryPrompt($playerName)
+    ];
+
+    $contextData = array_merge($head, $prompt);
+
+    $originalGameRequest = $GLOBALS["gameRequest"] ?? null;
+    $GLOBALS["gameRequest"] = [0 => "diary_player", 1 => time(), 2 => $gameRequest[2], 3 => "Diary for " . $playerName];
+
+    $hadForce = array_key_exists('FORCE_MAX_TOKENS', $GLOBALS);
+    $prevForce = $hadForce ? $GLOBALS['FORCE_MAX_TOKENS'] : null;
+    if ($hadForce) {
+        unset($GLOBALS['FORCE_MAX_TOKENS']);
+    }
+
+    $buffer = "";
+
+    try {
+        $connector = new LLMConnector();
+        $coreConnectorId = trim((string)$player->get('diary_connector_id'));
+        if ($coreConnectorId === '') {
+            foreach (['CORE_CONNECTOR_SUMMARY', 'CORE_CONNECTOR_PLAYER', 'CORE_CONNECTOR_PROFILES'] as $globalConnectorKey) {
+                $candidateConnectorId = trim((string)($GLOBALS[$globalConnectorKey] ?? ''));
+                if ($candidateConnectorId !== '') {
+                    $coreConnectorId = $candidateConnectorId;
+                    break;
+                }
+            }
+        }
+
+        $currentConnectorData = null;
+        if ($coreConnectorId !== '') {
+            $currentConnectorData = $connector->getById($coreConnectorId);
+        }
+
+        if (!empty($currentConnectorData)) {
+            Logger::info("PLAYER_DIARY: Using core connector {$coreConnectorId} ({$currentConnectorData["driver"]}/{$currentConnectorData["model"]})");
+            $connector->setOldGlobals($currentConnectorData);
+            $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
+            unset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["stop"]);
+
+            $maxTokens = null;
+            if (isset($currentConnectorData["max_tokens"]) && $currentConnectorData["max_tokens"] !== null && $currentConnectorData["max_tokens"] !== '') {
+                $maxTokens = (int)$currentConnectorData["max_tokens"];
+            } elseif (isset($GLOBALS["CONNECTOR"][$currentConnectorData["driver"]]["max_tokens"])) {
+                $maxTokens = (int)$GLOBALS["CONNECTOR"][$currentConnectorData["driver"]]["max_tokens"];
+            } elseif (isset($GLOBALS["CONNECTOR"][$currentConnectorData["driver"]]["MAX_TOKENS_MEMORY"])) {
+                $maxTokens = (int)$GLOBALS["CONNECTOR"][$currentConnectorData["driver"]]["MAX_TOKENS_MEMORY"];
+            } else {
+                $maxTokens = 2048;
+            }
+
+            $connectionHandler = $connector->getConnector($currentConnectorData);
+            $buffer = (string)$connectionHandler->fast_request($contextData, ["MAX_TOKENS" => $maxTokens], "diary");
+        } else {
+            $diaryConnector = function_exists('chimResolveDiaryConnectorName') ? chimResolveDiaryConnectorName() : null;
+            if ($diaryConnector === null) {
+                Logger::warn("PLAYER_DIARY: No diary connector configured");
+                return false;
+            }
+
+            Logger::warn("PLAYER_DIARY: Falling back to legacy diary connector '{$diaryConnector}'");
+            require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "connector" . DIRECTORY_SEPARATOR . "{$diaryConnector}.php");
+
+            $maxTokens = null;
+            if (isset($GLOBALS["CONNECTOR"][$diaryConnector]["max_tokens"]) && $GLOBALS["CONNECTOR"][$diaryConnector]["max_tokens"] !== '') {
+                $maxTokens = (int)$GLOBALS["CONNECTOR"][$diaryConnector]["max_tokens"];
+            } elseif (isset($GLOBALS["CONNECTOR"][$diaryConnector]["MAX_TOKENS_MEMORY"])) {
+                $maxTokens = (int)$GLOBALS["CONNECTOR"][$diaryConnector]["MAX_TOKENS_MEMORY"];
+            } else {
+                $maxTokens = 2048;
+            }
+
+            $connectionHandler = new $diaryConnector();
+            $connectionHandler->open($contextData, ["MAX_TOKENS" => $maxTokens]);
+
+            while (true) {
+                $chunk = $connectionHandler->process();
+                if ($chunk !== null && $chunk !== false) {
+                    $buffer .= $chunk;
+                }
+
+                if ($connectionHandler->isDone()) {
+                    break;
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        Logger::error("PLAYER_DIARY: Error generating diary for {$playerName}: " . $e->getMessage());
+    } finally {
+        if (isset($connectionHandler) && is_object($connectionHandler) && method_exists($connectionHandler, 'close')) {
+            try {
+                $connectionHandler->close("generatePlayerDiary");
+            } catch (Throwable $closeError) {
+                Logger::debug("PLAYER_DIARY: Connector close warning for {$playerName}: " . $closeError->getMessage());
+            }
+        }
+
+        if ($hadForce) {
+            $GLOBALS['FORCE_MAX_TOKENS'] = $prevForce;
+        }
+
+        if ($originalGameRequest !== null) {
+            $GLOBALS["gameRequest"] = $originalGameRequest;
+        } else {
+            unset($GLOBALS["gameRequest"]);
+        }
+    }
+
+    if (!empty(trim($buffer))) {
+        $topic = DataLastKnowDate();
+        $location = DataLastKnownLocation();
+        $momentum = time();
+
+        $db->insert(
+            'diarylog',
+            array(
+                'ts' => $gameRequest[1],
+                'gamets' => $gameRequest[2],
+                'topic' => $topic . " (Player diary: $eventType)",
+                'content' => trim($buffer),
+                'tags' => "Player-diary,$eventType",
+                'people' => $playerName,
+                'location' => $location,
+                'sess' => $momentum,
+                'localts' => time()
+            )
+        );
+
+        if (function_exists('logMemory')) {
+            logMemory($playerName, $playerName, trim($buffer), $momentum, $gameRequest[2], 'player_diary', $gameRequest[1]);
+        }
+
+        echo $playerName . "|rolecommand|DebugNotification@Diary Entry Written for " . $playerName . PHP_EOL;
+        @ob_flush();
+        @flush();
+
+        return true;
+    }
+
+    return false;
+}
+
 function processAutoDiary($gameRequest, $eventType) {
     global $db;
     
     Logger::info("AUTO_DIARY: Function called for event type: $eventType");
+    $playerDiaryEnabled = isPlayerDiaryEnabled();
     
     // Get nearby NPCs
     $nearbyNpcsStr = DataBeingsInCloseRange();
@@ -242,8 +514,8 @@ function processAutoDiary($gameRequest, $eventType) {
         Logger::info("AUTO_DIARY: Added The Narrator to auto diary processing (toggle enabled)");
     }
     
-    if (empty($nearbyNpcs)) {
-        Logger::info("AUTO_DIARY: No nearby NPCs (including narrator) to process");
+    if (empty($nearbyNpcs) && !$playerDiaryEnabled) {
+        Logger::info("AUTO_DIARY: No nearby NPCs, narrator, or player diary entries to process");
         return;
     }
     
@@ -251,6 +523,57 @@ function processAutoDiary($gameRequest, $eventType) {
     $generatedCount = 0;
     $diaryCooldownPeriod = isset($GLOBALS["DIARY_COOLDOWN"]) ? intval($GLOBALS["DIARY_COOLDOWN"]) : 30;
     
+    if ($playerDiaryEnabled) {
+        try {
+            if (!class_exists('Player')) {
+                require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+            }
+
+            $player = new Player();
+            $playerName = getConfiguredPlayerDiaryName($player);
+            $playerNameSafe = preg_replace('/[^a-zA-Z0-9_]/', '_', $playerName);
+            $cooldownKey = "DIARY_LAST_TIMESTAMP_PLAYER_" . $playerNameSafe;
+
+            $diaryRecord = $db->fetchAll("SELECT value FROM conf_opts WHERE id='" . $db->escape($cooldownKey) . "'");
+            if (!empty($diaryRecord) && isset($diaryRecord[0]['value'])) {
+                $lastTimestamp = intval($diaryRecord[0]['value']);
+                $timeSinceLastDiary = time() - $lastTimestamp;
+
+                if ($timeSinceLastDiary < $diaryCooldownPeriod) {
+                    $remaining = $diaryCooldownPeriod - $timeSinceLastDiary;
+                    Logger::debug("AUTO_DIARY: {$playerName} is on diary cooldown (remaining: {$remaining}s), skipping");
+                } else {
+                    $processedCount++;
+                    if (generatePlayerDiary($gameRequest, $eventType)) {
+                        $generatedCount++;
+                        $db->query("DELETE FROM conf_opts WHERE id='" . $db->escape($cooldownKey) . "'");
+                        $db->insert('conf_opts', [
+                            'id' => $cooldownKey,
+                            'value' => (string)time()
+                        ]);
+                        Logger::info("AUTO_DIARY: Successfully generated player diary for {$playerName}");
+                    } else {
+                        Logger::warn("AUTO_DIARY: Failed to generate player diary for {$playerName}");
+                    }
+                }
+            } else {
+                $processedCount++;
+                if (generatePlayerDiary($gameRequest, $eventType)) {
+                    $generatedCount++;
+                    $db->insert('conf_opts', [
+                        'id' => $cooldownKey,
+                        'value' => (string)time()
+                    ]);
+                    Logger::info("AUTO_DIARY: Successfully generated player diary for {$playerName}");
+                } else {
+                    Logger::warn("AUTO_DIARY: Failed to generate player diary for {$playerName}");
+                }
+            }
+        } catch (Throwable $e) {
+            Logger::error("AUTO_DIARY: Error processing player diary: " . $e->getMessage());
+        }
+    }
+
     Logger::info("AUTO_DIARY: Processing $eventType event for " . count($nearbyNpcs) . " nearby NPCs/entities");
     
     foreach ($nearbyNpcs as $npcName) {

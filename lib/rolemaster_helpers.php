@@ -959,11 +959,12 @@ function createQuestFromTemplate($template, $notes)
 
     $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
-    if (!isset($GLOBALS["CONNECTORS_DIARY"]) || !file_exists($enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php")) {
+    $diaryConnector = function_exists('chimResolveDiaryConnectorName') ? chimResolveDiaryConnectorName() : null;
+    if ($diaryConnector === null) {
         return false;
     }
 
-    require_once $enginePath . "connector" . DIRECTORY_SEPARATOR . "{$GLOBALS["CONNECTORS_DIARY"]}.php";
+    require_once $enginePath . "connector" . DIRECTORY_SEPARATOR . "{$diaryConnector}.php";
 
     $head[] = ["role" => "system", "content" => $GLOBALS["AIQUEST_TEMPLATE"]];
     $prompt[] = ["role" => "user", "content" => json_encode($template)];
@@ -975,7 +976,7 @@ function createQuestFromTemplate($template, $notes)
     $contextData = array_merge($head, $prompt);
 
     //print_r($contextData);
-    $connectionHandler = new $GLOBALS["CONNECTORS_DIARY"];
+    $connectionHandler = new $diaryConnector();
     $GLOBALS["FORCE_MAX_TOKENS"] = 2048;
     $connectionHandler->open($contextData, ["MAX_TOKENS" => 2048]);
     $buffer = "";
