@@ -284,6 +284,8 @@ class CoreProfile
             'REMOVE_ASTERISKS_FROM_NPC_OUTPUT',
             'INLINE_NARRATION_ENABLED',
             'INLINE_NARRATION_MODE',
+            'REMOVE_PLAYER_AUTOCHAT_ASTERISKS',
+            'PLAYER_AUTOCHAT_ASTERISKS_ENABLED',
             'PRESERVE_ASTERISKS_IN_CONTEXT'
         ];
         if (is_array($metadata)) {

@@ -696,6 +696,18 @@ function isInlineNarrationEnabled() {
     return getInlineNarrationMode() !== 'disabled';
 }
 
+function shouldRemovePlayerAutochatAsterisks() {
+    if (isset($GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'])) {
+        return (bool)$GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'];
+    }
+
+    if (isset($GLOBALS['PLAYER_AUTOCHAT_ASTERISKS_ENABLED'])) {
+        return !(bool)$GLOBALS['PLAYER_AUTOCHAT_ASTERISKS_ENABLED'];
+    }
+
+    return true;
+}
+
 function shouldSplitInlineNarration() {
     return getInlineNarrationMode() === 'narrator';
 }
@@ -787,6 +799,16 @@ function stripLeadingParentheticalBlocks($text) {
     return preg_replace('/^\s*(?:\([^)]*\)\s*)+/', '', (string)$text);
 }
 
+function stripLeadingPlayerRespeechNarration($text) {
+    $speechText = (string)$text;
+    do {
+        $previousText = $speechText;
+        $speechText = preg_replace('/^\s*(?:(?:\([^)]*\))|(?:\*[^*]+\*))\s*/', '', $speechText);
+    } while ($speechText !== $previousText);
+
+    return $speechText;
+}
+
 function convertLeadingParentheticalBlocksToInlineNarration($text) {
     $speechText = (string)$text;
     if (!preg_match('/^\s*((?:\([^)]*\)\s*)+)/', $speechText, $matches)) {
@@ -811,23 +833,19 @@ function convertLeadingParentheticalBlocksToInlineNarration($text) {
     return trim($inlineNarration . ' ' . ltrim((string)$remainingText));
 }
 
-function shouldPreservePlayerRespeechNarration() {
-    return isInlineNarrationEnabled();
-}
-
 function sanitizePlayerRespeechText($text, $speakerName = null) {
-    $preserveNarration = shouldPreservePlayerRespeechNarration();
+    $removeNarration = shouldRemovePlayerAutochatAsterisks();
     $speechText = str_replace(["\r", "\n"], ' ', (string)$text);
-    $speechText = $preserveNarration
-        ? convertLeadingParentheticalBlocksToInlineNarration($speechText)
-        : stripLeadingParentheticalBlocks($speechText);
-    if ($preserveNarration) {
+    $speechText = $removeNarration
+        ? stripLeadingPlayerRespeechNarration($speechText)
+        : convertLeadingParentheticalBlocksToInlineNarration($speechText);
+    if (!$removeNarration) {
         $speechText = stripOutputSpeakerPrefixAfterInlineNarration($speechText, $speakerName);
     }
     $speechText = stripOutputSpeakerPrefix($speechText, $speakerName);
-    $speechText = $preserveNarration
-        ? convertLeadingParentheticalBlocksToInlineNarration($speechText)
-        : stripLeadingParentheticalBlocks($speechText);
+    $speechText = $removeNarration
+        ? stripLeadingPlayerRespeechNarration($speechText)
+        : convertLeadingParentheticalBlocksToInlineNarration($speechText);
     return trim(preg_replace('/\s+/', ' ', $speechText));
 }
 

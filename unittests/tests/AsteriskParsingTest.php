@@ -18,6 +18,8 @@ final class AsteriskParsingTest extends TestCase
             $GLOBALS['PLAYER_NAME'],
             $GLOBALS['INLINE_NARRATION_MODE'],
             $GLOBALS['INLINE_NARRATION_ENABLED'],
+            $GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'],
+            $GLOBALS['PLAYER_AUTOCHAT_ASTERISKS_ENABLED'],
             $GLOBALS['PRESERVE_ASTERISKS_IN_CONTEXT'],
             $GLOBALS['REMOVE_ASTERISKS_FROM_PLAYER_INPUT'],
             $GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'],
@@ -165,7 +167,8 @@ final class AsteriskParsingTest extends TestCase
     public function testSanitizePlayerRespeechTextStripsLeadingNarrationAndPlayerPrefix(): void
     {
         $GLOBALS['PLAYER_NAME'] = 'Rangroo';
-        $GLOBALS['INLINE_NARRATION_MODE'] = 'disabled';
+        $GLOBALS['INLINE_NARRATION_MODE'] = 'narrator';
+        $GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'] = true;
 
         $this->assertSame(
             "Sven. The air bites today, doesn't it? (Talking to Sven)",
@@ -176,10 +179,25 @@ final class AsteriskParsingTest extends TestCase
         );
     }
 
+    public function testSanitizePlayerRespeechTextStripsLeadingInlineAsterisksWhenDisabled(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'Rangroo';
+        $GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'] = true;
+
+        $this->assertSame(
+            "Sven. The air bites today, doesn't it? (Talking to Sven)",
+            sanitizePlayerRespeechText(
+                "*A shiver runs down Rangroo's spine, despite his heavy furs.* Rangroo: Sven. The air bites today, doesn't it? (Talking to Sven)",
+                $GLOBALS['PLAYER_NAME']
+            )
+        );
+    }
+
     public function testSanitizePlayerRespeechTextConvertsLeadingNarrationToInlineAsterisksWhenEnabled(): void
     {
         $GLOBALS['PLAYER_NAME'] = 'Rangroo';
-        $GLOBALS['INLINE_NARRATION_MODE'] = 'narrator';
+        $GLOBALS['INLINE_NARRATION_MODE'] = 'disabled';
+        $GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'] = false;
 
         $this->assertSame(
             "*A shiver runs down Rangroo's spine, despite his heavy furs.* Sven. The air bites today, doesn't it? (Talking to Sven)",

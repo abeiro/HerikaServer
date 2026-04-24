@@ -124,20 +124,19 @@ if (! isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
         $systemContent .= "\n\n# Character Context\n" . $playerContext;
     }
 
-    $inlineNarrationMode = getInlineNarrationMode();
-    $preserveInlineNarration = $inlineNarrationMode !== 'disabled';
+    $removePlayerAutochatAsterisks = shouldRemovePlayerAutochatAsterisks();
 
     // Build instruction
     if (!$_GET["speech"]) {
         $instruction = "Write dialogue for {$GLOBALS["PLAYER_NAME"]}.";
         $outputInstruction = "Output only the final spoken dialogue line. No narration. No stage directions. No speaker names. No bracketed comments.";
     } else {
-        if ($preserveInlineNarration) {
+        if ($removePlayerAutochatAsterisks) {
+            $instruction = "Rewrite dialogue for {$GLOBALS["PLAYER_NAME"]}, using this text as source \"{$GLOBALS["PLAYER_NAME"]}:{$_GET["speech"]}\". Use comments between brackets only as guidance for tone, target, length, and verbosity. Do not repeat bracketed comments, stage directions, narration, asterisked narration, or speaker names in the output.";
+            $outputInstruction = "Output only the final spoken dialogue line. No narration. No stage directions. No asterisked narration. No speaker names. No bracketed comments.";
+        } else {
             $instruction = "Rewrite dialogue for {$GLOBALS["PLAYER_NAME"]}, using this text as source \"{$GLOBALS["PLAYER_NAME"]}:{$_GET["speech"]}\". Use comments between brackets only as guidance for tone, target, length, and verbosity. If the source includes brief narration or stage business before the spoken line, preserve it as one short third-person narration block in single asterisks before the dialogue. Do not repeat bracketed comments or speaker names in the output.";
             $outputInstruction = "Output only the rewritten line. If the source includes brief leading narration, keep at most one short leading narration block in single asterisks before the spoken dialogue. Keep spoken dialogue outside the asterisks. No speaker names. No bracketed comments.";
-        } else {
-            $instruction = "Rewrite dialogue for {$GLOBALS["PLAYER_NAME"]}, using this text as source \"{$GLOBALS["PLAYER_NAME"]}:{$_GET["speech"]}\". Use comments between brackets only as guidance for tone, target, length, and verbosity. Do not repeat bracketed comments, stage directions, narration, or speaker names in the output.";
-            $outputInstruction = "Output only the final spoken dialogue line. No narration. No stage directions. No speaker names. No bracketed comments.";
         }
     }
 
