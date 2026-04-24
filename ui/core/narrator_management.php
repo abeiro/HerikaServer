@@ -112,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
         $narrator->set('preserve_asterisks_in_context', isset($_POST['preserve_asterisks_in_context']) && $_POST['preserve_asterisks_in_context'] === '1' ? '1' : '0');
         $narrator->set('remove_asterisks_from_player_input', isset($_POST['remove_asterisks_from_player_input']) && $_POST['remove_asterisks_from_player_input'] === '1' ? '1' : '0');
         $narrator->set('remove_asterisks_from_npc_output', isset($_POST['remove_asterisks_from_npc_output']) && $_POST['remove_asterisks_from_npc_output'] === '1' ? '1' : '0');
+        $narrator->set('remove_player_autochat_asterisks', isset($_POST['remove_player_autochat_asterisks']) && $_POST['remove_player_autochat_asterisks'] === '1' ? '1' : '0');
         $narrator->set('diary_enabled', isset($_POST['diary_enabled']) && $_POST['diary_enabled'] === '1' ? '1' : '0');
         
         // Save integer settings
@@ -222,6 +223,10 @@ if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
         $inlineNarrationMode = $narrator->getBool('inline_narration_enabled', isset($GLOBALS['INLINE_NARRATION_ENABLED']) ? (bool)$GLOBALS['INLINE_NARRATION_ENABLED'] : false) ? 'narrator' : 'disabled';
     }
 }
+$removePlayerAutochatAsterisks = $narrator->getBool(
+    'remove_player_autochat_asterisks',
+    isset($GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS']) ? (bool)$GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'] : (isset($GLOBALS['PLAYER_AUTOCHAT_ASTERISKS_ENABLED']) ? !(bool)$GLOBALS['PLAYER_AUTOCHAT_ASTERISKS_ENABLED'] : true)
+);
 $preserveAsterisksInContext = $narrator->getBool('preserve_asterisks_in_context', false);
 $removeAsterisksFromPlayerInput = $narrator->getBool(
     'remove_asterisks_from_player_input',
@@ -1238,6 +1243,15 @@ if (!$isEmbed) {
                         <span class="toggle-label">Remove NPC Output Asterisks</span>
                     </label>
                     <span class="hint">Filters *asterisked* NPC narration/emotes from NPC speech and subtitles. Turn this off if you want NPCs to keep or speak their own asterisked text.</span>
+
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="remove_player_autochat_asterisks" name="remove_player_autochat_asterisks" value="1" <?php echo $removePlayerAutochatAsterisks ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Remove Player Autochat Astreisk</span>
+                    </label>
+                    <span class="hint">Keeps AUTOCHAT and `**` player respeech spoken-only by stripping leading narration and *asterisked* narration from the rewritten player line. Turn this off if you want rewritten player text to keep one short leading *narration* block.</span>
 
                     <label class="toggle-row">
                         <div class="toggle-switch">

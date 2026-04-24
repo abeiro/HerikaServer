@@ -1883,6 +1883,29 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
+} elseif (strpos($gameRequest[0], "updateprofile_narrator")===0) {
+    
+    Logger::info("updateprofile_narrator: Direct narrator dynamic profile update requested");
+    echo "The Narrator|rolecommand|DebugNotification@Updating The Narrator dynamic profile..." . PHP_EOL;
+    @ob_flush();
+    @flush();
+    
+    try {
+        $success = processNarratorDynamicProfile($db);
+        if ($success) {
+            echo "The Narrator|rolecommand|DebugNotification@The Narrator dynamic profile updated." . PHP_EOL;
+            Logger::info("updateprofile_narrator: Successfully updated The Narrator dynamic profile");
+        } else {
+            echo "The Narrator|rolecommand|DebugNotification@The Narrator dynamic profile update failed." . PHP_EOL;
+            Logger::warn("updateprofile_narrator: Failed to update The Narrator dynamic profile");
+        }
+    } catch (Throwable $e) {
+        echo "The Narrator|rolecommand|DebugNotification@The Narrator dynamic profile update failed." . PHP_EOL;
+        Logger::error("updateprofile_narrator: Error updating The Narrator dynamic profile: " . $e->getMessage());
+    }
+    
+    terminate();
+    
 } elseif (strpos($gameRequest[0], "updateprofiles_batch_async")===0) {
     
     // Async batch processing for timer-based dynamic profile updates
@@ -2313,6 +2336,35 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
     $MUST_END=true;
     
+    
+} elseif (strpos($gameRequest[0], "diary_narrator")===0) {
+    
+    Logger::info("diary_narrator: Direct narrator diary request received");
+    
+    if (empty($GLOBALS["NARRATOR_DIARY_ENABLED"])) {
+        echo "The Narrator|rolecommand|DebugNotification@Narrator diary is disabled." . PHP_EOL;
+        Logger::warn("diary_narrator: Narrator diary is disabled");
+        terminate();
+    }
+    
+    echo "The Narrator|rolecommand|DebugNotification@The Narrator is writing a diary entry..." . PHP_EOL;
+    @ob_flush();
+    @flush();
+    
+    try {
+        $success = generateFollowerDiary("The Narrator", $gameRequest, "manual_narrator");
+        if (!$success) {
+            echo "The Narrator|rolecommand|DebugNotification@The Narrator diary update failed." . PHP_EOL;
+            Logger::warn("diary_narrator: Failed to generate narrator diary entry");
+        } else {
+            Logger::info("diary_narrator: Successfully generated narrator diary entry");
+        }
+    } catch (Throwable $e) {
+        echo "The Narrator|rolecommand|DebugNotification@The Narrator diary update failed." . PHP_EOL;
+        Logger::error("diary_narrator: Error generating narrator diary entry: " . $e->getMessage());
+    }
+    
+    terminate();
     
 } elseif (strpos($gameRequest[0], "diary_nearby")===0) {    // diary_nearby event - manual trigger for all NPCs in range
     

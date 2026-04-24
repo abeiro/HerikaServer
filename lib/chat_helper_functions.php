@@ -696,6 +696,18 @@ function isInlineNarrationEnabled() {
     return getInlineNarrationMode() !== 'disabled';
 }
 
+function shouldRemovePlayerAutochatAsterisks() {
+    if (isset($GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'])) {
+        return (bool)$GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'];
+    }
+
+    if (isset($GLOBALS['PLAYER_AUTOCHAT_ASTERISKS_ENABLED'])) {
+        return !(bool)$GLOBALS['PLAYER_AUTOCHAT_ASTERISKS_ENABLED'];
+    }
+
+    return true;
+}
+
 function shouldSplitInlineNarration() {
     return getInlineNarrationMode() === 'narrator';
 }
@@ -770,15 +782,70 @@ function stripOutputSpeakerPrefix($text, $speakerName = null) {
     return preg_replace('/^' . preg_quote((string)$speakerName, '/') . '\s*:\s*/i', '', (string)$text);
 }
 
+function stripOutputSpeakerPrefixAfterInlineNarration($text, $speakerName = null) {
+    $speakerName = $speakerName ?? ($GLOBALS["HERIKA_NAME"] ?? "");
+    if ($speakerName === '') {
+        return (string)$text;
+    }
+
+    return preg_replace(
+        '/^(\s*(?:\*[^*]+\*\s*)+)' . preg_quote((string)$speakerName, '/') . '\s*:\s*/i',
+        '$1',
+        (string)$text
+    );
+}
+
 function stripLeadingParentheticalBlocks($text) {
     return preg_replace('/^\s*(?:\([^)]*\)\s*)+/', '', (string)$text);
 }
 
+function stripLeadingPlayerRespeechNarration($text) {
+    $speechText = (string)$text;
+    do {
+        $previousText = $speechText;
+        $speechText = preg_replace('/^\s*(?:(?:\([^)]*\))|(?:\*[^*]+\*))\s*/', '', $speechText);
+    } while ($speechText !== $previousText);
+
+    return $speechText;
+}
+
+function convertLeadingParentheticalBlocksToInlineNarration($text) {
+    $speechText = (string)$text;
+    if (!preg_match('/^\s*((?:\([^)]*\)\s*)+)/', $speechText, $matches)) {
+        return $speechText;
+    }
+
+    preg_match_all('/\(([^)]*)\)/', $matches[1], $narrationMatches);
+    $narrationBlocks = [];
+    foreach ($narrationMatches[1] as $block) {
+        $block = trim((string)$block);
+        if ($block !== '') {
+            $narrationBlocks[] = "*{$block}*";
+        }
+    }
+
+    if (empty($narrationBlocks)) {
+        return stripLeadingParentheticalBlocks($speechText);
+    }
+
+    $remainingText = preg_replace('/^\s*(?:\([^)]*\)\s*)+/', '', $speechText);
+    $inlineNarration = implode(' ', $narrationBlocks);
+    return trim($inlineNarration . ' ' . ltrim((string)$remainingText));
+}
+
 function sanitizePlayerRespeechText($text, $speakerName = null) {
+    $removeNarration = shouldRemovePlayerAutochatAsterisks();
     $speechText = str_replace(["\r", "\n"], ' ', (string)$text);
-    $speechText = stripLeadingParentheticalBlocks($speechText);
+    $speechText = $removeNarration
+        ? stripLeadingPlayerRespeechNarration($speechText)
+        : convertLeadingParentheticalBlocksToInlineNarration($speechText);
+    if (!$removeNarration) {
+        $speechText = stripOutputSpeakerPrefixAfterInlineNarration($speechText, $speakerName);
+    }
     $speechText = stripOutputSpeakerPrefix($speechText, $speakerName);
-    $speechText = stripLeadingParentheticalBlocks($speechText);
+    $speechText = $removeNarration
+        ? stripLeadingPlayerRespeechNarration($speechText)
+        : convertLeadingParentheticalBlocksToInlineNarration($speechText);
     return trim(preg_replace('/\s+/', ' ', $speechText));
 }
 
