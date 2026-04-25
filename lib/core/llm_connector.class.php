@@ -1,9 +1,90 @@
 <?php
 
+require_once __DIR__ . DIRECTORY_SEPARATOR . "api_badge.class.php";
+
+if (!function_exists('chimConnectorExtraParametersEnabled')) {
+    function chimConnectorExtraParametersEnabled(array $connector): bool
+    {
+        if (!array_key_exists('extra_parameters_enabled', $connector)) {
+            return true;
+        }
+
+        $value = $connector['extra_parameters_enabled'];
+
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return ((int)$value) !== 0;
+        }
+
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+            if ($normalized === '' || $normalized === '0' || $normalized === 'false' || $normalized === 'off' || $normalized === 'no') {
+                return false;
+            }
+
+            return true;
+        }
+
+        return (bool)$value;
+    }
+}
+
+if (!function_exists('chimGetEnabledConnectorExtraParameters')) {
+    function chimGetEnabledConnectorExtraParameters(array $connector): array
+    {
+        if (!chimConnectorExtraParametersEnabled($connector)) {
+            return [];
+        }
+
+        if (!isset($connector['extra_parameters']) || !is_array($connector['extra_parameters'])) {
+            return [];
+        }
+
+        return $connector['extra_parameters'];
+    }
+}
+
 class LLMConnector
 {
 
     private $table = "core_llm_connector";
+
+    private function normalizeConnectorUrlValue($value)
+    {
+        if (!is_string($value)) {
+            return $value;
+        }
+
+        $trimmed = trim($value);
+        return $trimmed === "" ? null : $trimmed;
+    }
+
+    private function normalizeConnectorRecord(array $data, bool $forWrite = false): array
+    {
+        if (array_key_exists("url", $data)) {
+            $normalizedUrl = $this->normalizeConnectorUrlValue($data["url"]);
+            if (!$forWrite && $normalizedUrl === null) {
+                $normalizedUrl = "";
+            }
+            $data["url"] = $normalizedUrl;
+        }
+
+        return $data;
+    }
+
+    private function normalizeConnectorRecords(array $rows): array
+    {
+        foreach ($rows as $index => $row) {
+            if (is_array($row)) {
+                $rows[$index] = $this->normalizeConnectorRecord($row);
+            }
+        }
+
+        return $rows;
+    }
 
     public function create($data)
     {
@@ -31,6 +112,8 @@ class LLMConnector
             "top_a"
         ];
 
+        $data = $this->normalizeConnectorRecord($data, true);
+
         foreach ($data as $k => $v) {
             if (($v === "" || $v === null) && $v !== "0" && $v !== false && $v !== 0) {
                 $data[$k] = null;
@@ -44,7 +127,7 @@ class LLMConnector
     public function readAll()
     {
         $query = "SELECT * FROM {$this->table} ORDER BY LOWER(COALESCE(NULLIF(label,''), model)) ASC";
-        return $GLOBALS["db"]->fetchAll($query);
+        return $this->normalizeConnectorRecords($GLOBALS["db"]->fetchAll($query));
     }
 
     public function readOne($id)
@@ -53,7 +136,11 @@ class LLMConnector
         $query = "SELECT * FROM {$this->table} WHERE id = {$id} LIMIT 1";
         $data = $GLOBALS["db"]->fetchOne($query);
 
-        return $data;
+        if (!is_array($data)) {
+            return $data;
+        }
+
+        return $this->normalizeConnectorRecord($data);
     }
 
     public function getById($id)
@@ -86,6 +173,8 @@ class LLMConnector
             "min_p",
             "top_a"
         ];
+
+        $data = $this->normalizeConnectorRecord($data, true);
 
         foreach ($data as $k => $v) {
             if (($v === "" || $v === null) && $v !== "0" && $v !== false && $v !== 0) {
@@ -156,6 +245,9 @@ class LLMConnector
 
     public function setOldGlobals($currentConnectorData)
     {
+        if (is_array($currentConnectorData)) {
+            $currentConnectorData = $this->normalizeConnectorRecord($currentConnectorData);
+        }
 
         if ($currentConnectorData["driver"] == "openaijson") {
 
@@ -332,7 +424,10 @@ class LLMConnector
         $connector = new $currentConnectorData["driver"]();
 
         $metadata = is_string($currentConnectorData["metadata"]) ? json_decode($currentConnectorData["metadata"], true) : $currentConnectorData["metadata"];
-        if (isset($metadata["remove_action_prompt"]) && $metadata["remove_action_prompt"] === true) {
+        if ((!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) || (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && !$GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"])) {
+            error_log("[CORE SYSTEM] Skipping action enforcement prompt for connector ID {$currentConnectorData["id"]} ({$currentConnectorData["driver"]}/{$currentConnectorData["model"]})");
+            $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"] = "";
+        } elseif (isset($metadata["remove_action_prompt"]) && $metadata["remove_action_prompt"] === true) {
             // Option to disable actions enfoncement prompt per connector. Some models like gemini-3-flash tend to use actions a lot.
             error_log("[CORE SYSTEM] Disabling action enforcement prompt for connector ID {$currentConnectorData["id"]} ({$currentConnectorData["driver"]}/{$currentConnectorData["model"]})");
             $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"] = "(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is appropriate, use it)";

@@ -14,6 +14,9 @@
 //      account to only store people NOT far away on eventlog (so far away NPCs won't have access to this context).
 //       If player is in stealh mode, no rechat (this is a standard behavior).
 //
+// * Narrator (NARRATOR)
+//      Routes player speech privately to The Narrator only, using narrator_inputtext semantics.
+//
 // * Director. (DIRECTOR)
 //      Call instruction directly.
 //
@@ -86,6 +89,11 @@ if ($EXECUTION_MODE=="STANDARD") {
     );
     
     // Disable rechat when player is sneaking (handled by plugin side based on stealth state)
+
+} else if ($EXECUTION_MODE=="NARRATOR") {
+    if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"], true)) {
+        $gameRequest[0] = "narrator_inputtext";
+    }
     
 } else if ($EXECUTION_MODE=="DIRECTOR") {
     

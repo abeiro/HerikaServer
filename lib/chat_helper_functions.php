@@ -10,6 +10,82 @@ require_once(__DIR__."/online_translation.php");
 require_once(__DIR__."/utils_game_timestamp.php");
 require_once(__DIR__."/pipeline_status.php");
 
+function callConfiguredTts($textString, $mood, $stringforhash)
+{
+    $ttsFunction = strval($GLOBALS["TTSFUNCTION"] ?? '');
+    if ($ttsFunction === '') {
+        return false;
+    }
+
+    $specialFiles = [
+        'stylettsv2' => __DIR__ . "/../tts/tts-stylettsv2-2.php",
+    ];
+
+    $ttsFile = $specialFiles[$ttsFunction] ?? (__DIR__ . "/../tts/tts-" . $ttsFunction . ".php");
+    if (!file_exists($ttsFile)) {
+        return false;
+    }
+
+    require_once($ttsFile);
+    if (!isset($GLOBALS["TTS_IN_USE"]) || !is_callable($GLOBALS["TTS_IN_USE"])) {
+        return false;
+    }
+
+    return $GLOBALS["TTS_IN_USE"]($textString, $mood, $stringforhash);
+}
+
+function canRetryNpcTtsWithFallback(): bool
+{
+    $currentNpcData = $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] ?? null;
+    $currentName = trim(strval($GLOBALS["HERIKA_NAME"] ?? ''));
+    $originalVoice = trim(strval($GLOBALS["TTS_NPC_ORIGINAL_VOICE"] ?? ''));
+    $fallbackVoice = trim(strval($GLOBALS["TTS_NPC_FALLBACK_VOICE"] ?? ''));
+
+    if (!is_array($currentNpcData) || $currentName === '' || $originalVoice === '' || $fallbackVoice === '') {
+        return false;
+    }
+    if (strcasecmp($currentName, 'The Narrator') === 0) {
+        return false;
+    }
+    if (strcasecmp(trim(strval($currentNpcData['npc_name'] ?? '')), $currentName) !== 0) {
+        return false;
+    }
+
+    return strcasecmp($originalVoice, $fallbackVoice) !== 0;
+}
+
+function callNpcTtsWithFallback($textString, $mood, $stringforhash)
+{
+    $ttsOutput = callConfiguredTts($textString, $mood, $stringforhash);
+    if ($ttsOutput || !canRetryNpcTtsWithFallback()) {
+        return $ttsOutput;
+    }
+
+    $fallbackVoice = trim(strval($GLOBALS["TTS_NPC_FALLBACK_VOICE"] ?? ''));
+    $originalVoice = $GLOBALS["PATCH_OVERRIDE_VOICE"] ?? null;
+    if ($fallbackVoice === '') {
+        return $ttsOutput;
+    }
+
+    Logger::warn("[TTS FALLBACK] Retrying NPC TTS for {$GLOBALS["HERIKA_NAME"]} with fallback voice '{$fallbackVoice}' after initial synthesis failure.");
+
+    $GLOBALS["PATCH_OVERRIDE_VOICE"] = $fallbackVoice;
+    $retryOutput = callConfiguredTts($textString, $mood, $stringforhash);
+
+    if ($retryOutput) {
+        $GLOBALS["TTS_NPC_RESOLVED_VOICE"] = $fallbackVoice;
+        return $retryOutput;
+    }
+
+    if ($originalVoice === null || trim(strval($originalVoice)) === '') {
+        unset($GLOBALS["PATCH_OVERRIDE_VOICE"]);
+    } else {
+        $GLOBALS["PATCH_OVERRIDE_VOICE"] = $originalVoice;
+    }
+
+    return $ttsOutput;
+}
+
 function randomReplaceShortWordsWithPoints($inputString, $distance)
 {
     // Split the input string into words
@@ -186,12 +262,15 @@ function findFastSentencePosition($s_string) {
     if (preg_match_all($splitSentenceRegex, $s_string, $matches, PREG_OFFSET_CAPTURE)) {
         foreach ($matches[1] as $match) {
             $position = $match[1];
-            $candidate = substr($s_string, 0, $position + 1);
+            // Use the end of the matched punctuation so that multi-byte characters
+            // (e.g. Japanese 。！？ which are 3 bytes in UTF-8) are not split mid-character.
+            $endPosition = $position + strlen($match[0]) - 1;
+            $candidate = substr($s_string, 0, $endPosition + 1);
             if (hasUnclosedSingleAsteriskBlock($candidate)) {
                 continue;
             }
 
-            return $position;
+            return $endPosition;
         }
     }
 
@@ -285,6 +364,7 @@ function split_sentences($paragraph)
     }
 
     $paragraphNcr = br2nl($paragraph); // Remove any BR tags
+    $paragraphNcr = preg_replace('/([。！？])(?=\S)/u', '$1 ', $paragraphNcr);
 
     $sentences = split_at_end_of_sentence($paragraphNcr);
 
@@ -297,6 +377,7 @@ function split_sentences_stream($paragraph)
         return [$paragraph];
     }
 
+    $paragraph = preg_replace('/([。！？])(?=\S)/u', '$1 ', $paragraph);
     // Split at sentence boundaries
     $sentences = split_at_end_of_sentence($paragraph);
 
@@ -463,6 +544,79 @@ function hasUnclosedSingleAsteriskBlock($text) {
 }
 
 /**
+ * Normalize the leading text from a candidate dialogue segment salvaged out of
+ * a malformed fully wrapped *...* reply.
+ */
+function normalizeWrappedDialogueLead($text) {
+    $normalized = trim((string)$text);
+    return preg_replace('/^[\s"\'\(\[\{]+/', '', $normalized);
+}
+
+/**
+ * Detect whether the text after the first sentence in a malformed fully
+ * wrapped *...* reply looks like spoken dialogue rather than more narration.
+ */
+function isLikelyWrappedDialogueLead($text) {
+    $lead = normalizeWrappedDialogueLead($text);
+    if ($lead === '') {
+        return false;
+    }
+
+    if (preg_match('/\b(?:you|he|she|they)\s+(?:say|says|said|ask|asks|asked|reply|replies|replied|whisper|whispers|whispered|murmur|murmurs|murmured)\b/i', $lead)) {
+        return false;
+    }
+
+    if (preg_match('/^(?:indeed|yes|no|of course|certainly|very well|as you wish|understood|ready|i am|i\'m|i will|i\'ll|i can|i cannot|i do|i did|i have|i\'ve|i understand|i obey|i serve|forgive me|thank you)\b/i', $lead)) {
+        return true;
+    }
+
+    if (preg_match('/,\s*(?:my lord|milord|my lady|your majesty|your highness|my friend|sister|brother)\b/i', $lead)) {
+        return true;
+    }
+
+    if (preg_match('/\b(?:if i do say so myself|i suppose|i think|i know|i dare say)\b/i', $lead)) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Salvage a malformed reply where the model wrapped both narration and speech
+ * inside a single *...* block. This only splits after the first sentence when
+ * the remaining text strongly resembles spoken dialogue.
+ */
+function trySplitFullyWrappedNarrationReply($text) {
+    $wrappedText = trim((string)$text);
+    if ($wrappedText === '') {
+        return null;
+    }
+
+    $sentences = split_at_end_of_sentence($wrappedText);
+    if (count($sentences) < 2) {
+        return null;
+    }
+
+    $narrationCandidate = trim($sentences[0]);
+    $dialogueCandidate = trim(implode(' ', array_slice($sentences, 1)));
+    if ($narrationCandidate === '' || $dialogueCandidate === '') {
+        return null;
+    }
+
+    if (!isLikelyWrappedDialogueLead($dialogueCandidate)) {
+        return null;
+    }
+
+    Logger::info("[extractNarrationAndDialogue] Salvaged malformed wrapped reply into narration + dialogue: " . substr($wrappedText, 0, 100));
+
+    return [
+        'narrations' => [$narrationCandidate],
+        'dialogue' => $dialogueCandidate,
+        'has_narration' => true
+    ];
+}
+
+/**
  * Extract narration (text in asterisks) from dialogue
  * Handles multiple narration blocks throughout the text
  *
@@ -483,9 +637,20 @@ function extractNarrationAndDialogue($text) {
     }
     // Try to extract paired asterisks at the START of the sentence: *narration* dialogue
     else if (preg_match('/^\*([^*]+)\*(?:\s*[.!?,;:-])?\s*(.*)$/s', $text, $matches)) {
-        // Only extract narration if it's at the beginning, followed by dialogue
-        $narrations = [trim($matches[1])];
+        // Only extract narration if it's at the beginning, followed by dialogue.
+        // If the entire reply is wrapped in one *...* block, try to salvage the
+        // first sentence as narration when the remainder clearly looks spoken.
+        $wrappedText = trim($matches[1]);
         $remainingText = trim($matches[2]);
+
+        if ($remainingText === '') {
+            $wrappedSplit = trySplitFullyWrappedNarrationReply($wrappedText);
+            if ($wrappedSplit !== null) {
+                return $wrappedSplit;
+            }
+        }
+
+        $narrations = [$wrappedText];
 
         Logger::info("[extractNarrationAndDialogue] Found narration at start (paired asterisks): " . substr($narrations[0], 0, 50));
     }
@@ -514,12 +679,215 @@ function stripPlayerAsteriskActions($text) {
     return trim(preg_replace('/\s+/', ' ', $strippedText));
 }
 
-function formatPlayerSubtitleText($text) {
+function getInlineNarrationMode() {
+    $mode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? "")));
+    if (in_array($mode, ['disabled', 'narrator', 'npc'], true)) {
+        return $mode;
+    }
+
+    if (isset($GLOBALS["INLINE_NARRATION_ENABLED"])) {
+        return $GLOBALS["INLINE_NARRATION_ENABLED"] ? 'narrator' : 'disabled';
+    }
+
+    return 'disabled';
+}
+
+function isInlineNarrationEnabled() {
+    return getInlineNarrationMode() !== 'disabled';
+}
+
+function shouldRemovePlayerAutochatAsterisks() {
+    if (isset($GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'])) {
+        return (bool)$GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'];
+    }
+
+    if (isset($GLOBALS['PLAYER_AUTOCHAT_ASTERISKS_ENABLED'])) {
+        return !(bool)$GLOBALS['PLAYER_AUTOCHAT_ASTERISKS_ENABLED'];
+    }
+
+    return true;
+}
+
+function shouldSplitInlineNarration() {
+    return getInlineNarrationMode() === 'narrator';
+}
+
+function shouldStripPlayerInputAsterisks() {
+    if (isset($GLOBALS['REMOVE_ASTERISKS_FROM_PLAYER_INPUT'])) {
+        return (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_PLAYER_INPUT'];
+    }
+
+    if (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'])) {
+        return (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'];
+    }
+
+    return true;
+}
+
+function shouldStripNpcOutputAsterisks() {
+    if (array_key_exists('strip_emotes_from_output', $GLOBALS)) {
+        return (bool)$GLOBALS['strip_emotes_from_output'];
+    }
+
+    if (isset($GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'])) {
+        return (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'];
+    }
+
+    if (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'])) {
+        return (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'];
+    }
+
+    return true;
+}
+
+function normalizeAsteriskTextForSpeech($text) {
+    $normalizedText = preg_replace('/\*([^*]+)\*/', '$1', (string)$text);
+    return str_replace('*', '', $normalizedText);
+}
+
+function filterKnownNpcAsteriskTokens($text) {
+    return strtr((string)$text, [
+        "*Smirks*" => "", "*smirks*" => "",
+        "*smiles*" => "", "*Smile*" => "", "*smile*" => "",
+        "*winks*" => "", "*wink*" => "", "*smirk*" => "", "*gasps*" => "", "*chuckles*" => "", "*giggles*" => "", "*Giggles*" => "", "*laughs*" => "",
+        "*gasp*" => "", "*moans*" => "", "*whispers*" => "", "*moan*" => "",
+        "*pant*" => "", "*cough*" => "", "*hiccup*" => "", "*whimper*" => ""
+    ]);
+}
+
+function formatPlayerSpeechText($text) {
+    if (shouldStripPlayerInputAsterisks()) {
+        return stripPlayerAsteriskActions($text);
+    }
+
+    return trim(preg_replace('/\s+/', ' ', normalizeAsteriskTextForSpeech($text)));
+}
+
+function formatNpcSpeechText($text) {
+    $speechText = (string)$text;
+    if (shouldStripNpcOutputAsterisks()) {
+        $speechText = filterKnownNpcAsteriskTokens($speechText);
+    }
+
+    $speechText = normalizeAsteriskTextForSpeech($speechText);
+    return trim(preg_replace('/\s+/', ' ', $speechText));
+}
+
+function stripOutputSpeakerPrefix($text, $speakerName = null) {
+    $speakerName = $speakerName ?? ($GLOBALS["HERIKA_NAME"] ?? "");
+    if ($speakerName === '') {
+        return (string)$text;
+    }
+
+    return preg_replace('/^' . preg_quote((string)$speakerName, '/') . '\s*:\s*/i', '', (string)$text);
+}
+
+function stripOutputSpeakerPrefixAfterInlineNarration($text, $speakerName = null) {
+    $speakerName = $speakerName ?? ($GLOBALS["HERIKA_NAME"] ?? "");
+    if ($speakerName === '') {
+        return (string)$text;
+    }
+
+    return preg_replace(
+        '/^(\s*(?:\*[^*]+\*\s*)+)' . preg_quote((string)$speakerName, '/') . '\s*:\s*/i',
+        '$1',
+        (string)$text
+    );
+}
+
+function stripLeadingParentheticalBlocks($text) {
+    return preg_replace('/^\s*(?:\([^)]*\)\s*)+/', '', (string)$text);
+}
+
+function stripLeadingPlayerRespeechNarration($text) {
+    $speechText = (string)$text;
+    do {
+        $previousText = $speechText;
+        $speechText = preg_replace('/^\s*(?:(?:\([^)]*\))|(?:\*[^*]+\*))\s*/', '', $speechText);
+    } while ($speechText !== $previousText);
+
+    return $speechText;
+}
+
+function convertLeadingParentheticalBlocksToInlineNarration($text) {
+    $speechText = (string)$text;
+    if (!preg_match('/^\s*((?:\([^)]*\)\s*)+)/', $speechText, $matches)) {
+        return $speechText;
+    }
+
+    preg_match_all('/\(([^)]*)\)/', $matches[1], $narrationMatches);
+    $narrationBlocks = [];
+    foreach ($narrationMatches[1] as $block) {
+        $block = trim((string)$block);
+        if ($block !== '') {
+            $narrationBlocks[] = "*{$block}*";
+        }
+    }
+
+    if (empty($narrationBlocks)) {
+        return stripLeadingParentheticalBlocks($speechText);
+    }
+
+    $remainingText = preg_replace('/^\s*(?:\([^)]*\)\s*)+/', '', $speechText);
+    $inlineNarration = implode(' ', $narrationBlocks);
+    return trim($inlineNarration . ' ' . ltrim((string)$remainingText));
+}
+
+function sanitizePlayerRespeechText($text, $speakerName = null) {
+    $removeNarration = shouldRemovePlayerAutochatAsterisks();
+    $speechText = str_replace(["\r", "\n"], ' ', (string)$text);
+    $speechText = $removeNarration
+        ? stripLeadingPlayerRespeechNarration($speechText)
+        : convertLeadingParentheticalBlocksToInlineNarration($speechText);
+    if (!$removeNarration) {
+        $speechText = stripOutputSpeakerPrefixAfterInlineNarration($speechText, $speakerName);
+    }
+    $speechText = stripOutputSpeakerPrefix($speechText, $speakerName);
+    $speechText = $removeNarration
+        ? stripLeadingPlayerRespeechNarration($speechText)
+        : convertLeadingParentheticalBlocksToInlineNarration($speechText);
+    return trim(preg_replace('/\s+/', ' ', $speechText));
+}
+
+function cleanupDisplayText($text, $speakerName = null) {
+    $displayText = stripOutputSpeakerPrefix((string)$text, $speakerName);
+    $displayText = strtr($displayText, [
+        "#SpeechStyle" => "",
+        "#SpeechStyle:" => ""
+    ]);
+    $displayText = preg_replace('/^\*\*\([^)]*\)\*\*\s*/i', '', $displayText);
+    $displayText = preg_replace('/"/', '', $displayText);
+    $displayText = preg_replace('/\s*# ?ACTIONS.*/', '', $displayText);
+    $displayText = preg_replace('/#[A-Za-z]+/', '', $displayText);
+    return trim(preg_replace('/\s+/', ' ', $displayText));
+}
+
+function formatPlayerSubtitleText($text, $speakerName = null) {
+    $speakerName = $speakerName ?? ($GLOBALS["PLAYER_NAME"] ?? null);
     $subtitleText = preg_replace('/\s*\(Talking to [^)]+\)\s*$/i', '', $text);
-    $subtitleText = preg_replace('/"/', '', $subtitleText);
-    $subtitleText = preg_replace('/\s*# ?ACTIONS.*/', '', $subtitleText);
-    $subtitleText = preg_replace('/#[A-Za-z]+/', '', $subtitleText);
-    return trim(preg_replace('/\s+/', ' ', $subtitleText));
+    return cleanupDisplayText($subtitleText, $speakerName);
+}
+
+function formatNpcSubtitleText($text) {
+    $subtitleText = shouldStripNpcOutputAsterisks() ? formatNpcSpeechText($text) : (string)$text;
+    return cleanupDisplayText($subtitleText, $GLOBALS["HERIKA_NAME"] ?? null);
+}
+
+function formatInlineNarrationDialogueSubtitleText($text) {
+    $subtitleText = shouldStripNpcOutputAsterisks() ? formatNpcSpeechText($text) : (string)$text;
+    $subtitleText = cleanupDisplayText($subtitleText, $GLOBALS["HERIKA_NAME"] ?? null);
+    $subtitleText = ltrim($subtitleText, ".!?,;:- \t\n\r\0\x0B");
+    return trim($subtitleText);
+}
+
+function formatNarrationSubtitleText($text) {
+    $narrationText = trim((string)$text, " \t\n\r\0\x0B*");
+    return "*{$narrationText}*";
+}
+
+function shouldStripAsterisksFromCleanContextBuffer() {
+    $preserveAsterisksInContext = isset($GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"]) ? (bool)$GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"] : false;
+    return getInlineNarrationMode() === 'disabled' && !$preserveAsterisksInContext;
 }
 
 /**
@@ -527,22 +895,20 @@ function formatPlayerSubtitleText($text) {
  * @return array Current TTS settings
  */
 function saveCurrentVoiceSettings() {
-    return isset($GLOBALS['TTS']) ? $GLOBALS['TTS'] : [];
+    return [
+        'tts' => isset($GLOBALS['TTS']) ? $GLOBALS['TTS'] : [],
+        'has_patch_override_voice' => array_key_exists('PATCH_OVERRIDE_VOICE', $GLOBALS),
+        'patch_override_voice' => $GLOBALS['PATCH_OVERRIDE_VOICE'] ?? null,
+        'has_patch_override_voice_id' => array_key_exists('PATCH_OVERRIDE_VOICE_ID', $GLOBALS),
+        'patch_override_voice_id' => $GLOBALS['PATCH_OVERRIDE_VOICE_ID'] ?? null,
+    ];
 }
 
-/**
- * Load The Narrator's voice settings into GLOBALS
- */
-function loadNarratorVoiceSettings() {
-    require_once(__DIR__ . "/core/narrator.class.php");
-    $narrator = new Narrator();
-    $voiceid = $narrator->get('voiceid');
+function applyVoiceIdToTtsGlobals(string $voiceid): void
+{
+    $GLOBALS['PATCH_OVERRIDE_VOICE'] = $voiceid;
+    unset($GLOBALS['PATCH_OVERRIDE_VOICE_ID']);
 
-    if (!$voiceid) {
-        $voiceid = 'TheNarrator'; // Fallback default
-    }
-
-    // Apply Narrator voice to all TTS providers
     $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']  = $voiceid;
     $GLOBALS['TTS']['CHATTERBOX']['voiceid']   = $voiceid;
     $GLOBALS['TTS']['POCKETTTS']['voiceid']    = $voiceid;
@@ -561,12 +927,46 @@ function loadNarratorVoiceSettings() {
 }
 
 /**
+ * Load The Narrator's voice settings into GLOBALS
+ */
+function loadNarratorVoiceSettings() {
+    require_once(__DIR__ . "/core/narrator.class.php");
+    $narrator = new Narrator();
+    $voiceid = $narrator->get('voiceid');
+
+    if (!$voiceid) {
+        $voiceid = 'TheNarrator'; // Fallback default
+    }
+
+    applyVoiceIdToTtsGlobals($voiceid);
+}
+
+/**
  * Restore previously saved voice settings
  * @param array $savedSettings The settings to restore
  */
 function restoreVoiceSettings($savedSettings) {
-    if (!empty($savedSettings)) {
+    if (!is_array($savedSettings)) {
+        return;
+    }
+
+    if (array_key_exists('tts', $savedSettings)) {
+        $GLOBALS['TTS'] = $savedSettings['tts'];
+    } elseif (!empty($savedSettings)) {
+        // Backward compatibility with older callers that saved only the TTS array.
         $GLOBALS['TTS'] = $savedSettings;
+    }
+
+    if (!empty($savedSettings['has_patch_override_voice'])) {
+        $GLOBALS['PATCH_OVERRIDE_VOICE'] = $savedSettings['patch_override_voice'];
+    } else {
+        unset($GLOBALS['PATCH_OVERRIDE_VOICE']);
+    }
+
+    if (!empty($savedSettings['has_patch_override_voice_id'])) {
+        $GLOBALS['PATCH_OVERRIDE_VOICE_ID'] = $savedSettings['patch_override_voice_id'];
+    } else {
+        unset($GLOBALS['PATCH_OVERRIDE_VOICE_ID']);
     }
 }
 
@@ -578,43 +978,31 @@ function unmoodSentence($sentence) {
     $isPlayerSpeech = isset($GLOBALS["HERIKA_NAME"]) && strcasecmp((string)$GLOBALS["HERIKA_NAME"], "Player") === 0;
 
     if ($isPlayerSpeech) {
-        // Player-side *action* markers are always non-spoken context, regardless of narrator output settings.
-        $output = stripPlayerAsteriskActions($output);
+        $output = formatPlayerSpeechText($output);
     }
 
     // Determine whether to process asterisks:
-    // This function is used to prepare text for TTS, so we ALWAYS want to strip asterisks
-    // (narration should never be spoken by NPCs, even when inline narration is enabled)
-    // The only exception is if explicitly disabled via strip_emotes_from_output or REMOVE_ASTERISKS_FROM_OUTPUT
+    // This function prepares text for TTS/log text. Player speech uses its own toggle.
     $processAsterisks = true; // Default to stripping asterisks for TTS
 
-    if (array_key_exists('strip_emotes_from_output', $GLOBALS)) {
-        $processAsterisks = (bool)$GLOBALS['strip_emotes_from_output'];
-    } elseif (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'])) {
-        error_log("[unmoodSentence] REMOVE_ASTERISKS_FROM_OUTPUT is setted to <{$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']}>" );
-        $processAsterisks=$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'];
+    if (!$isPlayerSpeech) {
+        $processAsterisks = shouldStripNpcOutputAsterisks();
+        if (isset($GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'])) {
+            error_log("[unmoodSentence] REMOVE_ASTERISKS_FROM_NPC_OUTPUT is setted to <{$GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT']}>" );
+        } elseif (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'])) {
+            error_log("[unmoodSentence] REMOVE_ASTERISKS_FROM_OUTPUT is setted to <{$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']}>" );
+        }
     }
     
 
-    if ($processAsterisks === true ) {
-        error_log("[unmoodSentence] REMOVE_ASTERISKS_FROM_OUTPUT FULL is active! $sentence <" . ($GLOBALS['strip_emotes_from_output'] ?? 'N/A') . "> <" . ($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] ?? 'N/A') . ">" );
+    if (!$isPlayerSpeech && $processAsterisks === true ) {
+        error_log("[unmoodSentence] NPC output asterisk filtering is active! $sentence <" . ($GLOBALS['strip_emotes_from_output'] ?? 'N/A') . "> <" . ($GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'] ?? $GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] ?? 'N/A') . ">" );
 
-        if (!$isPlayerSpeech) {
-            // Remove a few explicit emote/action tokens first; emphasis like *my* should keep the inner text.
-            $output = strtr($output, [
-                "*Smirks*" => "", "*smirks*" => "",
-                "*winks*" => "", "*wink*" => "", "*smirk*" => "", "*gasps*" => "", "*chuckles*" => "", "*giggles*" => "", "*Giggles*" => "", "*laughs*" => "",
-                "*gasp*" => "", "*moans*" => "", "*whispers*" => "", "*moan*" => "",
-                "*pant*" => "", "*cough*" => "", "*hiccup*" => "", "*whimper*" => ""
-            ]);
-
-            // For NPC output, preserve emphasized text but strip the asterisk markers.
-            $output = preg_replace('/\*([^*]+)\*/', '$1', $output);
-        }
+        $output = formatNpcSpeechText($output);
     }
-    // is this the users intention if they set REMOVE_ASTERISKS false?
-    else {
-        error_log("[unmoodSentence] REMOVE_ASTERISKS_FROM_OUTPUT PARTIAL is active! preserving raw asterisk blocks");
+    else if (!$isPlayerSpeech) {
+        error_log("[unmoodSentence] NPC output asterisk filtering is disabled; keeping asterisk content in speech");
+        $output = formatNpcSpeechText($output);
     }
 
     // Non-asterisk-related cleanup always applies
@@ -656,8 +1044,8 @@ function returnLines($lines,$writeOutput=true)
 {
     global $db, $startTime, $forceMood, $staticMood, $talkedSoFar, $FORCED_STOP, $TRANSFORMER_FUNCTION,$receivedData;
 
-    // Check if inline narration is enabled
-    $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
+    $inlineNarrationMode = getInlineNarrationMode();
+    $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
     $preserveAsterisksInContext = isset($GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"]) ? (bool)$GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"] : false;
 
     // If inline narration is enabled, recombine split narration sentences
@@ -711,8 +1099,8 @@ function returnLines($lines,$writeOutput=true)
         $sentence=$output;
 
         // Preserve the original sentence for subtitles BEFORE any processing
-        // Check if inline narration is enabled (default to false if not set)
-        $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
+        $inlineNarrationMode = getInlineNarrationMode();
+        $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
         $sentenceForSubtitles = $sentence; // Keep the original with narration
 
         // Strip "(Talking to ...)" from player speech for cleaner subtitles,
@@ -728,10 +1116,10 @@ function returnLines($lines,$writeOutput=true)
         $narrationParts = null;
         if ($inlineNarrationEnabled && !$isPlayerSpeech) {
             $narrationParts = extractNarrationAndDialogue($sentenceForSubtitles);
-            $splitNarration = $narrationParts['has_narration'];
+            $splitNarration = shouldSplitInlineNarration() && $narrationParts['has_narration'];
 
             // Debug logging
-            Logger::info("[INLINE_NARRATION] Enabled: true");
+            Logger::info("[INLINE_NARRATION] Mode: " . $inlineNarrationMode);
             Logger::info("[INLINE_NARRATION] Original sentence: " . $sentenceForSubtitles);
             Logger::info("[INLINE_NARRATION] Has narration: " . ($splitNarration ? 'yes' : 'no'));
             if ($splitNarration) {
@@ -788,24 +1176,19 @@ function returnLines($lines,$writeOutput=true)
             continue;
         }
 
-        $responseTextUnmooded = preg_replace("/{$GLOBALS["HERIKA_NAME"]}\s*:\s*/", '', $responseTextUnmooded);	// Should not happen
+        $responseTextUnmooded = stripOutputSpeakerPrefix($responseTextUnmooded);	// Should not happen
 
         $responseText = $responseTextUnmooded;
         $responseForTTS = $responseTextUnmooded; // TTS gets the "unmooded" version (narration stripped)
 
         // Set up subtitles based on whether inline narration is enabled
         if ($isPlayerSpeech) {
-            // Player subtitles keep action markers so the player can confirm contextual actions were captured.
             $responseForSubtitles = formatPlayerSubtitleText($sentenceForSubtitles);
-        } elseif (!$splitNarration && ($inlineNarrationEnabled || $preserveAsterisksInContext)) {
-            // Preserve narration in subtitles - use the original sentence
-            $responseForSubtitles = $sentenceForSubtitles;
-            $responseForSubtitles = preg_replace("/{$GLOBALS["HERIKA_NAME"]}\s*:\s*/", '', $responseForSubtitles);
-            // Remove quotes and other non-narration cleanup
-            $responseForSubtitles = preg_replace('/"/', '', $responseForSubtitles);
-            $responseForSubtitles = preg_replace('/\s*# ?ACTIONS.*/', '', $responseForSubtitles);
-            $responseForSubtitles = preg_replace('/#[A-Za-z]+/', '', $responseForSubtitles);
-            $responseForSubtitles = trim($responseForSubtitles);
+        } elseif (!$splitNarration) {
+            $responseForSubtitles = formatNpcSubtitleText($sentenceForSubtitles);
+            if (strlen($responseForSubtitles) > _MAX_SUBTITLE_LENGTH) {
+                $responseForSubtitles = substr($responseForSubtitles, 0, _MAX_SUBTITLE_LENGTH);
+            }
         } else {
             // If narration is disabled or will be split, use the same text as TTS (narration stripped)
             $responseForSubtitles = strlen($responseTextUnmooded) > _MAX_SUBTITLE_LENGTH ?
@@ -815,19 +1198,14 @@ function returnLines($lines,$writeOutput=true)
 
         $responseForContext = $responseTextUnmooded;
         if ($preserveAsterisksInContext) {
-            $responseForContext = $sentenceForSubtitles;
-            $responseForContext = preg_replace("/{$GLOBALS["HERIKA_NAME"]}\s*:\s*/", '', $responseForContext);
-            $responseForContext = preg_replace('/"/', '', $responseForContext);
-            $responseForContext = preg_replace('/\s*# ?ACTIONS.*/', '', $responseForContext);
-            $responseForContext = preg_replace('/#[A-Za-z]+/', '', $responseForContext);
-            $responseForContext = trim($responseForContext);
+            $responseForContext = cleanupDisplayText($sentenceForSubtitles, $GLOBALS["HERIKA_NAME"] ?? null);
         }
 
         $ttsOutput = null;
 
         if (Translation::$response) {
             Translation::$sentences[$n] = unmoodSentence(Translation::$sentences[$n]);
-            Translation::$sentences[$n] = preg_replace("/{$GLOBALS["HERIKA_NAME"]}\s*:\s*/", '', Translation::$sentences[$n]);
+            Translation::$sentences[$n] = stripOutputSpeakerPrefix(Translation::$sentences[$n]);
 
             if (Translation::isAudioEnabled() || Translation::isPlayerAudioEnabled()) {
                 $responseForTTS = Translation::$sentences[$n]; // script for TTS to generate audio from
@@ -891,63 +1269,12 @@ function returnLines($lines,$writeOutput=true)
 
                     // Prepare narration for TTS (with asterisks for subtitle display)
                     $narrationForTTS = $narrationText;
-                    $narrationForSubtitles = "*" . $narrationText . "*";
+                    $narrationForSubtitles = formatNarrationSubtitleText($narrationText);
 
                     Logger::info("[INLINE_NARRATION] Generating TTS with function: " . $GLOBALS["TTSFUNCTION"]);
 
                     // Generate TTS for narration using the configured TTS function
-                    $narratorTtsOutput = null;
-                    if ($GLOBALS["TTSFUNCTION"] == "azure") {
-                        require_once(__DIR__."/../tts/tts-azure.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "mimic3") {
-                        require_once(__DIR__."/../tts/tts-mimic3.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "piper-tts") {
-                        require_once(__DIR__."/../tts/tts-piper-tts.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "11labs") {
-                        require_once(__DIR__."/../tts/tts-11labs.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "gcp") {
-                        require_once(__DIR__."/../tts/tts-gcp.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "coqui-ai") {
-                        require_once(__DIR__."/../tts/tts-coqui-ai.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "xvasynth") {
-                        require_once(__DIR__."/../tts/tts-xvasynth.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "openai") {
-                        require_once(__DIR__."/../tts/tts-openai.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "convai") {
-                        require_once(__DIR__."/../tts/tts-convai.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "xtts") {
-                        require_once(__DIR__."/../tts/tts-xtts.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
-                        require_once(__DIR__."/../tts/tts-stylettsv2-2.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "koboldcpp") {
-                        require_once(__DIR__."/../tts/tts-koboldcpp.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "zonos_gradio") {
-                        require_once(__DIR__."/../tts/tts-zonos_gradio.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "cartesia") {
-                        require_once(__DIR__."/../tts/tts-cartesia.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else if ($GLOBALS["TTSFUNCTION"] == "inworld") {
-                        require_once(__DIR__."/../tts/tts-inworld.php");
-                        $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                    } else {
-                        if (file_exists(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php")) {
-                            require_once(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php");
-                            $narratorTtsOutput = $GLOBALS["TTS_IN_USE"]($narrationForTTS, "default", $narrationForSubtitles);
-                        }
-                    }
+                    $narratorTtsOutput = callConfiguredTts($narrationForTTS, "default", $narrationForSubtitles);
 
                     // Track narrator TTS output
                     if ($narratorTtsOutput) {
@@ -977,16 +1304,14 @@ function returnLines($lines,$writeOutput=true)
 
                 // Now generate TTS for the NPC's dialogue (if any)
                 if (!empty($narrationParts['dialogue'])) {
-                    $responseForTTS = $narrationParts['dialogue'];
-                    // Strip any remaining asterisks from NPC dialogue for subtitles
-                    $responseForSubtitles = preg_replace('/\*/', '', $narrationParts['dialogue']);
-                    $responseForSubtitles = trim($responseForSubtitles);
-                    // Clean up any leading punctuation artifacts (., *, etc.)
-                    $responseForSubtitles = ltrim($responseForSubtitles, '*.!? ');
-                    $responseForSubtitles = trim($responseForSubtitles);
+                    $responseForTTS = unmoodSentence($narrationParts['dialogue']);
+                    $responseForSubtitles = formatInlineNarrationDialogueSubtitleText($narrationParts['dialogue']);
                     // IMPORTANT: Also update the main response variables so the output buffer uses dialogue only
-                    $responseText = $responseForSubtitles;
-                    $responseTextUnmooded = $responseForSubtitles;
+                    $responseText = $responseForTTS;
+                    $responseTextUnmooded = $responseForTTS;
+                    if (!$preserveAsterisksInContext) {
+                        $responseForContext = $responseForTTS;
+                    }
                 } else {
                     // Narration-only line: narrator speech already emitted above, skip NPC speech output.
                     $shouldEmitNpcLine = false;
@@ -1002,93 +1327,7 @@ function returnLines($lines,$writeOutput=true)
                 pipeline_status_set('tts', true);
 
                 // Generate regular TTS (either full text if no narration, or just dialogue after narration)
-                if ($GLOBALS["TTSFUNCTION"] == "azure") {
-
-                    require_once(__DIR__."/../tts/tts-azure.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "mimic3") {
-
-                    require_once(__DIR__."/../tts/tts-mimic3.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "piper-tts") {
-
-                    require_once(__DIR__."/../tts/tts-piper-tts.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "11labs") {
-
-                    require_once(__DIR__."/../tts/tts-11labs.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "gcp") {
-
-                    require_once(__DIR__."/../tts/tts-gcp.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "coqui-ai") {
-
-                    require_once(__DIR__."/../tts/tts-coqui-ai.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "xvasynth") {
-
-                    require_once(__DIR__."/../tts/tts-xvasynth.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "openai") {
-
-                    require_once(__DIR__."/../tts/tts-openai.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "convai") {
-
-                    require_once(__DIR__."/../tts/tts-convai.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "xtts") {
-
-                    require_once(__DIR__."/../tts/tts-xtts.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
-
-                    require_once(__DIR__."/../tts/tts-stylettsv2-2.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "stylettsv2") {
-
-                    require_once(__DIR__."/../tts/tts-stylettsv2-2.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "koboldcpp") {
-
-                    require_once(__DIR__."/../tts/tts-koboldcpp.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "zonos_gradio") {
-
-                    require_once(__DIR__."/../tts/tts-zonos_gradio.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "cartesia") {
-
-                    require_once(__DIR__."/../tts/tts-cartesia.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                } else if ($GLOBALS["TTSFUNCTION"] == "inworld") {
-
-                    require_once(__DIR__."/../tts/tts-inworld.php");
-                    $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-
-                }
-                else {
-                    if (file_exists(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php")) {
-                        require_once(__DIR__."/../tts/tts-".$GLOBALS["TTSFUNCTION"].".php");
-                        $ttsOutput=$GLOBALS["TTS_IN_USE"]($responseForTTS, $mood, $responseForSubtitles);
-                    }
-                }
+                $ttsOutput = callNpcTtsWithFallback($responseForTTS, $mood, $responseForSubtitles);
                 if (!$ttsOutput) {
                     if (isset($GLOBALS["TTS_FALLBACK_FNCT"]))
                         $ttsOutput = $GLOBALS["TTS_FALLBACK_FNCT"]($responseForTTS, $mood, $responseForSubtitles);

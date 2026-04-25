@@ -433,7 +433,9 @@ class NpcMaster
                  "BORED_EVENT_SERVERSIDE", "CONTEXT_HISTORY", "CONTEXT_HISTORY_DIARY", "CONTEXT_HISTORY_DYNAMIC_PROFILE",
                  "ALIVE_MESSAGE", "TIME_AWARENESS", "QUEST_COMMENT", "QUEST_COMMENT_CHANCE", "CURRENT_TASK",
                  "CORE_LANG", "LANG_LLM_XTTS", "MAX_WORDS_LIMIT",
-                 "REMOVE_ASTERISKS_FROM_OUTPUT", "ENFORCE_ACTIONS_PROMPT", "DIARY_PROMPT"]))
+                 "REMOVE_ASTERISKS_FROM_OUTPUT", "REMOVE_ASTERISKS_FROM_PLAYER_INPUT", "REMOVE_ASTERISKS_FROM_NPC_OUTPUT",
+                 "INLINE_NARRATION_ENABLED", "INLINE_NARRATION_MODE", "REMOVE_PLAYER_AUTOCHAT_ASTERISKS", "PLAYER_AUTOCHAT_ASTERISKS_ENABLED",
+                 "ENFORCE_ACTIONS_PROMPT", "DIARY_PROMPT"]))
                     if (!empty($v))
                         $overrides[$k]=$v;
             }
@@ -528,30 +530,48 @@ class NpcMaster
             $GLOBALS['HERIKA_PERS'] = "Roleplay as {$GLOBALS['HERIKA_NAME']}";
         }
 
-        // Check this
-        if (isset($currentNpcData['voiceid']) && $currentNpcData['voiceid']) {
+        $voiceResolution = $this->resolveNpcTtsVoice($currentNpcData);
+        $resolvedVoice = $voiceResolution['resolved_voice'];
+        $originalVoice = $voiceResolution['original_voice'];
+        $fallbackVoice = $voiceResolution['fallback_voice'];
 
-            $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']  = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['CHATTERBOX']['voiceid']   = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['POCKETTTS']['voiceid']    = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['MELOTTS']['voiceid']      = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['MIMIC3']['voice']         = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['XVASYNTH']['model']       = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['ZONOS_GRADIO']['voiceid'] = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['PIPERTTS']['voiceid']     = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['ELEVEN_LABS']['voice_id'] = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['AZURE']['voice']          = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['KOKORO']['voiceid']       = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['openai']['voice']         = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['deepgram']['model']       = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['CARTESIA']['voiceid']     = $currentNpcData['voiceid'];
-            $GLOBALS['TTS']['INWORLD']['voiceid']      = $currentNpcData['voiceid'];
+        if ($resolvedVoice !== '') {
+            $GLOBALS['PATCH_OVERRIDE_VOICE'] = $resolvedVoice;
+            $this->applyNpcVoiceToTtsGlobals($resolvedVoice);
+        } else {
+            unset($GLOBALS['PATCH_OVERRIDE_VOICE']);
+        }
 
+        if ($originalVoice !== '') {
+            $GLOBALS['TTS_NPC_ORIGINAL_VOICE'] = $originalVoice;
+        } else {
+            unset($GLOBALS['TTS_NPC_ORIGINAL_VOICE']);
+        }
+
+        if ($fallbackVoice !== '') {
+            $GLOBALS['TTS_NPC_FALLBACK_VOICE'] = $fallbackVoice;
+        } else {
+            unset($GLOBALS['TTS_NPC_FALLBACK_VOICE']);
+        }
+
+        if ($resolvedVoice !== '') {
+            $GLOBALS['TTS_NPC_RESOLVED_VOICE'] = $resolvedVoice;
+        } else {
+            unset($GLOBALS['TTS_NPC_RESOLVED_VOICE']);
         }
 
         // Decode metadata and extended_data if available
         $metadata = json_decode($currentNpcData['metadata'] ?? '{}', true);
-        $narratorManagedKeys = ['REMOVE_ASTERISKS_FROM_OUTPUT', 'INLINE_NARRATION_ENABLED', 'PRESERVE_ASTERISKS_IN_CONTEXT'];
+        $narratorManagedKeys = [
+            'REMOVE_ASTERISKS_FROM_OUTPUT',
+            'REMOVE_ASTERISKS_FROM_PLAYER_INPUT',
+            'REMOVE_ASTERISKS_FROM_NPC_OUTPUT',
+            'INLINE_NARRATION_ENABLED',
+            'INLINE_NARRATION_MODE',
+            'REMOVE_PLAYER_AUTOCHAT_ASTERISKS',
+            'PLAYER_AUTOCHAT_ASTERISKS_ENABLED',
+            'PRESERVE_ASTERISKS_IN_CONTEXT'
+        ];
         if (is_array($metadata)) {
             foreach ($metadata as $key => $value) {
                 if (in_array(strtoupper((string)$key), $narratorManagedKeys, true)) {
@@ -882,7 +902,51 @@ FROM restore
         $this->updateByArray($currentNpcData);
     }
 
-      /**
+    /**
+     * Retrieve all rows from the factions table.
+     *
+     * @param string $where Optional SQL WHERE clause (defaults to TRUE = all rows).
+     * @return array        Array of faction rows from the factions table.
+     */
+    public function getAllfactions($where = "TRUE")
+    {
+        $query = "SELECT * FROM factions WHERE $where";
+        return $this->db->fetchAll($query);
+    }
+
+    /**
+     * Extract the factions an NPC belongs to from their extended_data JSON.
+     *
+     * Returns the raw factions array stored in extended_data, optionally filtered
+     * to only active memberships (rank > -1).
+     *
+     * @param array $npcData        The NPC data array (must contain 'extended_data').
+     * @param bool  $activeOnly     When true, only factions with rank > -1 are returned.
+     * @return array                Array of faction entries (each with 'formid' and 'rank'),
+     *                              or an empty array when none are found.
+     */
+    public function getNpcFactions(array $npcData, bool $activeOnly = true): array
+    {
+        if (empty($npcData['extended_data'])) {
+            return [];
+        }
+
+        $extendedData = json_decode($npcData['extended_data'], true);
+
+        if (!is_array($extendedData) || !isset($extendedData['factions']) || !is_array($extendedData['factions'])) {
+            return [];
+        }
+
+        if (!$activeOnly) {
+            return $extendedData['factions'];
+        }
+
+        return array_values(array_filter($extendedData['factions'], function ($faction) {
+            return isset($faction['rank']) && $faction['rank'] > -1;
+        }));
+    }
+
+    /**
      * Check if an NPC is in a specific faction by formid
      * 
      * @param array $npcData The NPC data array
@@ -914,5 +978,48 @@ FROM restore
         }
 
         return false;
+    }
+
+    private function resolveNpcTtsVoice(array $currentNpcData): array
+    {
+        if (!class_exists('TTSConnector')) {
+            require_once(__DIR__ . DIRECTORY_SEPARATOR . "tts_connector.class.php");
+        }
+
+        $connectorData = null;
+        $profileData = $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] ?? [];
+        $connectorId = intval($profileData['tts_connector_id'] ?? 0);
+        if ($connectorId > 0) {
+            $ttsConnector = new TTSConnector();
+            $connectorData = $ttsConnector->getById($connectorId);
+            return $ttsConnector->resolveNpcVoiceForConnector($currentNpcData, $connectorData);
+        }
+
+        $voiceId = trim(strval($currentNpcData['voiceid'] ?? ''));
+        return [
+            'original_voice' => $voiceId,
+            'fallback_voice' => '',
+            'resolved_voice' => $voiceId,
+            'used_fallback' => false,
+        ];
+    }
+
+    private function applyNpcVoiceToTtsGlobals(string $voiceId): void
+    {
+        $GLOBALS['TTS']['XTTSFASTAPI']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['CHATTERBOX']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['POCKETTTS']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['MELOTTS']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['MIMIC3']['voice'] = $voiceId;
+        $GLOBALS['TTS']['XVASYNTH']['model'] = $voiceId;
+        $GLOBALS['TTS']['ZONOS_GRADIO']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['PIPERTTS']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['ELEVEN_LABS']['voice_id'] = $voiceId;
+        $GLOBALS['TTS']['AZURE']['voice'] = $voiceId;
+        $GLOBALS['TTS']['KOKORO']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['openai']['voice'] = $voiceId;
+        $GLOBALS['TTS']['deepgram']['model'] = $voiceId;
+        $GLOBALS['TTS']['CARTESIA']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['INWORLD']['voiceid'] = $voiceId;
     }
 }

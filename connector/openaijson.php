@@ -24,6 +24,7 @@ class openaijson
     private $_is_cohere_ai;
     private $_is_cerebras_ai;
     private $_is_nvidia_com;
+    private $_is_lm_studio;
     private $_is_streaming;
     private $_is_reasoning;
     private $_is_grok;
@@ -35,6 +36,7 @@ class openaijson
     private $_cot_tag_base;
     private $_output_buffer; 
     private $_timeout;
+    private $_saw_reasoning_content;
     public $_extractedbuffer;
     private $_lastStreamedObject;
 
@@ -52,6 +54,7 @@ class openaijson
         $this->_is_cohere_ai=false;
         $this->_is_cerebras_ai=false;
         $this->_is_nvidia_com=false;
+        $this->_is_lm_studio=false;
         $this->_is_streaming=true;
         $this->_is_reasoning=false;
         $this->_is_grok=false;
@@ -63,6 +66,7 @@ class openaijson
         $this->_cot_tag_base="think";
         $this->_output_buffer="";
         $this->_timeout=30;
+        $this->_saw_reasoning_content=false;
         require_once(__DIR__."/__jpd.php");
     }
 
@@ -161,8 +165,122 @@ class openaijson
         return $b_res;
     }
 
+    private function normalizeBooleanFlag($value, $default=false) {
+        if ($value === null) {
+            return $default;
+        }
+
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return ((int)$value) !== 0;
+        }
+
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+            if ($normalized === '') {
+                return $default;
+            }
+            if (in_array($normalized, ['1', 'true', 'yes', 'on'], true)) {
+                return true;
+            }
+            if (in_array($normalized, ['0', 'false', 'no', 'off'], true)) {
+                return false;
+            }
+        }
+
+        return (bool)$value;
+    }
+
+    private function isPrivateIpv4Host($host)
+    {
+        if (!is_string($host) || !filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            return false;
+        }
+
+        $octets = array_map('intval', explode('.', $host));
+        if (count($octets) !== 4) {
+            return false;
+        }
+
+        if ($octets[0] === 10 || $octets[0] === 127) {
+            return true;
+        }
+
+        if ($octets[0] === 172 && $octets[1] >= 16 && $octets[1] <= 31) {
+            return true;
+        }
+
+        return ($octets[0] === 192 && $octets[1] === 168);
+    }
+
+    private function isLikelyLmStudioUrl($url)
+    {
+        if (!is_string($url) || trim($url) === '') {
+            return false;
+        }
+
+        $parts = parse_url($url);
+        if (!is_array($parts)) {
+            return false;
+        }
+
+        $scheme = strtolower(strval($parts['scheme'] ?? 'http'));
+        $host = strtolower(strval($parts['host'] ?? ''));
+        $path = strtolower(strval($parts['path'] ?? ''));
+        $port = intval($parts['port'] ?? (($scheme === 'https') ? 443 : 80));
+
+        if ($path !== '/v1/chat/completions' || $port !== 1234) {
+            return false;
+        }
+
+        if (($host === 'localhost') || ($host === '::1') || ($host === '0.0.0.0')) {
+            return true;
+        }
+
+        return $this->isPrivateIpv4Host($host) || (stripos($host, 'lmstudio') !== false);
+    }
+
+    private function buildLmStudioGenericJsonSchemaResponseFormat()
+    {
+        return array(
+            'type' => 'json_schema',
+            'json_schema' => array(
+                'name' => 'generic_object_response',
+                'strict' => false,
+                'schema' => array(
+                    'type' => 'object',
+                    'additionalProperties' => true
+                )
+            )
+        );
+    }
+
+    private function adaptLmStudioResponseFormat(array &$data)
+    {
+        if (!$this->_is_lm_studio) {
+            return;
+        }
+
+        $responseFormat = $data['response_format'] ?? null;
+        if (!is_array($responseFormat)) {
+            return;
+        }
+
+        if (($responseFormat['type'] ?? '') !== 'json_object') {
+            return;
+        }
+
+        $data['response_format'] = $this->buildLmStudioGenericJsonSchemaResponseFormat();
+    }
+
     private function init_connector($customParms) {
-        $this->_url = (isset($GLOBALS["CONNECTOR"][$this->name]["url"])) ? $GLOBALS["CONNECTOR"][$this->name]["url"] : "";
+        $this->_url = (isset($GLOBALS["CONNECTOR"][$this->name]["url"])) ? trim($GLOBALS["CONNECTOR"][$this->name]["url"]) : "";
+        $this->_is_lm_studio = false;
+        $this->_is_streaming = true;
+        $this->_stopProc = false;
         if (strlen($this->_url) < 6)
             Logger::error("{$this->name} connector - missing url!");
 
@@ -203,16 +321,157 @@ class openaijson
         
         $this->_is_grok = (stripos($this->_model, "grok") > 0 ); 
         $this->_is_openai_model = $this->isOpenAIModel($this->_model);
+        $this->_is_lm_studio = $this->normalizeBooleanFlag($GLOBALS["CONNECTOR"][$this->name]["lmstudio_compat"] ?? false, false);
+        if (!$this->_is_lm_studio) {
+            $this->_is_lm_studio = $this->isLikelyLmStudioUrl($this->_url);
+        }
 
         $this->_is_reasoning = $GLOBALS["CONNECTOR"][$this->name]["reasoning_model"] ?? false;  
         if (!$this->_is_reasoning)
             $this->_is_reasoning = $this->isReasoningModel($this->_model); // check if resoning model
+
+        $disableStreaming = $this->normalizeBooleanFlag($GLOBALS["CONNECTOR"][$this->name]["disable_streaming"] ?? false, false);
+        if ($disableStreaming && !$this->_is_groq_com) {
+            $this->_is_streaming = false;
+        }
+
+        $extraParameters = chimGetEnabledConnectorExtraParameters($GLOBALS["CONNECTOR"][$this->name] ?? []);
+        if (!$this->_is_groq_com && array_key_exists("stream", $extraParameters)) {
+            $this->_is_streaming = $this->normalizeBooleanFlag($extraParameters["stream"], $this->_is_streaming);
+        }
+
         $this->_timeout = ($this->_is_reasoning) ? 90 : 30; // reasoning models could think more than 2 minutes
+    }
+
+    private function extractTextFromResponsePart($value)
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+
+        if (!is_array($value)) {
+            return "";
+        }
+
+        $segments = [];
+        foreach ($value as $part) {
+            if (is_string($part)) {
+                $segments[] = $part;
+                continue;
+            }
+
+            if (!is_array($part)) {
+                continue;
+            }
+
+            $segmentText = $part["text"] ?? "";
+            if (is_string($segmentText) && $segmentText !== "") {
+                $segments[] = $segmentText;
+            }
+        }
+
+        return implode("", $segments);
+    }
+
+    private function extractMessageContentFromChoice($choice)
+    {
+        if (!is_array($choice)) {
+            return "";
+        }
+
+        $message = $choice["message"] ?? [];
+        if (!is_array($message)) {
+            return "";
+        }
+
+        return $this->extractTextFromResponsePart($message["content"] ?? null);
+    }
+
+    private function extractDeltaContentFromChoice($choice)
+    {
+        if (!is_array($choice)) {
+            return "";
+        }
+
+        $delta = $choice["delta"] ?? [];
+        if (!is_array($delta)) {
+            return "";
+        }
+
+        return $this->extractTextFromResponsePart($delta["content"] ?? null);
+    }
+
+    private function extractReasoningContentFromChoice($choice)
+    {
+        if (!is_array($choice)) {
+            return "";
+        }
+
+        $delta = $choice["delta"] ?? [];
+        if (is_array($delta)) {
+            $deltaReasoning = $this->extractTextFromResponsePart($delta["reasoning_content"] ?? null);
+            if ($deltaReasoning !== "") {
+                return $deltaReasoning;
+            }
+        }
+
+        $message = $choice["message"] ?? [];
+        if (!is_array($message)) {
+            return "";
+        }
+
+        return $this->extractTextFromResponsePart($message["reasoning_content"] ?? null);
+    }
+
+    private function decodeStreamingLine($line)
+    {
+        $line = trim((string)$line);
+        if ($line === "") {
+            return [null, false];
+        }
+
+        if (stripos($line, "data:") === 0) {
+            $payload = trim(substr($line, 5));
+            if ($payload === "") {
+                return [null, false];
+            }
+            if ($payload === "[DONE]") {
+                return [null, true];
+            }
+
+            $decoded = json_decode($payload, true);
+            return [is_array($decoded) ? $decoded : null, false];
+        }
+
+        if (($line[0] !== "{") && ($line[0] !== "[")) {
+            return [null, false];
+        }
+
+        $decoded = json_decode($line, true);
+        return [is_array($decoded) ? $decoded : null, false];
+    }
+
+    private function appendVisibleContent($content, &$buffer, &$totalBuffer)
+    {
+        if (!is_string($content) || $content === "") {
+            return;
+        }
+
+        $cleanContent = $this->removeChainOfThought($content);
+        if (strlen($cleanContent) > 0) {
+            $buffer .= $cleanContent;
+            $this->_buffer .= $cleanContent;
+            $this->_numOutputTokens += 1;
+        }
+
+        $totalBuffer .= $content;
     }
     
     public function open($contextData, $customParms)
     {
         $this->init_connector($customParms);
+        $this->_saw_reasoning_content=false;
+        $this->_stopProc=false;
 
         $MAX_TOKENS=intval((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48));
 
@@ -604,12 +863,11 @@ class openaijson
             unset($data["max_tokens"]); 
         }
 
-        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
-            foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
+        foreach (chimGetEnabledConnectorExtraParameters($GLOBALS["CONNECTOR"][$this->name] ?? []) as $k => $v) {
                 $data[$k]=$v;
-            }
         }
 
+        $this->adaptLmStudioResponseFormat($data);
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
 
@@ -771,6 +1029,8 @@ class openaijson
 
         if (!$this->primary_handler) {
             $line = "";
+        } else if (!$this->_is_streaming) {
+            $line = stream_get_contents($this->primary_handler);
         } else {
             $line = fgets($this->primary_handler);
         }
@@ -786,15 +1046,15 @@ class openaijson
 
             $data=json_decode($line, true);
 
-
-            if (isset($data["choices"][0]["message"]["content"])) {
-                $msg = trim($data["choices"][0]["message"]["content"]); 
-                if (strlen($msg) > 0) {
-                    $buffer .= $msg;
-                    $this->_buffer .= $msg;
-                    $this->_numOutputTokens += 1;
+            $choice = (isset($data["choices"][0]) && is_array($data["choices"][0])) ? $data["choices"][0] : [];
+            $msg = $this->extractMessageContentFromChoice($choice);
+            if (strlen($msg) > 0) {
+                $this->appendVisibleContent($msg, $buffer, $totalBuffer);
+            } else {
+                $reasoningContent = $this->extractReasoningContentFromChoice($choice);
+                if (strlen($reasoningContent) > 0) {
+                    $this->_saw_reasoning_content = true;
                 }
-                $totalBuffer .= $msg;
             }
 
             if (isset($data["usage"])) 
@@ -802,26 +1062,36 @@ class openaijson
 
         } else { // --- normal streaming flow 
 
-            $data=json_decode(substr($line, 6), true);
+            list($data, $streamDone) = $this->decodeStreamingLine($line);
+            if ($streamDone) {
+                $this->_stopProc = true;
+                $data = ["choices" => [["finish_reason" => "stop"]]];
+            }
 
-            if (isset($data["choices"][0]["delta"]["content"])) {
-                if (strlen(($data["choices"][0]["delta"]["content"]))>0) {
-                    $clean_content = $this->removeChainOfThought($data["choices"][0]["delta"]["content"]); // remove CoT tags and thinking content
-                    if (strlen($clean_content) > 0) {
-                        $buffer .= $clean_content;
-                        $this->_buffer .= $clean_content;
-                        $this->_numOutputTokens += 1;
+            if (is_array($data)) {
+                $choice = (isset($data["choices"][0]) && is_array($data["choices"][0])) ? $data["choices"][0] : [];
+                $chunkContent = $this->extractDeltaContentFromChoice($choice);
+                if (strlen($chunkContent) === 0) {
+                    $chunkContent = $this->extractMessageContentFromChoice($choice);
+                }
+
+                if (strlen($chunkContent) > 0) {
+                    $this->appendVisibleContent($chunkContent, $buffer, $totalBuffer);
+                } else {
+                    $reasoningContent = $this->extractReasoningContentFromChoice($choice);
+                    if (strlen($reasoningContent) > 0) {
+                        $this->_saw_reasoning_content = true;
                     }
                 }
-                $totalBuffer.=$data["choices"][0]["delta"]["content"];
-                
             }
+
             if (isset($data["usage"])) 
                 $this->_lastStreamedObject=$data;
         } // --- endif is_streaming 
 
         // process any remaining reasoning content on stream completion
-        if (isset($data["choices"][0]["finish_reason"]) && $data["choices"][0]["finish_reason"] !== null) {
+        if (is_array($data) && isset($data["choices"][0]["finish_reason"]) && $data["choices"][0]["finish_reason"] !== null) {
+            $this->_stopProc = true;
             if (!empty($this->_output_buffer)) {
                 $clean_remain = $this->removeChainOfThought("");
                 if (!empty($clean_remain)) {
@@ -829,6 +1099,10 @@ class openaijson
                     $this->_buffer .= $clean_remain;
                 }
                 $this->_output_buffer = ""; // clear the buffer
+            }
+
+            if ($this->_saw_reasoning_content && empty($this->_buffer)) {
+                Logger::warn("openaijson: stream finished with reasoning-only chunks and no visible assistant content");
             }
         }
 
@@ -885,6 +1159,7 @@ class openaijson
     // Method to close the data processing operation
     public function close($callName='')
     {
+        $this->_stopProc = true;
         
         // process any remaining content in the reasoning buffer before closing
         if ($this->_is_reasoning && !empty($this->_output_buffer)) {
@@ -1053,7 +1328,7 @@ class openaijson
 
     public function isDone()
     {
-        return !$this->primary_handler || feof($this->primary_handler);
+        return $this->_stopProc || !$this->primary_handler || feof($this->primary_handler);
     }
 
     public function fast_request($contextData, $customParms,$callName='')
@@ -1222,12 +1497,11 @@ class openaijson
             unset($data["max_tokens"]); 
         }
 
-        if (isset($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"]) && is_array($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"])) {
-            foreach ($GLOBALS["CONNECTOR"][$this->name]["extra_parameters"] as $k=>$v) {
+        foreach (chimGetEnabledConnectorExtraParameters($GLOBALS["CONNECTOR"][$this->name] ?? []) as $k => $v) {
                 $data[$k]=$v;
-            }
         }
 
+        $this->adaptLmStudioResponseFormat($data);
 
         $GLOBALS["DEBUG_DATA"]["full"]=($data);
      

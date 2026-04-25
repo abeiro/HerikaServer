@@ -10,61 +10,102 @@
 // Common patterns to use in most functions
 $MAXIMUM_WORDS=($GLOBALS["MAX_WORDS_LIMIT"]>0)?"(Maximum {$GLOBALS["MAX_WORDS_LIMIT"]} words)":"";
 
-// Database Prompt (Prose/Narration)
-$TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next prose/narration as a casual direct reaction to what was just said." . 
-" Be original, creative, knowledgeable, use your own thoughts. " . 
-" Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines." . 
-" {$GLOBALS["HERIKA_NAME"]}'s next lines will use this format \"{$GLOBALS["HERIKA_NAME"]}: ";
-
-// Database Prompt (Prose/Narration)
-// "should be a casual direct reaction to what was just said" is not always true, maybe last line was the same NPC,
-// and is repeating (not copying) this same line, because is the 'direct reaction to what was just said'
-// Example:
-// Morgan|ScriptQueue|Though I suppose we could always settle it with a little *wrestling*.//Volkur//
-// (a funcrec event comes, which just write  something into context. )
-// Morgan|ScriptQueue|Wrestling, you say? Now *that* sounds like a fun way to get acquainted.//Vixi Talax//
-//
-
-
-// Add narration instruction if inline narration is enabled (default to false if not set)
-$inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
-if ($inlineNarrationEnabled) {
-    $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next prose/narration." . 
-" Be original, creative, knowledgeable, use your own thoughts. " . 
-" Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.$MAXIMUM_WORDS" . 
-"";
-
-    global $db;
-    $inlineNarrationPrompt = null;
-    try {
-        $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'inline_narration_prompt'");
-        if ($promptData) {
-            $inlineNarrationPrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
-        }
-    } catch (Exception $e) {
-        Logger::warn("[INLINE_NARRATION] Failed to load prompt from database, using hardcoded fallback: " . $e->getMessage());
-    }
-    
-    // Hardcoded fallback if database query failed or returned no results
-    if (!$inlineNarrationPrompt) {
-        $inlineNarrationPrompt = "You may include one brief third-person narration block in single asterisks before the dialogue (e.g., *She smiles*). Do not wrap the entire reply in asterisks; keep any spoken dialogue outside the asterisks.";
-    }
-    $TEMPLATE_DIALOG .= " " . $inlineNarrationPrompt;
-} else {
-    // Restore old behavior.By default, no narration instruction is included 
-    // 'next prose/narration.' will enforce narrations, and will break oon another use cases (quests/instruction pprompts).
-    // I don't want narrations. If you want narrations, enable inline narration or whatever.
-    
-    $TEMPLATE_DIALOG=" Write {$GLOBALS["HERIKA_NAME"]}'s next dialogue line." . 
-" Be original, creative, knowledgeable, use your own thoughts. " . 
-" Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.$MAXIMUM_WORDS" . 
-"";
+$directNarratorDialogue = false;
+if (isset($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) {
+    $directNarratorDialogue = (bool)$GLOBALS["DIRECT_NARRATOR_DIALOGUE"];
+} elseif (isset($GLOBALS["gameRequest"][0])) {
+    $directNarratorDialogue = ($GLOBALS["gameRequest"][0] === 'narrator_inputtext');
+} elseif (isset($gameRequest[0])) {
+    $directNarratorDialogue = ($gameRequest[0] === 'narrator_inputtext');
 }
 
-// Legacy format reference (prose-friendly update applied)
-// $TEMPLATE_DIALOG="write {$GLOBALS["HERIKA_NAME"]}'s next prose/narration using this format \"{$GLOBALS["HERIKA_NAME"]}: ";
+if (!function_exists('chimLoadManagedPromptTemplate')) {
+    function chimLoadManagedPromptTemplate($promptKey, $fallbackPrompt, array $replacements = [], $logContext = "PROMPT")
+    {
+        global $db;
+
+        $promptText = null;
+        try {
+            if (isset($db)) {
+                $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = '{$promptKey}'");
+                if ($promptData) {
+                    $promptText = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+                }
+            }
+        } catch (Exception $e) {
+            Logger::warn("[$logContext] Failed to load prompt from database, using hardcoded fallback: " . $e->getMessage());
+        }
+
+        if (!$promptText) {
+            $promptText = $fallbackPrompt;
+        }
+
+        return strtr($promptText, $replacements);
+    }
+}
 
 
+// Add narration instruction when inline narration mode expects leading asterisk narration blocks.
+$inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
+if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+    $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
+}
+$inlineNarrationMode = $directNarratorDialogue ? 'disabled' : $inlineNarrationMode;
+$inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
+if ($inlineNarrationEnabled) {
+    if ($inlineNarrationMode === 'npc') {
+        $inlineDialoguePromptKey = 'dialogue_line_inline_response_npc';
+        $inlineDialogueFallback = " Write {HERIKA_NAME}'s next dialogue line."
+            . " If needed, you may include one brief third-person narration block in single asterisks before the dialogue."
+            . " Keep any spoken dialogue outside the asterisks, and do not wrap the entire reply in asterisks."
+            . " Be original, creative, knowledgeable, use your own thoughts."
+            . " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}";
+        $inlineNarrationPromptKey = 'inline_narration_prompt_npc';
+        $inlineNarrationFallback = "You may include one brief third-person narration block in single asterisks before the dialogue (e.g., *She smiles softly*). Keep any spoken dialogue outside the asterisks. Do not wrap the entire reply in asterisks.";
+    } else {
+        $inlineDialoguePromptKey = 'dialogue_line_inline_response_narrator';
+        $inlineDialogueFallback = " Write {HERIKA_NAME}'s next prose/narration."
+            . " Be original, creative, knowledgeable, use your own thoughts. "
+            . " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}";
+        $inlineNarrationPromptKey = 'inline_narration_prompt_narrator';
+        $inlineNarrationFallback = "You may include one brief third-person narration block in single asterisks before the dialogue (e.g., *She smiles*). Do not wrap the entire reply in asterisks; keep any spoken dialogue outside the asterisks.";
+    }
+
+    $TEMPLATE_DIALOG = chimLoadManagedPromptTemplate(
+        $inlineDialoguePromptKey,
+        $inlineDialogueFallback,
+        [
+            "{HERIKA_NAME}" => $GLOBALS["HERIKA_NAME"],
+            "{MAXIMUM_WORDS}" => $MAXIMUM_WORDS,
+        ],
+        "DIALOGUE_LINE_INLINE_RESPONSE"
+    );
+
+    $inlineNarrationPrompt = chimLoadManagedPromptTemplate(
+        $inlineNarrationPromptKey,
+        $inlineNarrationFallback,
+        [],
+        "INLINE_NARRATION"
+    );
+    $TEMPLATE_DIALOG .= " " . $inlineNarrationPrompt;
+} else {
+    $TEMPLATE_DIALOG = chimLoadManagedPromptTemplate(
+        'dialogue_line_response',
+        " Write {HERIKA_NAME}'s next dialogue line." .
+        " Be original, creative, knowledgeable, use your own thoughts. " .
+        " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}",
+        [
+            "{HERIKA_NAME}" => $GLOBALS["HERIKA_NAME"],
+            "{MAXIMUM_WORDS}" => $MAXIMUM_WORDS,
+        ],
+        "DIALOGUE_LINE_RESPONSE"
+    );
+}
+
+if ($directNarratorDialogue) {
+    $TEMPLATE_DIALOG .= " Reply directly to {$GLOBALS["PLAYER_NAME"]} in plain spoken dialogue only." .
+        " Do not include third-person narration, scene description, stage directions, or text in asterisks.";
+}
 
 if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) &&  sizeof($GLOBALS["TTS"]["AZURE"]["validMoods"])>0) 
     if ($GLOBALS["TTSFUNCTION"]=="azure")

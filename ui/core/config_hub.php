@@ -5,7 +5,6 @@ $enginePath = __DIR__ . DIRECTORY_SEPARATOR . "../../";
 require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 
-// Determine web root (match other core pages)
 $scriptPath = $_SERVER['SCRIPT_NAME'];
 $uiPos = strpos($scriptPath, '/ui/');
 if ($uiPos !== false) {
@@ -13,106 +12,30 @@ if ($uiPos !== false) {
 } else {
     $webRoot = '';
 }
-if ($webRoot == '/') $webRoot = '';
+if ($webRoot == '/') {
+    $webRoot = '';
+}
 $webRoot = rtrim($webRoot, '/');
 
-require_once(__DIR__.DIRECTORY_SEPARATOR."../profile_loader.php");
+require_once(__DIR__ . DIRECTORY_SEPARATOR . "../profile_loader.php");
 $TITLE = "Configuration";
 ob_start();
-include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
-include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
+include(__DIR__ . DIRECTORY_SEPARATOR . "../tmpl/head.html");
+include(__DIR__ . DIRECTORY_SEPARATOR . "../tmpl/navbar.php");
 ?>
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
 main { padding: 80px 10px 10px; height: 100vh; }
-
-.tab-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    margin: 20px 0 20px 0;
-    border-bottom: 2px solid rgba(242, 124, 17, 0.2);
-    gap: 5px;
-    word-spacing: 5px;
-}
-
-.tab-button {
-    background: linear-gradient(180deg, rgba(42, 42, 42, 0.8), rgba(34, 34, 34, 0.9));
-    border: 2px solid #3a3a3a;
-    border-bottom: none;
-    padding: 12px 18px;
-    color: #f8f9fa;
-    cursor: pointer;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    transition: all 0.3s ease;
-    font-size: 1em;
-    white-space: nowrap;
-    font-family: 'MagicCards', sans-serif;
-    word-spacing: 5px;
-    letter-spacing: 1.5px;
-    margin-bottom: -2px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.tab-button:hover {
-    background: linear-gradient(180deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 1));
-    color: rgb(242, 124, 17);
-    border-color: rgba(242, 124, 17, 0.3);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.tab-button.active {
-    background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
-    border-color: rgba(242, 124, 17, 0.5);
-    border-bottom: 2px solid rgba(42, 42, 42, 0.95);
-    color: rgb(242, 124, 17);
-    box-shadow: 0 4px 8px rgba(242, 124, 17, 0.2);
-}
-
-.tab-content {
-    display: none;
-    background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
-    border-radius: 8px;
-    border-top-left-radius: 0;
-    border: 1px solid #3a3a3a;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
-}
-
-.tab-content.active {
-    display: flex;
-    flex-grow: 1;
-}
-
-.embed-wrap {
-    height: 100%;
-    width: 100%;
-    border: 1px solid #4a4a4a;
-    border-radius: 8px;
-    overflow: hidden;
-    background: #2a2a2a;
-}
-
-.embed {
-    width: 100%;
-    height: 100%;
-    border: 0;
-    background: transparent;
-}
-
-@media (max-height: 800px) {
-    .embed-wrap {
-        min-height: 420px;
-    }
-}
-
-.tab-divider {
-    padding: 10px 8px;
-    color: #9fb1c9;
-    font-weight: 700;
-    user-select: none;
-    pointer-events: none;
-}
+.tab-buttons { display: flex; flex-wrap: wrap; margin: 20px 0; border-bottom: 2px solid rgba(242, 124, 17, 0.2); gap: 5px; word-spacing: 5px; }
+.tab-button { background: linear-gradient(180deg, rgba(42, 42, 42, 0.8), rgba(34, 34, 34, 0.9)); border: 2px solid #3a3a3a; border-bottom: none; padding: 12px 18px; color: #f8f9fa; cursor: pointer; border-top-left-radius: 8px; border-top-right-radius: 8px; transition: all 0.3s ease; font-size: 1em; white-space: nowrap; font-family: 'MagicCards', sans-serif; word-spacing: 5px; letter-spacing: 1.5px; margin-bottom: -2px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+.tab-button:hover { background: linear-gradient(180deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 1)); color: rgb(242, 124, 17); border-color: rgba(242, 124, 17, 0.3); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
+.tab-button.active { background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98)); border-color: rgba(242, 124, 17, 0.5); border-bottom: 2px solid rgba(42, 42, 42, 0.95); color: rgb(242, 124, 17); box-shadow: 0 4px 8px rgba(242, 124, 17, 0.2); }
+.tab-content { display: none; background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98)); border-radius: 8px; border-top-left-radius: 0; border: 1px solid #3a3a3a; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03); }
+.tab-content.active { display: flex; flex-grow: 1; }
+.embed-wrap { height: 100%; width: 100%; border: 1px solid #4a4a4a; border-radius: 8px; overflow: hidden; background: #2a2a2a; }
+.embed { width: 100%; height: 100%; border: 0; background: transparent; }
+@media (max-height: 800px) { .embed-wrap { min-height: 420px; } }
 </style>
 
 <main class="d-flex flex-column">
@@ -122,20 +45,21 @@ main { padding: 80px 10px 10px; height: 100vh; }
 
     <div class="top-area">
         <div class="tab-buttons">
-            <button class="tab-button active" data-tab="npc">🌟CHIM NPCs</button>
-            <button class="tab-button" data-tab="globals">🌐Global Settings</button>
-            <button class="tab-button" data-tab="profiles">🗃️Profiles</button>
-            <button class="tab-button" data-tab="llm">🧠LLM Connectors</button>
-            <button class="tab-button" data-tab="keys">🔑API Keys</button>
-            <button class="tab-button" data-tab="player">👤Player</button>
+            <button class="tab-button active" data-tab="npc">🌟 CHIM NPCs</button>
+            <button class="tab-button" data-tab="globals">🌐 Global Settings</button>
+            <button class="tab-button" data-tab="profiles">🗃️ Profiles</button>
+            <button class="tab-button" data-tab="llm">🧠 LLM Connectors</button>
+            <button class="tab-button" data-tab="ttscfg">🔊 TTS Connectors</button>
+            <button class="tab-button" data-tab="keys">🔑 API Keys</button>
+            <button class="tab-button" data-tab="player">👤 Player</button>
             <button class="tab-button" data-tab="narrator">🗣️ Narration</button>
-            <button class="tab-button" data-tab="oghma">🐙Oghma Infinium</button>
-            <button class="tab-button" data-tab="npcbio">🪪NPC Biographies</button>
+            <button class="tab-button" data-tab="oghma">📜 Oghma Infinium</button>
+            <button class="tab-button" data-tab="npcbio">🪪 NPC Biographies</button>
             <button class="tab-button" data-tab="items">📜 Descriptions</button>
-            <button class="tab-button" data-tab="actions">⚔️Action Editor</button>
-            <button class="tab-button" data-tab="prompts">💬Prompts Manager</button>
+            <button class="tab-button" data-tab="actions">⚔️ Action Editor</button>
+            <button class="tab-button" data-tab="prompts">💬 Prompts Manager</button>
             <button class="tab-button" data-tab="xtts">📢 TTS Studio</button>
-            <button class="tab-button" data-tab="serverplugins">🔌Server Plugins</button>
+            <button class="tab-button" data-tab="serverplugins">🧩 Server Plugins</button>
         </div>
     </div>
 
@@ -163,6 +87,11 @@ main { padding: 80px 10px 10px; height: 100vh; }
         <div id="llm" class="tab-content">
             <div class="embed-wrap">
                 <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/llm_connectors.php?embed=1"></iframe>
+            </div>
+        </div>
+        <div id="ttscfg" class="tab-content">
+            <div class="embed-wrap">
+                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/tts_connectors.php?embed=1"></iframe>
             </div>
         </div>
         <div id="oghma" class="tab-content">
@@ -198,11 +127,6 @@ main { padding: 80px 10px 10px; height: 100vh; }
         <div id="dbmgr" class="tab-content">
             <div class="embed-wrap">
                 <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/import_db.php?embed=1"></iframe>
-            </div>
-        </div>
-        <div id="ttscfg" class="tab-content">
-            <div class="embed-wrap">
-                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/tts_connectors.php?embed=1"></iframe>
             </div>
         </div>
         <div id="sttcfg" class="tab-content">
@@ -242,40 +166,50 @@ main { padding: 80px 10px 10px; height: 100vh; }
 (function(){
     const buttons = document.querySelectorAll('.tab-button');
     const tabs = document.querySelectorAll('.tab-content');
-    function reloadIframe(container){
+
+    function reloadIframe(container) {
         const iframe = container.querySelector('iframe');
         if (!iframe) return;
         const base = iframe.getAttribute('data-src') || iframe.getAttribute('src');
         if (!base) return;
-        const u = new URL(base, window.location.origin);
-        u.searchParams.set('_', String(Date.now()));
-        iframe.src = u.toString();
+        const url = new URL(base, window.location.origin);
+        url.searchParams.set('_', String(Date.now()));
+        iframe.src = url.toString();
     }
-    function activate(id){
-        buttons.forEach(b=>{ b.classList.toggle('active', b.dataset.tab===id); });
-        tabs.forEach(t=>{
-            const on = (t.id===id);
-            t.classList.toggle('active', on);
-            if (on) reloadIframe(t);
+
+    function activate(id) {
+        buttons.forEach(function(button){
+            button.classList.toggle('active', button.dataset.tab === id);
+        });
+        tabs.forEach(function(tab){
+            const active = tab.id === id;
+            tab.classList.toggle('active', active);
+            if (active) {
+                reloadIframe(tab);
+            }
         });
         const url = new URL(window.location);
         url.searchParams.set('tab', id);
         window.history.replaceState({}, '', url);
     }
-    buttons.forEach(b=> b.addEventListener('click', ()=> activate(b.dataset.tab)));
-    // Init from URL param
-    const qp = new URL(window.location).searchParams.get('tab');
-    if (qp && document.getElementById(qp)) activate(qp);
+
+    buttons.forEach(function(button){
+        button.addEventListener('click', function(){
+            activate(button.dataset.tab);
+        });
+    });
+
+    const initialTab = new URL(window.location).searchParams.get('tab');
+    if (initialTab && document.getElementById(initialTab)) {
+        activate(initialTab);
+    }
 })();
 </script>
 
 <?php
-include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/footer.html");
+include(__DIR__ . DIRECTORY_SEPARATOR . "../tmpl/footer.html");
 $buffer = ob_get_contents();
 ob_end_clean();
-$title = $TITLE;
-$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $TITLE . '$3', $buffer);
 echo $buffer;
 ?>
-
-

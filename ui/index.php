@@ -840,180 +840,26 @@ if (isset($_POST["animation"])) {
     } 
 
     if (isset($_GET["table"]) && ($_GET["table"] == "audit_request")) {
-        $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 50;
+        $limit = isset($_GET["limit"]) ? max(10, intval($_GET["limit"])) : 50;
         $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
-        $offset = ($page - 1) * $limit;
-
-        // Add modal HTML structure if not already present
-        if (strpos($buffer ?? '', 'id="contentModal"') === false) {
-            echo '
-            <div id="contentModal" class="modal">
-                <div class="modal-content">
-                    <span class="close">&times;</span>
-                    <div id="modalText"></div>
-                </div>
-            </div>
-            
-            <style>
-            /* Modal styles */
-            .modal {
-                display: none;
-                position: fixed;
-                z-index: 100000;
-                left: 0;
-                top: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0,0,0,0.5);
-                backdrop-filter: blur(5px);
-                -webkit-backdrop-filter: blur(5px);
-            }
-
-            .modal-content {
-                background-color: #2a2a2a;
-                margin: 5% auto;
-                padding: 20px;
-                border: 1px solid #444;
-                width: 80%;
-                max-width: 1200px;
-                max-height: 80vh;
-                overflow-y: auto;
-                border-radius: 5px;
-                color: #fff;
-                position: relative;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            }
-
-            .close {
-                color: #aaa;
-                float: right;
-                font-size: 28px;
-                font-weight: bold;
-                cursor: pointer;
-                position: sticky;
-                z-index: 1;
-            }
-
-            .close:hover,
-            .close:focus {
-                color: #fff;
-                text-decoration: none;
-            }
-
-            #modalText {
-                white-space: pre-wrap;
-                word-wrap: break-word;
-                line-height: 1.6;
-                padding: 10px 0;
-                font-size: 12px;
-            }
-
-            /* Prevent background interaction when modal is open */
-            body.modal-open {
-                overflow: hidden;
-            }
-            </style>
-
-            <script>
-            // Modal functionality
-            document.addEventListener("DOMContentLoaded", function() {
-                var modal = document.getElementById("contentModal");
-                var modalText = document.getElementById("modalText");
-                var span = document.getElementsByClassName("close")[0];
-
-                // When the user clicks on <span> (x), close the modal
-                span.onclick = function() {
-                    modal.style.display = "none";
-                    document.body.classList.remove("modal-open");
-                };
-
-                // When the user clicks anywhere outside of the modal, close it
-                window.onclick = function(event) {
-                    if (event.target == modal) {
-                        modal.style.display = "none";
-                        document.body.classList.remove("modal-open");
-                    }
-                };
-
-                // Add click handlers to all cell contents
-                document.querySelectorAll(".view-contents-btn").forEach(function(element) {
-                    element.addEventListener("click", function() {
-                        modalText.innerHTML = this.getAttribute("data-full-content");
-                        modal.style.display = "block";
-                        document.body.classList.add("modal-open");
-                    });
-                });
-            });
-            </script>';
-        }
-
-        $results = $db->fetchAll(
-            "SELECT created_at, request, result, usage, url, rowid 
-             FROM audit_request 
-             ORDER BY created_at DESC 
-             LIMIT $limit OFFSET $offset"
-        );
-
-        $columnHeaders = [
-            'created_at' => 'Time (UTC)',
-            'request' => 'Request',
-            'result' => 'Result',
-            'usage' => 'Usage',
-            'rowid' => 'Row ID',
-            'url' => 'URL'
+        $params = [
+            "page" => $page,
+            "limit" => $limit,
         ];
 
-        $mappedResults = array_map(function ($row) use ($columnHeaders) {
-            $mappedRow = [];
-            foreach ($row as $key => $value) {
-                if ($key === 'request') {
-                    // For request column, show as a button with preview (400 characters)
-                    $escapedContent = htmlspecialchars($value, ENT_QUOTES);
-                    $preview = htmlspecialchars(substr($value, 0, 400)) . (strlen($value) > 400 ? '...' : '');
-                    $mappedRow[$columnHeaders[$key] ?? $key] = 
-                        '<div style="display: flex; align-items: center; gap: 10px;">' .
-                        '<span style="flex-grow: 1;">' . $preview . '</span>' .
-                        '<button class="view-contents-btn btn-base btn-primary" data-full-content="' . $escapedContent . '">ðŸ“„ View Full</button>' .
-                        '</div>';
-                } else if ($key === 'created_at' && !empty($value)) {
-                    // Format timestamp to UTC time
-                    $dt = new DateTime($value);
-                    $dt->setTimezone(new DateTimeZone('UTC'));
-                    $mappedRow[$columnHeaders[$key]] = $dt->format('d-m-Y H:i:s');
-                } else if ($key === 'result') {
-                    // Format result with color coding - green for OK, red for others
-                    $resultColor = (strtoupper(trim($value)) === 'OK') ? '#4CAF50' : '#f44336';
-                    $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content" style="color: ' . $resultColor . '; font-weight: bold;">' . nl2br(htmlspecialchars($value)) . '</div>';
-                } else if ($key === 'usage') {
-                    // Render compact JSON preview
-                    $jsonText = is_string($value) ? $value : json_encode($value);
-                    $preview = htmlspecialchars(substr($jsonText, 0, 400)) . (strlen($jsonText) > 400 ? '...' : '');
-                    $mappedRow[$columnHeaders[$key] ?? $key] = '<div class="full-content">' . $preview . '</div>';
-                } else if ($key === 'url') {
-                    // Format URL column
-                    $mappedRow[$columnHeaders[$key] ?? $key] = htmlspecialchars($value);
-                } else {
-                    $mappedRow[$columnHeaders[$key] ?? $key] = htmlspecialchars($value);
-                }
-            }
-            return $mappedRow;
-        }, $results);
-
-        echo "<h1 class='my-2'>Request to LLM Services Log</h1>";
-        echo "<p>This table shows requests made to LLM services and their responses.</p>";
-
-        // Pagination buttons
-        $prevPage = max(1, $page - 1);
-        $nextPage = $page + 1;
-
-        echo "<div class='pagination-buttons' style='margin: 10px 0;'>";
-        if ($page > 1) {
-            echo "<button onclick=\"window.location.href='?table=audit_request&page=$prevPage&limit=$limit'\" class='btn-base btn-primary'>Previous</button> ";
+        if (isset($_GET["embed"]) && $_GET["embed"]) {
+            $params["embed"] = "1";
         }
-        echo "<button onclick=\"window.location.href='?table=audit_request&page=$nextPage&limit=$limit'\" class='btn-base btn-primary'>Next</button>";
-        echo "</div>";
 
-        print_array_as_table($mappedResults);
+        $requestLogUrl = $webRoot . "/ui/request_logs.php?" . http_build_query($params);
+        $escapedRequestLogUrl = htmlspecialchars($requestLogUrl, ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8");
+
+        echo "<div class='table-container'>";
+        echo "<h1 class='my-2'>Request to LLM Services Log</h1>";
+        echo "<p>This view moved to the dedicated request log page.</p>";
+        echo "<p><a class='btn-base btn-primary' href='{$escapedRequestLogUrl}'>Open Request Logs</a></p>";
+        echo "<script>window.location.replace(" . json_encode($requestLogUrl) . ");</script>";
+        echo "</div>";
     } 
 
     if (isset($_GET["table"]) && ($_GET["table"] == "openai_token_count")) {

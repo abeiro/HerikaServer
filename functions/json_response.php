@@ -10,6 +10,16 @@
     $structuredOutputTemplate=array();
     $grammar = "";
 
+    if (!function_exists('chimIsDirectNarratorDialogue')) {
+        function chimIsDirectNarratorDialogue() {
+            if (isset($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) {
+                return (bool)$GLOBALS["DIRECT_NARRATOR_DIALOGUE"];
+            }
+
+            return isset($GLOBALS["gameRequest"][0]) && $GLOBALS["gameRequest"][0] === "narrator_inputtext";
+        }
+    }
+
     setActions();
     setResponseTemplate();
     setStructuredOutputTemplate();
@@ -33,6 +43,11 @@
         // Skip actions list for narration events (The Narrator doesn't need action options for atmospheric descriptions)
         if (isset($GLOBALS["gameRequest"]) && $GLOBALS["gameRequest"][0] === "narration") {
             $GLOBALS["FUNC_LIST"] = ["Talk"];  // Only Talk action for narration
+            return;
+        }
+
+        if (chimIsDirectNarratorDialogue()) {
+            $GLOBALS["FUNC_LIST"] = ["Talk"];
             return;
         }
         
@@ -113,11 +128,20 @@
             $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to. Address whoever just spoke - can be any person in the conversation.";
         }
     
-        // Determine message description based on INLINE_NARRATION_ENABLED setting (default to false if not set)
-        $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
+        // Determine message description based on inline narration mode.
+        $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+            $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
+        }
+        if (chimIsDirectNarratorDialogue()) {
+            $inlineNarrationMode = 'disabled';
+        }
+        $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
         $messageDescription = "lines of dialogue";
         if ($inlineNarrationEnabled) {
             $messageDescription = "If needed, start with one brief third-person narration block in single asterisks, then put {$GLOBALS["HERIKA_NAME"]}'s spoken text after it. Example: *She smiles* It's good to see you again, my friend! Do not wrap the entire reply in asterisks, and keep spoken dialogue outside the asterisks.";
+        } elseif (chimIsDirectNarratorDialogue()) {
+            $messageDescription = "plain spoken dialogue addressed directly to {$GLOBALS["PLAYER_NAME"]}. Do not include third-person narration, scene description, stage directions, or text in asterisks.";
         }
     
         if (isset($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])&&($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])) {
@@ -199,11 +223,20 @@
         $moods=normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "");
         shuffle($moods);
 
-        // Determine message description based on INLINE_NARRATION_ENABLED setting (default to false if not set)
-        $inlineNarrationEnabled = isset($GLOBALS["INLINE_NARRATION_ENABLED"]) ? (bool)$GLOBALS["INLINE_NARRATION_ENABLED"] : false;
+        // Determine message description based on inline narration mode.
+        $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+            $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
+        }
+        if (chimIsDirectNarratorDialogue()) {
+            $inlineNarrationMode = 'disabled';
+        }
+        $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
         $messageDescription = "lines of {$GLOBALS["HERIKA_NAME"]}'s dialogue";
         if ($inlineNarrationEnabled) {
             $messageDescription = "If needed, start with one brief third-person narration block in single asterisks, then put {$GLOBALS["HERIKA_NAME"]}'s spoken text after it. Example: *She smiles* It's good to see you again, my friend! Do not wrap the entire reply in asterisks, and keep spoken dialogue outside the asterisks.";
+        } elseif (chimIsDirectNarratorDialogue()) {
+            $messageDescription = "plain spoken dialogue addressed directly to {$GLOBALS["PLAYER_NAME"]}. Do not include third-person narration, scene description, stage directions, or text in asterisks.";
         }
 
         $GLOBALS["structuredOutputTemplate"] = array(

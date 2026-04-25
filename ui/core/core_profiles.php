@@ -601,9 +601,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
         if ($id <= 0) { echo json_encode(["ok"=>false, "error"=>"Invalid id"]); exit; }
 
         $allowed = [
-            'label','service','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema','api_badge_id','extra_parameters_yaml'
+            'label','service','url','model','provider','driver','max_tokens','temperature','presence_penalty','frequency_penalty','repetition_penalty','top_p','top_k','min_p','top_a','enforce_json','prefill_json','reasoning_model','json_schema','api_badge_id','extra_parameters_yaml','extra_parameters_enabled','disable_streaming'
         ];
         $data = [];
+        $readConnectorMetadata = function() use (&$data, $llm, $id) {
+            if (isset($data['metadata'])) {
+                $metadata = json_decode(strval($data['metadata']), true);
+                if (is_array($metadata)) {
+                    return $metadata;
+                }
+            }
+            $row = $llm->getById($id);
+            $metadata = is_string($row['metadata'] ?? '') ? json_decode($row['metadata'], true) : ($row['metadata'] ?? []);
+            return is_array($metadata) ? $metadata : [];
+        };
+        $writeConnectorMetadata = function(array $metadata) use (&$data) {
+            $data['metadata'] = json_encode($metadata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        };
         foreach ($allowed as $k) {
             if (!array_key_exists($k, $_POST)) continue;
             $v = $_POST[$k];
@@ -619,22 +633,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_connect
                 // Parse YAML and store as metadata.extra_parameters
                 require_once __DIR__ . '/../../connector/parse_simple_yaml.php';
                 $extra_parameters = parse_simple_yaml($v);
+                $metadata = $readConnectorMetadata();
                 if (is_array($extra_parameters)) {
-                    // Get current metadata
-                    $row = $llm->getById($id);
-                    $metadata = is_string($row['metadata'] ?? '') ? json_decode($row['metadata'], true) : ($row['metadata'] ?? []);
-                    if (!is_array($metadata)) $metadata = [];
                     $metadata['extra_parameters'] = $extra_parameters;
-                    $data['metadata'] = json_encode($metadata);
                 } else {
-                    // Invalid YAML, remove extra_parameters
-                    $row = $llm->getById($id);
-                    $metadata = is_string($row['metadata'] ?? '') ? json_decode($row['metadata'], true) : ($row['metadata'] ?? []);
-                    if (!is_array($metadata)) $metadata = [];
                     unset($metadata['extra_parameters']);
-                    $data['metadata'] = json_encode($metadata);
                 }
+                $writeConnectorMetadata($metadata);
                 // Don't add extra_parameters_yaml to $data directly
+                continue;
+            } else if ($k === 'extra_parameters_enabled') {
+                $metadata = $readConnectorMetadata();
+                $metadata['extra_parameters_enabled'] = ($v === '1' || $v === 'true' || $v === 1);
+                $writeConnectorMetadata($metadata);
+                continue;
+            } else if ($k === 'disable_streaming') {
+                $metadata = $readConnectorMetadata();
+                $metadata['disable_streaming'] = ($v === '1' || $v === 'true' || $v === 1);
+                $writeConnectorMetadata($metadata);
                 continue;
             } else {
                 $data[$k] = ($v === '' ? null : $v);
@@ -1019,6 +1035,7 @@ $byId = function($rows){
 $llmById = $byId($llmRows);
 $ttsById = $byId($ttsRows);
 $ittById = $byId($ittRows);
+
 ?>
 
 <div class="page-header">
@@ -1108,6 +1125,7 @@ $ittById = $byId($ittRows);
                                 `</div>
                             </div>
                             <div class="pf-lines">
+                                <div class="pf-line"><span class="pf-icon">&#x1F50A;</span><span class="pf-key">TTS Connector</span><span class="pf-val">${tts||'&mdash;'}</span></div>
                                 <div class="pf-line"><span class="pf-icon">&#x1F579;&#xFE0F;</span><span class="pf-key">Standard LLM</span><span class="pf-val">${llm1||'&mdash;'}</span></div>
                                 <div class="pf-line"><span class="pf-icon">&#x1F3C3;&#x200D;&#x2642;&#xFE0F;&#x200D;&#x27A1;&#xFE0F;</span><span class="pf-key">Fast LLM</span><span class="pf-val">${llm2||'&mdash;'}</span></div>
                                 <div class="pf-line"><span class="pf-icon">&#x1F4AA;</span><span class="pf-key">Powerful LLM</span><span class="pf-val">${llm3||'&mdash;'}</span></div>
@@ -1425,20 +1443,26 @@ const saveAllBtn = document.getElementById('btn_save_all');
         <?php
             $connectorRoleSections = [
                 [
+                    'title' => 'Audio',
+                    'rows' => [
+                        ['field' => 'tts_connector_id',  'icon' => '&#x1F50A;',         'title' => 'TTS Connector',   'desc' => 'Voice synthesis connector used for spoken output.', 'options' => 'tts'],
+                    ],
+                ],
+                [
                     'title' => 'Response',
                     'rows' => [
-                        ['field' => 'llm_primary_id',    'icon' => '&#x1F579;&#xFE0F;', 'title' => 'Standard LLM',     'desc' => 'General purpose connector for normal roleplay responses.'],
-                        ['field' => 'llm_secondary_id',  'icon' => '&#x1F3C3;&#x200D;&#x2642;&#xFE0F;&#x200D;&#x27A1;&#xFE0F;', 'title' => 'Fast LLM',         'desc' => 'Lower-latency connector for quick reactions and lightweight dialogue.'],
-                        ['field' => 'llm_tertiary_id',   'icon' => '&#x1F4AA;',         'title' => 'Powerful LLM',     'desc' => 'Higher-quality connector for deeper or more complex responses.'],
-                        ['field' => 'llm_quaternary_id', 'icon' => '&#x1F9EA;',         'title' => 'Experimental LLM', 'desc' => 'Optional wildcard connector for experimentation and variety.'],
+                        ['field' => 'llm_primary_id',    'icon' => '&#x1F579;&#xFE0F;', 'title' => 'Standard LLM',     'desc' => 'General purpose connector for normal roleplay responses.', 'options' => 'llm'],
+                        ['field' => 'llm_secondary_id',  'icon' => '&#x1F3C3;&#x200D;&#x2642;&#xFE0F;&#x200D;&#x27A1;&#xFE0F;', 'title' => 'Fast LLM',         'desc' => 'Lower-latency connector for quick reactions and lightweight dialogue.', 'options' => 'llm'],
+                        ['field' => 'llm_tertiary_id',   'icon' => '&#x1F4AA;',         'title' => 'Powerful LLM',     'desc' => 'Higher-quality connector for deeper or more complex responses.', 'options' => 'llm'],
+                        ['field' => 'llm_quaternary_id', 'icon' => '&#x1F9EA;',         'title' => 'Experimental LLM', 'desc' => 'Optional wildcard connector for experimentation and variety.', 'options' => 'llm'],
                     ],
                 ],
                 [
                     'title' => 'Background',
                     'rows' => [
-                        ['field' => 'diary_connector_id','icon' => '&#x1F4D3;',         'title' => 'Diary LLM',        'desc' => 'Connector used for diary generation.'],
-                        ['field' => 'llm_formatter_id',  'icon' => '&#x1F9FE;',         'title' => 'Formatter LLM',    'desc' => 'Connector used for JSON formatting and structured background tasks.'],
-                        ['field' => 'llm_fallback_id',   'icon' => '&#x1F504;',         'title' => 'Fallback LLM',     'desc' => 'Backup connector used when primary requests fail.'],
+                        ['field' => 'diary_connector_id','icon' => '&#x1F4D3;',         'title' => 'Diary LLM',        'desc' => 'Connector used for diary generation.', 'options' => 'llm'],
+                        ['field' => 'llm_formatter_id',  'icon' => '&#x1F9FE;',         'title' => 'Formatter LLM',    'desc' => 'Connector used for JSON formatting and structured background tasks.', 'options' => 'llm'],
+                        ['field' => 'llm_fallback_id',   'icon' => '&#x1F504;',         'title' => 'Fallback LLM',     'desc' => 'Backup connector used when primary requests fail.', 'options' => 'llm'],
                     ],
                 ],
             ];
@@ -1455,8 +1479,14 @@ const saveAllBtn = document.getElementById('btn_save_all');
                     <div class="setting-control">
                         <select name="<?= htmlspecialchars($rowCfg['field']) ?>" id="<?= htmlspecialchars($rowCfg['field']) ?>">
                             <option value="">-- None --</option>
-                            <?php foreach (($llmRows ?? []) as $opt): ?>
-                                <?php $optLabel = trim((string)($opt['label'] ?? '')) !== '' ? (string)$opt['label'] : (string)($opt['model'] ?? ('LLM #' . ($opt['id'] ?? ''))); ?>
+                            <?php $optionType = $rowCfg['options'] ?? 'llm'; ?>
+                            <?php $optionRows = ($optionType === 'tts') ? ($ttsRows ?? []) : ($llmRows ?? []); ?>
+                            <?php foreach ($optionRows as $opt): ?>
+                                <?php
+                                    $optLabel = trim((string)($opt['label'] ?? '')) !== ''
+                                        ? (string)$opt['label']
+                                        : (string)($opt['model'] ?? ($optionType === 'tts' ? ('TTS #' . ($opt['id'] ?? '')) : ('LLM #' . ($opt['id'] ?? ''))));
+                                ?>
                                 <option value="<?= htmlspecialchars((string)$opt['id']) ?>" <?= ((string)$opt['id'] === $selectedId ? 'selected' : '') ?>><?= htmlspecialchars($optLabel) ?></option>
                             <?php endforeach; ?>
                         </select>
@@ -1938,7 +1968,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
             else if (connectorField==='llm_secondary_id') key = 'LLM Fast';
             else if (connectorField==='llm_tertiary_id') key = 'LLM Powerful';
             else if (connectorField==='llm_quaternary_id') key = 'LLM Experimental';
-            else if (connectorField==='tts_connector_id') key = 'TTS';
+            else if (connectorField==='tts_connector_id') key = 'TTS Connector';
             else if (connectorField==='itt_connector_id') key = 'ITT';
             else if (connectorField==='diary_connector_id') key = 'Diary';
             else if (connectorField==='llm_formatter_id') key = 'Formatter LLM';

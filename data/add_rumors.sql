@@ -4,7 +4,8 @@ CREATE TABLE public.rumors (
     ts bigint,
     hold text,
     content text,
-    type text
+    type text,
+    rumor_length_days integer
 );
 
 

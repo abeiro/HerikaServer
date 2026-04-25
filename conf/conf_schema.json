@@ -4,6 +4,8 @@
   "AUTOMATIC_DATABASE_BACKUPS": {"userlvl":"basic","type":"boolean","scope":"global","description":"Automatically create database backups every time the server starts up. Keeps a maximum of 5 backups, automatically deleting the oldest when the limit is reached."},
   "LOCK_PROFILE": {"userlvl":"basic","type":"boolean","description":"When enabled, this profile will be skipped when using 'Copy to All Profiles' functionality. It will also not be deleted when you Delete All Character Profiles. Can not be toggled for the default profile."},
   "AUTO_LOCK_PROFILE": {"userlvl":"basic","type":"boolean","scope":"global","description":"When enabled, saving an NPC profile in CHIM NPC page automatically locks it to prevent history updates from overwriting manual edits."},
+  "AUTOFILL_CUSTOM_PROFILES": {"userlvl":"basic","type":"boolean","scope":"global","description":"When enabled, imported custom NPCs with blank AI profile fields will be marked for automatic AI profile backfill once they have enough usable dialogue history."},
+  "AUTOFILL_CUSTOM_PROFILES_TRIGGER": {"userlvl":"basic","type":"integer","scope":"global","description":"Number of usable AI profile events required before a blank custom NPC is auto-filled. Range: 10-100."},
   "HERIKA_NAME": {"userlvl":"basic","type":"string","description":"NPC Name. MUST MATCH their Skyrim in-game NPC name!<br>If you are in the default profile <b>YOU MUST</b> leave it as <i>The Narrator</i>!<br><b>You can change profiles by clicking the blue button in the top left.</b>"},
   "PROMPT_HEAD": {"userlvl":"pro","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "PLAYER_SPEECH_STYLE":{"type":"longstring","description":"Instructions for how the player character speaks and communicates. This will be used as context when rewriting player dialogue.","scope":"global"},
@@ -70,7 +72,9 @@
   "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Attempt to enforce a word limit for AI's responses. Leave as 0 to have no limit."},
   "JSON_DIALOGUE_FORMAT_REORDER": {"type":"boolean","userlvl":"pro","description":"Reorders properties in the output JSON schema. AI generates an action first, then a dialogue comment. Some users report this improves actions performance."},
   "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"Default list of moods passed to LLM (comma separated). Can be overridden per-NPC in CHIM NPCs. Some moods will trigger animations if enabled.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features"},
-  "REMOVE_ASTERISKS_FROM_OUTPUT": {"userlvl":"basic","type":"boolean","description":"Remove text between **, like *couch*, *smiles*...", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features"},
+  "INLINE_NARRATION_MODE": {"userlvl":"basic","type":"select","values":["disabled","narrator","npc"],"description":"Controls who voices inline *narration* blocks. disabled = no special routing, narrator = The Narrator voices the asterisked section, npc = the NPC keeps the whole line.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features"},
+  "REMOVE_ASTERISKS_FROM_PLAYER_INPUT": {"userlvl":"basic","type":"boolean","description":"Filter *asterisked* player input from player TTS only. The in-game player subtitle echo keeps the visible *text*.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features"},
+  "REMOVE_ASTERISKS_FROM_NPC_OUTPUT": {"userlvl":"basic","type":"boolean","description":"Filter *asterisked* NPC narration/emotes from NPC speech and subtitles.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features"},
   "ENFORCE_ACTIONS_PROMPT": {"userlvl":"basic","type":"boolean","description":"Adds a prompt to enforce use of actions", "helpurl":""},
   "SUMMARY_PROMPT": {"userlvl":"pro","type":"longstring","description":"Custom instructions added when generating summaries for memories. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the SUMMARY connector you are using.","scope":"global"},
   "DYNAMIC_PROMPT": {"userlvl":"basic","type":"longstring","description":"Legacy instructions for updating HERIKA_DYNAMIC. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the SUMMARY connector you are using.","scope":"global"},
@@ -88,6 +92,8 @@
   "CORE_CONNECTOR_PLAYER": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for player re-speech. Recommend to use a very 🏃‍♀️‍➡️Fast LLM."},
   "CORE_CONNECTOR_SUMMARY": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for generating and compacting memory summaries that power long-term memory recall. Recommend using a smaller LLM."},
   "CORE_CONNECTOR_MEDIUMTERM": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to generate longer memories summaries after every 10 memory summaries. Can be enabled in CHIM NPC page. Recommend to user a smaller LLM."},
+  "CORE_CONNECTOR_SCENECLASSIFIER": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to classify recent scene tone/genre for post-request ambient cues. Recommend using a very fast small LLM.","scope":"global"},
+  "SCENE_CLASSIFIER_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","description":"Enable the Scene Classifier. When enabled, CHIM runs a small post-request genre/tone classification pass for ambient scene cues. Requires CORE_CONNECTOR_SCENECLASSIFIER or a valid fallback connector.","_title":"Scene Classifier"},
   "CORE_CONNECTOR_PROFILES": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to update CHIM NPC Dynamic Profiles. Recommend to use a 🕹️Standard LLM.","scope":"global"},
   "CORE_CONNECTOR_OGHMA_CUSTOM": {"userlvl": "basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for custom Oghma LLM topic extraction. Will be slower than MiniMe T5 and slow down responses. Recommend to use a very very 🏃‍♀️‍➡️Fast LLM.","scope": "global"},
   "RELATIONSHIP_SYSTEM_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","description":"Enable the Relationship Management System. When enabled, NPCs will dynamically form and update relationships based on conversations and events. Requires RELLLM_CONNECTOR to be configured.","_title":"Relationship System"},
@@ -241,14 +247,14 @@
   "TTS": {
     "_title":"Text-to-Speech Service",
     "MELOTTS": {
-      "_title":"MeloTTS (Installed in DwemerDistro)",
+      "_title":"MeloTTS",
       "endpoint":{"type":"url","description":"Endpoint URL. Leave as is.","helpurl":"https://github.com/myshell-ai/MeloTTS"},
       "language":{"type":"select","values":["EN","ES","FR","ZH","JP","KR"],"description":"Language Model. Should be EN if using default installation"},
       "speed":{"type":"number","description":"Speech Speed"},
       "voiceid":{"type":"string","description":"Voice ID. Should be set automatically for most Vanilla Skyrim NPCs. Uses Skyrim VoiceType ID, e.g. femaleeventoned.<b> Click the help/doc link for full list of voiceids!</b>", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#melotts-voice-ids"}
     },
     "XTTSFASTAPI": {
-      "_title":"CHIM XTTS (Installed in DwemerDistro)",
+      "_title":"CHIM XTTS",
       "endpoint":{"type":"url","description":"Leave as is if using CHIM XTTS. If you want to use Mantella XTTS then click[HOST PC IP]. [WSL IP] will set it back to point to CHIM XTTS.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chim-xtts"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
@@ -258,7 +264,7 @@
       "PARALINGUISTIC_TAGS_LIST":{"type":"string","description":"Comma-separated list of supported paralinguistic tags (e.g., [laugh],[sigh],[gasp]). Tags are case-insensitive.","scope":"global"}
     },
     "CHATTERBOX": {
-      "_title":"Chatterbox (Optimized XTTS Fork)",
+      "_title":"Chatterbox",
       "endpoint":{"type":"url","description":"Chatterbox endpoint. Uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chatterbox"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
@@ -268,14 +274,14 @@
       "PARALINGUISTIC_TAGS_LIST":{"type":"string","description":"Comma-separated list of supported paralinguistic tags (e.g., [laugh],[sigh],[gasp]). Tags are case-insensitive.","scope":"global"}
     },
     "POCKETTTS": {
-      "_title":"PocketTTS (CPU-based TTS)",
+      "_title":"PocketTTS",
       "endpoint":{"type":"url","description":"PocketTTS endpoint. CPU-only TTS, uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#pockettts"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS POCKETTTS voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"}
     },
     "MIMIC3": {
-      "_title":"MIMIC3 (Installed in DwemerDistro)",
+      "_title":"MIMIC3",
       "URL": {"type":"url","description":"MIMIC3 Service URL."},
       "voice": {"type":"string","description":"Voice ID code"},
       "rate": {"type":"number","description":"Voice speed"},
@@ -343,13 +349,18 @@
     },
     "ELEVEN_LABS": {
       "_title":"ElevenLabs Text-To-Speech",
-      "voice_id": {"type":"string","description":"Voice code","helpurl":"https://elevenlabs.io/docs/api-reference/voices/get"},
-      "optimize_streaming_latency": {"type":"string","description":"Optimize Streaming Latency","helpurl":"https://docs.elevenlabs.io/api-reference/text-to-speech"},
-      "model_id": {"type":"string","description":"Model ID","helpurl":"https://beta.elevenlabs.io/speech-synthesis"},
-      "stability":{"userlvl":"pro","type":"number","description":"Stability"},
-      "similarity_boost": {"userlvl":"pro","type":"number","description":"Similarity_Boost"},
-      "style": {"type":"number","description":"Style"},
-      "API_KEY": {"type":"apikey","description":"Eleven Labs API key.","code":"11LABS_API_KEY"}
+      "voice_id": {"type":"string","description":"ElevenLabs voice ID to speak with.","helpurl":"https://elevenlabs.io/docs/api-reference/voices/get"},
+      "optimize_streaming_latency": {"type":"string","description":"Reduces response delay at some cost to quality and text handling. Use 0 for default behavior; higher values favor speed more aggressively.","helpurl":"https://docs.elevenlabs.io/api-reference/text-to-speech"},
+      "model_id": {"type":"string","description":"ElevenLabs model to use for this connector. Use eleven_v3 if you want V3 enhancers or audio tags.","helpurl":"https://elevenlabs.io/docs/api-reference/text-to-speech/convert"},
+      "stability":{"userlvl":"pro","type":"number","description":"Controls how consistent each generation sounds. Lower values are more expressive, while higher values are steadier and less varied."},
+      "similarity_boost": {"userlvl":"pro","type":"number","description":"Controls how closely the output sticks to the selected voice. Higher values usually sound more like the source voice, but can reduce flexibility."},
+      "style": {"type":"number","description":"Adds extra stylization and exaggeration to the delivery. Higher values can sound more dramatic, but may increase latency."},
+      "speed": {"type":"number","description":"Adjusts the speaking rate of the generated audio. 1.0 is normal speed."},
+      "use_speaker_boost": {"type":"boolean","description":"Boosts resemblance to the original voice at a small latency cost. Ignored by eleven_v3."},
+      "apply_text_normalization": {"type":"select","description":"Controls whether numbers, dates, abbreviations, and similar text are rewritten before speech. Auto lets ElevenLabs decide, on always normalizes, and off keeps the raw text.","values":["auto","on","off"]},
+      "apply_language_text_normalization": {"type":"boolean","description":"Enables extra language-specific cleanup before synthesis. This is mainly useful for languages that need special text handling, such as Japanese."},
+      "v3_audio_tags": {"type":"longstring","description":"Optional Eleven v3 prompt tags added before the text, such as [whispers] or [curious]. Only used when model_id is eleven_v3."},
+      "API_KEY": {"type":"apikey","description":"Legacy ElevenLabs API key setting. Prefer assigning an ElevenLabs API Badge to the connector instead.","code":"11LABS_API_KEY"}
     },
     "GCP": {
       "_title":"Google Cloud Platform Text-To-Speech",

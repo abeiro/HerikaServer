@@ -273,6 +273,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
         $buffer .= "?>" . PHP_EOL;
         $target = $rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
         $result = @file_put_contents($target, $buffer);
+        if ($result !== false) {
+            try {
+                include($target);
+                require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "api_badge.class.php");
+                require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
+                $ttsConnector = new TTSConnector();
+                $ttsConnector->ensureLegacyConnectorMigration(true);
+                $ttsConnector->importLegacyPlayerSettings();
+            } catch (Throwable $_e) {
+                // Keep quickstart save successful even if connector sync is unavailable.
+            }
+        }
         echo json_encode([ 'ok' => $result !== false ]);
         exit;
     }
@@ -667,7 +679,7 @@ echo '<section class="qs-section">
 
 echo '<section class="qs-section">
                 <h2 class="qs-section-title">LLM Connectors Note</h2>
-                <p class="form-text" id="qs_llm_connectors_note_default"' . $llmNoteDefaultStyle . '>The default CHIM installation comes with 4 predefined LLMs that you can hotswap ingame. Diary, summary, and middle-term memory defaults use OpenRouter DeepSeek Chat V3.2.</p>
+                <p class="form-text" id="qs_llm_connectors_note_default"' . $llmNoteDefaultStyle . '>The default CHIM installation comes with 4 predefined LLMs that you can hotswap ingame. Diary, summary, and middle-term memory defaults use OpenRouter DeepSeek Chat V3.2. Scene Classifier uses a dedicated Gemma 3N E4B connector.</p>
                 <p class="form-text" id="qs_llm_connectors_note_player2"' . $llmNotePlayer2Style . '>Player2 mode is active. Standard, Fast, Powerful, and Experimental all use the local Player2 connector, and Diary, Formatter, plus Fallback also route through Player2. The actual model stays controlled in the Player2 app.</p>
                 <div id="qs_llm_connectors_cards_default" style="' . $llmCardsDefaultStyle . '">
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">

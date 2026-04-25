@@ -6,6 +6,7 @@ if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+require_once(__DIR__.DIRECTORY_SEPARATOR."cmd".DIRECTORY_SEPARATOR."rumor_service.php");
 
 $TITLE = "🗺️ Background Life - Map Viewer";
 
@@ -25,6 +26,139 @@ $adminConn = @pg_connect("host={$host} port={$port} dbname={$dbname} user={$user
 if (! $adminConn) {
     echo json_encode(['ok' => false]);
     exit;
+}
+
+$rumorFlash = null;
+$rumorFormData = [
+    'hold' => '',
+    'type' => '',
+    'content' => '',
+    'length_days' => '7',
+];
+$editingRumorId = 0;
+
+function getRumorPagePath() {
+    $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    if (!$path) {
+        $path = $_SERVER['SCRIPT_NAME'];
+    }
+    return $path;
+}
+
+function redirectToRumorSection($status, $message, $anchor = 'create-rumor') {
+    $path = getRumorPagePath();
+
+    $query = http_build_query([
+        'rumor_status' => $status,
+        'rumor_message' => $message,
+    ]);
+
+    $anchor = trim((string) $anchor);
+    if ($anchor !== '') {
+        $anchor = '#' . ltrim($anchor, '#');
+    }
+
+    header('Location: ' . $path . '?' . $query . $anchor);
+    exit;
+}
+
+function fetchRumorById($rumorId) {
+    global $adminConn;
+
+    $rumorId = (int) $rumorId;
+    if ($rumorId <= 0) {
+        return null;
+    }
+
+    $result = pg_query_params(
+        $adminConn,
+        "SELECT id, hold, type, content, COALESCE(rumor_length_days, 7) AS rumor_length_days FROM rumors WHERE id = $1 LIMIT 1",
+        [$rumorId]
+    );
+
+    if (!$result || pg_num_rows($result) === 0) {
+        return null;
+    }
+
+    return pg_fetch_assoc($result);
+}
+
+function handleCreateRumor() {
+    global $adminConn;
+
+    $hold = trim((string)($_POST['rumor_hold'] ?? ''));
+    $type = trim((string)($_POST['rumor_type'] ?? ''));
+    $content = trim((string)($_POST['rumor_content'] ?? ''));
+    $lengthDaysInput = trim((string)($_POST['rumor_length_days'] ?? ''));
+
+    $formData = [
+        'hold' => $hold,
+        'type' => $type,
+        'content' => $content,
+        'length_days' => ($lengthDaysInput !== '') ? $lengthDaysInput : '7',
+    ];
+
+    $result = chimCreateRumorEntry($adminConn, $hold, $type, $content, $lengthDaysInput);
+    if (!($result['ok'] ?? false)) {
+        return [
+            ['type' => 'error', 'message' => $result['message'] ?? 'Failed to create rumor.'],
+            $formData,
+        ];
+    }
+
+    redirectToRumorSection('success', $result['message'] ?? 'Rumor created successfully.');
+}
+
+function handleUpdateRumor() {
+    global $adminConn;
+
+    $rumorId = (int) ($_POST['rumor_id'] ?? 0);
+    $hold = trim((string)($_POST['rumor_hold'] ?? ''));
+    $type = trim((string)($_POST['rumor_type'] ?? ''));
+    $content = trim((string)($_POST['rumor_content'] ?? ''));
+    $lengthDaysInput = trim((string)($_POST['rumor_length_days'] ?? ''));
+
+    $formData = [
+        'hold' => $hold,
+        'type' => $type,
+        'content' => $content,
+        'length_days' => ($lengthDaysInput !== '') ? $lengthDaysInput : '7',
+        'id' => $rumorId,
+    ];
+
+    $result = chimUpdateRumorEntry($adminConn, $rumorId, $hold, $type, $content, $lengthDaysInput);
+    if (!($result['ok'] ?? false)) {
+        return [
+            ['type' => 'error', 'message' => $result['message'] ?? 'Failed to update rumor.'],
+            $formData,
+            $rumorId,
+        ];
+    }
+
+    redirectToRumorSection('success', $result['message'] ?? 'Rumor updated successfully.');
+}
+
+function handleDeleteRumor() {
+    global $adminConn;
+
+    $rumorId = (int) ($_POST['rumor_id'] ?? 0);
+    $result = chimDeleteRumorEntry($adminConn, $rumorId);
+
+    if (!($result['ok'] ?? false)) {
+        return [
+            'type' => 'error',
+            'message' => $result['message'] ?? 'Failed to delete rumor.',
+        ];
+    }
+
+    redirectToRumorSection('success', $result['message'] ?? 'Rumor deleted successfully.', 'rumors-section');
+}
+
+if (isset($_GET['rumor_status']) && isset($_GET['rumor_message'])) {
+    $rumorFlash = [
+        'type' => ($_GET['rumor_status'] === 'success') ? 'success' : 'error',
+        'message' => trim((string) $_GET['rumor_message']),
+    ];
 }
 
 // Helper function to resolve NPC portrait path (same as npc_master.php)
@@ -131,7 +265,38 @@ if (!function_exists('race_icon_web_path')) {
         } elseif ($_POST['action'] === 'toggle_bg_life_setting') {
             handleToggleBgLifeSetting();
             exit;
+        } elseif ($_POST['action'] === 'create_rumor') {
+            [$rumorFlash, $rumorFormData] = handleCreateRumor();
+        } elseif ($_POST['action'] === 'update_rumor') {
+            [$rumorFlash, $rumorFormData, $editingRumorId] = handleUpdateRumor();
+        } elseif ($_POST['action'] === 'delete_rumor') {
+            $rumorFlash = handleDeleteRumor();
         }
+    }
+
+    if ($editingRumorId <= 0 && isset($_GET['edit_rumor_id'])) {
+        $editingRumorId = (int) $_GET['edit_rumor_id'];
+    }
+
+    if ($editingRumorId > 0 && !isset($rumorFormData['id'])) {
+        $editingRumor = fetchRumorById($editingRumorId);
+        if ($editingRumor) {
+            $rumorFormData = [
+                'hold' => (string) ($editingRumor['hold'] ?? ''),
+                'type' => (string) ($editingRumor['type'] ?? ''),
+                'content' => (string) ($editingRumor['content'] ?? ''),
+                'length_days' => (string) ($editingRumor['rumor_length_days'] ?? '7'),
+                'id' => (int) ($editingRumor['id'] ?? 0),
+            ];
+        } else {
+            $editingRumorId = 0;
+            $rumorFlash = [
+                'type' => 'error',
+                'message' => 'Rumor not found for editing.',
+            ];
+        }
+    } elseif (isset($rumorFormData['id'])) {
+        $editingRumorId = (int) $rumorFormData['id'];
     }
 
     function handleRequestAction() {
@@ -2026,13 +2191,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     <?php
     // Rumors section
-    // Calculate 7 in-game days threshold
-    $sevenDaysInGamets = (7 * 24) / 0.0000024; // 7 days worth of gamets
-    $sevenDaysAgoGamets = $last_gamets - $sevenDaysInGamets;
+    $rumorGametsPerDay = (int) round(24 / 0.0000024);
     
-    // Query current rumors (last 7 in-game days)
-    $currentRumorsQuery = "SELECT id, gamets, ts, hold, content, type FROM rumors WHERE gamets >= $1 ORDER BY gamets DESC";
-    $currentRumorsResult = pg_query_params($adminConn, $currentRumorsQuery, [$sevenDaysAgoGamets]);
+    // Query current rumors based on per-rumor duration
+    $currentRumorsQuery = "SELECT id, gamets, ts, hold, content, type, COALESCE(rumor_length_days, 7) AS rumor_length_days FROM rumors WHERE (gamets + (COALESCE(rumor_length_days, 7) * $1)) > $2 ORDER BY gamets DESC";
+    $currentRumorsResult = pg_query_params($adminConn, $currentRumorsQuery, [$rumorGametsPerDay, $last_gamets]);
     $currentRumors = [];
     if ($currentRumorsResult) {
         while ($row = pg_fetch_assoc($currentRumorsResult)) {
@@ -2040,9 +2203,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         }
     }
     
-    // Query outdated rumors (older than 7 in-game days)
-    $outdatedRumorsQuery = "SELECT id, gamets, ts, hold, content, type FROM rumors WHERE gamets < $1 ORDER BY gamets DESC";
-    $outdatedRumorsResult = pg_query_params($adminConn, $outdatedRumorsQuery, [$sevenDaysAgoGamets]);
+    // Query outdated rumors based on per-rumor duration
+    $outdatedRumorsQuery = "SELECT id, gamets, ts, hold, content, type, COALESCE(rumor_length_days, 7) AS rumor_length_days FROM rumors WHERE (gamets + (COALESCE(rumor_length_days, 7) * $1)) <= $2 ORDER BY gamets DESC";
+    $outdatedRumorsResult = pg_query_params($adminConn, $outdatedRumorsQuery, [$rumorGametsPerDay, $last_gamets]);
     $outdatedRumors = [];
     if ($outdatedRumorsResult) {
         while ($row = pg_fetch_assoc($outdatedRumorsResult)) {
@@ -2051,14 +2214,26 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
     ?>
     
-    <div style="margin-top: 40px;">
+    <div id="rumors-section" style="margin-top: 40px;">
         <div class="page-header" style="margin-bottom: 20px;">
             <h1>📰 Rumors</h1>
         </div>
         
+        <?php if (!empty($rumorFlash['message'])): ?>
+            <?php
+                $isSuccessFlash = ($rumorFlash['type'] ?? '') === 'success';
+                $flashBg = $isSuccessFlash ? 'rgba(42, 122, 59, 0.22)' : 'rgba(122, 42, 42, 0.24)';
+                $flashBorder = $isSuccessFlash ? '#4caf50' : '#d65c5c';
+                $flashText = $isSuccessFlash ? '#d6ffd9' : '#ffd6d6';
+            ?>
+            <div class="info-panel" style="margin-bottom: 20px; background: <?php echo $flashBg; ?>; border: 1px solid <?php echo $flashBorder; ?>; color: <?php echo $flashText; ?>;">
+                <?php echo htmlspecialchars($rumorFlash['message']); ?>
+            </div>
+        <?php endif; ?>
+
         <!-- Current Rumors -->
         <div class="info-panel" style="margin-bottom: 30px;">
-            <h3>🔥 Current Rumors (Last 7 In-Game Days)</h3>
+            <h3>🔥 Current Rumors</h3>
             <?php if (empty($currentRumors)): ?>
                 <p style="color: #888; font-style: italic;">No current rumors</p>
             <?php else: ?>
@@ -2068,9 +2243,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                             <tr style="background: #1a1a1a; border-bottom: 2px solid rgb(242, 124, 17);">
                                 <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">Hold</th>
                                 <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">Type</th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">Lasts</th>
                                 <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">Content</th>
                                 <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">In-Game Date</th>
                                 <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">Age</th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2082,9 +2259,18 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                 <tr style="border-bottom: 1px solid #333;">
                                     <td style="padding: 12px; color: #ddd;"><?php echo htmlspecialchars($rumor['hold'] ?? 'Unknown'); ?></td>
                                     <td style="padding: 12px; color: #bbb; font-size: 12px;"><?php echo htmlspecialchars($rumor['type'] ?? 'General'); ?></td>
+                                    <td style="padding: 12px; color: #bbb; font-size: 12px; white-space: nowrap;"><?php echo (int)($rumor['rumor_length_days'] ?? 7); ?> days</td>
                                     <td style="padding: 12px; color: #fff;"><?php echo htmlspecialchars($rumor['content']); ?></td>
                                     <td style="padding: 12px; color: #bbb; font-size: 12px; white-space: nowrap;"><?php echo htmlspecialchars($rumorDate); ?></td>
                                     <td style="padding: 12px; color: #888; font-size: 12px; white-space: nowrap;"><?php echo $hoursAgo; ?> hours ago</td>
+                                    <td style="padding: 12px;">
+                                        <a href="<?php echo htmlspecialchars(getRumorPagePath() . '?edit_rumor_id=' . urlencode((string)($rumor['id'] ?? '')) . '#create-rumor'); ?>" style="color: rgb(242, 124, 17); font-weight: 600; text-decoration: none;">Edit</a>
+                                        <form method="post" action="" style="display: inline; margin-left: 12px;" onsubmit="return confirm('Delete this rumor?');">
+                                            <input type="hidden" name="action" value="delete_rumor">
+                                            <input type="hidden" name="rumor_id" value="<?php echo (int) ($rumor['id'] ?? 0); ?>">
+                                            <button type="submit" style="background: none; border: none; padding: 0; color: #d65c5c; font-weight: 600; text-decoration: none; cursor: pointer;">Delete</button>
+                                        </form>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -2095,7 +2281,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         
         <!-- Outdated Rumors -->
         <div class="info-panel">
-            <h3>📜 Outdated Rumors (Older than 7 In-Game Days)</h3>
+            <h3>📜 Outdated Rumors</h3>
             <?php if (empty($outdatedRumors)): ?>
                 <p style="color: #888; font-style: italic;">No outdated rumors</p>
             <?php else: ?>
@@ -2105,9 +2291,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                             <tr style="background: #1a1a1a; border-bottom: 2px solid #666;">
                                 <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Hold</th>
                                 <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Type</th>
+                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Lasts</th>
                                 <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Content</th>
                                 <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">In-Game Date</th>
                                 <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Age</th>
+                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2119,15 +2307,89 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                 <tr style="border-bottom: 1px solid #333; opacity: 0.6;">
                                     <td style="padding: 12px; color: #888;"><?php echo htmlspecialchars($rumor['hold'] ?? 'Unknown'); ?></td>
                                     <td style="padding: 12px; color: #777; font-size: 12px;"><?php echo htmlspecialchars($rumor['type'] ?? 'General'); ?></td>
+                                    <td style="padding: 12px; color: #777; font-size: 12px; white-space: nowrap;"><?php echo (int)($rumor['rumor_length_days'] ?? 7); ?> days</td>
                                     <td style="padding: 12px; color: #999;"><?php echo htmlspecialchars($rumor['content']); ?></td>
                                     <td style="padding: 12px; color: #777; font-size: 12px; white-space: nowrap;"><?php echo htmlspecialchars($rumorDate); ?></td>
                                     <td style="padding: 12px; color: #666; font-size: 12px; white-space: nowrap;"><?php echo $hoursAgo; ?> hours ago</td>
+                                    <td style="padding: 12px;">
+                                        <a href="<?php echo htmlspecialchars(getRumorPagePath() . '?edit_rumor_id=' . urlencode((string)($rumor['id'] ?? '')) . '#create-rumor'); ?>" style="color: #bbb; font-weight: 600; text-decoration: none;">Edit</a>
+                                        <form method="post" action="" style="display: inline; margin-left: 12px;" onsubmit="return confirm('Delete this rumor?');">
+                                            <input type="hidden" name="action" value="delete_rumor">
+                                            <input type="hidden" name="rumor_id" value="<?php echo (int) ($rumor['id'] ?? 0); ?>">
+                                            <button type="submit" style="background: none; border: none; padding: 0; color: #d65c5c; font-weight: 600; text-decoration: none; cursor: pointer;">Delete</button>
+                                        </form>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
             <?php endif; ?>
+        </div>
+
+        <div class="info-panel" id="create-rumor" style="margin-top: 30px;">
+            <h3><?php echo ($editingRumorId > 0) ? 'Edit Rumor' : 'Create Rumor'; ?></h3>
+            <form method="post" action="">
+                <input type="hidden" name="action" value="<?php echo ($editingRumorId > 0) ? 'update_rumor' : 'create_rumor'; ?>">
+                <?php if ($editingRumorId > 0): ?>
+                    <input type="hidden" name="rumor_id" value="<?php echo (int) $editingRumorId; ?>">
+                <?php endif; ?>
+                <div style="display: grid; grid-template-columns: minmax(220px, 280px) minmax(200px, 1fr) minmax(160px, 180px); gap: 18px; margin-top: 16px;">
+                    <div>
+                        <label for="rumor_hold" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Hold</label>
+                        <select id="rumor_hold" name="rumor_hold" required style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px;">
+                            <option value="">Select hold</option>
+                            <?php foreach (chimGetRumorHoldOptions() as $holdOption): ?>
+                                <option value="<?php echo htmlspecialchars($holdOption); ?>" <?php echo (($rumorFormData['hold'] ?? '') === $holdOption) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($holdOption); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="rumor_type" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Type</label>
+                        <input
+                            id="rumor_type"
+                            name="rumor_type"
+                            type="text"
+                            value="<?php echo htmlspecialchars($rumorFormData['type'] ?? ''); ?>"
+                            placeholder="General"
+                            style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label for="rumor_length_days" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Rumor Length (Days)</label>
+                        <input
+                            id="rumor_length_days"
+                            name="rumor_length_days"
+                            type="number"
+                            min="1"
+                            step="1"
+                            value="<?php echo htmlspecialchars($rumorFormData['length_days'] ?? '7'); ?>"
+                            placeholder="7"
+                            style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                    </div>
+                </div>
+                <div style="margin-top: 18px;">
+                    <label for="rumor_content" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Content</label>
+                    <textarea
+                        id="rumor_content"
+                        name="rumor_content"
+                        rows="4"
+                        required
+                        placeholder="Write the rumor text here..."
+                        style="width: 100%; padding: 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; resize: vertical;"><?php echo htmlspecialchars($rumorFormData['content'] ?? ''); ?></textarea>
+                </div>
+                <div style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 12px;">
+                    <?php if ($editingRumorId > 0): ?>
+                        <a href="<?php echo htmlspecialchars(getRumorPagePath() . '#create-rumor'); ?>" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #555; background: #242424; color: #f2f2f2; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;">
+                            Cancel Edit
+                        </a>
+                    <?php endif; ?>
+                    <button type="submit" style="padding: 10px 18px; border-radius: 8px; border: 1px solid rgb(242, 124, 17); background: rgb(242, 124, 17); color: #121212; font-weight: 700; cursor: pointer;">
+                        <?php echo ($editingRumorId > 0) ? 'Save Rumor' : 'Create Rumor'; ?>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </main>

@@ -7,6 +7,7 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "core_profiles.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
 
 // Determine web root
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -22,8 +23,77 @@ $webRoot = rtrim($webRoot, '/');
 $GLOBALS["db"] = new sql();
 $narrator = new Narrator();
 
+$advancedPromptKeys = [
+    'dialogue_line_inline_response_narrator',
+    'inline_narration_prompt_narrator',
+    'dialogue_line_inline_response_npc',
+    'inline_narration_prompt_npc',
+    'narrator_welcome_prompt',
+    'player_speech_style_prompt',
+    'random_narration_prompt',
+    'quest_comment_prompt',
+];
+
 $saveSuccess = false;
 $saveMessage = '';
+
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
+    && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
+    && isset($_POST['action'])
+) {
+    $promptKey = trim((string)($_POST['prompt_key'] ?? ''));
+    $isAllowedPromptKey = in_array($promptKey, $advancedPromptKeys, true);
+
+    if ($_POST['action'] === 'update_narrator_prompt') {
+        header('Content-Type: application/json');
+
+        if (!$isAllowedPromptKey) {
+            echo json_encode(['success' => false, 'message' => 'Invalid prompt key.']);
+            exit;
+        }
+
+        $customPrompt = trim((string)($_POST['custom_prompt'] ?? ''));
+        $setCustomPromptSql = $customPrompt === '' ? 'NULL' : $GLOBALS["db"]->escapeLiteral($customPrompt);
+        $updatedAtSql = $GLOBALS["db"]->escapeLiteral(date('Y-m-d H:i:s'));
+        $promptKeySql = $GLOBALS["db"]->escapeLiteral($promptKey);
+        $result = $GLOBALS["db"]->execQuery(
+            "UPDATE prompts
+             SET custom_prompt = {$setCustomPromptSql},
+                 updated_at = {$updatedAtSql}
+             WHERE prompt_key = {$promptKeySql}"
+        );
+        echo json_encode([
+            'success' => (bool)$result,
+            'message' => $result ? 'Prompt saved successfully.' : 'Failed to save prompt.'
+        ]);
+        exit;
+    }
+
+    if ($_POST['action'] === 'clear_narrator_prompt') {
+        header('Content-Type: application/json');
+
+        if (!$isAllowedPromptKey) {
+            echo json_encode(['success' => false, 'message' => 'Invalid prompt key.']);
+            exit;
+        }
+
+        $updatedAtSql = $GLOBALS["db"]->escapeLiteral(date('Y-m-d H:i:s'));
+        $promptKeySql = $GLOBALS["db"]->escapeLiteral($promptKey);
+        $result = $GLOBALS["db"]->execQuery(
+            "UPDATE prompts
+             SET custom_prompt = NULL,
+                 updated_at = {$updatedAtSql}
+             WHERE prompt_key = {$promptKeySql}"
+        );
+        echo json_encode([
+            'success' => (bool)$result,
+            'message' => $result ? 'Custom prompt cleared.' : 'Failed to clear prompt.'
+        ]);
+        exit;
+    }
+}
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
@@ -34,9 +104,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
         $narrator->set('random_enabled', isset($_POST['random_enabled']) && $_POST['random_enabled'] === '1' ? '1' : '0');
         $narrator->set('books_only_narrator', isset($_POST['books_only_narrator']) && $_POST['books_only_narrator'] === '1' ? '1' : '0');
         $narrator->set('hide_from_context', isset($_POST['hide_from_context']) && $_POST['hide_from_context'] === '1' ? '1' : '0');
-        $narrator->set('inline_narration_enabled', isset($_POST['inline_narration_enabled']) && $_POST['inline_narration_enabled'] === '1' ? '1' : '0');
+        $inlineNarrationMode = isset($_POST['inline_narration_mode']) ? strtolower(trim((string)$_POST['inline_narration_mode'])) : 'disabled';
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+            $inlineNarrationMode = 'disabled';
+        }
+        $narrator->set('inline_narration_mode', $inlineNarrationMode);
         $narrator->set('preserve_asterisks_in_context', isset($_POST['preserve_asterisks_in_context']) && $_POST['preserve_asterisks_in_context'] === '1' ? '1' : '0');
-        $narrator->set('remove_asterisks_from_output', isset($_POST['remove_asterisks_from_output']) && $_POST['remove_asterisks_from_output'] === '1' ? '1' : '0');
+        $narrator->set('remove_asterisks_from_player_input', isset($_POST['remove_asterisks_from_player_input']) && $_POST['remove_asterisks_from_player_input'] === '1' ? '1' : '0');
+        $narrator->set('remove_asterisks_from_npc_output', isset($_POST['remove_asterisks_from_npc_output']) && $_POST['remove_asterisks_from_npc_output'] === '1' ? '1' : '0');
+        $narrator->set('remove_player_autochat_asterisks', isset($_POST['remove_player_autochat_asterisks']) && $_POST['remove_player_autochat_asterisks'] === '1' ? '1' : '0');
         $narrator->set('diary_enabled', isset($_POST['diary_enabled']) && $_POST['diary_enabled'] === '1' ? '1' : '0');
         
         // Save integer settings
@@ -139,11 +215,26 @@ $questCommentChance = $narrator->getInt('quest_comment_chance', 10);
 $questCommentCooldown = $narrator->getInt('quest_comment_cooldown', 3);
 $booksOnlyNarrator = $narrator->getBool('books_only_narrator', false);
 $hideFromContext = $narrator->getBool('hide_from_context', false);
-$inlineNarrationEnabled = $narrator->getBool('inline_narration_enabled', false);
+$inlineNarrationMode = strtolower(trim((string)($narrator->get('inline_narration_mode') ?? '')));
+if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+    if (isset($GLOBALS['INLINE_NARRATION_MODE']) && in_array(strtolower(trim((string)$GLOBALS['INLINE_NARRATION_MODE'])), ['disabled', 'narrator', 'npc'], true)) {
+        $inlineNarrationMode = strtolower(trim((string)$GLOBALS['INLINE_NARRATION_MODE']));
+    } else {
+        $inlineNarrationMode = $narrator->getBool('inline_narration_enabled', isset($GLOBALS['INLINE_NARRATION_ENABLED']) ? (bool)$GLOBALS['INLINE_NARRATION_ENABLED'] : false) ? 'narrator' : 'disabled';
+    }
+}
+$removePlayerAutochatAsterisks = $narrator->getBool(
+    'remove_player_autochat_asterisks',
+    isset($GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS']) ? (bool)$GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'] : (isset($GLOBALS['PLAYER_AUTOCHAT_ASTERISKS_ENABLED']) ? !(bool)$GLOBALS['PLAYER_AUTOCHAT_ASTERISKS_ENABLED'] : true)
+);
 $preserveAsterisksInContext = $narrator->getBool('preserve_asterisks_in_context', false);
-$removeAsterisksFromOutput = $narrator->getBool(
-    'remove_asterisks_from_output',
-    isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] : false
+$removeAsterisksFromPlayerInput = $narrator->getBool(
+    'remove_asterisks_from_player_input',
+    isset($GLOBALS['REMOVE_ASTERISKS_FROM_PLAYER_INPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_PLAYER_INPUT'] : (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] : true)
+);
+$removeAsterisksFromNpcOutput = $narrator->getBool(
+    'remove_asterisks_from_npc_output',
+    isset($GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'] : (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] : true)
 );
 $diaryEnabled = $narrator->getBool('diary_enabled', true);
 $dynamicProfileEnabled = $narrator->getBool('dynamic_profile', false);
@@ -168,11 +259,17 @@ $allProfiles = $profileMgr->readAll();
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "llm_connector.class.php");
 $connectorMgr = new LLMConnector();
 $allConnectors = $connectorMgr->readAll();
+$ttsConnectorMgr = new TTSConnector();
+$allTtsConnectors = $ttsConnectorMgr->readAll();
 
 // Build lookup maps
 $llmById = [];
 foreach ($allConnectors as $conn) {
     $llmById[$conn['id']] = $conn['label'] ?? 'Connector ' . $conn['id'];
+}
+$ttsById = [];
+foreach ($allTtsConnectors as $conn) {
+    $ttsById[$conn['id']] = $conn['label'] ?? 'Connector ' . $conn['id'];
 }
 
 // Build profile connector map
@@ -183,6 +280,19 @@ foreach ($allProfiles as $prof) {
 
 // Get current profile data
 $currentProfileData = $profilesConnById[$profileId] ?? null;
+
+$advancedPromptOrderSql = [];
+foreach ($advancedPromptKeys as $index => $advancedPromptKey) {
+    $advancedPromptOrderSql[] = "WHEN " . $GLOBALS["db"]->escapeLiteral($advancedPromptKey) . " THEN " . ($index + 1);
+}
+
+$advancedPromptRows = $GLOBALS["db"]->fetchAll(
+    "SELECT prompt_key, default_prompt, custom_prompt, description
+     FROM prompts
+     WHERE prompt_key IN (" . implode(', ', array_map([$GLOBALS["db"], 'escapeLiteral'], $advancedPromptKeys)) . ")
+     ORDER BY CASE prompt_key " . implode(' ', $advancedPromptOrderSql) . " ELSE 999 END"
+);
+$advancedPrompts = is_array($advancedPromptRows) ? $advancedPromptRows : [];
 
 $isEmbed = isset($_GET['embed']) && $_GET['embed'] == '1';
 
@@ -621,6 +731,357 @@ if (!$isEmbed) {
         background: #c03;
     }
 
+    .advanced-prompts-wrap {
+        margin-top: 24px;
+        border: 1px solid #3a3a3a;
+        border-radius: 10px;
+        background: linear-gradient(180deg, rgba(36, 36, 36, 0.92), rgba(28, 28, 28, 0.96));
+        overflow: hidden;
+    }
+
+    .advanced-prompts-wrap[open] {
+        border-color: rgba(242, 124, 17, 0.28);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+    }
+
+    .advanced-prompts-summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 16px 18px;
+        color: #ffffff;
+        font-family: 'MagicCards', serif !important;
+        font-size: 1.15em;
+        word-spacing: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        user-select: none;
+    }
+
+    .advanced-prompts-summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .advanced-prompts-summary-text {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-family: 'MagicCards', serif !important;
+    }
+
+    .advanced-prompts-summary-text span {
+        font-family: 'MagicCards', serif !important;
+    }
+
+    .advanced-prompts-summary-icon {
+        font-size: 0.9em;
+        transition: transform 0.2s ease;
+    }
+
+    .advanced-prompts-wrap[open] .advanced-prompts-summary-icon {
+        transform: rotate(90deg);
+    }
+
+    .advanced-prompts-panel {
+        padding: 0 18px 18px 18px;
+    }
+
+    .advanced-prompts-table-wrap {
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        max-height: 560px;
+        overflow-y: auto;
+        overflow-x: auto;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
+    }
+
+    .advanced-prompts-table-wrap thead {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: linear-gradient(180deg, rgba(26, 26, 26, 0.95), rgba(20, 20, 20, 0.98));
+        border-bottom: 2px solid rgba(242, 124, 17, 0.5);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .advanced-prompts-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .advanced-prompts-table th {
+        padding: 15px 12px;
+        text-align: left;
+        color: rgb(242, 124, 17);
+        font-family: 'MagicCards', serif;
+        font-size: 1.05em;
+        word-spacing: 6px;
+        font-weight: normal;
+        letter-spacing: 1px;
+    }
+
+    .advanced-prompts-table tbody tr {
+        border-bottom: 1px solid #3a3a3a;
+        transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .advanced-prompts-table tbody tr:hover {
+        background: rgba(242, 124, 17, 0.05);
+        box-shadow: inset 0 0 10px rgba(242, 124, 17, 0.1);
+    }
+
+    .advanced-prompts-table td {
+        padding: 12px;
+        color: #e0e0e0;
+        vertical-align: top;
+    }
+
+    .advanced-prompt-key-cell {
+        min-width: 220px;
+        font-family: 'Courier New', monospace;
+        color: rgb(100, 149, 237);
+        font-size: 0.9em;
+    }
+
+    .advanced-prompt-description-cell {
+        min-width: 260px;
+        color: #b0b0b0;
+        font-style: italic;
+        font-size: 0.9em;
+    }
+
+    .advanced-prompt-content-cell {
+        max-width: 420px;
+    }
+
+    .advanced-prompt-preview {
+        background: #1a1a1a;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #3a3a3a;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85em;
+        white-space: pre-wrap;
+        max-height: 100px;
+        overflow-y: auto;
+        color: #ccc;
+        line-height: 1.4;
+    }
+
+    .advanced-prompt-preview.custom {
+        border-color: rgb(242, 124, 17);
+        background: rgba(242, 124, 17, 0.05);
+    }
+
+    .advanced-status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.8em;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .advanced-status-badge.custom {
+        background: rgba(242, 124, 17, 0.2);
+        color: rgb(242, 124, 17);
+        border: 1px solid rgb(242, 124, 17);
+    }
+
+    .advanced-status-badge.default {
+        background: rgba(100, 149, 237, 0.2);
+        color: rgb(100, 149, 237);
+        border: 1px solid rgb(100, 149, 237);
+    }
+
+    .advanced-prompts-actions-cell {
+        white-space: nowrap;
+        text-align: center;
+        min-width: 120px;
+    }
+
+    .advanced-prompts-btn {
+        padding: 6px 12px;
+        border: 1px solid rgba(58, 58, 58, 0.5);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85em;
+        transition: all 0.2s ease;
+        margin: 2px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    }
+
+    .advanced-prompts-btn-edit {
+        background: linear-gradient(135deg, rgba(100, 149, 237, 0.9), rgba(80, 129, 217, 0.9));
+        color: white;
+        border-color: rgba(100, 149, 237, 0.3);
+    }
+
+    .advanced-prompts-btn-edit:hover {
+        background: linear-gradient(135deg, rgba(80, 129, 217, 1), rgba(60, 109, 197, 1));
+        border-color: rgba(100, 149, 237, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+    }
+
+    .advanced-prompts-btn-clear {
+        background: linear-gradient(135deg, rgba(242, 124, 17, 0.9), rgba(222, 104, 0, 0.9));
+        color: white;
+        border-color: rgba(242, 124, 17, 0.3);
+    }
+
+    .advanced-prompts-btn-clear:hover {
+        background: linear-gradient(135deg, rgba(222, 104, 0, 1), rgba(202, 84, 0, 1));
+        border-color: rgba(242, 124, 17, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+    }
+
+    .advanced-prompts-empty {
+        padding: 18px;
+        color: #cfd8e3;
+    }
+
+    .advanced-prompts-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.8);
+    }
+
+    .advanced-prompts-modal-content {
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.98), rgba(34, 34, 34, 0.98));
+        margin: 2% auto;
+        padding: 0;
+        border: 2px solid rgba(242, 124, 17, 0.5);
+        border-radius: 10px;
+        width: 90%;
+        max-width: 1200px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px rgba(255, 255, 255, 0.03);
+    }
+
+    .advanced-prompts-modal-header {
+        padding: 20px;
+        background: linear-gradient(180deg, rgba(26, 26, 26, 0.95), rgba(20, 20, 20, 0.98));
+        border-bottom: 1px solid rgba(242, 124, 17, 0.3);
+        border-radius: 8px 8px 0 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .advanced-prompts-modal-header h3 {
+        margin: 0;
+        color: #ffffff;
+        font-family: 'MagicCards', serif;
+        font-size: 1.5em;
+        word-spacing: 6px;
+    }
+
+    .advanced-prompts-modal-body {
+        padding: 20px;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .advanced-prompts-modal-footer {
+        padding: 15px 20px;
+        background: linear-gradient(180deg, rgba(26, 26, 26, 0.95), rgba(20, 20, 20, 0.98));
+        border-top: 1px solid rgba(242, 124, 17, 0.3);
+        text-align: right;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .advanced-prompts-modal-close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        line-height: 20px;
+        cursor: pointer;
+    }
+
+    .advanced-prompts-modal-close:hover,
+    .advanced-prompts-modal-close:focus {
+        color: rgb(242, 124, 17);
+    }
+
+    .advanced-prompts-modal-group {
+        margin-bottom: 20px;
+    }
+
+    .advanced-prompts-modal-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: rgb(242, 124, 17);
+        font-weight: bold;
+    }
+
+    .advanced-prompts-readonly {
+        background: linear-gradient(135deg, rgba(37, 37, 37, 0.8), rgba(32, 32, 32, 0.9));
+        padding: 15px;
+        border-radius: 6px;
+        border: 1px solid #3a3a3a;
+        font-family: 'Courier New', monospace;
+        color: #999;
+        white-space: pre-wrap;
+        max-height: 200px;
+        overflow-y: auto;
+        line-height: 1.5;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .advanced-prompts-textarea {
+        width: 100%;
+        min-height: 300px;
+        resize: vertical;
+        padding: 12px;
+        background: rgba(26, 26, 26, 0.8);
+        border: 1px solid #3a3a3a;
+        border-radius: 6px;
+        color: #e0e0e0;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+    }
+
+    .advanced-prompts-textarea:focus {
+        outline: none;
+        border-color: rgb(242, 124, 17);
+        box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+        background: rgba(26, 26, 26, 0.95);
+    }
+
+    .advanced-prompts-modal-btn {
+        padding: 10px 18px;
+        border: 1px solid rgba(58, 58, 58, 0.5);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.95em;
+        transition: all 0.2s ease;
+        margin-left: 8px;
+    }
+
+    .advanced-prompts-modal-btn-cancel {
+        background: linear-gradient(135deg, rgba(136, 136, 136, 0.9), rgba(102, 102, 102, 0.9));
+        color: white;
+        border-color: rgba(136, 136, 136, 0.3);
+    }
+
+    .advanced-prompts-modal-btn-save {
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0.9), rgba(69, 160, 73, 0.9));
+        color: white;
+        border-color: rgba(76, 175, 80, 0.3);
+    }
+
     /* Responsive Design */
     @media (max-width: 768px) {
         main {
@@ -638,6 +1099,11 @@ if (!$isEmbed) {
         
         .content-section {
             padding: 15px;
+        }
+
+        .advanced-prompts-modal-content {
+            width: 95%;
+            margin: 5% auto;
         }
     }
 
@@ -752,23 +1218,40 @@ if (!$isEmbed) {
                 <div class="content-section">
                     <h2>Inline Narration</h2>
 
-                    <label class="toggle-row">
-                        <div class="toggle-switch">
-                            <input type="checkbox" id="inline_narration_enabled" name="inline_narration_enabled" value="1" <?php echo $inlineNarrationEnabled ? 'checked' : ''; ?>>
-                            <span class="toggle-slider"></span>
-                        </div>
-                        <span class="toggle-label">Enable Inline Narration</span>
-                    </label>
-                    <span class="hint">Enable inline narration in asterisks (e.g., *She smiles*). Narration is spoken by The Narrator voice and shown in subtitles, while the dialogue line remains in the NPC's voice.</span>
+                    <label for="inline_narration_mode">Inline Narration Mode</label>
+                    <select id="inline_narration_mode" name="inline_narration_mode">
+                        <option value="disabled" <?php echo $inlineNarrationMode === 'disabled' ? 'selected' : ''; ?>>Disabled</option>
+                        <option value="narrator" <?php echo $inlineNarrationMode === 'narrator' ? 'selected' : ''; ?>>Narrator</option>
+                        <option value="npc" <?php echo $inlineNarrationMode === 'npc' ? 'selected' : ''; ?>>NPC</option>
+                    </select>
+                    <span class="hint">Controls who voices leading *narration* blocks. Narrator sends the asterisked section to The Narrator voice, NPC keeps the full line on the NPC voice, and Disabled turns off special inline narration routing.</span>
 
                     <label class="toggle-row">
                         <div class="toggle-switch">
-                            <input type="checkbox" id="remove_asterisks_from_output" name="remove_asterisks_from_output" value="1" <?php echo $removeAsterisksFromOutput ? 'checked' : ''; ?>>
+                            <input type="checkbox" id="remove_asterisks_from_player_input" name="remove_asterisks_from_player_input" value="1" <?php echo $removeAsterisksFromPlayerInput ? 'checked' : ''; ?>>
                             <span class="toggle-slider"></span>
                         </div>
-                        <span class="toggle-label">Remove Asterisks From Output</span>
+                        <span class="toggle-label">Remove Player Input Asterisks From TTS</span>
                     </label>
-                    <span class="hint">Remove text between ** when responding (*cough*, *smiles*, etc).</span>
+                    <span class="hint">Filters *asterisked* player actions/emphasis from player TTS only. The in-game player subtitle echo keeps the visible *text* either way. Turn this off if you want the player voice to speak asterisked text too.</span>
+
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="remove_asterisks_from_npc_output" name="remove_asterisks_from_npc_output" value="1" <?php echo $removeAsterisksFromNpcOutput ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Remove NPC Output Asterisks</span>
+                    </label>
+                    <span class="hint">Filters *asterisked* NPC narration/emotes from NPC speech and subtitles. Turn this off if you want NPCs to keep or speak their own asterisked text.</span>
+
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="remove_player_autochat_asterisks" name="remove_player_autochat_asterisks" value="1" <?php echo $removePlayerAutochatAsterisks ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Remove Player Autochat Astreisk</span>
+                    </label>
+                    <span class="hint">Keeps AUTOCHAT and `**` player respeech spoken-only by stripping leading narration and *asterisked* narration from the rewritten player line. Turn this off if you want rewritten player text to keep one short leading *narration* block.</span>
 
                     <label class="toggle-row">
                         <div class="toggle-switch">
@@ -876,6 +1359,8 @@ if (!$isEmbed) {
                     };
                     ?>
                     <div id="profile_llm_summary" style="display:grid; grid-template-columns: auto 1fr; gap:8px; color:#cfd9ea; font-size: 13px; line-height: 1.6;">
+                        <div style="color:rgb(242,124,17); font-weight:600;">🔊 TTS:</div>
+                        <div><?= htmlspecialchars($ttsById[$currentProfileData['tts_connector_id'] ?? null] ?? '—') ?></div>
                         <div style="color:rgb(242,124,17); font-weight:600;">🕹️ Standard:</div>
                         <div><?= $getConnectorLabel($currentProfileData['llm_primary_id'] ?? null) ?></div>
                         
@@ -902,10 +1387,16 @@ if (!$isEmbed) {
             (function(){
                 const PROFILE_CONN = <?= json_encode($profilesConnById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
                 const LLM_LABELS = <?= json_encode($llmById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+                const TTS_LABELS = <?= json_encode($ttsById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
                 
                 function labelOf(id){ 
                     const k = String(id || ''); 
                     return (k && LLM_LABELS[k]) ? String(LLM_LABELS[k]) : '—'; 
+                }
+                
+                function ttsLabelOf(id){
+                    const k = String(id || '');
+                    return (k && TTS_LABELS[k]) ? String(TTS_LABELS[k]) : '—';
                 }
                 
                 function renderProfileConnectors(pid){
@@ -914,6 +1405,7 @@ if (!$isEmbed) {
                     const pc = PROFILE_CONN[String(pid || '')] || null;
                     
                     const rows = [
+                        ['🔊 TTS:', ttsLabelOf(pc ? pc.tts_connector_id : null)],
                         ['🕹️ Standard:', labelOf(pc ? pc.llm_primary_id : null)],
                         ['🏃‍♂️‍➡️ Fast:', labelOf(pc ? pc.llm_secondary_id : null)],
                         ['💪 Power:', labelOf(pc ? pc.llm_tertiary_id : null)],
@@ -1004,10 +1496,287 @@ if (!$isEmbed) {
                 <label for="goals">Goals</label>
                 <textarea id="goals" name="goals" rows="3" placeholder="Current objectives..."><?php echo htmlspecialchars($goals); ?></textarea>
                 <span class="hint">Current goals and objectives for The Narrator.</span>
+
+                <details class="advanced-prompts-wrap">
+                    <summary class="advanced-prompts-summary">
+                        <span class="advanced-prompts-summary-text">
+                            <span class="advanced-prompts-summary-icon">▶</span>
+                            <span>Advanced Prompts (Prompts Manager)</span>
+                        </span>
+                    </summary>
+                    <div class="advanced-prompts-panel">
+                        <?php if (!empty($advancedPrompts)): ?>
+                            <div class="advanced-prompts-table-wrap">
+                                <table class="advanced-prompts-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Prompt Key</th>
+                                            <th>Description</th>
+                                            <th>Status</th>
+                                            <th>Preview</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($advancedPrompts as $promptRow):
+                                            $promptKey = htmlspecialchars($promptRow['prompt_key']);
+                                            $defaultPrompt = $promptRow['default_prompt'] ?? '';
+                                            $customPrompt = $promptRow['custom_prompt'] ?? '';
+                                            $description = htmlspecialchars($promptRow['description'] ?? '');
+                                            $isCustomPrompt = !empty($customPrompt);
+                                            $activePrompt = $isCustomPrompt ? $customPrompt : $defaultPrompt;
+                                            $preview = strlen($activePrompt) > 150 ? substr($activePrompt, 0, 150) . '...' : $activePrompt;
+                                        ?>
+                                            <tr id="advanced-prompt-row-<?php echo htmlspecialchars($promptRow['prompt_key']); ?>">
+                                                <td class="advanced-prompt-key-cell">
+                                                    <code><?php echo $promptKey; ?></code>
+                                                </td>
+                                                <td class="advanced-prompt-description-cell"><?php echo $description; ?></td>
+                                                <td>
+                                                    <?php if ($isCustomPrompt): ?>
+                                                        <span class="advanced-status-badge custom">Custom</span>
+                                                    <?php else: ?>
+                                                        <span class="advanced-status-badge default">Default</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="advanced-prompt-content-cell">
+                                                    <div class="advanced-prompt-preview <?php echo $isCustomPrompt ? 'custom' : ''; ?>">
+                                                        <?php echo htmlspecialchars($preview); ?>
+                                                    </div>
+                                                </td>
+                                                <td class="advanced-prompts-actions-cell">
+                                                    <button type="button" class="advanced-prompts-btn advanced-prompts-btn-edit" onclick="openNarratorPromptModal('<?php echo $promptKey; ?>')">Edit</button>
+                                                    <?php if ($isCustomPrompt): ?>
+                                                        <button type="button" class="advanced-prompts-btn advanced-prompts-btn-clear" onclick="clearNarratorPrompt('<?php echo $promptKey; ?>')">Clear</button>
+                                                    <?php endif; ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php else: ?>
+                            <div class="advanced-prompts-empty">No advanced narrator prompts were found.</div>
+                        <?php endif; ?>
+                    </div>
+                </details>
+            </div>
+
+            <div style="display:flex; justify-content:flex-start; margin-top:20px;">
+                <button type="submit" class="btn-save" name="save_narrator" value="1">Save Narration Settings</button>
             </div>
         </form>
+
+        <div id="narratorAdvancedPromptModal" class="advanced-prompts-modal">
+            <div class="advanced-prompts-modal-content">
+                <div class="advanced-prompts-modal-header">
+                    <span class="advanced-prompts-modal-close" onclick="closeNarratorPromptModal()">&times;</span>
+                    <h3>Edit Prompt: <span id="narratorAdvancedPromptModalKey"></span></h3>
+                </div>
+                <div class="advanced-prompts-modal-body">
+                    <div class="advanced-prompts-modal-group">
+                        <label>Description</label>
+                        <p id="narratorAdvancedPromptModalDescription" style="color:#b0b0b0; margin:0;"></p>
+                    </div>
+                    <div class="advanced-prompts-modal-group">
+                        <label>Default Prompt (Read-Only)</label>
+                        <div id="narratorAdvancedPromptModalDefault" class="advanced-prompts-readonly"></div>
+                    </div>
+                    <div class="advanced-prompts-modal-group">
+                        <label>Custom Prompt (Optional - Leave empty to use default)</label>
+                        <textarea id="narratorAdvancedPromptModalCustom" class="advanced-prompts-textarea" placeholder="Enter your custom prompt here, or leave empty to use the default prompt..."></textarea>
+                    </div>
+                </div>
+                <div class="advanced-prompts-modal-footer">
+                    <button type="button" class="advanced-prompts-modal-btn advanced-prompts-modal-btn-cancel" onclick="closeNarratorPromptModal()">Cancel</button>
+                    <button type="button" class="advanced-prompts-modal-btn advanced-prompts-modal-btn-save" onclick="saveNarratorPrompt()">Save Custom Prompt</button>
+                </div>
+            </div>
+        </div>
     </div>
 </main>
+
+<script>
+const narratorAdvancedPrompts = <?php
+    $advancedPromptJs = [];
+    foreach ($advancedPrompts as $promptRow) {
+        $advancedPromptJs[$promptRow['prompt_key']] = [
+            'default_prompt' => $promptRow['default_prompt'] ?? '',
+            'custom_prompt' => $promptRow['custom_prompt'] ?? null,
+            'description' => $promptRow['description'] ?? '',
+        ];
+    }
+    echo json_encode($advancedPromptJs, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+?>;
+
+function showNarratorToast(message, isError = false) {
+    const toast = document.getElementById('toast');
+    if (!toast) {
+        return;
+    }
+
+    const messageNode = toast.querySelector('.message');
+    if (messageNode) {
+        messageNode.textContent = message;
+    }
+
+    toast.classList.toggle('error', !!isError);
+    toast.style.display = 'block';
+    window.clearTimeout(window.__narratorToastTimer);
+    window.__narratorToastTimer = window.setTimeout(() => {
+        toast.style.display = 'none';
+    }, 3000);
+}
+
+function openNarratorPromptModal(promptKey) {
+    const promptData = narratorAdvancedPrompts[promptKey];
+    if (!promptData) {
+        return;
+    }
+
+    document.getElementById('narratorAdvancedPromptModalKey').textContent = promptKey;
+    document.getElementById('narratorAdvancedPromptModalDescription').textContent = promptData.description || 'No description available.';
+    document.getElementById('narratorAdvancedPromptModalDefault').textContent = promptData.default_prompt || '';
+    document.getElementById('narratorAdvancedPromptModalCustom').value = promptData.custom_prompt || '';
+    document.getElementById('narratorAdvancedPromptModal').dataset.promptKey = promptKey;
+    document.getElementById('narratorAdvancedPromptModal').style.display = 'block';
+}
+
+function closeNarratorPromptModal() {
+    const modal = document.getElementById('narratorAdvancedPromptModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function updateNarratorPromptRow(promptKey) {
+    const promptData = narratorAdvancedPrompts[promptKey];
+    const row = document.getElementById('advanced-prompt-row-' + promptKey);
+    if (!promptData || !row) {
+        return;
+    }
+
+    const isCustom = !!(promptData.custom_prompt && String(promptData.custom_prompt).trim());
+    const activePrompt = isCustom ? String(promptData.custom_prompt) : String(promptData.default_prompt || '');
+    const preview = activePrompt.length > 150 ? activePrompt.substring(0, 150) + '...' : activePrompt;
+
+    const statusCell = row.cells[2];
+    statusCell.innerHTML = isCustom
+        ? '<span class="advanced-status-badge custom">Custom</span>'
+        : '<span class="advanced-status-badge default">Default</span>';
+
+    const previewDiv = row.querySelector('.advanced-prompt-preview');
+    if (previewDiv) {
+        previewDiv.textContent = preview;
+        previewDiv.classList.toggle('custom', isCustom);
+    }
+
+    const actionsCell = row.querySelector('.advanced-prompts-actions-cell');
+    if (actionsCell) {
+        let html = '<button type="button" class="advanced-prompts-btn advanced-prompts-btn-edit" onclick="openNarratorPromptModal(\'' + promptKey + '\')">Edit</button>';
+        if (isCustom) {
+            html += '<button type="button" class="advanced-prompts-btn advanced-prompts-btn-clear" onclick="clearNarratorPrompt(\'' + promptKey + '\')">Clear</button>';
+        }
+        actionsCell.innerHTML = html;
+    }
+}
+
+function saveNarratorPrompt() {
+    const modal = document.getElementById('narratorAdvancedPromptModal');
+    const promptKey = modal ? modal.dataset.promptKey : '';
+    if (!promptKey || !narratorAdvancedPrompts[promptKey]) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('action', 'update_narrator_prompt');
+    formData.append('prompt_key', promptKey);
+    formData.append('custom_prompt', document.getElementById('narratorAdvancedPromptModalCustom').value);
+
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to save prompt.');
+        }
+
+        const nextValue = document.getElementById('narratorAdvancedPromptModalCustom').value;
+        narratorAdvancedPrompts[promptKey].custom_prompt = nextValue.trim() === '' ? null : nextValue;
+        updateNarratorPromptRow(promptKey);
+        closeNarratorPromptModal();
+        showNarratorToast('Prompt saved successfully.');
+    })
+    .catch(error => {
+        showNarratorToast(error.message || 'Failed to save prompt.', true);
+    });
+}
+
+function clearNarratorPrompt(promptKey) {
+    if (!confirm('Are you sure you want to clear the custom prompt and revert to the default? This cannot be undone.')) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('action', 'clear_narrator_prompt');
+    formData.append('prompt_key', promptKey);
+
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to clear prompt.');
+        }
+
+        narratorAdvancedPrompts[promptKey].custom_prompt = null;
+        updateNarratorPromptRow(promptKey);
+
+        const modal = document.getElementById('narratorAdvancedPromptModal');
+        if (modal && modal.style.display === 'block' && modal.dataset.promptKey === promptKey) {
+            document.getElementById('narratorAdvancedPromptModalCustom').value = '';
+        }
+
+        showNarratorToast('Custom prompt cleared.');
+    })
+    .catch(error => {
+        showNarratorToast(error.message || 'Failed to clear prompt.', true);
+    });
+}
+
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('narratorAdvancedPromptModal');
+    if (modal && event.target === modal) {
+        closeNarratorPromptModal();
+    }
+});
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeNarratorPromptModal();
+    }
+});
+</script>
 
 <?php
 if (!$isEmbed) {

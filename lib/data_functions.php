@@ -4,6 +4,7 @@ require_once(__DIR__."/utils.php");
 // used for openai_token_count table
 
 require_once(__DIR__."/utils_game_timestamp.php");
+require_once(__DIR__."/lazy_xml.php");
 require_once(__DIR__."/model_dynmodel.php");
 require_once(__DIR__."/emote_moods.php");
 require_once(__DIR__."/core/npc_master.class.php");
@@ -47,6 +48,116 @@ function ReplacePlayerNamePlaceholder($s_input) {
         ]);
     }
     return $s_res;
+}
+
+if (!function_exists('chimAppendDiaryConnectorCandidate')) {
+    function chimAppendDiaryConnectorCandidate(array &$candidates, string $candidate): void
+    {
+        $normalized = strtolower(trim($candidate));
+        if ($normalized === '' || $normalized === 'array') {
+            return;
+        }
+
+        switch ($normalized) {
+            case 'openrouterjson':
+                $normalized = 'openrouter';
+                break;
+            case 'openaijson':
+                $normalized = 'openai';
+                break;
+            case 'koboldcppjson':
+                $normalized = 'koboldcpp';
+                break;
+        }
+
+        if (!in_array($normalized, $candidates, true)) {
+            $candidates[] = $normalized;
+        }
+    }
+}
+
+if (!function_exists('chimExtractDiaryConnectorCandidates')) {
+    function chimExtractDiaryConnectorCandidates($value): array
+    {
+        $candidates = [];
+
+        $pushValue = function ($candidate) use (&$candidates, &$pushValue): void {
+            if (is_array($candidate)) {
+                foreach ($candidate as $nestedCandidate) {
+                    $pushValue($nestedCandidate);
+                }
+                return;
+            }
+
+            if (!is_scalar($candidate)) {
+                return;
+            }
+
+            $stringValue = trim((string)$candidate);
+            if ($stringValue === '') {
+                return;
+            }
+
+            if (($stringValue[0] === '[' || $stringValue[0] === '{')) {
+                $decoded = json_decode($stringValue, true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $decodedCandidate) {
+                        $pushValue($decodedCandidate);
+                    }
+                    return;
+                }
+            }
+
+            if (strpos($stringValue, ',') !== false) {
+                foreach (explode(',', $stringValue) as $splitCandidate) {
+                    $pushValue($splitCandidate);
+                }
+                return;
+            }
+
+            chimAppendDiaryConnectorCandidate($candidates, $stringValue);
+        };
+
+        $pushValue($value);
+
+        return $candidates;
+    }
+}
+
+if (!function_exists('chimResolveDiaryConnectorName')) {
+    function chimResolveDiaryConnectorName($rawValue = null, bool $persistGlobal = true): ?string
+    {
+        $connectorDir = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "connector" . DIRECTORY_SEPARATOR;
+        $sourceValue = func_num_args() > 0 ? $rawValue : ($GLOBALS["CONNECTORS_DIARY"] ?? null);
+
+        $candidates = chimExtractDiaryConnectorCandidates($sourceValue);
+        foreach (chimExtractDiaryConnectorCandidates($GLOBALS["CONNECTORS"] ?? null) as $candidate) {
+            if (!in_array($candidate, $candidates, true)) {
+                $candidates[] = $candidate;
+            }
+        }
+
+        foreach (['openrouter', 'openai', 'google_openaijson', 'koboldcpp'] as $fallbackCandidate) {
+            if (!in_array($fallbackCandidate, $candidates, true)) {
+                $candidates[] = $fallbackCandidate;
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            if (file_exists($connectorDir . $candidate . ".php")) {
+                if ($persistGlobal) {
+                    $originalValue = is_scalar($sourceValue) ? trim((string)$sourceValue) : json_encode($sourceValue);
+                    if ($originalValue !== $candidate) {
+                        Logger::warn("DIARY: Resolved CONNECTORS_DIARY value " . var_export($sourceValue, true) . " to '{$candidate}'");
+                    }
+                    $GLOBALS["CONNECTORS_DIARY"] = $candidate;
+                }
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
 }
 
 function getGoldFromMetadata($npcName = null) {
@@ -1524,7 +1635,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     and type<>'combatend'  
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc' and type<>'infoitems'  
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
-    and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region' and type<>'named_cell' and type<>'narrator_inputtext'
+    and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region' and type<>'named_cell'
     ".(($actorEscaped)?" 
     and (
      people like '%|$actorEscaped|%' 
@@ -2724,38 +2835,338 @@ function DataLastKnownLocation()
 
 }
 
+function normalizeLocationContextToken($value, $stripStateSuffix = false)
+{
+    $value = trim((string) $value);
+    if ($value === "") {
+        return "";
+    }
+
+    $value = preg_replace('/\s+/u', ' ', $value);
+    $value = trim((string) $value, " \t\n\r\0\x0B,");
+
+    if ($stripStateSuffix) {
+        $value = preg_replace('/\s+(outdoors|interior)\s*$/iu', '', $value);
+        $value = trim((string) $value, " \t\n\r\0\x0B,");
+    }
+
+    return $value;
+}
+
+function getCanonicalHoldGroups()
+{
+    return [
+        "Eastmarch" => ["Eastmarch"],
+        "Falkreath Hold" => ["Falkreath Hold", "Falkreath"],
+        "Haafingar" => ["Haafingar"],
+        "Hjaalmarch" => ["Hjaalmarch"],
+        "The Pale" => ["The Pale", "the Pale"],
+        "The Reach" => ["The Reach"],
+        "The Rift" => ["The Rift"],
+        "Whiterun Hold" => ["Whiterun Hold", "Whiterun"],
+        "Winterhold" => ["Winterhold"],
+    ];
+}
+
+function canonicalizeHoldName($value)
+{
+    static $aliasMap = null;
+
+    if ($aliasMap === null) {
+        $aliasMap = [];
+        foreach (getCanonicalHoldGroups() as $canonical => $aliases) {
+            foreach ($aliases as $alias) {
+                $aliasKey = strtolower(normalizeLocationContextToken($alias, true));
+                if ($aliasKey !== "") {
+                    $aliasMap[$aliasKey] = $canonical;
+                }
+            }
+        }
+    }
+
+    $valueKey = strtolower(normalizeLocationContextToken($value, true));
+    if ($valueKey === "") {
+        return "";
+    }
+
+    return $aliasMap[$valueKey] ?? "";
+}
+
+function getCanonicalHoldAliases($value)
+{
+    $canonical = canonicalizeHoldName($value);
+    $groups = getCanonicalHoldGroups();
+
+    if ($canonical !== "" && isset($groups[$canonical])) {
+        return $groups[$canonical];
+    }
+
+    $value = normalizeLocationContextToken($value, true);
+    return $value !== "" ? [$value] : [];
+}
+
+function DataLastKnownLocationContextParts($cached = false)
+{
+    if (isset($GLOBALS["CACHE_LAST_KNOWN_LOCATION_CONTEXT_PARTS"])) {
+        return $GLOBALS["CACHE_LAST_KNOWN_LOCATION_CONTEXT_PARTS"];
+    }
+
+    global $db;
+
+    $lastLoc = $db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc','location','request') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+    if (!is_array($lastLoc) || sizeof($lastLoc) == 0) {
+        $GLOBALS["CACHE_LAST_KNOWN_LOCATION_CONTEXT_PARTS"] = [
+            "location" => "",
+            "location_base" => "",
+            "hold_raw" => "",
+        ];
+        return $GLOBALS["CACHE_LAST_KNOWN_LOCATION_CONTEXT_PARTS"];
+    }
+
+    $location = "";
+    $holdRaw = "";
+    if (preg_match('/Context\s*(?:new\s*)?location:\s*([^,]+?)(?:,|$)/u', $lastLoc[0]["data"], $locationMatch) && isset($locationMatch[1])) {
+        $location = normalizeLocationContextToken($locationMatch[1], false);
+    }
+
+    if (preg_match('/Hold:\s*([^,\)]+?)(?:,|\)|$)/u', $lastLoc[0]["data"], $holdMatch) && isset($holdMatch[1])) {
+        $holdRaw = normalizeLocationContextToken($holdMatch[1], false);
+    }
+
+    $GLOBALS["CACHE_LAST_KNOWN_LOCATION_CONTEXT_PARTS"] = [
+        "location" => $location,
+        "location_base" => normalizeLocationContextToken($location, true),
+        "hold_raw" => $holdRaw,
+    ];
+
+    return $GLOBALS["CACHE_LAST_KNOWN_LOCATION_CONTEXT_PARTS"];
+}
+
+function DataLastKnownLocationBaseHuman($cached = false)
+{
+    $parts = DataLastKnownLocationContextParts($cached);
+    return $parts["location_base"] ?? "";
+}
+
+function locationFieldMatchesCandidate($row, $field, $candidateKey)
+{
+    if (!isset($row[$field])) {
+        return false;
+    }
+
+    return strtolower(normalizeLocationContextToken($row[$field], true)) === $candidateKey;
+}
+
+function resolveCanonicalHoldFromLocationRows($rows, $candidateKey)
+{
+    if (!is_array($rows) || empty($rows) || $candidateKey === "") {
+        return "";
+    }
+
+    $prioritizedMatches = [
+        ["matchField" => "name", "valueField" => "hold"],
+        ["matchField" => "name", "valueField" => "region"],
+        ["matchField" => "region", "valueField" => "hold"],
+        ["matchField" => "hold", "valueField" => "hold"],
+    ];
+
+    foreach ($prioritizedMatches as $rule) {
+        foreach ($rows as $row) {
+            if (locationFieldMatchesCandidate($row, $rule["matchField"], $candidateKey)) {
+                $canonical = canonicalizeHoldName($row[$rule["valueField"]] ?? "");
+                if ($canonical !== "") {
+                    return $canonical;
+                }
+            }
+        }
+    }
+
+    foreach (["hold", "region", "name"] as $field) {
+        foreach ($rows as $row) {
+            $canonical = canonicalizeHoldName($row[$field] ?? "");
+            if ($canonical !== "") {
+                return $canonical;
+            }
+        }
+    }
+
+    return "";
+}
+
+function lookupCanonicalHoldByLocationCandidate($candidate)
+{
+    global $db;
+
+    $candidateKey = strtolower(normalizeLocationContextToken($candidate, true));
+    if ($candidateKey === "") {
+        return "";
+    }
+
+    if (isset($GLOBALS["CACHE_CANONICAL_HOLD_BY_LOCATION_CANDIDATE"][$candidateKey])) {
+        return $GLOBALS["CACHE_CANONICAL_HOLD_BY_LOCATION_CANDIDATE"][$candidateKey];
+    }
+
+    $candidateEsc = $db->escape($candidateKey);
+    $rows = $db->fetchAll(
+        "SELECT name, region, hold
+           FROM locations
+          WHERE LOWER(name) = '{$candidateEsc}'
+             OR LOWER(region) = '{$candidateEsc}'
+             OR LOWER(hold) = '{$candidateEsc}'"
+    );
+
+    $canonical = resolveCanonicalHoldFromLocationRows($rows, $candidateKey);
+    $GLOBALS["CACHE_CANONICAL_HOLD_BY_LOCATION_CANDIDATE"][$candidateKey] = $canonical;
+
+    return $canonical;
+}
+
+function DataLastKnownCanonicalHoldHuman($cached = false)
+{
+    $cacheKey = "HOLD_CANONICAL";
+    if (isset($GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey])) {
+        return $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey];
+    }
+
+    $parts = DataLastKnownLocationContextParts($cached);
+    $canonical = "";
+
+    $currentLocation = $parts["location_base"] ?? "";
+    if ($currentLocation !== "") {
+        $canonical = lookupCanonicalHoldByLocationCandidate($currentLocation);
+    }
+
+    $reportedHold = $parts["hold_raw"] ?? "";
+    if ($canonical === "" && $reportedHold !== "") {
+        $canonical = canonicalizeHoldName($reportedHold);
+    }
+    if ($canonical === "" && $reportedHold !== "") {
+        $canonical = lookupCanonicalHoldByLocationCandidate($reportedHold);
+    }
+    if ($canonical === "" && $reportedHold !== "") {
+        $canonical = normalizeLocationContextToken($reportedHold, true);
+    }
+
+    $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey] = $canonical;
+    return $canonical;
+}
+
 function DataLastKnownLocationHuman($hold=false,$cached=false)
 {
 
-    global $db;
-    
     $cache_key = $hold ? "HOLD" : "LOC";
     if (isset($GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key]))
         return $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key];
 
-    $lastLoc=$db->fetchAll("select  a.data  as data  FROM  eventlog a  WHERE type in ('infoloc','location','request') and data like '%(Context%'  order by gamets desc,ts desc LIMIT 1 OFFSET 0");
-    if (!is_array($lastLoc) || sizeof($lastLoc)==0) {
-        $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key] = "";
-        return "";
-    }
-    
-    if (!$hold) {
-        $re = '/Context (?:new )?location: ([\w\ \']*)/';
-        preg_match($re, $lastLoc[0]["data"], $matches, PREG_OFFSET_CAPTURE, 0);
-        $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key]=$matches[1][0];
-        return $matches[1][0];
-    } else {
-        preg_match('/Hold:\s*(\w+)/', $lastLoc[0]["data"], $matches);
-        if (isset($matches[1])) {
-            $val = $matches[1];
-        }
-        else 
-            $val = "";
-        
-        $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key] = $val;
-        return $val;
+    $parts = DataLastKnownLocationContextParts($cached);
+    $val = $hold ? ($parts["hold_raw"] ?? "") : ($parts["location"] ?? "");
+
+    $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cache_key] = $val;
+    return $val;
+
+}
+
+function buildWorldPrompt($gamets = 0)
+{
+    $worldLines = [];
+
+    $currentLoc = trim(DataLastKnownLocationHuman(false, false));
+    if ($currentLoc !== "") {
+        $worldLines[] = "  <location>" . xml_fragment_escape_text($currentLoc) . "</location>";
     }
 
+    $currentHold = trim(DataLastKnownCanonicalHoldHuman(false));
+    if ($currentHold !== "") {
+        $worldLines[] = "  <hold>" . xml_fragment_escape_text($currentHold) . "</hold>";
+    }
+
+    $currentWeather = trim(DataLastKnownWeatherHuman());
+    if ($currentWeather !== "") {
+        $worldLines[] = "  <weather>" . xml_fragment_escape_text($currentWeather) . "</weather>";
+    }
+
+    $f_gamets = floatval($gamets);
+    if ($f_gamets <= 0.0) {
+        $f_gamets = floatval(DataLastKnownGameTS());
+    }
+
+    if ($f_gamets > 0.0) {
+        $tsTime = gamets2timestamp($f_gamets);
+        $currentDate = trim(convert_gamets2skyrim_long_date_no_time($f_gamets));
+        $currentTime = date('g:i A', $tsTime);
+        $dayPart = hour2part_of_day(date('H', $tsTime));
+
+        if ($currentDate !== "") {
+            $worldLines[] = "  <date>" . xml_fragment_escape_text($currentDate) . "</date>";
+        }
+        $worldLines[] = "  <time>" . xml_fragment_escape_text("{$currentTime}, {$dayPart}") . "</time>";
+    }
+
+    if (empty($worldLines)) {
+        return "";
+    }
+
+    return "\n\n<world>\n" . implode("\n", $worldLines) . "\n</world>";
+}
+
+function DataLastKnownWeatherHuman()
+{
+    $cacheKey = "WEATHER";
+    if (isset($GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey])) {
+        return $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey];
+    }
+
+    global $db;
+
+    $lastWeather = $db->fetchAll("select a.data as data FROM eventlog a WHERE type in ('location','infoloc','request') and lower(data) like '%current weather:%' order by gamets desc,ts desc LIMIT 1 OFFSET 0");
+    if (!is_array($lastWeather) || sizeof($lastWeather) == 0) {
+        $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey] = "";
+        return "";
+    }
+
+    $weatherValue = "";
+    if (preg_match('/current weather:\s*([^\)]+)/i', $lastWeather[0]["data"], $matches) && isset($matches[1])) {
+        $rawWeather = trim($matches[1]);
+        $prefix = "";
+        if (stripos($rawWeather, 'outdoors it is ') === 0) {
+            $prefix = 'outdoors it is ';
+            $rawWeather = trim(substr($rawWeather, strlen($prefix)));
+        }
+
+        $rawParts = array_filter(array_map('trim', explode(',', $rawWeather)), function ($part) {
+            return $part !== "";
+        });
+
+        $weatherMap = [
+            'pleasant' => 'Pleasant',
+            'clear' => 'Clear',
+            'cloudy' => 'Cloudy',
+            'rainy' => 'Raining',
+            'raining' => 'Raining',
+            'snowy' => 'Snowning',
+            'snowning' => 'Snowning',
+            'foggy' => 'Foggy',
+            'unknown' => 'Unknown',
+        ];
+
+        if (!empty($rawParts)) {
+            $weatherParts = [];
+            foreach ($rawParts as $part) {
+                $normalizedPart = strtolower($part);
+                $displayPart = $weatherMap[$normalizedPart] ?? $part;
+                if (!in_array($displayPart, $weatherParts, true)) {
+                    $weatherParts[] = $displayPart;
+                }
+            }
+            $weatherValue = $prefix . implode(', ', $weatherParts);
+        } else {
+            $normalizedWeather = strtolower(trim($rawWeather, " ,"));
+            $weatherValue = $prefix . ($weatherMap[$normalizedWeather] ?? $rawWeather);
+        }
+    }
+
+    $GLOBALS["CACHE_LAST_KNOWN_LOCATION_HUMAN"][$cacheKey] = $weatherValue;
+    return $weatherValue;
 }
 
 
@@ -4026,6 +4437,44 @@ function FastCallOAI($question) {
     
 }
 
+function snapshot_response_prompt_debug_data($connectorData = null) {
+    if (!isset($GLOBALS["DEBUG_DATA"]) || !is_array($GLOBALS["DEBUG_DATA"])) {
+        $GLOBALS["DEBUG_DATA"] = [];
+    }
+
+    if (isset($GLOBALS["DEBUG_DATA"]["full"]) && is_array($GLOBALS["DEBUG_DATA"]["full"])) {
+        $GLOBALS["DEBUG_DATA"]["response_full"] = $GLOBALS["DEBUG_DATA"]["full"];
+    } else {
+        unset($GLOBALS["DEBUG_DATA"]["response_full"]);
+    }
+
+    if ($connectorData === null
+        && isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])
+        && is_array($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
+        $connectorData = $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"];
+    }
+
+    if (!is_array($connectorData)) {
+        unset($GLOBALS["DEBUG_DATA"]["response_connector"]);
+        return;
+    }
+
+    $responseConnector = array_filter([
+        'id' => $connectorData['id'] ?? null,
+        'label' => $connectorData['label'] ?? null,
+        'driver' => $connectorData['driver'] ?? null,
+        'model' => $connectorData['model'] ?? null,
+    ], function ($value) {
+        return $value !== null && $value !== '';
+    });
+
+    if (!empty($responseConnector)) {
+        $GLOBALS["DEBUG_DATA"]["response_connector"] = $responseConnector;
+    } else {
+        unset($GLOBALS["DEBUG_DATA"]["response_connector"]);
+    }
+}
+
 function call_llm() {
     global $contextData, $gameRequest, $receivedData, $startTime, $db;
     global $ERROR_TRIGGERED, $talkedSoFar, $alreadysent, $FUNCTIONS_ARE_ENABLED;
@@ -4069,8 +4518,13 @@ function call_llm_internal() {
 
 
         $buffer=$connectionHandler->fast_request($contextData,$overrideParameters,'standard');
+        snapshot_response_prompt_debug_data($currentConnectorData);
         $preserveAsterisksInContext = isset($GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"]) ? (bool)$GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"] : false;
-        if (!$preserveAsterisksInContext) {
+        $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+            $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
+        }
+        if ($inlineNarrationMode === 'disabled' && !$preserveAsterisksInContext) {
             $buffer = preg_replace('/\*([^*]*\s+[^*]*)\*/', '', $buffer);
         }
 
@@ -4161,6 +4615,7 @@ function call_llm_internal() {
         }
 
         $connectionHandler->open($contextData,$overrideParameters);
+        snapshot_response_prompt_debug_data();
     }
 
 
