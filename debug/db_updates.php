@@ -104,10 +104,14 @@ try {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_llm_connector.sql"));
         $db->execQuery("SET search_path TO public");
     }
-if ($checkTableExists("core_profiles") == -1) {
+    if ($checkTableExists("core_profiles") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles.sql"));
     $db->execQuery("SET search_path TO public");
 }
+    if ($checkTableExists("core_action") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_action.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
     if ($checkTableExists("core_npc_master") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master.sql"));
         $db->execQuery("SET search_path TO public");

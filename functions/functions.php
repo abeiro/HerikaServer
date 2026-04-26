@@ -1073,6 +1073,8 @@ $FUNCTIONS_GHOSTED_LOCAL = [
 
 $GLOBALS["FUNCTIONS_GHOSTED"] = $FUNCTIONS_GHOSTED_LOCAL;
 
+require_once __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "action_catalog.php";
+
 function getFunctionCodeName($key)
 {
     if (!isset($GLOBALS["F_NAMES"]) || !is_array($GLOBALS["F_NAMES"])) {
@@ -1151,108 +1153,25 @@ function unsetFunction($functionCodename)
 
 }
 
-if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
-    $GLOBALS["ENABLED_FUNCTIONS"] = [
-        'Inspect',
-        //'LookAt',
-        'InspectSurroundings',
-        'MoveTo',
-        'OpenInventory',
-        'OpenInventory2',
-        'Attack',
-        'AttackHunt',
-        'TravelTo',
-        'Follow',
-        'CheckInventory', // Commented out - redundant since <inventory> tag already shows NPC's items. Could be repurposed to check OTHER NPCs' inventories later.
-        //'SheatheWeapon',
-        'Relax',
-        //'LeadTheWayTo',
-        'TakeASeat',
-        'IncreaseWalkSpeed',
-        'DecreaseWalkSpeed',
-        //'GetDateTime',
-        //'SearchDiary',
-        //'SetCurrentTask',
-        //'SearchMemory',
-        //'StopWalk'
-        'WaitHere',
-        'ComeCloser',
-        //'GiveItemToPlayer',
-        'TakeGoldFromPlayer',
-        'RentRoom',
-        'HireCarriage',
-        'HireFerry',
-        'AddBounty',
-        'PayBounty',
-        'ArrestPlayer',
-        'ForgiveCrime',
-        'FollowPlayer',
-        'Brawl',
-        'GiveGoldTo',
-        'GiveItemTo',
-        'PickupItem',
-        'GoToSleep',
-        'UseSoulGaze',
-        'CastSpell',
-        'MakeFollower',
-        'Drink',
-        'Toast',
-        'StartRitualCeremony',
-        'EndRitualCeremony',
-        'Training',
-        'EndConversation'
+$seedActionRows = herikaBuildActionCatalogSeedRows(
+    $GLOBALS["F_NAMES"] ?? [],
+    $GLOBALS["F_TRANSLATIONS"] ?? [],
+    $GLOBALS["F_RETURNMESSAGES"] ?? [],
+    [],
+    $ENABLED_FUNCTIONS_LOCAL
+);
+if (herikaActionCatalogDbReady()) {
+    herikaSyncActionCatalogBaseRows($seedActionRows);
+    herikaImportLegacyActionPreferences($seedActionRows);
+}
 
-    ];
+$isNpcMode = isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"];
+$defaultEnabledFunctions = $isNpcMode ? herikaGetNpcDefaultActionCodes() : herikaGetFollowerDefaultActionCodes();
+$dbEnabledFunctions = herikaLoadEnabledActionCodesForMode($isNpcMode);
+$GLOBALS["ENABLED_FUNCTIONS"] = count($dbEnabledFunctions) > 0 ? $dbEnabledFunctions : $defaultEnabledFunctions;
+
+if ($isNpcMode) {
     error_log("[DEBUG functions.php] IS_NPC=true, CastSpell in ENABLED: " . (in_array('CastSpell', $GLOBALS["ENABLED_FUNCTIONS"]) ? "YES" : "NO"));
-} else {
-    $GLOBALS["ENABLED_FUNCTIONS"] = [
-        'Inspect',
-        //'LookAt',
-        'InspectSurroundings',
-        //'MoveTo',
-        'OpenInventory',
-        'OpenInventory2',
-        'Attack',
-        'AttackHunt',
-        'TravelTo',
-        'Follow',
-        'CheckInventory', // Commented out - redundant since <inventory> tag already shows NPC's items. Could be repurposed to check OTHER NPCs' inventories later.
-        'SheatheWeapon',
-        'Relax',
-        //'LeadTheWayTo',
-        'TakeASeat',
-        'ReadQuestJournal',
-        'IncreaseWalkSpeed',
-        'DecreaseWalkSpeed',
-        'WaitHere',
-        //'SetCurrentTask',
-        'ComeCloser',
-        //'GiveItemToPlayer',
-        'TakeGoldFromPlayer',
-        'RentRoom',
-        'HireCarriage',
-        'HireFerry',
-        'AddBounty',
-        'PayBounty',
-        'ArrestPlayer',
-        'ForgiveCrime',
-        'Brawl',
-        'GiveGoldTo',
-        'GiveItemTo',
-        'PickupItem',
-        'GoToSleep',
-        'UseSoulGaze',
-        'CastSpell',
-        'Drink',
-        'Toast',
-        'Training',
-        'StartRitualCeremony',
-        'EndRitualCeremony',
-        //'GetDateTime',
-        //'SearchDiary',
-        //'SearchMemory',
-        //'StopWalk'
-    ];
 }
 
 if ($GLOBALS["ENABLED_FUNCTIONS"]) {
@@ -1270,7 +1189,7 @@ if ($GLOBALS["ENABLED_FUNCTIONS"]) {
             AND defeat_evt.data LIKE '%$playerCnName%defeat%$cnName%' and type='death'
       ) )
 ");
-        if (isset($isCombat["exists"])) {
+        if (herikaActionCatalogToBool($isCombat["exists"] ?? false) && herikaActionCatalogIsActionEnabled("Surrender")) {
             error_log("[DEBUG functions.php] Combat active detected for {$GLOBALS["HERIKA_NAME"]}, adding Surrender function");
             $GLOBALS["ENABLED_FUNCTIONS"][]="Surrender";
         } else {
@@ -1366,6 +1285,18 @@ if ($hasGuardAction) {
 
 $folderPath = __DIR__ . DIRECTORY_SEPARATOR . "../ext/";
 requireFunctionFilesRecursively($folderPath);
+
+if (herikaActionCatalogDbReady()) {
+    herikaSyncActionCatalogBaseRows(
+        herikaBuildActionCatalogSeedRows(
+            $GLOBALS["F_NAMES"] ?? [],
+            $GLOBALS["F_TRANSLATIONS"] ?? [],
+            $GLOBALS["F_RETURNMESSAGES"] ?? [],
+            $GLOBALS["ENABLED_FUNCTIONS"] ?? [],
+            $ENABLED_FUNCTIONS_LOCAL
+        )
+    );
+}
 
 // Why is this here?
 if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . "lang" . DIRECTORY_SEPARATOR . $GLOBALS["CORE_LANG"] . DIRECTORY_SEPARATOR . "prompts.php")) {

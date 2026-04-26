@@ -2240,8 +2240,10 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
 if (isset($GLOBALS["is_rolemastered"])) {
     // ReturnBackHome is initially disabled. Les restore it from copy here. Only applies to rolemastered NPCs
     $GLOBALS["NPC_ROLEMASTERED"]=true;
-    $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
-    $GLOBALS["FUNCTIONS"][]=$GLOBALS["BASE_FUNCTIONS"]["ReturnBackHome"];
+    if (!function_exists('herikaActionCatalogIsActionEnabled') || herikaActionCatalogIsActionEnabled("ReturnBackHome")) {
+        $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
+        $GLOBALS["FUNCTIONS"][]=$GLOBALS["BASE_FUNCTIONS"]["ReturnBackHome"];
+    }
     error_log("{$GLOBALS["HERIKA_NAME"]} is_rolemastered");
     if ((rand(0,5)!==0)){ // Remember goal from time to time
         $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
