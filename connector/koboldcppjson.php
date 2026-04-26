@@ -353,6 +353,7 @@ class koboldcppjson
                 }
                 
                 if (isset($partialResult[0]["mood"])) {
+                    $partialResult[0]["mood"] = extractFirstEmoteMood($partialResult[0]["mood"]);
                     $GLOBALS["SCRIPTLINE_ANIMATION"]=GetAnimationHex($partialResult[0]["mood"]);
                     $GLOBALS["SCRIPTLINE_EXPRESSION"]=GetExpression($partialResult[0]["mood"]);
                 }

@@ -5609,6 +5609,10 @@ function DataRetrieveLastTimeTalk($s_player_name, $s_npc_name) {
 
 function GetAnimationHex($mood)
 {
+    $mood = extractFirstEmoteMood($mood);
+    if ($mood === '') {
+        return "";
+    }
 
     //error_log("Getting animation for mood: $mood");
     $ANIMATIONS=[
@@ -5750,7 +5754,11 @@ function GetAnimationHex($mood)
 
 
 function GetExpression($mood) {
-    $EXPRESSIONS=[
+     $mood = extractFirstEmoteMood($mood);
+     if ($mood === '') {
+         return "";
+     }
+     $EXPRESSIONS=[
      "DialogueAnger",    "DialogueFear",    "DialogueHappy",     "DialogueSad",
      "DialogueSurprise", "DialoguePuzzled", "DialogueDisgusted", "MoodNeutral",
      "MoodAnger",        "MoodFear",        "MoodHappy",        "MoodSad",

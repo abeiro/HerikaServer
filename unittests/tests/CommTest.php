@@ -280,18 +280,44 @@ final class CommTest extends DatabaseTestCase
                         $jsonString = preg_match('/\{(.*)\}/', $actual->content, $matches);
                         $jsonString = $matches[0];
                         $data = json_decode($jsonString, true);
-                        $moodString = $data['mood'];
+                        $moodPrefix = 'choose exactly one mood while speaking from this list, never combine moods: ';
+                        $this->assertStringStartsWith($moodPrefix, $data['mood']);
+                        $moodString = substr($data['mood'], strlen($moodPrefix));
                         $moodArray = explode('|', $moodString);
                         sort($moodArray);
-                        $data['mood'] = implode('|', $moodArray);
-                        $jsonString = json_encode($data);
-
-                        $actual->content = ".  Use this JSON object to give your answer: {$jsonString}";
-                        $expected = [
-                            "role"=>"user",
-                            "content"=>".  Use this JSON object to give your answer: {\"character\":\"The Narrator\",\"listener\":\"specify who The Narrator is talking to\",\"mood\":\"amused|assertive|assisting|default|irritated|kindly|lovely|mocking|neutral|playful|sarcastic|sardonic|sassy|seductive|sexy|smirking|smug|teasing\",\"action\":\"\",\"target\":\"action's target|destination name\",\"message\":\"lines of dialogue\"}"
-                        ];
-                        $this->assertEquals(json_encode($expected), json_encode($actual));
+                        $this->assertSame('The Narrator', $data['character']);
+                        $this->assertSame('specify who The Narrator is talking to', $data['listener']);
+                        $this->assertSame(
+                            [
+                                'amused',
+                                'angry',
+                                'assertive',
+                                'desperate',
+                                'drunk',
+                                'happy',
+                                'irritated',
+                                'kindly',
+                                'lovely',
+                                'neutral',
+                                'playful',
+                                'pleading',
+                                'sad',
+                                'sarcastic',
+                                'sassy',
+                                'scared',
+                                'seductive',
+                                'sexy',
+                                'shy',
+                                'smirking',
+                                'smug',
+                                'surprised',
+                                'teasing',
+                            ],
+                            $moodArray
+                        );
+                        $this->assertSame('', $data['action']);
+                        $this->assertSame("action's target|destination name", $data['target']);
+                        $this->assertSame('lines of dialogue', $data['message']);
                         return true;
                     }
                 }

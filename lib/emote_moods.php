@@ -107,3 +107,12 @@ function normalizeEmoteMoods($rawMoods) {
 
     return $normalizedMoods;
 }
+
+function extractFirstEmoteMood($rawMoods, $fallback = '') {
+    $normalizedMoods = normalizeEmoteMoods($rawMoods);
+    if (!empty($normalizedMoods)) {
+        return $normalizedMoods[0];
+    }
+
+    return trim((string)$fallback);
+}

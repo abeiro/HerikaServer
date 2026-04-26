@@ -9,6 +9,7 @@ define("_MAX_SUBTITLE_LENGTH", 1000);
 require_once(__DIR__."/online_translation.php");
 require_once(__DIR__."/utils_game_timestamp.php");
 require_once(__DIR__."/pipeline_status.php");
+require_once(__DIR__."/emote_moods.php");
 
 function callConfiguredTts($textString, $mood, $stringforhash)
 {
@@ -1165,6 +1166,7 @@ function returnLines($lines,$writeOutput=true)
         if (isset($GLOBALS["FORCE_MOOD"])) {
             $mood = $GLOBALS["FORCE_MOOD"];
         }
+        $mood = extractFirstEmoteMood($mood, "default");
 
 
         if (strlen($responseTextUnmooded) < 2 && !($splitNarration && $narrationParts && !empty($narrationParts['narrations']))) { // Avoid too short responses
