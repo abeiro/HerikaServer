@@ -212,7 +212,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 }
 
 
-$fast_commands = ["addnpc","updateprofile","diary","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
+$fast_commands = ["addnpc","updateprofile","updateprofile_narrator","diary","diary_narrator","diary_player","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
     "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
     "util_location_name","util_faction_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace","combatbark",
     "util_location_npc","enable_bg","region","named_cell","snqe","named_cell_static","player_menu_tts_prefetch","player_menu_tts_play"];
@@ -786,6 +786,7 @@ if (isset($_GET["profile"])) {
         $profile->setOldGlobals($currentProfileData);
         $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
         $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $currentNpcData;
+        $GLOBALS["STOBE_CORE_CURRENT_NPC_DATA"] = $currentNpcData;
 
         $npcMaster->updateByArray($currentNpcData);
         
@@ -848,6 +849,7 @@ if (isset($_GET["profile"])) {
                 if ($fallbackNpcData) {
                     $npcMaster->setOldGlobalsFromCurrentNpcData($fallbackNpcData);
                     $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $fallbackNpcData;
+                    $GLOBALS["STOBE_CORE_CURRENT_NPC_DATA"] = $fallbackNpcData;
                     error_log("[CORE SYSTEM] Resolved unknown profile hash to NPC '{$fallbackNpcData["npc_name"]}' from request payload");
                 } else {
                     error_log("[CORE SYSTEM] Could not resolve NPC '{$fallbackNpcName}' for unknown profile hash");
@@ -922,6 +924,7 @@ if (isset($_GET["profile"])) {
             // Profile has been migrated
             $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
             $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $currentNpcData;
+            $GLOBALS["STOBE_CORE_CURRENT_NPC_DATA"] = $currentNpcData;
 
             $profile=new CoreProfile();
 
@@ -972,6 +975,7 @@ if (isset($_GET["profile"])) {
             $profile->setOldGlobals($currentProfileData);
             $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
             $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $currentNpcData;
+            $GLOBALS["STOBE_CORE_CURRENT_NPC_DATA"] = $currentNpcData;
 
             $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
 
@@ -1006,6 +1010,7 @@ if (isset($GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"]) && $GLOBALS["CHIM_CORE_CURRENT
     $refreshedNpcData = maybeQueueNpcVoiceRefresh($GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"], $npcMasterForVoiceRefresh);
     if ($refreshedNpcData) {
         $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $refreshedNpcData;
+        $GLOBALS["STOBE_CORE_CURRENT_NPC_DATA"] = $refreshedNpcData;
     }
 }
 
@@ -1104,7 +1109,12 @@ foreach ($gameRequest as $i => $ele) {
 
 
 if ($gameRequest[0]=="diary") {
-    $GLOBALS["CURRENT_CONNECTOR"]=$GLOBALS["CONNECTORS_DIARY"];
+    $resolvedDiaryConnector = function_exists('chimResolveDiaryConnectorName')
+        ? chimResolveDiaryConnectorName()
+        : ($GLOBALS["CONNECTORS_DIARY"] ?? '');
+    if (!empty($resolvedDiaryConnector)) {
+        $GLOBALS["CURRENT_CONNECTOR"] = $resolvedDiaryConnector;
+    }
     
     // Add configurable cooldown for diary events to prevent spam (per NPC)
     $diaryCooldownPeriod = isset($GLOBALS["DIARY_COOLDOWN"]) ? intval($GLOBALS["DIARY_COOLDOWN"]) : 30;

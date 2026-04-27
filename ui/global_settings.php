@@ -210,6 +210,16 @@ function flatten_current_conf(array $currentConf, array $confSchema): array {
         $fieldName = strtr($pname, [" " => "@"]); // HERIKA NAME -> HERIKA@NAME
         $type = $parms["type"] ?? ($confSchema[$pname]["type"] ?? 'string');
         $val = $parms["currentValue"] ?? '';
+        if ($type !== 'selectmultiple' && is_array($val)) {
+            $firstScalar = '';
+            foreach ($val as $candidate) {
+                if (is_scalar($candidate)) {
+                    $firstScalar = (string)$candidate;
+                    break;
+                }
+            }
+            $val = $firstScalar;
+        }
         if ($type === 'boolean') {
             $flat[$fieldName] = $val ? 'true' : 'false';
         } else if ($type === 'selectmultiple') {
@@ -218,12 +228,7 @@ function flatten_current_conf(array $currentConf, array $confSchema): array {
             $flat[$fieldName] = (string)($val === '' ? '' : $val);
         } else {
             // strings, longstring, url, apikey, foreign, etc.
-            if (is_array($val)) {
-                // Defensive: unexpected arrays default to empty
-                $flat[$fieldName] = [];
-            } else {
-                $flat[$fieldName] = (string)$val;
-            }
+            $flat[$fieldName] = (string)$val;
         }
     }
     return $flat;
@@ -278,6 +283,17 @@ function build_conf_php_from_pairs(array $pairs, array $confSchema): string {
         $fullNameHierch = explode("@", $k);
         $plainNameHierch = strtr($k, ["@" => " "]);
         $type = $confSchema[$plainNameHierch]["type"] ?? 'string';
+
+        if ($type !== 'selectmultiple' && is_array($v)) {
+            $firstScalar = '';
+            foreach ($v as $candidate) {
+                if (is_scalar($candidate)) {
+                    $firstScalar = (string)$candidate;
+                    break;
+                }
+            }
+            $v = $firstScalar;
+        }
 
         if (is_array($v)) {
             $value = json_encode($v, true);
@@ -354,6 +370,8 @@ function pretty_label(string $flatName): string {
         'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
         'CORE_CONNECTOR_SUMMARY' => 'Summaries',
         'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory/Background Life',
+        'CORE_CONNECTOR_SCENECLASSIFIER' => 'Scene Classifier',
+        'SCENE_CLASSIFIER_ENABLED' => 'Scene Classifier',
         'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
         'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
@@ -387,11 +405,13 @@ function icon_for_field(string $flatName): string {
         if ($u === 'CORE_CONNECTOR_PLAYER') return '🎮';
         if ($u === 'CORE_CONNECTOR_SUMMARY') return '📝';
         if ($u === 'CORE_CONNECTOR_MEDIUMTERM') return '🧠';
+        if ($u === 'CORE_CONNECTOR_SCENECLASSIFIER') return '🎭';
         if ($u === 'CORE_CONNECTOR_PROFILES') return '👥';
         if ($u === 'CORE_CONNECTOR_DIRECTOR') return '🎬';
         if ($u === 'CORE_CONNECTOR_OGHMA_CUSTOM') return '🐙';
         return '🔌';
     }
+    if ($u === 'SCENE_CLASSIFIER_ENABLED') return '🎭';
     if ($u === 'RELATIONSHIP_SYSTEM_ENABLED') return '💞';
     if ($u === 'RELLLM_CONNECTOR') return '🔗';
     if ($u === 'POWER_AWARENESS_ENABLED') return '⚔️';
@@ -448,6 +468,7 @@ $gsSections = [
         [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'foreign:core_llm_connector:id:label' ],
+        [ 'name' => 'CORE_CONNECTOR_SCENECLASSIFIER', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'RELLLM_CONNECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
@@ -523,6 +544,44 @@ if ($hasForeign) {
     }
 }
 
+$sceneClassifierLabels = [
+    'Gemma 3N E4B',
+    'Scene Classifier (Gemma 3N E4B)',
+    'Scene Classifier (Gemini 2.5 Flash Lite)'
+];
+$runtimeConfPath = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
+$runtimeConfRaw = @file_get_contents($runtimeConfPath);
+$sceneClassifierExplicitlyConfigured = is_string($runtimeConfRaw)
+    && preg_match('/\\$CORE_CONNECTOR_SCENECLASSIFIER\\s*=/', $runtimeConfRaw);
+$sceneClassifierEnabledExplicitlyConfigured = is_string($runtimeConfRaw)
+    && preg_match('/\\$SCENE_CLASSIFIER_ENABLED\\s*=/', $runtimeConfRaw);
+
+if (!$sceneClassifierExplicitlyConfigured && !empty($foreignOptions['CORE_CONNECTOR_SCENECLASSIFIER'])) {
+    foreach ($foreignOptions['CORE_CONNECTOR_SCENECLASSIFIER'] as $row) {
+        $rowLabel = trim((string)($row['label'] ?? ''));
+        foreach ($sceneClassifierLabels as $sceneClassifierLabel) {
+            if (strcasecmp($rowLabel, $sceneClassifierLabel) !== 0) {
+                continue;
+            }
+            if (!isset($currentConf['CORE_CONNECTOR_SCENECLASSIFIER']) || !is_array($currentConf['CORE_CONNECTOR_SCENECLASSIFIER'])) {
+                $currentConf['CORE_CONNECTOR_SCENECLASSIFIER'] = $confSchema['CORE_CONNECTOR_SCENECLASSIFIER'] ?? ['type' => 'foreign:core_llm_connector:id:label'];
+            }
+            $currentConf['CORE_CONNECTOR_SCENECLASSIFIER']['currentValue'] = (string)($row['id'] ?? '');
+            break;
+        }
+        if (!empty($currentConf['CORE_CONNECTOR_SCENECLASSIFIER']['currentValue'] ?? '')) {
+            break;
+        }
+    }
+}
+
+if (!$sceneClassifierEnabledExplicitlyConfigured) {
+    if (!isset($currentConf['SCENE_CLASSIFIER_ENABLED']) || !is_array($currentConf['SCENE_CLASSIFIER_ENABLED'])) {
+        $currentConf['SCENE_CLASSIFIER_ENABLED'] = $confSchema['SCENE_CLASSIFIER_ENABLED'] ?? ['type' => 'boolean'];
+    }
+    $currentConf['SCENE_CLASSIFIER_ENABLED']['currentValue'] = true;
+}
+
 // Handle Save
 $saveSuccess = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
@@ -565,6 +624,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
     } else {
         // Checkbox unchecked - no POST value means false
         $allPairs['RELATIONSHIP_SYSTEM_ENABLED'] = 'false';
+    }
+
+    // Apply SCENE_CLASSIFIER_ENABLED (rendered inline with CORE_CONNECTOR_SCENECLASSIFIER, not in $gsSections)
+    if (isset($_POST['SCENE_CLASSIFIER_ENABLED'])) {
+        $allPairs['SCENE_CLASSIFIER_ENABLED'] = ($_POST['SCENE_CLASSIFIER_ENABLED'] === 'true') ? 'true' : 'false';
+    } else {
+        $allPairs['SCENE_CLASSIFIER_ENABLED'] = 'false';
     }
 
     // Apply POWER_AWARENESS_ENABLED
@@ -1117,6 +1183,12 @@ function render_tts_grouped_options(array $options, string $selectedValue, array
                                             <div class="provider-toggle">
                                                 <input type="hidden" name="RELATIONSHIP_SYSTEM_ENABLED" value="false">
                                                 <input type="checkbox" name="RELATIONSHIP_SYSTEM_ENABLED" value="true" <?php echo (current_value('RELATIONSHIP_SYSTEM_ENABLED', $currentConf) ? 'checked' : ''); ?> style="width:auto;" title="Enable/Disable Relationship System">
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if ($fname === 'CORE_CONNECTOR_SCENECLASSIFIER'): ?>
+                                            <div class="provider-toggle">
+                                                <input type="hidden" name="SCENE_CLASSIFIER_ENABLED" value="false">
+                                                <input type="checkbox" name="SCENE_CLASSIFIER_ENABLED" value="true" <?php echo (current_value('SCENE_CLASSIFIER_ENABLED', $currentConf) ? 'checked' : ''); ?> style="width:auto;" title="Enable/Disable Scene Classifier">
                                             </div>
                                         <?php endif; ?>
                                         <?php if ($fname === 'CORE_CONNECTOR_OGHMA_CUSTOM'): ?>

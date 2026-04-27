@@ -91,39 +91,96 @@ if ($minimeEnabled) {
 
         $status = "default";
         //$topic  = json_decode(minimePostScene($historyData), true);// Not working well for now.
-
-        $connector            = new LLMConnector();
-        $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
-        $connector->setOldGlobals($currentConnectorData);
-        $connectionHandler = $connector->getConnector($currentConnectorData);
-        
-        $allowedGenres = ["horror", "action", "thriller", "mystery", "romance", "comedy", "drama","nsfw"];
-
-        $prompt[] = ['role' => 'system', 'content' => "Classify the following dialogue into one of these genres: ".
-            implode(", ", $allowedGenres)];
-        
-        $prompt[] = ['role' => 'user', 'content' => "Dialogue:\n$historyData"];
-        $prompt[] = ['role' => 'user', 'content' => "Respond only with the genre name."];
-
-
-        $buffer = $connectionHandler->fast_request($prompt,                                                                                               
-            ["MAX_TOKENS" => 64, "model" => "google/gemma-3-4b-it", "temperature" => 0.7], 
-            "sceneclassifier"
-        );
-
-        // Parse LLM output to find matching genre
-        $detectedGenre = "default";
-        $bufferLower = strtolower(trim($buffer));
-        foreach ($allowedGenres as $genre) {
-            if (stripos($bufferLower, strtolower($genre)) !== false) {
-                $detectedGenre = $genre;
-                break;
+        $sceneClassifierEnabled = true;
+        if (array_key_exists("SCENE_CLASSIFIER_ENABLED", $GLOBALS)) {
+            $sceneClassifierEnabledValue = $GLOBALS["SCENE_CLASSIFIER_ENABLED"];
+            if (is_string($sceneClassifierEnabledValue)) {
+                $sceneClassifierEnabled = !in_array(strtolower(trim($sceneClassifierEnabledValue)), ["", "0", "false", "off", "no"], true);
+            } else {
+                $sceneClassifierEnabled = !empty($sceneClassifierEnabledValue);
             }
         }
-        
-        $topic = ["generated_tags" => $detectedGenre];
 
-        error_log("[minimePostScene] Detected genre: {$topic["generated_tags"]} from buffer $buffer");
+        $topic = ["generated_tags" => "default"];
+        if ($sceneClassifierEnabled) {
+            $connector = new LLMConnector();
+            $sceneClassifierLabels = [
+                "Gemma 3N E4B",
+                "Scene Classifier (Gemma 3N E4B)",
+                "Scene Classifier (Gemini 2.5 Flash Lite)"
+            ];
+            $sceneClassifierConnectorId = intval($GLOBALS["CORE_CONNECTOR_SCENECLASSIFIER"] ?? 0);
+            $mediumTermConnectorId = intval($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"] ?? 0);
+            $currentConnectorData = null;
+            $connectionHandler = null;
+
+            if ($sceneClassifierConnectorId > 0) {
+                $currentConnectorData = $connector->getById($sceneClassifierConnectorId);
+            }
+
+            if (empty($currentConnectorData) && isset($GLOBALS["db"]) && $GLOBALS["db"]) {
+                foreach ($sceneClassifierLabels as $sceneClassifierLabel) {
+                    $sceneClassifierLabelEscaped = $GLOBALS["db"]->escape($sceneClassifierLabel);
+                    $sceneClassifierRow = $GLOBALS["db"]->fetchOne(
+                        "SELECT id FROM core_llm_connector WHERE LOWER(COALESCE(label,'')) = LOWER('{$sceneClassifierLabelEscaped}') LIMIT 1"
+                    );
+                    if (is_array($sceneClassifierRow) && !empty($sceneClassifierRow["id"])) {
+                        $sceneClassifierConnectorId = intval($sceneClassifierRow["id"]);
+                        $currentConnectorData = $connector->getById($sceneClassifierConnectorId);
+                        if (!empty($currentConnectorData)) {
+                            Logger::info("[SCENE CLASSIFIER] Auto-selected dedicated scene classifier connector ID {$sceneClassifierConnectorId}");
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (empty($currentConnectorData) && $mediumTermConnectorId > 0) {
+                Logger::info("[SCENE CLASSIFIER] CORE_CONNECTOR_SCENECLASSIFIER not configured or invalid, falling back to CORE_CONNECTOR_MEDIUMTERM");
+                $currentConnectorData = $connector->getById($mediumTermConnectorId);
+            }
+
+            if (!empty($currentConnectorData)) {
+                $connector->setOldGlobals($currentConnectorData);
+                $connectionHandler = $connector->getConnector($currentConnectorData);
+            } else {
+                Logger::warn("[SCENE CLASSIFIER] No connector configured for scene classification, skipping scene genre detection");
+            }
+            
+            $allowedGenres = ["horror", "action", "thriller", "mystery", "romance", "comedy", "drama","nsfw"];
+
+            $prompt = [];
+            $prompt[] = ['role' => 'system', 'content' => "Classify the following dialogue into one of these genres: ".
+                implode(", ", $allowedGenres)];
+            
+            $prompt[] = ['role' => 'user', 'content' => "Dialogue:\n$historyData"];
+            $prompt[] = ['role' => 'user', 'content' => "Respond only with the genre name."];
+
+            $buffer = "";
+            if ($connectionHandler) {
+                $buffer = $connectionHandler->fast_request(
+                    $prompt,
+                    ["MAX_TOKENS" => 64],
+                    "sceneclassifier"
+                );
+            }
+
+            // Parse LLM output to find matching genre
+            $detectedGenre = "default";
+            $bufferLower = strtolower(trim($buffer));
+            foreach ($allowedGenres as $genre) {
+                if (stripos($bufferLower, strtolower($genre)) !== false) {
+                    $detectedGenre = $genre;
+                    break;
+                }
+            }
+            
+            $topic = ["generated_tags" => $detectedGenre];
+
+            error_log("[minimePostScene] Detected genre: {$topic["generated_tags"]} from buffer $buffer");
+        } else {
+            Logger::info("[SCENE CLASSIFIER] Disabled, skipping scene genre detection");
+        }
         if ($topic["generated_tags"] == "relax") {
             $GLOBALS["db"]->insert(
                 'rolemaster',

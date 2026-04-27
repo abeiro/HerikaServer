@@ -7,6 +7,7 @@ require_once(__DIR__."/utils_game_timestamp.php");
 require_once(__DIR__."/lazy_xml.php");
 require_once(__DIR__."/model_dynmodel.php");
 require_once(__DIR__."/emote_moods.php");
+require_once(__DIR__."/core/activity_status.php");
 require_once(__DIR__."/core/npc_master.class.php");
 
 
@@ -48,6 +49,116 @@ function ReplacePlayerNamePlaceholder($s_input) {
         ]);
     }
     return $s_res;
+}
+
+if (!function_exists('chimAppendDiaryConnectorCandidate')) {
+    function chimAppendDiaryConnectorCandidate(array &$candidates, string $candidate): void
+    {
+        $normalized = strtolower(trim($candidate));
+        if ($normalized === '' || $normalized === 'array') {
+            return;
+        }
+
+        switch ($normalized) {
+            case 'openrouterjson':
+                $normalized = 'openrouter';
+                break;
+            case 'openaijson':
+                $normalized = 'openai';
+                break;
+            case 'koboldcppjson':
+                $normalized = 'koboldcpp';
+                break;
+        }
+
+        if (!in_array($normalized, $candidates, true)) {
+            $candidates[] = $normalized;
+        }
+    }
+}
+
+if (!function_exists('chimExtractDiaryConnectorCandidates')) {
+    function chimExtractDiaryConnectorCandidates($value): array
+    {
+        $candidates = [];
+
+        $pushValue = function ($candidate) use (&$candidates, &$pushValue): void {
+            if (is_array($candidate)) {
+                foreach ($candidate as $nestedCandidate) {
+                    $pushValue($nestedCandidate);
+                }
+                return;
+            }
+
+            if (!is_scalar($candidate)) {
+                return;
+            }
+
+            $stringValue = trim((string)$candidate);
+            if ($stringValue === '') {
+                return;
+            }
+
+            if (($stringValue[0] === '[' || $stringValue[0] === '{')) {
+                $decoded = json_decode($stringValue, true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $decodedCandidate) {
+                        $pushValue($decodedCandidate);
+                    }
+                    return;
+                }
+            }
+
+            if (strpos($stringValue, ',') !== false) {
+                foreach (explode(',', $stringValue) as $splitCandidate) {
+                    $pushValue($splitCandidate);
+                }
+                return;
+            }
+
+            chimAppendDiaryConnectorCandidate($candidates, $stringValue);
+        };
+
+        $pushValue($value);
+
+        return $candidates;
+    }
+}
+
+if (!function_exists('chimResolveDiaryConnectorName')) {
+    function chimResolveDiaryConnectorName($rawValue = null, bool $persistGlobal = true): ?string
+    {
+        $connectorDir = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "connector" . DIRECTORY_SEPARATOR;
+        $sourceValue = func_num_args() > 0 ? $rawValue : ($GLOBALS["CONNECTORS_DIARY"] ?? null);
+
+        $candidates = chimExtractDiaryConnectorCandidates($sourceValue);
+        foreach (chimExtractDiaryConnectorCandidates($GLOBALS["CONNECTORS"] ?? null) as $candidate) {
+            if (!in_array($candidate, $candidates, true)) {
+                $candidates[] = $candidate;
+            }
+        }
+
+        foreach (['openrouter', 'openai', 'google_openaijson', 'koboldcpp'] as $fallbackCandidate) {
+            if (!in_array($fallbackCandidate, $candidates, true)) {
+                $candidates[] = $fallbackCandidate;
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            if (file_exists($connectorDir . $candidate . ".php")) {
+                if ($persistGlobal) {
+                    $originalValue = is_scalar($sourceValue) ? trim((string)$sourceValue) : json_encode($sourceValue);
+                    if ($originalValue !== $candidate) {
+                        Logger::warn("DIARY: Resolved CONNECTORS_DIARY value " . var_export($sourceValue, true) . " to '{$candidate}'");
+                    }
+                    $GLOBALS["CONNECTORS_DIARY"] = $candidate;
+                }
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
 }
 
 function getGoldFromMetadata($npcName = null) {
@@ -480,6 +591,11 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                                 $profileString .= " ({$powerComparison})";
                             }
                         }
+                    }
+
+                    $activityStatus = chimNormalizeActivityStatus($metaData);
+                    if (!empty($activityStatus['fresh']) && !empty($activityStatus['summary'])) {
+                        $profileString .= ". Current activity: " . $activityStatus['summary'];
                     }
                     
                     // Add equipment if available
@@ -5499,6 +5615,10 @@ function DataRetrieveLastTimeTalk($s_player_name, $s_npc_name) {
 
 function GetAnimationHex($mood)
 {
+    $mood = extractFirstEmoteMood($mood);
+    if ($mood === '') {
+        return "";
+    }
 
     //error_log("Getting animation for mood: $mood");
     $ANIMATIONS=[
@@ -5640,7 +5760,11 @@ function GetAnimationHex($mood)
 
 
 function GetExpression($mood) {
-    $EXPRESSIONS=[
+     $mood = extractFirstEmoteMood($mood);
+     if ($mood === '') {
+         return "";
+     }
+     $EXPRESSIONS=[
      "DialogueAnger",    "DialogueFear",    "DialogueHappy",     "DialogueSad",
      "DialogueSurprise", "DialoguePuzzled", "DialogueDisgusted", "MoodNeutral",
      "MoodAnger",        "MoodFear",        "MoodHappy",        "MoodSad",
@@ -6004,11 +6128,18 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
     $TARGET_EQUIPMENT_ADD="";
     $STATS_ADD="";
     $SPELLS_ADD="";
+    $ACTIVITY_ADD="";
     
     $npcMaster=new NpcMaster();
     $currentNpcData=$npcMaster->getByName($FOLLOWER_CONF["HERIKA_NAME"]);
     $metaData=$npcMaster->getMetaData($currentNpcData);
     $extendedData=$npcMaster->getExtendedData($currentNpcData);
+    $activityStatus = chimNormalizeActivityStatus($metaData);
+
+    if (!empty($activityStatus['summary'])) {
+        $activityHeading = !empty($activityStatus['fresh']) ? '#Current Activity' : '#Last Known Activity';
+        $ACTIVITY_ADD = "\n\n<current_activity>\n{$activityHeading}\n" . ucfirst($activityStatus['summary']) . ".\n</current_activity>\n";
+    }
     
     if (isset($metaData["skills"])) {
         // Convert numeric skills to descriptive levels, grouped by category
@@ -6387,6 +6518,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
                 $dynamicBio.=$EQUIPMENT_ADD ?? "";
                 $dynamicBio.=$TARGET_EQUIPMENT_ADD ?? "";
                 $dynamicBio.=$INVENTORY_ADD ?? "";
+                $dynamicBio.=$ACTIVITY_ADD ?? "";
                 $dynamicBio.=$STATS_ADD ?? "";
                 $dynamicBio.=$SPELLS_ADD ?? "";
             }

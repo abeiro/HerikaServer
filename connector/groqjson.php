@@ -497,6 +497,7 @@ class groqjson
                         }
                         
                         if (isset($finalData["mood"])) {
+                            $finalData["mood"] = extractFirstEmoteMood($finalData["mood"]);
                             $GLOBALS["SCRIPTLINE_ANIMATION"]=GetAnimationHex($finalData["mood"]);
                             $GLOBALS["SCRIPTLINE_EXPRESSION"]=GetExpression($finalData["mood"]);
                         }

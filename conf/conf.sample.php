@@ -85,6 +85,7 @@ $EMOTEMOODS="sassy,"
     . "surprised"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 
 $INLINE_NARRATION_MODE="disabled"; // disabled|narrator|npc
+$REMOVE_PLAYER_AUTOCHAT_ASTERISKS=true; // keep AUTOCHAT / PLAYER_RESPEECH rewritten player text spoken-only by stripping leading narration / *asterisks*
 $REMOVE_ASTERISKS_FROM_PLAYER_INPUT=true; // filters *asterisked* player input from player TTS only
 $REMOVE_ASTERISKS_FROM_NPC_OUTPUT=true;
 $ENFORCE_ACTIONS_PROMPT=true;
@@ -166,6 +167,8 @@ $CORE_CONNECTOR_DIRECTOR=1;
 $CORE_CONNECTOR_PLAYER=2;
 $CORE_CONNECTOR_SUMMARY=4;
 $CORE_CONNECTOR_MEDIUMTERM=4;
+$CORE_CONNECTOR_SCENECLASSIFIER=7; // Gemma 3N E4B
+$SCENE_CLASSIFIER_ENABLED=true; // Enable post-request scene tone/genre classification.
 $CORE_CONNECTOR_PROFILES=1;
 $RELLLM_CONNECTOR=5; // Relationship Management default (Mistral Small 3.2 24B)
 

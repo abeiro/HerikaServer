@@ -107,6 +107,9 @@
     Function setResponseTemplate() {
         $moods=normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "");
         shuffle($moods);
+        $moodDescription = empty($moods)
+            ? "choose exactly one mood while speaking, never combine moods"
+            : "choose exactly one mood while speaking from this list, never combine moods: ".implode("|", $moods);
     
         // Auto-detect language from TTS config if LLM_LANG not set
         if (!isset($GLOBALS["LLM_LANG"]) && isset($GLOBALS["LANG_LLM_XTTS"]) && $GLOBALS["LANG_LLM_XTTS"]) {
@@ -150,7 +153,7 @@
                     "character"=>$GLOBALS["HERIKA_NAME"],
                     "listener"=>$listenerDesc,
                     "message"=>$messageDescription,
-                    "mood"=>implode("|",$moods),
+                    "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
                     "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50')",
@@ -161,7 +164,7 @@
                     "character"=>$GLOBALS["HERIKA_NAME"],
                     "listener"=>$listenerDesc,
                     "message"=>$messageDescription,
-                    "mood"=>implode("|",$moods),
+                    "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
                     "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50')"
@@ -172,7 +175,7 @@
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
                     "listener"=>$listenerDesc,
-                    "mood"=>implode("|",$moods),
+                    "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
                     "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50')",
@@ -183,7 +186,7 @@
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
                     "listener"=>$listenerDesc,
-                    "mood"=>implode("|",$moods),
+                    "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
                     "target"=>"action target actor|action destination location name",
                     "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells)",
@@ -222,6 +225,7 @@
     Function setStructuredOutputTemplate() {
         $moods=normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "");
         shuffle($moods);
+        $moodDescription = "choose exactly one mood while speaking, never combine moods";
 
         // Determine message description based on inline narration mode.
         $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
@@ -261,11 +265,11 @@
                         "mood" => empty($moods) ?
                             array(
                                 "type" => "string",
-                                "description" => "mood to use while speaking"
+                                "description" => $moodDescription
                             ) :
                             array(
                                 "type" => "string",
-                                "description" => "mood to use while speaking",
+                                "description" => $moodDescription,
                                 "enum" => $moods
                             ),
                         "action" => empty($GLOBALS["FUNC_LIST"]) ? 

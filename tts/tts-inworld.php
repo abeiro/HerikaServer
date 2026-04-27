@@ -1,5 +1,7 @@
 <?php
 
+require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."emote_moods.php");
+
 /**
  * Inworld TTS Implementation
  * 
@@ -710,9 +712,9 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
     // emotions:
     $b_emotions = isset($GLOBALS["LAST_LLM_RESPONSE"]) && ($GLOBALS['use_emotions_expression'] ?? false);
     if (isEmotionCapable() && $b_emotions) {
-        $s_mood = strtolower($GLOBALS["LAST_LLM_RESPONSE"]["mood"] ?? "");
+        $s_mood = strtolower(extractFirstEmoteMood($GLOBALS["LAST_LLM_RESPONSE"]["mood"] ?? ""));
         if (isset($GLOBALS["FORCE_MOOD"]) && (strlen($GLOBALS["FORCE_MOOD"]) > 0)) {
-            $s_mood = strtolower($GLOBALS["FORCE_MOOD"]);
+            $s_mood = strtolower(extractFirstEmoteMood($GLOBALS["FORCE_MOOD"]));
         }
         
         if (($s_mood == "whispering") || ($s_mood == "laughing"))  {

@@ -2,6 +2,7 @@
 $localPath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 require_once($localPath . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
 require_once($localPath . "lib".DIRECTORY_SEPARATOR."sharedmem.class.php"); // Caching token
+require_once($localPath . "lib".DIRECTORY_SEPARATOR."emote_moods.php");
 
 $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash)
 {
@@ -27,6 +28,8 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash)
 
     if (empty(trim($mood)))
         $mood = "default";
+
+    $mood = extractFirstEmoteMood($mood, "default");
 
     if ($GLOBALS["TTS"]["AZURE"]["validMoods"])
         $valid_tokens = $GLOBALS["TTS"]["AZURE"]["validMoods"];

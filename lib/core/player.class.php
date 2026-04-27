@@ -118,6 +118,36 @@ class Player
     }
 
     /**
+     * Get a value and parse it as boolean
+     * @param string $key The setting key
+     * @param bool $default Default value if not found
+     * @return bool The boolean value
+     */
+    public function getBool(string $key, bool $default = false): bool
+    {
+        $value = $this->get($key);
+        if ($value === null) {
+            return $default;
+        }
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Get a value and parse it as integer
+     * @param string $key The setting key
+     * @param int $default Default value if not found
+     * @return int The integer value
+     */
+    public function getInt(string $key, int $default = 0): int
+    {
+        $value = $this->get($key);
+        if ($value === null) {
+            return $default;
+        }
+        return intval($value);
+    }
+
+    /**
      * Escape string for SQL
      * @param string $value The value to escape
      * @return string Escaped value

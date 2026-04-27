@@ -1877,6 +1877,160 @@ if (!$existsColumn || !$existsColumn[0]["column_name"]) {
     echo '<script>alert("A patch (add service column to core_llm_connector) has been applied to Database")</script>';
 }
 
+if ($checkVersion("core_llm_connector") < 20260423001) {
+    Logger::debug("Applying core_llm_connector 20260423001 - Seeding dedicated scene classifier connector");
+    try {
+        $sceneClassifierLabel = "Gemma 3N E4B";
+        $sceneClassifierLabelEscaped = $db->escape($sceneClassifierLabel);
+        $existingSceneClassifier = $db->fetchOne(
+            "SELECT id FROM public.core_llm_connector WHERE LOWER(COALESCE(label,'')) = LOWER('{$sceneClassifierLabelEscaped}') LIMIT 1"
+        );
+
+        if (!$existingSceneClassifier || !isset($existingSceneClassifier["id"])) {
+            $openRouterBadge = $db->fetchOne("SELECT id FROM public.core_api_badge WHERE LOWER(label) = 'openrouter' LIMIT 1");
+            $openRouterBadgeId = intval($openRouterBadge["id"] ?? 0);
+
+            $insertPayload = [
+                "label" => $sceneClassifierLabel,
+                "metadata" => "{}",
+                "url" => "https://openrouter.ai/api/v1/chat/completions",
+                "model" => "google/gemma-3n-e4b-it",
+                "provider" => "openrouter",
+                "driver" => "openrouterjson",
+                "max_tokens" => 128,
+                "enforce_json" => 1,
+                "prefill_json" => 0,
+                "json_schema" => 1,
+                "temperature" => 0.2,
+                "service" => "openrouter"
+            ];
+            if ($openRouterBadgeId > 0) {
+                $insertPayload["api_badge_id"] = $openRouterBadgeId;
+            }
+
+            $db->insert("core_llm_connector", $insertPayload);
+            Logger::info("Inserted dedicated scene classifier connector '{$sceneClassifierLabel}'");
+        } else {
+            Logger::info("Dedicated scene classifier connector already exists with ID " . intval($existingSceneClassifier["id"]));
+        }
+
+        $updateVersion("core_llm_connector", 20260423001);
+        Logger::info("Applied patch core_llm_connector 20260423001");
+    } catch (Exception $e) {
+        Logger::error("Error applying core_llm_connector 20260423001: " . $e->getMessage());
+    }
+}
+
+if ($checkVersion("core_llm_connector") < 20260423002) {
+    Logger::debug("Applying core_llm_connector 20260423002 - Migrating scene classifier default to Gemma 3N E4B");
+    try {
+        $sceneClassifierLabel = "Gemma 3N E4B";
+        $legacySceneClassifierLabel = "Scene Classifier (Gemma 3N E4B)";
+        $legacySceneClassifierLabel2 = "Scene Classifier (Gemini 2.5 Flash Lite)";
+        $sceneClassifierLabelEscaped = $db->escape($sceneClassifierLabel);
+        $legacySceneClassifierLabelEscaped = $db->escape($legacySceneClassifierLabel);
+        $legacySceneClassifierLabelEscaped2 = $db->escape($legacySceneClassifierLabel2);
+
+        $sceneClassifierRow = $db->fetchOne(
+            "SELECT id FROM public.core_llm_connector
+             WHERE LOWER(COALESCE(label,'')) = LOWER('{$sceneClassifierLabelEscaped}')
+                OR LOWER(COALESCE(label,'')) = LOWER('{$legacySceneClassifierLabelEscaped}')
+                OR LOWER(COALESCE(label,'')) = LOWER('{$legacySceneClassifierLabelEscaped2}')
+             ORDER BY id ASC
+             LIMIT 1"
+        );
+
+        $openRouterBadge = $db->fetchOne("SELECT id FROM public.core_api_badge WHERE LOWER(label) = 'openrouter' LIMIT 1");
+        $openRouterBadgeId = intval($openRouterBadge["id"] ?? 0);
+
+        $sceneClassifierPayload = [
+            "label" => $sceneClassifierLabel,
+            "metadata" => "{}",
+            "url" => "https://openrouter.ai/api/v1/chat/completions",
+            "model" => "google/gemma-3n-e4b-it",
+            "provider" => "openrouter",
+            "driver" => "openrouterjson",
+            "max_tokens" => 128,
+            "enforce_json" => 1,
+            "prefill_json" => 0,
+            "json_schema" => 1,
+            "temperature" => 0.2,
+            "service" => "openrouter"
+        ];
+        if ($openRouterBadgeId > 0) {
+            $sceneClassifierPayload["api_badge_id"] = $openRouterBadgeId;
+        }
+
+        if ($sceneClassifierRow && isset($sceneClassifierRow["id"])) {
+            $db->updateRow("core_llm_connector", $sceneClassifierPayload, "id=" . intval($sceneClassifierRow["id"]));
+            Logger::info("Updated dedicated scene classifier connector ID " . intval($sceneClassifierRow["id"]) . " to Gemma 3N E4B");
+        } else {
+            $db->insert("core_llm_connector", $sceneClassifierPayload);
+            Logger::info("Inserted dedicated scene classifier connector '{$sceneClassifierLabel}'");
+        }
+
+        $updateVersion("core_llm_connector", 20260423002);
+        Logger::info("Applied patch core_llm_connector 20260423002");
+    } catch (Exception $e) {
+        Logger::error("Error applying core_llm_connector 20260423002: " . $e->getMessage());
+    }
+}
+
+if ($checkVersion("core_llm_connector") < 20260423003) {
+    Logger::debug("Applying core_llm_connector 20260423003 - Shortening scene classifier connector label");
+    try {
+        $sceneClassifierLabel = "Gemma 3N E4B";
+        $legacySceneClassifierLabels = [
+            "Scene Classifier (Gemma 3N E4B)",
+            "Scene Classifier (Gemini 2.5 Flash Lite)"
+        ];
+
+        $conditions = [];
+        $conditions[] = "LOWER(COALESCE(label,'')) = LOWER('" . $db->escape($sceneClassifierLabel) . "')";
+        foreach ($legacySceneClassifierLabels as $legacyLabel) {
+            $conditions[] = "LOWER(COALESCE(label,'')) = LOWER('" . $db->escape($legacyLabel) . "')";
+        }
+
+        $sceneClassifierRow = $db->fetchOne(
+            "SELECT id FROM public.core_llm_connector WHERE " . implode(" OR ", $conditions) . " ORDER BY id ASC LIMIT 1"
+        );
+
+        $openRouterBadge = $db->fetchOne("SELECT id FROM public.core_api_badge WHERE LOWER(label) = 'openrouter' LIMIT 1");
+        $openRouterBadgeId = intval($openRouterBadge["id"] ?? 0);
+
+        $sceneClassifierPayload = [
+            "label" => $sceneClassifierLabel,
+            "metadata" => "{}",
+            "url" => "https://openrouter.ai/api/v1/chat/completions",
+            "model" => "google/gemma-3n-e4b-it",
+            "provider" => "openrouter",
+            "driver" => "openrouterjson",
+            "max_tokens" => 128,
+            "enforce_json" => 1,
+            "prefill_json" => 0,
+            "json_schema" => 1,
+            "temperature" => 0.2,
+            "service" => "openrouter"
+        ];
+        if ($openRouterBadgeId > 0) {
+            $sceneClassifierPayload["api_badge_id"] = $openRouterBadgeId;
+        }
+
+        if ($sceneClassifierRow && isset($sceneClassifierRow["id"])) {
+            $db->updateRow("core_llm_connector", $sceneClassifierPayload, "id=" . intval($sceneClassifierRow["id"]));
+            Logger::info("Renamed scene classifier connector ID " . intval($sceneClassifierRow["id"]) . " to '{$sceneClassifierLabel}'");
+        } else {
+            $db->insert("core_llm_connector", $sceneClassifierPayload);
+            Logger::info("Inserted dedicated scene classifier connector '{$sceneClassifierLabel}'");
+        }
+
+        $updateVersion("core_llm_connector", 20260423003);
+        Logger::info("Applied patch core_llm_connector 20260423003");
+    } catch (Exception $e) {
+        Logger::error("Error applying core_llm_connector 20260423003: " . $e->getMessage());
+    }
+}
+
 if ($checkTableExists("core_npc_master_history") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master_history.sql"));
 } else
@@ -3669,6 +3823,65 @@ if ($checkVersion("emotions_expression")<20251230001) {
         $updateVersion("emotions_expression",20251230001);
         Logger::info("Applied patch emotions_expression 20251230001");
     }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20260423001) {
+    Logger::debug(" try patch: prompts 20260423001");
+
+    // Fresh installs only seed the consolidated prompt entry.
+
+    $directorSuggestionSystemSingle = $db->escape(
+        "You are a game director, and we are roleplaying Skyrim in the Tamriel universe. You must create a instruction for an actor to generate new content/events on game.\n\n"
+        . "# Examples\n\n"
+        . "user request: actor \"a\" leaves the place \n"
+        . "{\"instructions\":[{\n"
+        . "  \"character\": \"actor a\",\n"
+        . "  \"instruction\": \"actor a should say goodbye to everyone, hinting that they may not return for a long time\",\n"
+        . "  \"action\": \"ExitLocation\",\n"
+        . "  \"target\": \"everyone\",\n"
+        . "  \"scene_note\": \"The mood is somber as actor a prepares to leave. Actor b watches in silence, perhaps with regret or longing.\"\n"
+        . "},\n"
+        . "{\n"
+        . "  \"character\": \"actor b\",\n"
+        . "  \"instruction\": \"actor b should say goodbye to b\",\n"
+        . "  \"action\": \"JustTalk\",\n"
+        . "  \"target\": \"Actor a\",\n"
+        . "  \"scene_note\": \"\"\n"
+        . "}\n"
+        . "]\n"
+        . "}\n\n"
+        . "(no user request, randomly generated content)\n"
+        . "{\"instructions\":[\n"
+        . " {\n"
+        . "  \"character\": \"actor a\",\n"
+        . "  \"instruction\": \"actor a should ask actor b for a few coins, claiming they desperately need a drink.\",\n"
+        . "  \"action\": \"Talk\",\n"
+        . "  \"target\": \"actor b\",\n"
+        . "  \"scene_note\": \"actor a looks disheveled but charming, half-joking and half-serious. Actor b is unsure whether to laugh, help, or walk away.\"\n"
+        . " }\n"
+        . "]\n"
+        . "}\n\n"
+        . "Just provide instructions! You can also provide more than one instruction, but one per actor (keep limit at 2 or 3 max actors)\n"
+        . "In addition, follow these general scene rules as a game director:\n"
+        . " * Use any actor in NEARBY ACTORS/NPC IN THE SCENE list ({PLAYER_NAME}, busy actors and far away actors are excluded)\n"
+        . " * Continue the scene as naturally and fully as possible, unless the user explicitly requests a new one. You can specify actions to reinforce the actors' dialogue.\n"
+        . " * If there are more actors in the room, try to involve them in the conversation.\n"
+        . " * When dialogue becomes repetitive, make a plot twist.\n"
+        . " * If a character reuses the same argument too often, nudge the scene towards a new topic.\n"
+        . " * Occasionally introduce subtle foreshadowing or hint at future events, dangers, or quests.\n"
+        . " * Do not resolve everything neatly - keep room for ongoing tension or future continuation.\n"
+        . " * You must always provide dialogue instructions for the character, as every request requires a dialogue response.\n"
+        . " * Here are a list of actions that can be used:\n{FUNCTION_LIST}\n  ** JustTalk\n"
+        . " * Add a Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality.\n"
+        . " * If scene is getting boring, add a plot twist"
+    );
+
+    $db->execQuery("INSERT INTO public.prompts (prompt_key, default_prompt, description) VALUES ('directorSuggestionSystem', '$directorSuggestionSystemSingle', 'Single prompt-manager entry for rolemaster suggestion generation. Includes system framing, examples, and suggestion rules. Supports {PLAYER_NAME} and {FUNCTION_LIST} placeholders. Used in: service/processors/rolemaster/cmd/suggestion.php') ON CONFLICT (prompt_key) DO UPDATE SET default_prompt = EXCLUDED.default_prompt, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP");
+
+    $updateVersion("prompts", 20260423001);
+    Logger::info("Applied patch prompts 20260423001 - Added directorSuggestionSystem prompt");
 }
 
 //----------------------------------------------------

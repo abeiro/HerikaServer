@@ -273,6 +273,26 @@ class Narrator
                 $allSettings['remove_asterisks_from_player_input'] = $serialized;
             }
         }
+
+        if (!isset($allSettings['remove_player_autochat_asterisks'])) {
+            $legacyRemovePlayerAutochatAsterisks = null;
+            if (isset($allSettings['player_autochat_asterisks_enabled'])) {
+                $legacyRemovePlayerAutochatAsterisks = !filter_var($allSettings['player_autochat_asterisks_enabled'], FILTER_VALIDATE_BOOLEAN);
+            } elseif (isset($GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'])) {
+                $legacyRemovePlayerAutochatAsterisks = (bool)$GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'];
+            } elseif (isset($GLOBALS['PLAYER_AUTOCHAT_ASTERISKS_ENABLED'])) {
+                $legacyRemovePlayerAutochatAsterisks = !(bool)$GLOBALS['PLAYER_AUTOCHAT_ASTERISKS_ENABLED'];
+            }
+
+            if ($legacyRemovePlayerAutochatAsterisks === null) {
+                $legacyRemovePlayerAutochatAsterisks = true;
+            }
+
+            $serialized = $legacyRemovePlayerAutochatAsterisks ? '1' : '0';
+            if ($this->set('remove_player_autochat_asterisks', $serialized)) {
+                $allSettings['remove_player_autochat_asterisks'] = $serialized;
+            }
+        }
         
         // Map database keys to GLOBALS keys with type conversion
         $keyMapping = [
@@ -286,6 +306,11 @@ class Narrator
             'hide_from_context' => ['HIDE_NARRATOR_DIALOGUE', 'bool', false],
             'dynamic_profile' => ['DYNAMIC_PROFILE', 'bool', false],
             'inline_narration_mode' => ['INLINE_NARRATION_MODE', 'string', isset($GLOBALS['INLINE_NARRATION_MODE']) ? $GLOBALS['INLINE_NARRATION_MODE'] : 'disabled'],
+            'remove_player_autochat_asterisks' => [
+                'REMOVE_PLAYER_AUTOCHAT_ASTERISKS',
+                'bool',
+                isset($GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS']) ? (bool)$GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'] : (isset($GLOBALS['PLAYER_AUTOCHAT_ASTERISKS_ENABLED']) ? !(bool)$GLOBALS['PLAYER_AUTOCHAT_ASTERISKS_ENABLED'] : true),
+            ],
             'preserve_asterisks_in_context' => ['PRESERVE_ASTERISKS_IN_CONTEXT', 'bool', false],
             'remove_asterisks_from_player_input' => [
                 'REMOVE_ASTERISKS_FROM_PLAYER_INPUT',
