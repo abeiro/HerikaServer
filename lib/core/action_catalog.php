@@ -450,6 +450,14 @@ function herikaNormalizeActionCatalogDisplayActionName($text)
     $text = preg_replace('/\b[Tt]he\s+Npc\b/u', 'Npc', $text);
     $text = preg_replace('/\b[Tt]he\s+Player\b/u', 'Player', $text);
 
+    $text = preg_replace('/[\s\-]+/u', '_', $text);
+    $text = preg_replace('/(?<=[a-z0-9])(?=[A-Z])/u', '_', $text);
+    $text = preg_replace('/(?<=[A-Z])(?=[A-Z][a-z])/u', '_', $text);
+    $text = preg_replace('/(?<=[A-Za-z])(?=\d)/u', '_', $text);
+    $text = preg_replace('/(?<=\d)(?=[A-Za-z])/u', '_', $text);
+    $text = preg_replace('/_+/u', '_', $text);
+    $text = trim($text, '_');
+
     return $text;
 }
 
@@ -638,6 +646,21 @@ function herikaActionCatalogGetBaseScriptProxyPrograms()
                     ],
                 ],
             ],
+            'npc_metadata_updates' => [
+                'ritual_state' => [
+                    'active' => true,
+                    'type' => '{{parameter_target}}',
+                    'started_at' => '{{local_ts}}',
+                    'gamets' => '{{game_ts}}',
+                ],
+                'activity_status' => [
+                    'current_action' => 'ritual',
+                    'current_use' => '{{parameter_target}}',
+                    'use_type' => 'ritual',
+                    'timestamp' => '{{local_ts_ms}}',
+                    'gamets' => '{{game_ts}}',
+                ],
+            ],
             'db_inserts' => [
                 [
                     'table' => 'rolemaster',
@@ -670,6 +693,17 @@ function herikaActionCatalogGetBaseScriptProxyPrograms()
                         'targetObjectFormId' => '{{actor_refid}}',
                         'akIdle' => '0x000f11e3',
                     ],
+                ],
+            ],
+            'npc_metadata_updates' => [
+                'ritual_state' => null,
+                'activity_status' => [
+                    'current_action' => 'idle',
+                    'current_use' => '',
+                    'use_type' => '',
+                    'furniture_name' => '',
+                    'timestamp' => '{{local_ts_ms}}',
+                    'gamets' => '{{game_ts}}',
                 ],
             ],
             'db_inserts' => [
@@ -859,6 +893,16 @@ function herikaActionCatalogGetBuiltinRequirements($codeName)
         'Relax' => [
             'activity' => [
                 'current_action_not_in' => ['dead', 'unconscious', 'sleeping', 'combat', 'attacking'],
+            ],
+        ],
+        'StartRitualCeremony' => [
+            'activity' => [
+                'current_action_not_in' => ['dead', 'unconscious', 'sleeping', 'combat', 'attacking', 'ritual'],
+            ],
+        ],
+        'EndRitualCeremony' => [
+            'activity' => [
+                'current_action_in' => ['ritual'],
             ],
         ],
     ];
@@ -1791,7 +1835,7 @@ function herikaGetActionCatalogRowsByCode()
 
         $GLOBALS["HERIKA_ACTION_CATALOG_ROWS_BY_CODE"][$codeName] = [
             'code_name' => $codeName,
-            'action_name' => strval($row['action_name'] ?? $codeName),
+            'action_name' => herikaNormalizeActionCatalogDisplayActionName(strval($row['action_name'] ?? $codeName)),
             'description' => strval($row['description'] ?? ''),
             'return_message' => strval($row['return_message'] ?? ''),
             'available_to_npc' => herikaActionCatalogToBool($row['available_to_npc'] ?? false),
@@ -2054,6 +2098,8 @@ function herikaActionCatalogUpsertCustomToggle($codeName, $enabled)
         return false;
     }
 
+    $actionName = herikaNormalizeActionCatalogDisplayActionName(strval($row['action_name'] ?? ''));
+
     $result = $GLOBALS["db"]->execQuery("
         INSERT INTO public.core_action_custom (
             code_name,
@@ -2175,6 +2221,8 @@ function herikaActionCatalogUpsertCustomConfig($codeName, $configValues)
         $metadata['custom_config'][$configKey] = $configValue;
     }
 
+    $actionName = herikaNormalizeActionCatalogDisplayActionName(strval($row['action_name'] ?? ''));
+
     $result = $GLOBALS["db"]->execQuery("
         INSERT INTO public.core_action_custom (
             code_name,
@@ -2190,7 +2238,7 @@ function herikaActionCatalogUpsertCustomConfig($codeName, $configValues)
             script_proxy_program
         ) VALUES (
             " . herikaActionCatalogSqlText($row['code_name'] ?? $codeName) . ",
-            " . herikaActionCatalogSqlText($row['action_name'] ?? '') . ",
+            " . herikaActionCatalogSqlText($actionName) . ",
             " . herikaActionCatalogSqlText($row['description'] ?? '') . ",
             " . herikaActionCatalogSqlText($row['return_message'] ?? '') . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_npc'] ?? false)) . ",
@@ -2252,6 +2300,7 @@ function herikaActionCatalogUpsertCustomParameters($codeName, $parameters)
     $normalizedParameters = herikaActionCatalogNormalizeParameterSchema(
         herikaActionCatalogDecodeJson($parameters, [])
     );
+    $actionName = herikaNormalizeActionCatalogDisplayActionName(strval($row['action_name'] ?? ''));
 
     $result = $GLOBALS["db"]->execQuery("
         INSERT INTO public.core_action_custom (
@@ -2268,7 +2317,7 @@ function herikaActionCatalogUpsertCustomParameters($codeName, $parameters)
             script_proxy_program
         ) VALUES (
             " . herikaActionCatalogSqlText($row['code_name'] ?? $codeName) . ",
-            " . herikaActionCatalogSqlText($row['action_name'] ?? '') . ",
+            " . herikaActionCatalogSqlText($actionName) . ",
             " . herikaActionCatalogSqlText($row['description'] ?? '') . ",
             " . herikaActionCatalogSqlText($row['return_message'] ?? '') . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_npc'] ?? false)) . ",
@@ -2304,7 +2353,7 @@ function herikaActionCatalogUpsertCustomRow($row)
     }
 
     $codeName = trim(strval($row['code_name'] ?? ''));
-    $actionName = trim(strval($row['action_name'] ?? ''));
+    $actionName = herikaNormalizeActionCatalogDisplayActionName(trim(strval($row['action_name'] ?? '')));
     if ($codeName === '' || $actionName === '') {
         return false;
     }
@@ -2513,6 +2562,7 @@ function herikaActionCatalogBuildScriptProxyContext($actionParts, $actionParts2)
         'cache_location' => strval($GLOBALS["CACHE_LOCATION"] ?? ''),
         'cache_party' => strval($GLOBALS["CACHE_PARTY"] ?? ''),
         'toast_delay_seconds' => intval(ceil($bufferCharacters / 12)),
+        'local_ts_ms' => (int) round(microtime(true) * 1000),
     ];
 }
 
@@ -2573,6 +2623,24 @@ function herikaActionCatalogExecuteScriptProxyDbInserts($dbInserts, $context)
     return $executed;
 }
 
+function herikaActionCatalogExecuteScriptProxyNpcMetadataUpdates($npcMetadataUpdates, $context)
+{
+    if (!is_array($npcMetadataUpdates) || count($npcMetadataUpdates) === 0) {
+        return false;
+    }
+
+    $resolvedUpdates = herikaActionCatalogResolveTemplateValue($npcMetadataUpdates, $context);
+    if (!is_array($resolvedUpdates) || count($resolvedUpdates) === 0) {
+        return false;
+    }
+
+    require_once __DIR__ . DIRECTORY_SEPARATOR . 'activity_status.php';
+    return chimApplyNpcMetadataUpdatesByName(
+        trim(strval($context['actor_name'] ?? '')),
+        $resolvedUpdates
+    );
+}
+
 function herikaActionCatalogRunScriptProxyProgram($program, $context)
 {
     if (!is_array($program) || count($program) === 0) {
@@ -2591,6 +2659,7 @@ function herikaActionCatalogRunScriptProxyProgram($program, $context)
 
     $executed = herikaActionCatalogExecuteScriptProxyCommands($program['commands'] ?? [], $context) || $executed;
     $executed = herikaActionCatalogExecuteScriptProxyDbInserts($program['db_inserts'] ?? [], $context) || $executed;
+    $executed = herikaActionCatalogExecuteScriptProxyNpcMetadataUpdates($program['npc_metadata_updates'] ?? [], $context) || $executed;
 
     return $executed;
 }

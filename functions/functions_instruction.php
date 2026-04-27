@@ -5,7 +5,9 @@
 // We must use internal named keys here.
 
 $GLOBALS["F_TRANSLATIONS_NEW"]["TravelTo"]="Long distance travel command. Use it to move to major locations and landmarks, or nearby buildings.";
-$GLOBALS["F_NAMES_NEW"]["TravelTo"]="TravelTo";
+$GLOBALS["F_NAMES_NEW"]["TravelTo"] = function_exists('herikaNormalizeActionCatalogDisplayActionName')
+    ? herikaNormalizeActionCatalogDisplayActionName("TravelTo")
+    : "TravelTo";
 
 foreach ($GLOBALS["FUNCTIONS"] as $n=>$f) {
     $internalCode=getFunctionByTrlName($f["name"]);

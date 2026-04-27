@@ -236,9 +236,7 @@ class openai
                         
                         $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
                         $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
-                        $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
-                                        "#TARGET#"=>current($localArguments),
-                                        ]);
+                        $lastAction=herikaFormatReturnMessageTemplate($localFuncCodeName, current($localArguments));
                         
                         unset($contextData[$n]);
                     } else

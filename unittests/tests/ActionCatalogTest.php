@@ -166,7 +166,7 @@ final class ActionCatalogTest extends TestCase
                 ]
             );
 
-            $this->assertSame('TakeGoldFromPlayer', $rows['TakeGoldFromPlayer']['action_name']);
+            $this->assertSame('Take_Gold_From_Player', $rows['TakeGoldFromPlayer']['action_name']);
             $this->assertSame(
                 'NPC takes amount (property target) of gold from PLAYER, once PLAYER is agree. infer amount from context.',
                 $rows['TakeGoldFromPlayer']['description']
@@ -175,7 +175,7 @@ final class ActionCatalogTest extends TestCase
                 'PLAYER gave #TARGET# coins to NPC. If this a transaction, maybe GiveItemToPlayer is needed.',
                 $rows['TakeGoldFromPlayer']['return_message']
             );
-            $this->assertSame('JoinPlayerParty', $rows['MakeFollower']['action_name']);
+            $this->assertSame('Join_Player_Party', $rows['MakeFollower']['action_name']);
             $this->assertSame(
                 'NPC joins PLAYER party and travels with PLAYER as an ally.',
                 $rows['MakeFollower']['description']

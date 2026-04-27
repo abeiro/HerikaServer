@@ -32,9 +32,7 @@
                                     
                                     $localFuncCodeName=getFunctionCodeName($s_msg["tool_calls"][0]["function"]["name"]);
                                     $localArguments=json_decode($s_msg["tool_calls"][0]["function"]["arguments"],true);
-                                    $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
-                                                    "#TARGET#"=>current($localArguments),
-                                                    ]);
+                    $lastAction=herikaFormatReturnMessageTemplate($localFuncCodeName, current($localArguments));
                                     
                                     
                                 } else {

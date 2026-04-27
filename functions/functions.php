@@ -334,6 +334,12 @@ $F_NAMES_LOCAL["EndRitualCeremony"] = "EndRitualCeremony";
 $F_NAMES_LOCAL["Training"] = "Training";
 $F_NAMES_LOCAL["EndConversation"] = "EndConversation";
 
+if (function_exists('herikaNormalizeActionCatalogDisplayActionName')) {
+    foreach ($F_NAMES_LOCAL as $functionCode => $functionName) {
+        $F_NAMES_LOCAL[$functionCode] = herikaNormalizeActionCatalogDisplayActionName($functionName);
+    }
+}
+
 if (isset($GLOBALS["CORE_LANG"])) {
     if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lang" . DIRECTORY_SEPARATOR . $GLOBALS["CORE_LANG"] . DIRECTORY_SEPARATOR . "functions.php")) {
         require_once __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lang" . DIRECTORY_SEPARATOR . $GLOBALS["CORE_LANG"] . DIRECTORY_SEPARATOR . "functions.php";
@@ -1027,7 +1033,7 @@ function getFunctionNameAliases()
 {
     $playerName = strval($GLOBALS["PLAYER_NAME"] ?? "Player");
 
-    return [
+    $aliases = [
         'ExchangeItems' => 'OpenInventory',
         'ListInventory' => 'CheckInventory',
         'LetsRelax' => 'Relax',
@@ -1037,6 +1043,17 @@ function getFunctionNameAliases()
         "JoinTo{$playerName}Squad" => 'MakeFollower',
         'MakeAToast' => 'Toast',
     ];
+
+    if (function_exists('herikaNormalizeActionCatalogDisplayActionName')) {
+        foreach ($aliases as $legacyActionName => $codeName) {
+            $normalizedLegacyActionName = herikaNormalizeActionCatalogDisplayActionName($legacyActionName);
+            if ($normalizedLegacyActionName !== '' && !isset($aliases[$normalizedLegacyActionName])) {
+                $aliases[$normalizedLegacyActionName] = $codeName;
+            }
+        }
+    }
+
+    return $aliases;
 }
 
 function getFunctionCodeName($key)
@@ -1045,6 +1062,7 @@ function getFunctionCodeName($key)
         return false;
     }
 
+    $key = strval($key);
     if (isset($GLOBALS["F_NAMES"][$key])) {
         return $key;
     }
@@ -1056,32 +1074,80 @@ function getFunctionCodeName($key)
         }
     }
 
-    $matchingCodes = [];
-    foreach ($GLOBALS["F_NAMES"] as $functionCode => $functionName) {
-        if ($functionName === $key) {
-            $matchingCodes[] = $functionCode;
+    $keysToTry = [$key];
+    if (function_exists('herikaNormalizeActionCatalogDisplayActionName')) {
+        $normalizedKey = herikaNormalizeActionCatalogDisplayActionName($key);
+        if ($normalizedKey !== '' && !in_array($normalizedKey, $keysToTry, true)) {
+            $keysToTry[] = $normalizedKey;
         }
     }
 
-    if (count($matchingCodes) === 1) {
-        return $matchingCodes[0];
-    }
-
-    if (count($matchingCodes) > 1) {
-        foreach ($matchingCodes as $matchingCode) {
-            if (function_exists('herikaGetActionCatalogRow')) {
-                $row = herikaGetActionCatalogRow($matchingCode);
-                if (is_array($row) && herikaActionCatalogRowIsAvailableInCurrentMode($row) && !empty(($row['metadata'] ?? [])['builtin']) === false) {
-                    return $matchingCode;
-                }
+    foreach ($keysToTry as $candidateKey) {
+        if (isset($GLOBALS["HERIKA_ACTION_NAME_PREFERRED_CODE"]) && is_array($GLOBALS["HERIKA_ACTION_NAME_PREFERRED_CODE"])) {
+            $preferredCode = $GLOBALS["HERIKA_ACTION_NAME_PREFERRED_CODE"][$candidateKey] ?? false;
+            if ($preferredCode !== false) {
+                return $preferredCode;
             }
         }
 
-        return $matchingCodes[0];
+        $matchingCodes = [];
+        foreach ($GLOBALS["F_NAMES"] as $functionCode => $functionName) {
+            if ($functionName === $candidateKey) {
+                $matchingCodes[] = $functionCode;
+            }
+        }
+
+        if (count($matchingCodes) === 1) {
+            return $matchingCodes[0];
+        }
+
+        if (count($matchingCodes) > 1) {
+            foreach ($matchingCodes as $matchingCode) {
+                if (function_exists('herikaGetActionCatalogRow')) {
+                    $row = herikaGetActionCatalogRow($matchingCode);
+                    if (is_array($row) && herikaActionCatalogRowIsAvailableInCurrentMode($row) && !empty(($row['metadata'] ?? [])['builtin']) === false) {
+                        return $matchingCode;
+                    }
+                }
+            }
+
+            return $matchingCodes[0];
+        }
     }
 
     $aliases = getFunctionNameAliases();
     return $aliases[$key] ?? false;
+}
+
+function herikaFormatReturnMessageTemplate($codeName, $primaryArgument = '', array $extraReplacements = [])
+{
+    $codeName = trim(strval($codeName));
+    if ($codeName === '' || !isset($GLOBALS["F_RETURNMESSAGES"][$codeName])) {
+        return '';
+    }
+
+    $template = strval($GLOBALS["F_RETURNMESSAGES"][$codeName] ?? '');
+    if ($template === '') {
+        return '';
+    }
+
+    if (is_scalar($primaryArgument) || $primaryArgument === null) {
+        $primaryArgument = strval($primaryArgument ?? '');
+    } else {
+        $primaryArgument = '';
+    }
+
+    $replacements = [
+        '#TARGET#' => $primaryArgument,
+        '#HERIKA_NAME#' => strval($GLOBALS["HERIKA_NAME"] ?? 'NPC'),
+        '#PLAYER_NAME#' => strval($GLOBALS["PLAYER_NAME"] ?? 'Player'),
+    ];
+
+    foreach ($extraReplacements as $key => $value) {
+        $replacements[strval($key)] = is_scalar($value) || $value === null ? strval($value ?? '') : '';
+    }
+
+    return strtr($template, $replacements);
 }
 
 function getFunctionTrlName($key)
@@ -1607,6 +1673,22 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                     )
                 );
 
+                chimApplyNpcMetadataUpdatesByName($actionParts[0], [
+                    'ritual_state' => [
+                        'active' => true,
+                        'type' => strval($actionParts2[1] ?? ''),
+                        'started_at' => time(),
+                        'gamets' => $gameRequest[2],
+                    ],
+                    'activity_status' => [
+                        'current_action' => 'ritual',
+                        'current_use' => strval($actionParts2[1] ?? ''),
+                        'use_type' => 'ritual',
+                        'timestamp' => (int) round(microtime(true) * 1000),
+                        'gamets' => $gameRequest[2],
+                    ],
+                ]);
+
                 error_log("[ACTION POSTFILTER StartRitualCeremony] Executed server-side");
 
             } else if ($actionParts2[0]=="EndRitualCeremony") {
@@ -1641,6 +1723,18 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                         'original'=>''
                     )
                 );
+
+                chimApplyNpcMetadataUpdatesByName($actionParts[0], [
+                    'ritual_state' => null,
+                    'activity_status' => [
+                        'current_action' => 'idle',
+                        'current_use' => '',
+                        'use_type' => '',
+                        'furniture_name' => '',
+                        'timestamp' => (int) round(microtime(true) * 1000),
+                        'gamets' => $gameRequest[2],
+                    ],
+                ]);
 
                 error_log("[ACTION POSTFILTER Toast] Executed server-side");
 

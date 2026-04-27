@@ -426,9 +426,7 @@ class openrouterjson
                         $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
                         $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
                         if (isset($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName])) {
-                            $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
-                                        "#TARGET#"=>current($localArguments),
-                                        ]);
+                            $lastAction=herikaFormatReturnMessageTemplate($localFuncCodeName, current($localArguments));
                         }
                         $contextDataCopy[]=[
                                 "role"=>"assistant",

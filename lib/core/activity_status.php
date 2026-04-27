@@ -184,6 +184,68 @@ function chimUpsertActivityStatusMetadata(array $metadata, array $payload): arra
     return $metadata;
 }
 
+function chimClearActivityStatusMetadata(array $metadata): array
+{
+    unset($metadata['activity_status']);
+    unset($metadata['current_action']);
+    unset($metadata['furniture']);
+    unset($metadata['use_type']);
+    unset($metadata['activity_status_timestamp']);
+
+    return $metadata;
+}
+
+function chimApplyNpcMetadataUpdatesByName(string $npcName, array $updates): bool
+{
+    $npcName = trim($npcName);
+    if ($npcName === '' || count($updates) === 0) {
+        return false;
+    }
+
+    require_once __DIR__ . DIRECTORY_SEPARATOR . 'npc_master.class.php';
+    if (!class_exists('NpcMaster')) {
+        return false;
+    }
+
+    $npcMaster = new NpcMaster();
+    $npcData = $npcMaster->getByName($npcName);
+    if (!is_array($npcData) || count($npcData) === 0) {
+        return false;
+    }
+
+    $metadata = $npcMaster->getMetadata($npcData);
+    if (!is_array($metadata)) {
+        $metadata = [];
+    }
+
+    if (array_key_exists('activity_status', $updates)) {
+        $activityPayload = $updates['activity_status'];
+        unset($updates['activity_status']);
+
+        if (is_array($activityPayload)) {
+            $metadata = chimUpsertActivityStatusMetadata($metadata, $activityPayload);
+        } elseif ($activityPayload === null) {
+            $metadata = chimClearActivityStatusMetadata($metadata);
+        }
+    }
+
+    foreach ($updates as $key => $value) {
+        $metadataKey = trim((string) $key);
+        if ($metadataKey === '') {
+            continue;
+        }
+
+        if ($value === null) {
+            unset($metadata[$metadataKey]);
+        } else {
+            $metadata[$metadataKey] = $value;
+        }
+    }
+
+    $npcData = $npcMaster->setMetadata($npcData, $metadata);
+    return $npcMaster->updateByArray($npcData) !== false;
+}
+
 function chimActivityStatusIsFresh(array $status, int $maxAgeMs = 45000): bool
 {
     $timestamp = (int) ($status['timestamp'] ?? 0);
@@ -251,6 +313,13 @@ function chimBuildActivityStatusSummary(array $status): string
     }
     if ($action === 'combat') {
         return $target !== '' ? "in combat with {$target}" : 'in combat';
+    }
+    if ($action === 'ritual') {
+        $ritualType = strtolower(trim((string) ($status['current_use'] ?? '')));
+        if ($ritualType !== '' && $ritualType !== 'ritual') {
+            return "performing a {$ritualType} ritual";
+        }
+        return 'performing a ritual';
     }
     if ($useType !== '' && $action === 'using') {
         return 'using ' . chimHumanizeActivityUseType($useType, $status['furniture_name']);
