@@ -14,6 +14,7 @@ require_once(__DIR__ . "/conf/conf.php");
 require_once(__DIR__ . "/lib/{$GLOBALS["DBDRIVER"]}.class.php");
 $GLOBALS["db"] = new sql();
 require_once(__DIR__ . "/lib/core/npc_master.class.php");
+require_once(__DIR__ . "/lib/core/activity_status.php");
 require_once(__DIR__ . "/lib/logger.php");
 
 // Only accept POST requests
@@ -35,7 +36,7 @@ if (!$data || !isset($data['type'])) {
 }
 
 // Types that operate on global data and do not require an actor
-$actorlessTypes = ['market_stock'];
+$actorlessTypes = ['market_stock', 'activity_status_bulk'];
 
 // Validate required fields (skipped for actorless types)
 if (!in_array($data['type'], $actorlessTypes)) {
@@ -72,14 +73,14 @@ try {
         case 'skyrim_stats':
             handleSkyrimStatsUpdate($data);
             break;
-         case 'furniture':
-            $currentData = $npcMaster->getByName($data["actor_name"]);
-            if ($currentData) {
-                $meta = $npcMaster->getMetadata($currentData);
-                $meta['furniture'] = $data['furniture'];    
-                            $currentData = $npcMaster->setMetadata($currentData, $meta);
-                $npcMaster->updateByArray($currentData);
-            }
+        case 'furniture':
+            handleFurnitureUpdate($data, $npcMaster);
+            break;
+        case 'activity_status':
+            handleActivityStatusUpdate($data, $npcMaster);
+            break;
+        case 'activity_status_bulk':
+            handleActivityStatusBulkUpdate($data, $npcMaster);
             break;
         case 'market_stock':
             handleMarketStockUpdate($data);
@@ -184,6 +185,63 @@ function handleEquipmentUpdate(array $data, NpcMaster $npcMaster): void {
     $npcMaster->updateByArray($currentData);
     
     Logger::debug("[gamedata.php] Updated equipment for {$actorType}: {$actorName}");
+}
+
+function handleFurnitureUpdate(array $data, NpcMaster $npcMaster): void
+{
+    $currentData = $npcMaster->getByName($data['actor_name']);
+    if (!$currentData) {
+        return;
+    }
+
+    $meta = $npcMaster->getMetadata($currentData);
+    $meta = chimUpsertActivityStatusMetadata($meta, [
+        'furniture_name' => $data['furniture'] ?? '',
+        'timestamp' => $data['timestamp'] ?? chimActivityStatusNowMs(),
+        'gamets' => $data['gamets'] ?? 0,
+    ]);
+
+    $currentData = $npcMaster->setMetadata($currentData, $meta);
+    $npcMaster->updateByArray($currentData);
+}
+
+function handleActivityStatusUpdate(array $data, NpcMaster $npcMaster): void
+{
+    $currentData = $npcMaster->getByName($data['actor_name']);
+    if (!$currentData) {
+        return;
+    }
+
+    $meta = $npcMaster->getMetadata($currentData);
+    $meta = chimUpsertActivityStatusMetadata($meta, $data);
+
+    $currentData = $npcMaster->setMetadata($currentData, $meta);
+    $npcMaster->updateByArray($currentData);
+}
+
+function handleActivityStatusBulkUpdate(array $data, NpcMaster $npcMaster): void
+{
+    if (empty($data['statuses']) || !is_array($data['statuses'])) {
+        Logger::warn("[gamedata.php] activity_status_bulk missing statuses payload");
+        return;
+    }
+
+    foreach ($data['statuses'] as $statusRow) {
+        if (!is_array($statusRow) || empty($statusRow['actor_name'])) {
+            continue;
+        }
+
+        $currentData = $npcMaster->getByName($statusRow['actor_name']);
+        if (!$currentData) {
+            continue;
+        }
+
+        $meta = $npcMaster->getMetadata($currentData);
+        $meta = chimUpsertActivityStatusMetadata($meta, $statusRow);
+
+        $currentData = $npcMaster->setMetadata($currentData, $meta);
+        $npcMaster->updateByArray($currentData);
+    }
 }
 
 /**

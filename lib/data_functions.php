@@ -7,6 +7,7 @@ require_once(__DIR__."/utils_game_timestamp.php");
 require_once(__DIR__."/lazy_xml.php");
 require_once(__DIR__."/model_dynmodel.php");
 require_once(__DIR__."/emote_moods.php");
+require_once(__DIR__."/core/activity_status.php");
 require_once(__DIR__."/core/npc_master.class.php");
 
 
@@ -590,6 +591,11 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                                 $profileString .= " ({$powerComparison})";
                             }
                         }
+                    }
+
+                    $activityStatus = chimNormalizeActivityStatus($metaData);
+                    if (!empty($activityStatus['fresh']) && !empty($activityStatus['summary'])) {
+                        $profileString .= ". Current activity: " . $activityStatus['summary'];
                     }
                     
                     // Add equipment if available
@@ -6093,11 +6099,18 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
     $TARGET_EQUIPMENT_ADD="";
     $STATS_ADD="";
     $SPELLS_ADD="";
+    $ACTIVITY_ADD="";
     
     $npcMaster=new NpcMaster();
     $currentNpcData=$npcMaster->getByName($FOLLOWER_CONF["HERIKA_NAME"]);
     $metaData=$npcMaster->getMetaData($currentNpcData);
     $extendedData=$npcMaster->getExtendedData($currentNpcData);
+    $activityStatus = chimNormalizeActivityStatus($metaData);
+
+    if (!empty($activityStatus['summary'])) {
+        $activityHeading = !empty($activityStatus['fresh']) ? '#Current Activity' : '#Last Known Activity';
+        $ACTIVITY_ADD = "\n\n<current_activity>\n{$activityHeading}\n" . ucfirst($activityStatus['summary']) . ".\n</current_activity>\n";
+    }
     
     if (isset($metaData["skills"])) {
         // Convert numeric skills to descriptive levels, grouped by category
@@ -6476,6 +6489,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
                 $dynamicBio.=$EQUIPMENT_ADD ?? "";
                 $dynamicBio.=$TARGET_EQUIPMENT_ADD ?? "";
                 $dynamicBio.=$INVENTORY_ADD ?? "";
+                $dynamicBio.=$ACTIVITY_ADD ?? "";
                 $dynamicBio.=$STATS_ADD ?? "";
                 $dynamicBio.=$SPELLS_ADD ?? "";
             }
