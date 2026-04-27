@@ -97,6 +97,49 @@ final class ActionCatalogTest extends TestCase
         $this->assertNotEmpty($rows['Drink']['script_proxy_program']['cases']);
     }
 
+    public function testBuildActionCatalogSeedRows_SeedsBuiltinRequirementsAndCooldownMetadata(): void
+    {
+        $rows = herikaBuildActionCatalogSeedRows(
+            [
+                'RentRoom' => 'RentRoom',
+                'WaitHere' => 'WaitHere',
+                'SheatheWeapon' => 'SheatheWeapon',
+                'Training' => 'Training',
+                'HireCarriage' => 'HireCarriage',
+                'HireFerry' => 'HireFerry',
+            ],
+            [],
+            [],
+            [],
+            [],
+            [
+                'RentRoom' => ['parameters' => ['type' => 'object', 'properties' => [], 'required' => []]],
+                'WaitHere' => ['parameters' => ['type' => 'object', 'properties' => [], 'required' => []]],
+                'SheatheWeapon' => ['parameters' => ['type' => 'object', 'properties' => [], 'required' => []]],
+                'Training' => ['parameters' => ['type' => 'object', 'properties' => [], 'required' => []]],
+                'HireCarriage' => ['parameters' => ['type' => 'object', 'properties' => [], 'required' => []]],
+                'HireFerry' => ['parameters' => ['type' => 'object', 'properties' => [], 'required' => []]],
+            ]
+        );
+
+        $this->assertSame(['0005091B'], $rows['RentRoom']['metadata']['requirements']['npc_factions_any']);
+        $this->assertSame(300, $rows['WaitHere']['metadata']['cooldown_seconds']);
+        $this->assertTrue($rows['SheatheWeapon']['metadata']['requirements']['activity']['is_weapon_drawn']);
+        $this->assertTrue($rows['Training']['metadata']['requirements']['requires_training_service']);
+        $this->assertSame(
+            'allowed_npc_names',
+            $rows['HireCarriage']['metadata']['requirements']['npc_name_in_action_config_list']['config_key']
+        );
+        $this->assertSame(
+            "Bjorlam\nAlfarinn\nKibell\nSigaar\nThaer\nEngar\nGunjar\nMarkus",
+            $rows['HireCarriage']['metadata']['editor_fields'][1]['default']
+        );
+        $this->assertSame(
+            "Gort\nHarlaug\nJolf",
+            $rows['HireFerry']['metadata']['editor_fields'][1]['default']
+        );
+    }
+
     public function testBuildActionCatalogSeedRows_NormalizesDisplayTextToGenericNpcAndPlayerLabels(): void
     {
         $hadHerikaName = array_key_exists('HERIKA_NAME', $GLOBALS);

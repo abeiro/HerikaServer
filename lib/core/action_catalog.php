@@ -725,6 +725,15 @@ function herikaActionCatalogGetBuiltinEditorFields($codeName)
                 'format' => 'gold',
                 'help' => 'How much gold the player pays for carriage travel.',
             ],
+            [
+                'key' => 'allowed_npc_names',
+                'label' => 'Allowed NPCs',
+                'type' => 'textarea',
+                'default' => "Bjorlam\nAlfarinn\nKibell\nSigaar\nThaer\nEngar\nGunjar\nMarkus",
+                'format' => 'name_list',
+                'placeholder' => "One NPC name per line",
+                'help' => 'Only these NPC names will offer carriage travel.',
+            ],
         ],
         'HireFerry' => [
             [
@@ -735,6 +744,15 @@ function herikaActionCatalogGetBuiltinEditorFields($codeName)
                 'minimum' => 1,
                 'format' => 'gold',
                 'help' => 'How much gold the player pays for ferry travel.',
+            ],
+            [
+                'key' => 'allowed_npc_names',
+                'label' => 'Allowed NPCs',
+                'type' => 'textarea',
+                'default' => "Gort\nHarlaug\nJolf",
+                'format' => 'name_list',
+                'placeholder' => "One NPC name per line",
+                'help' => 'Only these NPC names will offer ferry travel.',
             ],
         ],
     ];
@@ -759,6 +777,93 @@ function herikaActionCatalogGetBuiltinParameterTemplate($codeName)
     ];
 
     return $templates[$codeName] ?? null;
+}
+
+function herikaActionCatalogGetBuiltinCooldownSeconds($codeName)
+{
+    $cooldowns = [
+        'ComeCloser' => 120,
+        'WaitHere' => 300,
+        'UseSoulGaze' => 300,
+        'Relax' => 180,
+        'MakeAToast' => 60,
+        'Toast' => 60,
+        'StartRitualCeremony' => 60,
+        'Follow' => 60,
+        'FollowPlayer' => 60,
+    ];
+
+    return $cooldowns[$codeName] ?? null;
+}
+
+function herikaActionCatalogGetBuiltinRequirements($codeName)
+{
+    $requirements = [
+        'RentRoom' => [
+            'npc_factions_any' => ['0005091B'],
+            'activity' => [
+                'current_action_not_in' => ['dead', 'unconscious', 'sleeping'],
+            ],
+        ],
+        'HireCarriage' => [
+            'npc_name_in_action_config_list' => [
+                'config_key' => 'allowed_npc_names',
+            ],
+            'activity' => [
+                'current_action_not_in' => ['dead', 'unconscious', 'sleeping', 'combat', 'attacking'],
+            ],
+        ],
+        'HireFerry' => [
+            'npc_name_in_action_config_list' => [
+                'config_key' => 'allowed_npc_names',
+            ],
+            'activity' => [
+                'current_action_not_in' => ['dead', 'unconscious', 'sleeping', 'combat', 'attacking'],
+            ],
+        ],
+        'AddBounty' => [
+            'npc_factions_any' => ['00086EEE'],
+        ],
+        'PayBounty' => [
+            'npc_factions_any' => ['00086EEE'],
+        ],
+        'ArrestPlayer' => [
+            'npc_factions_any' => ['00086EEE'],
+        ],
+        'ForgiveCrime' => [
+            'npc_factions_any' => ['00086EEE'],
+        ],
+        'ReturnBackHome' => [
+            'requires_rolemaster' => true,
+        ],
+        'Training' => [
+            'requires_training_service' => true,
+        ],
+        'SheatheWeapon' => [
+            'activity' => [
+                'require_fresh' => true,
+                'is_weapon_drawn' => true,
+                'current_action_not_in' => ['dead', 'unconscious', 'sleeping'],
+            ],
+        ],
+        'TakeASeat' => [
+            'activity' => [
+                'current_action_not_in' => ['dead', 'unconscious', 'sleeping', 'sitting', 'using', 'leaning'],
+            ],
+        ],
+        'GoToSleep' => [
+            'activity' => [
+                'current_action_not_in' => ['dead', 'unconscious', 'sleeping', 'combat', 'attacking'],
+            ],
+        ],
+        'Relax' => [
+            'activity' => [
+                'current_action_not_in' => ['dead', 'unconscious', 'sleeping', 'combat', 'attacking'],
+            ],
+        ],
+    ];
+
+    return $requirements[$codeName] ?? [];
 }
 
 function herikaActionCatalogBuildBaseMetadata($codeName, $scriptProxyProgram = null)
@@ -787,6 +892,16 @@ function herikaActionCatalogBuildBaseMetadata($codeName, $scriptProxyProgram = n
         $metadata['parameter_template'] = $parameterTemplate;
     }
 
+    $requirements = herikaActionCatalogGetBuiltinRequirements($codeName);
+    if (count($requirements) > 0) {
+        $metadata['requirements'] = $requirements;
+    }
+
+    $cooldownSeconds = herikaActionCatalogGetBuiltinCooldownSeconds($codeName);
+    if ($cooldownSeconds !== null) {
+        $metadata['cooldown_seconds'] = intval($cooldownSeconds);
+    }
+
     return $metadata;
 }
 
@@ -794,6 +909,483 @@ function herikaActionCatalogIsGameFunction($metadata)
 {
     $dispatch = strtolower(trim(strval($metadata['dispatch'] ?? 'plugin_command')));
     return !in_array($dispatch, ['server_action', 'server_query'], true);
+}
+
+function herikaActionCatalogNormalizeRequirementStringList($values)
+{
+    if (is_string($values)) {
+        $values = explode(',', $values);
+    }
+
+    if (!is_array($values)) {
+        return [];
+    }
+
+    $normalized = [];
+    foreach ($values as $value) {
+        $text = strtolower(trim(strval($value)));
+        if ($text === '') {
+            continue;
+        }
+
+        $normalized[] = $text;
+    }
+
+    return array_values(array_unique($normalized));
+}
+
+function herikaActionCatalogRequirementListContains($needle, $values)
+{
+    $needle = strtolower(trim(strval($needle)));
+    if ($needle === '') {
+        return false;
+    }
+
+    return in_array($needle, herikaActionCatalogNormalizeRequirementStringList($values), true);
+}
+
+function herikaActionCatalogGetCurrentNpcLookup()
+{
+    static $cachedKey = null;
+    static $cachedLookup = null;
+
+    $herikaName = trim(strval($GLOBALS["HERIKA_NAME"] ?? ''));
+    if ($cachedKey === $herikaName && is_array($cachedLookup)) {
+        return $cachedLookup;
+    }
+
+    $cachedKey = $herikaName;
+    $cachedLookup = [
+        'npc_master' => null,
+        'npc_data' => [],
+        'metadata' => [],
+        'extended' => [],
+    ];
+
+    if ($herikaName === '' || $herikaName === '(actor)' || !class_exists('NpcMaster')) {
+        return $cachedLookup;
+    }
+
+    $npcMaster = new NpcMaster();
+    $npcData = $npcMaster->getByName($herikaName);
+    if (!is_array($npcData) || count($npcData) === 0) {
+        return $cachedLookup;
+    }
+
+    $cachedLookup['npc_master'] = $npcMaster;
+    $cachedLookup['npc_data'] = $npcData;
+    $cachedLookup['metadata'] = $npcMaster->getMetadata($npcData);
+    $cachedLookup['extended'] = $npcMaster->getExtendedData($npcData);
+
+    return $cachedLookup;
+}
+
+function herikaActionCatalogGetRuntimeRequirementContext()
+{
+    static $cachedKey = null;
+    static $cachedContext = null;
+
+    $requestType = strtolower(trim(strval($GLOBALS["gameRequest"][0] ?? '')));
+    $cacheKey = implode('|', [
+        trim(strval($GLOBALS["HERIKA_NAME"] ?? '')),
+        trim(strval($GLOBALS["PLAYER_NAME"] ?? '')),
+        !empty($GLOBALS["IS_NPC"]) ? '1' : '0',
+        $requestType,
+        strval($GLOBALS["gameRequest"][2] ?? ''),
+        !empty($GLOBALS["is_rolemastered"]) ? '1' : '0',
+    ]);
+
+    if ($cachedKey === $cacheKey && is_array($cachedContext)) {
+        return $cachedContext;
+    }
+
+    require_once __DIR__ . DIRECTORY_SEPARATOR . 'activity_status.php';
+
+    $lookup = herikaActionCatalogGetCurrentNpcLookup();
+    $metadata = is_array($lookup['metadata']) ? $lookup['metadata'] : [];
+    $extended = is_array($lookup['extended']) ? $lookup['extended'] : [];
+    $activityStatus = chimNormalizeActivityStatus($metadata);
+
+    $metadataRolemaster = !empty($metadata['is_rolemastered']) || !empty($extended['is_rolemastered']);
+
+    $cachedKey = $cacheKey;
+    $cachedContext = [
+        'npc_name' => trim(strval($GLOBALS["HERIKA_NAME"] ?? '')),
+        'player_name' => trim(strval($GLOBALS["PLAYER_NAME"] ?? '')),
+        'request_type' => $requestType,
+        'is_rechat' => in_array($requestType, ['rechat', 'narration'], true),
+        'is_npc_mode' => !empty($GLOBALS["IS_NPC"]),
+        'is_rolemastered' => !empty($GLOBALS["is_rolemastered"]) || $metadataRolemaster,
+        'npc_master' => $lookup['npc_master'],
+        'npc_data' => $lookup['npc_data'],
+        'npc_metadata' => $metadata,
+        'npc_extended' => $extended,
+        'activity_status' => $activityStatus,
+    ];
+
+    return $cachedContext;
+}
+
+function herikaActionCatalogGetConfigListValues($definition)
+{
+    $configKey = '';
+    $fallbackCsv = '';
+    $fallbackValues = [];
+
+    if (is_string($definition)) {
+        $configKey = trim($definition);
+    } elseif (is_array($definition)) {
+        $configKey = trim(strval($definition['config_key'] ?? ''));
+        $fallbackCsv = trim(strval($definition['fallback_csv'] ?? ''));
+        $fallbackValues = $definition['fallback_values'] ?? [];
+    }
+
+    $rawValues = '';
+    if ($configKey !== '' && isset($GLOBALS[$configKey])) {
+        $rawValues = trim(strval($GLOBALS[$configKey]));
+    }
+    if ($rawValues === '') {
+        $rawValues = $fallbackCsv;
+    }
+
+    $values = herikaActionCatalogNormalizeRequirementStringList($rawValues);
+    if (count($fallbackValues) > 0) {
+        $values = array_values(array_unique(array_merge(
+            $values,
+            herikaActionCatalogNormalizeRequirementStringList($fallbackValues)
+        )));
+    }
+
+    return $values;
+}
+
+function herikaActionCatalogGetActionConfigListValues($config, $definition)
+{
+    $config = is_array($config) ? $config : [];
+    $configKey = '';
+    $fallbackCsv = '';
+    $fallbackValues = [];
+
+    if (is_string($definition)) {
+        $configKey = trim($definition);
+    } elseif (is_array($definition)) {
+        $configKey = trim(strval($definition['config_key'] ?? ''));
+        $fallbackCsv = trim(strval($definition['fallback_csv'] ?? ''));
+        $fallbackValues = $definition['fallback_values'] ?? [];
+    }
+
+    $rawValues = '';
+    if ($configKey !== '' && array_key_exists($configKey, $config)) {
+        $rawValues = strval($config[$configKey]);
+    }
+    if (trim($rawValues) === '') {
+        $rawValues = $fallbackCsv;
+    }
+
+    $values = herikaActionCatalogNormalizeRequirementStringList(preg_split('/[\r\n,]+/', $rawValues) ?: []);
+    if (count($fallbackValues) > 0) {
+        $values = array_values(array_unique(array_merge(
+            $values,
+            herikaActionCatalogNormalizeRequirementStringList($fallbackValues)
+        )));
+    }
+
+    return $values;
+}
+
+function herikaActionCatalogNpcMatchesFactionRequirement($npcMaster, $npcData, $factionIds, $requireAll = false)
+{
+    $factionIds = herikaActionCatalogNormalizeRequirementStringList($factionIds);
+    if (count($factionIds) === 0) {
+        return true;
+    }
+
+    if (!$npcMaster || !is_array($npcData) || count($npcData) === 0) {
+        return false;
+    }
+
+    foreach ($factionIds as $factionId) {
+        $matches = $npcMaster->isNpcInFaction($npcData, strtoupper($factionId));
+        if ($requireAll && !$matches) {
+            return false;
+        }
+        if (!$requireAll && $matches) {
+            return true;
+        }
+    }
+
+    return $requireAll;
+}
+
+function herikaActionCatalogMatchesActivityRequirements($requirements, $status)
+{
+    $requirements = herikaActionCatalogDecodeJson($requirements, []);
+    if (!is_array($requirements) || count($requirements) === 0) {
+        return true;
+    }
+
+    $status = is_array($status) ? $status : [];
+    $available = !empty($status['available']);
+    $fresh = !empty($status['fresh']);
+
+    if (!empty($requirements['require_available']) && !$available) {
+        return false;
+    }
+    if (!empty($requirements['require_fresh']) && !$fresh) {
+        return false;
+    }
+
+    $boolKeys = [
+        'is_in_combat',
+        'is_attacking',
+        'is_moving',
+        'is_running',
+        'is_sneaking',
+        'is_sitting',
+        'is_sleeping',
+        'is_unconscious',
+        'is_dead',
+        'is_weapon_drawn',
+    ];
+
+    foreach ($boolKeys as $boolKey) {
+        if (!array_key_exists($boolKey, $requirements)) {
+            continue;
+        }
+
+        $expected = herikaActionCatalogToBool($requirements[$boolKey]);
+        if (!$available) {
+            if ($expected) {
+                return false;
+            }
+            continue;
+        }
+
+        if (herikaActionCatalogToBool($status[$boolKey] ?? false) !== $expected) {
+            return false;
+        }
+    }
+
+    $currentAction = strtolower(trim(strval($status['current_action'] ?? '')));
+    $useType = strtolower(trim(strval($status['use_type'] ?? '')));
+
+    if (isset($requirements['current_action'])) {
+        $expectedAction = strtolower(trim(strval($requirements['current_action'])));
+        if ($expectedAction !== '' && $currentAction !== $expectedAction) {
+            return false;
+        }
+    }
+
+    $currentActionIn = herikaActionCatalogNormalizeRequirementStringList($requirements['current_action_in'] ?? []);
+    if (count($currentActionIn) > 0) {
+        if ($currentAction === '' || !in_array($currentAction, $currentActionIn, true)) {
+            return false;
+        }
+    }
+
+    $currentActionNotIn = herikaActionCatalogNormalizeRequirementStringList($requirements['current_action_not_in'] ?? []);
+    if ($currentAction !== '' && in_array($currentAction, $currentActionNotIn, true)) {
+        return false;
+    }
+
+    if (isset($requirements['use_type'])) {
+        $expectedUseType = strtolower(trim(strval($requirements['use_type'])));
+        if ($expectedUseType !== '' && $useType !== $expectedUseType) {
+            return false;
+        }
+    }
+
+    $useTypeIn = herikaActionCatalogNormalizeRequirementStringList($requirements['use_type_in'] ?? []);
+    if (count($useTypeIn) > 0) {
+        if ($useType === '' || !in_array($useType, $useTypeIn, true)) {
+            return false;
+        }
+    }
+
+    $useTypeNotIn = herikaActionCatalogNormalizeRequirementStringList($requirements['use_type_not_in'] ?? []);
+    if ($useType !== '' && in_array($useType, $useTypeNotIn, true)) {
+        return false;
+    }
+
+    return true;
+}
+
+function herikaActionCatalogRequirementsMatch($requirements, $context)
+{
+    $requirements = herikaActionCatalogDecodeJson($requirements, []);
+    if (!is_array($requirements) || count($requirements) === 0) {
+        return true;
+    }
+
+    $context = is_array($context) ? $context : herikaActionCatalogGetRuntimeRequirementContext();
+
+    if (isset($requirements['requires_rolemaster'])) {
+        $expectedRolemaster = herikaActionCatalogToBool($requirements['requires_rolemaster']);
+        if (herikaActionCatalogToBool($context['is_rolemastered'] ?? false) !== $expectedRolemaster) {
+            return false;
+        }
+    }
+
+    if (isset($requirements['requires_training_service'])) {
+        $hasTrainingService = !empty($context['npc_extended']['class']['teaches']);
+        if ($hasTrainingService !== herikaActionCatalogToBool($requirements['requires_training_service'])) {
+            return false;
+        }
+    }
+
+    if (!empty($requirements['hide_in_rechat']) && !empty($context['is_rechat'])) {
+        return false;
+    }
+    if (!empty($requirements['show_only_in_rechat']) && empty($context['is_rechat'])) {
+        return false;
+    }
+
+    $requestTypesAny = herikaActionCatalogNormalizeRequirementStringList($requirements['request_types_any'] ?? []);
+    if (count($requestTypesAny) > 0 && !in_array(strtolower(trim(strval($context['request_type'] ?? ''))), $requestTypesAny, true)) {
+        return false;
+    }
+
+    $requestTypesNone = herikaActionCatalogNormalizeRequirementStringList($requirements['request_types_none'] ?? []);
+    if (count($requestTypesNone) > 0 && in_array(strtolower(trim(strval($context['request_type'] ?? ''))), $requestTypesNone, true)) {
+        return false;
+    }
+
+    $npcNamesAny = herikaActionCatalogNormalizeRequirementStringList($requirements['npc_names_any'] ?? []);
+    if (count($npcNamesAny) > 0 && !in_array(strtolower(trim(strval($context['npc_name'] ?? ''))), $npcNamesAny, true)) {
+        return false;
+    }
+
+    if (isset($requirements['npc_name_in_config_list'])) {
+        $allowedNpcNames = herikaActionCatalogGetConfigListValues($requirements['npc_name_in_config_list']);
+        if (count($allowedNpcNames) > 0 && !in_array(strtolower(trim(strval($context['npc_name'] ?? ''))), $allowedNpcNames, true)) {
+            return false;
+        }
+    }
+
+    if (isset($requirements['npc_name_in_action_config_list'])) {
+        $allowedNpcNames = herikaActionCatalogGetActionConfigListValues(
+            $context['action_config'] ?? [],
+            $requirements['npc_name_in_action_config_list']
+        );
+        if (count($allowedNpcNames) > 0 && !in_array(strtolower(trim(strval($context['npc_name'] ?? ''))), $allowedNpcNames, true)) {
+            return false;
+        }
+    }
+
+    if (!herikaActionCatalogNpcMatchesFactionRequirement(
+        $context['npc_master'] ?? null,
+        $context['npc_data'] ?? [],
+        $requirements['npc_factions_any'] ?? [],
+        false
+    )) {
+        return false;
+    }
+
+    if (!herikaActionCatalogNpcMatchesFactionRequirement(
+        $context['npc_master'] ?? null,
+        $context['npc_data'] ?? [],
+        $requirements['npc_factions_all'] ?? [],
+        true
+    )) {
+        return false;
+    }
+
+    if (!herikaActionCatalogMatchesActivityRequirements($requirements['activity'] ?? [], $context['activity_status'] ?? [])) {
+        return false;
+    }
+
+    return true;
+}
+
+function herikaActionCatalogGetLastActionsIssuedMap()
+{
+    static $cachedKey = null;
+    static $cachedRows = null;
+
+    if (!isset($GLOBALS["db"]) || !($GLOBALS["db"] instanceof sql)) {
+        return [];
+    }
+
+    $localActorName = trim(strval($GLOBALS["HERIKA_NAME"] ?? ''));
+    if ($localActorName === '') {
+        return [];
+    }
+
+    if ($cachedKey === $localActorName && is_array($cachedRows)) {
+        return $cachedRows;
+    }
+
+    $escapedActorName = $GLOBALS["db"]->escape($localActorName);
+    $rows = $GLOBALS["db"]->fetchAll(
+        "SELECT * FROM (
+            SELECT DISTINCT ON (action) *
+            FROM actions_issued
+            WHERE (actorname = '$escapedActorName' or actorname like '%$escapedActorName,%' or actorname='*')
+            ORDER BY action, gamets DESC, ts DESC
+        ) AS sub
+        ORDER BY gamets DESC, ts DESC"
+    );
+
+    $cachedKey = $localActorName;
+    $cachedRows = [];
+    foreach ($rows as $row) {
+        $actionCode = trim(strval($row['action'] ?? ''));
+        if ($actionCode === '') {
+            continue;
+        }
+
+        $cachedRows[$actionCode] = $row;
+    }
+
+    return $cachedRows;
+}
+
+function herikaActionCatalogIsActionOnCooldown($codeName, $cooldownSeconds)
+{
+    $codeName = trim(strval($codeName));
+    $cooldownSeconds = intval($cooldownSeconds);
+    if ($codeName === '' || $cooldownSeconds <= 0 || empty($GLOBALS["gameRequest"][2])) {
+        return false;
+    }
+
+    require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'utils_game_timestamp.php';
+
+    $lastActionsIssuedMap = herikaActionCatalogGetLastActionsIssuedMap();
+    if (!isset($lastActionsIssuedMap[$codeName])) {
+        return false;
+    }
+
+    $ingameNow = convert_gamets2seconds($GLOBALS["gameRequest"][2]);
+    $lastTriggered = convert_gamets2seconds($lastActionsIssuedMap[$codeName]["gamets"] ?? 0);
+    if ($ingameNow <= 0 || $lastTriggered <= 0) {
+        return false;
+    }
+
+    return ($ingameNow - $lastTriggered) < $cooldownSeconds;
+}
+
+function herikaActionCatalogRowMatchesRequirements($row, $context = null)
+{
+    if (!is_array($row)) {
+        return true;
+    }
+
+    $metadata = herikaActionCatalogDecodeJson($row['metadata'] ?? [], []);
+    $context = is_array($context) ? $context : herikaActionCatalogGetRuntimeRequirementContext();
+    $context['action_config'] = function_exists('herikaActionCatalogGetResolvedCustomConfig')
+        ? herikaActionCatalogGetResolvedCustomConfig($row['code_name'] ?? '', $row)
+        : [];
+
+    if (!herikaActionCatalogRequirementsMatch($metadata['requirements'] ?? [], $context)) {
+        return false;
+    }
+
+    $cooldownSeconds = intval($metadata['cooldown_seconds'] ?? 0);
+    if ($cooldownSeconds > 0 && herikaActionCatalogIsActionOnCooldown($row['code_name'] ?? '', $cooldownSeconds)) {
+        return false;
+    }
+
+    return true;
 }
 
 function herikaActionCatalogResetCache()
@@ -1249,7 +1841,7 @@ function herikaActionCatalogGetCustomConfigValue($codeName, $configKey, $default
     return $config[$configKey];
 }
 
-function herikaLoadEnabledActionCodesForMode($isNpc)
+function herikaLoadEnabledActionCodesForMode($isNpc, $applyRequirements = false)
 {
     $rowsByCode = herikaGetActionCatalogRowsByCode();
     if (count($rowsByCode) === 0) {
@@ -1259,6 +1851,10 @@ function herikaLoadEnabledActionCodesForMode($isNpc)
     $enabledCodes = [];
     foreach ($rowsByCode as $codeName => $row) {
         if (!$row['is_activated']) {
+            continue;
+        }
+
+        if ($applyRequirements && !herikaActionCatalogRowMatchesRequirements($row)) {
             continue;
         }
 
@@ -1310,10 +1906,23 @@ function herikaActionCatalogRowIsAvailableInCurrentMode($row)
     return !empty($row['available_to_followers']);
 }
 
+function herikaActionCatalogRowIsUsableInCurrentContext($row)
+{
+    if (!is_array($row) || empty($row['is_activated'])) {
+        return false;
+    }
+
+    if (!herikaActionCatalogRowIsAvailableInCurrentMode($row)) {
+        return false;
+    }
+
+    return herikaActionCatalogRowMatchesRequirements($row);
+}
+
 function herikaActionCatalogShouldPreferRowForActionName($candidateRow, $currentRow)
 {
-    $candidateAvailable = herikaActionCatalogRowIsAvailableInCurrentMode($candidateRow);
-    $currentAvailable = herikaActionCatalogRowIsAvailableInCurrentMode($currentRow);
+    $candidateAvailable = herikaActionCatalogRowIsUsableInCurrentContext($candidateRow);
+    $currentAvailable = herikaActionCatalogRowIsUsableInCurrentContext($currentRow);
     if ($candidateAvailable !== $currentAvailable) {
         return $candidateAvailable;
     }
@@ -1589,6 +2198,84 @@ function herikaActionCatalogUpsertCustomConfig($codeName, $configValues)
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['is_activated'] ?? false)) . ",
             " . herikaActionCatalogSqlJson($row['parameters_json'] ?? []) . ",
             " . herikaActionCatalogSqlJson($metadata) . ",
+            " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['game_function'] ?? false)) . ",
+            " . herikaActionCatalogSqlJson($row['script_proxy_program'] ?? null, true) . "
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ");
+
+    herikaActionCatalogResetCache();
+    return $result !== false;
+}
+
+function herikaActionCatalogUpsertCustomParameters($codeName, $parameters)
+{
+    $codeName = trim(strval($codeName));
+    if ($codeName === '' || !herikaActionCatalogDbReady()) {
+        return false;
+    }
+
+    $literalCode = herikaActionCatalogSqlText($codeName);
+    $row = $GLOBALS["db"]->fetchOne("
+        SELECT
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            script_proxy_program
+        FROM public.combined_core_action
+        WHERE code_name = {$literalCode}
+        LIMIT 1
+    ");
+
+    if (!$row) {
+        return false;
+    }
+
+    $normalizedParameters = herikaActionCatalogNormalizeParameterSchema(
+        herikaActionCatalogDecodeJson($parameters, [])
+    );
+
+    $result = $GLOBALS["db"]->execQuery("
+        INSERT INTO public.core_action_custom (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            script_proxy_program
+        ) VALUES (
+            " . herikaActionCatalogSqlText($row['code_name'] ?? $codeName) . ",
+            " . herikaActionCatalogSqlText($row['action_name'] ?? '') . ",
+            " . herikaActionCatalogSqlText($row['description'] ?? '') . ",
+            " . herikaActionCatalogSqlText($row['return_message'] ?? '') . ",
+            " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_npc'] ?? false)) . ",
+            " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_followers'] ?? false)) . ",
+            " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['is_activated'] ?? false)) . ",
+            " . herikaActionCatalogSqlJson($normalizedParameters) . ",
+            " . herikaActionCatalogSqlJson($row['metadata'] ?? []) . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['game_function'] ?? false)) . ",
             " . herikaActionCatalogSqlJson($row['script_proxy_program'] ?? null, true) . "
         )

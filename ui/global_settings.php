@@ -436,8 +436,6 @@ $gsSections = [
         [ 'name' => 'AUTOFILL_CUSTOM_PROFILES_TRIGGER', 'type' => 'integer', 'min' => 10, 'max' => 100 ],
         [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
         [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
-        [ 'name' => 'CARRIAGE_DRIVERS', 'type' => 'longstring' ],
-        [ 'name' => 'FERRY_DRIVERS', 'type' => 'longstring' ],
         [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean', 'subsection' => 'Memory' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean', 'subsection' => 'Memory' ],

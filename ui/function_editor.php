@@ -59,6 +59,192 @@ function functionEditorPrettyJson($value)
     return is_string($json) ? $json : "{}";
 }
 
+function functionEditorGetParameterSchemaVariableTokens()
+{
+    return [
+        'player_name' => '#PLAYER_NAME#',
+        'herika_name' => '#HERIKA_NAME#',
+    ];
+}
+
+function functionEditorGetParameterSchemaVariableValues()
+{
+    return [
+        'player_name' => trim(strval($GLOBALS['PLAYER_NAME'] ?? '')),
+        'herika_name' => trim(strval($GLOBALS['HERIKA_NAME'] ?? '')),
+    ];
+}
+
+function functionEditorReplaceParameterSchemaVariablesInString($text)
+{
+    $text = strval($text);
+    if ($text === '') {
+        return '';
+    }
+
+    $values = functionEditorGetParameterSchemaVariableValues();
+    $tokens = functionEditorGetParameterSchemaVariableTokens();
+    foreach ($tokens as $key => $token) {
+        $value = strval($values[$key] ?? '');
+        if ($value === '' || $value === $token) {
+            continue;
+        }
+
+        $text = str_replace($value, $token, $text);
+    }
+
+    return $text;
+}
+
+function functionEditorRestoreParameterSchemaVariablesInString($text)
+{
+    $text = strval($text);
+    if ($text === '') {
+        return '';
+    }
+
+    $values = functionEditorGetParameterSchemaVariableValues();
+    $tokens = functionEditorGetParameterSchemaVariableTokens();
+    foreach ($tokens as $key => $token) {
+        $value = strval($values[$key] ?? '');
+        if ($value !== '') {
+            $text = str_replace($token, $value, $text);
+        }
+
+        if ($key === 'player_name') {
+            $text = str_replace(['#PLAYER_NAME#', '$PLAYER_NAME', '{$PLAYER_NAME}', '{$GLOBALS["PLAYER_NAME"]}'], $value, $text);
+            continue;
+        }
+
+        if ($key === 'herika_name') {
+            $text = str_replace(['#HERIKA_NAME#', '$HERIKA_NAME', '{$HERIKA_NAME}', '{$GLOBALS["HERIKA_NAME"]}'], $value, $text);
+        }
+    }
+
+    return $text;
+}
+
+function functionEditorTransformParameterSchemaStrings($value, $mode = 'display')
+{
+    if (is_array($value)) {
+        $transformed = [];
+        foreach ($value as $key => $childValue) {
+            $transformed[$key] = functionEditorTransformParameterSchemaStrings($childValue, $mode);
+        }
+
+        return $transformed;
+    }
+
+    if (!is_string($value)) {
+        return $value;
+    }
+
+    if ($mode === 'storage') {
+        return functionEditorRestoreParameterSchemaVariablesInString($value);
+    }
+
+    return functionEditorReplaceParameterSchemaVariablesInString($value);
+}
+
+function functionEditorNormalizeParameterSchema($value)
+{
+    if (is_array($value)) {
+        return $value;
+    }
+
+    $decoded = json_decode(strval($value), true);
+    return is_array($decoded) ? $decoded : [];
+}
+
+function functionEditorRenderParameterSchema($value)
+{
+    $schema = functionEditorTransformParameterSchemaStrings(functionEditorNormalizeParameterSchema($value), 'display');
+    if (count($schema) === 0) {
+        return '<span class="pricing-empty">No parameters</span>';
+    }
+
+    $properties = is_array($schema['properties'] ?? null) ? $schema['properties'] : [];
+    $required = [];
+    foreach (($schema['required'] ?? []) as $requiredField) {
+        $requiredField = trim(strval($requiredField));
+        if ($requiredField !== '') {
+            $required[$requiredField] = true;
+        }
+    }
+
+    $parts = [];
+    $rootType = trim(strval($schema['type'] ?? 'object'));
+    if ($rootType !== '') {
+        $parts[] = '<div class="helper-text" style="margin-bottom:8px;">Root type: <code>' . h($rootType) . '</code></div>';
+    }
+
+    if (count($properties) === 0) {
+        $parts[] = '<div class="helper-text">No defined properties.</div>';
+        $parts[] = '<details style="margin-top:10px;"><summary class="return-preview" style="cursor:pointer;">Raw schema</summary><pre class="json-preview">'
+            . h(functionEditorPrettyJson($schema))
+            . '</pre></details>';
+        return implode('', $parts);
+    }
+
+    $parts[] = '<div class="param-list">';
+    foreach ($properties as $propertyName => $propertySchema) {
+        $propertySchema = is_array($propertySchema) ? $propertySchema : [];
+        $propertyType = trim(strval($propertySchema['type'] ?? 'string'));
+        $propertyDescription = trim(strval($propertySchema['description'] ?? ''));
+        $enumValues = is_array($propertySchema['enum'] ?? null) ? $propertySchema['enum'] : [];
+        $isRequired = isset($required[$propertyName]);
+
+        $parts[] = '<div class="config-field" style="margin-bottom:14px;">';
+        $parts[] = '<div><code>' . h($propertyName) . '</code> <span class="status-pill scope">' . h($propertyType) . '</span>'
+            . ($isRequired ? ' <span class="status-pill enabled">Required</span>' : ' <span class="status-pill disabled">Optional</span>')
+            . '</div>';
+
+        if ($propertyDescription !== '') {
+            $parts[] = '<div class="helper-text" style="margin-top:6px;">' . nl2br(h($propertyDescription)) . '</div>';
+        }
+
+        if (count($enumValues) > 0) {
+            $parts[] = '<div class="helper-text" style="margin-top:6px;">Allowed values (' . count($enumValues) . '):</div>';
+            $parts[] = '<div class="command-meta" style="margin-top:6px;">';
+            foreach ($enumValues as $enumValue) {
+                $parts[] = '<span class="status-pill base">' . h($enumValue) . '</span>';
+            }
+            $parts[] = '</div>';
+        }
+
+        $parts[] = '</div>';
+    }
+    $parts[] = '</div>';
+    $parts[] = '<details style="margin-top:10px;"><summary class="return-preview" style="cursor:pointer;">Raw schema</summary><pre class="json-preview">'
+        . h(functionEditorPrettyJson($schema))
+        . '</pre></details>';
+
+    return implode('', $parts);
+}
+
+function functionEditorNormalizeSubmittedParameterSchema($rawValue, &$errorMessage)
+{
+    $text = trim(strval($rawValue));
+    if ($text === '') {
+        $errorMessage = 'Parameters JSON cannot be blank.';
+        return null;
+    }
+
+    $decoded = json_decode($text, true);
+    if (!is_array($decoded)) {
+        $errorMessage = 'Parameters JSON must be a valid JSON object.';
+        return null;
+    }
+
+    $decoded = functionEditorTransformParameterSchemaStrings($decoded, 'storage');
+
+    if (!function_exists('herikaActionCatalogNormalizeParameterSchema')) {
+        return $decoded;
+    }
+
+    return herikaActionCatalogNormalizeParameterSchema($decoded);
+}
+
 function functionEditorBuildUrl($params = [], $embed = false, $anchor = "")
 {
     $base = basename($_SERVER["PHP_SELF"] ?? "function_editor.php");
@@ -82,6 +268,11 @@ function functionEditorGetEditableConfigFieldsForRow($row)
     return herikaActionCatalogGetEditorFields($row);
 }
 
+function functionEditorRowHasConfig($row)
+{
+    return count(functionEditorGetEditableConfigFieldsForRow($row)) > 0;
+}
+
 function functionEditorFormatConfigValue($field, $value)
 {
     $field = function_exists('herikaActionCatalogNormalizeEditorField')
@@ -94,6 +285,19 @@ function functionEditorFormatConfigValue($field, $value)
 
     if (($field['format'] ?? '') === 'gold') {
         return functionEditorFormatGold($value);
+    }
+
+    if (($field['format'] ?? '') === 'name_list') {
+        $parts = preg_split('/[\r\n,]+/', strval($value)) ?: [];
+        $names = [];
+        foreach ($parts as $part) {
+            $name = trim(strval($part));
+            if ($name !== '') {
+                $names[] = $name;
+            }
+        }
+
+        return count($names) > 0 ? implode(', ', $names) : 'None';
     }
 
     if (($field['type'] ?? '') === 'boolean') {
@@ -193,7 +397,7 @@ function functionEditorNormalizeSubmittedConfigValue($field, $submittedConfig, &
 function functionEditorGetCurrentFilterParams()
 {
     $params = [];
-    foreach (["search", "state", "scope", "game_function"] as $key) {
+    foreach (["search", "state", "scope", "game_function", "custom"] as $key) {
         if (!isset($_GET[$key])) {
             continue;
         }
@@ -280,6 +484,33 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
                 }
             }
         }
+    } elseif ($_POST["action"] === "update_action_parameters") {
+        $codeName = functionEditorTrim($_POST["code_name"] ?? "");
+        $row = function_exists('herikaGetActionCatalogRow') ? herikaGetActionCatalogRow($codeName) : null;
+        $rawParameters = $_POST["parameters_json"] ?? "";
+
+        if (!function_exists("herikaActionCatalogDbReady") || !herikaActionCatalogDbReady()) {
+            $message = "Action catalog tables are not available yet. Run database updates first.";
+            $messageType = "err";
+        } elseif (!is_array($row)) {
+            $message = "Unknown action code name.";
+            $messageType = "err";
+        } elseif (!function_exists("herikaActionCatalogUpsertCustomParameters")) {
+            $message = "Action catalog parameter override support is not available in this build.";
+            $messageType = "err";
+        } else {
+            $errorMessage = "";
+            $normalizedParameters = functionEditorNormalizeSubmittedParameterSchema($rawParameters, $errorMessage);
+            if ($errorMessage !== "") {
+                $message = $errorMessage;
+                $messageType = "err";
+            } elseif (herikaActionCatalogUpsertCustomParameters($codeName, $normalizedParameters)) {
+                functionEditorRedirectWithNotice($codeName . " parameters updated.", "ok", $isEmbed);
+            } else {
+                $message = "Could not update action parameters.";
+                $messageType = "err";
+            }
+        }
     }
 }
 
@@ -292,6 +523,7 @@ $search = functionEditorTrim($_GET["search"] ?? "");
 $state = strtolower(functionEditorTrim($_GET["state"] ?? "all"));
 $scope = strtolower(functionEditorTrim($_GET["scope"] ?? "all"));
 $gameFilter = strtolower(functionEditorTrim($_GET["game_function"] ?? "all"));
+$customFilter = strtolower(functionEditorTrim($_GET["custom"] ?? "all"));
 if (!in_array($state, ["all", "enabled", "disabled"], true)) {
     $state = "all";
 }
@@ -301,11 +533,15 @@ if (!in_array($scope, ["all", "npc", "followers", "dynamic"], true)) {
 if (!in_array($gameFilter, ["all", "game", "server"], true)) {
     $gameFilter = "all";
 }
+if (!in_array($customFilter, ["all", "custom", "base"], true)) {
+    $customFilter = "all";
+}
 $currentFilterParams = [
     "search" => $search,
     "state" => $state,
     "scope" => $scope,
     "game_function" => $gameFilter,
+    "custom" => $customFilter,
 ];
 
 $rows = [];
@@ -317,6 +553,8 @@ $countFollowers = 0;
 $countDynamic = 0;
 $countGameFunction = 0;
 $countServerAction = 0;
+$countCustom = 0;
+$countBase = 0;
 $catalogReady = function_exists("herikaActionCatalogDbReady") && herikaActionCatalogDbReady();
 
 if ($catalogReady) {
@@ -341,6 +579,11 @@ if ($catalogReady) {
         $whereParts[] = "v.game_function = TRUE";
     } elseif ($gameFilter === "server") {
         $whereParts[] = "v.game_function = FALSE";
+    }
+    if ($customFilter === "custom") {
+        $whereParts[] = "EXISTS (SELECT 1 FROM public.core_action_custom c WHERE LOWER(c.code_name) = LOWER(v.code_name))";
+    } elseif ($customFilter === "base") {
+        $whereParts[] = "NOT EXISTS (SELECT 1 FROM public.core_action_custom c WHERE LOWER(c.code_name) = LOWER(v.code_name))";
     }
 
     $whereSql = count($whereParts) > 0 ? ("WHERE " . implode(" AND ", $whereParts)) : "";
@@ -368,6 +611,21 @@ if ($catalogReady) {
         LIMIT 2000
     ");
 
+    usort($rows, function ($left, $right) {
+        $leftHasConfig = functionEditorRowHasConfig($left);
+        $rightHasConfig = functionEditorRowHasConfig($right);
+        if ($leftHasConfig !== $rightHasConfig) {
+            return $leftHasConfig ? -1 : 1;
+        }
+
+        $nameCompare = strcasecmp(strval($left["action_name"] ?? ''), strval($right["action_name"] ?? ''));
+        if ($nameCompare !== 0) {
+            return $nameCompare;
+        }
+
+        return strcasecmp(strval($left["code_name"] ?? ''), strval($right["code_name"] ?? ''));
+    });
+
     $countAll = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action")["c"] ?? 0);
     $countEnabled = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE is_activated = TRUE")["c"] ?? 0);
     $countDisabled = max(0, $countAll - $countEnabled);
@@ -376,6 +634,16 @@ if ($catalogReady) {
     $countDynamic = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE available_to_npc = FALSE AND available_to_followers = FALSE")["c"] ?? 0);
     $countGameFunction = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE game_function = TRUE")["c"] ?? 0);
     $countServerAction = max(0, $countAll - $countGameFunction);
+    $countCustom = intval($GLOBALS["db"]->fetchOne("
+        SELECT COUNT(*) AS c
+        FROM public.combined_core_action v
+        WHERE EXISTS (
+            SELECT 1
+            FROM public.core_action_custom c
+            WHERE LOWER(c.code_name) = LOWER(v.code_name)
+        )
+    ")["c"] ?? 0);
+    $countBase = max(0, $countAll - $countCustom);
 }
 
 ob_start();
@@ -750,6 +1018,8 @@ if (!$isEmbed) {
                 <div class="stat-line">Dynamic Only <span class="stat-pill scope"><?php echo h($countDynamic); ?></span></div>
                 <div class="stat-line">Game Functions <span class="stat-pill scope"><?php echo h($countGameFunction); ?></span></div>
                 <div class="stat-line">Server Only <span class="stat-pill scope"><?php echo h($countServerAction); ?></span></div>
+                <div class="stat-line">Custom Actions <span class="stat-pill scope"><?php echo h($countCustom); ?></span></div>
+                <div class="stat-line">Base Actions <span class="stat-pill scope"><?php echo h($countBase); ?></span></div>
             </div>
             <div class="content-section">
                 <h2>How It Works</h2>
@@ -787,6 +1057,11 @@ if (!$isEmbed) {
                                 <option value="game" <?php echo $gameFilter === "game" ? "selected" : ""; ?>>Game functions</option>
                                 <option value="server" <?php echo $gameFilter === "server" ? "selected" : ""; ?>>Server only</option>
                             </select>
+                            <select name="custom" id="customFilter">
+                                <option value="all" <?php echo $customFilter === "all" ? "selected" : ""; ?>>All sources</option>
+                                <option value="custom" <?php echo $customFilter === "custom" ? "selected" : ""; ?>>Custom only</option>
+                                <option value="base" <?php echo $customFilter === "base" ? "selected" : ""; ?>>Base only</option>
+                            </select>
                             <button type="submit" class="action-button edit">Search</button>
                             <a href="<?php echo h(functionEditorBuildUrl([], $isEmbed, "entries")); ?>" class="action-button">Clear</a>
                         </div>
@@ -821,7 +1096,13 @@ if (!$isEmbed) {
                                 $targetEnabled = $enabled ? "0" : "1";
                                 $metadata = herikaActionCatalogDecodeJson($row["metadata"] ?? [], []);
                                 $metadataPreview = functionEditorPrettyJson($metadata);
-                                $parametersPreview = functionEditorPrettyJson($row["parameters_json"] ?? "{}");
+                                $parametersRendered = functionEditorRenderParameterSchema($row["parameters_json"] ?? "{}");
+                                $parametersEditorValue = functionEditorPrettyJson(
+                                    functionEditorTransformParameterSchemaStrings(
+                                        functionEditorNormalizeParameterSchema($row["parameters_json"] ?? "{}"),
+                                        'display'
+                                    )
+                                );
                                 $scriptProxyPreview = functionEditorPrettyJson($row["script_proxy_program"] ?? "");
                                 $configFields = functionEditorGetEditableConfigFieldsForRow($row);
                                 $customConfig = is_array($metadata["custom_config"] ?? null) ? $metadata["custom_config"] : [];
@@ -939,12 +1220,43 @@ if (!$isEmbed) {
                                             <span class="pricing-empty">No editable config</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td style="min-width: 300px;"><pre class="json-preview"><?php echo h($parametersPreview); ?></pre></td>
+                                    <td style="min-width: 420px;">
+                                        <?php echo $parametersRendered; ?>
+                                        <div class="inline-action-editor" style="margin-top: 12px;">
+                                            <form method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>">
+                                                <input type="hidden" name="action" value="update_action_parameters">
+                                                <input type="hidden" name="code_name" value="<?php echo h($codeName); ?>">
+                                                <div class="config-field">
+                                                    <label for="<?php echo h('parameters-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>">Edit Parameter Schema</label>
+                                                    <div class="editor-controls">
+                                                        <textarea
+                                                            id="<?php echo h('parameters-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>"
+                                                            name="parameters_json"
+                                                            rows="12"
+                                                            style="font-family: Consolas, monospace;"
+                                                            placeholder="{&quot;type&quot;:&quot;object&quot;,&quot;properties&quot;:{},&quot;required&quot;:[]}"
+                                                        ><?php echo h($parametersEditorValue); ?></textarea>
+                                                    </div>
+                                                    <div class="helper-text">
+                                                        Save a full <code>parameters_json</code> override. This updates enums, properties, descriptions, and required fields for built-in or custom actions.
+                                                    </div>
+                                                </div>
+                                                <div class="editor-controls">
+                                                    <button type="submit" class="btn-save">Save Parameters</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </td>
                                     <td style="min-width: 320px;">
-                                        <pre class="json-preview"><?php echo h($metadataPreview); ?></pre>
+                                        <details>
+                                            <summary class="return-preview" style="cursor:pointer;">Metadata JSON</summary>
+                                            <pre class="json-preview"><?php echo h($metadataPreview); ?></pre>
+                                        </details>
                                         <?php if (!in_array(trim($scriptProxyPreview), ["", "[]", "{}"], true)): ?>
-                                            <span class="return-preview" style="margin-top:10px;">ScriptProxy Program</span>
-                                            <pre class="json-preview"><?php echo h($scriptProxyPreview); ?></pre>
+                                            <details style="margin-top:10px;">
+                                                <summary class="return-preview" style="cursor:pointer;">ScriptProxy Program</summary>
+                                                <pre class="json-preview"><?php echo h($scriptProxyPreview); ?></pre>
+                                            </details>
                                         <?php endif; ?>
                                     </td>
                                     <td>

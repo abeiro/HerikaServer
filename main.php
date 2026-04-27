@@ -2199,49 +2199,11 @@ if (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) {
         $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
 }
 
-// Cooldown definitions
-$COOLDOWNMAP["ComeCloser"]=120/0.00864;
-$COOLDOWNMAP["WaitHere"]=300/0.00864;
-$COOLDOWNMAP["UseSoulGaze"]=300/0.00864;
-$COOLDOWNMAP["Relax"]=180/0.00864;
-$COOLDOWNMAP["MakeAToast"]=60/0.00864;
-$COOLDOWNMAP["Toast"]=60/0.00864;
-$COOLDOWNMAP["StartRitualCeremony"]=60/0.00864;
-$COOLDOWNMAP["Follow"]=60/0.00864;
-$COOLDOWNMAP["FollowPlayer"]=60/0.00864;
-
-if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-    $localActorName=$GLOBALS["db"]->escape($GLOBALS["HERIKA_NAME"]);
-    $lastActionsIssuedMap=$GLOBALS["db"]->fetchAll("SELECT * FROM (SELECT DISTINCT ON (action) * FROM actions_issued WHERE (actorname = '$localActorName' or actorname like '%$localActorName,%' or actorname='*') ORDER BY action, gamets DESC, ts DESC) AS sub ORDER BY gamets DESC, ts DESC");
-    if (isset($lastActionsIssuedMap[0])) {
-        foreach ($lastActionsIssuedMap as $lastActionsIssued) {
-
-            $ingamenow=convert_gamets2seconds($gameRequest[2]);
-            $lasttriggered=convert_gamets2seconds($lastActionsIssued["gamets"]);
-            $elapsedSecs=gamets2seconds_between($gameRequest[2],$lastActionsIssued["gamets"]);
-
-            if (isset($COOLDOWNMAP[$lastActionsIssued["action"]])) {
-                if (($ingamenow-$lasttriggered)<$COOLDOWNMAP[$lastActionsIssued["action"]]) {   // COnsider here use gamets and ts and id001 time functions
-                    error_log("{$lastActionsIssued["action"]} in cooldown for $localActorName, {$COOLDOWNMAP[$lastActionsIssued["action"]]} $ingamenow-$lasttriggered $elapsedSecs");
-                    unsetFunction($lastActionsIssued["action"]);
-                } else {
-                    error_log("{$lastActionsIssued["action"]} NOT in cooldown for $localActorName  {$COOLDOWNMAP[$lastActionsIssued["action"]]} $ingamenow-$lasttriggered $elapsedSecs");
-                }
-            }
-        }
-    }
-}
-
 // Rolemaster stuff
 
 
 if (isset($GLOBALS["is_rolemastered"])) {
-    // ReturnBackHome is initially disabled. Les restore it from copy here. Only applies to rolemastered NPCs
     $GLOBALS["NPC_ROLEMASTERED"]=true;
-    if (!function_exists('herikaActionCatalogIsActionEnabled') || herikaActionCatalogIsActionEnabled("ReturnBackHome")) {
-        $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
-        $GLOBALS["FUNCTIONS"][]=$GLOBALS["BASE_FUNCTIONS"]["ReturnBackHome"];
-    }
     error_log("{$GLOBALS["HERIKA_NAME"]} is_rolemastered");
     if ((rand(0,5)!==0)){ // Remember goal from time to time
         $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
