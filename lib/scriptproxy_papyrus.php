@@ -691,6 +691,11 @@ class SkyrimCommandBuilder
             public function PrintLinkedRef(string $targetObjectFormId, string $akActor): array {
                 return $this->builder->build(491, compact('targetObjectFormId', 'akActor'));
             }
+
+            // 492
+            public function setDrivenByAIA(string $targetObjectFormId, string $akActor): array {
+                return $this->builder->build(492, compact('targetObjectFormId', 'akActor'));
+            }
         };
 
         $this->Faction = new class($this) {
