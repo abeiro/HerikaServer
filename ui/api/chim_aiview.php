@@ -29,6 +29,7 @@ require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."profile_loader.php");
 
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."logger.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+require_once(LIB_PATH .DIRECTORY_SEPARATOR."core".DIRECTORY_SEPARATOR."activity_status.php");
 
 $db = new sql();
 
@@ -152,6 +153,7 @@ try {
 
     // Parse extended data (metadata JSON column)
     $extendedData = json_decode($npcData['metadata'] ?? '{}', true) ?: [];
+    $activityStatus = chimNormalizeActivityStatus($extendedData);
 
     // Determine toggle states - show actual state AND source (NPC override vs inherited)
     
@@ -232,14 +234,16 @@ try {
             'oghma_tags' => $npcData['oghma_knowledge_tags'] ?? '',
             
             // Profile info
-            'profile' => [
+             'profile' => [
                 'id' => $profileData['id'] ?? null,
                 'label' => $profileData['label'] ?? 'Default Profile',
                 'connectors' => $llmConnectors
-            ],
-            
-            // Toggle states
-            'settings' => [
+             ],
+
+            'activity_status' => $activityStatus,
+             
+             // Toggle states
+             'settings' => [
                 'dynamic_profile' => $dynamicProfile,
                 'middle_term_memory' => $middleTermEnabled,
                 'auto_diary' => $autoDiary,
