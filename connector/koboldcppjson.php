@@ -419,35 +419,8 @@ class koboldcppjson
             $parsedResponse=$jsonData;
             
             if (!empty($parsedResponse["action"])) {
-                if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
-                    
-                    $functionDef=findFunctionByName(trim($parsedResponse["action"]));
-                    if ($functionDef) {
-                        $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                        if (strlen($functionDef["parameters"]["required"][0] ?? '')>0) {
-                            if (!empty($parsedResponse["target"])) {
-                                $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
-                            }
-                            else {
-                                Logger::warn("Missing required parameter");
-                            }
-                                
-                        } else {
-                            $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
-                        }
-                    } elseif ($parsedResponse["action"] != "Talk") {
-                        Logger::warn("Function not found for {$parsedResponse["action"]}");
-                    }
-                    
-                    //$functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                    //$this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n";
-                    //echo "Herika|command|$functionCodeName@$parameter\r\n";
-                    $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")]=end($this->_commandBuffer);
-                
-                } else {
-                    Logger::warn("Function not found for {$parsedResponse["action"]} already sent");
-                }
-                    
+                $executionContext = buildFunctionExecutionContextFromResponse($parsedResponse);
+                queueFunctionExecutionCommand($this->_commandBuffer, $alreadysent, $executionContext, "koboldcppjson");
             }
         }
         

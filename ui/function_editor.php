@@ -1,186 +1,405 @@
 <?php
-// Get the relative web path from document root to our application
 $scriptPath = $_SERVER['SCRIPT_NAME'];
-$webRoot = dirname(dirname($scriptPath)); // Go up two levels from the script location
-if ($webRoot == '/') $webRoot = '';
+$webRoot = dirname(dirname($scriptPath));
+if ($webRoot == '/') {
+    $webRoot = '';
+}
 $webRoot = rtrim($webRoot, '/');
 
-require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+require_once(__DIR__ . DIRECTORY_SEPARATOR . "profile_loader.php");
 
-$TITLE = "⚙️ CHIM - AI Action Editor";
+$TITLE = "Action Editor";
+$isEmbed = isset($_GET['embed']) && strval($_GET['embed']) === '1';
+
+$enginePath = dirname(__DIR__) . DIRECTORY_SEPARATOR;
+require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
+
+if (!isset($GLOBALS["db"]) || !($GLOBALS["db"] instanceof sql)) {
+    $GLOBALS["db"] = new sql();
+}
+
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "action_catalog.php");
+
+function h($value)
+{
+    return htmlspecialchars(strval($value), ENT_QUOTES, "UTF-8");
+}
+
+function functionEditorTrim($value)
+{
+    return trim(strval($value));
+}
+
+function functionEditorToBool($value)
+{
+    if (is_bool($value)) {
+        return $value;
+    }
+
+    $text = strtolower(trim(strval($value)));
+    return in_array($text, ["1", "true", "yes", "on", "t"], true);
+}
+
+function functionEditorPrettyJson($value)
+{
+    if (is_array($value)) {
+        $decoded = $value;
+    } else {
+        $decoded = json_decode(strval($value), true);
+    }
+
+    if (!is_array($decoded)) {
+        $text = trim(strval($value));
+        return $text === "" ? "{}" : $text;
+    }
+
+    $json = json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    return is_string($json) ? $json : "{}";
+}
+
+function functionEditorBuildUrl($params = [], $embed = false, $anchor = "")
+{
+    $base = basename($_SERVER["PHP_SELF"] ?? "function_editor.php");
+    if ($embed) {
+        $params["embed"] = "1";
+    }
+    $qs = http_build_query($params);
+    $url = $base . ($qs !== "" ? ("?" . $qs) : "");
+    if ($anchor !== "") {
+        $url .= "#" . ltrim($anchor, "#");
+    }
+    return $url;
+}
+
+function functionEditorGetEditableConfigFieldsForRow($row)
+{
+    if (!function_exists('herikaActionCatalogGetEditorFields')) {
+        return [];
+    }
+
+    return herikaActionCatalogGetEditorFields($row);
+}
+
+function functionEditorFormatConfigValue($field, $value)
+{
+    $field = function_exists('herikaActionCatalogNormalizeEditorField')
+        ? herikaActionCatalogNormalizeEditorField($field)
+        : $field;
+
+    if (!is_array($field)) {
+        return strval($value);
+    }
+
+    if (($field['format'] ?? '') === 'gold') {
+        return functionEditorFormatGold($value);
+    }
+
+    if (($field['type'] ?? '') === 'boolean') {
+        return functionEditorToBool($value) ? 'Enabled' : 'Disabled';
+    }
+
+    if (($field['type'] ?? '') === 'select') {
+        foreach (($field['options'] ?? []) as $option) {
+            if (strval($option['value'] ?? '') === strval($value)) {
+                return strval($option['label'] ?? $value);
+            }
+        }
+    }
+
+    if (($field['type'] ?? '') === 'number') {
+        return strval(floatval($value));
+    }
+
+    return strval($value);
+}
+
+function functionEditorNormalizeSubmittedConfigValue($field, $submittedConfig, &$errorMessage)
+{
+    $field = function_exists('herikaActionCatalogNormalizeEditorField')
+        ? herikaActionCatalogNormalizeEditorField($field)
+        : $field;
+
+    if (!is_array($field)) {
+        $errorMessage = 'Invalid field definition.';
+        return null;
+    }
+
+    $fieldKey = strval($field['key'] ?? '');
+    $fieldLabel = strval($field['label'] ?? $fieldKey);
+    $fieldType = strval($field['type'] ?? 'text');
+    $rawValue = is_array($submittedConfig) && array_key_exists($fieldKey, $submittedConfig)
+        ? $submittedConfig[$fieldKey]
+        : null;
+
+    if ($fieldType === 'boolean') {
+        return functionEditorToBool($rawValue);
+    }
+
+    if ($fieldType === 'integer') {
+        $textValue = trim(strval($rawValue));
+        if ($textValue === '' || !is_numeric($textValue)) {
+            $errorMessage = "{$fieldLabel} must be a whole number.";
+            return null;
+        }
+
+        $value = intval(round(floatval($textValue)));
+        if (is_numeric($field['minimum']) && $value < intval($field['minimum'])) {
+            $errorMessage = "{$fieldLabel} must be at least " . intval($field['minimum']) . ".";
+            return null;
+        }
+        if (is_numeric($field['maximum']) && $value > intval($field['maximum'])) {
+            $errorMessage = "{$fieldLabel} must be at most " . intval($field['maximum']) . ".";
+            return null;
+        }
+        return $value;
+    }
+
+    if ($fieldType === 'number') {
+        $textValue = trim(strval($rawValue));
+        if ($textValue === '' || !is_numeric($textValue)) {
+            $errorMessage = "{$fieldLabel} must be numeric.";
+            return null;
+        }
+
+        $value = floatval($textValue);
+        if (is_numeric($field['minimum']) && $value < floatval($field['minimum'])) {
+            $errorMessage = "{$fieldLabel} must be at least " . floatval($field['minimum']) . ".";
+            return null;
+        }
+        if (is_numeric($field['maximum']) && $value > floatval($field['maximum'])) {
+            $errorMessage = "{$fieldLabel} must be at most " . floatval($field['maximum']) . ".";
+            return null;
+        }
+        return $value;
+    }
+
+    if ($fieldType === 'select') {
+        $value = trim(strval($rawValue));
+        foreach (($field['options'] ?? []) as $option) {
+            if ($value === strval($option['value'] ?? '')) {
+                return $value;
+            }
+        }
+
+        $errorMessage = "{$fieldLabel} has an invalid option.";
+        return null;
+    }
+
+    return strval($rawValue ?? '');
+}
+
+function functionEditorGetCurrentFilterParams()
+{
+    $params = [];
+    foreach (["search", "state", "scope", "game_function"] as $key) {
+        if (!isset($_GET[$key])) {
+            continue;
+        }
+
+        $params[$key] = trim(strval($_GET[$key]));
+    }
+
+    return $params;
+}
+
+function functionEditorRedirectWithNotice($message, $messageType, $embed = false, $anchor = "entries")
+{
+    $params = functionEditorGetCurrentFilterParams();
+    $params["notice"] = strval($message);
+    $params["notice_type"] = strval($messageType);
+    header("Location: " . functionEditorBuildUrl($params, $embed, $anchor));
+    exit;
+}
+
+function functionEditorFormatGold($value)
+{
+    $value = intval($value);
+    return ($value === 1) ? "1 gold" : ("{$value} gold");
+}
+
+$message = "";
+$messageType = "ok";
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
+    if ($_POST["action"] === "toggle_action") {
+        $codeName = functionEditorTrim($_POST["code_name"] ?? "");
+        $targetEnabled = functionEditorToBool($_POST["target_enabled"] ?? "0");
+
+        if ($codeName === "") {
+            $message = "Missing action code name.";
+            $messageType = "err";
+        } elseif (!function_exists("herikaActionCatalogDbReady") || !herikaActionCatalogDbReady()) {
+            $message = "Action catalog tables are not available yet. Run database updates first.";
+            $messageType = "err";
+        } elseif (herikaActionCatalogUpsertCustomToggle($codeName, $targetEnabled)) {
+            $message = sprintf("%s is now %s.", $codeName, $targetEnabled ? "enabled" : "disabled");
+        } else {
+            $message = "Could not update action toggle.";
+            $messageType = "err";
+        }
+    } elseif ($_POST["action"] === "update_action_config") {
+        $codeName = functionEditorTrim($_POST["code_name"] ?? "");
+        $row = function_exists('herikaGetActionCatalogRow') ? herikaGetActionCatalogRow($codeName) : null;
+        $configFields = functionEditorGetEditableConfigFieldsForRow($row);
+        $submittedConfig = $_POST["config"] ?? [];
+
+        if (!function_exists("herikaActionCatalogDbReady") || !herikaActionCatalogDbReady()) {
+            $message = "Action catalog tables are not available yet. Run database updates first.";
+            $messageType = "err";
+        } elseif (!is_array($row)) {
+            $message = "Unknown action code name.";
+            $messageType = "err";
+        } elseif (count($configFields) === 0) {
+            $message = "This action does not expose any editable configuration fields.";
+            $messageType = "err";
+        } elseif (!function_exists("herikaActionCatalogUpsertCustomConfig")) {
+            $message = "Action catalog custom config support is not available in this build.";
+            $messageType = "err";
+        } else {
+            $configValues = [];
+            foreach ($configFields as $field) {
+                $errorMessage = "";
+                $normalizedValue = functionEditorNormalizeSubmittedConfigValue($field, $submittedConfig, $errorMessage);
+                if ($errorMessage !== "") {
+                    $message = $errorMessage;
+                    $messageType = "err";
+                    break;
+                }
+
+                $configValues[strval($field['key'])] = $normalizedValue;
+            }
+
+            if ($messageType !== "err") {
+                if (herikaActionCatalogUpsertCustomConfig($codeName, $configValues)) {
+                    functionEditorRedirectWithNotice($codeName . " configuration updated.", "ok", $isEmbed);
+                } else {
+                    $message = "Could not update action configuration.";
+                    $messageType = "err";
+                }
+            }
+        }
+    }
+}
+
+if ($message === "" && isset($_GET["notice"])) {
+    $message = functionEditorTrim($_GET["notice"]);
+    $messageType = functionEditorTrim($_GET["notice_type"] ?? "ok");
+}
+
+$search = functionEditorTrim($_GET["search"] ?? "");
+$state = strtolower(functionEditorTrim($_GET["state"] ?? "all"));
+$scope = strtolower(functionEditorTrim($_GET["scope"] ?? "all"));
+$gameFilter = strtolower(functionEditorTrim($_GET["game_function"] ?? "all"));
+if (!in_array($state, ["all", "enabled", "disabled"], true)) {
+    $state = "all";
+}
+if (!in_array($scope, ["all", "npc", "followers", "dynamic"], true)) {
+    $scope = "all";
+}
+if (!in_array($gameFilter, ["all", "game", "server"], true)) {
+    $gameFilter = "all";
+}
+$currentFilterParams = [
+    "search" => $search,
+    "state" => $state,
+    "scope" => $scope,
+    "game_function" => $gameFilter,
+];
+
+$rows = [];
+$countAll = 0;
+$countEnabled = 0;
+$countDisabled = 0;
+$countNpc = 0;
+$countFollowers = 0;
+$countDynamic = 0;
+$countGameFunction = 0;
+$countServerAction = 0;
+$catalogReady = function_exists("herikaActionCatalogDbReady") && herikaActionCatalogDbReady();
+
+if ($catalogReady) {
+    $whereParts = [];
+    if ($search !== "") {
+        $searchLiteral = herikaActionCatalogSqlText("%" . $search . "%");
+        $whereParts[] = "(v.code_name ILIKE {$searchLiteral} OR v.action_name ILIKE {$searchLiteral} OR v.description ILIKE {$searchLiteral})";
+    }
+    if ($state === "enabled") {
+        $whereParts[] = "v.is_activated = TRUE";
+    } elseif ($state === "disabled") {
+        $whereParts[] = "v.is_activated = FALSE";
+    }
+    if ($scope === "npc") {
+        $whereParts[] = "v.available_to_npc = TRUE";
+    } elseif ($scope === "followers") {
+        $whereParts[] = "v.available_to_followers = TRUE";
+    } elseif ($scope === "dynamic") {
+        $whereParts[] = "v.available_to_npc = FALSE AND v.available_to_followers = FALSE";
+    }
+    if ($gameFilter === "game") {
+        $whereParts[] = "v.game_function = TRUE";
+    } elseif ($gameFilter === "server") {
+        $whereParts[] = "v.game_function = FALSE";
+    }
+
+    $whereSql = count($whereParts) > 0 ? ("WHERE " . implode(" AND ", $whereParts)) : "";
+    $rows = $GLOBALS["db"]->fetchAll("
+        SELECT
+            v.code_name,
+            v.action_name,
+            v.description,
+            v.return_message,
+            v.available_to_npc,
+            v.available_to_followers,
+            v.is_activated,
+            v.parameters_json,
+            v.metadata,
+            v.game_function,
+            v.script_proxy_program,
+            EXISTS (
+                SELECT 1
+                FROM public.core_action_custom c
+                WHERE LOWER(c.code_name) = LOWER(v.code_name)
+            ) AS is_custom
+        FROM public.combined_core_action v
+        {$whereSql}
+        ORDER BY LOWER(v.action_name), LOWER(v.code_name)
+        LIMIT 2000
+    ");
+
+    $countAll = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action")["c"] ?? 0);
+    $countEnabled = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE is_activated = TRUE")["c"] ?? 0);
+    $countDisabled = max(0, $countAll - $countEnabled);
+    $countNpc = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE available_to_npc = TRUE")["c"] ?? 0);
+    $countFollowers = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE available_to_followers = TRUE")["c"] ?? 0);
+    $countDynamic = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE available_to_npc = FALSE AND available_to_followers = FALSE")["c"] ?? 0);
+    $countGameFunction = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE game_function = TRUE")["c"] ?? 0);
+    $countServerAction = max(0, $countAll - $countGameFunction);
+}
 
 ob_start();
-
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
-$isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
-
-$debugPaneLink = false;
+include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "head.html");
 if (!$isEmbed) {
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
-}
-
-// Persisted action selection (if present)
-$userPrefPath = __DIR__."/../functions/user_pref.json";
-$hasUserPrefs = file_exists($userPrefPath);
-if ($hasUserPrefs) {
-    $currentOnes=json_decode(file_get_contents($userPrefPath),true);
-    if (!is_array($currentOnes)) {
-        $currentOnes = [];
-    }
-} else {
-    $currentOnes=[];
-}
-
-// Arrays without the commented ones
-$npcFunctions = [
-    'Inspect',
-    'InspectSurroundings',
-    'OpenInventory',
-    'OpenInventory2',
-    'Attack',
-    'AttackHunt',
-    'TravelTo',
-    'Follow',
-    'CheckInventory',
-    'Relax',
-    'TakeASeat',
-    'IncreaseWalkSpeed',
-    'DecreaseWalkSpeed',
-    'WaitHere',
-    'ComeCloser',
-    'TakeGoldFromPlayer',
-    'RentRoom',
-    'HireCarriage',
-    'HireFerry',
-    'AddBounty',
-    'PayBounty',
-    'ArrestPlayer',
-    'ForgiveCrime',
-    'FollowPlayer',
-    'Brawl',
-    'GiveGoldTo',
-    'GiveItemTo',
-    'PickupItem',
-    'CastSpell',
-    'MakeFollower',
-    'Toast',
-    'Drink',
-    'Training',
-    'Surrender',
-    'EndConversation',
-    'MoveTo',
-];
-
-$playerFunctions = [
-    'Inspect',
-    'InspectSurroundings',
-    'OpenInventory',
-    'OpenInventory2',
-    'Attack',
-    'AttackHunt',
-    'TravelTo',
-    'CheckInventory',
-    'SheatheWeapon',
-    'Relax',
-    'TakeASeat',
-    'ReadQuestJournal',
-    'IncreaseWalkSpeed',
-    'DecreaseWalkSpeed',
-    'WaitHere',
-    'SetCurrentTask',
-    'ComeCloser',
-    'TakeGoldFromPlayer',
-    'RentRoom',
-    'HireCarriage',
-    'HireFerry',
-    'AddBounty',
-    'PayBounty',
-    'ArrestPlayer',
-    'ForgiveCrime',
-    'Brawl',
-    'GiveGoldTo',
-    'GiveItemTo',
-    'PickupItem',
-    'GoToSleep',
-    'UseSoulGaze',
-    'CastSpell',
-    'Toast',
-    'Drink',
-];
-
-$socialFunctions = ['Inspect', 'InspectSurroundings', 'Relax', 'TakeASeat', 'UseSoulGaze','Toast', 'Drink', 'Training','EndRitualCeremony','StartRitualCeremony','Surrender','EndConversation','MoveTo'];
-$movementFunctions = ['TravelTo', 'Follow', 'FollowPlayer', 'ComeCloser', 'WaitHere', 'IncreaseWalkSpeed', 'DecreaseWalkSpeed','MakeFollower'];
-$combatFunctions = ['Attack', 'AttackHunt', 'Brawl', 'SheatheWeapon'];
-$inventoryFunctions = ['OpenInventory', 'OpenInventory2', 'CheckInventory', 'GiveGoldTo', 'GiveItemTo', 'PickupItem', 'TakeGoldFromPlayer', 'RentRoom', 'HireCarriage', 'HireFerry', 'CastSpell'];
-$crimeFunctions = ['AddBounty', 'PayBounty', 'ArrestPlayer', 'ForgiveCrime'];
-$playerOnlyFunctions = ['ReadQuestJournal', 'SetCurrentTask', 'GoToSleep'];
-
-
-$currentList = array_unique(array_merge($npcFunctions, $playerFunctions));
-
-$enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
-require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
-$GLOBALS["db"]=new sql(); // if we delay creating new instance, functions.php inclusion in line 86 could trigger errors in plugins
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
-require_once($enginePath."lib/utils.php");
-require_once($enginePath."functions/functions.php");
-
-$currentList = $GLOBALS["DEFINED_FUNCTIONS"];
-$alwaysVisibleFunctions = ['RentRoom', 'HireCarriage', 'HireFerry', 'AddBounty', 'PayBounty', 'ArrestPlayer', 'ForgiveCrime','MakeFollower'];
-$currentList = array_unique(array_merge($currentList, $alwaysVisibleFunctions));
-
-// Fresh install UX: default to all commands checked when no saved preferences exist yet.
-if (!$hasUserPrefs) {
-    $currentOnes = array_values($currentList);
-    @file_put_contents($userPrefPath, json_encode($currentOnes));
-}
-
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $selectedFunctions = $_POST['functions'] ?? [];
-    $GLOBALS['ENABLED_FUNCTIONS'] = $selectedFunctions;
-    
-    file_put_contents($userPrefPath,json_encode($selectedFunctions));
-    $currentOnes=$selectedFunctions;
-    $message = "Function preferences updated successfully! Selected " . count($selectedFunctions) . " functions.";
+    include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "navbar.php");
 }
 ?>
-
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
-    /* Font Face Declaration */
     @font-face {
-        font-family: 'MagicCards';
-        src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+        font-family: "MagicCards";
+        src: url("<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf") format("truetype");
         font-weight: normal;
         font-style: normal;
     }
-
-    /* Override main container styles */
     main {
-        padding-top: 80px; /* Space for navbar */
+        padding-top: <?php echo $isEmbed ? "30px" : "80px"; ?>;
         padding-bottom: 40px;
-        padding-left: 10%;
-        padding-right: 10%;
+        padding-left: 5px;
+        padding-right: 5px;
         width: 100%;
         margin: 0;
     }
-    
-    /* Override footer styles */
-    footer {
-        position: fixed;
-        bottom: 0;
-        width: 100%;
-        height: 20px;
-        background: #031633;
-        z-index: 100;
-    }
-
-    /* Page Header Styling */
     .page-header {
         text-align: center;
         margin-bottom: 30px;
@@ -190,564 +409,581 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         border: 1px solid #3a3a3a;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
     }
-
-    .page-header h1 {
+    .page-header h1.api-title {
         margin-bottom: 8px;
-        font-family: 'MagicCards', serif;
+    }
+    h1.api-title {
+        margin: 0 0 20px 0;
+        font-family: "MagicCards", serif;
         word-spacing: 8px;
         font-size: 2.2em;
-        color: rgb(242, 124, 17);
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        color: #e6b76c;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        text-align: center;
     }
-    
     .page-subtitle {
         margin: 0;
         color: #bbb;
         font-size: 1.1em;
         line-height: 1.6;
     }
-
-    /* Content Section Headers */
-    .content-section h1 {
-        font-family: 'MagicCards', serif;
-        font-size: 1.8em;
-        color: rgb(242, 124, 17);
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        word-spacing: 8px;
-        text-align: center;
-        margin-bottom: 20px;
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
     }
-
-    /* Content sections */
     .content-section {
-        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
         padding: 25px;
         border-radius: 10px;
         border: 1px solid #3a3a3a;
-        margin-bottom: 20px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
         transition: border-color 0.3s ease, box-shadow 0.3s ease;
     }
-    
     .content-section:hover {
-        border-color: rgba(242, 124, 17, 0.3);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.05);
+        border-color: #4a4a4a;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.05);
     }
-
-    /* Function Grid Layout */
-    .function-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    .content-section h2 {
+        font-family: "MagicCards", serif;
+        color: #e6b76c;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        word-spacing: 6px;
+        margin-bottom: 15px;
+        margin-top: 0;
+        font-size: 1.4em;
+    }
+    .full-width-section {
+        grid-column: 1 / -1;
+    }
+    .full-width-section h2 {
+        font-family: "MagicCards", serif;
+        color: #e6b76c;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        word-spacing: 6px;
+        margin-bottom: 15px;
+        font-size: 1.6em;
+        text-align: center;
+    }
+    .stat-line {
+        margin: 8px 0;
+        color: #d0d6df;
+    }
+    .stat-pill {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        margin-left: 8px;
+        border: 1px solid #4a4a4a;
+    }
+    .stat-pill.enabled {
+        color: #6dd19c;
+        border-color: rgba(109, 209, 156, 0.45);
+        background: rgba(25, 77, 50, 0.3);
+    }
+    .stat-pill.disabled {
+        color: #ffb3b3;
+        border-color: rgba(220, 110, 110, 0.45);
+        background: rgba(96, 32, 32, 0.32);
+    }
+    .stat-pill.scope {
+        color: #c9d3e5;
+        border-color: rgba(138, 155, 182, 0.35);
+        background: rgba(55, 66, 84, 0.28);
+    }
+    .action-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
         gap: 15px;
-        margin: 20px 0;
+        margin-bottom: 20px;
     }
-
-    .function-category {
-        background: linear-gradient(180deg, rgba(26, 26, 26, 0.9), rgba(20, 20, 20, 0.95));
+    .search-container {
+        display: flex;
+        gap: 10px;
+        min-width: 360px;
+        flex-wrap: wrap;
+    }
+    .search-container input[type="text"],
+    .search-container select {
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #555555;
+        background-color: #4a4a4a;
+        color: #f8f9fa;
+    }
+    .table-container {
+        width: 100%;
+        overflow-x: auto;
+        margin-top: 20px;
+        max-height: calc(100vh - 320px);
+        overflow-y: auto;
         border: 1px solid #3a3a3a;
         border-radius: 8px;
-        padding: 20px;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.02);
-        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        position: relative;
+        isolation: isolate;
+        background: rgba(20, 24, 31, 0.98);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
     }
-    
-    .function-category:hover {
-        border-color: rgba(242, 124, 17, 0.3);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.04);
+    .table-container table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: rgba(26, 30, 37, 0.99);
+        table-layout: fixed;
+        position: relative;
+        z-index: 1;
     }
-
-    .function-category h3 {
-        color: rgb(242, 124, 17);
-        margin-bottom: 15px;
-        font-size: 1.1em;
-        border-bottom: 1px solid rgba(242, 124, 17, 0.2);
-        padding-bottom: 8px;
+    .table-container thead {
+        position: sticky;
+        top: 0;
+        z-index: 3;
     }
-
-    /* Function Item Styling */
-    .function-item {
+    .table-container thead th {
+        background: linear-gradient(135deg, rgb(58, 58, 58), rgb(48, 48, 48));
+        color: #e6b76c;
+        padding: 12px 10px;
+        text-align: left;
+        font-family: "MagicCards", serif;
+        letter-spacing: 1px;
+        border-bottom: 2px solid rgba(230, 183, 108, 0.3);
+        box-shadow: inset 0 -1px 0 rgba(18, 18, 18, 0.8);
+    }
+    .table-container td {
+        padding: 10px;
+        border-bottom: 1px solid #3a3a3a;
+        vertical-align: top;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        background: rgba(33, 38, 46, 0.98);
+    }
+    .table-container tbody tr:nth-child(even) td {
+        background: rgba(28, 33, 40, 0.99);
+    }
+    .table-container tbody tr:hover td {
+        background: rgba(58, 58, 58, 0.78);
+    }
+    .status-pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        border: 1px solid #4a4a4a;
+    }
+    .status-pill.custom {
+        color: #6dd19c;
+        border-color: rgba(109, 209, 156, 0.45);
+        background: rgba(25, 77, 50, 0.3);
+    }
+    .status-pill.base {
+        color: #c9d3e5;
+        border-color: rgba(138, 155, 182, 0.35);
+        background: rgba(55, 66, 84, 0.28);
+    }
+    .status-pill.scope {
+        color: #f3d8a0;
+        border-color: rgba(216, 165, 76, 0.35);
+        background: rgba(98, 73, 27, 0.3);
+        margin-right: 6px;
+        margin-bottom: 6px;
+    }
+    .status-pill.enabled {
+        color: #6dd19c;
+        border-color: rgba(109, 209, 156, 0.45);
+        background: rgba(25, 77, 50, 0.3);
+    }
+    .status-pill.disabled {
+        color: #ffb3b3;
+        border-color: rgba(220, 110, 110, 0.45);
+        background: rgba(96, 32, 32, 0.32);
+    }
+    .status-pill.game {
+        color: #b4d9ff;
+        border-color: rgba(120, 171, 219, 0.42);
+        background: rgba(32, 55, 86, 0.3);
+    }
+    .status-pill.server {
+        color: #d8ccff;
+        border-color: rgba(165, 142, 220, 0.4);
+        background: rgba(67, 42, 101, 0.28);
+    }
+    .state-enabled {
+        color: #6dd19c;
+        font-weight: 600;
+    }
+    .state-disabled {
+        color: #ffb3b3;
+        font-weight: 600;
+    }
+    .return-preview {
+        display: block;
+        margin-top: 8px;
+        color: #9aa7bd;
+        font-size: 0.92em;
+        line-height: 1.45;
+    }
+    .table-container code {
+        white-space: nowrap;
+    }
+    .json-preview {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 12px;
+        line-height: 1.45;
+        color: #d5deee;
+        background: rgba(19, 24, 31, 0.72);
+        border: 1px solid rgba(138, 155, 182, 0.22);
+        border-radius: 6px;
+        padding: 8px 10px;
+    }
+    .toast-notification {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        min-width: 280px;
+        max-width: 560px;
+        background: rgba(19, 24, 31, 0.96);
+        color: #e9efff;
+        border: 1px solid rgba(138, 155, 182, 0.38);
+        border-radius: 10px;
+        padding: 12px 14px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        transform: translateY(-6px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        z-index: 9999;
+    }
+    .toast-notification.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .inline-action-editor {
+        display: grid;
+        gap: 8px;
+    }
+    .inline-action-editor label {
+        display: block;
+        color: #d0d6df;
+        font-size: 0.92em;
+    }
+    .inline-action-editor .editor-controls {
         display: flex;
         align-items: center;
-        margin: 8px 0;
-        padding: 8px 12px;
-        background: linear-gradient(135deg, rgba(42, 42, 42, 0.6), rgba(34, 34, 34, 0.7));
-        border-radius: 6px;
-        border: 1px solid rgba(58, 58, 58, 0.5);
-        transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .function-item:hover {
-        background: linear-gradient(135deg, rgba(51, 51, 51, 0.8), rgba(42, 42, 42, 0.9));
-        border-color: rgba(242, 124, 17, 0.3);
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-    }
-
-    .function-item input[type="checkbox"] {
-        margin-right: 12px;
-        transform: scale(1.2);
-        accent-color: rgb(242, 124, 17);
-        cursor: pointer;
-    }
-
-    .function-item label {
-        cursor: pointer;
-        color: #e0e0e0;
-        font-weight: 500;
-        user-select: none;
-        flex-grow: 1;
-    }
-
-    .function-item label:hover {
-        color: #ffffff;
-    }
-
-    /* Mode indicator */
-    .mode-indicator {
-        display: inline-block;
-        background: linear-gradient(135deg, rgba(242, 124, 17, 0.2), rgba(242, 124, 17, 0.15));
-        color: rgb(242, 124, 17);
-        padding: 8px 16px;
-        border-radius: 20px;
-        border: 1px solid rgba(242, 124, 17, 0.3);
-        font-size: 0.9em;
-        font-weight: 600;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-    }
-
-
-
-    /* Action buttons container */
-    .action-buttons {
-        display: flex;
-        gap: 15px;
-        justify-content: center;
+        gap: 8px;
         flex-wrap: wrap;
-        margin: 25px 0;
     }
-
-    /* Function descriptions */
-    .function-description {
-        font-size: 0.8em;
-        color: #888;
-        margin-top: 4px;
-        font-style: italic;
+    .inline-action-editor input[type="number"] {
+        width: 110px;
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #555555;
+        background-color: #4a4a4a;
+        color: #f8f9fa;
     }
-
-    /* Responsive Design */
-    @media (max-width: 768px) {
+    .command-code {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 700;
+        color: #f0f4fb;
+    }
+    .command-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .pricing-cell {
+        min-width: 250px;
+    }
+    .pricing-empty {
+        color: #8f99aa;
+        font-size: 0.92em;
+    }
+    .helper-text {
+        color: #9aa7bd;
+        font-size: 0.9em;
+        line-height: 1.45;
+    }
+    @media (max-width: 1024px) {
         main {
-            padding-left: 5%;
-            padding-right: 5%;
+            padding-left: 4%;
+            padding-right: 4%;
         }
-        
-        .function-grid {
+        .content-grid {
             grid-template-columns: 1fr;
+            gap: 20px;
         }
-        
-        .action-buttons {
-            flex-direction: column;
-            align-items: center;
-        }
-        
-        .page-header h1 {
-            font-size: 1.8em;
-        }
-
-        .content-section h1 {
-            font-size: 1.6em;
-        }
-    }
-
-    @media (max-width: 480px) {
-        main {
-            padding-left: 2%;
-            padding-right: 2%;
-        }
-        
-        .page-header h1 {
-            font-size: 1.5em;
-        }
-
-        .content-section h1 {
-            font-size: 1.3em;
-        }
-        
-        .function-grid {
-            grid-template-columns: 1fr;
-            gap: 10px;
-        }
-        
-        .content-section {
-            padding: 15px;
+        .search-container {
+            min-width: 280px;
         }
     }
 </style>
-
-<?php if ($isEmbed): ?>
-<style>
-    /* Embedded in hub: remove extra top padding since navbar is hidden */
-    main { padding-top: 20px; }
-</style>
-<?php endif; ?>
 
 <main>
-    <div id="toast" class="toast-notification">
-        <span class="message"></span>
-    </div>
+    <div id="toast" class="toast-notification"><span class="message"></span></div>
 
     <div class="page-header">
-        <h1>AI Action Editor</h1>
-        <p class="page-subtitle">Configure which AI functions are available for AI actors in CHIM</p>
+        <h1 class="api-title">Action Editor</h1>
+        <p class="page-subtitle">Configure available actions exposed to AI prompting and execution</p>
     </div>
 
-    <div class="content-section">
-        <h1>Function Selection</h1>
-        
-        <form method="post" id="functionForm">
-            <!-- Quick Action Buttons -->
-            <div class="action-buttons">
-                <button type="button" onclick="selectAll()" class="btn-primary">Select All</button>
-                <button type="button" onclick="selectNone()" class="btn-cancel">Clear All</button>
-                <button type="submit" class="btn-save">💾 Save Function Configuration</button>
+    <?php if (!$catalogReady): ?>
+        <div class="content-section">
+            <h2>Action Catalog Unavailable</h2>
+            <p style="margin:0; color:#d0d6df; line-height:1.45;">
+                Action catalog tables are not available yet. Run HerikaServer database updates, then reload this page.
+            </p>
+        </div>
+    <?php else: ?>
+        <div class="content-grid">
+            <div class="content-section">
+                <h2>Action Summary</h2>
+                <div class="stat-line">Total Actions <span class="stat-pill"><?php echo h($countAll); ?></span></div>
+                <div class="stat-line">Enabled <span class="stat-pill enabled"><?php echo h($countEnabled); ?></span></div>
+                <div class="stat-line">Disabled <span class="stat-pill disabled"><?php echo h($countDisabled); ?></span></div>
+                <div class="stat-line">NPC Scope <span class="stat-pill scope"><?php echo h($countNpc); ?></span></div>
+                <div class="stat-line">Follower Scope <span class="stat-pill scope"><?php echo h($countFollowers); ?></span></div>
+                <div class="stat-line">Dynamic Only <span class="stat-pill scope"><?php echo h($countDynamic); ?></span></div>
+                <div class="stat-line">Game Functions <span class="stat-pill scope"><?php echo h($countGameFunction); ?></span></div>
+                <div class="stat-line">Server Only <span class="stat-pill scope"><?php echo h($countServerAction); ?></span></div>
+            </div>
+            <div class="content-section">
+                <h2>How It Works</h2>
+                <p style="margin:0; color:#d0d6df; line-height:1.45;">
+                    Toggling an action writes a persistent override into <code>core_action_custom</code>.
+                    Built-in defaults in <code>core_action</code> remain untouched. Scope flags decide whether an action
+                    is available to NPC mode, follower mode, or only as a dynamic runtime action. Parameter schemas mirror
+                    the exported JSON function definition, metadata holds dispatch details such as <code>plugin_command</code>
+                    versus <code>script_proxy</code>, and the pricing column can override selected gold costs per action
+                    without changing the shipped base catalog.
+                </p>
             </div>
 
-            <!-- Function Grid -->
-            <div class="function-grid">
-                <!-- Movement & Navigation Functions -->
-                <div class="function-category">
-                    <h3>🚶 Movement & Navigation</h3>
-                    <?php
-                    
-                    foreach ($movementFunctions as $func):
-                        if (in_array($func, $currentList)):
-                    ?>
-                        <div class="function-item">
-                            <input type="checkbox" name="functions[]" value="<?= htmlspecialchars($func) ?>" id="func_<?= $func ?>"
-                                <?= in_array($func, $currentOnes ?? []) ? 'checked' : '' ?>>
-                            <label for="func_<?= $func ?>">
-                                <?= htmlspecialchars($func) ?>
-                                <div class="function-description">
-                                    <?php
-                                    $descriptions = [
-                                        'TravelTo' => 'Move to specific fast travel locations',
-                                        'Follow' => 'Follow another character or NPC',
-                                        'FollowPlayer' => 'Follow the player character',
-                                        'ComeCloser' => 'Move closer to the NPC partner',
-                                        'WaitHere' => 'Stay in current location and wait',
-                                        'IncreaseWalkSpeed' => 'Move faster during travel',
-                                        'DecreaseWalkSpeed' => 'Move slower, more carefully',
-                                        'MakeFollower' => 'Designate another NPC as a follower to follow the player around'
-                                    ];
-                                    echo $descriptions[$func] ?? 'Movement-related function';
-                                    ?>
-                                </div>
-                            </label>
-                        </div>
-                    <?php 
-                        endif;
-                    endforeach; 
-                    ?>
-                </div>
+            <div class="content-section full-width-section">
+                <h2 id="entries">Actions</h2>
 
-                <!-- Combat & Actions -->
-                <div class="function-category">
-                    <h3>⚔️ Combat & Actions</h3>
-                    <?php
+                <form method="get" action="">
+                    <?php if ($isEmbed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
+                    <div class="action-container">
+                        <div class="search-container">
+                            <input type="text" name="search" id="searchBox" value="<?php echo h($search); ?>" placeholder="Search command, action name, description">
+                            <select name="state" id="stateFilter">
+                                <option value="all" <?php echo $state === "all" ? "selected" : ""; ?>>All states</option>
+                                <option value="enabled" <?php echo $state === "enabled" ? "selected" : ""; ?>>Enabled only</option>
+                                <option value="disabled" <?php echo $state === "disabled" ? "selected" : ""; ?>>Disabled only</option>
+                            </select>
+                            <select name="scope" id="scopeFilter">
+                                <option value="all" <?php echo $scope === "all" ? "selected" : ""; ?>>All scopes</option>
+                                <option value="npc" <?php echo $scope === "npc" ? "selected" : ""; ?>>NPC only</option>
+                                <option value="followers" <?php echo $scope === "followers" ? "selected" : ""; ?>>Followers only</option>
+                                <option value="dynamic" <?php echo $scope === "dynamic" ? "selected" : ""; ?>>Dynamic only</option>
+                            </select>
+                            <select name="game_function" id="gameFunctionFilter">
+                                <option value="all" <?php echo $gameFilter === "all" ? "selected" : ""; ?>>All dispatch</option>
+                                <option value="game" <?php echo $gameFilter === "game" ? "selected" : ""; ?>>Game functions</option>
+                                <option value="server" <?php echo $gameFilter === "server" ? "selected" : ""; ?>>Server only</option>
+                            </select>
+                            <button type="submit" class="action-button edit">Search</button>
+                            <a href="<?php echo h(functionEditorBuildUrl([], $isEmbed, "entries")); ?>" class="action-button">Clear</a>
+                        </div>
+                    </div>
+                </form>
 
-                    foreach ($combatFunctions as $func):
-                        if (in_array($func, $currentList)):
-                    ?>
-                        <div class="function-item">
-                            <input type="checkbox" name="functions[]" value="<?= htmlspecialchars($func) ?>" id="func_<?= $func ?>"
-                                <?= in_array($func, $currentOnes ?? []) ? 'checked' : '' ?>>
-                            <label for="func_<?= $func ?>">
-                                <?= htmlspecialchars($func) ?>
-                                <div class="function-description">
-                                    <?php
-                                    $descriptions = [
-                                        'Attack' => 'Engage in combat with hostile entities',
-                                        'AttackHunt' => 'More conservative attack mode',
-                                        'Brawl' => 'Engage in non-lethal combat or sparring',
-                                        'SheatheWeapon' => 'Put away weapons to appear non-threatening'
-                                    ];
-                                    echo $descriptions[$func] ?? 'Combat-related function';
-                                    ?>
-                                </div>
-                            </label>
-                        </div>
-                    <?php 
-                        endif;
-                    endforeach; 
-                    ?>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Command</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Config</th>
+                                <th>Parameters</th>
+                                <th>Metadata</th>
+                                <th>Toggle</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (count($rows) === 0): ?>
+                                <tr><td colspan="7">No actions found.</td></tr>
+                            <?php endif; ?>
+                            <?php foreach ($rows as $row): ?>
+                                <?php
+                                $codeName = strval($row["code_name"] ?? "");
+                                $enabled = herikaActionCatalogToBool($row["is_activated"] ?? false);
+                                $isCustom = herikaActionCatalogToBool($row["is_custom"] ?? false);
+                                $isNpc = herikaActionCatalogToBool($row["available_to_npc"] ?? false);
+                                $isFollowers = herikaActionCatalogToBool($row["available_to_followers"] ?? false);
+                                $isGameFunction = herikaActionCatalogToBool($row["game_function"] ?? false);
+                                $targetEnabled = $enabled ? "0" : "1";
+                                $metadata = herikaActionCatalogDecodeJson($row["metadata"] ?? [], []);
+                                $metadataPreview = functionEditorPrettyJson($metadata);
+                                $parametersPreview = functionEditorPrettyJson($row["parameters_json"] ?? "{}");
+                                $scriptProxyPreview = functionEditorPrettyJson($row["script_proxy_program"] ?? "");
+                                $configFields = functionEditorGetEditableConfigFieldsForRow($row);
+                                $customConfig = is_array($metadata["custom_config"] ?? null) ? $metadata["custom_config"] : [];
+                                $resolvedConfig = function_exists('herikaActionCatalogGetResolvedCustomConfig')
+                                    ? herikaActionCatalogGetResolvedCustomConfig($codeName, $row)
+                                    : $customConfig;
+                                ?>
+                                <tr>
+                                    <td style="min-width: 220px;">
+                                        <code class="command-code"><?php echo h($codeName); ?></code>
+                                        <div class="command-meta">
+                                            <?php if ($isNpc): ?>
+                                                <span class="status-pill scope">NPC</span>
+                                            <?php endif; ?>
+                                            <?php if ($isFollowers): ?>
+                                                <span class="status-pill scope">Followers</span>
+                                            <?php endif; ?>
+                                            <?php if (!$isNpc && !$isFollowers): ?>
+                                                <span class="status-pill scope">Dynamic</span>
+                                            <?php endif; ?>
+                                            <span class="status-pill <?php echo $isGameFunction ? "game" : "server"; ?>"><?php echo $isGameFunction ? "Game" : "Server"; ?></span>
+                                            <span class="status-pill <?php echo $isCustom ? "custom" : "base"; ?>"><?php echo $isCustom ? "Custom" : "Base"; ?></span>
+                                            <span class="status-pill <?php echo $enabled ? "enabled" : "disabled"; ?>"><?php echo $enabled ? "Enabled" : "Disabled"; ?></span>
+                                        </div>
+                                    </td>
+                                    <td><?php echo h($row["action_name"] ?? ""); ?></td>
+                                    <td style="max-width: 360px;">
+                                        <?php echo nl2br(h($row["description"] ?? "")); ?>
+                                        <?php if (trim(strval($row["return_message"] ?? "")) !== ""): ?>
+                                            <span class="return-preview">Return: <?php echo nl2br(h($row["return_message"] ?? "")); ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="pricing-cell">
+                                        <?php if (count($configFields) > 0): ?>
+                                            <div class="inline-action-editor">
+                                                <form method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>">
+                                                    <input type="hidden" name="action" value="update_action_config">
+                                                    <input type="hidden" name="code_name" value="<?php echo h($codeName); ?>">
+                                                    <?php foreach ($configFields as $configField): ?>
+                                                        <?php
+                                                        $fieldKey = strval($configField['key'] ?? '');
+                                                        $fieldId = 'config-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName . '-' . $fieldKey);
+                                                        $fieldType = strval($configField['type'] ?? 'text');
+                                                        $fieldValue = $resolvedConfig[$fieldKey] ?? (function_exists('herikaActionCatalogGetEditorFieldDefaultValue')
+                                                            ? herikaActionCatalogGetEditorFieldDefaultValue($configField)
+                                                            : '');
+                                                        $fieldDefaultValue = function_exists('herikaActionCatalogGetEditorFieldDefaultValue')
+                                                            ? herikaActionCatalogGetEditorFieldDefaultValue($configField)
+                                                            : '';
+                                                        $hasOverride = array_key_exists($fieldKey, $customConfig);
+                                                        ?>
+                                                        <div class="config-field" style="margin-bottom: 14px;">
+                                                            <label for="<?php echo h($fieldId); ?>"><?php echo h($configField['label'] ?? $fieldKey); ?></label>
+                                                            <div class="editor-controls">
+                                                                <?php if ($fieldType === 'boolean'): ?>
+                                                                    <input type="hidden" name="config[<?php echo h($fieldKey); ?>]" value="0">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        id="<?php echo h($fieldId); ?>"
+                                                                        name="config[<?php echo h($fieldKey); ?>]"
+                                                                        value="1"
+                                                                        <?php echo functionEditorToBool($fieldValue) ? 'checked' : ''; ?>
+                                                                    >
+                                                                <?php elseif ($fieldType === 'textarea'): ?>
+                                                                    <textarea
+                                                                        id="<?php echo h($fieldId); ?>"
+                                                                        name="config[<?php echo h($fieldKey); ?>]"
+                                                                        rows="3"
+                                                                        placeholder="<?php echo h($configField['placeholder'] ?? ''); ?>"
+                                                                    ><?php echo h($fieldValue); ?></textarea>
+                                                                <?php elseif ($fieldType === 'select'): ?>
+                                                                    <select
+                                                                        id="<?php echo h($fieldId); ?>"
+                                                                        name="config[<?php echo h($fieldKey); ?>]"
+                                                                    >
+                                                                        <?php foreach (($configField['options'] ?? []) as $option): ?>
+                                                                            <?php $optionValue = strval($option['value'] ?? ''); ?>
+                                                                            <option value="<?php echo h($optionValue); ?>" <?php echo $optionValue === strval($fieldValue) ? 'selected' : ''; ?>>
+                                                                                <?php echo h($option['label'] ?? $optionValue); ?>
+                                                                            </option>
+                                                                        <?php endforeach; ?>
+                                                                    </select>
+                                                                <?php else: ?>
+                                                                    <input
+                                                                        type="<?php echo $fieldType === 'integer' || $fieldType === 'number' ? 'number' : 'text'; ?>"
+                                                                        id="<?php echo h($fieldId); ?>"
+                                                                        name="config[<?php echo h($fieldKey); ?>]"
+                                                                        <?php if (is_numeric($configField['minimum'] ?? null)): ?>min="<?php echo h($configField['minimum']); ?>"<?php endif; ?>
+                                                                        <?php if (is_numeric($configField['maximum'] ?? null)): ?>max="<?php echo h($configField['maximum']); ?>"<?php endif; ?>
+                                                                        <?php if (is_numeric($configField['step'] ?? null)): ?>step="<?php echo h($configField['step']); ?>"<?php elseif ($fieldType === 'integer'): ?>step="1"<?php endif; ?>
+                                                                        placeholder="<?php echo h($configField['placeholder'] ?? ''); ?>"
+                                                                        value="<?php echo h($fieldValue); ?>"
+                                                                    >
+                                                                <?php endif; ?>
+                                                            </div>
+                                                            <div class="helper-text">
+                                                                Effective: <?php echo h(functionEditorFormatConfigValue($configField, $fieldValue)); ?>.
+                                                                <?php if ($hasOverride): ?>
+                                                                    Override active. Default fallback: <?php echo h(functionEditorFormatConfigValue($configField, $fieldDefaultValue)); ?>.
+                                                                <?php else: ?>
+                                                                    Default fallback: <?php echo h(functionEditorFormatConfigValue($configField, $fieldDefaultValue)); ?>.
+                                                                <?php endif; ?>
+                                                                <?php if (trim(strval($configField['help'] ?? '')) !== ''): ?>
+                                                                    <?php echo h($configField['help']); ?>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                    <div class="editor-controls">
+                                                        <button type="submit" class="btn-save">Save</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        <?php else: ?>
+                                            <span class="pricing-empty">No editable config</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="min-width: 300px;"><pre class="json-preview"><?php echo h($parametersPreview); ?></pre></td>
+                                    <td style="min-width: 320px;">
+                                        <pre class="json-preview"><?php echo h($metadataPreview); ?></pre>
+                                        <?php if (!in_array(trim($scriptProxyPreview), ["", "[]", "{}"], true)): ?>
+                                            <span class="return-preview" style="margin-top:10px;">ScriptProxy Program</span>
+                                            <pre class="json-preview"><?php echo h($scriptProxyPreview); ?></pre>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <form method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>">
+                                            <?php if ($isEmbed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
+                                            <input type="hidden" name="action" value="toggle_action">
+                                            <input type="hidden" name="code_name" value="<?php echo h($codeName); ?>">
+                                            <input type="hidden" name="target_enabled" value="<?php echo h($targetEnabled); ?>">
+                                            <button type="submit" class="<?php echo $enabled ? "btn-danger" : "btn-save"; ?>">
+                                                <?php echo $enabled ? "Disable" : "Enable"; ?>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
-
-                <!-- Interaction & Social -->
-                <div class="function-category">
-                    <h3>👥 Interaction & Social</h3>
-                    <?php
-                    
-                    foreach ($socialFunctions as $func):
-                        if (in_array($func, $currentList)):
-                    ?>
-                        <div class="function-item">
-                            <input type="checkbox" name="functions[]" value="<?= htmlspecialchars($func) ?>" id="func_<?= $func ?>"
-                                <?= in_array($func, $currentOnes ?? []) ? 'checked' : '' ?>>
-                            <label for="func_<?= $func ?>">
-                                <?= htmlspecialchars($func) ?>
-                                <div class="function-description">
-                                    <?php
-                                    $descriptions = [
-                                        'Inspect' => 'Examine objects, people, or items closely',
-                                        'InspectSurroundings' => 'Look around and observe the environment',
-                                        'Relax' => 'Take a break and sandbox',
-                                        'TakeASeat' => 'Sit down at nearest chair',
-                                        'UseSoulGaze' => 'Use ITT to visualize and describe the current scene',
-                                        'Toast' => 'Raise a glass in celebration or honor',
-                                        'Drink' => 'Drink a beverage to quench thirst',
-                                        'Training' => 'Opens training menu for skill improvement (only available for trainer NPCs)',
-                                        'Surrender' => 'Surrender to avoid conflict or harm',
-                                    ];
-                                    echo $descriptions[$func] ?? 'AI ends conversation';
-                                    ?>
-                                </div>
-                            </label>
-                        </div>
-                    <?php 
-                        endif;
-                    endforeach; 
-                    ?>
-                </div>
-
-                <!-- Inventory & Items -->
-                <div class="function-category">
-                    <h3>🎒 Inventory & Items</h3>
-                    <?php
-                    
-                    foreach ($inventoryFunctions as $func):
-                        if (in_array($func, $currentList)):
-                    ?>
-                        <div class="function-item">
-                            <input type="checkbox" name="functions[]" value="<?= htmlspecialchars($func) ?>" id="func_<?= $func ?>"
-                                <?= in_array($func, $currentOnes ?? []) ? 'checked' : '' ?>>
-                            <label for="func_<?= $func ?>">
-                                <?= htmlspecialchars($func) ?>
-                                <div class="function-description">
-                                    <?php
-                                    $descriptions = [
-                                        'OpenInventory' => 'Regular menu trading',
-                                        'OpenInventory2' => 'Gift Trading',
-                                        'CheckInventory' => 'Check of inventory status',
-                                        'GiveGoldTo' => 'Give gold to another character.',
-                                        'GiveItemTo' => 'Give items to another character.',
-                                        'PickupItem' => 'Pick up items from the ground using RefID from nearby_items',
-                                        'TakeGoldFromPlayer' => 'Receive or take gold from player. Requires player confirmation.',
-                                        'RentRoom' => 'Innkeeper-only: rent a room to the player for 10 gold and unlock the inn bed for 24 in-game hours.',
-                                        'HireCarriage' => 'Carriage-driver-only: hire a carriage for player fast travel with vanilla costs (20 major cities, 50 minor towns).',
-                                        'HireFerry' => 'Ferryman-only: hire a ferry for player fast travel with vanilla costs (50 standard routes, 500 Icewater Jetty, free Castle Volkihar).',
-                                        'CastSpell' => 'Cast a spell on a target actor (use spell names from known spells).'
-                                    ];
-                                    echo $descriptions[$func] ?? 'Inventory management function';
-                                    ?>
-                                </div>
-                            </label>
-                        </div>
-                    <?php 
-                        endif;
-                    endforeach; 
-                    ?>
-                </div>
-
-                <!-- Crime & Bounty Functions -->
-                <div class="function-category">
-                    <h3>⚖️ Crime & Bounty (Guard-Only)</h3>
-                    <?php
-                    foreach ($crimeFunctions as $func):
-                        if (in_array($func, $currentList)):
-                    ?>
-                        <div class="function-item">
-                            <input type="checkbox" name="functions[]" value="<?= htmlspecialchars($func) ?>" id="func_<?= $func ?>"
-                                <?= in_array($func, $currentOnes ?? []) ? 'checked' : '' ?>>
-                            <label for="func_<?= $func ?>">
-                                <?= htmlspecialchars($func) ?>
-                                <div class="function-description">
-                                    <?php
-                                    $descriptions = [
-                                        'AddBounty' => 'Guard-only: add crime bounty to player using vanilla crime types (Assault=40, Murder=1000, Theft=100, etc.).',
-                                        'PayBounty' => 'Guard-only: player pays off bounty. Stolen items are confiscated automatically.',
-                                        'ArrestPlayer' => 'Guard-only: arrest player and send to jail. Inventory confiscated.',
-                                        'ForgiveCrime' => 'Guard-only: forgive crimes and clear bounty (persuasion, bribe, thane status).',
-                                    ];
-                                    echo $descriptions[$func] ?? 'Crime-related guard function';
-                                    ?>
-                                </div>
-                            </label>
-                        </div>
-                    <?php 
-                        endif;
-                    endforeach; 
-                    ?>
-                </div>
-
-                <!-- Player-Specific Functions -->
-                <?php if (!isset($GLOBALS["IS_NPC"]) || !$GLOBALS["IS_NPC"]): ?>
-                <div class="function-category">
-                    <h3>📖 Player-Specific</h3>
-                    <?php
-                    foreach ($playerOnlyFunctions as $func):
-                        if (in_array($func, $currentList)):
-                    ?>
-                        <div class="function-item">
-                            <input type="checkbox" name="functions[]" value="<?= htmlspecialchars($func) ?>" id="func_<?= $func ?>"
-                                <?= in_array($func, $currentOnes ?? []) ? 'checked' : '' ?>>
-                            <label for="func_<?= $func ?>">
-                                <?= htmlspecialchars($func) ?>
-                                <div class="function-description">
-                                    <?php
-                                    $descriptions = [
-                                        'ReadQuestJournal' => 'Check current active quests',
-                                        'SetCurrentTask' => 'Set or update current AI Dynamic Objective',
-                                        'GoToSleep' => 'Rest and sleep to recover'
-                                    ];
-                                    echo $descriptions[$func] ?? 'Player-specific function';
-                                    ?>
-                                </div>
-                            </label>
-                        </div>
-                    <?php 
-                        endif;
-                    endforeach; 
-                    ?>
-                </div>
-                <div class="function-category">
-                    <h3>📖 Plugin functions</h3>
-                    <?php
-                    
-                    foreach ($currentList as $func):
-                        if ((strpos($func,"ExtCmd")!==false) || (strpos($func,"WebCmd")!==false)):
-                    ?>
-                        <div class="function-item">
-                            <input type="checkbox" name="functions[]" value="<?= htmlspecialchars($func) ?>" id="func_<?= $func ?>"
-                                <?= in_array($func, $currentOnes ?? []) ? 'checked' : '' ?>>
-                            <label for="func_<?= $func ?>">
-                                <?= htmlspecialchars($func) ?>
-                                <div class="function-description">
-                                    <?php
-                                    echo $GLOBALS["F_TRANSLATIONS"][$func] ?? 'Player-specific function';
-                                    ?>
-                                </div>
-                            </label>
-                        </div>
-                    <?php 
-                        endif;
-                    endforeach; 
-                    ?>
-                </div>
-                <?php endif; ?>
-
-                <!-- NPC-Specific Functions -->
-                <?php if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]): ?>
-                <div class="function-category">
-                    <h3>🎓 NPC-Specific</h3>
-                    <?php
-                    foreach ($npcOnlyFunctions as $func):
-                        if (in_array($func, $currentList)):
-                    ?>
-                        <div class="function-item">
-                            <input type="checkbox" name="functions[]" value="<?= htmlspecialchars($func) ?>" id="func_<?= $func ?>"
-                                <?= in_array($func, $currentOnes ?? []) ? 'checked' : '' ?>>
-                            <label for="func_<?= $func ?>">
-                                <?= htmlspecialchars($func) ?>
-                                <div class="function-description">
-                                    <?php
-                                    $descriptions = [
-                                        'Training' => 'Opens training menu for skill improvement (only for trainer NPCs)'
-                                    ];
-                                    echo $descriptions[$func] ?? 'NPC-specific function';
-                                    ?>
-                                </div>
-                            </label>
-                        </div>
-                    <?php 
-                        endif;
-                    endforeach; 
-                    ?>
-                </div>
-                <?php endif; ?>
             </div>
-        </form>
-    </div>
+        </div>
+    <?php endif; ?>
 </main>
 
 <script>
 function showToast(message, duration = 5000) {
-    const toast = document.getElementById('toast');
-    const messageSpan = toast.querySelector('.message');
+    const toast = document.getElementById("toast");
+    const messageSpan = toast.querySelector(".message");
     messageSpan.textContent = message;
-    toast.classList.add('show');
-    
+    toast.classList.add("show");
     setTimeout(() => {
-        toast.classList.remove('show');
+        toast.classList.remove("show");
     }, duration);
 }
-
-
-
-function selectAll() {
-    const checkboxes = document.querySelectorAll('input[name="functions[]"]');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = true;
-    });
-}
-
-function selectNone() {
-    const checkboxes = document.querySelectorAll('input[name="functions[]"]');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = false;
-    });
-}
-
-
-
-
-
-// Show success message if functions were updated
-<?php if (!empty($message)): ?>
-document.addEventListener('DOMContentLoaded', function() {
-    showToast(<?php echo json_encode($message); ?>);
+<?php if ($message !== ""): ?>
+document.addEventListener("DOMContentLoaded", function() {
+    showToast(<?= json_encode($message) ?>);
 });
 <?php endif; ?>
-
-// Form submission handling
-document.getElementById('functionForm').addEventListener('submit', function(e) {
-    const selectedCount = document.querySelectorAll('input[name="functions[]"]:checked').length;
-    
-    if (selectedCount === 0) {
-        e.preventDefault();
-        showToast('Please select at least one function before saving.', 3000);
-        return false;
-    }
-    
-    // Show loading state
-    const submitBtn = document.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = '💾 Saving...';
-    submitBtn.disabled = true;
-    
-    // Re-enable after a short delay (form will submit)
-    setTimeout(() => {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    }, 2000);
-});
 </script>
 
-<?php
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl/footer.html");
-
-$buffer = ob_get_contents();
-ob_end_clean();
-$title = $TITLE;
-$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
-echo $buffer;
-?>
+</body>
+</html>

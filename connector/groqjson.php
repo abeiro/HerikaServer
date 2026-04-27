@@ -567,13 +567,15 @@ class groqjson
             $parameterArr = json_decode($this->_parameterBuff, true);
             if (is_array($parameterArr)) {
                 $parameter = current($parameterArr);
+                $functionCodeName = getFunctionCodeName($this->_functionName);
+                $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
+                $commandStr = "{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@$parameter\r\n";
 
-                if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")])) {
-                    $functionCodeName=getFunctionCodeName($this->_functionName);
-                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@$parameter\r\n";
+                if (!isset($alreadysent[md5($commandStr)])) {
+                    $this->_commandBuffer[] = $commandStr;
                 }
 
-                $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n";
+                $alreadysent[md5($commandStr)] = $commandStr;
                 if (ob_get_level()) @ob_flush();
             } else 
                 return null;
@@ -584,67 +586,9 @@ class groqjson
                 if (!empty($parsedResponse["action"])) {
                     if (!isset($parsedResponse["target"]))    
                         $parsedResponse["target"] = "";
-                        
-                    $functionDef=findFunctionByName($parsedResponse["action"]);
-                    $paramString = "";
-                    $functionCodeName = "";
-                    if (isset($functionDef)) {
-                        $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                        $paramCount = count($functionDef["parameters"]["properties"] ?? []);
-                        
-                        if ($paramCount > 1) {
-                            $params = [];
-                            foreach (array_keys($functionDef["parameters"]["properties"] ?? []) as $paramName) {
-                                if (isset($parsedResponse[$paramName])) {
-                                    $paramValue = $parsedResponse[$paramName];
-                                    $paramType = $functionDef["parameters"]["properties"][$paramName]["type"] ?? "string";
-                                    if ($paramType === "integer" && is_numeric($paramValue)) {
-                                        $paramValue = intval($paramValue);
-                                    }
-                                    $params[$paramName] = $paramValue;
-                                }
-                            }
-                            
-                            $requiredParams = $functionDef["parameters"]["required"] ?? [];
-                            foreach ($requiredParams as $reqParam) {
-                                if (!isset($parsedResponse[$reqParam]) || $parsedResponse[$reqParam] === "") {
-                                    Logger::warn("groqjson: Missing required parameter '{$reqParam}' for function {$parsedResponse["action"]}");
-                                }
-                            }
-                            
-                            $paramString = json_encode($params);
-                        } else {
-                            $paramString = $parsedResponse["target"] ?? "";
-                        }
-                    } else {
-                        $paramString = $parsedResponse["target"] ?? "";
-                        $functionCodeName = $parsedResponse["action"] ?? "";
-                    }
-                    
-                    $commandStr = "{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$paramString}\r\n";
-                    if (!isset($alreadysent[md5($commandStr)])) {
-                        
-                        if (isset($functionDef)) {
-                            if (strlen($functionDef["parameters"]["required"][0] ?? '')>0) {
-                                if (!empty($paramString)) {
-                                    $this->_commandBuffer[]=$commandStr;
-                                }
-                                else {
-                                    Logger::warn("groqjson: Missing required parameters");
-                                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@\r\n";
-                                }
-                                    
-                            } else {
-                                $this->_commandBuffer[]=$commandStr;
-                            }
-                        } elseif ($parsedResponse["action"] != "Talk") {
-                            Logger::warn("groqjson: Function not found for {$parsedResponse["action"]}");
-                        }
-                        
-                        $alreadysent[md5($commandStr)]=end($this->_commandBuffer);
-                    
-                    } 
-                        
+
+                    $executionContext = buildFunctionExecutionContextFromResponse($parsedResponse);
+                    queueFunctionExecutionCommand($this->_commandBuffer, $alreadysent, $executionContext, "groqjson");
                 }
                 
                 if (ob_get_level()) @ob_flush();

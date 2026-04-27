@@ -62,31 +62,6 @@ if (isset($returnFunction[2])) {
 		$useFunctionsAgain = false;
 
 
-	} else if ($functionCodeName == "ReadQuestJournal") {
-		//$useFunctionsAgain=true;
-		$request = "(use action '" . getFunctionTrlName("SetCurrentTask") . "' to update current task) $request";
-		$argName = "id_quest";
-		$useFunctionsAgain = true;
-
-	} else if ($functionCodeName == "SearchMemory") {
-		//$useFunctionsAgain=true;
-
-		$argName = "target";
-		$useFunctionsAgain = false;
-
-	} else if ($functionCodeName == "ReadDiaryPage") {
-		//$useFunctionsAgain=true;
-		$argName = "page";
-
-
-	} else if ($functionCodeName == "SearchDiary") {
-		//$useFunctionsAgain=true;
-		$request = "(use function " . getFunctionTrlName("ReadDiaryPage") . " to access the specific page provided by SearchDiary) $request";
-		$argName = "keyword";
-		$useFunctionsAgain = true;
-		$GLOBALS["FUNCTIONS"][] = $GLOBALS["FUNCTIONS_GHOSTED"];// We provide here the ReadDiaryPage function
-
-
 	} else if ($functionCodeName == "GetTime") {
 		//$useFunctionsAgain=true;
 		$argName = "datestring";
@@ -94,12 +69,6 @@ if (isset($returnFunction[2])) {
 
 
 	} else if ($functionCodeName == "get_current_mission") {		// Disabled, current task is always provided.
-		//$useFunctionsAgain=true;
-		$argName = "description";
-		//$useFunctionsAgain=true;
-
-
-	} else if ($functionCodeName == "SetCurrentTask") {
 		//$useFunctionsAgain=true;
 		$argName = "description";
 		//$useFunctionsAgain=true;

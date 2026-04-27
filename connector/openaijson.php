@@ -1227,15 +1227,17 @@ class openaijson
             $parameterArr = json_decode($this->_parameterBuff, true);
             if (is_array($parameterArr)) {
                 $parameter = current($parameterArr); // Only support for one parameter
+                $functionCodeName = getFunctionCodeName($this->_functionName);
+                $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
+                $commandStr = "{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@$parameter\r\n";
 
-                if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")])) {
-                    $functionCodeName=getFunctionCodeName($this->_functionName);
-                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@$parameter\r\n";
+                if (!isset($alreadysent[md5($commandStr)])) {
+                    $this->_commandBuffer[] = $commandStr;
                     //echo "Herika|command|$functionCodeName@$parameter\r\n";
 
                 }
 
-                $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n";
+                $alreadysent[md5($commandStr)] = $commandStr;
                 if (ob_get_level()) @ob_flush();
             } else 
                 return null;
@@ -1246,74 +1248,9 @@ class openaijson
                 if (!empty($parsedResponse["action"])) {
                     if (!isset($parsedResponse["target"]))    
                         $parsedResponse["target"] = "";
-                        
-                    // Build parameter string - use JSON for functions with multiple parameters
-                    $functionDef=findFunctionByName($parsedResponse["action"]);
-                    $paramString = "";
-                    $functionCodeName = "";
-                    if (isset($functionDef)) {
-                        $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                        $paramCount = count($functionDef["parameters"]["properties"] ?? []);
-                        
-                        // For functions with multiple parameters, send as JSON
-                        if ($paramCount > 1) {
-                            $params = [];
-                            foreach (array_keys($functionDef["parameters"]["properties"] ?? []) as $paramName) {
-                                if (isset($parsedResponse[$paramName])) {
-                                    $paramValue = $parsedResponse[$paramName];
-                                    // Convert to appropriate type based on function definition
-                                    $paramType = $functionDef["parameters"]["properties"][$paramName]["type"] ?? "string";
-                                    if ($paramType === "integer" && is_numeric($paramValue)) {
-                                        $paramValue = intval($paramValue);
-                                    }
-                                    $params[$paramName] = $paramValue;
-                                }
-                            }
-                            
-                            // Check if required parameters are missing (validate against original $parsedResponse)
-                            $requiredParams = $functionDef["parameters"]["required"] ?? [];
-                            foreach ($requiredParams as $reqParam) {
-                                // Check $parsedResponse for original params, not $params (which may be converted)
-                                if (!isset($parsedResponse[$reqParam]) || $parsedResponse[$reqParam] === "") {
-                                    Logger::warn("openaijson: Missing required parameter '{$reqParam}' for function {$parsedResponse["action"]}");
-                                }
-                            }
-                            
-                            $paramString = json_encode($params);
-                        } else {
-                            // Legacy: single parameter as plain string
-                            $paramString = $parsedResponse["target"] ?? "";
-                        }
-                    } else {
-                        $paramString = $parsedResponse["target"] ?? "";
-                        $functionCodeName = $parsedResponse["action"] ?? "";
-                    }
-                    
-                    $commandStr = "{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$paramString}\r\n";
-                    if (!isset($alreadysent[md5($commandStr)])) {
-                        
-                        if (isset($functionDef)) {
-                            if (strlen($functionDef["parameters"]["required"][0] ?? '')>0) {
-                                if (!empty($paramString)) {
-                                    $this->_commandBuffer[]=$commandStr;
-                                }
-                                else {
-                                    Logger::warn("openaijson: Missing required parameters");
-                                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@\r\n";
-                                    // Change. we allow this. Post filter maybe can fix.
 
-                                }
-                                    
-                            } else {
-                                $this->_commandBuffer[]=$commandStr;
-                            }
-                        } elseif ($parsedResponse["action"] != "Talk") {
-                            Logger::warn("openaijson: Function not found for {$parsedResponse["action"]}");
-                        }
-                        
-                        $alreadysent[md5($commandStr)]=end($this->_commandBuffer);
-                    
-                    } 
+                    $executionContext = buildFunctionExecutionContextFromResponse($parsedResponse);
+                    queueFunctionExecutionCommand($this->_commandBuffer, $alreadysent, $executionContext, "openaijson");
                         
                 }
                 

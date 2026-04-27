@@ -104,10 +104,14 @@ try {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_llm_connector.sql"));
         $db->execQuery("SET search_path TO public");
     }
-if ($checkTableExists("core_profiles") == -1) {
+    if ($checkTableExists("core_profiles") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles.sql"));
     $db->execQuery("SET search_path TO public");
 }
+    if ($checkTableExists("core_action") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_action.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
     if ($checkTableExists("core_npc_master") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master.sql"));
         $db->execQuery("SET search_path TO public");
@@ -122,6 +126,75 @@ if ($checkTableExists("core_profiles") == -1) {
     }
 } catch (Exception $e) {
     Logger::warn("Bootstrap core tables: " . $e->getMessage());
+}
+
+if ($checkVersion("core_action") < 20260426001) {
+    Logger::debug("Applying core_action 20260426001 - add parameters/metadata/game function fields");
+
+    $db->execQuery("ALTER TABLE public.core_action ADD COLUMN IF NOT EXISTS parameters_json JSONB NOT NULL DEFAULT '{}'::jsonb");
+    $db->execQuery("ALTER TABLE public.core_action ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb");
+    $db->execQuery("ALTER TABLE public.core_action ADD COLUMN IF NOT EXISTS game_function BOOLEAN NOT NULL DEFAULT TRUE");
+    $db->execQuery("ALTER TABLE public.core_action ADD COLUMN IF NOT EXISTS script_proxy_program JSONB");
+
+    $db->execQuery("ALTER TABLE public.core_action_custom ADD COLUMN IF NOT EXISTS parameters_json JSONB NOT NULL DEFAULT '{}'::jsonb");
+    $db->execQuery("ALTER TABLE public.core_action_custom ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb");
+    $db->execQuery("ALTER TABLE public.core_action_custom ADD COLUMN IF NOT EXISTS game_function BOOLEAN NOT NULL DEFAULT TRUE");
+    $db->execQuery("ALTER TABLE public.core_action_custom ADD COLUMN IF NOT EXISTS script_proxy_program JSONB");
+
+    $db->execQuery("CREATE INDEX IF NOT EXISTS idx_core_action_game_function ON public.core_action (game_function)");
+    $db->execQuery("CREATE INDEX IF NOT EXISTS idx_core_action_custom_game_function ON public.core_action_custom (game_function)");
+
+    $db->execQuery("DROP VIEW IF EXISTS public.combined_core_action");
+    $db->execQuery("
+        CREATE VIEW public.combined_core_action AS
+        SELECT
+            c.id,
+            c.code_name,
+            c.action_name,
+            c.description,
+            c.return_message,
+            c.available_to_npc,
+            c.available_to_followers,
+            c.is_activated,
+            c.parameters_json,
+            c.metadata,
+            c.game_function,
+            c.script_proxy_program,
+            c.created_at,
+            c.updated_at
+        FROM public.core_action_custom c
+        UNION ALL
+        SELECT
+            b.id,
+            b.code_name,
+            b.action_name,
+            b.description,
+            b.return_message,
+            b.available_to_npc,
+            b.available_to_followers,
+            b.is_activated,
+            b.parameters_json,
+            b.metadata,
+            b.game_function,
+            b.script_proxy_program,
+            b.created_at,
+            b.updated_at
+        FROM public.core_action b
+        LEFT JOIN public.core_action_custom c ON LOWER(b.code_name) = LOWER(c.code_name)
+        WHERE c.code_name IS NULL
+    ");
+
+    $db->execQuery("
+        DELETE FROM public.core_action_custom
+        WHERE code_name IN ('AttackHunt', 'ReadQuestJournal', 'GetDateTime', 'SearchDiary', 'SetCurrentTask', 'ReadDiaryPage', 'SearchMemory')
+    ");
+    $db->execQuery("
+        DELETE FROM public.core_action
+        WHERE code_name IN ('AttackHunt', 'ReadQuestJournal', 'GetDateTime', 'SearchDiary', 'SetCurrentTask', 'ReadDiaryPage', 'SearchMemory')
+    ");
+
+    $updateVersion("core_action", 20260426001);
+    Logger::info("Applied patch core_action 20260426001");
 }
 
 // Narrator is now managed via core_narrator table, not core_npc_master
@@ -1839,8 +1912,21 @@ if ($checkTableExists("core_api_badge") > 0 && $checkVersion("core_api_badge") <
         $db->execQuery("UPDATE public.core_api_badge SET label = 'Nano-GPT' WHERE LOWER(label) = 'nano-gpt'");
         $db->execQuery("UPDATE public.core_api_badge SET label = 'DeepL' WHERE LOWER(label) = 'deepl'");
         
-        // Add unique constraint
-        $db->execQuery("ALTER TABLE public.core_api_badge ADD CONSTRAINT core_api_badge_label_unique UNIQUE (label)");
+        // Add unique constraint once; reinstall/update paths can revisit this patch.
+        $db->execQuery("
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM pg_constraint
+                    WHERE conname = 'core_api_badge_label_unique'
+                      AND conrelid = 'public.core_api_badge'::regclass
+                ) THEN
+                    ALTER TABLE public.core_api_badge
+                    ADD CONSTRAINT core_api_badge_label_unique UNIQUE (label);
+                END IF;
+            END $$;
+        ");
         
         // Add case-insensitive index for faster lookups
         $db->execQuery("CREATE INDEX IF NOT EXISTS idx_core_api_badge_label_lower ON public.core_api_badge (LOWER(label))");
@@ -2466,7 +2552,7 @@ try {
             '-'::text AS speaker,
             '-'::text AS listener,
             memory.ts
-           FROM memory
+           FROM public.memory
           WHERE memory.message !~~ 'Dear Diary%'::text AND memory.message <> ''::text and event<>'backgroundlife_diary'::text
         UNION
          SELECT (((('(Context Location:'::text || speech.location) || ') '::text) || speech.speaker) || ': '::text) || speech.speech,
@@ -2475,7 +2561,7 @@ try {
             speech.speaker,
             speech.listener,
             speech.ts
-           FROM speech
+           FROM public.speech
           WHERE speech.speech <> ''::text
         UNION
          SELECT eventlog.data,
@@ -2484,7 +2570,7 @@ try {
             '-'::text AS text,
             '-'::text AS listener,
             eventlog.ts
-           FROM eventlog
+           FROM public.eventlog
           WHERE eventlog.type::text = ANY (ARRAY['death'::character varying::text, 'location'::character varying::text])) subquery
   ORDER BY gamets, ts");
     $updateVersion("memory_v",20251122001);
@@ -2545,6 +2631,10 @@ if ($checkTableExists("sneq_quests_saved") == -1) {
 
 
 
+// Some imported dump-style SQL files clear search_path; restore it before
+// running unqualified late-stage migrations.
+$db->execQuery("SET search_path TO public");
+
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS region text");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS hold text");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS tags text");
@@ -2556,9 +2646,9 @@ $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS refs text"
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS cleared boolean");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP");
 $db->execQuery("
-CREATE OR REPLACE VIEW locations_v
+CREATE OR REPLACE VIEW public.locations_v
 as
-select * FROM  locations
+select * FROM  public.locations
 where
 case 
   when formid=102771 and cleared=FALSE then FALSE -- Dustman's Cairn is closed until The Companions quest, 'Proving Honor' has been activated
@@ -2599,30 +2689,30 @@ if ($checkTableExists("master_packages") == -1) {
 
 $db->execQuery("CREATE INDEX IF NOT EXISTS event_log_type ON public.eventlog USING btree (type)");
 $db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_people_trgm
-ON eventlog
+ON public.eventlog
 USING gin (people gin_trgm_ops)");
 
 $db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_people_trgm2
-ON eventlog
+ON public.eventlog
 USING gin (data gin_trgm_ops)");
 
 $db->execQuery("CREATE INDEX IF NOT EXISTS idx_speech_speaker_trgm
-ON speech
+ON public.speech
 USING gin (speaker gin_trgm_ops)");
 
 $db->execQuery("CREATE INDEX IF NOT EXISTS idx_speech_listener_trgm
-ON speech
+ON public.speech
 USING gin (listener gin_trgm_ops)");
 
 $db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_gamets_pos
-ON eventlog (gamets)
+ON public.eventlog (gamets)
 WHERE gamets > 0");
 
 $db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_gamets_ts_pos
-ON eventlog (gamets DESC, ts DESC)");
+ON public.eventlog (gamets DESC, ts DESC)");
 
 $db->execQuery("CREATE INDEX IF NOT EXISTS   idx_speech_gamets_pos
-ON speech (gamets)
+ON public.speech (gamets)
 WHERE gamets > 0");
 
 
@@ -3887,28 +3977,28 @@ if ($checkVersion("prompts")<20260423001) {
 //----------------------------------------------------
 
 // Relationship Evaluation and Initialization Queues
-$db->execQuery("CREATE TABLE IF NOT EXISTS relationship_eval_queue (
+$db->execQuery("CREATE TABLE IF NOT EXISTS public.relationship_eval_queue (
                 id SERIAL PRIMARY KEY,
                 npc_id INTEGER NOT NULL UNIQUE,
                 eval_data JSONB NOT NULL,
                 created_at TIMESTAMP DEFAULT NOW()  )");
 
-$db->execQuery("CREATE TABLE IF NOT EXISTS relationship_init_queue (
+$db->execQuery("CREATE TABLE IF NOT EXISTS public.relationship_init_queue (
                 id SERIAL PRIMARY KEY,
                 npc_id INTEGER NOT NULL UNIQUE,
                 init_data JSONB NOT NULL,
                 created_at TIMESTAMP DEFAULT NOW()  )");
 
 $db->execQuery("
-            ALTER TABLE relationship_init_queue
+            ALTER TABLE public.relationship_init_queue
             ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0
         ");
 $db->execQuery("
-            ALTER TABLE relationship_init_queue
+            ALTER TABLE public.relationship_init_queue
             ADD COLUMN IF NOT EXISTS last_error TEXT
         ");
 $db->execQuery("
-            ALTER TABLE relationship_eval_queue
+            ALTER TABLE public.relationship_eval_queue
             ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0
         ");
 Logger::info(__FILE__." update file processed");

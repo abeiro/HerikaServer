@@ -1097,15 +1097,17 @@ class openrouterjson
             $parameterArr = json_decode($this->_parameterBuff, true);
             if (is_array($parameterArr)) {
                 $parameter = current($parameterArr); // Only support for one parameter
+                $functionCodeName = getFunctionCodeName($this->_functionName);
+                $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
+                $commandStr = "{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@$parameter\r\n";
 
-                if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")])) {
-                    $functionCodeName=getFunctionCodeName($this->_functionName);
-                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@$parameter\r\n";
+                if (!isset($alreadysent[md5($commandStr)])) {
+                    $this->_commandBuffer[] = $commandStr;
                     //echo "Herika|command|$functionCodeName@$parameter\r\n";
 
                 }
 
-                $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n";
+                $alreadysent[md5($commandStr)] = $commandStr;
                 if (ob_get_level()) @ob_flush();
             } else 
                 return null;
@@ -1123,88 +1125,10 @@ class openrouterjson
 
                 if (!isset($parsedResponse["target"]))    
                     $parsedResponse["target"] = "";
-                
-                // Build parameter string - use JSON for functions with multiple parameters
-                $functionDef=findFunctionByName(trim($parsedResponse["action"]));
-                $paramString = "";
-                $functionCodeName = "";
-                if (isset($functionDef)) {
-                    $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                    $paramCount = count($functionDef["parameters"]["properties"] ?? []);
-                    
-                    // For functions with multiple parameters, send as JSON
-                    if ($paramCount > 1) {
-                        $params = [];
-                        foreach (array_keys($functionDef["parameters"]["properties"] ?? []) as $paramName) {
-                            if (isset($parsedResponse[$paramName])) {
-                                $paramValue = $parsedResponse[$paramName];
-                                // Convert to appropriate type based on function definition
-                                $paramType = $functionDef["parameters"]["properties"][$paramName]["type"] ?? "string";
-                                if ($paramType === "integer" && is_numeric($paramValue)) {
-                                    $paramValue = intval($paramValue);
-                                }
-                                $params[$paramName] = $paramValue;
-                            }
-                        }
-                        
-                        // Check if required parameters are missing (validate against original $parsedResponse)
-                        $requiredParams = $functionDef["parameters"]["required"] ?? [];
-                        $missingParams = [];
-                        foreach ($requiredParams as $reqParam) {
-                            // Check $parsedResponse for original params, not $params (which may be converted)
-                            if (!isset($parsedResponse[$reqParam]) || $parsedResponse[$reqParam] === "") {
-                                $missingParams[] = $reqParam;
-                            }
-                        }
-                        
-                        if (!empty($missingParams)) {
-                            Logger::warn("openrouterjson: Missing required parameters for {$functionCodeName}: " . implode(", ", $missingParams) . ". Skipping command.");
-                            // Skip this command by setting action to empty
-                            $parsedResponse["action"] = "";
-                            $functionCodeName = "";
-                        } else {
-                            $paramString = json_encode($params);
-                            Logger::info("openrouterjson: Multi-param function {$functionCodeName}, params: {$paramString}");
-                        }
-                    } else {
-                        // Legacy: single parameter as plain string
-                        $paramString = $parsedResponse["target"] ?? "";
-                    }
-                } else {
-                    $paramString = $parsedResponse["target"] ?? "";
-                    $functionCodeName = $parsedResponse["action"] ?? "";
-                }
-                
-                $commandStr = "{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$paramString}\r\n";
-                Logger::info("openrouterjson: Sending command: {$commandStr}");
-                if (!empty($parsedResponse["action"])) {
-                    if (!isset($alreadysent[md5($commandStr)])) {
-                        
-                        if (isset($functionDef)) {
-                            if (strlen($functionDef["parameters"]["required"][0] ?? '')>0) {
-                                if (!empty($paramString)) {
-                                    $this->_commandBuffer[]=$commandStr;
-                                }
-                                else {
-                                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@\r\n";
-                                    Logger::warn("openrouterjson: Missing required parameter: target");
-                                    // Change. we allow this. Post filter maybe can fix.
-                                }
-                                    
-                            } else {
-                                $this->_commandBuffer[]=$commandStr;
-                            }
-                        } elseif ($parsedResponse["action"] != "Talk") {
-                            Logger::warn("openrouterjson: Function not found for {$parsedResponse["action"]}");
-                        }
-                        
-                        $alreadysent[md5($commandStr)]=end($this->_commandBuffer);
-                    
-                    } else {
-                         Logger::warn("openrouterjson: Function not found for {$parsedResponse["action"]} already sent");
-                    }
-                        
-                }
+
+                $executionContext = buildFunctionExecutionContextFromResponse($parsedResponse);
+                Logger::info("openrouterjson: Prepared command payload for " . strval($executionContext["function_code_name"] ?? ""));
+                queueFunctionExecutionCommand($this->_commandBuffer, $alreadysent, $executionContext, "openrouterjson");
                 
                 if (ob_get_level()) @ob_flush();
             } else {

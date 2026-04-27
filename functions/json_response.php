@@ -68,11 +68,9 @@
                 }
 
                 $GLOBALS["FUNC_LIST"][]=$function["name"];
-                if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"] || $function["name"]==$GLOBALS["F_NAMES"]["Brawl"] || $function["name"]==$GLOBALS["F_NAMES"]["AttackHunt"]) {
+                if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"] || $function["name"]==$GLOBALS["F_NAMES"]["Brawl"]) {
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
-                } else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
-                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]}(keywords to search ({$function["description"]})";
                 } else if ($fname == "GiveGoldTo") {
                     require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
                     $goldAmount = getGoldFromMetadata();

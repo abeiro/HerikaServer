@@ -187,10 +187,8 @@ $PROMPTS=array(
             "GetDateTime"=>"({$GLOBALS["HERIKA_NAME"]} answers with the current date and time in short sentence){$GLOBALS["TEMPLATE_DIALOG"]}",
             "MoveTo"=>"({$GLOBALS["HERIKA_NAME"]} talks, eg: makes a comment about movement to the destination){$GLOBALS["TEMPLATE_DIALOG"]}",
             "CheckInventory"=>"({$GLOBALS["HERIKA_NAME"]} talks about inventory and backpack items){$GLOBALS["TEMPLATE_DIALOG"]}",
-            "Inspect"=>"({$GLOBALS["HERIKA_NAME"]} talks about items inspected, short speech){$GLOBALS["TEMPLATE_DIALOG"]}",
             "ReadQuestJournal"=>"({$GLOBALS["HERIKA_NAME"]} talks about quests they have read in the quest journal){$GLOBALS["TEMPLATE_DIALOG"]}",
             "TravelTo"=>"({$GLOBALS["HERIKA_NAME"]} talks about the journey){$GLOBALS["TEMPLATE_DIALOG"]}",
-            "InspectSurroundings"=>"({$GLOBALS["HERIKA_NAME"]} talks about seen actors, or to the actor its looking for){$GLOBALS["TEMPLATE_DIALOG"]}",
             "GiveGoldTo"=>"({$GLOBALS["HERIKA_NAME"]} Talks about coins or gold given.{$GLOBALS["TEMPLATE_DIALOG"]}",
             "Brawl"=>"({$GLOBALS["HERIKA_NAME"]} {$GLOBALS["TEMPLATE_DIALOG"]}"
             
@@ -308,7 +306,7 @@ $PROMPTS=array(
     ],
     // Database Prompt (Welcome)
     "welcome"=>[ 
-        "cue"=>["{$gameRequest[3]}. {$GLOBALS["HERIKA_NAME"]} should Inspect surroundings to see who is in scene. Write {$GLOBALS["HERIKA_NAME"]}'s prose/narration."],
+        "cue"=>["{$gameRequest[3]}. {$GLOBALS["HERIKA_NAME"]} should identify who is in the scene and write {$GLOBALS["HERIKA_NAME"]}'s prose/narration."],
         "player_request"=>["The Narrator: {$gameRequest[3]}"],
     ],
     "cheatmode"=>[

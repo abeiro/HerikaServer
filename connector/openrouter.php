@@ -505,15 +505,17 @@ class openrouter
 
             $parameterArr = json_decode($this->_parameterBuff, true);
             $parameter = current($parameterArr); // Only support for one parameter
+            $functionCodeName = getFunctionCodeName($this->_functionName);
+            $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
+            $commandStr = "Herika|command|$functionCodeName@$parameter\r\n";
 
-            if (!isset($alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")])) {
-                $functionCodeName=getFunctionCodeName($this->_functionName);
-                $this->_commandBuffer[]="Herika|command|$functionCodeName@$parameter\r\n";
+            if (!isset($alreadysent[md5($commandStr)])) {
+                $this->_commandBuffer[] = $commandStr;
                 //echo "Herika|command|$functionCodeName@$parameter\r\n";
 
             }
 
-            $alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")] = "Herika|command|{$this->_functionName}@$parameter\r\n";
+            $alreadysent[md5($commandStr)] = $commandStr;
             if (ob_get_level()) @ob_flush();
 
         }
@@ -560,15 +562,17 @@ class openrouter
         if ($this->_functionName) {
             $parameterArr = json_decode($this->_parameterBuff, true);
             $parameter = current($parameterArr); // Only support for one parameter
+            $functionCodeName = getFunctionCodeName($this->_functionName);
+            $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
+            $commandStr = "Herika|command|$functionCodeName@$parameter\r\n";
 
-            if (!isset($alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")])) {
-                $functionCodeName=getFunctionCodeName($this->_functionName);
-                $this->_commandBuffer[]="Herika|command|$functionCodeName@$parameter\r\n";
+            if (!isset($alreadysent[md5($commandStr)])) {
+                $this->_commandBuffer[] = $commandStr;
                 //echo "Herika|command|$functionCodeName@$parameter\r\n";
 
             }
 
-            $alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")] = "Herika|command|{$this->_functionName}@$parameter\r\n";
+            $alreadysent[md5($commandStr)] = $commandStr;
             if (ob_get_level()) @ob_flush();
         }
 

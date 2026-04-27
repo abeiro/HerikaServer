@@ -466,15 +466,17 @@ class google_openaijson
             $parameterArr = json_decode($this->_parameterBuff, true);
             if (is_array($parameterArr)) {
                 $parameter = current($parameterArr); // Only support for one parameter
+                $functionCodeName = getFunctionCodeName($this->_functionName);
+                $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
+                $commandStr = "{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@$parameter\r\n";
 
-                if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")])) {
-                    $functionCodeName=getFunctionCodeName($this->_functionName);
-                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@$parameter\r\n";
+                if (!isset($alreadysent[md5($commandStr)])) {
+                    $this->_commandBuffer[] = $commandStr;
                     //echo "Herika|command|$functionCodeName@$parameter\r\n";
 
                 }
 
-                $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n";
+                $alreadysent[md5($commandStr)] = $commandStr;
                 if (ob_get_level()) @ob_flush();
             } else 
                 return null;
@@ -483,33 +485,8 @@ class google_openaijson
             $parsedResponse=__jpd_decode_lazy($this->_buffer);   // USE JPD_LAZY?
             if (is_array($parsedResponse)) {
                 if (!empty($parsedResponse["action"])) {
-                    if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
-                        
-                        $functionDef=findFunctionByName($parsedResponse["action"]);
-                        if ($functionDef) {
-                            $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                            if (strlen($functionDef["parameters"]["required"][0] ?? '')>0) {
-                                if (!empty($parsedResponse["target"])) {
-                                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
-                                }
-                                else {
-                                    Logger::warn("Missing required parameter");
-                                }
-                                    
-                            } else {
-                                $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
-                            }
-                        } elseif ($parsedResponse["action"] != "Talk") {
-                            Logger::warn("Function not found for {$parsedResponse["action"]}");
-                        }
-                        
-                        //$functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                        //$this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n";
-                        //echo "Herika|command|$functionCodeName@$parameter\r\n";
-                        $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")]=end($this->_commandBuffer);
-                    
-                    } 
-                        
+                    $executionContext = buildFunctionExecutionContextFromResponse($parsedResponse);
+                    queueFunctionExecutionCommand($this->_commandBuffer, $alreadysent, $executionContext, "google_openaijson");
                 }
                 
                 if (ob_get_level()) @ob_flush();

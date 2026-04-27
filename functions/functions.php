@@ -3,29 +3,20 @@
 // Functions to be provided to OpenAI
 
 $ENABLED_FUNCTIONS_LOCAL = [
-    'Inspect',
-    'LookAt',
-    'InspectSurroundings',
     'MoveTo',
     'OpenInventory',
     'OpenInventory2',
     'Attack',
-    'AttackHunt',
     'Follow',
     'CheckInventory',
     'SheatheWeapon',
     'Relax',
     'LeadTheWayTo',
     'TakeASeat',
-    'ReadQuestJournal',
     'IncreaseWalkSpeed',
     'DecreaseWalkSpeed',
-    'GetDateTime',
-    'SearchDiary',
-    'SetCurrentTask',
     'StopWalk',
     'TravelTo',
-    'SearchMemory',
     'GiveItemToPlayer',
     'FollowPlayer',
     'ComeCloser',
@@ -43,7 +34,6 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'StartRitualCeremony',
     'EndRitualCeremony',
     'Training',
-    'Surrender',
     'RentRoom',
     'HireCarriage',
     'HireFerry',
@@ -85,38 +75,153 @@ if (!isset($GLOBALS["PLAYER_NAME"]) || $GLOBALS["PLAYER_NAME"] === '') {
     $GLOBALS["PLAYER_NAME"] = $safePlayerName;
 }
 
+require_once __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "action_catalog.php";
+
+function getConfiguredPositiveActionGoldCost($codeName, $configKey, $defaultCost)
+{
+    $override = null;
+    if (function_exists('herikaActionCatalogGetCustomConfigValue')) {
+        $override = herikaActionCatalogGetCustomConfigValue($codeName, $configKey, null);
+    }
+
+    $overrideCost = intval($override);
+    if ($override !== null && $overrideCost > 0) {
+        return $overrideCost;
+    }
+
+    return intval($defaultCost);
+}
+
+function formatConfiguredActionGoldCost($cost)
+{
+    $cost = intval($cost);
+    return ($cost === 1) ? '1 gold' : ("{$cost} gold");
+}
+
+function getConfiguredRentRoomCost()
+{
+    return getConfiguredPositiveActionGoldCost("RentRoom", "rent_room_cost", 10);
+}
+
+function getConfiguredHireCarriageCost()
+{
+    return getConfiguredPositiveActionGoldCost("HireCarriage", "hire_carriage_cost", 20);
+}
+
+function getConfiguredHireFerryCost()
+{
+    return getConfiguredPositiveActionGoldCost("HireFerry", "hire_ferry_cost", 50);
+}
+
+function decodeFunctionExecutionParameterPayload($parameter)
+{
+    if (is_array($parameter)) {
+        return $parameter;
+    }
+
+    $text = trim(strval($parameter));
+    if ($text === '' || $text[0] !== '{') {
+        return null;
+    }
+
+    $decoded = json_decode($text, true);
+    return is_array($decoded) ? $decoded : null;
+}
+
+function buildTravelExecutionParameter($parameter, $amount)
+{
+    $payload = decodeFunctionExecutionParameterPayload($parameter);
+    if (!is_array($payload)) {
+        $payload = [];
+    }
+
+    if (!isset($payload["target"]) || trim(strval($payload["target"])) === "") {
+        $payload["target"] = is_array($parameter) ? "" : trim(strval($parameter));
+    }
+
+    $payload["amount"] = intval($amount);
+
+    return json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+}
+
+function buildConfiguredActionParameterFromMetadata($functionCodeName, $parameter)
+{
+    if (!function_exists('herikaGetActionCatalogRow') || !function_exists('herikaActionCatalogResolveTemplateValue')) {
+        return null;
+    }
+
+    $row = herikaGetActionCatalogRow($functionCodeName);
+    if (!is_array($row)) {
+        return null;
+    }
+
+    $metadata = herikaActionCatalogDecodeJson($row['metadata'] ?? [], []);
+    $parameterTemplate = $metadata['parameter_template'] ?? null;
+    if ($parameterTemplate === null || $parameterTemplate === '') {
+        return null;
+    }
+
+    $parameterData = decodeFunctionExecutionParameterPayload($parameter);
+    if (!is_array($parameterData)) {
+        $parameterData = [];
+    }
+
+    $parameterTarget = strval($parameterData['target'] ?? (is_array($parameter) ? '' : trim(strval($parameter))));
+    $context = [
+        'action_name' => $functionCodeName,
+        'parameter_raw' => is_array($parameter)
+            ? json_encode($parameter, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+            : strval($parameter),
+        'parameter_target' => $parameterTarget,
+        'parameters' => $parameterData,
+        'config' => function_exists('herikaActionCatalogGetResolvedCustomConfig')
+            ? herikaActionCatalogGetResolvedCustomConfig($functionCodeName, $row)
+            : [],
+    ];
+
+    $resolved = herikaActionCatalogResolveTemplateValue($parameterTemplate, $context);
+    if (is_array($resolved)) {
+        return json_encode($resolved, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    if ($resolved === null) {
+        return '';
+    }
+
+    return is_string($resolved)
+        ? $resolved
+        : json_encode($resolved, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+}
+
+$rentRoomCost = getConfiguredRentRoomCost();
+$hireCarriageCost = getConfiguredHireCarriageCost();
+$hireFerryCost = getConfiguredHireFerryCost();
+$rentRoomCostText = formatConfiguredActionGoldCost($rentRoomCost);
+$hireCarriageCostText = formatConfiguredActionGoldCost($hireCarriageCost);
+$hireFerryCostText = formatConfiguredActionGoldCost($hireFerryCost);
+
 // We must use internal keys here.
 
-$F_TRANSLATIONS_LOCAL["Inspect"] = "Inspects ONLY an ACTOR/NPC. Wait for result to give a dialogue message.";
-$F_TRANSLATIONS_LOCAL["LookAt"] = "Inspects ONLY an ACTOR/NPC. Wait for result to give a dialogue message.";
-$F_TRANSLATIONS_LOCAL["InspectSurroundings"] = "Looks for actors around.Wait for result to give a dialogue message";
 $F_TRANSLATIONS_LOCAL["MoveTo"] = "Move to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
 $F_TRANSLATIONS_LOCAL["OpenInventory"] = "Initiates trading or exchange ITEMS with {$GLOBALS["PLAYER_NAME"]}.";
 $F_TRANSLATIONS_LOCAL["OpenInventory2"] = "Initiates trading, {$GLOBALS["PLAYER_NAME"]} must give ITEMS to {$GLOBALS["HERIKA_NAME"]}";
 $F_TRANSLATIONS_LOCAL["Attack"] = "Attack with intention to kill an Actor, NPC or entity.";
-$F_TRANSLATIONS_LOCAL["AttackHunt"] = "Hunt with intention to kill an Actor, NPC or entity.";
 $F_TRANSLATIONS_LOCAL["Follow"] = "Move to and follow the specified target actor";
 $F_TRANSLATIONS_LOCAL["CheckInventory"] = "Search in {$GLOBALS["HERIKA_NAME"]}'s inventory, backpack or pocket. List their inventory contents";
 $F_TRANSLATIONS_LOCAL["SheatheWeapon"] = "Sheathes/put away current weapon";
 $F_TRANSLATIONS_LOCAL["Relax"] = "Stop whatever you are doing and relax at the current location.Used to Unwind,Loosen Up,Enjoy Moment,Chill";
 $F_TRANSLATIONS_LOCAL["TravelTo"] = "Use it to move to major locations and landmarks and POIs.";
 $F_TRANSLATIONS_LOCAL["TakeASeat"] = "{$GLOBALS["HERIKA_NAME"]} take a seat at seating location nearby.";
-$F_TRANSLATIONS_LOCAL["ReadQuestJournal"] = "Only use if {$GLOBALS["PLAYER_NAME"]} explicitly ask for a quest. Get info about current quests";
 $F_TRANSLATIONS_LOCAL["IncreaseWalkSpeed"] = "Increase {$GLOBALS["HERIKA_NAME"]} speed when moving or travelling";
 $F_TRANSLATIONS_LOCAL["DecreaseWalkSpeed"] = "Decrease {$GLOBALS["HERIKA_NAME"]} speed when moving or travelling";
-$F_TRANSLATIONS_LOCAL["GetDateTime"] = "Get Current Date and Time";
-$F_TRANSLATIONS_LOCAL["SearchDiary"] = "Read {$GLOBALS["HERIKA_NAME"]}'s diary to make her remember something. Search in diary index";
-$F_TRANSLATIONS_LOCAL["SetCurrentTask"] = "Set the current plan of action or task or quest";
-$F_TRANSLATIONS_LOCAL["ReadDiaryPage"] = "Read {$GLOBALS["HERIKA_NAME"]}'s diary to access a specific topic";
 $F_TRANSLATIONS_LOCAL["StopWalk"] = "Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
 $F_TRANSLATIONS_LOCAL["TravelTo"] = "Only use if {$GLOBALS["PLAYER_NAME"]} explicitly suggest it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. Also known as lead the way";
-$F_TRANSLATIONS_LOCAL["SearchMemory"] = "{$GLOBALS["HERIKA_NAME"]} tries to remember information. REPLY with hashtags";
 $F_TRANSLATIONS_LOCAL["WaitHere"] = "{$GLOBALS["HERIKA_NAME"]} waits and loiters at the current location";
 $F_TRANSLATIONS_LOCAL["GiveItemToPlayer"] = "{$GLOBALS["HERIKA_NAME"]} gives item (property target) to {$GLOBALS["PLAYER_NAME"]} (property listener)";
 $F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"] = "{$GLOBALS["HERIKA_NAME"]} takes amount (property target) of gold from {$GLOBALS["PLAYER_NAME"]}, once {$GLOBALS["PLAYER_NAME"]} is agree. infer amount from context.";
-$F_TRANSLATIONS_LOCAL["RentRoom"] = "{$GLOBALS["HERIKA_NAME"]} rents a room to {$GLOBALS["PLAYER_NAME"]} for 10 gold coins. Only innkeepers can use this action and it only applies to {$GLOBALS["PLAYER_NAME"]}.";
-$F_TRANSLATIONS_LOCAL["HireCarriage"] = "{$GLOBALS["HERIKA_NAME"]} accepts carriage fare and transports {$GLOBALS["PLAYER_NAME"]} to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
-$F_TRANSLATIONS_LOCAL["HireFerry"] = "{$GLOBALS["HERIKA_NAME"]} accepts ferry fare and transports {$GLOBALS["PLAYER_NAME"]} to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
+$F_TRANSLATIONS_LOCAL["RentRoom"] = "{$GLOBALS["HERIKA_NAME"]} rents a room to {$GLOBALS["PLAYER_NAME"]} for {$rentRoomCostText}. Only innkeepers can use this action and it only applies to {$GLOBALS["PLAYER_NAME"]}.";
+$F_TRANSLATIONS_LOCAL["HireCarriage"] = "{$GLOBALS["HERIKA_NAME"]} accepts {$hireCarriageCostText} for carriage travel and transports {$GLOBALS["PLAYER_NAME"]} to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
+$F_TRANSLATIONS_LOCAL["HireFerry"] = "{$GLOBALS["HERIKA_NAME"]} accepts {$hireFerryCostText} for ferry travel and transports {$GLOBALS["PLAYER_NAME"]} to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
 $F_TRANSLATIONS_LOCAL["AddBounty"] = "{$GLOBALS["HERIKA_NAME"]} adds a crime bounty to {$GLOBALS["PLAYER_NAME"]} for a witnessed or reported crime. Guard-only action.";
 $F_TRANSLATIONS_LOCAL["PayBounty"] = "{$GLOBALS["PLAYER_NAME"]} pays off their bounty to {$GLOBALS["HERIKA_NAME"]}. Stolen items are confiscated and the matter is resolved immediately. Guard-only action.";
 $F_TRANSLATIONS_LOCAL["ArrestPlayer"] = "{$GLOBALS["HERIKA_NAME"]} attempts to arrest {$GLOBALS["PLAYER_NAME"]}. The player can submit or resist. Guard-only action for serious crimes or refusal to pay.";
@@ -139,39 +244,28 @@ $F_TRANSLATIONS_LOCAL["StartRitualCeremony"] = "Participates in a ritual or cere
 $F_TRANSLATIONS_LOCAL["EndRitualCeremony"] = "Concludes a ritual or ceremony, marking its completion.";
     
 $F_TRANSLATIONS_LOCAL["Training"] = "Opens training menu to improve skills with a trainer.";
-$F_TRANSLATIONS_LOCAL["Surrender"] = "{$GLOBALS["HERIKA_NAME"]} surrenders to avoid conflict or harm.";
 $F_TRANSLATIONS_LOCAL["EndConversation"] = "{$GLOBALS["HERIKA_NAME"]} ends the conversation and becomes unavailable to talk for a short time.";
 
-$F_RETURNMESSAGES_LOCAL["Inspect"] = "{$GLOBALS["HERIKA_NAME"]} inspects #TARGET# and see this: #RESULT#";
-$F_RETURNMESSAGES_LOCAL["LookAt"] = "LOOK at or Inspects NPC, Actor, or being OUTFIT and GEAR";
-$F_RETURNMESSAGES_LOCAL["InspectSurroundings"] = "{$GLOBALS["HERIKA_NAME"]} takes a look around and see this: #RESULT#";
 $F_RETURNMESSAGES_LOCAL["MoveTo"] = "Walk to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
 $F_RETURNMESSAGES_LOCAL["OpenInventory"] = "Initiates trading or exchange items with {$GLOBALS["PLAYER_NAME"]}.";
 $F_RETURNMESSAGES_LOCAL["OpenInventory2"] = "{$GLOBALS["PLAYER_NAME"]} give items to {$GLOBALS["HERIKA_NAME"]}. Accept gift.";
 $F_RETURNMESSAGES_LOCAL["Attack"] = "{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
-$F_RETURNMESSAGES_LOCAL["AttackHunt"] = "{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES_LOCAL["Follow"] = "{$GLOBALS["HERIKA_NAME"]} follows #TARGET# ";
 $F_RETURNMESSAGES_LOCAL["CheckInventory"] = "{$GLOBALS["HERIKA_NAME"]}'s INVENTORY:#RESULT#";
 $F_RETURNMESSAGES_LOCAL["SheatheWeapon"] = "Sheathes/put away current weapon";
 $F_RETURNMESSAGES_LOCAL["Relax"] = "{$GLOBALS["HERIKA_NAME"]} is relaxed. Time to enjoy life.";
 $F_RETURNMESSAGES_LOCAL["LeadTheWayTo"] = "Only use if {$GLOBALS["PLAYER_NAME"]} explicitly orders it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. ";
 $F_RETURNMESSAGES_LOCAL["TakeASeat"] = "{$GLOBALS["HERIKA_NAME"]} seats in nearby chair or furniture ";
-$F_RETURNMESSAGES_LOCAL["ReadQuestJournal"] = "";
 $F_RETURNMESSAGES_LOCAL["IncreaseWalkSpeed"] = "Increases {$GLOBALS["HERIKA_NAME"]} speed/pace when moving or travelling";
 $F_RETURNMESSAGES_LOCAL["DecreaseWalkSpeed"] = "Decreases {$GLOBALS["HERIKA_NAME"]} speed/pace when moving or travelling";
-$F_RETURNMESSAGES_LOCAL["GetDateTime"] = "Get Current Date and Time";
-$F_RETURNMESSAGES_LOCAL["SearchDiary"] = "Read {$GLOBALS["HERIKA_NAME"]}'s diary to make her remember something. Search in diary index";
-$F_RETURNMESSAGES_LOCAL["SetCurrentTask"] = "Set the current plan of action or task or quest";
-$F_RETURNMESSAGES_LOCAL["ReadDiaryPage"] = "Read {$GLOBALS["HERIKA_NAME"]}'s diary to access a specific topic";
 $F_RETURNMESSAGES_LOCAL["StopWalk"] = "Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
 $F_RETURNMESSAGES_LOCAL["TravelTo"] = "{$GLOBALS["HERIKA_NAME"]} begins travelling to #TARGET#";
-$F_RETURNMESSAGES_LOCAL["SearchMemory"] = "{$GLOBALS["HERIKA_NAME"]} tries to remember information. JUST REPLY something like 'Let me think' and wait";
 $F_RETURNMESSAGES_LOCAL["WaitHere"] = "{$GLOBALS["HERIKA_NAME"]} waits and stands at the place";
 $F_RETURNMESSAGES_LOCAL["GiveItemToPlayer"] = "{$GLOBALS["HERIKA_NAME"]} gave #TARGET# to {$GLOBALS["PLAYER_NAME"]}.If this a transaction, maybe TakeGoldFromPlayer is needed.";
 $F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"] = "{$GLOBALS["PLAYER_NAME"]} gave #TARGET# coins to {$GLOBALS["HERIKA_NAME"]}. If this a transaction, maybe GiveItemToPlayer is needed.";
-$F_RETURNMESSAGES_LOCAL["RentRoom"] = "{$GLOBALS["HERIKA_NAME"]} rented a room to {$GLOBALS["PLAYER_NAME"]} for 10 gold.";
-$F_RETURNMESSAGES_LOCAL["HireCarriage"] = "{$GLOBALS["HERIKA_NAME"]} accepted the fare to #TARGET# and ended the conversation.";
-$F_RETURNMESSAGES_LOCAL["HireFerry"] = "{$GLOBALS["HERIKA_NAME"]} accepted the ferry fare to #TARGET# and ended the conversation.";
+$F_RETURNMESSAGES_LOCAL["RentRoom"] = "{$GLOBALS["HERIKA_NAME"]} rented a room to {$GLOBALS["PLAYER_NAME"]} for {$rentRoomCostText}.";
+$F_RETURNMESSAGES_LOCAL["HireCarriage"] = "{$GLOBALS["HERIKA_NAME"]} accepted the {$hireCarriageCostText} carriage fare to #TARGET# and ended the conversation.";
+$F_RETURNMESSAGES_LOCAL["HireFerry"] = "{$GLOBALS["HERIKA_NAME"]} accepted the {$hireFerryCostText} ferry fare to #TARGET# and ended the conversation.";
 $F_RETURNMESSAGES_LOCAL["AddBounty"] = "{$GLOBALS["HERIKA_NAME"]} added a bounty for #TARGET# to {$GLOBALS["PLAYER_NAME"]}.";
 $F_RETURNMESSAGES_LOCAL["PayBounty"] = "{$GLOBALS["PLAYER_NAME"]} paid off their bounty to {$GLOBALS["HERIKA_NAME"]}, and stolen items were removed from inventory.";
 $F_RETURNMESSAGES_LOCAL["ArrestPlayer"] = "{$GLOBALS["HERIKA_NAME"]} attempted to arrest {$GLOBALS["PLAYER_NAME"]}.";
@@ -193,37 +287,26 @@ $F_RETURNMESSAGES_LOCAL["StartRitualCeremony"] = "{$GLOBALS["HERIKA_NAME"]} begi
 $F_RETURNMESSAGES_LOCAL["EndRitualCeremony"] = "{$GLOBALS["HERIKA_NAME"]} concludes a ritual or ceremony, marking its completion.";
 $F_RETURNMESSAGES_LOCAL["Training"] = "{$GLOBALS["HERIKA_NAME"]} opens the training menu.";
 
-$F_RETURNMESSAGES_LOCAL["Surrender"] = "{$GLOBALS["HERIKA_NAME"]} surrenders to avoid conflict or harm.";
 // What is this?. We can translate functions or give them a custom name.
 // This array will handle translations. Plugin must receive the codename always.
 
-$F_NAMES_LOCAL["Inspect"] = "Inspect";
-$F_NAMES_LOCAL["LookAt"] = "LookAt";
-$F_NAMES_LOCAL["InspectSurroundings"] = "InspectSurroundings";
 $F_NAMES_LOCAL["MoveTo"] = "MoveTo";
-$F_NAMES_LOCAL["OpenInventory"] = "ExchangeItems";
+$F_NAMES_LOCAL["OpenInventory"] = "TradeItems";
 $F_NAMES_LOCAL["OpenInventory2"] = "AcceptGift";
 $F_NAMES_LOCAL["Attack"] = "Attack";
-$F_NAMES_LOCAL["AttackHunt"] = "Hunt";
 $F_NAMES_LOCAL["Follow"] = "Follow";
-$F_NAMES_LOCAL["CheckInventory"] = "ListInventory";
+$F_NAMES_LOCAL["CheckInventory"] = "CheckInventory";
 $F_NAMES_LOCAL["SheatheWeapon"] = "SheatheWeapon";
-$F_NAMES_LOCAL["Relax"] = "LetsRelax";
+$F_NAMES_LOCAL["Relax"] = "Relax";
 //$F_NAMES_LOCAL["LeadTheWayTo"]="LeadTheWayTo";
 $F_NAMES_LOCAL["TakeASeat"] = "TakeASeat";
-$F_NAMES_LOCAL["ReadQuestJournal"] = "ReadQuestJournal";
 $F_NAMES_LOCAL["IncreaseWalkSpeed"] = "IncreaseWalkSpeed";
 $F_NAMES_LOCAL["DecreaseWalkSpeed"] = "DecreaseWalkSpeed";
-$F_NAMES_LOCAL["GetDateTime"] = "GetDateTime";
-$F_NAMES_LOCAL["SearchDiary"] = "SearchDiary";
-$F_NAMES_LOCAL["SetCurrentTask"] = "SetCurrentTask";
-$F_NAMES_LOCAL["ReadDiaryPage"] = "ReadDiaryPage";
 $F_NAMES_LOCAL["StopWalk"] = "StopWalk";
 $F_NAMES_LOCAL["TravelTo"] = "TravelTo";
-$F_NAMES_LOCAL["SearchMemory"] = "TryToRemember";
 $F_NAMES_LOCAL["WaitHere"] = "WaitHere";
 $F_NAMES_LOCAL["GiveItemToPlayer"] = "GiveItemToPlayer";
-$F_NAMES_LOCAL["TakeGoldFromPlayer"] = "TakeMoneyFrom{$GLOBALS["PLAYER_NAME"]}"; // Mmm
+$F_NAMES_LOCAL["TakeGoldFromPlayer"] = "TakeGoldFrom{$GLOBALS["PLAYER_NAME"]}";
 $F_NAMES_LOCAL["RentRoom"] = "RentRoom";
 $F_NAMES_LOCAL["HireCarriage"] = "HireCarriage";
 $F_NAMES_LOCAL["HireFerry"] = "HireFerry";
@@ -233,28 +316,47 @@ $F_NAMES_LOCAL["ArrestPlayer"] = "ArrestPlayer";
 $F_NAMES_LOCAL["ForgiveCrime"] = "ForgiveCrime";
 $F_NAMES_LOCAL["FollowPlayer"] = "FollowPlayer";
 $F_NAMES_LOCAL["ComeCloser"] = "ComeCloser";
-$F_NAMES_LOCAL["Brawl"] = "Fight";
-$F_NAMES_LOCAL["ReturnBackHome"] = "ReturnBackHome";
+$F_NAMES_LOCAL["Brawl"] = "Brawl";
+$F_NAMES_LOCAL["ReturnBackHome"] = "ReturnHome";
 $F_NAMES_LOCAL["GiveGoldTo"] = "GiveGoldTo";
 $F_NAMES_LOCAL["GiveItemTo"] = "GiveItemTo";
 $F_NAMES_LOCAL["PickupItem"] = "PickupItem";
 $F_NAMES_LOCAL["GoToSleep"] = "GoToSleep";
 $F_NAMES_LOCAL["UseSoulGaze"] = "UseSoulGaze";
 $F_NAMES_LOCAL["CastSpell"] = "CastSpell";
-$F_NAMES_LOCAL["MakeFollower"] = "JoinTo{$GLOBALS["PLAYER_NAME"]}Squad";
+$F_NAMES_LOCAL["MakeFollower"] = "Join{$GLOBALS["PLAYER_NAME"]}Party";
 
-$F_NAMES_LOCAL["Toast"] = "MakeAToast";
+$F_NAMES_LOCAL["Toast"] = "Toast";
 $F_NAMES_LOCAL["Drink"] = "Drink";
 $F_NAMES_LOCAL["StartRitualCeremony"] = "StartRitualCeremony";
 $F_NAMES_LOCAL["EndRitualCeremony"] = "EndRitualCeremony";
 
 $F_NAMES_LOCAL["Training"] = "Training";
-$F_NAMES_LOCAL["Surrender"] = "Surrender";
 $F_NAMES_LOCAL["EndConversation"] = "EndConversation";
 
 if (isset($GLOBALS["CORE_LANG"])) {
     if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lang" . DIRECTORY_SEPARATOR . $GLOBALS["CORE_LANG"] . DIRECTORY_SEPARATOR . "functions.php")) {
         require_once __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lang" . DIRECTORY_SEPARATOR . $GLOBALS["CORE_LANG"] . DIRECTORY_SEPARATOR . "functions.php";
+    }
+}
+
+$herikaRetiredActionCodes = [
+    'AttackHunt',
+    'Inspect',
+    'InspectSurroundings',
+    'LookAt',
+    'Surrender',
+    'ReadQuestJournal',
+    'GetDateTime',
+    'SearchDiary',
+    'SetCurrentTask',
+    'ReadDiaryPage',
+    'SearchMemory',
+];
+$herikaRetiredActionNames = [];
+foreach ($herikaRetiredActionCodes as $herikaRetiredActionCode) {
+    if (isset($F_NAMES_LOCAL[$herikaRetiredActionCode])) {
+        $herikaRetiredActionNames[] = $F_NAMES_LOCAL[$herikaRetiredActionCode];
     }
 }
 
@@ -296,52 +398,6 @@ $hireFerryDestinations = [
 $crimeTypes = ["Assault", "Murder", "Theft", "Pickpocketing", "Trespassing", "Jailbreak", "Custom"];
 
 $GLOBALS["FUNCTIONS"] = [
-    [
-        "name" => $F_NAMES_LOCAL["Inspect"],
-        "description" => $F_TRANSLATIONS_LOCAL["Inspect"],
-        "parameters" => [
-            "type" => "object",
-            "properties" => [
-                "target" => [
-                    "type" => "string",
-                    "description" => "Target NPC, Actor, or being",
-                    "enum" => isset($GLOBALS['FUNCTION_PARM_INSPECT']) ? $GLOBALS['FUNCTION_PARM_INSPECT'] : [],
-
-                ],
-            ],
-            "required" => ["target"],
-        ],
-    ],
-    [
-        "name" => $F_NAMES_LOCAL["InspectSurroundings"],
-        "description" => $F_TRANSLATIONS_LOCAL["InspectSurroundings"],
-        "parameters" => [
-            "type" => "object",
-            "properties" => [
-                "target" => [
-                    "type" => "string",
-                    "description" => "Keep it blank",
-                ],
-            ],
-            "required" => [],
-        ],
-    ],
-    [
-        "name" => $F_NAMES_LOCAL["LookAt"],
-        "description" => $F_TRANSLATIONS_LOCAL["Inspect"],
-        "parameters" => [
-            "type" => "object",
-            "properties" => [
-                "target" => [
-                    "type" => "string",
-                    "description" => "Target NPC, Actor, or being",
-                    "enum" => isset($GLOBALS['FUNCTION_PARM_INSPECT']) ? $GLOBALS['FUNCTION_PARM_INSPECT'] : [],
-
-                ],
-            ],
-            "required" => ["target"],
-        ],
-    ],
     [
         "name" => $F_NAMES_LOCAL["MoveTo"],
         "description" => $F_TRANSLATIONS_LOCAL["MoveTo"],
@@ -394,20 +450,6 @@ $GLOBALS["FUNCTIONS"] = [
                 "target" => [
                     "type" => "string",
                     "description" => "Target NPC, Actor, or being",
-                ],
-            ],
-            "required" => ["target"],
-        ],
-    ],
-    [
-        "name" => $F_NAMES_LOCAL["AttackHunt"],
-        "description" => $F_TRANSLATIONS_LOCAL["AttackHunt"],
-        "parameters" => [
-            "type" => "object",
-            "properties" => [
-                "target" => [
-                    "type" => "string",
-                    "description" => "Target animal",
                 ],
             ],
             "required" => ["target"],
@@ -514,20 +556,6 @@ $GLOBALS["FUNCTIONS"] = [
         ],
     ],
     [
-        "name" => $F_NAMES_LOCAL["ReadQuestJournal"],
-        "description" => $F_TRANSLATIONS_LOCAL["ReadQuestJournal"],
-        "parameters" => [
-            "type" => "object",
-            "properties" => [
-                "id_quest" => [
-                    "type" => "string",
-                    "description" => "Specific quest to get info for, or blank to get all",
-                ],
-            ],
-            "required" => [""],
-        ],
-    ],
-    [
         "name" => $F_NAMES_LOCAL["IncreaseWalkSpeed"],
         "description" => $F_TRANSLATIONS_LOCAL["IncreaseWalkSpeed"],
         "parameters" => [
@@ -560,49 +588,6 @@ $GLOBALS["FUNCTIONS"] = [
         ],
     ],
     [
-        "name" => $F_NAMES_LOCAL["GetDateTime"],
-        "description" => $F_TRANSLATIONS_LOCAL["GetDateTime"],
-        "parameters" => [
-            "type" => "object",
-            "properties" => [
-                "datestring" => [
-                    "type" => "string",
-                    "description" => "Formatted date and time",
-                ],
-
-            ],
-            "required" => [],
-        ],
-    ],
-    [
-        "name" => $F_NAMES_LOCAL["SearchDiary"],
-        "description" => $F_TRANSLATIONS_LOCAL["SearchDiary"],
-        "parameters" => [
-            "type" => "object",
-            "properties" => [
-                "keyword" => [
-                    "type" => "string",
-                    "description" => "keyword to search in full-text query syntax",
-                ],
-            ],
-            "required" => [""],
-        ],
-    ],
-    [
-        "name" => $F_NAMES_LOCAL["SetCurrentTask"],
-        "description" => $F_TRANSLATIONS_LOCAL["SetCurrentTask"],
-        "parameters" => [
-            "type" => "object",
-            "properties" => [
-                "description" => [
-                    "type" => "string",
-                    "description" => "Short description of current task talked by the party",
-                ],
-            ],
-            "required" => ["description"],
-        ],
-    ],
-    [
         "name" => $F_NAMES_LOCAL["StopWalk"],
         "description" => $F_TRANSLATIONS_LOCAL["StopWalk"],
         "parameters" => [
@@ -611,20 +596,6 @@ $GLOBALS["FUNCTIONS"] = [
                 "target" => [
                     "type" => "string",
                     "description" => "action",
-                ],
-            ],
-            "required" => [""],
-        ],
-    ],
-    [
-        "name" => $F_NAMES_LOCAL["SearchMemory"],
-        "description" => $F_TRANSLATIONS_LOCAL["SearchMemory"],
-        "parameters" => [
-            "type" => "object",
-            "properties" => [
-                "target" => [
-                    "type" => "string",
-                    "description" => "",
                 ],
             ],
             "required" => [""],
@@ -1019,20 +990,6 @@ $GLOBALS["FUNCTIONS"] = [
             "required" => [""],
         ],
     ],
-      [
-        "name" => $F_NAMES_LOCAL["Surrender"],
-        "description" => $F_TRANSLATIONS_LOCAL["Surrender"],
-        "parameters" => [
-            "type" => "object",
-            "properties" => [
-                "target" => [
-                    "type" => "string",
-                    "description" => "Keep it blank",
-                ],
-            ],
-            "required" => [""],
-        ],
-    ],
     [
         "name" => $F_NAMES_LOCAL["EndConversation"],
         "description" => $F_TRANSLATIONS_LOCAL["EndConversation"],
@@ -1049,29 +1006,38 @@ $GLOBALS["FUNCTIONS"] = [
     ],
 ];
 
+foreach ($herikaRetiredActionCodes as $herikaRetiredActionCode) {
+    unset($F_TRANSLATIONS_LOCAL[$herikaRetiredActionCode], $F_RETURNMESSAGES_LOCAL[$herikaRetiredActionCode], $F_NAMES_LOCAL[$herikaRetiredActionCode]);
+}
+
+$GLOBALS["F_TRANSLATIONS"] = $F_TRANSLATIONS_LOCAL;
+$GLOBALS["F_RETURNMESSAGES"] = $F_RETURNMESSAGES_LOCAL;
+$GLOBALS["F_NAMES"] = $F_NAMES_LOCAL;
+$GLOBALS["FUNCTIONS"] = array_values(array_filter($GLOBALS["FUNCTIONS"], function ($functionEntry) use ($herikaRetiredActionNames) {
+    return !in_array($functionEntry["name"] ?? "", $herikaRetiredActionNames, true);
+}));
+
 // Mantain a copy of all functions defined here
 foreach ($GLOBALS["FUNCTIONS"] as $n => $functionEntry) {
     $GLOBALS["BASE_FUNCTIONS"][getFunctionCodeName($functionEntry["name"])] = $GLOBALS["FUNCTIONS"][$n];
 }
+$HERIKA_BASE_FUNCTIONS_LOCAL = $GLOBALS["BASE_FUNCTIONS"];
 
-// This function only is offered when SearchDiary
-$FUNCTIONS_GHOSTED_LOCAL = [
-    "name" => $F_NAMES_LOCAL["ReadDiaryPage"],
-    "description" => $F_TRANSLATIONS_LOCAL["ReadDiaryPage"],
-    "parameters" => [
-        "type" => "object",
-        "properties" => [
-            "page" => [
-                "type" => "string",
-                "description" => "topic to search in full-text query syntax",
-            ],
-        ],
-        "required" => ["topic"],
-    ],
-]
-;
+function getFunctionNameAliases()
+{
+    $playerName = strval($GLOBALS["PLAYER_NAME"] ?? "Player");
 
-$GLOBALS["FUNCTIONS_GHOSTED"] = $FUNCTIONS_GHOSTED_LOCAL;
+    return [
+        'ExchangeItems' => 'OpenInventory',
+        'ListInventory' => 'CheckInventory',
+        'LetsRelax' => 'Relax',
+        "TakeMoneyFrom{$playerName}" => 'TakeGoldFromPlayer',
+        'Fight' => 'Brawl',
+        'ReturnBackHome' => 'ReturnBackHome',
+        "JoinTo{$playerName}Squad" => 'MakeFollower',
+        'MakeAToast' => 'Toast',
+    ];
+}
 
 function getFunctionCodeName($key)
 {
@@ -1079,10 +1045,43 @@ function getFunctionCodeName($key)
         return false;
     }
 
-    $functionCode = array_search($key, $GLOBALS["F_NAMES"]);
+    if (isset($GLOBALS["F_NAMES"][$key])) {
+        return $key;
+    }
 
-    // If not found, return false (function will be filtered out)
-    return $functionCode !== false ? $functionCode : false;
+    if (isset($GLOBALS["HERIKA_ACTION_NAME_PREFERRED_CODE"]) && is_array($GLOBALS["HERIKA_ACTION_NAME_PREFERRED_CODE"])) {
+        $preferredCode = $GLOBALS["HERIKA_ACTION_NAME_PREFERRED_CODE"][$key] ?? false;
+        if ($preferredCode !== false) {
+            return $preferredCode;
+        }
+    }
+
+    $matchingCodes = [];
+    foreach ($GLOBALS["F_NAMES"] as $functionCode => $functionName) {
+        if ($functionName === $key) {
+            $matchingCodes[] = $functionCode;
+        }
+    }
+
+    if (count($matchingCodes) === 1) {
+        return $matchingCodes[0];
+    }
+
+    if (count($matchingCodes) > 1) {
+        foreach ($matchingCodes as $matchingCode) {
+            if (function_exists('herikaGetActionCatalogRow')) {
+                $row = herikaGetActionCatalogRow($matchingCode);
+                if (is_array($row) && herikaActionCatalogRowIsAvailableInCurrentMode($row) && !empty(($row['metadata'] ?? [])['builtin']) === false) {
+                    return $matchingCode;
+                }
+            }
+        }
+
+        return $matchingCodes[0];
+    }
+
+    $aliases = getFunctionNameAliases();
+    return $aliases[$key] ?? false;
 }
 
 function getFunctionTrlName($key)
@@ -1093,6 +1092,191 @@ function getFunctionTrlName($key)
         return $key;
     }
 
+}
+
+function getSingleFunctionParameterValue($functionDef, $parsedResponse)
+{
+    if (!is_array($parsedResponse)) {
+        return "";
+    }
+
+    $properties = $functionDef["parameters"]["properties"] ?? [];
+    if (is_array($properties) && count($properties) === 1) {
+        $parameterName = array_key_first($properties);
+        if (is_string($parameterName) && array_key_exists($parameterName, $parsedResponse)) {
+            return $parsedResponse[$parameterName];
+        }
+    }
+
+    return $parsedResponse["target"] ?? "";
+}
+
+function normalizeFunctionParameterValueFromSchema($parameterSchema, $value)
+{
+    if (!is_array($parameterSchema)) {
+        return $value;
+    }
+
+    $parameterType = strtolower(trim(strval($parameterSchema["type"] ?? "")));
+    if ($parameterType === "integer" && is_numeric($value)) {
+        return intval(round(floatval($value)));
+    }
+
+    if ($parameterType === "number" && is_numeric($value)) {
+        return floatval($value);
+    }
+
+    if ($parameterType === "boolean") {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        $text = strtolower(trim(strval($value)));
+        if (in_array($text, ["1", "true", "yes", "on", "t"], true)) {
+            return true;
+        }
+        if (in_array($text, ["0", "false", "no", "off", "f"], true)) {
+            return false;
+        }
+    }
+
+    return $value;
+}
+
+function functionDefinitionHasRequiredParameters($functionDef)
+{
+    return is_array($functionDef) && count($functionDef["parameters"]["required"] ?? []) > 0;
+}
+
+function functionExecutionParameterValueIsEmpty($parameterValue)
+{
+    if (is_array($parameterValue)) {
+        return count($parameterValue) === 0;
+    }
+
+    return trim(strval($parameterValue)) === "";
+}
+
+function buildFunctionParameterValueFromResponse($functionDef, $parsedResponse)
+{
+    $properties = $functionDef["parameters"]["properties"] ?? [];
+    $requiredParameters = [];
+    foreach (($functionDef["parameters"]["required"] ?? []) as $requiredParameter) {
+        $requiredParameter = trim(strval($requiredParameter));
+        if ($requiredParameter !== "") {
+            $requiredParameters[] = $requiredParameter;
+        }
+    }
+
+    $missingRequiredParameters = [];
+    foreach ($requiredParameters as $requiredParameter) {
+        if (!array_key_exists($requiredParameter, $parsedResponse) || $parsedResponse[$requiredParameter] === "" || $parsedResponse[$requiredParameter] === null) {
+            $missingRequiredParameters[] = $requiredParameter;
+        }
+    }
+
+    if (count($properties) > 1) {
+        $parameters = [];
+        foreach ($properties as $parameterName => $parameterSchema) {
+            if (array_key_exists($parameterName, $parsedResponse)) {
+                $parameters[$parameterName] = normalizeFunctionParameterValueFromSchema($parameterSchema, $parsedResponse[$parameterName]);
+            }
+        }
+
+        return [
+            "parameter_value" => $parameters,
+            "missing_required" => $missingRequiredParameters,
+        ];
+    }
+
+    return [
+        "parameter_value" => getSingleFunctionParameterValue($functionDef, $parsedResponse),
+        "missing_required" => $missingRequiredParameters,
+    ];
+}
+
+function buildFunctionExecutionContextFromResponse($parsedResponse)
+{
+    $actionName = trim(strval($parsedResponse["action"] ?? ""));
+    $functionDef = $actionName !== "" ? findFunctionByName($actionName) : null;
+    $functionCodeName = $actionName;
+    $parameterValue = $parsedResponse["target"] ?? "";
+    $missingRequired = [];
+
+    if (is_array($functionDef)) {
+        $resolvedCodeName = getFunctionCodeName($actionName);
+        if (is_string($resolvedCodeName) && $resolvedCodeName !== "") {
+            $functionCodeName = $resolvedCodeName;
+        }
+
+        $parameterData = buildFunctionParameterValueFromResponse($functionDef, is_array($parsedResponse) ? $parsedResponse : []);
+        $parameterValue = $parameterData["parameter_value"];
+        $missingRequired = $parameterData["missing_required"];
+    }
+
+    return [
+        "action_name" => $actionName,
+        "function_def" => $functionDef,
+        "function_found" => is_array($functionDef),
+        "function_code_name" => $functionCodeName,
+        "parameter_value" => $parameterValue,
+        "parameter_string" => buildFunctionExecutionParameter($functionCodeName, $parameterValue),
+        "missing_required" => $missingRequired,
+        "has_required_parameters" => functionDefinitionHasRequiredParameters($functionDef),
+        "parameter_is_empty" => functionExecutionParameterValueIsEmpty($parameterValue),
+    ];
+}
+
+function queueFunctionExecutionCommand(&$commandBuffer, &$alreadySent, $executionContext, $connectorName, $actorName = null)
+{
+    $actionName = trim(strval($executionContext["action_name"] ?? ""));
+    if ($actionName === "") {
+        return false;
+    }
+
+    if (empty($executionContext["function_found"])) {
+        if ($actionName !== "Talk") {
+            Logger::warn("{$connectorName}: Function not found for {$actionName}");
+        }
+        return false;
+    }
+
+    $missingRequired = $executionContext["missing_required"] ?? [];
+    if (count($missingRequired) > 0) {
+        Logger::warn("{$connectorName}: Missing required parameter(s) for " . strval($executionContext["function_code_name"] ?? $actionName) . ": " . implode(", ", $missingRequired));
+    }
+
+    if (!empty($executionContext["has_required_parameters"]) && !empty($executionContext["parameter_is_empty"])) {
+        return false;
+    }
+
+    $actorName = ($actorName !== null && trim(strval($actorName)) !== "") ? strval($actorName) : strval($GLOBALS["HERIKA_NAME"] ?? "Herika");
+    $commandStr = $actorName . "|command|" . strval($executionContext["function_code_name"] ?? "") . "@" . strval($executionContext["parameter_string"] ?? "") . "\r\n";
+    $commandHash = md5($commandStr);
+
+    if (isset($alreadySent[$commandHash])) {
+        return false;
+    }
+
+    $commandBuffer[] = $commandStr;
+    $alreadySent[$commandHash] = $commandStr;
+    return true;
+}
+
+function buildFunctionExecutionParameter($functionCodeName, $parameter)
+{
+    $functionCodeName = trim(strval($functionCodeName));
+
+    $configuredPayload = buildConfiguredActionParameterFromMetadata($functionCodeName, $parameter);
+    if ($configuredPayload !== null) {
+        return $configuredPayload;
+    }
+
+    if (is_array($parameter)) {
+        return json_encode($parameter, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    return strval($parameter);
 }
 
 function findFunctionByName($name)
@@ -1151,109 +1335,23 @@ function unsetFunction($functionCodename)
 
 }
 
-if (isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"]) {
-    $GLOBALS["ENABLED_FUNCTIONS"] = [
-        'Inspect',
-        //'LookAt',
-        'InspectSurroundings',
-        'MoveTo',
-        'OpenInventory',
-        'OpenInventory2',
-        'Attack',
-        'AttackHunt',
-        'TravelTo',
-        'Follow',
-        'CheckInventory', // Commented out - redundant since <inventory> tag already shows NPC's items. Could be repurposed to check OTHER NPCs' inventories later.
-        //'SheatheWeapon',
-        'Relax',
-        //'LeadTheWayTo',
-        'TakeASeat',
-        'IncreaseWalkSpeed',
-        'DecreaseWalkSpeed',
-        //'GetDateTime',
-        //'SearchDiary',
-        //'SetCurrentTask',
-        //'SearchMemory',
-        //'StopWalk'
-        'WaitHere',
-        'ComeCloser',
-        //'GiveItemToPlayer',
-        'TakeGoldFromPlayer',
-        'RentRoom',
-        'HireCarriage',
-        'HireFerry',
-        'AddBounty',
-        'PayBounty',
-        'ArrestPlayer',
-        'ForgiveCrime',
-        'FollowPlayer',
-        'Brawl',
-        'GiveGoldTo',
-        'GiveItemTo',
-        'PickupItem',
-        'GoToSleep',
-        'UseSoulGaze',
-        'CastSpell',
-        'MakeFollower',
-        'Drink',
-        'Toast',
-        'StartRitualCeremony',
-        'EndRitualCeremony',
-        'Training',
-        'EndConversation'
-
-    ];
-    error_log("[DEBUG functions.php] IS_NPC=true, CastSpell in ENABLED: " . (in_array('CastSpell', $GLOBALS["ENABLED_FUNCTIONS"]) ? "YES" : "NO"));
-} else {
-    $GLOBALS["ENABLED_FUNCTIONS"] = [
-        'Inspect',
-        //'LookAt',
-        'InspectSurroundings',
-        //'MoveTo',
-        'OpenInventory',
-        'OpenInventory2',
-        'Attack',
-        'AttackHunt',
-        'TravelTo',
-        'Follow',
-        'CheckInventory', // Commented out - redundant since <inventory> tag already shows NPC's items. Could be repurposed to check OTHER NPCs' inventories later.
-        'SheatheWeapon',
-        'Relax',
-        //'LeadTheWayTo',
-        'TakeASeat',
-        'ReadQuestJournal',
-        'IncreaseWalkSpeed',
-        'DecreaseWalkSpeed',
-        'WaitHere',
-        //'SetCurrentTask',
-        'ComeCloser',
-        //'GiveItemToPlayer',
-        'TakeGoldFromPlayer',
-        'RentRoom',
-        'HireCarriage',
-        'HireFerry',
-        'AddBounty',
-        'PayBounty',
-        'ArrestPlayer',
-        'ForgiveCrime',
-        'Brawl',
-        'GiveGoldTo',
-        'GiveItemTo',
-        'PickupItem',
-        'GoToSleep',
-        'UseSoulGaze',
-        'CastSpell',
-        'Drink',
-        'Toast',
-        'Training',
-        'StartRitualCeremony',
-        'EndRitualCeremony',
-        //'GetDateTime',
-        //'SearchDiary',
-        //'SearchMemory',
-        //'StopWalk'
-    ];
+$seedActionRows = herikaBuildActionCatalogSeedRows(
+    $F_NAMES_LOCAL ?? [],
+    $F_TRANSLATIONS_LOCAL ?? [],
+    $F_RETURNMESSAGES_LOCAL ?? [],
+    [],
+    $ENABLED_FUNCTIONS_LOCAL,
+    herikaBuildActionCatalogFunctionDefinitionsByCode($HERIKA_BASE_FUNCTIONS_LOCAL ?? [])
+);
+if (herikaActionCatalogDbReady()) {
+    herikaSyncActionCatalogBaseRows($seedActionRows);
+    herikaImportLegacyActionPreferences($seedActionRows);
 }
+
+$isNpcMode = isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"];
+$defaultEnabledFunctions = $isNpcMode ? herikaGetNpcDefaultActionCodes() : herikaGetFollowerDefaultActionCodes();
+$dbEnabledFunctions = herikaLoadEnabledActionCodesForMode($isNpcMode);
+$GLOBALS["ENABLED_FUNCTIONS"] = count($dbEnabledFunctions) > 0 ? $dbEnabledFunctions : $defaultEnabledFunctions;
 
 if ($GLOBALS["ENABLED_FUNCTIONS"]) {
     if ($GLOBALS["HERIKA_NAME"] && $GLOBALS["HERIKA_NAME"]!="(actor)") {
@@ -1270,13 +1368,6 @@ if ($GLOBALS["ENABLED_FUNCTIONS"]) {
             AND defeat_evt.data LIKE '%$playerCnName%defeat%$cnName%' and type='death'
       ) )
 ");
-        if (isset($isCombat["exists"])) {
-            error_log("[DEBUG functions.php] Combat active detected for {$GLOBALS["HERIKA_NAME"]}, adding Surrender function");
-            $GLOBALS["ENABLED_FUNCTIONS"][]="Surrender";
-        } else {
-            error_log("[DEBUG functions.php] No active combat detected for {$GLOBALS["HERIKA_NAME"]}");
-        }
-
         if (in_array("RentRoom", $GLOBALS["ENABLED_FUNCTIONS"])) {
             $npcMaster = new NpcMaster();
             $npcData = $npcMaster->getByName($GLOBALS["HERIKA_NAME"]);
@@ -1285,7 +1376,6 @@ if ($GLOBALS["ENABLED_FUNCTIONS"]) {
                 $isInnkeeper = $npcMaster->isNpcInFaction($npcData, "0005091B");
             }
             if (!$isInnkeeper) {
-                error_log("[DEBUG functions.php] {$GLOBALS["HERIKA_NAME"]} is not innkeeper, removing RentRoom function");
                 unsetFunction('RentRoom');
             }
         }
@@ -1306,7 +1396,6 @@ if ($GLOBALS["ENABLED_FUNCTIONS"]) {
             }
 
             if (!$isAllowedDriver) {
-                error_log("[DEBUG functions.php] {$GLOBALS["HERIKA_NAME"]} is not in CARRIAGE_DRIVERS, removing HireCarriage function");
                 unsetFunction("HireCarriage");
             }
         }
@@ -1327,7 +1416,6 @@ if ($GLOBALS["ENABLED_FUNCTIONS"]) {
             }
 
             if (!$isAllowedFerryDriver) {
-                error_log("[DEBUG functions.php] {$GLOBALS["HERIKA_NAME"]} is not in FERRY_DRIVERS, removing HireFerry function");
                 unsetFunction("HireFerry");
             }
         }
@@ -1355,17 +1443,26 @@ if ($hasGuardAction) {
                 break;
             }
         }
-    }
-    if (!$isGuard) {
-        error_log("[DEBUG functions.php] {$GLOBALS["HERIKA_NAME"]} is not in GuardFaction, removing guard crime actions");
-        foreach ($guardActions as $ga) {
-            unsetFunction($ga);
         }
+        if (!$isGuard) {
+            foreach ($guardActions as $ga) {
+                unsetFunction($ga);
+            }
     }
 }
 
 $folderPath = __DIR__ . DIRECTORY_SEPARATOR . "../ext/";
 requireFunctionFilesRecursively($folderPath);
+
+if (herikaActionCatalogDbReady()) {
+    // Do not re-seed core_action from the live runtime list here.
+    // Runtime functions may already include DB-backed custom actions that
+    // intentionally share an action_name with shipped actions (for example
+    // CHIM-Custom NFF wrappers like WaitHere / FollowMe / BehindMe). If we
+    // write back from the runtime list, those custom rows can be mistaken for
+    // built-in functions and get rewritten as source=function.php rows.
+    herikaActionCatalogApplyRowsToRuntimeFunctions();
+}
 
 // Why is this here?
 if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . "lang" . DIRECTORY_SEPARATOR . $GLOBALS["CORE_LANG"] . DIRECTORY_SEPARATOR . "prompts.php")) {
@@ -1419,6 +1516,11 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
         $actionParts2=explode("@",$actionParts[2]);
         
         if (isset($actionParts2[0])) {
+            if (herikaActionCatalogExecuteScriptProxyAction($action)) {
+                unset($actionsCopy[$n]);
+                continue;
+            }
+
             // Parameter part 
             if ($actionParts2[0]=="Drink") {
                
@@ -1635,37 +1737,6 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
 
                 error_log("[ACTION POSTFILTER Toast] Executed server-side");
 
-            } else if ($actionParts2[0]=="Surrender") {
-                
-                $npcMaster = new Npcmaster();
-                $npcData   = $npcMaster->getByName($actionParts[0]);
-
-                $skyrimCmd = new SkyrimCommandBuilder();
-                $json      = $skyrimCmd->Actor->SetRelationshipRank("0x{$npcData["refid"]}", "0x00000014", 0);// Set to Ally
-                $skyrimCmd->send(cmd: $json);
-
-                $json      = $skyrimCmd->Actor->StopCombat("0x{$npcData["refid"]}");
-                $skyrimCmd->send(cmd: $json);
-  
-                $GLOBALS["db"]->insert(
-                    'eventlog',
-                    [
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
-                'type' => "combatend",
-                'data' => "{$GLOBALS["PLAYER_NAME"]} has defeated {$actionParts[0]}, {$actionParts[0]} surrenders.",
-                'sess' => 'pending',
-                'localts' => time(),
-                'people'=> $GLOBALS["CACHE_PEOPLE_LIMITED"],
-                'location'=>$GLOBALS["CACHE_LOCATION"],
-                'party'=>$GLOBALS["CACHE_PARTY"]
-                    ]
-                );
-                unset($actionsCopy[$n]);// Remove action from list, so client does not execute it
-
-              
-
-                error_log("[ACTION POSTFILTER Surrender] Executed server-side");
             }
         }
     }

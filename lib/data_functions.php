@@ -4912,7 +4912,7 @@ function call_llm_internal() {
                     
                     if (isset($actionParts2[1])) {
                         // Parameter part 
-                        if ($actionParts2[0]=="Attack"||$actionParts2[0]=="AttackHunt") {
+                        if ($actionParts2[0]=="Attack") {
                             // Lets polish the parameters
                             $localtarget=$actionParts2[1];
                             $mang1=explode(",",$localtarget);
@@ -4928,22 +4928,6 @@ function call_llm_internal() {
                                 $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Attack@{$mang3[0]}";
 
                             error_log("[ACTION POSTFILTER Attack] $localtarget => {$mang3[0]} => $mang4");
-                        } else if ($actionParts2[0]=="Inspect") {
-                            // Lets polish the parammeters
-                            $localtarget=$actionParts2[1];
-                            $mang1=explode(",",$localtarget);
-                            $mang2=explode(" and ",$mang1[0]);
-                            $mang3=explode("(",$mang2[0]);
-                            $mang4=FindClosestActorName($mang3[0]);
-
-                            if ($mang4)
-                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Inspect@{$mang4}";
-                            else
-                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Inspect@{$mang3[0]}";
-
-                            error_log("[ACTION POSTFILTER GiveItemTo] $localtarget => {$mang3[0]} => $mang4");
-
-
                         } else if ($actionParts2[0]=="GiveItemTo") {
                             // Check if parameter is JSON (multi-param) - skip post-filtering for JSON
                             if (isset($actionParts2[1]) && substr(trim($actionParts2[1]), 0, 1) === '{') {
@@ -5220,19 +5204,6 @@ function call_llm_internal() {
                                 $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TakeGoldFromPlayer@";
                             } else
                                 $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TakeGoldFromPlayer@$mang4";
-
-                        } else if ($actionParts2[0]=="SetCurrentTask") {
-                            // Lets polish the parammeters
-                            if (empty(trim($actionParts2[1]))) {
-                                //$speech=implode(" ".$talkedSoFar); typo? if not, what does this do
-                                //trying
-                                $speech=implode(" ", $talkedSoFar);
-                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|SetCurrentTask@$speech";
-                                error_log("[ACTION POSTFILTER SetCurrentTask, using speech as parameter $speech] ");
-                            
-                            } else {
-                                error_log("[ACTION POSTFILTER SetCurrentTask, using target as parameter {$actionParts2[1]}] ");
-                            }
 
                         } else if ($actionParts2[0]=="PickupItem") {
                             // Parse item parameter - can be JSON or plain string
