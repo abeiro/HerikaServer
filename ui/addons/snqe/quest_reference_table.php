@@ -60,21 +60,17 @@ function quest_ref_parse_formids_input($rawInput)
             continue;
         }
 
-        $normalized = quest_reference_normalize_formid($tokenCn);
-        if ($normalized === null || $normalized < 0) {
+        $canonical = quest_reference_canonicalize_formid_for_text_storage($tokenCn);
+        if ($canonical === null || $canonical === '') {
             $invalid[] = $tokenCn;
             continue;
         }
 
-        $hex = strtolower(quest_reference_formid_to_hex($normalized));
-        if ($hex === "") {
-            $invalid[] = $tokenCn;
-            continue;
-        }
+        $dedupeKey = strtolower($canonical);
 
-        if (!isset($seen[$hex])) {
-            $seen[$hex] = true;
-            $valid[] = $hex;
+        if (!isset($seen[$dedupeKey])) {
+            $seen[$dedupeKey] = true;
+            $valid[] = $canonical;
         }
     }
 
@@ -104,19 +100,15 @@ function quest_ref_decode_formids_json($value)
             continue;
         }
 
-        $formId = quest_reference_normalize_formid($itemCn);
-        if ($formId === null || $formId < 0) {
+        $canonical = quest_reference_canonicalize_formid_for_text_storage($itemCn);
+        if ($canonical === null || $canonical === '') {
             continue;
         }
 
-        $hex = strtolower(quest_reference_formid_to_hex($formId));
-        if ($hex === "") {
-            continue;
-        }
-
-        if (!isset($seen[$hex])) {
-            $seen[$hex] = true;
-            $normalized[] = $hex;
+        $dedupeKey = strtolower($canonical);
+        if (!isset($seen[$dedupeKey])) {
+            $seen[$dedupeKey] = true;
+            $normalized[] = $canonical;
         }
     }
 
@@ -729,7 +721,7 @@ tr:hover {
 <main>
     <div class="page-header">
         <h1><?php echo htmlspecialchars($datasetLabel); ?></h1>
-        <p class="page-subtitle">Manage quest reference entries stored in <code><?php echo htmlspecialchars($tableName); ?></code>. One row per key with all form IDs in <code>formids_json</code>.</p>
+        <p class="page-subtitle">Manage quest reference entries stored in <code><?php echo htmlspecialchars($tableName); ?></code>. One row per key with all form IDs in <code>formids_json</code>. Supports both raw FormIDs and stable <code>Plugin.esp|LocalFormId</code> references.</p>
     </div>
 
     <?php if ($message !== ""): ?>
@@ -748,8 +740,8 @@ tr:hover {
                 <input type="text" id="entry-key" name="key_name" placeholder="male_redguard" required>
 
                 <label for="entry-formids">Form IDs</label>
-                <textarea id="entry-formids" name="formids_input" placeholder='["0x0006762e", "0x00058b3f"]'></textarea>
-                <p class="muted">Accepts JSON array or comma/newline-separated values. Decimal values are converted to canonical hex.</p>
+                <textarea id="entry-formids" name="formids_input" placeholder='["0x0006762e", "MyMod.esp|000058B3"]'></textarea>
+                <p class="muted">Accepts JSON array or comma/newline-separated values. Decimal values are converted to canonical hex, and stable <code>Plugin.esp|LocalFormId</code> values are preserved.</p>
 
                 <label for="entry-note">Note (optional)</label>
                 <input type="text" id="entry-note" name="note" placeholder="synced from rolemaster hardcode">
@@ -783,7 +775,7 @@ tr:hover {
                 CSV columns: <code><?php echo htmlspecialchars($keyColumn); ?></code>, <code>formids_json</code>, <code>active</code>, <code>note</code>.
             </p>
             <p class="muted">
-                Quote JSON arrays in CSV, for example <code>"[""0x0006762e"",""0x00058b3f""]"</code>. Empty <code>active</code> defaults to <code>true</code>.
+                Quote JSON arrays in CSV, for example <code>"[""0x0006762e"",""MyMod.esp|000058B3""]"</code>. Empty <code>active</code> defaults to <code>true</code>.
             </p>
             <p class="muted">
                 Current rows: <?php echo intval($entryCount); ?> (active: <?php echo intval($activeCount); ?>, form IDs: <?php echo intval($formidCount); ?>).

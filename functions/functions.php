@@ -1167,6 +1167,10 @@ function getSingleFunctionParameterValue($functionDef, $parsedResponse)
     }
 
     $properties = $functionDef["parameters"]["properties"] ?? [];
+    if (is_array($properties) && count($properties) === 0) {
+        return "";
+    }
+
     if (is_array($properties) && count($properties) === 1) {
         $parameterName = array_key_first($properties);
         if (is_string($parameterName) && array_key_exists($parameterName, $parsedResponse)) {

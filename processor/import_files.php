@@ -813,6 +813,7 @@ function handleCustomActionImport($csvData, $timestamp, $game_timestamp, $filena
     }
 
     $processedCount = 0;
+    $skippedCount = 0;
     $errorCount = 0;
     $hadFatalError = false;
     $processedCodeNames = [];
@@ -891,6 +892,10 @@ function handleCustomActionImport($csvData, $timestamp, $game_timestamp, $filena
                 continue;
             }
 
+            $incomingImportVersion = herikaActionCatalogNormalizeImportVersion(
+                customActionImportCsvGetValue($headerMap, $data, 'import_version', '0')
+            );
+
             $metadataSource = trim(strval($metadata['source'] ?? ''));
             if ($metadataSource === '') {
                 $metadataSource = trim(strval($metadata['bridge_script'] ?? ''));
@@ -903,6 +908,7 @@ function handleCustomActionImport($csvData, $timestamp, $game_timestamp, $filena
             }
             $metadata['source'] = $metadataSource;
             $metadata['import_type'] = 'custom_action_import';
+            $metadata['import_version'] = $incomingImportVersion;
             if ($filename !== '') {
                 $metadata['import_filename'] = $filename;
             }
@@ -939,8 +945,21 @@ function handleCustomActionImport($csvData, $timestamp, $game_timestamp, $filena
                 ),
                 'parameters_json' => $parameters,
                 'metadata' => $metadata,
+                'import_version' => $incomingImportVersion,
                 'script_proxy_program' => $scriptProxyProgram,
             ];
+
+            $existingImportVersion = herikaActionCatalogGetExistingCustomImportVersion($codeName);
+            if ($existingImportVersion !== null
+                && !herikaActionCatalogShouldOverwriteImportVersion($incomingImportVersion, $existingImportVersion)
+            ) {
+                Logger::info(
+                    "Custom Action Import: Skipping '{$codeName}' because import_version {$incomingImportVersion} is not newer than existing {$existingImportVersion}"
+                );
+                $skippedCount++;
+                $processedCodeNames[] = $codeName;
+                continue;
+            }
 
             if (herikaActionCatalogUpsertCustomRow($row)) {
                 $processedCount++;
@@ -970,7 +989,7 @@ function handleCustomActionImport($csvData, $timestamp, $game_timestamp, $filena
         fclose($handle);
         unlink($tempFile);
 
-        Logger::info("Custom Action Import: Processing complete. $processedCount records processed, $errorCount errors");
+        Logger::info("Custom Action Import: Processing complete. $processedCount records processed, $skippedCount skipped, $errorCount errors");
 
         $db->insert(
             'eventlog',
@@ -978,7 +997,7 @@ function handleCustomActionImport($csvData, $timestamp, $game_timestamp, $filena
                 'ts' => $timestamp,
                 'gamets' => $game_timestamp,
                 'type' => 'custom_action_import',
-                'data' => "CSV upload ($filename): $processedCount records processed, $errorCount errors",
+                'data' => "CSV upload ($filename): $processedCount records processed, $skippedCount skipped, $errorCount errors",
                 'sess' => 'web',
                 'localts' => time(),
                 'people' => '',

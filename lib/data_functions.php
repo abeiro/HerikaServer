@@ -8,6 +8,7 @@ require_once(__DIR__."/lazy_xml.php");
 require_once(__DIR__."/model_dynmodel.php");
 require_once(__DIR__."/emote_moods.php");
 require_once(__DIR__."/core/activity_status.php");
+require_once(__DIR__."/core/game_plugins.php");
 require_once(__DIR__."/core/npc_master.class.php");
 
 
@@ -215,44 +216,29 @@ function isItemBlacklisted($itemName) {
 }
 
 /**
- * Lookup description from descriptions table, supporting mod FormIDs (XX prefix)
- * Tries exact FormID first, then falls back to XX-prefixed version for mod items
+ * Lookup description from the merged descriptions view using runtime, legacy, or stable keys.
+ * Supports:
+ * - exact runtime FormIDs (e.g. 020098A0)
+ * - legacy wildcard keys (e.g. XX0098A0, FEXXX822)
+ * - stable plugin-aware keys (e.g. Dawnguard.esm|000098A0)
  * 
- * @param string $formId The FormID to lookup (hex format, e.g., "0303572F")
- * @return array|null Array with 'name' and 'description' keys, or null if not found
+ * @param string $formId The identifier to lookup
+ * @return array|null Array with 'baseid', 'name', and 'description' keys, or null if not found
  */
 function lookupDescriptionByFormID(string $formId): ?array {
     global $db;
-    
-    // Ensure FormID is properly formatted (8 hex digits, uppercase)
-    $formId = strtoupper(str_replace('0x', '', $formId));
-    $formId = str_pad($formId, 8, '0', STR_PAD_LEFT);
-    
-    // Try exact FormID first
-    $escapedFormId = $db->escape($formId);
-    $record = $db->fetchOne(
-        "SELECT name, description FROM descriptions WHERE baseid = '{$escapedFormId}' LIMIT 1"
-    );
-    
-    if ($record && !empty($record['name'])) {
-        return $record;
-    }
-    
-    // If not found and FormID starts with a mod index (first 2 digits not 00-03), try XX prefix
-    $modIndex = substr($formId, 0, 2);
-    if ($modIndex !== '00' && $modIndex !== '01' && $modIndex !== '02' && $modIndex !== '03') {
-        // Replace first 2 digits with XX for mod item lookup
-        $xxFormId = 'XX' . substr($formId, 2);
-        $escapedXXFormId = $db->escape($xxFormId);
+
+    foreach (chimBuildDescriptionBaseIdCandidates($formId) as $candidateBaseId) {
+        $escapedBaseId = $db->escape($candidateBaseId);
         $record = $db->fetchOne(
-            "SELECT name, description FROM descriptions WHERE baseid = '{$escapedXXFormId}' LIMIT 1"
+            "SELECT baseid, name, description FROM combined_descriptions WHERE baseid = '{$escapedBaseId}' LIMIT 1"
         );
-        
+
         if ($record && !empty($record['name'])) {
             return $record;
         }
     }
-    
+
     return null;
 }
 
@@ -748,11 +734,8 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 if (!in_array($baseID, $seenBaseIDs)) {
                     $seenBaseIDs[] = $baseID;
                     
-                    // Look up description from descriptions table
-                    $baseIDDec = hexdec(str_replace('0x', '', $baseID));
-                    $descRecord = $GLOBALS["db"]->fetchOne(
-                        "SELECT description FROM descriptions WHERE baseid = '{$baseIDDec}' LIMIT 1"
-                    );
+                    // Look up description through the shared runtime/stable/legacy resolver
+                    $descRecord = lookupDescriptionByFormID($baseID);
                     
                     if ($descRecord && !empty($descRecord['description'])) {
                         // Store description under clean name (without STEALING tag)
@@ -6062,12 +6045,11 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
     $getItemDescription = function($itemName, $baseid = null) {
         global $db;
         
-        // Try by baseid first if provided
+        // Try the shared runtime/stable/legacy baseid resolver first if provided
         if (!empty($baseid)) {
-            $escapedBaseid = $db->escape($baseid);
-            $result = $db->fetchAll("SELECT description FROM combined_descriptions WHERE baseid='{$escapedBaseid}' LIMIT 1");
-            if (!empty($result) && !empty($result[0]['description'])) {
-                return $result[0]['description'];
+            $record = lookupDescriptionByFormID((string) $baseid);
+            if (!empty($record['description'])) {
+                return $record['description'];
             }
         }
         

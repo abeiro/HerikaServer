@@ -1,5 +1,7 @@
 <?php
 
+require_once(__DIR__ . DIRECTORY_SEPARATOR . 'game_plugins.php');
+
 function herikaGetRetiredActionCodes()
 {
     return [
@@ -101,6 +103,38 @@ function herikaGetFollowerDefaultActionCodes()
 function herikaActionCatalogSqlBool($value)
 {
     return $value ? 'TRUE' : 'FALSE';
+}
+
+function herikaActionCatalogNormalizeImportVersion($value)
+{
+    if ($value === null) {
+        return 0;
+    }
+
+    if (is_bool($value)) {
+        return $value ? 1 : 0;
+    }
+
+    if (is_numeric($value)) {
+        return max(0, intval(floor(floatval($value))));
+    }
+
+    $text = trim(strval($value));
+    if ($text === '') {
+        return 0;
+    }
+
+    if (is_numeric($text)) {
+        return max(0, intval(floor(floatval($text))));
+    }
+
+    return 0;
+}
+
+function herikaActionCatalogShouldOverwriteImportVersion($incomingVersion, $existingVersion)
+{
+    return herikaActionCatalogNormalizeImportVersion($incomingVersion)
+        > herikaActionCatalogNormalizeImportVersion($existingVersion);
 }
 
 function herikaActionCatalogSqlText($value)
@@ -1148,8 +1182,30 @@ function herikaActionCatalogNpcMatchesFactionRequirement($npcMaster, $npcData, $
         return false;
     }
 
+    $npcFactions = $npcMaster->getNpcFactions($npcData, true);
+
     foreach ($factionIds as $factionId) {
-        $matches = $npcMaster->isNpcInFaction($npcData, strtoupper($factionId));
+        $matches = false;
+        $stableReference = chimParseStableFormReference($factionId);
+
+        if ($stableReference) {
+            foreach ($npcFactions as $npcFaction) {
+                if (chimFactionEntryMatchesStableFormReference($npcFaction, $stableReference['stable_key'])) {
+                    $matches = true;
+                    break;
+                }
+            }
+
+            if (!$matches) {
+                $runtimeFormId = chimResolveStableFormReferenceToRuntimeFormId($stableReference['stable_key']);
+                if ($runtimeFormId !== null) {
+                    $matches = $npcMaster->isNpcInFaction($npcData, $runtimeFormId);
+                }
+            }
+        } else {
+            $matches = $npcMaster->isNpcInFaction($npcData, strtoupper($factionId));
+        }
+
         if ($requireAll && !$matches) {
             return false;
         }
@@ -1475,6 +1531,27 @@ function herikaActionCatalogDbReady()
     return $ready;
 }
 
+function herikaActionCatalogGetExistingCustomImportVersion($codeName)
+{
+    $codeName = trim(strval($codeName));
+    if ($codeName === '' || !herikaActionCatalogDbReady()) {
+        return null;
+    }
+
+    $row = $GLOBALS["db"]->fetchOne("
+        SELECT import_version
+        FROM public.core_action_custom
+        WHERE LOWER(code_name) = LOWER(" . herikaActionCatalogSqlText($codeName) . ")
+        LIMIT 1
+    ");
+
+    if (!is_array($row) || !array_key_exists('import_version', $row)) {
+        return null;
+    }
+
+    return herikaActionCatalogNormalizeImportVersion($row['import_version']);
+}
+
 function herikaBuildActionCatalogFunctionDefinitionsByCode($runtimeFunctions = null)
 {
     $definitions = [];
@@ -1546,6 +1623,7 @@ function herikaBuildActionCatalogSeedRows($actionNames, $descriptions, $returnMe
             'parameters_json' => $parameters,
             'metadata' => $metadata,
             'game_function' => herikaActionCatalogIsGameFunction($metadata),
+            'import_version' => 0,
             'script_proxy_program' => $scriptProxyProgram,
         ];
     }
@@ -1619,6 +1697,7 @@ function herikaSyncActionCatalogBaseRows($rowsByCode)
                 parameters_json,
                 metadata,
                 game_function,
+                import_version,
                 script_proxy_program
             ) VALUES (
                 " . herikaActionCatalogSqlText($row['code_name']) . ",
@@ -1631,6 +1710,7 @@ function herikaSyncActionCatalogBaseRows($rowsByCode)
                 " . herikaActionCatalogSqlJson($row['parameters_json'] ?? []) . ",
                 " . herikaActionCatalogSqlJson($row['metadata'] ?? []) . ",
                 " . herikaActionCatalogSqlBool(!empty($row['game_function'])) . ",
+                " . herikaActionCatalogNormalizeImportVersion($row['import_version'] ?? 0) . ",
                 " . herikaActionCatalogSqlJson($row['script_proxy_program'] ?? null, true) . "
             )
             ON CONFLICT (code_name) DO UPDATE SET
@@ -1643,6 +1723,7 @@ function herikaSyncActionCatalogBaseRows($rowsByCode)
                 parameters_json = EXCLUDED.parameters_json,
                 metadata = EXCLUDED.metadata,
                 game_function = EXCLUDED.game_function,
+                import_version = EXCLUDED.import_version,
                 script_proxy_program = EXCLUDED.script_proxy_program,
                 updated_at = NOW()
         ");
@@ -1658,6 +1739,7 @@ function herikaSyncActionCatalogBaseRows($rowsByCode)
                 parameters_json = " . herikaActionCatalogSqlJson($row['parameters_json'] ?? []) . ",
                 metadata = " . herikaActionCatalogSqlJson($preservedCustomMetadata) . ",
                 game_function = " . herikaActionCatalogSqlBool(!empty($row['game_function'])) . ",
+                import_version = " . herikaActionCatalogNormalizeImportVersion($row['import_version'] ?? 0) . ",
                 script_proxy_program = " . herikaActionCatalogSqlJson($row['script_proxy_program'] ?? null, true) . ",
                 updated_at = NOW()
             WHERE LOWER(code_name) = LOWER(" . herikaActionCatalogSqlText($row['code_name']) . ")
@@ -1767,6 +1849,7 @@ function herikaImportLegacyActionPreferences($rowsByCode)
                 parameters_json,
                 metadata,
                 game_function,
+                import_version,
                 script_proxy_program
             ) VALUES (
                 " . herikaActionCatalogSqlText($row['code_name']) . ",
@@ -1779,6 +1862,7 @@ function herikaImportLegacyActionPreferences($rowsByCode)
                 " . herikaActionCatalogSqlJson($row['parameters_json'] ?? []) . ",
                 " . herikaActionCatalogSqlJson($row['metadata'] ?? []) . ",
                 " . herikaActionCatalogSqlBool(!empty($row['game_function'])) . ",
+                " . herikaActionCatalogNormalizeImportVersion($row['import_version'] ?? 0) . ",
                 " . herikaActionCatalogSqlJson($row['script_proxy_program'] ?? null, true) . "
             )
             ON CONFLICT (code_name) DO UPDATE SET
@@ -1791,6 +1875,7 @@ function herikaImportLegacyActionPreferences($rowsByCode)
                 parameters_json = EXCLUDED.parameters_json,
                 metadata = EXCLUDED.metadata,
                 game_function = EXCLUDED.game_function,
+                import_version = EXCLUDED.import_version,
                 script_proxy_program = EXCLUDED.script_proxy_program,
                 updated_at = NOW()
         ");
@@ -1846,6 +1931,7 @@ function herikaGetActionCatalogRowsByCode()
             ),
             'metadata' => herikaActionCatalogDecodeJson($row['metadata'] ?? [], []),
             'game_function' => herikaActionCatalogToBool($row['game_function'] ?? false),
+            'import_version' => herikaActionCatalogNormalizeImportVersion($row['import_version'] ?? 0),
             'script_proxy_program' => herikaActionCatalogDecodeJson($row['script_proxy_program'] ?? null, []),
         ];
     }
@@ -2088,6 +2174,7 @@ function herikaActionCatalogUpsertCustomToggle($codeName, $enabled)
             parameters_json,
             metadata,
             game_function,
+            import_version,
             script_proxy_program
         FROM public.combined_core_action
         WHERE code_name = {$literalCode}
@@ -2112,10 +2199,11 @@ function herikaActionCatalogUpsertCustomToggle($codeName, $enabled)
             parameters_json,
             metadata,
             game_function,
+            import_version,
             script_proxy_program
         ) VALUES (
             " . herikaActionCatalogSqlText($row['code_name'] ?? $codeName) . ",
-            " . herikaActionCatalogSqlText($row['action_name'] ?? '') . ",
+            " . herikaActionCatalogSqlText($actionName) . ",
             " . herikaActionCatalogSqlText($row['description'] ?? '') . ",
             " . herikaActionCatalogSqlText($row['return_message'] ?? '') . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_npc'] ?? false)) . ",
@@ -2124,6 +2212,7 @@ function herikaActionCatalogUpsertCustomToggle($codeName, $enabled)
             " . herikaActionCatalogSqlJson($row['parameters_json'] ?? []) . ",
             " . herikaActionCatalogSqlJson($row['metadata'] ?? []) . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['game_function'] ?? false)) . ",
+            " . herikaActionCatalogNormalizeImportVersion($row['import_version'] ?? 0) . ",
             " . herikaActionCatalogSqlJson($row['script_proxy_program'] ?? null, true) . "
         )
         ON CONFLICT (code_name) DO UPDATE SET
@@ -2136,6 +2225,7 @@ function herikaActionCatalogUpsertCustomToggle($codeName, $enabled)
             parameters_json = EXCLUDED.parameters_json,
             metadata = EXCLUDED.metadata,
             game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
             script_proxy_program = EXCLUDED.script_proxy_program,
             updated_at = NOW()
     ");
@@ -2165,6 +2255,7 @@ function herikaActionCatalogUpsertCustomConfigValue($codeName, $configKey, $valu
             parameters_json,
             metadata,
             game_function,
+            import_version,
             script_proxy_program
         FROM public.combined_core_action
         WHERE code_name = {$literalCode}
@@ -2198,6 +2289,7 @@ function herikaActionCatalogUpsertCustomConfig($codeName, $configValues)
             parameters_json,
             metadata,
             game_function,
+            import_version,
             script_proxy_program
         FROM public.combined_core_action
         WHERE code_name = {$literalCode}
@@ -2235,6 +2327,7 @@ function herikaActionCatalogUpsertCustomConfig($codeName, $configValues)
             parameters_json,
             metadata,
             game_function,
+            import_version,
             script_proxy_program
         ) VALUES (
             " . herikaActionCatalogSqlText($row['code_name'] ?? $codeName) . ",
@@ -2247,6 +2340,7 @@ function herikaActionCatalogUpsertCustomConfig($codeName, $configValues)
             " . herikaActionCatalogSqlJson($row['parameters_json'] ?? []) . ",
             " . herikaActionCatalogSqlJson($metadata) . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['game_function'] ?? false)) . ",
+            " . herikaActionCatalogNormalizeImportVersion($row['import_version'] ?? 0) . ",
             " . herikaActionCatalogSqlJson($row['script_proxy_program'] ?? null, true) . "
         )
         ON CONFLICT (code_name) DO UPDATE SET
@@ -2259,6 +2353,7 @@ function herikaActionCatalogUpsertCustomConfig($codeName, $configValues)
             parameters_json = EXCLUDED.parameters_json,
             metadata = EXCLUDED.metadata,
             game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
             script_proxy_program = EXCLUDED.script_proxy_program,
             updated_at = NOW()
     ");
@@ -2287,6 +2382,7 @@ function herikaActionCatalogUpsertCustomParameters($codeName, $parameters)
             parameters_json,
             metadata,
             game_function,
+            import_version,
             script_proxy_program
         FROM public.combined_core_action
         WHERE code_name = {$literalCode}
@@ -2314,6 +2410,7 @@ function herikaActionCatalogUpsertCustomParameters($codeName, $parameters)
             parameters_json,
             metadata,
             game_function,
+            import_version,
             script_proxy_program
         ) VALUES (
             " . herikaActionCatalogSqlText($row['code_name'] ?? $codeName) . ",
@@ -2326,6 +2423,7 @@ function herikaActionCatalogUpsertCustomParameters($codeName, $parameters)
             " . herikaActionCatalogSqlJson($normalizedParameters) . ",
             " . herikaActionCatalogSqlJson($row['metadata'] ?? []) . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['game_function'] ?? false)) . ",
+            " . herikaActionCatalogNormalizeImportVersion($row['import_version'] ?? 0) . ",
             " . herikaActionCatalogSqlJson($row['script_proxy_program'] ?? null, true) . "
         )
         ON CONFLICT (code_name) DO UPDATE SET
@@ -2338,6 +2436,7 @@ function herikaActionCatalogUpsertCustomParameters($codeName, $parameters)
             parameters_json = EXCLUDED.parameters_json,
             metadata = EXCLUDED.metadata,
             game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
             script_proxy_program = EXCLUDED.script_proxy_program,
             updated_at = NOW()
     ");
@@ -2384,6 +2483,7 @@ function herikaActionCatalogUpsertCustomRow($row)
     $gameFunction = array_key_exists('game_function', $row)
         ? herikaActionCatalogToBool($row['game_function'])
         : herikaActionCatalogIsGameFunction($metadata);
+    $importVersion = herikaActionCatalogNormalizeImportVersion($row['import_version'] ?? 0);
 
     $result = $GLOBALS["db"]->execQuery("
         INSERT INTO public.core_action_custom (
@@ -2397,6 +2497,7 @@ function herikaActionCatalogUpsertCustomRow($row)
             parameters_json,
             metadata,
             game_function,
+            import_version,
             script_proxy_program
         ) VALUES (
             " . herikaActionCatalogSqlText($codeName) . ",
@@ -2409,6 +2510,7 @@ function herikaActionCatalogUpsertCustomRow($row)
             " . herikaActionCatalogSqlJson($parameters) . ",
             " . herikaActionCatalogSqlJson($metadata) . ",
             " . herikaActionCatalogSqlBool($gameFunction) . ",
+            " . $importVersion . ",
             " . herikaActionCatalogSqlJson($scriptProxyProgram, true) . "
         )
         ON CONFLICT (code_name) DO UPDATE SET
@@ -2421,6 +2523,7 @@ function herikaActionCatalogUpsertCustomRow($row)
             parameters_json = EXCLUDED.parameters_json,
             metadata = EXCLUDED.metadata,
             game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
             script_proxy_program = EXCLUDED.script_proxy_program,
             updated_at = NOW()
     ");

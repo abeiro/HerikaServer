@@ -2,6 +2,7 @@
 require_once($GLOBALS["ENGINE_PATH"]."/lib/dynamic_update_util.php");
 require_once($GLOBALS["ENGINE_PATH"]."/lib/utils_game_timestamp.php");
 require_once($GLOBALS["ENGINE_PATH"]."/lib/playthrough_snapshot.php");
+require_once($GLOBALS["ENGINE_PATH"]."/lib/core/game_plugins.php");
 
 $MUST_END=false;
 
@@ -1542,7 +1543,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
             $meta["mods"]=isset($splitNameBase[41]) ?explode("#",$splitNameBase[41]):null;
 
-            // NPC factions - format: formID1:rank1#formID2:rank2#...
+            // NPC factions - format: formID1:rank1[:PluginName.esp|LocalFormId]#formID2:rank2[:...]
             $factionString = isset($splitNameBase[42]) ? $splitNameBase[42] : '';
             $factionList = [];
             $formIds=[];
@@ -1552,21 +1553,36 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 foreach ($factionPairs as $pair) {
                     $parts = explode(":", $pair);
                     if (count($parts) >= 2) {
-                        $formId = $parts[0];
+                        $formId = chimNormalizeRuntimeFormId($parts[0]);
+                        if ($formId === '') {
+                            continue;
+                        }
                         $formIds[]=$formId;// Collect form IDs to fetch names later
                         $rank = intval($parts[1]);
-                        $factionList[] = [
+                        $factionEntry = [
                             'formid' => $formId,
                             'rank' => $rank,
                             'name'=>'' // Placeholder, will be filled after fetching faction names from DB
                         ];
+
+                        $stableReference = isset($parts[2]) ? chimParseStableFormReference($parts[2]) : null;
+                        if ($stableReference) {
+                            $factionEntry['plugin'] = $stableReference['plugin_name'];
+                            $factionEntry['local_formid'] = $stableReference['local_formid'];
+                            $factionEntry['stable_key'] = $stableReference['stable_key'];
+                        }
+
+                        $factionList[] = $factionEntry;
                     }
                 }
             }
             // Fetch only the faction names we need in a single query to avoid multiple DB hits
             $arrFormIdNames=[];
             if (sizeof($formIds)>0) {
-                $arrFormIdNames=$factionNames=$db->fetchAll("select formid,name from factions where formid in ('".implode("','", $formIds)."')");
+                $escapedFormIds = array_map(function ($formId) use ($db) {
+                    return $db->escape($formId);
+                }, array_values(array_unique($formIds)));
+                $arrFormIdNames = $db->fetchAll("select formid,name from factions where formid in ('".implode("','", $escapedFormIds)."')");
             }
             
             // Now map the arrFormIdNames to  mapFormIdNames 

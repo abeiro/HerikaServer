@@ -197,6 +197,71 @@ if ($checkVersion("core_action") < 20260426001) {
     Logger::info("Applied patch core_action 20260426001");
 }
 
+if ($checkVersion("core_action") < 20260427001) {
+    Logger::debug("Applying core_action 20260427001 - add import_version field");
+
+    $db->execQuery("ALTER TABLE public.core_action ADD COLUMN IF NOT EXISTS import_version BIGINT NOT NULL DEFAULT 0");
+    $db->execQuery("ALTER TABLE public.core_action_custom ADD COLUMN IF NOT EXISTS import_version BIGINT NOT NULL DEFAULT 0");
+
+    $db->execQuery("UPDATE public.core_action SET import_version = 0 WHERE import_version IS NULL");
+    $db->execQuery("UPDATE public.core_action_custom SET import_version = 0 WHERE import_version IS NULL");
+
+    $db->execQuery("DROP VIEW IF EXISTS public.combined_core_action");
+    $db->execQuery("
+        CREATE VIEW public.combined_core_action AS
+        SELECT
+            c.id,
+            c.code_name,
+            c.action_name,
+            c.description,
+            c.return_message,
+            c.available_to_npc,
+            c.available_to_followers,
+            c.is_activated,
+            c.parameters_json,
+            c.metadata,
+            c.game_function,
+            c.import_version,
+            c.script_proxy_program,
+            c.created_at,
+            c.updated_at
+        FROM public.core_action_custom c
+        UNION ALL
+        SELECT
+            b.id,
+            b.code_name,
+            b.action_name,
+            b.description,
+            b.return_message,
+            b.available_to_npc,
+            b.available_to_followers,
+            b.is_activated,
+            b.parameters_json,
+            b.metadata,
+            b.game_function,
+            b.import_version,
+            b.script_proxy_program,
+            b.created_at,
+            b.updated_at
+        FROM public.core_action b
+        LEFT JOIN public.core_action_custom c ON LOWER(b.code_name) = LOWER(c.code_name)
+        WHERE c.code_name IS NULL
+    ");
+
+    $updateVersion("core_action", 20260427001);
+    Logger::info("Applied patch core_action 20260427001");
+}
+
+if ($checkVersion("game_plugins") < 20260427001) {
+    Logger::debug("Applying game_plugins 20260427001 - create loaded plugin manifest table");
+
+    $db->execQuery(file_get_contents(__DIR__ . "/../data/add_game_plugins.sql"));
+    $db->execQuery("SET search_path TO public");
+
+    $updateVersion("game_plugins", 20260427001);
+    Logger::info("Applied patch game_plugins 20260427001");
+}
+
 // Narrator is now managed via core_narrator table, not core_npc_master
 // Seeding of narrator data happens in the core_narrator migration blocks
 

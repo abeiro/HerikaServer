@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.core_action (
     parameters_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
     game_function BOOLEAN NOT NULL DEFAULT TRUE,
+    import_version BIGINT NOT NULL DEFAULT 0,
     script_proxy_program JSONB,
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
@@ -27,6 +28,7 @@ CREATE TABLE IF NOT EXISTS public.core_action_custom (
     parameters_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
     game_function BOOLEAN NOT NULL DEFAULT TRUE,
+    import_version BIGINT NOT NULL DEFAULT 0,
     script_proxy_program JSONB,
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
@@ -59,6 +61,7 @@ SELECT
     c.parameters_json,
     c.metadata,
     c.game_function,
+    c.import_version,
     c.script_proxy_program,
     c.created_at,
     c.updated_at
@@ -76,6 +79,7 @@ SELECT
     b.parameters_json,
     b.metadata,
     b.game_function,
+    b.import_version,
     b.script_proxy_program,
     b.created_at,
     b.updated_at

@@ -1,5 +1,9 @@
 <?php
 
+if (!function_exists('chimParseStableFormReference')) {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "game_plugins.php");
+}
+
 class NpcMaster
 {
     private $table = "core_npc_master";
@@ -963,6 +967,23 @@ FROM restore
         
         if (!is_array($extendedData) || !isset($extendedData['factions']) || !is_array($extendedData['factions'])) {
             return false;
+        }
+
+        $stableReference = chimParseStableFormReference($factionFormId);
+        if ($stableReference) {
+            foreach ($extendedData['factions'] as $faction) {
+                if (
+                    isset($faction['rank']) && $faction['rank'] > -1 &&
+                    chimFactionEntryMatchesStableFormReference($faction, $stableReference['stable_key'])
+                ) {
+                    return true;
+                }
+            }
+
+            $resolvedRuntimeFormId = chimResolveStableFormReferenceToRuntimeFormId($stableReference['stable_key']);
+            if ($resolvedRuntimeFormId !== null) {
+                $factionFormId = $resolvedRuntimeFormId;
+            }
         }
 
         // Normalize formid for comparison (handle case-insensitive comparison)

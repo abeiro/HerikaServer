@@ -15,6 +15,7 @@ require_once(__DIR__ . "/lib/{$GLOBALS["DBDRIVER"]}.class.php");
 $GLOBALS["db"] = new sql();
 require_once(__DIR__ . "/lib/core/npc_master.class.php");
 require_once(__DIR__ . "/lib/core/activity_status.php");
+require_once(__DIR__ . "/lib/core/game_plugins.php");
 require_once(__DIR__ . "/lib/logger.php");
 
 // Only accept POST requests
@@ -36,7 +37,7 @@ if (!$data || !isset($data['type'])) {
 }
 
 // Types that operate on global data and do not require an actor
-$actorlessTypes = ['market_stock', 'activity_status_bulk'];
+$actorlessTypes = ['market_stock', 'activity_status_bulk', 'loaded_plugins'];
 
 // Validate required fields (skipped for actorless types)
 if (!in_array($data['type'], $actorlessTypes)) {
@@ -84,6 +85,9 @@ try {
             break;
         case 'market_stock':
             handleMarketStockUpdate($data);
+            break;
+        case 'loaded_plugins':
+            handleLoadedPluginsUpdate($data);
             break;
         default:
             http_response_code(400);
@@ -242,6 +246,17 @@ function handleActivityStatusBulkUpdate(array $data, NpcMaster $npcMaster): void
         $currentData = $npcMaster->setMetadata($currentData, $meta);
         $npcMaster->updateByArray($currentData);
     }
+}
+
+function handleLoadedPluginsUpdate(array $data): void
+{
+    if (empty($data['plugins']) || !is_array($data['plugins'])) {
+        Logger::warn("[gamedata.php] loaded_plugins missing plugins payload");
+        return;
+    }
+
+    $pluginCount = chimReplaceLoadedGamePlugins($data['plugins']);
+    Logger::debug("[gamedata.php] Updated loaded plugin manifest ({$pluginCount} plugins)");
 }
 
 /**

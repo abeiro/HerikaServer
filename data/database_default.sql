@@ -733,6 +733,7 @@ CREATE TABLE public.core_action (
     parameters_json jsonb DEFAULT '{}'::jsonb NOT NULL,
     metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     game_function boolean DEFAULT true NOT NULL,
+    import_version bigint DEFAULT 0 NOT NULL,
     script_proxy_program jsonb,
     created_at timestamp without time zone DEFAULT now(),
     updated_at timestamp without time zone DEFAULT now()
@@ -757,6 +758,7 @@ CREATE TABLE public.core_action_custom (
     parameters_json jsonb DEFAULT '{}'::jsonb NOT NULL,
     metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     game_function boolean DEFAULT true NOT NULL,
+    import_version bigint DEFAULT 0 NOT NULL,
     script_proxy_program jsonb,
     created_at timestamp without time zone DEFAULT now(),
     updated_at timestamp without time zone DEFAULT now()
@@ -781,6 +783,7 @@ CREATE VIEW public.combined_core_action AS
     c.parameters_json,
     c.metadata,
     c.game_function,
+    c.import_version,
     c.script_proxy_program,
     c.created_at,
     c.updated_at
@@ -797,6 +800,7 @@ SELECT b.id,
     b.parameters_json,
     b.metadata,
     b.game_function,
+    b.import_version,
     b.script_proxy_program,
     b.created_at,
     b.updated_at
