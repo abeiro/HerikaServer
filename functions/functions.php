@@ -369,6 +369,8 @@ foreach ($herikaRetiredActionCodes as $herikaRetiredActionCode) {
 $GLOBALS["F_TRANSLATIONS"] = $F_TRANSLATIONS_LOCAL;
 $GLOBALS["F_RETURNMESSAGES"] = $F_RETURNMESSAGES_LOCAL;
 $GLOBALS["F_NAMES"] = $F_NAMES_LOCAL;
+$GLOBALS["F_TRANSLATIONS_BASE"] = $F_TRANSLATIONS_LOCAL;
+$GLOBALS["F_RETURNMESSAGES_BASE"] = $F_RETURNMESSAGES_LOCAL;
 
 $hireCarriageDestinations = [
     "Whiterun",
@@ -1148,6 +1150,46 @@ function herikaFormatReturnMessageTemplate($codeName, $primaryArgument = '', arr
     }
 
     return strtr($template, $replacements);
+}
+
+function herikaFormatActionPromptTemplate($template, array $extraReplacements = [])
+{
+    $template = strval($template);
+    if ($template === '') {
+        return '';
+    }
+
+    $replacements = [
+        '#HERIKA_NAME#' => strval($GLOBALS["HERIKA_NAME"] ?? 'NPC'),
+        '#PLAYER_NAME#' => strval($GLOBALS["PLAYER_NAME"] ?? 'Player'),
+        '{$GLOBALS["HERIKA_NAME"]}' => strval($GLOBALS["HERIKA_NAME"] ?? 'NPC'),
+        '{$GLOBALS["PLAYER_NAME"]}' => strval($GLOBALS["PLAYER_NAME"] ?? 'Player'),
+    ];
+
+    foreach ($extraReplacements as $key => $value) {
+        $replacements[strval($key)] = is_scalar($value) || $value === null ? strval($value ?? '') : '';
+    }
+
+    $rendered = strtr($template, $replacements);
+
+    // Some catalog/imported strings can still carry SQL-style doubled apostrophes.
+    return str_replace("''", "'", $rendered);
+}
+
+function herikaGetPromptActionDescription($codeName, $fallbackDescription = '')
+{
+    $codeName = trim(strval($codeName));
+    $description = '';
+
+    if ($codeName !== '' && isset($GLOBALS["F_TRANSLATIONS"][$codeName])) {
+        $description = strval($GLOBALS["F_TRANSLATIONS"][$codeName] ?? '');
+    }
+
+    if ($description === '') {
+        $description = strval($fallbackDescription);
+    }
+
+    return herikaFormatActionPromptTemplate($description);
 }
 
 function getFunctionTrlName($key)

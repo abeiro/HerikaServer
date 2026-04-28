@@ -2105,8 +2105,23 @@ function herikaActionCatalogApplyRowsToRuntimeFunctions()
     }
 
     foreach ($rowsByCode as $codeName => $row) {
+        $rowMetadata = is_array($row['metadata'] ?? null)
+            ? $row['metadata']
+            : herikaActionCatalogDecodeJson($row['metadata'] ?? [], []);
+        $isBuiltin = !empty($rowMetadata['builtin']);
+        $runtimeDescription = '';
+        if ($isBuiltin && isset($GLOBALS["F_TRANSLATIONS_BASE"][$codeName])) {
+            $runtimeDescription = function_exists('herikaFormatActionPromptTemplate')
+                ? herikaFormatActionPromptTemplate($GLOBALS["F_TRANSLATIONS_BASE"][$codeName] ?? '')
+                : strval($GLOBALS["F_TRANSLATIONS_BASE"][$codeName] ?? '');
+        } else {
+            $runtimeDescription = function_exists('herikaFormatActionPromptTemplate')
+                ? herikaFormatActionPromptTemplate($row['description'] ?? '')
+                : strval($row['description'] ?? '');
+        }
+
         $GLOBALS["F_NAMES"][$codeName] = $row['action_name'];
-        $GLOBALS["F_TRANSLATIONS"][$codeName] = $row['description'];
+        $GLOBALS["F_TRANSLATIONS"][$codeName] = $runtimeDescription;
         $GLOBALS["F_RETURNMESSAGES"][$codeName] = $row['return_message'];
 
         $catalogFunctionEntry = herikaActionCatalogBuildFunctionEntryFromRow($row);
@@ -2114,9 +2129,11 @@ function herikaActionCatalogApplyRowsToRuntimeFunctions()
             continue;
         }
 
+        $catalogFunctionEntry['description'] = $runtimeDescription;
+
         if (isset($runtimeFunctionMap[$codeName])) {
             $runtimeFunctionMap[$codeName]['name'] = $catalogFunctionEntry['name'];
-            $runtimeFunctionMap[$codeName]['description'] = $catalogFunctionEntry['description'];
+            $runtimeFunctionMap[$codeName]['description'] = $runtimeDescription;
             $runtimeFunctionMap[$codeName]['parameters'] = $catalogFunctionEntry['parameters'];
         } else {
             $runtimeFunctionMap[$codeName] = $catalogFunctionEntry;

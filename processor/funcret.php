@@ -1,4 +1,36 @@
 <?php
+if (!function_exists('chimActionShouldEmitDebugNotification')) {
+	function chimActionShouldEmitDebugNotification($functionCodeName)
+	{
+		if (!function_exists('herikaGetActionCatalogRow')) {
+			return false;
+		}
+
+		$row = herikaGetActionCatalogRow($functionCodeName);
+		if (!is_array($row)) {
+			return false;
+		}
+
+		$metadata = $row['metadata'] ?? [];
+		if (!is_array($metadata)) {
+			return false;
+		}
+
+		return !empty($metadata['debug_notification']) || !empty($metadata['top_left_notification']);
+	}
+}
+
+if (!function_exists('chimSanitizeDebugNotificationText')) {
+	function chimSanitizeDebugNotificationText($text)
+	{
+		$text = str_replace(["\r", "\n"], ' ', strval($text));
+		$text = str_replace('@', ' at ', $text);
+		$text = str_replace('|', '/', $text);
+		$text = preg_replace('/\s+/', ' ', $text);
+		return trim(strval($text));
+	}
+}
+
 if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . ".last_tool_call_openai.id.txt")) {
 	$lastCallId = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . ".last_tool_call_openai.id.txt");
 } else {
@@ -190,6 +222,16 @@ if (isset($returnFunction[2])) {
 } else
 	//$functionCalled[] = array('role' => 'assistant', 'content' => null, 'tool_calls' => [array("id" => $lastCallId, "function"=>["name"=>$functionLocaleName,"arguments" => "{\"$argName\":\"{$returnFunction[2]}\"}"])]);
 	$functionCalled[] = array('role' => 'assistant', 'content' => null, 'tool_calls' => [array("id" => $lastCallId, "function" => ["name" => $functionLocaleName, "arguments" => "{\"$argName\":\"\"}"])]); // $returnFunction[2] is not set here
+
+$debugNotificationText = chimSanitizeDebugNotificationText($returnFunction[3] ?? '');
+if ($debugNotificationText !== '' && chimActionShouldEmitDebugNotification($functionCodeName)) {
+	$notificationSpeaker = trim(strval($GLOBALS["HERIKA_NAME"] ?? ''));
+	if ($notificationSpeaker === '') {
+		$notificationSpeaker = 'The Narrator';
+	}
+
+	echo $notificationSpeaker . "|rolecommand|DebugNotification@" . $debugNotificationText . PHP_EOL;
+}
 
 $returnFunctionArray[] = array('role' => 'tool', 'content' => "{$returnFunction[3]}", 'tool_call_id' => "$lastCallId");
 
