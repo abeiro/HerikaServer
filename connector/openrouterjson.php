@@ -989,6 +989,10 @@ class openrouterjson
                 if (isset($finalData[0])&& is_array($finalData[0]))
                     $finalData=$finalData[0];
                 
+                if (isset($finalData["action"]) && chimActionShouldSuppressImmediateMessage($finalData["action"] ?? '')) {
+                    $finalData["message"] = "";
+                }
+
                 if (isset($finalData["message"])) {
                     // Check first if action was issued
                     if (is_array($finalData)&&isset($finalData["action"])) {

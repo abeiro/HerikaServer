@@ -96,6 +96,8 @@
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Use when {$GLOBALS["PLAYER_NAME"]} successfully persuades, bribes, or invokes thane status to clear their bounty.";
                 } else if ($fname == "TeachRightHandSpell") {
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Do not put anything in the 'target' or 'item' field. This action automatically teaches whatever spell {$GLOBALS["PLAYER_NAME"]} currently has equipped in the right hand.";
+                } else if ($fname == "Consume") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put the exact item name from <inventory> in the 'target' field. Only use this for food, drinks, or potions already in inventory. Leave 'item' blank unless you need it as a fallback copy of the same item name. The spoken reply for this action happens after the item is consumed, so use it only when {$GLOBALS["HERIKA_NAME"]} is actually going to eat or drink the item.";
                 } else {
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription})";
                 }
@@ -288,11 +290,11 @@
                             ),
                         "target" => array(
                             "type" => "string",
-                            "description" => "action target actor| action destination location name. Leave blank when the chosen action does not need a target."
+                            "description" => "action target actor| action destination location name| exact inventory item name when action is Consume. Leave blank when the chosen action does not need a target."
                         ),
                         "item" => array(
                             "type" => "string",
-                            "description" => "item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact name from inventory, nearby_items, or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50'). Leave blank when the chosen action does not need an item."
+                            "description" => "item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact name from inventory, nearby_items, or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50'). For Consume, leave item blank unless target is empty and you need item as the same exact inventory item name fallback."
                         )
                     ),
                     "required" => [

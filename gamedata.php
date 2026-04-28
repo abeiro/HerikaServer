@@ -122,14 +122,8 @@ function handleEquipmentUpdate(array $data, NpcMaster $npcMaster): void {
         try {
             require_once(__DIR__ . "/lib/core/player.class.php");
             $player = new Player();
-            
-            // Format equipment data for storage
-            $equipmentData = [];
-            foreach ($equipment as $slot => $item) {
-                $equipmentData[$slot] = isset($item['name']) ? $item['name'] : '';
-                $equipmentData[$slot . '_baseid'] = isset($item['baseid']) ? $item['baseid'] : '';
-            }
-            
+
+            $equipmentData = buildEquipmentMetadataValue($equipment);
             $player->setJson('equipment', $equipmentData);
             Logger::debug("[gamedata.php] Saved player equipment to core_player table");
         } catch (Exception $e) {
@@ -139,22 +133,9 @@ function handleEquipmentUpdate(array $data, NpcMaster $npcMaster): void {
         // For backward compatibility, also try to update NPC record if it exists
         $currentData = $npcMaster->getByName($actorName);
         if ($currentData) {
-            $meta = [];
-            if (!empty($currentData['metadata'])) {
-                $meta = json_decode($currentData['metadata'], true);
-                if (!is_array($meta)) {
-                    $meta = [];
-                }
-            }
-            
-            $meta['equipment'] = [];
-            foreach ($equipment as $slot => $item) {
-                $meta['equipment'][$slot] = isset($item['name']) ? $item['name'] : '';
-                $meta['equipment'][$slot . '_baseid'] = isset($item['baseid']) ? $item['baseid'] : '';
-            }
-            
-            $currentData = $npcMaster->setMetadata($currentData, $meta);
-            $npcMaster->updateByArray($currentData);
+            $npcMaster->updateMetadataKeysByName($actorName, [
+                'equipment' => buildEquipmentMetadataValue($equipment),
+            ]);
         }
         
         return; // Done with player, exit early
@@ -168,25 +149,9 @@ function handleEquipmentUpdate(array $data, NpcMaster $npcMaster): void {
         return;
     }
     
-    // Get existing metadata
-    $meta = [];
-    if (!empty($currentData['metadata'])) {
-        $meta = json_decode($currentData['metadata'], true);
-        if (!is_array($meta)) {
-            $meta = [];
-        }
-    }
-    
-    // Update equipment section
-    $meta['equipment'] = [];
-    foreach ($equipment as $slot => $item) {
-        $meta['equipment'][$slot] = isset($item['name']) ? $item['name'] : '';
-        $meta['equipment'][$slot . '_baseid'] = isset($item['baseid']) ? $item['baseid'] : '';
-    }
-    
-    // Save back to database
-    $currentData = $npcMaster->setMetadata($currentData, $meta);
-    $npcMaster->updateByArray($currentData);
+    $npcMaster->updateMetadataKeysByName($actorName, [
+        'equipment' => buildEquipmentMetadataValue($equipment),
+    ]);
     
     Logger::debug("[gamedata.php] Updated equipment for {$actorType}: {$actorName}");
 }
@@ -198,15 +163,13 @@ function handleFurnitureUpdate(array $data, NpcMaster $npcMaster): void
         return;
     }
 
-    $meta = $npcMaster->getMetadata($currentData);
-    $meta = chimUpsertActivityStatusMetadata($meta, [
+    chimApplyNpcMetadataUpdatesByName($data['actor_name'], [
+        'activity_status' => [
         'furniture_name' => $data['furniture'] ?? '',
         'timestamp' => $data['timestamp'] ?? chimActivityStatusNowMs(),
         'gamets' => $data['gamets'] ?? 0,
+        ],
     ]);
-
-    $currentData = $npcMaster->setMetadata($currentData, $meta);
-    $npcMaster->updateByArray($currentData);
 }
 
 function handleActivityStatusUpdate(array $data, NpcMaster $npcMaster): void
@@ -216,11 +179,9 @@ function handleActivityStatusUpdate(array $data, NpcMaster $npcMaster): void
         return;
     }
 
-    $meta = $npcMaster->getMetadata($currentData);
-    $meta = chimUpsertActivityStatusMetadata($meta, $data);
-
-    $currentData = $npcMaster->setMetadata($currentData, $meta);
-    $npcMaster->updateByArray($currentData);
+    chimApplyNpcMetadataUpdatesByName($data['actor_name'], [
+        'activity_status' => $data,
+    ]);
 }
 
 function handleActivityStatusBulkUpdate(array $data, NpcMaster $npcMaster): void
@@ -240,11 +201,9 @@ function handleActivityStatusBulkUpdate(array $data, NpcMaster $npcMaster): void
             continue;
         }
 
-        $meta = $npcMaster->getMetadata($currentData);
-        $meta = chimUpsertActivityStatusMetadata($meta, $statusRow);
-
-        $currentData = $npcMaster->setMetadata($currentData, $meta);
-        $npcMaster->updateByArray($currentData);
+        chimApplyNpcMetadataUpdatesByName($statusRow['actor_name'], [
+            'activity_status' => $statusRow,
+        ]);
     }
 }
 
@@ -257,6 +216,74 @@ function handleLoadedPluginsUpdate(array $data): void
 
     $pluginCount = chimReplaceLoadedGamePlugins($data['plugins']);
     Logger::debug("[gamedata.php] Updated loaded plugin manifest ({$pluginCount} plugins)");
+}
+
+function buildEquipmentMetadataValue(array $equipment): array
+{
+    $equipmentData = [];
+    foreach ($equipment as $slot => $item) {
+        $equipmentData[$slot] = isset($item['name']) ? $item['name'] : '';
+        $equipmentData[$slot . '_baseid'] = isset($item['baseid']) ? $item['baseid'] : '';
+    }
+
+    return $equipmentData;
+}
+
+function buildInventoryMetadataValue(array $items): array
+{
+    $inventoryData = [];
+    foreach ($items as $item) {
+        if (isset($item['name']) && isset($item['baseid']) && isset($item['count'])) {
+            $inventoryData[] = [
+                'name' => $item['name'],
+                'baseid' => $item['baseid'],
+                'count' => intval($item['count']),
+            ];
+        }
+    }
+
+    return $inventoryData;
+}
+
+function buildSkillsMetadataValue(array $skills): array
+{
+    $skillsData = [];
+    foreach ($skills as $skillName => $skillValue) {
+        $skillsData[$skillName] = floatval($skillValue);
+    }
+
+    return $skillsData;
+}
+
+function buildStatsMetadataValue(array $stats): array
+{
+    return [
+        'level' => isset($stats['level']) ? intval($stats['level']) : 1,
+        'health' => isset($stats['health']) ? floatval($stats['health']) : 0,
+        'health_max' => isset($stats['health_max']) ? floatval($stats['health_max']) : 0,
+        'magicka' => isset($stats['magicka']) ? floatval($stats['magicka']) : 0,
+        'magicka_max' => isset($stats['magicka_max']) ? floatval($stats['magicka_max']) : 0,
+        'stamina' => isset($stats['stamina']) ? floatval($stats['stamina']) : 0,
+        'stamina_max' => isset($stats['stamina_max']) ? floatval($stats['stamina_max']) : 0,
+        'scale' => isset($stats['scale']) ? floatval($stats['scale']) : 1.0,
+    ];
+}
+
+function buildSpellsMetadataValue(array $spells): array
+{
+    $spellData = [];
+    foreach ($spells as $spell) {
+        if (isset($spell['name']) && isset($spell['baseid'])) {
+            $spellData[] = [
+                'name' => $spell['name'],
+                'baseid' => $spell['baseid'],
+                'casting_type' => isset($spell['casting_type']) ? intval($spell['casting_type']) : 0,
+                'delivery' => isset($spell['delivery']) ? intval($spell['delivery']) : 0,
+            ];
+        }
+    }
+
+    return $spellData;
 }
 
 /**
@@ -278,19 +305,8 @@ function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void {
         try {
             require_once(__DIR__ . "/lib/core/player.class.php");
             $player = new Player();
-            
-            // Format inventory data for storage
-            $inventoryData = [];
-            foreach ($items as $item) {
-                if (isset($item['name']) && isset($item['baseid']) && isset($item['count'])) {
-                    $inventoryData[] = [
-                        'name' => $item['name'],
-                        'baseid' => $item['baseid'],
-                        'count' => intval($item['count'])
-                    ];
-                }
-            }
-            
+
+            $inventoryData = buildInventoryMetadataValue($items);
             $player->setJson('inventory', $inventoryData);
             Logger::debug("[gamedata.php] Saved player inventory to core_player table");
         } catch (Exception $e) {
@@ -300,27 +316,9 @@ function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void {
         // For backward compatibility, also try to update NPC record if it exists
         $currentData = $npcMaster->getByName($actorName);
         if ($currentData) {
-            $meta = [];
-            if (!empty($currentData['metadata'])) {
-                $meta = json_decode($currentData['metadata'], true);
-                if (!is_array($meta)) {
-                    $meta = [];
-                }
-            }
-            
-            $meta['inventory'] = [];
-            foreach ($items as $item) {
-                if (isset($item['name']) && isset($item['baseid']) && isset($item['count'])) {
-                    $meta['inventory'][] = [
-                        'name' => $item['name'],
-                        'baseid' => $item['baseid'],
-                        'count' => intval($item['count'])
-                    ];
-                }
-            }
-            
-            $currentData = $npcMaster->setMetadata($currentData, $meta);
-            $npcMaster->updateByArray($currentData);
+            $npcMaster->updateMetadataKeysByName($actorName, [
+                'inventory' => buildInventoryMetadataValue($items),
+            ]);
         }
         
         $itemCount = count($items);
@@ -336,30 +334,9 @@ function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void {
         return;
     }
     
-    // Get existing metadata
-    $meta = [];
-    if (!empty($currentData['metadata'])) {
-        $meta = json_decode($currentData['metadata'], true);
-        if (!is_array($meta)) {
-            $meta = [];
-        }
-    }
-    
-    // Update inventory section - store as array for easier processing
-    $meta['inventory'] = [];
-    foreach ($items as $item) {
-        if (isset($item['name']) && isset($item['baseid']) && isset($item['count'])) {
-            $meta['inventory'][] = [
-                'name' => $item['name'],
-                'baseid' => $item['baseid'],
-                'count' => intval($item['count'])
-            ];
-        }
-    }
-    
-    // Save back to database
-    $currentData = $npcMaster->setMetadata($currentData, $meta);
-    $npcMaster->updateByArray($currentData);
+    $npcMaster->updateMetadataKeysByName($actorName, [
+        'inventory' => buildInventoryMetadataValue($items),
+    ]);
     
     $itemCount = count($items);
     Logger::debug("[gamedata.php] Updated inventory for {$actorType}: {$actorName} ({$itemCount} items)");
@@ -384,13 +361,8 @@ function handleSkillsUpdate(array $data, NpcMaster $npcMaster): void {
         try {
             require_once(__DIR__ . "/lib/core/player.class.php");
             $player = new Player();
-            
-            // Format skills data for storage
-            $skillsData = [];
-            foreach ($skills as $skillName => $skillValue) {
-                $skillsData[$skillName] = floatval($skillValue);
-            }
-            
+
+            $skillsData = buildSkillsMetadataValue($skills);
             $player->setJson('skills', $skillsData);
             Logger::debug("[gamedata.php] Saved player skills to core_player table");
         } catch (Exception $e) {
@@ -400,21 +372,9 @@ function handleSkillsUpdate(array $data, NpcMaster $npcMaster): void {
         // For backward compatibility, also try to update NPC record if it exists
         $currentData = $npcMaster->getByName($actorName);
         if ($currentData) {
-            $meta = [];
-            if (!empty($currentData['metadata'])) {
-                $meta = json_decode($currentData['metadata'], true);
-                if (!is_array($meta)) {
-                    $meta = [];
-                }
-            }
-            
-            $meta['skills'] = [];
-            foreach ($skills as $skillName => $skillValue) {
-                $meta['skills'][$skillName] = floatval($skillValue);
-            }
-            
-            $currentData = $npcMaster->setMetadata($currentData, $meta);
-            $npcMaster->updateByArray($currentData);
+            $npcMaster->updateMetadataKeysByName($actorName, [
+                'skills' => buildSkillsMetadataValue($skills),
+            ]);
         }
         
         Logger::debug("[gamedata.php] Updated skills for player: {$actorName}");
@@ -429,24 +389,9 @@ function handleSkillsUpdate(array $data, NpcMaster $npcMaster): void {
         return;
     }
     
-    // Get existing metadata
-    $meta = [];
-    if (!empty($currentData['metadata'])) {
-        $meta = json_decode($currentData['metadata'], true);
-        if (!is_array($meta)) {
-            $meta = [];
-        }
-    }
-    
-    // Update skills section
-    $meta['skills'] = [];
-    foreach ($skills as $skillName => $skillValue) {
-        $meta['skills'][$skillName] = floatval($skillValue);
-    }
-    
-    // Save back to database
-    $currentData = $npcMaster->setMetadata($currentData, $meta);
-    $npcMaster->updateByArray($currentData);
+    $npcMaster->updateMetadataKeysByName($actorName, [
+        'skills' => buildSkillsMetadataValue($skills),
+    ]);
     
     Logger::debug("[gamedata.php] Updated skills for {$actorType}: {$actorName}");
 }
@@ -470,19 +415,8 @@ function handleStatsUpdate(array $data, NpcMaster $npcMaster): void {
         try {
             require_once(__DIR__ . "/lib/core/player.class.php");
             $player = new Player();
-            
-            // Format stats data for storage
-            $statsData = [
-                'level' => isset($stats['level']) ? intval($stats['level']) : 1,
-                'health' => isset($stats['health']) ? floatval($stats['health']) : 0,
-                'health_max' => isset($stats['health_max']) ? floatval($stats['health_max']) : 0,
-                'magicka' => isset($stats['magicka']) ? floatval($stats['magicka']) : 0,
-                'magicka_max' => isset($stats['magicka_max']) ? floatval($stats['magicka_max']) : 0,
-                'stamina' => isset($stats['stamina']) ? floatval($stats['stamina']) : 0,
-                'stamina_max' => isset($stats['stamina_max']) ? floatval($stats['stamina_max']) : 0,
-                'scale' => isset($stats['scale']) ? floatval($stats['scale']) : 1.0
-            ];
-            
+
+            $statsData = buildStatsMetadataValue($stats);
             $player->setJson('stats', $statsData);
             Logger::debug("[gamedata.php] Saved player stats to core_player table");
         } catch (Exception $e) {
@@ -492,27 +426,9 @@ function handleStatsUpdate(array $data, NpcMaster $npcMaster): void {
         // For backward compatibility, also try to update NPC record if it exists
         $currentData = $npcMaster->getByName($actorName);
         if ($currentData) {
-            $meta = [];
-            if (!empty($currentData['metadata'])) {
-                $meta = json_decode($currentData['metadata'], true);
-                if (!is_array($meta)) {
-                    $meta = [];
-                }
-            }
-            
-            $meta['stats'] = [
-                'level' => isset($stats['level']) ? intval($stats['level']) : 1,
-                'health' => isset($stats['health']) ? floatval($stats['health']) : 0,
-                'health_max' => isset($stats['health_max']) ? floatval($stats['health_max']) : 0,
-                'magicka' => isset($stats['magicka']) ? floatval($stats['magicka']) : 0,
-                'magicka_max' => isset($stats['magicka_max']) ? floatval($stats['magicka_max']) : 0,
-                'stamina' => isset($stats['stamina']) ? floatval($stats['stamina']) : 0,
-                'stamina_max' => isset($stats['stamina_max']) ? floatval($stats['stamina_max']) : 0,
-                'scale' => isset($stats['scale']) ? floatval($stats['scale']) : 1.0
-            ];
-            
-            $currentData = $npcMaster->setMetadata($currentData, $meta);
-            $npcMaster->updateByArray($currentData);
+            $npcMaster->updateMetadataKeysByName($actorName, [
+                'stats' => buildStatsMetadataValue($stats),
+            ]);
         }
         
         Logger::debug("[gamedata.php] Updated stats for player: {$actorName}");
@@ -527,30 +443,9 @@ function handleStatsUpdate(array $data, NpcMaster $npcMaster): void {
         return;
     }
     
-    // Get existing metadata
-    $meta = [];
-    if (!empty($currentData['metadata'])) {
-        $meta = json_decode($currentData['metadata'], true);
-        if (!is_array($meta)) {
-            $meta = [];
-        }
-    }
-    
-    // Update stats section
-    $meta['stats'] = [
-        'level' => isset($stats['level']) ? intval($stats['level']) : 1,
-        'health' => isset($stats['health']) ? floatval($stats['health']) : 0,
-        'health_max' => isset($stats['health_max']) ? floatval($stats['health_max']) : 0,
-        'magicka' => isset($stats['magicka']) ? floatval($stats['magicka']) : 0,
-        'magicka_max' => isset($stats['magicka_max']) ? floatval($stats['magicka_max']) : 0,
-        'stamina' => isset($stats['stamina']) ? floatval($stats['stamina']) : 0,
-        'stamina_max' => isset($stats['stamina_max']) ? floatval($stats['stamina_max']) : 0,
-        'scale' => isset($stats['scale']) ? floatval($stats['scale']) : 1.0
-    ];
-    
-    // Save back to database
-    $currentData = $npcMaster->setMetadata($currentData, $meta);
-    $npcMaster->updateByArray($currentData);
+    $npcMaster->updateMetadataKeysByName($actorName, [
+        'stats' => buildStatsMetadataValue($stats),
+    ]);
     
     Logger::debug("[gamedata.php] Updated stats for {$actorType}: {$actorName}");
 }
@@ -583,32 +478,10 @@ function handleSpellsUpdate(array $data, NpcMaster $npcMaster): void {
         return;
     }
     
-    // Get existing metadata
-    $meta = [];
-    if (!empty($currentData['metadata'])) {
-        $meta = json_decode($currentData['metadata'], true);
-        if (!is_array($meta)) {
-            $meta = [];
-        }
-    }
-    
-    // Update spells section - store as array
-    $meta['spells'] = [];
-    foreach ($spells as $spell) {
-        if (isset($spell['name']) && isset($spell['baseid'])) {
-            $meta['spells'][] = [
-                'name' => $spell['name'],
-                'baseid' => $spell['baseid'],
-                'casting_type' => isset($spell['casting_type']) ? intval($spell['casting_type']) : 0,
-                'delivery' => isset($spell['delivery']) ? intval($spell['delivery']) : 0
-            ];
-        }
-    }
-    $meta['spells_updated'] = time();
-    
-    // Save back to database
-    $currentData = $npcMaster->setMetadata($currentData, $meta);
-    $npcMaster->updateByArray($currentData);
+    $npcMaster->updateMetadataKeysByName($actorName, [
+        'spells' => buildSpellsMetadataValue($spells),
+        'spells_updated' => time(),
+    ]);
     
     Logger::debug("[gamedata.php] Updated spells for NPC: {$actorName}");
 }

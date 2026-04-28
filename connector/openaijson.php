@@ -1120,6 +1120,10 @@ class openaijson
                             $finalData["message"]=implode(",",$finalData["message"]);
                 }
 
+                if (isset($finalData["action"]) && chimActionShouldSuppressImmediateMessage($finalData["action"] ?? '')) {
+                    $finalData["message"] = "";
+                }
+
                 if (isset($finalData["message"])) {
                     if (is_array($finalData)&&isset($finalData["message"])) {
                         $mangledBuffer = str_replace($this->_extractedbuffer, "", $finalData["message"]);

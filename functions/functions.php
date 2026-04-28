@@ -31,6 +31,7 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'MakeFollower',
     'Toast',
     'Drink',
+    'Consume',
     'StartRitualCeremony',
     'EndRitualCeremony',
     'Training',
@@ -240,6 +241,7 @@ $F_TRANSLATIONS_LOCAL["MakeFollower"] = "{$GLOBALS["HERIKA_NAME"]} joins to {$GL
 
 $F_TRANSLATIONS_LOCAL["Toast"] = "Raises a glass in celebration or honor.";
 $F_TRANSLATIONS_LOCAL["Drink"] = "Drinks a beverage to quench thirst or enjoy flavor.";
+$F_TRANSLATIONS_LOCAL["Consume"] = "{$GLOBALS["HERIKA_NAME"]} consumes a food, drink, or potion from inventory. Use the exact inventory item name in the target field.";
 $F_TRANSLATIONS_LOCAL["StartRitualCeremony"] = "Participates in a ritual or ceremony, following its customs and practices.";
 $F_TRANSLATIONS_LOCAL["EndRitualCeremony"] = "Concludes a ritual or ceremony, marking its completion.";
     
@@ -283,6 +285,7 @@ $F_RETURNMESSAGES_LOCAL["MakeFollower"] = "{$GLOBALS["HERIKA_NAME"]} is now part
 
 $F_RETURNMESSAGES_LOCAL["Toast"] = "{$GLOBALS["HERIKA_NAME"]} raises a glass in celebration or honor.";      
 $F_RETURNMESSAGES_LOCAL["Drink"] = "{$GLOBALS["HERIKA_NAME"]} drinks a beverage to quench thirst or enjoy flavor.";
+$F_RETURNMESSAGES_LOCAL["Consume"] = "{$GLOBALS["HERIKA_NAME"]} consumes an item from inventory.";
 $F_RETURNMESSAGES_LOCAL["StartRitualCeremony"] = "{$GLOBALS["HERIKA_NAME"]} begins a ritual or ceremony, following its customs and practices.";
 $F_RETURNMESSAGES_LOCAL["EndRitualCeremony"] = "{$GLOBALS["HERIKA_NAME"]} concludes a ritual or ceremony, marking its completion.";
 $F_RETURNMESSAGES_LOCAL["Training"] = "{$GLOBALS["HERIKA_NAME"]} opens the training menu.";
@@ -328,6 +331,7 @@ $F_NAMES_LOCAL["MakeFollower"] = "Join{$GLOBALS["PLAYER_NAME"]}Party";
 
 $F_NAMES_LOCAL["Toast"] = "Toast";
 $F_NAMES_LOCAL["Drink"] = "Drink";
+$F_NAMES_LOCAL["Consume"] = "Consume";
 $F_NAMES_LOCAL["StartRitualCeremony"] = "StartRitualCeremony";
 $F_NAMES_LOCAL["EndRitualCeremony"] = "EndRitualCeremony";
 
@@ -956,6 +960,24 @@ $GLOBALS["FUNCTIONS"] = [
         ],
     ],
     [
+        "name" => $F_NAMES_LOCAL["Consume"],
+        "description" => $F_TRANSLATIONS_LOCAL["Consume"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "REQUIRED: Exact name of the food, drink, or potion from <inventory> to consume.",
+                ],
+                "item" => [
+                    "type" => "string",
+                    "description" => "Optional fallback copy of the same inventory item name if target is empty.",
+                ],
+            ],
+            "required" => ["target"],
+        ],
+    ],
+    [
         "name" => $F_NAMES_LOCAL["Training"],
         "description" => $F_TRANSLATIONS_LOCAL["Training"],
         "parameters" => [
@@ -1374,6 +1396,17 @@ function queueFunctionExecutionCommand(&$commandBuffer, &$alreadySent, $executio
     $alreadySent[$commandHash] = $commandStr;
     return true;
 }
+
+function chimActionShouldSuppressImmediateMessage($actionName)
+{
+    $actionName = trim(strval($actionName));
+    if ($actionName === '') {
+        return false;
+    }
+
+    return getFunctionCodeName($actionName) === 'Consume';
+}
+
 
 function buildFunctionExecutionParameter($functionCodeName, $parameter)
 {

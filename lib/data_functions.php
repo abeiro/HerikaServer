@@ -243,6 +243,84 @@ function lookupDescriptionByFormID(string $formId): ?array {
 }
 
 /**
+ * Lookup description only by exact runtime FormID or stable plugin-aware key.
+ * This deliberately skips legacy wildcard keys and name fallback to avoid
+ * cross-matching unrelated item descriptions for spells.
+ *
+ * @param string $formId The runtime or stable identifier to lookup
+ * @return array|null Array with 'baseid', 'name', and 'description' keys, or null if not found
+ */
+function lookupStrictDescriptionByFormID(string $formId): ?array {
+    global $db;
+
+    $candidates = [];
+    $pushCandidate = function ($candidate) use (&$candidates): void {
+        $candidate = trim((string) $candidate);
+        if ($candidate === '') {
+            return;
+        }
+
+        if (strpos($candidate, '|') !== false) {
+            $parsedStable = chimParseStableFormReference($candidate);
+            if ($parsedStable) {
+                $candidate = $parsedStable['stable_key'];
+            }
+        } else {
+            $candidate = strtoupper($candidate);
+        }
+
+        if (!in_array($candidate, $candidates, true)) {
+            $candidates[] = $candidate;
+        }
+    };
+
+    $formId = trim($formId);
+    if ($formId === '') {
+        return null;
+    }
+
+    $parsedStableReference = chimParseStableFormReference($formId);
+    if ($parsedStableReference) {
+        $pushCandidate($parsedStableReference['stable_key']);
+
+        $pluginRow = chimGetLoadedGamePluginByName($parsedStableReference['plugin_name']);
+        if ($pluginRow && !empty($pluginRow['formid_prefix'])) {
+            $runtimeFormId = chimComputeRuntimeFormIdFromPrefix(
+                $pluginRow['formid_prefix'],
+                $parsedStableReference['local_formid']
+            );
+            if ($runtimeFormId) {
+                $pushCandidate($runtimeFormId);
+            }
+        }
+    } else {
+        $runtimeFormId = chimNormalizeRuntimeFormId($formId);
+        if ($runtimeFormId !== '') {
+            $pushCandidate($runtimeFormId);
+
+            $pluginRow = chimGetLoadedGamePluginByRuntimeFormId($runtimeFormId);
+            $localFormId = chimExtractLocalFormIdFromRuntimeFormId($runtimeFormId);
+            if ($pluginRow && !empty($pluginRow['plugin_name']) && $localFormId !== '') {
+                $pushCandidate(chimBuildStableFormReference($pluginRow['plugin_name'], $localFormId));
+            }
+        }
+    }
+
+    foreach ($candidates as $candidateBaseId) {
+        $escapedBaseId = $db->escape($candidateBaseId);
+        $record = $db->fetchOne(
+            "SELECT baseid, name, description FROM combined_descriptions WHERE baseid = '{$escapedBaseId}' LIMIT 1"
+        );
+
+        if ($record && !empty($record['description'])) {
+            return $record;
+        }
+    }
+
+    return null;
+}
+
+/**
  * Get height description based on scale value
  * Reads height descriptions from prompts table with hardcoded fallback
  * 
@@ -6332,11 +6410,14 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
                 continue;
             }
             
-            // Only add spells that have descriptions in the database
+            // Only add spells that have exact/stable spell descriptions in the database.
+            // Do not use legacy wildcard or name fallback here; those can collide with
+            // unrelated item descriptions after mod-aware FormID resolution.
             $description = null;
             if (!empty($baseid) && !in_array($baseid, $describedBaseids)) {
-                $description = $getItemDescription($spellName, $baseid);
-                if ($description) {
+                $record = lookupStrictDescriptionByFormID((string) $baseid);
+                if (!empty($record['description'])) {
+                    $description = $record['description'];
                     $describedBaseids[] = $baseid;
                 }
             }

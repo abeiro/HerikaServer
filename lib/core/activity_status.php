@@ -195,6 +195,30 @@ function chimClearActivityStatusMetadata(array $metadata): array
     return $metadata;
 }
 
+function chimBuildActivityStatusMetadataUpdates(array $payload): array
+{
+    $status = chimSanitizeActivityStatusPayload($payload);
+
+    $setValues = [
+        'activity_status' => $status,
+        'current_action' => $status['current_action'],
+        'furniture' => $status['furniture_name'],
+        'activity_status_timestamp' => $status['timestamp'],
+    ];
+    $unsetKeys = [];
+
+    if ($status['use_type'] !== '') {
+        $setValues['use_type'] = $status['use_type'];
+    } else {
+        $unsetKeys[] = 'use_type';
+    }
+
+    return [
+        'set' => $setValues,
+        'unset' => $unsetKeys,
+    ];
+}
+
 function chimApplyNpcMetadataUpdatesByName(string $npcName, array $updates): bool
 {
     $npcName = trim($npcName);
@@ -213,19 +237,25 @@ function chimApplyNpcMetadataUpdatesByName(string $npcName, array $updates): boo
         return false;
     }
 
-    $metadata = $npcMaster->getMetadata($npcData);
-    if (!is_array($metadata)) {
-        $metadata = [];
-    }
+    $setValues = [];
+    $unsetKeys = [];
 
     if (array_key_exists('activity_status', $updates)) {
         $activityPayload = $updates['activity_status'];
         unset($updates['activity_status']);
 
         if (is_array($activityPayload)) {
-            $metadata = chimUpsertActivityStatusMetadata($metadata, $activityPayload);
+            $activityUpdates = chimBuildActivityStatusMetadataUpdates($activityPayload);
+            $setValues = array_merge($setValues, $activityUpdates['set']);
+            $unsetKeys = array_merge($unsetKeys, $activityUpdates['unset']);
         } elseif ($activityPayload === null) {
-            $metadata = chimClearActivityStatusMetadata($metadata);
+            $unsetKeys = array_merge($unsetKeys, [
+                'activity_status',
+                'current_action',
+                'furniture',
+                'use_type',
+                'activity_status_timestamp',
+            ]);
         }
     }
 
@@ -236,14 +266,13 @@ function chimApplyNpcMetadataUpdatesByName(string $npcName, array $updates): boo
         }
 
         if ($value === null) {
-            unset($metadata[$metadataKey]);
+            $unsetKeys[] = $metadataKey;
         } else {
-            $metadata[$metadataKey] = $value;
+            $setValues[$metadataKey] = $value;
         }
     }
 
-    $npcData = $npcMaster->setMetadata($npcData, $metadata);
-    return $npcMaster->updateByArray($npcData) !== false;
+    return $npcMaster->updateMetadataKeysByName($npcName, $setValues, $unsetKeys);
 }
 
 function chimActivityStatusIsFresh(array $status, int $maxAgeMs = 45000): bool

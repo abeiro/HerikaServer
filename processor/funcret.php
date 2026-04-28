@@ -164,6 +164,16 @@ if (isset($returnFunction[2])) {
 		$argName = "target";
 		$useFunctionsAgain = false;
 		$request = "(You forgave the player's crimes and cleared their bounty. Acknowledge this with a warning or blessing.) $request";
+	} else if ($functionCodeName == "Consume") {
+		$argName = "target";
+		$useFunctionsAgain = false;
+		$GLOBALS["OPENAI_MAX_TOKENS"] = "64";
+		$isConsumeError = isset($returnFunction[3]) && stripos(trim(strval($returnFunction[3])), "Error:") === 0;
+		if ($isConsumeError) {
+			$request = "(The consume action failed. Reply with one short in-character line explaining why {$GLOBALS["HERIKA_NAME"]} could not eat or drink that item. Do not pretend it was consumed and do not ask follow-up questions.) $request";
+		} else {
+			$request = "(The item has already been consumed. Reply with one short in-character reaction to how it tasted or felt. Do not describe preparing to eat it and do not ask follow-up questions.) $request";
+		}
 
 	} else if ($functionCodeName == "FollowPlayer") {
 		terminate();
