@@ -8,11 +8,15 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'OpenInventory2',
     'Attack',
     'Follow',
+    'Inspect',
+    'InspectSurroundings',
     'CheckInventory',
     'SheatheWeapon',
     'Relax',
     'LeadTheWayTo',
     'TakeASeat',
+    'ReadQuestJournal',
+    'Surrender',
     'IncreaseWalkSpeed',
     'DecreaseWalkSpeed',
     'StopWalk',
@@ -208,11 +212,15 @@ $F_TRANSLATIONS_LOCAL["OpenInventory"] = "Initiates trading or exchange ITEMS wi
 $F_TRANSLATIONS_LOCAL["OpenInventory2"] = "Initiates trading, {$GLOBALS["PLAYER_NAME"]} must give ITEMS to {$GLOBALS["HERIKA_NAME"]}";
 $F_TRANSLATIONS_LOCAL["Attack"] = "Attack with intention to kill an Actor, NPC or entity.";
 $F_TRANSLATIONS_LOCAL["Follow"] = "Move to and follow the specified target actor";
+$F_TRANSLATIONS_LOCAL["Inspect"] = "Inspect a nearby NPC or actor to get a closer read on their visible equipment, condition, and state.";
+$F_TRANSLATIONS_LOCAL["InspectSurroundings"] = "Look around and assess who or what is nearby, including people, creatures, and possible threats.";
 $F_TRANSLATIONS_LOCAL["CheckInventory"] = "Search in {$GLOBALS["HERIKA_NAME"]}'s inventory, backpack or pocket. List their inventory contents";
 $F_TRANSLATIONS_LOCAL["SheatheWeapon"] = "Sheathes/put away current weapon";
 $F_TRANSLATIONS_LOCAL["Relax"] = "Stop whatever you are doing and relax at the current location.Used to Unwind,Loosen Up,Enjoy Moment,Chill";
 $F_TRANSLATIONS_LOCAL["TravelTo"] = "Use it to move to major locations and landmarks and POIs.";
 $F_TRANSLATIONS_LOCAL["TakeASeat"] = "{$GLOBALS["HERIKA_NAME"]} take a seat at seating location nearby.";
+$F_TRANSLATIONS_LOCAL["ReadQuestJournal"] = "Only use if {$GLOBALS["PLAYER_NAME"]} explicitly asks about a quest. Read the quest journal and get information about current quests.";
+$F_TRANSLATIONS_LOCAL["Surrender"] = "{$GLOBALS["HERIKA_NAME"]} yields, raises their hands, and stops resisting.";
 $F_TRANSLATIONS_LOCAL["IncreaseWalkSpeed"] = "Increase {$GLOBALS["HERIKA_NAME"]} speed when moving or travelling";
 $F_TRANSLATIONS_LOCAL["DecreaseWalkSpeed"] = "Decrease {$GLOBALS["HERIKA_NAME"]} speed when moving or travelling";
 $F_TRANSLATIONS_LOCAL["StopWalk"] = "Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
@@ -253,11 +261,15 @@ $F_RETURNMESSAGES_LOCAL["OpenInventory"] = "Initiates trading or exchange items 
 $F_RETURNMESSAGES_LOCAL["OpenInventory2"] = "{$GLOBALS["PLAYER_NAME"]} give items to {$GLOBALS["HERIKA_NAME"]}. Accept gift.";
 $F_RETURNMESSAGES_LOCAL["Attack"] = "{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES_LOCAL["Follow"] = "{$GLOBALS["HERIKA_NAME"]} follows #TARGET# ";
+$F_RETURNMESSAGES_LOCAL["Inspect"] = "";
+$F_RETURNMESSAGES_LOCAL["InspectSurroundings"] = "";
 $F_RETURNMESSAGES_LOCAL["CheckInventory"] = "{$GLOBALS["HERIKA_NAME"]}'s INVENTORY:#RESULT#";
 $F_RETURNMESSAGES_LOCAL["SheatheWeapon"] = "Sheathes/put away current weapon";
 $F_RETURNMESSAGES_LOCAL["Relax"] = "{$GLOBALS["HERIKA_NAME"]} is relaxed. Time to enjoy life.";
 $F_RETURNMESSAGES_LOCAL["LeadTheWayTo"] = "Only use if {$GLOBALS["PLAYER_NAME"]} explicitly orders it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. ";
 $F_RETURNMESSAGES_LOCAL["TakeASeat"] = "{$GLOBALS["HERIKA_NAME"]} seats in nearby chair or furniture ";
+$F_RETURNMESSAGES_LOCAL["ReadQuestJournal"] = "";
+$F_RETURNMESSAGES_LOCAL["Surrender"] = "{$GLOBALS["HERIKA_NAME"]} surrenders and raises their hands.";
 $F_RETURNMESSAGES_LOCAL["IncreaseWalkSpeed"] = "Increases {$GLOBALS["HERIKA_NAME"]} speed/pace when moving or travelling";
 $F_RETURNMESSAGES_LOCAL["DecreaseWalkSpeed"] = "Decreases {$GLOBALS["HERIKA_NAME"]} speed/pace when moving or travelling";
 $F_RETURNMESSAGES_LOCAL["StopWalk"] = "Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
@@ -298,11 +310,15 @@ $F_NAMES_LOCAL["OpenInventory"] = "TradeItems";
 $F_NAMES_LOCAL["OpenInventory2"] = "AcceptGift";
 $F_NAMES_LOCAL["Attack"] = "Attack";
 $F_NAMES_LOCAL["Follow"] = "Follow";
+$F_NAMES_LOCAL["Inspect"] = "Inspect";
+$F_NAMES_LOCAL["InspectSurroundings"] = "InspectSurroundings";
 $F_NAMES_LOCAL["CheckInventory"] = "CheckInventory";
 $F_NAMES_LOCAL["SheatheWeapon"] = "SheatheWeapon";
 $F_NAMES_LOCAL["Relax"] = "Relax";
 //$F_NAMES_LOCAL["LeadTheWayTo"]="LeadTheWayTo";
 $F_NAMES_LOCAL["TakeASeat"] = "TakeASeat";
+$F_NAMES_LOCAL["ReadQuestJournal"] = "ReadQuestJournal";
+$F_NAMES_LOCAL["Surrender"] = "Surrender";
 $F_NAMES_LOCAL["IncreaseWalkSpeed"] = "IncreaseWalkSpeed";
 $F_NAMES_LOCAL["DecreaseWalkSpeed"] = "DecreaseWalkSpeed";
 $F_NAMES_LOCAL["StopWalk"] = "StopWalk";
@@ -352,11 +368,7 @@ if (isset($GLOBALS["CORE_LANG"])) {
 
 $herikaRetiredActionCodes = [
     'AttackHunt',
-    'Inspect',
-    'InspectSurroundings',
     'LookAt',
-    'Surrender',
-    'ReadQuestJournal',
     'GetDateTime',
     'SearchDiary',
     'SetCurrentTask',
@@ -482,6 +494,35 @@ $GLOBALS["FUNCTIONS"] = [
         ],
     ],
     [
+        "name" => $F_NAMES_LOCAL["Inspect"],
+        "description" => $F_TRANSLATIONS_LOCAL["Inspect"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Nearby NPC, actor, or being to inspect more closely",
+                    "enum" => isset($GLOBALS['FUNCTION_PARM_INSPECT']) ? $GLOBALS['FUNCTION_PARM_INSPECT'] : [],
+                ],
+            ],
+            "required" => ["target"],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["InspectSurroundings"],
+        "description" => $F_TRANSLATIONS_LOCAL["InspectSurroundings"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ],
+            ],
+            "required" => [],
+        ],
+    ],
+    [
         "name" => $F_NAMES_LOCAL["CheckInventory"],
         "description" => $F_TRANSLATIONS_LOCAL["CheckInventory"],
         "parameters" => [
@@ -556,6 +597,34 @@ $GLOBALS["FUNCTIONS"] = [
     [
         "name" => $F_NAMES_LOCAL["TakeASeat"],
         "description" => $F_TRANSLATIONS_LOCAL["TakeASeat"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Keep it blank",
+                ],
+            ],
+            "required" => [""],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["ReadQuestJournal"],
+        "description" => $F_TRANSLATIONS_LOCAL["ReadQuestJournal"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "id_quest" => [
+                    "type" => "string",
+                    "description" => "Specific quest to read. Leave blank to read current quests.",
+                ],
+            ],
+            "required" => [""],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["Surrender"],
+        "description" => $F_TRANSLATIONS_LOCAL["Surrender"],
         "parameters" => [
             "type" => "object",
             "properties" => [
@@ -1404,7 +1473,7 @@ function chimActionShouldSuppressImmediateMessage($actionName)
         return false;
     }
 
-    return getFunctionCodeName($actionName) === 'Consume';
+    return in_array(getFunctionCodeName($actionName), ['Consume', 'InspectSurroundings'], true);
 }
 
 

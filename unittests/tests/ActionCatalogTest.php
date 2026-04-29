@@ -6,6 +6,22 @@ require_once __DIR__.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'..'.DIRECTORY
 
 final class ActionCatalogTest extends TestCase
 {
+    public function testReadQuestJournalIsNotRetiredAndIsEnabledByDefault(): void
+    {
+        $this->assertNotContains('ReadQuestJournal', herikaGetRetiredActionCodes());
+        $this->assertContains('ReadQuestJournal', herikaGetNpcDefaultActionCodes());
+        $this->assertContains('ReadQuestJournal', herikaGetFollowerDefaultActionCodes());
+        $this->assertNotContains('Inspect', herikaGetRetiredActionCodes());
+        $this->assertContains('Inspect', herikaGetNpcDefaultActionCodes());
+        $this->assertContains('Inspect', herikaGetFollowerDefaultActionCodes());
+        $this->assertNotContains('InspectSurroundings', herikaGetRetiredActionCodes());
+        $this->assertContains('InspectSurroundings', herikaGetNpcDefaultActionCodes());
+        $this->assertContains('InspectSurroundings', herikaGetFollowerDefaultActionCodes());
+        $this->assertNotContains('Surrender', herikaGetRetiredActionCodes());
+        $this->assertContains('Surrender', herikaGetNpcDefaultActionCodes());
+        $this->assertContains('Surrender', herikaGetFollowerDefaultActionCodes());
+    }
+
     public function testBuildActionCatalogSeedRows_AssignsScopesAndSkipsRetiredActions(): void
     {
         $rows = herikaBuildActionCatalogSeedRows(
@@ -41,8 +57,6 @@ final class ActionCatalogTest extends TestCase
         );
 
         $this->assertArrayNotHasKey('AttackHunt', $rows);
-        $this->assertArrayNotHasKey('Surrender', $rows);
-
         $this->assertTrue($rows['MoveTo']['available_to_npc']);
         $this->assertFalse($rows['MoveTo']['available_to_followers']);
         $this->assertTrue($rows['MoveTo']['is_activated']);

@@ -1177,6 +1177,119 @@ function DataPosibleInspectTargets($pack=true)
     return $GLOBALS["CACHE_POSIBLE_INSPECT_TARGETS"][(int)$pack];
 }
 
+function chimDescribeConditionStat(string $kind, float $cur, float $max): string
+{
+    if ($max <= 0) {
+        return "Unknown";
+    }
+
+    $pct = ($cur < 0 ? 0.0 : ($cur > $max ? $max : $cur)) / $max * 100.0;
+    if ($kind === 'health') {
+        if ($pct >= 75.0) {
+            return "Near full health";
+        }
+        if ($pct >= 50.0) {
+            return "Wounded";
+        }
+        if ($pct >= 25.0) {
+            return "Badly wounded";
+        }
+        return "On the brink of collapse";
+    }
+
+    if ($kind === 'magicka') {
+        if ($pct >= 75.0) {
+            return "Magicka reserves strong";
+        }
+        if ($pct >= 50.0) {
+            return "Magicka reserves middling";
+        }
+        if ($pct >= 25.0) {
+            return "Magicka reserves low";
+        }
+        return "Magicka nearly drained";
+    }
+
+    if ($pct >= 75.0) {
+        return "Well-rested";
+    }
+    if ($pct >= 50.0) {
+        return "Winded";
+    }
+    if ($pct >= 25.0) {
+        return "Exhausted";
+    }
+    return "Spent";
+}
+
+function chimBuildCurrentConditionLinesFromStats($stats)
+{
+    if (!is_array($stats) || empty($stats)) {
+        return [];
+    }
+
+    $h = chimDescribeConditionStat('health', (float)($stats['health'] ?? 0), (float)($stats['health_max'] ?? 0));
+    $m = chimDescribeConditionStat('magicka', (float)($stats['magicka'] ?? 0), (float)($stats['magicka_max'] ?? 0));
+    $st = chimDescribeConditionStat('stamina', (float)($stats['stamina'] ?? 0), (float)($stats['stamina_max'] ?? 0));
+
+    $lines = [];
+    if ($h !== 'Unknown') {
+        $lines[] = "  • Health: {$h}";
+    }
+    if ($m !== 'Unknown') {
+        $lines[] = "  • Magicka: {$m}";
+    }
+    if ($st !== 'Unknown') {
+        $lines[] = "  • Stamina: {$st}";
+    }
+
+    return $lines;
+}
+
+function chimBuildCurrentConditionBlockFromStats($stats)
+{
+    $lines = chimBuildCurrentConditionLinesFromStats($stats);
+    if (empty($lines)) {
+        return '';
+    }
+
+    return "<current_condition>\n#Current Condition\n" . implode("\n", $lines) . "\n</current_condition>";
+}
+
+function chimBuildNpcInspectSummary(string $npcName)
+{
+    $npcName = trim($npcName);
+    if ($npcName === '') {
+        return '';
+    }
+
+    $npcMaster = new NpcMaster();
+    $currentNpcData = $npcMaster->getByName($npcName);
+    if (!is_array($currentNpcData) || empty($currentNpcData)) {
+        return '';
+    }
+
+    $metaData = $npcMaster->getMetaData($currentNpcData);
+    if (!is_array($metaData)) {
+        $metaData = [];
+    }
+
+    $sections = [];
+
+    $conditionBlock = chimBuildCurrentConditionBlockFromStats($metaData['stats'] ?? null);
+    if ($conditionBlock !== '') {
+        $sections[] = $conditionBlock;
+    }
+
+    $activityStatus = chimNormalizeActivityStatus($metaData);
+    if (!empty($activityStatus['summary'])) {
+        $heading = !empty($activityStatus['fresh']) ? '#Current Activity' : '#Last Known Activity';
+        $sections[] = "<current_activity>\n{$heading}\n" . ucfirst($activityStatus['summary']) . ".\n</current_activity>";
+    }
+
+    return implode("\n", $sections);
+}
+
 function DataQuestJournal($quest)
 {
     global $db;

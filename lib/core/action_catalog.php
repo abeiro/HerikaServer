@@ -6,11 +6,7 @@ function herikaGetRetiredActionCodes()
 {
     return [
         'AttackHunt',
-        'Inspect',
-        'InspectSurroundings',
         'LookAt',
-        'Surrender',
-        'ReadQuestJournal',
         'GetDateTime',
         'SearchDiary',
         'SetCurrentTask',
@@ -28,7 +24,11 @@ function herikaGetNpcDefaultActionCodes()
         'Attack',
         'TravelTo',
         'Follow',
+        'Inspect',
+        'InspectSurroundings',
         'CheckInventory',
+        'ReadQuestJournal',
+        'Surrender',
         'Relax',
         'TakeASeat',
         'IncreaseWalkSpeed',
@@ -70,7 +70,11 @@ function herikaGetFollowerDefaultActionCodes()
         'Attack',
         'TravelTo',
         'Follow',
+        'Inspect',
+        'InspectSurroundings',
         'CheckInventory',
+        'ReadQuestJournal',
+        'Surrender',
         'SheatheWeapon',
         'Relax',
         'TakeASeat',
@@ -2440,6 +2444,92 @@ function herikaActionCatalogUpsertCustomParameters($codeName, $parameters)
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_followers'] ?? false)) . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['is_activated'] ?? false)) . ",
             " . herikaActionCatalogSqlJson($normalizedParameters) . ",
+            " . herikaActionCatalogSqlJson($row['metadata'] ?? []) . ",
+            " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['game_function'] ?? false)) . ",
+            " . herikaActionCatalogNormalizeImportVersion($row['import_version'] ?? 0) . ",
+            " . herikaActionCatalogSqlJson($row['script_proxy_program'] ?? null, true) . "
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ");
+
+    herikaActionCatalogResetCache();
+    return $result !== false;
+}
+
+function herikaActionCatalogUpsertCustomTextFields($codeName, $fieldValues)
+{
+    $codeName = trim(strval($codeName));
+    if ($codeName === '' || !is_array($fieldValues) || !herikaActionCatalogDbReady()) {
+        return false;
+    }
+
+    $literalCode = herikaActionCatalogSqlText($codeName);
+    $row = $GLOBALS["db"]->fetchOne("
+        SELECT
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        FROM public.combined_core_action
+        WHERE code_name = {$literalCode}
+        LIMIT 1
+    ");
+
+    if (!$row) {
+        return false;
+    }
+
+    $actionName = herikaNormalizeActionCatalogDisplayActionName(strval($fieldValues['action_name'] ?? ($row['action_name'] ?? '')));
+    if ($actionName === '') {
+        return false;
+    }
+
+    $description = strval($fieldValues['description'] ?? ($row['description'] ?? ''));
+    $returnMessage = strval($fieldValues['return_message'] ?? ($row['return_message'] ?? ''));
+
+    $result = $GLOBALS["db"]->execQuery("
+        INSERT INTO public.core_action_custom (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        ) VALUES (
+            " . herikaActionCatalogSqlText($row['code_name'] ?? $codeName) . ",
+            " . herikaActionCatalogSqlText($actionName) . ",
+            " . herikaActionCatalogSqlText($description) . ",
+            " . herikaActionCatalogSqlText($returnMessage) . ",
+            " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_npc'] ?? false)) . ",
+            " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_followers'] ?? false)) . ",
+            " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['is_activated'] ?? false)) . ",
+            " . herikaActionCatalogSqlJson($row['parameters_json'] ?? []) . ",
             " . herikaActionCatalogSqlJson($row['metadata'] ?? []) . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['game_function'] ?? false)) . ",
             " . herikaActionCatalogNormalizeImportVersion($row['import_version'] ?? 0) . ",

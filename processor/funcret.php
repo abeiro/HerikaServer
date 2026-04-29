@@ -93,6 +93,40 @@ if (isset($returnFunction[2])) {
 		$argName = "target";
 		$useFunctionsAgain = false;
 
+	} else if ($functionCodeName == "Inspect") {
+		$argName = "target";
+		$useFunctionsAgain = false;
+		$GLOBALS["OPENAI_MAX_TOKENS"] = "96";
+		$inspectedName = trim(strval($returnFunction[2] ?? ''));
+		$inspectResult = trim(strval($returnFunction[3] ?? ''));
+		$isInspectError = stripos($inspectResult, "Error:") === 0;
+
+		if (!$isInspectError && function_exists('chimBuildNpcInspectSummary')) {
+			$inspectSummary = trim(chimBuildNpcInspectSummary($inspectedName));
+			if ($inspectSummary !== '') {
+				$returnFunction[3] = trim($inspectResult . "\n" . $inspectSummary);
+			}
+		}
+
+		if ($isInspectError) {
+			$request = "(The inspect action failed. Reply with one short in-character line explaining why {$GLOBALS["HERIKA_NAME"]} could not get a proper look at {$inspectedName}. Do not pretend the inspection succeeded and do not ask follow-up questions.) $request";
+		} else {
+			$request = "(You just inspected {$inspectedName}. Reply with one short in-character observation about their visible gear, posture, and current condition. If condition details are present, use them naturally. Do not ask follow-up questions.) $request";
+		}
+
+	} else if ($functionCodeName == "InspectSurroundings") {
+		$argName = "target";
+		$useFunctionsAgain = false;
+		$GLOBALS["OPENAI_MAX_TOKENS"] = "80";
+		$surroundingsResult = trim(strval($returnFunction[3] ?? ''));
+		$isInspectError = stripos($surroundingsResult, "Error:") === 0;
+
+		if ($isInspectError) {
+			$request = "(The look-around action failed. Reply with one short in-character line explaining that {$GLOBALS["HERIKA_NAME"]} could not get a proper read on the surroundings. Do not pretend the scan succeeded and do not ask follow-up questions.) $request";
+		} else {
+			$request = "(You just looked around and assessed the nearby area. Reply with one short in-character observation about who or what is nearby, including any notable people, creatures, or threats. Do not ask follow-up questions.) $request";
+		}
+
 
 	} else if ($functionCodeName == "GetTime") {
 		//$useFunctionsAgain=true;

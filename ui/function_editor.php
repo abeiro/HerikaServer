@@ -124,6 +124,27 @@ function functionEditorRestoreParameterSchemaVariablesInString($text)
     return $text;
 }
 
+function functionEditorReplaceActionTextVariablesInString($text)
+{
+    $text = functionEditorReplaceParameterSchemaVariablesInString($text);
+    if ($text === '') {
+        return '';
+    }
+
+    $text = preg_replace('/\b[Tt]he\s+PLAYER\b/u', '#PLAYER_NAME#', $text);
+    $text = preg_replace('/\bPLAYER\b/u', '#PLAYER_NAME#', $text);
+    $text = preg_replace('/\b[Tt]he\s+NPC\b/u', '#HERIKA_NAME#', $text);
+    $text = preg_replace('/\bNPC\b/u', '#HERIKA_NAME#', $text);
+
+    return strval($text);
+}
+
+function functionEditorNormalizeSubmittedActionTextForStorage($text)
+{
+    $text = functionEditorReplaceActionTextVariablesInString($text);
+    return strval($text);
+}
+
 function functionEditorTransformParameterSchemaStrings($value, $mode = 'display')
 {
     if (is_array($value)) {
@@ -423,6 +444,22 @@ function functionEditorFormatGold($value)
     return ($value === 1) ? "1 gold" : ("{$value} gold");
 }
 
+function functionEditorNormalizeSubmittedActionTextValue($value, $fieldLabel, $allowBlank = true)
+{
+    $value = strval($value);
+    if (!$allowBlank && trim($value) === '') {
+        return [
+            'value' => null,
+            'error' => "{$fieldLabel} cannot be blank.",
+        ];
+    }
+
+    return [
+        'value' => $value,
+        'error' => '',
+    ];
+}
+
 $message = "";
 $messageType = "ok";
 
@@ -508,6 +545,44 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
                 functionEditorRedirectWithNotice($codeName . " parameters updated.", "ok", $isEmbed);
             } else {
                 $message = "Could not update action parameters.";
+                $messageType = "err";
+            }
+        }
+    } elseif ($_POST["action"] === "update_action_text_fields") {
+        $codeName = functionEditorTrim($_POST["code_name"] ?? "");
+        $row = function_exists('herikaGetActionCatalogRow') ? herikaGetActionCatalogRow($codeName) : null;
+
+        if (!function_exists("herikaActionCatalogDbReady") || !herikaActionCatalogDbReady()) {
+            $message = "Action catalog tables are not available yet. Run database updates first.";
+            $messageType = "err";
+        } elseif (!is_array($row)) {
+            $message = "Unknown action code name.";
+            $messageType = "err";
+        } elseif (!function_exists("herikaActionCatalogUpsertCustomTextFields")) {
+            $message = "Action catalog text override support is not available in this build.";
+            $messageType = "err";
+        } else {
+            $submittedName = functionEditorNormalizeSubmittedActionTextValue($_POST["action_name"] ?? "", "Action name", false);
+            $submittedDescription = functionEditorNormalizeSubmittedActionTextValue($_POST["description"] ?? "", "Description", true);
+            $submittedReturnMessage = functionEditorNormalizeSubmittedActionTextValue($_POST["return_message"] ?? "", "Return message", true);
+
+            $errorMessage = trim(implode(' ', array_filter([
+                $submittedName['error'] ?? '',
+                $submittedDescription['error'] ?? '',
+                $submittedReturnMessage['error'] ?? '',
+            ])));
+
+            if ($errorMessage !== '') {
+                $message = $errorMessage;
+                $messageType = "err";
+            } elseif (herikaActionCatalogUpsertCustomTextFields($codeName, [
+                'action_name' => $submittedName['value'],
+                'description' => functionEditorNormalizeSubmittedActionTextForStorage($submittedDescription['value']),
+                'return_message' => functionEditorNormalizeSubmittedActionTextForStorage($submittedReturnMessage['value']),
+            ])) {
+                functionEditorRedirectWithNotice($codeName . " text updated.", "ok", $isEmbed);
+            } else {
+                $message = "Could not update action text.";
                 $messageType = "err";
             }
         }
@@ -953,6 +1028,18 @@ if (!$isEmbed) {
         background-color: #4a4a4a;
         color: #f8f9fa;
     }
+    .inline-action-editor input[type="text"],
+    .inline-action-editor textarea,
+    .inline-action-editor select {
+        width: 100%;
+        max-width: 100%;
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #555555;
+        background-color: #4a4a4a;
+        color: #f8f9fa;
+        box-sizing: border-box;
+    }
     .command-code {
         display: block;
         margin-bottom: 8px;
@@ -1073,8 +1160,7 @@ if (!$isEmbed) {
                         <thead>
                             <tr>
                                 <th>Command</th>
-                                <th>Name</th>
-                                <th>Description</th>
+                                <th>Info</th>
                                 <th>Config</th>
                                 <th>Parameters</th>
                                 <th>Metadata</th>
@@ -1083,7 +1169,7 @@ if (!$isEmbed) {
                         </thead>
                         <tbody>
                             <?php if (count($rows) === 0): ?>
-                                <tr><td colspan="7">No actions found.</td></tr>
+                                <tr><td colspan="6">No actions found.</td></tr>
                             <?php endif; ?>
                             <?php foreach ($rows as $row): ?>
                                 <?php
@@ -1109,6 +1195,9 @@ if (!$isEmbed) {
                                 $resolvedConfig = function_exists('herikaActionCatalogGetResolvedCustomConfig')
                                     ? herikaActionCatalogGetResolvedCustomConfig($codeName, $row)
                                     : $customConfig;
+                                $actionNameValue = strval($row["action_name"] ?? "");
+                                $descriptionValue = functionEditorReplaceActionTextVariablesInString(strval($row["description"] ?? ""));
+                                $returnMessageValue = functionEditorReplaceActionTextVariablesInString(strval($row["return_message"] ?? ""));
                                 ?>
                                 <tr>
                                     <td style="min-width: 220px;">
@@ -1128,12 +1217,55 @@ if (!$isEmbed) {
                                             <span class="status-pill <?php echo $enabled ? "enabled" : "disabled"; ?>"><?php echo $enabled ? "Enabled" : "Disabled"; ?></span>
                                         </div>
                                     </td>
-                                    <td><?php echo h($row["action_name"] ?? ""); ?></td>
                                     <td style="max-width: 360px;">
-                                        <?php echo nl2br(h($row["description"] ?? "")); ?>
-                                        <?php if (trim(strval($row["return_message"] ?? "")) !== ""): ?>
-                                            <span class="return-preview">Return: <?php echo nl2br(h($row["return_message"] ?? "")); ?></span>
-                                        <?php endif; ?>
+                                        <div style="margin-bottom:8px;"><strong><?php echo h($actionNameValue); ?></strong></div>
+                                        <?php echo nl2br(h($descriptionValue)); ?>
+                                        <span class="return-preview">
+                                            Return: <?php echo trim($returnMessageValue) !== "" ? nl2br(h($returnMessageValue)) : '<em>None</em>'; ?>
+                                        </span>
+                                        <div class="inline-action-editor" style="margin-top: 12px;">
+                                            <form method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>">
+                                                <input type="hidden" name="action" value="update_action_text_fields">
+                                                <input type="hidden" name="code_name" value="<?php echo h($codeName); ?>">
+                                                <div class="config-field" style="margin-bottom: 12px;">
+                                                    <label for="<?php echo h('text-name-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>">Name</label>
+                                                    <div class="editor-controls">
+                                                        <input
+                                                            type="text"
+                                                            id="<?php echo h('text-name-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>"
+                                                            name="action_name"
+                                                            value="<?php echo h($actionNameValue); ?>"
+                                                        >
+                                                    </div>
+                                                </div>
+                                                <div class="config-field" style="margin-bottom: 12px;">
+                                                    <label for="<?php echo h('text-description-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>">Description</label>
+                                                    <div class="editor-controls">
+                                                        <textarea
+                                                            id="<?php echo h('text-description-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>"
+                                                            name="description"
+                                                            rows="4"
+                                                        ><?php echo h($descriptionValue); ?></textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="config-field">
+                                                    <label for="<?php echo h('text-return-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>">Return Message</label>
+                                                    <div class="editor-controls">
+                                                        <textarea
+                                                            id="<?php echo h('text-return-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>"
+                                                            name="return_message"
+                                                            rows="3"
+                                                        ><?php echo h($returnMessageValue); ?></textarea>
+                                                    </div>
+                                                    <div class="helper-text">
+                                                        Edit the visible action name, the prompt description, and the default return text from this row.
+                                                    </div>
+                                                </div>
+                                                <div class="editor-controls">
+                                                    <button type="submit" class="btn-save">Save Text</button>
+                                                </div>
+                                            </form>
+                                        </div>
                                     </td>
                                     <td class="pricing-cell">
                                         <?php if (count($configFields) > 0): ?>

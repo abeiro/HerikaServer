@@ -186,11 +186,11 @@ if ($checkVersion("core_action") < 20260426001) {
 
     $db->execQuery("
         DELETE FROM public.core_action_custom
-        WHERE code_name IN ('AttackHunt', 'ReadQuestJournal', 'GetDateTime', 'SearchDiary', 'SetCurrentTask', 'ReadDiaryPage', 'SearchMemory')
+        WHERE code_name IN ('AttackHunt', 'GetDateTime', 'SearchDiary', 'SetCurrentTask', 'ReadDiaryPage', 'SearchMemory')
     ");
     $db->execQuery("
         DELETE FROM public.core_action
-        WHERE code_name IN ('AttackHunt', 'ReadQuestJournal', 'GetDateTime', 'SearchDiary', 'SetCurrentTask', 'ReadDiaryPage', 'SearchMemory')
+        WHERE code_name IN ('AttackHunt', 'GetDateTime', 'SearchDiary', 'SetCurrentTask', 'ReadDiaryPage', 'SearchMemory')
     ");
 
     $updateVersion("core_action", 20260426001);
