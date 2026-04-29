@@ -341,7 +341,7 @@ $F_NAMES_LOCAL["UseSoulGaze"] = "UseSoulGaze";
 $F_NAMES_LOCAL["CastSpell"] = "CastSpell";
 $F_NAMES_LOCAL["MakeFollower"] = "Join{$GLOBALS["PLAYER_NAME"]}Party";
 
-$F_NAMES_LOCAL["Toast"] = "Toast";
+$F_NAMES_LOCAL["Toast"] = "MakeAToast";
 $F_NAMES_LOCAL["Drink"] = "Drink";
 $F_NAMES_LOCAL["Consume"] = "Consume";
 $F_NAMES_LOCAL["StartRitualCeremony"] = "StartRitualCeremony";
