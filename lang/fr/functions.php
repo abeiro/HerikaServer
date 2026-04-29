@@ -119,5 +119,5 @@ $F_NAMES["TravelTo"]="VoyagerA";
 $F_NAMES["SearchMemory"]="SeSouvenir";
 $F_NAMES["WaitHere"]="AtteindreIci";
 $F_NAMES["TakeGoldFromPlayer"]="PrendreObjetduJoueur";
-$F_NAMES["FollowPlayer"]="SuivreJoueur";
+$F_NAMES["FollowPlayer"]="Suivre{$GLOBALS["PLAYER_NAME"]}";
 

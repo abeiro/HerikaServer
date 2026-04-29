@@ -54,6 +54,23 @@ if ($returnVar !== 0) {
 echo "SQL file imported successfully.\n";
 echo implode("\n", $output) . "\n";
 
+$coreActionSeedFile = $enginePath.'/data/core_action_seed.sql';
+if (file_exists($coreActionSeedFile) && trim(strval(file_get_contents($coreActionSeedFile))) !== '') {
+    $seedCommand = "PGPASSWORD=$password psql -h $host -p $port -U $username -d $dbname -f $coreActionSeedFile";
+    $seedOutput = [];
+    $seedReturnVar = 0;
+    exec($seedCommand, $seedOutput, $seedReturnVar);
+
+    if ($seedReturnVar !== 0) {
+        echo "Failed to import core_action seed SQL file.\n";
+        echo implode("\n", $seedOutput) . "\n";
+        exit;
+    }
+
+    echo "core_action seed SQL imported successfully.\n";
+    echo implode("\n", $seedOutput) . "\n";
+}
+
 echo "Import completed.\n";
 
 

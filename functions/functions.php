@@ -206,98 +206,98 @@ $hireFerryCostText = formatConfiguredActionGoldCost($hireFerryCost);
 
 // We must use internal keys here.
 
-$F_TRANSLATIONS_LOCAL["MoveTo"] = "Move to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
-$F_TRANSLATIONS_LOCAL["OpenInventory"] = "Initiates trading or exchange ITEMS with {$GLOBALS["PLAYER_NAME"]}.";
-$F_TRANSLATIONS_LOCAL["OpenInventory2"] = "Initiates trading, {$GLOBALS["PLAYER_NAME"]} must give ITEMS to {$GLOBALS["HERIKA_NAME"]}";
-$F_TRANSLATIONS_LOCAL["Attack"] = "Attack with intention to kill an Actor, NPC or entity.";
+$F_TRANSLATIONS_LOCAL["MoveTo"] = "Move to a visible building or visible actor, also used to guide #PLAYER_NAME# to an actor or building.";
+$F_TRANSLATIONS_LOCAL["OpenInventory"] = "Initiates trading or exchange items with #PLAYER_NAME#.";
+$F_TRANSLATIONS_LOCAL["OpenInventory2"] = "Initiates trading; #PLAYER_NAME# must give items to #HERIKA_NAME#.";
+$F_TRANSLATIONS_LOCAL["Attack"] = "Attack with intention to kill a target actor or entity.";
 $F_TRANSLATIONS_LOCAL["Follow"] = "Move to and follow the specified target actor";
-$F_TRANSLATIONS_LOCAL["Inspect"] = "Inspect a nearby NPC or actor to get a closer read on their visible equipment, condition, and state.";
+$F_TRANSLATIONS_LOCAL["Inspect"] = "Inspect a nearby actor or being to get a closer read on their visible equipment, condition, and state.";
 $F_TRANSLATIONS_LOCAL["InspectSurroundings"] = "Look around and assess who or what is nearby, including people, creatures, and possible threats.";
-$F_TRANSLATIONS_LOCAL["CheckInventory"] = "Search in {$GLOBALS["HERIKA_NAME"]}'s inventory, backpack or pocket. List their inventory contents";
+$F_TRANSLATIONS_LOCAL["CheckInventory"] = "Search in #HERIKA_NAME#'s inventory, backpack, or pocket. List their inventory contents.";
 $F_TRANSLATIONS_LOCAL["SheatheWeapon"] = "Sheathes/put away current weapon";
 $F_TRANSLATIONS_LOCAL["Relax"] = "Stop whatever you are doing and relax at the current location.Used to Unwind,Loosen Up,Enjoy Moment,Chill";
 $F_TRANSLATIONS_LOCAL["TravelTo"] = "Use it to move to major locations and landmarks and POIs.";
-$F_TRANSLATIONS_LOCAL["TakeASeat"] = "{$GLOBALS["HERIKA_NAME"]} take a seat at seating location nearby.";
-$F_TRANSLATIONS_LOCAL["ReadQuestJournal"] = "Only use if {$GLOBALS["PLAYER_NAME"]} explicitly asks about a quest. Read the quest journal and get information about current quests.";
-$F_TRANSLATIONS_LOCAL["Surrender"] = "{$GLOBALS["HERIKA_NAME"]} yields, raises their hands, and stops resisting.";
-$F_TRANSLATIONS_LOCAL["IncreaseWalkSpeed"] = "Increase {$GLOBALS["HERIKA_NAME"]} speed when moving or travelling";
-$F_TRANSLATIONS_LOCAL["DecreaseWalkSpeed"] = "Decrease {$GLOBALS["HERIKA_NAME"]} speed when moving or travelling";
-$F_TRANSLATIONS_LOCAL["StopWalk"] = "Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
-$F_TRANSLATIONS_LOCAL["TravelTo"] = "Only use if {$GLOBALS["PLAYER_NAME"]} explicitly suggest it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. Also known as lead the way";
-$F_TRANSLATIONS_LOCAL["WaitHere"] = "{$GLOBALS["HERIKA_NAME"]} waits and loiters at the current location";
-$F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"] = "{$GLOBALS["HERIKA_NAME"]} takes amount (property target) of gold from {$GLOBALS["PLAYER_NAME"]}, once {$GLOBALS["PLAYER_NAME"]} is agree. infer amount from context.";
-$F_TRANSLATIONS_LOCAL["RentRoom"] = "{$GLOBALS["HERIKA_NAME"]} rents a room to {$GLOBALS["PLAYER_NAME"]} for {$rentRoomCostText}. Only innkeepers can use this action and it only applies to {$GLOBALS["PLAYER_NAME"]}.";
-$F_TRANSLATIONS_LOCAL["HireCarriage"] = "{$GLOBALS["HERIKA_NAME"]} accepts {$hireCarriageCostText} for carriage travel and transports {$GLOBALS["PLAYER_NAME"]} to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
-$F_TRANSLATIONS_LOCAL["HireFerry"] = "{$GLOBALS["HERIKA_NAME"]} accepts {$hireFerryCostText} for ferry travel and transports {$GLOBALS["PLAYER_NAME"]} to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
-$F_TRANSLATIONS_LOCAL["AddBounty"] = "{$GLOBALS["HERIKA_NAME"]} adds a crime bounty to {$GLOBALS["PLAYER_NAME"]} for a witnessed or reported crime. Guard-only action.";
-$F_TRANSLATIONS_LOCAL["PayBounty"] = "{$GLOBALS["PLAYER_NAME"]} pays off their bounty to {$GLOBALS["HERIKA_NAME"]}. Stolen items are confiscated and the matter is resolved immediately. Guard-only action.";
-$F_TRANSLATIONS_LOCAL["ArrestPlayer"] = "{$GLOBALS["HERIKA_NAME"]} attempts to arrest {$GLOBALS["PLAYER_NAME"]}. The player can submit or resist. Guard-only action for serious crimes or refusal to pay.";
-$F_TRANSLATIONS_LOCAL["ForgiveCrime"] = "{$GLOBALS["HERIKA_NAME"]} forgives {$GLOBALS["PLAYER_NAME"]}'s crimes and clears their bounty. Guard-only action for persuasion, bribe, or thane status.";
-$F_TRANSLATIONS_LOCAL["FollowPlayer"] = "{$GLOBALS["HERIKA_NAME"]} follows  {$GLOBALS["PLAYER_NAME"]}";
-$F_TRANSLATIONS_LOCAL["ComeCloser"] = "{$GLOBALS["HERIKA_NAME"]} aproaches to {$GLOBALS["PLAYER_NAME"]}";
-$F_TRANSLATIONS_LOCAL["Brawl"] = "{$GLOBALS["HERIKA_NAME"]} engages non lethtal combat with another actor, using weapons";
-$F_TRANSLATIONS_LOCAL["ReturnBackHome"] = "{$GLOBALS["HERIKA_NAME"]} travels to home/origin place.Returns home.";
-$F_TRANSLATIONS_LOCAL["GiveGoldTo"] = "{$GLOBALS["HERIKA_NAME"]} gives gold/coins/septims to another actor or {$GLOBALS["PLAYER_NAME"]}. REQUIRED: Must include 'target' field with recipient name and 'item' field with amount as a number string";
-$F_TRANSLATIONS_LOCAL["GiveItemTo"] = "{$GLOBALS["HERIKA_NAME"]} gives a specific item from inventory to another actor or {$GLOBALS["PLAYER_NAME"]}. REQUIRED: Must include 'item' field with exact item name from <inventory> tag, and 'target' field with recipient name";
-$F_TRANSLATIONS_LOCAL["PickupItem"] = "{$GLOBALS["HERIKA_NAME"]} picks up a specific item from the ground. Use the exact RefID:ItemName format from nearby_items (e.g. 0x12345:Iron Sword)";
-$F_TRANSLATIONS_LOCAL["GoToSleep"] = "{$GLOBALS["HERIKA_NAME"]} takes a nap";
-$F_TRANSLATIONS_LOCAL["UseSoulGaze"] = "Use the spell SoulGaze, a powerful incantation that allows {$GLOBALS["HERIKA_NAME"]} to perceive surroundings in vivid detail through {$GLOBALS["PLAYER_NAME"]}'s eyes. The spell, however, causes some disturbance to the caster.";
-$F_TRANSLATIONS_LOCAL["CastSpell"] = "{$GLOBALS["HERIKA_NAME"]} casts a spell on target actor. Must specify spell name from <spells> and target actor name. Use 'self' as target for self-targeted spells.";
-$F_TRANSLATIONS_LOCAL["MakeFollower"] = "{$GLOBALS["HERIKA_NAME"]} joins to {$GLOBALS["PLAYER_NAME"]}, forming a squad or adventuring party";
+$F_TRANSLATIONS_LOCAL["TakeASeat"] = "#HERIKA_NAME# takes a seat at a nearby seating location.";
+$F_TRANSLATIONS_LOCAL["ReadQuestJournal"] = "Only use if #PLAYER_NAME# explicitly asks about a quest. Read the quest journal and get information about current quests.";
+$F_TRANSLATIONS_LOCAL["Surrender"] = "#HERIKA_NAME# yields, raises their hands, and stops resisting.";
+$F_TRANSLATIONS_LOCAL["IncreaseWalkSpeed"] = "Increase #HERIKA_NAME#'s speed when moving or travelling.";
+$F_TRANSLATIONS_LOCAL["DecreaseWalkSpeed"] = "Decrease #HERIKA_NAME#'s speed when moving or travelling.";
+$F_TRANSLATIONS_LOCAL["StopWalk"] = "Stop all of #HERIKA_NAME#'s actions immediately.";
+$F_TRANSLATIONS_LOCAL["TravelTo"] = "Only use if #PLAYER_NAME# explicitly suggests it. Guide #PLAYER_NAME# to a town or city. Also known as lead the way.";
+$F_TRANSLATIONS_LOCAL["WaitHere"] = "#HERIKA_NAME# waits and loiters at the current location.";
+$F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"] = "#HERIKA_NAME# takes the amount in property target of gold from #PLAYER_NAME#, once #PLAYER_NAME# agrees. Infer the amount from context.";
+$F_TRANSLATIONS_LOCAL["RentRoom"] = "#HERIKA_NAME# rents a room to #PLAYER_NAME# for {$rentRoomCostText}. Only innkeepers can use this action and it only applies to #PLAYER_NAME#.";
+$F_TRANSLATIONS_LOCAL["HireCarriage"] = "#HERIKA_NAME# accepts {$hireCarriageCostText} for carriage travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
+$F_TRANSLATIONS_LOCAL["HireFerry"] = "#HERIKA_NAME# accepts {$hireFerryCostText} for ferry travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
+$F_TRANSLATIONS_LOCAL["AddBounty"] = "#HERIKA_NAME# adds a crime bounty to #PLAYER_NAME# for a witnessed or reported crime. Guard-only action.";
+$F_TRANSLATIONS_LOCAL["PayBounty"] = "#PLAYER_NAME# pays off their bounty to #HERIKA_NAME#. Stolen items are confiscated and the matter is resolved immediately. Guard-only action.";
+$F_TRANSLATIONS_LOCAL["ArrestPlayer"] = "#HERIKA_NAME# attempts to arrest #PLAYER_NAME#. #PLAYER_NAME# can submit or resist. Guard-only action for serious crimes or refusal to pay.";
+$F_TRANSLATIONS_LOCAL["ForgiveCrime"] = "#HERIKA_NAME# forgives #PLAYER_NAME#'s crimes and clears their bounty. Guard-only action for persuasion, bribe, or thane status.";
+$F_TRANSLATIONS_LOCAL["FollowPlayer"] = "#HERIKA_NAME# follows #PLAYER_NAME#.";
+$F_TRANSLATIONS_LOCAL["ComeCloser"] = "#HERIKA_NAME# approaches #PLAYER_NAME#.";
+$F_TRANSLATIONS_LOCAL["Brawl"] = "#HERIKA_NAME# engages in non-lethal combat with another actor, using weapons.";
+$F_TRANSLATIONS_LOCAL["ReturnBackHome"] = "#HERIKA_NAME# travels to their home or place of origin. Returns home.";
+$F_TRANSLATIONS_LOCAL["GiveGoldTo"] = "#HERIKA_NAME# gives gold, coins, or septims to another actor or #PLAYER_NAME#. REQUIRED: Must include 'target' field with recipient name and 'item' field with amount as a number string.";
+$F_TRANSLATIONS_LOCAL["GiveItemTo"] = "#HERIKA_NAME# gives a specific item from inventory to another actor or #PLAYER_NAME#. REQUIRED: Must include 'item' field with exact item name from <inventory> tag, and 'target' field with recipient name.";
+$F_TRANSLATIONS_LOCAL["PickupItem"] = "#HERIKA_NAME# picks up a specific item from the ground. Use the exact RefID:ItemName format from nearby_items (e.g. 0x12345:Iron Sword).";
+$F_TRANSLATIONS_LOCAL["GoToSleep"] = "#HERIKA_NAME# takes a nap.";
+$F_TRANSLATIONS_LOCAL["UseSoulGaze"] = "Use the spell SoulGaze, a powerful incantation that allows #HERIKA_NAME# to perceive surroundings in vivid detail through #PLAYER_NAME#'s eyes. The spell, however, causes some disturbance to the caster.";
+$F_TRANSLATIONS_LOCAL["CastSpell"] = "#HERIKA_NAME# casts a spell on a target actor. Must specify spell name from <spells> and target actor name. Use 'self' as target for self-targeted spells.";
+$F_TRANSLATIONS_LOCAL["MakeFollower"] = "#HERIKA_NAME# joins #PLAYER_NAME#, forming a squad or adventuring party.";
 
 $F_TRANSLATIONS_LOCAL["Toast"] = "Raises a glass in celebration or honor.";
 $F_TRANSLATIONS_LOCAL["Drink"] = "Drinks a beverage to quench thirst or enjoy flavor.";
-$F_TRANSLATIONS_LOCAL["Consume"] = "{$GLOBALS["HERIKA_NAME"]} consumes a food, drink, or potion from inventory. Use the exact inventory item name in the target field.";
+$F_TRANSLATIONS_LOCAL["Consume"] = "#HERIKA_NAME# consumes a food, drink, or potion from inventory. Use the exact inventory item name in the target field.";
 $F_TRANSLATIONS_LOCAL["StartRitualCeremony"] = "Participates in a ritual or ceremony, following its customs and practices.";
 $F_TRANSLATIONS_LOCAL["EndRitualCeremony"] = "Concludes a ritual or ceremony, marking its completion.";
     
 $F_TRANSLATIONS_LOCAL["Training"] = "Opens training menu to improve skills with a trainer.";
-$F_TRANSLATIONS_LOCAL["EndConversation"] = "{$GLOBALS["HERIKA_NAME"]} ends the conversation and becomes unavailable to talk for a short time.";
+$F_TRANSLATIONS_LOCAL["EndConversation"] = "#HERIKA_NAME# ends the conversation and becomes unavailable to talk for a short time.";
 
-$F_RETURNMESSAGES_LOCAL["MoveTo"] = "Walk to a visible building or visible actor, also used to guide {$GLOBALS["PLAYER_NAME"]} to a actor or building.";
-$F_RETURNMESSAGES_LOCAL["OpenInventory"] = "Initiates trading or exchange items with {$GLOBALS["PLAYER_NAME"]}.";
-$F_RETURNMESSAGES_LOCAL["OpenInventory2"] = "{$GLOBALS["PLAYER_NAME"]} give items to {$GLOBALS["HERIKA_NAME"]}. Accept gift.";
-$F_RETURNMESSAGES_LOCAL["Attack"] = "{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
-$F_RETURNMESSAGES_LOCAL["Follow"] = "{$GLOBALS["HERIKA_NAME"]} follows #TARGET# ";
+$F_RETURNMESSAGES_LOCAL["MoveTo"] = "Walk to a visible building or visible actor, also used to guide #PLAYER_NAME# to an actor or building.";
+$F_RETURNMESSAGES_LOCAL["OpenInventory"] = "Initiates trading or exchange items with #PLAYER_NAME#.";
+$F_RETURNMESSAGES_LOCAL["OpenInventory2"] = "#PLAYER_NAME# gives items to #HERIKA_NAME#. Accept gift.";
+$F_RETURNMESSAGES_LOCAL["Attack"] = "#HERIKA_NAME# attacks #TARGET#.";
+$F_RETURNMESSAGES_LOCAL["Follow"] = "#HERIKA_NAME# follows #TARGET#.";
 $F_RETURNMESSAGES_LOCAL["Inspect"] = "";
 $F_RETURNMESSAGES_LOCAL["InspectSurroundings"] = "";
-$F_RETURNMESSAGES_LOCAL["CheckInventory"] = "{$GLOBALS["HERIKA_NAME"]}'s INVENTORY:#RESULT#";
+$F_RETURNMESSAGES_LOCAL["CheckInventory"] = "#HERIKA_NAME#'s INVENTORY:#RESULT#";
 $F_RETURNMESSAGES_LOCAL["SheatheWeapon"] = "Sheathes/put away current weapon";
-$F_RETURNMESSAGES_LOCAL["Relax"] = "{$GLOBALS["HERIKA_NAME"]} is relaxed. Time to enjoy life.";
-$F_RETURNMESSAGES_LOCAL["LeadTheWayTo"] = "Only use if {$GLOBALS["PLAYER_NAME"]} explicitly orders it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. ";
-$F_RETURNMESSAGES_LOCAL["TakeASeat"] = "{$GLOBALS["HERIKA_NAME"]} seats in nearby chair or furniture ";
+$F_RETURNMESSAGES_LOCAL["Relax"] = "#HERIKA_NAME# is relaxed. Time to enjoy life.";
+$F_RETURNMESSAGES_LOCAL["LeadTheWayTo"] = "Only use if #PLAYER_NAME# explicitly orders it. Guide #PLAYER_NAME# to a town or city.";
+$F_RETURNMESSAGES_LOCAL["TakeASeat"] = "#HERIKA_NAME# sits in a nearby chair or piece of furniture.";
 $F_RETURNMESSAGES_LOCAL["ReadQuestJournal"] = "";
-$F_RETURNMESSAGES_LOCAL["Surrender"] = "{$GLOBALS["HERIKA_NAME"]} surrenders and raises their hands.";
-$F_RETURNMESSAGES_LOCAL["IncreaseWalkSpeed"] = "Increases {$GLOBALS["HERIKA_NAME"]} speed/pace when moving or travelling";
-$F_RETURNMESSAGES_LOCAL["DecreaseWalkSpeed"] = "Decreases {$GLOBALS["HERIKA_NAME"]} speed/pace when moving or travelling";
-$F_RETURNMESSAGES_LOCAL["StopWalk"] = "Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
-$F_RETURNMESSAGES_LOCAL["TravelTo"] = "{$GLOBALS["HERIKA_NAME"]} begins travelling to #TARGET#";
-$F_RETURNMESSAGES_LOCAL["WaitHere"] = "{$GLOBALS["HERIKA_NAME"]} waits and stands at the place";
-$F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"] = "{$GLOBALS["PLAYER_NAME"]} gave #TARGET# coins to {$GLOBALS["HERIKA_NAME"]}. If this a transaction, maybe GiveItemTo is needed.";
-$F_RETURNMESSAGES_LOCAL["RentRoom"] = "{$GLOBALS["HERIKA_NAME"]} rented a room to {$GLOBALS["PLAYER_NAME"]} for {$rentRoomCostText}.";
-$F_RETURNMESSAGES_LOCAL["HireCarriage"] = "{$GLOBALS["HERIKA_NAME"]} accepted the {$hireCarriageCostText} carriage fare to #TARGET# and ended the conversation.";
-$F_RETURNMESSAGES_LOCAL["HireFerry"] = "{$GLOBALS["HERIKA_NAME"]} accepted the {$hireFerryCostText} ferry fare to #TARGET# and ended the conversation.";
-$F_RETURNMESSAGES_LOCAL["AddBounty"] = "{$GLOBALS["HERIKA_NAME"]} added a bounty for #TARGET# to {$GLOBALS["PLAYER_NAME"]}.";
-$F_RETURNMESSAGES_LOCAL["PayBounty"] = "{$GLOBALS["PLAYER_NAME"]} paid off their bounty to {$GLOBALS["HERIKA_NAME"]}, and stolen items were removed from inventory.";
-$F_RETURNMESSAGES_LOCAL["ArrestPlayer"] = "{$GLOBALS["HERIKA_NAME"]} attempted to arrest {$GLOBALS["PLAYER_NAME"]}.";
-$F_RETURNMESSAGES_LOCAL["ForgiveCrime"] = "{$GLOBALS["HERIKA_NAME"]} forgave {$GLOBALS["PLAYER_NAME"]}'s crimes and cleared their bounty.";
-$F_RETURNMESSAGES_LOCAL["FollowPlayer"] = "{$GLOBALS["HERIKA_NAME"]} follows {$GLOBALS["PLAYER_NAME"]}";
-$F_RETURNMESSAGES_LOCAL["Brawl"] = "{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
-$F_RETURNMESSAGES_LOCAL["ReturnBackHome"] = "{$GLOBALS["HERIKA_NAME"]} goes back home";
-$F_RETURNMESSAGES_LOCAL["GiveGoldTo"] = "{$GLOBALS["HERIKA_NAME"]} gives #ITEM# gold to #TARGET#";
-$F_RETURNMESSAGES_LOCAL["GiveItemTo"] = "{$GLOBALS["HERIKA_NAME"]} gives #ITEM# to #TARGET#";
-$F_RETURNMESSAGES_LOCAL["PickupItem"] = "{$GLOBALS["HERIKA_NAME"]} picks up #ITEM#";
-$F_RETURNMESSAGES_LOCAL["GoToSleep"] = "{$GLOBALS["HERIKA_NAME"]} takes a nap";
-$F_RETURNMESSAGES_LOCAL["UseSoulGaze"] = "{$GLOBALS["HERIKA_NAME"]} used soulgaze";
-$F_RETURNMESSAGES_LOCAL["CastSpell"] = "{$GLOBALS["HERIKA_NAME"]} casts #ITEM# on #TARGET#";
-$F_RETURNMESSAGES_LOCAL["MakeFollower"] = "{$GLOBALS["HERIKA_NAME"]} is now part of the adventuring party";
+$F_RETURNMESSAGES_LOCAL["Surrender"] = "#HERIKA_NAME# surrenders and raises their hands.";
+$F_RETURNMESSAGES_LOCAL["IncreaseWalkSpeed"] = "Increases #HERIKA_NAME#'s speed or pace when moving or travelling.";
+$F_RETURNMESSAGES_LOCAL["DecreaseWalkSpeed"] = "Decreases #HERIKA_NAME#'s speed or pace when moving or travelling.";
+$F_RETURNMESSAGES_LOCAL["StopWalk"] = "Stop all of #HERIKA_NAME#'s actions immediately.";
+$F_RETURNMESSAGES_LOCAL["TravelTo"] = "#HERIKA_NAME# begins travelling to #TARGET#.";
+$F_RETURNMESSAGES_LOCAL["WaitHere"] = "#HERIKA_NAME# waits and stands at the place.";
+$F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"] = "#PLAYER_NAME# gave #TARGET# coins to #HERIKA_NAME#. If this is a transaction, maybe GiveItemTo is needed.";
+$F_RETURNMESSAGES_LOCAL["RentRoom"] = "#HERIKA_NAME# rented a room to #PLAYER_NAME# for {$rentRoomCostText}.";
+$F_RETURNMESSAGES_LOCAL["HireCarriage"] = "#HERIKA_NAME# accepted the {$hireCarriageCostText} carriage fare to #TARGET# and ended the conversation.";
+$F_RETURNMESSAGES_LOCAL["HireFerry"] = "#HERIKA_NAME# accepted the {$hireFerryCostText} ferry fare to #TARGET# and ended the conversation.";
+$F_RETURNMESSAGES_LOCAL["AddBounty"] = "#HERIKA_NAME# added a bounty for #TARGET# to #PLAYER_NAME#.";
+$F_RETURNMESSAGES_LOCAL["PayBounty"] = "#PLAYER_NAME# paid off their bounty to #HERIKA_NAME#, and stolen items were removed from inventory.";
+$F_RETURNMESSAGES_LOCAL["ArrestPlayer"] = "#HERIKA_NAME# attempted to arrest #PLAYER_NAME#.";
+$F_RETURNMESSAGES_LOCAL["ForgiveCrime"] = "#HERIKA_NAME# forgave #PLAYER_NAME#'s crimes and cleared their bounty.";
+$F_RETURNMESSAGES_LOCAL["FollowPlayer"] = "#HERIKA_NAME# follows #PLAYER_NAME#.";
+$F_RETURNMESSAGES_LOCAL["Brawl"] = "#HERIKA_NAME# starts a brawl with #TARGET#.";
+$F_RETURNMESSAGES_LOCAL["ReturnBackHome"] = "#HERIKA_NAME# goes back home.";
+$F_RETURNMESSAGES_LOCAL["GiveGoldTo"] = "#HERIKA_NAME# gives #ITEM# gold to #TARGET#.";
+$F_RETURNMESSAGES_LOCAL["GiveItemTo"] = "#HERIKA_NAME# gives #ITEM# to #TARGET#.";
+$F_RETURNMESSAGES_LOCAL["PickupItem"] = "#HERIKA_NAME# picks up #ITEM#.";
+$F_RETURNMESSAGES_LOCAL["GoToSleep"] = "#HERIKA_NAME# takes a nap.";
+$F_RETURNMESSAGES_LOCAL["UseSoulGaze"] = "#HERIKA_NAME# used Soul Gaze.";
+$F_RETURNMESSAGES_LOCAL["CastSpell"] = "#HERIKA_NAME# casts #ITEM# on #TARGET#.";
+$F_RETURNMESSAGES_LOCAL["MakeFollower"] = "#HERIKA_NAME# is now part of the adventuring party.";
 
-$F_RETURNMESSAGES_LOCAL["Toast"] = "{$GLOBALS["HERIKA_NAME"]} raises a glass in celebration or honor.";      
-$F_RETURNMESSAGES_LOCAL["Drink"] = "{$GLOBALS["HERIKA_NAME"]} drinks a beverage to quench thirst or enjoy flavor.";
-$F_RETURNMESSAGES_LOCAL["Consume"] = "{$GLOBALS["HERIKA_NAME"]} consumes an item from inventory.";
-$F_RETURNMESSAGES_LOCAL["StartRitualCeremony"] = "{$GLOBALS["HERIKA_NAME"]} begins a ritual or ceremony, following its customs and practices.";
-$F_RETURNMESSAGES_LOCAL["EndRitualCeremony"] = "{$GLOBALS["HERIKA_NAME"]} concludes a ritual or ceremony, marking its completion.";
-$F_RETURNMESSAGES_LOCAL["Training"] = "{$GLOBALS["HERIKA_NAME"]} opens the training menu.";
+$F_RETURNMESSAGES_LOCAL["Toast"] = "#HERIKA_NAME# raises a glass in celebration or honor.";      
+$F_RETURNMESSAGES_LOCAL["Drink"] = "#HERIKA_NAME# drinks a beverage to quench thirst or enjoy flavor.";
+$F_RETURNMESSAGES_LOCAL["Consume"] = "#HERIKA_NAME# consumes an item from inventory.";
+$F_RETURNMESSAGES_LOCAL["StartRitualCeremony"] = "#HERIKA_NAME# begins a ritual or ceremony, following its customs and practices.";
+$F_RETURNMESSAGES_LOCAL["EndRitualCeremony"] = "#HERIKA_NAME# concludes a ritual or ceremony, marking its completion.";
+$F_RETURNMESSAGES_LOCAL["Training"] = "#HERIKA_NAME# opens the training menu.";
 
 // What is this?. We can translate functions or give them a custom name.
 // This array will handle translations. Plugin must receive the codename always.
@@ -321,15 +321,15 @@ $F_NAMES_LOCAL["DecreaseWalkSpeed"] = "DecreaseWalkSpeed";
 $F_NAMES_LOCAL["StopWalk"] = "StopWalk";
 $F_NAMES_LOCAL["TravelTo"] = "TravelTo";
 $F_NAMES_LOCAL["WaitHere"] = "WaitHere";
-$F_NAMES_LOCAL["TakeGoldFromPlayer"] = "TakeGoldFrom{$GLOBALS["PLAYER_NAME"]}";
+$F_NAMES_LOCAL["TakeGoldFromPlayer"] = "Take_Gold_From_#PLAYER_NAME#";
 $F_NAMES_LOCAL["RentRoom"] = "RentRoom";
 $F_NAMES_LOCAL["HireCarriage"] = "HireCarriage";
 $F_NAMES_LOCAL["HireFerry"] = "HireFerry";
 $F_NAMES_LOCAL["AddBounty"] = "AddBounty";
 $F_NAMES_LOCAL["PayBounty"] = "PayBounty";
-$F_NAMES_LOCAL["ArrestPlayer"] = "ArrestPlayer";
+$F_NAMES_LOCAL["ArrestPlayer"] = "Arrest_#PLAYER_NAME#";
 $F_NAMES_LOCAL["ForgiveCrime"] = "ForgiveCrime";
-$F_NAMES_LOCAL["FollowPlayer"] = "FollowPlayer";
+$F_NAMES_LOCAL["FollowPlayer"] = "Follow_#PLAYER_NAME#";
 $F_NAMES_LOCAL["ComeCloser"] = "ComeCloser";
 $F_NAMES_LOCAL["Brawl"] = "Brawl";
 $F_NAMES_LOCAL["ReturnBackHome"] = "ReturnHome";
@@ -339,7 +339,7 @@ $F_NAMES_LOCAL["PickupItem"] = "PickupItem";
 $F_NAMES_LOCAL["GoToSleep"] = "GoToSleep";
 $F_NAMES_LOCAL["UseSoulGaze"] = "UseSoulGaze";
 $F_NAMES_LOCAL["CastSpell"] = "CastSpell";
-$F_NAMES_LOCAL["MakeFollower"] = "Join{$GLOBALS["PLAYER_NAME"]}Party";
+$F_NAMES_LOCAL["MakeFollower"] = "Join_#PLAYER_NAME#_Party";
 
 $F_NAMES_LOCAL["Toast"] = "MakeAToast";
 $F_NAMES_LOCAL["Drink"] = "Drink";
@@ -1103,6 +1103,7 @@ foreach ($GLOBALS["FUNCTIONS"] as $n => $functionEntry) {
     $GLOBALS["BASE_FUNCTIONS"][getFunctionCodeName($functionEntry["name"])] = $GLOBALS["FUNCTIONS"][$n];
 }
 $HERIKA_BASE_FUNCTIONS_LOCAL = $GLOBALS["BASE_FUNCTIONS"];
+$GLOBALS["HERIKA_BASE_FUNCTIONS_FALLBACK"] = $GLOBALS["BASE_FUNCTIONS"];
 
 function getFunctionNameAliases()
 {
@@ -1540,8 +1541,14 @@ $seedActionRows = herikaBuildActionCatalogSeedRows(
     herikaBuildActionCatalogFunctionDefinitionsByCode($HERIKA_BASE_FUNCTIONS_LOCAL ?? [])
 );
 if (herikaActionCatalogDbReady()) {
-    herikaSyncActionCatalogBaseRows($seedActionRows);
-    herikaImportLegacyActionPreferences($seedActionRows);
+    herikaEnsureActionCatalogBaseRowsSeeded($seedActionRows);
+
+    $legacyPreferenceRows = herikaGetActionCatalogRowsByCode();
+    if (count($legacyPreferenceRows) === 0) {
+        $legacyPreferenceRows = $seedActionRows;
+    }
+
+    herikaImportLegacyActionPreferences($legacyPreferenceRows);
 }
 
 $isNpcMode = isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"];

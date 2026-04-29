@@ -1638,7 +1638,7 @@ function herikaBuildActionCatalogSeedRows($actionNames, $descriptions, $returnMe
     return $rows;
 }
 
-function herikaDeleteRetiredActionCatalogRows()
+function herikaDeleteRetiredActionCatalogRows($updateCustomRows = true)
 {
     if (!herikaActionCatalogDbReady()) {
         return;
@@ -1655,31 +1655,35 @@ function herikaDeleteRetiredActionCatalogRows()
     }
 
     $inList = implode(',', $literals);
-    $GLOBALS["db"]->execQuery("DELETE FROM public.core_action_custom WHERE code_name IN ({$inList})");
+    if ($updateCustomRows) {
+        $GLOBALS["db"]->execQuery("DELETE FROM public.core_action_custom WHERE code_name IN ({$inList})");
+    }
     $GLOBALS["db"]->execQuery("DELETE FROM public.core_action WHERE code_name IN ({$inList})");
 }
 
-function herikaSyncActionCatalogBaseRows($rowsByCode)
+function herikaSyncActionCatalogBaseRows($rowsByCode, $updateCustomRows = true)
 {
     if (!herikaActionCatalogDbReady()) {
         return;
     }
 
-    herikaDeleteRetiredActionCatalogRows();
-    herikaDeleteUnexpectedBaseActionCatalogRows($rowsByCode);
+    herikaDeleteRetiredActionCatalogRows($updateCustomRows);
+    herikaDeleteUnexpectedBaseActionCatalogRows($rowsByCode, $updateCustomRows);
 
     $existingCustomMetadataByCode = [];
-    $existingCustomRows = $GLOBALS["db"]->fetchAll("
-        SELECT code_name, metadata
-        FROM public.core_action_custom
-    ");
-    foreach ($existingCustomRows as $existingCustomRow) {
-        $existingCodeName = strtolower(trim(strval($existingCustomRow['code_name'] ?? '')));
-        if ($existingCodeName === '') {
-            continue;
-        }
+    if ($updateCustomRows) {
+        $existingCustomRows = $GLOBALS["db"]->fetchAll("
+            SELECT code_name, metadata
+            FROM public.core_action_custom
+        ");
+        foreach ($existingCustomRows as $existingCustomRow) {
+            $existingCodeName = strtolower(trim(strval($existingCustomRow['code_name'] ?? '')));
+            if ($existingCodeName === '') {
+                continue;
+            }
 
-        $existingCustomMetadataByCode[$existingCodeName] = herikaActionCatalogDecodeJson($existingCustomRow['metadata'] ?? [], []);
+            $existingCustomMetadataByCode[$existingCodeName] = herikaActionCatalogDecodeJson($existingCustomRow['metadata'] ?? [], []);
+        }
     }
 
     foreach ($rowsByCode as $row) {
@@ -1735,28 +1739,30 @@ function herikaSyncActionCatalogBaseRows($rowsByCode)
                 updated_at = NOW()
         ");
 
-        $GLOBALS["db"]->execQuery("
-            UPDATE public.core_action_custom
-            SET
-                action_name = " . herikaActionCatalogSqlText($row['action_name'] ?? '') . ",
-                description = " . herikaActionCatalogSqlText($row['description'] ?? '') . ",
-                return_message = " . herikaActionCatalogSqlText($row['return_message'] ?? '') . ",
-                available_to_npc = " . herikaActionCatalogSqlBool(!empty($row['available_to_npc'])) . ",
-                available_to_followers = " . herikaActionCatalogSqlBool(!empty($row['available_to_followers'])) . ",
-                parameters_json = " . herikaActionCatalogSqlJson($row['parameters_json'] ?? []) . ",
-                metadata = " . herikaActionCatalogSqlJson($preservedCustomMetadata) . ",
-                game_function = " . herikaActionCatalogSqlBool(!empty($row['game_function'])) . ",
-                import_version = " . herikaActionCatalogNormalizeImportVersion($row['import_version'] ?? 0) . ",
-                script_proxy_program = " . herikaActionCatalogSqlJson($row['script_proxy_program'] ?? null, true) . ",
-                updated_at = NOW()
-            WHERE LOWER(code_name) = LOWER(" . herikaActionCatalogSqlText($row['code_name']) . ")
-        ");
+        if ($updateCustomRows) {
+            $GLOBALS["db"]->execQuery("
+                UPDATE public.core_action_custom
+                SET
+                    action_name = " . herikaActionCatalogSqlText($row['action_name'] ?? '') . ",
+                    description = " . herikaActionCatalogSqlText($row['description'] ?? '') . ",
+                    return_message = " . herikaActionCatalogSqlText($row['return_message'] ?? '') . ",
+                    available_to_npc = " . herikaActionCatalogSqlBool(!empty($row['available_to_npc'])) . ",
+                    available_to_followers = " . herikaActionCatalogSqlBool(!empty($row['available_to_followers'])) . ",
+                    parameters_json = " . herikaActionCatalogSqlJson($row['parameters_json'] ?? []) . ",
+                    metadata = " . herikaActionCatalogSqlJson($preservedCustomMetadata) . ",
+                    game_function = " . herikaActionCatalogSqlBool(!empty($row['game_function'])) . ",
+                    import_version = " . herikaActionCatalogNormalizeImportVersion($row['import_version'] ?? 0) . ",
+                    script_proxy_program = " . herikaActionCatalogSqlJson($row['script_proxy_program'] ?? null, true) . ",
+                    updated_at = NOW()
+                WHERE LOWER(code_name) = LOWER(" . herikaActionCatalogSqlText($row['code_name']) . ")
+            ");
+        }
     }
 
     herikaActionCatalogResetCache();
 }
 
-function herikaDeleteUnexpectedBaseActionCatalogRows($rowsByCode)
+function herikaDeleteUnexpectedBaseActionCatalogRows($rowsByCode, $updateCustomRows = true)
 {
     if (!herikaActionCatalogDbReady()) {
         return;
@@ -1784,11 +1790,13 @@ function herikaDeleteUnexpectedBaseActionCatalogRows($rowsByCode)
           AND LOWER(code_name) NOT IN ({$seedCodeList})
     ");
 
-    $GLOBALS["db"]->execQuery("
-        DELETE FROM public.core_action_custom
-        WHERE {$builtinFilter}
-          AND LOWER(code_name) NOT IN ({$seedCodeList})
-    ");
+    if ($updateCustomRows) {
+        $GLOBALS["db"]->execQuery("
+            DELETE FROM public.core_action_custom
+            WHERE {$builtinFilter}
+              AND LOWER(code_name) NOT IN ({$seedCodeList})
+        ");
+    }
 }
 
 function herikaMarkLegacyActionPreferencesImported()
@@ -2026,8 +2034,12 @@ function herikaActionCatalogBuildFunctionEntryFromRow($row)
         return null;
     }
 
+    $runtimeActionName = function_exists('herikaFormatActionPromptTemplate')
+        ? herikaFormatActionPromptTemplate(strval($row['action_name'] ?? ''))
+        : strval($row['action_name'] ?? '');
+
     return [
-        'name' => strval($row['action_name']),
+        'name' => $runtimeActionName,
         'description' => strval($row['description'] ?? ''),
         'parameters' => herikaActionCatalogNormalizeParameterSchema($row['parameters_json'] ?? null),
     ];
@@ -2041,6 +2053,70 @@ function herikaActionCatalogRowIsAvailableInCurrentMode($row)
     }
 
     return !empty($row['available_to_followers']);
+}
+
+function herikaActionCatalogHasBaseRows()
+{
+    if (!herikaActionCatalogDbReady()) {
+        return false;
+    }
+
+    $row = $GLOBALS["db"]->fetchOne("
+        SELECT 1 AS has_row
+        FROM public.core_action
+        LIMIT 1
+    ");
+
+    return is_array($row) && !empty($row['has_row']);
+}
+
+function herikaGetActionCatalogBaseSeedFilePath()
+{
+    return dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'core_action_seed.sql';
+}
+
+function herikaSeedActionCatalogBaseRowsFromSeedFile()
+{
+    if (!herikaActionCatalogDbReady()) {
+        return false;
+    }
+
+    $seedFile = herikaGetActionCatalogBaseSeedFilePath();
+    if (!file_exists($seedFile)) {
+        return false;
+    }
+
+    $sql = trim(strval(file_get_contents($seedFile)));
+    if ($sql === '') {
+        return false;
+    }
+
+    try {
+        $GLOBALS["db"]->execQuery($sql);
+        herikaActionCatalogResetCache();
+        return herikaActionCatalogHasBaseRows();
+    } catch (Throwable $e) {
+        if (class_exists('Logger')) {
+            Logger::warn("core_action seed import failed: " . $e->getMessage());
+        }
+    }
+
+    return false;
+}
+
+function herikaEnsureActionCatalogBaseRowsSeeded($rowsByCode)
+{
+    if (!herikaActionCatalogDbReady() || herikaActionCatalogHasBaseRows()) {
+        return false;
+    }
+
+    if (herikaSeedActionCatalogBaseRowsFromSeedFile()) {
+        return true;
+    }
+
+    herikaSyncActionCatalogBaseRows($rowsByCode, false);
+    herikaActionCatalogResetCache();
+    return true;
 }
 
 function herikaActionCatalogRowIsUsableInCurrentContext($row)
@@ -2098,6 +2174,9 @@ function herikaActionCatalogApplyRowsToRuntimeFunctions()
     }
 
     $runtimeFunctionMap = [];
+    $fallbackBaseFunctionMap = is_array($GLOBALS["HERIKA_BASE_FUNCTIONS_FALLBACK"] ?? null)
+        ? $GLOBALS["HERIKA_BASE_FUNCTIONS_FALLBACK"]
+        : [];
     foreach ($GLOBALS["FUNCTIONS"] ?? [] as $functionEntry) {
         if (!is_array($functionEntry) || empty($functionEntry['name'])) {
             continue;
@@ -2108,26 +2187,22 @@ function herikaActionCatalogApplyRowsToRuntimeFunctions()
             continue;
         }
 
+        if (isset($fallbackBaseFunctionMap[$codeName])) {
+            continue;
+        }
+
         $runtimeFunctionMap[$codeName] = $functionEntry;
     }
 
     foreach ($rowsByCode as $codeName => $row) {
-        $rowMetadata = is_array($row['metadata'] ?? null)
-            ? $row['metadata']
-            : herikaActionCatalogDecodeJson($row['metadata'] ?? [], []);
-        $isBuiltin = !empty($rowMetadata['builtin']);
-        $runtimeDescription = '';
-        if ($isBuiltin && isset($GLOBALS["F_TRANSLATIONS_BASE"][$codeName])) {
-            $runtimeDescription = function_exists('herikaFormatActionPromptTemplate')
-                ? herikaFormatActionPromptTemplate($GLOBALS["F_TRANSLATIONS_BASE"][$codeName] ?? '')
-                : strval($GLOBALS["F_TRANSLATIONS_BASE"][$codeName] ?? '');
-        } else {
-            $runtimeDescription = function_exists('herikaFormatActionPromptTemplate')
-                ? herikaFormatActionPromptTemplate($row['description'] ?? '')
-                : strval($row['description'] ?? '');
-        }
+        $runtimeActionName = function_exists('herikaFormatActionPromptTemplate')
+            ? herikaFormatActionPromptTemplate(strval($row['action_name'] ?? ''))
+            : strval($row['action_name'] ?? '');
+        $runtimeDescription = function_exists('herikaFormatActionPromptTemplate')
+            ? herikaFormatActionPromptTemplate($row['description'] ?? '')
+            : strval($row['description'] ?? '');
 
-        $GLOBALS["F_NAMES"][$codeName] = $row['action_name'];
+        $GLOBALS["F_NAMES"][$codeName] = $runtimeActionName;
         $GLOBALS["F_TRANSLATIONS"][$codeName] = $runtimeDescription;
         $GLOBALS["F_RETURNMESSAGES"][$codeName] = $row['return_message'];
 

@@ -87,6 +87,6 @@ $F_NAMES_LOCAL["TravelTo"]="ViajarHacia";
 $F_NAMES_LOCAL["SearchMemory"]="IntentarRecordar";
 $F_NAMES_LOCAL["WaitHere"]="EsperarAqui";
 $F_NAMES_LOCAL["TakeGoldFromPlayer"]="TomarOroDeJugador";
-$F_NAMES_LOCAL["FollowPlayer"]="SeguirJugador";
+$F_NAMES_LOCAL["FollowPlayer"]="Seguir{$GLOBALS["PLAYER_NAME"]}";
 $F_NAMES_LOCAL["CastSpell"]="LanzarHechizo";
 

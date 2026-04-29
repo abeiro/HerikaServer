@@ -252,6 +252,25 @@ if ($checkVersion("core_action") < 20260427001) {
     Logger::info("Applied patch core_action 20260427001");
 }
 
+if ($checkVersion("core_action") < 20260428001) {
+    Logger::debug("Applying core_action 20260428001 - seed baseline actions from repo snapshot when empty");
+
+    $row = $db->fetchOne("SELECT COUNT(*) AS total FROM public.core_action");
+    $baseRowCount = intval($row['total'] ?? 0);
+    if ($baseRowCount === 0) {
+        $seedFile = __DIR__ . "/../data/core_action_seed.sql";
+        if (file_exists($seedFile) && trim(strval(file_get_contents($seedFile))) !== '') {
+            $db->execQuery(file_get_contents($seedFile));
+            Logger::info("Seeded public.core_action from core_action_seed.sql");
+        } else {
+            Logger::warn("core_action seed file missing or empty; leaving public.core_action unseeded");
+        }
+    }
+
+    $updateVersion("core_action", 20260428001);
+    Logger::info("Applied patch core_action 20260428001");
+}
+
 if ($checkVersion("game_plugins") < 20260427001) {
     Logger::debug("Applying game_plugins 20260427001 - create loaded plugin manifest table");
 

@@ -4,6 +4,13 @@ use PHPUnit\Framework\TestCase;
 
 require_once __DIR__.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'lib'.DIRECTORY_SEPARATOR.'core'.DIRECTORY_SEPARATOR.'action_catalog.php';
 
+if (!function_exists('getFunctionCodeName')) {
+    function getFunctionCodeName($key)
+    {
+        return $GLOBALS['TEST_FUNCTION_CODE_MAP'][$key] ?? false;
+    }
+}
+
 final class ActionCatalogTest extends TestCase
 {
     public function testReadQuestJournalIsNotRetiredAndIsEnabledByDefault(): void
@@ -209,6 +216,151 @@ final class ActionCatalogTest extends TestCase
                 $GLOBALS['PLAYER_NAME'] = $originalPlayerName;
             } else {
                 unset($GLOBALS['PLAYER_NAME']);
+            }
+        }
+    }
+
+    public function testApplyRowsToRuntimeFunctions_UsesCatalogRowsAsBaselineSourceOfTruth(): void
+    {
+        $previousRows = $GLOBALS['HERIKA_ACTION_CATALOG_ROWS_BY_CODE'] ?? null;
+        $previousFunctions = $GLOBALS['FUNCTIONS'] ?? null;
+        $previousBaseFunctions = $GLOBALS['BASE_FUNCTIONS'] ?? null;
+        $previousFallbackBaseFunctions = $GLOBALS['HERIKA_BASE_FUNCTIONS_FALLBACK'] ?? null;
+        $previousNames = $GLOBALS['F_NAMES'] ?? null;
+        $previousTranslations = $GLOBALS['F_TRANSLATIONS'] ?? null;
+        $previousReturnMessages = $GLOBALS['F_RETURNMESSAGES'] ?? null;
+        $previousPreferredCodes = $GLOBALS['HERIKA_ACTION_NAME_PREFERRED_CODE'] ?? null;
+        $previousCodeMap = $GLOBALS['TEST_FUNCTION_CODE_MAP'] ?? null;
+
+        $GLOBALS['HERIKA_ACTION_CATALOG_ROWS_BY_CODE'] = [
+            'Toast' => [
+                'code_name' => 'Toast',
+                'action_name' => 'Make_a_Toast',
+                'description' => 'Table-owned toast description.',
+                'return_message' => 'Table-owned toast return.',
+                'available_to_npc' => true,
+                'available_to_followers' => true,
+                'is_activated' => true,
+                'parameters_json' => [
+                    'type' => 'object',
+                    'properties' => [],
+                    'required' => [],
+                ],
+                'metadata' => [
+                    'builtin' => true,
+                    'dispatch' => 'plugin_command',
+                ],
+                'game_function' => true,
+                'script_proxy_program' => null,
+            ],
+        ];
+
+        $GLOBALS['FUNCTIONS'] = [
+            [
+                'name' => 'Fallback_Toast',
+                'description' => 'Fallback toast description.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [],
+                    'required' => [],
+                ],
+            ],
+            [
+                'name' => 'Ext_Action',
+                'description' => 'Extension action.',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [],
+                    'required' => [],
+                ],
+            ],
+        ];
+
+        $GLOBALS['HERIKA_BASE_FUNCTIONS_FALLBACK'] = [
+            'Toast' => $GLOBALS['FUNCTIONS'][0],
+        ];
+        $GLOBALS['F_NAMES'] = [
+            'Toast' => 'Fallback_Toast',
+            'ExtCode' => 'Ext_Action',
+        ];
+        $GLOBALS['F_TRANSLATIONS'] = [
+            'Toast' => 'Fallback toast description.',
+            'ExtCode' => 'Extension action.',
+        ];
+        $GLOBALS['F_RETURNMESSAGES'] = [
+            'Toast' => 'Fallback toast return.',
+            'ExtCode' => '',
+        ];
+        $GLOBALS['TEST_FUNCTION_CODE_MAP'] = [
+            'Fallback_Toast' => 'Toast',
+            'Make_a_Toast' => 'Toast',
+            'Ext_Action' => 'ExtCode',
+        ];
+
+        try {
+            herikaActionCatalogApplyRowsToRuntimeFunctions();
+
+            $this->assertSame('Make_a_Toast', $GLOBALS['F_NAMES']['Toast']);
+            $this->assertSame('Table-owned toast description.', $GLOBALS['F_TRANSLATIONS']['Toast']);
+            $this->assertSame('Table-owned toast return.', $GLOBALS['F_RETURNMESSAGES']['Toast']);
+            $this->assertArrayHasKey('Toast', $GLOBALS['BASE_FUNCTIONS']);
+            $this->assertSame('Make_a_Toast', $GLOBALS['BASE_FUNCTIONS']['Toast']['name']);
+            $this->assertSame('Table-owned toast description.', $GLOBALS['BASE_FUNCTIONS']['Toast']['description']);
+            $this->assertArrayHasKey('ExtCode', $GLOBALS['BASE_FUNCTIONS']);
+            $this->assertSame('Ext_Action', $GLOBALS['BASE_FUNCTIONS']['ExtCode']['name']);
+        } finally {
+            if ($previousRows !== null) {
+                $GLOBALS['HERIKA_ACTION_CATALOG_ROWS_BY_CODE'] = $previousRows;
+            } else {
+                unset($GLOBALS['HERIKA_ACTION_CATALOG_ROWS_BY_CODE']);
+            }
+
+            if ($previousFunctions !== null) {
+                $GLOBALS['FUNCTIONS'] = $previousFunctions;
+            } else {
+                unset($GLOBALS['FUNCTIONS']);
+            }
+
+            if ($previousBaseFunctions !== null) {
+                $GLOBALS['BASE_FUNCTIONS'] = $previousBaseFunctions;
+            } else {
+                unset($GLOBALS['BASE_FUNCTIONS']);
+            }
+
+            if ($previousFallbackBaseFunctions !== null) {
+                $GLOBALS['HERIKA_BASE_FUNCTIONS_FALLBACK'] = $previousFallbackBaseFunctions;
+            } else {
+                unset($GLOBALS['HERIKA_BASE_FUNCTIONS_FALLBACK']);
+            }
+
+            if ($previousNames !== null) {
+                $GLOBALS['F_NAMES'] = $previousNames;
+            } else {
+                unset($GLOBALS['F_NAMES']);
+            }
+
+            if ($previousTranslations !== null) {
+                $GLOBALS['F_TRANSLATIONS'] = $previousTranslations;
+            } else {
+                unset($GLOBALS['F_TRANSLATIONS']);
+            }
+
+            if ($previousReturnMessages !== null) {
+                $GLOBALS['F_RETURNMESSAGES'] = $previousReturnMessages;
+            } else {
+                unset($GLOBALS['F_RETURNMESSAGES']);
+            }
+
+            if ($previousPreferredCodes !== null) {
+                $GLOBALS['HERIKA_ACTION_NAME_PREFERRED_CODE'] = $previousPreferredCodes;
+            } else {
+                unset($GLOBALS['HERIKA_ACTION_NAME_PREFERRED_CODE']);
+            }
+
+            if ($previousCodeMap !== null) {
+                $GLOBALS['TEST_FUNCTION_CODE_MAP'] = $previousCodeMap;
+            } else {
+                unset($GLOBALS['TEST_FUNCTION_CODE_MAP']);
             }
         }
     }
