@@ -175,7 +175,7 @@ final class ActionCatalogTest extends TestCase
                     'MakeFollower' => 'The Narrator joins RANGROO party and travels with RANGROO as an ally.',
                 ],
                 [
-                    'TakeGoldFromPlayer' => 'RANGROO gave #TARGET# coins to The Narrator. If this a transaction, maybe GiveItemToPlayer is needed.',
+                    'TakeGoldFromPlayer' => 'RANGROO gave #TARGET# coins to The Narrator. If this a transaction, maybe GiveItemTo is needed.',
                     'MakeFollower' => 'The Narrator is now part of RANGROO party.',
                 ]
             );
@@ -186,7 +186,7 @@ final class ActionCatalogTest extends TestCase
                 $rows['TakeGoldFromPlayer']['description']
             );
             $this->assertSame(
-                'PLAYER gave #TARGET# coins to NPC. If this a transaction, maybe GiveItemToPlayer is needed.',
+                'PLAYER gave #TARGET# coins to NPC. If this a transaction, maybe GiveItemTo is needed.',
                 $rows['TakeGoldFromPlayer']['return_message']
             );
             $this->assertSame('Join_Player_Party', $rows['MakeFollower']['action_name']);

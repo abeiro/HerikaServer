@@ -12,6 +12,7 @@ function herikaGetRetiredActionCodes()
         'SetCurrentTask',
         'ReadDiaryPage',
         'SearchMemory',
+        'GiveItemToPlayer',
     ];
 }
 

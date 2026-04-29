@@ -21,7 +21,6 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'DecreaseWalkSpeed',
     'StopWalk',
     'TravelTo',
-    'GiveItemToPlayer',
     'FollowPlayer',
     'ComeCloser',
     'Brawl',
@@ -226,7 +225,6 @@ $F_TRANSLATIONS_LOCAL["DecreaseWalkSpeed"] = "Decrease {$GLOBALS["HERIKA_NAME"]}
 $F_TRANSLATIONS_LOCAL["StopWalk"] = "Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
 $F_TRANSLATIONS_LOCAL["TravelTo"] = "Only use if {$GLOBALS["PLAYER_NAME"]} explicitly suggest it. Guide {$GLOBALS["PLAYER_NAME"]} to a Town o City. Also known as lead the way";
 $F_TRANSLATIONS_LOCAL["WaitHere"] = "{$GLOBALS["HERIKA_NAME"]} waits and loiters at the current location";
-$F_TRANSLATIONS_LOCAL["GiveItemToPlayer"] = "{$GLOBALS["HERIKA_NAME"]} gives item (property target) to {$GLOBALS["PLAYER_NAME"]} (property listener)";
 $F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"] = "{$GLOBALS["HERIKA_NAME"]} takes amount (property target) of gold from {$GLOBALS["PLAYER_NAME"]}, once {$GLOBALS["PLAYER_NAME"]} is agree. infer amount from context.";
 $F_TRANSLATIONS_LOCAL["RentRoom"] = "{$GLOBALS["HERIKA_NAME"]} rents a room to {$GLOBALS["PLAYER_NAME"]} for {$rentRoomCostText}. Only innkeepers can use this action and it only applies to {$GLOBALS["PLAYER_NAME"]}.";
 $F_TRANSLATIONS_LOCAL["HireCarriage"] = "{$GLOBALS["HERIKA_NAME"]} accepts {$hireCarriageCostText} for carriage travel and transports {$GLOBALS["PLAYER_NAME"]} to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
@@ -239,8 +237,8 @@ $F_TRANSLATIONS_LOCAL["FollowPlayer"] = "{$GLOBALS["HERIKA_NAME"]} follows  {$GL
 $F_TRANSLATIONS_LOCAL["ComeCloser"] = "{$GLOBALS["HERIKA_NAME"]} aproaches to {$GLOBALS["PLAYER_NAME"]}";
 $F_TRANSLATIONS_LOCAL["Brawl"] = "{$GLOBALS["HERIKA_NAME"]} engages non lethtal combat with another actor, using weapons";
 $F_TRANSLATIONS_LOCAL["ReturnBackHome"] = "{$GLOBALS["HERIKA_NAME"]} travels to home/origin place.Returns home.";
-$F_TRANSLATIONS_LOCAL["GiveGoldTo"] = "{$GLOBALS["HERIKA_NAME"]} gives gold/coins/septims to another actor. Specify the amount to give";
-$F_TRANSLATIONS_LOCAL["GiveItemTo"] = "{$GLOBALS["HERIKA_NAME"]} gives a specific item from inventory to another actor. REQUIRED: Must include 'item' field with exact item name from <inventory> tag, and 'target' field with recipient name";
+$F_TRANSLATIONS_LOCAL["GiveGoldTo"] = "{$GLOBALS["HERIKA_NAME"]} gives gold/coins/septims to another actor or {$GLOBALS["PLAYER_NAME"]}. REQUIRED: Must include 'target' field with recipient name and 'item' field with amount as a number string";
+$F_TRANSLATIONS_LOCAL["GiveItemTo"] = "{$GLOBALS["HERIKA_NAME"]} gives a specific item from inventory to another actor or {$GLOBALS["PLAYER_NAME"]}. REQUIRED: Must include 'item' field with exact item name from <inventory> tag, and 'target' field with recipient name";
 $F_TRANSLATIONS_LOCAL["PickupItem"] = "{$GLOBALS["HERIKA_NAME"]} picks up a specific item from the ground. Use the exact RefID:ItemName format from nearby_items (e.g. 0x12345:Iron Sword)";
 $F_TRANSLATIONS_LOCAL["GoToSleep"] = "{$GLOBALS["HERIKA_NAME"]} takes a nap";
 $F_TRANSLATIONS_LOCAL["UseSoulGaze"] = "Use the spell SoulGaze, a powerful incantation that allows {$GLOBALS["HERIKA_NAME"]} to perceive surroundings in vivid detail through {$GLOBALS["PLAYER_NAME"]}'s eyes. The spell, however, causes some disturbance to the caster.";
@@ -275,8 +273,7 @@ $F_RETURNMESSAGES_LOCAL["DecreaseWalkSpeed"] = "Decreases {$GLOBALS["HERIKA_NAME
 $F_RETURNMESSAGES_LOCAL["StopWalk"] = "Stop all {$GLOBALS["HERIKA_NAME"]}'s actions inmediately";
 $F_RETURNMESSAGES_LOCAL["TravelTo"] = "{$GLOBALS["HERIKA_NAME"]} begins travelling to #TARGET#";
 $F_RETURNMESSAGES_LOCAL["WaitHere"] = "{$GLOBALS["HERIKA_NAME"]} waits and stands at the place";
-$F_RETURNMESSAGES_LOCAL["GiveItemToPlayer"] = "{$GLOBALS["HERIKA_NAME"]} gave #TARGET# to {$GLOBALS["PLAYER_NAME"]}.If this a transaction, maybe TakeGoldFromPlayer is needed.";
-$F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"] = "{$GLOBALS["PLAYER_NAME"]} gave #TARGET# coins to {$GLOBALS["HERIKA_NAME"]}. If this a transaction, maybe GiveItemToPlayer is needed.";
+$F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"] = "{$GLOBALS["PLAYER_NAME"]} gave #TARGET# coins to {$GLOBALS["HERIKA_NAME"]}. If this a transaction, maybe GiveItemTo is needed.";
 $F_RETURNMESSAGES_LOCAL["RentRoom"] = "{$GLOBALS["HERIKA_NAME"]} rented a room to {$GLOBALS["PLAYER_NAME"]} for {$rentRoomCostText}.";
 $F_RETURNMESSAGES_LOCAL["HireCarriage"] = "{$GLOBALS["HERIKA_NAME"]} accepted the {$hireCarriageCostText} carriage fare to #TARGET# and ended the conversation.";
 $F_RETURNMESSAGES_LOCAL["HireFerry"] = "{$GLOBALS["HERIKA_NAME"]} accepted the {$hireFerryCostText} ferry fare to #TARGET# and ended the conversation.";
@@ -287,7 +284,7 @@ $F_RETURNMESSAGES_LOCAL["ForgiveCrime"] = "{$GLOBALS["HERIKA_NAME"]} forgave {$G
 $F_RETURNMESSAGES_LOCAL["FollowPlayer"] = "{$GLOBALS["HERIKA_NAME"]} follows {$GLOBALS["PLAYER_NAME"]}";
 $F_RETURNMESSAGES_LOCAL["Brawl"] = "{$GLOBALS["HERIKA_NAME"]} Attacks #TARGET# ";
 $F_RETURNMESSAGES_LOCAL["ReturnBackHome"] = "{$GLOBALS["HERIKA_NAME"]} goes back home";
-$F_RETURNMESSAGES_LOCAL["GiveGoldTo"] = "{$GLOBALS["HERIKA_NAME"]} gives #TARGET# gold";
+$F_RETURNMESSAGES_LOCAL["GiveGoldTo"] = "{$GLOBALS["HERIKA_NAME"]} gives #ITEM# gold to #TARGET#";
 $F_RETURNMESSAGES_LOCAL["GiveItemTo"] = "{$GLOBALS["HERIKA_NAME"]} gives #ITEM# to #TARGET#";
 $F_RETURNMESSAGES_LOCAL["PickupItem"] = "{$GLOBALS["HERIKA_NAME"]} picks up #ITEM#";
 $F_RETURNMESSAGES_LOCAL["GoToSleep"] = "{$GLOBALS["HERIKA_NAME"]} takes a nap";
@@ -324,7 +321,6 @@ $F_NAMES_LOCAL["DecreaseWalkSpeed"] = "DecreaseWalkSpeed";
 $F_NAMES_LOCAL["StopWalk"] = "StopWalk";
 $F_NAMES_LOCAL["TravelTo"] = "TravelTo";
 $F_NAMES_LOCAL["WaitHere"] = "WaitHere";
-$F_NAMES_LOCAL["GiveItemToPlayer"] = "GiveItemToPlayer";
 $F_NAMES_LOCAL["TakeGoldFromPlayer"] = "TakeGoldFrom{$GLOBALS["PLAYER_NAME"]}";
 $F_NAMES_LOCAL["RentRoom"] = "RentRoom";
 $F_NAMES_LOCAL["HireCarriage"] = "HireCarriage";
@@ -694,20 +690,6 @@ $GLOBALS["FUNCTIONS"] = [
                 ],
             ],
             "required" => [""],
-        ],
-    ],
-    [
-        "name" => $F_NAMES_LOCAL["GiveItemToPlayer"],
-        "description" => $F_TRANSLATIONS_LOCAL["GiveItemToPlayer"],
-        "parameters" => [
-            "type" => "object",
-            "properties" => [
-                "target" => [
-                    "type" => "string",
-                    "description" => "",
-                ],
-            ],
-            "required" => ["target"],
         ],
     ],
     [

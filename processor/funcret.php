@@ -159,11 +159,6 @@ if (isset($returnFunction[2])) {
 		$argName = "target";
 		$useFunctionsAgain = false;
 
-	} else if ($functionCodeName == "GiveItemToPlayer") {
-		$useFunctionsAgain = true;
-		$request = "(use action '" . getFunctionTrlName("TakeGoldFromPlayer") . "' if needed) $request";
-
-
 	} else if ($functionCodeName == "TakeGoldFromPlayer") {
 		$useFunctionsAgain = true;
 		die();
