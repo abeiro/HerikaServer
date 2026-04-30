@@ -110,6 +110,7 @@ function herikaGetFollowerDefaultActionCodes()
 function herikaGetNarratorDefaultActionCodes()
 {
     return [
+        'CreateNewNPC',
         'KillTarget',
         'SpawnItem',
         'TeleportNPC',
@@ -965,6 +966,8 @@ function herikaActionCatalogBuildBaseMetadata($codeName, $scriptProxyProgram = n
     $dispatch = 'plugin_command';
     if ($scriptProxyProgram !== null) {
         $dispatch = 'script_proxy';
+    } elseif (in_array($codeName, ['CreateNewNPC'], true)) {
+        $dispatch = 'server_action';
     } elseif (in_array($codeName, ['Training', 'TeleportNPC', 'SpawnItem', 'KillTarget'], true)) {
         $dispatch = 'rolecommand';
     }
@@ -2070,6 +2073,65 @@ function herikaResolveActionCatalogCodeName($actionNameOrCode, $requireCurrentMo
     return trim(strval($row['code_name']));
 }
 
+function herikaFindActionCatalogActionNameConflict($actionName, $excludeCodeName = '')
+{
+    $actionName = trim(strval($actionName));
+    $excludeCodeName = trim(strval($excludeCodeName));
+    if ($actionName === '') {
+        return null;
+    }
+
+    $rowsByCode = herikaGetActionCatalogRowsByCode();
+    if (count($rowsByCode) === 0) {
+        return null;
+    }
+
+    $normalizedSearchName = function_exists('herikaNormalizeActionCatalogDisplayActionName')
+        ? trim(strval(herikaNormalizeActionCatalogDisplayActionName($actionName)))
+        : $actionName;
+    if ($normalizedSearchName === '') {
+        return null;
+    }
+
+    foreach ($rowsByCode as $row) {
+        if (!is_array($row) || empty($row['code_name'])) {
+            continue;
+        }
+
+        $rowCodeName = trim(strval($row['code_name'] ?? ''));
+        if ($rowCodeName === '') {
+            continue;
+        }
+        if ($excludeCodeName !== '' && strcasecmp($rowCodeName, $excludeCodeName) === 0) {
+            continue;
+        }
+
+        $rawActionName = trim(strval($row['action_name'] ?? ''));
+        $runtimeActionName = function_exists('herikaFormatActionPromptTemplate')
+            ? trim(strval(herikaFormatActionPromptTemplate($rawActionName)))
+            : $rawActionName;
+        $normalizedCodeName = function_exists('herikaNormalizeActionCatalogDisplayActionName')
+            ? trim(strval(herikaNormalizeActionCatalogDisplayActionName($rowCodeName)))
+            : $rowCodeName;
+        $normalizedRawActionName = function_exists('herikaNormalizeActionCatalogDisplayActionName')
+            ? trim(strval(herikaNormalizeActionCatalogDisplayActionName($rawActionName)))
+            : $rawActionName;
+        $normalizedRuntimeActionName = function_exists('herikaNormalizeActionCatalogDisplayActionName')
+            ? trim(strval(herikaNormalizeActionCatalogDisplayActionName($runtimeActionName)))
+            : $runtimeActionName;
+
+        if (
+            ($normalizedCodeName !== '' && strcasecmp($normalizedCodeName, $normalizedSearchName) === 0) ||
+            ($normalizedRawActionName !== '' && strcasecmp($normalizedRawActionName, $normalizedSearchName) === 0) ||
+            ($normalizedRuntimeActionName !== '' && strcasecmp($normalizedRuntimeActionName, $normalizedSearchName) === 0)
+        ) {
+            return $row;
+        }
+    }
+
+    return null;
+}
+
 function herikaActionCatalogGetCustomConfigValue($codeName, $configKey, $default = null)
 {
     $codeName = trim(strval($codeName));
@@ -2724,6 +2786,12 @@ function herikaActionCatalogUpsertCustomTextFields($codeName, $fieldValues)
     $actionName = herikaNormalizeActionCatalogDisplayActionName(strval($fieldValues['action_name'] ?? ($row['action_name'] ?? '')));
     if ($actionName === '') {
         return false;
+    }
+    if (function_exists('herikaFindActionCatalogActionNameConflict')) {
+        $conflictingRow = herikaFindActionCatalogActionNameConflict($actionName, $codeName);
+        if (is_array($conflictingRow) && !empty($conflictingRow['code_name'])) {
+            return false;
+        }
     }
 
     $description = strval($fieldValues['description'] ?? ($row['description'] ?? ''));

@@ -95,6 +95,8 @@
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put the exact item name from <inventory> in the 'target' field. Only use this for food, drinks, or potions already in inventory. Leave 'item' blank unless you need it as a fallback copy of the same item name. The spoken reply for this action happens after the item is consumed, so use it only when {$GLOBALS["HERIKA_NAME"]} is actually going to eat or drink the item.";
                 } else if ($fname == "SpawnItem") {
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put the recipient in the 'target' field, the item name in the 'item' field, and the quantity in the 'amount' field. Use '{$GLOBALS["PLAYER_NAME"]}', 'PLAYER', or 'me' to give the item to the player.";
+                } else if ($fname == "CreateNewNPC") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put a short creation brief for the new NPC in the 'target' field. Leave 'item' and 'amount' blank.";
                 } else if ($fname == "TeleportNPC") {
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put who to teleport in the 'target' field and the destination location name in the 'item' field. Use '{$GLOBALS["PLAYER_NAME"]}', 'PLAYER', or 'me' to teleport the player.";
                 } else if ($fname == "KillTarget") {
@@ -162,9 +164,9 @@
                     "message"=>$messageDescription,
                     "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem, this is the actor who should receive the spawned item. For KillTarget, this is the actor to kill. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item.",
-                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC. Use a positive integer when needed.",
+                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem, this is the actor who should receive the spawned item. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including CreateNewNPC.",
+                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC. Use a positive integer when needed.",
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                 ];
             } else {
@@ -174,9 +176,9 @@
                     "message"=>$messageDescription,
                     "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem, this is the actor who should receive the spawned item. For KillTarget, this is the actor to kill. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item.",
-                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC. Use a positive integer when needed."
+                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem, this is the actor who should receive the spawned item. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including CreateNewNPC.",
+                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC. Use a positive integer when needed."
                 ];
             }
         } else {
@@ -186,9 +188,9 @@
                     "listener"=>$listenerDesc,
                     "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem, this is the actor who should receive the spawned item. For KillTarget, this is the actor to kill. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item.",
-                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC. Use a positive integer when needed.",
+                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem, this is the actor who should receive the spawned item. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including CreateNewNPC.",
+                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC. Use a positive integer when needed.",
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                     "message"=>$messageDescription
                 ];
@@ -198,9 +200,9 @@
                     "listener"=>$listenerDesc,
                     "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem, this is the actor who should receive the spawned item. For KillTarget, this is the actor to kill. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item.",
-                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC. Use a positive integer when needed.",
+                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem, this is the actor who should receive the spawned item. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including CreateNewNPC.",
+                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC. Use a positive integer when needed.",
                     "message"=>$messageDescription
                 ];
             }
@@ -295,15 +297,15 @@
                             ),
                         "target" => array(
                             "type" => "string",
-                            "description" => "action target actor| exact inventory item name when action is Consume| actor to teleport when action is TeleportNPC| actor to receive the spawned item when action is SpawnItem| actor to kill when action is KillTarget. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target."
+                            "description" => "action target actor| exact inventory item name when action is Consume| actor to teleport when action is TeleportNPC| actor to receive the spawned item when action is SpawnItem| actor to kill when action is KillTarget| short creation brief when action is CreateNewNPC. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target."
                         ),
                         "item" => array(
                             "type" => "string",
-                            "description" => "item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact name from inventory, nearby_items, or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). For Consume, leave item blank unless target is empty and you need item as the same exact inventory item name fallback."
+                            "description" => "item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact name from inventory, nearby_items, or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). For Consume, leave item blank unless target is empty and you need item as the same exact inventory item name fallback. Leave item blank for CreateNewNPC."
                         ),
                         "amount" => array(
                             "type" => "integer",
-                            "description" => "quantity to give or spawn when the chosen action supports it. REQUIRED when action is SpawnItem. Optional when action is GiveItemTo. Use a positive integer."
+                            "description" => "quantity to give or spawn when the chosen action supports it. REQUIRED when action is SpawnItem. Optional when action is GiveItemTo. Leave blank for CreateNewNPC. Use a positive integer."
                         )
                     ),
                     "required" => [

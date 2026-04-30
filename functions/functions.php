@@ -42,6 +42,7 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'HireCarriage',
     'HireFerry',
     'SpawnItem',
+    'CreateNewNPC',
     'TeleportNPC',
     'AddBounty',
     'PayBounty',
@@ -511,6 +512,58 @@ function herikaGetLatestNarratorInputText()
     return preg_replace('/^[^:]+:\s*/u', '', $latestInput) ?? $latestInput;
 }
 
+function herikaQueueNarratorCreateNewNpc($creationBrief)
+{
+    $creationBrief = trim(strval($creationBrief));
+    if ($creationBrief === '') {
+        error_log("[ACTION POSTFILTER CreateNewNPC] Missing creation brief before spawn helper");
+        return false;
+    }
+
+    $managerPath = realpath(__DIR__ . '/../service/manager.php');
+    if ($managerPath === false || !file_exists($managerPath)) {
+        error_log("[ACTION POSTFILTER CreateNewNPC] Could not resolve manager path from " . __DIR__);
+        return false;
+    }
+
+    $phpBinaryCandidates = [];
+    $phpBindir = rtrim(strval(PHP_BINDIR ?? ''), "/\\");
+    if ($phpBindir !== '') {
+        $phpBinaryCandidates[] = $phpBindir . DIRECTORY_SEPARATOR . (stripos(PHP_OS, 'WIN') === 0 ? 'php.exe' : 'php');
+    }
+
+    $phpBinary = trim(strval(PHP_BINARY ?? ''));
+    if ($phpBinary !== '') {
+        $phpBinaryBase = strtolower(basename(str_replace('\\', '/', $phpBinary)));
+        if (strpos($phpBinaryBase, 'php') === 0) {
+            $phpBinaryCandidates[] = $phpBinary;
+        }
+    }
+
+    if (!in_array('php', $phpBinaryCandidates, true)) {
+        $phpBinaryCandidates[] = 'php';
+    }
+
+    $escapedManagerPath = escapeshellarg($managerPath);
+    $escapedBrief = escapeshellarg($creationBrief);
+    $attemptLogs = [];
+
+    foreach (array_values(array_unique($phpBinaryCandidates)) as $phpBinaryCandidate) {
+        $output = [];
+        $returnCode = 0;
+        $escapedPhpBinary = escapeshellarg($phpBinaryCandidate);
+        exec("{$escapedPhpBinary} {$escapedManagerPath} rolemaster spawn {$escapedBrief} 2>&1", $output, $returnCode);
+        if ($returnCode === 0) {
+            return true;
+        }
+
+        $attemptLogs[] = "php={$phpBinaryCandidate} rc={$returnCode} output=" . implode(" || ", $output);
+    }
+
+    error_log("[ACTION POSTFILTER CreateNewNPC] rolemaster spawn command failed manager={$managerPath} attempts=" . implode(" ### ", $attemptLogs));
+    return false;
+}
+
 function herikaInferNarratorActorTargetFromText($sourceText, $peoplePipe = '')
 {
     $normalizedSource = herikaNormalizeNarratorActorTargetInferenceText($sourceText);
@@ -608,6 +661,7 @@ $F_TRANSLATIONS_LOCAL["RentRoom"] = "#HERIKA_NAME# rents a room to #PLAYER_NAME#
 $F_TRANSLATIONS_LOCAL["HireCarriage"] = "#HERIKA_NAME# accepts {$hireCarriageCostText} for carriage travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
 $F_TRANSLATIONS_LOCAL["HireFerry"] = "#HERIKA_NAME# accepts {$hireFerryCostText} for ferry travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
 $F_TRANSLATIONS_LOCAL["SpawnItem"] = "Create a named item from the descriptions database and give it to a target actor or #PLAYER_NAME#.";
+$F_TRANSLATIONS_LOCAL["CreateNewNPC"] = "Create and spawn a brand-new nearby NPC from a short creation brief. Put the creation brief in the target field and leave item and amount blank.";
 $F_TRANSLATIONS_LOCAL["TeleportNPC"] = "Teleport a chosen NPC, actor, or #PLAYER_NAME# to a named location from the location database.";
 $F_TRANSLATIONS_LOCAL["KillTarget"] = "Kill a chosen NPC, actor, or #PLAYER_NAME# immediately.";
 $F_TRANSLATIONS_LOCAL["AddBounty"] = "#HERIKA_NAME# adds a crime bounty to #PLAYER_NAME# for a witnessed or reported crime. Guard-only action.";
@@ -659,6 +713,7 @@ $F_RETURNMESSAGES_LOCAL["RentRoom"] = "#HERIKA_NAME# rented a room to #PLAYER_NA
 $F_RETURNMESSAGES_LOCAL["HireCarriage"] = "#HERIKA_NAME# accepted the {$hireCarriageCostText} carriage fare to #TARGET# and ended the conversation.";
 $F_RETURNMESSAGES_LOCAL["HireFerry"] = "#HERIKA_NAME# accepted the {$hireFerryCostText} ferry fare to #TARGET# and ended the conversation.";
 $F_RETURNMESSAGES_LOCAL["SpawnItem"] = "#TARGET# receives #ITEM#.";
+$F_RETURNMESSAGES_LOCAL["CreateNewNPC"] = "A new NPC is being created nearby.";
 $F_RETURNMESSAGES_LOCAL["TeleportNPC"] = "#TARGET# teleports to #ITEM#.";
 $F_RETURNMESSAGES_LOCAL["KillTarget"] = "#TARGET# is killed.";
 $F_RETURNMESSAGES_LOCAL["AddBounty"] = "#HERIKA_NAME# added a bounty for #TARGET# to #PLAYER_NAME#.";
@@ -710,6 +765,7 @@ $F_NAMES_LOCAL["RentRoom"] = "RentRoom";
 $F_NAMES_LOCAL["HireCarriage"] = "HireCarriage";
 $F_NAMES_LOCAL["HireFerry"] = "HireFerry";
 $F_NAMES_LOCAL["SpawnItem"] = "SpawnItem";
+$F_NAMES_LOCAL["CreateNewNPC"] = "CreateNewNPC";
 $F_NAMES_LOCAL["TeleportNPC"] = "TeleportNPC";
 $F_NAMES_LOCAL["KillTarget"] = "KillTarget";
 $F_NAMES_LOCAL["AddBounty"] = "AddBounty";
@@ -1157,6 +1213,20 @@ $GLOBALS["FUNCTIONS"] = [
                 ],
             ],
             "required" => ["item"],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["CreateNewNPC"],
+        "description" => $F_TRANSLATIONS_LOCAL["CreateNewNPC"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "REQUIRED: short creation brief for the new nearby NPC, such as race, role, temperament, or purpose.",
+                ],
+            ],
+            "required" => ["target"],
         ],
     ],
     [
@@ -2176,13 +2246,18 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
         $actionParts2=explode("@",$actionParts[2]);
         
         if (isset($actionParts2[0])) {
+            $actionCodeNameResolved = getFunctionCodeName($actionParts2[0]);
+            if ($actionCodeNameResolved === false || trim(strval($actionCodeNameResolved)) === '') {
+                $actionCodeNameResolved = $actionParts2[0];
+            }
+
             if (herikaActionCatalogExecuteScriptProxyAction($action)) {
                 unset($actionsCopy[$n]);
                 continue;
             }
 
             // Parameter part 
-            if ($actionParts2[0]=="Drink") {
+            if ($actionCodeNameResolved=="Drink") {
                
                 // Make NPC to toast
                 $npcMaster = new Npcmaster();
@@ -2218,7 +2293,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
 
                 error_log("[ACTION POSTFILTER Drink] Executed server-side");
 
-            } else  if ($actionParts2[0]=="Toast") {
+            } else  if ($actionCodeNameResolved=="Toast") {
                 
                 $npcMaster = new Npcmaster();
                 $npcData   = $npcMaster->getByName($actionParts[0]);
@@ -2258,7 +2333,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
 
                 error_log("[ACTION POSTFILTER Toast] Executed server-side");
 
-            } else if (preg_match('/^Train(.+)$/', $actionParts2[0], $matches)) {
+            } else if (preg_match('/^Train(.+)$/', $actionCodeNameResolved, $matches)) {
                 // Training function called - send rolecommand to open training menu
                 $GLOBALS["db"]->insert(
                     'responselog',
@@ -2288,7 +2363,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 error_log("[ACTION POSTFILTER Train] Executed server-side");
                 unset($actionsCopy[$n]);// Remove action from list, so client does not execute it
 
-            } else if ($actionParts2[0] == "SpawnItem") {
+            } else if ($actionCodeNameResolved == "SpawnItem") {
                 $rawParameter = implode("@", array_slice($actionParts2, 1));
                 $payload = decodeFunctionExecutionParameterPayload($rawParameter);
                 if (!is_array($payload)) {
@@ -2370,7 +2445,73 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 error_log("[ACTION POSTFILTER SpawnItem] Queued {$roleCommand}");
                 unset($actionsCopy[$n]);
 
-            } else if ($actionParts2[0] == "TeleportNPC") {
+            } else if ($actionCodeNameResolved == "CreateNewNPC") {
+                $rawParameter = implode("@", array_slice($actionParts2, 1));
+                $payload = decodeFunctionExecutionParameterPayload($rawParameter);
+                if (!is_array($payload)) {
+                    $payload = [];
+                }
+
+                $creationBrief = trim(strval($payload["target"] ?? ''));
+                if ($creationBrief === '') {
+                    $creationBrief = herikaGetLatestNarratorInputText();
+                }
+
+                if ($creationBrief === '') {
+                    error_log("[ACTION POSTFILTER CreateNewNPC] Missing creation brief");
+                    $GLOBALS["db"]->insert(
+                        'responselog',
+                        array(
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => '',
+                            'action' => "rolecommand|DebugNotification@Create_New_NPC requires a short creation brief",
+                            'tag' => ""
+                        )
+                    );
+                    unset($actionsCopy[$n]);
+                    continue;
+                }
+
+                $creationBrief = str_replace(["\r", "\n"], ' ', $creationBrief);
+                $creationBrief = preg_replace('/\s+/u', ' ', $creationBrief) ?? $creationBrief;
+                $creationBrief = trim(str_replace('@', '', $creationBrief));
+
+                if (!herikaQueueNarratorCreateNewNpc($creationBrief)) {
+                    error_log("[ACTION POSTFILTER CreateNewNPC] Failed to invoke rolemaster spawn for '{$creationBrief}'");
+                    $GLOBALS["db"]->insert(
+                        'responselog',
+                        array(
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => '',
+                            'action' => "rolecommand|DebugNotification@Could not start Create_New_NPC",
+                            'tag' => ""
+                        )
+                    );
+                    unset($actionsCopy[$n]);
+                    continue;
+                }
+
+                $GLOBALS["db"]->insert(
+                    'actions_issued',
+                    array(
+                        'action' => "CreateNewNPC",
+                        'fullcall' => $actionParts[0] . "|" . $actionParts[1] . "|" . $actionParts[2],
+                        'actorname' => $actionParts[0],
+                        'ts' => $gameRequest[1],
+                        'gamets' => $gameRequest[2],
+                        'localts' => time(),
+                        'original' => $creationBrief
+                    )
+                );
+
+                error_log("[ACTION POSTFILTER CreateNewNPC] Started rolemaster spawn for {$creationBrief}");
+                unset($actionsCopy[$n]);
+
+            } else if ($actionCodeNameResolved == "TeleportNPC") {
                 $rawParameter = implode("@", array_slice($actionParts2, 1));
                 $payload = decodeFunctionExecutionParameterPayload($rawParameter);
                 if (!is_array($payload)) {
@@ -2451,7 +2592,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 error_log("[ACTION POSTFILTER TeleportNPC] Queued {$roleCommand}");
                 unset($actionsCopy[$n]);
 
-            } else if ($actionParts2[0] == "KillTarget") {
+            } else if ($actionCodeNameResolved == "KillTarget") {
                 $rawParameter = implode("@", array_slice($actionParts2, 1));
                 $payload = decodeFunctionExecutionParameterPayload($rawParameter);
                 if (!is_array($payload)) {
@@ -2547,7 +2688,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 error_log("[ACTION POSTFILTER KillTarget] Queued {$roleCommand}");
                 unset($actionsCopy[$n]);
 
-            } else if ($actionParts2[0]=="StartRitualCeremony") {
+            } else if ($actionCodeNameResolved=="StartRitualCeremony") {
                 
                 $npcMaster = new Npcmaster();
                 $npcData   = $npcMaster->getByName($actionParts[0]);
@@ -2639,7 +2780,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
 
                 error_log("[ACTION POSTFILTER StartRitualCeremony] Executed server-side");
 
-            } else if ($actionParts2[0]=="EndRitualCeremony") {
+            } else if ($actionCodeNameResolved=="EndRitualCeremony") {
                 
                 $npcMaster = new Npcmaster();
                 $npcData   = $npcMaster->getByName($actionParts[0]);

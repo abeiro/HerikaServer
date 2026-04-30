@@ -575,6 +575,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
             if ($errorMessage !== '') {
                 $message = $errorMessage;
                 $messageType = "err";
+            } elseif (function_exists("herikaFindActionCatalogActionNameConflict")) {
+                $conflictingRow = herikaFindActionCatalogActionNameConflict($submittedName['value'], $codeName);
+                if (is_array($conflictingRow) && !empty($conflictingRow['code_name'])) {
+                    $conflictingActionName = trim(strval($conflictingRow['action_name'] ?? ''));
+                    $conflictingActionName = $conflictingActionName !== '' ? $conflictingActionName : trim(strval($conflictingRow['code_name'] ?? ''));
+                    $message = "Action name conflicts with " . $conflictingActionName . " (" . trim(strval($conflictingRow['code_name'] ?? '')) . "). Keep action names unique so renamed actions always resolve to the correct code.";
+                    $messageType = "err";
+                } elseif (herikaActionCatalogUpsertCustomTextFields($codeName, [
+                    'action_name' => $submittedName['value'],
+                    'description' => functionEditorNormalizeSubmittedActionTextForStorage($submittedDescription['value']),
+                    'return_message' => functionEditorNormalizeSubmittedActionTextForStorage($submittedReturnMessage['value']),
+                ])) {
+                    functionEditorRedirectWithNotice($codeName . " text updated.", "ok", $isEmbed);
+                } else {
+                    $message = "Could not update action text.";
+                    $messageType = "err";
+                }
             } elseif (herikaActionCatalogUpsertCustomTextFields($codeName, [
                 'action_name' => $submittedName['value'],
                 'description' => functionEditorNormalizeSubmittedActionTextForStorage($submittedDescription['value']),
@@ -842,26 +859,121 @@ if (!$isEmbed) {
         background: rgba(55, 66, 84, 0.28);
     }
     .action-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 15px;
+        display: grid;
+        gap: 16px;
         margin-bottom: 20px;
     }
-    .search-container {
+    .filter-toolbar {
+        display: grid;
+        gap: 14px;
+        padding: 14px 16px;
+        border: 1px solid rgba(138, 155, 182, 0.22);
+        border-radius: 10px;
+        background: linear-gradient(180deg, rgba(29, 35, 44, 0.96), rgba(20, 24, 31, 0.96));
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+    .filter-toolbar-top {
         display: flex;
-        gap: 10px;
-        min-width: 360px;
+        align-items: center;
+        gap: 12px;
         flex-wrap: wrap;
     }
-    .search-container input[type="text"],
-    .search-container select {
-        padding: 8px;
-        border-radius: 4px;
+    .filter-toolbar-bottom {
+        display: grid;
+        gap: 12px;
+    }
+    .live-search-wrap {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1 1 420px;
+        min-width: 280px;
+    }
+    .live-search-wrap input[type="text"] {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 8px;
         border: 1px solid #555555;
         background-color: #4a4a4a;
         color: #f8f9fa;
+        box-sizing: border-box;
+    }
+    .filter-summary {
+        color: #9aa7bd;
+        font-size: 0.92em;
+        white-space: nowrap;
+    }
+    .filter-groups {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 18px;
+        align-items: start;
+    }
+    .filter-group {
+        display: grid;
+        gap: 8px;
+        min-width: 0;
+    }
+    .filter-group-label {
+        font-size: 0.78em;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #9aa7bd;
+    }
+    .filter-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .filter-chip-row input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+    .filter-chip-row label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(138, 155, 182, 0.28);
+        background: rgba(43, 50, 61, 0.92);
+        color: #dbe4f5;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+        user-select: none;
+        font-size: 0.92em;
+    }
+    .filter-chip-row label:hover {
+        background: rgba(58, 67, 81, 0.96);
+        border-color: rgba(216, 165, 76, 0.42);
+        color: #fff0cc;
+        transform: translateY(-1px);
+    }
+    .filter-chip-row input[type="radio"]:checked + label {
+        background: linear-gradient(135deg, rgba(122, 86, 30, 0.95), rgba(94, 63, 19, 0.95));
+        border-color: rgba(230, 183, 108, 0.72);
+        color: #fff3d6;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+    .filter-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .action-button.secondary {
+        background: rgba(49, 57, 69, 0.96);
+        border: 1px solid rgba(138, 155, 182, 0.28);
+        color: #dbe4f5;
+    }
+    .empty-filter-state {
+        display: none;
+        padding: 14px 16px;
+        border-top: 1px solid rgba(138, 155, 182, 0.18);
+        color: #9aa7bd;
+        background: rgba(18, 22, 29, 0.9);
     }
     .table-container {
         width: 100%;
@@ -1077,8 +1189,8 @@ if (!$isEmbed) {
             grid-template-columns: 1fr;
             gap: 20px;
         }
-        .search-container {
-            min-width: 280px;
+        .live-search-wrap {
+            min-width: 0;
         }
     }
 </style>
@@ -1129,38 +1241,71 @@ if (!$isEmbed) {
             <div class="content-section full-width-section">
                 <h2 id="entries">Actions</h2>
 
-                <form method="get" action="">
-                    <?php if ($isEmbed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
-                    <div class="action-container">
-                        <div class="search-container">
-                            <input type="text" name="search" id="searchBox" value="<?php echo h($search); ?>" placeholder="Search command, action name, description">
-                            <select name="state" id="stateFilter">
-                                <option value="all" <?php echo $state === "all" ? "selected" : ""; ?>>All states</option>
-                                <option value="enabled" <?php echo $state === "enabled" ? "selected" : ""; ?>>Enabled only</option>
-                                <option value="disabled" <?php echo $state === "disabled" ? "selected" : ""; ?>>Disabled only</option>
-                            </select>
-                            <select name="scope" id="scopeFilter">
-                                <option value="all" <?php echo $scope === "all" ? "selected" : ""; ?>>All scopes</option>
-                                <option value="npc" <?php echo $scope === "npc" ? "selected" : ""; ?>>NPC only</option>
-                                <option value="followers" <?php echo $scope === "followers" ? "selected" : ""; ?>>Followers only</option>
-                                <option value="narrator" <?php echo $scope === "narrator" ? "selected" : ""; ?>>Narrator only</option>
-                                <option value="dynamic" <?php echo $scope === "dynamic" ? "selected" : ""; ?>>Dynamic only</option>
-                            </select>
-                            <select name="game_function" id="gameFunctionFilter">
-                                <option value="all" <?php echo $gameFilter === "all" ? "selected" : ""; ?>>All dispatch</option>
-                                <option value="game" <?php echo $gameFilter === "game" ? "selected" : ""; ?>>Game functions</option>
-                                <option value="server" <?php echo $gameFilter === "server" ? "selected" : ""; ?>>Server only</option>
-                            </select>
-                            <select name="custom" id="customFilter">
-                                <option value="all" <?php echo $customFilter === "all" ? "selected" : ""; ?>>All sources</option>
-                                <option value="custom" <?php echo $customFilter === "custom" ? "selected" : ""; ?>>Custom only</option>
-                                <option value="base" <?php echo $customFilter === "base" ? "selected" : ""; ?>>Base only</option>
-                            </select>
-                            <button type="submit" class="action-button edit">Search</button>
-                            <a href="<?php echo h(functionEditorBuildUrl([], $isEmbed, "entries")); ?>" class="action-button">Clear</a>
+                <div class="action-container">
+                    <div class="filter-toolbar">
+                        <div class="filter-toolbar-top">
+                            <div class="live-search-wrap">
+                                <input type="text" id="actionLiveSearch" value="<?php echo h($search); ?>" placeholder="Live search by command or action name">
+                                <div class="filter-summary"><span id="actionVisibleCount"><?php echo h(count($rows)); ?></span> of <?php echo h(count($rows)); ?> shown</div>
+                            </div>
+                            <div class="filter-actions">
+                                <button type="button" class="action-button secondary" id="actionFilterReset">Reset Filters</button>
+                            </div>
+                        </div>
+                        <div class="filter-toolbar-bottom">
+                            <div class="filter-groups">
+                                <div class="filter-group">
+                                    <div class="filter-group-label">State</div>
+                                    <div class="filter-chip-row">
+                                        <input type="radio" name="live-state" id="live-state-all" value="all" <?php echo $state === "all" ? "checked" : ""; ?>>
+                                        <label for="live-state-all">All</label>
+                                        <input type="radio" name="live-state" id="live-state-enabled" value="enabled" <?php echo $state === "enabled" ? "checked" : ""; ?>>
+                                        <label for="live-state-enabled">Enabled</label>
+                                        <input type="radio" name="live-state" id="live-state-disabled" value="disabled" <?php echo $state === "disabled" ? "checked" : ""; ?>>
+                                        <label for="live-state-disabled">Disabled</label>
+                                    </div>
+                                </div>
+                                <div class="filter-group">
+                                    <div class="filter-group-label">Scope</div>
+                                    <div class="filter-chip-row">
+                                        <input type="radio" name="live-scope" id="live-scope-all" value="all" <?php echo $scope === "all" ? "checked" : ""; ?>>
+                                        <label for="live-scope-all">All</label>
+                                        <input type="radio" name="live-scope" id="live-scope-npc" value="npc" <?php echo $scope === "npc" ? "checked" : ""; ?>>
+                                        <label for="live-scope-npc">NPC</label>
+                                        <input type="radio" name="live-scope" id="live-scope-followers" value="followers" <?php echo $scope === "followers" ? "checked" : ""; ?>>
+                                        <label for="live-scope-followers">Followers</label>
+                                        <input type="radio" name="live-scope" id="live-scope-narrator" value="narrator" <?php echo $scope === "narrator" ? "checked" : ""; ?>>
+                                        <label for="live-scope-narrator">Narrator</label>
+                                        <input type="radio" name="live-scope" id="live-scope-dynamic" value="dynamic" <?php echo $scope === "dynamic" ? "checked" : ""; ?>>
+                                        <label for="live-scope-dynamic">Dynamic</label>
+                                    </div>
+                                </div>
+                                <div class="filter-group">
+                                    <div class="filter-group-label">Dispatch</div>
+                                    <div class="filter-chip-row">
+                                        <input type="radio" name="live-dispatch" id="live-dispatch-all" value="all" <?php echo $gameFilter === "all" ? "checked" : ""; ?>>
+                                        <label for="live-dispatch-all">All</label>
+                                        <input type="radio" name="live-dispatch" id="live-dispatch-game" value="game" <?php echo $gameFilter === "game" ? "checked" : ""; ?>>
+                                        <label for="live-dispatch-game">Game</label>
+                                        <input type="radio" name="live-dispatch" id="live-dispatch-server" value="server" <?php echo $gameFilter === "server" ? "checked" : ""; ?>>
+                                        <label for="live-dispatch-server">Server</label>
+                                    </div>
+                                </div>
+                                <div class="filter-group">
+                                    <div class="filter-group-label">Source</div>
+                                    <div class="filter-chip-row">
+                                        <input type="radio" name="live-source" id="live-source-all" value="all" <?php echo $customFilter === "all" ? "checked" : ""; ?>>
+                                        <label for="live-source-all">All</label>
+                                        <input type="radio" name="live-source" id="live-source-custom" value="custom" <?php echo $customFilter === "custom" ? "checked" : ""; ?>>
+                                        <label for="live-source-custom">Custom</label>
+                                        <input type="radio" name="live-source" id="live-source-base" value="base" <?php echo $customFilter === "base" ? "checked" : ""; ?>>
+                                        <label for="live-source-base">Base</label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </form>
+                </div>
 
                 <div class="table-container">
                     <table>
@@ -1206,8 +1351,27 @@ if (!$isEmbed) {
                                 $actionNameValue = strval($row["action_name"] ?? "");
                                 $descriptionValue = functionEditorReplaceActionTextVariablesInString(strval($row["description"] ?? ""));
                                 $returnMessageValue = functionEditorReplaceActionTextVariablesInString(strval($row["return_message"] ?? ""));
+                                $searchBlob = strtolower(trim(implode(' ', array_filter([
+                                    $codeName,
+                                    $actionNameValue,
+                                ]))));
+                                $rowScope = "dynamic";
+                                if ($isNarrator) {
+                                    $rowScope = "narrator";
+                                } elseif ($isFollowers) {
+                                    $rowScope = "followers";
+                                } elseif ($isNpc) {
+                                    $rowScope = "npc";
+                                }
                                 ?>
-                                <tr>
+                                <tr
+                                    class="action-row"
+                                    data-search="<?php echo h($searchBlob); ?>"
+                                    data-state="<?php echo $enabled ? 'enabled' : 'disabled'; ?>"
+                                    data-scope="<?php echo h($rowScope); ?>"
+                                    data-dispatch="<?php echo $isGameFunction ? 'game' : 'server'; ?>"
+                                    data-source="<?php echo $isCustom ? 'custom' : 'base'; ?>"
+                                >
                                     <td style="min-width: 220px;">
                                         <code class="command-code"><?php echo h($codeName); ?></code>
                                         <div class="command-meta">
@@ -1417,6 +1581,7 @@ if (!$isEmbed) {
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                    <div class="empty-filter-state" id="actionFilterEmptyState">No actions match the current filters.</div>
                 </div>
             </div>
         </div>
@@ -1438,6 +1603,80 @@ document.addEventListener("DOMContentLoaded", function() {
     showToast(<?= json_encode($message) ?>);
 });
 <?php endif; ?>
+
+document.addEventListener("DOMContentLoaded", function() {
+    const rows = Array.from(document.querySelectorAll(".action-row"));
+    if (!rows.length) {
+        return;
+    }
+
+    const searchInput = document.getElementById("actionLiveSearch");
+    const visibleCount = document.getElementById("actionVisibleCount");
+    const emptyState = document.getElementById("actionFilterEmptyState");
+    const resetButton = document.getElementById("actionFilterReset");
+
+    function selectedValue(name) {
+        const checked = document.querySelector(`input[name="${name}"]:checked`);
+        return checked ? checked.value : "all";
+    }
+
+    function applyFilters() {
+        const searchValue = (searchInput?.value || "").trim().toLowerCase();
+        const stateValue = selectedValue("live-state");
+        const scopeValue = selectedValue("live-scope");
+        const dispatchValue = selectedValue("live-dispatch");
+        const sourceValue = selectedValue("live-source");
+        let shown = 0;
+
+        rows.forEach((row) => {
+            const matchesSearch = searchValue === "" || (row.dataset.search || "").includes(searchValue);
+            const matchesState = stateValue === "all" || row.dataset.state === stateValue;
+            const matchesScope = scopeValue === "all" || row.dataset.scope === scopeValue;
+            const matchesDispatch = dispatchValue === "all" || row.dataset.dispatch === dispatchValue;
+            const matchesSource = sourceValue === "all" || row.dataset.source === sourceValue;
+            const visible = matchesSearch && matchesState && matchesScope && matchesDispatch && matchesSource;
+
+            row.style.display = visible ? "" : "none";
+            if (visible) {
+                shown += 1;
+            }
+        });
+
+        if (visibleCount) {
+            visibleCount.textContent = String(shown);
+        }
+        if (emptyState) {
+            emptyState.style.display = shown === 0 ? "block" : "none";
+        }
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener("input", applyFilters);
+    }
+
+    document.querySelectorAll('input[name="live-state"], input[name="live-scope"], input[name="live-dispatch"], input[name="live-source"]').forEach((input) => {
+        input.addEventListener("change", applyFilters);
+    });
+
+    if (resetButton) {
+        resetButton.addEventListener("click", function() {
+            if (searchInput) {
+                searchInput.value = "";
+            }
+
+            ["live-state-all", "live-scope-all", "live-dispatch-all", "live-source-all"].forEach((id) => {
+                const input = document.getElementById(id);
+                if (input) {
+                    input.checked = true;
+                }
+            });
+
+            applyFilters();
+        });
+    }
+
+    applyFilters();
+});
 </script>
 
 </body>

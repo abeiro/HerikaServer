@@ -529,6 +529,59 @@ if ($checkVersion("core_action") < 20260429006) {
     Logger::info("Applied patch core_action 20260429006");
 }
 
+if ($checkVersion("core_action") < 20260429007) {
+    Logger::debug("Applying core_action 20260429007 - add narrator CreateNewNPC baseline action");
+
+    $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            available_to_narrator,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        ) VALUES (
+            'CreateNewNPC',
+            'Create_New_NPC',
+            'Create and spawn a brand-new nearby NPC from a short creation brief.',
+            'A new NPC is being created nearby.',
+            FALSE,
+            FALSE,
+            TRUE,
+            TRUE,
+            '{\"type\":\"object\",\"required\":[\"target\"],\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"REQUIRED: short creation brief for the new nearby NPC.\"}}}'::jsonb,
+            '{\"source\":\"functions.php\",\"status\":\"active\",\"builtin\":true,\"dispatch\":\"server_action\"}'::jsonb,
+            FALSE,
+            0,
+            NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ");
+
+    $updateVersion("core_action", 20260429007);
+    Logger::info("Applied patch core_action 20260429007");
+}
+
 if ($checkVersion("game_plugins") < 20260427001) {
     Logger::debug("Applying game_plugins 20260427001 - create loaded plugin manifest table");
 

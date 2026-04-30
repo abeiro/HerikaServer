@@ -3043,7 +3043,7 @@ function isNarratorPrivateActionName($actionName)
     }
 
     $normalizedActionName = strtolower(str_replace([" ", "-"], "", $actionName));
-    return in_array($normalizedActionName, ["spawnitem", "spawn_item", "teleportnpc", "teleport_npc", "killtarget", "kill_target"], true);
+    return in_array($normalizedActionName, ["spawnitem", "spawn_item", "teleportnpc", "teleport_npc", "killtarget", "kill_target", "createnewnpc", "create_new_npc"], true);
 }
 
 function isNarratorPrivatePlayerAlias($targetName, $listenerName = "")
