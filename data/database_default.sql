@@ -729,6 +729,7 @@ CREATE TABLE public.core_action (
     return_message text DEFAULT ''::text NOT NULL,
     available_to_npc boolean DEFAULT false NOT NULL,
     available_to_followers boolean DEFAULT false NOT NULL,
+    available_to_narrator boolean DEFAULT false NOT NULL,
     is_activated boolean DEFAULT true NOT NULL,
     parameters_json jsonb DEFAULT '{}'::jsonb NOT NULL,
     metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -754,6 +755,7 @@ CREATE TABLE public.core_action_custom (
     return_message text DEFAULT ''::text NOT NULL,
     available_to_npc boolean DEFAULT false NOT NULL,
     available_to_followers boolean DEFAULT false NOT NULL,
+    available_to_narrator boolean DEFAULT false NOT NULL,
     is_activated boolean DEFAULT true NOT NULL,
     parameters_json jsonb DEFAULT '{}'::jsonb NOT NULL,
     metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -779,6 +781,7 @@ CREATE VIEW public.combined_core_action AS
     c.return_message,
     c.available_to_npc,
     c.available_to_followers,
+    c.available_to_narrator,
     c.is_activated,
     c.parameters_json,
     c.metadata,
@@ -796,6 +799,7 @@ SELECT b.id,
     b.return_message,
     b.available_to_npc,
     b.available_to_followers,
+    b.available_to_narrator,
     b.is_activated,
     b.parameters_json,
     b.metadata,
@@ -842,6 +846,12 @@ CREATE INDEX idx_core_action_available_to_npc ON public.core_action USING btree 
 CREATE INDEX idx_core_action_available_to_followers ON public.core_action USING btree (available_to_followers);
 
 --
+-- Name: idx_core_action_available_to_narrator; Type: INDEX; Schema: public; Owner: dwemer
+--
+
+CREATE INDEX idx_core_action_available_to_narrator ON public.core_action USING btree (available_to_narrator);
+
+--
 -- Name: idx_core_action_game_function; Type: INDEX; Schema: public; Owner: dwemer
 --
 
@@ -876,6 +886,12 @@ CREATE INDEX idx_core_action_custom_available_to_npc ON public.core_action_custo
 --
 
 CREATE INDEX idx_core_action_custom_available_to_followers ON public.core_action_custom USING btree (available_to_followers);
+
+--
+-- Name: idx_core_action_custom_available_to_narrator; Type: INDEX; Schema: public; Owner: dwemer
+--
+
+CREATE INDEX idx_core_action_custom_available_to_narrator ON public.core_action_custom USING btree (available_to_narrator);
 
 --
 -- Name: idx_core_action_custom_game_function; Type: INDEX; Schema: public; Owner: dwemer

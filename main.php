@@ -119,6 +119,7 @@ MAIN FLOW
 ***********************/
 
 $gameRequest = explode("|", $receivedData);
+$GLOBALS["gameRequest"] = &$gameRequest;
 
 
 $startTime = microtime(true);
@@ -659,8 +660,17 @@ if (isset($_GET["profile"])) {
     $OVERRIDES["TTSFUNCTION_PLAYER_VOICE_ID"] = isset($GLOBALS["TTSFUNCTION_PLAYER_VOICE_ID"]) ? $GLOBALS["TTSFUNCTION_PLAYER_VOICE_ID"] : "";
     $OVERRIDES["TTSFUNCTION_PLAYER_LANGUAGE"] = isset($GLOBALS["TTSFUNCTION_PLAYER_LANGUAGE"]) ? $GLOBALS["TTSFUNCTION_PLAYER_LANGUAGE"] : "";
     
-    // Check if this is The Narrator (by MD5)
-    $isNarratorProfile = ($_GET["profile"] === md5('The Narrator'));
+    // Direct narrator requests must load the narrator runtime profile even if the
+    // inbound request still carries the current NPC profile hash.
+    $isNarratorRequest = in_array($gameRequest[0], [
+        "narrator_inputtext",
+        "narration",
+        "narrator_welcome",
+        "narrator_quest_comment"
+    ], true);
+
+    // Check if this is The Narrator (by MD5) or an explicit narrator request.
+    $isNarratorProfile = $isNarratorRequest || ($_GET["profile"] === md5('The Narrator'));
     
     // If this is The Narrator, use Narrator class instead of NpcMaster
     if ($isNarratorProfile) {
@@ -999,8 +1009,61 @@ if (isset($_GET["profile"])) {
     // error_log("Using profile {$GLOBALS["TTSFUNCTION_PLAYER"]} {$_GET["profile"]} / ".$path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
     
 } else {
-    //error_log(__FILE__.". Using default profile because NO GET PROFILE SPECIFIED");
-    $GLOBALS["USING_DEFAULT_PROFILE"]=true;
+    $isNarratorRequestWithoutProfile = in_array($gameRequest[0], [
+        "narrator_inputtext",
+        "narration",
+        "narrator_welcome",
+        "narrator_quest_comment"
+    ], true);
+
+    if ($isNarratorRequestWithoutProfile) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+        $narrator = new Narrator();
+        $narratorData = $narrator->getNarratorData();
+
+        if ($narratorData && isset($narratorData["profile_id"])) {
+            $profile = new CoreProfile();
+            $currentProfileData = $profile->getById($narratorData["profile_id"]);
+
+            if ($currentProfileData) {
+                $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] = $currentProfileData;
+
+                $connector = new LLMConnector();
+                $npcMaster = new NpcMaster(); // still needed for LLMRandomizer compatibility
+                $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $narratorData, $npcMaster);
+                $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+                $currentConnectorData = $connector->getById($connectorId);
+
+                if ($currentConnectorData) {
+                    $connector->setOldGlobals($currentConnectorData);
+                    $profile->setOldGlobals($currentProfileData);
+                    $narrator->loadCharacterIntoGlobals();
+                    $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
+
+                    $currentMode = $GLOBALS["db"]->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
+                    pipeline_status_set_context(
+                        $currentMode['value'] ?? 'STANDARD',
+                        $currentConnectorData['label'] ?? '',
+                        $currentConnectorData['model'] ?? ''
+                    );
+
+                    error_log("[CORE SYSTEM] Using Narrator profile without explicit profile hash, profile: {$currentProfileData["label"]}");
+                } else {
+                    Logger::error("[CORE SYSTEM] Narrator request without profile hash could not resolve connector");
+                    $GLOBALS["USING_DEFAULT_PROFILE"] = true;
+                }
+            } else {
+                Logger::error("[CORE SYSTEM] Narrator request without profile hash could not resolve profile");
+                $GLOBALS["USING_DEFAULT_PROFILE"] = true;
+            }
+        } else {
+            Logger::error("[CORE SYSTEM] Narrator request without profile hash has no narrator profile configured");
+            $GLOBALS["USING_DEFAULT_PROFILE"] = true;
+        }
+    } else {
+        //error_log(__FILE__.". Using default profile because NO GET PROFILE SPECIFIED");
+        $GLOBALS["USING_DEFAULT_PROFILE"]=true;
+    }
 }
 
 if (isset($GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"]) && $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] && ($GLOBALS["HERIKA_NAME"] ?? "") !== "The Narrator") {
@@ -1296,6 +1359,14 @@ if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtex
     $FUNCTIONS_ARE_ENABLED=false;
 }
 
+// Direct narrator dialogue is an explicit action-capable request path.
+// Keep DB-backed narrator actions enabled so narrator_inputtext can expose
+// Kill_Target / Spawn_Item / Teleport_NPC instead of falling back to
+// speech-only JSON with an empty action list.
+if ($gameRequest[0] === "narrator_inputtext") {
+    $FUNCTIONS_ARE_ENABLED=true;
+}
+
 // Force actions when instruction issued
 if (in_array($gameRequest[0],["instruction"])) {
     $FUNCTIONS_ARE_ENABLED=true;
@@ -1310,7 +1381,7 @@ if (in_array($gameRequest[0],["suggestion"])) {
 }
 
 // Disable functions for The Narrator
-if ($GLOBALS["HERIKA_NAME"]=="The Narrator") {
+if ($GLOBALS["HERIKA_NAME"]=="The Narrator" && (!isset($gameRequest[0]) || $gameRequest[0] !== "narrator_inputtext")) {
     $FUNCTIONS_ARE_ENABLED=false;
 }
 
@@ -1714,6 +1785,59 @@ if ($EXECUTION_MODE=="INJECTION_LOG") {
 ***********************/
 
 $GLOBALS["DIRECT_NARRATOR_DIALOGUE"] = ($gameRequest[0] === "narrator_inputtext");
+
+// Narrator-scoped requests must execute with the narrator runtime profile even
+// when the inbound request still carries a valid NPC profile hash. If that hash
+// wins earlier profile loading, narrator-only actions get filtered out of the
+// runtime function list before response processing.
+$isNarratorScopedRequest = in_array($gameRequest[0], [
+    "narrator_inputtext",
+    "narration",
+    "narrator_welcome",
+    "narrator_quest_comment",
+], true);
+
+if ($isNarratorScopedRequest && (($GLOBALS["HERIKA_NAME"] ?? "") !== "The Narrator")) {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+
+    $narrator = new Narrator();
+    $narratorData = $narrator->getNarratorData();
+
+    if ($narratorData && isset($narratorData["profile_id"])) {
+        $profile = new CoreProfile();
+        $currentProfileData = $profile->getById($narratorData["profile_id"]);
+
+        if ($currentProfileData) {
+            $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] = $currentProfileData;
+
+            $connector = new LLMConnector();
+            $npcMaster = new NpcMaster();
+            $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $narratorData, $npcMaster);
+            $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+            $currentConnectorData = $connector->getById($connectorId);
+
+            if ($currentConnectorData) {
+                $connector->setOldGlobals($currentConnectorData);
+                $profile->setOldGlobals($currentProfileData);
+                $narrator->loadCharacterIntoGlobals();
+
+                $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
+                $GLOBALS["CURRENT_CONNECTOR"] = $currentConnectorData['driver'] ?? ($GLOBALS["CURRENT_CONNECTOR"] ?? "");
+                unset($GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"], $GLOBALS["STOBE_CORE_CURRENT_NPC_DATA"]);
+                $GLOBALS["IS_NPC"] = false;
+                $GLOBALS["FUNCTIONS_ARE_ENABLED"] = true;
+
+                error_log("[CORE SYSTEM] Re-synced narrator runtime profile before prompt build");
+            } else {
+                error_log("[CORE SYSTEM] Failed to re-sync narrator runtime profile: connector not found");
+            }
+        } else {
+            error_log("[CORE SYSTEM] Failed to re-sync narrator runtime profile: profile not found");
+        }
+    } else {
+        error_log("[CORE SYSTEM] Failed to re-sync narrator runtime profile: narrator data missing");
+    }
+}
 
 // Include prompts, command prompts and functions.
 require(__DIR__.DIRECTORY_SEPARATOR."prompt.includes.php");

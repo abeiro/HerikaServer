@@ -236,7 +236,10 @@ class openai
                         
                         $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
                         $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
-                        $lastAction=herikaFormatReturnMessageTemplate($localFuncCodeName, current($localArguments));
+                        if (!is_array($localArguments)) {
+                            $localArguments = [];
+                        }
+                        $lastAction=herikaFormatReturnMessageTemplate($localFuncCodeName, $localArguments);
                         
                         unset($contextData[$n]);
                     } else
@@ -253,11 +256,12 @@ class openai
                                         
                                     ];
                                     
+                                $GLOBALS["PATCH_STORE_FUNC_RES_ACTION"] = $localFuncCodeName;
                                 $GLOBALS["PATCH_STORE_FUNC_RES"]=strtr($lastAction,["#RESULT#"=>$element["content"]]);
                             } else {
                                 $contextData[$n]=[
                                         "role"=>"user",
-                                        "content"=>"The Narrator: NOTE, cannot go to that place:".current($localArguments),
+                                        "content"=>"The Narrator: NOTE, cannot go to that place:".herikaExtractActionArgumentTargetValue($localArguments),
                                         
                                 ];
                             }
@@ -542,7 +546,7 @@ class openai
             file_put_contents(__DIR__."/../log/debugStreamParsed.log",print_r($this->_parameterBuff,true));
 
             if (is_array($parameterArr)) {
-                $parameter = current($parameterArr); // Only support for one parameter
+                $parameter = $parameterArr;
 
                 $functionCodeName = getFunctionCodeName($this->_functionName);
                 $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
@@ -603,7 +607,7 @@ class openai
         if ($this->_functionName) {
             $parameterArr = json_decode($this->_parameterBuff, true);
             if (is_array($parameterArr)) {
-                $parameter = current($parameterArr); // Only support for one parameter
+                $parameter = $parameterArr;
 
                 $functionCodeName = getFunctionCodeName($this->_functionName);
                 $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);

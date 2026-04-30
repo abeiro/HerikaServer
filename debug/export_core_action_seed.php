@@ -13,7 +13,24 @@ function exportSeedSqlText($value)
 
 function exportSeedSqlBool($value)
 {
-    return !empty($value) ? 'TRUE' : 'FALSE';
+    if (is_bool($value)) {
+        return $value ? 'TRUE' : 'FALSE';
+    }
+
+    if ($value === null) {
+        return 'FALSE';
+    }
+
+    if (is_int($value) || is_float($value)) {
+        return intval($value) !== 0 ? 'TRUE' : 'FALSE';
+    }
+
+    $normalized = strtolower(trim(strval($value)));
+    if ($normalized === '' || $normalized === '0' || $normalized === 'false' || $normalized === 'f' || $normalized === 'no' || $normalized === 'off') {
+        return 'FALSE';
+    }
+
+    return 'TRUE';
 }
 
 function exportSeedNormalizeJson($value, $default)
@@ -55,6 +72,7 @@ $rows = $db->fetchAll("
         return_message,
         available_to_npc,
         available_to_followers,
+        available_to_narrator,
         is_activated,
         parameters_json,
         metadata,
@@ -75,6 +93,7 @@ $lines[] = "    description,";
 $lines[] = "    return_message,";
 $lines[] = "    available_to_npc,";
 $lines[] = "    available_to_followers,";
+$lines[] = "    available_to_narrator,";
 $lines[] = "    is_activated,";
 $lines[] = "    parameters_json,";
 $lines[] = "    metadata,";
@@ -92,6 +111,7 @@ foreach ($rows as $row) {
         . exportSeedSqlText($row['return_message'] ?? '') . ", "
         . exportSeedSqlBool($row['available_to_npc'] ?? false) . ", "
         . exportSeedSqlBool($row['available_to_followers'] ?? false) . ", "
+        . exportSeedSqlBool($row['available_to_narrator'] ?? false) . ", "
         . exportSeedSqlBool($row['is_activated'] ?? false) . ", "
         . exportSeedSqlJson($row['parameters_json'] ?? null, []) . ", "
         . exportSeedSqlJson($row['metadata'] ?? null, []) . ", "
@@ -108,6 +128,7 @@ $lines[] = "    description = EXCLUDED.description,";
 $lines[] = "    return_message = EXCLUDED.return_message,";
 $lines[] = "    available_to_npc = EXCLUDED.available_to_npc,";
 $lines[] = "    available_to_followers = EXCLUDED.available_to_followers,";
+$lines[] = "    available_to_narrator = EXCLUDED.available_to_narrator,";
 $lines[] = "    is_activated = EXCLUDED.is_activated,";
 $lines[] = "    parameters_json = EXCLUDED.parameters_json,";
 $lines[] = "    metadata = EXCLUDED.metadata,";
@@ -119,4 +140,3 @@ $lines[] = "";
 
 file_put_contents($outputPath, implode(PHP_EOL, $lines));
 echo "Wrote {$outputPath} (" . count($rows) . " rows)" . PHP_EOL;
-

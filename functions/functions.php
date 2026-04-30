@@ -41,6 +41,8 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'RentRoom',
     'HireCarriage',
     'HireFerry',
+    'SpawnItem',
+    'TeleportNPC',
     'AddBounty',
     'PayBounty',
     'ArrestPlayer',
@@ -197,6 +199,382 @@ function buildConfiguredActionParameterFromMetadata($functionCodeName, $paramete
         : json_encode($resolved, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 }
 
+function herikaNormalizePositiveActionAmount($rawAmount, $defaultAmount = 1, $maxAmount = 1000)
+{
+    $amount = intval($rawAmount);
+    if ($amount <= 0) {
+        $amount = intval($defaultAmount);
+    }
+
+    if ($amount <= 0) {
+        $amount = 1;
+    }
+
+    if ($amount > intval($maxAmount)) {
+        $amount = intval($maxAmount);
+    }
+
+    return $amount;
+}
+
+function herikaResolveSpawnItemBaseIdToRuntimeFormId($baseId)
+{
+    $baseId = trim(strval($baseId));
+    if ($baseId === '') {
+        return null;
+    }
+
+    $parsedStableReference = function_exists('chimParseStableFormReference')
+        ? chimParseStableFormReference($baseId)
+        : null;
+    if ($parsedStableReference) {
+        $runtimeFormId = function_exists('chimResolveStableFormReferenceToRuntimeFormId')
+            ? chimResolveStableFormReferenceToRuntimeFormId($parsedStableReference['stable_key'])
+            : null;
+        $runtimeFormId = trim(strval($runtimeFormId));
+        return $runtimeFormId !== '' ? strtoupper($runtimeFormId) : null;
+    }
+
+    $upperBaseId = strtoupper($baseId);
+    if (strpos($upperBaseId, 'XX') === 0 || strpos($upperBaseId, 'FEXXX') === 0) {
+        return null;
+    }
+
+    $runtimeFormId = function_exists('chimNormalizeRuntimeFormId')
+        ? chimNormalizeRuntimeFormId($baseId)
+        : '';
+    $runtimeFormId = trim(strval($runtimeFormId));
+
+    return $runtimeFormId !== '' ? strtoupper($runtimeFormId) : null;
+}
+
+function herikaResolveSpawnItemDescriptionMatch($requestedItemName)
+{
+    if (!isset($GLOBALS["db"])) {
+        return ['ok' => false, 'error' => 'database_unavailable'];
+    }
+
+    $requestedItemName = trim(strval($requestedItemName));
+    if ($requestedItemName === '') {
+        return ['ok' => false, 'error' => 'missing_item_name'];
+    }
+
+    $escapedName = $GLOBALS["db"]->escape($requestedItemName);
+    $buildCandidates = function ($rows, $reason) {
+        $candidates = [];
+        foreach ((array) $rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $baseId = trim(strval($row['baseid'] ?? ''));
+            $runtimeFormId = herikaResolveSpawnItemBaseIdToRuntimeFormId($baseId);
+            if ($runtimeFormId === null) {
+                continue;
+            }
+
+            $candidate = [
+                'baseid' => $baseId,
+                'runtime_formid' => $runtimeFormId,
+                'name' => trim(strval($row['name'] ?? $requestedItemName)),
+                'description' => trim(strval($row['description'] ?? '')),
+                'match_reason' => $reason,
+                'similarity' => isset($row['sim']) ? floatval($row['sim']) : 1.0,
+            ];
+
+            $candidateKey = strtoupper($runtimeFormId) . '|' . strtolower($candidate['name']);
+            $candidates[$candidateKey] = $candidate;
+        }
+
+        return array_values($candidates);
+    };
+
+    $selectPreferredCandidate = function (array $candidates) use ($requestedItemName) {
+        if (count($candidates) === 0) {
+            return null;
+        }
+
+        $requestedLower = strtolower(trim(strval($requestedItemName)));
+        usort($candidates, function ($left, $right) use ($requestedLower) {
+            $leftName = strtolower(trim(strval($left['name'] ?? '')));
+            $rightName = strtolower(trim(strval($right['name'] ?? '')));
+
+            $leftExact = ($leftName === $requestedLower) ? 1 : 0;
+            $rightExact = ($rightName === $requestedLower) ? 1 : 0;
+            if ($leftExact !== $rightExact) {
+                return ($leftExact > $rightExact) ? -1 : 1;
+            }
+
+            $leftRuntime = strtoupper(trim(strval($left['runtime_formid'] ?? '')));
+            $rightRuntime = strtoupper(trim(strval($right['runtime_formid'] ?? '')));
+
+            $leftVanillaLike = preg_match('/^00[0-9A-F]{6}$/', $leftRuntime) ? 1 : 0;
+            $rightVanillaLike = preg_match('/^00[0-9A-F]{6}$/', $rightRuntime) ? 1 : 0;
+            if ($leftVanillaLike !== $rightVanillaLike) {
+                return ($leftVanillaLike > $rightVanillaLike) ? -1 : 1;
+            }
+
+            if ($leftRuntime !== $rightRuntime) {
+                return strcmp($leftRuntime, $rightRuntime);
+            }
+
+            return strcmp($leftName, $rightName);
+        });
+
+        return $candidates[0];
+    };
+
+    $exactRows = $GLOBALS["db"]->fetchAll("
+        SELECT baseid, name, description
+        FROM combined_descriptions
+        WHERE LOWER(name) = LOWER('{$escapedName}')
+        ORDER BY baseid ASC
+        LIMIT 12
+    ");
+    $exactCandidates = $buildCandidates($exactRows, 'exact_name');
+    if (count($exactCandidates) === 1) {
+        return ['ok' => true] + $exactCandidates[0];
+    }
+    if (count($exactCandidates) > 1) {
+        $preferredExactCandidate = $selectPreferredCandidate($exactCandidates);
+        if ($preferredExactCandidate !== null) {
+            $preferredExactCandidate['match_reason'] = 'preferred_exact_name';
+            $preferredExactCandidate['duplicate_count'] = count($exactCandidates);
+            return ['ok' => true] + $preferredExactCandidate;
+        }
+
+        return ['ok' => false, 'error' => 'ambiguous_exact_name', 'candidates' => $exactCandidates];
+    }
+
+    $similarityRows = $GLOBALS["db"]->fetchAll("
+        SELECT baseid, name, description, similarity(name, '{$escapedName}') AS sim
+        FROM combined_descriptions
+        WHERE similarity(name, '{$escapedName}') > 0.55
+        ORDER BY sim DESC, name ASC
+        LIMIT 8
+    ");
+    $similarityCandidates = $buildCandidates($similarityRows, 'similar_name');
+    if (count($similarityCandidates) === 0) {
+        return ['ok' => false, 'error' => 'no_spawn_safe_match'];
+    }
+
+    usort($similarityCandidates, function ($left, $right) {
+        $leftSimilarity = floatval($left['similarity'] ?? 0);
+        $rightSimilarity = floatval($right['similarity'] ?? 0);
+        if ($leftSimilarity === $rightSimilarity) {
+            return strcmp(strtolower(strval($left['name'] ?? '')), strtolower(strval($right['name'] ?? '')));
+        }
+        return ($leftSimilarity > $rightSimilarity) ? -1 : 1;
+    });
+
+    $bestCandidate = $similarityCandidates[0];
+    $bestSimilarity = floatval($bestCandidate['similarity'] ?? 0);
+    $runnerUpSimilarity = isset($similarityCandidates[1]) ? floatval($similarityCandidates[1]['similarity'] ?? 0) : 0.0;
+
+    if ($bestSimilarity < 0.72) {
+        return ['ok' => false, 'error' => 'low_confidence_match', 'candidates' => $similarityCandidates];
+    }
+
+    if (isset($similarityCandidates[1]) && ($bestSimilarity - $runnerUpSimilarity) < 0.05) {
+        return ['ok' => false, 'error' => 'ambiguous_similar_name', 'candidates' => $similarityCandidates];
+    }
+
+    return ['ok' => true] + $bestCandidate;
+}
+
+function herikaNormalizeNarratorActorTargetForRoleCommand($targetName, $defaultToPlayer = true)
+{
+    $targetName = trim(strval($targetName));
+    $playerName = trim(strval($GLOBALS["PLAYER_NAME"] ?? "Player"));
+    $narratorName = trim(strval($GLOBALS["HERIKA_NAME"] ?? ""));
+    $normalizedTarget = strtolower($targetName);
+
+    if ($targetName === '') {
+        return $defaultToPlayer ? 'PLAYER' : '';
+    }
+
+    if ($normalizedTarget === 'player' || $normalizedTarget === 'me' || $normalizedTarget === 'the narrator' || $normalizedTarget === 'narrator') {
+        return 'PLAYER';
+    }
+
+    if ($playerName !== '' && strcasecmp($targetName, $playerName) === 0) {
+        return 'PLAYER';
+    }
+
+    if ($narratorName !== '' && strcasecmp($targetName, $narratorName) === 0) {
+        return 'PLAYER';
+    }
+
+    return $targetName;
+}
+
+function herikaNormalizeNarratorActorTargetInferenceText($text)
+{
+    $text = trim(strval($text));
+    if ($text === '') {
+        return '';
+    }
+
+    $text = preg_replace('/\([^)]+\)/u', ' ', $text);
+    $text = preg_replace('/[^[:alnum:]\s\'#_-]+/u', ' ', $text);
+    $text = strtolower(trim(preg_replace('/\s+/u', ' ', $text)));
+
+    return $text;
+}
+
+function herikaGetNarratorActorTargetCandidates($peoplePipe = '')
+{
+    $candidatePipes = [];
+    $peoplePipe = trim(strval($peoplePipe));
+    if ($peoplePipe !== '') {
+        $candidatePipes[] = $peoplePipe;
+    }
+
+    $cachePeople = trim(strval($GLOBALS["CACHE_PEOPLE"] ?? ''));
+    if ($cachePeople !== '') {
+        $candidatePipes[] = $cachePeople;
+    }
+
+    if (isset($GLOBALS["db"])) {
+        $latestPeopleRows = $GLOBALS["db"]->fetchAll("
+            SELECT people
+            FROM public.eventlog
+            WHERE type IN ('infonpc', 'infonpc_close')
+              AND COALESCE(people, '') <> ''
+            ORDER BY gamets DESC, ts DESC
+            LIMIT 3
+        ");
+        if (is_array($latestPeopleRows)) {
+            foreach ($latestPeopleRows as $row) {
+                $rowPeople = trim(strval($row['people'] ?? ''));
+                if ($rowPeople !== '') {
+                    $candidatePipes[] = $rowPeople;
+                }
+            }
+        }
+    }
+
+    if (empty($candidatePipes) && function_exists('DataBeingsInCloseRange')) {
+        $candidatePipes[] = trim(strval(DataBeingsInCloseRange(true)));
+    }
+
+    $uniqueCandidates = [];
+    foreach ($candidatePipes as $candidatePipe) {
+        $tokens = array_values(array_filter(array_map('trim', explode('|', strval($candidatePipe)))));
+        foreach ($tokens as $token) {
+            if ($token === '') {
+                continue;
+            }
+
+            $baseToken = trim(preg_replace('/\s*\([^)]+\)\s*/u', '', $token));
+            foreach (array_unique([$token, $baseToken]) as $candidate) {
+                $candidate = trim(strval($candidate));
+                if ($candidate === '') {
+                    continue;
+                }
+                $normalizedCandidate = herikaNormalizeNarratorActorTargetInferenceText($candidate);
+                if ($normalizedCandidate === '') {
+                    continue;
+                }
+                $uniqueCandidates[$candidate] = $normalizedCandidate;
+            }
+        }
+    }
+
+    return $uniqueCandidates;
+}
+
+function herikaGetLatestNarratorInputText()
+{
+    if (!isset($GLOBALS["db"])) {
+        return '';
+    }
+
+    $rows = $GLOBALS["db"]->fetchAll("
+        SELECT data
+        FROM public.eventlog
+        WHERE type = 'narrator_inputtext'
+          AND COALESCE(data, '') <> ''
+        ORDER BY gamets DESC, ts DESC
+        LIMIT 1
+    ");
+
+    if (!is_array($rows) || empty($rows[0])) {
+        return '';
+    }
+
+    $latestInput = trim(strval($rows[0]['data'] ?? ''));
+    if ($latestInput === '') {
+        return '';
+    }
+
+    return preg_replace('/^[^:]+:\s*/u', '', $latestInput) ?? $latestInput;
+}
+
+function herikaInferNarratorActorTargetFromText($sourceText, $peoplePipe = '')
+{
+    $normalizedSource = herikaNormalizeNarratorActorTargetInferenceText($sourceText);
+    if ($normalizedSource === '') {
+        return '';
+    }
+
+    $playerName = trim(strval($GLOBALS["PLAYER_NAME"] ?? 'Player'));
+    $normalizedPlayerName = herikaNormalizeNarratorActorTargetInferenceText($playerName);
+    $playerAliasMatched = preg_match('/\b(player|me|myself)\b/u', $normalizedSource) === 1
+        || ($normalizedPlayerName !== '' && preg_match('/\b' . preg_quote($normalizedPlayerName, '/') . '\b/u', $normalizedSource) === 1);
+
+    $bestCandidate = '';
+    $bestScore = -1;
+    foreach (herikaGetNarratorActorTargetCandidates($peoplePipe) as $candidate => $normalizedCandidate) {
+        if ($normalizedCandidate === '') {
+            continue;
+        }
+
+        if (preg_match('/\b' . preg_quote($normalizedCandidate, '/') . '\b/u', $normalizedSource) !== 1) {
+            continue;
+        }
+
+        $score = strlen($normalizedCandidate);
+        if ($normalizedCandidate === $normalizedSource) {
+            $score += 1000;
+        }
+
+        if ($score > $bestScore) {
+            $bestScore = $score;
+            $bestCandidate = $candidate;
+        }
+    }
+
+    if ($bestCandidate !== '') {
+        return $bestCandidate;
+    }
+
+    return $playerAliasMatched ? 'PLAYER' : '';
+}
+
+function herikaExtractActionArgumentTargetValue($arguments)
+{
+    if (!is_array($arguments)) {
+        return trim(strval($arguments));
+    }
+
+    foreach (['target', 'item', 'amount'] as $preferredKey) {
+        if (array_key_exists($preferredKey, $arguments)) {
+            $value = $arguments[$preferredKey];
+            if (is_scalar($value) || $value === null) {
+                return trim(strval($value));
+            }
+        }
+    }
+
+    $firstValue = reset($arguments);
+    if (is_scalar($firstValue) || $firstValue === null) {
+        return trim(strval($firstValue));
+    }
+
+    return '';
+}
+
 $rentRoomCost = getConfiguredRentRoomCost();
 $hireCarriageCost = getConfiguredHireCarriageCost();
 $hireFerryCost = getConfiguredHireFerryCost();
@@ -229,6 +607,9 @@ $F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"] = "#HERIKA_NAME# takes the amount in
 $F_TRANSLATIONS_LOCAL["RentRoom"] = "#HERIKA_NAME# rents a room to #PLAYER_NAME# for {$rentRoomCostText}. Only innkeepers can use this action and it only applies to #PLAYER_NAME#.";
 $F_TRANSLATIONS_LOCAL["HireCarriage"] = "#HERIKA_NAME# accepts {$hireCarriageCostText} for carriage travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
 $F_TRANSLATIONS_LOCAL["HireFerry"] = "#HERIKA_NAME# accepts {$hireFerryCostText} for ferry travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
+$F_TRANSLATIONS_LOCAL["SpawnItem"] = "Create a named item from the descriptions database and give it to a target actor or #PLAYER_NAME#.";
+$F_TRANSLATIONS_LOCAL["TeleportNPC"] = "Teleport a chosen NPC, actor, or #PLAYER_NAME# to a named location from the location database.";
+$F_TRANSLATIONS_LOCAL["KillTarget"] = "Kill a chosen NPC, actor, or #PLAYER_NAME# immediately.";
 $F_TRANSLATIONS_LOCAL["AddBounty"] = "#HERIKA_NAME# adds a crime bounty to #PLAYER_NAME# for a witnessed or reported crime. Guard-only action.";
 $F_TRANSLATIONS_LOCAL["PayBounty"] = "#PLAYER_NAME# pays off their bounty to #HERIKA_NAME#. Stolen items are confiscated and the matter is resolved immediately. Guard-only action.";
 $F_TRANSLATIONS_LOCAL["ArrestPlayer"] = "#HERIKA_NAME# attempts to arrest #PLAYER_NAME#. #PLAYER_NAME# can submit or resist. Guard-only action for serious crimes or refusal to pay.";
@@ -277,6 +658,9 @@ $F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"] = "#PLAYER_NAME# gave #TARGET# coi
 $F_RETURNMESSAGES_LOCAL["RentRoom"] = "#HERIKA_NAME# rented a room to #PLAYER_NAME# for {$rentRoomCostText}.";
 $F_RETURNMESSAGES_LOCAL["HireCarriage"] = "#HERIKA_NAME# accepted the {$hireCarriageCostText} carriage fare to #TARGET# and ended the conversation.";
 $F_RETURNMESSAGES_LOCAL["HireFerry"] = "#HERIKA_NAME# accepted the {$hireFerryCostText} ferry fare to #TARGET# and ended the conversation.";
+$F_RETURNMESSAGES_LOCAL["SpawnItem"] = "#TARGET# receives #ITEM#.";
+$F_RETURNMESSAGES_LOCAL["TeleportNPC"] = "#TARGET# teleports to #ITEM#.";
+$F_RETURNMESSAGES_LOCAL["KillTarget"] = "#TARGET# is killed.";
 $F_RETURNMESSAGES_LOCAL["AddBounty"] = "#HERIKA_NAME# added a bounty for #TARGET# to #PLAYER_NAME#.";
 $F_RETURNMESSAGES_LOCAL["PayBounty"] = "#PLAYER_NAME# paid off their bounty to #HERIKA_NAME#, and stolen items were removed from inventory.";
 $F_RETURNMESSAGES_LOCAL["ArrestPlayer"] = "#HERIKA_NAME# attempted to arrest #PLAYER_NAME#.";
@@ -325,6 +709,9 @@ $F_NAMES_LOCAL["TakeGoldFromPlayer"] = "Take_Gold_From_#PLAYER_NAME#";
 $F_NAMES_LOCAL["RentRoom"] = "RentRoom";
 $F_NAMES_LOCAL["HireCarriage"] = "HireCarriage";
 $F_NAMES_LOCAL["HireFerry"] = "HireFerry";
+$F_NAMES_LOCAL["SpawnItem"] = "SpawnItem";
+$F_NAMES_LOCAL["TeleportNPC"] = "TeleportNPC";
+$F_NAMES_LOCAL["KillTarget"] = "KillTarget";
 $F_NAMES_LOCAL["AddBounty"] = "AddBounty";
 $F_NAMES_LOCAL["PayBounty"] = "PayBounty";
 $F_NAMES_LOCAL["ArrestPlayer"] = "Arrest_#PLAYER_NAME#";
@@ -751,6 +1138,60 @@ $GLOBALS["FUNCTIONS"] = [
         ],
     ],
     [
+        "name" => $F_NAMES_LOCAL["SpawnItem"],
+        "description" => $F_TRANSLATIONS_LOCAL["SpawnItem"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Recipient actor. Use #PLAYER_NAME#, PLAYER, or me to give the item to the player.",
+                ],
+                "item" => [
+                    "type" => "string",
+                    "description" => "REQUIRED: item name from the descriptions database.",
+                ],
+                "amount" => [
+                    "type" => "integer",
+                    "description" => "Quantity to spawn and give (default: 1).",
+                ],
+            ],
+            "required" => ["item"],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["TeleportNPC"],
+        "description" => $F_TRANSLATIONS_LOCAL["TeleportNPC"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Actor to teleport. Use #PLAYER_NAME#, PLAYER, or me to teleport the player.",
+                ],
+                "item" => [
+                    "type" => "string",
+                    "description" => "REQUIRED: destination location name from the location database.",
+                ],
+            ],
+            "required" => ["item"],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["KillTarget"],
+        "description" => $F_TRANSLATIONS_LOCAL["KillTarget"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "REQUIRED: actor to kill. Use #PLAYER_NAME#, PLAYER, or me to kill the player.",
+                ],
+            ],
+            "required" => ["target"],
+        ],
+    ],
+    [
         "name" => $F_NAMES_LOCAL["AddBounty"],
         "description" => $F_TRANSLATIONS_LOCAL["AddBounty"],
         "parameters" => [
@@ -1134,11 +1575,23 @@ function getFunctionNameAliases()
 
 function getFunctionCodeName($key)
 {
+    $key = strval($key);
+    if (function_exists('herikaResolveActionCatalogCodeName')) {
+        $catalogCodeName = herikaResolveActionCatalogCodeName($key, true);
+        if ($catalogCodeName !== false) {
+            return $catalogCodeName;
+        }
+
+        $catalogCodeName = herikaResolveActionCatalogCodeName($key, false);
+        if ($catalogCodeName !== false) {
+            return $catalogCodeName;
+        }
+    }
+
     if (!isset($GLOBALS["F_NAMES"]) || !is_array($GLOBALS["F_NAMES"])) {
         return false;
     }
 
-    $key = strval($key);
     if (isset($GLOBALS["F_NAMES"][$key])) {
         return $key;
     }
@@ -1207,14 +1660,24 @@ function herikaFormatReturnMessageTemplate($codeName, $primaryArgument = '', arr
         return '';
     }
 
-    if (is_scalar($primaryArgument) || $primaryArgument === null) {
-        $primaryArgument = strval($primaryArgument ?? '');
+    $argumentData = [];
+    if (is_array($primaryArgument)) {
+        $argumentData = $primaryArgument;
+        $primaryArgument = trim(strval($argumentData['target'] ?? ''));
+        if ($primaryArgument === '') {
+            $primaryArgument = herikaExtractActionArgumentTargetValue($argumentData);
+        }
     } else {
-        $primaryArgument = '';
+        $primaryArgument = is_scalar($primaryArgument) || $primaryArgument === null
+            ? strval($primaryArgument ?? '')
+            : '';
     }
 
     $replacements = [
         '#TARGET#' => $primaryArgument,
+        '#ITEM#' => trim(strval($argumentData['item'] ?? ($argumentData['location'] ?? ''))),
+        '#AMOUNT#' => trim(strval($argumentData['amount'] ?? '')),
+        '#LOCATION#' => trim(strval($argumentData['location'] ?? ($argumentData['item'] ?? ''))),
         '#HERIKA_NAME#' => strval($GLOBALS["HERIKA_NAME"] ?? 'NPC'),
         '#PLAYER_NAME#' => strval($GLOBALS["PLAYER_NAME"] ?? 'Player'),
     ];
@@ -1478,17 +1941,104 @@ function buildFunctionExecutionParameter($functionCodeName, $parameter)
 
 function findFunctionByName($name)
 {
+    $name = trim(strval($name));
+    if (function_exists('herikaFindActionCatalogRowByNameOrCode') && function_exists('herikaActionCatalogBuildFunctionEntryFromRow')) {
+        $row = herikaFindActionCatalogRowByNameOrCode($name, true);
+        if (is_array($row) && !empty($row['is_activated'])) {
+            $functionEntry = herikaActionCatalogBuildFunctionEntryFromRow($row);
+            if (is_array($functionEntry) && !empty($functionEntry['name'])) {
+                $functionEntry['description'] = function_exists('herikaFormatActionPromptTemplate')
+                    ? herikaFormatActionPromptTemplate($row['description'] ?? '')
+                    : strval($row['description'] ?? '');
+                return $functionEntry;
+            }
+        }
+    }
+
     foreach ($GLOBALS["FUNCTIONS"] as $function) {
-        if ($function['name'] === $name) {
+        if (($function['name'] ?? '') === $name) {
             return $function;
         }
     }
+
+    $resolvedCodeName = getFunctionCodeName($name);
+    if (is_string($resolvedCodeName) && $resolvedCodeName !== '') {
+        foreach ($GLOBALS["FUNCTIONS"] as $function) {
+            $functionName = trim(strval($function['name'] ?? ''));
+            if ($functionName === '') {
+                continue;
+            }
+
+            if (getFunctionCodeName($functionName) === $resolvedCodeName) {
+                return $function;
+            }
+        }
+    }
+
+    if (function_exists('herikaGetActionCatalogRowsByCode') && function_exists('herikaActionCatalogBuildFunctionEntryFromRow')) {
+        $rowsByCode = herikaGetActionCatalogRowsByCode();
+        $candidateCodes = [];
+
+        if ($name !== '') {
+            $candidateCodes[] = $name;
+        }
+        if (is_string($resolvedCodeName) && $resolvedCodeName !== '' && !in_array($resolvedCodeName, $candidateCodes, true)) {
+            $candidateCodes[] = $resolvedCodeName;
+        }
+
+        foreach ($candidateCodes as $candidateCode) {
+            $row = $rowsByCode[$candidateCode] ?? null;
+            if (!is_array($row) || empty($row['is_activated'])) {
+                continue;
+            }
+            if (function_exists('herikaActionCatalogRowIsAvailableInCurrentMode') && !herikaActionCatalogRowIsAvailableInCurrentMode($row)) {
+                continue;
+            }
+
+            $functionEntry = herikaActionCatalogBuildFunctionEntryFromRow($row);
+            if (is_array($functionEntry) && !empty($functionEntry['name'])) {
+                return $functionEntry;
+            }
+        }
+
+        foreach ($rowsByCode as $row) {
+            if (!is_array($row) || empty($row['code_name']) || empty($row['is_activated'])) {
+                continue;
+            }
+            if (function_exists('herikaActionCatalogRowIsAvailableInCurrentMode') && !herikaActionCatalogRowIsAvailableInCurrentMode($row)) {
+                continue;
+            }
+
+            $rowActionName = trim(strval($row['action_name'] ?? ''));
+            $runtimeActionName = function_exists('herikaFormatActionPromptTemplate')
+                ? trim(strval(herikaFormatActionPromptTemplate($rowActionName)))
+                : $rowActionName;
+            $normalizedRuntimeActionName = function_exists('herikaNormalizeActionCatalogDisplayActionName')
+                ? trim(strval(herikaNormalizeActionCatalogDisplayActionName($runtimeActionName)))
+                : $runtimeActionName;
+
+            if (!in_array($name, [$rowActionName, $runtimeActionName, $normalizedRuntimeActionName], true)) {
+                continue;
+            }
+
+            $functionEntry = herikaActionCatalogBuildFunctionEntryFromRow($row);
+            if (is_array($functionEntry) && !empty($functionEntry['name'])) {
+                return $functionEntry;
+            }
+        }
+    }
+
     return null; // Return null if function not found
 }
 
 function getFunctionByTrlName($searchValue)
 {
-    $keys = [];
+    if (function_exists('herikaResolveActionCatalogCodeName')) {
+        $catalogCodeName = herikaResolveActionCatalogCodeName($searchValue, true);
+        if ($catalogCodeName !== false) {
+            return $catalogCodeName;
+        }
+    }
 
     foreach ($GLOBALS["F_NAMES"] as $key => $value) {
         if ($value === $searchValue) {
@@ -1552,7 +2102,9 @@ if (herikaActionCatalogDbReady()) {
 }
 
 $isNpcMode = isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"];
-$defaultEnabledFunctions = $isNpcMode ? herikaGetNpcDefaultActionCodes() : herikaGetFollowerDefaultActionCodes();
+$defaultEnabledFunctions = herikaActionCatalogIsNarratorMode()
+    ? herikaGetNarratorDefaultActionCodes()
+    : ($isNpcMode ? herikaGetNpcDefaultActionCodes() : herikaGetFollowerDefaultActionCodes());
 $dbEnabledFunctions = herikaLoadEnabledActionCodesForMode($isNpcMode, true);
 $GLOBALS["ENABLED_FUNCTIONS"] = herikaActionCatalogDbReady()
     ? $dbEnabledFunctions
@@ -1735,6 +2287,265 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
 
                 error_log("[ACTION POSTFILTER Train] Executed server-side");
                 unset($actionsCopy[$n]);// Remove action from list, so client does not execute it
+
+            } else if ($actionParts2[0] == "SpawnItem") {
+                $rawParameter = implode("@", array_slice($actionParts2, 1));
+                $payload = decodeFunctionExecutionParameterPayload($rawParameter);
+                if (!is_array($payload)) {
+                    $payload = [];
+                }
+
+                $playerName = trim(strval($GLOBALS["PLAYER_NAME"] ?? "Player"));
+                $targetName = trim(strval($payload["target"] ?? ""));
+                $itemName = trim(strval($payload["item"] ?? ""));
+                $itemAmount = herikaNormalizePositiveActionAmount($payload["amount"] ?? 1, 1, 1000);
+
+                $targetName = herikaNormalizeNarratorActorTargetForRoleCommand($targetName);
+
+                if ($itemName === '') {
+                    error_log("[ACTION POSTFILTER SpawnItem] Missing item name");
+                    unset($actionsCopy[$n]);
+                    continue;
+                }
+
+                $resolvedItem = herikaResolveSpawnItemDescriptionMatch($itemName);
+                if (empty($resolvedItem['ok'])) {
+                    $safeItemName = str_replace('@', '', $itemName);
+                    $reason = strval($resolvedItem['error'] ?? 'unknown_error');
+                    error_log("[ACTION POSTFILTER SpawnItem] Could not resolve '{$safeItemName}' ({$reason})");
+
+                    $GLOBALS["db"]->insert(
+                        'responselog',
+                        array(
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => '',
+                            'action' => "rolecommand|DebugNotification@Could not resolve item {$safeItemName} for Spawn_Item",
+                            'tag' => ""
+                        )
+                    );
+
+                    unset($actionsCopy[$n]);
+                    continue;
+                }
+
+                $targetNameEscaped = str_replace('@', '', $targetName);
+                $resolvedItemName = str_replace('@', '', trim(strval($resolvedItem['name'] ?? $itemName)));
+                $runtimeFormId = str_replace('@', '', trim(strval($resolvedItem['runtime_formid'] ?? '')));
+
+                if ($runtimeFormId === '') {
+                    error_log("[ACTION POSTFILTER SpawnItem] Resolved item missing runtime formid for {$resolvedItemName}");
+                    unset($actionsCopy[$n]);
+                    continue;
+                }
+
+                $roleCommand = "rolecommand|SpawnItemRaw@{$targetNameEscaped}@{$runtimeFormId}@{$itemAmount}@{$resolvedItemName}";
+
+                $GLOBALS["db"]->insert(
+                    'responselog',
+                    array(
+                        'localts' => time(),
+                        'sent' => 0,
+                        'actor' => "rolemaster",
+                        'text' => '',
+                        'action' => $roleCommand,
+                        'tag' => ""
+                    )
+                );
+
+                $GLOBALS["db"]->insert(
+                    'actions_issued',
+                    array(
+                        'action' => "SpawnItem",
+                        'fullcall' => $actionParts[0] . "|" . $actionParts[1] . "|" . $actionParts[2],
+                        'actorname' => $actionParts[0],
+                        'ts' => $gameRequest[1],
+                        'gamets' => $gameRequest[2],
+                        'localts' => time(),
+                        'original' => ''
+                    )
+                );
+
+                error_log("[ACTION POSTFILTER SpawnItem] Queued {$roleCommand}");
+                unset($actionsCopy[$n]);
+
+            } else if ($actionParts2[0] == "TeleportNPC") {
+                $rawParameter = implode("@", array_slice($actionParts2, 1));
+                $payload = decodeFunctionExecutionParameterPayload($rawParameter);
+                if (!is_array($payload)) {
+                    $payload = [];
+                }
+
+                $requestedTarget = trim(strval($payload["target"] ?? ""));
+                $destinationName = trim(strval($payload["item"] ?? ""));
+                $targetName = herikaNormalizeNarratorActorTargetForRoleCommand($requestedTarget);
+                $playerName = trim(strval($GLOBALS["PLAYER_NAME"] ?? "Player"));
+
+                if ($destinationName === '' && $requestedTarget !== '') {
+                    $requestedTargetLower = strtolower($requestedTarget);
+                    $looksLikePlayerAlias = $requestedTargetLower === 'player'
+                        || $requestedTargetLower === 'me'
+                        || ($playerName !== '' && strcasecmp($requestedTarget, $playerName) === 0);
+                    if (!$looksLikePlayerAlias) {
+                        $destinationName = $requestedTarget;
+                        $targetName = 'PLAYER';
+                    }
+                }
+
+                if ($targetName === '') {
+                    $targetName = $playerName;
+                }
+
+                if ($destinationName === '') {
+                    error_log("[ACTION POSTFILTER TeleportNPC] Missing destination");
+                    unset($actionsCopy[$n]);
+                    continue;
+                }
+
+                $targetNameEscaped = str_replace('@', '', $targetName);
+                $destinationNameEscaped = str_replace('@', '', $destinationName);
+                $destinationLiteral = $GLOBALS["db"]->escape($destinationNameEscaped);
+                $dbDestination = $GLOBALS["db"]->fetchOne("SELECT name, similarity(name, '{$destinationLiteral}') AS sim, formid FROM locations ORDER BY sim DESC LIMIT 1");
+                $dbDestinationRegion = $GLOBALS["db"]->fetchOne("SELECT name, similarity(region, '{$destinationLiteral}') AS sim, formid FROM locations ORDER BY sim DESC LIMIT 1");
+
+                $destinationFormId = '';
+                $destinationLabel = $destinationNameEscaped;
+                if (is_array($dbDestination) && is_array($dbDestinationRegion)) {
+                    $useRegion = floatval($dbDestinationRegion["sim"] ?? 0) > floatval($dbDestination["sim"] ?? 0);
+                    $resolvedDestination = $useRegion ? $dbDestinationRegion : $dbDestination;
+                    $destinationFormId = trim(strval($resolvedDestination["formid"] ?? ''));
+                    $destinationLabel = trim(strval($resolvedDestination["name"] ?? $destinationNameEscaped));
+                }
+                $destinationLabel = str_replace('@', '', $destinationLabel);
+
+                $roleCommand = $destinationFormId !== ''
+                    ? "rolecommand|TeleportNPCRaw@{$targetNameEscaped}@{$destinationFormId}@{$destinationLabel}"
+                    : "rolecommand|TeleportNPC@{$targetNameEscaped}@{$destinationNameEscaped}";
+
+                $GLOBALS["db"]->insert(
+                    'responselog',
+                    array(
+                        'localts' => time(),
+                        'sent' => 0,
+                        'actor' => "rolemaster",
+                        'text' => '',
+                        'action' => $roleCommand,
+                        'tag' => ""
+                    )
+                );
+
+                $GLOBALS["db"]->insert(
+                    'actions_issued',
+                    array(
+                        'action' => "TeleportNPC",
+                        'fullcall' => $actionParts[0] . "|" . $actionParts[1] . "|" . $actionParts[2],
+                        'actorname' => $actionParts[0],
+                        'ts' => $gameRequest[1],
+                        'gamets' => $gameRequest[2],
+                        'localts' => time(),
+                        'original' => ''
+                    )
+                );
+
+                error_log("[ACTION POSTFILTER TeleportNPC] Queued {$roleCommand}");
+                unset($actionsCopy[$n]);
+
+            } else if ($actionParts2[0] == "KillTarget") {
+                $rawParameter = implode("@", array_slice($actionParts2, 1));
+                $payload = decodeFunctionExecutionParameterPayload($rawParameter);
+                if (!is_array($payload)) {
+                    $payload = [];
+                }
+
+                $requestedTarget = trim(strval($payload["target"] ?? ""));
+                if ($requestedTarget === '') {
+                    $requestedTarget = trim(strval($rawParameter));
+                }
+
+                $inferenceSources = [];
+                $latestNarratorInput = herikaGetLatestNarratorInputText();
+                if ($latestNarratorInput !== '') {
+                    $inferenceSources[] = $latestNarratorInput;
+                }
+                if (isset($gameRequest[3]) && trim(strval($gameRequest[3])) !== '') {
+                    $inferenceSources[] = trim(strval($gameRequest[3]));
+                }
+
+                $inferredTarget = '';
+                foreach ($inferenceSources as $inferenceSource) {
+                    $candidateTarget = herikaInferNarratorActorTargetFromText($inferenceSource);
+                    if ($candidateTarget === '') {
+                        continue;
+                    }
+                    $normalizedCandidateTarget = herikaNormalizeNarratorActorTargetForRoleCommand($candidateTarget, false);
+                    if ($normalizedCandidateTarget !== '' && $normalizedCandidateTarget !== 'PLAYER') {
+                        $inferredTarget = $candidateTarget;
+                        break;
+                    }
+                    if ($inferredTarget === '') {
+                        $inferredTarget = $candidateTarget;
+                    }
+                }
+
+                $normalizedRequestedTarget = herikaNormalizeNarratorActorTargetForRoleCommand($requestedTarget, false);
+                $normalizedInferredTarget = herikaNormalizeNarratorActorTargetForRoleCommand($inferredTarget, false);
+
+                if ($normalizedRequestedTarget === '' && $normalizedInferredTarget !== '') {
+                    $targetName = $normalizedInferredTarget;
+                } else if ($normalizedRequestedTarget === 'PLAYER' && $normalizedInferredTarget !== '' && $normalizedInferredTarget !== 'PLAYER') {
+                    $targetName = $normalizedInferredTarget;
+                } else {
+                    $targetName = $normalizedRequestedTarget;
+                }
+
+                if ($targetName === '') {
+                    error_log("[ACTION POSTFILTER KillTarget] Missing target");
+                    $GLOBALS["db"]->insert(
+                        'responselog',
+                        array(
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => '',
+                            'action' => "rolecommand|DebugNotification@Kill_Target requires a target",
+                            'tag' => ""
+                        )
+                    );
+                    unset($actionsCopy[$n]);
+                    continue;
+                }
+
+                $targetNameEscaped = str_replace('@', '', $targetName);
+                $roleCommand = "rolecommand|KillTargetRaw@{$targetNameEscaped}";
+
+                $GLOBALS["db"]->insert(
+                    'responselog',
+                    array(
+                        'localts' => time(),
+                        'sent' => 0,
+                        'actor' => "rolemaster",
+                        'text' => '',
+                        'action' => $roleCommand,
+                        'tag' => ""
+                    )
+                );
+
+                $GLOBALS["db"]->insert(
+                    'actions_issued',
+                    array(
+                        'action' => "KillTarget",
+                        'fullcall' => $actionParts[0] . "|" . $actionParts[1] . "|" . $actionParts[2],
+                        'actorname' => $actionParts[0],
+                        'ts' => $gameRequest[1],
+                        'gamets' => $gameRequest[2],
+                        'localts' => time(),
+                        'original' => ''
+                    )
+                );
+
+                error_log("[ACTION POSTFILTER KillTarget] Queued {$roleCommand}");
+                unset($actionsCopy[$n]);
 
             } else if ($actionParts2[0]=="StartRitualCeremony") {
                 

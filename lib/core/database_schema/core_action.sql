@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS public.core_action (
     return_message TEXT NOT NULL DEFAULT '',
     available_to_npc BOOLEAN NOT NULL DEFAULT FALSE,
     available_to_followers BOOLEAN NOT NULL DEFAULT FALSE,
+    available_to_narrator BOOLEAN NOT NULL DEFAULT FALSE,
     is_activated BOOLEAN NOT NULL DEFAULT TRUE,
     parameters_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -24,6 +25,7 @@ CREATE TABLE IF NOT EXISTS public.core_action_custom (
     return_message TEXT NOT NULL DEFAULT '',
     available_to_npc BOOLEAN NOT NULL DEFAULT FALSE,
     available_to_followers BOOLEAN NOT NULL DEFAULT FALSE,
+    available_to_narrator BOOLEAN NOT NULL DEFAULT FALSE,
     is_activated BOOLEAN NOT NULL DEFAULT TRUE,
     parameters_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -39,6 +41,7 @@ CREATE INDEX IF NOT EXISTS idx_core_action_action_name_lower ON public.core_acti
 CREATE INDEX IF NOT EXISTS idx_core_action_is_activated ON public.core_action (is_activated);
 CREATE INDEX IF NOT EXISTS idx_core_action_available_to_npc ON public.core_action (available_to_npc);
 CREATE INDEX IF NOT EXISTS idx_core_action_available_to_followers ON public.core_action (available_to_followers);
+CREATE INDEX IF NOT EXISTS idx_core_action_available_to_narrator ON public.core_action (available_to_narrator);
 CREATE INDEX IF NOT EXISTS idx_core_action_game_function ON public.core_action (game_function);
 
 CREATE INDEX IF NOT EXISTS idx_core_action_custom_code_name_lower ON public.core_action_custom (LOWER(code_name));
@@ -46,6 +49,7 @@ CREATE INDEX IF NOT EXISTS idx_core_action_custom_action_name_lower ON public.co
 CREATE INDEX IF NOT EXISTS idx_core_action_custom_is_activated ON public.core_action_custom (is_activated);
 CREATE INDEX IF NOT EXISTS idx_core_action_custom_available_to_npc ON public.core_action_custom (available_to_npc);
 CREATE INDEX IF NOT EXISTS idx_core_action_custom_available_to_followers ON public.core_action_custom (available_to_followers);
+CREATE INDEX IF NOT EXISTS idx_core_action_custom_available_to_narrator ON public.core_action_custom (available_to_narrator);
 CREATE INDEX IF NOT EXISTS idx_core_action_custom_game_function ON public.core_action_custom (game_function);
 
 CREATE OR REPLACE VIEW public.combined_core_action AS
@@ -57,6 +61,7 @@ SELECT
     c.return_message,
     c.available_to_npc,
     c.available_to_followers,
+    c.available_to_narrator,
     c.is_activated,
     c.parameters_json,
     c.metadata,
@@ -75,6 +80,7 @@ SELECT
     b.return_message,
     b.available_to_npc,
     b.available_to_followers,
+    b.available_to_narrator,
     b.is_activated,
     b.parameters_json,
     b.metadata,

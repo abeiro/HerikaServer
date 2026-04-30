@@ -32,8 +32,11 @@
                                     $lastAction="{$GLOBALS["HERIKA_NAME"]} issued ACTION {$s_msg["tool_calls"][0]["function"]["name"]} {$s_msg["tool_calls"][0]["function"]["arguments"]}";
                                     
                                     $localFuncCodeName=getFunctionCodeName($s_msg["tool_calls"][0]["function"]["name"]);
-                                    $localArguments=json_decode($s_msg["tool_calls"][0]["function"]["arguments"],true);
-                    $lastAction=herikaFormatReturnMessageTemplate($localFuncCodeName, current($localArguments));
+                    $localArguments=json_decode($s_msg["tool_calls"][0]["function"]["arguments"],true);
+                    if (!is_array($localArguments)) {
+                        $localArguments = [];
+                    }
+                    $lastAction=herikaFormatReturnMessageTemplate($localFuncCodeName, $localArguments);
                                     
                                     
                                 } else {

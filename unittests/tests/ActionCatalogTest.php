@@ -27,6 +27,9 @@ final class ActionCatalogTest extends TestCase
         $this->assertNotContains('Surrender', herikaGetRetiredActionCodes());
         $this->assertContains('Surrender', herikaGetNpcDefaultActionCodes());
         $this->assertContains('Surrender', herikaGetFollowerDefaultActionCodes());
+        $this->assertContains('KillTarget', herikaGetNarratorDefaultActionCodes());
+        $this->assertContains('SpawnItem', herikaGetNarratorDefaultActionCodes());
+        $this->assertContains('TeleportNPC', herikaGetNarratorDefaultActionCodes());
     }
 
     public function testBuildActionCatalogSeedRows_AssignsScopesAndSkipsRetiredActions(): void
@@ -35,6 +38,9 @@ final class ActionCatalogTest extends TestCase
             [
                 'MoveTo' => 'MoveTo',
                 'Drink' => 'Drink',
+                'KillTarget' => 'KillTarget',
+                'SpawnItem' => 'SpawnItem',
+                'TeleportNPC' => 'TeleportNPC',
                 'AttackHunt' => 'Hunt',
             ],
             [],
@@ -60,17 +66,64 @@ final class ActionCatalogTest extends TestCase
                         'required' => [],
                     ],
                 ],
+                'TeleportNPC' => [
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'target' => ['type' => 'string'],
+                            'item' => ['type' => 'string'],
+                        ],
+                        'required' => ['item'],
+                    ],
+                ],
+                'KillTarget' => [
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'target' => ['type' => 'string'],
+                        ],
+                        'required' => ['target'],
+                    ],
+                ],
+                'SpawnItem' => [
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'target' => ['type' => 'string'],
+                            'item' => ['type' => 'string'],
+                            'amount' => ['type' => 'integer'],
+                        ],
+                        'required' => ['item'],
+                    ],
+                ],
             ]
         );
 
         $this->assertArrayNotHasKey('AttackHunt', $rows);
         $this->assertTrue($rows['MoveTo']['available_to_npc']);
         $this->assertFalse($rows['MoveTo']['available_to_followers']);
+        $this->assertFalse($rows['MoveTo']['available_to_narrator']);
         $this->assertTrue($rows['MoveTo']['is_activated']);
 
         $this->assertTrue($rows['Drink']['available_to_npc']);
         $this->assertTrue($rows['Drink']['available_to_followers']);
+        $this->assertFalse($rows['Drink']['available_to_narrator']);
         $this->assertTrue($rows['Drink']['is_activated']);
+
+        $this->assertFalse($rows['TeleportNPC']['available_to_npc']);
+        $this->assertFalse($rows['TeleportNPC']['available_to_followers']);
+        $this->assertTrue($rows['TeleportNPC']['available_to_narrator']);
+        $this->assertTrue($rows['TeleportNPC']['is_activated']);
+
+        $this->assertFalse($rows['KillTarget']['available_to_npc']);
+        $this->assertFalse($rows['KillTarget']['available_to_followers']);
+        $this->assertTrue($rows['KillTarget']['available_to_narrator']);
+        $this->assertTrue($rows['KillTarget']['is_activated']);
+
+        $this->assertFalse($rows['SpawnItem']['available_to_npc']);
+        $this->assertFalse($rows['SpawnItem']['available_to_followers']);
+        $this->assertTrue($rows['SpawnItem']['available_to_narrator']);
+        $this->assertTrue($rows['SpawnItem']['is_activated']);
     }
 
     public function testBuildActionCatalogSeedRows_SeedsParametersMetadataAndScriptProxyProgram(): void
@@ -79,6 +132,9 @@ final class ActionCatalogTest extends TestCase
             [
                 'MoveTo' => 'MoveTo',
                 'Drink' => 'Drink',
+                'KillTarget' => 'KillTarget',
+                'SpawnItem' => 'SpawnItem',
+                'TeleportNPC' => 'TeleportNPC',
             ],
             [],
             [],
@@ -103,6 +159,36 @@ final class ActionCatalogTest extends TestCase
                         'required' => [],
                     ],
                 ],
+                'TeleportNPC' => [
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'target' => ['type' => 'string'],
+                            'item' => ['type' => 'string'],
+                        ],
+                        'required' => ['item'],
+                    ],
+                ],
+                'KillTarget' => [
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'target' => ['type' => 'string'],
+                        ],
+                        'required' => ['target'],
+                    ],
+                ],
+                'SpawnItem' => [
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'target' => ['type' => 'string'],
+                            'item' => ['type' => 'string'],
+                            'amount' => ['type' => 'integer'],
+                        ],
+                        'required' => ['item'],
+                    ],
+                ],
             ]
         );
 
@@ -116,6 +202,45 @@ final class ActionCatalogTest extends TestCase
         $this->assertTrue($rows['Drink']['game_function']);
         $this->assertIsArray($rows['Drink']['script_proxy_program']);
         $this->assertNotEmpty($rows['Drink']['script_proxy_program']['cases']);
+
+        $this->assertSame('rolecommand', $rows['TeleportNPC']['metadata']['dispatch']);
+        $this->assertTrue($rows['TeleportNPC']['game_function']);
+        $this->assertNull($rows['TeleportNPC']['script_proxy_program']);
+
+        $this->assertSame('rolecommand', $rows['KillTarget']['metadata']['dispatch']);
+        $this->assertTrue($rows['KillTarget']['game_function']);
+        $this->assertNull($rows['KillTarget']['script_proxy_program']);
+
+        $this->assertSame('rolecommand', $rows['SpawnItem']['metadata']['dispatch']);
+        $this->assertTrue($rows['SpawnItem']['game_function']);
+        $this->assertNull($rows['SpawnItem']['script_proxy_program']);
+    }
+
+    public function testActionCatalogMetadataFlagEnabled_ReadsBooleanFlagsFromCatalogRows(): void
+    {
+        $GLOBALS['HERIKA_ACTION_CATALOG_ROWS_BY_CODE'] = [
+            'ExtCmdCHIMNFF_TeachRightHandSpell' => [
+                'code_name' => 'ExtCmdCHIMNFF_TeachRightHandSpell',
+                'metadata' => [
+                    'suppress_placeholder_infoaction' => true,
+                ],
+            ],
+        ];
+
+        $this->assertTrue(
+            herikaActionCatalogMetadataFlagEnabled(
+                'ExtCmdCHIMNFF_TeachRightHandSpell',
+                'suppress_placeholder_infoaction'
+            )
+        );
+        $this->assertFalse(
+            herikaActionCatalogMetadataFlagEnabled(
+                'ExtCmdCHIMNFF_TeachRightHandSpell',
+                'missing_flag'
+            )
+        );
+
+        unset($GLOBALS['HERIKA_ACTION_CATALOG_ROWS_BY_CODE']);
     }
 
     public function testBuildActionCatalogSeedRows_SeedsBuiltinRequirementsAndCooldownMetadata(): void
@@ -361,6 +486,43 @@ final class ActionCatalogTest extends TestCase
                 $GLOBALS['TEST_FUNCTION_CODE_MAP'] = $previousCodeMap;
             } else {
                 unset($GLOBALS['TEST_FUNCTION_CODE_MAP']);
+            }
+        }
+    }
+
+    public function testActionCatalogRowIsAvailableInCurrentMode_UsesNarratorScopeForNarrator(): void
+    {
+        $previousHerikaName = $GLOBALS['HERIKA_NAME'] ?? null;
+        $hadHerikaName = array_key_exists('HERIKA_NAME', $GLOBALS);
+        $previousIsNpc = $GLOBALS['IS_NPC'] ?? null;
+        $hadIsNpc = array_key_exists('IS_NPC', $GLOBALS);
+
+        $GLOBALS['HERIKA_NAME'] = 'The Narrator';
+        $GLOBALS['IS_NPC'] = false;
+
+        try {
+            $this->assertTrue(herikaActionCatalogRowIsAvailableInCurrentMode([
+                'available_to_npc' => false,
+                'available_to_followers' => false,
+                'available_to_narrator' => true,
+            ]));
+
+            $this->assertFalse(herikaActionCatalogRowIsAvailableInCurrentMode([
+                'available_to_npc' => true,
+                'available_to_followers' => true,
+                'available_to_narrator' => false,
+            ]));
+        } finally {
+            if ($hadHerikaName) {
+                $GLOBALS['HERIKA_NAME'] = $previousHerikaName;
+            } else {
+                unset($GLOBALS['HERIKA_NAME']);
+            }
+
+            if ($hadIsNpc) {
+                $GLOBALS['IS_NPC'] = $previousIsNpc;
+            } else {
+                unset($GLOBALS['IS_NPC']);
             }
         }
     }

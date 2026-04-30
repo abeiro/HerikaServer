@@ -425,16 +425,20 @@ class openrouterjson
                         $lastActionName=$element["tool_calls"][0]["function"]["name"];
                         $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
                         $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
+                        if (!is_array($localArguments)) {
+                            $localArguments = [];
+                        }
+                        $actionTargetValue = herikaExtractActionArgumentTargetValue($localArguments);
                         if (isset($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName])) {
-                            $lastAction=herikaFormatReturnMessageTemplate($localFuncCodeName, current($localArguments));
+                            $lastAction=herikaFormatReturnMessageTemplate($localFuncCodeName, $localArguments);
                         }
                         $contextDataCopy[]=[
                                 "role"=>"assistant",
-                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\",\"target\": \"".current($localArguments)."\", \"message\": \"\"}"
+                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\",\"target\": \"".$actionTargetValue."\", \"message\": \"\"}"
                             ];
                             
                         $gameRequestCopy=$GLOBALS["gameRequest"];    
-                        $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\", \"target\": \"".current($localArguments)."\", \"message\": \"\"}";
+                        $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\", \"target\": \"".$actionTargetValue."\", \"message\": \"\"}";
                         $gameRequestCopy[0]="logaction";
                         logEvent($gameRequestCopy);   
                         
@@ -494,7 +498,8 @@ class openrouterjson
                             $pb["system"].=$element["content"]."\n";
                             
                            
-                            if (strpos($element["content"],"Error")===0) {
+                             $GLOBALS["PATCH_STORE_FUNC_RES_ACTION"] = $localFuncCodeName;
+                             if (strpos($element["content"],"Error")===0) {
                                 $GLOBALS["PATCH_STORE_FUNC_RES"]="{$GLOBALS["HERIKA_NAME"]} issued ACTION, but {$element["content"]}";
                                 $contextDataCopy[]=[
                                     "role"=>"user",
@@ -1098,7 +1103,7 @@ class openrouterjson
             Logger::info("Old function scheme");
             $parameterArr = json_decode($this->_parameterBuff, true);
             if (is_array($parameterArr)) {
-                $parameter = current($parameterArr); // Only support for one parameter
+                $parameter = $parameterArr;
                 $functionCodeName = getFunctionCodeName($this->_functionName);
                 $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
                 $commandStr = "{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@$parameter\r\n";

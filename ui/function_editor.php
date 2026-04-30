@@ -602,7 +602,7 @@ $customFilter = strtolower(functionEditorTrim($_GET["custom"] ?? "all"));
 if (!in_array($state, ["all", "enabled", "disabled"], true)) {
     $state = "all";
 }
-if (!in_array($scope, ["all", "npc", "followers", "dynamic"], true)) {
+if (!in_array($scope, ["all", "npc", "followers", "narrator", "dynamic"], true)) {
     $scope = "all";
 }
 if (!in_array($gameFilter, ["all", "game", "server"], true)) {
@@ -625,6 +625,7 @@ $countEnabled = 0;
 $countDisabled = 0;
 $countNpc = 0;
 $countFollowers = 0;
+$countNarrator = 0;
 $countDynamic = 0;
 $countGameFunction = 0;
 $countServerAction = 0;
@@ -647,8 +648,10 @@ if ($catalogReady) {
         $whereParts[] = "v.available_to_npc = TRUE";
     } elseif ($scope === "followers") {
         $whereParts[] = "v.available_to_followers = TRUE";
+    } elseif ($scope === "narrator") {
+        $whereParts[] = "v.available_to_narrator = TRUE";
     } elseif ($scope === "dynamic") {
-        $whereParts[] = "v.available_to_npc = FALSE AND v.available_to_followers = FALSE";
+        $whereParts[] = "v.available_to_npc = FALSE AND v.available_to_followers = FALSE AND v.available_to_narrator = FALSE";
     }
     if ($gameFilter === "game") {
         $whereParts[] = "v.game_function = TRUE";
@@ -670,6 +673,7 @@ if ($catalogReady) {
             v.return_message,
             v.available_to_npc,
             v.available_to_followers,
+            v.available_to_narrator,
             v.is_activated,
             v.parameters_json,
             v.metadata,
@@ -706,7 +710,8 @@ if ($catalogReady) {
     $countDisabled = max(0, $countAll - $countEnabled);
     $countNpc = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE available_to_npc = TRUE")["c"] ?? 0);
     $countFollowers = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE available_to_followers = TRUE")["c"] ?? 0);
-    $countDynamic = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE available_to_npc = FALSE AND available_to_followers = FALSE")["c"] ?? 0);
+    $countNarrator = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE available_to_narrator = TRUE")["c"] ?? 0);
+    $countDynamic = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE available_to_npc = FALSE AND available_to_followers = FALSE AND available_to_narrator = FALSE")["c"] ?? 0);
     $countGameFunction = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE game_function = TRUE")["c"] ?? 0);
     $countServerAction = max(0, $countAll - $countGameFunction);
     $countCustom = intval($GLOBALS["db"]->fetchOne("
@@ -1102,6 +1107,7 @@ if (!$isEmbed) {
                 <div class="stat-line">Disabled <span class="stat-pill disabled"><?php echo h($countDisabled); ?></span></div>
                 <div class="stat-line">NPC Scope <span class="stat-pill scope"><?php echo h($countNpc); ?></span></div>
                 <div class="stat-line">Follower Scope <span class="stat-pill scope"><?php echo h($countFollowers); ?></span></div>
+                <div class="stat-line">Narrator Scope <span class="stat-pill scope"><?php echo h($countNarrator); ?></span></div>
                 <div class="stat-line">Dynamic Only <span class="stat-pill scope"><?php echo h($countDynamic); ?></span></div>
                 <div class="stat-line">Game Functions <span class="stat-pill scope"><?php echo h($countGameFunction); ?></span></div>
                 <div class="stat-line">Server Only <span class="stat-pill scope"><?php echo h($countServerAction); ?></span></div>
@@ -1137,6 +1143,7 @@ if (!$isEmbed) {
                                 <option value="all" <?php echo $scope === "all" ? "selected" : ""; ?>>All scopes</option>
                                 <option value="npc" <?php echo $scope === "npc" ? "selected" : ""; ?>>NPC only</option>
                                 <option value="followers" <?php echo $scope === "followers" ? "selected" : ""; ?>>Followers only</option>
+                                <option value="narrator" <?php echo $scope === "narrator" ? "selected" : ""; ?>>Narrator only</option>
                                 <option value="dynamic" <?php echo $scope === "dynamic" ? "selected" : ""; ?>>Dynamic only</option>
                             </select>
                             <select name="game_function" id="gameFunctionFilter">
@@ -1178,6 +1185,7 @@ if (!$isEmbed) {
                                 $isCustom = herikaActionCatalogToBool($row["is_custom"] ?? false);
                                 $isNpc = herikaActionCatalogToBool($row["available_to_npc"] ?? false);
                                 $isFollowers = herikaActionCatalogToBool($row["available_to_followers"] ?? false);
+                                $isNarrator = herikaActionCatalogToBool($row["available_to_narrator"] ?? false);
                                 $isGameFunction = herikaActionCatalogToBool($row["game_function"] ?? false);
                                 $targetEnabled = $enabled ? "0" : "1";
                                 $metadata = herikaActionCatalogDecodeJson($row["metadata"] ?? [], []);
@@ -1209,7 +1217,10 @@ if (!$isEmbed) {
                                             <?php if ($isFollowers): ?>
                                                 <span class="status-pill scope">Followers</span>
                                             <?php endif; ?>
-                                            <?php if (!$isNpc && !$isFollowers): ?>
+                                            <?php if ($isNarrator): ?>
+                                                <span class="status-pill scope">Narrator</span>
+                                            <?php endif; ?>
+                                            <?php if (!$isNpc && !$isFollowers && !$isNarrator): ?>
                                                 <span class="status-pill scope">Dynamic</span>
                                             <?php endif; ?>
                                             <span class="status-pill <?php echo $isGameFunction ? "game" : "server"; ?>"><?php echo $isGameFunction ? "Game" : "Server"; ?></span>

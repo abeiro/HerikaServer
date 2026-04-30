@@ -504,7 +504,7 @@ class openrouter
         if (isset($data["choices"][0]["finish_reason"]) && $data["choices"][0]["finish_reason"] == "function_call") {
 
             $parameterArr = json_decode($this->_parameterBuff, true);
-            $parameter = current($parameterArr); // Only support for one parameter
+                $parameter = $parameterArr;
             $functionCodeName = getFunctionCodeName($this->_functionName);
             $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
             $commandStr = "Herika|command|$functionCodeName@$parameter\r\n";
@@ -561,7 +561,7 @@ class openrouter
 
         if ($this->_functionName) {
             $parameterArr = json_decode($this->_parameterBuff, true);
-            $parameter = current($parameterArr); // Only support for one parameter
+                $parameter = $parameterArr;
             $functionCodeName = getFunctionCodeName($this->_functionName);
             $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
             $commandStr = "Herika|command|$functionCodeName@$parameter\r\n";

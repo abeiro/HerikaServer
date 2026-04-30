@@ -2878,11 +2878,21 @@ function extractActorNameFromInfoActionEvent($eventData)
         return "";
     }
 
-    // Most common shape: "Actor uses Object"
-    if (preg_match('/^\s*([^:]{1,128}?)\s+uses\s+/iu', $eventData, $matches)) {
-        $actorName = trim($matches[1]);
-        $actorName = trim($actorName, "|");
-        return ($actorName === "") ? "" : $actorName;
+    $patterns = [
+        '/^\s*([^:]{1,128}?)\s+uses\s+/iu',
+        '/^\s*([^:]{1,128}?)\s+receives\s+/iu',
+        '/^\s*([^:]{1,128}?)\s+teleports?\s+to\s+/iu',
+        '/^\s*([^:]{1,128}?)\s+is\s+killed\b/iu',
+        '/^\s*Could not teleport\s+([^:]{1,128}?)\s+to\s+/iu',
+        '/^\s*Could not kill\s+([^:]{1,128}?)(?:\.|\s|$)/iu',
+    ];
+
+    foreach ($patterns as $pattern) {
+        if (preg_match($pattern, $eventData, $matches)) {
+            $actorName = trim($matches[1]);
+            $actorName = trim($actorName, "|");
+            return ($actorName === "") ? "" : $actorName;
+        }
     }
 
     return "";
@@ -3014,6 +3024,130 @@ function extractEventPayloadParticipants($eventType, $eventData)
     }
 
     return [];
+}
+
+function isNarratorPrivateActionName($actionName)
+{
+    $actionName = trim((string)$actionName);
+    if ($actionName === "") {
+        return false;
+    }
+
+    if (function_exists('herikaFindActionCatalogRowByNameOrCode')) {
+        $row = herikaFindActionCatalogRowByNameOrCode($actionName, false);
+        if (is_array($row)) {
+            return !empty($row['available_to_narrator'])
+                && empty($row['available_to_npc'])
+                && empty($row['available_to_followers']);
+        }
+    }
+
+    $normalizedActionName = strtolower(str_replace([" ", "-"], "", $actionName));
+    return in_array($normalizedActionName, ["spawnitem", "spawn_item", "teleportnpc", "teleport_npc", "killtarget", "kill_target"], true);
+}
+
+function isNarratorPrivatePlayerAlias($targetName, $listenerName = "")
+{
+    $targetName = trim((string)$targetName);
+    $listenerName = trim((string)$listenerName);
+    if ($targetName === "") {
+        return true;
+    }
+
+    $normalizedTarget = normalizeActorNameForComparison($targetName);
+    if ($normalizedTarget === "" || $normalizedTarget === "player" || $normalizedTarget === "me" || $normalizedTarget === "the narrator" || $normalizedTarget === "narrator") {
+        return true;
+    }
+
+    $playerName = trim((string)($GLOBALS["PLAYER_NAME"] ?? "Player"));
+    if ($playerName !== "" && strcasecmp($targetName, $playerName) === 0) {
+        return true;
+    }
+
+    if ($listenerName !== "" && strcasecmp($targetName, $listenerName) === 0) {
+        return true;
+    }
+
+    return false;
+}
+
+function extractNarratorPrivateActionTargetName($eventType, $eventData)
+{
+    $eventType = strtolower(trim((string)$eventType));
+    $eventData = trim((string)$eventData);
+    if ($eventData === "") {
+        return "";
+    }
+
+    if ($eventType === "logaction") {
+        $payload = json_decode($eventData, true);
+        if (is_array($payload) && isNarratorPrivateActionName($payload["action"] ?? "")) {
+            return trim((string)($payload["target"] ?? ""));
+        }
+        return "";
+    }
+
+    if ($eventType === "funcret") {
+        if (preg_match('/^command@([^@]+)@([^@]*)@/iu', $eventData, $matches) && isNarratorPrivateActionName($matches[1] ?? '')) {
+            return trim((string)($matches[2] ?? ""));
+        }
+        return "";
+    }
+
+    if ($eventType === "infoaction") {
+        return extractActorNameFromInfoActionEvent($eventData);
+    }
+
+    return "";
+}
+
+function shouldScopeNarratorPrivateActionEvent($eventType, $eventData, $listenerName = "")
+{
+    $eventType = strtolower(trim((string)$eventType));
+    $listenerNormalized = normalizeActorNameForComparison($listenerName);
+    $eventData = trim((string)$eventData);
+
+    if (!in_array($eventType, ["logaction", "funcret", "infoaction"], true) || $eventData === "") {
+        return false;
+    }
+
+    if ($eventType === "logaction") {
+        $payload = json_decode($eventData, true);
+        if (!is_array($payload) || !isNarratorPrivateActionName($payload["action"] ?? "")) {
+            return false;
+        }
+
+        $characterName = trim((string)($payload["character"] ?? ""));
+        return $listenerNormalized === "the narrator" || strcasecmp($characterName, "The Narrator") === 0;
+    }
+
+    if ($eventType === "funcret") {
+        return preg_match('/^command@([^@]+)@/iu', $eventData, $matches) === 1
+            && isNarratorPrivateActionName($matches[1] ?? '');
+    }
+
+    if ($listenerNormalized !== "the narrator") {
+        return false;
+    }
+
+    return preg_match('/^\s*([^:]{1,128}?)\s+(?:receives|teleports?\s+to|is\s+killed)\b/iu', $eventData) === 1
+        || preg_match('/^\s*Could not teleport\s+/iu', $eventData) === 1
+        || preg_match('/^\s*Could not kill\s+/iu', $eventData) === 1;
+}
+
+function buildNarratorPrivatePeopleForEvent($eventType, $eventData, $listenerName = "")
+{
+    if (!shouldScopeNarratorPrivateActionEvent($eventType, $eventData, $listenerName)) {
+        return "";
+    }
+
+    $playerName = trim((string)($GLOBALS["PLAYER_NAME"] ?? "Player"));
+    $participants = ["The Narrator"];
+    if ($playerName !== "") {
+        $participants[] = $playerName;
+    }
+
+    return normalizePeoplePipeList($participants);
 }
 
 function extractGenericEventParticipants($eventType, $eventData)
@@ -3507,6 +3641,11 @@ function buildScopedPeopleForPlayerInput($eventType, $eventData, $listenerName, 
 function buildScopedPeopleForEvent($eventType, $eventData, $listenerName, $fallbackPeople = "")
 {
     $eventType = strtolower((string)$eventType);
+
+    $narratorPrivatePeople = buildNarratorPrivatePeopleForEvent($eventType, $eventData, $listenerName);
+    if ($narratorPrivatePeople !== "") {
+        return $narratorPrivatePeople;
+    }
 
     if ($eventType === "infoloc") {
         // Keep legacy infoloc behavior: do not apply strict spatial scoping.

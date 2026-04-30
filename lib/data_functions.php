@@ -1757,6 +1757,40 @@ function getTimeCategory($hoursAgo) {
 }
 
 
+function herikaShouldExcludeEventFromPromptContext(array $row): bool
+{
+    $type = strtolower(trim(strval($row['type'] ?? '')));
+    $data = trim(strval($row['data'] ?? ''));
+
+    static $csvImportEventTypes = [
+        'biography_import',
+        'oghma_import',
+        'dynamic_oghma_import',
+        'description_import',
+        'custom_action_import',
+        'item_import',
+        'npcvoice_refresh',
+    ];
+
+    if (in_array($type, $csvImportEventTypes, true)) {
+        return true;
+    }
+
+    if ($type === 'status_msg' && stripos($data, 'csv_import@') === 0) {
+        return true;
+    }
+
+    if (preg_match('/^CSV upload(?:\s*\(|:| failed:)/i', $data) === 1) {
+        return true;
+    }
+
+    if (preg_match('/^[^@]+@[0-9a-f]{8}@nullvoicetype$/i', $data) === 1) {
+        return true;
+    }
+
+    return false;
+}
+
 function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
 
     global $db;
@@ -1845,6 +1879,10 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             return true;
         });
     }
+
+    $results = array_filter($results, function ($row) {
+        return !herikaShouldExcludeEventFromPromptContext($row);
+    });
 
     //error_log($query);
     $rawData=[];
@@ -4804,10 +4842,28 @@ function call_llm_internal() {
 
     ///// PATCH. STORE FUNCTION RESULT ONCE RESULT PROMPT HAS BEEN BUILT.
     if (isset($GLOBALS["PATCH_STORE_FUNC_RES"])) {
-        $gameRequestCopy=$gameRequest;
-        $gameRequestCopy[0]="infoaction";
-        $gameRequestCopy[3]=$GLOBALS["PATCH_STORE_FUNC_RES"];
-        logEvent($gameRequestCopy);
+        $patchStoreFuncResAction = trim(strval($GLOBALS["PATCH_STORE_FUNC_RES_ACTION"] ?? ""));
+        $skipPatchStoreFuncResLog = $patchStoreFuncResAction !== ""
+            && function_exists('isNarratorPrivateActionName')
+            && isNarratorPrivateActionName($patchStoreFuncResAction);
+
+        if (
+            !$skipPatchStoreFuncResLog
+            && $patchStoreFuncResAction !== ''
+            && function_exists('herikaActionCatalogMetadataFlagEnabled')
+            && herikaActionCatalogMetadataFlagEnabled($patchStoreFuncResAction, 'suppress_placeholder_infoaction')
+        ) {
+            $skipPatchStoreFuncResLog = true;
+        }
+
+        if (!$skipPatchStoreFuncResLog) {
+            $gameRequestCopy=$gameRequest;
+            $gameRequestCopy[0]="infoaction";
+            $gameRequestCopy[3]=$GLOBALS["PATCH_STORE_FUNC_RES"];
+            logEvent($gameRequestCopy);
+        }
+
+        unset($GLOBALS["PATCH_STORE_FUNC_RES"], $GLOBALS["PATCH_STORE_FUNC_RES_ACTION"]);
     }
     ///// PATCH
 

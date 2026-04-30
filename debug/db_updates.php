@@ -271,6 +271,264 @@ if ($checkVersion("core_action") < 20260428001) {
     Logger::info("Applied patch core_action 20260428001");
 }
 
+if ($checkVersion("core_action") < 20260429001) {
+    Logger::debug("Applying core_action 20260429001 - purge deprecated CHIM-Campfire imported actions");
+
+    $db->execQuery("
+        DELETE FROM public.core_action_custom
+        WHERE LOWER(code_name) LIKE 'extcmdchimcampfire_%'
+           OR COALESCE(LOWER(metadata->>'source'), '') = 'chim-campfire'
+           OR COALESCE(LOWER(metadata->>'integration'), '') = 'campfire'
+           OR COALESCE(LOWER(metadata->>'bridge_script'), '') = 'chimcampfire'
+           OR COALESCE(LOWER(metadata->>'import_filename'), '') = 'campfire_actions.csv'
+    ");
+
+    $updateVersion("core_action", 20260429001);
+    Logger::info("Applied patch core_action 20260429001");
+}
+
+if ($checkVersion("core_action") < 20260429002) {
+    Logger::debug("Applying core_action 20260429002 - add available_to_narrator field");
+
+    $db->execQuery("ALTER TABLE public.core_action ADD COLUMN IF NOT EXISTS available_to_narrator BOOLEAN NOT NULL DEFAULT FALSE");
+    $db->execQuery("ALTER TABLE public.core_action_custom ADD COLUMN IF NOT EXISTS available_to_narrator BOOLEAN NOT NULL DEFAULT FALSE");
+
+    $db->execQuery("UPDATE public.core_action SET available_to_narrator = FALSE WHERE available_to_narrator IS NULL");
+    $db->execQuery("UPDATE public.core_action_custom SET available_to_narrator = FALSE WHERE available_to_narrator IS NULL");
+
+    $db->execQuery("CREATE INDEX IF NOT EXISTS idx_core_action_available_to_narrator ON public.core_action (available_to_narrator)");
+    $db->execQuery("CREATE INDEX IF NOT EXISTS idx_core_action_custom_available_to_narrator ON public.core_action_custom (available_to_narrator)");
+
+    $db->execQuery("DROP VIEW IF EXISTS public.combined_core_action");
+    $db->execQuery("
+        CREATE VIEW public.combined_core_action AS
+        SELECT
+            c.id,
+            c.code_name,
+            c.action_name,
+            c.description,
+            c.return_message,
+            c.available_to_npc,
+            c.available_to_followers,
+            c.available_to_narrator,
+            c.is_activated,
+            c.parameters_json,
+            c.metadata,
+            c.game_function,
+            c.import_version,
+            c.script_proxy_program,
+            c.created_at,
+            c.updated_at
+        FROM public.core_action_custom c
+        UNION ALL
+        SELECT
+            b.id,
+            b.code_name,
+            b.action_name,
+            b.description,
+            b.return_message,
+            b.available_to_npc,
+            b.available_to_followers,
+            b.available_to_narrator,
+            b.is_activated,
+            b.parameters_json,
+            b.metadata,
+            b.game_function,
+            b.import_version,
+            b.script_proxy_program,
+            b.created_at,
+            b.updated_at
+        FROM public.core_action b
+        LEFT JOIN public.core_action_custom c ON LOWER(b.code_name) = LOWER(c.code_name)
+        WHERE c.code_name IS NULL
+    ");
+
+    $updateVersion("core_action", 20260429002);
+    Logger::info("Applied patch core_action 20260429002");
+}
+
+if ($checkVersion("core_action") < 20260429003) {
+    Logger::debug("Applying core_action 20260429003 - add narrator TeleportNPC baseline action");
+
+    $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            available_to_narrator,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        ) VALUES (
+            'TeleportNPC',
+            'Teleport_NPC',
+            'Narrator-only action. Teleports a chosen NPC, actor, or #PLAYER_NAME# to a named location from the location database. Put who to teleport in the target field and the destination in the item field.',
+            '#TARGET# teleports to #ITEM#.',
+            FALSE,
+            FALSE,
+            TRUE,
+            TRUE,
+            '{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"Actor to teleport. Use #PLAYER_NAME#, PLAYER, or me to teleport the player.\"},\"item\":{\"type\":\"string\",\"description\":\"REQUIRED: destination location name from the location database.\"}},\"required\":[\"item\"]}'::jsonb,
+            '{\"dispatch\":\"rolecommand\",\"builtin\":true,\"status\":\"active\",\"source\":\"functions.php\"}'::jsonb,
+            TRUE,
+            0,
+            NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ");
+
+    $updateVersion("core_action", 20260429003);
+    Logger::info("Applied patch core_action 20260429003");
+}
+
+if ($checkVersion("core_action") < 20260429004) {
+    Logger::debug("Applying core_action 20260429004 - add narrator SpawnItem baseline action");
+
+    $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            available_to_narrator,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        ) VALUES (
+            'SpawnItem',
+            'Spawn_Item',
+            'Narrator-only action. Spawns a named item from the descriptions database and gives it to a target actor or #PLAYER_NAME#. Put the recipient in the target field, the item name in the item field, and the quantity in the amount field.',
+            '#TARGET# receives #ITEM#.',
+            FALSE,
+            FALSE,
+            TRUE,
+            TRUE,
+            '{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"Recipient actor. Use #PLAYER_NAME#, PLAYER, or me to give the item to the player.\"},\"item\":{\"type\":\"string\",\"description\":\"REQUIRED: item name from the descriptions database.\"},\"amount\":{\"type\":\"integer\",\"description\":\"Quantity to spawn and give (default: 1).\"}},\"required\":[\"item\"]}'::jsonb,
+            '{\"dispatch\":\"rolecommand\",\"builtin\":true,\"status\":\"active\",\"source\":\"functions.php\"}'::jsonb,
+            TRUE,
+            0,
+            NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ");
+
+    $updateVersion("core_action", 20260429004);
+    Logger::info("Applied patch core_action 20260429004");
+}
+
+if ($checkVersion("core_action") < 20260429005) {
+    Logger::debug("Applying core_action 20260429005 - normalize narrator action descriptions");
+
+    $db->execQuery("
+        UPDATE public.core_action
+        SET
+            description = CASE
+                WHEN code_name = 'SpawnItem' THEN 'Create a named item from the descriptions database and give it to a target actor or #PLAYER_NAME#.'
+                WHEN code_name = 'TeleportNPC' THEN 'Teleport a chosen NPC, actor, or #PLAYER_NAME# to a named location from the location database.'
+                ELSE description
+            END,
+            parameters_json = CASE
+                WHEN code_name = 'SpawnItem' THEN '{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"Recipient actor. Use #PLAYER_NAME#, PLAYER, or me to give the item to the player.\"},\"item\":{\"type\":\"string\",\"description\":\"REQUIRED: item name from the descriptions database.\"},\"amount\":{\"type\":\"integer\",\"description\":\"Quantity to spawn and give (default: 1).\"}},\"required\":[\"item\"]}'::jsonb
+                WHEN code_name = 'TeleportNPC' THEN '{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"Actor to teleport. Use #PLAYER_NAME#, PLAYER, or me to teleport the player.\"},\"item\":{\"type\":\"string\",\"description\":\"REQUIRED: destination location name from the location database.\"}},\"required\":[\"item\"]}'::jsonb
+                ELSE parameters_json
+            END
+        WHERE code_name IN ('SpawnItem', 'TeleportNPC')
+    ");
+
+    $updateVersion("core_action", 20260429005);
+    Logger::info("Applied patch core_action 20260429005");
+}
+
+if ($checkVersion("core_action") < 20260429006) {
+    Logger::debug("Applying core_action 20260429006 - add narrator KillTarget baseline action");
+
+    $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            available_to_narrator,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        ) VALUES (
+            'KillTarget',
+            'Kill_Target',
+            'Kill a chosen NPC, actor, or #PLAYER_NAME# immediately.',
+            '#TARGET# is killed.',
+            FALSE,
+            FALSE,
+            TRUE,
+            TRUE,
+            '{\"type\":\"object\",\"required\":[\"target\"],\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"REQUIRED: actor to kill. Use #PLAYER_NAME#, PLAYER, or me to kill the player.\"}}}'::jsonb,
+            '{\"source\":\"functions.php\",\"status\":\"active\",\"builtin\":true,\"dispatch\":\"rolecommand\"}'::jsonb,
+            TRUE,
+            0,
+            NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ");
+
+    $updateVersion("core_action", 20260429006);
+    Logger::info("Applied patch core_action 20260429006");
+}
+
 if ($checkVersion("game_plugins") < 20260427001) {
     Logger::debug("Applying game_plugins 20260427001 - create loaded plugin manifest table");
 

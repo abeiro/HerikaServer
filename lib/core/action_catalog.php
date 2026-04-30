@@ -107,6 +107,15 @@ function herikaGetFollowerDefaultActionCodes()
     ];
 }
 
+function herikaGetNarratorDefaultActionCodes()
+{
+    return [
+        'KillTarget',
+        'SpawnItem',
+        'TeleportNPC',
+    ];
+}
+
 function herikaActionCatalogSqlBool($value)
 {
     return $value ? 'TRUE' : 'FALSE';
@@ -956,7 +965,7 @@ function herikaActionCatalogBuildBaseMetadata($codeName, $scriptProxyProgram = n
     $dispatch = 'plugin_command';
     if ($scriptProxyProgram !== null) {
         $dispatch = 'script_proxy';
-    } elseif ($codeName === 'Training') {
+    } elseif (in_array($codeName, ['Training', 'TeleportNPC', 'SpawnItem', 'KillTarget'], true)) {
         $dispatch = 'rolecommand';
     }
 
@@ -1585,7 +1594,10 @@ function herikaBuildActionCatalogSeedRows($actionNames, $descriptions, $returnMe
 {
     $npcDefaults = herikaGetNpcDefaultActionCodes();
     $followerDefaults = herikaGetFollowerDefaultActionCodes();
-    $activationDefaults = count($defaultEnabledCodes) > 0 ? $defaultEnabledCodes : array_unique(array_merge($npcDefaults, $followerDefaults));
+    $narratorDefaults = herikaGetNarratorDefaultActionCodes();
+    $activationDefaults = count($defaultEnabledCodes) > 0
+        ? $defaultEnabledCodes
+        : array_unique(array_merge($npcDefaults, $followerDefaults, $narratorDefaults));
     $allCodeNames = array_unique(array_merge(
         array_keys(is_array($actionNames) ? $actionNames : []),
         array_keys(is_array($descriptions) ? $descriptions : []),
@@ -1594,6 +1606,7 @@ function herikaBuildActionCatalogSeedRows($actionNames, $descriptions, $returnMe
         $activationDefaults,
         $npcDefaults,
         $followerDefaults,
+        $narratorDefaults,
         array_keys(is_array($functionDefinitionsByCode) ? $functionDefinitionsByCode : [])
     ));
 
@@ -1611,6 +1624,7 @@ function herikaBuildActionCatalogSeedRows($actionNames, $descriptions, $returnMe
 
         $availableToNpc = in_array($codeName, $npcDefaults, true);
         $availableToFollowers = in_array($codeName, $followerDefaults, true);
+        $availableToNarrator = in_array($codeName, $narratorDefaults, true);
         $isActivated = in_array($codeName, $activationDefaults, true) || in_array($codeName, $currentEnabledCodes, true);
         $functionDefinition = is_array($functionDefinitionsByCode[$codeName] ?? null) ? $functionDefinitionsByCode[$codeName] : [];
         $parameters = herikaActionCatalogNormalizeParameterSchema($functionDefinition['parameters'] ?? null);
@@ -1626,6 +1640,7 @@ function herikaBuildActionCatalogSeedRows($actionNames, $descriptions, $returnMe
             'return_message' => isset($returnMessages[$codeName]) ? herikaNormalizeActionCatalogDisplayText($returnMessages[$codeName]) : '',
             'available_to_npc' => $availableToNpc,
             'available_to_followers' => $availableToFollowers,
+            'available_to_narrator' => $availableToNarrator,
             'is_activated' => $isActivated,
             'parameters_json' => $parameters,
             'metadata' => $metadata,
@@ -1704,6 +1719,7 @@ function herikaSyncActionCatalogBaseRows($rowsByCode, $updateCustomRows = true)
                 return_message,
                 available_to_npc,
                 available_to_followers,
+                available_to_narrator,
                 is_activated,
                 parameters_json,
                 metadata,
@@ -1717,6 +1733,7 @@ function herikaSyncActionCatalogBaseRows($rowsByCode, $updateCustomRows = true)
                 " . herikaActionCatalogSqlText($row['return_message'] ?? '') . ",
                 " . herikaActionCatalogSqlBool(!empty($row['available_to_npc'])) . ",
                 " . herikaActionCatalogSqlBool(!empty($row['available_to_followers'])) . ",
+                " . herikaActionCatalogSqlBool(!empty($row['available_to_narrator'])) . ",
                 " . herikaActionCatalogSqlBool(!empty($row['is_activated'])) . ",
                 " . herikaActionCatalogSqlJson($row['parameters_json'] ?? []) . ",
                 " . herikaActionCatalogSqlJson($row['metadata'] ?? []) . ",
@@ -1730,6 +1747,7 @@ function herikaSyncActionCatalogBaseRows($rowsByCode, $updateCustomRows = true)
                 return_message = EXCLUDED.return_message,
                 available_to_npc = EXCLUDED.available_to_npc,
                 available_to_followers = EXCLUDED.available_to_followers,
+                available_to_narrator = EXCLUDED.available_to_narrator,
                 is_activated = EXCLUDED.is_activated,
                 parameters_json = EXCLUDED.parameters_json,
                 metadata = EXCLUDED.metadata,
@@ -1748,6 +1766,7 @@ function herikaSyncActionCatalogBaseRows($rowsByCode, $updateCustomRows = true)
                     return_message = " . herikaActionCatalogSqlText($row['return_message'] ?? '') . ",
                     available_to_npc = " . herikaActionCatalogSqlBool(!empty($row['available_to_npc'])) . ",
                     available_to_followers = " . herikaActionCatalogSqlBool(!empty($row['available_to_followers'])) . ",
+                    available_to_narrator = " . herikaActionCatalogSqlBool(!empty($row['available_to_narrator'])) . ",
                     parameters_json = " . herikaActionCatalogSqlJson($row['parameters_json'] ?? []) . ",
                     metadata = " . herikaActionCatalogSqlJson($preservedCustomMetadata) . ",
                     game_function = " . herikaActionCatalogSqlBool(!empty($row['game_function'])) . ",
@@ -1860,6 +1879,7 @@ function herikaImportLegacyActionPreferences($rowsByCode)
                 return_message,
                 available_to_npc,
                 available_to_followers,
+                available_to_narrator,
                 is_activated,
                 parameters_json,
                 metadata,
@@ -1873,6 +1893,7 @@ function herikaImportLegacyActionPreferences($rowsByCode)
                 " . herikaActionCatalogSqlText($row['return_message'] ?? '') . ",
                 " . herikaActionCatalogSqlBool(!empty($row['available_to_npc'])) . ",
                 " . herikaActionCatalogSqlBool(!empty($row['available_to_followers'])) . ",
+                " . herikaActionCatalogSqlBool(!empty($row['available_to_narrator'])) . ",
                 " . herikaActionCatalogSqlBool(isset($selectedMap[$row['code_name']])) . ",
                 " . herikaActionCatalogSqlJson($row['parameters_json'] ?? []) . ",
                 " . herikaActionCatalogSqlJson($row['metadata'] ?? []) . ",
@@ -1886,6 +1907,7 @@ function herikaImportLegacyActionPreferences($rowsByCode)
                 return_message = EXCLUDED.return_message,
                 available_to_npc = EXCLUDED.available_to_npc,
                 available_to_followers = EXCLUDED.available_to_followers,
+                available_to_narrator = EXCLUDED.available_to_narrator,
                 is_activated = EXCLUDED.is_activated,
                 parameters_json = EXCLUDED.parameters_json,
                 metadata = EXCLUDED.metadata,
@@ -1919,10 +1941,12 @@ function herikaGetActionCatalogRowsByCode()
             return_message,
             available_to_npc,
             available_to_followers,
+            available_to_narrator,
             is_activated,
             parameters_json,
             metadata,
             game_function,
+            import_version,
             script_proxy_program
         FROM public.combined_core_action
     ");
@@ -1940,6 +1964,7 @@ function herikaGetActionCatalogRowsByCode()
             'return_message' => strval($row['return_message'] ?? ''),
             'available_to_npc' => herikaActionCatalogToBool($row['available_to_npc'] ?? false),
             'available_to_followers' => herikaActionCatalogToBool($row['available_to_followers'] ?? false),
+            'available_to_narrator' => herikaActionCatalogToBool($row['available_to_narrator'] ?? false),
             'is_activated' => herikaActionCatalogToBool($row['is_activated'] ?? false),
             'parameters_json' => herikaActionCatalogNormalizeParameterSchema(
                 herikaActionCatalogDecodeJson($row['parameters_json'] ?? [], [])
@@ -1963,6 +1988,86 @@ function herikaGetActionCatalogRow($codeName)
 
     $rowsByCode = herikaGetActionCatalogRowsByCode();
     return $rowsByCode[$codeName] ?? null;
+}
+
+function herikaActionCatalogMetadataFlagEnabled($codeName, $flagName): bool
+{
+    $flagName = trim(strval($flagName));
+    if ($flagName === '') {
+        return false;
+    }
+
+    $row = herikaGetActionCatalogRow($codeName);
+    if (!is_array($row)) {
+        return false;
+    }
+
+    $metadata = $row['metadata'] ?? [];
+    if (!is_array($metadata) || !array_key_exists($flagName, $metadata)) {
+        return false;
+    }
+
+    return herikaActionCatalogToBool($metadata[$flagName]);
+}
+
+function herikaFindActionCatalogRowByNameOrCode($actionNameOrCode, $requireCurrentMode = false)
+{
+    $actionNameOrCode = trim(strval($actionNameOrCode));
+    if ($actionNameOrCode === '') {
+        return null;
+    }
+
+    $rowsByCode = herikaGetActionCatalogRowsByCode();
+    if (count($rowsByCode) === 0) {
+        return null;
+    }
+
+    $normalizedSearchName = function_exists('herikaNormalizeActionCatalogDisplayActionName')
+        ? trim(strval(herikaNormalizeActionCatalogDisplayActionName($actionNameOrCode)))
+        : $actionNameOrCode;
+
+    $matchedRow = null;
+    foreach ($rowsByCode as $row) {
+        if (!is_array($row) || empty($row['code_name'])) {
+            continue;
+        }
+        if ($requireCurrentMode && !herikaActionCatalogRowIsAvailableInCurrentMode($row)) {
+            continue;
+        }
+
+        $rowCodeName = trim(strval($row['code_name'] ?? ''));
+        $rawActionName = trim(strval($row['action_name'] ?? ''));
+        $runtimeActionName = function_exists('herikaFormatActionPromptTemplate')
+            ? trim(strval(herikaFormatActionPromptTemplate($rawActionName)))
+            : $rawActionName;
+        $normalizedRuntimeActionName = function_exists('herikaNormalizeActionCatalogDisplayActionName')
+            ? trim(strval(herikaNormalizeActionCatalogDisplayActionName($runtimeActionName)))
+            : $runtimeActionName;
+
+        $isMatch = strcasecmp($rowCodeName, $actionNameOrCode) === 0
+            || strcasecmp($rawActionName, $actionNameOrCode) === 0
+            || strcasecmp($runtimeActionName, $actionNameOrCode) === 0
+            || ($normalizedSearchName !== '' && strcasecmp($normalizedRuntimeActionName, $normalizedSearchName) === 0);
+        if (!$isMatch) {
+            continue;
+        }
+
+        if ($matchedRow === null || herikaActionCatalogShouldPreferRowForActionName($row, $matchedRow)) {
+            $matchedRow = $row;
+        }
+    }
+
+    return $matchedRow;
+}
+
+function herikaResolveActionCatalogCodeName($actionNameOrCode, $requireCurrentMode = false)
+{
+    $row = herikaFindActionCatalogRowByNameOrCode($actionNameOrCode, $requireCurrentMode);
+    if (!is_array($row) || empty($row['code_name'])) {
+        return false;
+    }
+
+    return trim(strval($row['code_name']));
 }
 
 function herikaActionCatalogGetCustomConfigValue($codeName, $configKey, $default = null)
@@ -2003,7 +2108,11 @@ function herikaLoadEnabledActionCodesForMode($isNpc, $applyRequirements = false)
             continue;
         }
 
-        if ($isNpc && !empty($row['available_to_npc'])) {
+        if (herikaActionCatalogIsNarratorMode()) {
+            if (!empty($row['available_to_narrator'])) {
+                $enabledCodes[] = $codeName;
+            }
+        } elseif ($isNpc && !empty($row['available_to_npc'])) {
             $enabledCodes[] = $codeName;
         } elseif (!$isNpc && !empty($row['available_to_followers'])) {
             $enabledCodes[] = $codeName;
@@ -2028,6 +2137,25 @@ function herikaActionCatalogIsActionEnabled($codeName)
     return !empty($rowsByCode[$codeName]['is_activated']);
 }
 
+function herikaActionCatalogIsNarratorMode()
+{
+    $requestType = strtolower(trim(strval($GLOBALS["gameRequest"][0] ?? '')));
+    if (in_array($requestType, [
+        'narrator_inputtext',
+        'narration',
+        'narrator_welcome',
+        'narrator_quest_comment',
+    ], true)) {
+        return true;
+    }
+
+    if (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) {
+        return true;
+    }
+
+    return strcasecmp(trim(strval($GLOBALS["HERIKA_NAME"] ?? '')), 'The Narrator') === 0;
+}
+
 function herikaActionCatalogBuildFunctionEntryFromRow($row)
 {
     if (!is_array($row) || empty($row['code_name']) || trim(strval($row['action_name'] ?? '')) === '') {
@@ -2047,6 +2175,10 @@ function herikaActionCatalogBuildFunctionEntryFromRow($row)
 
 function herikaActionCatalogRowIsAvailableInCurrentMode($row)
 {
+    if (herikaActionCatalogIsNarratorMode()) {
+        return !empty($row['available_to_narrator']);
+    }
+
     $isNpcMode = !empty($GLOBALS["IS_NPC"]);
     if ($isNpcMode) {
         return !empty($row['available_to_npc']);
@@ -2270,6 +2402,7 @@ function herikaActionCatalogUpsertCustomToggle($codeName, $enabled)
             return_message,
             available_to_npc,
             available_to_followers,
+            available_to_narrator,
             parameters_json,
             metadata,
             game_function,
@@ -2294,6 +2427,7 @@ function herikaActionCatalogUpsertCustomToggle($codeName, $enabled)
             return_message,
             available_to_npc,
             available_to_followers,
+            available_to_narrator,
             is_activated,
             parameters_json,
             metadata,
@@ -2307,6 +2441,7 @@ function herikaActionCatalogUpsertCustomToggle($codeName, $enabled)
             " . herikaActionCatalogSqlText($row['return_message'] ?? '') . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_npc'] ?? false)) . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_followers'] ?? false)) . ",
+            " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_narrator'] ?? false)) . ",
             " . herikaActionCatalogSqlBool((bool) $enabled) . ",
             " . herikaActionCatalogSqlJson($row['parameters_json'] ?? []) . ",
             " . herikaActionCatalogSqlJson($row['metadata'] ?? []) . ",
@@ -2320,6 +2455,7 @@ function herikaActionCatalogUpsertCustomToggle($codeName, $enabled)
             return_message = EXCLUDED.return_message,
             available_to_npc = EXCLUDED.available_to_npc,
             available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
             is_activated = EXCLUDED.is_activated,
             parameters_json = EXCLUDED.parameters_json,
             metadata = EXCLUDED.metadata,
@@ -2350,6 +2486,7 @@ function herikaActionCatalogUpsertCustomConfigValue($codeName, $configKey, $valu
             return_message,
             available_to_npc,
             available_to_followers,
+            available_to_narrator,
             is_activated,
             parameters_json,
             metadata,
@@ -2384,6 +2521,7 @@ function herikaActionCatalogUpsertCustomConfig($codeName, $configValues)
             return_message,
             available_to_npc,
             available_to_followers,
+            available_to_narrator,
             is_activated,
             parameters_json,
             metadata,
@@ -2422,6 +2560,7 @@ function herikaActionCatalogUpsertCustomConfig($codeName, $configValues)
             return_message,
             available_to_npc,
             available_to_followers,
+            available_to_narrator,
             is_activated,
             parameters_json,
             metadata,
@@ -2435,6 +2574,7 @@ function herikaActionCatalogUpsertCustomConfig($codeName, $configValues)
             " . herikaActionCatalogSqlText($row['return_message'] ?? '') . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_npc'] ?? false)) . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_followers'] ?? false)) . ",
+            " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_narrator'] ?? false)) . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['is_activated'] ?? false)) . ",
             " . herikaActionCatalogSqlJson($row['parameters_json'] ?? []) . ",
             " . herikaActionCatalogSqlJson($metadata) . ",
@@ -2448,6 +2588,7 @@ function herikaActionCatalogUpsertCustomConfig($codeName, $configValues)
             return_message = EXCLUDED.return_message,
             available_to_npc = EXCLUDED.available_to_npc,
             available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
             is_activated = EXCLUDED.is_activated,
             parameters_json = EXCLUDED.parameters_json,
             metadata = EXCLUDED.metadata,
@@ -2477,6 +2618,7 @@ function herikaActionCatalogUpsertCustomParameters($codeName, $parameters)
             return_message,
             available_to_npc,
             available_to_followers,
+            available_to_narrator,
             is_activated,
             parameters_json,
             metadata,
@@ -2505,6 +2647,7 @@ function herikaActionCatalogUpsertCustomParameters($codeName, $parameters)
             return_message,
             available_to_npc,
             available_to_followers,
+            available_to_narrator,
             is_activated,
             parameters_json,
             metadata,
@@ -2518,6 +2661,7 @@ function herikaActionCatalogUpsertCustomParameters($codeName, $parameters)
             " . herikaActionCatalogSqlText($row['return_message'] ?? '') . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_npc'] ?? false)) . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_followers'] ?? false)) . ",
+            " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_narrator'] ?? false)) . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['is_activated'] ?? false)) . ",
             " . herikaActionCatalogSqlJson($normalizedParameters) . ",
             " . herikaActionCatalogSqlJson($row['metadata'] ?? []) . ",
@@ -2531,6 +2675,7 @@ function herikaActionCatalogUpsertCustomParameters($codeName, $parameters)
             return_message = EXCLUDED.return_message,
             available_to_npc = EXCLUDED.available_to_npc,
             available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
             is_activated = EXCLUDED.is_activated,
             parameters_json = EXCLUDED.parameters_json,
             metadata = EXCLUDED.metadata,
@@ -2560,6 +2705,7 @@ function herikaActionCatalogUpsertCustomTextFields($codeName, $fieldValues)
             return_message,
             available_to_npc,
             available_to_followers,
+            available_to_narrator,
             is_activated,
             parameters_json,
             metadata,
@@ -2591,6 +2737,7 @@ function herikaActionCatalogUpsertCustomTextFields($codeName, $fieldValues)
             return_message,
             available_to_npc,
             available_to_followers,
+            available_to_narrator,
             is_activated,
             parameters_json,
             metadata,
@@ -2604,6 +2751,7 @@ function herikaActionCatalogUpsertCustomTextFields($codeName, $fieldValues)
             " . herikaActionCatalogSqlText($returnMessage) . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_npc'] ?? false)) . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_followers'] ?? false)) . ",
+            " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_narrator'] ?? false)) . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['is_activated'] ?? false)) . ",
             " . herikaActionCatalogSqlJson($row['parameters_json'] ?? []) . ",
             " . herikaActionCatalogSqlJson($row['metadata'] ?? []) . ",
@@ -2617,6 +2765,7 @@ function herikaActionCatalogUpsertCustomTextFields($codeName, $fieldValues)
             return_message = EXCLUDED.return_message,
             available_to_npc = EXCLUDED.available_to_npc,
             available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
             is_activated = EXCLUDED.is_activated,
             parameters_json = EXCLUDED.parameters_json,
             metadata = EXCLUDED.metadata,
@@ -2678,6 +2827,7 @@ function herikaActionCatalogUpsertCustomRow($row)
             return_message,
             available_to_npc,
             available_to_followers,
+            available_to_narrator,
             is_activated,
             parameters_json,
             metadata,
@@ -2691,6 +2841,7 @@ function herikaActionCatalogUpsertCustomRow($row)
             " . herikaActionCatalogSqlText($row['return_message'] ?? '') . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_npc'] ?? false)) . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_followers'] ?? false)) . ",
+            " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['available_to_narrator'] ?? false)) . ",
             " . herikaActionCatalogSqlBool(herikaActionCatalogToBool($row['is_activated'] ?? true)) . ",
             " . herikaActionCatalogSqlJson($parameters) . ",
             " . herikaActionCatalogSqlJson($metadata) . ",
@@ -2704,6 +2855,7 @@ function herikaActionCatalogUpsertCustomRow($row)
             return_message = EXCLUDED.return_message,
             available_to_npc = EXCLUDED.available_to_npc,
             available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
             is_activated = EXCLUDED.is_activated,
             parameters_json = EXCLUDED.parameters_json,
             metadata = EXCLUDED.metadata,
