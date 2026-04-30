@@ -42,6 +42,7 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'HireCarriage',
     'HireFerry',
     'SpawnItem',
+    'SpawnNPC',
     'CreateNewNPC',
     'TeleportNPC',
     'AddBounty',
@@ -383,6 +384,295 @@ function herikaResolveSpawnItemDescriptionMatch($requestedItemName)
     return ['ok' => true] + $bestCandidate;
 }
 
+function herikaNormalizeSpawnNpcTemplateKey($value)
+{
+    $value = strtolower(trim(strval($value)));
+    if ($value === '') {
+        return '';
+    }
+
+    $value = preg_replace('/[^a-z0-9]+/u', '_', $value);
+    $value = preg_replace('/_+/u', '_', $value);
+    return trim(strval($value), '_');
+}
+
+function herikaGetSpawnNpcTemplateGenderVariant($normalizedKey)
+{
+    $normalizedKey = herikaNormalizeSpawnNpcTemplateKey($normalizedKey);
+    if (strpos($normalizedKey, 'male_') === 0) {
+        return 'male';
+    }
+
+    if (strpos($normalizedKey, 'female_') === 0) {
+        return 'female';
+    }
+
+    return '';
+}
+
+function herikaStripSpawnNpcTemplateGenderPrefix($normalizedKey)
+{
+    $normalizedKey = herikaNormalizeSpawnNpcTemplateKey($normalizedKey);
+    if (strpos($normalizedKey, 'male_') === 0) {
+        return substr($normalizedKey, 5);
+    }
+
+    if (strpos($normalizedKey, 'female_') === 0) {
+        return substr($normalizedKey, 7);
+    }
+
+    return $normalizedKey;
+}
+
+function herikaTokenizeSpawnNpcTemplateKey($normalizedKey)
+{
+    $normalizedKey = herikaNormalizeSpawnNpcTemplateKey($normalizedKey);
+    if ($normalizedKey === '') {
+        return [];
+    }
+
+    $tokens = preg_split('/_+/u', $normalizedKey);
+    $tokens = array_values(array_filter(array_map('trim', (array) $tokens), function ($token) {
+        return $token !== '';
+    }));
+
+    return array_values(array_unique($tokens));
+}
+
+function herikaDetectSpawnNpcGenderHint($text)
+{
+    $normalizedText = herikaNormalizeSpawnNpcTemplateKey($text);
+    if ($normalizedText === '') {
+        return '';
+    }
+
+    $tokens = herikaTokenizeSpawnNpcTemplateKey($normalizedText);
+    if (in_array('female', $tokens, true) || strpos($normalizedText, 'female_') === 0) {
+        return 'female';
+    }
+
+    if (in_array('male', $tokens, true) || strpos($normalizedText, 'male_') === 0) {
+        return 'male';
+    }
+
+    return '';
+}
+
+function herikaGetSpawnNpcTemplateKeys()
+{
+    if (!function_exists('quest_reference_active_keys')) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'quest_reference_data.php');
+    }
+
+    $keys = [];
+    foreach (['npc_own_templates', 'npc_templates'] as $datasetName) {
+        foreach ((array) quest_reference_active_keys($datasetName) as $templateKey) {
+            $templateKey = trim(strval($templateKey));
+            if ($templateKey === '') {
+                continue;
+            }
+            $keys[$templateKey] = true;
+        }
+    }
+
+    $result = array_keys($keys);
+    natcasesort($result);
+    return array_values($result);
+}
+
+function herikaResolveSpawnNpcTemplateMatch($requestedTemplateKey, $contextText = '')
+{
+    if (!function_exists('quest_reference_load_dataset')) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'quest_reference_data.php');
+    }
+
+    $requestedTemplateKey = trim(strval($requestedTemplateKey));
+    if ($requestedTemplateKey === '') {
+        return ['ok' => false, 'error' => 'missing_template_key'];
+    }
+
+    $normalizedRequestedKey = herikaNormalizeSpawnNpcTemplateKey($requestedTemplateKey);
+    if ($normalizedRequestedKey === '') {
+        return ['ok' => false, 'error' => 'missing_template_key'];
+    }
+
+    $requestedAliasKey = herikaStripSpawnNpcTemplateGenderPrefix($normalizedRequestedKey);
+    $requestedTokens = herikaTokenizeSpawnNpcTemplateKey($normalizedRequestedKey);
+    $requestedAliasTokens = herikaTokenizeSpawnNpcTemplateKey($requestedAliasKey);
+    $genderHint = herikaDetectSpawnNpcGenderHint($contextText);
+    if ($genderHint === '') {
+        $genderHint = herikaGetSpawnNpcTemplateGenderVariant($normalizedRequestedKey);
+    }
+
+    $datasets = [
+        'npc_own_templates' => (array) quest_reference_load_dataset('npc_own_templates', true),
+        'npc_templates' => (array) quest_reference_load_dataset('npc_templates', true),
+    ];
+
+    $exactCandidate = null;
+    $fallbackCandidates = [];
+
+    foreach ($datasets as $datasetName => $datasetRows) {
+        foreach ($datasetRows as $templateKey => $formIds) {
+            $templateKey = trim(strval($templateKey));
+            if ($templateKey === '' || !is_array($formIds) || count($formIds) === 0) {
+                continue;
+            }
+
+            $normalizedTemplateKey = herikaNormalizeSpawnNpcTemplateKey($templateKey);
+            if ($normalizedTemplateKey === '') {
+                continue;
+            }
+
+            $runtimeFormIds = [];
+            foreach ($formIds as $formId) {
+                $normalizedFormId = function_exists('quest_reference_normalize_formid')
+                    ? quest_reference_normalize_formid($formId)
+                    : null;
+                if ($normalizedFormId === null || intval($normalizedFormId) < 0) {
+                    continue;
+                }
+                $runtimeFormIds[] = intval($normalizedFormId);
+            }
+
+            $runtimeFormIds = array_values(array_unique($runtimeFormIds));
+            if (count($runtimeFormIds) === 0) {
+                continue;
+            }
+
+            $candidate = [
+                'dataset' => $datasetName,
+                'template_key' => $templateKey,
+                'normalized_key' => $normalizedTemplateKey,
+                'alias_key' => herikaStripSpawnNpcTemplateGenderPrefix($normalizedTemplateKey),
+                'gender_variant' => herikaGetSpawnNpcTemplateGenderVariant($normalizedTemplateKey),
+                'runtime_formids' => $runtimeFormIds,
+                'runtime_formid' => sprintf('%08X', $runtimeFormIds[0] & 0xFFFFFFFF),
+                'match_reason' => '',
+                'score' => 0,
+            ];
+
+            $isOwnTemplate = ($datasetName === 'npc_own_templates');
+            if ($normalizedTemplateKey === $normalizedRequestedKey) {
+                $candidate['match_reason'] = 'exact_key';
+                $candidate['score'] = $isOwnTemplate ? 1000 : 950;
+                if ($exactCandidate === null || $candidate['score'] > $exactCandidate['score']) {
+                    $exactCandidate = $candidate;
+                }
+                continue;
+            }
+
+            $score = 0;
+            $reason = '';
+
+            $aliasKey = strval($candidate['alias_key']);
+            $aliasTokens = herikaTokenizeSpawnNpcTemplateKey($aliasKey);
+            $candidateTokens = herikaTokenizeSpawnNpcTemplateKey($normalizedTemplateKey);
+
+            $matchedRequestedTokenCount = 0;
+            foreach ($requestedAliasTokens as $token) {
+                if (in_array($token, $aliasTokens, true) || in_array($token, $candidateTokens, true)) {
+                    $matchedRequestedTokenCount++;
+                }
+            }
+
+            if ($aliasKey !== '' && $aliasKey === $requestedAliasKey) {
+                $score = $isOwnTemplate ? 980 : 970;
+                $reason = 'exact_alias';
+            } elseif (
+                count($requestedAliasTokens) > 0
+                && $matchedRequestedTokenCount === count($requestedAliasTokens)
+            ) {
+                $score = $isOwnTemplate ? 910 : 870;
+                $reason = 'token_subset';
+            } elseif ($matchedRequestedTokenCount > 0) {
+                $score = ($isOwnTemplate ? 860 : 820) + min(30, $matchedRequestedTokenCount * 10);
+                $reason = 'token_overlap';
+            } elseif (strpos($normalizedTemplateKey, $normalizedRequestedKey) !== false || strpos($normalizedRequestedKey, $normalizedTemplateKey) !== false) {
+                $score = $isOwnTemplate ? 860 : 820;
+                $reason = 'partial_key';
+            } elseif ($aliasKey !== '' && (strpos($aliasKey, $requestedAliasKey) !== false || strpos($requestedAliasKey, $aliasKey) !== false)) {
+                $score = $isOwnTemplate ? 850 : 810;
+                $reason = 'partial_alias';
+            } else {
+                similar_text($normalizedTemplateKey, $normalizedRequestedKey, $similarityPercent);
+                if ($similarityPercent >= 72.0) {
+                    $score = intval(round($similarityPercent)) + ($isOwnTemplate ? 40 : 0);
+                    $reason = 'similar_key';
+                }
+            }
+
+            if ($score <= 0) {
+                continue;
+            }
+
+            if ($genderHint !== '' && strval($candidate['gender_variant']) === $genderHint) {
+                $score += 20;
+                $reason .= '_gender_hint';
+            }
+
+            $candidate['match_reason'] = $reason;
+            $candidate['score'] = $score;
+            $fallbackCandidates[] = $candidate;
+        }
+    }
+
+    if (is_array($exactCandidate)) {
+        return ['ok' => true] + $exactCandidate;
+    }
+
+    if (count($fallbackCandidates) === 0) {
+        return ['ok' => false, 'error' => 'no_template_match'];
+    }
+
+    usort($fallbackCandidates, function ($left, $right) {
+        $leftScore = intval($left['score'] ?? 0);
+        $rightScore = intval($right['score'] ?? 0);
+        if ($leftScore !== $rightScore) {
+            return ($leftScore > $rightScore) ? -1 : 1;
+        }
+
+        $leftDataset = strval($left['dataset'] ?? '');
+        $rightDataset = strval($right['dataset'] ?? '');
+        if ($leftDataset !== $rightDataset) {
+            return ($leftDataset === 'npc_own_templates') ? -1 : 1;
+        }
+
+        $leftGender = strval($left['gender_variant'] ?? '');
+        $rightGender = strval($right['gender_variant'] ?? '');
+        if ($leftGender !== $rightGender) {
+            if ($leftGender === 'male') {
+                return -1;
+            }
+            if ($rightGender === 'male') {
+                return 1;
+            }
+        }
+
+        return strcasecmp(strval($left['template_key'] ?? ''), strval($right['template_key'] ?? ''));
+    });
+
+    if (count($fallbackCandidates) > 1) {
+        $bestScore = intval($fallbackCandidates[0]['score'] ?? 0);
+        $runnerUpScore = intval($fallbackCandidates[1]['score'] ?? 0);
+        if (($bestScore - $runnerUpScore) < 5) {
+            $bestAlias = strval($fallbackCandidates[0]['alias_key'] ?? '');
+            $runnerUpAlias = strval($fallbackCandidates[1]['alias_key'] ?? '');
+            $bestFormId = strval($fallbackCandidates[0]['runtime_formid'] ?? '');
+            $runnerUpFormId = strval($fallbackCandidates[1]['runtime_formid'] ?? '');
+            if (
+                ($bestAlias !== '' && $bestAlias === $runnerUpAlias)
+                || ($bestFormId !== '' && $bestFormId === $runnerUpFormId)
+            ) {
+                return ['ok' => true] + $fallbackCandidates[0];
+            }
+            return ['ok' => false, 'error' => 'ambiguous_template_match', 'candidates' => array_slice($fallbackCandidates, 0, 5)];
+        }
+    }
+
+    return ['ok' => true] + $fallbackCandidates[0];
+}
+
 function herikaNormalizeNarratorActorTargetForRoleCommand($targetName, $defaultToPlayer = true)
 {
     $targetName = trim(strval($targetName));
@@ -661,6 +951,7 @@ $F_TRANSLATIONS_LOCAL["RentRoom"] = "#HERIKA_NAME# rents a room to #PLAYER_NAME#
 $F_TRANSLATIONS_LOCAL["HireCarriage"] = "#HERIKA_NAME# accepts {$hireCarriageCostText} for carriage travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
 $F_TRANSLATIONS_LOCAL["HireFerry"] = "#HERIKA_NAME# accepts {$hireFerryCostText} for ferry travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
 $F_TRANSLATIONS_LOCAL["SpawnItem"] = "Create a named item from the descriptions database and give it to a target actor or #PLAYER_NAME#.";
+$F_TRANSLATIONS_LOCAL["SpawnNPC"] = "Spawn one or more NPCs near #PLAYER_NAME# from the SNQE NPC template datasets. Put the template key in the target field and the spawn count in amount.";
 $F_TRANSLATIONS_LOCAL["CreateNewNPC"] = "Create and spawn a brand-new nearby NPC from a short creation brief. Put the creation brief in the target field and leave item and amount blank.";
 $F_TRANSLATIONS_LOCAL["TeleportNPC"] = "Teleport a chosen NPC, actor, or #PLAYER_NAME# to a named location from the location database.";
 $F_TRANSLATIONS_LOCAL["KillTarget"] = "Kill a chosen NPC, actor, or #PLAYER_NAME# immediately.";
@@ -713,6 +1004,7 @@ $F_RETURNMESSAGES_LOCAL["RentRoom"] = "#HERIKA_NAME# rented a room to #PLAYER_NA
 $F_RETURNMESSAGES_LOCAL["HireCarriage"] = "#HERIKA_NAME# accepted the {$hireCarriageCostText} carriage fare to #TARGET# and ended the conversation.";
 $F_RETURNMESSAGES_LOCAL["HireFerry"] = "#HERIKA_NAME# accepted the {$hireFerryCostText} ferry fare to #TARGET# and ended the conversation.";
 $F_RETURNMESSAGES_LOCAL["SpawnItem"] = "#TARGET# receives #ITEM#.";
+$F_RETURNMESSAGES_LOCAL["SpawnNPC"] = "Spawned #AMOUNT# #TARGET# near #PLAYER_NAME#.";
 $F_RETURNMESSAGES_LOCAL["CreateNewNPC"] = "A new NPC is being created nearby.";
 $F_RETURNMESSAGES_LOCAL["TeleportNPC"] = "#TARGET# teleports to #ITEM#.";
 $F_RETURNMESSAGES_LOCAL["KillTarget"] = "#TARGET# is killed.";
@@ -765,6 +1057,7 @@ $F_NAMES_LOCAL["RentRoom"] = "RentRoom";
 $F_NAMES_LOCAL["HireCarriage"] = "HireCarriage";
 $F_NAMES_LOCAL["HireFerry"] = "HireFerry";
 $F_NAMES_LOCAL["SpawnItem"] = "SpawnItem";
+$F_NAMES_LOCAL["SpawnNPC"] = "SpawnNPC";
 $F_NAMES_LOCAL["CreateNewNPC"] = "CreateNewNPC";
 $F_NAMES_LOCAL["TeleportNPC"] = "TeleportNPC";
 $F_NAMES_LOCAL["KillTarget"] = "KillTarget";
@@ -1213,6 +1506,25 @@ $GLOBALS["FUNCTIONS"] = [
                 ],
             ],
             "required" => ["item"],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["SpawnNPC"],
+        "description" => $F_TRANSLATIONS_LOCAL["SpawnNPC"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "REQUIRED: SNQE NPC template key from npc_templates or npc_own_templates.",
+                    "enum" => herikaGetSpawnNpcTemplateKeys(),
+                ],
+                "amount" => [
+                    "type" => "integer",
+                    "description" => "How many NPCs to spawn from that template key (default: 1, max: 10).",
+                ],
+            ],
+            "required" => ["target"],
         ],
     ],
     [
@@ -2443,6 +2755,81 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 );
 
                 error_log("[ACTION POSTFILTER SpawnItem] Queued {$roleCommand}");
+                unset($actionsCopy[$n]);
+
+            } else if ($actionCodeNameResolved == "SpawnNPC") {
+                $rawParameter = implode("@", array_slice($actionParts2, 1));
+                $payload = decodeFunctionExecutionParameterPayload($rawParameter);
+                if (!is_array($payload)) {
+                    $payload = [];
+                }
+
+                $latestNarratorInputText = herikaGetLatestNarratorInputText();
+                $requestedTemplateKey = trim(strval($payload["target"] ?? ''));
+                if ($requestedTemplateKey === '') {
+                    $requestedTemplateKey = $latestNarratorInputText;
+                }
+
+                $spawnAmount = herikaNormalizePositiveActionAmount($payload["amount"] ?? 1, 1, 10);
+                $resolvedTemplate = herikaResolveSpawnNpcTemplateMatch($requestedTemplateKey, $latestNarratorInputText);
+
+                if (empty($resolvedTemplate['ok'])) {
+                    $safeTemplateKey = str_replace('@', '', trim(strval($requestedTemplateKey)));
+                    $reason = strval($resolvedTemplate['error'] ?? 'unknown_error');
+                    error_log("[ACTION POSTFILTER SpawnNPC] Could not resolve '{$safeTemplateKey}' ({$reason})");
+
+                    $GLOBALS["db"]->insert(
+                        'responselog',
+                        array(
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => '',
+                            'action' => "rolecommand|DebugNotification@Could not resolve NPC template {$safeTemplateKey} for Spawn_NPC",
+                            'tag' => ""
+                        )
+                    );
+
+                    unset($actionsCopy[$n]);
+                    continue;
+                }
+
+                $templateKey = str_replace('@', '', trim(strval($resolvedTemplate['template_key'] ?? $requestedTemplateKey)));
+                $runtimeFormId = str_replace('@', '', trim(strval($resolvedTemplate['runtime_formid'] ?? '')));
+                if ($runtimeFormId === '') {
+                    error_log("[ACTION POSTFILTER SpawnNPC] Resolved template missing runtime formid for {$templateKey}");
+                    unset($actionsCopy[$n]);
+                    continue;
+                }
+
+                $roleCommand = "rolecommand|SpawnNPCRaw@{$templateKey}@{$runtimeFormId}@{$spawnAmount}";
+
+                $GLOBALS["db"]->insert(
+                    'responselog',
+                    array(
+                        'localts' => time(),
+                        'sent' => 0,
+                        'actor' => "rolemaster",
+                        'text' => '',
+                        'action' => $roleCommand,
+                        'tag' => ""
+                    )
+                );
+
+                $GLOBALS["db"]->insert(
+                    'actions_issued',
+                    array(
+                        'action' => "SpawnNPC",
+                        'fullcall' => $actionParts[0] . "|" . $actionParts[1] . "|" . $actionParts[2],
+                        'actorname' => $actionParts[0],
+                        'ts' => $gameRequest[1],
+                        'gamets' => $gameRequest[2],
+                        'localts' => time(),
+                        'original' => $templateKey
+                    )
+                );
+
+                error_log("[ACTION POSTFILTER SpawnNPC] Queued {$roleCommand}");
                 unset($actionsCopy[$n]);
 
             } else if ($actionCodeNameResolved == "CreateNewNPC") {

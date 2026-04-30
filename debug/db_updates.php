@@ -582,6 +582,59 @@ if ($checkVersion("core_action") < 20260429007) {
     Logger::info("Applied patch core_action 20260429007");
 }
 
+if ($checkVersion("core_action") < 20260429008) {
+    Logger::debug("Applying core_action 20260429008 - add narrator SpawnNPC baseline action");
+
+    $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            available_to_narrator,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        ) VALUES (
+            'SpawnNPC',
+            'Spawn_NPC',
+            'Spawn one or more NPCs near #PLAYER_NAME# from the SNQE NPC template datasets. Put the template key in the target field and the spawn count in amount.',
+            'Spawned #AMOUNT# #TARGET# near #PLAYER_NAME#.',
+            FALSE,
+            FALSE,
+            TRUE,
+            TRUE,
+            '{\"type\":\"object\",\"required\":[\"target\"],\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"REQUIRED: SNQE NPC template key from npc_templates or npc_own_templates.\"},\"amount\":{\"type\":\"integer\",\"description\":\"How many NPCs to spawn from that template key (default: 1, max: 10).\"}}}'::jsonb,
+            '{\"source\":\"functions.php\",\"status\":\"active\",\"builtin\":true,\"dispatch\":\"rolecommand\"}'::jsonb,
+            TRUE,
+            0,
+            NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ");
+
+    $updateVersion("core_action", 20260429008);
+    Logger::info("Applied patch core_action 20260429008");
+}
+
 if ($checkVersion("game_plugins") < 20260427001) {
     Logger::debug("Applying game_plugins 20260427001 - create loaded plugin manifest table");
 

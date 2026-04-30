@@ -28,6 +28,7 @@ final class ActionCatalogTest extends TestCase
         $this->assertContains('Surrender', herikaGetNpcDefaultActionCodes());
         $this->assertContains('Surrender', herikaGetFollowerDefaultActionCodes());
         $this->assertContains('KillTarget', herikaGetNarratorDefaultActionCodes());
+        $this->assertContains('SpawnNPC', herikaGetNarratorDefaultActionCodes());
         $this->assertContains('SpawnItem', herikaGetNarratorDefaultActionCodes());
         $this->assertContains('TeleportNPC', herikaGetNarratorDefaultActionCodes());
     }
@@ -39,6 +40,7 @@ final class ActionCatalogTest extends TestCase
                 'MoveTo' => 'MoveTo',
                 'Drink' => 'Drink',
                 'KillTarget' => 'KillTarget',
+                'SpawnNPC' => 'SpawnNPC',
                 'SpawnItem' => 'SpawnItem',
                 'TeleportNPC' => 'TeleportNPC',
                 'AttackHunt' => 'Hunt',
@@ -85,6 +87,16 @@ final class ActionCatalogTest extends TestCase
                         'required' => ['target'],
                     ],
                 ],
+                'SpawnNPC' => [
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'target' => ['type' => 'string'],
+                            'amount' => ['type' => 'integer'],
+                        ],
+                        'required' => ['target'],
+                    ],
+                ],
                 'SpawnItem' => [
                     'parameters' => [
                         'type' => 'object',
@@ -120,6 +132,11 @@ final class ActionCatalogTest extends TestCase
         $this->assertTrue($rows['KillTarget']['available_to_narrator']);
         $this->assertTrue($rows['KillTarget']['is_activated']);
 
+        $this->assertFalse($rows['SpawnNPC']['available_to_npc']);
+        $this->assertFalse($rows['SpawnNPC']['available_to_followers']);
+        $this->assertTrue($rows['SpawnNPC']['available_to_narrator']);
+        $this->assertTrue($rows['SpawnNPC']['is_activated']);
+
         $this->assertFalse($rows['SpawnItem']['available_to_npc']);
         $this->assertFalse($rows['SpawnItem']['available_to_followers']);
         $this->assertTrue($rows['SpawnItem']['available_to_narrator']);
@@ -133,6 +150,7 @@ final class ActionCatalogTest extends TestCase
                 'MoveTo' => 'MoveTo',
                 'Drink' => 'Drink',
                 'KillTarget' => 'KillTarget',
+                'SpawnNPC' => 'SpawnNPC',
                 'SpawnItem' => 'SpawnItem',
                 'TeleportNPC' => 'TeleportNPC',
             ],
@@ -178,6 +196,16 @@ final class ActionCatalogTest extends TestCase
                         'required' => ['target'],
                     ],
                 ],
+                'SpawnNPC' => [
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'target' => ['type' => 'string'],
+                            'amount' => ['type' => 'integer'],
+                        ],
+                        'required' => ['target'],
+                    ],
+                ],
                 'SpawnItem' => [
                     'parameters' => [
                         'type' => 'object',
@@ -210,6 +238,10 @@ final class ActionCatalogTest extends TestCase
         $this->assertSame('rolecommand', $rows['KillTarget']['metadata']['dispatch']);
         $this->assertTrue($rows['KillTarget']['game_function']);
         $this->assertNull($rows['KillTarget']['script_proxy_program']);
+
+        $this->assertSame('rolecommand', $rows['SpawnNPC']['metadata']['dispatch']);
+        $this->assertTrue($rows['SpawnNPC']['game_function']);
+        $this->assertNull($rows['SpawnNPC']['script_proxy_program']);
 
         $this->assertSame('rolecommand', $rows['SpawnItem']['metadata']['dispatch']);
         $this->assertTrue($rows['SpawnItem']['game_function']);

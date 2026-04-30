@@ -112,6 +112,7 @@ function herikaGetNarratorDefaultActionCodes()
     return [
         'CreateNewNPC',
         'KillTarget',
+        'SpawnNPC',
         'SpawnItem',
         'TeleportNPC',
     ];
@@ -968,7 +969,7 @@ function herikaActionCatalogBuildBaseMetadata($codeName, $scriptProxyProgram = n
         $dispatch = 'script_proxy';
     } elseif (in_array($codeName, ['CreateNewNPC'], true)) {
         $dispatch = 'server_action';
-    } elseif (in_array($codeName, ['Training', 'TeleportNPC', 'SpawnItem', 'KillTarget'], true)) {
+    } elseif (in_array($codeName, ['Training', 'TeleportNPC', 'SpawnItem', 'SpawnNPC', 'KillTarget'], true)) {
         $dispatch = 'rolecommand';
     }
 
