@@ -1392,12 +1392,13 @@ function returnLines($lines,$writeOutput=true)
                 $listenerFix=explode(" and ",$GLOBALS["SCRIPTLINE_LISTENER"]);
                 // Don't touch original one
                 $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=$GLOBALS["SCRIPTLINE_LISTENER"];
+                $GLOBALS["SCRIPTLINE_RECHAT_TARGET"]=$GLOBALS["SCRIPTLINE_LISTENER"];
 
                 if (is_array($listenerFix) && (sizeof($listenerFix)>1)) {
                     $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=trim($listenerFix[0]);
                 }
                 
-                $listenerFix2=explode(",",$GLOBALS["SCRIPTLINE_LISTENER"]);
+                $listenerFix2=parseDialogueListenerNames($GLOBALS["SCRIPTLINE_LISTENER"]);
                 if (is_array($listenerFix2) && (sizeof($listenerFix2)>1)) {
                     if (!isset($GLOBALS["SCRIPTLINE_LISTENER_CYCLE"])) {
                         $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]=0;
@@ -1445,21 +1446,55 @@ function returnLines($lines,$writeOutput=true)
                         $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=trim($listener);
                     }
 
-                    $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=strtr($GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"],["Dragonborn"=>$GLOBALS["PLAYER_NAME"]]);
+                    $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=normalizeDialogueListenerName($GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]);
 
                     $npcList=DataBeingsInCloseRange();
                     $npcs=explode("|",$npcList);
-                    if (is_array($npcs) && (!in_array($GLOBALS["SCRIPTLINE_LISTENER"],$npcs))) {
-                        Logger::info("Listener {$GLOBALS["SCRIPTLINE_LISTENER"]} not around, forcing player: {$GLOBALS["SCRIPTLINE_LISTENER"]} {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]} {$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]} {$npcList} ");
-                        $GLOBALS["SCRIPTLINE_LISTENER"]=$GLOBALS["PLAYER_NAME"];
-
+                    $normalizedNearby = [];
+                    foreach ($npcs as $nearbyNpcName) {
+                        $nearbyNpcName = normalizeDialogueListenerName($nearbyNpcName);
+                        if ($nearbyNpcName !== "") {
+                            $normalizedNearby[] = $nearbyNpcName;
+                        }
                     }
 
-                    Logger::info("Applying listenerFix2: {$GLOBALS["SCRIPTLINE_LISTENER"]} {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}  {$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]}");
+                    $rechatTarget = "";
+                    foreach ($listenerFix2 as $candidateName) {
+                        $candidateName = normalizeDialogueListenerName($candidateName);
+                        if ($candidateName === "" || isPlayerDialogueListenerName($candidateName)) {
+                            continue;
+                        }
+                        if (in_array($candidateName, $normalizedNearby, true)) {
+                            $rechatTarget = $candidateName;
+                            break;
+                        }
+                    }
+
+                    if ($rechatTarget === "" && !isPlayerDialogueListenerName($GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"])) {
+                        $rechatTarget = $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"];
+                    }
+
+                    if (!in_array($GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"], $normalizedNearby, true) &&
+                        !isPlayerDialogueListenerName($GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"])) {
+                        Logger::info("Atomic listener {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]} not nearby, forcing player playback target. Raw listener={$GLOBALS["SCRIPTLINE_LISTENER"]} cycle={$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]}");
+                        $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=$GLOBALS["PLAYER_NAME"];
+                    }
+
+                    if ($rechatTarget !== "") {
+                        $GLOBALS["SCRIPTLINE_RECHAT_TARGET"] = $rechatTarget;
+                    } else {
+                        $GLOBALS["SCRIPTLINE_RECHAT_TARGET"] = $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"];
+                    }
+
+                    Logger::info("Applying listenerFix2: raw={$GLOBALS["SCRIPTLINE_LISTENER"]} atomic={$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]} rechat={$GLOBALS["SCRIPTLINE_RECHAT_TARGET"]} cycle={$GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]}");
                     //$GLOBALS["SCRIPTLINE_LISTENER"]=trim($listenerFix2[ $GLOBALS["SCRIPTLINE_LISTENER_CYCLE"]]);
                     // $GLOBALS["SCRIPTLINE_LISTENER"] = trim($listenerFix2[array_rand($listenerFix2)]); // Random
                     
 
+                }
+                else {
+                    $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"] = normalizeDialogueListenerName($GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]);
+                    $GLOBALS["SCRIPTLINE_RECHAT_TARGET"] = $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"];
                 }
 
                 $responseTextPhonetic = "";
@@ -1497,10 +1532,10 @@ function returnLines($lines,$writeOutput=true)
                 }
                 
                 // Output here with volumeBoost appended
-                echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic/$volumeBoost\r\n";
+                echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic/$volumeBoost/{$GLOBALS["SCRIPTLINE_RECHAT_TARGET"]}\r\n";
 
                 
-                $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic/$volumeBoost\r\n";
+                $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic/$volumeBoost/{$GLOBALS["SCRIPTLINE_RECHAT_TARGET"]}\r\n";
                 if ($outBuffer["actor"]!="Player" && isset($GLOBALS["PATCH_ORIGINAL_MOOD_ISSUED"])) {
                     $GLOBALS["db"]->insert(
                         'moods_issued',
@@ -2632,6 +2667,58 @@ function buildDialogueTargetSuffix($listenerName, $isSpeakingLoudly = false)
     }
 
     return "(talking to {$listenerName})";
+}
+
+function parseDialogueListenerNames($listenerName)
+{
+    $listenerName = trim((string)$listenerName);
+    if ($listenerName === "") {
+        return [];
+    }
+
+    $parts = preg_split('/\s*(?:,|&|\band\b)\s*/iu', $listenerName);
+    if (!is_array($parts)) {
+        return [$listenerName];
+    }
+
+    $normalized = [];
+    foreach ($parts as $part) {
+        $part = trim((string)$part);
+        if ($part !== "") {
+            $normalized[] = $part;
+        }
+    }
+
+    return array_values(array_unique($normalized));
+}
+
+function normalizeDialogueListenerName($listenerName)
+{
+    $listenerName = trim((string)$listenerName);
+    if ($listenerName === "") {
+        return "";
+    }
+
+    if (strcasecmp($listenerName, "Dragonborn") === 0 && !empty($GLOBALS["PLAYER_NAME"])) {
+        return trim((string)$GLOBALS["PLAYER_NAME"]);
+    }
+
+    return $listenerName;
+}
+
+function isPlayerDialogueListenerName($listenerName)
+{
+    $listenerName = normalizeDialogueListenerName($listenerName);
+    if ($listenerName === "") {
+        return false;
+    }
+
+    $playerName = isset($GLOBALS["PLAYER_NAME"]) ? trim((string)$GLOBALS["PLAYER_NAME"]) : "";
+    if ($playerName !== "" && strcasecmp($listenerName, $playerName) === 0) {
+        return true;
+    }
+
+    return in_array(strtolower($listenerName), ["player", "me"], true);
 }
 
 function convertTalkingTagsToWhispering($eventData)
