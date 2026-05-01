@@ -649,6 +649,26 @@ function maybeQueueNpcVoiceRefresh($currentNpcData, $npcMaster)
 
 
 // Profile loading
+if (!isset($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"])) {
+    $GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"] = false;
+}
+
+if (($gameRequest[0] ?? '') === 'bored') {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+    $narratorSettings = new Narrator();
+    if ($narratorSettings->getBool('bored_enabled', false)) {
+        $boredChance = max(1, min(100, $narratorSettings->getInt('bored_chance', 25)));
+        $boredRoll = random_int(1, 100);
+        if ($boredRoll <= $boredChance) {
+            $_GET["profile"] = md5('The Narrator');
+            $GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"] = true;
+            Logger::info("[NARRATOR_BORED] Routing bored event through The Narrator runtime (roll {$boredRoll}/{$boredChance})");
+        } else {
+            Logger::info("[NARRATOR_BORED] Keeping bored event on NPC runtime (roll {$boredRoll}/{$boredChance})");
+        }
+    }
+}
+
 if (isset($_GET["profile"])) {
     
     // Initialize OVERRIDES array for all profile types
@@ -1305,7 +1325,9 @@ if (in_array($gameRequest[0],["bored"])) {
         logEvent($localGameRequest);
     }
     
-    if ((isset($GLOBALS["BORED_EVENT_SERVERSIDE"])&&($GLOBALS["BORED_EVENT_SERVERSIDE"]))) {
+    if (!empty($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"])) {
+        Logger::info("[NARRATOR_BORED] Using narrator bored flow");
+    } elseif ((isset($GLOBALS["BORED_EVENT_SERVERSIDE"])&&($GLOBALS["BORED_EVENT_SERVERSIDE"]))) {
         Logger::info("Redirecting bored event to rolemaster");
         `php service/manager.php rolemaster instruction ""`;
         terminate();
@@ -1889,6 +1911,29 @@ if (in_array('Training', $GLOBALS["ENABLED_FUNCTIONS"]) && isset($currentNpcData
 if (isset($GLOBALS["RANDOM_NARRATION_PROMPT"]) && $gameRequest[0] == "narration") {
     $PROMPTS["narration"]["cue"] = [$GLOBALS["RANDOM_NARRATION_PROMPT"]];
     Logger::info("[RANDOM_NARRATION] Injected narration prompt as cue");
+}
+
+if (!empty($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"]) && $gameRequest[0] == "bored") {
+    $boredPrompt = null;
+    try {
+        $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'narrator_bored_prompt'");
+        if ($promptData) {
+            $boredPrompt = !empty($promptData['custom_prompt']) ? $promptData['custom_prompt'] : ($promptData['default_prompt'] ?? null);
+        }
+    } catch (Exception $e) {
+        Logger::warn("[NARRATOR_BORED] Failed to load narrator_bored_prompt from database: " . $e->getMessage());
+    }
+
+    if (!$boredPrompt) {
+        $boredPrompt = '({HERIKA_NAME} makes one short comment directly to {PLAYER_NAME} about something happening right now in the current scene. Keep it grounded in the present moment, do not ask follow-up questions, and do not continue the conversation.) {TEMPLATE_DIALOG}';
+    }
+
+    $PROMPTS["bored"]["cue"] = [strtr($boredPrompt, [
+        '{HERIKA_NAME}' => $GLOBALS["HERIKA_NAME"] ?? 'The Narrator',
+        '{PLAYER_NAME}' => $GLOBALS["PLAYER_NAME"] ?? 'Player',
+        '{TEMPLATE_DIALOG}' => $GLOBALS["TEMPLATE_DIALOG"] ?? '',
+    ])];
+    Logger::info("[NARRATOR_BORED] Injected narrator bored prompt");
 }
 
 // Inject narrator welcome prompt if this is a narrator_welcome event

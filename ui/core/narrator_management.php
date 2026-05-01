@@ -31,6 +31,7 @@ $advancedPromptKeys = [
     'narrator_welcome_prompt',
     'player_speech_style_prompt',
     'random_narration_prompt',
+    'narrator_bored_prompt',
     'quest_comment_prompt',
 ];
 
@@ -102,6 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
         $narrator->set('enabled', isset($_POST['enabled']) && $_POST['enabled'] === '1' ? '1' : '0');
         $narrator->set('welcome_enabled', isset($_POST['welcome_enabled']) && $_POST['welcome_enabled'] === '1' ? '1' : '0');
         $narrator->set('random_enabled', isset($_POST['random_enabled']) && $_POST['random_enabled'] === '1' ? '1' : '0');
+        $narrator->set('bored_enabled', isset($_POST['bored_enabled']) && $_POST['bored_enabled'] === '1' ? '1' : '0');
         $narrator->set('books_only_narrator', isset($_POST['books_only_narrator']) && $_POST['books_only_narrator'] === '1' ? '1' : '0');
         $narrator->set('hide_from_context', isset($_POST['hide_from_context']) && $_POST['hide_from_context'] === '1' ? '1' : '0');
         $inlineNarrationMode = isset($_POST['inline_narration_mode']) ? strtolower(trim((string)$_POST['inline_narration_mode'])) : 'disabled';
@@ -125,6 +127,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
             $cooldown = intval($_POST['random_cooldown']);
             $cooldown = max(0, min(10, $cooldown)); // Clamp to 0-10
             $narrator->set('random_cooldown', (string)$cooldown);
+        }
+        if (isset($_POST['bored_chance'])) {
+            $boredChance = intval($_POST['bored_chance']);
+            $boredChance = max(1, min(100, $boredChance));
+            $narrator->set('bored_chance', (string)$boredChance);
         }
         if (isset($_POST['welcome_cooldown'])) {
             $cooldown = intval($_POST['welcome_cooldown']);
@@ -209,6 +216,8 @@ $welcomeEnabled = $narrator->getBool('welcome_enabled', false);
 $randomEnabled = $narrator->getBool('random_enabled', false);
 $randomChance = $narrator->getInt('random_chance', 15);
 $randomCooldown = $narrator->getInt('random_cooldown', 2);
+$boredEnabled = $narrator->getBool('bored_enabled', false);
+$boredChance = $narrator->getInt('bored_chance', 25);
 $welcomeCooldown = $narrator->getInt('welcome_cooldown', 10);
 $questCommentEnabled = $narrator->getBool('quest_comment_enabled', false);
 $questCommentChance = $narrator->getInt('quest_comment_chance', 10);
@@ -1301,6 +1310,23 @@ if (!$isEmbed) {
                     <label for="random_cooldown">Random Narration Cooldown</label>
                     <input type="number" id="random_cooldown" name="random_cooldown" value="<?php echo htmlspecialchars((string)$randomCooldown); ?>" min="0" max="10">
                     <span class="hint">Minimum number of conversation rounds between Narrator interjections. Prevents narration spam. Range: 0-10, Default: 2</span>
+                </div>
+
+                <div class="content-section">
+                    <h2>Bored Events</h2>
+
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="bored_enabled" name="bored_enabled" value="1" <?php echo $boredEnabled ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Allow Narrator Bored Events</span>
+                    </label>
+                    <span class="hint">When enabled, bored events can sometimes route through The Narrator instead of the selected NPC.</span>
+
+                    <label for="bored_chance">Narrator Bored Event Chance (%)</label>
+                    <input type="number" id="bored_chance" name="bored_chance" value="<?php echo htmlspecialchars((string)$boredChance); ?>" min="1" max="100">
+                    <span class="hint">Probability (1-100) that an eligible bored event will be rerouted to The Narrator. Default: 25%</span>
                 </div>
 
                 <!-- Quest Comments Section -->

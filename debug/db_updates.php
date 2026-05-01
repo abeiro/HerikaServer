@@ -5514,6 +5514,35 @@ if ($checkVersion("core_action")<20260430016) {
 }
 
 //----------------------------------------------------
+// Add narrator_bored_prompt to prompts table
+// Version 20260430017
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20260430017) {
+    Logger::debug("Applying prompts table 20260430017 - Adding narrator_bored_prompt");
+
+    $narratorBoredPrompt = $db->escape(
+        "({HERIKA_NAME} makes one short comment directly to {PLAYER_NAME} about something happening right now in the current scene. Keep it grounded in the present moment, do not ask follow-up questions, and do not continue the conversation.) {TEMPLATE_DIALOG}"
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'narrator_bored_prompt',
+            '$narratorBoredPrompt',
+            'Prompt for narrator bored events directed at the player (contains {HERIKA_NAME}, {PLAYER_NAME}, and {TEMPLATE_DIALOG} placeholders). Used in: main.php narrator bored routing.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $updateVersion("prompts", 20260430017);
+    Logger::info("Applied patch prompts 20260430017 - Added narrator_bored_prompt");
+}
+
+//----------------------------------------------------
 
 // Relationship Evaluation and Initialization Queues
 $db->execQuery("CREATE TABLE IF NOT EXISTS public.relationship_eval_queue (
