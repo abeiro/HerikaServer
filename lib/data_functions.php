@@ -5560,7 +5560,9 @@ function call_llm_internal() {
                         'ts' => $gameRequest[1],
                         'gamets' => $gameRequest[2],
                         'localts'=>time(),
-                        'original'=>$copyActions[$n]
+                        'original'=>function_exists('herikaActionCatalogApplyFollowupChainToActionsIssuedOriginal')
+                            ? herikaActionCatalogApplyFollowupChainToActionsIssuedOriginal($copyActions[$n])
+                            : $copyActions[$n]
                     )
                 );
 

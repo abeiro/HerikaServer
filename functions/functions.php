@@ -85,42 +85,6 @@ if (!isset($GLOBALS["PLAYER_NAME"]) || $GLOBALS["PLAYER_NAME"] === '') {
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "action_catalog.php";
 
-function getConfiguredPositiveActionGoldCost($codeName, $configKey, $defaultCost)
-{
-    $override = null;
-    if (function_exists('herikaActionCatalogGetCustomConfigValue')) {
-        $override = herikaActionCatalogGetCustomConfigValue($codeName, $configKey, null);
-    }
-
-    $overrideCost = intval($override);
-    if ($override !== null && $overrideCost > 0) {
-        return $overrideCost;
-    }
-
-    return intval($defaultCost);
-}
-
-function formatConfiguredActionGoldCost($cost)
-{
-    $cost = intval($cost);
-    return ($cost === 1) ? '1 gold' : ("{$cost} gold");
-}
-
-function getConfiguredRentRoomCost()
-{
-    return getConfiguredPositiveActionGoldCost("RentRoom", "rent_room_cost", 10);
-}
-
-function getConfiguredHireCarriageCost()
-{
-    return getConfiguredPositiveActionGoldCost("HireCarriage", "hire_carriage_cost", 20);
-}
-
-function getConfiguredHireFerryCost()
-{
-    return getConfiguredPositiveActionGoldCost("HireFerry", "hire_ferry_cost", 50);
-}
-
 function decodeFunctionExecutionParameterPayload($parameter)
 {
     if (is_array($parameter)) {
@@ -918,13 +882,6 @@ function herikaExtractActionArgumentTargetValue($arguments)
     return '';
 }
 
-$rentRoomCost = getConfiguredRentRoomCost();
-$hireCarriageCost = getConfiguredHireCarriageCost();
-$hireFerryCost = getConfiguredHireFerryCost();
-$rentRoomCostText = formatConfiguredActionGoldCost($rentRoomCost);
-$hireCarriageCostText = formatConfiguredActionGoldCost($hireCarriageCost);
-$hireFerryCostText = formatConfiguredActionGoldCost($hireFerryCost);
-
 // We must use internal keys here.
 
 $F_TRANSLATIONS_LOCAL["MoveTo"] = "Move to a visible building or visible actor, also used to guide #PLAYER_NAME# to an actor or building.";
@@ -947,9 +904,9 @@ $F_TRANSLATIONS_LOCAL["StopWalk"] = "Stop all of #HERIKA_NAME#'s actions immedia
 $F_TRANSLATIONS_LOCAL["TravelTo"] = "Only use if #PLAYER_NAME# explicitly suggests it. Guide #PLAYER_NAME# to a town or city. Also known as lead the way.";
 $F_TRANSLATIONS_LOCAL["WaitHere"] = "#HERIKA_NAME# waits and loiters at the current location.";
 $F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"] = "#HERIKA_NAME# takes the amount in property target of gold from #PLAYER_NAME#, once #PLAYER_NAME# agrees. Infer the amount from context.";
-$F_TRANSLATIONS_LOCAL["RentRoom"] = "#HERIKA_NAME# rents a room to #PLAYER_NAME# for {$rentRoomCostText}. Only innkeepers can use this action and it only applies to #PLAYER_NAME#.";
-$F_TRANSLATIONS_LOCAL["HireCarriage"] = "#HERIKA_NAME# accepts {$hireCarriageCostText} for carriage travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
-$F_TRANSLATIONS_LOCAL["HireFerry"] = "#HERIKA_NAME# accepts {$hireFerryCostText} for ferry travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
+$F_TRANSLATIONS_LOCAL["RentRoom"] = "#HERIKA_NAME# rents a room to #PLAYER_NAME# for {{config.cost_gold}} gold. Only innkeepers can use this action and it only applies to #PLAYER_NAME#.";
+$F_TRANSLATIONS_LOCAL["HireCarriage"] = "#HERIKA_NAME# accepts {{config.cost_gold}} gold for carriage travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
+$F_TRANSLATIONS_LOCAL["HireFerry"] = "#HERIKA_NAME# accepts {{config.cost_gold}} gold for ferry travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
 $F_TRANSLATIONS_LOCAL["SpawnItem"] = "Create a named item from the descriptions database and give it to a target actor or #PLAYER_NAME#.";
 $F_TRANSLATIONS_LOCAL["SpawnNPC"] = "Spawn one or more NPCs near #PLAYER_NAME# from the SNQE NPC template datasets. Put the template key in the target field and the spawn count in amount.";
 $F_TRANSLATIONS_LOCAL["CreateNewNPC"] = "Create and spawn a brand-new nearby NPC from a short creation brief. Put the creation brief in the target field and leave item and amount blank.";
@@ -1000,9 +957,9 @@ $F_RETURNMESSAGES_LOCAL["StopWalk"] = "Stop all of #HERIKA_NAME#'s actions immed
 $F_RETURNMESSAGES_LOCAL["TravelTo"] = "#HERIKA_NAME# begins travelling to #TARGET#.";
 $F_RETURNMESSAGES_LOCAL["WaitHere"] = "#HERIKA_NAME# waits and stands at the place.";
 $F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"] = "#PLAYER_NAME# gave #TARGET# coins to #HERIKA_NAME#. If this is a transaction, maybe GiveItemTo is needed.";
-$F_RETURNMESSAGES_LOCAL["RentRoom"] = "#HERIKA_NAME# rented a room to #PLAYER_NAME# for {$rentRoomCostText}.";
-$F_RETURNMESSAGES_LOCAL["HireCarriage"] = "#HERIKA_NAME# accepted the {$hireCarriageCostText} carriage fare to #TARGET# and ended the conversation.";
-$F_RETURNMESSAGES_LOCAL["HireFerry"] = "#HERIKA_NAME# accepted the {$hireFerryCostText} ferry fare to #TARGET# and ended the conversation.";
+$F_RETURNMESSAGES_LOCAL["RentRoom"] = "#HERIKA_NAME# rented a room to #PLAYER_NAME# for {{config.cost_gold}} gold.";
+$F_RETURNMESSAGES_LOCAL["HireCarriage"] = "#HERIKA_NAME# accepted the {{config.cost_gold}} gold carriage fare to #TARGET# and ended the conversation.";
+$F_RETURNMESSAGES_LOCAL["HireFerry"] = "#HERIKA_NAME# accepted the {{config.cost_gold}} gold ferry fare to #TARGET# and ended the conversation.";
 $F_RETURNMESSAGES_LOCAL["SpawnItem"] = "#TARGET# receives #ITEM#.";
 $F_RETURNMESSAGES_LOCAL["SpawnNPC"] = "Spawned #AMOUNT# #TARGET# near #PLAYER_NAME#.";
 $F_RETURNMESSAGES_LOCAL["CreateNewNPC"] = "A new NPC is being created nearby.";
@@ -2030,14 +1987,61 @@ function getFunctionCodeName($key)
     return $aliases[$key] ?? false;
 }
 
+function herikaBuildActionPromptTemplateContext($rowOrCode = null, array $extraContext = [])
+{
+    $row = null;
+    $codeName = '';
+
+    if (is_array($rowOrCode)) {
+        $row = $rowOrCode;
+        $codeName = trim(strval($row['code_name'] ?? ''));
+    } else {
+        $codeName = trim(strval($rowOrCode ?? ''));
+        if ($codeName !== '' && function_exists('herikaGetActionCatalogRow')) {
+            $row = herikaGetActionCatalogRow($codeName);
+        }
+    }
+
+    if ($codeName === '' && is_array($row)) {
+        $codeName = trim(strval($row['code_name'] ?? ''));
+    }
+
+    $context = [
+        'code_name' => $codeName,
+        'herika_name' => strval($GLOBALS["HERIKA_NAME"] ?? 'NPC'),
+        'player_name' => strval($GLOBALS["PLAYER_NAME"] ?? 'Player'),
+        'config' => [],
+    ];
+
+    if ($codeName !== '' && function_exists('herikaActionCatalogGetResolvedCustomConfig')) {
+        $context['config'] = herikaActionCatalogGetResolvedCustomConfig($codeName, $row);
+    }
+
+    if (count($extraContext) > 0) {
+        $context = array_replace_recursive($context, $extraContext);
+    }
+
+    return $context;
+}
+
 function herikaFormatReturnMessageTemplate($codeName, $primaryArgument = '', array $extraReplacements = [])
 {
     $codeName = trim(strval($codeName));
-    if ($codeName === '' || !isset($GLOBALS["F_RETURNMESSAGES"][$codeName])) {
+    if ($codeName === '') {
         return '';
     }
 
-    $template = strval($GLOBALS["F_RETURNMESSAGES"][$codeName] ?? '');
+    $actionRow = function_exists('herikaGetActionCatalogRow')
+        ? herikaGetActionCatalogRow($codeName)
+        : null;
+
+    $template = '';
+    if (is_array($actionRow)) {
+        $template = strval($actionRow['return_message'] ?? '');
+    }
+    if ($template === '' && isset($GLOBALS["F_RETURNMESSAGES"][$codeName])) {
+        $template = strval($GLOBALS["F_RETURNMESSAGES"][$codeName] ?? '');
+    }
     if ($template === '') {
         return '';
     }
@@ -2068,10 +2072,19 @@ function herikaFormatReturnMessageTemplate($codeName, $primaryArgument = '', arr
         $replacements[strval($key)] = is_scalar($value) || $value === null ? strval($value ?? '') : '';
     }
 
-    return strtr($template, $replacements);
+    $rendered = strtr($template, $replacements);
+    return herikaFormatActionPromptTemplate(
+        $rendered,
+        [],
+        is_array($actionRow) ? $actionRow : $codeName,
+        [
+            'parameter_target' => $primaryArgument,
+            'parameters' => $argumentData,
+        ]
+    );
 }
 
-function herikaFormatActionPromptTemplate($template, array $extraReplacements = [])
+function herikaFormatActionPromptTemplate($template, array $extraReplacements = [], $rowOrCode = null, array $extraContext = [])
 {
     $template = strval($template);
     if ($template === '') {
@@ -2091,6 +2104,14 @@ function herikaFormatActionPromptTemplate($template, array $extraReplacements = 
 
     $rendered = strtr($template, $replacements);
 
+    if (function_exists('herikaActionCatalogResolveTemplateValue')) {
+        $context = herikaBuildActionPromptTemplateContext($rowOrCode, $extraContext);
+        $resolved = herikaActionCatalogResolveTemplateValue($rendered, $context);
+        if (!is_array($resolved) && $resolved !== null) {
+            $rendered = strval($resolved);
+        }
+    }
+
     // Some catalog/imported strings can still carry SQL-style doubled apostrophes.
     return str_replace("''", "'", $rendered);
 }
@@ -2108,7 +2129,7 @@ function herikaGetPromptActionDescription($codeName, $fallbackDescription = '')
         $description = strval($fallbackDescription);
     }
 
-    return herikaFormatActionPromptTemplate($description);
+    return herikaFormatActionPromptTemplate($description, [], $codeName);
 }
 
 function getFunctionTrlName($key)
@@ -2294,16 +2315,14 @@ function queueFunctionExecutionCommand(&$commandBuffer, &$alreadySent, $executio
     return true;
 }
 
-function chimActionShouldSuppressImmediateMessage($actionName)
+function chimPrepareActionsIssuedOriginalValue($originalValue)
 {
-    $actionName = trim(strval($actionName));
-    if ($actionName === '') {
-        return false;
+    if (function_exists('herikaActionCatalogApplyFollowupChainToActionsIssuedOriginal')) {
+        return herikaActionCatalogApplyFollowupChainToActionsIssuedOriginal($originalValue);
     }
 
-    return in_array(getFunctionCodeName($actionName), ['Consume', 'InspectSurroundings'], true);
+    return strval($originalValue);
 }
-
 
 function buildFunctionExecutionParameter($functionCodeName, $parameter)
 {
@@ -2330,7 +2349,7 @@ function findFunctionByName($name)
             $functionEntry = herikaActionCatalogBuildFunctionEntryFromRow($row);
             if (is_array($functionEntry) && !empty($functionEntry['name'])) {
                 $functionEntry['description'] = function_exists('herikaFormatActionPromptTemplate')
-                    ? herikaFormatActionPromptTemplate($row['description'] ?? '')
+                    ? herikaFormatActionPromptTemplate($row['description'] ?? '', [], $row)
                     : strval($row['description'] ?? '');
                 return $functionEntry;
             }
@@ -2393,7 +2412,7 @@ function findFunctionByName($name)
 
             $rowActionName = trim(strval($row['action_name'] ?? ''));
             $runtimeActionName = function_exists('herikaFormatActionPromptTemplate')
-                ? trim(strval(herikaFormatActionPromptTemplate($rowActionName)))
+                ? trim(strval(herikaFormatActionPromptTemplate($rowActionName, [], $row)))
                 : $rowActionName;
             $normalizedRuntimeActionName = function_exists('herikaNormalizeActionCatalogDisplayActionName')
                 ? trim(strval(herikaNormalizeActionCatalogDisplayActionName($runtimeActionName)))
@@ -2484,13 +2503,10 @@ if (herikaActionCatalogDbReady()) {
 }
 
 $isNpcMode = isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"];
-$defaultEnabledFunctions = herikaActionCatalogIsNarratorMode()
-    ? herikaGetNarratorDefaultActionCodes()
-    : ($isNpcMode ? herikaGetNpcDefaultActionCodes() : herikaGetFollowerDefaultActionCodes());
 $dbEnabledFunctions = herikaLoadEnabledActionCodesForMode($isNpcMode, true);
 $GLOBALS["ENABLED_FUNCTIONS"] = herikaActionCatalogDbReady()
     ? $dbEnabledFunctions
-    : $defaultEnabledFunctions;
+    : array_values(array_unique($ENABLED_FUNCTIONS_LOCAL));
 
 $folderPath = __DIR__ . DIRECTORY_SEPARATOR . "../ext/";
 requireFunctionFilesRecursively($folderPath);
@@ -2599,7 +2615,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                         'ts' => $gameRequest[1],
                         'gamets' => $gameRequest[2],
                         'localts'=>time(),
-                        'original'=>''
+                        'original'=>chimPrepareActionsIssuedOriginalValue('')
                     )
                 );
 
@@ -2639,7 +2655,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                         'ts' => $gameRequest[1],
                         'gamets' => $gameRequest[2],
                         'localts'=>time(),
-                        'original'=>''
+                        'original'=>chimPrepareActionsIssuedOriginalValue('')
                     )
                 );
 
@@ -2668,7 +2684,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                         'ts' => $gameRequest[1],
                         'gamets' => $gameRequest[2],
                         'localts'=>time(),
-                        'original'=>''
+                        'original'=>chimPrepareActionsIssuedOriginalValue('')
                     )
                 );
 
@@ -2750,7 +2766,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                         'ts' => $gameRequest[1],
                         'gamets' => $gameRequest[2],
                         'localts' => time(),
-                        'original' => ''
+                        'original' => chimPrepareActionsIssuedOriginalValue('')
                     )
                 );
 
@@ -2825,7 +2841,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                         'ts' => $gameRequest[1],
                         'gamets' => $gameRequest[2],
                         'localts' => time(),
-                        'original' => $templateKey
+                        'original' => chimPrepareActionsIssuedOriginalValue($templateKey)
                     )
                 );
 
@@ -2891,7 +2907,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                         'ts' => $gameRequest[1],
                         'gamets' => $gameRequest[2],
                         'localts' => time(),
-                        'original' => $creationBrief
+                        'original' => chimPrepareActionsIssuedOriginalValue($creationBrief)
                     )
                 );
 
@@ -2972,7 +2988,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                         'ts' => $gameRequest[1],
                         'gamets' => $gameRequest[2],
                         'localts' => time(),
-                        'original' => ''
+                        'original' => chimPrepareActionsIssuedOriginalValue('')
                     )
                 );
 
@@ -3068,7 +3084,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                         'ts' => $gameRequest[1],
                         'gamets' => $gameRequest[2],
                         'localts' => time(),
-                        'original' => ''
+                        'original' => chimPrepareActionsIssuedOriginalValue('')
                     )
                 );
 
@@ -3145,7 +3161,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                         'ts' => $gameRequest[1],
                         'gamets' => $gameRequest[2],
                         'localts'=>time(),
-                        'original'=>''
+                        'original'=>chimPrepareActionsIssuedOriginalValue('')
                     )
                 );
 
@@ -3196,7 +3212,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                         'ts' => $gameRequest[1],
                         'gamets' => $gameRequest[2],
                         'localts'=>time(),
-                        'original'=>''
+                        'original'=>chimPrepareActionsIssuedOriginalValue('')
                     )
                 );
 

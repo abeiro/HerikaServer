@@ -13,28 +13,82 @@ if (!function_exists('getFunctionCodeName')) {
 
 final class ActionCatalogTest extends TestCase
 {
-    public function testReadQuestJournalIsNotRetiredAndIsEnabledByDefault(): void
+    public function testBaseSeedFileDefinesActionAvailabilityAndActivation(): void
     {
         $this->assertNotContains('ReadQuestJournal', herikaGetRetiredActionCodes());
-        $this->assertContains('ReadQuestJournal', herikaGetNpcDefaultActionCodes());
-        $this->assertContains('ReadQuestJournal', herikaGetFollowerDefaultActionCodes());
         $this->assertNotContains('Inspect', herikaGetRetiredActionCodes());
-        $this->assertContains('Inspect', herikaGetNpcDefaultActionCodes());
-        $this->assertContains('Inspect', herikaGetFollowerDefaultActionCodes());
         $this->assertNotContains('InspectSurroundings', herikaGetRetiredActionCodes());
-        $this->assertContains('InspectSurroundings', herikaGetNpcDefaultActionCodes());
-        $this->assertContains('InspectSurroundings', herikaGetFollowerDefaultActionCodes());
         $this->assertNotContains('Surrender', herikaGetRetiredActionCodes());
-        $this->assertContains('Surrender', herikaGetNpcDefaultActionCodes());
-        $this->assertContains('Surrender', herikaGetFollowerDefaultActionCodes());
-        $this->assertContains('KillTarget', herikaGetNarratorDefaultActionCodes());
-        $this->assertContains('SpawnNPC', herikaGetNarratorDefaultActionCodes());
-        $this->assertContains('SpawnItem', herikaGetNarratorDefaultActionCodes());
-        $this->assertContains('TeleportNPC', herikaGetNarratorDefaultActionCodes());
+
+        $rows = herikaLoadActionCatalogBaseSeedRowsFromSeedFile();
+
+        $this->assertTrue($rows['ReadQuestJournal']['available_to_npc']);
+        $this->assertTrue($rows['ReadQuestJournal']['available_to_followers']);
+        $this->assertTrue($rows['ReadQuestJournal']['available_to_narrator']);
+        $this->assertTrue($rows['ReadQuestJournal']['is_activated']);
+
+        $this->assertTrue($rows['Inspect']['available_to_npc']);
+        $this->assertTrue($rows['Inspect']['available_to_followers']);
+        $this->assertFalse($rows['Inspect']['available_to_narrator']);
+        $this->assertTrue($rows['Inspect']['is_activated']);
+
+        $this->assertTrue($rows['InspectSurroundings']['available_to_npc']);
+        $this->assertTrue($rows['InspectSurroundings']['available_to_followers']);
+        $this->assertFalse($rows['InspectSurroundings']['available_to_narrator']);
+        $this->assertTrue($rows['InspectSurroundings']['is_activated']);
+
+        $this->assertTrue($rows['Surrender']['available_to_npc']);
+        $this->assertTrue($rows['Surrender']['available_to_followers']);
+        $this->assertFalse($rows['Surrender']['available_to_narrator']);
+        $this->assertTrue($rows['Surrender']['is_activated']);
+
+        $this->assertTrue($rows['KillTarget']['available_to_narrator']);
+        $this->assertTrue($rows['SpawnNPC']['available_to_narrator']);
+        $this->assertTrue($rows['SpawnItem']['available_to_narrator']);
+        $this->assertTrue($rows['TeleportNPC']['available_to_narrator']);
     }
 
     public function testBuildActionCatalogSeedRows_AssignsScopesAndSkipsRetiredActions(): void
     {
+        $seedDefaultsByCode = [
+            'MoveTo' => [
+                'available_to_npc' => true,
+                'available_to_followers' => false,
+                'available_to_narrator' => false,
+                'is_activated' => true,
+            ],
+            'Drink' => [
+                'available_to_npc' => true,
+                'available_to_followers' => true,
+                'available_to_narrator' => false,
+                'is_activated' => true,
+            ],
+            'TeleportNPC' => [
+                'available_to_npc' => false,
+                'available_to_followers' => false,
+                'available_to_narrator' => true,
+                'is_activated' => true,
+            ],
+            'KillTarget' => [
+                'available_to_npc' => false,
+                'available_to_followers' => false,
+                'available_to_narrator' => true,
+                'is_activated' => true,
+            ],
+            'SpawnNPC' => [
+                'available_to_npc' => false,
+                'available_to_followers' => false,
+                'available_to_narrator' => true,
+                'is_activated' => true,
+            ],
+            'SpawnItem' => [
+                'available_to_npc' => false,
+                'available_to_followers' => false,
+                'available_to_narrator' => true,
+                'is_activated' => true,
+            ],
+        ];
+
         $rows = herikaBuildActionCatalogSeedRows(
             [
                 'MoveTo' => 'MoveTo',
@@ -108,7 +162,8 @@ final class ActionCatalogTest extends TestCase
                         'required' => ['item'],
                     ],
                 ],
-            ]
+            ],
+            $seedDefaultsByCode
         );
 
         $this->assertArrayNotHasKey('AttackHunt', $rows);

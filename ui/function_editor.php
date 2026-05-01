@@ -212,7 +212,6 @@ function functionEditorRenderParameterSchema($value)
         $propertySchema = is_array($propertySchema) ? $propertySchema : [];
         $propertyType = trim(strval($propertySchema['type'] ?? 'string'));
         $propertyDescription = trim(strval($propertySchema['description'] ?? ''));
-        $enumValues = is_array($propertySchema['enum'] ?? null) ? $propertySchema['enum'] : [];
         $isRequired = isset($required[$propertyName]);
 
         $parts[] = '<div class="config-field" style="margin-bottom:14px;">';
@@ -222,15 +221,6 @@ function functionEditorRenderParameterSchema($value)
 
         if ($propertyDescription !== '') {
             $parts[] = '<div class="helper-text" style="margin-top:6px;">' . nl2br(h($propertyDescription)) . '</div>';
-        }
-
-        if (count($enumValues) > 0) {
-            $parts[] = '<div class="helper-text" style="margin-top:6px;">Allowed values (' . count($enumValues) . '):</div>';
-            $parts[] = '<div class="command-meta" style="margin-top:6px;">';
-            foreach ($enumValues as $enumValue) {
-                $parts[] = '<span class="status-pill base">' . h($enumValue) . '</span>';
-            }
-            $parts[] = '</div>';
         }
 
         $parts[] = '</div>';
@@ -338,6 +328,17 @@ function functionEditorFormatConfigValue($field, $value)
     }
 
     return strval($value);
+}
+
+function functionEditorShouldOnlyShowDefaultFallback($fieldKey)
+{
+    $fieldKey = trim(strval($fieldKey));
+    return in_array($fieldKey, [
+        'followup_enabled',
+        'followup_arg_name',
+        'followup_prompt',
+        'followup_use_functions_again',
+    ], true);
 }
 
 function functionEditorNormalizeSubmittedConfigValue($field, $submittedConfig, &$errorMessage)
@@ -603,6 +604,45 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
                 $messageType = "err";
             }
         }
+    } elseif ($_POST["action"] === "reset_action_override") {
+        $codeName = functionEditorTrim($_POST["code_name"] ?? "");
+
+        if ($codeName === "") {
+            $message = "Missing action code name.";
+            $messageType = "err";
+        } elseif (!function_exists("herikaActionCatalogDbReady") || !herikaActionCatalogDbReady()) {
+            $message = "Action catalog tables are not available yet. Run database updates first.";
+            $messageType = "err";
+        } else {
+            $baseRow = $GLOBALS["db"]->fetchOne("
+                SELECT 1 AS exists
+                FROM public.core_action
+                WHERE LOWER(code_name) = LOWER(" . herikaActionCatalogSqlText($codeName) . ")
+                LIMIT 1
+            ");
+            $customRow = $GLOBALS["db"]->fetchOne("
+                SELECT 1 AS exists
+                FROM public.core_action_custom
+                WHERE LOWER(code_name) = LOWER(" . herikaActionCatalogSqlText($codeName) . ")
+                LIMIT 1
+            ");
+
+            $hasBaseAction = isset($baseRow["exists"]);
+            $hasCustomOverride = isset($customRow["exists"]);
+
+            if (!$hasBaseAction || !$hasCustomOverride) {
+                $message = "This action does not have a resettable custom override.";
+                $messageType = "err";
+            } elseif (!function_exists("herikaActionCatalogDeleteCustomOverride")) {
+                $message = "Action catalog override reset support is not available in this build.";
+                $messageType = "err";
+            } elseif (herikaActionCatalogDeleteCustomOverride($codeName)) {
+                functionEditorRedirectWithNotice($codeName . " reset to base action.", "ok", $isEmbed);
+            } else {
+                $message = "Could not reset action override.";
+                $messageType = "err";
+            }
+        }
     }
 }
 
@@ -696,6 +736,11 @@ if ($catalogReady) {
             v.metadata,
             v.game_function,
             v.script_proxy_program,
+            EXISTS (
+                SELECT 1
+                FROM public.core_action b
+                WHERE LOWER(b.code_name) = LOWER(v.code_name)
+            ) AS has_base,
             EXISTS (
                 SELECT 1
                 FROM public.core_action_custom c
@@ -835,6 +880,37 @@ if (!$isEmbed) {
         margin: 8px 0;
         color: #d0d6df;
     }
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+        gap: 12px;
+    }
+    .summary-card {
+        display: grid;
+        gap: 8px;
+        padding: 14px 16px;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        background: linear-gradient(180deg, rgba(35, 35, 35, 0.96), rgba(26, 26, 26, 0.98));
+        box-shadow: inset 0 1px rgba(255, 255, 255, 0.03);
+    }
+    .summary-card-label {
+        color: #d0d6df;
+        font-size: 0.9em;
+        line-height: 1.35;
+    }
+    .summary-card-value {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #f6e5bf;
+        font-size: 1.35em;
+        font-weight: 700;
+    }
+    .summary-card-value .stat-pill {
+        margin-left: 0;
+        font-size: 0.72em;
+    }
     .stat-pill {
         display: inline-block;
         padding: 3px 10px;
@@ -867,10 +943,10 @@ if (!$isEmbed) {
         display: grid;
         gap: 14px;
         padding: 14px 16px;
-        border: 1px solid rgba(138, 155, 182, 0.22);
+        border: 1px solid #3a3a3a;
         border-radius: 10px;
-        background: linear-gradient(180deg, rgba(29, 35, 44, 0.96), rgba(20, 24, 31, 0.96));
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
     }
     .filter-toolbar-top {
         display: flex;
@@ -886,20 +962,27 @@ if (!$isEmbed) {
         display: flex;
         align-items: center;
         gap: 12px;
-        flex: 1 1 420px;
-        min-width: 280px;
+        flex: 0 0 auto;
+        min-width: 0;
     }
     .live-search-wrap input[type="text"] {
-        width: 100%;
+        width: min(320px, 24vw);
+        min-width: 220px;
         padding: 10px 12px;
         border-radius: 8px;
-        border: 1px solid #555555;
-        background-color: #4a4a4a;
+        border: 1px solid #4a4a4a;
+        background: rgba(28, 28, 28, 0.92);
         color: #f8f9fa;
         box-sizing: border-box;
+        box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.25);
+    }
+    .live-search-wrap input[type="text"]:focus {
+        outline: none;
+        border-color: rgba(242, 124, 17, 0.45);
+        box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.12), inset 0 1px 1px rgba(0, 0, 0, 0.2);
     }
     .filter-summary {
-        color: #9aa7bd;
+        color: #d2b078;
         font-size: 0.92em;
         white-space: nowrap;
     }
@@ -918,7 +1001,8 @@ if (!$isEmbed) {
         font-size: 0.78em;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: #9aa7bd;
+        color: #e6b76c;
+        font-weight: 700;
     }
     .filter-chip-row {
         display: flex;
@@ -937,25 +1021,27 @@ if (!$isEmbed) {
         min-height: 34px;
         padding: 0 12px;
         border-radius: 999px;
-        border: 1px solid rgba(138, 155, 182, 0.28);
-        background: rgba(43, 50, 61, 0.92);
-        color: #dbe4f5;
+        border: 1px solid #3a3a3a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.86), rgba(34, 34, 34, 0.94));
+        color: #f8f9fa;
         cursor: pointer;
         transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
         user-select: none;
         font-size: 0.92em;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.14);
     }
     .filter-chip-row label:hover {
-        background: rgba(58, 67, 81, 0.96);
-        border-color: rgba(216, 165, 76, 0.42);
-        color: #fff0cc;
+        background: linear-gradient(180deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 1));
+        border-color: rgba(242, 124, 17, 0.3);
+        color: rgb(242, 124, 17);
         transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
     .filter-chip-row input[type="radio"]:checked + label {
-        background: linear-gradient(135deg, rgba(122, 86, 30, 0.95), rgba(94, 63, 19, 0.95));
-        border-color: rgba(230, 183, 108, 0.72);
-        color: #fff3d6;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        border-color: rgba(242, 124, 17, 0.5);
+        color: rgb(242, 124, 17);
+        box-shadow: 0 4px 8px rgba(242, 124, 17, 0.2);
     }
     .filter-actions {
         display: flex;
@@ -964,38 +1050,40 @@ if (!$isEmbed) {
         flex-wrap: wrap;
     }
     .action-button.secondary {
-        background: rgba(49, 57, 69, 0.96);
-        border: 1px solid rgba(138, 155, 182, 0.28);
-        color: #dbe4f5;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.86), rgba(34, 34, 34, 0.94));
+        border: 1px solid #3a3a3a;
+        color: #f8f9fa;
+    }
+    .action-button.secondary:hover {
+        background: linear-gradient(180deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 1));
+        border-color: rgba(242, 124, 17, 0.3);
+        color: rgb(242, 124, 17);
     }
     .empty-filter-state {
         display: none;
         padding: 14px 16px;
-        border-top: 1px solid rgba(138, 155, 182, 0.18);
-        color: #9aa7bd;
-        background: rgba(18, 22, 29, 0.9);
+        border-top: 1px solid #3a3a3a;
+        color: #d2b078;
+        background: rgba(26, 26, 26, 0.94);
     }
     .table-container {
         width: 100%;
         overflow-x: auto;
         margin-top: 20px;
-        max-height: calc(100vh - 320px);
+        min-height: 72vh;
+        max-height: calc(100vh - 120px);
         overflow-y: auto;
         border: 1px solid #3a3a3a;
         border-radius: 8px;
-        position: relative;
-        isolation: isolate;
-        background: rgba(20, 24, 31, 0.98);
-        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+        background: rgba(18, 18, 18, 0.82);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
     }
     .table-container table {
         width: 100%;
         border-collapse: separate;
         border-spacing: 0;
-        background: rgba(26, 30, 37, 0.99);
+        background: transparent;
         table-layout: fixed;
-        position: relative;
-        z-index: 1;
     }
     .table-container thead {
         position: sticky;
@@ -1190,7 +1278,15 @@ if (!$isEmbed) {
             gap: 20px;
         }
         .live-search-wrap {
+            width: 100%;
+        }
+        .live-search-wrap input[type="text"] {
+            width: 100%;
             min-width: 0;
+        }
+        .table-container {
+            min-height: 60vh;
+            max-height: calc(100vh - 100px);
         }
     }
 </style>
@@ -1214,17 +1310,52 @@ if (!$isEmbed) {
         <div class="content-grid">
             <div class="content-section">
                 <h2>Action Summary</h2>
-                <div class="stat-line">Total Actions <span class="stat-pill"><?php echo h($countAll); ?></span></div>
-                <div class="stat-line">Enabled <span class="stat-pill enabled"><?php echo h($countEnabled); ?></span></div>
-                <div class="stat-line">Disabled <span class="stat-pill disabled"><?php echo h($countDisabled); ?></span></div>
-                <div class="stat-line">NPC Scope <span class="stat-pill scope"><?php echo h($countNpc); ?></span></div>
-                <div class="stat-line">Follower Scope <span class="stat-pill scope"><?php echo h($countFollowers); ?></span></div>
-                <div class="stat-line">Narrator Scope <span class="stat-pill scope"><?php echo h($countNarrator); ?></span></div>
-                <div class="stat-line">Dynamic Only <span class="stat-pill scope"><?php echo h($countDynamic); ?></span></div>
-                <div class="stat-line">Game Functions <span class="stat-pill scope"><?php echo h($countGameFunction); ?></span></div>
-                <div class="stat-line">Server Only <span class="stat-pill scope"><?php echo h($countServerAction); ?></span></div>
-                <div class="stat-line">Custom Actions <span class="stat-pill scope"><?php echo h($countCustom); ?></span></div>
-                <div class="stat-line">Base Actions <span class="stat-pill scope"><?php echo h($countBase); ?></span></div>
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <div class="summary-card-label">Total Actions</div>
+                        <div class="summary-card-value"><span class="stat-pill"><?php echo h($countAll); ?></span></div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">Enabled</div>
+                        <div class="summary-card-value"><span class="stat-pill enabled"><?php echo h($countEnabled); ?></span></div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">Disabled</div>
+                        <div class="summary-card-value"><span class="stat-pill disabled"><?php echo h($countDisabled); ?></span></div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">NPC Scope</div>
+                        <div class="summary-card-value"><span class="stat-pill scope"><?php echo h($countNpc); ?></span></div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">Follower Scope</div>
+                        <div class="summary-card-value"><span class="stat-pill scope"><?php echo h($countFollowers); ?></span></div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">Narrator Scope</div>
+                        <div class="summary-card-value"><span class="stat-pill scope"><?php echo h($countNarrator); ?></span></div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">Dynamic Only</div>
+                        <div class="summary-card-value"><span class="stat-pill scope"><?php echo h($countDynamic); ?></span></div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">Game Functions</div>
+                        <div class="summary-card-value"><span class="stat-pill scope"><?php echo h($countGameFunction); ?></span></div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">Server Only</div>
+                        <div class="summary-card-value"><span class="stat-pill scope"><?php echo h($countServerAction); ?></span></div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">Custom Actions</div>
+                        <div class="summary-card-value"><span class="stat-pill scope"><?php echo h($countCustom); ?></span></div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">Base Actions</div>
+                        <div class="summary-card-value"><span class="stat-pill scope"><?php echo h($countBase); ?></span></div>
+                    </div>
+                </div>
             </div>
             <div class="content-section">
                 <h2>How It Works</h2>
@@ -1238,14 +1369,12 @@ if (!$isEmbed) {
                 </p>
             </div>
 
-            <div class="content-section full-width-section">
-                <h2 id="entries">Actions</h2>
-
+            <div class="full-width-section">
                 <div class="action-container">
-                    <div class="filter-toolbar">
+                    <div class="filter-toolbar" id="entries">
                         <div class="filter-toolbar-top">
                             <div class="live-search-wrap">
-                                <input type="text" id="actionLiveSearch" value="<?php echo h($search); ?>" placeholder="Live search by command or action name">
+                                <input type="text" id="actionLiveSearch" value="<?php echo h($search); ?>" placeholder="Search">
                                 <div class="filter-summary"><span id="actionVisibleCount"><?php echo h(count($rows)); ?></span> of <?php echo h(count($rows)); ?> shown</div>
                             </div>
                             <div class="filter-actions">
@@ -1296,10 +1425,10 @@ if (!$isEmbed) {
                                     <div class="filter-chip-row">
                                         <input type="radio" name="live-source" id="live-source-all" value="all" <?php echo $customFilter === "all" ? "checked" : ""; ?>>
                                         <label for="live-source-all">All</label>
-                                        <input type="radio" name="live-source" id="live-source-custom" value="custom" <?php echo $customFilter === "custom" ? "checked" : ""; ?>>
-                                        <label for="live-source-custom">Custom</label>
                                         <input type="radio" name="live-source" id="live-source-base" value="base" <?php echo $customFilter === "base" ? "checked" : ""; ?>>
                                         <label for="live-source-base">Base</label>
+                                        <input type="radio" name="live-source" id="live-source-custom" value="custom" <?php echo $customFilter === "custom" ? "checked" : ""; ?>>
+                                        <label for="live-source-custom">Custom</label>
                                     </div>
                                 </div>
                             </div>
@@ -1328,6 +1457,7 @@ if (!$isEmbed) {
                                 $codeName = strval($row["code_name"] ?? "");
                                 $enabled = herikaActionCatalogToBool($row["is_activated"] ?? false);
                                 $isCustom = herikaActionCatalogToBool($row["is_custom"] ?? false);
+                                $hasBase = herikaActionCatalogToBool($row["has_base"] ?? false);
                                 $isNpc = herikaActionCatalogToBool($row["available_to_npc"] ?? false);
                                 $isFollowers = herikaActionCatalogToBool($row["available_to_followers"] ?? false);
                                 $isNarrator = herikaActionCatalogToBool($row["available_to_narrator"] ?? false);
@@ -1454,12 +1584,8 @@ if (!$isEmbed) {
                                                         $fieldId = 'config-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName . '-' . $fieldKey);
                                                         $fieldType = strval($configField['type'] ?? 'text');
                                                         $fieldValue = $resolvedConfig[$fieldKey] ?? (function_exists('herikaActionCatalogGetEditorFieldDefaultValue')
-                                                            ? herikaActionCatalogGetEditorFieldDefaultValue($configField)
+                                                            ? herikaActionCatalogGetEditorFieldDefaultValue($configField, $row)
                                                             : '');
-                                                        $fieldDefaultValue = function_exists('herikaActionCatalogGetEditorFieldDefaultValue')
-                                                            ? herikaActionCatalogGetEditorFieldDefaultValue($configField)
-                                                            : '';
-                                                        $hasOverride = array_key_exists($fieldKey, $customConfig);
                                                         ?>
                                                         <div class="config-field" style="margin-bottom: 14px;">
                                                             <label for="<?php echo h($fieldId); ?>"><?php echo h($configField['label'] ?? $fieldKey); ?></label>
@@ -1503,17 +1629,6 @@ if (!$isEmbed) {
                                                                         placeholder="<?php echo h($configField['placeholder'] ?? ''); ?>"
                                                                         value="<?php echo h($fieldValue); ?>"
                                                                     >
-                                                                <?php endif; ?>
-                                                            </div>
-                                                            <div class="helper-text">
-                                                                Effective: <?php echo h(functionEditorFormatConfigValue($configField, $fieldValue)); ?>.
-                                                                <?php if ($hasOverride): ?>
-                                                                    Override active. Default fallback: <?php echo h(functionEditorFormatConfigValue($configField, $fieldDefaultValue)); ?>.
-                                                                <?php else: ?>
-                                                                    Default fallback: <?php echo h(functionEditorFormatConfigValue($configField, $fieldDefaultValue)); ?>.
-                                                                <?php endif; ?>
-                                                                <?php if (trim(strval($configField['help'] ?? '')) !== ''): ?>
-                                                                    <?php echo h($configField['help']); ?>
                                                                 <?php endif; ?>
                                                             </div>
                                                         </div>
@@ -1576,6 +1691,16 @@ if (!$isEmbed) {
                                                 <?php echo $enabled ? "Disable" : "Enable"; ?>
                                             </button>
                                         </form>
+                                        <?php if ($isCustom && $hasBase): ?>
+                                            <form method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>" style="margin-top: 8px;" onsubmit="return confirm('Reset this action to its base definition? This will delete the custom override row for <?php echo h($codeName); ?>.');">
+                                                <?php if ($isEmbed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
+                                                <input type="hidden" name="action" value="reset_action_override">
+                                                <input type="hidden" name="code_name" value="<?php echo h($codeName); ?>">
+                                                <button type="submit" class="action-button secondary">
+                                                    Reset Override
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

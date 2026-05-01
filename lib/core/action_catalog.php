@@ -16,106 +16,161 @@ function herikaGetRetiredActionCodes()
     ];
 }
 
-function herikaGetNpcDefaultActionCodes()
+function herikaActionCatalogDecodeSqlQuotedText($value)
 {
-    return [
-        'MoveTo',
-        'OpenInventory',
-        'OpenInventory2',
-        'Attack',
-        'TravelTo',
-        'Follow',
-        'Inspect',
-        'InspectSurroundings',
-        'CheckInventory',
-        'ReadQuestJournal',
-        'Surrender',
-        'Relax',
-        'TakeASeat',
-        'IncreaseWalkSpeed',
-        'DecreaseWalkSpeed',
-        'WaitHere',
-        'ComeCloser',
-        'TakeGoldFromPlayer',
-        'RentRoom',
-        'HireCarriage',
-        'HireFerry',
-        'AddBounty',
-        'PayBounty',
-        'ArrestPlayer',
-        'ForgiveCrime',
-        'FollowPlayer',
-        'Brawl',
-        'GiveGoldTo',
-        'GiveItemTo',
-        'PickupItem',
-        'GoToSleep',
-        'UseSoulGaze',
-        'CastSpell',
-        'MakeFollower',
-        'Drink',
-        'Consume',
-        'Toast',
-        'StartRitualCeremony',
-        'EndRitualCeremony',
-        'Training',
-        'EndConversation',
-    ];
+    $text = trim(strval($value));
+    if ($text === '' || strcasecmp($text, 'NULL') === 0) {
+        return null;
+    }
+
+    if (strlen($text) >= 2 && $text[0] === "'" && substr($text, -1) === "'") {
+        $text = substr($text, 1, -1);
+    }
+
+    return str_replace("''", "'", $text);
 }
 
-function herikaGetFollowerDefaultActionCodes()
+function herikaActionCatalogSplitSqlTuple($tuple)
 {
-    return [
-        'OpenInventory',
-        'OpenInventory2',
-        'Attack',
-        'TravelTo',
-        'Follow',
-        'Inspect',
-        'InspectSurroundings',
-        'CheckInventory',
-        'ReadQuestJournal',
-        'Surrender',
-        'SheatheWeapon',
-        'Relax',
-        'TakeASeat',
-        'IncreaseWalkSpeed',
-        'DecreaseWalkSpeed',
-        'WaitHere',
-        'ComeCloser',
-        'TakeGoldFromPlayer',
-        'RentRoom',
-        'HireCarriage',
-        'HireFerry',
-        'AddBounty',
-        'PayBounty',
-        'ArrestPlayer',
-        'ForgiveCrime',
-        'Brawl',
-        'GiveGoldTo',
-        'GiveItemTo',
-        'PickupItem',
-        'GoToSleep',
-        'UseSoulGaze',
-        'CastSpell',
-        'Drink',
-        'Consume',
-        'Toast',
-        'Training',
-        'StartRitualCeremony',
-        'EndRitualCeremony',
-    ];
+    $fields = [];
+    $current = '';
+    $inString = false;
+    $length = strlen($tuple);
+
+    for ($index = 0; $index < $length; $index++) {
+        $char = $tuple[$index];
+
+        if ($char === "'") {
+            $current .= $char;
+            if ($inString && $index + 1 < $length && $tuple[$index + 1] === "'") {
+                $current .= "'";
+                $index++;
+                continue;
+            }
+
+            $inString = !$inString;
+            continue;
+        }
+
+        if (!$inString && $char === ',') {
+            $fields[] = trim($current);
+            $current = '';
+            continue;
+        }
+
+        $current .= $char;
+    }
+
+    if (trim($current) !== '') {
+        $fields[] = trim($current);
+    }
+
+    return $fields;
 }
 
-function herikaGetNarratorDefaultActionCodes()
+function herikaActionCatalogSplitSqlInsertTuples($sql)
 {
-    return [
-        'CreateNewNPC',
-        'KillTarget',
-        'SpawnNPC',
-        'SpawnItem',
-        'TeleportNPC',
-    ];
+    $valuesPos = stripos($sql, 'VALUES');
+    $conflictPos = stripos($sql, 'ON CONFLICT');
+    if ($valuesPos === false || $conflictPos === false || $conflictPos <= $valuesPos) {
+        return [];
+    }
+
+    $valuesSql = trim(substr($sql, $valuesPos + strlen('VALUES'), $conflictPos - ($valuesPos + strlen('VALUES'))));
+    if ($valuesSql === '') {
+        return [];
+    }
+
+    $tuples = [];
+    $current = '';
+    $depth = 0;
+    $inString = false;
+    $length = strlen($valuesSql);
+
+    for ($index = 0; $index < $length; $index++) {
+        $char = $valuesSql[$index];
+
+        if ($char === "'") {
+            $current .= $char;
+            if ($inString && $index + 1 < $length && $valuesSql[$index + 1] === "'") {
+                $current .= "'";
+                $index++;
+                continue;
+            }
+
+            $inString = !$inString;
+            continue;
+        }
+
+        if (!$inString) {
+            if ($char === '(') {
+                if ($depth > 0) {
+                    $current .= $char;
+                }
+                $depth++;
+                continue;
+            }
+
+            if ($char === ')') {
+                $depth--;
+                if ($depth === 0) {
+                    $tuples[] = $current;
+                    $current = '';
+                    continue;
+                }
+            }
+        }
+
+        if ($depth > 0) {
+            $current .= $char;
+        }
+    }
+
+    return $tuples;
+}
+
+function herikaLoadActionCatalogBaseSeedRowsFromSeedFile()
+{
+    static $cache = null;
+    if (is_array($cache)) {
+        return $cache;
+    }
+
+    $cache = [];
+    $seedFile = herikaGetActionCatalogBaseSeedFilePath();
+    if (!file_exists($seedFile)) {
+        return $cache;
+    }
+
+    $sql = trim(strval(file_get_contents($seedFile)));
+    if ($sql === '') {
+        return $cache;
+    }
+
+    foreach (herikaActionCatalogSplitSqlInsertTuples($sql) as $tuple) {
+        $fields = herikaActionCatalogSplitSqlTuple($tuple);
+        if (count($fields) < 8) {
+            continue;
+        }
+
+        $codeName = herikaActionCatalogDecodeSqlQuotedText($fields[0] ?? '');
+        if ($codeName === null || trim($codeName) === '') {
+            continue;
+        }
+
+        $cache[$codeName] = [
+            'code_name' => $codeName,
+            'action_name' => herikaActionCatalogDecodeSqlQuotedText($fields[1] ?? ''),
+            'description' => herikaActionCatalogDecodeSqlQuotedText($fields[2] ?? ''),
+            'return_message' => herikaActionCatalogDecodeSqlQuotedText($fields[3] ?? ''),
+            'available_to_npc' => herikaActionCatalogToBool($fields[4] ?? false),
+            'available_to_followers' => herikaActionCatalogToBool($fields[5] ?? false),
+            'available_to_narrator' => herikaActionCatalogToBool($fields[6] ?? false),
+            'is_activated' => herikaActionCatalogToBool($fields[7] ?? false),
+        ];
+    }
+
+    return $cache;
 }
 
 function herikaActionCatalogSqlBool($value)
@@ -265,6 +320,46 @@ function herikaActionCatalogNormalizeEditorFieldOptions($options)
     return $normalized;
 }
 
+function herikaActionCatalogGetSharedEditorFields()
+{
+    return [
+        [
+            'key' => 'followup_enabled',
+            'label' => 'Follow-up Enabled',
+            'type' => 'boolean',
+            'default' => false,
+            'metadata_default_path' => 'followup.enabled',
+            'help' => 'If enabled, this action may trigger a follow-up LLM response when a funcret result arrives.',
+        ],
+        [
+            'key' => 'followup_arg_name',
+            'label' => 'Follow-up Argument Name',
+            'type' => 'text',
+            'default' => 'target',
+            'metadata_default_path' => 'followup.arg_name',
+            'placeholder' => 'target',
+            'help' => 'Tool-call argument name to use in the synthetic follow-up context.',
+        ],
+        [
+            'key' => 'followup_prompt',
+            'label' => 'Follow-up Prompt',
+            'type' => 'textarea',
+            'default' => '',
+            'metadata_default_path' => 'followup.prompt',
+            'placeholder' => 'Reply with one short in-character line reacting to the tool result below. Do not ask follow-up questions.',
+            'help' => 'The full instruction used to generate the follow-up response.',
+        ],
+        [
+            'key' => 'followup_use_functions_again',
+            'label' => 'Allow Follow-up Actions',
+            'type' => 'boolean',
+            'default' => false,
+            'metadata_default_path' => 'followup.use_functions_again',
+            'help' => 'If enabled, the follow-up response may call another action.',
+        ],
+    ];
+}
+
 function herikaActionCatalogNormalizeEditorField($field)
 {
     if (!is_array($field)) {
@@ -287,6 +382,7 @@ function herikaActionCatalogNormalizeEditorField($field)
         'type' => $type,
         'default' => $field['default'] ?? null,
         'global_default_key' => trim(strval($field['global_default_key'] ?? '')),
+        'metadata_default_path' => trim(strval($field['metadata_default_path'] ?? '')),
         'minimum' => array_key_exists('minimum', $field) ? $field['minimum'] : null,
         'maximum' => array_key_exists('maximum', $field) ? $field['maximum'] : null,
         'step' => array_key_exists('step', $field) ? $field['step'] : null,
@@ -323,6 +419,15 @@ function herikaActionCatalogGetEditorFields($rowOrCode = null)
     }
 
     $normalized = [];
+    foreach (herikaActionCatalogGetSharedEditorFields() as $field) {
+        $normalizedField = herikaActionCatalogNormalizeEditorField($field);
+        if ($normalizedField === null) {
+            continue;
+        }
+
+        $normalized[$normalizedField['key']] = $normalizedField;
+    }
+
     foreach ($fields as $field) {
         $normalizedField = herikaActionCatalogNormalizeEditorField($field);
         if ($normalizedField === null) {
@@ -395,7 +500,7 @@ function herikaActionCatalogCastEditorFieldValue($field, $value)
     return strval($value ?? '');
 }
 
-function herikaActionCatalogGetEditorFieldDefaultValue($field)
+function herikaActionCatalogGetEditorFieldDefaultValue($field, $row = null)
 {
     $field = herikaActionCatalogNormalizeEditorField($field);
     if ($field === null) {
@@ -406,6 +511,15 @@ function herikaActionCatalogGetEditorFieldDefaultValue($field)
     $globalDefaultKey = trim(strval($field['global_default_key'] ?? ''));
     if ($globalDefaultKey !== '' && array_key_exists($globalDefaultKey, $GLOBALS)) {
         $defaultValue = $GLOBALS[$globalDefaultKey];
+    }
+
+    $metadataDefaultPath = trim(strval($field['metadata_default_path'] ?? ''));
+    if ($metadataDefaultPath !== '' && is_array($row)) {
+        $rowMetadata = herikaActionCatalogDecodeJson($row['metadata'] ?? [], []);
+        $metadataDefaultValue = herikaActionCatalogResolveContextPath($rowMetadata, $metadataDefaultPath);
+        if ($metadataDefaultValue !== null) {
+            $defaultValue = $metadataDefaultValue;
+        }
     }
 
     return herikaActionCatalogCastEditorFieldValue($field, $defaultValue);
@@ -434,7 +548,7 @@ function herikaActionCatalogGetResolvedCustomConfig($codeName, $row = null)
         if (array_key_exists($fieldKey, $customConfig)) {
             $resolvedConfig[$fieldKey] = herikaActionCatalogCastEditorFieldValue($field, $customConfig[$fieldKey]);
         } else {
-            $resolvedConfig[$fieldKey] = herikaActionCatalogGetEditorFieldDefaultValue($field);
+            $resolvedConfig[$fieldKey] = herikaActionCatalogGetEditorFieldDefaultValue($field, $row);
         }
     }
 
@@ -792,24 +906,24 @@ function herikaActionCatalogGetBuiltinEditorFields($codeName)
     $fields = [
         'RentRoom' => [
             [
-                'key' => 'rent_room_cost',
-                'label' => 'Room Cost',
+                'key' => 'cost_gold',
+                'label' => 'Gold Cost',
                 'type' => 'integer',
                 'default' => 10,
                 'minimum' => 1,
                 'format' => 'gold',
-                'help' => 'How much gold the player pays to rent a room from this NPC.',
+                'help' => 'How much gold this action costs.',
             ],
         ],
         'HireCarriage' => [
             [
-                'key' => 'hire_carriage_cost',
-                'label' => 'Carriage Fare',
+                'key' => 'cost_gold',
+                'label' => 'Gold Cost',
                 'type' => 'integer',
                 'default' => 20,
                 'minimum' => 1,
                 'format' => 'gold',
-                'help' => 'How much gold the player pays for carriage travel.',
+                'help' => 'How much gold this action costs.',
             ],
             [
                 'key' => 'allowed_npc_names',
@@ -823,13 +937,13 @@ function herikaActionCatalogGetBuiltinEditorFields($codeName)
         ],
         'HireFerry' => [
             [
-                'key' => 'hire_ferry_cost',
-                'label' => 'Ferry Fare',
+                'key' => 'cost_gold',
+                'label' => 'Gold Cost',
                 'type' => 'integer',
                 'default' => 50,
                 'minimum' => 1,
                 'format' => 'gold',
-                'help' => 'How much gold the player pays for ferry travel.',
+                'help' => 'How much gold this action costs.',
             ],
             [
                 'key' => 'allowed_npc_names',
@@ -850,15 +964,15 @@ function herikaActionCatalogGetBuiltinParameterTemplate($codeName)
 {
     $templates = [
         'RentRoom' => [
-            'amount' => '{{config.rent_room_cost}}',
+            'amount' => '{{config.cost_gold}}',
         ],
         'HireCarriage' => [
             'target' => '{{parameter_target}}',
-            'amount' => '{{config.hire_carriage_cost}}',
+            'amount' => '{{config.cost_gold}}',
         ],
         'HireFerry' => [
             'target' => '{{parameter_target}}',
-            'amount' => '{{config.hire_ferry_cost}}',
+            'amount' => '{{config.cost_gold}}',
         ],
     ];
 
@@ -1000,7 +1114,228 @@ function herikaActionCatalogBuildBaseMetadata($codeName, $scriptProxyProgram = n
         $metadata['cooldown_seconds'] = intval($cooldownSeconds);
     }
 
+    $followupConfig = herikaActionCatalogBuildBaseFollowupConfig($codeName);
+    if (count($followupConfig) > 0) {
+        $metadata['followup'] = $followupConfig;
+    }
+
     return $metadata;
+}
+
+function herikaActionCatalogNormalizeFollowupConfig($config)
+{
+    if (!is_array($config)) {
+        return [];
+    }
+
+    $normalized = [];
+    if (array_key_exists('enabled', $config)) {
+        $normalized['enabled'] = herikaActionCatalogToBool($config['enabled']);
+    }
+
+    $prompt = trim(strval($config['prompt'] ?? ''));
+    if ($prompt !== '') {
+        $normalized['prompt'] = $prompt;
+    }
+
+    $argName = trim(strval($config['arg_name'] ?? ''));
+    if ($argName !== '') {
+        $normalized['arg_name'] = $argName;
+    }
+
+    if (array_key_exists('use_functions_again', $config)) {
+        $normalized['use_functions_again'] = herikaActionCatalogToBool($config['use_functions_again']);
+    }
+
+    return $normalized;
+}
+
+function herikaActionCatalogGetFollowupChainLimit()
+{
+    return 1;
+}
+
+function herikaActionCatalogGetFollowupChainMarkerPrefix()
+{
+    return '__chim_followup_chain__';
+}
+
+function herikaActionCatalogParseActionsIssuedOriginalValue($value)
+{
+    $value = strval($value);
+    $parsed = [
+        'is_followup_chain' => false,
+        'followup_chain_depth' => 0,
+        'original' => $value,
+    ];
+
+    if ($value === '') {
+        return $parsed;
+    }
+
+    $prefix = herikaActionCatalogGetFollowupChainMarkerPrefix();
+    if (strpos($value, $prefix) !== 0) {
+        return $parsed;
+    }
+
+    $payload = json_decode(substr($value, strlen($prefix)), true);
+    if (!is_array($payload)) {
+        return $parsed;
+    }
+
+    $depth = max(0, intval($payload['depth'] ?? 0));
+    $parsed['is_followup_chain'] = $depth > 0;
+    $parsed['followup_chain_depth'] = $depth;
+    $parsed['original'] = strval($payload['original'] ?? '');
+
+    return $parsed;
+}
+
+function herikaActionCatalogEncodeActionsIssuedOriginalValue($originalValue, $depth)
+{
+    $depth = max(0, intval($depth));
+    if ($depth <= 0) {
+        return strval($originalValue);
+    }
+
+    $payload = [
+        'depth' => $depth,
+    ];
+
+    $originalValue = strval($originalValue);
+    if ($originalValue !== '') {
+        $payload['original'] = $originalValue;
+    }
+
+    return herikaActionCatalogGetFollowupChainMarkerPrefix()
+        . json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+}
+
+function herikaActionCatalogApplyFollowupChainToActionsIssuedOriginal($originalValue)
+{
+    $depth = intval($GLOBALS["FOLLOWUP_CHAIN_NEXT_DEPTH"] ?? 0);
+    if ($depth <= 0) {
+        return strval($originalValue);
+    }
+
+    return herikaActionCatalogEncodeActionsIssuedOriginalValue($originalValue, $depth);
+}
+
+function herikaActionCatalogBuildBaseFollowupConfig($codeName)
+{
+    $disabledFollowUpCodes = [
+        'Attack',
+        'Consume',
+        'FollowPlayer',
+        'ForgiveCrime',
+        'GiveGoldTo',
+        'GiveItemTo',
+        'HireCarriage',
+        'HireFerry',
+        'LeadTheWayTo',
+        'MoveTo',
+        'RentRoom',
+        'TakeGoldFromPlayer',
+    ];
+
+    $promptMap = [
+        'GetTopicInfo' => ['arg_name' => 'topic', 'prompt' => 'Reply with one short in-character line about the requested topic using the tool result below. Do not ask follow-up questions.'],
+        'LeadTheWayTo' => ['arg_name' => 'location', 'prompt' => 'Reply with one short in-character line acknowledging that you are now leading the player to the destination. Do not ask follow-up questions.'],
+        'MoveTo' => ['arg_name' => 'target', 'prompt' => 'Reply with one short in-character line acknowledging that you moved to the target. Do not ask follow-up questions.'],
+        'Attack' => ['arg_name' => 'target', 'prompt' => 'Reply with one short in-character combat line reacting to the attack outcome. Do not ask follow-up questions.'],
+        'Inspect' => ['arg_name' => 'target', 'prompt' => 'Reply with one short in-character observation using the inspect result below. Do not ask follow-up questions.'],
+        'InspectSurroundings' => ['arg_name' => 'target', 'prompt' => 'Reply with one short in-character observation about the surroundings using the tool result below. Do not ask follow-up questions.'],
+        'GetTime' => ['arg_name' => 'datestring', 'prompt' => 'Reply with one short in-character line acknowledging the reported time. Do not ask follow-up questions.'],
+        'get_current_mission' => ['arg_name' => 'description', 'prompt' => 'Reply with one short in-character line about the current mission using the tool result below. Do not ask follow-up questions.'],
+        'CheckInventory' => ['arg_name' => 'target', 'prompt' => 'Reply with one short in-character line about the inventory result below. Do not ask follow-up questions.'],
+        'ReadQuestJournal' => ['arg_name' => 'id_quest', 'prompt' => 'Reply with one short in-character line about the quest journal result below. Do not ask follow-up questions.'],
+        'GiveItemTo' => ['arg_name' => 'target', 'prompt' => 'Reply with one short in-character line reacting to the item handoff result below. Do not ask follow-up questions.'],
+        'GiveGoldTo' => ['arg_name' => 'target', 'prompt' => 'Reply with one short in-character line reacting to the gold transfer result below. Do not ask follow-up questions.'],
+        'RentRoom' => ['arg_name' => 'target', 'prompt' => 'Reply with one short in-character confirmation that the room rental is complete. Do not ask follow-up questions.'],
+        'HireCarriage' => ['arg_name' => 'target', 'prompt' => 'Reply with one short in-character line accepting payment and ending the conversation. Do not ask follow-up questions.'],
+        'HireFerry' => ['arg_name' => 'target', 'prompt' => 'Reply with one short in-character line accepting payment and ending the conversation. Do not ask follow-up questions.'],
+        'AddBounty' => ['arg_name' => 'target', 'prompt' => 'You just added a bounty to #PLAYER_NAME#. React in character. You may follow up with another action if appropriate.', 'use_functions_again' => true],
+        'PayBounty' => ['arg_name' => 'target', 'prompt' => '#PLAYER_NAME# has already paid the bounty and stolen items were removed from inventory. This action is fully complete. Reply with one short confirmation line, do not ask follow-up questions, and end the conversation.'],
+        'ArrestPlayer' => ['arg_name' => 'target', 'prompt' => 'You attempted to arrest #PLAYER_NAME#. They get a submit or resist prompt; resist starts combat. Reply with one short stern final line. Do not ask follow-up questions.'],
+        'ForgiveCrime' => ['arg_name' => 'target', 'prompt' => 'You forgave #PLAYER_NAME#\'s crimes and cleared their bounty. Reply with one short in-character acknowledgment, warning, or blessing. Do not ask follow-up questions.'],
+    ];
+
+    if (in_array($codeName, $disabledFollowUpCodes, true)) {
+        $config = $promptMap[$codeName] ?? [];
+        return herikaActionCatalogNormalizeFollowupConfig([
+            'enabled' => false,
+        ] + $config);
+    }
+
+    if (isset($promptMap[$codeName])) {
+        return herikaActionCatalogNormalizeFollowupConfig([
+            'enabled' => true,
+        ] + $promptMap[$codeName]);
+    }
+
+    return [];
+}
+
+function herikaActionCatalogGetResolvedFollowupConfig($codeName, $row = null)
+{
+    $codeName = trim(strval($codeName));
+    if ($codeName === '') {
+        return [];
+    }
+
+    if (!is_array($row)) {
+        $row = herikaGetActionCatalogRow($codeName);
+    }
+    if (!is_array($row)) {
+        return [];
+    }
+
+    $metadata = herikaActionCatalogDecodeJson($row['metadata'] ?? [], []);
+    $resolvedConfig = herikaActionCatalogNormalizeFollowupConfig($metadata['followup'] ?? []);
+
+    $customConfig = is_array($metadata['custom_config'] ?? null) ? $metadata['custom_config'] : [];
+    $resolvedCustomConfig = herikaActionCatalogGetResolvedCustomConfig($codeName, $row);
+    $customKeyToConfigKeyMap = [
+        'followup_enabled' => 'enabled',
+        'followup_arg_name' => 'arg_name',
+        'followup_prompt' => 'prompt',
+        'followup_use_functions_again' => 'use_functions_again',
+    ];
+
+    foreach ($customKeyToConfigKeyMap as $customKey => $configKey) {
+        if (!array_key_exists($customKey, $customConfig) || !array_key_exists($customKey, $resolvedCustomConfig)) {
+            continue;
+        }
+
+        $resolvedConfig[$configKey] = $resolvedCustomConfig[$customKey];
+    }
+
+    if (!empty($resolvedConfig['prompt']) && function_exists('herikaFormatActionPromptTemplate')) {
+        $resolvedConfig['prompt'] = herikaFormatActionPromptTemplate(
+            strval($resolvedConfig['prompt']),
+            [],
+            $row
+        );
+    }
+
+    return herikaActionCatalogNormalizeFollowupConfig($resolvedConfig);
+}
+
+function herikaActionCatalogGetLastIssuedActionFollowupChainDepth($codeName)
+{
+    $codeName = trim(strval($codeName));
+    if ($codeName === '') {
+        return 0;
+    }
+
+    $rows = herikaActionCatalogGetLastActionsIssuedMap();
+    $row = is_array($rows) ? ($rows[$codeName] ?? null) : null;
+    if (!is_array($row)) {
+        return 0;
+    }
+
+    $parsed = herikaActionCatalogParseActionsIssuedOriginalValue($row['original'] ?? '');
+    return max(0, intval($parsed['followup_chain_depth'] ?? 0));
 }
 
 function herikaActionCatalogIsGameFunction($metadata)
@@ -1594,23 +1929,22 @@ function herikaBuildActionCatalogFunctionDefinitionsByCode($runtimeFunctions = n
     return $definitions;
 }
 
-function herikaBuildActionCatalogSeedRows($actionNames, $descriptions, $returnMessages, $currentEnabledCodes = [], $defaultEnabledCodes = [], $functionDefinitionsByCode = [])
+function herikaBuildActionCatalogSeedRows($actionNames, $descriptions, $returnMessages, $currentEnabledCodes = [], $defaultEnabledCodes = [], $functionDefinitionsByCode = [], $seedDefaultsByCode = null)
 {
-    $npcDefaults = herikaGetNpcDefaultActionCodes();
-    $followerDefaults = herikaGetFollowerDefaultActionCodes();
-    $narratorDefaults = herikaGetNarratorDefaultActionCodes();
+    $seedDefaultsByCode = is_array($seedDefaultsByCode) ? $seedDefaultsByCode : herikaLoadActionCatalogBaseSeedRowsFromSeedFile();
     $activationDefaults = count($defaultEnabledCodes) > 0
         ? $defaultEnabledCodes
-        : array_unique(array_merge($npcDefaults, $followerDefaults, $narratorDefaults));
+        : array_unique(array_merge(
+            array_keys($seedDefaultsByCode),
+            is_array($currentEnabledCodes) ? $currentEnabledCodes : []
+        ));
     $allCodeNames = array_unique(array_merge(
         array_keys(is_array($actionNames) ? $actionNames : []),
         array_keys(is_array($descriptions) ? $descriptions : []),
         array_keys(is_array($returnMessages) ? $returnMessages : []),
         is_array($currentEnabledCodes) ? $currentEnabledCodes : [],
         $activationDefaults,
-        $npcDefaults,
-        $followerDefaults,
-        $narratorDefaults,
+        array_keys($seedDefaultsByCode),
         array_keys(is_array($functionDefinitionsByCode) ? $functionDefinitionsByCode : [])
     ));
 
@@ -1626,10 +1960,13 @@ function herikaBuildActionCatalogSeedRows($actionNames, $descriptions, $returnMe
             continue;
         }
 
-        $availableToNpc = in_array($codeName, $npcDefaults, true);
-        $availableToFollowers = in_array($codeName, $followerDefaults, true);
-        $availableToNarrator = in_array($codeName, $narratorDefaults, true);
-        $isActivated = in_array($codeName, $activationDefaults, true) || in_array($codeName, $currentEnabledCodes, true);
+        $seedDefaults = is_array($seedDefaultsByCode[$codeName] ?? null) ? $seedDefaultsByCode[$codeName] : [];
+        $availableToNpc = herikaActionCatalogToBool($seedDefaults['available_to_npc'] ?? false);
+        $availableToFollowers = herikaActionCatalogToBool($seedDefaults['available_to_followers'] ?? false);
+        $availableToNarrator = herikaActionCatalogToBool($seedDefaults['available_to_narrator'] ?? false);
+        $isActivated = array_key_exists('is_activated', $seedDefaults)
+            ? herikaActionCatalogToBool($seedDefaults['is_activated'])
+            : (in_array($codeName, $activationDefaults, true) || in_array($codeName, $currentEnabledCodes, true));
         $functionDefinition = is_array($functionDefinitionsByCode[$codeName] ?? null) ? $functionDefinitionsByCode[$codeName] : [];
         $parameters = herikaActionCatalogNormalizeParameterSchema($functionDefinition['parameters'] ?? null);
         $scriptProxyProgram = $scriptProxyPrograms[$codeName] ?? null;
@@ -2042,7 +2379,7 @@ function herikaFindActionCatalogRowByNameOrCode($actionNameOrCode, $requireCurre
         $rowCodeName = trim(strval($row['code_name'] ?? ''));
         $rawActionName = trim(strval($row['action_name'] ?? ''));
         $runtimeActionName = function_exists('herikaFormatActionPromptTemplate')
-            ? trim(strval(herikaFormatActionPromptTemplate($rawActionName)))
+            ? trim(strval(herikaFormatActionPromptTemplate($rawActionName, [], $row)))
             : $rawActionName;
         $normalizedRuntimeActionName = function_exists('herikaNormalizeActionCatalogDisplayActionName')
             ? trim(strval(herikaNormalizeActionCatalogDisplayActionName($runtimeActionName)))
@@ -2109,7 +2446,7 @@ function herikaFindActionCatalogActionNameConflict($actionName, $excludeCodeName
 
         $rawActionName = trim(strval($row['action_name'] ?? ''));
         $runtimeActionName = function_exists('herikaFormatActionPromptTemplate')
-            ? trim(strval(herikaFormatActionPromptTemplate($rawActionName)))
+            ? trim(strval(herikaFormatActionPromptTemplate($rawActionName, [], $row)))
             : $rawActionName;
         $normalizedCodeName = function_exists('herikaNormalizeActionCatalogDisplayActionName')
             ? trim(strval(herikaNormalizeActionCatalogDisplayActionName($rowCodeName)))
@@ -2226,12 +2563,15 @@ function herikaActionCatalogBuildFunctionEntryFromRow($row)
     }
 
     $runtimeActionName = function_exists('herikaFormatActionPromptTemplate')
-        ? herikaFormatActionPromptTemplate(strval($row['action_name'] ?? ''))
+        ? herikaFormatActionPromptTemplate(strval($row['action_name'] ?? ''), [], $row)
         : strval($row['action_name'] ?? '');
+    $runtimeDescription = function_exists('herikaFormatActionPromptTemplate')
+        ? herikaFormatActionPromptTemplate(strval($row['description'] ?? ''), [], $row)
+        : strval($row['description'] ?? '');
 
     return [
         'name' => $runtimeActionName,
-        'description' => strval($row['description'] ?? ''),
+        'description' => $runtimeDescription,
         'parameters' => herikaActionCatalogNormalizeParameterSchema($row['parameters_json'] ?? null),
     ];
 }
@@ -2391,15 +2731,15 @@ function herikaActionCatalogApplyRowsToRuntimeFunctions()
 
     foreach ($rowsByCode as $codeName => $row) {
         $runtimeActionName = function_exists('herikaFormatActionPromptTemplate')
-            ? herikaFormatActionPromptTemplate(strval($row['action_name'] ?? ''))
+            ? herikaFormatActionPromptTemplate(strval($row['action_name'] ?? ''), [], $row)
             : strval($row['action_name'] ?? '');
         $runtimeDescription = function_exists('herikaFormatActionPromptTemplate')
-            ? herikaFormatActionPromptTemplate($row['description'] ?? '')
+            ? herikaFormatActionPromptTemplate($row['description'] ?? '', [], $row)
             : strval($row['description'] ?? '');
 
         $GLOBALS["F_NAMES"][$codeName] = $runtimeActionName;
         $GLOBALS["F_TRANSLATIONS"][$codeName] = $runtimeDescription;
-        $GLOBALS["F_RETURNMESSAGES"][$codeName] = $row['return_message'];
+        $GLOBALS["F_RETURNMESSAGES"][$codeName] = strval($row['return_message'] ?? '');
 
         $catalogFunctionEntry = herikaActionCatalogBuildFunctionEntryFromRow($row);
         if ($catalogFunctionEntry === null) {
@@ -2526,6 +2866,22 @@ function herikaActionCatalogUpsertCustomToggle($codeName, $enabled)
             import_version = EXCLUDED.import_version,
             script_proxy_program = EXCLUDED.script_proxy_program,
             updated_at = NOW()
+    ");
+
+    herikaActionCatalogResetCache();
+    return $result !== false;
+}
+
+function herikaActionCatalogDeleteCustomOverride($codeName)
+{
+    $codeName = trim(strval($codeName));
+    if ($codeName === '' || !herikaActionCatalogDbReady()) {
+        return false;
+    }
+
+    $result = $GLOBALS["db"]->execQuery("
+        DELETE FROM public.core_action_custom
+        WHERE LOWER(code_name) = LOWER(" . herikaActionCatalogSqlText($codeName) . ")
     ");
 
     herikaActionCatalogResetCache();
@@ -3123,6 +3479,10 @@ function herikaActionCatalogExecuteScriptProxyDbInserts($dbInserts, $context)
         $data = herikaActionCatalogResolveTemplateValue($dbInsert['data'], $context);
         if (!is_array($data)) {
             continue;
+        }
+
+        if (strcasecmp(strval($dbInsert['table']), 'actions_issued') === 0 && array_key_exists('original', $data)) {
+            $data['original'] = herikaActionCatalogApplyFollowupChainToActionsIssuedOriginal($data['original']);
         }
 
         $GLOBALS["db"]->insert($dbInsert['table'], $data);

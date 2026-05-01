@@ -31,6 +31,22 @@ if (!function_exists('chimSanitizeDebugNotificationText')) {
 	}
 }
 
+if (!function_exists('chimBuildMetadataFollowupRequest')) {
+	function chimBuildMetadataFollowupRequest($requestText, $promptText)
+	{
+		$requestText = trim(strval($requestText));
+		$promptText = trim(strval($promptText));
+		if ($promptText === '') {
+			return $requestText;
+		}
+		if ($requestText === '') {
+			return "({$promptText})";
+		}
+
+		return "({$promptText}) {$requestText}";
+	}
+}
+
 if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . ".last_tool_call_openai.id.txt")) {
 	$lastCallId = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . ".last_tool_call_openai.id.txt");
 } else {
@@ -47,8 +63,8 @@ $functionCodeName = $functionLocaleName;
 $functionCodeName = $returnFunction[1];
 
 $useFunctionsAgain = false;
-
-$forceAttackingText = false;
+$argName = "target";
+$currentFollowupChainDepth = 0;
 
 if (isset($returnFunction[2])) {
 	// Patch. 
@@ -56,195 +72,40 @@ if (isset($returnFunction[2])) {
 
 	error_log("[CHIM] Checking <$functionCodeName> <{$returnFunction[1]}>");
 
-	if ($functionCodeName == "GetTopicInfo") {
-		$argName = "topic";
-		// Lets overwrite this
-		// Get info about $returnFunction[2]}
-		$returnFunction[3] = "";
+	$followupConfig = function_exists('herikaActionCatalogGetResolvedFollowupConfig')
+		? herikaActionCatalogGetResolvedFollowupConfig($functionCodeName)
+		: [];
+	$followupEnabled = !empty($followupConfig['enabled']);
+	$followupPrompt = trim(strval($followupConfig['prompt'] ?? ''));
 
-		//
-	} else if ($functionCodeName == "LeadTheWayTo") {
-		$argName = "location";
-		$GLOBALS["OPENAI_MAX_TOKENS"] = "64";	// Force a short response, as IA here tends to simulate the whole travel
-
-		$db->insert(
-			'currentmission',
-			array(
-				'ts' => $gameRequest[1],
-				'gamets' => $gameRequest[2],
-				'description' => SQLite3::escapeString("Travel to {$returnFunction[2]}"),
-				'sess' => 'pending',
-				'localts' => time()
-			)
-		);
-
-
-	} else if ($functionCodeName == "MoveTo") {
-		if (strpos($gameRequest[3], "LeadTheWayTo") !== false) {// PatchHack. If Moving returning Shoud use TravelTo, enable functions again
-			$useFunctionsAgain = true;
-			$request = "(use function call '" . getFunctionTrlName("LeadTheWayTo") . "' to travel) $request";
-		}
-		$argName = "target";
-
-
-	} else if ($functionCodeName == "Attack") {
-		//$useFunctionsAgain=true;
-		$forceAttackingText = true;
-		$argName = "target";
-		$useFunctionsAgain = false;
-
-	} else if ($functionCodeName == "Inspect") {
-		$argName = "target";
-		$useFunctionsAgain = false;
-		$GLOBALS["OPENAI_MAX_TOKENS"] = "96";
-		$inspectedName = trim(strval($returnFunction[2] ?? ''));
-		$inspectResult = trim(strval($returnFunction[3] ?? ''));
-		$isInspectError = stripos($inspectResult, "Error:") === 0;
-
-		if (!$isInspectError && function_exists('chimBuildNpcInspectSummary')) {
-			$inspectSummary = trim(chimBuildNpcInspectSummary($inspectedName));
-			if ($inspectSummary !== '') {
-				$returnFunction[3] = trim($inspectResult . "\n" . $inspectSummary);
-			}
-		}
-
-		if ($isInspectError) {
-			$request = "(The inspect action failed. Reply with one short in-character line explaining why {$GLOBALS["HERIKA_NAME"]} could not get a proper look at {$inspectedName}. Do not pretend the inspection succeeded and do not ask follow-up questions.) $request";
-		} else {
-			$request = "(You just inspected {$inspectedName}. Reply with one short in-character observation about their visible gear, posture, and current condition. If condition details are present, use them naturally. Do not ask follow-up questions.) $request";
-		}
-
-	} else if ($functionCodeName == "InspectSurroundings") {
-		$argName = "target";
-		$useFunctionsAgain = false;
-		$GLOBALS["OPENAI_MAX_TOKENS"] = "80";
-		$surroundingsResult = trim(strval($returnFunction[3] ?? ''));
-		$isInspectError = stripos($surroundingsResult, "Error:") === 0;
-
-		if ($isInspectError) {
-			$request = "(The look-around action failed. Reply with one short in-character line explaining that {$GLOBALS["HERIKA_NAME"]} could not get a proper read on the surroundings. Do not pretend the scan succeeded and do not ask follow-up questions.) $request";
-		} else {
-			$request = "(You just looked around and assessed the nearby area. Reply with one short in-character observation about who or what is nearby, including any notable people, creatures, or threats. Do not ask follow-up questions.) $request";
-		}
-
-
-	} else if ($functionCodeName == "GetTime") {
-		//$useFunctionsAgain=true;
-		$argName = "datestring";
-		//$useFunctionsAgain=true;
-
-
-	} else if ($functionCodeName == "get_current_mission") {		// Disabled, current task is always provided.
-		//$useFunctionsAgain=true;
-		$argName = "description";
-		//$useFunctionsAgain=true;
-
-
-	} else if ($functionCodeName == "CheckInventory") {
-		//$useFunctionsAgain=true;
-		$argName = "target";
-		//$useFunctionsAgain=true;
-
-
-	} else if ($functionCodeName == "GiveItemTo") {
-		// Parse item info from function arguments
-		$argName = "target";
-		$useFunctionsAgain = false;
-
-		// Item transfer is logged separately, so we just acknowledge
-		// The actual inventory sync will happen via container events
-
-	} else if ($functionCodeName == "GiveGoldTo") {
-		// Parse gold amount from function arguments
-		$argName = "target";
-		$useFunctionsAgain = false;
-
-	} else if ($functionCodeName == "TakeGoldFromPlayer") {
-		$useFunctionsAgain = true;
-		die();
-
-	} else if ($functionCodeName == "RentRoom") {
-		$argName = "target";
-		$useFunctionsAgain = false;
-	} else if ($functionCodeName == "HireCarriage") {
-		$argName = "target";
-		$useFunctionsAgain = false;
-		$GLOBALS["OPENAI_MAX_TOKENS"] = "64";
-		$request = "(reply with one short line accepting payment and ending the conversation. Do not ask follow-up questions.) $request";
-	} else if ($functionCodeName == "HireFerry") {
-		$argName = "target";
-		$useFunctionsAgain = false;
-		$GLOBALS["OPENAI_MAX_TOKENS"] = "64";
-		$request = "(reply with one short line accepting payment and ending the conversation. Do not ask follow-up questions.) $request";
-	} else if ($functionCodeName == "AddBounty") {
-		$argName = "target";
-		$useFunctionsAgain = true;
-		$request = "(You just added a bounty to the player. You may follow up with ArrestPlayer or PayBounty if appropriate. React in character.) $request";
-	} else if ($functionCodeName == "PayBounty") {
-		$argName = "target";
-		$useFunctionsAgain = false;
-		$GLOBALS["OPENAI_MAX_TOKENS"] = "64";
-		$request = "(The player has already paid the bounty and stolen items were removed from inventory. This action is fully complete. Reply with one short confirmation line, do not ask follow-up questions, and end the conversation.) $request";
-	} else if ($functionCodeName == "ArrestPlayer") {
-		$argName = "target";
-		$useFunctionsAgain = false;
-		$request = "(You attempted to arrest the player. They get a submit/resist prompt; resist starts combat. Deliver a stern final line.) $request";
-	} else if ($functionCodeName == "ForgiveCrime") {
-		$argName = "target";
-		$useFunctionsAgain = false;
-		$request = "(You forgave the player's crimes and cleared their bounty. Acknowledge this with a warning or blessing.) $request";
-	} else if ($functionCodeName == "Consume") {
-		$argName = "target";
-		$useFunctionsAgain = false;
-		$GLOBALS["OPENAI_MAX_TOKENS"] = "64";
-		$isConsumeError = isset($returnFunction[3]) && stripos(trim(strval($returnFunction[3])), "Error:") === 0;
-		if ($isConsumeError) {
-			$request = "(The consume action failed. Reply with one short in-character line explaining why {$GLOBALS["HERIKA_NAME"]} could not eat or drink that item. Do not pretend it was consumed and do not ask follow-up questions.) $request";
-		} else {
-			$request = "(The item has already been consumed. Reply with one short in-character reaction to how it tasted or felt. Do not describe preparing to eat it and do not ask follow-up questions.) $request";
-		}
-
-	} else if ($functionCodeName == "FollowPlayer") {
+	if (!$followupEnabled) {
 		terminate();
 
+	}
+
+	$argName = trim(strval($followupConfig['arg_name'] ?? 'target'));
+	if ($argName === '') {
+		$argName = 'target';
+	}
+
+	$useFunctionsAgain = !empty($followupConfig['use_functions_again']);
+	$currentFollowupChainDepth = function_exists('herikaActionCatalogGetLastIssuedActionFollowupChainDepth')
+		? intval(herikaActionCatalogGetLastIssuedActionFollowupChainDepth($functionCodeName))
+		: 0;
+	$followupChainLimit = function_exists('herikaActionCatalogGetFollowupChainLimit')
+		? intval(herikaActionCatalogGetFollowupChainLimit())
+		: 1;
+
+	if ($useFunctionsAgain && $followupChainLimit > 0 && $currentFollowupChainDepth >= $followupChainLimit) {
+		error_log("[CHIM] Follow-up action chaining disabled for {$functionCodeName}: depth {$currentFollowupChainDepth} reached limit {$followupChainLimit}");
+		$useFunctionsAgain = false;
+	}
+
+	if ($followupPrompt !== '') {
+		$request = chimBuildMetadataFollowupRequest($request, $followupPrompt);
+
 	} else {
-		error_log("[CHIM] Checking <$functionCodeName> in external declarations");
-
-		if (isset($GLOBALS["FUNCRET"][$functionCodeName])) {
-
-			$reflection = new ReflectionFunction($GLOBALS["FUNCRET"][$functionCodeName]);
-			// Get number of required parameters
-			$required = $reflection->getNumberOfRequiredParameters();
-			if ($required == 1)
-				$frResponse = call_user_func_array($GLOBALS["FUNCRET"][$functionCodeName], ["gameRequest" => $gameRequest]);
-			else
-				$frResponse = call_user_func_array($GLOBALS["FUNCRET"][$functionCodeName], []);
-
-
-
-			if (isset($frResponse["argName"]))
-				$argName = $frResponse["argName"];
-			if (isset($frResponse["request"]))
-				$request = $frResponse["request"];
-			if (isset($frResponse["useFunctionsAgain"]))
-				$useFunctionsAgain = $frResponse["useFunctionsAgain"];
-
-
-		} else if (isset($GLOBALS["FUNCRET"][$returnFunction[1]])) {	// Patch, search also by codename
-
-			$frResponse = call_user_func_array($GLOBALS["FUNCRET"][$returnFunction[1]], []);
-
-			if (isset($frResponse["argName"]))
-				$argName = $frResponse["argName"];
-			if (isset($frResponse["request"]))
-				$request = $frResponse["request"];
-			if (isset($frResponse["useFunctionsAgain"]))
-				$useFunctionsAgain = $frResponse["useFunctionsAgain"];
-
-
-		} else
-			$argName = "target";
-
+		terminate();
 	}
 	$functionCalled[] = array(
 		'role' => 'assistant',
@@ -274,10 +135,7 @@ if ($debugNotificationText !== '' && chimActionShouldEmitDebugNotification($func
 
 $returnFunctionArray[] = array('role' => 'tool', 'content' => "{$returnFunction[3]}", 'tool_call_id' => "$lastCallId");
 
-if ($forceAttackingText)
-	$returnFunctionArray[] = array('role' => $LAST_ROLE, 'content' => selectRandomInArray($GLOBALS["PROMPTS"]["afterattack"]["cue"]) . " {$GLOBALS["HERIKA_NAME"]}: ");
-else
-	$returnFunctionArray[] = array('role' => $LAST_ROLE, 'content' => $request);
+$returnFunctionArray[] = array('role' => $LAST_ROLE, 'content' => $request);
 
 
 $contextData = array_merge($head, ($contextDataFull), $functionCalled, $returnFunctionArray);
@@ -288,8 +146,10 @@ if ($useFunctionsAgain) {
 	$GLOBALS["FUNCTIONS_ARE_ENABLED"] = true;
 	$GLOBALS["FUNCTIONS"];
 	$GLOBALS["FUNCTIONS_FORCE_CALL"] = "auto";
+	$GLOBALS["FOLLOWUP_CHAIN_NEXT_DEPTH"] = $currentFollowupChainDepth + 1;
 } else {
 	$GLOBALS["FUNCTIONS_ARE_ENABLED"] = false;
+	unset($GLOBALS["FOLLOWUP_CHAIN_NEXT_DEPTH"]);
 }
 
 ?>

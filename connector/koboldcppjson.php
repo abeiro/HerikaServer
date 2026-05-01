@@ -334,9 +334,6 @@ class koboldcppjson
                     if (($partialResult[0]["action"]=="Inspect")) {
                         return "";
                     }
-                    if (chimActionShouldSuppressImmediateMessage($partialResult[0]["action"] ?? '')) {
-                        return "";
-                    }
                 }
                 // workaround for some LLMs that return an array of strings for the dialogue in the JSON response.
                 if (is_array($partialResult[0]["message"])) {
