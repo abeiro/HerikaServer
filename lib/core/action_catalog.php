@@ -1081,7 +1081,7 @@ function herikaActionCatalogBuildBaseMetadata($codeName, $scriptProxyProgram = n
     $dispatch = 'plugin_command';
     if ($scriptProxyProgram !== null) {
         $dispatch = 'script_proxy';
-    } elseif (in_array($codeName, ['CreateNewNPC'], true)) {
+    } elseif (in_array($codeName, ['CreateNewNPC', 'DirectorCommand'], true)) {
         $dispatch = 'server_action';
     } elseif (in_array($codeName, ['Training', 'TeleportNPC', 'SpawnItem', 'SpawnNPC', 'KillTarget'], true)) {
         $dispatch = 'rolecommand';

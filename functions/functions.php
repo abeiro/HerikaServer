@@ -44,6 +44,7 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'SpawnItem',
     'SpawnNPC',
     'CreateNewNPC',
+    'DirectorCommand',
     'TeleportNPC',
     'AddBounty',
     'PayBounty',
@@ -774,9 +775,31 @@ function herikaQueueNarratorCreateNewNpc($creationBrief)
         return false;
     }
 
+    return herikaInvokeRolemasterCliCommand('spawn', $creationBrief, 'CreateNewNPC');
+}
+
+function herikaInvokeRolemasterCliCommand($subcommand, $directive, $logLabel = 'Rolemaster')
+{
+    $subcommand = trim(strval($subcommand));
+    $directive = trim(strval($directive));
+    $logLabel = trim(strval($logLabel));
+    if ($logLabel === '') {
+        $logLabel = 'Rolemaster';
+    }
+
+    if ($subcommand === '') {
+        error_log("[ACTION POSTFILTER {$logLabel}] Missing rolemaster subcommand");
+        return false;
+    }
+
+    if ($directive === '') {
+        error_log("[ACTION POSTFILTER {$logLabel}] Missing directive before rolemaster helper");
+        return false;
+    }
+
     $managerPath = realpath(__DIR__ . '/../service/manager.php');
     if ($managerPath === false || !file_exists($managerPath)) {
-        error_log("[ACTION POSTFILTER CreateNewNPC] Could not resolve manager path from " . __DIR__);
+        error_log("[ACTION POSTFILTER {$logLabel}] Could not resolve manager path from " . __DIR__);
         return false;
     }
 
@@ -799,14 +822,15 @@ function herikaQueueNarratorCreateNewNpc($creationBrief)
     }
 
     $escapedManagerPath = escapeshellarg($managerPath);
-    $escapedBrief = escapeshellarg($creationBrief);
+    $escapedSubcommand = escapeshellarg($subcommand);
+    $escapedDirective = escapeshellarg($directive);
     $attemptLogs = [];
 
     foreach (array_values(array_unique($phpBinaryCandidates)) as $phpBinaryCandidate) {
         $output = [];
         $returnCode = 0;
         $escapedPhpBinary = escapeshellarg($phpBinaryCandidate);
-        exec("{$escapedPhpBinary} {$escapedManagerPath} rolemaster spawn {$escapedBrief} 2>&1", $output, $returnCode);
+        exec("{$escapedPhpBinary} {$escapedManagerPath} rolemaster {$escapedSubcommand} {$escapedDirective} 2>&1", $output, $returnCode);
         if ($returnCode === 0) {
             return true;
         }
@@ -814,8 +838,19 @@ function herikaQueueNarratorCreateNewNpc($creationBrief)
         $attemptLogs[] = "php={$phpBinaryCandidate} rc={$returnCode} output=" . implode(" || ", $output);
     }
 
-    error_log("[ACTION POSTFILTER CreateNewNPC] rolemaster spawn command failed manager={$managerPath} attempts=" . implode(" ### ", $attemptLogs));
+    error_log("[ACTION POSTFILTER {$logLabel}] rolemaster {$subcommand} command failed manager={$managerPath} attempts=" . implode(" ### ", $attemptLogs));
     return false;
+}
+
+function herikaQueueNarratorDirectorCommand($directive)
+{
+    $directive = trim(strval($directive));
+    if ($directive === '') {
+        error_log("[ACTION POSTFILTER DirectorCommand] Missing directive before instruction helper");
+        return false;
+    }
+
+    return herikaInvokeRolemasterCliCommand('instruction', $directive, 'DirectorCommand');
 }
 
 function herikaInferNarratorActorTargetFromText($sourceText, $peoplePipe = '')
@@ -910,6 +945,7 @@ $F_TRANSLATIONS_LOCAL["HireFerry"] = "#HERIKA_NAME# accepts {{config.cost_gold}}
 $F_TRANSLATIONS_LOCAL["SpawnItem"] = "Create a named item from the descriptions database and give it to a target actor or #PLAYER_NAME#.";
 $F_TRANSLATIONS_LOCAL["SpawnNPC"] = "Spawn one or more NPCs near #PLAYER_NAME# from the SNQE NPC template datasets. Put the template key in the target field and the spawn count in amount.";
 $F_TRANSLATIONS_LOCAL["CreateNewNPC"] = "Create and spawn a brand-new nearby NPC from a short creation brief. Put the creation brief in the target field and leave item and amount blank.";
+$F_TRANSLATIONS_LOCAL["DirectorCommand"] = "Issue a freeform director instruction for the server-side director mode to turn into scene actions. Put the director brief in the target field and leave item and amount blank.";
 $F_TRANSLATIONS_LOCAL["TeleportNPC"] = "Teleport a chosen NPC, actor, or #PLAYER_NAME# to a named location from the location database.";
 $F_TRANSLATIONS_LOCAL["KillTarget"] = "Kill a chosen NPC, actor, or #PLAYER_NAME# immediately.";
 $F_TRANSLATIONS_LOCAL["AddBounty"] = "#HERIKA_NAME# adds a crime bounty to #PLAYER_NAME# for a witnessed or reported crime. Guard-only action.";
@@ -963,6 +999,7 @@ $F_RETURNMESSAGES_LOCAL["HireFerry"] = "#HERIKA_NAME# accepted the {{config.cost
 $F_RETURNMESSAGES_LOCAL["SpawnItem"] = "#TARGET# receives #ITEM#.";
 $F_RETURNMESSAGES_LOCAL["SpawnNPC"] = "Spawned #AMOUNT# #TARGET# near #PLAYER_NAME#.";
 $F_RETURNMESSAGES_LOCAL["CreateNewNPC"] = "A new NPC is being created nearby.";
+$F_RETURNMESSAGES_LOCAL["DirectorCommand"] = "The director is preparing a scene instruction.";
 $F_RETURNMESSAGES_LOCAL["TeleportNPC"] = "#TARGET# teleports to #ITEM#.";
 $F_RETURNMESSAGES_LOCAL["KillTarget"] = "#TARGET# is killed.";
 $F_RETURNMESSAGES_LOCAL["AddBounty"] = "#HERIKA_NAME# added a bounty for #TARGET# to #PLAYER_NAME#.";
@@ -1016,6 +1053,7 @@ $F_NAMES_LOCAL["HireFerry"] = "HireFerry";
 $F_NAMES_LOCAL["SpawnItem"] = "SpawnItem";
 $F_NAMES_LOCAL["SpawnNPC"] = "SpawnNPC";
 $F_NAMES_LOCAL["CreateNewNPC"] = "CreateNewNPC";
+$F_NAMES_LOCAL["DirectorCommand"] = "DirectorCommand";
 $F_NAMES_LOCAL["TeleportNPC"] = "TeleportNPC";
 $F_NAMES_LOCAL["KillTarget"] = "KillTarget";
 $F_NAMES_LOCAL["AddBounty"] = "AddBounty";
@@ -1493,6 +1531,20 @@ $GLOBALS["FUNCTIONS"] = [
                 "target" => [
                     "type" => "string",
                     "description" => "REQUIRED: short creation brief for the new nearby NPC, such as race, role, temperament, or purpose.",
+                ],
+            ],
+            "required" => ["target"],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["DirectorCommand"],
+        "description" => $F_TRANSLATIONS_LOCAL["DirectorCommand"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "REQUIRED: short freeform director brief describing the scene change, instruction, or event to stage.",
                 ],
             ],
             "required" => ["target"],
@@ -2912,6 +2964,72 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 );
 
                 error_log("[ACTION POSTFILTER CreateNewNPC] Started rolemaster spawn for {$creationBrief}");
+                unset($actionsCopy[$n]);
+
+            } else if ($actionCodeNameResolved == "DirectorCommand") {
+                $rawParameter = implode("@", array_slice($actionParts2, 1));
+                $payload = decodeFunctionExecutionParameterPayload($rawParameter);
+                if (!is_array($payload)) {
+                    $payload = [];
+                }
+
+                $directorBrief = trim(strval($payload["target"] ?? ""));
+                if ($directorBrief === '') {
+                    $directorBrief = herikaGetLatestNarratorInputText();
+                }
+
+                if ($directorBrief === '') {
+                    error_log("[ACTION POSTFILTER DirectorCommand] Missing director brief");
+                    $GLOBALS["db"]->insert(
+                        'responselog',
+                        array(
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => '',
+                            'action' => "rolecommand|DebugNotification@Director_Command requires a short director brief",
+                            'tag' => ""
+                        )
+                    );
+                    unset($actionsCopy[$n]);
+                    continue;
+                }
+
+                $directorBrief = str_replace(["\r", "\n"], ' ', $directorBrief);
+                $directorBrief = preg_replace('/\s+/u', ' ', $directorBrief) ?? $directorBrief;
+                $directorBrief = trim(str_replace('@', '', $directorBrief));
+
+                if (!herikaQueueNarratorDirectorCommand($directorBrief)) {
+                    error_log("[ACTION POSTFILTER DirectorCommand] Failed to invoke rolemaster instruction for '{$directorBrief}'");
+                    $GLOBALS["db"]->insert(
+                        'responselog',
+                        array(
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => '',
+                            'action' => "rolecommand|DebugNotification@Could not start Director_Command",
+                            'tag' => ""
+                        )
+                    );
+                    unset($actionsCopy[$n]);
+                    continue;
+                }
+
+                $GLOBALS["db"]->insert(
+                    'actions_issued',
+                    array(
+                        'action' => "DirectorCommand",
+                        'fullcall' => $actionParts[0] . "|" . $actionParts[1] . "|" . $actionParts[2],
+                        'actorname' => $actionParts[0],
+                        'ts' => $gameRequest[1],
+                        'gamets' => $gameRequest[2],
+                        'localts' => time(),
+                        'original' => chimPrepareActionsIssuedOriginalValue($directorBrief)
+                    )
+                );
+
+                error_log("[ACTION POSTFILTER DirectorCommand] Started rolemaster instruction for {$directorBrief}");
                 unset($actionsCopy[$n]);
 
             } else if ($actionCodeNameResolved == "TeleportNPC") {

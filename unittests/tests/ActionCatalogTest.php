@@ -45,6 +45,7 @@ final class ActionCatalogTest extends TestCase
         $this->assertTrue($rows['KillTarget']['available_to_narrator']);
         $this->assertTrue($rows['SpawnNPC']['available_to_narrator']);
         $this->assertTrue($rows['SpawnItem']['available_to_narrator']);
+        $this->assertTrue($rows['DirectorCommand']['available_to_narrator']);
         $this->assertTrue($rows['TeleportNPC']['available_to_narrator']);
     }
 
@@ -87,6 +88,12 @@ final class ActionCatalogTest extends TestCase
                 'available_to_narrator' => true,
                 'is_activated' => true,
             ],
+            'DirectorCommand' => [
+                'available_to_npc' => false,
+                'available_to_followers' => false,
+                'available_to_narrator' => true,
+                'is_activated' => true,
+            ],
         ];
 
         $rows = herikaBuildActionCatalogSeedRows(
@@ -96,6 +103,7 @@ final class ActionCatalogTest extends TestCase
                 'KillTarget' => 'KillTarget',
                 'SpawnNPC' => 'SpawnNPC',
                 'SpawnItem' => 'SpawnItem',
+                'DirectorCommand' => 'DirectorCommand',
                 'TeleportNPC' => 'TeleportNPC',
                 'AttackHunt' => 'Hunt',
             ],
@@ -162,6 +170,15 @@ final class ActionCatalogTest extends TestCase
                         'required' => ['item'],
                     ],
                 ],
+                'DirectorCommand' => [
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'target' => ['type' => 'string'],
+                        ],
+                        'required' => ['target'],
+                    ],
+                ],
             ],
             $seedDefaultsByCode
         );
@@ -196,6 +213,11 @@ final class ActionCatalogTest extends TestCase
         $this->assertFalse($rows['SpawnItem']['available_to_followers']);
         $this->assertTrue($rows['SpawnItem']['available_to_narrator']);
         $this->assertTrue($rows['SpawnItem']['is_activated']);
+
+        $this->assertFalse($rows['DirectorCommand']['available_to_npc']);
+        $this->assertFalse($rows['DirectorCommand']['available_to_followers']);
+        $this->assertTrue($rows['DirectorCommand']['available_to_narrator']);
+        $this->assertTrue($rows['DirectorCommand']['is_activated']);
     }
 
     public function testBuildActionCatalogSeedRows_SeedsParametersMetadataAndScriptProxyProgram(): void
@@ -207,6 +229,7 @@ final class ActionCatalogTest extends TestCase
                 'KillTarget' => 'KillTarget',
                 'SpawnNPC' => 'SpawnNPC',
                 'SpawnItem' => 'SpawnItem',
+                'DirectorCommand' => 'DirectorCommand',
                 'TeleportNPC' => 'TeleportNPC',
             ],
             [],
@@ -272,6 +295,15 @@ final class ActionCatalogTest extends TestCase
                         'required' => ['item'],
                     ],
                 ],
+                'DirectorCommand' => [
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'target' => ['type' => 'string'],
+                        ],
+                        'required' => ['target'],
+                    ],
+                ],
             ]
         );
 
@@ -301,6 +333,10 @@ final class ActionCatalogTest extends TestCase
         $this->assertSame('rolecommand', $rows['SpawnItem']['metadata']['dispatch']);
         $this->assertTrue($rows['SpawnItem']['game_function']);
         $this->assertNull($rows['SpawnItem']['script_proxy_program']);
+
+        $this->assertSame('server_action', $rows['DirectorCommand']['metadata']['dispatch']);
+        $this->assertFalse($rows['DirectorCommand']['game_function']);
+        $this->assertNull($rows['DirectorCommand']['script_proxy_program']);
     }
 
     public function testActionCatalogMetadataFlagEnabled_ReadsBooleanFlagsFromCatalogRows(): void

@@ -5455,6 +5455,66 @@ if ($checkVersion("prompts")<20260423001) {
 
 //----------------------------------------------------
 
+if ($checkVersion("core_action")<20260430016) {
+    Logger::debug(" try patch: core_action 20260430016");
+
+    $description = $db->escape("Send a short freeform director instruction to the server-side director mode so it can stage a scene or event.");
+    $returnMessage = $db->escape("The director is preparing a scene instruction.");
+    $parametersJson = $db->escape('{"type":"object","required":["target"],"properties":{"target":{"type":"string","description":"REQUIRED: short freeform director brief describing the scene instruction or event to stage."}}}');
+    $metadataJson = $db->escape('{"source":"functions.php","status":"active","builtin":true,"dispatch":"server_action"}');
+
+    $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            available_to_narrator,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        ) VALUES (
+            'DirectorCommand',
+            'Director_Command',
+            '{$description}',
+            '{$returnMessage}',
+            FALSE,
+            FALSE,
+            TRUE,
+            TRUE,
+            '{$parametersJson}'::jsonb,
+            '{$metadataJson}'::jsonb,
+            FALSE,
+            0,
+            NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $updateVersion("core_action",20260430016);
+    Logger::info("Applied patch core_action 20260430016 - Added DirectorCommand narrator server action");
+}
+
+//----------------------------------------------------
+
 // Relationship Evaluation and Initialization Queues
 $db->execQuery("CREATE TABLE IF NOT EXISTS public.relationship_eval_queue (
                 id SERIAL PRIMARY KEY,
