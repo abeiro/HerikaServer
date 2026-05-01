@@ -48,8 +48,11 @@ class SemaphoreManager {
 
         $ix = 0;
         $t0 = time();
-        $tick_us = max(1, intval($tick_ms)) * 1000;
-
+        //$tick_us = max(1, intval($tick_ms)) * 1000;
+        $tick_us = max(251, intval($tick_ms * 51)); // tick ~20 times for full $tick_ms period, at least 4x per miliSec 
+        $i_check = max(3, intval(472000 / $tick_us)); //check ~2x per second
+        // for $tick_ms=1s   => $tick_us=51ms  $i_check=9
+        //     $tick_ms=50ms => $tick_us=2.5ms $i_check=185
         while (sem_acquire($semaphore, true) !== true) {
             $ix++;
             if (is_callable($callback)) {
@@ -63,7 +66,7 @@ class SemaphoreManager {
                     Logger::warn("*TRACE: [SemaphoreManager] " . self::runId() . " callback threw: ".$e->getMessage());
                 }
             }
-            if ($ix > 2000) {
+            if ($ix > $i_check) {
                 $dt = time() - $t0;
                 if ($dt > $timeout) {
                     Logger::warn("*TRACE: [SemaphoreManager] " . self::runId() . " wait loop break after {$dt} sec for semaphore '{$id}'");
@@ -73,9 +76,9 @@ class SemaphoreManager {
                 }
             }
 
-            if ($ix % 10 ===  1) {
-                Logger::warn("*TRACE: [SemaphoreManager] " . self::runId() . " still waiting for $id after {$ix} attempts and " . (time() - $t0) . " seconds");
-            }
+            //if ($ix % 10 ===  1) {
+            //    Logger::warn("*TRACE: [SemaphoreManager] " . self::runId() . " still waiting for $id after {$ix} attempts and " . (time() - $t0) . " seconds");
+            //}
 
             usleep($tick_us);
         }
