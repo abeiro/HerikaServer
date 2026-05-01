@@ -788,7 +788,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 if (is_array($latestInputRow) && isset($latestInputRow["rowid"])) {
                     $rowId = intval($latestInputRow["rowid"]);
                     $latestInputType = strtolower(trim((string)($latestInputRow["type"] ?? "")));
-                    if ($latestInputType === "narrator_inputtext") {
+                    if ($latestInputType === "narrator_inputtext" && !empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"])) {
                         error_log("[SPATIAL_SCOPE] Preserved narrator_inputtext row {$rowId} private scope");
                     } else {
                         $escapedPeople = $db->escape($audiblePeoplePipe);
@@ -956,10 +956,40 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                         $rowsToUpdate = [intval($chatRowId)];
                     }
 
+                    $preserveNarratorAudience = (
+                        empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) &&
+                        normalizeActorNameForComparison($speechSpeaker) === "the narrator"
+                    );
+
                     foreach ($rowsToUpdate as $rowIdToUpdate) {
                         if ($rowIdToUpdate <= 0) {
                             continue;
                         }
+
+                        if ($preserveNarratorAudience) {
+                            $existingRow = $db->fetchOne("SELECT people FROM eventlog WHERE rowid={$rowIdToUpdate} LIMIT 1");
+                            $existingPeoplePipe = isset($existingRow["people"]) ? trim((string)$existingRow["people"]) : "";
+                            if ($existingPeoplePipe !== "") {
+                                $existingNames = parsePeoplePipeList($existingPeoplePipe);
+                                $existingHasExtraAudience = false;
+                                foreach ($existingNames as $existingName) {
+                                    $existingNormalized = normalizeActorNameForComparison($existingName);
+                                    if ($existingNormalized === "" ||
+                                        $existingNormalized === "the narrator" ||
+                                        $existingNormalized === $normalizedPlayerName) {
+                                        continue;
+                                    }
+                                    $existingHasExtraAudience = true;
+                                    break;
+                                }
+
+                                if ($existingHasExtraAudience) {
+                                    error_log("[SPATIAL_SCOPE] Preserved narrator chat row {$rowIdToUpdate} broader people={$existingPeoplePipe}");
+                                    continue;
+                                }
+                            }
+                        }
+
                         $db->update("eventlog", "people='{$escapedPeople}'", "rowid={$rowIdToUpdate}");
                     }
 
