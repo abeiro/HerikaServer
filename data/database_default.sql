@@ -1049,7 +1049,9 @@ CREATE TABLE public.eventlog (
     rowid bigint NOT NULL,
     people text,
     location text,
-    party text
+    party text,
+    utterance_id text,
+    delivery_state text
 );
 
 
@@ -1292,7 +1294,8 @@ CREATE TABLE public.speech (
     ts bigint,
     rowid bigint NOT NULL,
     companions text,
-    audios text
+    audios text,
+    utterance_id text
 );
 
 

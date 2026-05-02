@@ -561,6 +561,37 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
 
 
+} elseif ($gameRequest[0] == "_speech_abort") {
+    error_reporting(E_ALL);
+    $abortData = json_decode($gameRequest[3], true);
+
+    if (is_array($abortData)) {
+        $utteranceIds = [];
+        if (isset($abortData["utterance_ids"]) && is_array($abortData["utterance_ids"])) {
+            foreach ($abortData["utterance_ids"] as $utteranceId) {
+                $utteranceId = trim((string)$utteranceId);
+                if ($utteranceId === "") {
+                    continue;
+                }
+                $utteranceIds[$utteranceId] = $db->escape($utteranceId);
+            }
+        }
+
+        if (!empty($utteranceIds)) {
+            $quotedIds = array_map(function ($escapedId) {
+                return "'" . $escapedId . "'";
+            }, array_values($utteranceIds));
+            $db->execQuery(
+                "DELETE FROM public.eventlog
+                 WHERE type='chat'
+                   AND utterance_id IN (" . implode(",", $quotedIds) . ")
+                   AND COALESCE(delivery_state, 'pending')='pending'"
+            );
+        }
+    }
+
+    $MUST_END=true;
+
 } elseif ($gameRequest[0] == "_speech") {
     error_reporting(E_ALL);
     $speech = json_decode($gameRequest[3], true);
@@ -569,6 +600,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     if (is_array($speech)) {
         $speechSpeaker = isset($speech["speaker"]) ? trim((string)$speech["speaker"]) : "";
         $speechListener = isset($speech["listener"]) ? trim((string)$speech["listener"]) : "";
+        $speechUtteranceId = isset($speech["utterance_id"]) ? trim((string)$speech["utterance_id"]) : "";
         $audiblePeople = [];
         if (isset($speech["companions"]) && is_array($speech["companions"])) {
             foreach ($speech["companions"] as $companionName) {
@@ -623,10 +655,30 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 'companions' => $companionsReformatStr,
                 'sess' => 'pending',
                 'audios' => isset($speech["audios"])?$speech["audios"]:null,
+                'utterance_id' => $speechUtteranceId,
                 'topic' => $topic,
                 'localts' => time()
             )
         );
+
+        $matchedUtteranceRowIds = [];
+        if ($speechUtteranceId !== "") {
+            $speechUtteranceIdEscaped = $db->escape($speechUtteranceId);
+            $matchedRows = $db->fetchAll(
+                "SELECT rowid
+                 FROM eventlog
+                 WHERE type='chat'
+                   AND utterance_id='{$speechUtteranceIdEscaped}'
+                 ORDER BY rowid DESC"
+            );
+            foreach ((array)$matchedRows as $matchedRow) {
+                $matchedRowId = intval($matchedRow["rowid"] ?? 0);
+                if ($matchedRowId > 0) {
+                    $matchedUtteranceRowIds[] = $matchedRowId;
+                }
+            }
+            $matchedUtteranceRowIds = array_values(array_unique($matchedUtteranceRowIds));
+        }
 
         // Plugin-authoritative mode: _speech companions are the source of truth for
         // actor-originated audience scope. For direct NPC replies to player prompts,
@@ -803,7 +855,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             // NPC speech: align matching chat eventlog row to spatial audibility.
             if (!$isPlayerSpeech && $speechSpeaker !== "") {
                 $chatRowId = 0;
-                $rowsToUpdate = [];
+                $rowsToUpdate = $matchedUtteranceRowIds;
                 $speakerEscaped = $db->escape($speechSpeaker);
                 $matchesSpeechListener = function ($chatData) use ($speechListener) {
                     if ($speechListener === "") {
@@ -823,31 +875,37 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     return false;
                 };
 
-                // Fast path: same gamets linkage if available.
-                $sameGametsChatRows = $db->fetchAll(
-                    "SELECT rowid, gamets, data
-                     FROM eventlog
-                     WHERE gamets={$speechGamets}
-                       AND type='chat'
-                       AND data ILIKE '{$speakerEscaped}:%'
-                     ORDER BY ts DESC, rowid DESC
-                     LIMIT 40"
-                );
-                foreach ((array)$sameGametsChatRows as $sameRow) {
-                    $sameRowId = intval($sameRow["rowid"] ?? 0);
-                    $sameData = isset($sameRow["data"]) ? (string)$sameRow["data"] : "";
-                    if ($sameRowId <= 0 || $sameData === "") {
-                        continue;
-                    }
-                    if (!$matchesSpeechListener($sameData)) {
-                        continue;
-                    }
-                    $rowsToUpdate[] = $sameRowId;
-                }
                 if (!empty($rowsToUpdate)) {
                     $rowsToUpdate = array_values(array_unique(array_map('intval', $rowsToUpdate)));
                     rsort($rowsToUpdate);
                     $chatRowId = intval($rowsToUpdate[0]);
+                } else {
+                    // Fast path: same gamets linkage if available.
+                    $sameGametsChatRows = $db->fetchAll(
+                        "SELECT rowid, gamets, data
+                         FROM eventlog
+                         WHERE gamets={$speechGamets}
+                           AND type='chat'
+                           AND data ILIKE '{$speakerEscaped}:%'
+                         ORDER BY ts DESC, rowid DESC
+                         LIMIT 40"
+                    );
+                    foreach ((array)$sameGametsChatRows as $sameRow) {
+                        $sameRowId = intval($sameRow["rowid"] ?? 0);
+                        $sameData = isset($sameRow["data"]) ? (string)$sameRow["data"] : "";
+                        if ($sameRowId <= 0 || $sameData === "") {
+                            continue;
+                        }
+                        if (!$matchesSpeechListener($sameData)) {
+                            continue;
+                        }
+                        $rowsToUpdate[] = $sameRowId;
+                    }
+                    if (!empty($rowsToUpdate)) {
+                        $rowsToUpdate = array_values(array_unique(array_map('intval', $rowsToUpdate)));
+                        rsort($rowsToUpdate);
+                        $chatRowId = intval($rowsToUpdate[0]);
+                    }
                 }
 
                 if ($chatRowId <= 0) {
@@ -984,13 +1042,14 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                                 }
 
                                 if ($existingHasExtraAudience) {
+                                    $db->update("eventlog", "delivery_state='spoken'", "rowid={$rowIdToUpdate}");
                                     error_log("[SPATIAL_SCOPE] Preserved narrator chat row {$rowIdToUpdate} broader people={$existingPeoplePipe}");
                                     continue;
                                 }
                             }
                         }
 
-                        $db->update("eventlog", "people='{$escapedPeople}'", "rowid={$rowIdToUpdate}");
+                        $db->update("eventlog", "people='{$escapedPeople}', delivery_state='spoken'", "rowid={$rowIdToUpdate}");
                     }
 
                     if (count($rowsToUpdate) > 1) {
@@ -1001,6 +1060,13 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     }
                 } else {
                     error_log("[SPATIAL_SCOPE] No chat row matched for speaker '{$speechSpeaker}' to update");
+                }
+            } elseif (!empty($matchedUtteranceRowIds)) {
+                foreach ($matchedUtteranceRowIds as $matchedRowId) {
+                    if ($matchedRowId <= 0) {
+                        continue;
+                    }
+                    $db->update("eventlog", "delivery_state='spoken'", "rowid={$matchedRowId}");
                 }
             }
         }

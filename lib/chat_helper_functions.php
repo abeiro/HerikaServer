@@ -1507,6 +1507,9 @@ function returnLines($lines,$writeOutput=true)
                     $GLOBALS["SCRIPTLINE_RECHAT_TARGET"] = $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"];
                 }
 
+                $currentUtteranceId = chimGenerateUtteranceId();
+                $GLOBALS["SCRIPTLINE_UTTERANCE_ID"] = $currentUtteranceId;
+
                 $responseTextPhonetic = "";
                 if (Translation::isAudioEnabled() || Translation::isTextEnabled()) {
                     $responseTextPhonetic = $responseForTTS;
@@ -1542,10 +1545,10 @@ function returnLines($lines,$writeOutput=true)
                 }
                 
                 // Output here with volumeBoost appended
-                echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic/$volumeBoost/{$GLOBALS["SCRIPTLINE_RECHAT_TARGET"]}\r\n";
+                echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic/$volumeBoost/{$GLOBALS["SCRIPTLINE_RECHAT_TARGET"]}/{$currentUtteranceId}\r\n";
 
                 
-                $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic/$volumeBoost/{$GLOBALS["SCRIPTLINE_RECHAT_TARGET"]}\r\n";
+                $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]="{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic/$volumeBoost/{$GLOBALS["SCRIPTLINE_RECHAT_TARGET"]}/{$currentUtteranceId}\r\n";
                 if ($outBuffer["actor"]!="Player" && isset($GLOBALS["PATCH_ORIGINAL_MOOD_ISSUED"])) {
                     $GLOBALS["db"]->insert(
                         'moods_issued',
@@ -1632,6 +1635,10 @@ function returnLines($lines,$writeOutput=true)
                 $addonlistener="";
             }
             $originalRequest[3]="{$outBuffer["actor"]}: $responseForContext $addonlistener";
+            $originalRequest[5] = [
+                'utterance_id' => $GLOBALS["SCRIPTLINE_UTTERANCE_ID"] ?? chimGenerateUtteranceId(),
+                'delivery_state' => 'pending'
+            ];
             logEvent($originalRequest);
         }
         
@@ -2254,6 +2261,7 @@ function getGametsLimitFor($actor) {
             SELECT gamets 
             FROM eventlog 
             WHERE type='chat'
+            AND COALESCE(delivery_state, 'spoken')='spoken'
             and people LIKE '%$actorEscaped%'
             ORDER BY gamets DESC
             LIMIT $limit
@@ -4243,6 +4251,15 @@ function shouldBroadcastNarratorChatToNearbyPeople($eventData, $fallbackPeople =
     return true;
 }
 
+function chimGenerateUtteranceId()
+{
+    try {
+        return "utt_" . bin2hex(random_bytes(10));
+    } catch (Exception $e) {
+        return "utt_" . substr(md5(uniqid((string)mt_rand(), true)), 0, 20);
+    }
+}
+
 function logEvent($dataArray,$forcePeople='')
 {
     global $db;
@@ -4279,20 +4296,28 @@ function logEvent($dataArray,$forcePeople='')
             );
         }
 
-        $insertResult = $db->insert(
-            'eventlog',
-            array(
-                'ts' => $dataArray[1],
-                'gamets' => $dataArray[2],
-                'type' => $dataArray[0],
-                'data' => $dataArray[3],
-                'sess' => $dataArray[4]??'pending',
-                'localts' => time(),
-                'people'=> $eventPeople,
-                'location'=>$GLOBALS["CACHE_LOCATION"],
-                'party'=>$GLOBALS["CACHE_PARTY"]
-            )
+        $extraColumns = [];
+        if (isset($dataArray[5]) && is_array($dataArray[5])) {
+            $extraColumns = $dataArray[5];
+        }
+
+        $insertData = array(
+            'ts' => $dataArray[1],
+            'gamets' => $dataArray[2],
+            'type' => $dataArray[0],
+            'data' => $dataArray[3],
+            'sess' => $dataArray[4]??'pending',
+            'localts' => time(),
+            'people'=> $eventPeople,
+            'location'=>$GLOBALS["CACHE_LOCATION"],
+            'party'=>$GLOBALS["CACHE_PARTY"]
         );
+
+        if (!empty($extraColumns)) {
+            $insertData = array_merge($insertData, $extraColumns);
+        }
+
+        $insertResult = $db->insert('eventlog', $insertData);
     }
 }
 

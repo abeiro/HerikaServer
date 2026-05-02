@@ -690,7 +690,7 @@ final class CommTest extends DatabaseTestCase
         $_SERVER["QUERY_STRING"] = "data={$encodedData}";
         require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
 
-        $this->assertMatchesRegularExpression('/Lydia|ScriptQueue|Of course I do\.\/\/Prisoner\/(IdleDialogueExpressiveStart)?\/\r\n/', $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]);
+        $this->assertMatchesRegularExpression('/Lydia\|ScriptQueue\|Of course I do\.\/\/Prisoner\/(IdleDialogueExpressiveStart)?\/\/1(?:\.0)?\/[^\/\r\n]+\r\n/', $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]);
     }
 
     public function testComm_WhenLinesAreJapanese_PhoneticTextShouldBeSentToScriptQueue(): void

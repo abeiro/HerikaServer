@@ -5544,6 +5544,48 @@ if ($checkVersion("prompts")<20260430017) {
 
 //----------------------------------------------------
 
+if ($checkVersion("utterance_delivery") < 20260502001) {
+    Logger::debug(" try patch: utterance_delivery 20260502001");
+    $b_ok = true;
+
+    try {
+        $db->execQuery("ALTER TABLE public.eventlog ADD COLUMN IF NOT EXISTS utterance_id TEXT;");
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'eventlog' table (utterance_id): " . $e->getMessage());
+    }
+
+    try {
+        $db->execQuery("ALTER TABLE public.eventlog ADD COLUMN IF NOT EXISTS delivery_state TEXT;");
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'eventlog' table (delivery_state): " . $e->getMessage());
+    }
+
+    try {
+        $db->execQuery("ALTER TABLE public.speech ADD COLUMN IF NOT EXISTS utterance_id TEXT;");
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'speech' table (utterance_id): " . $e->getMessage());
+    }
+
+    try {
+        $db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_utterance_id ON public.eventlog (utterance_id);");
+        $db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_delivery_state ON public.eventlog (delivery_state);");
+        $db->execQuery("CREATE INDEX IF NOT EXISTS idx_speech_utterance_id ON public.speech (utterance_id);");
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error creating utterance delivery indexes: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("utterance_delivery", 20260502001);
+        Logger::info("Applied patch utterance_delivery 20260502001");
+    }
+}
+
+//----------------------------------------------------
+
 // Relationship Evaluation and Initialization Queues
 $db->execQuery("CREATE TABLE IF NOT EXISTS public.relationship_eval_queue (
                 id SERIAL PRIMARY KEY,

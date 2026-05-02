@@ -1414,14 +1414,14 @@ function DataLastDataExpandedForNPC($actor, $lastNelements = -10,$sqlfilter="") 
             else if ($speechEvent["speaker"]=="The Narrator")
                 continue;
             
-            $talkingto="";
-            if ($lastListener!="The Narrator")
-                $talkingto="(talking to {$lastListener})";
-            
-            if ($lastSpeaker==$GLOBALS["PLAYER_NAME"])
-                $talkingto="";
-            
             if (($lastSpeaker!=$speechEvent["speaker"])&&($lastSpeaker!=null)) {
+                $talkingto="";
+                if ($lastListener!="The Narrator")
+                    $talkingto="(talking to {$lastListener})";
+                
+                if ($lastSpeaker==$GLOBALS["PLAYER_NAME"])
+                    $talkingto="";
+
                 $lastDialogFull[$speechEvent["ts"]] = array('role' => $currentSpeaker, 'content' => "$lastSpeaker: $buffer $talkingto");   
                 $buffer="";
                 $lastSpeaker=$speechEvent["speaker"];
@@ -1448,11 +1448,18 @@ function DataLastDataExpandedForNPC($actor, $lastNelements = -10,$sqlfilter="") 
 
         ksort($lastDialogFull);
         
-        $results = $db->fetchAll("SELECT gamets,data,ts FROM eventlog where type in ('inputtext','inputtext_s','ginputtext','ginputtext_s','narrator_inputtext')
-            order by gamets desc LIMIT 1 OFFSET 0");    
+        $results = $db->fetchAll("SELECT gamets,data,ts
+            FROM eventlog
+            WHERE type in ('inputtext','inputtext_s','ginputtext','ginputtext_s','narrator_inputtext')
+              AND people like '%$actorcn%'
+            ORDER BY gamets desc, ts desc");
         $rawData=[];
         foreach ($results as $row) {
-            $lastDialogFull[]= array('role' => 'user', 'content' => "{$row["data"]}");  
+            $rawData[] = $row;
+        }
+        $rawData = array_reverse($rawData);
+        foreach ($rawData as $row) {
+            $lastDialogFull[] = array('role' => 'user', 'content' => "{$row["data"]}");
         }
 
        
@@ -1850,6 +1857,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc' and type<>'infoitems'  
     and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
     and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region' and type<>'named_cell'
+    and (type<>'chat' or COALESCE(delivery_state, 'spoken')='spoken')
     ".(($actorEscaped)?" 
     and (
      people like '%|$actorEscaped|%' 

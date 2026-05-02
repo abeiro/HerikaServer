@@ -1642,7 +1642,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         }
     }
 
-    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction','infoaction','death','itemfound') or (type='chat' and data like '(Context%') ";  // Use prechat
+    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction','infoaction','death','itemfound') or (type='chat' and COALESCE(delivery_state,'spoken')='spoken' and data like '(Context%') ";  // Use prechat
     // chat entries starting by "(Context%" are standard skyrim dialogue
 
     $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny => CHAOS MODE
@@ -2123,21 +2123,23 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
             }
         }
 
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
-                'type' => $gameRequest[0],
-                'data' => ($gameRequest[3]),
-                'sess' => (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST'))?'cli':'web',
-                'localts' => time(),
-                'people'=> $eventPeople,
-                'location'=>$GLOBALS["CACHE_LOCATION"],
-                'party'=>$GLOBALS["CACHE_PARTY"],
-                
-            )
+        $eventlogInsert = array(
+            'ts' => $gameRequest[1],
+            'gamets' => $gameRequest[2],
+            'type' => $gameRequest[0],
+            'data' => ($gameRequest[3]),
+            'sess' => (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST'))?'cli':'web',
+            'localts' => time(),
+            'people'=> $eventPeople,
+            'location'=>$GLOBALS["CACHE_LOCATION"],
+            'party'=>$GLOBALS["CACHE_PARTY"],
         );
+
+        if ($gameRequest[0] === "chat") {
+            $eventlogInsert["delivery_state"] = "spoken";
+        }
+
+        $db->insert('eventlog', $eventlogInsert);
     }
 
 }
