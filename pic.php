@@ -8,15 +8,19 @@ $GLOBALS["ENGINE_PATH"]=$path;
 
 $enginePath=$GLOBALS["ENGINE_PATH"];
 
-require_once($path . "conf/conf.php"); // API KEY must be there
+require_once($path . "lib/runtime_bootstrap.php");
+chimRuntimeBootstrap($path, [
+    'load_general_settings' => true,
+    'load_stt_connector' => false,
+    'load_itt_connector' => true,
+]);
 require_once($path . "lib/model_dynmodel.php");
-require_once($path . "lib/{$GLOBALS["DBDRIVER"]}.class.php");
-if (!isset($GLOBALS["db"])) $GLOBALS["db"] = new sql();
 require_once($path . "lib/data_functions.php");
 require_once($path . "lib/chat_helper_functions.php");
 require_once($path . "lib/logger.php");
 
-$db = new sql();
+$db = $GLOBALS["db"] ?? new sql();
+$GLOBALS["db"] = $db;
 
 require_once $enginePath . "lib/core/npc_master.class.php";
 require_once $enginePath . "lib/core/api_badge.class.php";

@@ -28,7 +28,9 @@ CREATE TABLE public.core_itt_connector (
     id integer NOT NULL,
     driver text,
     label text,
-    metadata jsonb
+    metadata jsonb,
+    api_badge_id integer,
+    url text
 );
 
 
@@ -82,6 +84,14 @@ SELECT pg_catalog.setval('public.itt_connector_id_seq', 1, false);
 
 ALTER TABLE ONLY public.core_itt_connector
     ADD CONSTRAINT itt_connector_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: core_itt_connector itt_connector_api_badge_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: dwemer
+--
+
+ALTER TABLE ONLY public.core_itt_connector
+    ADD CONSTRAINT itt_connector_api_badge_id_fkey FOREIGN KEY (api_badge_id) REFERENCES public.core_api_badge(id);
 
 
 --

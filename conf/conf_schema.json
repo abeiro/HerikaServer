@@ -434,7 +434,7 @@
   },
   "PLAYER_RESPEECH":{"type":"boolean","description":"Allows the AI to rewrite player speech with Chat Assist & Creation modes.","scope":"global"},
   "STTFUNCTION": {
-    "type":"select","values":["none","whisper","localwhisper","azure","deepgram","gemini","parakeet","inworld"],"description":"Speech-to-Text service options. Translates your voice to text.", 
+    "type":"select","values":["deepgram","parakeet","whisper","localwhisper","gemini","azure","inworld","none"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service","scope":"global"
     },
   "STT": {
@@ -476,11 +476,21 @@
     }
   },
   "ITTFUNCTION": {
-    "type":"select","values":["openai","google_openai","openrouter","llamacpp"],"description":"Image recognition aka Soulgaze spell. OpenAI also works as a connector to OpenRouter!<br><br><strong>Must be configured in default profile!</strong>", 
+    "type":"select","values":["openrouter","custom","openai","google_openai","llamacpp"],"description":"Image recognition aka Soulgaze spell. OpenAI also works as a connector to OpenRouter!<br><br><strong>Must be configured in default profile!</strong>", 
     "_title":"Soulgaze (ITT)","scope":"global",
     "quality": {"type":"int","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens.","scope":"global"}
   },
   "ITT": {
+    "custom": {
+      "_title":"Custom OpenAI-Compatible Service",
+      "url": {"type":"url","description":"Endpoint for a custom OpenAI-compatible vision/chat completions service.","scope":"global"},
+      "model": {"type":"string","description":"Model to use for image analysis.","scope":"global"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate","scope":"global"},
+      "detail": {"type":"select","values":["low","high"],"description":"Low or high fidelity image understanding","scope":"global"},
+      "API_KEY": {"type":"apikey","description":"Optional API key for the custom service","code":"OPENAI_API_KEY","scope":"global"},
+      "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the custom vision model.","scope":"global"},
+      "AI_PROMPT": {"type":"longstring","description":"Prompt for the AI NPC to follow when describing the scene."}
+    },
     "openai": {
       "_title":"OpenAI/OpenRouter",
       "url": {"type":"url","description":"OpenAI API or OpenRouter endpoint. Use this for OpenRouter (https://openrouter.ai/api/v1/chat/completions)","scope":"global"},

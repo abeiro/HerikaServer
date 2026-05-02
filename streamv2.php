@@ -6,7 +6,12 @@
 
 
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
-require_once($path . "conf".DIRECTORY_SEPARATOR."conf.php");
+require_once($path . "lib".DIRECTORY_SEPARATOR."runtime_bootstrap.php");
+chimRuntimeBootstrap($path, [
+    'load_general_settings' => true,
+    'load_stt_connector' => false,
+    'load_itt_connector' => false,
+]);
 require_once($path . "lib".DIRECTORY_SEPARATOR."model_dynmodel.php");
 
 if (isset($_GET["profile"])) {

@@ -544,6 +544,14 @@ $ITT["openrouter"]["detail"]='low'; //(Low|high) fidelity image understanding.
 $ITT["openrouter"]["API_KEY"]=''; //OpenRouter API key.
 $ITT["openrouter"]["AI_VISION_PROMPT"]="Let's roleplay in the world of Skyrim. Describe this Skyrim image as if it is real life. Describe the environment, objects, and people you see at a fifth grade reading level. Ignore video game HUD and UI elements in your description."; //Prompt to send to the Vision API.
 $ITT["openrouter"]["AI_PROMPT"]='#HERIKA_NPC1# describes what they are seeing'; //Prompt sent to the LLM.
+//Custom OpenAI-Compatible Service
+$ITT["custom"]["url"]=''; //Endpoint for a custom OpenAI-compatible vision/chat completions service.
+$ITT["custom"]["model"]=''; //LLM model.
+$ITT["custom"]["max_tokens"]=1024; //Maximum tokens to generate.
+$ITT["custom"]["detail"]='low'; //(Low|high) fidelity image understanding.
+$ITT["custom"]["API_KEY"]=''; //Optional API key for the custom service.
+$ITT["custom"]["AI_VISION_PROMPT"]="Let's roleplay in the world of Skyrim. Describe this Skyrim image as if it is real life. Describe the environment, objects, and people you see at a fifth grade reading level. Ignore video game HUD and UI elements in your description."; //Prompt to send to the Vision API.
+$ITT["custom"]["AI_PROMPT"]='#HERIKA_NPC1# describes what they are seeing'; //Prompt sent to the LLM.
 //Azure
 $ITT["AZURE"]["ENDPOINT"]=""; //API endpoint.
 $ITT["AZURE"]["API_KEY"]=""; //API key.

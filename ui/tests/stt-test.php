@@ -16,8 +16,12 @@ $debugPaneLink = false;
 // include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
 
 $enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "$DBDRIVER.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_stt_connector' => true,
+    'load_itt_connector' => false,
+]);
 
 // Include the appropriate STT function based on configuration
 if ($STTFUNCTION == "azure") {

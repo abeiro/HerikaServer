@@ -1,6 +1,7 @@
 <?php 
 
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/logger.php");
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/settings.php");
 
 $checkVersion = function($tablename) {
     global $db;
@@ -83,8 +84,16 @@ try {
 
 // Bootstrap critical core tables early to avoid UI queries failing during initial load
 try {
+    if ($checkTableExists("general_settings") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/general_settings.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
     if ($checkTableExists("core_api_badge") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_api_badge.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
+    if ($checkTableExists("core_stt_connector") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_stt_connector.sql"));
         $db->execQuery("SET search_path TO public");
     }
     if ($checkTableExists("core_itt_connector") == -1) {
@@ -5581,6 +5590,203 @@ if ($checkVersion("utterance_delivery") < 20260502001) {
     if ($b_ok) {
         $updateVersion("utterance_delivery", 20260502001);
         Logger::info("Applied patch utterance_delivery 20260502001");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("general_settings") < 20260502002) {
+    Logger::debug("Applying general_settings 20260502002 - create database-backed general settings table");
+    $b_ok = true;
+
+    try {
+        if ($checkTableExists("general_settings") == -1) {
+            $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/general_settings.sql"));
+            $db->execQuery("SET search_path TO public");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error ensuring 'general_settings' table: " . $e->getMessage());
+    }
+
+    try {
+        $db->execQuery("ALTER TABLE public.general_settings ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';");
+        $db->execQuery("ALTER TABLE public.general_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;");
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'general_settings' table: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260502002);
+        Logger::info("Applied patch general_settings 20260502002");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("core_stt_connector") < 20260502002) {
+    Logger::debug("Applying core_stt_connector 20260502002 - add api badge and URL support");
+    $b_ok = true;
+
+    try {
+        if ($checkTableExists("core_stt_connector") == -1) {
+            $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_stt_connector.sql"));
+            $db->execQuery("SET search_path TO public");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error ensuring 'core_stt_connector' table: " . $e->getMessage());
+    }
+
+    try {
+        $db->execQuery("ALTER TABLE public.core_stt_connector ADD COLUMN IF NOT EXISTS api_badge_id integer;");
+        $db->execQuery("ALTER TABLE public.core_stt_connector ADD COLUMN IF NOT EXISTS url text;");
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'core_stt_connector' table: " . $e->getMessage());
+    }
+
+    try {
+        $fkExists = $db->fetchAll("
+            SELECT 1
+            FROM pg_constraint
+            WHERE conname = 'stt_connector_api_badge_id_fkey'
+            LIMIT 1
+        ");
+        if (!$fkExists) {
+            $db->execQuery("
+                ALTER TABLE public.core_stt_connector
+                ADD CONSTRAINT stt_connector_api_badge_id_fkey
+                FOREIGN KEY (api_badge_id) REFERENCES public.core_api_badge(id)
+            ");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error ensuring 'core_stt_connector' FK: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("core_stt_connector", 20260502002);
+        Logger::info("Applied patch core_stt_connector 20260502002");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("core_itt_connector") < 20260502002) {
+    Logger::debug("Applying core_itt_connector 20260502002 - add api badge and URL support");
+    $b_ok = true;
+
+    try {
+        if ($checkTableExists("core_itt_connector") == -1) {
+            $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_itt_connector.sql"));
+            $db->execQuery("SET search_path TO public");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error ensuring 'core_itt_connector' table: " . $e->getMessage());
+    }
+
+    try {
+        $db->execQuery("ALTER TABLE public.core_itt_connector ADD COLUMN IF NOT EXISTS api_badge_id integer;");
+        $db->execQuery("ALTER TABLE public.core_itt_connector ADD COLUMN IF NOT EXISTS url text;");
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'core_itt_connector' table: " . $e->getMessage());
+    }
+
+    try {
+        $fkExists = $db->fetchAll("
+            SELECT 1
+            FROM pg_constraint
+            WHERE conname = 'itt_connector_api_badge_id_fkey'
+            LIMIT 1
+        ");
+        if (!$fkExists) {
+            $db->execQuery("
+                ALTER TABLE public.core_itt_connector
+                ADD CONSTRAINT itt_connector_api_badge_id_fkey
+                FOREIGN KEY (api_badge_id) REFERENCES public.core_api_badge(id)
+            ");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error ensuring 'core_itt_connector' FK: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("core_itt_connector", 20260502002);
+        Logger::info("Applied patch core_itt_connector 20260502002");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("general_settings") < 20260502003) {
+    Logger::debug("Applying general_settings 20260502003 - migrate legacy conf values and active STT/ITT selections");
+    $b_ok = true;
+
+    try {
+        $managedDescriptions = chimGetManagedGeneralSettingDescriptions();
+        foreach (chimGetManagedGeneralSettingIds() as $settingId) {
+            $definition = chimGetSchemaDefinition($settingId);
+            $hasLegacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+            if ($hasLegacyValue === "__CHIM_SETTING_MISSING__") {
+                if ($settingId === 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARYS') {
+                    $currentValue = true;
+                } elseif (array_key_exists('default', $definition)) {
+                    $currentValue = $definition['default'];
+                } else {
+                    continue;
+                }
+            } else {
+                $currentValue = $hasLegacyValue;
+            }
+
+            $description = $managedDescriptions[$settingId] ?? chimGetSchemaDescription($settingId);
+            if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+                throw new Exception("Failed writing general setting '{$settingId}'");
+            }
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error migrating legacy global settings: " . $e->getMessage());
+    }
+
+    try {
+        require_once(__DIR__ . "/../lib/core/stt_connector.class.php");
+        $sttConnector = new STTConnector();
+        $sttRow = $sttConnector->ensureLegacySelectionFromGlobals();
+        if ($sttRow && intval($sttRow['id'] ?? 0) > 0) {
+            $description = chimGetManagedGeneralSettingDescriptions()['GLOBAL_STT_CONNECTOR_ID'] ?? 'Active global STT connector.';
+            if (!chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', intval($sttRow['id']), $description)) {
+                throw new Exception("Failed writing GLOBAL_STT_CONNECTOR_ID");
+            }
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error migrating legacy STT connector selection: " . $e->getMessage());
+    }
+
+    try {
+        require_once(__DIR__ . "/../lib/core/itt_connector.class.php");
+        $ittConnector = new ITTConnector();
+        $ittRow = $ittConnector->ensureLegacySelectionFromGlobals();
+        if ($ittRow && intval($ittRow['id'] ?? 0) > 0) {
+            $description = chimGetManagedGeneralSettingDescriptions()['GLOBAL_ITT_CONNECTOR_ID'] ?? 'Active global ITT connector.';
+            if (!chimSetGeneralSetting('GLOBAL_ITT_CONNECTOR_ID', intval($ittRow['id']), $description)) {
+                throw new Exception("Failed writing GLOBAL_ITT_CONNECTOR_ID");
+            }
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error migrating legacy ITT connector selection: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260502003);
+        Logger::info("Applied patch general_settings 20260502003");
     }
 }
 

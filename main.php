@@ -25,11 +25,16 @@ $COOLDOWNMAP=[];
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
 $GLOBALS["ENGINE_PATH"]=$path;
 
-require($path . "conf/conf.php");
+require_once($path . "lib/runtime_bootstrap.php");
+chimRuntimeBootstrap($path, [
+    'load_general_settings' => true,
+    'load_stt_connector' => true,
+    'load_itt_connector' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
 require_once($path . "lib/auditing.php");
 require_once($path . "lib/model_dynmodel.php");
-require_once($path . "lib/{$GLOBALS["DBDRIVER"]}.class.php");
-$GLOBALS["db"] = new sql();
 require_once($path . "lib/minimet5_service.php");
 require_once($path . "lib/data_functions.php");
 require_once($path . "lib/chat_helper_functions.php");
@@ -141,41 +146,8 @@ if (in_array($gameRequest[0], ['updateequipment', 'updateinventory', 'updateskil
 }
 
 // Database Connection
-$db = new sql();
-
-// Load PLAYER_NAME from core_player table
-try {
-    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
-    $player = new Player();
-    $playerNameFromTable = $player->get('player_name');
-    if ($playerNameFromTable !== null && $playerNameFromTable !== '') {
-        $GLOBALS["PLAYER_NAME"] = $playerNameFromTable;
-    } else {
-        // Fallback to conf_opts
-        $playerNameFromDb = $db->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
-        if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
-            $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
-        }
-    }
-} catch (Exception $e) {
-    // Fallback to conf_opts on error
-    $playerNameFromDb = $db->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
-    if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
-        $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
-    }
-}
-
-// Load narrator settings from core_narrator table
-try {
-    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
-    $narrator = new Narrator();
-    // Load all narrator settings into GLOBALS with proper type conversion
-    // Falls back to existing GLOBALS values (from conf.php) if not found in database
-    $narrator->loadIntoGlobals();
-} catch (Exception $e) {
-    // Fallback to conf.php values already loaded
-    // Settings will use defaults or values from conf.php
-}
+$db = $GLOBALS["db"] ?? new sql();
+$GLOBALS["db"] = $db;
 
 require_once($path . "processor" .DIRECTORY_SEPARATOR."chim_modes.php");
 

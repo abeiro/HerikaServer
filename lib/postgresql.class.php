@@ -399,18 +399,18 @@ class sql
  
     public function escape($string)
     {
-        if ($string) {
+        if ($string !== null) {
             $this->re_connect();
-            return pg_escape_string(self::$link,$string);
+            return pg_escape_string(self::$link, strval($string));
         } else
             return "";
     }
 
     public function escapeLiteral($string)
     {
-        if ($string) {
+        if ($string !== null) {
             $this->re_connect();
-            return pg_escape_literal(self::$link,$string);
+            return pg_escape_literal(self::$link, strval($string));
         } else
             return "";
     }
