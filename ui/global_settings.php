@@ -461,6 +461,9 @@ $gsSections = [
         [ 'name' => 'DISABLE_REANIMATION_TRACKING', 'type' => 'boolean', 'action' => 'clear_reanimation' ],
         [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
     ],
+    'Rechat' => [
+        [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight','conversational','group','random'] ],
+    ],
     // NOTE: Diary section removed - AUTO_DIARY is now configured per-profile in Profile Settings
     'Global Connectors' => [
         [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],

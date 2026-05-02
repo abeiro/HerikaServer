@@ -581,6 +581,8 @@ $FEATURES["MISC"]["LIFE_LINK_PLUGIN"]=false; // WIP. Use life link plugin for dy
 
 $BORED_EVENT_SERVERSIDE=false;
 $RECHAT_ALLOW_ACTIONS=false;
+$RECHAT_MODE='conversational'; // tight = listener-only, conversational = focused back-and-forth, group = rotate around nearby NPCs, random = roll one mode per chain
+$OPEN_RECHAT=true;
 $RANDOM_NARATION=false;
 $RANDOM_NARATION_CHANCE=15;
 $RANDOM_NARRATION_COOLDOWN=2;

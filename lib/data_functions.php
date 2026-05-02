@@ -3523,9 +3523,9 @@ function DataRechatHistory()
 {
 
     global $db;
-    // Actually we don't need the data here, just an array which size must match the history size.
-    // Include 'narration' type as it's an official part of rechat (random narrator interjections)
-    $lastRechat=$db->fetchAll("select gamets FROM  eventlog a  WHERE type in ('rechat','narration','inputtext','inputtext_s') 
+    // Include only actual rechat turns. Player input is not part of the rechat budget.
+    // Keep the row payload so callers can scope the count to the current speaker.
+    $lastRechat=$db->fetchAll("select type,data,gamets FROM  eventlog a  WHERE type in ('rechat','narration') 
     and localts>".(time()-120)."  order by gamets desc,ts desc LIMIT 10 OFFSET 0");
     
     return $lastRechat;

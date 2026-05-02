@@ -1428,25 +1428,49 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     //RECHAT. Must choose if we continue conversation or no.
     // Note: narration is part of rechat system (random narrator interjections count as rechat rounds)
 
-    $rechatHistory=DataRechatHistory();
-    
-    if (sizeof($rechatHistory)>=(intval($GLOBALS["RECHAT_H"])))    {   // TOO MUCH RECHAT
-        Logger::info("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">={$GLOBALS["RECHAT_H"]}");
-        // Lets try to summarize
-        SemaphoreManager::release("MAIN");
-        while(ob_get_length() && ob_end_clean());
-        require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
-        terminate();
+    if ($gameRequest[0] === "rechat") {
+        $rechatPayload = chimParseServerSideRechatPayload($gameRequest[3] ?? "");
+        $resolvedRechatTarget = chimResolveServerSideRechatTarget($rechatPayload);
+        $GLOBALS["RECHAT_REQUEST_PAYLOAD"] = $rechatPayload;
+        $GLOBALS["RECHAT_RESOLVED_TARGET"] = $resolvedRechatTarget;
+
+        if (empty($resolvedRechatTarget["selected"])) {
+            Logger::info("[RECHAT_SELECT] No valid responder selected; terminating rechat");
+            terminate();
+        }
+
+        if (!chimSwitchActiveNpcProfile($resolvedRechatTarget["selected"])) {
+            Logger::warn("[RECHAT_SELECT] Failed to switch active NPC profile to " . $resolvedRechatTarget["selected"]);
+            terminate();
+        }
     }
+
+    $rechatHistory=DataRechatHistory();
+    $currentSpeakerName = trim((string)($GLOBALS["HERIKA_NAME"] ?? ""));
     
     // Pre-calculated rechat budget with final-round closing prompt
 
-    $sessionKey = md5($GLOBALS["HERIKA_NAME"] . "_" . floor(time() / 120));
+    $sessionKey = isset($GLOBALS["RECHAT_RESOLVED_TARGET"])
+        ? chimBuildServerSideRechatSessionKey($GLOBALS["RECHAT_RESOLVED_TARGET"])
+        : md5($GLOBALS["HERIKA_NAME"] . "_" . floor(time() / 120));
     $budgetFile = sys_get_temp_dir() . "/chim_rechat_" . $sessionKey . ".json";
-    $currentRound = sizeof($rechatHistory); // rounds fired so far
+    $budgetStateWindow = 120;
+    $budgetState = null;
 
-    if ($currentRound === 0) {
-        // Pre-roll the entire conversation's rechat chain upfront
+    if (file_exists($budgetFile)) {
+        $loadedBudgetState = json_decode(file_get_contents($budgetFile), true);
+        if (is_array($loadedBudgetState) &&
+            isset($loadedBudgetState["budget"]) &&
+            isset($loadedBudgetState["used"]) &&
+            isset($loadedBudgetState["ts"]) &&
+            (time() - intval($loadedBudgetState["ts"]) <= $budgetStateWindow)) {
+            $budgetState = $loadedBudgetState;
+        } else {
+            @unlink($budgetFile);
+        }
+    }
+
+    if (!is_array($budgetState)) {
         $budget = 0;
         for ($i = 0; $i < intval($GLOBALS["RECHAT_H"]); $i++) {
             if (rand(1, 100) <= intval($GLOBALS["RECHAT_P"])) {
@@ -1459,40 +1483,37 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
             Logger::info("Rechat: pre-roll determined 0 rounds — terminating");
             terminate();
         }
-        file_put_contents($budgetFile, json_encode(['budget' => $budget, 'ts' => time()]));
-        Logger::info("Rechat: pre-rolled budget={$budget} for {$GLOBALS["HERIKA_NAME"]}");
-
-    } else {
-        // Subsequent rounds — check against pre-rolled budget
-        if (!file_exists($budgetFile)) {
-            // No budget file (edge case) — fall back to original CHIM behaviour
-            if (rand(1, 100) > intval($GLOBALS["RECHAT_P"])) {
-                Logger::info("Rechat: fallback probability check failed");
-                terminate();
-            }
-        } else {
-            $data = json_decode(file_get_contents($budgetFile), true);
-            $budget = intval($data['budget']);
-            if ($currentRound >= $budget) {
-                Logger::info("Rechat: pre-roll budget exhausted ({$currentRound}/{$budget}) — terminating");
-                @unlink($budgetFile);
-                terminate();
-            }
-        }
+        $budgetState = ['budget' => $budget, 'used' => 0, 'ts' => time()];
     }
 
+    $budget = intval($budgetState['budget'] ?? 0);
+    $currentRound = intval($budgetState['used'] ?? 0);
+    if ($currentRound >= $budget) {
+        Logger::info("Rechat: pre-roll budget exhausted ({$currentRound}/{$budget}) — terminating");
+        Logger::info("[RECHAT_COUNT] exhausted speaker={$GLOBALS["HERIKA_NAME"]} chain_id=" .
+            (isset($GLOBALS["RECHAT_RESOLVED_TARGET"]["chain_id"]) ? $GLOBALS["RECHAT_RESOLVED_TARGET"]["chain_id"] : "") .
+            " used={$currentRound} budget={$budget}");
+        @unlink($budgetFile);
+        terminate();
+    }
+
+    $budgetState['used'] = $currentRound + 1;
+    $budgetState['ts'] = time();
+    file_put_contents($budgetFile, json_encode($budgetState));
+    Logger::info("[RECHAT_COUNT] speaker={$GLOBALS["HERIKA_NAME"]} chain_id=" .
+        (isset($GLOBALS["RECHAT_RESOLVED_TARGET"]["chain_id"]) ? $GLOBALS["RECHAT_RESOLVED_TARGET"]["chain_id"] : "") .
+        " used={$budgetState['used']} budget={$budget}");
+
     // All gates passed — detect final round and inject closing prompt
-    $budget = isset($budget) ? $budget : intval($GLOBALS["RECHAT_H"]);
     if ($currentRound + 1 >= $budget) {
         $GLOBALS["PROMPT_HEAD"] .= "\n[This is your final response in this exchange. Conclude your current thought naturally — you are not leaving, just finishing what you were saying for now.]";
         Logger::info("Rechat: final round ({$currentRound}/{$budget}) — closing prompt injected");
     }
 
 
-    if (sizeof($rechatHistory)>1) {
+    if ($currentRound > 1) {
         // Lets make rechat wait a bit, so events while NPCs are speaking get into context// disabled if using new rechat fire event
         SemaphoreManager::release("MAIN");
-        Logger::info("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
         // Check if this conflicts with smart rechat
         // Is this doing something?
         $semaphore_timeout = $GLOBALS["SEMAPHORES_TIMEOUT"] ?? 300;
