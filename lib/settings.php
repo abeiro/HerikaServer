@@ -169,6 +169,7 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'INVENTORY_ITEMS_DESCRIPTIONS_ONLY',
             'HIDE_AMBIENT_COMBAT',
             'DISABLE_REANIMATION_TRACKING',
+            'TRANSFORMATION_DETECTION',
             'PROMPT_TIMESTAMP',
             'PROMPT_CONTEXT_OPTIONS',
             'RECHAT_MODE',

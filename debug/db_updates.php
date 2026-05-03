@@ -5954,6 +5954,35 @@ if ($checkVersion("general_settings") < 20260502005) {
 
 //----------------------------------------------------
 
+if ($checkVersion("general_settings") < 20260502006) {
+    Logger::debug("Applying general_settings 20260502006 - add transformation detection setting");
+    $b_ok = true;
+
+    try {
+        $settingId = 'TRANSFORMATION_DETECTION';
+        $definition = chimGetSchemaDefinition($settingId);
+        $hasLegacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+        $currentValue = ($hasLegacyValue === "__CHIM_SETTING_MISSING__")
+            ? ($definition['default'] ?? true)
+            : $hasLegacyValue;
+        $description = chimGetManagedGeneralSettingDescriptions()[$settingId] ?? chimGetSchemaDescription($settingId);
+
+        if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+            throw new Exception("Failed writing general setting '{$settingId}'");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error adding transformation detection setting: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260502006);
+        Logger::info("Applied patch general_settings 20260502006");
+    }
+}
+
+//----------------------------------------------------
+
 if ($checkVersion("core_action") < 20260502001) {
     Logger::debug("Applying core_action 20260502001 - hide Drink and Toast while NPC is sitting");
     $b_ok = true;

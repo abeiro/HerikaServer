@@ -8,6 +8,7 @@ require_once(__DIR__."/lazy_xml.php");
 require_once(__DIR__."/model_dynmodel.php");
 require_once(__DIR__."/emote_moods.php");
 require_once(__DIR__."/core/activity_status.php");
+require_once(__DIR__."/core/transformation_state.php");
 require_once(__DIR__."/core/game_plugins.php");
 require_once(__DIR__."/core/npc_master.class.php");
 
@@ -1222,33 +1223,34 @@ function chimDescribeConditionStat(string $kind, float $cur, float $max): string
     return "Spent";
 }
 
-function chimBuildCurrentConditionLinesFromStats($stats)
+function chimBuildCurrentConditionLinesFromMetadata($stats, array $metadata = [])
 {
-    if (!is_array($stats) || empty($stats)) {
-        return [];
-    }
-
-    $h = chimDescribeConditionStat('health', (float)($stats['health'] ?? 0), (float)($stats['health_max'] ?? 0));
-    $m = chimDescribeConditionStat('magicka', (float)($stats['magicka'] ?? 0), (float)($stats['magicka_max'] ?? 0));
-    $st = chimDescribeConditionStat('stamina', (float)($stats['stamina'] ?? 0), (float)($stats['stamina_max'] ?? 0));
-
     $lines = [];
-    if ($h !== 'Unknown') {
-        $lines[] = "  • Health: {$h}";
+
+    if (is_array($stats) && !empty($stats)) {
+        $h = chimDescribeConditionStat('health', (float)($stats['health'] ?? 0), (float)($stats['health_max'] ?? 0));
+        $m = chimDescribeConditionStat('magicka', (float)($stats['magicka'] ?? 0), (float)($stats['magicka_max'] ?? 0));
+        $st = chimDescribeConditionStat('stamina', (float)($stats['stamina'] ?? 0), (float)($stats['stamina_max'] ?? 0));
+
+        if ($h !== 'Unknown') {
+            $lines[] = "  • Health: {$h}";
+        }
+        if ($m !== 'Unknown') {
+            $lines[] = "  • Magicka: {$m}";
+        }
+        if ($st !== 'Unknown') {
+            $lines[] = "  • Stamina: {$st}";
+        }
     }
-    if ($m !== 'Unknown') {
-        $lines[] = "  • Magicka: {$m}";
-    }
-    if ($st !== 'Unknown') {
-        $lines[] = "  • Stamina: {$st}";
-    }
+
+    $lines = array_merge($lines, chimBuildTransformationStateConditionLines($metadata));
 
     return $lines;
 }
 
-function chimBuildCurrentConditionBlockFromStats($stats)
+function chimBuildCurrentConditionBlockFromMetadata($stats, array $metadata = [])
 {
-    $lines = chimBuildCurrentConditionLinesFromStats($stats);
+    $lines = chimBuildCurrentConditionLinesFromMetadata($stats, $metadata);
     if (empty($lines)) {
         return '';
     }
@@ -1276,7 +1278,7 @@ function chimBuildNpcInspectSummary(string $npcName)
 
     $sections = [];
 
-    $conditionBlock = chimBuildCurrentConditionBlockFromStats($metaData['stats'] ?? null);
+    $conditionBlock = chimBuildCurrentConditionBlockFromMetadata($metaData['stats'] ?? null, $metaData);
     if ($conditionBlock !== '') {
         $sections[] = $conditionBlock;
     }
@@ -6556,6 +6558,13 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
 		}
 	}
     
+    $conditionLines = chimBuildCurrentConditionLinesFromMetadata($metaData["stats"] ?? null, $metaData);
+    if (!empty($conditionLines)) {
+        $STATS_ADD = "\n\n<current_condition>\n#Current Condition\n" . implode("\n", $conditionLines)."\n</current_condition>\n";
+    } else {
+        $STATS_ADD = "";
+    }
+
     // Add NPC's known spells (skip for The Narrator)
     if ($FOLLOWER_CONF["HERIKA_NAME"] !== "The Narrator" && isset($metaData["spells"]) && is_array($metaData["spells"])) {
         $spellParts = [];

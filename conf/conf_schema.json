@@ -67,6 +67,7 @@
   "INVENTORY_ITEMS_DESCRIPTIONS_ONLY": {"userlvl":"basic","type":"boolean","scope":"global","description":"Only show inventory items in context that have descriptions in the description manager."},
   "HIDE_AMBIENT_COMBAT": {"userlvl":"basic","type":"boolean","scope":"global","description":"Hide ambient NPC-to-NPC combat deaths from context during requests. Only player and companion kills will be shown. This is useful for hiding the violent nature of Skyrim's nature from being detected."},
   "DISABLE_REANIMATION_TRACKING": {"userlvl":"basic","type":"boolean","scope":"global","description":"Disable reanimation tracking. When enabled, NPCs marked as reanimated will not have zombie status text injected into their prompts."},
+  "TRANSFORMATION_DETECTION": {"userlvl":"basic","type":"boolean","scope":"global","description":"Include werewolf and vampire lord transformation state in prompt context when detected."},
   "HERIKA_ANIMATIONS": {"userlvl":"basic","type":"boolean","description":"Will issue animations for the NPC to play", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features","_title":"Advanced Configuration"},
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the CHIM Server. Leave it blank for English."},
   "LANG_LLM_XTTS": {"userlvl":"pro","type":"boolean","description":"XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language."},

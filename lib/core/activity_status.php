@@ -259,6 +259,28 @@ function chimApplyNpcMetadataUpdatesByName(string $npcName, array $updates): boo
         }
     }
 
+    if (array_key_exists('transformation_state', $updates)) {
+        $transformationPayload = $updates['transformation_state'];
+        unset($updates['transformation_state']);
+
+        if (is_array($transformationPayload)) {
+            require_once __DIR__ . DIRECTORY_SEPARATOR . 'transformation_state.php';
+            $transformationUpdates = chimBuildTransformationStateMetadataUpdates($transformationPayload);
+            $setValues = array_merge($setValues, $transformationUpdates['set']);
+            $unsetKeys = array_merge($unsetKeys, $transformationUpdates['unset']);
+        } elseif ($transformationPayload === null) {
+            $unsetKeys = array_merge($unsetKeys, [
+                'transformation_state',
+                'transformation_state_type',
+                'is_werewolf_form',
+                'is_vampire_lord_form',
+                'transformation_state_timestamp',
+                'transformation_race_name',
+                'transformation_race_editor_id',
+            ]);
+        }
+    }
+
     foreach ($updates as $key => $value) {
         $metadataKey = trim((string) $key);
         if ($metadataKey === '') {

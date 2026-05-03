@@ -15,6 +15,7 @@ require_once(__DIR__ . "/lib/{$GLOBALS["DBDRIVER"]}.class.php");
 $GLOBALS["db"] = new sql();
 require_once(__DIR__ . "/lib/core/npc_master.class.php");
 require_once(__DIR__ . "/lib/core/activity_status.php");
+require_once(__DIR__ . "/lib/core/transformation_state.php");
 require_once(__DIR__ . "/lib/core/game_plugins.php");
 require_once(__DIR__ . "/lib/logger.php");
 
@@ -37,7 +38,7 @@ if (!$data || !isset($data['type'])) {
 }
 
 // Types that operate on global data and do not require an actor
-$actorlessTypes = ['market_stock', 'activity_status_bulk', 'loaded_plugins'];
+$actorlessTypes = ['market_stock', 'activity_status_bulk', 'transformation_state_bulk', 'loaded_plugins'];
 
 // Validate required fields (skipped for actorless types)
 if (!in_array($data['type'], $actorlessTypes)) {
@@ -82,6 +83,12 @@ try {
             break;
         case 'activity_status_bulk':
             handleActivityStatusBulkUpdate($data, $npcMaster);
+            break;
+        case 'transformation_state':
+            handleTransformationStateUpdate($data, $npcMaster);
+            break;
+        case 'transformation_state_bulk':
+            handleTransformationStateBulkUpdate($data, $npcMaster);
             break;
         case 'market_stock':
             handleMarketStockUpdate($data);
@@ -203,6 +210,63 @@ function handleActivityStatusBulkUpdate(array $data, NpcMaster $npcMaster): void
 
         chimApplyNpcMetadataUpdatesByName($statusRow['actor_name'], [
             'activity_status' => $statusRow,
+        ]);
+    }
+}
+
+function handleTransformationStateUpdate(array $data, NpcMaster $npcMaster): void
+{
+    if (($data['actor_type'] ?? '') === 'player') {
+        try {
+            require_once(__DIR__ . "/lib/core/player.class.php");
+            $player = new Player();
+            $player->setJson('transformation_state', chimSanitizeTransformationStatePayload($data));
+        } catch (Exception $e) {
+            Logger::warn("[gamedata.php] Could not save player transformation_state to core_player: " . $e->getMessage());
+        }
+        return;
+    }
+
+    $currentData = $npcMaster->getByName($data['actor_name']);
+    if (!$currentData) {
+        return;
+    }
+
+    chimApplyNpcMetadataUpdatesByName($data['actor_name'], [
+        'transformation_state' => $data,
+    ]);
+}
+
+function handleTransformationStateBulkUpdate(array $data, NpcMaster $npcMaster): void
+{
+    if (empty($data['states']) || !is_array($data['states'])) {
+        Logger::warn("[gamedata.php] transformation_state_bulk missing states payload");
+        return;
+    }
+
+    foreach ($data['states'] as $stateRow) {
+        if (!is_array($stateRow) || empty($stateRow['actor_name'])) {
+            continue;
+        }
+
+        if (($stateRow['actor_type'] ?? '') === 'player') {
+            try {
+                require_once(__DIR__ . "/lib/core/player.class.php");
+                $player = new Player();
+                $player->setJson('transformation_state', chimSanitizeTransformationStatePayload($stateRow));
+            } catch (Exception $e) {
+                Logger::warn("[gamedata.php] Could not save player transformation_state during bulk update: " . $e->getMessage());
+            }
+            continue;
+        }
+
+        $currentData = $npcMaster->getByName($stateRow['actor_name']);
+        if (!$currentData) {
+            continue;
+        }
+
+        chimApplyNpcMetadataUpdatesByName($stateRow['actor_name'], [
+            'transformation_state' => $stateRow,
         ]);
     }
 }
