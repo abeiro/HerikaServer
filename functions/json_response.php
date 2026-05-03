@@ -20,6 +20,12 @@
         }
     }
 
+    if (!function_exists('chimIsVisionRequest')) {
+        function chimIsVisionRequest() {
+            return isset($GLOBALS["gameRequest"][0]) && $GLOBALS["gameRequest"][0] === "vision";
+        }
+    }
+
     setActions();
     setResponseTemplate();
     setStructuredOutputTemplate();
@@ -40,9 +46,10 @@
         // Initialize actions list
         $GLOBALS["PROMPT_ACTIONS_LIST"] = "";
         
-        // Skip actions list for narration events (The Narrator doesn't need action options for atmospheric descriptions)
-        if (isset($GLOBALS["gameRequest"]) && $GLOBALS["gameRequest"][0] === "narration") {
-            $GLOBALS["FUNC_LIST"] = ["Talk"];  // Only Talk action for narration
+        // Narration-style requests should not browse the full action catalog, but
+        // they still need a stable Talk action in the response schema.
+        if (isset($GLOBALS["gameRequest"]) && in_array($GLOBALS["gameRequest"][0], ["narration", "vision"], true)) {
+            $GLOBALS["FUNC_LIST"] = ["Talk"];
             return;
         }
 
@@ -140,7 +147,9 @@
     
         // Build listener description - for rechat events, encourage addressing the previous speaker
         $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order";
-        if (
+        if (chimIsVisionRequest()) {
+            $listenerDesc = "leave blank unless {$GLOBALS["HERIKA_NAME"]} directly addresses someone while explaining the Soulgaze vision";
+        } elseif (
             isset($GLOBALS["gameRequest"]) &&
             (
                 (function_exists('chimIsStrictResponsePromptContext') && chimIsStrictResponsePromptContext()) ||
@@ -162,7 +171,9 @@
         }
         $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
         $messageDescription = "lines of dialogue";
-        if ($inlineNarrationEnabled) {
+        if (chimIsVisionRequest()) {
+            $messageDescription = "{$GLOBALS["HERIKA_NAME"]}'s spoken Soulgaze explanation of the current scene. Describe only what is visibly present right now through {$GLOBALS["PLAYER_NAME"]}'s eyes, focusing on people, environment, objects, and immediate activity. Do not continue unrelated conversation, do not answer stale dialogue, and do not invent unseen details.";
+        } elseif ($inlineNarrationEnabled) {
             $messageDescription = "If needed, start with one brief third-person narration block in single asterisks, then put {$GLOBALS["HERIKA_NAME"]}'s spoken text after it. Example: *She smiles* It's good to see you again, my friend! Do not wrap the entire reply in asterisks, and keep spoken dialogue outside the asterisks.";
         } elseif (chimIsDirectNarratorDialogue()) {
             $messageDescription = "plain spoken dialogue addressed directly to {$GLOBALS["PLAYER_NAME"]}. Do not include third-person narration, scene description, stage directions, or text in asterisks.";
@@ -251,6 +262,9 @@
         $moods=normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "");
         shuffle($moods);
         $moodDescription = "choose exactly one mood while speaking, never combine moods";
+        $listenerDescription = chimIsVisionRequest()
+            ? "leave blank unless {$GLOBALS["HERIKA_NAME"]} directly addresses someone while explaining the Soulgaze vision"
+            : "specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order";
 
         // Determine message description based on inline narration mode.
         $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
@@ -262,7 +276,9 @@
         }
         $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
         $messageDescription = "lines of {$GLOBALS["HERIKA_NAME"]}'s dialogue";
-        if ($inlineNarrationEnabled) {
+        if (chimIsVisionRequest()) {
+            $messageDescription = "{$GLOBALS["HERIKA_NAME"]}'s spoken Soulgaze explanation of the current scene. Describe only what is visibly present right now through {$GLOBALS["PLAYER_NAME"]}'s eyes, focusing on people, environment, objects, and immediate activity. Do not continue unrelated conversation, do not answer stale dialogue, and do not invent unseen details.";
+        } elseif ($inlineNarrationEnabled) {
             $messageDescription = "If needed, start with one brief third-person narration block in single asterisks, then put {$GLOBALS["HERIKA_NAME"]}'s spoken text after it. Example: *She smiles* It's good to see you again, my friend! Do not wrap the entire reply in asterisks, and keep spoken dialogue outside the asterisks.";
         } elseif (chimIsDirectNarratorDialogue()) {
             $messageDescription = "plain spoken dialogue addressed directly to {$GLOBALS["PLAYER_NAME"]}. Do not include third-person narration, scene description, stage directions, or text in asterisks.";
@@ -281,7 +297,7 @@
                         ),
                         "listener" => array(
                             "type" => "string",
-                            "description" => "specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
+                            "description" => $listenerDescription,
                         ),
                         "message" => array(
                             "type" => "string",

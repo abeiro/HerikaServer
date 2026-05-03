@@ -2580,8 +2580,11 @@ if ($currentHold) {
     $rumorsText = build_rumor_prompt_xml($rumors);
 }
 
-// For narration events, simplify the command prompt (no actions needed for atmospheric descriptions)
-if ($gameRequest[0] === "narration" || $gameRequest[0] === "narrator_welcome") {
+// Narration-like requests should stay descriptive instead of drifting into
+// ordinary conversation turns.
+if ($gameRequest[0] === "vision") {
+    $GLOBALS["COMMAND_PROMPT"] = "Respond with a Soulgaze scene explanation only. Focus on what is visibly present in the provided scene context. Use the Talk action.";
+} else if ($gameRequest[0] === "narration" || $gameRequest[0] === "narrator_welcome") {
     $GLOBALS["COMMAND_PROMPT"] = "Respond with atmospheric narration only. Use the Talk action.";
 }
 

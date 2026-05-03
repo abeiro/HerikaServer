@@ -1293,6 +1293,12 @@ function herikaActionCatalogGetResolvedFollowupConfig($codeName, $row = null)
         return [];
     }
 
+    if ($codeName === 'UseSoulGaze') {
+        return herikaActionCatalogNormalizeFollowupConfig([
+            'enabled' => false,
+        ]);
+    }
+
     if (!is_array($row)) {
         $row = herikaGetActionCatalogRow($codeName);
     }
