@@ -423,17 +423,9 @@ class LLMConnector
         require_once($GLOBALS["ENGINE_PATH"] . "/connector" . DIRECTORY_SEPARATOR . "{$currentConnectorData["driver"]}.php");
         $connector = new $currentConnectorData["driver"]();
 
-        $metadata = is_string($currentConnectorData["metadata"]) ? json_decode($currentConnectorData["metadata"], true) : $currentConnectorData["metadata"];
-        if ((!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) || (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && !$GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"])) {
-            error_log("[CORE SYSTEM] Skipping action enforcement prompt for connector ID {$currentConnectorData["id"]} ({$currentConnectorData["driver"]}/{$currentConnectorData["model"]})");
-            $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"] = "";
-        } elseif (isset($metadata["remove_action_prompt"]) && $metadata["remove_action_prompt"] === true) {
-            // Option to disable actions enfoncement prompt per connector. Some models like gemini-3-flash tend to use actions a lot.
-            error_log("[CORE SYSTEM] Disabling action enforcement prompt for connector ID {$currentConnectorData["id"]} ({$currentConnectorData["driver"]}/{$currentConnectorData["model"]})");
-            $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"] = "(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is appropriate, use it)";
-        } else {
-            error_log("[CORE SYSTEM] Using action enforcement prompt for connector ID {$currentConnectorData["id"]} ({$currentConnectorData["driver"]}/{$currentConnectorData["model"]})");
-        }
+        $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"] = false;
+        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"] = "";
+        error_log("[CORE SYSTEM] Action enforcement prompt hard-disabled for connector ID {$currentConnectorData["id"]} ({$currentConnectorData["driver"]}/{$currentConnectorData["model"]})");
         return $connector;
 
     }

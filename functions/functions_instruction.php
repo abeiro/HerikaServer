@@ -34,7 +34,7 @@ unsetFunction("DecreaseWalkSpeed");
 
 
 
-$GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(optionally enforce dialogue by using action)";
+$GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
+$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
 
 ?>

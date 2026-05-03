@@ -2292,8 +2292,10 @@ if (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_
 
 // array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
 
-// Action-enforcement prompt is disabled for direct narrator dialogue.
-$GLOBALS["ENFORCE_ACTIONS_PROMPT"] = empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]);
+// Action-enforcement prompt is hard-disabled globally.
+$GLOBALS["ENFORCE_ACTIONS_PROMPT"] = false;
+$GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"] = false;
+$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"] = "";
 
 
 // Rechat case
@@ -2303,11 +2305,8 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     if (isset($GLOBALS["RECHAT_ALLOW_ACTIONS"]) && $GLOBALS["RECHAT_ALLOW_ACTIONS"]) {
         $FUNCTIONS_ARE_ENABLED=true;
 
-        $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-        if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
-            $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
-        else
-            $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
+        $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
+        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
         
         // MinAI prompts are breaking rechat actor adressing "Respond to #target# as #herika_name#"
         $GLOBALS['action_prompts']=[];
@@ -2356,22 +2355,14 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
 // Instruction reinforcement
 if (in_array($gameRequest[0],["instruction"]) ) {
     
-    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
+    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
+    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
     
 }
 
 // Enforce actions
-if (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) {
-    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
-    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
-} else {
-    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-    if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
-        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
-    else
-        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
-}
+$GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
+$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
 
 // Rolemaster stuff
 
@@ -2379,18 +2370,8 @@ if (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) {
 if (isset($GLOBALS["is_rolemastered"])) {
     $GLOBALS["NPC_ROLEMASTERED"]=true;
     error_log("{$GLOBALS["HERIKA_NAME"]} is_rolemastered");
-    if ((rand(0,5)!==0)){ // Remember goal from time to time
-        $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
-        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"].="(consider character's goal and traits, check #Storyline as this actor is part of a storyline)";
-        /*if (isset($GLOBALS["ENFORCE_ACTIONS_PROMPT"]) && $GLOBALS["ENFORCE_ACTIONS_PROMPT"]) {
-            $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-            if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
-                $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
-            else
-                $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
-        }*/
-    }
+    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
+    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
 } 
 
 // MINIME_T5 STUFF, command assistant
@@ -2424,8 +2405,8 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
                     );
                     Logger::info("ENFORCING COMMAND: <{$preCommand["is_command"]}>");
                     //$memoryInjectionCtx=[]; // Disable memories when command.
-                    $COMMAND_PROMPT_ENFORCE_ACTIONS.="(USER MAY WANTS YOU TO ISSUE ACTION {$preCommand["is_command"]}).";
-                    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
+                    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
+                    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
                 } 
             }
         }
