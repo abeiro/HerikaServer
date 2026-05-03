@@ -5954,6 +5954,279 @@ if ($checkVersion("general_settings") < 20260502005) {
 
 //----------------------------------------------------
 
+if ($checkVersion("core_action") < 20260502001) {
+    Logger::debug("Applying core_action 20260502001 - hide Drink and Toast while NPC is sitting");
+    $b_ok = true;
+
+    try {
+        $syncSittingRestrictions = function ($tableName) use ($db, $checkTableExists) {
+            if ($checkTableExists($tableName) == -1) {
+                return;
+            }
+
+            $rows = $db->fetchAll("
+                SELECT id, code_name, metadata
+                FROM public.{$tableName}
+                WHERE LOWER(code_name) IN ('drink', 'toast')
+            ");
+
+            foreach ($rows as $row) {
+                $rowId = intval($row['id'] ?? 0);
+                if ($rowId <= 0) {
+                    continue;
+                }
+
+                $metadata = json_decode(strval($row['metadata'] ?? '{}'), true);
+                if (!is_array($metadata)) {
+                    $metadata = [];
+                }
+
+                $requirements = is_array($metadata['requirements'] ?? null) ? $metadata['requirements'] : [];
+                $activityRequirements = is_array($requirements['activity'] ?? null) ? $requirements['activity'] : [];
+                $currentActionNotIn = $activityRequirements['current_action_not_in'] ?? [];
+                if (!is_array($currentActionNotIn)) {
+                    $currentActionNotIn = [$currentActionNotIn];
+                }
+
+                $normalizedValues = [];
+                foreach ($currentActionNotIn as $value) {
+                    $normalizedValue = strtolower(trim(strval($value)));
+                    if ($normalizedValue !== '') {
+                        $normalizedValues[$normalizedValue] = true;
+                    }
+                }
+
+                if (isset($normalizedValues['sitting'])) {
+                    continue;
+                }
+
+                $currentActionNotIn[] = 'sitting';
+                $activityRequirements['current_action_not_in'] = array_values(array_unique(array_map(
+                    function ($value) {
+                        return strtolower(trim(strval($value)));
+                    },
+                    $currentActionNotIn
+                )));
+                $requirements['activity'] = $activityRequirements;
+                $metadata['requirements'] = $requirements;
+
+                $metadataJson = json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                if (!is_string($metadataJson) || $metadataJson === '') {
+                    $metadataJson = '{}';
+                }
+
+                $metadataLiteral = $db->escapeLiteral($metadataJson);
+                $db->execQuery("
+                    UPDATE public.{$tableName}
+                    SET metadata = {$metadataLiteral}::jsonb,
+                        updated_at = NOW()
+                    WHERE id = {$rowId}
+                ");
+            }
+        };
+
+        $syncSittingRestrictions('core_action');
+        $syncSittingRestrictions('core_action_custom');
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error syncing sitting restrictions for Drink/Toast: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("core_action", 20260502001);
+        Logger::info("Applied patch core_action 20260502001");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("core_action") < 20260502002) {
+    Logger::debug("Applying core_action 20260502002 - hide StartRitualCeremony while NPC is sitting");
+    $b_ok = true;
+
+    try {
+        $syncSittingRestrictions = function ($tableName) use ($db, $checkTableExists) {
+            if ($checkTableExists($tableName) == -1) {
+                return;
+            }
+
+            $rows = $db->fetchAll("
+                SELECT id, code_name, metadata
+                FROM public.{$tableName}
+                WHERE LOWER(code_name) = 'startritualceremony'
+            ");
+
+            foreach ($rows as $row) {
+                $rowId = intval($row['id'] ?? 0);
+                if ($rowId <= 0) {
+                    continue;
+                }
+
+                $metadata = json_decode(strval($row['metadata'] ?? '{}'), true);
+                if (!is_array($metadata)) {
+                    $metadata = [];
+                }
+
+                $requirements = is_array($metadata['requirements'] ?? null) ? $metadata['requirements'] : [];
+                $activityRequirements = is_array($requirements['activity'] ?? null) ? $requirements['activity'] : [];
+                $currentActionNotIn = $activityRequirements['current_action_not_in'] ?? [];
+                if (!is_array($currentActionNotIn)) {
+                    $currentActionNotIn = [$currentActionNotIn];
+                }
+
+                $normalizedValues = [];
+                foreach ($currentActionNotIn as $value) {
+                    $normalizedValue = strtolower(trim(strval($value)));
+                    if ($normalizedValue !== '') {
+                        $normalizedValues[$normalizedValue] = true;
+                    }
+                }
+
+                if (isset($normalizedValues['sitting'])) {
+                    continue;
+                }
+
+                $currentActionNotIn[] = 'sitting';
+                $activityRequirements['current_action_not_in'] = array_values(array_unique(array_map(
+                    function ($value) {
+                        return strtolower(trim(strval($value)));
+                    },
+                    $currentActionNotIn
+                )));
+                $requirements['activity'] = $activityRequirements;
+                $metadata['requirements'] = $requirements;
+
+                $metadataJson = json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                if (!is_string($metadataJson) || $metadataJson === '') {
+                    $metadataJson = '{}';
+                }
+
+                $metadataLiteral = $db->escapeLiteral($metadataJson);
+                $db->execQuery("
+                    UPDATE public.{$tableName}
+                    SET metadata = {$metadataLiteral}::jsonb,
+                        updated_at = NOW()
+                    WHERE id = {$rowId}
+                ");
+            }
+        };
+
+        $syncSittingRestrictions('core_action');
+        $syncSittingRestrictions('core_action_custom');
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error syncing sitting restrictions for StartRitualCeremony: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("core_action", 20260502002);
+        Logger::info("Applied patch core_action 20260502002");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("core_action") < 20260502011) {
+    Logger::debug("Applying core_action 20260502011 - sync sitting restrictions for Drink, Toast, and StartRitualCeremony");
+    $b_ok = true;
+
+    try {
+        $syncSittingRestrictions = function ($tableName) use ($db, $checkTableExists) {
+            if ($checkTableExists($tableName) == -1) {
+                return;
+            }
+
+            $targets = [
+                'drink' => ['sitting'],
+                'toast' => ['sitting'],
+                'startritualceremony' => ['sitting'],
+            ];
+
+            $rows = $db->fetchAll("
+                SELECT id, code_name, metadata
+                FROM public.{$tableName}
+                WHERE LOWER(code_name) IN ('drink', 'toast', 'startritualceremony')
+            ");
+
+            foreach ($rows as $row) {
+                $rowId = intval($row['id'] ?? 0);
+                $codeName = strtolower(trim(strval($row['code_name'] ?? '')));
+                if ($rowId <= 0 || !isset($targets[$codeName])) {
+                    continue;
+                }
+
+                $metadata = json_decode(strval($row['metadata'] ?? '{}'), true);
+                if (!is_array($metadata)) {
+                    $metadata = [];
+                }
+
+                $requirements = is_array($metadata['requirements'] ?? null) ? $metadata['requirements'] : [];
+                $activityRequirements = is_array($requirements['activity'] ?? null) ? $requirements['activity'] : [];
+                $currentActionNotIn = $activityRequirements['current_action_not_in'] ?? [];
+                if (!is_array($currentActionNotIn)) {
+                    $currentActionNotIn = [$currentActionNotIn];
+                }
+
+                $normalizedValues = [];
+                foreach ($currentActionNotIn as $value) {
+                    $normalizedValue = strtolower(trim(strval($value)));
+                    if ($normalizedValue !== '') {
+                        $normalizedValues[$normalizedValue] = true;
+                    }
+                }
+
+                $changed = false;
+                foreach ($targets[$codeName] as $requiredValue) {
+                    if (!isset($normalizedValues[$requiredValue])) {
+                        $currentActionNotIn[] = $requiredValue;
+                        $normalizedValues[$requiredValue] = true;
+                        $changed = true;
+                    }
+                }
+
+                if (!$changed) {
+                    continue;
+                }
+
+                $activityRequirements['current_action_not_in'] = array_values(array_unique(array_map(
+                    function ($value) {
+                        return strtolower(trim(strval($value)));
+                    },
+                    $currentActionNotIn
+                )));
+                $requirements['activity'] = $activityRequirements;
+                $metadata['requirements'] = $requirements;
+
+                $metadataJson = json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                if (!is_string($metadataJson) || $metadataJson === '') {
+                    $metadataJson = '{}';
+                }
+
+                $metadataLiteral = $db->escapeLiteral($metadataJson);
+                $db->execQuery("
+                    UPDATE public.{$tableName}
+                    SET metadata = {$metadataLiteral}::jsonb,
+                        updated_at = NOW()
+                    WHERE id = {$rowId}
+                ");
+            }
+        };
+
+        $syncSittingRestrictions('core_action');
+        $syncSittingRestrictions('core_action_custom');
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error syncing higher-version sitting restrictions: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("core_action", 20260502011);
+        Logger::info("Applied patch core_action 20260502011");
+    }
+}
+
+//----------------------------------------------------
+
 // Relationship Evaluation and Initialization Queues
 $db->execQuery("CREATE TABLE IF NOT EXISTS public.relationship_eval_queue (
                 id SERIAL PRIMARY KEY,

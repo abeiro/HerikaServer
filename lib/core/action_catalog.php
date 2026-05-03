@@ -1061,9 +1061,19 @@ function herikaActionCatalogGetBuiltinRequirements($codeName)
                 'current_action_not_in' => ['dead', 'unconscious', 'sleeping', 'combat', 'attacking'],
             ],
         ],
+        'Drink' => [
+            'activity' => [
+                'current_action_not_in' => ['sitting'],
+            ],
+        ],
+        'Toast' => [
+            'activity' => [
+                'current_action_not_in' => ['sitting'],
+            ],
+        ],
         'StartRitualCeremony' => [
             'activity' => [
-                'current_action_not_in' => ['dead', 'unconscious', 'sleeping', 'combat', 'attacking', 'ritual'],
+                'current_action_not_in' => ['dead', 'unconscious', 'sleeping', 'combat', 'attacking', 'ritual', 'sitting'],
             ],
         ],
         'EndRitualCeremony' => [
