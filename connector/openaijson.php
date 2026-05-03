@@ -497,6 +497,10 @@ class openaijson
         } 
 
         require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+
+        if (function_exists('chimEnsureNarratorJsonResponseState')) {
+            chimEnsureNarratorJsonResponseState('OPENAIJSON');
+        }
         
         
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
@@ -1276,6 +1280,11 @@ class openaijson
     {
         
         $this->init_connector($customParms);
+
+        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+        if (function_exists('chimEnsureNarratorJsonResponseState')) {
+            chimEnsureNarratorJsonResponseState('OPENAIJSON_FAST');
+        }
         
         if (empty($callName))
             $callName=$this->name;

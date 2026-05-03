@@ -130,9 +130,11 @@ $PROMPTS=array(
 
 	],
 	"narrator_inputtext"=>[
-		"cue"=>[
-			"{$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
-		]
+		"cue"=>(function () use ($TEMPLATE_ACTION) {
+			return [
+				"$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+			];
+		})()
 	],
 	"inputtext_s"=>[
 		"cue"=>(function () use ($TEMPLATE_ACTION) {

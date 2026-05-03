@@ -327,7 +327,8 @@ if ($inlineNarrationEnabled) {
 }
 
 if ($directNarratorDialogue) {
-    $TEMPLATE_DIALOG .= " Reply directly to {$GLOBALS["PLAYER_NAME"]} in plain spoken dialogue only." .
+    $TEMPLATE_DIALOG .= " Reply directly to {$GLOBALS["PLAYER_NAME"]} in spoken dialogue." .
+        " If an narrator action matches the request, use it and keep the spoken line consistent with that action." .
         " Do not include third-person narration, scene description, stage directions, or text in asterisks.";
 }
 

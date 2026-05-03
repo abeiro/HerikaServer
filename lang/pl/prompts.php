@@ -13,6 +13,10 @@ if ($plDirectNarratorDialogue) {
         . " Nie dodawaj narracji w trzeciej osobie, opisów sceny, didaskaliów ani tekstu w gwiazdkach.";
 }
 
+if ($plDirectNarratorDialogue) {
+    $TEMPLATE_DIALOG .= " If an enabled narrator action matches the request, use it and keep the spoken line consistent with that action.";
+}
+
 if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) && sizeof($GLOBALS["TTS"]["AZURE"]["validMoods"]) > 0) {
     if ($GLOBALS["TTSFUNCTION"] == "azure") {
         $TEMPLATE_DIALOG .= "(opcjonalny sposób mówienia z tej listy [" . implode(",", $GLOBALS["TTS"]["AZURE"]["validMoods"]) . "])";
@@ -92,9 +96,11 @@ $PROMPTS = array(
 
     ],
     "narrator_inputtext" => [
-        "cue" => [
-            "{$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
-        ]
+        "cue" => (function () use ($TEMPLATE_ACTION) {
+            return [
+                "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+            ];
+        })()
     ],
     "inputtext_s" => [
         "cue" => (function () use ($TEMPLATE_ACTION) {

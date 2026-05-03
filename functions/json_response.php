@@ -26,20 +26,121 @@
         }
     }
 
-    setActions();
-    setResponseTemplate();
-    setStructuredOutputTemplate();
-    setGBNFGrammar();
+    if (!function_exists('chimShouldExposePromptActions')) {
+        function chimShouldExposePromptActions() {
+            if (chimIsVisionRequest()) {
+                return false;
+            }
 
-    // allow for edits to the json templates by extensions
-    requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"json_response_custom.php");
+            if (chimIsDirectNarratorDialogue()) {
+                return true;
+            }
 
-    if (isset($GLOBALS["HOOKS"]) && isset($GLOBALS["HOOKS"]["JSON_TEMPLATE"]) && is_array($GLOBALS["HOOKS"]["JSON_TEMPLATE"])) {
-        foreach ($GLOBALS["HOOKS"]["JSON_TEMPLATE"] as $hook) {
-            call_user_func($hook);
-
+            return isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"];
         }
     }
+
+    if (!function_exists('chimApplyJsonTemplateHooks')) {
+        function chimApplyJsonTemplateHooks() {
+            if (isset($GLOBALS["HOOKS"]) && isset($GLOBALS["HOOKS"]["JSON_TEMPLATE"]) && is_array($GLOBALS["HOOKS"]["JSON_TEMPLATE"])) {
+                foreach ($GLOBALS["HOOKS"]["JSON_TEMPLATE"] as $hook) {
+                    call_user_func($hook);
+                }
+            }
+        }
+    }
+
+    if (!function_exists('chimRefreshJsonResponseState')) {
+        function chimRefreshJsonResponseState($loadExtensionCustomizers = false) {
+            global $FUNC_LIST;
+            global $responseTemplate;
+            global $structuredOutputTemplate;
+            global $grammar;
+
+            $FUNC_LIST = [];
+            $responseTemplate = [];
+            $structuredOutputTemplate = array();
+            $grammar = "";
+
+            setActions();
+            setResponseTemplate();
+            setStructuredOutputTemplate();
+            setGBNFGrammar();
+
+            if ($loadExtensionCustomizers && empty($GLOBALS["CHIM_JSON_RESPONSE_EXT_LOADED"])) {
+                // Allow one-time direct template edits from extensions on initial load.
+                requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"json_response_custom.php");
+                $GLOBALS["CHIM_JSON_RESPONSE_EXT_LOADED"] = true;
+            }
+
+            chimApplyJsonTemplateHooks();
+        }
+    }
+
+    if (!function_exists('chimNarratorJsonResponseNeedsRefresh')) {
+        function chimNarratorJsonResponseNeedsRefresh(): bool
+        {
+            if (!chimIsDirectNarratorDialogue()) {
+                return false;
+            }
+
+            $actionTemplate = trim(strval($GLOBALS["responseTemplate"]["action"] ?? ""));
+            $funcList = array_values(array_filter(
+                is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : [],
+                function ($value) {
+                    return trim(strval($value)) !== "";
+                }
+            ));
+
+            $structuredActionProperty = $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"]["action"] ?? null;
+            $structuredActionEnum = [];
+            if (is_array($structuredActionProperty) && isset($structuredActionProperty["enum"]) && is_array($structuredActionProperty["enum"])) {
+                $structuredActionEnum = array_values(array_filter($structuredActionProperty["enum"], function ($value) {
+                    return trim(strval($value)) !== "";
+                }));
+            }
+
+            $hasOnlyTalkAction = count($funcList) === 1 && strcasecmp($funcList[0], "Talk") === 0;
+
+            return (
+                empty($GLOBALS["PROMPT_ACTIONS_LIST"])
+                || empty($funcList)
+                || $actionTemplate === ""
+                || strcasecmp($actionTemplate, "Talk") === 0
+                || empty($structuredActionEnum)
+                || $hasOnlyTalkAction
+            );
+        }
+    }
+
+    if (!function_exists('chimEnsureNarratorJsonResponseState')) {
+        function chimEnsureNarratorJsonResponseState($logContext = 'JSON_RESPONSE')
+        {
+            if (!function_exists('chimRefreshJsonResponseState')) {
+                return;
+            }
+
+            $requestType = strtolower(trim(strval($GLOBALS["gameRequest"][0] ?? '')));
+            $directNarratorDialogue = chimIsDirectNarratorDialogue();
+            if (!$directNarratorDialogue) {
+                if ($requestType === 'narrator_inputtext' || strcasecmp(trim(strval($GLOBALS["HERIKA_NAME"] ?? '')), 'The Narrator') === 0) {
+                    Logger::warn("[{$logContext}] Skipping narrator JSON refresh because chimIsDirectNarratorDialogue() is false (request={$requestType}, direct_flag=" . (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]) ? '1' : '0') . ", herika=" . strval($GLOBALS["HERIKA_NAME"] ?? '') . ")");
+                }
+                return;
+            }
+
+            if (!chimNarratorJsonResponseNeedsRefresh()) {
+                Logger::info("[{$logContext}] Narrator JSON response state already complete (request={$requestType}, actions=" . count(is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : []) . ", response_action=" . trim(strval($GLOBALS["responseTemplate"]["action"] ?? '')) . ")");
+                return;
+            }
+
+            Logger::warn("[{$logContext}] Rebuilding narrator JSON response state because prompt actions/schema were incomplete");
+            chimRefreshJsonResponseState();
+            Logger::warn("[{$logContext}] Narrator JSON response state after rebuild: actions=" . count(is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : []) . ", prompt_actions_len=" . strlen(strval($GLOBALS["PROMPT_ACTIONS_LIST"] ?? '')) . ", response_action=" . trim(strval($GLOBALS["responseTemplate"]["action"] ?? '')));
+        }
+    }
+
+    chimRefreshJsonResponseState(true);
 
     // specify the available actions which will be made available in the context
     Function setActions() {
@@ -53,8 +154,13 @@
             return;
         }
 
+        $shouldExposePromptActions = chimShouldExposePromptActions();
+        if ($shouldExposePromptActions && empty($GLOBALS["FUNCTIONS_ARE_ENABLED"])) {
+            $GLOBALS["FUNCTIONS_ARE_ENABLED"] = true;
+        }
+
         // Build actions list separately (not in PROMPT_HEAD)
-        if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+        if ($shouldExposePromptActions) {
             $GLOBALS["PROMPT_ACTIONS_LIST"] = "\n<available_actions_list>\n";
             $GLOBALS["PROMPT_ACTIONS_LIST"] .= $GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
             
@@ -176,7 +282,7 @@
         } elseif ($inlineNarrationEnabled) {
             $messageDescription = "If needed, start with one brief third-person narration block in single asterisks, then put {$GLOBALS["HERIKA_NAME"]}'s spoken text after it. Example: *She smiles* It's good to see you again, my friend! Do not wrap the entire reply in asterisks, and keep spoken dialogue outside the asterisks.";
         } elseif (chimIsDirectNarratorDialogue()) {
-            $messageDescription = "plain spoken dialogue addressed directly to {$GLOBALS["PLAYER_NAME"]}. Do not include third-person narration, scene description, stage directions, or text in asterisks.";
+            $messageDescription = "plain spoken dialogue addressed directly to {$GLOBALS["PLAYER_NAME"]}. Keep the spoken reply consistent with the chosen narrator action when you use one. Do not include third-person narration, scene description, stage directions, or text in asterisks.";
         }
     
         if (isset($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])&&($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])) {
@@ -281,7 +387,7 @@
         } elseif ($inlineNarrationEnabled) {
             $messageDescription = "If needed, start with one brief third-person narration block in single asterisks, then put {$GLOBALS["HERIKA_NAME"]}'s spoken text after it. Example: *She smiles* It's good to see you again, my friend! Do not wrap the entire reply in asterisks, and keep spoken dialogue outside the asterisks.";
         } elseif (chimIsDirectNarratorDialogue()) {
-            $messageDescription = "plain spoken dialogue addressed directly to {$GLOBALS["PLAYER_NAME"]}. Do not include third-person narration, scene description, stage directions, or text in asterisks.";
+            $messageDescription = "plain spoken dialogue addressed directly to {$GLOBALS["PLAYER_NAME"]}. Keep the spoken reply consistent with the chosen narrator action when you use one. Do not include third-person narration, scene description, stage directions, or text in asterisks.";
         }
 
         $GLOBALS["structuredOutputTemplate"] = array(

@@ -77,6 +77,10 @@ class google_openaijson
         }
 
         require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+
+        if (function_exists('chimEnsureNarratorJsonResponseState')) {
+            chimEnsureNarratorJsonResponseState('GOOGLE_OPENAIJSON');
+        }
         
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
             $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
@@ -506,6 +510,11 @@ class google_openaijson
     {
         
         $this->init_connector($customParms);
+
+        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+        if (function_exists('chimEnsureNarratorJsonResponseState')) {
+            chimEnsureNarratorJsonResponseState('GOOGLE_OPENAIJSON_FAST');
+        }
         
 
         $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);

@@ -358,6 +358,9 @@ function herikaNormalizeSpawnNpcTemplateKey($value)
 
     $value = preg_replace('/[^a-z0-9]+/u', '_', $value);
     $value = preg_replace('/_+/u', '_', $value);
+    $value = trim(strval($value), '_');
+    $value = preg_replace('/^(actor|creature|npc)_+/u', '', $value);
+    $value = preg_replace('/^(actor|creature|npc)(?=[a-z0-9])/u', '', $value);
     return trim(strval($value), '_');
 }
 
@@ -2302,17 +2305,21 @@ function buildFunctionParameterValueFromResponse($functionDef, $parsedResponse)
 function buildFunctionExecutionContextFromResponse($parsedResponse)
 {
     $actionName = trim(strval($parsedResponse["action"] ?? ""));
-    $functionDef = $actionName !== "" ? findFunctionByName($actionName) : null;
-    $functionCodeName = $actionName;
+    $resolvedCodeName = $actionName !== "" ? getFunctionCodeName($actionName) : false;
+    $functionCodeName = is_string($resolvedCodeName) && $resolvedCodeName !== ""
+        ? $resolvedCodeName
+        : $actionName;
+    $functionDef = null;
+    if ($functionCodeName !== "") {
+        $functionDef = findFunctionByName($functionCodeName);
+    }
+    if (!is_array($functionDef) && $actionName !== "" && $functionCodeName !== $actionName) {
+        $functionDef = findFunctionByName($actionName);
+    }
     $parameterValue = $parsedResponse["target"] ?? "";
     $missingRequired = [];
 
     if (is_array($functionDef)) {
-        $resolvedCodeName = getFunctionCodeName($actionName);
-        if (is_string($resolvedCodeName) && $resolvedCodeName !== "") {
-            $functionCodeName = $resolvedCodeName;
-        }
-
         $parameterData = buildFunctionParameterValueFromResponse($functionDef, is_array($parsedResponse) ? $parsedResponse : []);
         $parameterValue = $parameterData["parameter_value"];
         $missingRequired = $parameterData["missing_required"];
@@ -2834,6 +2841,11 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
 
                 $latestNarratorInputText = herikaGetLatestNarratorInputText();
                 $requestedTemplateKey = trim(strval($payload["target"] ?? ''));
+                $requestedTemplateItem = trim(strval($payload["item"] ?? ''));
+                $normalizedRequestedTarget = herikaNormalizeNarratorActorTargetForRoleCommand($requestedTemplateKey, false);
+                if (($requestedTemplateKey === '' || $normalizedRequestedTarget === 'PLAYER') && $requestedTemplateItem !== '') {
+                    $requestedTemplateKey = $requestedTemplateItem;
+                }
                 if ($requestedTemplateKey === '') {
                     $requestedTemplateKey = $latestNarratorInputText;
                 }

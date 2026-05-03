@@ -66,6 +66,10 @@ class koboldcppjson
 
         require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
 
+        if (function_exists('chimEnsureNarratorJsonResponseState')) {
+            chimEnsureNarratorJsonResponseState('KOBOLDCPPJSON');
+        }
+
         /* This is handled in the template files
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             $contextData[0]["content"].=$GLOBALS["COMMAND_PROMPT"];

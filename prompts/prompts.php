@@ -168,9 +168,11 @@ $PROMPTS=array(
 
     ],
     "narrator_inputtext"=>[
-        "cue"=>[
-            "The Narrator replies directly to {$GLOBALS["PLAYER_NAME"]} in plain spoken dialogue only. {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
-        ]
+        "cue"=>(function () use ($TEMPLATE_ACTION) {
+            return [
+                "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+            ];
+        })()
     ],
     "inputtext_s"=>[
         "cue"=>(function () use ($TEMPLATE_ACTION) {

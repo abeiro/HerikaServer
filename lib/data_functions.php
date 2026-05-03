@@ -4746,6 +4746,21 @@ function call_llm_internal() {
         error_log("[CLEAN_CONTEXT_FOCUS_CHAT] Using 2-step schema, model: {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
 
 
+        if ($gameRequest[0] === "narrator_inputtext") {
+            require_once($GLOBALS["ENGINE_PATH"]."/functions".DIRECTORY_SEPARATOR."json_response.php");
+            if (function_exists('chimEnsureNarratorJsonResponseState')) {
+                chimEnsureNarratorJsonResponseState('DATA_FUNCTIONS_FAST_STANDARD');
+            }
+            if (
+                !empty($GLOBALS["PROMPT_ACTIONS_LIST"])
+                && isset($contextData[0]["content"])
+                && strpos($contextData[0]["content"], '<available_actions_list>') === false
+            ) {
+                $contextData[0]["content"] .= "\n" . $GLOBALS["PROMPT_ACTIONS_LIST"];
+                Logger::warn("[NARRATOR_DEBUG][DATA_FUNCTIONS][FAST_STANDARD_CONTEXT] injected available_actions_list into narrator system prompt");
+            }
+        }
+
         $buffer=$connectionHandler->fast_request($contextData,$overrideParameters,'standard');
         snapshot_response_prompt_debug_data($currentConnectorData);
         $preserveAsterisksInContext = isset($GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"]) ? (bool)$GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"] : false;

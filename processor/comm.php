@@ -346,7 +346,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
 } elseif ($gameRequest[0] == "request") { // Just requested response
     // Do nothing
-    $responseDataMl = DataDequeue(time()-1);// Allow responses queued up to 1 second in the future
+    $responseDataMl = DataDequeue(time()+1);// Allow responses queued up to 1 second in the future
     foreach ($responseDataMl as $responseData) {
         echo "{$responseData["actor"]}|{$responseData["action"]}|{$responseData["text"]}\r\n";
     }

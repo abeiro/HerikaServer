@@ -1374,11 +1374,6 @@ if (in_array($gameRequest[0],["suggestion"])) {
     $gameRequest[3] = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
 }
 
-// Disable functions for The Narrator
-if ($GLOBALS["HERIKA_NAME"]=="The Narrator" && (!isset($gameRequest[0]) || $gameRequest[0] !== "narrator_inputtext")) {
-    $FUNCTIONS_ARE_ENABLED=false;
-}
-
 $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
 $currentParty=json_decode($GLOBALS["CACHE_PARTY"],true);
 if (is_array($currentParty)) {
@@ -1809,7 +1804,13 @@ if (in_array($gameRequest[0], ["continue", "continue_group"], true) && empty($GL
  CONTEXT DATA BUILDING
 ***********************/
 
-$GLOBALS["DIRECT_NARRATOR_DIALOGUE"] = ($gameRequest[0] === "narrator_inputtext");
+$GLOBALS["DIRECT_NARRATOR_DIALOGUE"] = (
+    $gameRequest[0] === "narrator_inputtext"
+    || (
+        ($GLOBALS["HERIKA_NAME"] ?? "") === "The Narrator"
+        && in_array($gameRequest[0], ["cheatmode", "instruction"], true)
+    )
+);
 
 // Narrator-scoped requests must execute with the narrator runtime profile even
 // when the inbound request still carries a valid NPC profile hash. If that hash
@@ -1820,7 +1821,10 @@ $isNarratorScopedRequest = in_array($gameRequest[0], [
     "narration",
     "narrator_welcome",
     "narrator_quest_comment",
-], true);
+], true) || (
+    ($GLOBALS["HERIKA_NAME"] ?? "") === "The Narrator"
+    && in_array($gameRequest[0], ["cheatmode", "instruction"], true)
+);
 
 if ($isNarratorScopedRequest && (($GLOBALS["HERIKA_NAME"] ?? "") !== "The Narrator")) {
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
@@ -2590,6 +2594,36 @@ if ($gameRequest[0] === "vision") {
 
 // Ensure actions and nearby sections are added to PROMPT_HEAD before building system prompt
 require_once(__DIR__.DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+
+if ($gameRequest[0] === "narrator_inputtext") {
+    Logger::warn("[NARRATOR_DEBUG][MAIN][POST_JSON_REQUIRE] request={$gameRequest[0]} direct_flag=" . (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]) ? '1' : '0') . " herika=" . strval($GLOBALS["HERIKA_NAME"] ?? '') . " func_count=" . count(is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : []) . " prompt_actions_len=" . strlen(strval($GLOBALS["PROMPT_ACTIONS_LIST"] ?? '')) . " response_action=" . trim(strval($GLOBALS["responseTemplate"]["action"] ?? '')));
+}
+
+$narratorActionList = array_values(array_filter(
+    is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : [],
+    function ($value) {
+        return trim(strval($value)) !== "";
+    }
+));
+$narratorHasOnlyTalkAction = count($narratorActionList) === 1 && strcasecmp($narratorActionList[0], "Talk") === 0;
+
+if (
+    $gameRequest[0] === "narrator_inputtext"
+    && function_exists('chimEnsureNarratorJsonResponseState')
+    && (
+        empty($GLOBALS["PROMPT_ACTIONS_LIST"])
+        || empty($GLOBALS["FUNC_LIST"])
+        || trim(strval($GLOBALS["responseTemplate"]["action"] ?? "")) === ""
+        || $narratorHasOnlyTalkAction
+        || trim(strval($GLOBALS["responseTemplate"]["action"] ?? "")) === "Talk"
+    )
+) {
+    chimEnsureNarratorJsonResponseState('JSON_RESPONSE');
+}
+
+if ($gameRequest[0] === "narrator_inputtext") {
+    Logger::warn("[NARRATOR_DEBUG][MAIN][POST_REFRESH_CHECK] request={$gameRequest[0]} direct_flag=" . (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]) ? '1' : '0') . " herika=" . strval($GLOBALS["HERIKA_NAME"] ?? '') . " func_count=" . count(is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : []) . " prompt_actions_len=" . strlen(strval($GLOBALS["PROMPT_ACTIONS_LIST"] ?? '')) . " response_action=" . trim(strval($GLOBALS["responseTemplate"]["action"] ?? '')));
+}
 
 // Build nearby sections string
 $nearbySections = "";
