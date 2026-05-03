@@ -159,6 +159,10 @@ if (!function_exists('chimIsStrictRechatResponseEnabled')) {
 if (!function_exists('chimIsStrictRechatPromptContext')) {
     function chimIsStrictRechatPromptContext(): bool
     {
+        if (!chimIsStrictRechatResponseEnabled()) {
+            return false;
+        }
+
         if (!isset($GLOBALS["gameRequest"]) || !is_array($GLOBALS["gameRequest"])) {
             return false;
         }
