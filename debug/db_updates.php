@@ -5925,6 +5925,35 @@ if ($checkVersion("general_settings") < 20260502004) {
 
 //----------------------------------------------------
 
+if ($checkVersion("general_settings") < 20260502005) {
+    Logger::debug("Applying general_settings 20260502005 - add prompt context options setting");
+    $b_ok = true;
+
+    try {
+        $settingId = 'PROMPT_CONTEXT_OPTIONS';
+        $definition = chimGetSchemaDefinition($settingId);
+        $hasLegacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+        $currentValue = ($hasLegacyValue === "__CHIM_SETTING_MISSING__")
+            ? chimGetDefaultPromptContextOptions()
+            : chimNormalizePromptContextOptions($hasLegacyValue);
+        $description = chimGetManagedGeneralSettingDescriptions()[$settingId] ?? chimGetSchemaDescription($settingId);
+
+        if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+            throw new Exception("Failed writing general setting '{$settingId}'");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error adding prompt context options setting: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260502005);
+        Logger::info("Applied patch general_settings 20260502005");
+    }
+}
+
+//----------------------------------------------------
+
 // Relationship Evaluation and Initialization Queues
 $db->execQuery("CREATE TABLE IF NOT EXISTS public.relationship_eval_queue (
                 id SERIAL PRIMARY KEY,

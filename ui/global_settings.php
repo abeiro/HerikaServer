@@ -69,6 +69,7 @@ $gsSections = [
         [ 'name' => 'DISABLE_REANIMATION_TRACKING', 'type' => 'boolean', 'action' => 'clear_reanimation' ],
         [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
     ],
+    'Prompt Context Options' => [],
     'Global Connectors' => [
         [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'foreign:core_llm_connector:id:label' ],
@@ -194,6 +195,17 @@ function select_option_label(string $fieldName, string $optionValue): string
     return $optionValue;
 }
 
+function prompt_context_bucket_title(string $bucket): string
+{
+    $labels = [
+        'enabled_sections' => 'Top-Level Sections',
+        'enabled_character_subsections' => 'Character Subsections',
+        'enabled_general_subsections' => 'General Instruction Subsections',
+    ];
+
+    return $labels[$bucket] ?? $bucket;
+}
+
 function current_value(string $flatName)
 {
     $definition = chimGetSchemaDefinition($flatName);
@@ -235,6 +247,9 @@ foreach ($generalSettingRows as $row) {
         $generalSettingRowMap[strval($row['id'])] = $row;
     }
 }
+
+$promptContextCatalog = chimGetPromptContextOptionCatalog();
+$currentPromptContextOptions = chimGetPromptContextOptions();
 
 $foreignOptions = [];
 try {
@@ -298,6 +313,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
         if (!chimSetGeneralSetting($name, $value, $description)) {
             $didSave = false;
         }
+    }
+
+    $postedPromptContextOptions = chimNormalizePromptContextOptions([
+        'enabled_sections' => array_values(array_map('strval', $_POST['prompt_context_enabled_sections'] ?? [])),
+        'enabled_character_subsections' => array_values(array_map('strval', $_POST['prompt_context_enabled_character_subsections'] ?? [])),
+        'enabled_general_subsections' => array_values(array_map('strval', $_POST['prompt_context_enabled_general_subsections'] ?? [])),
+    ]);
+    $promptContextDescription = current_description('PROMPT_CONTEXT_OPTIONS', $generalSettingRowMap);
+    if (!chimSetGeneralSetting('PROMPT_CONTEXT_OPTIONS', $postedPromptContextOptions, $promptContextDescription)) {
+        $didSave = false;
     }
 
     $memoryCompatDescription = current_description('FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARYS', $generalSettingRowMap);
@@ -406,6 +431,7 @@ h1.gs-title {
     margin-bottom: 12px;
     padding-bottom: 8px;
     font-family: 'MagicCards', serif;
+    word-spacing: 7px;
     font-size: 1.18em;
     color: rgb(242,124,17);
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
@@ -525,6 +551,61 @@ h1.gs-title {
     min-width: 0;
 }
 
+.prompt-context-wrap {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.prompt-context-group {
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(28, 28, 28, 0.92), rgba(22, 22, 22, 0.95));
+    padding: 12px;
+}
+
+.prompt-context-group h3 {
+    margin: 0 0 10px 0;
+    color: #e6e6e6;
+    font-size: 15px;
+}
+
+.prompt-context-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: 10px;
+}
+
+.prompt-context-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px 12px;
+    align-items: start;
+    background: rgba(36, 36, 36, 0.9);
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+.prompt-context-card input[type="checkbox"] {
+    margin-top: 2px;
+    accent-color: #176529;
+    transform: scale(1.15);
+}
+
+.prompt-context-label {
+    color: #e8edf7;
+    font-weight: 700;
+    margin-bottom: 4px;
+    word-break: break-word;
+}
+
+.prompt-context-desc {
+    color: #b7c2d2;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
 .btn-save-green {
     background: linear-gradient(135deg, rgba(32, 122, 74, 0.9), rgba(23, 101, 57, 0.9));
     color: #fff;
@@ -613,6 +694,31 @@ h1.gs-title {
                 <div class="content-section">
                     <h2><?php echo htmlspecialchars($sectionTitle); ?></h2>
                     <div class="provider-grid">
+                        <?php if ($sectionTitle === 'Prompt Context Options'): ?>
+                            <div class="prompt-context-wrap">
+                                <?php foreach ($promptContextCatalog as $bucket => $options): ?>
+                                    <div class="prompt-context-group">
+                                        <h3><?php echo htmlspecialchars(prompt_context_bucket_title($bucket)); ?></h3>
+                                        <div class="prompt-context-grid">
+                                            <?php foreach ($options as $optionId => $meta): ?>
+                                                <?php
+                                                $checked = in_array($optionId, $currentPromptContextOptions[$bucket] ?? [], true);
+                                                $inputName = 'prompt_context_' . $bucket . '[]';
+                                                ?>
+                                                <label class="prompt-context-card">
+                                                    <input type="checkbox" name="<?php echo htmlspecialchars($inputName); ?>" value="<?php echo htmlspecialchars($optionId); ?>" <?php echo $checked ? 'checked' : ''; ?>>
+                                                    <span>
+                                                        <div class="prompt-context-label"><?php echo htmlspecialchars($meta['label'] ?? $optionId); ?></div>
+                                                        <div class="prompt-context-desc"><?php echo htmlspecialchars($meta['description'] ?? ''); ?></div>
+                                                    </span>
+                                                </label>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <?php continue; ?>
+                        <?php endif; ?>
                         <?php $lastSubsection = null; ?>
                         <?php foreach ($fields as $field): ?>
                             <?php

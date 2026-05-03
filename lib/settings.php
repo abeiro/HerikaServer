@@ -170,6 +170,7 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'HIDE_AMBIENT_COMBAT',
             'DISABLE_REANIMATION_TRACKING',
             'PROMPT_TIMESTAMP',
+            'PROMPT_CONTEXT_OPTIONS',
             'RECHAT_MODE',
             'ENFORCE_STRICT_RECHAT_RESPONSE',
             'OPEN_RECHAT',
@@ -212,10 +213,227 @@ if (!function_exists('chimGetManagedGeneralSettingDescriptions')) {
         }
 
         $descriptions['FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARYS'] = 'Compatibility flag preserved during settings migration so automatic memory summary creation continues to behave like the legacy Global Settings save path.';
+        $descriptions['PROMPT_CONTEXT_OPTIONS'] = 'Controls which XML-like prompt context sections are included in the final system prompt sent to the LLM. Managed from Global Settings.';
         $descriptions['GLOBAL_STT_CONNECTOR_ID'] = 'Active global STT connector. Only one STT connector is used globally for player speech-to-text.';
         $descriptions['GLOBAL_ITT_CONNECTOR_ID'] = 'Active global ITT connector. Only one ITT connector is used globally for image-to-text and Soulgaze.';
 
         return $descriptions;
+    }
+}
+
+if (!function_exists('chimGetPromptContextOptionCatalog')) {
+    function chimGetPromptContextOptionCatalog(): array
+    {
+        return [
+            'enabled_sections' => [
+                'roleplay_instructions' => [
+                    'label' => '<roleplay_instructions>',
+                    'description' => 'Core roleplay rules, system preamble, and scene-director framing.',
+                ],
+                'world' => [
+                    'label' => '<world>',
+                    'description' => 'Current location, hold, weather, date, and time context.',
+                ],
+                'knowledge' => [
+                    'label' => '<knowledge>',
+                    'description' => 'Injected Oghma or lore knowledge for the active subject.',
+                ],
+                'available_actions_list' => [
+                    'label' => '<available_actions_list>',
+                    'description' => 'Available in-game actions the actor may choose from.',
+                ],
+                'nearby_actors' => [
+                    'label' => '<nearby_actors>',
+                    'description' => 'Nearby NPCs, creatures, and party members in the current scene.',
+                ],
+                'group_descriptions' => [
+                    'label' => '<group_descriptions>',
+                    'description' => 'Faction and group descriptions for nearby actors.',
+                ],
+                'nearby_items' => [
+                    'label' => '<nearby_items>',
+                    'description' => 'Ground items and item descriptions near the actor.',
+                ],
+                'adventuring_party' => [
+                    'label' => '<adventuring_party>',
+                    'description' => 'Companion-party framing and who counts as part of the active group.',
+                ],
+                'points_of_interest' => [
+                    'label' => '<points_of_interest>',
+                    'description' => 'Nearby doors, passages, and notable destinations.',
+                ],
+                'scene_notes' => [
+                    'label' => '<scene_notes>',
+                    'description' => 'Temporary director or rolemaster scene notes.',
+                ],
+                'paralinguistic_tags' => [
+                    'label' => '<paralinguistic_tags>',
+                    'description' => 'TTS-specific paralinguistic tag guidance when enabled.',
+                ],
+            ],
+            'enabled_character_subsections' => [
+                'basic_summary' => [
+                    'label' => '<basic_summary>',
+                    'description' => 'Core background summary or short biography.',
+                ],
+                'groups' => [
+                    'label' => '<groups>',
+                    'description' => 'Faction membership summary inside the character sheet.',
+                ],
+                'personality' => [
+                    'label' => '<personality>',
+                    'description' => 'Behavioral traits, psychology, and temperament.',
+                ],
+                'appearance' => [
+                    'label' => '<appearance>',
+                    'description' => 'Physical appearance and identifying features.',
+                ],
+                'equipment' => [
+                    'label' => '<equipment>',
+                    'description' => 'Currently equipped gear and worn items.',
+                ],
+                'inventory' => [
+                    'label' => '<inventory>',
+                    'description' => 'Current inventory listing.',
+                ],
+                'current_activity' => [
+                    'label' => '<current_activity>',
+                    'description' => 'What the actor is currently doing.',
+                ],
+                'current_condition' => [
+                    'label' => '<current_condition>',
+                    'description' => 'Health, magicka, stamina, and visible condition state.',
+                ],
+                'relationships' => [
+                    'label' => '<relationships>',
+                    'description' => 'Named relationships and relevant social ties.',
+                ],
+                'occupation' => [
+                    'label' => '<occupation>',
+                    'description' => 'Job, societal role, or current profession.',
+                ],
+                'skills' => [
+                    'label' => '<skills>',
+                    'description' => 'Narrative skills, talents, and expertise.',
+                ],
+                'rpg_skills' => [
+                    'label' => '<rpg_skills>',
+                    'description' => 'RPG-style skill proficiencies and levels.',
+                ],
+                'speech_style' => [
+                    'label' => '<speech_style>',
+                    'description' => 'Speaking style and communication habits.',
+                ],
+                'goals' => [
+                    'label' => '<goals>',
+                    'description' => 'Current ambitions, motivations, and long-term aims.',
+                ],
+                'middle_term_memory' => [
+                    'label' => '<middle_term_memory>',
+                    'description' => 'Longer-range memory summary or background-life recap.',
+                ],
+                'group' => [
+                    'label' => '<group>',
+                    'description' => 'Profile-level group membership prompt fragment.',
+                ],
+                'storyline_starring' => [
+                    'label' => '<storyline_starring>',
+                    'description' => 'Quest or storyline currently starring this actor.',
+                ],
+                'quest_topics' => [
+                    'label' => '<quest_topics>',
+                    'description' => 'Quest topics this actor specifically knows about.',
+                ],
+                'reanimation_status' => [
+                    'label' => '<reanimation_status>',
+                    'description' => 'Zombie/reanimated state notice when applicable.',
+                ],
+            ],
+            'enabled_general_subsections' => [
+                'active_quests' => [
+                    'label' => '<active_quests>',
+                    'description' => 'Current active quest list.',
+                ],
+                'current_plans' => [
+                    'label' => '<current_plans>',
+                    'description' => 'Current and recent plan/task summary.',
+                ],
+            ],
+        ];
+    }
+}
+
+if (!function_exists('chimGetDefaultPromptContextOptions')) {
+    function chimGetDefaultPromptContextOptions(): array
+    {
+        $catalog = chimGetPromptContextOptionCatalog();
+        return [
+            'enabled_sections' => array_keys($catalog['enabled_sections']),
+            'enabled_character_subsections' => array_keys($catalog['enabled_character_subsections']),
+            'enabled_general_subsections' => array_keys($catalog['enabled_general_subsections']),
+        ];
+    }
+}
+
+if (!function_exists('chimNormalizePromptContextOptions')) {
+    function chimNormalizePromptContextOptions($rawOptions): array
+    {
+        $catalog = chimGetPromptContextOptionCatalog();
+        $defaults = chimGetDefaultPromptContextOptions();
+
+        if (is_string($rawOptions) && trim($rawOptions) !== '') {
+            $decoded = json_decode($rawOptions, true);
+            if (is_array($decoded)) {
+                $rawOptions = $decoded;
+            }
+        }
+
+        if (!is_array($rawOptions)) {
+            return $defaults;
+        }
+
+        $normalized = [];
+        foreach ($defaults as $bucket => $defaultIds) {
+            $hasBucket = array_key_exists($bucket, $rawOptions);
+            $rawIds = $hasBucket ? $rawOptions[$bucket] : $defaultIds;
+            if ($hasBucket && !is_array($rawIds)) {
+                $rawIds = [];
+            } elseif (!$hasBucket && !is_array($rawIds)) {
+                $rawIds = $defaultIds;
+            }
+
+            $allowedIds = array_keys($catalog[$bucket] ?? []);
+            $enabled = [];
+            foreach ($rawIds as $id) {
+                $id = strval($id);
+                if ($id !== '' && in_array($id, $allowedIds, true) && !in_array($id, $enabled, true)) {
+                    $enabled[] = $id;
+                }
+            }
+
+            $normalized[$bucket] = $hasBucket
+                ? $enabled
+                : (!empty($enabled) ? $enabled : $defaultIds);
+        }
+
+        return $normalized;
+    }
+}
+
+if (!function_exists('chimGetPromptContextOptions')) {
+    function chimGetPromptContextOptions(): array
+    {
+        $rawValue = chimGetGeneralSetting('PROMPT_CONTEXT_OPTIONS', '');
+        return chimNormalizePromptContextOptions($rawValue);
+    }
+}
+
+if (!function_exists('chimPromptContextOptionEnabled')) {
+    function chimPromptContextOptionEnabled(string $bucket, string $id): bool
+    {
+        $options = chimGetPromptContextOptions();
+        $enabled = $options[$bucket] ?? [];
+        return in_array($id, $enabled, true);
     }
 }
 

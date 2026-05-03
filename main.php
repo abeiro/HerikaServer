@@ -2656,6 +2656,118 @@ if (isset($GLOBALS["TTSFUNCTION"]) && !empty($GLOBALS["TTSFUNCTION"])) {
 }
 
 
+if (!function_exists('chimFormatPromptXmlSections')) {
+    function chimFormatPromptXmlSections($content)
+    {
+        $content = str_replace(["\r\n", "\r"], "\n", (string)$content);
+        $content = preg_replace("/[ \t]+\n/", "\n", $content);
+
+        $lines = explode("\n", $content);
+        $formatted = [];
+        $lineCount = count($lines);
+
+        for ($i = 0; $i < $lineCount; $i++) {
+            $line = rtrim($lines[$i]);
+            $trimmed = trim($line);
+
+            if ($trimmed === '') {
+                if (!empty($formatted) && trim(end($formatted)) !== '') {
+                    $formatted[] = '';
+                }
+                continue;
+            }
+
+            $isBlockOpenTag = preg_match('/^<([A-Za-z0-9_]+)>$/', $trimmed) === 1;
+            $isBlockCloseTag = preg_match('/^<\/([A-Za-z0-9_]+)>$/', $trimmed) === 1;
+
+            if ($isBlockOpenTag && !empty($formatted) && trim(end($formatted)) !== '') {
+                $formatted[] = '';
+            }
+
+            $formatted[] = $line;
+
+            if ($isBlockCloseTag) {
+                $nextNonEmpty = '';
+                for ($j = $i + 1; $j < $lineCount; $j++) {
+                    $candidate = trim(rtrim($lines[$j]));
+                    if ($candidate !== '') {
+                        $nextNonEmpty = $candidate;
+                        break;
+                    }
+                }
+
+                if ($nextNonEmpty !== '' && trim(end($formatted)) !== '') {
+                    $formatted[] = '';
+                }
+            }
+        }
+
+        while (!empty($formatted) && trim($formatted[0]) === '') {
+            array_shift($formatted);
+        }
+        while (!empty($formatted) && trim(end($formatted)) === '') {
+            array_pop($formatted);
+        }
+
+        $content = implode("\n", $formatted);
+        $content = preg_replace("/\n{3,}/", "\n\n", $content);
+
+        return $content . "\n";
+    }
+}
+
+if (!function_exists('chimRemovePromptXmlBlock')) {
+    function chimRemovePromptXmlBlock($content, string $tag)
+    {
+        $tagPattern = preg_quote($tag, '/');
+        return preg_replace('/\n*<' . $tagPattern . '>\s*.*?\s*<\/' . $tagPattern . '>\n*/s', "\n", (string)$content);
+    }
+}
+
+if (!function_exists('chimApplyPromptContextOptionsToSystemPrompt')) {
+    function chimApplyPromptContextOptionsToSystemPrompt($content)
+    {
+        if (!function_exists('chimGetPromptContextOptions') || !function_exists('chimGetPromptContextOptionCatalog')) {
+            return chimFormatPromptXmlSections($content);
+        }
+
+        $options = chimGetPromptContextOptions();
+        $catalog = chimGetPromptContextOptionCatalog();
+
+        foreach (array_keys($catalog['enabled_sections'] ?? []) as $tag) {
+            $enabled = in_array($tag, $options['enabled_sections'] ?? [], true);
+            if (!$enabled) {
+                $content = chimRemovePromptXmlBlock($content, $tag);
+            }
+        }
+
+        foreach (array_keys($catalog['enabled_character_subsections'] ?? []) as $tag) {
+            $enabled = in_array($tag, $options['enabled_character_subsections'] ?? [], true);
+            if (!$enabled) {
+                $content = chimRemovePromptXmlBlock($content, $tag);
+            }
+        }
+
+        foreach (array_keys($catalog['enabled_general_subsections'] ?? []) as $tag) {
+            $enabled = in_array($tag, $options['enabled_general_subsections'] ?? [], true);
+            if (!$enabled) {
+                $content = chimRemovePromptXmlBlock($content, $tag);
+            }
+        }
+
+        if (!preg_match('/<character>\s*<\/character>/s', $content)) {
+            $content = preg_replace('/\n{3,}/', "\n\n", $content);
+        }
+
+        if (!preg_match('/<general_instructions>\s*<\/general_instructions>/s', $content)) {
+            $content = preg_replace('/\n{3,}/', "\n\n", $content);
+        }
+
+        return chimFormatPromptXmlSections($content);
+    }
+}
+
+
 // Check for context overrides on ext dir (plugins) before system prompt build
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context_pre.php");
 
@@ -2664,20 +2776,33 @@ if (isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
     $nearbySections = $GLOBALS["PROMPT_NEARBY_SECTIONS"];
 }
 
+$knowledgeSection = "";
 if (!empty($GLOBALS["OGHMA_HINT"])) {
+    $knowledgeSection = "\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"] . "\n</knowledge>";
+}
 
-    $head[] = array('role' => 'system', 'content' =>  
-        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>".$worldPrompt."\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
-        ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
+$systemPromptRaw = "<roleplay_instructions>\n" . $GLOBALS["PROMPT_HEAD"] .
+    "\n</roleplay_instructions>" . $worldPrompt .
+    "\n\n<character>\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBiography .
+    "\n</character>" . $knowledgeSection .
+    "\n\n<general_instructions>\n" . $GLOBALS["COMMAND_PROMPT"] .
+    "\n</general_instructions>" . $actionsList . $nearbySections . $paralinguisticTagsPrompt .
+    "\n" . $rumorsText . "\n";
 
-    );
+$systemPrompt = chimFormatPromptXmlSections(
+    strtr(
+        $systemPromptRaw,
+        ["#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"], "#HERIKA_NAME#" => $GLOBALS["HERIKA_NAME"]]
+    )
+);
+$systemPrompt = chimApplyPromptContextOptionsToSystemPrompt($systemPrompt);
+
+$head[] = array('role' => 'system', 'content' => $systemPrompt);
+
+if (!empty($GLOBALS["OGHMA_HINT"])) {
     //avoid reinjecting command prompt that we have already appended
     $GLOBALS["COMMAND_PROMPT"] = "";
 } else {
-    $head[] = array('role' => 'system', 'content' =>  
-        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>".$worldPrompt."\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
-        ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
-    );
     //avoid reinjecting command prompt that we have already appended
     $GLOBALS["COMMAND_PROMPT"] = "";
 }
