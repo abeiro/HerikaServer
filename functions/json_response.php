@@ -140,8 +140,16 @@
     
         // Build listener description - for rechat events, encourage addressing the previous speaker
         $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order";
-        if (isset($GLOBALS["gameRequest"]) && in_array($GLOBALS["gameRequest"][0], ["rechat"])) {
-            $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to. Address whoever just spoke - can be any person in the conversation.";
+        if (
+            isset($GLOBALS["gameRequest"]) &&
+            (
+                (function_exists('chimIsStrictResponsePromptContext') && chimIsStrictResponsePromptContext()) ||
+                in_array($GLOBALS["gameRequest"][0], ["rechat"], true)
+            )
+        ) {
+            $listenerDesc = function_exists('chimLoadManagedRechatListenerPrompt')
+                ? chimLoadManagedRechatListenerPrompt()
+                : "specify who {$GLOBALS["HERIKA_NAME"]} is talking to. Address whoever just spoke - can be any person in the conversation.";
         }
     
         // Determine message description based on inline narration mode.

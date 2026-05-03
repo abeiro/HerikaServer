@@ -171,6 +171,7 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'DISABLE_REANIMATION_TRACKING',
             'PROMPT_TIMESTAMP',
             'RECHAT_MODE',
+            'ENFORCE_STRICT_RECHAT_RESPONSE',
             'OPEN_RECHAT',
             'CORE_CONNECTOR_PLAYER',
             'CORE_CONNECTOR_SUMMARY',

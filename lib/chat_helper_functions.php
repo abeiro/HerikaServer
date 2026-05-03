@@ -1388,6 +1388,16 @@ function returnLines($lines,$writeOutput=true)
 
                 }
 
+                $strictRechatListener = chimGetStrictRechatListenerName();
+                if ($strictRechatListener !== "") {
+                    $GLOBALS["SCRIPTLINE_LISTENER"] = $strictRechatListener;
+                }
+
+                $strictDirectedPlayerListener = chimGetStrictDirectedPlayerListenerName();
+                if ($strictDirectedPlayerListener !== "") {
+                    $GLOBALS["SCRIPTLINE_LISTENER"] = $strictDirectedPlayerListener;
+                }
+
 
                 $listenerFix=explode(" and ",$GLOBALS["SCRIPTLINE_LISTENER"]);
                 // Don't touch original one
@@ -2806,6 +2816,49 @@ function isPlayerDialogueListenerName($listenerName)
     }
 
     return in_array(strtolower($listenerName), ["player", "me"], true);
+}
+
+function chimGetStrictRechatListenerName()
+{
+    if (empty($GLOBALS["ENFORCE_STRICT_RECHAT_RESPONSE"])) {
+        return "";
+    }
+
+    if (
+        !isset($GLOBALS["gameRequest"]) ||
+        !is_array($GLOBALS["gameRequest"]) ||
+        !in_array(($GLOBALS["gameRequest"][0] ?? ""), ["rechat", "continue", "continue_group"], true)
+    ) {
+        return "";
+    }
+
+    $listenerName = normalizeDialogueListenerName($GLOBALS["RECHAT_PREVIOUS_SPEAKER"] ?? "");
+    if ($listenerName === "") {
+        return "";
+    }
+
+    return $listenerName;
+}
+
+function chimGetStrictDirectedPlayerListenerName()
+{
+    if (empty($GLOBALS["ENFORCE_STRICT_RECHAT_RESPONSE"])) {
+        return "";
+    }
+
+    if (!isset($GLOBALS["gameRequest"]) || !is_array($GLOBALS["gameRequest"])) {
+        return "";
+    }
+
+    if (!in_array(($GLOBALS["gameRequest"][0] ?? ""), ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s"], true)) {
+        return "";
+    }
+
+    if (!function_exists('chimIsStrictDirectedPlayerResponseContext') || !chimIsStrictDirectedPlayerResponseContext()) {
+        return "";
+    }
+
+    return normalizeDialogueListenerName($GLOBALS["PLAYER_NAME"] ?? "");
 }
 
 function getNormalizedNearbyDialogueListenerNames($excludeFarAway=true)

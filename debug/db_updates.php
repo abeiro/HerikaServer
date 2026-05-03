@@ -5551,6 +5551,112 @@ if ($checkVersion("prompts")<20260430017) {
     Logger::info("Applied patch prompts 20260430017 - Added narrator_bored_prompt");
 }
 
+if ($checkVersion("prompts")<20260502004) {
+    Logger::debug("Applying prompts table 20260502004 - Adding managed rechat strict/relaxed prompts");
+
+    $rechatResponsePromptRelaxed1 = $db->escape(
+        "Dialogue turn for {HERIKA_NAME}. Respond naturally to whoever just spoke. Address the previous speaker directly. {TEMPLATE_DIALOG}"
+    );
+    $rechatResponsePromptRelaxed2 = $db->escape(
+        "Dialogue turn for {HERIKA_NAME}. Continue the conversation naturally. Address whoever you're actually responding to. {TEMPLATE_DIALOG}"
+    );
+    $rechatResponsePromptRelaxed3 = $db->escape(
+        "Dialogue turn for {HERIKA_NAME}. Focus on one actor - respond to whoever just spoke. {TEMPLATE_DIALOG}"
+    );
+    $rechatResponsePromptStrict = $db->escape(
+        "Dialogue turn for {HERIKA_NAME}. The previous speaker was {PREVIOUS_SPEAKER}. You must respond directly to {PREVIOUS_SPEAKER}."
+    );
+    $rechatListenerPromptRelaxed = $db->escape(
+        "specify who {HERIKA_NAME} is talking to. Address whoever just spoke - can be any person in the conversation."
+    );
+    $rechatListenerPromptStrict = $db->escape(
+        "specify who {HERIKA_NAME} is talking to. The listener must be exactly {PREVIOUS_SPEAKER}. Address the person who just spoke."
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'rechat_response_prompt_relaxed_1',
+            '$rechatResponsePromptRelaxed1',
+            'Relaxed rechat cue variant 1. Supports placeholders: {HERIKA_NAME}, {TEMPLATE_DIALOG}. Used in: prompts/prompts.php for standard rechat turns.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'rechat_response_prompt_relaxed_2',
+            '$rechatResponsePromptRelaxed2',
+            'Relaxed rechat cue variant 2. Supports placeholders: {HERIKA_NAME}, {TEMPLATE_DIALOG}. Used in: prompts/prompts.php for standard rechat turns.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'rechat_response_prompt_relaxed_3',
+            '$rechatResponsePromptRelaxed3',
+            'Relaxed rechat cue variant 3. Supports placeholders: {HERIKA_NAME}, {TEMPLATE_DIALOG}. Used in: prompts/prompts.php for standard rechat turns.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    for ($i = 1; $i <= 3; $i++) {
+        $db->execQuery("
+            INSERT INTO public.prompts (prompt_key, default_prompt, description)
+            VALUES (
+                'rechat_response_prompt_strict_{$i}',
+                '$rechatResponsePromptStrict',
+                'Strict rechat cue variant {$i}. Supports placeholders: {HERIKA_NAME}, {PREVIOUS_SPEAKER}. Used in: prompts/prompts.php when strict rechat enforcement is enabled.'
+            )
+            ON CONFLICT (prompt_key) DO UPDATE SET
+                default_prompt = EXCLUDED.default_prompt,
+                description = EXCLUDED.description,
+                updated_at = CURRENT_TIMESTAMP
+        ");
+    }
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'rechat_listener_prompt_relaxed',
+            '$rechatListenerPromptRelaxed',
+            'Relaxed listener instruction for rechat JSON responses. Supports placeholders: {HERIKA_NAME}. Used in: functions/json_response.php.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'rechat_listener_prompt_strict',
+            '$rechatListenerPromptStrict',
+            'Strict listener instruction for rechat JSON responses. Supports placeholders: {HERIKA_NAME}, {PREVIOUS_SPEAKER}. Used in: functions/json_response.php when strict rechat enforcement is enabled.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $updateVersion("prompts", 20260502004);
+    Logger::info("Applied patch prompts 20260502004 - Added managed rechat strict/relaxed prompts");
+}
+
 //----------------------------------------------------
 
 if ($checkVersion("utterance_delivery") < 20260502001) {
@@ -5787,6 +5893,33 @@ if ($checkVersion("general_settings") < 20260502003) {
     if ($b_ok) {
         $updateVersion("general_settings", 20260502003);
         Logger::info("Applied patch general_settings 20260502003");
+    }
+}
+
+if ($checkVersion("general_settings") < 20260502004) {
+    Logger::debug("Applying general_settings 20260502004 - add strict rechat response setting");
+    $b_ok = true;
+
+    try {
+        $settingId = 'ENFORCE_STRICT_RECHAT_RESPONSE';
+        $definition = chimGetSchemaDefinition($settingId);
+        $hasLegacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+        $currentValue = ($hasLegacyValue === "__CHIM_SETTING_MISSING__")
+            ? ($definition['default'] ?? false)
+            : $hasLegacyValue;
+        $description = chimGetManagedGeneralSettingDescriptions()[$settingId] ?? chimGetSchemaDescription($settingId);
+
+        if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+            throw new Exception("Failed writing general setting '{$settingId}'");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error adding strict rechat response setting: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260502004);
+        Logger::info("Applied patch general_settings 20260502004");
     }
 }
 

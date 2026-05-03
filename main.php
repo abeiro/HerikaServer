@@ -1402,6 +1402,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
 
     if ($gameRequest[0] === "rechat") {
         $rechatPayload = chimParseServerSideRechatPayload($gameRequest[3] ?? "");
+        $GLOBALS["RECHAT_PREVIOUS_SPEAKER"] = trim((string)($rechatPayload["speaker"] ?? ""));
         $resolvedRechatTarget = chimResolveServerSideRechatTarget($rechatPayload);
         $GLOBALS["RECHAT_REQUEST_PAYLOAD"] = $rechatPayload;
         $GLOBALS["RECHAT_RESOLVED_TARGET"] = $resolvedRechatTarget;
@@ -1790,7 +1791,16 @@ if ($MUST_END) {  // Shorthand for non LLM processing
 if ($EXECUTION_MODE=="INJECTION_LOG") {
     
     terminate();
-    
+
+}
+
+if (in_array($gameRequest[0], ["continue", "continue_group"], true) && empty($GLOBALS["RECHAT_PREVIOUS_SPEAKER"])) {
+    try {
+        $lastSpeechRow = $db->fetchOne("SELECT speaker FROM speech ORDER BY rowid DESC LIMIT 1");
+        $GLOBALS["RECHAT_PREVIOUS_SPEAKER"] = trim((string)($lastSpeechRow["speaker"] ?? ""));
+    } catch (\Throwable $e) {
+        $GLOBALS["RECHAT_PREVIOUS_SPEAKER"] = "";
+    }
 }
 
 //error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));

@@ -43,10 +43,15 @@ $gsSections = [
         [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
         [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
         [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
+    ],
+    'Memory' => [
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer' ],
+    ],
+    'Rechat' => [
         [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random'] ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean', 'subsection' => 'Memory' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean', 'subsection' => 'Memory' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer', 'subsection' => 'Memory' ],
+        [ 'name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean' ],
     ],
     'Prompt' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
@@ -128,6 +133,7 @@ function pretty_label(string $flatName): string
         'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
         'RELLLM_CONNECTOR' => 'Relationship Management',
         'EMOTEMOODS' => 'Emote Moods',
+        'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
     ];
     if (isset($customLabels[$flatName])) {
         return $customLabels[$flatName];
@@ -170,6 +176,22 @@ function icon_for_field(string $flatName): string
     if (strpos($u, 'DIARY') !== false) return '📙';
     if (strpos($u, 'NARRATOR') !== false) return '🗣️';
     return '⚙️';
+}
+
+function select_option_label(string $fieldName, string $optionValue): string
+{
+    if ($fieldName === 'RECHAT_MODE') {
+        $labels = [
+            'tight' => 'Tight',
+            'conversational' => 'Conversational',
+            'group' => 'Group',
+            'random' => 'Random',
+        ];
+
+        return $labels[$optionValue] ?? ucwords(str_replace('_', ' ', strtolower($optionValue)));
+    }
+
+    return $optionValue;
 }
 
 function current_value(string $flatName)
@@ -673,7 +695,7 @@ h1.gs-title {
                                     <?php elseif ($fieldType === 'select'): ?>
                                         <select name="<?php echo htmlspecialchars($fieldName); ?>" <?php echo $isReadonly ? 'disabled' : ''; ?>>
                                             <?php foreach (($field['values'] ?? []) as $option): ?>
-                                                <option value="<?php echo htmlspecialchars(strval($option)); ?>" <?php echo (strval($current) === strval($option) ? 'selected' : ''); ?>><?php echo htmlspecialchars(strval($option)); ?></option>
+                                                <option value="<?php echo htmlspecialchars(strval($option)); ?>" <?php echo (strval($current) === strval($option) ? 'selected' : ''); ?>><?php echo htmlspecialchars(select_option_label($fieldName, strval($option))); ?></option>
                                             <?php endforeach; ?>
                                         </select>
                                     <?php elseif (strpos($fieldType, 'foreign:') === 0): ?>
