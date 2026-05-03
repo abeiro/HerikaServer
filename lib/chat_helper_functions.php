@@ -2588,7 +2588,7 @@ function normalizeActorNameForComparison($name)
     }
 
     $name = trim($name, "|");
-    $name = preg_replace('/\s*\((?:busy|hostile|in combat|far away|dead|disabled)\)\s*$/i', '', $name);
+    $name = preg_replace('/\s*\((?:busy|hostile|in combat|far away|restrained|dead|disabled)\)\s*$/i', '', $name);
     return strtolower(trim($name));
 }
 

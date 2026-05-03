@@ -1865,9 +1865,10 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
      people like '%|$actorEscaped|%' 
      or people like '$actorEscaped' 
      or people like '%|$actorEscaped (busy)|%'
-     OR people LIKE '%|$actorEscaped (hostile)|%' 
-     OR people LIKE '%|$actorEscaped (in combat)|%' 
-     or type='info_timeforward' )
+      OR people LIKE '%|$actorEscaped (hostile)|%' 
+      OR people LIKE '%|$actorEscaped (in combat)|%' 
+      OR people LIKE '%|$actorEscaped (restrained)|%' 
+      or type='info_timeforward' )
     ":"")." 
     and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
     ((false)?" and gamets>".($currentGameTs-(60*60*60*60)):"").
@@ -2752,9 +2753,9 @@ function DataSpeechJournal($topic,$limit=50)
     $lastDialogFull = [];
     $tn=$db->escape($topic);
     $results = $db->fetchAll("SElECT  speaker,speech,location,listener,topic as quest, convert_gamets2skyrim_date(gamets) AS sk_date, gamets FROM speech
-      where (speaker like '%$tn%' or  listener like '%$tn%' or location like '%$tn%' or  
+     where (speaker like '%$tn%' or  listener like '%$tn%' or location like '%$tn%' or  
       companions like '%|$tn|%' or  companions like '%$tn%' OR companions LIKE '%|$tn (busy)|%' 
-      OR companions LIKE '%|$tn (hostile)|%' ) 
+      OR companions LIKE '%|$tn (hostile)|%' OR companions LIKE '%|$tn (restrained)|%' ) 
       and listener<>'unknown' 
       order by rowid desc");
     if (!$results) {
