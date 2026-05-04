@@ -108,12 +108,6 @@ $DYNAMIC_PROMPT_PERSONALITY = "Based on the dialogue history and recent events, 
     . "Return ONLY the updated personality description in 3-5 sentences. Do not include any introductory text, meta-commentary, or phrases like 'Here is the updated personality' or 'The character's personality is'. "
     . "Start directly with the personality content.";
 
-$DYNAMIC_PROMPT_RELATIONSHIPS = "Based on recent interactions, update #HERIKA_NAME# relationships with other people and factions. "
-    . "Maintain all existing relevant relationships and add new ones or modify existing ones based on recent interactions. "
-    . "Focus on changed relationships, new relationships formed, evolved existing ones, and only remove relationships that are clearly no longer relevant. "
-    . "Return ONLY a bulleted list using * Name/Faction - Description format. Do not include any introductory text, meta-commentary, or phrases like 'Here are the updated relationships' or 'The character's relationships include'. "
-    . "Start directly with the first bullet point.";
-
 $DYNAMIC_PROMPT_OCCUPATION = "Based on story progression and events, update #HERIKA_NAME# occupation and role. "
     . "Maintain the current occupation unless significant changes have occurred. Add new responsibilities, changes in social status, and professional affiliations. "
     . "Focus on job changes, new duties, and evolving professional relationships. "

@@ -133,7 +133,6 @@ if ($method === "POST") {
             'HERIKA_BACKGROUND' => 'Basic Summary',
             'HERIKA_PERSONALITY' => 'Personality Traits',
             'HERIKA_APPEARANCE' => 'Physical Appearance',
-            'HERIKA_RELATIONSHIPS' => 'Relationships',
             'HERIKA_OCCUPATION' => 'Occupation & Role',
             'HERIKA_SPEECHSTYLE' => 'Speech Style',
             'HERIKA_GOALS' => 'Goals & Aspirations'

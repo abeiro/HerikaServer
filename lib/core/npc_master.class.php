@@ -39,6 +39,8 @@ class NpcMaster
         if (isset($data["npc_name"]) && $data["npc_name"] === "The Narrator") {
             throw new \Exception("The Narrator cannot be created via NpcMaster. Use the Narrator class and Narrator Management UI instead.");
         }
+
+        $data = $this->normalizeNpcDataForPersistence($data);
         
         $fields = [
             "npc_name",
@@ -49,7 +51,6 @@ class NpcMaster
             "oghma_knowledge_tags",
             "emote_moods",
             "personality",
-            "relationships",
             "occupation",
             "appearance",
             "skills",
@@ -134,6 +135,8 @@ class NpcMaster
     // Update NPC by ID
     public function update($id, $data)
     {
+        $data = $this->normalizeNpcDataForPersistence($data);
+
         $fields = [
             "npc_name",
             "npc_favorite",
@@ -143,7 +146,6 @@ class NpcMaster
             "oghma_knowledge_tags",
             "emote_moods",
             "personality",
-            "relationships",
             "occupation",
             "appearance",
             "skills",
@@ -245,6 +247,108 @@ class NpcMaster
         return $codename;
     }
 
+    public function normalizeNpcDataForPersistence($data)
+    {
+        if (!is_array($data)) {
+            return $data;
+        }
+
+        $aliasMap = [
+            'npc_misc' => 'oghma_knowledge_tags',
+            'npc_background' => 'npc_static_bio',
+            'npc_personality' => 'personality',
+            'npc_appearance' => 'appearance',
+            'npc_occupation' => 'occupation',
+            'npc_skills' => 'skills',
+            'npc_speechstyle' => 'speechstyle',
+            'npc_goals' => 'goals',
+        ];
+
+        foreach ($aliasMap as $legacyKey => $canonicalKey) {
+            if (
+                array_key_exists($legacyKey, $data)
+                && (
+                    !array_key_exists($canonicalKey, $data)
+                    || $data[$canonicalKey] === null
+                    || $data[$canonicalKey] === ''
+                )
+            ) {
+                $data[$canonicalKey] = $data[$legacyKey];
+            }
+            unset($data[$legacyKey]);
+        }
+
+        $relationshipSeed = null;
+        foreach (['relationships', 'npc_relationships'] as $relationshipKey) {
+            if (!array_key_exists($relationshipKey, $data)) {
+                continue;
+            }
+
+            $relationshipSeed = $this->decodeRelationshipSeed($data[$relationshipKey]);
+            unset($data[$relationshipKey]);
+
+            if (is_array($relationshipSeed)) {
+                break;
+            }
+        }
+
+        if (is_array($relationshipSeed)) {
+            $extendedData = $this->decodeJsonObject($data['extended_data'] ?? null);
+            $extendedData['relationships'] = $relationshipSeed;
+            $data['extended_data'] = json_encode($extendedData, JSON_UNESCAPED_UNICODE);
+        } elseif (isset($data['extended_data']) && is_array($data['extended_data'])) {
+            $data['extended_data'] = json_encode($data['extended_data'], JSON_UNESCAPED_UNICODE);
+        }
+
+        if (isset($data['metadata']) && is_array($data['metadata'])) {
+            $data['metadata'] = json_encode($data['metadata'], JSON_UNESCAPED_UNICODE);
+        }
+
+        return $data;
+    }
+
+    private function decodeJsonObject($value)
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (!is_string($value)) {
+            return [];
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return [];
+        }
+
+        $decoded = json_decode($trimmed, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function decodeRelationshipSeed($value)
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if ($trimmed[0] !== '{') {
+            return null;
+        }
+
+        $decoded = json_decode($trimmed, true);
+        return is_array($decoded) ? $decoded : null;
+    }
+
     public function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $baseprofile = '')
     {
         if ($npcname === "The Narrator") {
@@ -292,7 +396,7 @@ class NpcMaster
         }
 
         // Compose knowledge string (OGHMA_KNOWLEDGE)
-        $templateRow['npc_misc'] = $this->composeKnowledgeString($templateRow['npc_misc'], $codename);
+        $templateRow['oghma_knowledge_tags'] = $this->composeKnowledgeString($templateRow['oghma_knowledge_tags'] ?? '', $codename);
 
         // Fetch voice IDs
         $voiceData = $this->fetchVoiceData($codename);
@@ -326,21 +430,21 @@ class NpcMaster
 
         if (! $templateRow) {
             $templateRow = $this->db->fetchOne(
-                "SELECT core, oghma_knowledge_tags as npc_misc, npc_static_bio as npc_background, personality as npc_personality, appearance as npc_appearance, relationships as npc_relationships, occupation as npc_occupation, skills as npc_skills, speechstyle as npc_speechstyle, goals as npc_goals FROM combined_bio_templates WHERE lower(npc_name) = lower('{$escCode}')"
+                "SELECT core, oghma_knowledge_tags, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals FROM combined_bio_templates WHERE lower(npc_name) = lower('{$escCode}')"
             );
         }
 
         return $templateRow ?: [
-            'core'              => 'Roleplay as ' . $codename,
-            'npc_misc'          => $codename,
-            'npc_background'    => '',
-            'npc_personality'   => '',
-            'npc_appearance'    => '',
-            'npc_relationships' => '',
-            'npc_occupation'    => '',
-            'npc_skills'        => '',
-            'npc_speechstyle'   => '',
-            'npc_goals'         => '',
+            'core' => 'Roleplay as ' . $codename,
+            'oghma_knowledge_tags' => $codename,
+            'npc_static_bio' => '',
+            'personality' => '',
+            'appearance' => '',
+            'relationships' => '',
+            'occupation' => '',
+            'skills' => '',
+            'speechstyle' => '',
+            'goals' => '',
         ];
     }
 
@@ -393,10 +497,6 @@ class NpcMaster
 
         if (isset($OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'])) {
             $currentNpcData['personality'] = $OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'];
-        }
-
-        if (isset($OLD_GLOBALS_ARRAY['HERIKA_RELATIONSHIPS'])) {
-            $currentNpcData['relationships'] = $OLD_GLOBALS_ARRAY['HERIKA_RELATIONSHIPS'];
         }
 
         if (isset($OLD_GLOBALS_ARRAY['HERIKA_OCCUPATION'])) {
@@ -500,9 +600,7 @@ class NpcMaster
             $GLOBALS['HERIKA_PERSONALITY'] = $currentNpcData['personality'];
         }
 
-        if (isset($currentNpcData['relationships'])) {
-            $GLOBALS['HERIKA_RELATIONSHIPS'] = $currentNpcData['relationships'];
-        }
+        unset($GLOBALS['HERIKA_RELATIONSHIPS']);
 
         if (isset($currentNpcData['occupation'])) {
             $GLOBALS['HERIKA_OCCUPATION'] = $currentNpcData['occupation'];

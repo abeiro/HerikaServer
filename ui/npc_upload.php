@@ -1080,7 +1080,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 'Appearance' => $row['appearance'] ?? '',
                 'Static' => $row['npc_static_bio'] ?? '',
                 'Personality' => $row['personality'] ?? '',
-                'Relationships' => $row['relationships'] ?? '',
+                'Relationship Metadata' => $row['relationships'] ?? '',
                 'Occupation' => $row['occupation'] ?? '',
                 'Skills' => $row['skills'] ?? '',
                 'Speech Style' => $row['speechstyle'] ?? '',
@@ -1217,8 +1217,8 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <small>Detailed character traits, behavioral patterns, and psychological characteristics.</small>
                 <textarea name="npc_personality" id="edit_npc_personality" rows="4"></textarea>
 
-                <label for="edit_npc_relationships">Relationships:</label>
-                <small>Important relationships with other characters, family, friends, enemies, and social connections.</small>
+                <label for="edit_npc_relationships">Relationship Metadata (JSON):</label>
+                <small>Store structured relationship metadata JSON here. New NPC imports will seed <code>extended_data.relationships</code> from this field when the value is a valid JSON object.</small>
                 <textarea name="npc_relationships" id="edit_npc_relationships" rows="4"></textarea>
 
                 <label for="edit_npc_occupation">Occupation:</label>
@@ -1305,8 +1305,8 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <small>Detailed character traits, behavioral patterns, and psychological characteristics.</small>
                 <textarea name="npc_personality" id="new_npc_personality" rows="4"></textarea>
 
-                <label for="new_npc_relationships">Relationships:</label>
-                <small>Important relationships with other characters, family, friends, enemies, and social connections.</small>
+                <label for="new_npc_relationships">Relationship Metadata (JSON):</label>
+                <small>Store structured relationship metadata JSON here. New NPC imports will seed <code>extended_data.relationships</code> from this field when the value is a valid JSON object.</small>
                 <textarea name="npc_relationships" id="new_npc_relationships" rows="4"></textarea>
     
                 <label for="new_npc_occupation">Occupation & Role:</label>
@@ -1378,7 +1378,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 </div>
 
                 <div class="profile-field">
-                    <h4 style="color: rgb(242, 124, 17); margin: 0 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 4px;">Relationships</h4>
+                    <h4 style="color: rgb(242, 124, 17); margin: 0 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 4px;">Relationship Metadata</h4>
                     <div id="profile-relationships" style="background: #2a2a2a; padding: 12px; border-radius: 4px; min-height: 40px; white-space: pre-wrap;"></div>
                 </div>
 
