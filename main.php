@@ -1878,6 +1878,9 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
             // Race-safe spatial scope: if _speech arrived before inputtext, expand to audible companions now.
             $speakerName = extractSpeakerNameFromInputEvent($gameRequest[3] ?? "");
             $playerName = isset($GLOBALS["PLAYER_NAME"]) ? trim((string) $GLOBALS["PLAYER_NAME"]) : "";
+            if ($speakerName === "" && $playerName !== "") {
+                $speakerName = $playerName;
+            }
             $isPlayerSpeaker = ($speakerName !== "" && $playerName !== "" && strcasecmp($speakerName, $playerName) === 0);
             if ($isPlayerSpeaker) {
                 $speechGamets = intval($gameRequest[2] ?? 0);

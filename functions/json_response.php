@@ -124,8 +124,18 @@
     
         // Build listener description - for rechat events, encourage addressing the previous speaker
         $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order";
-        if (isset($GLOBALS["gameRequest"]) && in_array($GLOBALS["gameRequest"][0], ["rechat"])) {
-            $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to. Address whoever just spoke - can be any person in the conversation.";
+        if (isset($GLOBALS["gameRequest"])) {
+            if (in_array($GLOBALS["gameRequest"][0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s"], true)) {
+                $replyTargetName = extractSpeakerNameFromInputEvent($GLOBALS["gameRequest"][3] ?? "");
+                if ($replyTargetName === "") {
+                    $replyTargetName = trim((string)($GLOBALS["PLAYER_NAME"] ?? ""));
+                }
+                if ($replyTargetName !== "") {
+                    $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to. Treat {$replyTargetName}, who just spoke, as the current addressee unless the reply clearly shifts to someone else.";
+                }
+            } elseif (in_array($GLOBALS["gameRequest"][0], ["rechat"], true)) {
+                $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to. Address whoever just spoke - can be any person in the conversation.";
+            }
         }
     
         // Determine message description based on inline narration mode.

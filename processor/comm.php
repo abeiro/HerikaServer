@@ -775,14 +775,87 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             }
 
             if ($isPlayerSpeech) {
-                $latestInputRow = $db->fetchOne(
-                    "SELECT rowid, type, people, data
+                $recentInputRows = $db->fetchAll(
+                    "SELECT rowid, gamets, type, people, data, localts
                      FROM eventlog
-                     WHERE gamets={$speechGamets}
-                       AND type IN ('inputtext','inputtext_s','ginputtext','ginputtext_s','narrator_inputtext')
-                     ORDER BY ts DESC, rowid DESC
-                     LIMIT 1"
+                     WHERE type IN ('inputtext','inputtext_s','ginputtext','ginputtext_s','narrator_inputtext')
+                       AND localts > " . (time() - 180) . "
+                     ORDER BY rowid DESC
+                     LIMIT 120"
                 );
+                $latestInputRow = null;
+                $bestInputScore = -1;
+                $expectedInputSpeech = normalizeDialogTextForComparison($speech["speech"] ?? "");
+
+                foreach ((array)$recentInputRows as $inputRow) {
+                    $inputRowId = intval($inputRow["rowid"] ?? 0);
+                    $inputData = isset($inputRow["data"]) ? trim((string)$inputRow["data"]) : "";
+                    if ($inputRowId <= 0 || $inputData === "") {
+                        continue;
+                    }
+
+                    $rowType = strtolower(trim((string)($inputRow["type"] ?? "")));
+                    $rowGamets = intval($inputRow["gamets"] ?? 0);
+                    $inputPeopleNames = parsePeoplePipeList($inputRow["people"] ?? "");
+                    $inputTargetMeta = extractTalkTargetMetadata($inputData);
+                    $inputSpeaker = extractSpeakerNameFromInputEvent($inputData);
+                    $inputSpeakerNormalized = normalizeActorNameForComparison($inputSpeaker);
+                    $score = 0;
+
+                    if ($speechGamets > 0 && $rowGamets === $speechGamets) {
+                        $score += 8;
+                    }
+
+                    if ($inputSpeakerNormalized === $normalizedPlayerName) {
+                        $score += 4;
+                    } elseif (talkTargetsIncludeName($inputPeopleNames, $playerName)) {
+                        $score += 1;
+                    }
+
+                    $listenerMatched = false;
+                    if ($speechListener !== "") {
+                        if ($inputTargetMeta["hasExplicitTarget"] && !$inputTargetMeta["isBroadcast"] && !empty($inputTargetMeta["targets"])) {
+                            if (talkTargetsIncludeName($inputTargetMeta["targets"], $speechListener)) {
+                                $score += 6;
+                                $listenerMatched = true;
+                            }
+                        }
+                        if (!$listenerMatched && talkTargetsIncludeName($inputPeopleNames, $speechListener)) {
+                            $score += 3;
+                            $listenerMatched = true;
+                        }
+                        if (!$listenerMatched && $inputTargetMeta["hasExplicitTarget"] && !$inputTargetMeta["isBroadcast"]) {
+                            continue;
+                        }
+                    }
+
+                    $inputSpeech = normalizeDialogTextForComparison(extractCoreUtteranceFromInputEvent($inputData));
+                    if ($expectedInputSpeech !== "" && $inputSpeech !== "") {
+                        if ($inputSpeech === $expectedInputSpeech) {
+                            $score += 10;
+                        } elseif (
+                            strpos($inputSpeech, $expectedInputSpeech) !== false ||
+                            strpos($expectedInputSpeech, $inputSpeech) !== false
+                        ) {
+                            $score += 4;
+                        }
+                    }
+
+                    if ($rowType === "narrator_inputtext" && normalizeActorNameForComparison("The Narrator") === $normalizedSpeechListener) {
+                        $score += 2;
+                    }
+
+                    if ($score > $bestInputScore) {
+                        $bestInputScore = $score;
+                        $latestInputRow = $inputRow;
+                    }
+                    if ($bestInputScore >= 18) {
+                        break;
+                    }
+                }
+                if ($bestInputScore <= 0) {
+                    $latestInputRow = null;
+                }
 
                 if (is_array($latestInputRow) && isset($latestInputRow["rowid"])) {
                     $rowId = intval($latestInputRow["rowid"]);
@@ -795,7 +868,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                         error_log("[SPATIAL_SCOPE] Updated input eventlog row {$rowId} people={$audiblePeoplePipe}");
                     }
                 } else {
-                    error_log("[SPATIAL_SCOPE] No inputtext row found for gamets {$speechGamets} to update");
+                    error_log("[SPATIAL_SCOPE] No inputtext row matched for player speech gamets {$speechGamets}");
                 }
             }
 

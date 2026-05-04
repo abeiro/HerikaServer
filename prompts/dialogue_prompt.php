@@ -44,6 +44,62 @@ if (!function_exists('chimLoadManagedPromptTemplate')) {
     }
 }
 
+if (!function_exists('chimResolveImmediateReplyTargetName')) {
+    function chimResolveImmediateReplyTargetName()
+    {
+        $gameRequest = $GLOBALS["gameRequest"] ?? [];
+        $eventType = $gameRequest[0] ?? "";
+        if (!in_array($eventType, ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s"], true)) {
+            return "";
+        }
+
+        $speakerName = extractSpeakerNameFromInputEvent($gameRequest[3] ?? "");
+        if ($speakerName === "") {
+            $speakerName = trim((string)($GLOBALS["PLAYER_NAME"] ?? ""));
+        }
+
+        $herikaName = trim((string)($GLOBALS["HERIKA_NAME"] ?? ""));
+        if ($speakerName !== "" && $herikaName !== "" && strcasecmp($speakerName, $herikaName) === 0) {
+            return "";
+        }
+
+        return $speakerName;
+    }
+}
+
+if (!function_exists('chimApplyResponseTargetContextToPrompt')) {
+    function chimApplyResponseTargetContextToPrompt($promptText, $speakerName)
+    {
+        $promptText = (string)$promptText;
+        $speakerName = trim((string)$speakerName);
+        if ($promptText === "" || $speakerName === "") {
+            return $promptText;
+        }
+
+        $herikaName = trim((string)($GLOBALS["HERIKA_NAME"] ?? ""));
+        if ($herikaName === "") {
+            return $promptText;
+        }
+
+        $dialogueLead = "Write {$herikaName}'s next dialogue line.";
+        $dialogueLeadDirected = "Write {$herikaName}'s next dialogue line responding to {$speakerName}.";
+        if (strpos($promptText, $dialogueLead) !== false) {
+            return str_replace($dialogueLead, $dialogueLeadDirected, $promptText);
+        }
+
+        $proseLead = "Write {$herikaName}'s next prose/narration.";
+        $proseLeadDirected = "Write {$herikaName}'s next prose/narration responding to {$speakerName}.";
+        if (strpos($promptText, $proseLead) !== false) {
+            return str_replace($proseLead, $proseLeadDirected, $promptText);
+        }
+
+        return rtrim($promptText) . " Respond directly to {$speakerName}, the last person.";
+    }
+}
+
+$responseTargetName = chimResolveImmediateReplyTargetName();
+$responseTargetContext = ($responseTargetName !== "") ? " responding to {$responseTargetName}." : "";
+
 
 // Add narration instruction when inline narration mode expects leading asterisk narration blocks.
 $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
@@ -55,7 +111,7 @@ $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
 if ($inlineNarrationEnabled) {
     if ($inlineNarrationMode === 'npc') {
         $inlineDialoguePromptKey = 'dialogue_line_inline_response_npc';
-        $inlineDialogueFallback = " Write {HERIKA_NAME}'s next dialogue line."
+        $inlineDialogueFallback = " Write {HERIKA_NAME}'s next dialogue line{RESPONSE_TARGET_CONTEXT}."
             . " If needed, you may include one brief third-person narration block in single asterisks before the dialogue."
             . " Keep any spoken dialogue outside the asterisks, and do not wrap the entire reply in asterisks."
             . " Be original, creative, knowledgeable, use your own thoughts."
@@ -64,7 +120,7 @@ if ($inlineNarrationEnabled) {
         $inlineNarrationFallback = "You may include one brief third-person narration block in single asterisks before the dialogue (e.g., *She smiles softly*). Keep any spoken dialogue outside the asterisks. Do not wrap the entire reply in asterisks.";
     } else {
         $inlineDialoguePromptKey = 'dialogue_line_inline_response_narrator';
-        $inlineDialogueFallback = " Write {HERIKA_NAME}'s next prose/narration."
+        $inlineDialogueFallback = " Write {HERIKA_NAME}'s next prose/narration{RESPONSE_TARGET_CONTEXT}."
             . " Be original, creative, knowledgeable, use your own thoughts. "
             . " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}";
         $inlineNarrationPromptKey = 'inline_narration_prompt_narrator';
@@ -77,6 +133,7 @@ if ($inlineNarrationEnabled) {
         [
             "{HERIKA_NAME}" => $GLOBALS["HERIKA_NAME"],
             "{MAXIMUM_WORDS}" => $MAXIMUM_WORDS,
+            "{RESPONSE_TARGET_CONTEXT}" => $responseTargetContext,
         ],
         "DIALOGUE_LINE_INLINE_RESPONSE"
     );
@@ -91,16 +148,19 @@ if ($inlineNarrationEnabled) {
 } else {
     $TEMPLATE_DIALOG = chimLoadManagedPromptTemplate(
         'dialogue_line_response',
-        " Write {HERIKA_NAME}'s next dialogue line." .
+        " Write {HERIKA_NAME}'s next dialogue line{RESPONSE_TARGET_CONTEXT}." .
         " Be original, creative, knowledgeable, use your own thoughts. " .
         " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}",
         [
             "{HERIKA_NAME}" => $GLOBALS["HERIKA_NAME"],
             "{MAXIMUM_WORDS}" => $MAXIMUM_WORDS,
+            "{RESPONSE_TARGET_CONTEXT}" => $responseTargetContext,
         ],
         "DIALOGUE_LINE_RESPONSE"
     );
 }
+
+$TEMPLATE_DIALOG = chimApplyResponseTargetContextToPrompt($TEMPLATE_DIALOG, $responseTargetName);
 
 if ($directNarratorDialogue) {
     $TEMPLATE_DIALOG .= " Reply directly to {$GLOBALS["PLAYER_NAME"]} in plain spoken dialogue only." .

@@ -2738,6 +2738,21 @@ function extractSpeakerNameFromInputEvent($eventData)
     return $speakerName;
 }
 
+function extractCoreUtteranceFromInputEvent($eventData)
+{
+    $eventData = trim((string)$eventData);
+    if ($eventData === "") {
+        return "";
+    }
+
+    if (preg_match('/^\s*[^:]{1,128}\s*:\s*(.*)$/us', $eventData, $matches)) {
+        $eventData = trim((string)$matches[1]);
+    }
+
+    $eventData = preg_replace('/\s*\(\s*(?:(?:talking|whispering)\s+to|speaking\s+loudly\s+to)\s+[^)]*\)\s*$/iu', '', $eventData);
+    return trim((string)$eventData);
+}
+
 function extractSpeakerNameFromChatEvent($eventData)
 {
     $eventData = trim((string)$eventData);
@@ -3483,6 +3498,9 @@ function buildScopedPeopleForPlayerInput($eventType, $eventData, $listenerName, 
 
     // Include the speaker so player-directed lines remain attributable in people context.
     $speakerName = extractSpeakerNameFromInputEvent($eventData);
+    if ($speakerName === "" && !empty($GLOBALS["PLAYER_NAME"])) {
+        $speakerName = trim((string)$GLOBALS["PLAYER_NAME"]);
+    }
     if ($speakerName !== "" && !in_array($speakerName, $targetNames, true)) {
         $targetNames[] = $speakerName;
     }

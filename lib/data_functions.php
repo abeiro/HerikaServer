@@ -3301,16 +3301,43 @@ function PackIntoSummary($onlyMissingDiary=false)
     return $maxRow;
 }
 
+if (!function_exists('chimFilterRechatHistorySinceLatestInput')) {
+    function chimFilterRechatHistorySinceLatestInput(array $historyRows)
+    {
+        $chainRows = [];
+
+        foreach ($historyRows as $row) {
+            $eventType = strtolower(trim((string)($row['type'] ?? '')));
+            if ($eventType === '') {
+                continue;
+            }
+
+            if (in_array($eventType, ['inputtext', 'inputtext_s', 'ginputtext', 'ginputtext_s', 'narrator_inputtext'], true)) {
+                // A fresh player turn must reset the rechat chain. The first rechat after player input
+                // should therefore start at round 0 instead of inheriting an older chain budget.
+                $chainRows = [];
+                continue;
+            }
+
+            if (in_array($eventType, ['rechat', 'narration'], true)) {
+                $chainRows[] = $row;
+            }
+        }
+
+        return $chainRows;
+    }
+}
+
 function DataRechatHistory()
 {
 
     global $db;
-    // Actually we don't need the data here, just an array which size must match the history size.
-    // Include 'narration' type as it's an official part of rechat (random narrator interjections)
-    $lastRechat=$db->fetchAll("select gamets FROM  eventlog a  WHERE type in ('rechat','narration','inputtext','inputtext_s') 
-    and localts>".(time()-120)."  order by gamets desc,ts desc LIMIT 10 OFFSET 0");
-    
-    return $lastRechat;
+    // We only need the current post-input rechat chain length.
+    // Fetch recent candidate rows, then drop anything before the latest player turn.
+    $historyRows = $db->fetchAll("select type,gamets,ts FROM eventlog a WHERE type in ('rechat','narration','inputtext','inputtext_s','ginputtext','ginputtext_s','narrator_inputtext')
+    and localts>".(time()-120)." order by gamets desc,ts desc LIMIT 50 OFFSET 0");
+
+    return chimFilterRechatHistorySinceLatestInput(array_reverse($historyRows));
 
 }
 
