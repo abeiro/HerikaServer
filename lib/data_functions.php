@@ -22,7 +22,7 @@ function SaveOriginalHerikaName() {
     $b_already_saved = ($GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] ?? false);
     if (!$b_already_saved) {
         $herika = ($GLOBALS["HERIKA_NAME"] ?? "");
-        if ((strlen($herika) > 0) && ($herika != "Player") && ($herika != "LLMFallback") && (stripos($herika, "Narrator") === false) && (stripos($herika, "actor") === false) && (stripos($herika, "everyone") === false) && (stripos($herika, "*") === false) && (stripos($herika, "none") === false) ) {
+                if ((strlen($herika) > 0) && ($herika !== "The Narrator") && ($herika !== "Player") && ($herika !== "LLMFallback") && (stripos($herika, "Narrator") === false) && (stripos($herika, "actor") === false) && (stripos($herika, "everyone") === false) && (stripos($herika, "*") === false) && (stripos($herika, "none") === false) ) {
             $GLOBALS["ORIGINAL_HERIKA_NAME"] = $herika;
             $GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] = true;
         }
@@ -32,18 +32,37 @@ function SaveOriginalHerikaName() {
 function GetOriginalHerikaName() {
     $b_already_saved = ($GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] ?? false);
     if ($b_already_saved) {
-        $herika = $GLOBALS["ORIGINAL_HERIKA_NAME"];
+        $herika = $GLOBALS["ORIGINAL_HERIKA_NAME"] ?? '';
     } else {
         $herika = $GLOBALS["HERIKA_NAME"];
     }
     return $herika;
 } 
 
+function get_connector_id($s_driver='', $s_model='', $s_url='') {
+    $i_res = -1;
+    if (isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
+        $i_res = $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["id"] ?? -1;
+    }   
+    if ($i_res < 0) {
+        if ((strlen($s_model) > 0) && (strlen($s_url) > 0)  && (strlen($s_driver) > 0)) {
+            $query = "SELECT id FROM public.core_llm_connector WHERE (url='{$s_url}') AND (model='{$s_model}') AND (driver='{$s_driver}') LIMIT 1 ";
+            $ret = $GLOBALS["db"]->fetchAll($query);
+            if ($ret) {
+                $i_res = intval($ret[0]['id'] ?? -1);
+            }
+        }
+    }
+    return $i_res;
+}
+
 function ReplacePlayerNamePlaceholder($s_input) {
     //replace #PLAYER_NAME# with player name
     $s_res = $s_input;
     if ((strlen(trim($s_input))) > 12) {
         $s_res = strtr($s_input, [
+            "{HERIKA_NAME}" =>$GLOBALS["HERIKA_NAME"],
+            "{PLAYER_NAME}"=>$GLOBALS["PLAYER_NAME"], 
             "#HERIKA_NAME#" =>$GLOBALS["HERIKA_NAME"],
             "#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"] 
         ]);
@@ -1605,12 +1624,16 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         $removeBooks ="and type<>'contentbook' " ;
     }
     
+    $ext_sqlfilter1 = $GLOBALS["EXT_CONTEXT_SQL_FILTER1"] ?? "";
+    $ext_sqlfilter2 = $GLOBALS["EXT_CONTEXT_SQL_FILTER2"] ?? "";
+        
     $lastDialogFull = array();
-    $actorEscaped=$db->escape($actor);
-    $playerEscaped=$db->escape($GLOBALS["PLAYER_NAME"]);
-    
-    if (empty($actorEscaped))
-        $actorEscaped="%";
+    $b_actor = (strlen($actor) > 0); 
+    if ($b_actor)
+        $actorEscaped=$db->escape($actor);
+    else
+        $actorEscaped='';
+    //$playerEscaped=$db->escape($GLOBALS["PLAYER_NAME"]);
 
     $query="select  
     case 
@@ -1618,6 +1641,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type like 'info%' or type like 'funcret%' or type like 'location%' then 'CONTEXTI'
       when a.data like '%background chat%' then 'BACKDIAG'
       when type='book' then 'BOOKEVT' 
+      when type='contentbook' then 'BOOKEVT' 
       when type='quest' then 'QUEST' 
       when type='itemfound' then 'ITEM' 
       when type='rpg_word' then 'RPG_WORD' 
@@ -1637,23 +1661,21 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type like 'ext_%' then 'PLUGIN'
       else '' 
     end as subtype,a.data  as data , gamets,localts,type,location
-    FROM  eventlog a WHERE 1=1
-    and type<>'combatend'  
-    and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc' and type<>'infoitems'  
-    and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
-    and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region' and type<>'named_cell'
-    ".(($actorEscaped)?" 
-    and (
-     people like '%|$actorEscaped|%' 
-     or people like '$actorEscaped' 
-     or people like '%|$actorEscaped (busy)|%'
-     OR people LIKE '%|$actorEscaped (hostile)|%' 
-     OR people LIKE '%|$actorEscaped (in combat)|%' 
-     or type='info_timeforward' )
-    ":"")." 
-    and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
-    ((false)?" and gamets>".($currentGameTs-(60*60*60*60)):"").
-    " order by gamets desc, ts desc, rowid desc LIMIT $nRecordsLimit OFFSET 0";  
+    FROM  eventlog a WHERE 
+    type<>'combatend'  
+    and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' 
+    and type<>'addnpc' and type<>'infonpc' and type<>'infoitems'  
+    and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  
+    and type<>'infonpc_close' and type<>'instruction'
+    and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region' and type<>'named_cell' 
+    AND type<>'narrator_welcome' 
+    AND type<>'funccall' AND type<>'togglemodel' 
+    {$removeBooks} {$sqlfilter} {$ext_sqlfilter1} 
+    ".(($b_actor) ? " AND (people ILIKE '%|$actorEscaped%')" : " "). 
+    //((false)?" and gamets>".($currentGameTs-(60*60*60*60)):""). 
+    " OR type ILIKE 'info\_%' OR type ILIKE 'ext\_%' {$ext_sqlfilter2}  
+    ORDER BY gamets desc, ts desc, rowid desc LIMIT {$nRecordsLimit} OFFSET 0 "; 
+
     
     // OR people LIKE '%|$actorEscaped (far away)|%') this can be confusing in whisper mode
     $results = $db->fetchAll($query);
