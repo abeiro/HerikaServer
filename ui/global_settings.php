@@ -196,6 +196,32 @@ function select_option_label(string $fieldName, string $optionValue): string
     return $optionValue;
 }
 
+function filter_browse_field_configs(): array
+{
+    return [
+        'MAGIC_EVENT_BLACKLIST' => [
+            'button_label' => 'Selector',
+            'modal_title' => 'Recent Magic Events',
+            'modal_hint' => 'Shows recent npcspellcast names from the last 5000 eventlog rows. Check a value to keep it in the filter, uncheck it to remove it.',
+        ],
+        'LOCATION_BLACKLIST' => [
+            'button_label' => 'Selector',
+            'modal_title' => 'Recent Locations',
+            'modal_hint' => 'Shows recent Points of Interest candidates parsed from the last 5000 eventlog rows. Check a value to keep it in the filter, uncheck it to remove it.',
+        ],
+        'ITEM_BLACKLIST' => [
+            'button_label' => 'Selector',
+            'modal_title' => 'Recent Items',
+            'modal_hint' => 'Shows recent item names parsed from itemfound and nearby-item eventlog entries. Check a value to keep it in the filter, uncheck it to remove it.',
+        ],
+        'EVENT_TYPE_FILTER' => [
+            'button_label' => 'Selector',
+            'modal_title' => 'Recent Event Types',
+            'modal_hint' => 'Shows recent prompt-relevant event types from the last 5000 eventlog rows. Check a value to keep it in the filter, uncheck it to remove it.',
+        ],
+    ];
+}
+
 function prompt_context_bucket_title(string $bucket): string
 {
     $labels = [
@@ -252,6 +278,7 @@ foreach ($generalSettingRows as $row) {
 
 $promptContextCatalog = chimGetPromptContextOptionCatalog();
 $currentPromptContextOptions = chimGetPromptContextOptions();
+$filterBrowseFieldConfigs = filter_browse_field_configs();
 
 $foreignOptions = [];
 try {
@@ -505,6 +532,38 @@ h1.gs-title {
     min-width: 0;
 }
 
+.filter-browse-wrap {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+}
+
+.btn-filter-browse {
+    flex: 0 0 auto;
+    min-width: 78px;
+    border: 1px solid rgba(77, 144, 254, 0.42);
+    border-radius: 6px;
+    background: linear-gradient(135deg, rgba(34, 84, 173, 0.95), rgba(24, 62, 130, 0.98));
+    color: #e8f1ff;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 7px 10px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-filter-browse:hover {
+    background: linear-gradient(135deg, rgba(46, 101, 198, 0.98), rgba(34, 84, 173, 0.98));
+    border-color: rgba(106, 169, 255, 0.62);
+}
+
+.btn-filter-browse:disabled {
+    cursor: default;
+    opacity: 0.6;
+}
+
 .provider-body input[type="text"],
 .provider-body input[type="url"],
 .provider-body input[type="number"],
@@ -654,6 +713,203 @@ h1.gs-title {
     color: #ff6b6b;
 }
 
+.filter-modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: rgba(0, 0, 0, 0.72);
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.filter-modal-backdrop.is-open {
+    display: block;
+}
+
+.filter-modal-panel {
+    max-width: 900px;
+    margin: 0 auto;
+    border: 1px solid #3a3a3a;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(34, 34, 34, 0.98), rgba(24, 24, 24, 0.99));
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+}
+
+.filter-modal-head {
+    padding: 18px 22px 12px;
+    border-bottom: 1px solid rgba(242, 124, 17, 0.18);
+}
+
+.filter-modal-head h2 {
+    margin: 0;
+    font-size: 1.15em;
+    color: rgb(242,124,17);
+    font-family: 'MagicCards', serif;
+}
+
+.filter-modal-hint {
+    margin-top: 8px;
+    color: #c4c4c4;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.filter-modal-body {
+    padding: 18px 22px;
+}
+
+.filter-modal-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.filter-modal-toolbar input[type="search"] {
+    width: 100%;
+    background-color: rgba(26, 26, 26, 0.88);
+    color: #e9efff;
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+    padding: 9px 11px;
+}
+
+.filter-modal-toolbar input[type="search"]:focus {
+    border-color: rgba(242, 124, 17, 0.5);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+}
+
+.filter-modal-status {
+    color: #afafaf;
+    font-size: 12px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.filter-modal-list {
+    display: grid;
+    gap: 10px;
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.filter-candidate-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    border: 1px solid #353535;
+    border-radius: 8px;
+    background: rgba(29, 29, 29, 0.95);
+    padding: 10px 12px;
+}
+
+.filter-candidate-item input[type="checkbox"] {
+    margin-top: 3px;
+    transform: scale(1.1);
+    accent-color: #176529;
+}
+
+.filter-candidate-main {
+    min-width: 0;
+}
+
+.filter-candidate-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-candidate-value {
+    color: #f1f4ff;
+    font-weight: 700;
+    word-break: break-word;
+}
+
+.filter-candidate-count,
+.filter-candidate-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.filter-candidate-count {
+    background: rgba(24, 89, 50, 0.85);
+    color: #d8ffe9;
+}
+
+.filter-candidate-badge {
+    background: rgba(113, 83, 26, 0.8);
+    color: #f7dfae;
+}
+
+.filter-candidate-sample {
+    margin-top: 6px;
+    color: #b7b7b7;
+    font-size: 12px;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.filter-modal-empty,
+.filter-modal-loading,
+.filter-modal-error {
+    padding: 18px 14px;
+    text-align: center;
+    border: 1px dashed #444;
+    border-radius: 8px;
+    color: #b9b9b9;
+    background: rgba(26, 26, 26, 0.7);
+}
+
+.filter-modal-error {
+    color: #ff9a9a;
+    border-color: rgba(160, 52, 52, 0.5);
+}
+
+.filter-modal-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 22px 18px;
+    border-top: 1px solid rgba(242, 124, 17, 0.12);
+}
+
+.filter-modal-note {
+    color: #b2b2b2;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.filter-modal-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.filter-modal-close {
+    border: 1px solid #444;
+    border-radius: 6px;
+    background: rgba(42, 42, 42, 0.95);
+    color: #ececec;
+    font-weight: 700;
+    padding: 9px 14px;
+    cursor: pointer;
+}
+
+.filter-modal-close:hover {
+    background: rgba(56, 56, 56, 0.98);
+}
+
 @media (max-width: 1000px) {
     .provider-card {
         grid-template-columns: 1fr;
@@ -673,6 +929,29 @@ h1.gs-title {
     .page-header-actions {
         margin-left: 0;
         width: 100%;
+    }
+
+    .filter-browse-wrap {
+        flex-direction: column;
+    }
+
+    .btn-filter-browse {
+        width: 100%;
+    }
+
+    .filter-modal-toolbar,
+    .filter-modal-foot {
+        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-modal-actions {
+        width: 100%;
+    }
+
+    .filter-modal-actions button {
+        flex: 1 1 auto;
     }
 }
 </style>
@@ -796,7 +1075,23 @@ h1.gs-title {
                                     <?php elseif ($fieldType === 'number'): ?>
                                         <input type="number" step="0.01" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars(strval($current)); ?>" <?php echo $readonlyAttr; ?>>
                                     <?php elseif ($fieldType === 'longstring'): ?>
-                                        <textarea name="<?php echo htmlspecialchars($fieldName); ?>" rows="4" <?php echo $readonlyAttr; ?>><?php echo htmlspecialchars(strval($current)); ?></textarea>
+                                        <?php if (isset($filterBrowseFieldConfigs[$fieldName])): ?>
+                                            <?php $browseConfig = $filterBrowseFieldConfigs[$fieldName]; ?>
+                                            <div class="filter-browse-wrap">
+                                                <textarea name="<?php echo htmlspecialchars($fieldName); ?>" rows="4" <?php echo $readonlyAttr; ?>><?php echo htmlspecialchars(strval($current)); ?></textarea>
+                                                <?php if (!$isReadonly): ?>
+                                                    <button
+                                                        type="button"
+                                                        class="btn-filter-browse js-filter-browse"
+                                                        data-field="<?php echo htmlspecialchars($fieldName); ?>"
+                                                    >
+                                                        <?php echo htmlspecialchars(strval($browseConfig['button_label'] ?? 'Recent...')); ?>
+                                                    </button>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <textarea name="<?php echo htmlspecialchars($fieldName); ?>" rows="4" <?php echo $readonlyAttr; ?>><?php echo htmlspecialchars(strval($current)); ?></textarea>
+                                        <?php endif; ?>
                                     <?php elseif ($fieldType === 'url'): ?>
                                         <input type="url" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars(strval($current)); ?>" <?php echo $readonlyAttr; ?>>
                                     <?php elseif ($fieldType === 'apikey'): ?>
@@ -831,7 +1126,341 @@ h1.gs-title {
             <?php endforeach; ?>
         </div>
     </form>
+
+    <div id="filterBrowseModal" class="filter-modal-backdrop" aria-hidden="true">
+        <div class="filter-modal-panel" role="dialog" aria-modal="true" aria-labelledby="filterBrowseModalTitle">
+            <div class="filter-modal-head">
+                <h2 id="filterBrowseModalTitle">Recent Values</h2>
+                <div id="filterBrowseModalHint" class="filter-modal-hint"></div>
+            </div>
+            <div class="filter-modal-body">
+                <div class="filter-modal-toolbar">
+                    <input type="search" id="filterBrowseSearch" placeholder="Search recent values">
+                    <div id="filterBrowseStatus" class="filter-modal-status"></div>
+                </div>
+                <div id="filterBrowseFeedback" class="filter-modal-loading">Loading recent values...</div>
+                <div id="filterBrowseList" class="filter-modal-list" hidden></div>
+            </div>
+            <div class="filter-modal-foot">
+                <div class="filter-modal-note">Checked values stay in the textbox. Uncheck a value here, then save, to remove it from the filter.</div>
+                <div class="filter-modal-actions">
+                    <button type="button" class="filter-modal-close" id="filterBrowseCancel">Cancel</button>
+                    <button type="button" class="btn-save-green" id="filterBrowseSave">Save Selection</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </main>
+
+<script>
+const filterBrowseConfigs = <?php echo json_encode($filterBrowseFieldConfigs, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+const filterBrowseEndpoint = <?php echo json_encode($webRoot . '/ui/api/filter_candidates.php', JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+
+(function () {
+    const modal = document.getElementById('filterBrowseModal');
+    const modalTitle = document.getElementById('filterBrowseModalTitle');
+    const modalHint = document.getElementById('filterBrowseModalHint');
+    const feedback = document.getElementById('filterBrowseFeedback');
+    const list = document.getElementById('filterBrowseList');
+    const searchInput = document.getElementById('filterBrowseSearch');
+    const status = document.getElementById('filterBrowseStatus');
+    const saveButton = document.getElementById('filterBrowseSave');
+    const cancelButton = document.getElementById('filterBrowseCancel');
+    const browseButtons = document.querySelectorAll('.js-filter-browse');
+
+    const state = {
+        activeField: '',
+        activeTextarea: null,
+        candidates: [],
+        filteredCandidates: [],
+        selectedKeys: new Set()
+    };
+
+    function normalizeKey(value) {
+        return String(value || '').trim().toLowerCase();
+    }
+
+    function parseCsvValues(rawValue) {
+        const values = [];
+        const seen = new Set();
+        String(rawValue || '')
+            .split(',')
+            .map((part) => part.trim())
+            .filter((part) => part.length > 0)
+            .forEach((part) => {
+                const key = normalizeKey(part);
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    values.push(part);
+                }
+            });
+        return values;
+    }
+
+    function mergeCsvValues(currentValue, additions) {
+        const merged = [];
+        const seen = new Set();
+
+        parseCsvValues(currentValue).forEach((value) => {
+            const key = normalizeKey(value);
+            if (!seen.has(key)) {
+                seen.add(key);
+                merged.push(value);
+            }
+        });
+
+        additions.forEach((value) => {
+            const trimmed = String(value || '').trim();
+            const key = normalizeKey(trimmed);
+            if (trimmed && !seen.has(key)) {
+                seen.add(key);
+                merged.push(trimmed);
+            }
+        });
+
+        return merged.join(', ');
+    }
+
+    function setFeedback(message, cssClass) {
+        feedback.hidden = false;
+        feedback.className = cssClass;
+        feedback.textContent = message;
+        list.hidden = true;
+        list.innerHTML = '';
+        status.textContent = '';
+    }
+
+    function openModal() {
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        searchInput.value = '';
+        state.activeField = '';
+        state.activeTextarea = null;
+        state.candidates = [];
+        state.filteredCandidates = [];
+        state.selectedKeys = new Set();
+    }
+
+    function applySearchFilter() {
+        const query = searchInput.value.trim().toLowerCase();
+        if (!query) {
+            state.filteredCandidates = state.candidates.slice();
+            return;
+        }
+
+        state.filteredCandidates = state.candidates.filter((candidate) => {
+            const haystack = [candidate.value, candidate.sample || '']
+                .join(' ')
+                .toLowerCase();
+            return haystack.includes(query);
+        });
+    }
+
+    function renderCandidates() {
+        applySearchFilter();
+        list.innerHTML = '';
+
+        if (state.filteredCandidates.length === 0) {
+            list.hidden = true;
+            feedback.hidden = false;
+            feedback.className = 'filter-modal-empty';
+            feedback.textContent = 'No matching recent values found.';
+            status.textContent = '';
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        let selectedCount = 0;
+
+        state.filteredCandidates.forEach((candidate) => {
+            const item = document.createElement('label');
+            item.className = 'filter-candidate-item';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = candidate.value;
+
+            const key = normalizeKey(candidate.value);
+            const isSelected = state.selectedKeys.has(key);
+            if (isSelected) {
+                checkbox.checked = true;
+                selectedCount += 1;
+            }
+
+            checkbox.addEventListener('change', function () {
+                if (checkbox.checked) {
+                    state.selectedKeys.add(key);
+                } else {
+                    state.selectedKeys.delete(key);
+                }
+                renderCandidates();
+            });
+
+            const main = document.createElement('div');
+            main.className = 'filter-candidate-main';
+
+            const top = document.createElement('div');
+            top.className = 'filter-candidate-top';
+
+            const value = document.createElement('span');
+            value.className = 'filter-candidate-value';
+            value.textContent = candidate.value;
+            top.appendChild(value);
+
+            const count = document.createElement('span');
+            count.className = 'filter-candidate-count';
+            count.textContent = candidate.count + ' hits';
+            top.appendChild(count);
+
+            if (isSelected) {
+                const badge = document.createElement('span');
+                badge.className = 'filter-candidate-badge';
+                badge.textContent = 'Selected';
+                top.appendChild(badge);
+            }
+
+            main.appendChild(top);
+
+            if (candidate.sample) {
+                const sample = document.createElement('div');
+                sample.className = 'filter-candidate-sample';
+                sample.textContent = candidate.sample;
+                main.appendChild(sample);
+            }
+
+            item.appendChild(checkbox);
+            item.appendChild(main);
+            fragment.appendChild(item);
+        });
+
+        list.appendChild(fragment);
+        feedback.hidden = true;
+        list.hidden = false;
+        status.textContent = selectedCount + ' selected of ' + state.filteredCandidates.length + ' shown';
+    }
+
+    async function loadCandidates(fieldName) {
+        setFeedback('Loading recent values...', 'filter-modal-loading');
+        saveButton.disabled = true;
+
+        const config = filterBrowseConfigs[fieldName] || {};
+        modalTitle.textContent = config.modal_title || 'Recent Values';
+        modalHint.textContent = config.modal_hint || '';
+
+        try {
+            const response = await fetch(filterBrowseEndpoint + '?field=' + encodeURIComponent(fieldName), {
+                cache: 'no-store',
+                credentials: 'same-origin'
+            });
+
+            const payload = await response.json();
+            if (!response.ok || !payload.success) {
+                throw new Error(payload.error || 'Failed to load recent values.');
+            }
+
+            state.candidates = Array.isArray(payload.data) ? payload.data : [];
+            state.selectedKeys = new Set(
+                parseCsvValues(state.activeTextarea ? state.activeTextarea.value : '').map((value) => normalizeKey(value))
+            );
+            renderCandidates();
+            saveButton.disabled = false;
+        } catch (error) {
+            setFeedback(error.message || 'Failed to load recent values.', 'filter-modal-error');
+        }
+    }
+
+    browseButtons.forEach((button) => {
+        button.addEventListener('click', function () {
+            const fieldName = button.getAttribute('data-field') || '';
+            const card = button.closest('.provider-card');
+            const textarea = card ? card.querySelector('textarea[name="' + fieldName + '"]') : null;
+            if (!fieldName || !textarea) {
+                return;
+            }
+
+            state.activeField = fieldName;
+            state.activeTextarea = textarea;
+            openModal();
+            loadCandidates(fieldName);
+            setTimeout(() => searchInput.focus(), 0);
+        });
+    });
+
+    searchInput.addEventListener('input', function () {
+        renderCandidates();
+    });
+
+    saveButton.addEventListener('click', function () {
+        if (!state.activeTextarea) {
+            closeModal();
+            return;
+        }
+
+        const currentValues = parseCsvValues(state.activeTextarea.value);
+        const candidateMap = new Map();
+        const candidateKeys = new Set();
+        const nextValues = [];
+        const seen = new Set();
+
+        state.candidates.forEach((candidate) => {
+            const key = normalizeKey(candidate.value);
+            candidateKeys.add(key);
+            candidateMap.set(key, candidate.value);
+        });
+
+        currentValues.forEach((value) => {
+            const key = normalizeKey(value);
+            if (seen.has(key)) {
+                return;
+            }
+
+            if (candidateKeys.has(key)) {
+                if (state.selectedKeys.has(key)) {
+                    nextValues.push(value);
+                    seen.add(key);
+                }
+                return;
+            }
+
+            nextValues.push(value);
+            seen.add(key);
+        });
+
+        state.candidates.forEach((candidate) => {
+            const key = normalizeKey(candidate.value);
+            if (state.selectedKeys.has(key) && !seen.has(key)) {
+                nextValues.push(candidateMap.get(key) || candidate.value);
+                seen.add(key);
+            }
+        });
+
+        state.activeTextarea.value = nextValues.join(', ');
+
+        closeModal();
+    });
+
+    cancelButton.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function (event) {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && modal.classList.contains('is-open')) {
+            closeModal();
+        }
+    });
+})();
+</script>
 
 <?php
 include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "footer.html");
