@@ -554,7 +554,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     }
     $MUST_END=true;
 
-}  elseif ($gameRequest[0] == "_questreset") {
+} elseif ($gameRequest[0] == "_questreset") {
     error_reporting(E_ALL);
     $db->delete("quests", "1=1");
     $MUST_END=true;
@@ -1886,7 +1886,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
-}  elseif (strpos($gameRequest[0], "enable_bg")===0) {    // util_location_name 
+} elseif (strpos($gameRequest[0], "enable_bg")===0) {    // util_location_name 
     
     $npcMaster = new NpcMaster();
     $splitNameBase=explode("/",$gameRequest[3]);
@@ -2543,7 +2543,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
-}  elseif (strpos($gameRequest[0], "switchrace")===0) {    // diary_nearby event - manual trigger for all NPCs in range
+} elseif (strpos($gameRequest[0], "switchrace")===0) {    // diary_nearby event - manual trigger for all NPCs in range
     
     logEvent($gameRequest);
     
