@@ -1836,8 +1836,6 @@ if (!empty($GLOBALS["HERIKA_NAME"])) {
     }
 }
 
-$GLOBALS["CACHE_PEOPLE"]=DataBeingsInCloseRange();
-
 /// LOG INTO DB. Will use this later.
 if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
     // Filter out combat grunts
