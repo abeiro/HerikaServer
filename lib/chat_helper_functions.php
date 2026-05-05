@@ -1507,8 +1507,7 @@ function returnLines($lines,$writeOutput=true)
 
                 if (!in_array($GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"], $normalizedNearby, true) &&
                     !isPlayerDialogueListenerName($GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"])) {
-                    Logger::info("Atomic listener {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]} not nearby, forcing player playback target. Raw listener={$GLOBALS["SCRIPTLINE_LISTENER"]}");
-                    $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]=$GLOBALS["PLAYER_NAME"];
+                    Logger::info("Atomic listener {$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]} not nearby; preserving playback target. Raw listener={$GLOBALS["SCRIPTLINE_LISTENER"]}");
                 }
 
                 if ($rechatTarget !== "") {
