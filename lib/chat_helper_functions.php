@@ -3614,6 +3614,50 @@ function extractEventPayloadParticipants($eventType, $eventData)
     return [];
 }
 
+function isSpellcastEventType($eventType)
+{
+    $eventType = strtolower(trim((string)$eventType));
+    return in_array($eventType, ["spellcast", "npcspellcast"], true);
+}
+
+function extractSpellcastParticipants($eventData)
+{
+    $eventData = trim((string)$eventData);
+    if ($eventData === "") {
+        return [];
+    }
+
+    $participants = [];
+
+    if (preg_match('/^\s*([^:]{1,128}?)\s+casts\b/iu', $eventData, $matches)) {
+        $casterName = sanitizeActorTokenFromEventPayload($matches[1] ?? "");
+        if ($casterName !== "") {
+            appendUniqueActorName($participants, $casterName);
+        }
+    }
+
+    if (preg_match('/^\s*[^:]{1,128}?\s+casts\b.*?\bon\s+([^.,!?()]{1,128}?)(?:\s*\([^)]*\)\s*|[.,!?]|$)/iu', $eventData, $matches)) {
+        $targetName = sanitizeActorTokenFromEventPayload($matches[1] ?? "");
+        if ($targetName !== "") {
+            appendUniqueActorName($participants, $targetName);
+        }
+    }
+
+    return $participants;
+}
+
+function mergeParticipantsWithPeoplePipe($participantNames, $peoplePipe)
+{
+    $mergedPeople = parsePeoplePipeList($peoplePipe);
+    if (is_array($participantNames)) {
+        foreach ($participantNames as $participantName) {
+            appendUniqueActorName($mergedPeople, $participantName);
+        }
+    }
+
+    return normalizePeoplePipeList($mergedPeople);
+}
+
 function isNarratorPrivateActionName($actionName)
 {
     $actionName = trim((string)$actionName);
@@ -3752,6 +3796,13 @@ function extractGenericEventParticipants($eventType, $eventData)
         appendUniqueActorName($participants, $speakerName);
     }
 
+    if (isSpellcastEventType($eventType)) {
+        $spellParticipants = extractSpellcastParticipants($eventData);
+        foreach ($spellParticipants as $spellParticipant) {
+            appendUniqueActorName($participants, $spellParticipant);
+        }
+    }
+
     $targetMeta = extractTalkTargetMetadata($eventData);
     if (!empty($targetMeta["targets"])) {
         foreach ($targetMeta["targets"] as $targetName) {
@@ -3787,6 +3838,13 @@ function buildStrictFallbackPeopleForEvent($eventType, $eventData, $listenerName
 
     if (shouldAutoAppendListenerToPeople($eventType, $eventData, $listenerName)) {
         appendUniqueActorName($names, $listenerName);
+    }
+
+    if (isSpellcastEventType($eventType) && $fallbackPeople !== "") {
+        $spellScopedFallback = mergeParticipantsWithPeoplePipe($names, $fallbackPeople);
+        if ($spellScopedFallback !== "") {
+            return $spellScopedFallback;
+        }
     }
 
     if (empty($names) && $fallbackPeople !== "") {
@@ -3960,6 +4018,7 @@ function lookupConversationPeopleSourceOfTruth($speakerName, $targetName, $maxAg
 
 function buildScopedPeopleFromSpatialEvidence($eventType, $eventData, $listenerName, $fallbackPeople = "")
 {
+    $eventType = strtolower((string)$eventType);
     $participants = extractGenericEventParticipants($eventType, $eventData);
     $lookupCandidates = $participants;
     appendUniqueActorName($lookupCandidates, $listenerName);
@@ -4002,16 +4061,22 @@ function buildScopedPeopleFromSpatialEvidence($eventType, $eventData, $listenerN
 
         $scopedFromSpatial = normalizePeoplePipeList($bestSpatialPeople);
         if ($scopedFromSpatial !== "") {
-            $eventType = strtolower((string)$eventType);
             error_log("[SCOPE_GENERIC] type='{$eventType}' spatial_scoped='{$scopedFromSpatial}'");
             return $scopedFromSpatial;
+        }
+    }
+
+    if (isSpellcastEventType($eventType) && $fallbackPeople !== "") {
+        $spellFallbackScoped = mergeParticipantsWithPeoplePipe($participants, $fallbackPeople);
+        if ($spellFallbackScoped !== "") {
+            error_log("[SCOPE_GENERIC] type='{$eventType}' spell_fallback_scoped='{$spellFallbackScoped}'");
+            return $spellFallbackScoped;
         }
     }
 
     if (!empty($participants)) {
         $participantScoped = normalizePeoplePipeList($participants);
         if ($participantScoped !== "") {
-            $eventType = strtolower((string)$eventType);
             error_log("[SCOPE_GENERIC] type='{$eventType}' participant_scoped='{$participantScoped}'");
             return $participantScoped;
         }
@@ -4337,7 +4402,12 @@ function logEvent($dataArray,$forcePeople='')
             $dataArray[2] = $new_gts;
         }
 
-        $eventPeople = ($forcePeople) ? $forcePeople : $GLOBALS["CACHE_PEOPLE_LIMITED"];
+        $defaultPeopleFallback = $GLOBALS["CACHE_PEOPLE_LIMITED"];
+        if (isSpellcastEventType($dataArray[0] ?? "")) {
+            $defaultPeopleFallback = DataBeingsInRange();
+        }
+
+        $eventPeople = ($forcePeople) ? $forcePeople : $defaultPeopleFallback;
         $hasForcedPeople = !empty($forcePeople);
         if (!$hasForcedPeople) {
             $eventPeople = buildScopedPeopleForEvent(
