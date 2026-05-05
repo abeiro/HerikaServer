@@ -269,7 +269,7 @@ Response queued in `responselog` table, fetched by game mod via `comm.php`
 | `output_from_llm.log` | Raw LLM responses with timestamps |
 | `context_sent_to_llm.log` | Full context sent to LLM |
 | `context_sent_to_llm_fast.log` | Context for fast/helper calls |
-| `ouput_to_plugin.log` | Data sent back to game mod |
+| `output_to_plugin.log` | Data sent back to game mod |
 | `stt.log` | Speech-to-text processing |
 | `vision.log` | Vision/image processing |
 | `debugstream.log` | Streaming response debug data |
