@@ -1374,6 +1374,27 @@ function removeTalkingToOccurrences($input) {
     return $input;
 }
 
+function moveDialogueTargetSuffixToEnd($input) {
+    $input = trim((string)$input);
+    if ($input === "") {
+        return "";
+    }
+
+    $pattern = '/\s*(\((?:talking|whispering)\s+to [^()]+?\)|\(speaking loudly to [^()]+?\))\s*/i';
+    if (preg_match_all($pattern, $input, $matches) !== 1 || empty($matches[1])) {
+        return trim(preg_replace('/\s+/', ' ', $input));
+    }
+
+    $targetSuffix = trim((string)end($matches[1]));
+    $withoutSuffix = preg_replace($pattern, ' ', $input);
+    $withoutSuffix = trim(preg_replace('/\s+/', ' ', (string)$withoutSuffix));
+    if ($withoutSuffix === "") {
+        return $targetSuffix;
+    }
+
+    return "{$withoutSuffix} {$targetSuffix}";
+}
+
 
 function DataLastDataExpandedForNPC($actor, $lastNelements = -10,$sqlfilter="") {
 
@@ -2386,7 +2407,7 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
                 else if ($lastSpeaker=="backgroundchat")
                     $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", removeEmptyElements($buffer)));
                 else 
-                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode(" ", removeEmptyElements($buffer)));
+                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => moveDialogueTargetSuffixToEnd(implode(" ", removeEmptyElements($buffer))));
             }
             $buffer = [];
             $buffer[] = $line["content"];
@@ -2417,7 +2438,7 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
         else if ($lastSpeaker=="backgroundchat")
             $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $bufferCopy));
         else 
-            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode(" ", $bufferCopy));
+            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => moveDialogueTargetSuffixToEnd(implode(" ", $bufferCopy)));
     }
 
     $contextDataHistory=[];

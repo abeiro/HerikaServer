@@ -187,7 +187,7 @@ function select_option_label(string $fieldName, string $optionValue): string
             'tight' => 'Tight',
             'conversational' => 'Conversational',
             'group' => 'Group',
-            'random' => 'Random',
+            'random' => 'Random (Recommended)',
         ];
 
         return $labels[$optionValue] ?? ucwords(str_replace('_', ' ', strtolower($optionValue)));
