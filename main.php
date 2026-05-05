@@ -2752,24 +2752,12 @@ if (!function_exists('chimApplyPromptContextOptionsToSystemPrompt')) {
         $options = chimGetPromptContextOptions();
         $catalog = chimGetPromptContextOptionCatalog();
 
-        foreach (array_keys($catalog['enabled_sections'] ?? []) as $tag) {
-            $enabled = in_array($tag, $options['enabled_sections'] ?? [], true);
-            if (!$enabled) {
-                $content = chimRemovePromptXmlBlock($content, $tag);
-            }
-        }
-
-        foreach (array_keys($catalog['enabled_character_subsections'] ?? []) as $tag) {
-            $enabled = in_array($tag, $options['enabled_character_subsections'] ?? [], true);
-            if (!$enabled) {
-                $content = chimRemovePromptXmlBlock($content, $tag);
-            }
-        }
-
-        foreach (array_keys($catalog['enabled_general_subsections'] ?? []) as $tag) {
-            $enabled = in_array($tag, $options['enabled_general_subsections'] ?? [], true);
-            if (!$enabled) {
-                $content = chimRemovePromptXmlBlock($content, $tag);
+        foreach ($catalog as $bucket => $bucketOptions) {
+            $enabledTags = $options[$bucket] ?? array_keys($bucketOptions ?? []);
+            foreach (array_keys($bucketOptions ?? []) as $tag) {
+                if (!in_array($tag, $enabledTags, true)) {
+                    $content = chimRemovePromptXmlBlock($content, $tag);
+                }
             }
         }
 

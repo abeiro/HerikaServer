@@ -201,6 +201,7 @@ function prompt_context_bucket_title(string $bucket): string
     $labels = [
         'enabled_sections' => 'Top-Level Sections',
         'enabled_character_subsections' => 'Character Subsections',
+        'enabled_appearance_subsections' => 'Appearance / State Subsections',
         'enabled_general_subsections' => 'General Instruction Subsections',
     ];
 
@@ -319,6 +320,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
     $postedPromptContextOptions = chimNormalizePromptContextOptions([
         'enabled_sections' => array_values(array_map('strval', $_POST['prompt_context_enabled_sections'] ?? [])),
         'enabled_character_subsections' => array_values(array_map('strval', $_POST['prompt_context_enabled_character_subsections'] ?? [])),
+        'enabled_appearance_subsections' => array_values(array_map('strval', $_POST['prompt_context_enabled_appearance_subsections'] ?? [])),
         'enabled_general_subsections' => array_values(array_map('strval', $_POST['prompt_context_enabled_general_subsections'] ?? [])),
     ]);
     $promptContextDescription = current_description('PROMPT_CONTEXT_OPTIONS', $generalSettingRowMap);

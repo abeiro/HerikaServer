@@ -285,26 +285,6 @@ if (!function_exists('chimGetPromptContextOptionCatalog')) {
                     'label' => '<personality>',
                     'description' => 'Behavioral traits, psychology, and temperament.',
                 ],
-                'appearance' => [
-                    'label' => '<appearance>',
-                    'description' => 'Physical appearance and identifying features.',
-                ],
-                'equipment' => [
-                    'label' => '<equipment>',
-                    'description' => 'Currently equipped gear and worn items.',
-                ],
-                'inventory' => [
-                    'label' => '<inventory>',
-                    'description' => 'Current inventory listing.',
-                ],
-                'current_activity' => [
-                    'label' => '<current_activity>',
-                    'description' => 'What the actor is currently doing.',
-                ],
-                'current_condition' => [
-                    'label' => '<current_condition>',
-                    'description' => 'Health, magicka, stamina, and visible condition state.',
-                ],
                 'relationships' => [
                     'label' => '<relationships>',
                     'description' => 'Named relationships and relevant social ties.',
@@ -345,6 +325,36 @@ if (!function_exists('chimGetPromptContextOptionCatalog')) {
                     'label' => '<quest_topics>',
                     'description' => 'Quest topics this actor specifically knows about.',
                 ],
+            ],
+            'enabled_appearance_subsections' => [
+                'appearance' => [
+                    'label' => '<appearance>',
+                    'description' => 'Physical appearance and identifying features.',
+                ],
+                'equipment' => [
+                    'label' => '<equipment>',
+                    'description' => 'Currently equipped gear and worn items.',
+                ],
+                'target_equipment' => [
+                    'label' => '<target_equipment>',
+                    'description' => 'Equipment summary for the current dialogue target when available.',
+                ],
+                'inventory' => [
+                    'label' => '<inventory>',
+                    'description' => 'Current inventory listing.',
+                ],
+                'current_activity' => [
+                    'label' => '<current_activity>',
+                    'description' => 'What the actor is currently doing.',
+                ],
+                'current_condition' => [
+                    'label' => '<current_condition>',
+                    'description' => 'Health, magicka, stamina, and visible condition state.',
+                ],
+                'spells' => [
+                    'label' => '<spells>',
+                    'description' => 'Known spell list when available.',
+                ],
                 'reanimation_status' => [
                     'label' => '<reanimation_status>',
                     'description' => 'Zombie/reanimated state notice when applicable.',
@@ -368,11 +378,12 @@ if (!function_exists('chimGetDefaultPromptContextOptions')) {
     function chimGetDefaultPromptContextOptions(): array
     {
         $catalog = chimGetPromptContextOptionCatalog();
-        return [
-            'enabled_sections' => array_keys($catalog['enabled_sections']),
-            'enabled_character_subsections' => array_keys($catalog['enabled_character_subsections']),
-            'enabled_general_subsections' => array_keys($catalog['enabled_general_subsections']),
-        ];
+        $defaults = [];
+        foreach ($catalog as $bucket => $options) {
+            $defaults[$bucket] = array_keys($options);
+        }
+
+        return $defaults;
     }
 }
 
@@ -393,10 +404,32 @@ if (!function_exists('chimNormalizePromptContextOptions')) {
             return $defaults;
         }
 
+        $legacyAppearanceSubsectionIds = [
+            'appearance',
+            'equipment',
+            'inventory',
+            'current_activity',
+            'current_condition',
+            'reanimation_status',
+        ];
         $normalized = [];
         foreach ($defaults as $bucket => $defaultIds) {
             $hasBucket = array_key_exists($bucket, $rawOptions);
             $rawIds = $hasBucket ? $rawOptions[$bucket] : $defaultIds;
+            if (
+                !$hasBucket
+                && $bucket === 'enabled_appearance_subsections'
+                && isset($rawOptions['enabled_character_subsections'])
+                && is_array($rawOptions['enabled_character_subsections'])
+            ) {
+                $legacyCharacterIds = array_values(array_map('strval', $rawOptions['enabled_character_subsections']));
+                $rawIds = $defaultIds;
+                foreach ($legacyAppearanceSubsectionIds as $legacyId) {
+                    if (!in_array($legacyId, $legacyCharacterIds, true)) {
+                        $rawIds = array_values(array_diff($rawIds, [$legacyId]));
+                    }
+                }
+            }
             if ($hasBucket && !is_array($rawIds)) {
                 $rawIds = [];
             } elseif (!$hasBucket && !is_array($rawIds)) {

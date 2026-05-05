@@ -6371,6 +6371,13 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
         'HERIKA_SPEECHSTYLE' => 'Speech Style',
         'HERIKA_GOALS' => 'Goals'
     ];
+    $hasStructuredBiographyFields = false;
+    foreach (array_keys($herikaFields) as $structuredFieldName) {
+        if (isset($FOLLOWER_CONF[$structuredFieldName]) && !empty(trim((string)$FOLLOWER_CONF[$structuredFieldName]))) {
+            $hasStructuredBiographyFields = true;
+            break;
+        }
+    }
     $SKILLS_ADD="";
     $EQUIPMENT_ADD="";
     $TARGET_EQUIPMENT_ADD="";
@@ -6765,21 +6772,21 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
                 $dynamicBio.=!empty($SKILLS_ADD) ?"\n<rpg_skills>\n$SKILLS_ADD\n</rpg_skills>\n": "";
             }
             
-            // Add equipment and reanimation status right after HERIKA_APPEARANCE section
-            if ($fieldName=="HERIKA_APPEARANCE") {
-                // Check if this NPC is reanimated
-                $extendedData = $npcMaster->getExtendedData($currentNpcData);
-                if (empty($GLOBALS["DISABLE_REANIMATION_TRACKING"]) && isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
-                    $dynamicBio .= "\n<reanimation_status>\nYou have been reanimated from death as a zombie. Your skin has a deathly pale, greyish pallor with a corpse-like appearance. Your eyes are glazed and lifeless, and your movements are stiff and unnatural.\n</reanimation_status>";
-                }
-                
-                $dynamicBio.=$EQUIPMENT_ADD ?? "";
-                $dynamicBio.=$TARGET_EQUIPMENT_ADD ?? "";
-                $dynamicBio.=$INVENTORY_ADD ?? "";
-                $dynamicBio.=$ACTIVITY_ADD ?? "";
-                $dynamicBio.=$STATS_ADD ?? "";
-                $dynamicBio.=$SPELLS_ADD ?? "";
+        }
+
+        if ($fieldName=="HERIKA_APPEARANCE" && $hasStructuredBiographyFields) {
+            // Check if this NPC is reanimated
+            $extendedData = $npcMaster->getExtendedData($currentNpcData);
+            if (empty($GLOBALS["DISABLE_REANIMATION_TRACKING"]) && isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
+                $dynamicBio .= "\n<reanimation_status>\nYou have been reanimated from death as a zombie. Your skin has a deathly pale, greyish pallor with a corpse-like appearance. Your eyes are glazed and lifeless, and your movements are stiff and unnatural.\n</reanimation_status>";
             }
+
+            $dynamicBio.=$EQUIPMENT_ADD ?? "";
+            $dynamicBio.=$TARGET_EQUIPMENT_ADD ?? "";
+            $dynamicBio.=$INVENTORY_ADD ?? "";
+            $dynamicBio.=$ACTIVITY_ADD ?? "";
+            $dynamicBio.=$STATS_ADD ?? "";
+            $dynamicBio.=$SPELLS_ADD ?? "";
         }
     }
     
