@@ -86,7 +86,7 @@ $distroLogPath = $logPath . 'apache_error.log';
 $chimLogPath = $logPath . 'chim.log';
 $llmOutputPath = $logPath . 'output_from_llm.log';
 $llmContextPath = $logPath . 'context_sent_to_llm.log';
-$pluginOutputPath = $logPath . 'ouput_to_plugin.log';
+$pluginOutputPath = $logPath . 'output_to_plugin.log';
 $sttLogPath = $logPath . 'stt.log';
 $visionLogPath = $logPath . 'vision.log';
 $debugStreamLogPath = $logPath . 'debugstream.log';
@@ -2065,7 +2065,7 @@ if (isset($_GET['download_logs'])) {
         <div class="log-section">
             <?php
             // Display plugin output log
-            readRegularLog($pluginOutputPath, "Plugin Output (ouput_to_plugin.log)");
+            readRegularLog($pluginOutputPath, "Plugin Output (output_to_plugin.log)");
             ?>
         </div>
 
