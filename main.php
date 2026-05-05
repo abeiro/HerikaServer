@@ -1528,7 +1528,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         }
     }
 
-    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction','infoaction','death','itemfound','innerchat') or (type='chat' and data like '(Context%') ";  // Use prechat
+    $sqlfilter=" and (type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction','infoaction','death','itemfound','innerchat') or (type='chat' and data like '(Context%') )";  // Use prechat
     // chat entries starting by "(Context%" are standard skyrim dialogue
 
     $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny => CHAOS MODE
@@ -1836,6 +1836,8 @@ if (!empty($GLOBALS["HERIKA_NAME"])) {
     }
 }
 
+$GLOBALS["CACHE_PEOPLE"]=DataBeingsInCloseRange();
+
 /// LOG INTO DB. Will use this later.
 if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
     // Filter out combat grunts
@@ -1925,7 +1927,7 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
                         if ($spatialPeoplePipe !== "") {
                             $eventPeople = $spatialPeoplePipe;
                             $GLOBALS["CACHE_PEOPLE"] = $spatialPeoplePipe;
-                            error_log("[SPATIAL_SCOPE] main.php applied speech companions for gamets {$speechGamets}: {$spatialPeoplePipe}");
+                            error_log("[SPATIAL_SCOPE] main.php applied speech people for gamets {$speechGamets}: {$spatialPeoplePipe}");
                         }
                         }
                     }
