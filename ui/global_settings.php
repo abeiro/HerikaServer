@@ -34,25 +34,9 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "head.htm
 
 $saveSuccess = isset($_GET['_saved']) && $_GET['_saved'] === '1';
 $clearReanimationResult = null;
+$promptContextSectionTitle = 'Context Selections';
 
 $gsSections = [
-    'General' => [
-        [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
-        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES', 'type' => 'boolean' ],
-        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES_TRIGGER', 'type' => 'integer', 'min' => 10, 'max' => 100 ],
-        [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
-        [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
-        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
-    ],
-    'Memory' => [
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer' ],
-    ],
-    'Rechat' => [
-        [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random'] ],
-        [ 'name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean' ],
-    ],
     'Prompt' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
         [ 'name' => 'EMOTEMOODS', 'type' => 'longstring' ],
@@ -62,15 +46,15 @@ $gsSections = [
         [ 'name' => 'ITEM_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'EVENT_TYPE_FILTER', 'type' => 'longstring' ],
     ],
-    'Context' => [
-        [ 'name' => 'GROUND_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
-        [ 'name' => 'INVENTORY_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
-        [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
-        [ 'name' => 'DISABLE_REANIMATION_TRACKING', 'type' => 'boolean', 'action' => 'clear_reanimation' ],
-        [ 'name' => 'TRANSFORMATION_DETECTION', 'type' => 'boolean' ],
-        [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
+    'Rechat' => [
+        [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random'] ],
+        [ 'name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean' ],
     ],
-    'Prompt Context Options' => [],
+    'Memory' => [
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer' ],
+    ],
     'Global Connectors' => [
         [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'foreign:core_llm_connector:id:label' ],
@@ -80,6 +64,23 @@ $gsSections = [
         [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'RELLLM_CONNECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'foreign:core_llm_connector:id:label' ],
+    ],
+    'Context' => [
+        [ 'name' => 'GROUND_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
+        [ 'name' => 'INVENTORY_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
+        [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
+        [ 'name' => 'DISABLE_REANIMATION_TRACKING', 'type' => 'boolean', 'action' => 'clear_reanimation' ],
+        [ 'name' => 'TRANSFORMATION_DETECTION', 'type' => 'boolean' ],
+        [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
+    ],
+    $promptContextSectionTitle => [],
+    'Misc' => [
+        [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
+        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES', 'type' => 'boolean' ],
+        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES_TRIGGER', 'type' => 'integer', 'min' => 10, 'max' => 100 ],
+        [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
+        [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
+        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
     ],
     'Translation' => [
         [ 'name' => 'TRANSLATION_FUNCTION', 'type' => 'select', 'values' => ['none', 'DeepL'] ],
@@ -976,7 +977,7 @@ h1.gs-title {
                 <div class="content-section">
                     <h2><?php echo htmlspecialchars($sectionTitle); ?></h2>
                     <div class="provider-grid">
-                        <?php if ($sectionTitle === 'Prompt Context Options'): ?>
+                        <?php if ($sectionTitle === $promptContextSectionTitle): ?>
                             <div class="prompt-context-wrap">
                                 <?php foreach ($promptContextCatalog as $bucket => $options): ?>
                                     <div class="prompt-context-group">
