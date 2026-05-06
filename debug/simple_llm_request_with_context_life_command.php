@@ -40,7 +40,7 @@ $npcMaster = new NpcMaster();
 
 $connector            = new LLMConnector();
 $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
-$currentNpcData       = $npcMaster->getByName($argv[1]);
+$currentNpcData       = $npcMaster->getByName($argv[1]);// Lookup NPC data by name passed as first argument
 
 $profile            = new CoreProfile();
 $currentProfileData = $profile->getById($currentNpcData["profile_id"]);

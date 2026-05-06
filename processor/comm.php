@@ -555,7 +555,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     }
     $MUST_END=true;
 
-}  elseif ($gameRequest[0] == "_questreset") {
+} elseif ($gameRequest[0] == "_questreset") {
     error_reporting(E_ALL);
     $db->delete("quests", "1=1");
     $MUST_END=true;
@@ -1813,6 +1813,36 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         } else {
             error_log("[auto_greeting] disabled for {$currentNpcData["npc_name"]}");
         }
+        
+        $meta=$npcMaster->getMetadata($currentNpcData);
+        if ($meta && isset($meta["PENDING_DIALOGUE"]) && $meta["PENDING_DIALOGUE"]>0) {
+            if ($gameRequest[2]>$meta["PENDING_DIALOGUE"]) {
+                $instructionText="should talk to {$GLOBALS["PLAYER_NAME"]}";
+                $roleMasterAction = "rolecommand|Instruction@{$currentNpcData["npc_name"]}@{$instructionText}@0";
+
+                // Insert into database
+                $GLOBALS["db"]->insert(
+                'responselog',
+                    array(
+                        'localts' => time(),
+                        'sent' => 0,
+                        'actor' => "rolemaster",
+                        'text' => '',
+                        'action' => $roleMasterAction,
+                        'tag' => ""
+                    )
+                );
+                unset($meta["PENDING_DIALOGUE"]);
+                $currentNpcData=$npcMaster->setMetadata($currentNpcData,$meta);
+                $npcMaster->updateByArray($currentNpcData);
+                error_log("[PENDING_DIALOGUE] {$currentNpcData["npc_name"]} had PENDING_DIALOGUE flag, triggered greeting and unset the flag");
+            } else {
+                error_log("[PENDING_DIALOGUE] {$currentNpcData["npc_name"]} has PENDING_DIALOGUE flag but gamets2days_between({$meta["PENDING_DIALOGUE"]},{$gameRequest[2]}) <= 1");
+            }
+
+        } else {
+            error_log("[PENDING_DIALOGUE] {$currentNpcData["npc_name"]} does not have PENDING_DIALOGUE flag");
+        }
     }
 
     // RELATIONSHIP SYSTEM: Queue NPC for relationship initialization
@@ -1933,7 +1963,11 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
             }
 
-            $meta['last_coords'] = [$splitNameBase[1],$splitNameBase[2],$splitNameBase[3],$splitNameBase[4],"last_updated"=>$gameRequest[2]];
+            $meta['last_coords'] = [$splitNameBase[1],$splitNameBase[2],$splitNameBase[3],$splitNameBase[4],
+                "last_updated"=>$gameRequest[2],
+                "nearest_npc"=>[$splitNameBase[6]=>$splitNameBase[5]],
+                "state"=>$splitNameBase[7]
+            ];
             
             // Save back to database
             $currentNpcData = $npcMaster->setMetadata($currentNpcData, $meta);
@@ -1964,7 +1998,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
-}  elseif (strpos($gameRequest[0], "enable_bg")===0) {    // util_location_name 
+} elseif (strpos($gameRequest[0], "enable_bg")===0) {    // util_location_name 
     
     $npcMaster = new NpcMaster();
     $splitNameBase=explode("/",$gameRequest[3]);
@@ -2621,7 +2655,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
-}  elseif (strpos($gameRequest[0], "switchrace")===0) {    // diary_nearby event - manual trigger for all NPCs in range
+} elseif (strpos($gameRequest[0], "switchrace")===0) {    // diary_nearby event - manual trigger for all NPCs in range
     
     logEvent($gameRequest);
     

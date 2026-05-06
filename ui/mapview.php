@@ -465,13 +465,19 @@ if (!function_exists('race_icon_web_path')) {
     $last_gamets = $res["last_gamets"];
     $currentDate=convert_gamets2skyrim_date($last_gamets);
 
+    // Filter mode: show all NPCs with tracked coords, or only BG-Life enabled ones
+    $showAllCoords = isset($_GET['show_all_coords']) && $_GET['show_all_coords'] === '1';
+    $whereClause = $showAllCoords
+        ? "metadata->>'last_coords' IS NOT NULL"
+        : "extended_data->>'background_life_enabled' = 'true'";
+
     $query = "
     select A.*,B.content FROM 
     (SELECT
         npc_name,metadata,extended_data,id,refid,race,extended_data->>'background_life_last_updated' as last_report,
         metadata->>'last_coords' as last_coords,metadata->>'last_coords_history' as last_coords_history
     FROM core_npc_master
-    WHERE extended_data->>'background_life_enabled' = 'true'
+    WHERE {$whereClause}
     ) A
     LEFT JOIN  (
     SELECT topic, gamets, content, people
@@ -1719,6 +1725,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                             <strong>Current Ingame Date:</strong> <?php echo $currentDate?><br/>
                             <em style="color: #ffa500;">For traveling to work you must click "Send All Locations" in the CHIM MCM under Tools to add them to Background Life<br/></em>
                         </div>
+                        <label class="toggle-label-inline" style="margin-top:8px;" title="When enabled, shows all NPCs that have tracked coordinates, regardless of Background Life status">
+                            <input type="checkbox" class="toggle-checkbox" id="showAllCoordsChk"
+                                <?php echo $showAllCoords ? 'checked' : ''; ?>
+                                onchange="toggleShowAllCoords(this.checked)">
+                            <span class="toggle-text">🗺️ Show all NPCs with coords</span>
+                        </label>
                         <button onclick="updateAllCoords()" class="update-all-coords-btn">📍 Update All NPC Coords</button>
                 </div>
                 <div class="npc-list-container">
@@ -1804,6 +1816,16 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         
         function openInNewWindow() {
             window.open(window.location.href, '_blank');
+        }
+
+        function toggleShowAllCoords(enabled) {
+            const url = new URL(window.location.href);
+            if (enabled) {
+                url.searchParams.set('show_all_coords', '1');
+            } else {
+                url.searchParams.delete('show_all_coords');
+            }
+            window.location.href = url.toString();
         }
 
         function updateMapWidthFromSlider() {
