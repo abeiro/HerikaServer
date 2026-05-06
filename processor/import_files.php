@@ -1,16 +1,20 @@
 <?php
 
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."core".DIRECTORY_SEPARATOR."action_catalog.php");
+
 /* CSV Import Processor - Called by csv_import.php endpoint
- * Handles four types of CSV imports:
+ * Handles CSV imports:
  * - biography_import: NPC character data
  * - oghma_import: Knowledge base entries
  * - dynamic_oghma_import: Quest-specific knowledge entries
  * - description_import: Item/entity description data
+ * - custom_action_import: DB-backed custom action definitions
  */
 if (isset($_POST['csv_import']) && $_POST['csv_import'] == '1' && isset($_POST['type'])) {
     $import_type = $_POST['type'];
     $timestamp = $_POST['ts'] ?? time();
     $game_timestamp = $_POST['gamets'] ?? 0;
+    $filename = $_POST['filename'] ?? '';
     
     // Check if file was uploaded
     if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
@@ -38,10 +42,40 @@ if (isset($_POST['csv_import']) && $_POST['csv_import'] == '1' && isset($_POST['
         case 'description_import':
             handleDescriptionImport($csvData, $timestamp, $game_timestamp);
             break;
+        case 'custom_action_import':
+            handleCustomActionImport($csvData, $timestamp, $game_timestamp, $filename);
+            break;
         default:
             Logger::error("CSV Import: Unknown import type: $import_type");
             return false;
     }
+}
+
+function herikaLogCsvImportAuditEvent($eventType, $message, $timestamp, $game_timestamp)
+{
+    global $db;
+
+    $normalizedEventType = strtolower(trim(strval($eventType)));
+    $normalizedMessage = trim(strval($message));
+    if ($normalizedEventType === '' || $normalizedMessage === '') {
+        return;
+    }
+
+    // Use status_msg so CSV upload audits remain visible in eventlog without ever entering prompt context.
+    $db->insert(
+        'eventlog',
+        array(
+            'ts' => $timestamp,
+            'gamets' => $game_timestamp,
+            'type' => 'status_msg',
+            'data' => "csv_import@{$normalizedEventType}@{$normalizedMessage}",
+            'sess' => 'web',
+            'localts' => time(),
+            'people' => '',
+            'location' => '',
+            'party' => ''
+        )
+    );
 }
 
 function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
@@ -244,20 +278,11 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
         
         Logger::info("Biography Import: Processing complete. $processedCount records processed, $errorCount errors");
         
-        // Log the event for audit purposes
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $timestamp,
-                'gamets' => $game_timestamp,
-                'type' => 'biography_import',
-                'data' => "CSV upload: $processedCount records processed, $errorCount errors",
-                'sess' => 'web',
-                'localts' => time(),
-                'people' => '',
-                'location' => '',
-                'party' => ''
-            )
+        herikaLogCsvImportAuditEvent(
+            'biography_import',
+            "$processedCount records processed, $errorCount errors",
+            $timestamp,
+            $game_timestamp
         );
         
     } catch (Exception $e) {
@@ -266,20 +291,11 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
         if (isset($tempFile) && file_exists($tempFile)) {
             unlink($tempFile);
         }
-        // Log the error event
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $timestamp,
-                'gamets' => $game_timestamp,
-                'type' => 'biography_import',
-                'data' => "CSV upload failed: " . $e->getMessage(),
-                'sess' => 'web',
-                'localts' => time(),
-                'people' => '',
-                'location' => '',
-                'party' => ''
-            )
+        herikaLogCsvImportAuditEvent(
+            'biography_import',
+            "failed: " . $e->getMessage(),
+            $timestamp,
+            $game_timestamp
         );
     }
     
@@ -410,20 +426,11 @@ function handleOghmaImport($csvData, $timestamp, $game_timestamp) {
         
         Logger::info("Oghma Import: Processing complete. $processedCount records processed, $errorCount errors");
         
-        // Log the event for audit purposes
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $timestamp,
-                'gamets' => $game_timestamp,
-                'type' => 'oghma_import',
-                'data' => "CSV upload: $processedCount records processed, $errorCount errors",
-                'sess' => 'web',
-                'localts' => time(),
-                'people' => '',
-                'location' => '',
-                'party' => ''
-            )
+        herikaLogCsvImportAuditEvent(
+            'oghma_import',
+            "$processedCount records processed, $errorCount errors",
+            $timestamp,
+            $game_timestamp
         );
         
     } catch (Exception $e) {
@@ -432,20 +439,11 @@ function handleOghmaImport($csvData, $timestamp, $game_timestamp) {
         if (isset($tempFile) && file_exists($tempFile)) {
             unlink($tempFile);
         }
-        // Log the error event
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $timestamp,
-                'gamets' => $game_timestamp,
-                'type' => 'oghma_import',
-                'data' => "CSV upload failed: " . $e->getMessage(),
-                'sess' => 'web',
-                'localts' => time(),
-                'people' => '',
-                'location' => '',
-                'party' => ''
-            )
+        herikaLogCsvImportAuditEvent(
+            'oghma_import',
+            "failed: " . $e->getMessage(),
+            $timestamp,
+            $game_timestamp
         );
     }
     
@@ -599,20 +597,11 @@ function handleDynamicOghmaImport($csvData, $timestamp, $game_timestamp) {
         
         Logger::info("Dynamic Oghma Import: Processing complete. $processedCount records processed, $errorCount errors");
         
-        // Log the event for audit purposes
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $timestamp,
-                'gamets' => $game_timestamp,
-                'type' => 'dynamic_oghma_import',
-                'data' => "CSV upload: $processedCount records processed, $errorCount errors",
-                'sess' => 'web',
-                'localts' => time(),
-                'people' => '',
-                'location' => '',
-                'party' => ''
-            )
+        herikaLogCsvImportAuditEvent(
+            'dynamic_oghma_import',
+            "$processedCount records processed, $errorCount errors",
+            $timestamp,
+            $game_timestamp
         );
         
     } catch (Exception $e) {
@@ -621,20 +610,11 @@ function handleDynamicOghmaImport($csvData, $timestamp, $game_timestamp) {
         if (isset($tempFile) && file_exists($tempFile)) {
             unlink($tempFile);
         }
-        // Log the error event
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $timestamp,
-                'gamets' => $game_timestamp,
-                'type' => 'dynamic_oghma_import',
-                'data' => "CSV upload failed: " . $e->getMessage(),
-                'sess' => 'web',
-                'localts' => time(),
-                'people' => '',
-                'location' => '',
-                'party' => ''
-            )
+        herikaLogCsvImportAuditEvent(
+            'dynamic_oghma_import',
+            "failed: " . $e->getMessage(),
+            $timestamp,
+            $game_timestamp
         );
     }
     
@@ -702,20 +682,11 @@ function handleDescriptionImport($csvData, $timestamp, $game_timestamp) {
         
         Logger::info("Description Import: Processing complete. $processedCount records processed, $errorCount errors");
         
-        // Log the event for audit purposes
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $timestamp,
-                'gamets' => $game_timestamp,
-                'type' => 'description_import',
-                'data' => "CSV upload: $processedCount records processed, $errorCount errors",
-                'sess' => 'web',
-                'localts' => time(),
-                'people' => '',
-                'location' => '',
-                'party' => ''
-            )
+        herikaLogCsvImportAuditEvent(
+            'description_import',
+            "$processedCount records processed, $errorCount errors",
+            $timestamp,
+            $game_timestamp
         );
         
     } catch (Exception $e) {
@@ -724,24 +695,342 @@ function handleDescriptionImport($csvData, $timestamp, $game_timestamp) {
         if (isset($tempFile) && file_exists($tempFile)) {
             unlink($tempFile);
         }
-        // Log the error event
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $timestamp,
-                'gamets' => $game_timestamp,
-                'type' => 'item_import',
-                'data' => "CSV upload failed: " . $e->getMessage(),
-                'sess' => 'web',
-                'localts' => time(),
-                'people' => '',
-                'location' => '',
-                'party' => ''
-            )
+        herikaLogCsvImportAuditEvent(
+            'description_import',
+            "failed: " . $e->getMessage(),
+            $timestamp,
+            $game_timestamp
         );
     }
     
     return true;
+}
+
+function customActionImportCsvGetValue($headerMap, $data, $columnName, $default = '')
+{
+    $columnName = strtolower(trim($columnName));
+    if (!isset($headerMap[$columnName])) {
+        return $default;
+    }
+
+    $index = $headerMap[$columnName];
+    if (!isset($data[$index])) {
+        return $default;
+    }
+
+    return trim(strval($data[$index]));
+}
+
+function customActionImportCsvToBool($value, $default = false)
+{
+    $text = strtolower(trim(strval($value)));
+    if ($text === '') {
+        return (bool) $default;
+    }
+
+    return in_array($text, ['1', 'true', 't', 'yes', 'y', 'on'], true);
+}
+
+function customActionImportDecodeJsonField($rawValue, $default, &$errorMessage, $fieldName, $allowBlank = true)
+{
+    if (is_array($rawValue)) {
+        return $rawValue;
+    }
+
+    $text = trim(strval($rawValue));
+    if ($text === '') {
+        if ($allowBlank) {
+            return $default;
+        }
+
+        $errorMessage = "Missing JSON value for {$fieldName}";
+        return null;
+    }
+
+    $decoded = json_decode($text, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        $errorMessage = "Invalid JSON for {$fieldName}: " . json_last_error_msg();
+        return null;
+    }
+
+    return $decoded;
+}
+
+function handleCustomActionImport($csvData, $timestamp, $game_timestamp, $filename = '')
+{
+    global $db;
+
+    Logger::info("Custom Action Import: STARTED - Processing CSV data upload");
+
+    if (!herikaActionCatalogDbReady()) {
+        Logger::error("Custom Action Import: core_action_custom tables/view are not ready");
+        return false;
+    }
+
+    $processedCount = 0;
+    $skippedCount = 0;
+    $errorCount = 0;
+    $hadFatalError = false;
+    $processedCodeNames = [];
+
+    try {
+        $tempFile = tempnam(sys_get_temp_dir(), 'custom_action_import_');
+        file_put_contents($tempFile, $csvData);
+
+        $handle = fopen($tempFile, 'r');
+        if ($handle === false) {
+            Logger::error("Custom Action Import: Could not open temporary CSV file");
+            return false;
+        }
+
+        $header = fgetcsv($handle, 0, ',');
+        if ($header === false || empty($header)) {
+            Logger::error("Custom Action Import: Invalid CSV header");
+            fclose($handle);
+            unlink($tempFile);
+            return false;
+        }
+
+        $headerMap = [];
+        foreach ($header as $i => $colName) {
+            $headerMap[strtolower(trim($colName))] = $i;
+        }
+
+        while (($data = fgetcsv($handle, 0, ',')) !== false) {
+            if (empty($data)) {
+                continue;
+            }
+
+            $codeName = customActionImportCsvGetValue($headerMap, $data, 'code_name');
+            $actionName = customActionImportCsvGetValue($headerMap, $data, 'action_name');
+            if ($codeName === '' || $actionName === '') {
+                Logger::warn("Custom Action Import: Skipping row with missing code_name or action_name");
+                $errorCount++;
+                continue;
+            }
+
+            $errorMessage = '';
+            $parameters = customActionImportDecodeJsonField(
+                customActionImportCsvGetValue($headerMap, $data, 'parameters_json', ''),
+                ['type' => 'object', 'properties' => [], 'required' => []],
+                $errorMessage,
+                'parameters_json'
+            );
+            if ($parameters === null) {
+                Logger::error("Custom Action Import: {$codeName} - {$errorMessage}");
+                $errorCount++;
+                continue;
+            }
+
+            $metadata = customActionImportDecodeJsonField(
+                customActionImportCsvGetValue($headerMap, $data, 'metadata', ''),
+                [],
+                $errorMessage,
+                'metadata'
+            );
+            if ($metadata === null) {
+                Logger::error("Custom Action Import: {$codeName} - {$errorMessage}");
+                $errorCount++;
+                continue;
+            }
+
+            $scriptProxyRaw = customActionImportCsvGetValue($headerMap, $data, 'script_proxy_program', '');
+            $scriptProxyProgram = customActionImportDecodeJsonField(
+                $scriptProxyRaw,
+                null,
+                $errorMessage,
+                'script_proxy_program'
+            );
+            if ($scriptProxyProgram === null && trim($scriptProxyRaw) !== '') {
+                Logger::error("Custom Action Import: {$codeName} - {$errorMessage}");
+                $errorCount++;
+                continue;
+            }
+
+            $incomingImportVersion = herikaActionCatalogNormalizeImportVersion(
+                customActionImportCsvGetValue($headerMap, $data, 'import_version', '0')
+            );
+
+            $metadataSource = trim(strval($metadata['source'] ?? ''));
+            if ($metadataSource === '') {
+                $metadataSource = trim(strval($metadata['bridge_script'] ?? ''));
+            }
+            if ($metadataSource === '' && $filename !== '') {
+                $metadataSource = pathinfo($filename, PATHINFO_FILENAME);
+            }
+            if ($metadataSource === '') {
+                $metadataSource = 'custom_action_import';
+            }
+            $metadata['source'] = $metadataSource;
+            $metadata['import_type'] = 'custom_action_import';
+            $metadata['import_version'] = $incomingImportVersion;
+            if ($filename !== '') {
+                $metadata['import_filename'] = $filename;
+            }
+            if (!isset($metadata['dispatch']) || trim(strval($metadata['dispatch'])) === '') {
+                $metadata['dispatch'] = $scriptProxyProgram !== null ? 'script_proxy' : 'plugin_command';
+            }
+            if (!array_key_exists('builtin', $metadata)) {
+                $metadata['builtin'] = false;
+            }
+            if (!isset($metadata['status']) || trim(strval($metadata['status'])) === '') {
+                $metadata['status'] = 'active';
+            }
+
+            if (herikaIsDeprecatedCampfireActionImport($codeName, $metadata, $filename)) {
+                herikaDeleteDeprecatedCampfireActionRows($codeName);
+                Logger::warn("Custom Action Import: Skipping deprecated CHIM-Campfire action '{$codeName}'");
+                $skippedCount++;
+                continue;
+            }
+
+            $row = [
+                'code_name' => $codeName,
+                'action_name' => $actionName,
+                'description' => customActionImportCsvGetValue($headerMap, $data, 'description', ''),
+                'return_message' => customActionImportCsvGetValue($headerMap, $data, 'return_message', ''),
+                'available_to_npc' => customActionImportCsvToBool(
+                    customActionImportCsvGetValue($headerMap, $data, 'available_to_npc', '0'),
+                    false
+                ),
+                'available_to_followers' => customActionImportCsvToBool(
+                    customActionImportCsvGetValue($headerMap, $data, 'available_to_followers', '0'),
+                    false
+                ),
+                'available_to_narrator' => customActionImportCsvToBool(
+                    customActionImportCsvGetValue($headerMap, $data, 'available_to_narrator', '0'),
+                    false
+                ),
+                'is_activated' => customActionImportCsvToBool(
+                    customActionImportCsvGetValue($headerMap, $data, 'is_activated', '1'),
+                    true
+                ),
+                'game_function' => customActionImportCsvToBool(
+                    customActionImportCsvGetValue($headerMap, $data, 'game_function', '1'),
+                    true
+                ),
+                'parameters_json' => $parameters,
+                'metadata' => $metadata,
+                'import_version' => $incomingImportVersion,
+                'script_proxy_program' => $scriptProxyProgram,
+            ];
+
+            $existingImportVersion = herikaActionCatalogGetExistingCustomImportVersion($codeName);
+            if ($existingImportVersion !== null
+                && !herikaActionCatalogShouldOverwriteImportVersion($incomingImportVersion, $existingImportVersion)
+            ) {
+                Logger::info(
+                    "Custom Action Import: Skipping '{$codeName}' because import_version {$incomingImportVersion} is not newer than existing {$existingImportVersion}"
+                );
+                $skippedCount++;
+                $processedCodeNames[] = $codeName;
+                continue;
+            }
+
+            if (herikaActionCatalogUpsertCustomRow($row)) {
+                $processedCount++;
+                $processedCodeNames[] = $codeName;
+            } else {
+                Logger::error("Custom Action Import: Failed to upsert action '{$codeName}'");
+                $errorCount++;
+            }
+        }
+
+        if ($filename !== '' && $errorCount === 0) {
+            $literalFilename = herikaActionCatalogSqlText($filename);
+            $staleFilter = '';
+            if (count($processedCodeNames) > 0) {
+                $literalCodes = array_map('herikaActionCatalogSqlText', array_values(array_unique($processedCodeNames)));
+                $staleFilter = ' AND code_name NOT IN (' . implode(',', $literalCodes) . ')';
+            }
+
+            $db->execQuery("
+                DELETE FROM public.core_action_custom
+                WHERE COALESCE(metadata->>'import_type', '') = 'custom_action_import'
+                  AND COALESCE(metadata->>'import_filename', '') = {$literalFilename}
+                  {$staleFilter}
+            ");
+        }
+
+        if (strcasecmp($filename, 'campfire_actions.csv') === 0) {
+            herikaDeleteDeprecatedCampfireActionRows();
+        }
+
+        fclose($handle);
+        unlink($tempFile);
+
+        Logger::info("Custom Action Import: Processing complete. $processedCount records processed, $skippedCount skipped, $errorCount errors");
+
+        $summaryPrefix = ($filename !== '') ? "file={$filename}; " : '';
+        herikaLogCsvImportAuditEvent(
+            'custom_action_import',
+            $summaryPrefix . "$processedCount records processed, $skippedCount skipped, $errorCount errors",
+            $timestamp,
+            $game_timestamp
+        );
+    } catch (Exception $e) {
+        $hadFatalError = true;
+        Logger::error("Custom Action Import: Fatal error processing CSV: " . $e->getMessage());
+        if (isset($tempFile) && file_exists($tempFile)) {
+            unlink($tempFile);
+        }
+
+        herikaLogCsvImportAuditEvent(
+            'custom_action_import',
+            "failed: " . $e->getMessage(),
+            $timestamp,
+            $game_timestamp
+        );
+    }
+
+    return !$hadFatalError;
+}
+
+function herikaIsDeprecatedCampfireActionImport($codeName, array $metadata, $filename = '')
+{
+    $normalizedCodeName = strtolower(trim(strval($codeName)));
+    if (str_starts_with($normalizedCodeName, 'extcmdchimcampfire_')) {
+        return true;
+    }
+
+    $normalizedFilename = strtolower(trim(strval($filename)));
+    if ($normalizedFilename === 'campfire_actions.csv') {
+        return true;
+    }
+
+    $source = strtolower(trim(strval($metadata['source'] ?? '')));
+    if ($source === 'chim-campfire') {
+        return true;
+    }
+
+    $integration = strtolower(trim(strval($metadata['integration'] ?? '')));
+    if ($integration === 'campfire') {
+        return true;
+    }
+
+    $bridgeScript = strtolower(trim(strval($metadata['bridge_script'] ?? '')));
+    return $bridgeScript === 'chimcampfire';
+}
+
+function herikaDeleteDeprecatedCampfireActionRows($codeName = null)
+{
+    global $db;
+
+    $codeNameFilter = '';
+    if ($codeName !== null && trim(strval($codeName)) !== '') {
+        $literalCodeName = herikaActionCatalogSqlText($codeName);
+        $codeNameFilter = " OR LOWER(code_name) = LOWER({$literalCodeName})";
+    }
+
+    $db->execQuery("
+        DELETE FROM public.core_action_custom
+        WHERE LOWER(code_name) LIKE 'extcmdchimcampfire_%'
+           OR COALESCE(LOWER(metadata->>'source'), '') = 'chim-campfire'
+           OR COALESCE(LOWER(metadata->>'integration'), '') = 'campfire'
+           OR COALESCE(LOWER(metadata->>'bridge_script'), '') = 'chimcampfire'
+           OR COALESCE(LOWER(metadata->>'import_filename'), '') = 'campfire_actions.csv'
+           {$codeNameFilter}
+    ");
 }
 
 ?>

@@ -307,8 +307,7 @@ class CoreProfile
                 }
             }
         }
-        // This behavior is now always enabled.
-        $GLOBALS["ENFORCE_ACTIONS_PROMPT"] = true;
+        $GLOBALS["ENFORCE_ACTIONS_PROMPT"] = false;
         if (isset($currentProfileData["prompt"])) {
             $GLOBALS["PROFILE_PROMPT"] = $currentProfileData["prompt"];
         }

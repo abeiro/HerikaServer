@@ -75,8 +75,10 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
         // Function stuff
         require($enginePath . "functions/functions_instruction.php");
 
-        $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
-        $GLOBALS["FUNCTIONS"][]=$GLOBALS["BASE_FUNCTIONS"]["ReturnBackHome"];
+        if (!function_exists('herikaActionCatalogIsActionEnabled') || herikaActionCatalogIsActionEnabled("ReturnBackHome")) {
+            $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
+            $GLOBALS["FUNCTIONS"][]=$GLOBALS["BASE_FUNCTIONS"]["ReturnBackHome"];
+        }
 
         $fnames=[];
         foreach ($GLOBALS["F_NAMES"] as $functionCode=>$functionName) {

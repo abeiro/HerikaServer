@@ -2,6 +2,7 @@
 require_once($GLOBALS["ENGINE_PATH"]."/lib/dynamic_update_util.php");
 require_once($GLOBALS["ENGINE_PATH"]."/lib/utils_game_timestamp.php");
 require_once($GLOBALS["ENGINE_PATH"]."/lib/playthrough_snapshot.php");
+require_once($GLOBALS["ENGINE_PATH"]."/lib/core/game_plugins.php");
 
 $MUST_END=false;
 
@@ -345,7 +346,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
 } elseif ($gameRequest[0] == "request") { // Just requested response
     // Do nothing
-    $responseDataMl = DataDequeue(time()-1);// Allow responses queued up to 1 second in the future
+    $responseDataMl = DataDequeue(time()+1);// Allow responses queued up to 1 second in the future
     foreach ($responseDataMl as $responseData) {
         echo "{$responseData["actor"]}|{$responseData["action"]}|{$responseData["text"]}\r\n";
     }
@@ -560,6 +561,37 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
 
 
+} elseif ($gameRequest[0] == "_speech_abort") {
+    error_reporting(E_ALL);
+    $abortData = json_decode($gameRequest[3], true);
+
+    if (is_array($abortData)) {
+        $utteranceIds = [];
+        if (isset($abortData["utterance_ids"]) && is_array($abortData["utterance_ids"])) {
+            foreach ($abortData["utterance_ids"] as $utteranceId) {
+                $utteranceId = trim((string)$utteranceId);
+                if ($utteranceId === "") {
+                    continue;
+                }
+                $utteranceIds[$utteranceId] = $db->escape($utteranceId);
+            }
+        }
+
+        if (!empty($utteranceIds)) {
+            $quotedIds = array_map(function ($escapedId) {
+                return "'" . $escapedId . "'";
+            }, array_values($utteranceIds));
+            $db->execQuery(
+                "DELETE FROM public.eventlog
+                 WHERE type='chat'
+                   AND utterance_id IN (" . implode(",", $quotedIds) . ")
+                   AND COALESCE(delivery_state, 'pending')='pending'"
+            );
+        }
+    }
+
+    $MUST_END=true;
+
 } elseif ($gameRequest[0] == "_speech") {
     error_reporting(E_ALL);
     $speech = json_decode($gameRequest[3], true);
@@ -568,6 +600,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     if (is_array($speech)) {
         $speechSpeaker = isset($speech["speaker"]) ? trim((string)$speech["speaker"]) : "";
         $speechListener = isset($speech["listener"]) ? trim((string)$speech["listener"]) : "";
+        $speechUtteranceId = isset($speech["utterance_id"]) ? trim((string)$speech["utterance_id"]) : "";
         $audiblePeople = [];
         if (isset($speech["companions"]) && is_array($speech["companions"])) {
             foreach ($speech["companions"] as $companionName) {
@@ -622,10 +655,30 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 'companions' => $companionsReformatStr,
                 'sess' => 'pending',
                 'audios' => isset($speech["audios"])?$speech["audios"]:null,
+                'utterance_id' => $speechUtteranceId,
                 'topic' => $topic,
                 'localts' => time()
             )
         );
+
+        $matchedUtteranceRowIds = [];
+        if ($speechUtteranceId !== "") {
+            $speechUtteranceIdEscaped = $db->escape($speechUtteranceId);
+            $matchedRows = $db->fetchAll(
+                "SELECT rowid
+                 FROM eventlog
+                 WHERE type='chat'
+                   AND utterance_id='{$speechUtteranceIdEscaped}'
+                 ORDER BY rowid DESC"
+            );
+            foreach ((array)$matchedRows as $matchedRow) {
+                $matchedRowId = intval($matchedRow["rowid"] ?? 0);
+                if ($matchedRowId > 0) {
+                    $matchedUtteranceRowIds[] = $matchedRowId;
+                }
+            }
+            $matchedUtteranceRowIds = array_values(array_unique($matchedUtteranceRowIds));
+        }
 
         // Plugin-authoritative mode: _speech companions are the source of truth for
         // actor-originated audience scope. For direct NPC replies to player prompts,
@@ -787,7 +840,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 if (is_array($latestInputRow) && isset($latestInputRow["rowid"])) {
                     $rowId = intval($latestInputRow["rowid"]);
                     $latestInputType = strtolower(trim((string)($latestInputRow["type"] ?? "")));
-                    if ($latestInputType === "narrator_inputtext") {
+                    if ($latestInputType === "narrator_inputtext" && !empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"])) {
                         error_log("[SPATIAL_SCOPE] Preserved narrator_inputtext row {$rowId} private scope");
                     } else {
                         $escapedPeople = $db->escape($audiblePeoplePipe);
@@ -802,7 +855,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             // NPC speech: align matching chat eventlog row to spatial audibility.
             if (!$isPlayerSpeech && $speechSpeaker !== "") {
                 $chatRowId = 0;
-                $rowsToUpdate = [];
+                $rowsToUpdate = $matchedUtteranceRowIds;
                 $speakerEscaped = $db->escape($speechSpeaker);
                 $matchesSpeechListener = function ($chatData) use ($speechListener) {
                     if ($speechListener === "") {
@@ -822,31 +875,37 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     return false;
                 };
 
-                // Fast path: same gamets linkage if available.
-                $sameGametsChatRows = $db->fetchAll(
-                    "SELECT rowid, gamets, data
-                     FROM eventlog
-                     WHERE gamets={$speechGamets}
-                       AND type='chat'
-                       AND data ILIKE '{$speakerEscaped}:%'
-                     ORDER BY ts DESC, rowid DESC
-                     LIMIT 40"
-                );
-                foreach ((array)$sameGametsChatRows as $sameRow) {
-                    $sameRowId = intval($sameRow["rowid"] ?? 0);
-                    $sameData = isset($sameRow["data"]) ? (string)$sameRow["data"] : "";
-                    if ($sameRowId <= 0 || $sameData === "") {
-                        continue;
-                    }
-                    if (!$matchesSpeechListener($sameData)) {
-                        continue;
-                    }
-                    $rowsToUpdate[] = $sameRowId;
-                }
                 if (!empty($rowsToUpdate)) {
                     $rowsToUpdate = array_values(array_unique(array_map('intval', $rowsToUpdate)));
                     rsort($rowsToUpdate);
                     $chatRowId = intval($rowsToUpdate[0]);
+                } else {
+                    // Fast path: same gamets linkage if available.
+                    $sameGametsChatRows = $db->fetchAll(
+                        "SELECT rowid, gamets, data
+                         FROM eventlog
+                         WHERE gamets={$speechGamets}
+                           AND type='chat'
+                           AND data ILIKE '{$speakerEscaped}:%'
+                         ORDER BY ts DESC, rowid DESC
+                         LIMIT 40"
+                    );
+                    foreach ((array)$sameGametsChatRows as $sameRow) {
+                        $sameRowId = intval($sameRow["rowid"] ?? 0);
+                        $sameData = isset($sameRow["data"]) ? (string)$sameRow["data"] : "";
+                        if ($sameRowId <= 0 || $sameData === "") {
+                            continue;
+                        }
+                        if (!$matchesSpeechListener($sameData)) {
+                            continue;
+                        }
+                        $rowsToUpdate[] = $sameRowId;
+                    }
+                    if (!empty($rowsToUpdate)) {
+                        $rowsToUpdate = array_values(array_unique(array_map('intval', $rowsToUpdate)));
+                        rsort($rowsToUpdate);
+                        $chatRowId = intval($rowsToUpdate[0]);
+                    }
                 }
 
                 if ($chatRowId <= 0) {
@@ -955,11 +1014,42 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                         $rowsToUpdate = [intval($chatRowId)];
                     }
 
+                    $preserveNarratorAudience = (
+                        empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) &&
+                        normalizeActorNameForComparison($speechSpeaker) === "the narrator"
+                    );
+
                     foreach ($rowsToUpdate as $rowIdToUpdate) {
                         if ($rowIdToUpdate <= 0) {
                             continue;
                         }
-                        $db->update("eventlog", "people='{$escapedPeople}'", "rowid={$rowIdToUpdate}");
+
+                        if ($preserveNarratorAudience) {
+                            $existingRow = $db->fetchOne("SELECT people FROM eventlog WHERE rowid={$rowIdToUpdate} LIMIT 1");
+                            $existingPeoplePipe = isset($existingRow["people"]) ? trim((string)$existingRow["people"]) : "";
+                            if ($existingPeoplePipe !== "") {
+                                $existingNames = parsePeoplePipeList($existingPeoplePipe);
+                                $existingHasExtraAudience = false;
+                                foreach ($existingNames as $existingName) {
+                                    $existingNormalized = normalizeActorNameForComparison($existingName);
+                                    if ($existingNormalized === "" ||
+                                        $existingNormalized === "the narrator" ||
+                                        $existingNormalized === $normalizedPlayerName) {
+                                        continue;
+                                    }
+                                    $existingHasExtraAudience = true;
+                                    break;
+                                }
+
+                                if ($existingHasExtraAudience) {
+                                    $db->update("eventlog", "delivery_state='spoken'", "rowid={$rowIdToUpdate}");
+                                    error_log("[SPATIAL_SCOPE] Preserved narrator chat row {$rowIdToUpdate} broader people={$existingPeoplePipe}");
+                                    continue;
+                                }
+                            }
+                        }
+
+                        $db->update("eventlog", "people='{$escapedPeople}', delivery_state='spoken'", "rowid={$rowIdToUpdate}");
                     }
 
                     if (count($rowsToUpdate) > 1) {
@@ -970,6 +1060,13 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     }
                 } else {
                     error_log("[SPATIAL_SCOPE] No chat row matched for speaker '{$speechSpeaker}' to update");
+                }
+            } elseif (!empty($matchedUtteranceRowIds)) {
+                foreach ($matchedUtteranceRowIds as $matchedRowId) {
+                    if ($matchedRowId <= 0) {
+                        continue;
+                    }
+                    $db->update("eventlog", "delivery_state='spoken'", "rowid={$matchedRowId}");
                 }
             }
         }
@@ -1542,7 +1639,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
             $meta["mods"]=isset($splitNameBase[41]) ?explode("#",$splitNameBase[41]):null;
 
-            // NPC factions - format: formID1:rank1#formID2:rank2#...
+            // NPC factions - format: formID1:rank1[:PluginName.esp|LocalFormId]#formID2:rank2[:...]
             $factionString = isset($splitNameBase[42]) ? $splitNameBase[42] : '';
             $factionList = [];
             $formIds=[];
@@ -1552,21 +1649,36 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 foreach ($factionPairs as $pair) {
                     $parts = explode(":", $pair);
                     if (count($parts) >= 2) {
-                        $formId = $parts[0];
+                        $formId = chimNormalizeRuntimeFormId($parts[0]);
+                        if ($formId === '') {
+                            continue;
+                        }
                         $formIds[]=$formId;// Collect form IDs to fetch names later
                         $rank = intval($parts[1]);
-                        $factionList[] = [
+                        $factionEntry = [
                             'formid' => $formId,
                             'rank' => $rank,
                             'name'=>'' // Placeholder, will be filled after fetching faction names from DB
                         ];
+
+                        $stableReference = isset($parts[2]) ? chimParseStableFormReference($parts[2]) : null;
+                        if ($stableReference) {
+                            $factionEntry['plugin'] = $stableReference['plugin_name'];
+                            $factionEntry['local_formid'] = $stableReference['local_formid'];
+                            $factionEntry['stable_key'] = $stableReference['stable_key'];
+                        }
+
+                        $factionList[] = $factionEntry;
                     }
                 }
             }
             // Fetch only the faction names we need in a single query to avoid multiple DB hits
             $arrFormIdNames=[];
             if (sizeof($formIds)>0) {
-                $arrFormIdNames=$factionNames=$db->fetchAll("select formid,name from factions where formid in ('".implode("','", $formIds)."')");
+                $escapedFormIds = array_map(function ($formId) use ($db) {
+                    return $db->escape($formId);
+                }, array_values(array_unique($formIds)));
+                $arrFormIdNames = $db->fetchAll("select formid,name from factions where formid in ('".implode("','", $escapedFormIds)."')");
             }
             
             // Now map the arrFormIdNames to  mapFormIdNames 

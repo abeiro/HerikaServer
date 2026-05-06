@@ -1237,6 +1237,69 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         }
                         // END Travel To Locations Data Fetching
 
+                        // Detected Mods Data Fetching
+                        $pluginsCheck = fetch_widget_stats($conn, "
+                            SELECT EXISTS (
+                                SELECT 1
+                                FROM information_schema.tables
+                                WHERE table_schema = '{$schema}'
+                                AND table_name = 'game_plugins'
+                            ) as table_exists"
+                        );
+
+                        $pluginsWidgetContent = '';
+                        $pluginsModal = '';
+
+                        if (!isset($pluginsCheck['error']) && !empty($pluginsCheck) && isset($pluginsCheck[0]['table_exists']) && $pluginsCheck[0]['table_exists'] === 't') {
+                            $pluginsData = fetch_widget_stats($conn, "
+                                SELECT plugin_name, is_light, compile_index, small_file_compile_index, formid_prefix
+                                FROM {$schema}.game_plugins
+                                ORDER BY
+                                    CASE WHEN is_light THEN 1 ELSE 0 END,
+                                    compile_index,
+                                    small_file_compile_index,
+                                    plugin_name
+                            ");
+
+                            if (!isset($pluginsData['error']) && !empty($pluginsData)) {
+                                $pluginCount = count($pluginsData);
+                                $pluginsWidgetContent = "
+                                    <div class='stat-card double-width' style='cursor: pointer;' onclick=\"openModal('pluginsModal')\">
+                                        <div class='stat-value'>{$pluginCount}</div>
+                                        <div class='stat-label'>Detected Mods</div>
+                                    </div>";
+
+                                $pluginsModal = "<div id='pluginsModal' class='modal'>
+                                                    <div class='modal-content'>
+                                                        <span class='close-btn' onclick=\"closeModal('pluginsModal')\">&times;</span>
+                                                        <h3>Detected Mods</h3>
+                                                        <table class='modal-table'>
+                                                            <tr><th>Load Order</th><th>Plugin</th><th>FormID Prefix</th><th>Type</th></tr>";
+                                foreach ($pluginsData as $pluginRow) {
+                                    $isLight = isset($pluginRow['is_light']) && ($pluginRow['is_light'] === true || $pluginRow['is_light'] === 't' || $pluginRow['is_light'] === '1' || $pluginRow['is_light'] === 1);
+                                    $loadOrder = '';
+                                    if ($isLight) {
+                                        $smallIndex = isset($pluginRow['small_file_compile_index']) ? (int)$pluginRow['small_file_compile_index'] : 0;
+                                        $loadOrder = 'FE:' . strtoupper(str_pad(dechex($smallIndex), 3, '0', STR_PAD_LEFT));
+                                    } else {
+                                        $compileIndex = isset($pluginRow['compile_index']) ? (int)$pluginRow['compile_index'] : 0;
+                                        $loadOrder = strtoupper(str_pad(dechex($compileIndex), 2, '0', STR_PAD_LEFT));
+                                    }
+
+                                    $pluginsModal .= "<tr><td>" . htmlspecialchars($loadOrder) . "</td><td>" . htmlspecialchars($pluginRow['plugin_name']) . "</td><td>" . htmlspecialchars($pluginRow['formid_prefix']) . "</td><td>" . ($isLight ? 'Light' : 'Full') . "</td></tr>";
+                                }
+                                $pluginsModal .= "</table>
+                                                    </div>
+                                                </div>";
+                            } else {
+                                $pluginsWidgetContent = "
+                                    <div class='stat-card double-width'>
+                                        <div class='stat-label' style='white-space: normal; text-align: center;'>Load into the game once to sync detected mods from CHIM.</div>
+                                    </div>";
+                            }
+                        }
+                        // END Detected Mods Data Fetching
+
                         // Append $locationsWidgetContent to the CHIM Stats content string
                         $chimStatsHtml = "
                             <div class='widget-stats'>
@@ -1298,10 +1361,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                     </div>
                                 </div>
                                 {$locationsWidgetContent}
+                                {$pluginsWidgetContent}
                             </div>";
 
                         echo render_widget('CHIM Stats', $chimStatsHtml);
                         echo $locationsModal; // Output modal HTML globally
+                        echo $pluginsModal; // Output detected mods modal HTML globally
                         echo $eventTypesModal; // Output event types modal HTML globally
 
                         // Latest Diary Entry Widget

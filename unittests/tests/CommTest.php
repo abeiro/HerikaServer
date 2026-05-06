@@ -395,9 +395,45 @@ final class CommTest extends DatabaseTestCase
         $this->assertSame("pending", $rows[0]["sess"]);
     }
 
-    public function testComm_WhenNarratorInputTextAndNearbyActors_NarratorReplyShouldStayPrivateInEventLog(): void
+    public function testComm_WhenNarratorInputTextAndHideFromContextDisabled_NarratorReplyShouldKeepNearbyPeopleInEventLog(): void
     {
         require("conf.php");
+        $GLOBALS["HIDE_NARRATOR_DIALOGUE"] = false;
+
+        $testDb = new sql();
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "99",
+                'gamets' => "199",
+                'type' => "infonpc_close",
+                'data' => "beings in range:Hulda/Jon Battle-Born/Herika/Prisoner",
+                'sess' => 'pending',
+                'localts' => 0,
+                'people'=> "|Hulda|Jon Battle-Born|Herika|Prisoner|",
+                'location'=> "",
+                'party'=> "[]"
+            )
+        );
+        $testDb->close();
+
+        $encodedData = base64_encode("narrator_inputtext|100|200|Who am I?");
+        $_SERVER["QUERY_STRING"] = "data={$encodedData}";
+        require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
+
+        $testDb = new sql();
+        $rows = $testDb->fetchAll("SELECT * FROM eventlog ORDER BY rowid DESC LIMIT 1;");
+        $testDb->close();
+
+        $this->assertSame("chat", $rows[0]["type"]);
+        $this->assertSame("The Narrator: Unit test message (talking to Prisoner)", $rows[0]["data"]);
+        $this->assertSame("|Hulda|Jon Battle-Born|Herika|Prisoner|The Narrator|", $rows[0]["people"]);
+    }
+
+    public function testComm_WhenNarratorInputTextAndHideFromContextEnabled_NarratorReplyShouldStayPrivateInEventLog(): void
+    {
+        require("conf.php");
+        $GLOBALS["HIDE_NARRATOR_DIALOGUE"] = true;
 
         $testDb = new sql();
         $testDb->insert(
@@ -429,9 +465,60 @@ final class CommTest extends DatabaseTestCase
         $this->assertSame("|The Narrator|Prisoner|", $rows[0]["people"]);
     }
 
-    public function testComm_WhenNarratorInputTextHasSpatialSpeechContext_InputEventShouldStayScopedToPlayerAndNarrator(): void
+    public function testComm_WhenNarratorInputTextHasSpatialSpeechContextAndHideFromContextDisabled_InputEventShouldKeepNearbyPeople(): void
     {
         require("conf.php");
+        $GLOBALS["HIDE_NARRATOR_DIALOGUE"] = false;
+
+        $testDb = new sql();
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "99",
+                'gamets' => "199",
+                'type' => "infonpc_close",
+                'data' => "beings in range:Hulda/Jon Battle-Born/Herika/Prisoner",
+                'sess' => 'pending',
+                'localts' => 0,
+                'people'=> "|Hulda|Jon Battle-Born|Herika|Prisoner|",
+                'location'=> "",
+                'party'=> "[]"
+            )
+        );
+        $testDb->insert(
+            'speech',
+            array(
+                'ts' => "100",
+                'gamets' => "200",
+                'listener' => "The Narrator",
+                'speaker' => "Prisoner",
+                'speech' => "Who am I?",
+                'location' => "",
+                'companions' => "|Hulda|Jon Battle-Born|Herika|",
+                'sess' => 'pending',
+                'audios' => null,
+                'topic' => 'debug|spatial:test',
+                'localts' => time()
+            )
+        );
+        $testDb->close();
+
+        $encodedData = base64_encode("narrator_inputtext|100|200|Prisoner:Who am I?");
+        $_SERVER["QUERY_STRING"] = "data={$encodedData}";
+        require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
+
+        $testDb = new sql();
+        $rows = $testDb->fetchAll("SELECT * FROM eventlog WHERE type='narrator_inputtext' ORDER BY rowid DESC LIMIT 1;");
+        $testDb->close();
+
+        $this->assertSame("Prisoner:Who am I?", $rows[0]["data"]);
+        $this->assertSame("|Hulda|Jon Battle-Born|Herika|The Narrator|Prisoner|", $rows[0]["people"]);
+    }
+
+    public function testComm_WhenNarratorInputTextHasSpatialSpeechContextAndHideFromContextEnabled_InputEventShouldStayScopedToPlayerAndNarrator(): void
+    {
+        require("conf.php");
+        $GLOBALS["HIDE_NARRATOR_DIALOGUE"] = true;
 
         $testDb = new sql();
         $testDb->insert(
@@ -603,7 +690,7 @@ final class CommTest extends DatabaseTestCase
         $_SERVER["QUERY_STRING"] = "data={$encodedData}";
         require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
 
-        $this->assertMatchesRegularExpression('/Lydia|ScriptQueue|Of course I do\.\/\/Prisoner\/(IdleDialogueExpressiveStart)?\/\r\n/', $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]);
+        $this->assertMatchesRegularExpression('/Lydia\|ScriptQueue\|Of course I do\.\/\/Prisoner\/(IdleDialogueExpressiveStart)?\/\/1(?:\.0)?\/[^\/\r\n]+\r\n/', $GLOBALS["DEBUG_DATA"]["OUTPUT_LOG"]);
     }
 
     public function testComm_WhenLinesAreJapanese_PhoneticTextShouldBeSentToScriptQueue(): void

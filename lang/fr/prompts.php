@@ -1,5 +1,21 @@
 <?php 
-$TEMPLATE_DIALOG="génère les lignes de dialogue suivantes pour {$GLOBALS["HERIKA_NAME"]}. Évite les narrations.";
+$TEMPLATE_DIALOG = " Écris la prochaine réplique de {$GLOBALS["HERIKA_NAME"]}."
+    . " Sois original, créatif et pertinent, en t'appuyant sur tes propres idées."
+    . " Consulte l'historique du contexte pour rester sur le sujet de la conversation et éviter de répéter des phrases ou des tournures déjà utilisées.";
+
+$frDirectNarratorDialogue = !empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])
+    || (($GLOBALS["gameRequest"][0] ?? '') === 'narrator_inputtext')
+    || (($gameRequest[0] ?? '') === 'narrator_inputtext');
+if ($frDirectNarratorDialogue) {
+    $TEMPLATE_DIALOG .= " Réponds directement à {$GLOBALS["PLAYER_NAME"]} uniquement avec du dialogue parlé."
+        . " N'ajoute pas de narration à la troisième personne, de description de scène, d'indications scéniques ni de texte entre astérisques.";
+}
+
+if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) && sizeof($GLOBALS["TTS"]["AZURE"]["validMoods"]) > 0) {
+    if ($GLOBALS["TTSFUNCTION"] == "azure") {
+        $TEMPLATE_DIALOG .= "(manière facultative de parler parmi cette liste [" . implode(",", $GLOBALS["TTS"]["AZURE"]["validMoods"]) . "])";
+    }
+}
 
 $PROMPTS=array(
     "location"=>[
@@ -85,12 +101,33 @@ $PROMPTS=array(
     ],
 
     "inputtext"=>[
-        "cue"=>[
-            "$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} répond à {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
-        ]
+        "cue"=>(function () use ($TEMPLATE_ACTION) {
+            if (function_exists('chimIsStrictDirectedPlayerResponseContext') && chimIsStrictDirectedPlayerResponseContext()) {
+                return chimLoadManagedRechatCuePrompts();
+            }
+
+            return [
+                "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+            ];
+        })()
+    ],
+    "narrator_inputtext"=>[
+        "cue"=>(function () use ($TEMPLATE_ACTION) {
+            return [
+                "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+            ];
+        })()
     ],
     "inputtext_s"=>[
-        "cue"=>["$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} répond à {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"],
+        "cue"=>(function () use ($TEMPLATE_ACTION) {
+            if (function_exists('chimIsStrictDirectedPlayerResponseContext') && chimIsStrictDirectedPlayerResponseContext()) {
+                return chimLoadManagedRechatCuePrompts();
+            }
+
+            return [
+                "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+            ];
+        })(),
         "extra"=>["mood"=>"chuchotant"]
     ],
     "memory"=>[
@@ -187,6 +224,10 @@ $PROMPTS=array(
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("learn_word", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     "instruction"=>[ 
+        "cue"=>["{$gameRequest[3]} {$GLOBALS["TEMPLATE_DIALOG"]} LE PERSONNAGE DOIT SUIVRE L'INSTRUCTION DU NARRATEUR"],
+        "player_request"=>["Le Narrateur : {$gameRequest[3]}"],
+    ],
+    "suggestion"=>[
         "cue"=>["{$GLOBALS["TEMPLATE_DIALOG"]}"],
         "player_request"=>["Le Narrateur : {$gameRequest[3]}"],
     ],

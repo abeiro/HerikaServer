@@ -19,20 +19,20 @@ function conf_loader_load() {
 	
 	foreach ($confSchema as $name=>$definition) {
 		if (isset($definition["type"])) {
-			$definition["currentValue"] = isset($GLOBALS[$name]) ? $GLOBALS[$name] : '';
+			$definition["currentValue"] = isset($GLOBALS[$name]) ? $GLOBALS[$name] : ($definition["default"] ?? '');
 			$confMap[$name]=$definition;
 		}
 		else {
 			if (is_array($definition)) {
 				foreach ($definition as $name2=>$definition2) {
 					if (isset($definition2["type"])) {
-						$definition2["currentValue"] = isset($GLOBALS[$name][$name2]) ? $GLOBALS[$name][$name2] : '';
+						$definition2["currentValue"] = isset($GLOBALS[$name][$name2]) ? $GLOBALS[$name][$name2] : ($definition2["default"] ?? '');
 						$confMap["$name $name2"]=$definition2;
 					}
 					else if (is_array($definition2)) {
 						foreach ($definition2 as $name3=>$definition3) {
 							if (isset($definition3["type"])) {
-								$definition3["currentValue"] = isset($GLOBALS[$name][$name2][$name3]) ? $GLOBALS[$name][$name2][$name3] : '';
+								$definition3["currentValue"] = isset($GLOBALS[$name][$name2][$name3]) ? $GLOBALS[$name][$name2][$name3] : ($definition3["default"] ?? '');
 								$confMap["$name $name2 $name3"]=$definition3;
 							}
 						

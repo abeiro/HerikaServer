@@ -1,5 +1,9 @@
 <?php
 
+if (!function_exists('chimParseStableFormReference')) {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "game_plugins.php");
+}
+
 if (!function_exists('quest_reference_dataset_config')) {
     function quest_reference_dataset_config()
     {
@@ -141,6 +145,77 @@ if (!function_exists('quest_reference_formid_column_is_text')) {
 }
 
 if (!function_exists('quest_reference_normalize_formid')) {
+    function quest_reference_resolve_runtime_formid_string($value)
+    {
+        if (is_int($value)) {
+            if ($value < 0) {
+                return null;
+            }
+
+            return sprintf('%08X', $value & 0xFFFFFFFF);
+        }
+
+        if (is_float($value)) {
+            $intValue = intval($value);
+            if ($intValue < 0) {
+                return null;
+            }
+
+            return sprintf('%08X', $intValue & 0xFFFFFFFF);
+        }
+
+        $cn = trim((string) $value);
+        if ($cn === '') {
+            return null;
+        }
+
+        $stableReference = chimParseStableFormReference($cn);
+        if ($stableReference) {
+            return chimResolveStableFormReferenceToRuntimeFormId($stableReference['stable_key']);
+        }
+
+        if (stripos($cn, "0x") === 0) {
+            $hex = chimNormalizeRuntimeFormId($cn);
+            return $hex !== '' ? $hex : null;
+        }
+
+        if (preg_match('/^[0-9A-Fa-f]{8}$/', $cn)) {
+            $hex = chimNormalizeRuntimeFormId($cn);
+            return $hex !== '' ? $hex : null;
+        }
+
+        if (preg_match('/^[0-9A-Fa-f]{1,8}$/', $cn) && preg_match('/[A-Fa-f]/', $cn)) {
+            $hex = chimNormalizeRuntimeFormId($cn);
+            return $hex !== '' ? $hex : null;
+        }
+
+        if (preg_match('/^-?\d+$/', $cn)) {
+            $intValue = intval($cn, 10);
+            if ($intValue < 0) {
+                return null;
+            }
+
+            return sprintf('%08X', $intValue & 0xFFFFFFFF);
+        }
+
+        return null;
+    }
+
+    function quest_reference_canonicalize_formid_for_text_storage($value)
+    {
+        $stableReference = chimParseStableFormReference($value);
+        if ($stableReference) {
+            return $stableReference['stable_key'];
+        }
+
+        $runtimeFormId = quest_reference_resolve_runtime_formid_string($value);
+        if ($runtimeFormId === null) {
+            return null;
+        }
+
+        return strtolower('0x' . $runtimeFormId);
+    }
+
     function quest_reference_normalize_formid($value)
     {
         if (is_int($value)) {
@@ -157,8 +232,29 @@ if (!function_exists('quest_reference_normalize_formid')) {
                 return null;
             }
 
+            $stableReference = chimParseStableFormReference($cn);
+            if ($stableReference) {
+                $runtimeFormId = chimResolveStableFormReferenceToRuntimeFormId($stableReference['stable_key']);
+                if ($runtimeFormId !== null) {
+                    return hexdec($runtimeFormId);
+                }
+
+                return null;
+            }
+
             if (stripos($cn, "0x") === 0) {
-                return intval($cn, 0);
+                $runtimeFormId = chimNormalizeRuntimeFormId($cn);
+                return $runtimeFormId !== '' ? hexdec($runtimeFormId) : null;
+            }
+
+            if (preg_match('/^[0-9A-Fa-f]{8}$/', $cn)) {
+                $runtimeFormId = chimNormalizeRuntimeFormId($cn);
+                return $runtimeFormId !== '' ? hexdec($runtimeFormId) : null;
+            }
+
+            if (preg_match('/^[0-9A-Fa-f]{1,8}$/', $cn) && preg_match('/[A-Fa-f]/', $cn)) {
+                $runtimeFormId = chimNormalizeRuntimeFormId($cn);
+                return $runtimeFormId !== '' ? hexdec($runtimeFormId) : null;
             }
 
             if (preg_match('/^-?\d+$/', $cn)) {
@@ -283,18 +379,19 @@ if (!function_exists('quest_reference_prepare_formids_for_storage')) {
     {
         $prepared = [];
         foreach ($formIds as $formId) {
-            $normalized = quest_reference_normalize_formid($formId);
-            if ($normalized === null || $normalized < 0) {
-                continue;
-            }
-
             if ($storeAsText) {
-                $hex = quest_reference_formid_to_hex($normalized);
-                if ($hex === "") {
+                $canonical = quest_reference_canonicalize_formid_for_text_storage($formId);
+                if ($canonical === null || $canonical === '') {
                     continue;
                 }
-                $prepared[] = $hex;
+
+                $prepared[] = $canonical;
             } else {
+                $normalized = quest_reference_normalize_formid($formId);
+                if ($normalized === null || $normalized < 0) {
+                    continue;
+                }
+
                 $prepared[] = intval($normalized);
             }
         }
@@ -307,13 +404,13 @@ if (!function_exists('quest_reference_sql_formid_literal')) {
     function quest_reference_sql_formid_literal($formId, $storeAsText)
     {
         if ($storeAsText) {
-            $hex = quest_reference_formid_to_hex($formId);
-            if ($hex === "") {
+            $canonical = quest_reference_canonicalize_formid_for_text_storage($formId);
+            if ($canonical === null || $canonical === '') {
                 return null;
             }
 
-            $hexCn = $GLOBALS["db"]->escape($hex);
-            return "'{$hexCn}'";
+            $canonicalCn = $GLOBALS["db"]->escape($canonical);
+            return "'{$canonicalCn}'";
         }
 
         $normalized = quest_reference_normalize_formid($formId);

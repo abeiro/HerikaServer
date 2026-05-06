@@ -12,6 +12,10 @@ require_once("{$GLOBALS["ENGINE_ROOT"]}/service/lib/core_utils.php");
 require_once("{$GLOBALS["ENGINE_ROOT"]}/conf/conf.php");
 require_once("{$GLOBALS["ENGINE_ROOT"]}/lib/logger.php");
 
+if (isset($argv) && is_array($argv)) {
+    $GLOBALS["argv"] = $argv;
+}
+
 Logger::setCustomLog($GLOBALS["ENGINE_ROOT"]."log/manager.log");
 Logger::deleteLogIfTooLarge($GLOBALS["ENGINE_ROOT"]."log/manager.log");
 

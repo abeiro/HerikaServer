@@ -266,11 +266,13 @@ function cloneVoiceToInworld($voiceName, $voiceSamplePath) {
     $url = "https://api.inworld.ai/voices/v1/{$workspace}/voices:clone";
     
     // Get language from config
-    $language = $GLOBALS["TTS"]["INWORLD"]["language"] ?? 'EN_US';
+    $language = $GLOBALS["TTS"]["INWORLD"]["language"] ?? 'en-US';
     
     // Override language if set globally
     if (isset($GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"])) {
         $language = mapLanguageToInworld($GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]);
+    } else {
+        $language = mapLanguageToInworld($language);
     }
     
     // Read audio file and encode to base64
@@ -392,11 +394,13 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal', $outputFile = nul
     if ($temperature > 2.0) $temperature = 2.0;
     
     // Get language from config
-    $language = $GLOBALS["TTS"]["INWORLD"]["language"] ?? 'EN_US';
+    $language = $GLOBALS["TTS"]["INWORLD"]["language"] ?? 'en-US';
     
     // Override language if set globally
     if (isset($GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"])) {
         $language = mapLanguageToInworld($GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"]);
+    } else {
+        $language = mapLanguageToInworld($language);
     }
     
     // Prepare audio config
@@ -544,31 +548,58 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal', $outputFile = nul
  * Converts ISO 639-1 codes to Inworld regional codes
  * 
  * @param string $langCode ISO 639-1 language code (e.g., 'en', 'fr')
- * @return string Inworld language code (e.g., 'EN_US', 'FR_FR')
+ * @return string Inworld language code (e.g., 'en-US', 'fr-FR')
  */
 function mapLanguageToInworld($langCode) {
     $langMap = array(
-        'en' => 'EN_US',
-        'zh' => 'ZH_CN',
-        'ko' => 'KO_KR',
-        'ja' => 'JA_JP',
-        'ru' => 'RU_RU',
-        'it' => 'IT_IT',
-        'es' => 'ES_ES',
-        'pt' => 'PT_BR',
-        'de' => 'DE_DE',
-        'fr' => 'FR_FR',
-        'ar' => 'AR_SA',
-        'pl' => 'PL_PL',
-        'nl' => 'NL_NL',
-        'hi' => 'HI_IN',
-        'he' => 'HE_IL'
+        'en' => 'en-US',
+        'zh' => 'zh-CN',
+        'ko' => 'ko-KR',
+        'ja' => 'ja-JP',
+        'ru' => 'ru-RU',
+        'it' => 'it-IT',
+        'es' => 'es-ES',
+        'pt' => 'pt-BR',
+        'de' => 'de-DE',
+        'fr' => 'fr-FR',
+        'ar' => 'ar-SA',
+        'pl' => 'pl-PL',
+        'nl' => 'nl-NL',
+        'hi' => 'hi-IN',
+        'he' => 'he-IL'
+    );
+    $legacyLangMap = array(
+        'EN_US' => 'en-US',
+        'ZH_CN' => 'zh-CN',
+        'KO_KR' => 'ko-KR',
+        'JA_JP' => 'ja-JP',
+        'RU_RU' => 'ru-RU',
+        'IT_IT' => 'it-IT',
+        'ES_ES' => 'es-ES',
+        'PT_BR' => 'pt-BR',
+        'DE_DE' => 'de-DE',
+        'FR_FR' => 'fr-FR',
+        'AR_SA' => 'ar-SA',
+        'PL_PL' => 'pl-PL',
+        'NL_NL' => 'nl-NL',
+        'HI_IN' => 'hi-IN',
+        'HE_IL' => 'he-IL'
     );
     
+    $langCode = trim((string) $langCode);
     $langLower = strtolower($langCode);
-    
-    // If already in Inworld format, return as-is
-    if (preg_match('/^[A-Z]{2}_[A-Z]{2}$/', $langCode)) {
+
+    if ($langCode === '') {
+        return 'en-US';
+    }
+
+    // Convert legacy underscore codes to the new BCP-47 format.
+    if (isset($legacyLangMap[$langCode])) {
+        return $legacyLangMap[$langCode];
+    }
+
+    // If already in BCP-47 format, preserve the configured value.
+    if (preg_match('/^[a-z]{2}-[A-Z]{2}$/', $langCode)) {
         return $langCode;
     }
     
@@ -577,9 +608,15 @@ function mapLanguageToInworld($langCode) {
         return $langMap[$langLower];
     }
     
-    // Default to EN_US if unknown
-    Logger::info("Unknown language code '{$langCode}', defaulting to EN_US");
-    return 'EN_US';
+    // Try tolerant normalization for inputs like en_us or EN-US.
+    $langNormalized = str_replace('_', '-', $langCode);
+    if (preg_match('/^([A-Za-z]{2})-([A-Za-z]{2})$/', $langNormalized, $matches)) {
+        return strtolower($matches[1]) . '-' . strtoupper($matches[2]);
+    }
+
+    // Default to en-US if unknown
+    Logger::info("Unknown Inworld language code '{$langCode}', defaulting to en-US");
+    return 'en-US';
 }
 
 /**

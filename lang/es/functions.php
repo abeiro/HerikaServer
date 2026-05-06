@@ -26,7 +26,6 @@ $F_TRANSLATIONS_LOCAL["StopWalk"]="Detiene todas las acciones de {$GLOBALS["HERI
 $F_TRANSLATIONS_LOCAL["TravelTo"]="Solo usar si {$GLOBALS["PLAYER_NAME"]} lo ordena explícitamente. Guía a {$GLOBALS["PLAYER_NAME"]} a un Pueblo o Ciudad";
 $F_TRANSLATIONS_LOCAL["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} intenta recordar información. RESPONDE con hashtags";
 $F_TRANSLATIONS_LOCAL["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} espera y se mantiene en el lugar actual";
-$F_TRANSLATIONS_LOCAL["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} da el objeto (propiedad target) a {$GLOBALS["PLAYER_NAME"]} (propiedad listener)";
 $F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["HERIKA_NAME"]} toma la cantidad (propiedad target) de oro de {$GLOBALS["PLAYER_NAME"]} (propiedad listener)";
 $F_TRANSLATIONS_LOCAL["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} sigue a {$GLOBALS["PLAYER_NAME"]}";
 $F_TRANSLATIONS_LOCAL["CastSpell"]="{$GLOBALS["HERIKA_NAME"]} lanza un hechizo sobre el actor objetivo. Debe especificar el nombre del hechizo desde <spells> y el nombre del actor objetivo. Usar 'self' como objetivo para hechizos auto-dirigidos.";
@@ -56,8 +55,7 @@ $F_RETURNMESSAGES_LOCAL["StopWalk"]="Detiene todas las acciones de {$GLOBALS["HE
 $F_RETURNMESSAGES_LOCAL["TravelTo"]="{$GLOBALS["HERIKA_NAME"]} comienza a viajar hacia #TARGET#";
 $F_RETURNMESSAGES_LOCAL["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} intenta recordar información. SOLO RESPONDE algo como 'Déjame pensar' y espera";
 $F_RETURNMESSAGES_LOCAL["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} espera y se mantiene en el lugar";
-$F_RETURNMESSAGES_LOCAL["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} dio #TARGET# a {$GLOBALS["PLAYER_NAME"]}. Si esto es una transacción, tal vez se necesite TakeGoldFromPlayer";
-$F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["PLAYER_NAME"]} dio #TARGET# monedas a {$GLOBALS["HERIKA_NAME"]}. Si esto es una transacción, tal vez se necesite GiveItemToPlayer";
+$F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["PLAYER_NAME"]} dio #TARGET# monedas a {$GLOBALS["HERIKA_NAME"]}. Si esto es una transacción, tal vez se necesite GiveItemTo";
 $F_RETURNMESSAGES_LOCAL["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} sigue a {$GLOBALS["PLAYER_NAME"]}";
 $F_RETURNMESSAGES_LOCAL["CastSpell"]="{$GLOBALS["HERIKA_NAME"]} lanza #ITEM# sobre #TARGET#";
 
@@ -88,8 +86,7 @@ $F_NAMES_LOCAL["StopWalk"]="DetenerCaminata";
 $F_NAMES_LOCAL["TravelTo"]="ViajarHacia";
 $F_NAMES_LOCAL["SearchMemory"]="IntentarRecordar";
 $F_NAMES_LOCAL["WaitHere"]="EsperarAqui";
-$F_NAMES_LOCAL["GiveItemToPlayer"]="DarObjetoAJugador";
 $F_NAMES_LOCAL["TakeGoldFromPlayer"]="TomarOroDeJugador";
-$F_NAMES_LOCAL["FollowPlayer"]="SeguirJugador";
+$F_NAMES_LOCAL["FollowPlayer"]="Seguir{$GLOBALS["PLAYER_NAME"]}";
 $F_NAMES_LOCAL["CastSpell"]="LanzarHechizo";
 

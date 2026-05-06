@@ -31,7 +31,7 @@ $timestamp = $_GET['ts'] ?? time();
 $game_timestamp = $_GET['gamets'] ?? 0;
 $filename = $_GET['filename'] ?? '';
 
-if (!in_array($import_type, ['biography_import', 'oghma_import', 'dynamic_oghma_import', 'description_import'])) {
+if (!in_array($import_type, ['biography_import', 'oghma_import', 'dynamic_oghma_import', 'description_import', 'custom_action_import'])) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Invalid import type']);
     exit;
