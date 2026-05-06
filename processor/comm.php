@@ -611,9 +611,6 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 appendUniqueActorName($audiblePeople, $companionName);
             }
         }
-        if ($speechListener !== "") {
-            appendUniqueActorName($audiblePeople, $speechListener);
-        }
         if ($speechSpeaker !== "") {
             appendUniqueActorName($audiblePeople, $speechSpeaker);
         }
@@ -688,28 +685,34 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $normalizedPlayerName = normalizeActorNameForComparison($playerName);
         $normalizedSpeechSpeaker = normalizeActorNameForComparison($speechSpeaker);
         $normalizedSpeechListener = normalizeActorNameForComparison($speechListener);
+        $appendAudienceName = function (&$names, $actorName) {
+            $actorName = trim((string)$actorName);
+            if ($actorName === "") {
+                return;
+            }
+            if (normalizeActorNameForComparison($actorName) === "unknown") {
+                return;
+            }
+            appendUniqueActorName($names, $actorName);
+        };
         $isPlayerSpeech = ($normalizedSpeechSpeaker !== "" && $normalizedPlayerName !== "" &&
                            $normalizedSpeechSpeaker === $normalizedPlayerName);
         $isNpcReplyToPlayer = (!$isPlayerSpeech && $normalizedPlayerName !== "" &&
-                               ($normalizedSpeechListener === $normalizedPlayerName ||
-                                $normalizedSpeechListener === "" ||
-                                $normalizedSpeechListener === "unknown"));
+                               $normalizedSpeechListener === $normalizedPlayerName);
         $speechGamets = intval($gameRequest[2]);
         $chimModeRow = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
         $chimMode = isset($chimModeRow["value"]) ? strtoupper(trim((string)$chimModeRow["value"])) : "STANDARD";
         $isWhisperMode = ($chimMode === "WHISPER");
-
+        $payloadCompanionCount = (isset($speech["companions"]) && is_array($speech["companions"])) ? count($speech["companions"]) : 0;
+        $hasSpatialReason = isset($speech["spatial_reason"]) && trim((string)$speech["spatial_reason"]) !== "";
+        $hasSpatialVolume = array_key_exists("spatial_volume", $speech);
+        $hasAuthoritativeSpeechAudience = ($payloadCompanionCount > 0 && ($hasSpatialReason || $hasSpatialVolume));
         $audiblePeoplePipe = $companionsReformatStr;
         if ($audiblePeoplePipe === "") {
             $failClosedPeople = [];
-            if ($speechListener !== "") {
-                appendUniqueActorName($failClosedPeople, $speechListener);
-            }
-            if ($speechSpeaker !== "") {
-                appendUniqueActorName($failClosedPeople, $speechSpeaker);
-            }
+            $appendAudienceName($failClosedPeople, $speechListener);
+            $appendAudienceName($failClosedPeople, $speechSpeaker);
             $audiblePeoplePipe = normalizePeoplePipeList($failClosedPeople);
-            error_log("[SPATIAL_SCOPE] _speech missing companions for gamets {$speechGamets}; fail-closed people={$audiblePeoplePipe}");
         }
 
         if ($audiblePeoplePipe !== "") {
@@ -740,119 +743,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 );
             }
 
-            if ($isNpcReplyToPlayer && $speechSpeaker !== "") {
-                $usedWhisperSnapshot = false;
-                if ($isWhisperMode) {
-                    $snapshotPeopleRow = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_whisper_people'");
-                    $snapshotTargetRow = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_whisper_target'");
-                    $snapshotUpdatedRow = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_whisper_updated'");
-                    $snapshotPeoplePipe = isset($snapshotPeopleRow["value"]) ? trim((string)$snapshotPeopleRow["value"]) : "";
-                    $snapshotTarget = isset($snapshotTargetRow["value"]) ? trim((string)$snapshotTargetRow["value"]) : "";
-                    $snapshotUpdated = isset($snapshotUpdatedRow["value"]) ? intval($snapshotUpdatedRow["value"]) : 0;
-                    $snapshotIsFresh = ($snapshotUpdated > 0 && (time() - $snapshotUpdated) <= 120);
-                    $snapshotTargetMatches = (
-                        $snapshotTarget === "" ||
-                        normalizeActorNameForComparison($snapshotTarget) === normalizeActorNameForComparison($speechSpeaker)
-                    );
-
-                    if ($snapshotPeoplePipe !== "" && $snapshotIsFresh && $snapshotTargetMatches) {
-                        $baselineNames = parsePeoplePipeList($snapshotPeoplePipe);
-                        $baselineNames[] = $speechListener;
-                        $baselineNames[] = $speechSpeaker;
-                        $baselinePipe = normalizePeoplePipeList($baselineNames);
-                        if ($baselinePipe !== "") {
-                            $audiblePeoplePipe = $baselinePipe;
-                            $usedWhisperSnapshot = true;
-                            error_log("[SPATIAL_SCOPE] Whisper snapshot SOT people={$baselinePipe}");
-                        }
-                    }
-                }
-
-                if (!$usedWhisperSnapshot) {
-                    $recentInputRows = $db->fetchAll(
-                        "SELECT rowid, data, people, localts
-                         FROM eventlog
-                         WHERE type IN ('inputtext','inputtext_s','ginputtext','ginputtext_s','narrator_inputtext')
-                           AND localts > " . (time() - 600) . "
-                          ORDER BY rowid DESC
-                          LIMIT 80"
-                    );
-
-                    $sotInputRow = null;
-                    foreach ((array)$recentInputRows as $inputRow) {
-                        $inputData = isset($inputRow["data"]) ? (string)$inputRow["data"] : "";
-                        $inputPeople = isset($inputRow["people"]) ? trim((string)$inputRow["people"]) : "";
-                        if ($inputData === "" || $inputPeople === "") {
-                            continue;
-                        }
-
-                        $inputSpeaker = extractSpeakerNameFromInputEvent($inputData);
-                        if (normalizeActorNameForComparison($inputSpeaker) !== $normalizedPlayerName) {
-                            continue;
-                        }
-
-                        $inputTargetMeta = extractTalkTargetMetadata($inputData);
-                        $inputPeopleNames = parsePeoplePipeList($inputPeople);
-                        $inputIncludesSpeaker = talkTargetsIncludeName($inputPeopleNames, $speechSpeaker);
-                        $inputIncludesPlayer = talkTargetsIncludeName($inputPeopleNames, $playerName);
-                        $isDirectedTargetMatch = (
-                            $inputTargetMeta["hasExplicitTarget"] &&
-                            !$inputTargetMeta["isBroadcast"] &&
-                            !empty($inputTargetMeta["targets"]) &&
-                            talkTargetsIncludeName($inputTargetMeta["targets"], $speechSpeaker)
-                        );
-
-                        // Prefer explicit target metadata, but allow people-pipe fallback for
-                        // malformed/rewritten "Talking to ..." tags when speaker+player are both present.
-                        if (!$isDirectedTargetMatch && !($inputIncludesSpeaker && $inputIncludesPlayer)) {
-                            continue;
-                        }
-
-                        $sotInputRow = $inputRow;
-                        break;
-                    }
-
-                    if (is_array($sotInputRow)) {
-                        $baselineNames = parsePeoplePipeList($sotInputRow["people"] ?? "");
-                        $baselineNames[] = $speechListener;
-                        $baselineNames[] = $speechSpeaker;
-                        $baselinePipe = normalizePeoplePipeList($baselineNames);
-                        if ($baselinePipe !== "") {
-                            $audiblePeoplePipe = $baselinePipe;
-                            error_log("[SPATIAL_SCOPE] NPC->player input SOT row " .
-                                      intval($sotInputRow["rowid"] ?? 0) .
-                                      " people={$baselinePipe}");
-                        }
-                    }
-                }
-            }
-
-            if ($isPlayerSpeech) {
-                $latestInputRow = $db->fetchOne(
-                    "SELECT rowid, type, people, data
-                     FROM eventlog
-                     WHERE gamets={$speechGamets}
-                       AND type IN ('inputtext','inputtext_s','ginputtext','ginputtext_s','narrator_inputtext')
-                     ORDER BY ts DESC, rowid DESC
-                     LIMIT 1"
-                );
-
-                if (is_array($latestInputRow) && isset($latestInputRow["rowid"])) {
-                    $rowId = intval($latestInputRow["rowid"]);
-                    $latestInputType = strtolower(trim((string)($latestInputRow["type"] ?? "")));
-                    if ($latestInputType === "narrator_inputtext" && !empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"])) {
-                        error_log("[SPATIAL_SCOPE] Preserved narrator_inputtext row {$rowId} private scope");
-                    } else {
-                        $escapedPeople = $db->escape($audiblePeoplePipe);
-                        $db->update("eventlog", "people='{$escapedPeople}'", "rowid={$rowId}");
-                        error_log("[SPATIAL_SCOPE] Updated input eventlog row {$rowId} people={$audiblePeoplePipe}");
-                    }
-                } else {
-                    error_log("[SPATIAL_SCOPE] No inputtext row found for gamets {$speechGamets} to update");
-                }
-            }
-
-            // NPC speech: align matching chat eventlog row to spatial audibility.
+            // _speech no longer mutates eventlog.people. It only marks matching rows as spoken.
             if (!$isPlayerSpeech && $speechSpeaker !== "") {
                 $chatRowId = 0;
                 $rowsToUpdate = $matchedUtteranceRowIds;
@@ -1009,57 +900,16 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 }
 
                 if ($chatRowId > 0) {
-                    $escapedPeople = $db->escape($audiblePeoplePipe);
                     if (empty($rowsToUpdate)) {
                         $rowsToUpdate = [intval($chatRowId)];
                     }
-
-                    $preserveNarratorAudience = (
-                        empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) &&
-                        normalizeActorNameForComparison($speechSpeaker) === "the narrator"
-                    );
 
                     foreach ($rowsToUpdate as $rowIdToUpdate) {
                         if ($rowIdToUpdate <= 0) {
                             continue;
                         }
-
-                        if ($preserveNarratorAudience) {
-                            $existingRow = $db->fetchOne("SELECT people FROM eventlog WHERE rowid={$rowIdToUpdate} LIMIT 1");
-                            $existingPeoplePipe = isset($existingRow["people"]) ? trim((string)$existingRow["people"]) : "";
-                            if ($existingPeoplePipe !== "") {
-                                $existingNames = parsePeoplePipeList($existingPeoplePipe);
-                                $existingHasExtraAudience = false;
-                                foreach ($existingNames as $existingName) {
-                                    $existingNormalized = normalizeActorNameForComparison($existingName);
-                                    if ($existingNormalized === "" ||
-                                        $existingNormalized === "the narrator" ||
-                                        $existingNormalized === $normalizedPlayerName) {
-                                        continue;
-                                    }
-                                    $existingHasExtraAudience = true;
-                                    break;
-                                }
-
-                                if ($existingHasExtraAudience) {
-                                    $db->update("eventlog", "delivery_state='spoken'", "rowid={$rowIdToUpdate}");
-                                    error_log("[SPATIAL_SCOPE] Preserved narrator chat row {$rowIdToUpdate} broader people={$existingPeoplePipe}");
-                                    continue;
-                                }
-                            }
-                        }
-
-                        $db->update("eventlog", "people='{$escapedPeople}', delivery_state='spoken'", "rowid={$rowIdToUpdate}");
+                        $db->update("eventlog", "delivery_state='spoken'", "rowid={$rowIdToUpdate}");
                     }
-
-                    if (count($rowsToUpdate) > 1) {
-                        error_log("[SPATIAL_SCOPE] Updated chat eventlog rows {" . implode(",", $rowsToUpdate) .
-                                  "} people={$audiblePeoplePipe}");
-                    } else {
-                        error_log("[SPATIAL_SCOPE] Updated chat eventlog row {$chatRowId} people={$audiblePeoplePipe}");
-                    }
-                } else {
-                    error_log("[SPATIAL_SCOPE] No chat row matched for speaker '{$speechSpeaker}' to update");
                 }
             } elseif (!empty($matchedUtteranceRowIds)) {
                 foreach ($matchedUtteranceRowIds as $matchedRowId) {

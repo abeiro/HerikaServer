@@ -125,6 +125,7 @@ MAIN FLOW
 
 $gameRequest = explode("|", $receivedData);
 $GLOBALS["gameRequest"] = &$gameRequest;
+unset($GLOBALS["CHIM_TURN_PEOPLE_SNAPSHOT"]);
 
 
 $startTime = microtime(true);
@@ -1979,36 +1980,48 @@ if (!isset($GLOBALS["CACHE_PARTY"])) {
     $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
 } 
 
-if (in_array($gameRequest[0],["inputtext_s"])) {    // Stealth-targeted follower: scope to target NPC only
+if (in_array($gameRequest[0],["inputtext_s"]) && chimDecodeAudienceSnapshotField($gameRequest[4] ?? "") === "") {    // Stealth-targeted follower: scope to target NPC only
     $GLOBALS["CACHE_PEOPLE"]=$GLOBALS["HERIKA_NAME"];
 }
 
 // Scope all incoming events through spatial awareness when possible.
-$scopedPeople = buildScopedPeopleForEvent(
-    $gameRequest[0] ?? "",
-    $gameRequest[3] ?? "",
-    $GLOBALS["HERIKA_NAME"] ?? "",
-    $GLOBALS["CACHE_PEOPLE"] ?? ""
+$playerInputEventTypes = ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"];
+$requestAudienceSnapshot = chimDecodeAudienceSnapshotField($gameRequest[4] ?? "");
+$hasAuthoritativeRequestAudience = (
+    in_array($gameRequest[0] ?? "", $playerInputEventTypes, true) &&
+    $requestAudienceSnapshot !== ""
 );
-if (!empty($scopedPeople)) {
-    $GLOBALS["CACHE_PEOPLE"] = $scopedPeople;
-    Logger::info("Scoped CACHE_PEOPLE for {$gameRequest[0]}: " . $GLOBALS["CACHE_PEOPLE"]);
-}
 
-if (!empty($GLOBALS["HERIKA_NAME"])) {
-    $shouldAppendListener = shouldAutoAppendListenerToPeople(
+if ($hasAuthoritativeRequestAudience) {
+    $GLOBALS["CACHE_PEOPLE"] = $requestAudienceSnapshot;
+    Logger::info("Scoped CACHE_PEOPLE for {$gameRequest[0]} from request audience snapshot: " . $GLOBALS["CACHE_PEOPLE"]);
+} else {
+    $scopedPeople = buildScopedPeopleForEvent(
         $gameRequest[0] ?? "",
         $gameRequest[3] ?? "",
-        $GLOBALS["HERIKA_NAME"]
+        $GLOBALS["HERIKA_NAME"] ?? "",
+        $GLOBALS["CACHE_PEOPLE"] ?? ""
     );
-    $currentPeople = isset($GLOBALS["CACHE_PEOPLE"]) ? (string)$GLOBALS["CACHE_PEOPLE"] : "";
-    $peopleTokens = array_values(array_filter(array_map('trim', explode('|', $currentPeople))));
-    if ($shouldAppendListener && !in_array($GLOBALS["HERIKA_NAME"], $peopleTokens, true)) {
-        $peopleTokens[] = $GLOBALS["HERIKA_NAME"];
-        $GLOBALS["CACHE_PEOPLE"] = "|" . implode("|", $peopleTokens) . "|";
-        Logger::info("Added listener to CACHE_PEOPLE: " . $GLOBALS["HERIKA_NAME"]);
-    } elseif (!$shouldAppendListener) {
-        Logger::info("Skipped listener auto-append for scoped input event: " . $GLOBALS["HERIKA_NAME"]);
+    if (!empty($scopedPeople)) {
+        $GLOBALS["CACHE_PEOPLE"] = $scopedPeople;
+        Logger::info("Scoped CACHE_PEOPLE for {$gameRequest[0]}: " . $GLOBALS["CACHE_PEOPLE"]);
+    }
+
+    if (!empty($GLOBALS["HERIKA_NAME"])) {
+        $shouldAppendListener = shouldAutoAppendListenerToPeople(
+            $gameRequest[0] ?? "",
+            $gameRequest[3] ?? "",
+            $GLOBALS["HERIKA_NAME"]
+        );
+        $currentPeople = isset($GLOBALS["CACHE_PEOPLE"]) ? (string)$GLOBALS["CACHE_PEOPLE"] : "";
+        $peopleTokens = array_values(array_filter(array_map('trim', explode('|', $currentPeople))));
+        if ($shouldAppendListener && !in_array($GLOBALS["HERIKA_NAME"], $peopleTokens, true)) {
+            $peopleTokens[] = $GLOBALS["HERIKA_NAME"];
+            $GLOBALS["CACHE_PEOPLE"] = "|" . implode("|", $peopleTokens) . "|";
+            Logger::info("Added listener to CACHE_PEOPLE: " . $GLOBALS["HERIKA_NAME"]);
+        } elseif (!$shouldAppendListener) {
+            Logger::info("Skipped listener auto-append for scoped input event: " . $GLOBALS["HERIKA_NAME"]);
+        }
     }
 }
 
@@ -2038,75 +2051,23 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
     }
     
     if ($shouldLog) {
-        $eventPeople = buildScopedPeopleForEvent(
-            $gameRequest[0] ?? "",
-            $gameRequest[3] ?? "",
-            $GLOBALS["HERIKA_NAME"] ?? "",
-            $GLOBALS["CACHE_PEOPLE"] ?? ""
-        );
-        if (!empty($eventPeople)) {
-            $GLOBALS["CACHE_PEOPLE"] = $eventPeople;
+        if ($hasAuthoritativeRequestAudience) {
+            $eventPeople = $requestAudienceSnapshot;
+            $GLOBALS["CACHE_PEOPLE"] = $requestAudienceSnapshot;
+        } else {
+            $eventPeople = buildScopedPeopleForEvent(
+                $gameRequest[0] ?? "",
+                $gameRequest[3] ?? "",
+                $GLOBALS["HERIKA_NAME"] ?? "",
+                $GLOBALS["CACHE_PEOPLE"] ?? ""
+            );
+            if (!empty($eventPeople)) {
+                $GLOBALS["CACHE_PEOPLE"] = $eventPeople;
+            }
         }
 
-        $isPlayerInputEvent = in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s"], true);
-        if ($isPlayerInputEvent) {
-
-            // Race-safe spatial scope: if _speech arrived before inputtext, expand to audible companions now.
-            $speakerName = extractSpeakerNameFromInputEvent($gameRequest[3] ?? "");
-            $playerName = isset($GLOBALS["PLAYER_NAME"]) ? trim((string) $GLOBALS["PLAYER_NAME"]) : "";
-            $isPlayerSpeaker = ($speakerName !== "" && $playerName !== "" && strcasecmp($speakerName, $playerName) === 0);
-            if ($isPlayerSpeaker) {
-                $speechGamets = intval($gameRequest[2] ?? 0);
-                if ($speechGamets > 0) {
-                    $playerEscaped = $db->escape($playerName);
-                    $speechRow = $db->fetchOne(
-                        "SELECT companions, listener, speaker, topic
-                         FROM speech
-                         WHERE gamets={$speechGamets}
-                           AND LOWER(speaker)=LOWER('{$playerEscaped}')
-                         ORDER BY ts DESC, rowid DESC
-                         LIMIT 1"
-                    );
-
-                    if (is_array($speechRow)) {
-                        $speechTopic = isset($speechRow["topic"]) ? trim((string) $speechRow["topic"]) : "";
-                        $hasSpatialTopic = stripos($speechTopic, "spatial:") !== false;
-                        if (!$hasSpatialTopic) {
-                            error_log("[SPATIAL_SCOPE] main.php skipped speech companion apply for gamets {$speechGamets}: topic lacks spatial metadata");
-                        }
-
-                        if ($hasSpatialTopic) {
-                        $spatialPeopleNames = [];
-                        $companionsPipe = isset($speechRow["companions"]) ? trim((string) $speechRow["companions"]) : "";
-                        if ($companionsPipe !== "") {
-                            foreach (explode("|", $companionsPipe) as $companionName) {
-                                $companionName = trim((string) $companionName);
-                                if ($companionName !== "") {
-                                    $spatialPeopleNames[] = $companionName;
-                                }
-                            }
-                        }
-
-                        $speechListener = isset($speechRow["listener"]) ? trim((string) $speechRow["listener"]) : "";
-                        if ($speechListener !== "") {
-                            $spatialPeopleNames[] = $speechListener;
-                        }
-
-                        $speechSpeaker = isset($speechRow["speaker"]) ? trim((string) $speechRow["speaker"]) : "";
-                        if ($speechSpeaker !== "") {
-                            $spatialPeopleNames[] = $speechSpeaker;
-                        }
-
-                        $spatialPeoplePipe = normalizePeoplePipeList($spatialPeopleNames);
-                        if ($spatialPeoplePipe !== "") {
-                            $eventPeople = $spatialPeoplePipe;
-                            $GLOBALS["CACHE_PEOPLE"] = $spatialPeoplePipe;
-                            error_log("[SPATIAL_SCOPE] main.php applied speech people for gamets {$speechGamets}: {$spatialPeoplePipe}");
-                        }
-                        }
-                    }
-                }
-            }
+        if (in_array($gameRequest[0], $playerInputEventTypes, true)) {
+            chimSetCurrentTurnPeopleSnapshot($eventPeople);
         }
 
         $eventlogInsert = array(

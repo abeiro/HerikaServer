@@ -2563,6 +2563,55 @@ function parsePeoplePipeList($peoplePipe)
     return $cleanPeople;
 }
 
+function chimDecodeAudienceSnapshotField($rawField)
+{
+    $rawField = trim((string)$rawField);
+    if ($rawField === "") {
+        return "";
+    }
+
+    $decoded = base64_decode($rawField, true);
+    if ($decoded === false || $decoded === "") {
+        return "";
+    }
+
+    $payload = json_decode($decoded, true);
+    if (!is_array($payload)) {
+        return "";
+    }
+
+    if (!empty($payload["people"]) && is_string($payload["people"])) {
+        return normalizePeoplePipeList(parsePeoplePipeList($payload["people"]));
+    }
+
+    if (!empty($payload["companions"]) && is_array($payload["companions"])) {
+        return normalizePeoplePipeList($payload["companions"]);
+    }
+
+    return "";
+}
+
+function chimSetCurrentTurnPeopleSnapshot($peoplePipe)
+{
+    $normalized = normalizePeoplePipeList(parsePeoplePipeList($peoplePipe));
+    if ($normalized === "") {
+        unset($GLOBALS["CHIM_TURN_PEOPLE_SNAPSHOT"]);
+        return "";
+    }
+
+    $GLOBALS["CHIM_TURN_PEOPLE_SNAPSHOT"] = $normalized;
+    return $normalized;
+}
+
+function chimGetCurrentTurnPeopleSnapshot()
+{
+    if (!isset($GLOBALS["CHIM_TURN_PEOPLE_SNAPSHOT"])) {
+        return "";
+    }
+
+    return normalizePeoplePipeList(parsePeoplePipeList($GLOBALS["CHIM_TURN_PEOPLE_SNAPSHOT"]));
+}
+
 function normalizeDialogTextForComparison($text)
 {
     $text = trim((string)$text);
@@ -4061,7 +4110,6 @@ function buildScopedPeopleFromSpatialEvidence($eventType, $eventData, $listenerN
 
         $scopedFromSpatial = normalizePeoplePipeList($bestSpatialPeople);
         if ($scopedFromSpatial !== "") {
-            error_log("[SCOPE_GENERIC] type='{$eventType}' spatial_scoped='{$scopedFromSpatial}'");
             return $scopedFromSpatial;
         }
     }
@@ -4069,7 +4117,6 @@ function buildScopedPeopleFromSpatialEvidence($eventType, $eventData, $listenerN
     if (isSpellcastEventType($eventType) && $fallbackPeople !== "") {
         $spellFallbackScoped = mergeParticipantsWithPeoplePipe($participants, $fallbackPeople);
         if ($spellFallbackScoped !== "") {
-            error_log("[SCOPE_GENERIC] type='{$eventType}' spell_fallback_scoped='{$spellFallbackScoped}'");
             return $spellFallbackScoped;
         }
     }
@@ -4077,7 +4124,6 @@ function buildScopedPeopleFromSpatialEvidence($eventType, $eventData, $listenerN
     if (!empty($participants)) {
         $participantScoped = normalizePeoplePipeList($participants);
         if ($participantScoped !== "") {
-            error_log("[SCOPE_GENERIC] type='{$eventType}' participant_scoped='{$participantScoped}'");
             return $participantScoped;
         }
     }
@@ -4093,13 +4139,51 @@ function buildScopedPeopleForChatEvent($eventData, $fallbackPeople = "")
     }
 
     if (shouldBroadcastNarratorChatToNearbyPeople($eventData, $fallbackPeople)) {
-        error_log("[SCOPE_CHAT] narrator_broadcast_scoped='{$fallbackPeople}'");
         return $fallbackPeople;
     }
 
+    $hasContextLocationPrefix = preg_match('/^\s*\(\s*context location:/iu', $eventData) === 1;
+
+    if (stripos($eventData, ' background chat)') !== false) {
+        $speakerName = extractSpeakerNameFromChatEvent($eventData);
+        $backgroundNames = parsePeoplePipeList(DataBeingsInRange());
+        if (empty($backgroundNames)) {
+            $backgroundNames = parsePeoplePipeList($fallbackPeople);
+        }
+        if ($speakerName !== "") {
+            appendUniqueActorName($backgroundNames, $speakerName);
+        }
+        $backgroundScoped = normalizePeoplePipeList($backgroundNames);
+        if ($backgroundScoped !== "") {
+            return $backgroundScoped;
+        }
+    }
+
     $targetMeta = extractTalkTargetMetadata($eventData);
+    if ($hasContextLocationPrefix) {
+        $speakerName = extractSpeakerNameFromChatEvent($eventData);
+        $contextNames = parsePeoplePipeList(DataBeingsInRange());
+        if (empty($contextNames)) {
+            $contextNames = parsePeoplePipeList($fallbackPeople);
+        }
+        if ($speakerName !== "") {
+            appendUniqueActorName($contextNames, $speakerName);
+        }
+        if (!empty($targetMeta["targets"])) {
+            foreach ($targetMeta["targets"] as $targetName) {
+                $targetName = trim((string)$targetName);
+                if ($targetName !== "") {
+                    appendUniqueActorName($contextNames, $targetName);
+                }
+            }
+        }
+        $contextScoped = normalizePeoplePipeList($contextNames);
+        if ($contextScoped !== "") {
+            return $contextScoped;
+        }
+    }
+
     if ($targetMeta["isBroadcast"]) {
-        error_log("[SCOPE_CHAT] Broadcast target detected; keeping fallback people");
         return $fallbackPeople;
     }
 
@@ -4129,14 +4213,12 @@ function buildScopedPeopleForChatEvent($eventData, $fallbackPeople = "")
         if ($speakerName !== "" && $primaryTarget !== "") {
             $sotPeople = lookupConversationPeopleSourceOfTruth($speakerName, $primaryTarget, 300);
             if ($sotPeople !== "") {
-                error_log("[SCOPE_CHAT] speaker='{$speakerName}' sot_scoped='{$sotPeople}'");
                 return $sotPeople;
             }
         }
 
         $scopedPeople = normalizePeoplePipeList($participants);
         if ($scopedPeople !== "") {
-            error_log("[SCOPE_CHAT] speaker='{$speakerName}' targeted_scoped='{$scopedPeople}'");
             return $scopedPeople;
         }
     }
@@ -4162,14 +4244,12 @@ function buildScopedPeopleForChatEvent($eventData, $fallbackPeople = "")
 
         $spatialScoped = normalizePeoplePipeList($spatialPeople);
         if ($spatialScoped !== "") {
-            error_log("[SCOPE_CHAT] speaker='{$speakerName}' spatial_scoped='{$spatialScoped}'");
             return $spatialScoped;
         }
     }
 
     $scopedPeople = normalizePeoplePipeList($participants);
     if ($scopedPeople !== "") {
-        error_log("[SCOPE_CHAT] speaker='{$speakerName}' scoped='{$scopedPeople}'");
         return $scopedPeople;
     }
 
@@ -4402,7 +4482,14 @@ function logEvent($dataArray,$forcePeople='')
             $dataArray[2] = $new_gts;
         }
 
+        $eventType = strtolower((string)($dataArray[0] ?? ""));
         $defaultPeopleFallback = $GLOBALS["CACHE_PEOPLE_LIMITED"];
+        if ($eventType === "infoloc") {
+            $defaultPeopleFallback = DataBeingsInCloseRange(false);
+            if ($defaultPeopleFallback === "") {
+                $defaultPeopleFallback = DataBeingsInRange();
+            }
+        }
         if (isSpellcastEventType($dataArray[0] ?? "")) {
             $defaultPeopleFallback = DataBeingsInRange();
         }
@@ -4410,12 +4497,17 @@ function logEvent($dataArray,$forcePeople='')
         $eventPeople = ($forcePeople) ? $forcePeople : $defaultPeopleFallback;
         $hasForcedPeople = !empty($forcePeople);
         if (!$hasForcedPeople) {
-            $eventPeople = buildScopedPeopleForEvent(
-                $dataArray[0] ?? "",
-                $dataArray[3] ?? "",
-                $GLOBALS["HERIKA_NAME"] ?? "",
-                $eventPeople
-            );
+            $turnPeopleSnapshot = chimGetCurrentTurnPeopleSnapshot();
+            if (in_array($eventType, ["prechat", "chat"], true) && $turnPeopleSnapshot !== "") {
+                $eventPeople = $turnPeopleSnapshot;
+            } else {
+                $eventPeople = buildScopedPeopleForEvent(
+                    $dataArray[0] ?? "",
+                    $dataArray[3] ?? "",
+                    $GLOBALS["HERIKA_NAME"] ?? "",
+                    $eventPeople
+                );
+            }
         }
 
         $extraColumns = [];
