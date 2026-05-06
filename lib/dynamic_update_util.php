@@ -1095,6 +1095,8 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
             if (!is_array($entry)) return true;
             $content = isset($entry['content']) ? (string)$entry['content'] : '';
             if (strpos($content, '(Talking to The Narrator)') !== false) return false;
+            if (strpos($content, '(Whispering to The Narrator)') !== false) return false;
+            if (strpos($content, '(Shouting to The Narrator)') !== false) return false;
             if (strpos($content, 'The Narrator:') === 0) {
                 return $isContextNarratorLine($content);
             }

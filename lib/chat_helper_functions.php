@@ -1104,12 +1104,12 @@ function returnLines($lines,$writeOutput=true)
         $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
         $sentenceForSubtitles = $sentence; // Keep the original with narration
 
-        // Strip "(Talking to ...)" from player speech for cleaner subtitles,
+        // Strip trailing directed-dialogue tags from player speech for cleaner subtitles,
         // regardless of inline narration mode.
         $isPlayerSpeech = isset($GLOBALS["HERIKA_NAME"]) && strcasecmp((string)$GLOBALS["HERIKA_NAME"], "Player") === 0;
         if ($inlineNarrationEnabled || $isPlayerSpeech) {
-            $sentence = preg_replace('/\s*\(Talking to [^)]+\)\s*$/i', '', $sentence);
-            $sentenceForSubtitles = preg_replace('/\s*\(Talking to [^)]+\)\s*$/i', '', $sentenceForSubtitles);
+            $sentence = preg_replace('/\s*\((?:Talking|Whispering|Shouting)\s+to\s+[^)]+\)\s*$/i', '', $sentence);
+            $sentenceForSubtitles = preg_replace('/\s*\((?:Talking|Whispering|Shouting)\s+to\s+[^)]+\)\s*$/i', '', $sentenceForSubtitles);
         }
 
         // Check if we should split narration to The Narrator BEFORE unmoodSentence strips asterisks
@@ -1532,27 +1532,8 @@ function returnLines($lines,$writeOutput=true)
                     Logger::debug("Transliterated Japanese text to: $responseTextPhonetic");
                 }
                 
-                // Calculate volume boost from spatial volume first, with distance fallback.
-                // Shouting distance threshold
-                if (!defined('SHOUTING_DISTANCE_THRESHOLD')) {
-                    define('SHOUTING_DISTANCE_THRESHOLD', 800);
-                }
-                if (!defined('SHOUTING_VOLUME_BOOST')) {
-                    define('SHOUTING_VOLUME_BOOST', 1.3);
-                }
-                
                 $volumeBoost = 1.0;
-                $distance = isset($GLOBALS["LAST_SPEECH_DISTANCE"]) ? $GLOBALS["LAST_SPEECH_DISTANCE"] : 0.0;
-                $incomingSpatialVolume = isset($GLOBALS["LAST_SPEECH_VOLUME"]) ? floatval($GLOBALS["LAST_SPEECH_VOLUME"]) : null;
-                if ($incomingSpatialVolume !== null) {
-                    $incomingSpatialVolume = max(0.0, min(1.0, $incomingSpatialVolume));
-                    $volumeBoost = 1.0 + ((1.0 - $incomingSpatialVolume) * 0.3); // 1.0 .. 1.3 adaptive response
-                    Logger::info("Spatial volume {$incomingSpatialVolume}, applying adaptive volume boost: {$volumeBoost}");
-                } elseif ($distance > SHOUTING_DISTANCE_THRESHOLD) {
-                    $volumeBoost = SHOUTING_VOLUME_BOOST; // 30% louder for shouting
-                    Logger::info("Distance {$distance} > " . SHOUTING_DISTANCE_THRESHOLD . ", applying volume boost: {$volumeBoost}");
-                }
-                
+
                 // Output here with volumeBoost appended
                 echo "{$outBuffer["actor"]}|ScriptQueue|$responseForSubtitles/{$GLOBALS["SCRIPTLINE_EXPRESSION"]}/{$GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"]}/{$GLOBALS["SCRIPTLINE_ANIMATION"]}/$responseTextPhonetic/$volumeBoost/{$GLOBALS["SCRIPTLINE_RECHAT_TARGET"]}/{$currentUtteranceId}\r\n";
 
@@ -3271,7 +3252,7 @@ function chimSwitchActiveNpcProfile($npcName)
     return true;
 }
 
-function convertTalkingTagsToWhispering($eventData)
+function convertDirectedDialogueTagsToVerb($eventData, $verb)
 {
     $eventData = (string)$eventData;
     if ($eventData === "") {
@@ -3279,14 +3260,24 @@ function convertTalkingTagsToWhispering($eventData)
     }
 
     return preg_replace_callback(
-        '/\(\s*([Tt])alking to\s+([^()]+?)\s*\)/u',
-        static function ($matches) {
-            $prefix = ($matches[1] === 'T') ? 'Whispering' : 'whispering';
+        '/\(\s*([Tt]alking|[Ww]hispering|[Ss]houting)\s+to\s+([^()]+?)\s*\)/u',
+        static function ($matches) use ($verb) {
+            $prefix = ctype_upper(substr((string)$matches[1], 0, 1)) ? $verb : strtolower($verb);
             $target = trim((string)$matches[2]);
             return "({$prefix} to {$target})";
         },
         $eventData
     );
+}
+
+function convertTalkingTagsToWhispering($eventData)
+{
+    return convertDirectedDialogueTagsToVerb($eventData, 'Whispering');
+}
+
+function convertTalkingTagsToShouting($eventData)
+{
+    return convertDirectedDialogueTagsToVerb($eventData, 'Shouting');
 }
 
 function extractTalkTargetMetadata($eventData)
@@ -3302,7 +3293,7 @@ function extractTalkTargetMetadata($eventData)
         return $metadata;
     }
 
-    if (!preg_match('/\(\s*(?:(?:talking|whispering)\s+to|speaking\s+loudly\s+to)\s+([^()]+?)(?:\s+from\s+far\s+away)?\s*\)/i', $eventData, $matches)) {
+    if (!preg_match('/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+([^()]+?)(?:\s+from\s+far\s+away)?\s*\)/i', $eventData, $matches)) {
         return $metadata;
     }
 
@@ -3418,7 +3409,7 @@ function extractCoreUtteranceFromChatEvent($eventData)
         $eventData = trim((string)$matches[1]);
     }
 
-    $eventData = preg_replace('/\s*\(\s*(?:(?:talking|whispering)\s+to|speaking\s+loudly\s+to)\s+[^)]*\)\s*$/iu', '', $eventData);
+    $eventData = preg_replace('/\s*\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+[^)]*\)\s*$/iu', '', $eventData);
     return trim((string)$eventData);
 }
 

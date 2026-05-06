@@ -37,8 +37,9 @@ $FUNCTION_PARM_INSPECT[]=$GLOBALS["PLAYER_NAME"];
 require(__DIR__.DIRECTORY_SEPARATOR."prompts".DIRECTORY_SEPARATOR."command_prompt.php");
 
 if ($GLOBALS["OVERRIDE_DIALOGUE_TARGET"]) {
-    $isWhisperMode = isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_EXECUTION_MODE"]) === "WHISPER";
-    $dialogueTargetVerb = $isWhisperMode ? "Whispering to" : "Talking to";
+    $dialogueTargetVerb = function_exists('chimGetDialogueTargetVerb')
+        ? chimGetDialogueTargetVerb()
+        : "Talking to";
     if (isset($GLOBALS["USING_DEFAULT_PROFILE"])&&($GLOBALS["USING_DEFAULT_PROFILE"]))
         $DIALOGUE_TARGET="({$dialogueTargetVerb} Narrator)";
     else

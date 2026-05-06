@@ -246,7 +246,7 @@ if ($minimeEnabled) {
         $pattern     = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..
         $replacement = "";
         $TEST_TEXT   = preg_replace($pattern, $replacement, $gameRequest[3]); // // assistant vs user war
-        $pattern     = '/\(\s*(?:(?:talking|whispering)\s+to|speaking\s+loudly\s+to)\s+[^()]+(?:\s+from\s+far\s+away)?\s*\)/i';
+        $pattern     = '/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+[^()]+(?:\s+from\s+far\s+away)?\s*\)/i';
         $TEST_TEXT   = preg_replace($pattern, '', $TEST_TEXT);
 
         $command = json_decode(minimeTask($TEST_TEXT), true);

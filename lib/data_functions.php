@@ -1368,7 +1368,7 @@ function DataQuestJournal($quest)
 }
 
 function removeTalkingToOccurrences($input) {
-    $pattern = '/\(talking to [^()]+\)/i';
+    $pattern = '/\((?:talking|whispering|shouting)\s+to\s+[^()]+\)/i';
     preg_match_all($pattern, $input, $matches, PREG_OFFSET_CAPTURE);
 
     // Get all positions of the matches
@@ -1399,7 +1399,7 @@ function moveDialogueTargetSuffixToEnd($input) {
         return "";
     }
 
-    $pattern = '/\s*(\((?:talking|whispering)\s+to [^()]+?\)|\(speaking loudly to [^()]+?\))\s*/i';
+    $pattern = '/\s*(\((?:talking|whispering|shouting)\s+to [^()]+?\)|\(speaking loudly to [^()]+?\))\s*/i';
     if (preg_match_all($pattern, $input, $matches) !== 1 || empty($matches[1])) {
         return trim(preg_replace('/\s+/', ' ', $input));
     }
@@ -3597,17 +3597,17 @@ function DataRechatHistory()
 
 
 function extractDialogueTarget($string) {
-    // Check if the string contains "(talking to"
-    if ($string && strpos($string, '(talking to') !== false) {
+    // Check if the string contains a directed-dialogue tag.
+    if ($string && preg_match('/\((?:talking|whispering|shouting)\s+to\s+/i', $string)) {
         // Extract the target's name using regular expression
-        preg_match('/\(talking to ([^\)]+)\)/', $string, $matches);
+        preg_match('/\((?:talking|whispering|shouting)\s+to\s+([^\)]+)\)/i', $string, $matches);
         
         // Check if a match is found and extract the target's name
         if (isset($matches[1])) {
             $target = $matches[1];
 
-            // Remove the "(talking to ...)" part from the original string
-            $cleanedString = preg_replace('/\(talking to [^\)]+\)/', '', $string);
+            // Remove the directed-dialogue tag from the original string
+            $cleanedString = preg_replace('/\((?:talking|whispering|shouting)\s+to\s+[^\)]+\)/i', '', $string);
             if (strpos($cleanedString,"{$GLOBALS["HERIKA_NAME"]}:")===0) {
                 $cleanedString=str_replace("{$GLOBALS["HERIKA_NAME"]}:","",$cleanedString);
             }

@@ -42,8 +42,22 @@ Only perform actions and tool calling if your character would find it necessary 
 // Database Prompt (Command Coherent Prompt)
 $COMMAND_PROMPT_ENFORCE_ACTIONS="Choose coherent ACTION to obey {$GLOBALS["PLAYER_NAME"]}.";
 
-$isWhisperMode = isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_EXECUTION_MODE"]) === "WHISPER";
-$dialogueTargetVerb = $isWhisperMode ? "Whispering to" : "Talking to";
+if (!function_exists('chimGetDialogueTargetVerb')) {
+    function chimGetDialogueTargetVerb()
+    {
+        $mode = strtoupper((string)($GLOBALS["CHIM_EXECUTION_MODE"] ?? ""));
+        if ($mode === "WHISPER") {
+            return "Whispering to";
+        }
+        if ($mode === "SHOUT") {
+            return "Shouting to";
+        }
+
+        return "Talking to";
+    }
+}
+
+$dialogueTargetVerb = chimGetDialogueTargetVerb();
 $DIALOGUE_TARGET="({$dialogueTargetVerb} {$GLOBALS["HERIKA_NAME"]})";
 $MEMORY_OFFERING="";
 

@@ -152,12 +152,15 @@ $GLOBALS["db"] = $db;
 
 require_once($path . "processor" .DIRECTORY_SEPARATOR."chim_modes.php");
 
-// In whisper mode, normalize incoming dialogue tags so logs/prompts consistently show
-// "(whispering to X)" instead of "(talking to X)".
-if (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_EXECUTION_MODE"]) === "WHISPER") {
-    if (isset($gameRequest[3]) && is_string($gameRequest[3]) &&
-        in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext", "chat", "prechat", "rechat", "continue", "continue_group"], true)) {
+// In directed CHIM modes, normalize incoming dialogue tags so logs/prompts stay aligned
+// with the active speaking style.
+$chimExecutionMode = strtoupper((string)($GLOBALS["CHIM_EXECUTION_MODE"] ?? ""));
+if (isset($gameRequest[3]) && is_string($gameRequest[3]) &&
+    in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext", "chat", "prechat", "rechat", "continue", "continue_group"], true)) {
+    if ($chimExecutionMode === "WHISPER") {
         $gameRequest[3] = convertTalkingTagsToWhispering($gameRequest[3]);
+    } elseif ($chimExecutionMode === "SHOUT") {
+        $gameRequest[3] = convertTalkingTagsToShouting($gameRequest[3]);
     }
 }
 
@@ -826,7 +829,7 @@ if (isset($_GET["profile"])) {
             $currentProfileData = null;
 
             // Highest-confidence target extraction from player text payload.
-            if ($requestText !== "" && preg_match('/\(\s*(?:(?:talking|whispering)\s+to|speaking\s+loudly\s+to)\s+([^()]+?)(?:\s+from\s+far\s+away)?\s*\)/i', $requestText, $matches)) {
+            if ($requestText !== "" && preg_match('/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+([^()]+?)(?:\s+from\s+far\s+away)?\s*\)/i', $requestText, $matches)) {
                 $candidate = trim($matches[1]);
                 if ($candidate !== "") {
                     $fallbackNpcName = $candidate;
@@ -844,6 +847,7 @@ if (isset($_GET["profile"])) {
             $isNarratorScopedRequest = in_array($gameRequest[0], ["narrator_inputtext", "narration", "narrator_welcome"], true)
                 || stripos($requestText, '(Talking to The Narrator)') !== false
                 || stripos($requestText, '(Whispering to The Narrator)') !== false
+                || stripos($requestText, '(Shouting to The Narrator)') !== false
                 || ($fallbackNpcName !== null && strcasecmp($fallbackNpcName, "The Narrator") === 0);
 
             if ($fallbackNpcName !== null && strcasecmp($fallbackNpcName, "The Narrator") !== 0) {
@@ -2348,7 +2352,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $gameRequest[3]); // // assistant vs user war
         
-        $pattern = '/\(\s*(?:(?:talking|whispering)\s+to|speaking\s+loudly\s+to)\s+[^()]+(?:\s+from\s+far\s+away)?\s*\)/i';
+        $pattern = '/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+[^()]+(?:\s+from\s+far\s+away)?\s*\)/i';
         $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
         
         if (!in_array($gameRequest[0],["rechat","instruction"]) ) {// Dont use minime command force on rechat.
@@ -2431,7 +2435,7 @@ if ($GLOBALS["HERIKA_NAME"] !== "The Narrator") {
     $contextDataHistoric = array_values(array_filter($contextDataHistoric, function($entry) {
         if (!is_array($entry)) return true;
         $content = isset($entry['content']) ? (string)$entry['content'] : '';
-        if (preg_match('/\(\s*(?:Talking|Whispering|Speaking loudly)\s+to\s+The Narrator(?:\s+from\s+far\s+away)?\s*\)/i', $content)) return false;
+        if (preg_match('/\(\s*(?:Talking|Whispering|Shouting|Speaking loudly)\s+to\s+The Narrator(?:\s+from\s+far\s+away)?\s*\)/i', $content)) return false;
         return true;
     }));
     $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
@@ -2456,6 +2460,7 @@ if (!empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) && $GLOBALS["HERIKA_NAME"] !== "T
         // Remove user lines that are explicitly directed to The Narrator
         if (stripos($content, '(Talking to The Narrator)') !== false) return false;
         if (stripos($content, '(Whispering to The Narrator)') !== false) return false;
+        if (stripos($content, '(Shouting to The Narrator)') !== false) return false;
         if (strpos($content, 'The Narrator:') === 0) {
             // Remove narrator dialogue (non-context narrator lines)
             return $isContextNarratorLine($content);

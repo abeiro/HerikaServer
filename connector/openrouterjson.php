@@ -763,7 +763,7 @@ class openrouterjson
                 $target = substr($this->_websearch_text, 0, $i_pos);
                 $search_text = substr($this->_websearch_text,strlen($target)+1);
                 $search_text = preg_replace(
-                    '/\s*\(\s*(?:(?:talking|whispering)\s+to|speaking\s+loudly\s+to)\s+[^()]+(?:\s+from\s+far\s+away)?\s*\)\s*$/i',
+                    '/\s*\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+[^()]+(?:\s+from\s+far\s+away)?\s*\)\s*$/i',
                     '',
                     $search_text
                 );
