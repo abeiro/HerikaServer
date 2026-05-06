@@ -6140,8 +6140,8 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
                 // Query for new HERIKA fields (bio tables)
                 $npcNewFields = $db->fetchAll("SELECT npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags, voiceid, gender, race, refid FROM combined_bio_templates where npc_name='$codename'");
             } else {
-                // For translated templates, set empty new fields for now
-                $npcNewFields = [0 => ['npc_background' => '', 'npc_personality' => '', 'npc_appearance' => '', 'npc_relationships' => '', 'npc_occupation' => '', 'npc_skills' => '', 'npc_speechstyle' => '', 'npc_goals' => '']];
+                // Keep translated core text, but still seed structured metadata from the bio template view.
+                $npcNewFields = $db->fetchAll("SELECT npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags, voiceid, gender, race, refid FROM combined_bio_templates where npc_name='$codename'");
             }
         }
 
@@ -6299,8 +6299,24 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
         $currentData = $npcMaster->GetByName($npcname);
         $currentData["voiceid"] = $voiceid;
 
-        $currentData['metadata'] = json_encode([]);
-        $currentData['extended_data'] = json_encode(["chim_core_migrated" => 2]);
+        $existingMetadata = [];
+        if (!empty($currentData['metadata'])) {
+            $decodedMetadata = json_decode((string)$currentData['metadata'], true);
+            if (is_array($decodedMetadata)) {
+                $existingMetadata = $decodedMetadata;
+            }
+        }
+        $currentData['metadata'] = json_encode($existingMetadata, JSON_UNESCAPED_UNICODE);
+
+        $existingExtendedData = [];
+        if (!empty($currentData['extended_data'])) {
+            $decodedExtendedData = json_decode((string)$currentData['extended_data'], true);
+            if (is_array($decodedExtendedData)) {
+                $existingExtendedData = $decodedExtendedData;
+            }
+        }
+        $existingExtendedData['chim_core_migrated'] = 2;
+        $currentData['extended_data'] = json_encode($existingExtendedData, JSON_UNESCAPED_UNICODE);
         $currentData['profile_id'] = 1; // Default profile
         $currentData['md5'] = md5($currentData["npc_name"]);
         $currentData['gamets_last_updated'] = $GLOBALS["gameRequest"][2];

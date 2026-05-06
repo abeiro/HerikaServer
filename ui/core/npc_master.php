@@ -2082,17 +2082,42 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 
         
 
+        <style>
+            #relationship-editor-section {
+                margin-top: 0;
+            }
+
+            #relationship-editor-section > details.metadata-skills-view {
+                border: none !important;
+                border-radius: 0 !important;
+                padding: 0 !important;
+                background: transparent !important;
+                margin-top: 0 !important;
+                box-shadow: none !important;
+            }
+
+            #relationship-editor-section > details.metadata-skills-view > summary {
+                display: none !important;
+            }
+
+            #relationship-editor-section > details.metadata-skills-view > small.hint {
+                display: none !important;
+            }
+        </style>
+
         <div class="form-item">
             <label>Relationships</label>
-            <div style="min-height:120px; padding:12px; border:1px solid #3a3a3a; border-radius:8px; background:rgba(24,24,24,0.75); color:#c9d4e6;">
-                Relationship metadata is managed by the relationship editor below and stored in <code>extended_data</code>. The legacy scalar relationship field is deprecated and no longer used.
-            </div>
-            <small class="hint">Use the relationship metadata editor below to manage NPC relationship tiers and summaries.</small>
         </div>
 
         <?php if (file_exists(__DIR__."/../../ext/relationship_system/relationship_editor.php")) {
             include(__DIR__."/../../ext/relationship_system/relationship_editor.php");
         } ?>
+
+        <div class="form-item">
+            <label for="relationships">Relationships (Deprecated)</label>
+            <textarea id="relationships" name="relationships" placeholder="Legacy relationship text."><?= htmlspecialchars($editItem["relationships"] ?? "") ?></textarea>
+            <small class="hint">This legacy text field is still editable, but it is no longer used in prompting. Prompt relationship context comes from Relationships above.</small>
+        </div>
 
         <div class="form-item">
             <label for="occupation">Occupation</label>

@@ -6281,6 +6281,39 @@ $db->execQuery("
             ALTER TABLE public.relationship_eval_queue
             ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0
         ");
+
+//----------------------------------------------------
+// Refresh base bio template relationship metadata from canonical SQL
+// Version 20260505003
+//----------------------------------------------------
+if ($checkVersion("bio_templates_relationship_refresh") < 20260505003) {
+    Logger::debug("Applying bio_templates_relationship_refresh 20260505003");
+    try {
+        $sqlFile = __DIR__ . "/../data/relationship_metadata.sql";
+        if (file_exists($sqlFile)) {
+            $sqlContent = file_get_contents($sqlFile);
+            if ($sqlContent !== false && strlen($sqlContent) > 0) {
+                $db->execQuery($sqlContent);
+                $db->execQuery("
+                    UPDATE public.bio_templates_custom
+                       SET relationships = NULL
+                     WHERE relationships IS NOT NULL
+                       AND btrim(relationships) <> ''
+                       AND left(ltrim(relationships), 1) <> '{'
+                ");
+                $updateVersion("bio_templates_relationship_refresh", 20260505003);
+                Logger::info("Applied patch bio_templates_relationship_refresh 20260505003");
+            } else {
+                Logger::warn("relationship metadata file is empty: " . $sqlFile);
+            }
+        } else {
+            Logger::warn("relationship metadata file not found: " . $sqlFile);
+        }
+    } catch (Exception $e) {
+        Logger::error("Error applying bio_templates relationship refresh: " . $e->getMessage());
+    }
+}
+
 Logger::info(__FILE__." update file processed");
 
 //----------------------------------------------------
