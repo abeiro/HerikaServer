@@ -21,6 +21,7 @@ require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."profile_loader.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."logger.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."utils_game_timestamp.php");
+require_once(LIB_PATH .DIRECTORY_SEPARATOR."eventlog_helper.php");
 
 $db = new sql();
 
@@ -34,7 +35,7 @@ $sinceRowId = isset($_GET["since_rowid"]) ? intval($_GET["since_rowid"]) : 0;
 $sinceGamets = isset($_GET["since_gamets"]) ? intval($_GET["since_gamets"]) : 0;
 
 // Base event type filter - exclude internal events and location context
-$typeFilter = "type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','playerinfo','oghma_import','biography_import','dynamic_oghma_import','infoitems','description_import','backgroundaction','innerchat','npc_reanimated','infoloc','location')";
+$typeFilter = chimBuildVisibleEventLogWhereClause($db) . " AND type NOT IN ('infoloc','location')";
 
 // If specific event types are requested (for MCM conversation history panel)
 if (isset($_GET["event_types"]) && !empty($_GET["event_types"])) {
@@ -151,7 +152,7 @@ $mappedResults = array_map(function ($row) use ($columnHeaders) {
 }, $results);
 
 // Get total count for pagination info - also exclude location types
-$countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE type NOT IN ('prechat','rechat','infonpc','request','infonpc_close','addnpc','user_input','infosave','init','backgroundaction','innerchat','npc_reanimated','infoloc','location')";
+$countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE $typeFilter";
 $countResult = $db->fetchAll($countQuery);
 $totalRecords = $countResult[0]['total'];
 $totalPages = ceil($totalRecords / $limit);

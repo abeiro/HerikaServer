@@ -22,6 +22,9 @@ if (!function_exists('chimGetVisibleEventLogExcludedTypes')) {
             'backgroundaction',
             'innerchat',
             'npc_reanimated',
+            'npcvoice_refresh',
+            'status_msg',
+            'region',
         ];
     }
 }
