@@ -48,10 +48,10 @@ main { padding: 80px 10px 10px; height: 100vh; }
             <button class="tab-button active" data-tab="npc">🌟 CHIM NPCs</button>
             <button class="tab-button" data-tab="globals">🌐 Global Settings</button>
             <button class="tab-button" data-tab="profiles">🗃️ Profiles</button>
-            <button class="tab-button" data-tab="llm">🧠 LLM Connectors</button>
-            <button class="tab-button" data-tab="ttscfg">🔊 TTS Connectors</button>
-            <button class="tab-button" data-tab="sttcfg">🎤 STT Connector</button>
-            <button class="tab-button" data-tab="ittcfg">🖼️ ITT Connector</button>
+            <button class="tab-button" data-tab="llm">🧠 LLM</button>
+            <button class="tab-button" data-tab="ttscfg">🔊 TTS</button>
+            <button class="tab-button" data-tab="sttcfg">🎤 STT</button>
+            <button class="tab-button" data-tab="ittcfg">🖼️ ITT</button>
             <button class="tab-button" data-tab="keys">🔑 API Keys</button>
             <button class="tab-button" data-tab="player">👤 Player</button>
             <button class="tab-button" data-tab="narrator">🗣️ Narration</button>

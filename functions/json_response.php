@@ -435,7 +435,7 @@
                         ),
                         "item" => array(
                             "type" => "string",
-                            "description" => "item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact name from inventory, nearby_items, or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). For Consume, leave item blank unless target is empty and you need item as the same exact inventory item name fallback. Leave item blank for SpawnNPC and CreateNewNPC and DirectorCommand."
+                            "description" => "item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact name from inventory, nearby_items, the representative RefID:ItemName shown in grouped ITEM DESCRIPTIONS, or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). For Consume, leave item blank unless target is empty and you need item as the same exact inventory item name fallback. Leave item blank for SpawnNPC and CreateNewNPC and DirectorCommand."
                         ),
                         "amount" => array(
                             "type" => "integer",

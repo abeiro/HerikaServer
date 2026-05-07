@@ -144,6 +144,7 @@ $DETECT_MAGIC_EVENT=true; //Enable detection and logging of NPC spellcasting eve
 $MAGIC_EVENT_BLACKLIST=""; //Comma-separated list of magic events to exclude from logging.
 $LOCATION_BLACKLIST="Dark Brotherhood Sanctuary, Twilight Sepulcher"; //Comma-separated list of location names to exclude from Points of Interest context.
 $ITEM_BLACKLIST=""; //Comma-separated list of item/armor names to exclude from dynamic context.
+$SHORTER_NEARBY_ITEM_LIST=false; //Group duplicate nearby ground items into one counted entry and show a single representative RefID in item descriptions.
 $EVENT_TYPE_FILTER=""; //Comma-separated list of event types to exclude from context generation.
 $GROUND_ITEMS_DESCRIPTIONS_ONLY=false; //Only show nearby ground items that have descriptions in the database.
 $INVENTORY_ITEMS_DESCRIPTIONS_ONLY=false; //Only show inventory items that have descriptions in the database.

@@ -805,6 +805,10 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         $formattedItems = [];
         $seenBaseIDs = [];
         $itemDescriptions = [];
+        $groupedItems = [];
+        $playerName = $GLOBALS["PLAYER_NAME"] ?? "Player";
+        $playerLookingTag = " ({$playerName} is looking at this)";
+        $shorterNearbyItemList = !empty($GLOBALS["SHORTER_NEARBY_ITEM_LIST"]);
         
         foreach ($itemsList as $item) {
             $trimmedItem = trim($item);
@@ -819,8 +823,8 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 $baseID = $parts[1];
                 $itemName = $parts[2];
                 
-                // Strip (STEALING) tag for blacklist check
-                $itemNameClean = str_replace(' (STEALING)', '', $itemName);
+                // Strip prompt-only tags for blacklist and description lookup.
+                $itemNameClean = str_replace([' (STEALING)', $playerLookingTag], '', $itemName);
                 
                 // Skip blacklisted items
                 if (isItemBlacklisted($itemNameClean)) {
@@ -847,25 +851,60 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     continue;
                 }
                 
-                // Format for display: "RefID:ItemName" (hide BaseID from NPC, keep STEALING tag)
-                $displayItem = "{$refID}:{$itemName}";
-                $formattedItems[] = $displayItem;
+                if ($shorterNearbyItemList) {
+                    $groupKey = $itemName;
+                    if (!isset($groupedItems[$groupKey])) {
+                        $groupedItems[$groupKey] = [
+                            'count' => 0,
+                            'sample_refid' => $refID,
+                            'sample_item_name' => $itemName,
+                            'description' => $itemDescriptions[$itemNameClean] ?? '',
+                        ];
+                    }
+                    $groupedItems[$groupKey]['count']++;
+                    if (empty($groupedItems[$groupKey]['description']) && !empty($itemDescriptions[$itemNameClean])) {
+                        $groupedItems[$groupKey]['description'] = $itemDescriptions[$itemNameClean];
+                    }
+                } else {
+                    // Format for display: "RefID:ItemName" (hide BaseID from NPC, keep STEALING tag)
+                    $displayItem = "{$refID}:{$itemName}";
+                    $formattedItems[] = $displayItem;
+                }
             } elseif (count($parts) == 2) {
                 // Old format without BaseID - just use as-is
                 $refID = $parts[0];
                 $itemName = $parts[1];
                 
-                // Strip (STEALING) tag for blacklist check
-                $itemNameClean = str_replace(' (STEALING)', '', $itemName);
+                // Strip prompt-only tags for blacklist checks.
+                $itemNameClean = str_replace([' (STEALING)', $playerLookingTag], '', $itemName);
                 
                 // Skip blacklisted items
                 if (isItemBlacklisted($itemNameClean)) {
                     continue;
                 }
                 
-                // Keep STEALING tag in display
-                $displayItem = "{$refID}:{$itemName}";
-                $formattedItems[] = $displayItem;
+                if ($shorterNearbyItemList) {
+                    $groupKey = $itemName;
+                    if (!isset($groupedItems[$groupKey])) {
+                        $groupedItems[$groupKey] = [
+                            'count' => 0,
+                            'sample_refid' => $refID,
+                            'sample_item_name' => $itemName,
+                            'description' => '',
+                        ];
+                    }
+                    $groupedItems[$groupKey]['count']++;
+                } else {
+                    // Keep STEALING tag in display
+                    $displayItem = "{$refID}:{$itemName}";
+                    $formattedItems[] = $displayItem;
+                }
+            }
+        }
+
+        if ($shorterNearbyItemList && !empty($groupedItems)) {
+            foreach ($groupedItems as $group) {
+                $formattedItems[] = "{$group['count']}x {$group['sample_item_name']}";
             }
         }
         
@@ -874,15 +913,28 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
             
             // Add descriptions for unique items if available
             $descriptionText = "";
-            if (!empty($itemDescriptions)) {
+            if ($shorterNearbyItemList) {
+                $descParts = [];
+                foreach ($groupedItems as $group) {
+                    if (!empty($group['description'])) {
+                        $descParts[] = "{$group['sample_refid']}:{$group['sample_item_name']}: {$group['description']}";
+                    }
+                }
+                if (!empty($descParts)) {
+                    $descriptionText = "\n\n# ITEM DESCRIPTIONS\n## " . implode("\n## ", $descParts);
+                }
+            } elseif (!empty($itemDescriptions)) {
                 $descParts = [];
                 foreach ($itemDescriptions as $name => $desc) {
                     $descParts[] = "{$name}: {$desc}";
                 }
                 $descriptionText = "\n\n# ITEM DESCRIPTIONS\n## " . implode("\n## ", $descParts);
             }
-            
-            $contextContent = "<nearby_items>\n# NEARBY ITEMS (format: RefID:ItemName)\n## {$itemsText}{$descriptionText}\n</nearby_items>";
+
+            $nearbyItemsHeader = $shorterNearbyItemList
+                ? "# NEARBY ITEMS (grouped unique counts; use representative RefID from ITEM DESCRIPTIONS for PickupItem)"
+                : "# NEARBY ITEMS (format: RefID:ItemName)";
+            $contextContent = "<nearby_items>\n{$nearbyItemsHeader}\n## {$itemsText}{$descriptionText}\n</nearby_items>";
             if (!isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
                 $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
             }

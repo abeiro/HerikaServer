@@ -961,7 +961,7 @@ $F_TRANSLATIONS_LOCAL["Brawl"] = "#HERIKA_NAME# engages in non-lethal combat wit
 $F_TRANSLATIONS_LOCAL["ReturnBackHome"] = "#HERIKA_NAME# travels to their home or place of origin. Returns home.";
 $F_TRANSLATIONS_LOCAL["GiveGoldTo"] = "#HERIKA_NAME# gives gold, coins, or septims to another actor or #PLAYER_NAME#. REQUIRED: Must include 'target' field with recipient name and 'item' field with amount as a number string.";
 $F_TRANSLATIONS_LOCAL["GiveItemTo"] = "#HERIKA_NAME# gives a specific item from inventory to another actor or #PLAYER_NAME#. REQUIRED: Must include 'item' field with exact item name from <inventory> tag, and 'target' field with recipient name.";
-$F_TRANSLATIONS_LOCAL["PickupItem"] = "#HERIKA_NAME# picks up a specific item from the ground. Use the exact RefID:ItemName format from nearby_items (e.g. 0x12345:Iron Sword).";
+$F_TRANSLATIONS_LOCAL["PickupItem"] = "#HERIKA_NAME# picks up a specific item from the ground. Use the exact RefID:ItemName format from nearby_items or from the representative RefID shown in ITEM DESCRIPTIONS when the nearby item list is grouped (e.g. 0x12345:Iron Sword).";
 $F_TRANSLATIONS_LOCAL["GoToSleep"] = "#HERIKA_NAME# takes a nap.";
 $F_TRANSLATIONS_LOCAL["UseSoulGaze"] = "Use the spell SoulGaze, a powerful incantation that allows #HERIKA_NAME# to perceive surroundings in vivid detail through #PLAYER_NAME#'s eyes. The spell, however, causes some disturbance to the caster.";
 $F_TRANSLATIONS_LOCAL["CastSpell"] = "#HERIKA_NAME# casts a spell on a target actor. Must specify spell name from <spells> and target actor name. Use 'self' as target for self-targeted spells.";
@@ -1751,7 +1751,7 @@ $GLOBALS["FUNCTIONS"] = [
                 ],
                 "item" => [
                     "type" => "string",
-                    "description" => "REQUIRED: Exact RefID:ItemName from <nearby_items> tag (e.g., 0x12345:Iron Sword). Must match format exactly.",
+                    "description" => "REQUIRED: Exact RefID:ItemName from <nearby_items> or from the representative RefID shown in ITEM DESCRIPTIONS when nearby items are grouped (e.g., 0x12345:Iron Sword). Must match format exactly.",
                 ],
             ],
             "required" => ["item"],

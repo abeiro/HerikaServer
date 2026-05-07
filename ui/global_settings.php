@@ -44,6 +44,7 @@ $gsSections = [
         [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
         [ 'name' => 'ITEM_BLACKLIST', 'type' => 'longstring' ],
+        [ 'name' => 'SHORTER_NEARBY_ITEM_LIST', 'type' => 'boolean' ],
         [ 'name' => 'EVENT_TYPE_FILTER', 'type' => 'longstring' ],
     ],
     'Rechat' => [
@@ -137,6 +138,9 @@ function pretty_label(string $flatName): string
         'RELLLM_CONNECTOR' => 'Relationship Management',
         'EMOTEMOODS' => 'Emote Moods',
         'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
+        'SHORTER_NEARBY_ITEM_LIST' => 'Shorter Nearby Item List',
+        'BGL_TRIGGER_DAYS' => 'Background Life Days Cooldown',
+        'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY' => 'Focus Chat Context',
     ];
     if (isset($customLabels[$flatName])) {
         return $customLabels[$flatName];
