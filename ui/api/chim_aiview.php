@@ -35,6 +35,93 @@ $db = new sql();
 
 header('Content-Type: application/json');
 
+function chimNormalizeRelationshipAffinities($rawRelationships) {
+    if (!is_array($rawRelationships)) {
+        return [];
+    }
+
+    $normalized = [];
+
+    foreach ($rawRelationships as $key => $value) {
+        $name = '';
+        $affinity = 0;
+        $description = '';
+
+        if (is_array($value)) {
+            $name = trim((string)($value['name'] ?? $value['npc_name'] ?? $value['npc'] ?? $key));
+            $affinityRaw = $value['affinity'] ?? $value['aff'] ?? $value['value'] ?? $value['score'] ?? $value['rank'] ?? 0;
+            $affinity = is_numeric($affinityRaw) ? intval($affinityRaw) : 0;
+            $description = trim((string)($value['description'] ?? $value['summary'] ?? ''));
+            if ($description === '') {
+                $descriptionParts = [];
+                foreach (['relation', 'type', 'note', 'best', 'worst'] as $detailKey) {
+                    if (!empty($value[$detailKey])) {
+                        $detailLabel = ucfirst($detailKey);
+                        $descriptionParts[] = "{$detailLabel}: " . trim((string)$value[$detailKey]);
+                    }
+                }
+                $description = implode(' | ', $descriptionParts);
+            }
+        } else {
+            $name = trim((string)$key);
+            $affinity = is_numeric($value) ? intval($value) : 0;
+        }
+
+        if ($name === '') {
+            continue;
+        }
+
+        $normalized[] = [
+            'name' => $name,
+            'affinity' => $affinity,
+            'description' => $description
+        ];
+    }
+
+    usort($normalized, function ($left, $right) {
+        $affinityDelta = abs($right['affinity']) <=> abs($left['affinity']);
+        if ($affinityDelta !== 0) {
+            return $affinityDelta;
+        }
+
+        return strcasecmp($left['name'], $right['name']);
+    });
+
+    return $normalized;
+}
+
+function chimBuildRelationshipAffinitySummary(array $affinities) {
+    if (empty($affinities)) {
+        return '';
+    }
+
+    $count = count($affinities);
+    $summaryParts = ["Tracked affinities with {$count} NPC" . ($count === 1 ? '' : 's') . "."];
+
+    $strongestPositive = null;
+    $strongestNegative = null;
+
+    foreach ($affinities as $affinity) {
+        if ($affinity['affinity'] > 0 && ($strongestPositive === null || $affinity['affinity'] > $strongestPositive['affinity'])) {
+            $strongestPositive = $affinity;
+        }
+
+        if ($affinity['affinity'] < 0 && ($strongestNegative === null || $affinity['affinity'] < $strongestNegative['affinity'])) {
+            $strongestNegative = $affinity;
+        }
+    }
+
+    if ($strongestPositive !== null) {
+        $summaryParts[] = "Strongest positive: {$strongestPositive['name']} (+{$strongestPositive['affinity']}).";
+    }
+
+    if ($strongestNegative !== null) {
+        $summaryParts[] = "Strongest negative: {$strongestNegative['name']} ({$strongestNegative['affinity']}).";
+    }
+
+    return implode(' ', $summaryParts);
+}
+
 try {
     $npcName = isset($_GET['npc_name']) ? trim($_GET['npc_name']) : '';
     $refId = isset($_GET['refid']) ? trim($_GET['refid']) : '';
@@ -151,9 +238,10 @@ try {
         }
     }
 
-    // Parse extended data (metadata JSON column)
-    $extendedData = json_decode($npcData['metadata'] ?? '{}', true) ?: [];
-    $activityStatus = chimNormalizeActivityStatus($extendedData);
+    // Parse JSON columns
+    $metadata = json_decode($npcData['metadata'] ?? '{}', true) ?: [];
+    $extendedData = json_decode($npcData['extended_data'] ?? '{}', true) ?: [];
+    $activityStatus = chimNormalizeActivityStatus($metadata);
 
     // Determine toggle states - show actual state AND source (NPC override vs inherited)
     
@@ -210,7 +298,7 @@ try {
     // Get relationship affinity data
     $relationships = [];
     if (isset($extendedData['relationships']) && is_array($extendedData['relationships'])) {
-        $relationships = $extendedData['relationships'];
+        $relationships = chimNormalizeRelationshipAffinities($extendedData['relationships']);
     }
 
     // Get recent middle term memory
@@ -267,7 +355,8 @@ try {
             
             // Relationships and affinity
             'relationships' => [
-                'text' => $npcData['relationships'] ?? '',
+                'summary' => chimBuildRelationshipAffinitySummary($relationships),
+                'text' => '',
                 'affinities' => $relationships
             ],
             

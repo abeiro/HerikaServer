@@ -848,6 +848,35 @@ function isProviderConfigured($provider) {
     return (is_array($row) && !empty($row['api_key']));
 }
 
+function getInworldConfigurationStatus(): array
+{
+    $hasApiCredential = isProviderConfigured('inworld');
+    $workspace = trim(strval($GLOBALS["TTS"]["INWORLD"]["workspace"] ?? ''));
+    $hasWorkspace = ($workspace !== '');
+
+    if ($hasApiCredential && $hasWorkspace) {
+        return [
+            'configured' => true,
+            'title' => 'Inworld API badge and workspace are configured',
+            'message' => '',
+        ];
+    }
+
+    $missingParts = [];
+    if (!$hasApiCredential) {
+        $missingParts[] = 'API credential';
+    }
+    if (!$hasWorkspace) {
+        $missingParts[] = 'workspace';
+    }
+
+    return [
+        'configured' => false,
+        'title' => 'Missing Inworld ' . implode(' and ', $missingParts),
+        'message' => 'Please configure your Inworld ' . implode(' and ', $missingParts) . ' before syncing voices.',
+    ];
+}
+
 function chimTtsStudioProbeJson(string $url, string $method = 'GET', ?array $payload = null): array
 {
     $ch = curl_init();
@@ -1097,9 +1126,12 @@ $ttsStudioProviderStatuses = [
     'cartesia' => isProviderConfigured('cartesia')
         ? ['label' => 'Configured', 'class' => 'configured', 'title' => 'Cartesia API badge is configured']
         : ['label' => 'Not Configured', 'class' => 'unconfigured', 'title' => 'Cartesia API badge is not configured'],
-    'inworld' => isProviderConfigured('inworld')
-        ? ['label' => 'Configured', 'class' => 'configured', 'title' => 'Inworld API badge is configured']
-        : ['label' => 'Not Configured', 'class' => 'unconfigured', 'title' => 'Inworld API badge is not configured'],
+    'inworld' => (function () {
+        $status = getInworldConfigurationStatus();
+        return $status['configured']
+            ? ['label' => 'Configured', 'class' => 'configured', 'title' => $status['title']]
+            : ['label' => 'Not Configured', 'class' => 'unconfigured', 'title' => $status['title']];
+    })(),
 ];
 
 // Initialize message variables
@@ -3133,7 +3165,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p>For detailed information, see our <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options#inworld" style="color: yellow;" target="_blank" rel="noopener noreferrer">Inworld TTS Guide</a>.</p>
             
             <?php
-            $inworldConfigured = isProviderConfigured('inworld');
+            $inworldStatus = getInworldConfigurationStatus();
+            $inworldConfigured = $inworldStatus['configured'];
             $localVoices = getLocalVoices();
             $clonedVoices = getClonedVoices('inworld');
             $missingVoices = array_diff($localVoices, array_keys($clonedVoices));
@@ -3141,8 +3174,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <?php if (!$inworldConfigured): ?>
                 <div style="background: rgba(244, 67, 54, 0.1); border: 2px solid #f44336; border-radius: 8px; padding: 16px; margin: 20px 0; color: #f8f9fa;">
-                    <p style="margin: 0; font-weight: 600; color: #f44336;">⚠️ Inworld API not configured</p>
-                    <p style="margin: 8px 0 0 0;">Please configure your Inworld API credential in the <a href="<?php echo $webRoot; ?>/ui/core/api_badge.php" style="color: yellow;">API Badge</a> page before syncing voices.</p>
+                    <p style="margin: 0; font-weight: 600; color: #f44336;">⚠️ Inworld is not fully configured</p>
+                    <p style="margin: 8px 0 0 0;"><?php echo htmlspecialchars($inworldStatus['message']); ?> Set the API credential in <a href="<?php echo $webRoot; ?>/ui/core/api_badge.php" style="color: yellow;">API Badge</a> and the workspace in your TTS settings.</p>
                 </div>
             <?php endif; ?>
             
