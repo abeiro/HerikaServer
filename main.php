@@ -1988,6 +1988,13 @@ if (in_array($gameRequest[0],["inputtext_s"]) && chimDecodeAudienceSnapshotField
     $GLOBALS["CACHE_PEOPLE"]=$GLOBALS["HERIKA_NAME"];
 }
 
+if (($gameRequest[0] ?? "") === "infoloc") {
+    $scenePeople = DataBeingsInRange();
+    if (!empty($scenePeople)) {
+        $GLOBALS["CACHE_PEOPLE"] = $scenePeople;
+    }
+}
+
 // Scope all incoming events through spatial awareness when possible.
 $playerInputEventTypes = ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"];
 $requestAudienceSnapshot = chimDecodeAudienceSnapshotField($gameRequest[4] ?? "");
@@ -2431,44 +2438,11 @@ if (sizeof($memoryInjectionCtx)>0) {
 
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
-if ($GLOBALS["HERIKA_NAME"] !== "The Narrator") {
-    $contextDataHistoric = array_values(array_filter($contextDataHistoric, function($entry) {
-        if (!is_array($entry)) return true;
-        $content = isset($entry['content']) ? (string)$entry['content'] : '';
-        if (preg_match('/\(\s*(?:Talking|Whispering|Shouting|Speaking loudly)\s+to\s+The Narrator(?:\s+from\s+far\s+away)?\s*\)/i', $content)) return false;
-        return true;
-    }));
-    $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
-}
-
-// If enabled, hide narrator dialogue lines from NPC prompts, but keep narrator context
-if (!empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) && $GLOBALS["HERIKA_NAME"] !== "The Narrator") {
-    $isContextNarratorLine = function(string $content): bool {
-        if (strpos($content, 'The Narrator:') !== 0) return false;
-        // Keep known context markers
-        if (preg_match('/^The Narrator:\s*\(/', $content)) return true; // parenthetical events
-        if (strpos($content, 'The Narrator: background dialogue:') === 0) return true;
-        if (strpos($content, 'The Narrator: action moved to new location:') === 0) return true;
-        if (strpos($content, 'The Narrator: SCENARIO CHANGE') === 0) return true;
-        if (preg_match('/^The Narrator:\s*about\s+\d+\s+hours\s+later/i', $content)) return true;
-        return false;
-    };
-    // Filter only historic part to avoid dropping world info
-    $contextDataHistoric = array_values(array_filter($contextDataHistoric, function($entry) use ($isContextNarratorLine){
-        if (!is_array($entry)) return true;
-        $content = isset($entry['content']) ? (string)$entry['content'] : '';
-        // Remove user lines that are explicitly directed to The Narrator
-        if (stripos($content, '(Talking to The Narrator)') !== false) return false;
-        if (stripos($content, '(Whispering to The Narrator)') !== false) return false;
-        if (stripos($content, '(Shouting to The Narrator)') !== false) return false;
-        if (strpos($content, 'The Narrator:') === 0) {
-            // Remove narrator dialogue (non-context narrator lines)
-            return $isContextNarratorLine($content);
-        }
-        return true;
-    }));
-    $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
-}
+$contextDataHistoric = filterHistoricContextForNarratorVisibility(
+    $contextDataHistoric,
+    $GLOBALS["HERIKA_NAME"] ?? ""
+);
+$contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
 // audit_log(__FILE__." [OGHMA]  ".__LINE__);
 

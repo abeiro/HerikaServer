@@ -124,6 +124,44 @@ final class HistoricContextTest extends DatabaseTestCase
         $this->assertContains("Prisoner: Keep your voice down.", $contents);
     }
 
+    public function testBuildHistoricContextIncludesNarratorRowsForSharedAudience(): void
+    {
+        $this->insertEvent(
+            "chat",
+            "The Narrator: A cold wind sweeps through the inn.",
+            "|Lydia|Prisoner|The Narrator|",
+            100,
+            100,
+            100
+        );
+
+        $context = buildHistoricContext("Lydia", -5);
+        $contents = array_map(static function (array $row): string {
+            return (string)($row["content"] ?? "");
+        }, $context);
+
+        $this->assertContains("The Narrator: A cold wind sweeps through the inn.", $contents);
+    }
+
+    public function testBuildHistoricContextStillExcludesNonNarratorRowsForFarAwayAudience(): void
+    {
+        $this->insertEvent(
+            "chat",
+            "Belethor: Everything's for sale, my friend.",
+            "|Lydia (far away)|Prisoner|Belethor|",
+            100,
+            100,
+            100
+        );
+
+        $context = buildHistoricContext("Lydia", -5);
+        $contents = array_map(static function (array $row): string {
+            return (string)($row["content"] ?? "");
+        }, $context);
+
+        $this->assertNotContains("Belethor: Everything's for sale, my friend.", $contents);
+    }
+
     public function testNormalizeActorNameForComparisonStripsRestrainedSuffix(): void
     {
         $this->assertSame("lydia", normalizeActorNameForComparison("Lydia (restrained)"));

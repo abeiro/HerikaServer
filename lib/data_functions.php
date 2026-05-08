@@ -1977,7 +1977,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     "
     ORDER BY gamets desc, ts desc, rowid desc LIMIT {$nRecordsLimit} OFFSET 0 ";
     
-    // OR people LIKE '%|$actorEscaped (far away)|%') this can be confusing in whisper mode
+    // Keep generic far-away actors out of historic context. Shared narrator rows are flattened on write.
     $results = $db->fetchAll($query);
 
     // Filter blacklisted event types

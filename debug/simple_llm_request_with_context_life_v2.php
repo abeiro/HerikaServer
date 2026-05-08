@@ -124,19 +124,6 @@ function getBGLStyleFallback(string $promptKey): string
         . " propose one of the defined actions that would make sense for the development of the story. If <text> contains an Action proposed, you should consider it in your response.";
 }
 
-/**
- * Decide whether a narrator dialogue line is significant enough to keep in the
- * context history (parentheticals, location changes, scenario shifts, etc.).
- */
-function isSignificantNarratorLine(string $content): bool
-{
-    return preg_match('/^The Narrator:\s*\(/', $content)
-        || strpos($content, 'The Narrator: background dialogue:') === 0
-        || strpos($content, 'The Narrator: action moved to new location:') === 0
-        || strpos($content, 'The Narrator: SCENARIO CHANGE') === 0
-        || (bool) preg_match('/^The Narrator:\s*about\s+\d+\s+hours\s+later/i', $content);
-}
-
 // ─── Argument Parsing ─────────────────────────────────────────────────────────
 
 $npcName = $argv[1];
@@ -238,24 +225,10 @@ $sqlFilter = " AND gamets < $lastItGamets"
     . " AND data NOT LIKE '%inner thoughts%'";
 
 $contextDataHistoric = DataLastDataExpandedFor($GLOBALS['HERIKA_NAME'], -50, $sqlFilter);
-
-// Filter out irrelevant narrator lines when narrator visibility is suppressed
-if (!empty($GLOBALS['HIDE_NARRATOR_DIALOGUE']) && $GLOBALS['HERIKA_NAME'] !== 'The Narrator') {
-    $contextDataHistoric = array_values(array_filter(
-        $contextDataHistoric,
-        function (array $entry): bool {
-            $content = (string) ($entry['content'] ?? '');
-
-            if (strpos($content, '(Talking to The Narrator)') !== false) {
-                return false;
-            }
-            if (strpos($content, 'The Narrator:') === 0) {
-                return isSignificantNarratorLine($content);
-            }
-            return true;
-        }
-    ));
-}
+$contextDataHistoric = filterHistoricContextForNarratorVisibility(
+    $contextDataHistoric,
+    $GLOBALS['HERIKA_NAME'] ?? ''
+);
 
 $history = "\n<last_dialogue>\n";
 foreach ($contextDataHistoric as $entry) {

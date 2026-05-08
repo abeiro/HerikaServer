@@ -2609,7 +2609,7 @@ function normalizeDialogTextForComparison($text)
     return mb_strtolower($text, 'UTF-8');
 }
 
-function normalizeActorNameForComparison($name)
+function stripActorStateSuffix($name)
 {
     $name = trim((string)$name);
     if ($name === "") {
@@ -2618,7 +2618,17 @@ function normalizeActorNameForComparison($name)
 
     $name = trim($name, "|");
     $name = preg_replace('/\s*\((?:busy|hostile|in combat|far away|restrained|dead|disabled)\)\s*$/i', '', $name);
-    return strtolower(trim($name));
+    return trim((string)$name);
+}
+
+function normalizeActorNameForComparison($name)
+{
+    $name = stripActorStateSuffix($name);
+    if ($name === "") {
+        return "";
+    }
+
+    return strtolower($name);
 }
 
 function isSystemContextLabel($name)
@@ -2960,9 +2970,9 @@ function chimExtractPeopleListFromPipeString($peoplePipe)
     $parts = explode("|", $peoplePipe);
     $names = [];
     foreach ($parts as $part) {
-        $part = trim((string)$part);
+        $part = stripActorStateSuffix($part);
         if ($part !== "") {
-            $names[] = preg_replace('/\s+\((?:busy|hostile|in combat|far away)\)$/iu', '', $part);
+            $names[] = $part;
         }
     }
 
@@ -3822,6 +3832,74 @@ function buildNarratorPrivatePeopleForEvent($eventType, $eventData, $listenerNam
     return normalizePeoplePipeList($participants);
 }
 
+function buildCanonicalAudiencePeople($fallbackPeople = "", $participants = [])
+{
+    $audienceNames = [];
+    foreach (parsePeoplePipeList($fallbackPeople) as $audienceName) {
+        $audienceName = stripActorStateSuffix($audienceName);
+        if ($audienceName !== "") {
+            appendUniqueActorName($audienceNames, $audienceName);
+        }
+    }
+
+    if (is_array($participants)) {
+        foreach ($participants as $participantName) {
+            $participantName = stripActorStateSuffix($participantName);
+            if ($participantName !== "") {
+                appendUniqueActorName($audienceNames, $participantName);
+            }
+        }
+    }
+
+    return normalizePeoplePipeList($audienceNames);
+}
+
+function buildNarratorSharedPeopleForEvent($eventType, $eventData, $listenerName = "", $fallbackPeople = "")
+{
+    if (!empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"])) {
+        return "";
+    }
+
+    $eventType = strtolower((string)$eventType);
+    $participants = [];
+
+    if ($eventType === "narrator_inputtext") {
+        $speakerName = extractSpeakerNameFromInputEvent($eventData);
+        if ($speakerName === "" && !empty($GLOBALS["PLAYER_NAME"])) {
+            $speakerName = trim((string)$GLOBALS["PLAYER_NAME"]);
+        }
+        if ($speakerName !== "") {
+            appendUniqueActorName($participants, $speakerName);
+        }
+        appendUniqueActorName($participants, ($listenerName !== "") ? $listenerName : "The Narrator");
+
+        $sharedPeople = buildCanonicalAudiencePeople($fallbackPeople, $participants);
+        return ($sharedPeople !== "") ? $sharedPeople : normalizePeoplePipeList($participants);
+    }
+
+    if ($eventType !== "chat") {
+        return "";
+    }
+
+    $speakerName = extractSpeakerNameFromChatEvent($eventData);
+    if (normalizeActorNameForComparison($speakerName) !== "the narrator") {
+        return "";
+    }
+
+    if (stripos((string)$eventData, '(whispering to ') !== false) {
+        return "";
+    }
+
+    appendUniqueActorName($participants, $speakerName);
+    $targetMeta = extractTalkTargetMetadata($eventData);
+    foreach ($targetMeta["targets"] as $targetName) {
+        appendUniqueActorName($participants, $targetName);
+    }
+
+    $sharedPeople = buildCanonicalAudiencePeople($fallbackPeople, $participants);
+    return ($sharedPeople !== "") ? $sharedPeople : normalizePeoplePipeList($participants);
+}
+
 function extractGenericEventParticipants($eventType, $eventData)
 {
     $participants = [];
@@ -4129,10 +4207,6 @@ function buildScopedPeopleForChatEvent($eventData, $fallbackPeople = "")
         return $fallbackPeople;
     }
 
-    if (shouldBroadcastNarratorChatToNearbyPeople($eventData, $fallbackPeople)) {
-        return $fallbackPeople;
-    }
-
     $hasContextLocationPrefix = preg_match('/^\s*\(\s*context location:/iu', $eventData) === 1;
 
     if (stripos($eventData, ' background chat)') !== false) {
@@ -4317,25 +4391,17 @@ function buildScopedPeopleForPlayerInput($eventType, $eventData, $listenerName, 
         if ($speakerName === "" && !empty($GLOBALS["PLAYER_NAME"])) {
             $speakerName = trim((string)$GLOBALS["PLAYER_NAME"]);
         }
-        $narratorListener = ($listenerName !== "") ? $listenerName : "The Narrator";
-
-        if (empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"])) {
-            $participants = parsePeoplePipeList($fallbackPeople);
-            if ($speakerName !== "") {
-                appendUniqueActorName($participants, $speakerName);
-            }
-            appendUniqueActorName($participants, $narratorListener);
-            $scopedPeople = normalizePeoplePipeList($participants);
-            if ($scopedPeople !== "") {
-                return $scopedPeople;
-            }
-        }
-
         if ($speakerName !== "") {
-            $participants[] = $speakerName;
+            appendUniqueActorName($participants, $speakerName);
         }
-        $participants[] = $narratorListener;
-        return normalizePeoplePipeList($participants);
+        appendUniqueActorName($participants, ($listenerName !== "") ? $listenerName : "The Narrator");
+
+        if (!empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"])) {
+            return normalizePeoplePipeList($participants);
+        }
+
+        $sharedPeople = buildCanonicalAudiencePeople($fallbackPeople, $participants);
+        return ($sharedPeople !== "") ? $sharedPeople : normalizePeoplePipeList($participants);
     }
 
     $targetMeta = extractTalkTargetMetadata($eventData);
@@ -4381,16 +4447,18 @@ function buildScopedPeopleForEvent($eventType, $eventData, $listenerName, $fallb
         return $narratorPrivatePeople;
     }
 
+    $narratorSharedPeople = buildNarratorSharedPeopleForEvent($eventType, $eventData, $listenerName, $fallbackPeople);
+    if ($narratorSharedPeople !== "") {
+        return $narratorSharedPeople;
+    }
+
     if ($eventType === "infoloc") {
         // Keep legacy infoloc behavior: do not apply strict spatial scoping.
         return $fallbackPeople;
     }
 
-    $keepNarratorNearbyContext = ($eventType === "chat")
-        && shouldBroadcastNarratorChatToNearbyPeople($eventData, $fallbackPeople);
-
     $effectiveFallback = $fallbackPeople;
-    if (isStrictSpatialPeopleModeEnabled() && $eventType !== "infoaction" && !$keepNarratorNearbyContext) {
+    if (isStrictSpatialPeopleModeEnabled() && $eventType !== "infoaction") {
         $strictFallback = buildStrictFallbackPeopleForEvent($eventType, $eventData, $listenerName, $fallbackPeople);
         if ($strictFallback !== "") {
             $effectiveFallback = $strictFallback;
@@ -4415,28 +4483,48 @@ function buildScopedPeopleForEvent($eventType, $eventData, $listenerName, $fallb
     return buildScopedPeopleFromSpatialEvidence($eventType, $eventData, $listenerName, $effectiveFallback);
 }
 
-function shouldBroadcastNarratorChatToNearbyPeople($eventData, $fallbackPeople = "")
+function isNarratorHistoricContextLine($content)
 {
-    $fallbackPeople = trim((string)$fallbackPeople);
-    if ($fallbackPeople === "") {
+    $content = trim((string)$content);
+    if (strpos($content, 'The Narrator:') !== 0) {
         return false;
     }
 
-    if (!empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"])) {
-        return false;
+    return preg_match('/^The Narrator:\s*\(/', $content) === 1
+        || strpos($content, 'The Narrator: background dialogue:') === 0
+        || strpos($content, 'The Narrator: action moved to new location:') === 0
+        || strpos($content, 'The Narrator: SCENARIO CHANGE') === 0
+        || preg_match('/^The Narrator:\s*about\s+\d+\s+hours\s+later/i', $content) === 1;
+}
+
+function filterHistoricContextForNarratorVisibility(array $contextDataHistoric, $actorName)
+{
+    if (normalizeActorNameForComparison($actorName) === "the narrator") {
+        return array_values($contextDataHistoric);
     }
 
-    $speakerName = extractSpeakerNameFromChatEvent($eventData);
-    if (normalizeActorNameForComparison($speakerName) !== "the narrator") {
-        return false;
-    }
+    $hideNarratorDialogue = !empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]);
 
-    // Keep explicit whispers private.
-    if (stripos((string)$eventData, '(whispering to ') !== false) {
-        return false;
-    }
+    return array_values(array_filter($contextDataHistoric, static function ($entry) use ($hideNarratorDialogue) {
+        if (!is_array($entry)) {
+            return true;
+        }
 
-    return true;
+        $content = isset($entry["content"]) ? (string)$entry["content"] : "";
+        if (preg_match('/\(\s*(?:Talking|Whispering|Shouting|Speaking loudly)\s+to\s+The Narrator(?:\s+from\s+far\s+away)?\s*\)/i', $content) === 1) {
+            return false;
+        }
+
+        if (!$hideNarratorDialogue) {
+            return true;
+        }
+
+        if (strpos($content, 'The Narrator:') === 0) {
+            return isNarratorHistoricContextLine($content);
+        }
+
+        return true;
+    }));
 }
 
 function chimGenerateUtteranceId()
@@ -4476,9 +4564,9 @@ function logEvent($dataArray,$forcePeople='')
         $eventType = strtolower((string)($dataArray[0] ?? ""));
         $defaultPeopleFallback = $GLOBALS["CACHE_PEOPLE_LIMITED"];
         if ($eventType === "infoloc") {
-            $defaultPeopleFallback = DataBeingsInCloseRange(false);
+            $defaultPeopleFallback = DataBeingsInRange();
             if ($defaultPeopleFallback === "") {
-                $defaultPeopleFallback = DataBeingsInRange();
+                $defaultPeopleFallback = DataBeingsInCloseRange(false);
             }
         }
         if (isSpellcastEventType($dataArray[0] ?? "")) {

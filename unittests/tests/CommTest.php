@@ -407,10 +407,10 @@ final class CommTest extends DatabaseTestCase
                 'ts' => "99",
                 'gamets' => "199",
                 'type' => "infonpc_close",
-                'data' => "beings in range:Hulda/Jon Battle-Born/Herika/Prisoner",
+                'data' => "beings in range:Hulda/Jon Battle-Born (far away)/Herika (busy)/Prisoner",
                 'sess' => 'pending',
                 'localts' => 0,
-                'people'=> "|Hulda|Jon Battle-Born|Herika|Prisoner|",
+                'people'=> "|Hulda|Jon Battle-Born (far away)|Herika (busy)|Prisoner|",
                 'location'=> "",
                 'party'=> "[]"
             )
@@ -477,10 +477,10 @@ final class CommTest extends DatabaseTestCase
                 'ts' => "99",
                 'gamets' => "199",
                 'type' => "infonpc_close",
-                'data' => "beings in range:Hulda/Jon Battle-Born/Herika/Prisoner",
+                'data' => "beings in range:Hulda/Jon Battle-Born (far away)/Herika (busy)/Prisoner",
                 'sess' => 'pending',
                 'localts' => 0,
-                'people'=> "|Hulda|Jon Battle-Born|Herika|Prisoner|",
+                'people'=> "|Hulda|Jon Battle-Born (far away)|Herika (busy)|Prisoner|",
                 'location'=> "",
                 'party'=> "[]"
             )
@@ -494,7 +494,7 @@ final class CommTest extends DatabaseTestCase
                 'speaker' => "Prisoner",
                 'speech' => "Who am I?",
                 'location' => "",
-                'companions' => "|Hulda|Jon Battle-Born|Herika|",
+                'companions' => "|Hulda|Jon Battle-Born (far away)|Herika (busy)|",
                 'sess' => 'pending',
                 'audios' => null,
                 'topic' => 'debug|spatial:test',
@@ -512,7 +512,7 @@ final class CommTest extends DatabaseTestCase
         $testDb->close();
 
         $this->assertSame("Prisoner:Who am I?", $rows[0]["data"]);
-        $this->assertSame("|Hulda|Jon Battle-Born|Herika|The Narrator|Prisoner|", $rows[0]["people"]);
+        $this->assertSame("|Hulda|Jon Battle-Born|Herika|Prisoner|The Narrator|", $rows[0]["people"]);
     }
 
     public function testComm_WhenNarratorInputTextHasSpatialSpeechContextAndHideFromContextEnabled_InputEventShouldStayScopedToPlayerAndNarrator(): void
@@ -563,6 +563,56 @@ final class CommTest extends DatabaseTestCase
 
         $this->assertSame("Prisoner:Who am I?", $rows[0]["data"]);
         $this->assertSame("|Prisoner|The Narrator|", $rows[0]["people"]);
+    }
+
+    public function testFilterHistoricContextForNarratorVisibility_WhenHideDisabled_KeepsNarratorSpeechVisible(): void
+    {
+        require("conf.php");
+        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."chat_helper_functions.php");
+
+        $GLOBALS["HIDE_NARRATOR_DIALOGUE"] = false;
+        $contextDataHistoric = [
+            ["content" => "Prisoner:Who are you? (Talking to The Narrator)"],
+            ["content" => "The Narrator: A torch flickers in the tunnel. (talking to Prisoner)"],
+            ["content" => "Lydia: I heard that."]
+        ];
+
+        $filtered = filterHistoricContextForNarratorVisibility($contextDataHistoric, "Lydia");
+
+        $this->assertSame(
+            [
+                "The Narrator: A torch flickers in the tunnel. (talking to Prisoner)",
+                "Lydia: I heard that."
+            ],
+            array_values(array_map(static function ($entry) {
+                return $entry["content"];
+            }, $filtered))
+        );
+    }
+
+    public function testFilterHistoricContextForNarratorVisibility_WhenHideEnabled_KeepsOnlyNarratorContextMarkers(): void
+    {
+        require("conf.php");
+        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."chat_helper_functions.php");
+
+        $GLOBALS["HIDE_NARRATOR_DIALOGUE"] = true;
+        $contextDataHistoric = [
+            ["content" => "The Narrator: The torchlight reveals a blood trail. (talking to Prisoner)"],
+            ["content" => "The Narrator: (A cold wind sweeps through the ruin.)"],
+            ["content" => "Lydia: This place feels cursed."]
+        ];
+
+        $filtered = filterHistoricContextForNarratorVisibility($contextDataHistoric, "Lydia");
+
+        $this->assertSame(
+            [
+                "The Narrator: (A cold wind sweeps through the ruin.)",
+                "Lydia: This place feels cursed."
+            ],
+            array_values(array_map(static function ($entry) {
+                return $entry["content"];
+            }, $filtered))
+        );
     }
 
     public function testComm_Init_ShouldPurgeNewEvents(): void
