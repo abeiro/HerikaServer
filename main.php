@@ -164,7 +164,7 @@ if (isset($gameRequest[3]) && is_string($gameRequest[3]) &&
     }
 }
 
-
+// Call extension's preprocessing files
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"preprocessing.php");
 
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext","instruction","init"])) {
@@ -224,298 +224,9 @@ if (($gameRequest[0]=="playerinfo")||(($gameRequest[0]=="newgame"))) {
     sleep(1);   // Give time to populate data
 }
 
-
-if (($gameRequest[0]=="delete_event")) {
-    // Do this ASAP
-    $datacn=$db->escape($gameRequest[3]);
-    $db->delete("eventlog","type in ('chat','prechat') and data like '%$datacn%' and localts>".(time()- 120));
-    // audit_log(__FILE__);
-    terminate();
-}
-
-// Biography CSV upload
-if ($gameRequest[0]=="biography_import") {
-    require(__DIR__."/processor/biography_import.php");
-    
-    terminate();
-}
-
-// Oghma CSV upload
-// Move this to a processor file
-if ($gameRequest[0]=="oghma_import") {
-    Logger::info("Processing Oghma CSV data upload");
-    
-    // Parse the message format: oghma_import|timestamp|gametime|filename|csv_data
-    // $gameRequest[4] should contain the CSV data
-    if (!isset($gameRequest[4]) || empty($gameRequest[4])) {
-        Logger::error("Oghma Import: No CSV data provided");
-        terminate();
-    }
-    
-    $csvData = $gameRequest[4];
-    $processedCount = 0;
-    $errorCount = 0;
-    
-    try {
-        // Create a temporary file to properly parse complex CSV data
-        $tempFile = tempnam(sys_get_temp_dir(), 'oghma_import_');
-        file_put_contents($tempFile, $csvData);
-        
-        $handle = fopen($tempFile, 'r');
-        if ($handle === false) {
-            Logger::error("Oghma Import: Could not open temporary CSV file");
-            terminate();
-        }
-        
-        // Read and process header
-        $header = fgetcsv($handle, 0, ',', '"', '"');
-        if ($header === false || empty($header)) {
-            Logger::error("Oghma Import: Invalid CSV header");
-            fclose($handle);
-            unlink($tempFile);
-            terminate();
-        }
-        
-        // Normalize header labels and create header map
-        $headerMap = [];
-        foreach ($header as $i => $colName) {
-            $normalized = strtolower(trim($colName));
-            $headerMap[$normalized] = $i;
-        }
-        
-        // Process each data row
-        while (($data = fgetcsv($handle, 0, ',', '"', '"')) !== false) {
-            if (empty($data) || count($data) < 2) {
-                continue; // Skip empty or invalid rows
-            }
-            
-            // Extract required fields
-            $topic = '';
-            if (isset($headerMap['topic']) && isset($data[$headerMap['topic']])) {
-                $topic = strtolower(trim($data[$headerMap['topic']]));
-            }
-            
-            $topic_desc = '';
-            if (isset($headerMap['topic_desc']) && isset($data[$headerMap['topic_desc']])) {
-                $topic_desc = trim($data[$headerMap['topic_desc']]);
-            }
-            
-            // Extract optional fields
-            $knowledge_class = '';
-            if (isset($headerMap['knowledge_class']) && isset($data[$headerMap['knowledge_class']])) {
-                $knowledge_class = trim($data[$headerMap['knowledge_class']]);
-            }
-            
-            $topic_desc_basic = '';
-            if (isset($headerMap['topic_desc_basic']) && isset($data[$headerMap['topic_desc_basic']])) {
-                $topic_desc_basic = trim($data[$headerMap['topic_desc_basic']]);
-            }
-            
-            $knowledge_class_basic = '';
-            if (isset($headerMap['knowledge_class_basic']) && isset($data[$headerMap['knowledge_class_basic']])) {
-                $knowledge_class_basic = trim($data[$headerMap['knowledge_class_basic']]);
-            }
-            
-            $tags = '';
-            if (isset($headerMap['tags']) && isset($data[$headerMap['tags']])) {
-                $tags = trim($data[$headerMap['tags']]);
-            }
-            
-            $category = '';
-            if (isset($headerMap['category']) && isset($data[$headerMap['category']])) {
-                $category = trim($data[$headerMap['category']]);
-            }
-            
-            // Skip if required fields are missing
-            if (empty($topic) || empty($topic_desc)) {
-                Logger::warn("Oghma Import: Skipping row with missing topic or topic_desc");
-                $errorCount++;
-                continue;
-            }
-            
-            // Insert or update record using upsertRowOnConflict
-            try {
-                $db->upsertRowOnConflict(
-                    'oghma',
-                    array(
-                        'topic' => $topic,
-                        'topic_desc' => $topic_desc,
-                        'knowledge_class' => $knowledge_class,
-                        'topic_desc_basic' => $topic_desc_basic,
-                        'knowledge_class_basic' => $knowledge_class_basic,
-                        'tags' => $tags,
-                        'category' => $category
-                    ),
-                    'topic'
-                );
-                $processedCount++;
-                Logger::info("Oghma Import: Successfully processed topic: $topic");
-            } catch (Exception $e) {
-                Logger::error("Oghma Import: Error processing topic '$topic': " . $e->getMessage());
-                $errorCount++;
-            }
-        }
-        
-        fclose($handle);
-        unlink($tempFile);
-        
-        Logger::info("Oghma Import: Processing complete. $processedCount records processed, $errorCount errors");
-        
-    } catch (Exception $e) {
-        Logger::error("Oghma Import: Fatal error processing CSV: " . $e->getMessage());
-        // Clean up temp file if it exists
-        if (isset($tempFile) && file_exists($tempFile)) {
-            unlink($tempFile);
-        }
-    }
-    
-    terminate();
-}
-
-
-// Dynamic Oghma CSV upload
-// Move this to a processor file
-// Will insert data into database and will terminate.
-if ($gameRequest[0]=="dynamic_oghma_import") {
-    Logger::info("Processing Dynamic Oghma CSV data upload");
-    
-    // Parse the message format: dynamic_oghma_import|timestamp|gametime|filename|csv_data
-    // $gameRequest[4] should contain the CSV data
-    if (!isset($gameRequest[4]) || empty($gameRequest[4])) {
-        Logger::error("Dynamic Oghma Import: No CSV data provided");
-        terminate();
-    }
-    
-    $csvData = $gameRequest[4];
-    $processedCount = 0;
-    $errorCount = 0;
-    
-    try {
-        // Create a temporary file to properly parse complex CSV data
-        $tempFile = tempnam(sys_get_temp_dir(), 'dynamic_oghma_import_');
-        file_put_contents($tempFile, $csvData);
-        
-        $handle = fopen($tempFile, 'r');
-        if ($handle === false) {
-            Logger::error("Dynamic Oghma Import: Could not open temporary CSV file");
-            terminate();
-        }
-        
-        // Read and process header
-        $header = fgetcsv($handle, 0, ',', '"', '"');
-        if ($header === false || empty($header)) {
-            Logger::error("Dynamic Oghma Import: Invalid CSV header");
-            fclose($handle);
-            unlink($tempFile);
-            terminate();
-        }
-        
-        // Normalize header labels and create header map
-        $headerMap = [];
-        foreach ($header as $i => $colName) {
-            $normalized = strtolower(trim($colName));
-            $headerMap[$normalized] = $i;
-        }
-        
-        // Process each data row
-        while (($data = fgetcsv($handle, 0, ',', '"', '"')) !== false) {
-            if (empty($data) || count($data) < 3) {
-                continue; // Skip empty or invalid rows
-            }
-            
-            // Extract required fields
-            $id_quest = '';
-            if (isset($headerMap['id_quest']) && isset($data[$headerMap['id_quest']])) {
-                $id_quest = trim($data[$headerMap['id_quest']]);
-            }
-            
-            $stage = 0;
-            if (isset($headerMap['stage']) && isset($data[$headerMap['stage']])) {
-                $stage = intval(trim($data[$headerMap['stage']]));
-            }
-            
-            $topic = '';
-            if (isset($headerMap['topic']) && isset($data[$headerMap['topic']])) {
-                $topic = strtolower(trim($data[$headerMap['topic']]));
-            }
-            
-            // Extract optional fields
-            $topic_desc = '';
-            if (isset($headerMap['topic_desc']) && isset($data[$headerMap['topic_desc']])) {
-                $topic_desc = trim($data[$headerMap['topic_desc']]);
-            }
-            
-            $knowledge_class = '';
-            if (isset($headerMap['knowledge_class']) && isset($data[$headerMap['knowledge_class']])) {
-                $knowledge_class = trim($data[$headerMap['knowledge_class']]);
-            }
-            
-            $topic_desc_basic = '';
-            if (isset($headerMap['topic_desc_basic']) && isset($data[$headerMap['topic_desc_basic']])) {
-                $topic_desc_basic = trim($data[$headerMap['topic_desc_basic']]);
-            }
-            
-            $knowledge_class_basic = '';
-            if (isset($headerMap['knowledge_class_basic']) && isset($data[$headerMap['knowledge_class_basic']])) {
-                $knowledge_class_basic = trim($data[$headerMap['knowledge_class_basic']]);
-            }
-            
-            $tags = '';
-            if (isset($headerMap['tags']) && isset($data[$headerMap['tags']])) {
-                $tags = trim($data[$headerMap['tags']]);
-            }
-            
-            $category = '';
-            if (isset($headerMap['category']) && isset($data[$headerMap['category']])) {
-                $category = trim($data[$headerMap['category']]);
-            }
-            
-            // Skip if required fields are missing
-            if (empty($id_quest) || empty($topic)) {
-                Logger::warn("Dynamic Oghma Import: Skipping row with missing id_quest or topic");
-                $errorCount++;
-                continue;
-            }
-            
-            // Insert record (dynamic oghma doesn't use upsert, it allows multiple entries)
-            try {
-                $db->insert(
-                    'oghma_dynamic',
-                    array(
-                        'id_quest' => $id_quest,
-                        'stage' => $stage,
-                        'topic' => $topic,
-                        'topic_desc' => $topic_desc,
-                        'knowledge_class' => $knowledge_class,
-                        'topic_desc_basic' => $topic_desc_basic,
-                        'knowledge_class_basic' => $knowledge_class_basic,
-                        'tags' => $tags,
-                        'category' => $category
-                    )
-                );
-                $processedCount++;
-                Logger::info("Dynamic Oghma Import: Successfully processed quest '$id_quest' stage $stage topic '$topic'");
-            } catch (Exception $e) {
-                Logger::error("Dynamic Oghma Import: Error processing quest '$id_quest' topic '$topic': " . $e->getMessage());
-                $errorCount++;
-            }
-        }
-        
-        fclose($handle);
-        unlink($tempFile);
-        
-        Logger::info("Dynamic Oghma Import: Processing complete. $processedCount records processed, $errorCount errors");
-        
-    } catch (Exception $e) {
-        Logger::error("Dynamic Oghma Import: Fatal error processing CSV: " . $e->getMessage());
-        // Clean up temp file if it exists
-        if (isset($tempFile) && file_exists($tempFile)) {
-            unlink($tempFile);
-        }
-    }
-    
-    terminate();
-}
+// Misc events, some of them can terminate the request
+// delete_event, biography_import, oghma_import
+require(__DIR__."/processor/misc.php");
 
 
 // Player rewrite
@@ -551,84 +262,21 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 }
 
 
+// Narrator inititalization
+// Note: We should check if we need to load Narrator profile in all type of requests. 
+require(__DIR__."/processor/narrator_init.php");
 
-// Narrator initialization
-// Narrator is now managed via core_narrator table, not core_npc_master
-try {
-    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
-    $narrator = new Narrator();
-    
-    // Ensure narrator has a profile_id set (default to profile 1 if not set)
-    $profileId = $narrator->getProfileId();
-    if ($profileId === null) {
-        $profileMgr = new CoreProfile();
-        $defProfile = $profileMgr->getDefaultNarrator();
-        if ($defProfile) {
-            $narrator->set('profile_id', (string)$defProfile['id']);
-        } else {
-            // Fallback to profile 1
-            $narrator->set('profile_id', '1');
-        }
-    }
-    
-    // Ensure voiceid is set
-    if (!$narrator->get('voiceid')) {
-        $narrator->set('voiceid', 'TheNarrator');
-    }
-} catch (Exception $e) {
-    // Narrator initialization failed, will use defaults
-    Logger::warn("Narrator initialization failed: " . $e->getMessage());
-} 
-
-function maybeQueueNpcVoiceRefresh($currentNpcData, $npcMaster)
-{
-    if (!$currentNpcData || !($npcMaster instanceof NpcMaster)) {
-        return $currentNpcData;
-    }
-
-    $npcName = trim((string)($currentNpcData["npc_name"] ?? ""));
-    if ($npcName === "" || strcasecmp($npcName, "The Narrator") === 0) {
-        return $currentNpcData;
-    }
-
-    $voiceId = trim((string)($currentNpcData["voiceid"] ?? ""));
-    if ($voiceId !== "") {
-        return $currentNpcData;
-    }
-
-    $extended = $npcMaster->getExtendedData($currentNpcData);
-    $lastRequestedAt = intval($extended["voice_refresh_requested_at"] ?? 0);
-    $cooldownSeconds = 300;
-    $now = time();
-
-    if ($lastRequestedAt > 0 && ($now - $lastRequestedAt) < $cooldownSeconds) {
-        return $currentNpcData;
-    }
-
-    $extended["voice_refresh_requested_at"] = $now;
-    $extended["voice_refresh_attempts"] = intval($extended["voice_refresh_attempts"] ?? 0) + 1;
-    $extended["voice_refresh_last_result"] = "requested";
-
-    $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extended);
-    $npcMaster->updateByArray($currentNpcData);
-
-    $refId = trim((string)($currentNpcData["refid"] ?? ""));
-    if ($refId !== "" && stripos($refId, "0x") !== 0) {
-        $refId = "0x{$refId}";
-    }
-
-    echo "{$npcName}|rolecommand|RefreshNPCVoice@{$refId}@{$npcName}\r\n";
-    error_log("[NPCVOICE_REFRESH] Requested refresh for {$npcName} ({$refId})");
-
-    return $currentNpcData;
-}
-
+// maybeQueueNpcVoiceRefresh function moved to misc.php. 
+// If function is called only in one place,and seems has no other uses elsewhere, then there is no point of having a function, write the code in place.
+// Also, we must not declare functions on this file (main.php).
 
 // Profile loading
 if (!isset($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"])) {
     $GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"] = false;
 }
 
+
+// Bored
 if (($gameRequest[0] ?? '') === 'bored') {
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
     $narratorSettings = new Narrator();
@@ -1067,6 +715,7 @@ if (isset($GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"]) && $GLOBALS["CHIM_CORE_CURRENT
     $npcMasterForVoiceRefresh = isset($npcMaster) && ($npcMaster instanceof NpcMaster)
         ? $npcMaster
         : new NpcMaster();
+    
     $refreshedNpcData = maybeQueueNpcVoiceRefresh($GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"], $npcMasterForVoiceRefresh);
     if ($refreshedNpcData) {
         $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $refreshedNpcData;
@@ -1125,8 +774,7 @@ $GLOBALS["active_profile"]=md5($GLOBALS["HERIKA_NAME"]);
 // This is the correct place, after parsing $gameRequest and before starting to do substitutions
 // Will change connector, and apply narrator settings
 if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"])) {
-
-    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
     $narrator = new Narrator();
     $narratorData = $narrator->getNarratorData();
     error_log("[CHIM CORE] [BOOK OVERRIDE] USING CORE PROFILE {$narratorData["npc_name"]}");
@@ -1209,10 +857,6 @@ if ($gameRequest[0]=="diary") {
         'id'
     );
 }
-
-
-
-
 
 
 // Exit if only a event info log.
@@ -1394,6 +1038,14 @@ if (is_array($currentParty)) {
 
 
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"prerequest.php");
+
+// Non-LLM request handling.
+// We need to include this file asap. Most events are handled there.
+// Log events are handled there to, which are the most called requests, and we want to exit as fast as possible for them.
+// Most called events: 'request,'infonpc','infonpc_close'.
+
+require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
+
 
 if (in_array($gameRequest[0],["rechat","narration"]) ) {
     
@@ -1624,9 +1276,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     $sqlfilter=" and type<>'prechat' "; // Will dismiss prechat entries by default. prechat are LLM responses still not displayed in-game
 
 
-// Non-LLM request handling.
 
-require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
 
 // Handle narrator_welcome events (must be AFTER comm.php which converts init to narrator_welcome)
 if ($gameRequest[0] == "narrator_welcome") {
@@ -1786,6 +1436,8 @@ if ($MUST_END) {  // Shorthand for non LLM processing
         @ob_end_flush();
         @flush();
     }    
+    error_log("*TRACE EARLY END SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
+    error_log("*TRACE EARLY END: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." resolving request");
     terminate();
 }
 if ($EXECUTION_MODE=="INJECTION_LOG") {
@@ -1794,6 +1446,7 @@ if ($EXECUTION_MODE=="INJECTION_LOG") {
 
 }
 
+// What is this for?
 if (in_array($gameRequest[0], ["continue", "continue_group"], true) && empty($GLOBALS["RECHAT_PREVIOUS_SPEAKER"])) {
     try {
         $lastSpeechRow = $db->fetchOne("SELECT speaker FROM speech ORDER BY rowid DESC LIMIT 1");
@@ -1803,7 +1456,8 @@ if (in_array($gameRequest[0], ["continue", "continue_group"], true) && empty($GL
     }
 }
 
-//error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
+
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 /**********************
  CONTEXT DATA BUILDING
@@ -2043,6 +1697,8 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
     $data = isset($gameRequest[3]) ? $gameRequest[3] : '';
     
     // List of combat grunts to filter
+    // Not agree. Make it optional. A guy using a chair, even 6 times, a combat grunt, a cough ... all of that is context relevant.
+
     $combatGrunts = [
         'Unff!', 'Argh!', 'Off!', 'Ugh!', 'Gah!', 'Oof!', 'Urgh!', 'Ngh!', 
         'Aah!', 'Ouch!', 'Grr!', 'Hah!', 'Huh!', 'Hmm!', 'Oof', 'Argh', 
@@ -2155,6 +1811,7 @@ if ($gameRequest[0] === 'instruction' && isset($gameRequest[3])) {
         $rpgCommentEventType = 'bleedout';
     }
 }
+
 if (!empty($rpgCommentEventType)) {
     $rpgCooldownSeconds = 60;
     $rpgCooldownKey = 'RPG_COMMENT_LAST_TIMESTAMP';
@@ -2613,106 +2270,7 @@ if (isset($GLOBALS["TTSFUNCTION"]) && !empty($GLOBALS["TTSFUNCTION"])) {
     }
 }
 
-
-if (!function_exists('chimFormatPromptXmlSections')) {
-    function chimFormatPromptXmlSections($content)
-    {
-        $content = str_replace(["\r\n", "\r"], "\n", (string)$content);
-        $content = preg_replace("/[ \t]+\n/", "\n", $content);
-
-        $lines = explode("\n", $content);
-        $formatted = [];
-        $lineCount = count($lines);
-
-        for ($i = 0; $i < $lineCount; $i++) {
-            $line = rtrim($lines[$i]);
-            $trimmed = trim($line);
-
-            if ($trimmed === '') {
-                if (!empty($formatted) && trim(end($formatted)) !== '') {
-                    $formatted[] = '';
-                }
-                continue;
-            }
-
-            $isBlockOpenTag = preg_match('/^<([A-Za-z0-9_]+)>$/', $trimmed) === 1;
-            $isBlockCloseTag = preg_match('/^<\/([A-Za-z0-9_]+)>$/', $trimmed) === 1;
-
-            if ($isBlockOpenTag && !empty($formatted) && trim(end($formatted)) !== '') {
-                $formatted[] = '';
-            }
-
-            $formatted[] = $line;
-
-            if ($isBlockCloseTag) {
-                $nextNonEmpty = '';
-                for ($j = $i + 1; $j < $lineCount; $j++) {
-                    $candidate = trim(rtrim($lines[$j]));
-                    if ($candidate !== '') {
-                        $nextNonEmpty = $candidate;
-                        break;
-                    }
-                }
-
-                if ($nextNonEmpty !== '' && trim(end($formatted)) !== '') {
-                    $formatted[] = '';
-                }
-            }
-        }
-
-        while (!empty($formatted) && trim($formatted[0]) === '') {
-            array_shift($formatted);
-        }
-        while (!empty($formatted) && trim(end($formatted)) === '') {
-            array_pop($formatted);
-        }
-
-        $content = implode("\n", $formatted);
-        $content = preg_replace("/\n{3,}/", "\n\n", $content);
-
-        return $content . "\n";
-    }
-}
-
-if (!function_exists('chimRemovePromptXmlBlock')) {
-    function chimRemovePromptXmlBlock($content, string $tag)
-    {
-        $tagPattern = preg_quote($tag, '/');
-        return preg_replace('/\n*<' . $tagPattern . '>\s*.*?\s*<\/' . $tagPattern . '>\n*/s', "\n", (string)$content);
-    }
-}
-
-if (!function_exists('chimApplyPromptContextOptionsToSystemPrompt')) {
-    function chimApplyPromptContextOptionsToSystemPrompt($content)
-    {
-        if (!function_exists('chimGetPromptContextOptions') || !function_exists('chimGetPromptContextOptionCatalog')) {
-            return chimFormatPromptXmlSections($content);
-        }
-
-        $options = chimGetPromptContextOptions();
-        $catalog = chimGetPromptContextOptionCatalog();
-
-        foreach ($catalog as $bucket => $bucketOptions) {
-            $enabledTags = $options[$bucket] ?? array_keys($bucketOptions ?? []);
-            foreach (array_keys($bucketOptions ?? []) as $tag) {
-                if (!in_array($tag, $enabledTags, true)) {
-                    $content = chimRemovePromptXmlBlock($content, $tag);
-                }
-            }
-        }
-
-        if (!preg_match('/<character>\s*<\/character>/s', $content)) {
-            $content = preg_replace('/\n{3,}/', "\n\n", $content);
-        }
-
-        if (!preg_match('/<general_instructions>\s*<\/general_instructions>/s', $content)) {
-            $content = preg_replace('/\n{3,}/', "\n\n", $content);
-        }
-
-        return chimFormatPromptXmlSections($content);
-    }
-}
-
+//chimFormatPromptXmlSections moved to misc.php, chimRemovePromptXmlBlock,chimApplyPromptContextOptionsToSystemPrompt moved to misc.php
 
 // Check for context overrides on ext dir (plugins) before system prompt build
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context_pre.php");
@@ -2741,6 +2299,7 @@ $systemPrompt = chimFormatPromptXmlSections(
         ["#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"], "#HERIKA_NAME#" => $GLOBALS["HERIKA_NAME"]]
     )
 );
+
 $systemPrompt = chimApplyPromptContextOptionsToSystemPrompt($systemPrompt);
 
 $head[] = array('role' => 'system', 'content' => $systemPrompt);
