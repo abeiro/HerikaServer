@@ -214,12 +214,12 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
         // Tables may not exist yet - that's fine
     }
 
-    require_once __DIR__ . "/../service/processors/snqe/lib/snqe.class.php";
+    require_once $GLOBALS["ENGINE_PATH"] . "/service/processors/snqe/lib/snqe.class.php";
     SNQEQuestManager::load_quests($gameRequest[2]);
     
     // Narrator Welcome Message on Load
     try {
-        require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+        require_once($GLOBALS["ENGINE_PATH"] . "/lib/core/narrator.class.php");
         $narrator = new Narrator();
         
         // Check if narrator is enabled and welcome message is enabled
