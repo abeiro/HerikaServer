@@ -10,11 +10,17 @@ $GLOBALS["TASKS"]["rolemaster"]["fn"]=function() {
     $GLOBALS["FUNCTION_PARM_MOVETO"] = [];
     $GLOBALS["F_NAMES"] = [];
     
-    if (isset($GLOBALS["CORE_LANG"]))
-        $GLOBALS["CORE_LANG"]='';
-
-    require($enginePath . "conf/conf.php");
-    require_once($enginePath . "lib/{$GLOBALS["DBDRIVER"]}.class.php");
+    require_once($enginePath . "lib/runtime_bootstrap.php");
+    chimRuntimeBootstrapIfNeeded($enginePath, [
+        'load_general_settings' => true,
+        'load_stt_connector' => false,
+        'load_itt_connector' => false,
+        'load_player_name' => true,
+        'load_narrator' => true,
+    ]);
+    if (isset($GLOBALS["CORE_LANG"])) {
+        $GLOBALS["CORE_LANG"] = '';
+    }
     if (!isset($GLOBALS["db"])) { $GLOBALS["db"] = new sql(); }
     require_once($enginePath . "prompts/command_prompt.php");
     require_once($enginePath . "lib/chat_helper_functions.php");

@@ -21,6 +21,7 @@ if (!function_exists('chimRuntimeNeedsDbUpdates')) {
             'general_settings',
             'core_stt_connector',
             'core_itt_connector',
+            'core_tts_connector',
         ];
 
         try {
@@ -28,7 +29,7 @@ if (!function_exists('chimRuntimeNeedsDbUpdates')) {
                 "SELECT table_name
                  FROM information_schema.tables
                  WHERE table_schema='public'
-                   AND table_name IN ('database_versioning','general_settings','core_stt_connector','core_itt_connector')"
+                   AND table_name IN ('database_versioning','general_settings','core_stt_connector','core_itt_connector','core_tts_connector')"
             );
         } catch (\Throwable $e) {
             $decision = false;
@@ -122,6 +123,43 @@ if (!function_exists('chimRuntimeEnsureDbUpdates')) {
     }
 }
 
+if (!function_exists('chimRuntimeApplyBootstrapOptions')) {
+    function chimRuntimeApplyBootstrapOptions(string $enginePath, array $options = []): void
+    {
+        $runDbUpdates = !array_key_exists('run_db_updates', $options) || (bool)$options['run_db_updates'];
+        $loadGeneralSettings = !array_key_exists('load_general_settings', $options) || (bool)$options['load_general_settings'];
+        $loadSttConnector = !array_key_exists('load_stt_connector', $options) || (bool)$options['load_stt_connector'];
+        $loadIttConnector = !array_key_exists('load_itt_connector', $options) || (bool)$options['load_itt_connector'];
+        $loadTtsConnector = $options['load_tts_connector'] ?? false;
+        $loadPlayerName = !empty($options['load_player_name']);
+        $loadNarrator = !empty($options['load_narrator']);
+
+        if ($runDbUpdates) {
+            chimRuntimeEnsureDbUpdates($enginePath);
+        }
+        if ($loadGeneralSettings) {
+            chimLoadGeneralSettingsIntoGlobals();
+        }
+        if ($loadSttConnector) {
+            chimLoadActiveSttConnectorIntoGlobals();
+        }
+        if ($loadIttConnector) {
+            chimLoadActiveIttConnectorIntoGlobals();
+        }
+        if (is_string($loadTtsConnector) && trim($loadTtsConnector) !== '') {
+            chimLoadPreferredTtsConnectorIntoGlobals(trim($loadTtsConnector));
+        } elseif ($loadTtsConnector) {
+            chimLoadPreferredTtsConnectorIntoGlobals();
+        }
+        if ($loadPlayerName) {
+            chimLoadPlayerNameIntoGlobals();
+        }
+        if ($loadNarrator) {
+            chimLoadNarratorSettingsIntoGlobals();
+        }
+    }
+}
+
 if (!function_exists('chimRuntimeBootstrap')) {
     function chimRuntimeBootstrap(string $enginePath, array $options = []): void
     {
@@ -149,31 +187,39 @@ if (!function_exists('chimRuntimeBootstrap')) {
             $GLOBALS["db"] = new sql();
         }
 
-        $runDbUpdates = !array_key_exists('run_db_updates', $options) || (bool)$options['run_db_updates'];
-        $loadGeneralSettings = !array_key_exists('load_general_settings', $options) || (bool)$options['load_general_settings'];
-        $loadSttConnector = !array_key_exists('load_stt_connector', $options) || (bool)$options['load_stt_connector'];
-        $loadIttConnector = !array_key_exists('load_itt_connector', $options) || (bool)$options['load_itt_connector'];
-        $loadPlayerName = !empty($options['load_player_name']);
-        $loadNarrator = !empty($options['load_narrator']);
+        chimRuntimeApplyBootstrapOptions($enginePath, $options);
+    }
+}
 
-        if ($runDbUpdates) {
-            chimRuntimeEnsureDbUpdates($enginePath);
+if (!function_exists('chimRuntimeBootstrapIfNeeded')) {
+    function chimRuntimeBootstrapIfNeeded(string $enginePath, array $options = []): void
+    {
+        $enginePath = rtrim($enginePath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+        if (empty($GLOBALS["DBDRIVER"]) || !isset($GLOBALS["db"]) || !is_object($GLOBALS["db"])) {
+            chimRuntimeBootstrap($enginePath, $options);
+            return;
         }
-        if ($loadGeneralSettings) {
-            chimLoadGeneralSettingsIntoGlobals();
+
+        $GLOBALS["ENGINE_PATH"] = $enginePath;
+        chimRuntimeApplyBootstrapOptions($enginePath, $options);
+    }
+}
+
+if (!function_exists('chimRuntimeBindActiveProfileFromRequest')) {
+    function chimRuntimeBindActiveProfileFromRequest(): ?string
+    {
+        if (!isset($_GET["profile"])) {
+            return null;
         }
-        if ($loadSttConnector) {
-            chimLoadActiveSttConnectorIntoGlobals();
+
+        $profile = trim(strval($_GET["profile"]));
+        if ($profile === '') {
+            return null;
         }
-        if ($loadIttConnector) {
-            chimLoadActiveIttConnectorIntoGlobals();
-        }
-        if ($loadPlayerName) {
-            chimLoadPlayerNameIntoGlobals();
-        }
-        if ($loadNarrator) {
-            chimLoadNarratorSettingsIntoGlobals();
-        }
+
+        $GLOBALS["active_profile"] = $profile;
+        return $profile;
     }
 }
 

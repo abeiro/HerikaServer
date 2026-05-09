@@ -3,13 +3,29 @@
 session_start();
 
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."../";
-require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
+require_once($enginePath . "lib".DIRECTORY_SEPARATOR."runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_stt_connector' => false,
+    'load_itt_connector' => false,
+    'load_tts_connector' => false,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 
 if (isset($_SESSION["PROFILE"])) {
     require_once($_SESSION["PROFILE"]);
+    chimRuntimeApplyBootstrapOptions($enginePath, [
+        'load_general_settings' => true,
+        'load_stt_connector' => false,
+        'load_itt_connector' => false,
+        'load_tts_connector' => false,
+        'load_player_name' => true,
+        'load_narrator' => true,
+    ]);
 }
 
 $GLOBALS["active_profile"]=md5($GLOBALS["HERIKA_NAME"]);

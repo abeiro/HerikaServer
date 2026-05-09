@@ -2,10 +2,14 @@
 
 $enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
-require_once($enginePath."conf".DIRECTORY_SEPARATOR."conf.php");
-require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+require_once($enginePath."lib".DIRECTORY_SEPARATOR."runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
 
-$db = new sql();
+$db = $GLOBALS["db"];
 
 $db->execQuery("delete from {$_GET["table"]} where rowid={$_GET["rowid"]}");
 

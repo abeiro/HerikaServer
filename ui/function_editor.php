@@ -6,19 +6,19 @@ if ($webRoot == '/') {
 }
 $webRoot = rtrim($webRoot, '/');
 
+$enginePath = dirname(__DIR__) . DIRECTORY_SEPARATOR;
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
 require_once(__DIR__ . DIRECTORY_SEPARATOR . "profile_loader.php");
 
 $TITLE = "Action Editor";
 $isEmbed = isset($_GET['embed']) && strval($_GET['embed']) === '1';
-
-$enginePath = dirname(__DIR__) . DIRECTORY_SEPARATOR;
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
-
-if (!isset($GLOBALS["db"]) || !($GLOBALS["db"] instanceof sql)) {
-    $GLOBALS["db"] = new sql();
-}
 
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "action_catalog.php");
 

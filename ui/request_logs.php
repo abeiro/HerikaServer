@@ -2,10 +2,15 @@
 
 $enginePath = dirname(__DIR__) . DIRECTORY_SEPARATOR;
 
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once(__DIR__ . DIRECTORY_SEPARATOR . "profile_loader.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
 
 function h(mixed $value): string
 {

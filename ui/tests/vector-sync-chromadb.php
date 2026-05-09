@@ -1,10 +1,15 @@
 <?php
 
-require_once(__DIR__ . '/../../conf/conf.php');
-$embedding = $FEATURES["MEMORY_EMBEDDING"]["TEXT2VEC_PROVIDER"];
+$enginePath = __DIR__ . '/../../';
+require_once($enginePath . 'lib/runtime_bootstrap.php');
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+]);
+
+$embedding = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TEXT2VEC_PROVIDER"] ?? '';
 
 // Run sync command
-$commandsync = 'php /var/www/html/HerikaServer/debug/util_memory_subsystem.php sync';
+$commandsync = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($enginePath . 'debug/util_memory_subsystem.php') . ' sync';
 $outputsync = shell_exec($commandsync);
 
 // Output sync command

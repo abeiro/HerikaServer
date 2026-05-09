@@ -9,7 +9,14 @@ echo "[MANAGER] START".PHP_EOL;
 
 
 require_once("{$GLOBALS["ENGINE_ROOT"]}/service/lib/core_utils.php");
-require_once("{$GLOBALS["ENGINE_ROOT"]}/conf/conf.php");
+require_once("{$GLOBALS["ENGINE_ROOT"]}/lib/runtime_bootstrap.php");
+chimRuntimeBootstrap($GLOBALS["ENGINE_ROOT"], [
+    'load_general_settings' => true,
+    'load_stt_connector' => false,
+    'load_itt_connector' => false,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
 require_once("{$GLOBALS["ENGINE_ROOT"]}/lib/logger.php");
 
 if (isset($argv) && is_array($argv)) {

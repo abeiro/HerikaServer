@@ -1,9 +1,14 @@
 <?php
 
 $enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php";
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
@@ -12,7 +17,7 @@ $GLOBALS["ENGINE_PATH"] = $enginePath;
 $stateFile = "{$enginePath}log/snqe_state.json";
 $logTailLines = 400;
 
-$db = new sql();
+$db = $GLOBALS["db"];
 
 $isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
 

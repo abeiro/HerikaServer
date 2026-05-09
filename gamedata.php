@@ -10,9 +10,15 @@
 
 error_reporting(E_ALL);
 ini_set('display_errors', '0'); // Don't output errors to response body
-require_once(__DIR__ . "/conf/conf.php");
-require_once(__DIR__ . "/lib/{$GLOBALS["DBDRIVER"]}.class.php");
-$GLOBALS["db"] = new sql();
+require_once(__DIR__ . "/lib/runtime_bootstrap.php");
+chimRuntimeBootstrap(__DIR__, [
+    'load_general_settings' => true,
+    'load_stt_connector' => false,
+    'load_itt_connector' => false,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+$GLOBALS["db"] = $GLOBALS["db"] ?? new sql();
 require_once(__DIR__ . "/lib/core/npc_master.class.php");
 require_once(__DIR__ . "/lib/core/activity_status.php");
 require_once(__DIR__ . "/lib/core/transformation_state.php");

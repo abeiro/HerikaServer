@@ -33,9 +33,14 @@ $GLOBALS['ENGINE_PATH'] = $enginePath;
 
 // ─── Includes ─────────────────────────────────────────────────────────────────
 
-require_once $enginePath . 'conf/conf.php';
+require_once $enginePath . 'lib/runtime_bootstrap.php';
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
 require_once $enginePath . 'lib/model_dynmodel.php';
-require_once $enginePath . "lib/{$GLOBALS['DBDRIVER']}.class.php";
 require_once $enginePath . 'lib/chat_helper_functions.php';
 require_once $enginePath . 'lib/data_functions.php';
 require_once $enginePath . 'lib/logger.php';
@@ -53,7 +58,7 @@ require_once $enginePath . 'debug/background_action_handler.php';
 
 // ─── Database ─────────────────────────────────────────────────────────────────
 
-$db = new sql();
+$db = $GLOBALS["db"];
 
 // ─── Helper Functions ─────────────────────────────────────────────────────────
 
@@ -136,7 +141,9 @@ $forceLetter = ($argMode === 'forceletter');
 $forceAction = ($argMode === 'forceaction' || $argMode3 === 'forceaction');
 
 $GLOBALS['HERIKA_NAME'] = $npcName;
-$GLOBALS['PLAYER_NAME'] = resolvePlayerName($db);
+if (empty($GLOBALS['PLAYER_NAME'])) {
+    $GLOBALS['PLAYER_NAME'] = resolvePlayerName($db);
+}
 
 // Variables expected by some library functions
 $CLEAN_CONTEXT_FOCUS_CHAT = false;

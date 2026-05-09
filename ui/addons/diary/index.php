@@ -9,8 +9,12 @@ $enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY
 
 $configFilepath=realpath($enginePath."conf".DIRECTORY_SEPARATOR);
 
-require_once($enginePath."conf".DIRECTORY_SEPARATOR."conf.php");
-require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+require_once($enginePath."lib".DIRECTORY_SEPARATOR."runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
 
 $GLOBALS["PROFILES"]["default"]="$configFilepath/conf.php";
 foreach (glob($configFilepath . '/conf_????????????????????????????????.php') as $mconf ) {
@@ -25,6 +29,11 @@ foreach (glob($configFilepath . '/conf_????????????????????????????????.php') as
 
 if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFILES"])) {
     require_once($_SESSION["PROFILE"]);
+    chimRuntimeApplyBootstrapOptions($enginePath, [
+        'load_general_settings' => true,
+        'load_player_name' => true,
+        'load_narrator' => true,
+    ]);
 
   } else {
     ?>
@@ -247,7 +256,7 @@ if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"],$GLOBALS["PROFI
   
 
 //print_r($GLOBALS);
-$db = new sql();
+$db = $GLOBALS["db"];
 
 $data=[];
 $n=3; // Starting at page 3

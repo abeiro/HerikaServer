@@ -5,11 +5,20 @@ session_start();
 
 $enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
-require_once($enginePath."conf".DIRECTORY_SEPARATOR."conf.php");
-require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
+require_once($enginePath."lib".DIRECTORY_SEPARATOR."runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
 
 if (isset($_SESSION["PROFILE"])) {
     require_once($_SESSION["PROFILE"]);
+    chimRuntimeApplyBootstrapOptions($enginePath, [
+        'load_general_settings' => true,
+        'load_player_name' => true,
+        'load_narrator' => true,
+    ]);
 }
 
 $pattern = '/conf_([a-f0-9]+)\.php/';
@@ -19,7 +28,7 @@ $hash = $matches[1];
 // HTML template
 echo file_get_contents('template.html');
 
-$db=new sql();
+$db = $GLOBALS["db"];
 $res=$db->fetchAll("select max(gamets) as last_gamets from eventlog");
 $last_gamets=$res[0]["last_gamets"]+1;
 

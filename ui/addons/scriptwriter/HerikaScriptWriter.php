@@ -4,10 +4,17 @@ error_reporting(E_ALL);
 
 $enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
-require_once($enginePath . "conf/conf.php");
-require_once($enginePath . "lib/$DBDRIVER.class.php");
+require_once($enginePath . "lib/runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_stt_connector' => true,
+    'load_itt_connector' => true,
+    'load_tts_connector' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($enginePath . "prompts" .DIRECTORY_SEPARATOR."command_prompt.php");    // OpenAI complains
@@ -17,7 +24,7 @@ if ((!$argv[2])||(!$argv[1] )) {
  die("\nUse. ".basename(__FILE__)." time_multiplier scriptdata.json\n".PHP_EOL);
 }
 
-$db=new sql();
+$db = $GLOBALS["db"];
 
 $r=$db->fetchAll("select max(gamets)  as gamets from eventlog");
 

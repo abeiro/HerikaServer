@@ -7,8 +7,13 @@ header('Content-Type: application/json');
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 $GLOBALS["ENGINE_PATH"] = $enginePath;
-require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php";
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "dynamic_update_util.php";
 require_once $enginePath . "lib/core/npc_master.class.php";
@@ -17,8 +22,7 @@ require_once $enginePath . "lib/core/llm_connector.class.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "lazy_xml.php";
 require_once __DIR__ . DIRECTORY_SEPARATOR . "ai_profile_generation_service.php";
 
-$db = new sql();
-$GLOBALS["db"] = $db;
+$db = $GLOBALS["db"];
 $jsonDataInput = aiProfileMergeRequestData();
 
 $selectedEvents = [];

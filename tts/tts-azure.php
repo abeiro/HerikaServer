@@ -1,6 +1,12 @@
 <?php
 $localPath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-require_once($localPath . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
+require_once($localPath . "lib".DIRECTORY_SEPARATOR."runtime_bootstrap.php");
+chimRuntimeBootstrapIfNeeded($localPath, [
+    'load_general_settings' => true,
+    'load_stt_connector' => false,
+    'load_itt_connector' => false,
+]);
+chimEnsureTtsConnectorGlobals('azure');
 require_once($localPath . "lib".DIRECTORY_SEPARATOR."sharedmem.class.php"); // Caching token
 require_once($localPath . "lib".DIRECTORY_SEPARATOR."emote_moods.php");
 

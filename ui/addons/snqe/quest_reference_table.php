@@ -2,12 +2,16 @@
 
 $enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 require_once($enginePath . "ui" . DIRECTORY_SEPARATOR . "profile_loader.php");
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrapIfNeeded($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "quest_reference_data.php");
 
-$GLOBALS["db"] = new sql();
 $db = $GLOBALS["db"];
 
 $isEmbed = (isset($_GET["embed"]) && $_GET["embed"] === "1");

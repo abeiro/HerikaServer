@@ -750,6 +750,122 @@ if (!function_exists('chimLoadActiveIttConnectorIntoGlobals')) {
     }
 }
 
+if (!function_exists('chimResolvePreferredTtsConnectorRow')) {
+    function chimResolvePreferredTtsConnectorRow(string $driver = ''): ?array
+    {
+        if (!class_exists('TTSConnector')) {
+            require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
+        }
+
+        $connector = new TTSConnector();
+        $normalizedDriver = $driver !== '' ? $connector->normalizeDriverValue($driver) : '';
+        $rows = $connector->readAll();
+        if (!is_array($rows) || empty($rows)) {
+            return null;
+        }
+
+        if ($normalizedDriver !== '') {
+            $rows = array_values(array_filter($rows, static function ($row) use ($connector, $normalizedDriver) {
+                return $connector->normalizeDriverValue($row['driver'] ?? '') === $normalizedDriver;
+            }));
+            if (empty($rows)) {
+                return null;
+            }
+        }
+
+        $profileUsageMap = [];
+        try {
+            $usageRows = $GLOBALS["db"]->fetchAll(
+                "SELECT tts_connector_id, COUNT(*) AS c
+                 FROM core_profiles
+                 WHERE tts_connector_id IS NOT NULL
+                 GROUP BY tts_connector_id"
+            );
+            foreach ($usageRows as $usageRow) {
+                $profileUsageMap[intval($usageRow['tts_connector_id'] ?? 0)] = intval($usageRow['c'] ?? 0);
+            }
+        } catch (\Throwable $e) {
+        }
+
+        $playerConnectorId = 0;
+        try {
+            $playerRow = $GLOBALS["db"]->fetchOne("SELECT value FROM core_player WHERE id = 'tts_connector_id' LIMIT 1");
+            if (is_array($playerRow)) {
+                $playerConnectorId = intval($playerRow['value'] ?? 0);
+            }
+        } catch (\Throwable $e) {
+        }
+
+        usort($rows, static function ($a, $b) use ($profileUsageMap, $playerConnectorId) {
+            $aId = intval($a['id'] ?? 0);
+            $bId = intval($b['id'] ?? 0);
+
+            $aIsPlayer = ($aId > 0 && $aId === $playerConnectorId) ? 1 : 0;
+            $bIsPlayer = ($bId > 0 && $bId === $playerConnectorId) ? 1 : 0;
+            if ($aIsPlayer !== $bIsPlayer) {
+                return $bIsPlayer <=> $aIsPlayer;
+            }
+
+            $aUsage = $profileUsageMap[$aId] ?? 0;
+            $bUsage = $profileUsageMap[$bId] ?? 0;
+            if ($aUsage !== $bUsage) {
+                return $bUsage <=> $aUsage;
+            }
+
+            $aLabel = strtolower(trim(strval($a['label'] ?? '')));
+            $bLabel = strtolower(trim(strval($b['label'] ?? '')));
+            if ($aLabel !== $bLabel) {
+                return $aLabel <=> $bLabel;
+            }
+
+            return $aId <=> $bId;
+        });
+
+        return $connector->getById(intval($rows[0]['id'] ?? 0)) ?: null;
+    }
+}
+
+if (!function_exists('chimLoadPreferredTtsConnectorIntoGlobals')) {
+    function chimLoadPreferredTtsConnectorIntoGlobals(string $driver = ''): void
+    {
+        if (!class_exists('TTSConnector')) {
+            require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
+        }
+
+        $row = chimResolvePreferredTtsConnectorRow($driver);
+        if (!$row) {
+            return;
+        }
+
+        $connector = new TTSConnector();
+        $connector->setOldGlobals($row);
+    }
+}
+
+if (!function_exists('chimEnsureTtsConnectorGlobals')) {
+    function chimEnsureTtsConnectorGlobals(string $driver): void
+    {
+        if (!class_exists('TTSConnector')) {
+            require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
+        }
+
+        $connector = new TTSConnector();
+        $normalizedDriver = $connector->normalizeDriverValue($driver);
+        if ($normalizedDriver === '') {
+            return;
+        }
+
+        $currentDriver = $connector->normalizeDriverValue($GLOBALS["TTSFUNCTION"] ?? '');
+        $providerKey = $connector->getProviderKeyFromDriver($normalizedDriver);
+        $hasProviderGlobals = ($providerKey !== '' && !empty($GLOBALS["TTS"][$providerKey]) && is_array($GLOBALS["TTS"][$providerKey]));
+        if ($currentDriver === $normalizedDriver && $hasProviderGlobals) {
+            return;
+        }
+
+        chimLoadPreferredTtsConnectorIntoGlobals($normalizedDriver);
+    }
+}
+
 if (!function_exists('chimHydrateLegacyGlobalsFromDb')) {
     function chimHydrateLegacyGlobalsFromDb(): void
     {

@@ -30,15 +30,8 @@ if (!$_FILES["file"]["tmp_name"]) {
 @copy($_FILES["file"]["tmp_name"] ,$finalName);
 
 
-if (isset($_GET["profile"])) {
-    if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php")) {
-       // error_log("PROFILE: {$_GET["profile"]}");
-        require_once($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
-    }
-    chimLoadGeneralSettingsIntoGlobals();
-    chimLoadActiveIttConnectorIntoGlobals();
-    $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
-
+if (chimRuntimeBindActiveProfileFromRequest() !== null) {
+    $GLOBALS["CURRENT_CONNECTOR"] = DMgetCurrentModel();
 }
 
 function convertImage($originalImage, $outputImage, $quality)

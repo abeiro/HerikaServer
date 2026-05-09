@@ -2,9 +2,15 @@
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . "../../";
 
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+    'load_tts_connector' => true,
+]);
+
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "api_badge.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
 
@@ -17,7 +23,6 @@ if ($webRoot === '/') {
 $webRoot = rtrim($webRoot, '/');
 $isEmbed = isset($_GET['embed']) && strval($_GET['embed']) === '1';
 
-$GLOBALS["db"] = new sql();
 try {
     require_once($enginePath . "debug" . DIRECTORY_SEPARATOR . "db_updates.php");
 } catch (Throwable $_e) {

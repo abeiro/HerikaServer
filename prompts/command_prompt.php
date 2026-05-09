@@ -6,21 +6,16 @@ $rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 if (!isset($GLOBALS["PLAYER_NAME"]) || $GLOBALS["PLAYER_NAME"] === '') {
     $safePlayerName = 'Player';
     try {
-        @include_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
-        if (isset($GLOBALS["DBDRIVER"]) && $GLOBALS["DBDRIVER"] !== '') {
-            $dbClassFile = $rootPath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php";
-            if (!class_exists('sql') && file_exists($dbClassFile)) {
-                require_once($dbClassFile);
-            }
-            if (class_exists('sql')) {
-                $db_local = new sql();
-                if (method_exists($db_local, 'fetchOne')) {
-                    $row = $db_local->fetchOne("select value from conf_opts where id='PLAYER_NAME'");
-                    if (is_array($row) && isset($row['value']) && $row['value'] !== '') {
-                        $safePlayerName = (string)$row['value'];
-                    }
-                }
-            }
+        require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+        chimRuntimeBootstrapIfNeeded($rootPath, [
+            'run_db_updates' => false,
+            'load_general_settings' => false,
+            'load_stt_connector' => false,
+            'load_itt_connector' => false,
+            'load_player_name' => true,
+        ]);
+        if (isset($GLOBALS["PLAYER_NAME"]) && $GLOBALS["PLAYER_NAME"] !== '') {
+            $safePlayerName = (string)$GLOBALS["PLAYER_NAME"];
         }
     } catch (Throwable $_) {
         // Ignore and use fallback

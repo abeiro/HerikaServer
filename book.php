@@ -5,9 +5,15 @@
 
 
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
-require_once($path . "conf" . DIRECTORY_SEPARATOR . "conf.php"); // API KEY must be there
+require_once($path . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrap($path, [
+    'load_general_settings' => true,
+    'load_stt_connector' => false,
+    'load_itt_connector' => false,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
 require_once($path . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
-require_once($path . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($path . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
 require_once($path . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php");
 require_once($path . "lib" . DIRECTORY_SEPARATOR . "auditing.php");
@@ -28,7 +34,8 @@ if (!$_FILES["file"]["tmp_name"]) {
 }
 @copy($_FILES["file"]["tmp_name"], $finalName);
 
-$db = new sql();
+$db = $GLOBALS["db"] ?? new sql();
+$GLOBALS["db"] = $db;
 
 
 $title = $_GET["title"];
