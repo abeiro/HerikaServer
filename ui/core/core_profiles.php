@@ -1637,15 +1637,20 @@ const saveAllBtn = document.getElementById('btn_save_all');
             <small style="color:#9fb1c9; display:block; margin-bottom:8px;">Override global settings for this profile. Changes here take precedence over global configurations.</small>
             <?php
             // Configure override editor for Profile mode
+            $profileOverrideCatalog = chimGetOverrideableGeneralSettingsCatalog();
             $currentProfileOverrides = [];
             try {
                 if (!empty($editItem["metadata"])) {
                     $metaData = json_decode($editItem["metadata"], true);
                     if (is_array($metaData)) {
-                        $globalSettingKeys = ['TTSFUNCTION'];
-                        foreach ($globalSettingKeys as $key) {
-                            if (isset($metaData[$key])) {
+                        foreach (array_keys($profileOverrideCatalog) as $key) {
+                            if (array_key_exists($key, $metaData)) {
                                 $currentProfileOverrides[$key] = $metaData[$key];
+                            }
+                        }
+                        foreach (['TTSFUNCTION'] as $legacyKey) {
+                            if (array_key_exists($legacyKey, $metaData)) {
+                                $currentProfileOverrides[$legacyKey] = $metaData[$legacyKey];
                             }
                         }
                     }
@@ -1656,7 +1661,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
             $overrideEditorConfig = [
                 'mode' => 'profile',
                 'fieldName' => 'metadata',
-                'allowedSettings' => ['TTSFUNCTION'],
+                'settingsCatalog' => $profileOverrideCatalog,
                 'reservedKeys' => ['DYNAMIC_PROFILE_ENABLED', 'MIDDLE_TERM_MEMORY_ENABLED', 'AUTO_DIARY_ENABLED', 'AUTO_DIARY_WAIT_ENABLED', 'LLM_RANDOMIZER_ENABLED', 'RPG_COMMENTS', 'RPG_COMMENTS_CHANCE', 'DYNAMIC_PROFILE_FIELDS'],
                 'currentData' => $currentProfileOverrides,
                 'systemFields' => [],

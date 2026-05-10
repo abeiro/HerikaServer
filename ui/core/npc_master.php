@@ -2474,6 +2474,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             $reservedKeys = [ 'middle_term_enabled', 'individual_memory_enabled', 'auto_diary_enabled', 'auto_diary_wait_enabled', 'chim_core_migrated', 'salutation_after_a_while'];
             $extendedDataRaw = isset($editItem["extended_data"]) ? $editItem["extended_data"] : '{}';
             $extendedDataObj = json_decode($extendedDataRaw, true) ?: [];
+            $npcOverrideCatalog = chimGetOverrideableGeneralSettingsCatalog();
             $currentOverrides = [];
             $systemFields = [];
             foreach ($extendedDataObj as $key => $value) {
@@ -2486,7 +2487,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             $overrideEditorConfig = [
                 'mode' => 'npc',
                 'fieldName' => 'extended_data',
-                'allowedSettings' => ['TTSFUNCTION','RECHAT_H','RECHAT_P','RECHAT_ALLOW_ACTIONS','CORE_LANG','MAX_WORDS_LIMIT','DIARY_PROMPT','DIARY_COOLDOWN','COMBAT_BARK_COOLDOWN','OGHMA_INFINIUM','OGHMA_AMOUNT','CONTEXT_HISTORY','CONTEXT_HISTORY_DIARY','CONTEXT_HISTORY_DYNAMIC_PROFILE','QUEST_COMMENT','QUEST_COMMENT_CHANCE','BORED_EVENT','BORED_EVENT_SERVERSIDE','LANG_LLM_XTTS'],
+                'settingsCatalog' => $npcOverrideCatalog,
                 'reservedKeys' => $reservedKeys,
                 'currentData' => $currentOverrides,
                 'systemFields' => $systemFields,

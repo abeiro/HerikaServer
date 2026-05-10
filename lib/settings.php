@@ -222,6 +222,241 @@ if (!function_exists('chimGetManagedGeneralSettingDescriptions')) {
     }
 }
 
+if (!function_exists('chimPrettySettingLabel')) {
+    function chimPrettySettingLabel(string $flatName): string
+    {
+        if (strpos($flatName, 'FEATURES@MEMORY_EMBEDDING@') === 0) {
+            $parts = explode('@', $flatName);
+            $last = end($parts) ?: $flatName;
+            return ucwords(str_replace('_', ' ', strtolower(trim($last))));
+        }
+
+        if (strpos($flatName, 'TRANSLATION@settings@') === 0) {
+            $parts = explode('@', $flatName);
+            $last = end($parts) ?: $flatName;
+            return ucwords(str_replace('_', ' ', strtolower(trim($last))));
+        }
+
+        if (strpos($flatName, 'TRANSLATION@DeepL@') === 0) {
+            $parts = explode('@', $flatName);
+            $last = end($parts) ?: $flatName;
+            $lastLower = strtolower(trim($last));
+            if ($lastLower === 'url') {
+                return 'Endpoint URL';
+            }
+            if ($lastLower === 'api_key') {
+                return 'API Key';
+            }
+            return ucwords(str_replace('_', ' ', $lastLower));
+        }
+
+        if ($flatName === 'TRANSLATION_FUNCTION') {
+            return 'Provider';
+        }
+
+        $customLabels = [
+            'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
+            'CORE_CONNECTOR_SUMMARY' => 'Summaries',
+            'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory/Background Life',
+            'CORE_CONNECTOR_SCENECLASSIFIER' => 'Scene Classifier',
+            'SCENE_CLASSIFIER_ENABLED' => 'Scene Classifier',
+            'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile',
+            'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
+            'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
+            'RELLLM_CONNECTOR' => 'Relationship Management',
+            'EMOTEMOODS' => 'Emote Moods',
+            'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
+            'SHORTER_NEARBY_ITEM_LIST' => 'Shorter Nearby Item List',
+            'BGL_TRIGGER_DAYS' => 'Background Life Days Cooldown',
+            'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY' => 'Focus Chat Context',
+            'GLOBAL_STT_CONNECTOR_ID' => 'Speech To Text Connector',
+            'GLOBAL_ITT_CONNECTOR_ID' => 'Image To Text Connector',
+        ];
+        if (isset($customLabels[$flatName])) {
+            return $customLabels[$flatName];
+        }
+
+        $parts = explode('@', $flatName);
+        $prettyParts = [];
+        foreach ($parts as $part) {
+            $prettyParts[] = ucwords(str_replace('_', ' ', strtolower(trim($part))));
+        }
+        return implode(' -> ', $prettyParts);
+    }
+}
+
+if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
+    function chimGetOverrideableGeneralSettingCategory(string $flatId): string
+    {
+        if (
+            strpos($flatId, 'PROMPT_') === 0
+            || in_array($flatId, ['EMOTEMOODS', 'DETECT_MAGIC_EVENT', 'MAGIC_EVENT_BLACKLIST', 'LOCATION_BLACKLIST', 'ITEM_BLACKLIST', 'EVENT_TYPE_FILTER'], true)
+        ) {
+            return 'Prompt';
+        }
+
+        if (strpos($flatId, 'RECHAT') === 0) {
+            return 'Rechat';
+        }
+
+        if (strpos($flatId, 'FEATURES@MEMORY_EMBEDDING@') === 0) {
+            return 'Memory';
+        }
+
+        if (
+            strpos($flatId, 'CORE_CONNECTOR_') === 0
+            || in_array($flatId, ['RELLLM_CONNECTOR', 'GLOBAL_STT_CONNECTOR_ID', 'GLOBAL_ITT_CONNECTOR_ID'], true)
+        ) {
+            return 'Global Connectors';
+        }
+
+        if (
+            in_array($flatId, [
+                'GROUND_ITEMS_DESCRIPTIONS_ONLY',
+                'INVENTORY_ITEMS_DESCRIPTIONS_ONLY',
+                'HIDE_AMBIENT_COMBAT',
+                'DISABLE_REANIMATION_TRACKING',
+                'TRANSFORMATION_DETECTION',
+                'POWER_AWARENESS_ENABLED',
+                'SCENE_CLASSIFIER_ENABLED',
+                'RELATIONSHIP_SYSTEM_ENABLED',
+                'OGHMA_CUSTOM',
+            ], true)
+        ) {
+            return 'Context';
+        }
+
+        if (strpos($flatId, 'TRANSLATION') === 0) {
+            return 'Translation';
+        }
+
+        return 'Misc';
+    }
+}
+
+if (!function_exists('chimGetSelectOptionsForOverrideSetting')) {
+    function chimGetSelectOptionsForOverrideSetting(string $flatId): array
+    {
+        $db = chimSettingsDb();
+        if (!$db) {
+            return [];
+        }
+
+        $definitions = [
+            'GLOBAL_STT_CONNECTOR_ID' => [
+                'query' => "SELECT id, COALESCE(NULLIF(label, ''), NULLIF(driver, ''), CAST(id AS text)) AS option_label FROM public.core_stt_connector ORDER BY id ASC",
+            ],
+            'GLOBAL_ITT_CONNECTOR_ID' => [
+                'query' => "SELECT id, COALESCE(NULLIF(label, ''), NULLIF(driver, ''), CAST(id AS text)) AS option_label FROM public.core_itt_connector ORDER BY id ASC",
+            ],
+        ];
+
+        if (strpos($flatId, 'CORE_CONNECTOR_') === 0 || $flatId === 'RELLLM_CONNECTOR') {
+            $definitions[$flatId] = [
+                'query' => "SELECT id, COALESCE(NULLIF(label, ''), NULLIF(model, ''), CAST(id AS text)) AS option_label FROM public.core_llm_connector ORDER BY LOWER(COALESCE(NULLIF(label, ''), model)) ASC",
+            ];
+        }
+
+        if (!isset($definitions[$flatId])) {
+            return [];
+        }
+
+        try {
+            $rows = $db->fetchAll($definitions[$flatId]['query']);
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        $values = [];
+        $valueLabels = [];
+        foreach ((array)$rows as $row) {
+            $id = strval($row['id'] ?? '');
+            if ($id === '') {
+                continue;
+            }
+
+            $values[] = $id;
+            $valueLabels[$id] = strval($row['option_label'] ?? $id);
+        }
+
+        return [
+            'values' => $values,
+            'value_labels' => $valueLabels,
+        ];
+    }
+}
+
+if (!function_exists('chimGetOverrideableGeneralSettingsCatalog')) {
+    function chimGetOverrideableGeneralSettingsCatalog(): array
+    {
+        $descriptions = chimGetManagedGeneralSettingDescriptions();
+        $rowMap = [];
+        foreach (chimGetAllGeneralSettings() as $row) {
+            $id = strval($row['id'] ?? '');
+            if ($id !== '') {
+                $rowMap[$id] = $row;
+            }
+        }
+
+        $candidateIds = array_values(array_unique(array_merge(
+            chimGetManagedGeneralSettingIds(),
+            ['GLOBAL_STT_CONNECTOR_ID', 'GLOBAL_ITT_CONNECTOR_ID'],
+            array_keys($rowMap)
+        )));
+
+        $catalog = [];
+        foreach ($candidateIds as $id) {
+            $definition = chimGetSchemaDefinition($id);
+            $type = strtolower(trim(strval($definition['type'] ?? '')));
+            if ($type === '') {
+                $currentValue = strval($rowMap[$id]['value'] ?? '');
+                if (in_array(strtolower($currentValue), ['true', 'false'], true)) {
+                    $type = 'boolean';
+                } elseif ($currentValue !== '' && preg_match('/^-?\d+$/', $currentValue)) {
+                    $type = 'integer';
+                } else {
+                    $type = 'string';
+                }
+            }
+
+            if ($type === 'selectmultiple') {
+                continue;
+            }
+
+            if (in_array($type, ['int'], true)) {
+                $type = 'integer';
+            } elseif (in_array($type, ['float', 'double'], true)) {
+                $type = 'number';
+            } elseif ($type === 'url') {
+                $type = 'string';
+            }
+
+            $entry = [
+                'type' => $type,
+                'description' => trim(strval($rowMap[$id]['description'] ?? ($descriptions[$id] ?? chimGetSchemaDescription($id)))),
+                'category' => chimGetOverrideableGeneralSettingCategory($id),
+                'ui_label' => chimPrettySettingLabel($id),
+            ];
+
+            if (!empty($definition['values']) && is_array($definition['values'])) {
+                $entry['values'] = array_map('strval', $definition['values']);
+            }
+
+            $selectOptions = chimGetSelectOptionsForOverrideSetting($id);
+            if (!empty($selectOptions['values'])) {
+                $entry['type'] = 'select';
+                $entry['values'] = $selectOptions['values'];
+                $entry['value_labels'] = $selectOptions['value_labels'];
+            }
+
+            $catalog[$id] = $entry;
+        }
+
+        ksort($catalog);
+        return $catalog;
+    }
+}
+
 if (!function_exists('chimGetPromptContextOptionCatalog')) {
     function chimGetPromptContextOptionCatalog(): array
     {
@@ -663,6 +898,40 @@ if (!function_exists('chimAssignNestedGlobalValueToGlobals')) {
             }
             $cursor =& $cursor[$part];
         }
+    }
+}
+
+if (!function_exists('chimApplyOverrideValueToGlobals')) {
+    function chimApplyOverrideValueToGlobals(string $rawKey, $value): void
+    {
+        $rawKey = trim($rawKey);
+        if ($rawKey === '') {
+            return;
+        }
+
+        $schemaKey = strpos($rawKey, '@') !== false
+            ? $rawKey
+            : str_replace(' ', '@', $rawKey);
+        $definition = chimGetSchemaDefinition($schemaKey);
+        if (!empty($definition)) {
+            $value = chimSettingsNormalizeScalar(chimSettingsStringifyValue($value), $definition);
+        } elseif ($value === 'true') {
+            $value = true;
+        } elseif ($value === 'false') {
+            $value = false;
+        }
+
+        if (strpos($rawKey, '@') !== false) {
+            chimAssignNestedGlobalValueToGlobals(explode('@', $rawKey), $value);
+            return;
+        }
+
+        if (strpos($rawKey, ' ') !== false) {
+            chimAssignNestedGlobalValueToGlobals(explode(' ', $rawKey), $value);
+            return;
+        }
+
+        $GLOBALS[$rawKey] = $value;
     }
 }
 

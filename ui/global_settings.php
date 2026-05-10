@@ -205,22 +205,22 @@ function filter_browse_field_configs(): array
 {
     return [
         'MAGIC_EVENT_BLACKLIST' => [
-            'button_label' => 'Selector',
+            'button_label' => 'Select',
             'modal_title' => 'Recent Magic Events',
             'modal_hint' => 'Shows recent npcspellcast names from the last 5000 eventlog rows. Check a value to keep it in the filter, uncheck it to remove it.',
         ],
         'LOCATION_BLACKLIST' => [
-            'button_label' => 'Selector',
+            'button_label' => 'Select',
             'modal_title' => 'Recent Locations',
             'modal_hint' => 'Shows recent Points of Interest candidates parsed from the last 5000 eventlog rows. Check a value to keep it in the filter, uncheck it to remove it.',
         ],
         'ITEM_BLACKLIST' => [
-            'button_label' => 'Selector',
+            'button_label' => 'Select',
             'modal_title' => 'Recent Items',
             'modal_hint' => 'Shows recent item names parsed from itemfound and nearby-item eventlog entries. Check a value to keep it in the filter, uncheck it to remove it.',
         ],
         'EVENT_TYPE_FILTER' => [
-            'button_label' => 'Selector',
+            'button_label' => 'Select',
             'modal_title' => 'Recent Event Types',
             'modal_hint' => 'Shows recent prompt-relevant event types from the last 5000 eventlog rows. Check a value to keep it in the filter, uncheck it to remove it.',
         ],
@@ -539,7 +539,7 @@ h1.gs-title {
 
 .filter-browse-wrap {
     display: flex;
-    align-items: stretch;
+    align-items: flex-start;
     gap: 10px;
     width: 100%;
     min-width: 0;
@@ -547,14 +547,16 @@ h1.gs-title {
 
 .btn-filter-browse {
     flex: 0 0 auto;
-    min-width: 78px;
+    align-self: flex-start;
+    min-width: 64px;
     border: 1px solid rgba(77, 144, 254, 0.42);
     border-radius: 6px;
     background: linear-gradient(135deg, rgba(34, 84, 173, 0.95), rgba(24, 62, 130, 0.98));
     color: #e8f1ff;
     font-weight: 700;
-    font-size: 12px;
-    padding: 7px 10px;
+    font-size: 11px;
+    line-height: 1.15;
+    padding: 6px 9px;
     cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease;
 }
