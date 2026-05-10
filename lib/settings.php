@@ -341,14 +341,14 @@ if (!function_exists('chimGetPromptContextOptionCatalog')) {
                 ],
                 'inventory' => [
                     'label' => '<inventory>',
-                    'description' => 'Current inventory listing.',
+                    'description' => 'Inventory listing.',
                 ],
                 'current_activity' => [
-                    'label' => '<current_activity>',
-                    'description' => 'What the actor is currently doing.',
+                    'label' => '<activity>',
+                    'description' => 'What the actor is doing.',
                 ],
                 'current_condition' => [
-                    'label' => '<current_condition>',
+                    'label' => '<condition>',
                     'description' => 'Health, magicka, stamina, and visible condition state.',
                 ],
                 'spells' => [

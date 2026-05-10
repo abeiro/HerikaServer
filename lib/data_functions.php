@@ -1326,7 +1326,7 @@ function chimBuildCurrentConditionBlockFromMetadata($stats, array $metadata = []
         return '';
     }
 
-    return "<current_condition>\n#Current Condition\n" . implode("\n", $lines) . "\n</current_condition>";
+    return "<condition>\n#Condition\n" . implode("\n", $lines) . "\n</condition>";
 }
 
 function chimBuildNpcInspectSummary(string $npcName)
@@ -1356,8 +1356,7 @@ function chimBuildNpcInspectSummary(string $npcName)
 
     $activityStatus = chimNormalizeActivityStatus($metaData);
     if (!empty($activityStatus['summary'])) {
-        $heading = !empty($activityStatus['fresh']) ? '#Current Activity' : '#Last Known Activity';
-        $sections[] = "<current_activity>\n{$heading}\n" . ucfirst($activityStatus['summary']) . ".\n</current_activity>";
+        $sections[] = "<activity>\n#Activity\n" . ucfirst($activityStatus['summary']) . ".\n</activity>";
     }
 
     return implode("\n", $sections);
@@ -6490,8 +6489,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
     $activityStatus = chimNormalizeActivityStatus($metaData);
 
     if (!empty($activityStatus['summary'])) {
-        $activityHeading = !empty($activityStatus['fresh']) ? '#Current Activity' : '#Last Known Activity';
-        $ACTIVITY_ADD = "\n\n<current_activity>\n{$activityHeading}\n" . ucfirst($activityStatus['summary']) . ".\n</current_activity>\n";
+        $ACTIVITY_ADD = "\n\n<activity>\n#Activity\n" . ucfirst($activityStatus['summary']) . ".\n</activity>\n";
     }
     
     if (isset($metaData["skills"])) {
@@ -6657,7 +6655,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
         }
         
         if (!empty($equipmentParts)) {
-            $INVENTORY_ADD = "\n<inventory>\n#Current Inventory:\n" . implode(", ", $equipmentParts)."\n</inventory>";
+            $INVENTORY_ADD = "\n<inventory>\n#Inventory\n" . implode(", ", $equipmentParts)."\n</inventory>";
         }
     }
     
@@ -6694,14 +6692,14 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
 			if ($m !== 'Unknown') { $lines[] = "  • Magicka: {$m}"; }
 			if ($st !== 'Unknown') { $lines[] = "  • Stamina: {$st}"; }
 			if (!empty($lines)) {
-				$STATS_ADD = "\n\n<current_condition>\n#Current Condition\n" . implode("\n", $lines)."\n</current_condition>\n";
+				$STATS_ADD = "\n\n<condition>\n#Condition\n" . implode("\n", $lines)."\n</condition>\n";
 			}
 		}
 	}
     
     $conditionLines = chimBuildCurrentConditionLinesFromMetadata($metaData["stats"] ?? null, $metaData);
     if (!empty($conditionLines)) {
-        $STATS_ADD = "\n\n<current_condition>\n#Current Condition\n" . implode("\n", $conditionLines)."\n</current_condition>\n";
+        $STATS_ADD = "\n\n<condition>\n#Condition\n" . implode("\n", $conditionLines)."\n</condition>\n";
     } else {
         $STATS_ADD = "";
     }
