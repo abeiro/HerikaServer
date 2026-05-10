@@ -10,6 +10,7 @@ chimRuntimeBootstrap($enginePath, [
 ]);
 
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "action_catalog.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "core_profiles.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
@@ -42,16 +43,99 @@ $advancedPromptKeys = [
 $saveSuccess = false;
 $saveMessage = '';
 
+function narratorManagementGetNarratorActions()
+{
+    if (!function_exists('herikaActionCatalogDbReady') || !herikaActionCatalogDbReady()) {
+        return [];
+    }
+
+    $rows = $GLOBALS["db"]->fetchAll("
+        SELECT
+            v.code_name,
+            v.action_name,
+            v.description,
+            v.is_activated
+        FROM public.combined_core_action v
+        WHERE v.available_to_narrator = TRUE
+        ORDER BY LOWER(v.action_name), LOWER(v.code_name)
+    ");
+
+    return is_array($rows) ? $rows : [];
+}
+
+function narratorManagementBuildNarratorActionStats($rows)
+{
+    $total = is_array($rows) ? count($rows) : 0;
+    $enabled = 0;
+
+    if (is_array($rows)) {
+        foreach ($rows as $row) {
+            if (function_exists('herikaActionCatalogToBool') && herikaActionCatalogToBool($row['is_activated'] ?? false)) {
+                $enabled++;
+            }
+        }
+    }
+
+    return [
+        'total' => $total,
+        'enabled' => $enabled,
+        'disabled' => max(0, $total - $enabled),
+    ];
+}
+
 if (
     $_SERVER['REQUEST_METHOD'] === 'POST'
     && !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
     && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
     && isset($_POST['action'])
 ) {
+    $action = trim((string)($_POST['action'] ?? ''));
+
+    if ($action === 'toggle_narrator_action') {
+        header('Content-Type: application/json');
+
+        $codeName = trim((string)($_POST['code_name'] ?? ''));
+        $targetEnabled = in_array(strtolower(trim((string)($_POST['target_enabled'] ?? '0'))), ['1', 'true', 'yes', 'on', 't'], true);
+
+        if ($codeName === '') {
+            echo json_encode(['success' => false, 'message' => 'Missing action code name.']);
+            exit;
+        }
+
+        if (!function_exists('herikaActionCatalogDbReady') || !herikaActionCatalogDbReady()) {
+            echo json_encode(['success' => false, 'message' => 'Action catalog tables are not available yet.']);
+            exit;
+        }
+
+        $row = function_exists('herikaGetActionCatalogRow') ? herikaGetActionCatalogRow($codeName) : null;
+        if (!is_array($row) || !herikaActionCatalogToBool($row['available_to_narrator'] ?? false)) {
+            echo json_encode(['success' => false, 'message' => 'That action is not available to the narrator.']);
+            exit;
+        }
+
+        if (!herikaActionCatalogUpsertCustomToggle($codeName, $targetEnabled)) {
+            echo json_encode(['success' => false, 'message' => 'Could not update narration action toggle.']);
+            exit;
+        }
+
+        $updatedRow = function_exists('herikaGetActionCatalogRow') ? herikaGetActionCatalogRow($codeName) : null;
+        $actionRows = narratorManagementGetNarratorActions();
+        $stats = narratorManagementBuildNarratorActionStats($actionRows);
+
+        echo json_encode([
+            'success' => true,
+            'message' => sprintf('%s is now %s.', $codeName, $targetEnabled ? 'enabled' : 'disabled'),
+            'code_name' => $codeName,
+            'enabled' => is_array($updatedRow) ? herikaActionCatalogToBool($updatedRow['is_activated'] ?? false) : $targetEnabled,
+            'stats' => $stats,
+        ]);
+        exit;
+    }
+
     $promptKey = trim((string)($_POST['prompt_key'] ?? ''));
     $isAllowedPromptKey = in_array($promptKey, $advancedPromptKeys, true);
 
-    if ($_POST['action'] === 'update_narrator_prompt') {
+    if ($action === 'update_narrator_prompt') {
         header('Content-Type: application/json');
 
         if (!$isAllowedPromptKey) {
@@ -76,7 +160,7 @@ if (
         exit;
     }
 
-    if ($_POST['action'] === 'clear_narrator_prompt') {
+    if ($action === 'clear_narrator_prompt') {
         header('Content-Type: application/json');
 
         if (!$isAllowedPromptKey) {
@@ -306,6 +390,8 @@ $advancedPromptRows = $GLOBALS["db"]->fetchAll(
      ORDER BY CASE prompt_key " . implode(' ', $advancedPromptOrderSql) . " ELSE 999 END"
 );
 $advancedPrompts = is_array($advancedPromptRows) ? $advancedPromptRows : [];
+$narratorActionRows = narratorManagementGetNarratorActions();
+$narratorActionStats = narratorManagementBuildNarratorActionStats($narratorActionRows);
 
 $isEmbed = isset($_GET['embed']) && $_GET['embed'] == '1';
 
@@ -955,6 +1041,62 @@ if (!$isEmbed) {
         color: #cfd8e3;
     }
 
+    .narrator-actions-summary-count {
+        font-family: Arial, sans-serif;
+        font-size: 0.85rem;
+        color: #cfd8e3;
+        word-spacing: normal;
+    }
+
+    .narrator-actions-table td:first-child {
+        min-width: 240px;
+    }
+
+    .narrator-actions-name {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .narrator-actions-name strong {
+        color: #f1f4f8;
+        font-size: 0.98rem;
+    }
+
+    .narrator-actions-name code {
+        color: rgb(100, 149, 237);
+        font-size: 0.85rem;
+    }
+
+    .narrator-actions-description {
+        min-width: 320px;
+        color: #b8c2d1;
+        line-height: 1.45;
+    }
+
+    .narrator-actions-state {
+        min-width: 110px;
+    }
+
+    .narrator-actions-toggle-cell {
+        white-space: nowrap;
+        min-width: 120px;
+    }
+
+    .narrator-actions-toggle-btn {
+        min-width: 96px;
+    }
+
+    .narrator-actions-toggle-btn[disabled] {
+        opacity: 0.65;
+        cursor: wait;
+    }
+
+    .narrator-actions-empty {
+        padding: 18px;
+        color: #cfd8e3;
+    }
+
     .advanced-prompts-modal {
         display: none;
         position: fixed;
@@ -1531,6 +1673,74 @@ if (!$isEmbed) {
                     <summary class="advanced-prompts-summary">
                         <span class="advanced-prompts-summary-text">
                             <span class="advanced-prompts-summary-icon">▶</span>
+                            <span>Narration Actions</span>
+                        </span>
+                        <span class="narrator-actions-summary-count" id="narratorActionsSummaryCount">
+                            <?php echo intval($narratorActionStats['enabled'] ?? 0); ?> enabled / <?php echo intval($narratorActionStats['total'] ?? 0); ?> total
+                        </span>
+                    </summary>
+                    <div class="advanced-prompts-panel">
+                        <?php if (!empty($narratorActionRows)): ?>
+                            <div class="advanced-prompts-table-wrap">
+                                <table class="advanced-prompts-table narrator-actions-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Action</th>
+                                            <th>Description</th>
+                                            <th>Status</th>
+                                            <th>Toggle</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($narratorActionRows as $actionRow): ?>
+                                            <?php
+                                            $actionCodeName = strval($actionRow['code_name'] ?? '');
+                                            $actionName = strval($actionRow['action_name'] ?? $actionCodeName);
+                                            $actionDescription = strval($actionRow['description'] ?? '');
+                                            $actionEnabled = herikaActionCatalogToBool($actionRow['is_activated'] ?? false);
+                                            $nextActionState = $actionEnabled ? '0' : '1';
+                                            ?>
+                                            <tr id="narrator-action-row-<?php echo htmlspecialchars($actionCodeName, ENT_QUOTES, 'UTF-8'); ?>">
+                                                <td>
+                                                    <div class="narrator-actions-name">
+                                                        <strong><?php echo htmlspecialchars($actionName, ENT_QUOTES, 'UTF-8'); ?></strong>
+                                                        <code><?php echo htmlspecialchars($actionCodeName, ENT_QUOTES, 'UTF-8'); ?></code>
+                                                    </div>
+                                                </td>
+                                                <td class="narrator-actions-description"><?php echo htmlspecialchars($actionDescription, ENT_QUOTES, 'UTF-8'); ?></td>
+                                                <td class="narrator-actions-state">
+                                                    <?php if ($actionEnabled): ?>
+                                                        <span class="advanced-status-badge custom">Enabled</span>
+                                                    <?php else: ?>
+                                                        <span class="advanced-status-badge default">Disabled</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="narrator-actions-toggle-cell">
+                                                    <button
+                                                        type="button"
+                                                        class="advanced-prompts-btn narrator-actions-toggle-btn <?php echo $actionEnabled ? 'advanced-prompts-btn-clear' : 'advanced-prompts-btn-edit'; ?>"
+                                                        data-code-name="<?php echo htmlspecialchars($actionCodeName, ENT_QUOTES, 'UTF-8'); ?>"
+                                                        data-target-enabled="<?php echo htmlspecialchars($nextActionState, ENT_QUOTES, 'UTF-8'); ?>"
+                                                        onclick="toggleNarratorAction(this)"
+                                                    >
+                                                        <?php echo $actionEnabled ? 'Disable' : 'Enable'; ?>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php else: ?>
+                            <div class="narrator-actions-empty">No narrator-scoped actions were found.</div>
+                        <?php endif; ?>
+                    </div>
+                </details>
+
+                <details class="advanced-prompts-wrap">
+                    <summary class="advanced-prompts-summary">
+                        <span class="advanced-prompts-summary-text">
+                            <span class="advanced-prompts-summary-icon">▶</span>
                             <span>Advanced Prompts (Prompts Manager)</span>
                         </span>
                     </summary>
@@ -1638,6 +1848,21 @@ const narratorAdvancedPrompts = <?php
     }
     echo json_encode($advancedPromptJs, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 ?>;
+const narratorActions = <?php
+    $narratorActionJs = [];
+    foreach ($narratorActionRows as $actionRow) {
+        $codeName = strval($actionRow['code_name'] ?? '');
+        if ($codeName === '') {
+            continue;
+        }
+        $narratorActionJs[$codeName] = [
+            'action_name' => strval($actionRow['action_name'] ?? $codeName),
+            'description' => strval($actionRow['description'] ?? ''),
+            'enabled' => herikaActionCatalogToBool($actionRow['is_activated'] ?? false),
+        ];
+    }
+    echo json_encode($narratorActionJs, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+?>;
 
 function showNarratorToast(message, isError = false) {
     const toast = document.getElementById('toast');
@@ -1656,6 +1881,102 @@ function showNarratorToast(message, isError = false) {
     window.__narratorToastTimer = window.setTimeout(() => {
         toast.style.display = 'none';
     }, 3000);
+}
+
+function updateNarratorActionSummary(stats = null) {
+    const summary = document.getElementById('narratorActionsSummaryCount');
+    if (!summary) {
+        return;
+    }
+
+    let enabled = 0;
+    let total = 0;
+    if (stats && Number.isFinite(Number(stats.enabled)) && Number.isFinite(Number(stats.total))) {
+        enabled = Number(stats.enabled);
+        total = Number(stats.total);
+    } else {
+        const actionValues = Object.values(narratorActions);
+        total = actionValues.length;
+        enabled = actionValues.filter(action => !!action.enabled).length;
+    }
+
+    summary.textContent = `${enabled} enabled / ${total} total`;
+}
+
+function updateNarratorActionRow(codeName) {
+    const row = document.getElementById('narrator-action-row-' + codeName);
+    const actionData = narratorActions[codeName];
+    if (!row || !actionData) {
+        return;
+    }
+
+    const enabled = !!actionData.enabled;
+    const statusCell = row.querySelector('.narrator-actions-state');
+    if (statusCell) {
+        statusCell.innerHTML = enabled
+            ? '<span class="advanced-status-badge custom">Enabled</span>'
+            : '<span class="advanced-status-badge default">Disabled</span>';
+    }
+
+    const button = row.querySelector('.narrator-actions-toggle-btn');
+    if (button) {
+        button.textContent = enabled ? 'Disable' : 'Enable';
+        button.dataset.targetEnabled = enabled ? '0' : '1';
+        button.classList.toggle('advanced-prompts-btn-clear', enabled);
+        button.classList.toggle('advanced-prompts-btn-edit', !enabled);
+    }
+}
+
+function toggleNarratorAction(button) {
+    if (!button) {
+        return;
+    }
+
+    const codeName = button.dataset.codeName || '';
+    if (!codeName || !Object.prototype.hasOwnProperty.call(narratorActions, codeName)) {
+        return;
+    }
+
+    const targetEnabled = button.dataset.targetEnabled === '1';
+    const previousLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = targetEnabled ? 'Enabling...' : 'Disabling...';
+
+    const formData = new FormData();
+    formData.append('action', 'toggle_narrator_action');
+    formData.append('code_name', codeName);
+    formData.append('target_enabled', targetEnabled ? '1' : '0');
+
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to update narration action.');
+        }
+
+        narratorActions[codeName].enabled = !!data.enabled;
+        updateNarratorActionRow(codeName);
+        updateNarratorActionSummary(data.stats || null);
+        showNarratorToast(data.message || 'Narration action updated.');
+    })
+    .catch(error => {
+        button.textContent = previousLabel;
+        showNarratorToast(error.message || 'Failed to update narration action.', true);
+    })
+    .finally(() => {
+        button.disabled = false;
+    });
 }
 
 function openNarratorPromptModal(promptKey) {
