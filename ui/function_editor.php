@@ -445,6 +445,63 @@ function functionEditorFormatGold($value)
     return ($value === 1) ? "1 gold" : ("{$value} gold");
 }
 
+function functionEditorCreateActiveScopeGroups()
+{
+    return [
+        "npc" => [
+            "label" => "NPC",
+            "actions" => [],
+        ],
+        "followers" => [
+            "label" => "Followers",
+            "actions" => [],
+        ],
+        "narrator" => [
+            "label" => "Narrator",
+            "actions" => [],
+        ],
+        "dynamic" => [
+            "label" => "Dynamic",
+            "actions" => [],
+        ],
+    ];
+}
+
+function functionEditorBuildActiveScopeGroups($rows)
+{
+    $groups = functionEditorCreateActiveScopeGroups();
+
+    foreach ($rows as $row) {
+        $entry = [
+            "code_name" => strval($row["code_name"] ?? ""),
+            "action_name" => strval($row["action_name"] ?? ""),
+            "description" => trim(functionEditorReplaceActionTextVariablesInString(strval($row["description"] ?? ""))),
+        ];
+
+        $targets = [];
+        if (functionEditorToBool($row["available_to_npc"] ?? false)) {
+            $targets[] = "npc";
+        }
+        if (functionEditorToBool($row["available_to_followers"] ?? false)) {
+            $targets[] = "followers";
+        }
+        if (functionEditorToBool($row["available_to_narrator"] ?? false)) {
+            $targets[] = "narrator";
+        }
+        if (count($targets) === 0) {
+            $targets[] = "dynamic";
+        }
+
+        foreach ($targets as $target) {
+            if (isset($groups[$target])) {
+                $groups[$target]["actions"][] = $entry;
+            }
+        }
+    }
+
+    return $groups;
+}
+
 function functionEditorNormalizeSubmittedActionTextValue($value, $fieldLabel, $allowBlank = true)
 {
     $value = strval($value);
@@ -680,14 +737,7 @@ $rows = [];
 $countAll = 0;
 $countEnabled = 0;
 $countDisabled = 0;
-$countNpc = 0;
-$countFollowers = 0;
-$countNarrator = 0;
-$countDynamic = 0;
-$countGameFunction = 0;
-$countServerAction = 0;
-$countCustom = 0;
-$countBase = 0;
+$activeActionScopeGroups = functionEditorCreateActiveScopeGroups();
 $catalogReady = function_exists("herikaActionCatalogDbReady") && herikaActionCatalogDbReady();
 
 if ($catalogReady) {
@@ -770,22 +820,19 @@ if ($catalogReady) {
     $countAll = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action")["c"] ?? 0);
     $countEnabled = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE is_activated = TRUE")["c"] ?? 0);
     $countDisabled = max(0, $countAll - $countEnabled);
-    $countNpc = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE available_to_npc = TRUE")["c"] ?? 0);
-    $countFollowers = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE available_to_followers = TRUE")["c"] ?? 0);
-    $countNarrator = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE available_to_narrator = TRUE")["c"] ?? 0);
-    $countDynamic = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE available_to_npc = FALSE AND available_to_followers = FALSE AND available_to_narrator = FALSE")["c"] ?? 0);
-    $countGameFunction = intval($GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM public.combined_core_action WHERE game_function = TRUE")["c"] ?? 0);
-    $countServerAction = max(0, $countAll - $countGameFunction);
-    $countCustom = intval($GLOBALS["db"]->fetchOne("
-        SELECT COUNT(*) AS c
+    $activeActionRows = $GLOBALS["db"]->fetchAll("
+        SELECT
+            v.code_name,
+            v.action_name,
+            v.description,
+            v.available_to_npc,
+            v.available_to_followers,
+            v.available_to_narrator
         FROM public.combined_core_action v
-        WHERE EXISTS (
-            SELECT 1
-            FROM public.core_action_custom c
-            WHERE LOWER(c.code_name) = LOWER(v.code_name)
-        )
-    ")["c"] ?? 0);
-    $countBase = max(0, $countAll - $countCustom);
+        WHERE v.is_activated = TRUE
+        ORDER BY LOWER(v.action_name), LOWER(v.code_name)
+    ");
+    $activeActionScopeGroups = functionEditorBuildActiveScopeGroups($activeActionRows);
 }
 
 ob_start();
@@ -863,6 +910,17 @@ if (!$isEmbed) {
         margin-bottom: 15px;
         margin-top: 0;
         font-size: 1.4em;
+    }
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+    .section-header h2 {
+        margin: 0;
     }
     .full-width-section {
         grid-column: 1 / -1;
@@ -1058,6 +1116,148 @@ if (!$isEmbed) {
         background: linear-gradient(180deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 1));
         border-color: rgba(242, 124, 17, 0.3);
         color: rgb(242, 124, 17);
+    }
+    .summary-action-button {
+        white-space: nowrap;
+    }
+    .action-modal[hidden] {
+        display: none !important;
+    }
+    .action-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: rgba(5, 8, 12, 0.76);
+        backdrop-filter: blur(3px);
+    }
+    .action-modal-panel {
+        width: min(1120px, 100%);
+        max-height: min(88vh, 900px);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-radius: 14px;
+        border: 1px solid #3a3a3a;
+        background: linear-gradient(180deg, rgba(33, 33, 33, 0.98), rgba(20, 20, 20, 0.99));
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+    }
+    .action-modal-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 22px 24px 18px;
+        border-bottom: 1px solid #3a3a3a;
+    }
+    .action-modal-title {
+        margin: 0 0 8px 0;
+        font-family: "MagicCards", serif;
+        font-size: 1.45em;
+        color: #e6b76c;
+        word-spacing: 6px;
+    }
+    .action-modal-subtitle {
+        margin: 0;
+        color: #c9d3e5;
+        font-size: 0.95em;
+        line-height: 1.45;
+    }
+    .action-modal-close {
+        min-width: 44px;
+        min-height: 44px;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        background: linear-gradient(180deg, rgba(42, 42, 42, 0.9), rgba(34, 34, 34, 0.98));
+        color: #f8f9fa;
+        font-size: 1.2em;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    }
+    .action-modal-close:hover {
+        background: linear-gradient(180deg, rgba(58, 58, 58, 0.94), rgba(48, 48, 48, 1));
+        border-color: rgba(242, 124, 17, 0.3);
+        color: rgb(242, 124, 17);
+        transform: translateY(-1px);
+    }
+    .action-modal-body {
+        padding: 22px 24px 24px;
+        overflow: auto;
+    }
+    .active-scope-list-wrap {
+        display: grid;
+        gap: 10px;
+    }
+    .active-scope-row {
+        display: grid;
+        grid-template-columns: minmax(120px, 150px) 1fr;
+        gap: 14px;
+        align-items: start;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(58, 58, 58, 0.85);
+    }
+    .active-scope-row:first-child {
+        padding-top: 0;
+    }
+    .active-scope-row:last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+    }
+    .active-scope-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding-top: 4px;
+    }
+    .active-scope-title {
+        margin: 0;
+        font-size: 1em;
+        color: #f0f4fb;
+    }
+    .active-scope-count {
+        color: #e6b76c;
+        font-size: 0.88em;
+        font-weight: 700;
+    }
+    .active-scope-actions {
+        display: grid;
+        gap: 8px;
+    }
+    .active-scope-empty {
+        color: #8f99aa;
+        font-size: 0.93em;
+        line-height: 1.45;
+        padding-top: 4px;
+    }
+    .active-action-row {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) 1fr;
+        gap: 12px;
+        align-items: start;
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(58, 58, 58, 0.55);
+    }
+    .active-action-row:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+    }
+    .active-action-label {
+        color: #f6e5bf;
+        font-size: 0.94em;
+        line-height: 1.35;
+    }
+    .active-action-label code {
+        color: #d7dfed;
+        font-size: 0.9em;
+    }
+    .active-action-description {
+        color: #c1cbdb;
+        font-size: 0.92em;
+        line-height: 1.45;
     }
     .empty-filter-state {
         display: none;
@@ -1288,6 +1488,22 @@ if (!$isEmbed) {
             min-height: 60vh;
             max-height: calc(100vh - 100px);
         }
+        .action-modal {
+            padding: 14px;
+        }
+        .action-modal-header,
+        .action-modal-body {
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+        .active-scope-row {
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+        .active-action-row {
+            grid-template-columns: 1fr;
+            gap: 4px;
+        }
     }
 </style>
 
@@ -1309,7 +1525,10 @@ if (!$isEmbed) {
     <?php else: ?>
         <div class="content-grid">
             <div class="content-section">
-                <h2>Action Summary</h2>
+                <div class="section-header">
+                    <h2>Action Summary</h2>
+                    <button type="button" class="action-button secondary summary-action-button" id="viewActiveActionsButton">View Active Actions</button>
+                </div>
                 <div class="summary-grid">
                     <div class="summary-card">
                         <div class="summary-card-label">Total Actions</div>
@@ -1323,38 +1542,6 @@ if (!$isEmbed) {
                         <div class="summary-card-label">Disabled</div>
                         <div class="summary-card-value"><span class="stat-pill disabled"><?php echo h($countDisabled); ?></span></div>
                     </div>
-                    <div class="summary-card">
-                        <div class="summary-card-label">NPC Scope</div>
-                        <div class="summary-card-value"><span class="stat-pill scope"><?php echo h($countNpc); ?></span></div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-card-label">Follower Scope</div>
-                        <div class="summary-card-value"><span class="stat-pill scope"><?php echo h($countFollowers); ?></span></div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-card-label">Narrator Scope</div>
-                        <div class="summary-card-value"><span class="stat-pill scope"><?php echo h($countNarrator); ?></span></div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-card-label">Dynamic Only</div>
-                        <div class="summary-card-value"><span class="stat-pill scope"><?php echo h($countDynamic); ?></span></div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-card-label">Game Functions</div>
-                        <div class="summary-card-value"><span class="stat-pill scope"><?php echo h($countGameFunction); ?></span></div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-card-label">Server Only</div>
-                        <div class="summary-card-value"><span class="stat-pill scope"><?php echo h($countServerAction); ?></span></div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-card-label">Custom Actions</div>
-                        <div class="summary-card-value"><span class="stat-pill scope"><?php echo h($countCustom); ?></span></div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-card-label">Base Actions</div>
-                        <div class="summary-card-value"><span class="stat-pill scope"><?php echo h($countBase); ?></span></div>
-                    </div>
                 </div>
             </div>
             <div class="content-section">
@@ -1367,6 +1554,61 @@ if (!$isEmbed) {
                     versus <code>script_proxy</code>, and the pricing column can override selected gold costs per action
                     without changing the shipped base catalog.
                 </p>
+            </div>
+
+            <div id="activeActionsModal" class="action-modal" hidden>
+                <div class="action-modal-panel" role="dialog" aria-modal="true" aria-labelledby="activeActionsModalTitle">
+                    <div class="action-modal-header">
+                        <div>
+                            <h3 class="action-modal-title" id="activeActionsModalTitle">Currently Active Actions</h3>
+                            <p class="action-modal-subtitle">
+                                Enabled actions grouped by scope. Actions available in multiple scopes appear in each relevant section.
+                            </p>
+                        </div>
+                        <button type="button" class="action-modal-close" data-modal-close aria-label="Close active actions modal">&times;</button>
+                    </div>
+                    <div class="action-modal-body">
+                        <div class="active-scope-list-wrap">
+                            <?php foreach ($activeActionScopeGroups as $scopeGroup): ?>
+                                <?php
+                                $scopeLabel = strval($scopeGroup["label"] ?? "");
+                                $scopeActions = is_array($scopeGroup["actions"] ?? null) ? $scopeGroup["actions"] : [];
+                                ?>
+                                <section class="active-scope-row">
+                                    <div class="active-scope-meta">
+                                        <h4 class="active-scope-title"><?php echo h($scopeLabel); ?></h4>
+                                        <div class="active-scope-count"><?php echo h(count($scopeActions)); ?></div>
+                                    </div>
+                                    <div class="active-scope-actions">
+                                        <?php if (count($scopeActions) === 0): ?>
+                                            <div class="active-scope-empty">No active actions in this scope.</div>
+                                        <?php else: ?>
+                                            <?php foreach ($scopeActions as $activeAction): ?>
+                                                <?php
+                                                $activeActionName = trim(strval($activeAction["action_name"] ?? ""));
+                                                $activeCodeName = trim(strval($activeAction["code_name"] ?? ""));
+                                                $activeDescription = trim(strval($activeAction["description"] ?? ""));
+                                                if ($activeActionName === "") {
+                                                    $activeActionName = $activeCodeName;
+                                                }
+                                                ?>
+                                                <div class="active-action-row">
+                                                    <div class="active-action-label">
+                                                        <strong><?php echo h($activeActionName); ?></strong>
+                                                        <code><?php echo h($activeCodeName); ?></code>
+                                                    </div>
+                                                    <div class="active-action-description">
+                                                        <?php echo $activeDescription !== "" ? nl2br(h($activeDescription)) : '<em>No description provided.</em>'; ?>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </div>
+                                </section>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="full-width-section">
@@ -1801,6 +2043,44 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     applyFilters();
+});
+
+document.addEventListener("DOMContentLoaded", function() {
+    const modal = document.getElementById("activeActionsModal");
+    const openButton = document.getElementById("viewActiveActionsButton");
+    if (!modal || !openButton) {
+        return;
+    }
+
+    const closeButtons = modal.querySelectorAll("[data-modal-close]");
+
+    function openModal() {
+        modal.hidden = false;
+        document.body.style.overflow = "hidden";
+    }
+
+    function closeModal() {
+        modal.hidden = true;
+        document.body.style.overflow = "";
+    }
+
+    openButton.addEventListener("click", openModal);
+
+    closeButtons.forEach((button) => {
+        button.addEventListener("click", closeModal);
+    });
+
+    modal.addEventListener("click", function(event) {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "Escape" && !modal.hidden) {
+            closeModal();
+        }
+    });
 });
 </script>
 
