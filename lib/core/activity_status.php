@@ -348,10 +348,7 @@ function chimBuildActivityStatusSummary(array $status): string
         return 'sleeping';
     }
     if ($action === 'sitting') {
-        if ($useType === 'chair') {
-            return 'sitting on a chair';
-        }
-        return 'sitting';
+        return 'seated';
     }
     if ($action === 'leaning') {
         if ($status['furniture_name'] !== '') {
@@ -382,7 +379,7 @@ function chimBuildActivityStatusSummary(array $status): string
         return 'running';
     }
     if ($action === 'moving') {
-        return 'moving';
+        return 'idle';
     }
     if (!empty($status['is_weapon_drawn'])) {
         return 'idle with weapon drawn';
