@@ -1436,9 +1436,12 @@ if ($MUST_END) {  // Shorthand for non LLM processing
         @ob_end_flush();
         @flush();
     }    
-    error_log("*TRACE EARLY END SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
-    error_log("*TRACE EARLY END: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." resolving request");
+    if (microtime(true) - $startTime > 0.5) {
+        error_log("*TRACE EARLY END SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
+        error_log("*TRACE EARLY END: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." resolving request");
+    }
     terminate();
+
 }
 if ($EXECUTION_MODE=="INJECTION_LOG") {
     
@@ -1527,9 +1530,13 @@ if ($isNarratorScopedRequest && (($GLOBALS["HERIKA_NAME"] ?? "") !== "The Narrat
     }
 }
 
+error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)."");
+
 // Include prompts, command prompts and functions.
 require(__DIR__.DIRECTORY_SEPARATOR."prompt.includes.php");
 $gameRequest[0] = strtolower($gameRequest[0]); // one more time in case it was changed by an extension
+
+error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)."");
 
 // Inject training function for trainer NPCs (only if Training is enabled)
 if (in_array('Training', $GLOBALS["ENABLED_FUNCTIONS"]) && isset($currentNpcData) && $currentNpcData && $GLOBALS["HERIKA_NAME"] != "The Narrator") {
@@ -1649,6 +1656,7 @@ if (($gameRequest[0] ?? "") === "infoloc") {
     }
 }
 
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 // Scope all incoming events through spatial awareness when possible.
 $playerInputEventTypes = ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"];
 $requestAudienceSnapshot = chimDecodeAudienceSnapshotField($gameRequest[4] ?? "");
@@ -1689,6 +1697,8 @@ if ($hasAuthoritativeRequestAudience) {
         }
     }
 }
+
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 /// LOG INTO DB. Will use this later.
 if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
@@ -1893,6 +1903,7 @@ if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[
 
 // Offer memory in CONTEXT 
 
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext","rechat","narration","continue","continue_group"]) ) {
 
@@ -1913,6 +1924,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 } else
      $memoryInjectionCtx=[];
 
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 // Whisper-mode speaking behavior: make the NPC explicitly treat this exchange as whispered.
 if (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_EXECUTION_MODE"]) === "WHISPER") {
@@ -2009,6 +2021,8 @@ if (isset($GLOBALS["is_rolemastered"])) {
 
 // MINIME_T5 STUFF, command assistant
 
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
+
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     
     if (isMinimeT5Enabled()) {
@@ -2056,6 +2070,8 @@ if (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) {
 
 // audit_log(__FILE__." [MINIME]  ".__LINE__);
 
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
+
 // OGHMA STUFF - Only run if Oghma is enabled in profile
 // Helper function to properly check boolean values (handles string "false" from form submissions)
 if (!function_exists('isOghmaSettingEnabled')) {
@@ -2084,6 +2100,8 @@ if (($minimeEnabled || $oghmaCustomEnabled) && $oghmaInfiniumEnabled) {
         $GLOBALS["OGHMA_CALLED"] = true;
     }
 }
+
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 if (sizeof($memoryInjectionCtx)>0) {
     // Persist memory injection
@@ -2427,9 +2445,12 @@ if ($gameRequest[0] == "funcret") {
     
 }
 
-error_log("*TRACE SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
 
-error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." secs building call");
+if (microtime(true) - $startTime > 0.5) {
+    error_log("*TRACE SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
+    error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." secs building call");
+}
+
 //returnLines(["Mmm..let me think"]);
 
 // Global switch. Needed id we need to stop processing because sme function requires it. Example, funcret conditions.
