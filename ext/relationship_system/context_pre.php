@@ -22,6 +22,8 @@
  *    - Adds #REL: command instructions for conversation model
  */
 
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $GLOBALS["startTime"]));
+
 // Master toggle - if disabled, skip everything in this file
 if (empty($GLOBALS['RELATIONSHIP_SYSTEM_ENABLED'])) {
     return;
@@ -38,6 +40,8 @@ if ($useRelLLM) {
     _relEnsureWorkerRunning();
 }
 
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $GLOBALS["startTime"]));
+
 /**
  * Ensure the relationship worker daemon is running
  * Spawns it in background if not already active - instant, non-blocking
@@ -48,6 +52,7 @@ function _relEnsureWorkerRunning() {
     if ($checked) return; // Only check once per PHP request
     $checked = true;
 
+    
     $pidFile = $GLOBALS["ENGINE_PATH"] . 'log/relationship_worker.pid';
     $workerPath = __DIR__ . '/worker.php';
     $logPath = $GLOBALS["ENGINE_PATH"] . 'log/relationship_worker.log';
@@ -204,3 +209,7 @@ if ($npcName) {
         }
     }
 }
+
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $GLOBALS["startTime"]));
+
+?>
