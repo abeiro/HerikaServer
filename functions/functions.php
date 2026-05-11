@@ -1,6 +1,16 @@
 <?php
 
 // Functions to be provided to OpenAI
+$startTime=$GLOBALS["startTime"] ?? microtime(true);
+
+if (!function_exists('chimTraceFunctionsIncludePhase')) {
+    function chimTraceFunctionsIncludePhase($line, $label, $startTime)
+    {
+        // error_log("TRACE:\t{$line}\t".__FILE__.":\t".(microtime(true) - $startTime)."\t{$label}");
+    }
+}
+
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 $ENABLED_FUNCTIONS_LOCAL = [
     'MoveTo',
@@ -56,13 +66,18 @@ $ENABLED_FUNCTIONS_LOCAL = [
 
 $GLOBALS["ENABLED_FUNCTIONS"] = $ENABLED_FUNCTIONS_LOCAL;
 
+chimTraceFunctionsIncludePhase(__LINE__, 'enabled_functions_initialized', $startTime);
+
 // Ensure PLAYER_NAME is defined before use in string templates below.
 // Prefer database (conf_opts) value; fallback to existing global or 'Player'.
 if (!isset($GLOBALS["PLAYER_NAME"]) || $GLOBALS["PLAYER_NAME"] === '') {
     $safePlayerName = 'Player';
     try {
         $rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
+        chimTraceFunctionsIncludePhase(__LINE__, 'player_name_bootstrap_require_start', $startTime);
         require_once $rootPath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php";
+        chimTraceFunctionsIncludePhase(__LINE__, 'player_name_bootstrap_require_done', $startTime);
+        chimTraceFunctionsIncludePhase(__LINE__, 'player_name_bootstrap_run_start', $startTime);
         chimRuntimeBootstrapIfNeeded($rootPath, [
             'run_db_updates' => false,
             'load_general_settings' => false,
@@ -70,6 +85,7 @@ if (!isset($GLOBALS["PLAYER_NAME"]) || $GLOBALS["PLAYER_NAME"] === '') {
             'load_itt_connector' => false,
             'load_player_name' => true,
         ]);
+        chimTraceFunctionsIncludePhase(__LINE__, 'player_name_bootstrap_run_done', $startTime);
         if (isset($GLOBALS["PLAYER_NAME"]) && $GLOBALS["PLAYER_NAME"] !== '') {
             $safePlayerName = (string)$GLOBALS["PLAYER_NAME"];
         }
@@ -79,7 +95,11 @@ if (!isset($GLOBALS["PLAYER_NAME"]) || $GLOBALS["PLAYER_NAME"] === '') {
     $GLOBALS["PLAYER_NAME"] = $safePlayerName;
 }
 
+chimTraceFunctionsIncludePhase(__LINE__, 'player_name_ready', $startTime);
+
 require_once __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "action_catalog.php";
+
+chimTraceFunctionsIncludePhase(__LINE__, 'action_catalog_required', $startTime);
 
 function decodeFunctionExecutionParameterPayload($parameter)
 {
@@ -238,7 +258,7 @@ function herikaResolveSpawnItemDescriptionMatch($requestedItemName)
             $candidate = [
                 'baseid' => $baseId,
                 'runtime_formid' => $runtimeFormId,
-                'name' => trim(strval($row['name'] ?? $requestedItemName)),
+                'name' => trim(strval($row['name'] ?? $requestedItemName)),//requestedItemName is undefined in this scope. Must fix
                 'description' => trim(strval($row['description'] ?? '')),
                 'match_reason' => $reason,
                 'similarity' => isset($row['sim']) ? floatval($row['sim']) : 1.0,
@@ -1146,6 +1166,8 @@ $hireFerryDestinations = [
 
 $crimeTypes = ["Assault", "Murder", "Theft", "Pickpocketing", "Trespassing", "Jailbreak", "Custom"];
 
+chimTraceFunctionsIncludePhase(__LINE__, 'function_catalog_build_start', $startTime);
+
 $GLOBALS["FUNCTIONS"] = [
     [
         "name" => $F_NAMES_LOCAL["MoveTo"],
@@ -1917,6 +1939,8 @@ $GLOBALS["FUNCTIONS"] = [
     ],
 ];
 
+chimTraceFunctionsIncludePhase(__LINE__, 'function_catalog_build_done', $startTime);
+
 foreach ($herikaRetiredActionCodes as $herikaRetiredActionCode) {
     unset($F_TRANSLATIONS_LOCAL[$herikaRetiredActionCode], $F_RETURNMESSAGES_LOCAL[$herikaRetiredActionCode], $F_NAMES_LOCAL[$herikaRetiredActionCode]);
 }
@@ -1935,8 +1959,15 @@ foreach ($GLOBALS["FUNCTIONS"] as $n => $functionEntry) {
 $HERIKA_BASE_FUNCTIONS_LOCAL = $GLOBALS["BASE_FUNCTIONS"];
 $GLOBALS["HERIKA_BASE_FUNCTIONS_FALLBACK"] = $GLOBALS["BASE_FUNCTIONS"];
 
+chimTraceFunctionsIncludePhase(__LINE__, 'base_functions_indexed', $startTime);
+
 function getFunctionNameAliases()
 {
+    static $cachedAliases = null;
+    if (is_array($cachedAliases)) {
+        return $cachedAliases;
+    }
+
     $playerName = strval($GLOBALS["PLAYER_NAME"] ?? "Player");
 
     $aliases = [
@@ -1959,36 +1990,31 @@ function getFunctionNameAliases()
         }
     }
 
-    return $aliases;
+    $cachedAliases = $aliases;
+    return $cachedAliases;
 }
 
 function getFunctionCodeName($key)
 {
     $key = strval($key);
-    if (function_exists('herikaResolveActionCatalogCodeName')) {
-        $catalogCodeName = herikaResolveActionCatalogCodeName($key, true);
-        if ($catalogCodeName !== false) {
-            return $catalogCodeName;
-        }
+    static $resolvedCodeNames = [];
 
-        $catalogCodeName = herikaResolveActionCatalogCodeName($key, false);
-        if ($catalogCodeName !== false) {
-            return $catalogCodeName;
-        }
+    if (array_key_exists($key, $resolvedCodeNames)) {
+        return $resolvedCodeNames[$key];
     }
 
     if (!isset($GLOBALS["F_NAMES"]) || !is_array($GLOBALS["F_NAMES"])) {
-        return false;
+        return $resolvedCodeNames[$key] = false;
     }
 
     if (isset($GLOBALS["F_NAMES"][$key])) {
-        return $key;
+        return $resolvedCodeNames[$key] = $key;
     }
 
     if (isset($GLOBALS["HERIKA_ACTION_NAME_PREFERRED_CODE"]) && is_array($GLOBALS["HERIKA_ACTION_NAME_PREFERRED_CODE"])) {
         $preferredCode = $GLOBALS["HERIKA_ACTION_NAME_PREFERRED_CODE"][$key] ?? false;
         if ($preferredCode !== false) {
-            return $preferredCode;
+            return $resolvedCodeNames[$key] = $preferredCode;
         }
     }
 
@@ -2004,7 +2030,7 @@ function getFunctionCodeName($key)
         if (isset($GLOBALS["HERIKA_ACTION_NAME_PREFERRED_CODE"]) && is_array($GLOBALS["HERIKA_ACTION_NAME_PREFERRED_CODE"])) {
             $preferredCode = $GLOBALS["HERIKA_ACTION_NAME_PREFERRED_CODE"][$candidateKey] ?? false;
             if ($preferredCode !== false) {
-                return $preferredCode;
+                return $resolvedCodeNames[$key] = $preferredCode;
             }
         }
 
@@ -2016,7 +2042,7 @@ function getFunctionCodeName($key)
         }
 
         if (count($matchingCodes) === 1) {
-            return $matchingCodes[0];
+            return $resolvedCodeNames[$key] = $matchingCodes[0];
         }
 
         if (count($matchingCodes) > 1) {
@@ -2024,17 +2050,33 @@ function getFunctionCodeName($key)
                 if (function_exists('herikaGetActionCatalogRow')) {
                     $row = herikaGetActionCatalogRow($matchingCode);
                     if (is_array($row) && herikaActionCatalogRowIsAvailableInCurrentMode($row) && !empty(($row['metadata'] ?? [])['builtin']) === false) {
-                        return $matchingCode;
+                        return $resolvedCodeNames[$key] = $matchingCode;
                     }
                 }
             }
 
-            return $matchingCodes[0];
+            return $resolvedCodeNames[$key] = $matchingCodes[0];
         }
     }
 
     $aliases = getFunctionNameAliases();
-    return $aliases[$key] ?? false;
+    if (isset($aliases[$key])) {
+        return $resolvedCodeNames[$key] = $aliases[$key];
+    }
+
+    if (function_exists('herikaResolveActionCatalogCodeName')) {
+        $catalogCodeName = herikaResolveActionCatalogCodeName($key, true);
+        if ($catalogCodeName !== false) {
+            return $resolvedCodeNames[$key] = $catalogCodeName;
+        }
+
+        $catalogCodeName = herikaResolveActionCatalogCodeName($key, false);
+        if ($catalogCodeName !== false) {
+            return $resolvedCodeNames[$key] = $catalogCodeName;
+        }
+    }
+
+    return $resolvedCodeNames[$key] = false;
 }
 
 function herikaBuildActionPromptTemplateContext($rowOrCode = null, array $extraContext = [])
@@ -2545,7 +2587,9 @@ $seedActionRows = herikaBuildActionCatalogSeedRows(
     $ENABLED_FUNCTIONS_LOCAL,
     herikaBuildActionCatalogFunctionDefinitionsByCode($HERIKA_BASE_FUNCTIONS_LOCAL ?? [])
 );
+chimTraceFunctionsIncludePhase(__LINE__, 'seed_rows_built', $startTime);
 if (herikaActionCatalogDbReady()) {
+    chimTraceFunctionsIncludePhase(__LINE__, 'seed_rows_db_sync_start', $startTime);
     herikaEnsureActionCatalogBaseRowsSeeded($seedActionRows);
 
     $legacyPreferenceRows = herikaGetActionCatalogRowsByCode();
@@ -2554,6 +2598,7 @@ if (herikaActionCatalogDbReady()) {
     }
 
     herikaImportLegacyActionPreferences($legacyPreferenceRows);
+    chimTraceFunctionsIncludePhase(__LINE__, 'seed_rows_db_sync_done', $startTime);
 }
 
 $isNpcMode = isset($GLOBALS["IS_NPC"]) && $GLOBALS["IS_NPC"];
@@ -2562,8 +2607,12 @@ $GLOBALS["ENABLED_FUNCTIONS"] = herikaActionCatalogDbReady()
     ? $dbEnabledFunctions
     : array_values(array_unique($ENABLED_FUNCTIONS_LOCAL));
 
+chimTraceFunctionsIncludePhase(__LINE__, 'enabled_functions_loaded_from_runtime', $startTime);
+
 $folderPath = __DIR__ . DIRECTORY_SEPARATOR . "../ext/";
+chimTraceFunctionsIncludePhase(__LINE__, 'ext_function_scan_start', $startTime);
 requireFunctionFilesRecursively($folderPath);
+chimTraceFunctionsIncludePhase(__LINE__, 'ext_function_scan_done', $startTime);
 
 if (herikaActionCatalogDbReady()) {
     // Do not re-seed core_action from the live runtime list here.
@@ -2572,7 +2621,9 @@ if (herikaActionCatalogDbReady()) {
     // CHIM-Custom NFF wrappers like WaitHere / FollowMe / BehindMe). If we
     // write back from the runtime list, those custom rows can be mistaken for
     // built-in functions and get rewritten as source=function.php rows.
+    chimTraceFunctionsIncludePhase(__LINE__, 'runtime_function_merge_start', $startTime);
     herikaActionCatalogApplyRowsToRuntimeFunctions();
+    chimTraceFunctionsIncludePhase(__LINE__, 'runtime_function_merge_done', $startTime);
 }
 
 // Why is this here?
@@ -2584,15 +2635,19 @@ if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . "../prompts/prompts_custom.php")
     require __DIR__ . DIRECTORY_SEPARATOR . "../prompts/prompts_custom.php";
 }
 
+chimTraceFunctionsIncludePhase(__LINE__, 'prompt_overrides_loaded', $startTime);
+
 // Delete non wanted functions
 
+chimTraceFunctionsIncludePhase(__LINE__, 'enabled_function_filter_start', $startTime);
+$enabledFunctionSet = array_fill_keys($GLOBALS["ENABLED_FUNCTIONS"], true);
 foreach ($GLOBALS["FUNCTIONS"] as $n => $v) {
     $codeName = getFunctionCodeName($v["name"]);
     if ($codeName === false) {
         error_log("[FUNCTION] Warning: Could not get code name for function: {$v["name"]}");
         continue;
     }
-    if (!in_array($codeName, $GLOBALS["ENABLED_FUNCTIONS"])) {
+    if (!isset($enabledFunctionSet[$codeName])) {
         error_log("[FUNCTION] Removing $n {$v["name"]}:$codeName");
         unset($GLOBALS["FUNCTIONS"][$n]);
     } 
@@ -2601,11 +2656,17 @@ foreach ($GLOBALS["FUNCTIONS"] as $n => $v) {
     
 }
 
+chimTraceFunctionsIncludePhase(__LINE__, 'enabled_function_filter_done', $startTime);
+
+chimTraceFunctionsIncludePhase(__LINE__, 'bug_func_write_start', $startTime);
 file_put_contents(__DIR__ . "/../log/bug_func.txt", print_r($GLOBALS["FUNCTIONS"], true));
 file_put_contents(__DIR__ . "/../log/bug_func.txt", print_r($GLOBALS["ENABLED_FUNCTIONS"], true), FILE_APPEND);
 file_put_contents(__DIR__ . "/../log/bug_func.txt", print_r($GLOBALS["ENABLED_FUNCTIONS"], true), FILE_APPEND);
+chimTraceFunctionsIncludePhase(__LINE__, 'bug_func_write_done', $startTime);
 
 $GLOBALS["FUNCTIONS"] = array_values($GLOBALS["FUNCTIONS"]); //Get rid of array keys
+
+chimTraceFunctionsIncludePhase(__LINE__, 'functions_reindexed', $startTime);
 
 
 // POST FILTER HOOK. Used for cleaning actions returned by LLM
@@ -2614,6 +2675,8 @@ $GLOBALS["FUNCTIONS"] = array_values($GLOBALS["FUNCTIONS"]); //Get rid of array 
 
 require_once __DIR__ . "/../lib/scriptproxy_papyrus.php";
 require_once __DIR__ . "/../lib/core/activity_status.php";
+
+chimTraceFunctionsIncludePhase(__LINE__, 'post_filter_dependencies_loaded', $startTime);
 
 // action_post_process_fnct_ex is an arrya containing functions that process the actions after they are generated by the LLM
 // more working examples in data_functions.php
@@ -3361,3 +3424,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
 
     return $actionsCopy;
 };
+
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
+
+?>
