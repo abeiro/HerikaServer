@@ -41,6 +41,9 @@ function executeTaskAsync($taskname, $task) {
     } else if ($pid == 0) {
         // Child process - execute the task
         echo "[CHILD-$taskname] Starting task execution".PHP_EOL;
+        
+        unset($GLOBALS["db"]); // Ensure child process has its own DB connection
+
         Logger::info("Starting task execution in child process: $taskname (PID: " . posix_getpid() . ")");
         try {
             $task["fn"]();
