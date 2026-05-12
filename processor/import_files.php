@@ -78,6 +78,39 @@ function herikaLogCsvImportAuditEvent($eventType, $message, $timestamp, $game_ti
     );
 }
 
+if (!function_exists('chimNormalizeBiographyRelationshipSeed')) {
+    function chimNormalizeBiographyRelationshipSeed($value, &$errorMessage = '')
+    {
+        $errorMessage = '';
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_array($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        $trimmed = trim((string)$value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if ($trimmed[0] !== '{') {
+            $errorMessage = 'expected a JSON object with per-target relationship seeds';
+            return false;
+        }
+
+        $decoded = json_decode($trimmed, true);
+        if (!is_array($decoded)) {
+            $errorMessage = 'invalid JSON object';
+            return false;
+        }
+
+        return json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+}
+
 function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
     global $db;
     
@@ -243,6 +276,16 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
             // Skip if required fields are missing
             if (empty($npc_name) || empty($core)) {
                 Logger::warn("Biography Import: Skipping row with missing npc_name or core");
+                $errorCount++;
+                continue;
+            }
+
+            $relationshipError = '';
+            $npc_relationships = chimNormalizeBiographyRelationshipSeed($npc_relationships, $relationshipError);
+            if ($npc_relationships === false) {
+                Logger::error(
+                    "Biography Import: NPC '$npc_name' has invalid relationships field: $relationshipError"
+                );
                 $errorCount++;
                 continue;
             }
