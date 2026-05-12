@@ -3631,6 +3631,33 @@ function PackIntoSummary($onlyMissingDiary=false)
     return $maxRow;
 }
 
+if (!function_exists('chimFilterRechatHistorySinceLatestInput')) {
+    function chimFilterRechatHistorySinceLatestInput(array $historyRows)
+    {
+        $chainRows = [];
+
+        foreach ($historyRows as $row) {
+            $eventType = strtolower(trim((string)($row['type'] ?? '')));
+            if ($eventType === '') {
+                continue;
+            }
+
+            if (in_array($eventType, ['inputtext', 'inputtext_s', 'ginputtext', 'ginputtext_s', 'narrator_inputtext'], true)) {
+                // A fresh player turn must reset the rechat chain. The first rechat after player input
+                // should therefore start at round 0 instead of inheriting an older chain budget.
+                $chainRows = [];
+                continue;
+            }
+
+            if (in_array($eventType, ['rechat', 'narration'], true)) {
+                $chainRows[] = $row;
+            }
+        }
+
+        return $chainRows;
+    }
+}
+
 function DataRechatHistory()
 {
 

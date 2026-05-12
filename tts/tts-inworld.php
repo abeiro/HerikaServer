@@ -585,7 +585,6 @@ function mapLanguageToInworld($langCode) {
         'HI_IN' => 'hi-IN',
         'HE_IL' => 'he-IL'
     );
-    
     $langCode = trim((string) $langCode);
     $langLower = strtolower($langCode);
 
@@ -602,12 +601,11 @@ function mapLanguageToInworld($langCode) {
     if (preg_match('/^[a-z]{2}-[A-Z]{2}$/', $langCode)) {
         return $langCode;
     }
-    
+
     // Map ISO 639-1 to Inworld format
     if (isset($langMap[$langLower])) {
         return $langMap[$langLower];
     }
-    
     // Try tolerant normalization for inputs like en_us or EN-US.
     $langNormalized = str_replace('_', '-', $langCode);
     if (preg_match('/^([A-Za-z]{2})-([A-Za-z]{2})$/', $langNormalized, $matches)) {

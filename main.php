@@ -2135,6 +2135,21 @@ if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
 $dynamicBiography = buildDynamicBiography($GLOBALS);
 $worldPrompt = buildWorldPrompt($gameRequest[2] ?? 0);
 
+$playerBioSection = "";
+try {
+    require_once(__DIR__.DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."core".DIRECTORY_SEPARATOR."player.class.php");
+    $playerObj = new Player();
+    $playerBio = ResolvePlayerBackstory($playerObj);
+    $bioKnownByAll = filter_var((string)($playerObj->get('bio_known_by_all') ?? ''), FILTER_VALIDATE_BOOLEAN);
+    $isNarrator = isset($GLOBALS["HERIKA_NAME"]) && strcasecmp((string)$GLOBALS["HERIKA_NAME"], "The Narrator") === 0;
+
+    if ($playerBio !== "" && ($bioKnownByAll || $isNarrator)) {
+        $playerBioSection = "\n\n<player_character>\n# Player Character: {$GLOBALS["PLAYER_NAME"]}\n{$playerBio}\n</player_character>";
+    }
+} catch (Exception $e) {
+    Logger::debug("Could not load player bio for prompt: " . $e->getMessage());
+}
+
 
 if (isset($GLOBALS["PROFILE_PROMPT"])) {
     $dynamicBiography.="\n<group>\n#Part of a group\n{$GLOBALS["PROFILE_PROMPT"]}\n</group>";
