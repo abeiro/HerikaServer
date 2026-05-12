@@ -2779,7 +2779,7 @@ function chimGetRechatMode()
         return !empty($GLOBALS["OPEN_RECHAT"]) ? "conversational" : "tight";
     }
 
-    return "conversational";
+    return "random";
 }
 
 function isOpenRechatEnabled()
