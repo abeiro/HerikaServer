@@ -1970,10 +1970,9 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
      or people like '%|$actorEscaped (in combat)|%'
      or people like '%|$actorEscaped (restrained)|%'
      or type='info_timeforward'
-     or ((type ILIKE 'info\_%' OR type ILIKE 'ext\_%') {$ext_sqlfilter2})
     )" : " ").
     //((false)?" and gamets>".($currentGameTs-(60*60*60*60)):"").
-    "
+    " {$ext_sqlfilter2} 
     ORDER BY gamets desc, ts desc, rowid desc LIMIT {$nRecordsLimit} OFFSET 0 ";
     
     // Keep generic far-away actors out of historic context. Shared narrator rows are flattened on write.

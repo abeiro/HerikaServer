@@ -277,7 +277,7 @@ Response queued in `responselog` table, fetched by game mod via `comm.php`
 | `output_to_plugin.log` | Data sent back to game mod |
 | `stt.log` | Speech-to-text processing |
 | `vision.log` | Vision/image processing |
-| `debugstream.log` | Streaming response debug data |
+| `debugStream.log` | Streaming response debug data |
 | `monitor.log` | Service monitor logs |
 | `service.log` | Background service logs |
 

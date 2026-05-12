@@ -6155,6 +6155,44 @@ if ($checkVersion("core_action") < 20260502002) {
 
 //----------------------------------------------------
 
+if ($checkVersion("general_settings") < 20260511001) {
+    Logger::debug("Applying general_settings 20260511001 - ensure rechat mode defaults to random for new installs");
+    $b_ok = true;
+
+    try {
+        $settingId = 'RECHAT_MODE';
+        $existingRow = chimGetGeneralSettingRow($settingId);
+
+        if (!$existingRow) {
+            $definition = chimGetSchemaDefinition($settingId);
+            $hasLegacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+
+            if ($hasLegacyValue !== "__CHIM_SETTING_MISSING__") {
+                $currentValue = $hasLegacyValue;
+            } elseif (array_key_exists('OPEN_RECHAT', $GLOBALS)) {
+                $currentValue = !empty($GLOBALS['OPEN_RECHAT']) ? 'conversational' : 'tight';
+            } else {
+                $currentValue = $definition['default'] ?? 'random';
+            }
+
+            $description = chimGetManagedGeneralSettingDescriptions()[$settingId] ?? chimGetSchemaDescription($settingId);
+            if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+                throw new Exception("Failed writing general setting '{$settingId}'");
+            }
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error ensuring default rechat mode setting: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260511001);
+        Logger::info("Applied patch general_settings 20260511001");
+    }
+}
+
+//----------------------------------------------------
+
 if ($checkVersion("core_action") < 20260502011) {
     Logger::debug("Applying core_action 20260502011 - sync sitting restrictions for Drink, Toast, and StartRitualCeremony");
     $b_ok = true;
