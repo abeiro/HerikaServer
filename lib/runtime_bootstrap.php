@@ -117,6 +117,7 @@ if (!function_exists('chimRuntimeEnsureDbUpdates')) {
         }
 
         $updatesPath = $enginePath . "debug" . DIRECTORY_SEPARATOR . "db_updates.php";
+        $db=$GLOBALS["db"] ?? null;
         if (file_exists($updatesPath)) {
             require_once($updatesPath);
         }
