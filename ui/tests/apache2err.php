@@ -89,7 +89,7 @@ $llmContextPath = $logPath . 'context_sent_to_llm.log';
 $pluginOutputPath = $logPath . 'output_to_plugin.log';
 $sttLogPath = $logPath . 'stt.log';
 $visionLogPath = $logPath . 'vision.log';
-$debugStreamLogPath = $logPath . 'debugstream.log';
+$debugStreamLogPath = $logPath . 'debugStream.log';
 $llmContextFastPath = $logPath . 'context_sent_to_llm_fast.log';
 $monitorLogPath = $logPath . 'monitor.log';
 $serviceLogPath = $logPath . 'service.log';
@@ -2145,7 +2145,7 @@ if (isset($_GET['download_logs'])) {
         <div class="log-section">
             <?php
             // Display Debug Stream log
-            readRegularLog($debugStreamLogPath, "Debug Stream Log (debugstream.log)");
+            readRegularLog($debugStreamLogPath, "Debug Stream Log (debugStream.log)");
             ?>
         </div>
             </div>
