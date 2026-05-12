@@ -25,11 +25,16 @@ $COOLDOWNMAP=[];
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
 $GLOBALS["ENGINE_PATH"]=$path;
 
-require($path . "conf/conf.php");
+require_once($path . "lib/runtime_bootstrap.php");
+chimRuntimeBootstrap($path, [
+    'load_general_settings' => true,
+    'load_stt_connector' => true,
+    'load_itt_connector' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
 require_once($path . "lib/auditing.php");
 require_once($path . "lib/model_dynmodel.php");
-require_once($path . "lib/{$GLOBALS["DBDRIVER"]}.class.php");
-$GLOBALS["db"] = new sql();
 require_once($path . "lib/minimet5_service.php");
 require_once($path . "lib/data_functions.php");
 require_once($path . "lib/chat_helper_functions.php");
@@ -119,6 +124,8 @@ MAIN FLOW
 ***********************/
 
 $gameRequest = explode("|", $receivedData);
+$GLOBALS["gameRequest"] = &$gameRequest;
+unset($GLOBALS["CHIM_TURN_PEOPLE_SNAPSHOT"]);
 
 
 $startTime = microtime(true);
@@ -140,54 +147,24 @@ if (in_array($gameRequest[0], ['updateequipment', 'updateinventory', 'updateskil
 }
 
 // Database Connection
-$db = new sql();
-
-// Load PLAYER_NAME from core_player table
-try {
-    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
-    $player = new Player();
-    $playerNameFromTable = $player->get('player_name');
-    if ($playerNameFromTable !== null && $playerNameFromTable !== '') {
-        $GLOBALS["PLAYER_NAME"] = $playerNameFromTable;
-    } else {
-        // Fallback to conf_opts
-        $playerNameFromDb = $db->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
-        if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
-            $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
-        }
-    }
-} catch (Exception $e) {
-    // Fallback to conf_opts on error
-    $playerNameFromDb = $db->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME'");
-    if ($playerNameFromDb && !empty($playerNameFromDb['value'])) {
-        $GLOBALS["PLAYER_NAME"] = $playerNameFromDb['value'];
-    }
-}
-
-// Load narrator settings from core_narrator table
-try {
-    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
-    $narrator = new Narrator();
-    // Load all narrator settings into GLOBALS with proper type conversion
-    // Falls back to existing GLOBALS values (from conf.php) if not found in database
-    $narrator->loadIntoGlobals();
-} catch (Exception $e) {
-    // Fallback to conf.php values already loaded
-    // Settings will use defaults or values from conf.php
-}
+$db = $GLOBALS["db"] ?? new sql();
+$GLOBALS["db"] = $db;
 
 require_once($path . "processor" .DIRECTORY_SEPARATOR."chim_modes.php");
 
-// In whisper mode, normalize incoming dialogue tags so logs/prompts consistently show
-// "(whispering to X)" instead of "(talking to X)".
-if (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_EXECUTION_MODE"]) === "WHISPER") {
-    if (isset($gameRequest[3]) && is_string($gameRequest[3]) &&
-        in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext", "chat", "prechat", "rechat", "continue", "continue_group"], true)) {
+// In directed CHIM modes, normalize incoming dialogue tags so logs/prompts stay aligned
+// with the active speaking style.
+$chimExecutionMode = strtoupper((string)($GLOBALS["CHIM_EXECUTION_MODE"] ?? ""));
+if (isset($gameRequest[3]) && is_string($gameRequest[3]) &&
+    in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext", "chat", "prechat", "rechat", "continue", "continue_group"], true)) {
+    if ($chimExecutionMode === "WHISPER") {
         $gameRequest[3] = convertTalkingTagsToWhispering($gameRequest[3]);
+    } elseif ($chimExecutionMode === "SHOUT") {
+        $gameRequest[3] = convertTalkingTagsToShouting($gameRequest[3]);
     }
 }
 
-
+// Call extension's preprocessing files
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"preprocessing.php");
 
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext","instruction","init"])) {
@@ -247,298 +224,9 @@ if (($gameRequest[0]=="playerinfo")||(($gameRequest[0]=="newgame"))) {
     sleep(1);   // Give time to populate data
 }
 
-
-if (($gameRequest[0]=="delete_event")) {
-    // Do this ASAP
-    $datacn=$db->escape($gameRequest[3]);
-    $db->delete("eventlog","type in ('chat','prechat') and data like '%$datacn%' and localts>".(time()- 120));
-    // audit_log(__FILE__);
-    terminate();
-}
-
-// Biography CSV upload
-if ($gameRequest[0]=="biography_import") {
-    require(__DIR__."/processor/biography_import.php");
-    
-    terminate();
-}
-
-// Oghma CSV upload
-// Move this to a processor file
-if ($gameRequest[0]=="oghma_import") {
-    Logger::info("Processing Oghma CSV data upload");
-    
-    // Parse the message format: oghma_import|timestamp|gametime|filename|csv_data
-    // $gameRequest[4] should contain the CSV data
-    if (!isset($gameRequest[4]) || empty($gameRequest[4])) {
-        Logger::error("Oghma Import: No CSV data provided");
-        terminate();
-    }
-    
-    $csvData = $gameRequest[4];
-    $processedCount = 0;
-    $errorCount = 0;
-    
-    try {
-        // Create a temporary file to properly parse complex CSV data
-        $tempFile = tempnam(sys_get_temp_dir(), 'oghma_import_');
-        file_put_contents($tempFile, $csvData);
-        
-        $handle = fopen($tempFile, 'r');
-        if ($handle === false) {
-            Logger::error("Oghma Import: Could not open temporary CSV file");
-            terminate();
-        }
-        
-        // Read and process header
-        $header = fgetcsv($handle, 0, ',', '"', '"');
-        if ($header === false || empty($header)) {
-            Logger::error("Oghma Import: Invalid CSV header");
-            fclose($handle);
-            unlink($tempFile);
-            terminate();
-        }
-        
-        // Normalize header labels and create header map
-        $headerMap = [];
-        foreach ($header as $i => $colName) {
-            $normalized = strtolower(trim($colName));
-            $headerMap[$normalized] = $i;
-        }
-        
-        // Process each data row
-        while (($data = fgetcsv($handle, 0, ',', '"', '"')) !== false) {
-            if (empty($data) || count($data) < 2) {
-                continue; // Skip empty or invalid rows
-            }
-            
-            // Extract required fields
-            $topic = '';
-            if (isset($headerMap['topic']) && isset($data[$headerMap['topic']])) {
-                $topic = strtolower(trim($data[$headerMap['topic']]));
-            }
-            
-            $topic_desc = '';
-            if (isset($headerMap['topic_desc']) && isset($data[$headerMap['topic_desc']])) {
-                $topic_desc = trim($data[$headerMap['topic_desc']]);
-            }
-            
-            // Extract optional fields
-            $knowledge_class = '';
-            if (isset($headerMap['knowledge_class']) && isset($data[$headerMap['knowledge_class']])) {
-                $knowledge_class = trim($data[$headerMap['knowledge_class']]);
-            }
-            
-            $topic_desc_basic = '';
-            if (isset($headerMap['topic_desc_basic']) && isset($data[$headerMap['topic_desc_basic']])) {
-                $topic_desc_basic = trim($data[$headerMap['topic_desc_basic']]);
-            }
-            
-            $knowledge_class_basic = '';
-            if (isset($headerMap['knowledge_class_basic']) && isset($data[$headerMap['knowledge_class_basic']])) {
-                $knowledge_class_basic = trim($data[$headerMap['knowledge_class_basic']]);
-            }
-            
-            $tags = '';
-            if (isset($headerMap['tags']) && isset($data[$headerMap['tags']])) {
-                $tags = trim($data[$headerMap['tags']]);
-            }
-            
-            $category = '';
-            if (isset($headerMap['category']) && isset($data[$headerMap['category']])) {
-                $category = trim($data[$headerMap['category']]);
-            }
-            
-            // Skip if required fields are missing
-            if (empty($topic) || empty($topic_desc)) {
-                Logger::warn("Oghma Import: Skipping row with missing topic or topic_desc");
-                $errorCount++;
-                continue;
-            }
-            
-            // Insert or update record using upsertRowOnConflict
-            try {
-                $db->upsertRowOnConflict(
-                    'oghma',
-                    array(
-                        'topic' => $topic,
-                        'topic_desc' => $topic_desc,
-                        'knowledge_class' => $knowledge_class,
-                        'topic_desc_basic' => $topic_desc_basic,
-                        'knowledge_class_basic' => $knowledge_class_basic,
-                        'tags' => $tags,
-                        'category' => $category
-                    ),
-                    'topic'
-                );
-                $processedCount++;
-                Logger::info("Oghma Import: Successfully processed topic: $topic");
-            } catch (Exception $e) {
-                Logger::error("Oghma Import: Error processing topic '$topic': " . $e->getMessage());
-                $errorCount++;
-            }
-        }
-        
-        fclose($handle);
-        unlink($tempFile);
-        
-        Logger::info("Oghma Import: Processing complete. $processedCount records processed, $errorCount errors");
-        
-    } catch (Exception $e) {
-        Logger::error("Oghma Import: Fatal error processing CSV: " . $e->getMessage());
-        // Clean up temp file if it exists
-        if (isset($tempFile) && file_exists($tempFile)) {
-            unlink($tempFile);
-        }
-    }
-    
-    terminate();
-}
-
-
-// Dynamic Oghma CSV upload
-// Move this to a processor file
-// Will insert data into database and will terminate.
-if ($gameRequest[0]=="dynamic_oghma_import") {
-    Logger::info("Processing Dynamic Oghma CSV data upload");
-    
-    // Parse the message format: dynamic_oghma_import|timestamp|gametime|filename|csv_data
-    // $gameRequest[4] should contain the CSV data
-    if (!isset($gameRequest[4]) || empty($gameRequest[4])) {
-        Logger::error("Dynamic Oghma Import: No CSV data provided");
-        terminate();
-    }
-    
-    $csvData = $gameRequest[4];
-    $processedCount = 0;
-    $errorCount = 0;
-    
-    try {
-        // Create a temporary file to properly parse complex CSV data
-        $tempFile = tempnam(sys_get_temp_dir(), 'dynamic_oghma_import_');
-        file_put_contents($tempFile, $csvData);
-        
-        $handle = fopen($tempFile, 'r');
-        if ($handle === false) {
-            Logger::error("Dynamic Oghma Import: Could not open temporary CSV file");
-            terminate();
-        }
-        
-        // Read and process header
-        $header = fgetcsv($handle, 0, ',', '"', '"');
-        if ($header === false || empty($header)) {
-            Logger::error("Dynamic Oghma Import: Invalid CSV header");
-            fclose($handle);
-            unlink($tempFile);
-            terminate();
-        }
-        
-        // Normalize header labels and create header map
-        $headerMap = [];
-        foreach ($header as $i => $colName) {
-            $normalized = strtolower(trim($colName));
-            $headerMap[$normalized] = $i;
-        }
-        
-        // Process each data row
-        while (($data = fgetcsv($handle, 0, ',', '"', '"')) !== false) {
-            if (empty($data) || count($data) < 3) {
-                continue; // Skip empty or invalid rows
-            }
-            
-            // Extract required fields
-            $id_quest = '';
-            if (isset($headerMap['id_quest']) && isset($data[$headerMap['id_quest']])) {
-                $id_quest = trim($data[$headerMap['id_quest']]);
-            }
-            
-            $stage = 0;
-            if (isset($headerMap['stage']) && isset($data[$headerMap['stage']])) {
-                $stage = intval(trim($data[$headerMap['stage']]));
-            }
-            
-            $topic = '';
-            if (isset($headerMap['topic']) && isset($data[$headerMap['topic']])) {
-                $topic = strtolower(trim($data[$headerMap['topic']]));
-            }
-            
-            // Extract optional fields
-            $topic_desc = '';
-            if (isset($headerMap['topic_desc']) && isset($data[$headerMap['topic_desc']])) {
-                $topic_desc = trim($data[$headerMap['topic_desc']]);
-            }
-            
-            $knowledge_class = '';
-            if (isset($headerMap['knowledge_class']) && isset($data[$headerMap['knowledge_class']])) {
-                $knowledge_class = trim($data[$headerMap['knowledge_class']]);
-            }
-            
-            $topic_desc_basic = '';
-            if (isset($headerMap['topic_desc_basic']) && isset($data[$headerMap['topic_desc_basic']])) {
-                $topic_desc_basic = trim($data[$headerMap['topic_desc_basic']]);
-            }
-            
-            $knowledge_class_basic = '';
-            if (isset($headerMap['knowledge_class_basic']) && isset($data[$headerMap['knowledge_class_basic']])) {
-                $knowledge_class_basic = trim($data[$headerMap['knowledge_class_basic']]);
-            }
-            
-            $tags = '';
-            if (isset($headerMap['tags']) && isset($data[$headerMap['tags']])) {
-                $tags = trim($data[$headerMap['tags']]);
-            }
-            
-            $category = '';
-            if (isset($headerMap['category']) && isset($data[$headerMap['category']])) {
-                $category = trim($data[$headerMap['category']]);
-            }
-            
-            // Skip if required fields are missing
-            if (empty($id_quest) || empty($topic)) {
-                Logger::warn("Dynamic Oghma Import: Skipping row with missing id_quest or topic");
-                $errorCount++;
-                continue;
-            }
-            
-            // Insert record (dynamic oghma doesn't use upsert, it allows multiple entries)
-            try {
-                $db->insert(
-                    'oghma_dynamic',
-                    array(
-                        'id_quest' => $id_quest,
-                        'stage' => $stage,
-                        'topic' => $topic,
-                        'topic_desc' => $topic_desc,
-                        'knowledge_class' => $knowledge_class,
-                        'topic_desc_basic' => $topic_desc_basic,
-                        'knowledge_class_basic' => $knowledge_class_basic,
-                        'tags' => $tags,
-                        'category' => $category
-                    )
-                );
-                $processedCount++;
-                Logger::info("Dynamic Oghma Import: Successfully processed quest '$id_quest' stage $stage topic '$topic'");
-            } catch (Exception $e) {
-                Logger::error("Dynamic Oghma Import: Error processing quest '$id_quest' topic '$topic': " . $e->getMessage());
-                $errorCount++;
-            }
-        }
-        
-        fclose($handle);
-        unlink($tempFile);
-        
-        Logger::info("Dynamic Oghma Import: Processing complete. $processedCount records processed, $errorCount errors");
-        
-    } catch (Exception $e) {
-        Logger::error("Dynamic Oghma Import: Fatal error processing CSV: " . $e->getMessage());
-        // Clean up temp file if it exists
-        if (isset($tempFile) && file_exists($tempFile)) {
-            unlink($tempFile);
-        }
-    }
-    
-    terminate();
-}
+// Misc events, some of them can terminate the request
+// delete_event, biography_import, oghma_import
+require(__DIR__."/processor/misc.php");
 
 
 // Player rewrite
@@ -574,80 +262,37 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 }
 
 
+// Narrator inititalization
+// Note: We should check if we need to load Narrator profile in all type of requests. 
+require(__DIR__."/processor/narrator_init.php");
 
-// Narrator initialization
-// Narrator is now managed via core_narrator table, not core_npc_master
-try {
-    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
-    $narrator = new Narrator();
-    
-    // Ensure narrator has a profile_id set (default to profile 1 if not set)
-    $profileId = $narrator->getProfileId();
-    if ($profileId === null) {
-        $profileMgr = new CoreProfile();
-        $defProfile = $profileMgr->getDefaultNarrator();
-        if ($defProfile) {
-            $narrator->set('profile_id', (string)$defProfile['id']);
-        } else {
-            // Fallback to profile 1
-            $narrator->set('profile_id', '1');
-        }
-    }
-    
-    // Ensure voiceid is set
-    if (!$narrator->get('voiceid')) {
-        $narrator->set('voiceid', 'TheNarrator');
-    }
-} catch (Exception $e) {
-    // Narrator initialization failed, will use defaults
-    Logger::warn("Narrator initialization failed: " . $e->getMessage());
-} 
+// maybeQueueNpcVoiceRefresh function moved to misc.php. 
+// If function is called only in one place,and seems has no other uses elsewhere, then there is no point of having a function, write the code in place.
+// Also, we must not declare functions on this file (main.php).
 
-function maybeQueueNpcVoiceRefresh($currentNpcData, $npcMaster)
-{
-    if (!$currentNpcData || !($npcMaster instanceof NpcMaster)) {
-        return $currentNpcData;
-    }
-
-    $npcName = trim((string)($currentNpcData["npc_name"] ?? ""));
-    if ($npcName === "" || strcasecmp($npcName, "The Narrator") === 0) {
-        return $currentNpcData;
-    }
-
-    $voiceId = trim((string)($currentNpcData["voiceid"] ?? ""));
-    if ($voiceId !== "") {
-        return $currentNpcData;
-    }
-
-    $extended = $npcMaster->getExtendedData($currentNpcData);
-    $lastRequestedAt = intval($extended["voice_refresh_requested_at"] ?? 0);
-    $cooldownSeconds = 300;
-    $now = time();
-
-    if ($lastRequestedAt > 0 && ($now - $lastRequestedAt) < $cooldownSeconds) {
-        return $currentNpcData;
-    }
-
-    $extended["voice_refresh_requested_at"] = $now;
-    $extended["voice_refresh_attempts"] = intval($extended["voice_refresh_attempts"] ?? 0) + 1;
-    $extended["voice_refresh_last_result"] = "requested";
-
-    $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extended);
-    $npcMaster->updateByArray($currentNpcData);
-
-    $refId = trim((string)($currentNpcData["refid"] ?? ""));
-    if ($refId !== "" && stripos($refId, "0x") !== 0) {
-        $refId = "0x{$refId}";
-    }
-
-    echo "{$npcName}|rolecommand|RefreshNPCVoice@{$refId}@{$npcName}\r\n";
-    error_log("[NPCVOICE_REFRESH] Requested refresh for {$npcName} ({$refId})");
-
-    return $currentNpcData;
+// Profile loading
+if (!isset($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"])) {
+    $GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"] = false;
 }
 
 
-// Profile loading
+// Bored
+if (($gameRequest[0] ?? '') === 'bored') {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+    $narratorSettings = new Narrator();
+    if ($narratorSettings->getBool('bored_enabled', false)) {
+        $boredChance = max(1, min(100, $narratorSettings->getInt('bored_chance', 25)));
+        $boredRoll = random_int(1, 100);
+        if ($boredRoll <= $boredChance) {
+            $_GET["profile"] = md5('The Narrator');
+            $GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"] = true;
+            Logger::info("[NARRATOR_BORED] Routing bored event through The Narrator runtime (roll {$boredRoll}/{$boredChance})");
+        } else {
+            Logger::info("[NARRATOR_BORED] Keeping bored event on NPC runtime (roll {$boredRoll}/{$boredChance})");
+        }
+    }
+}
+
 if (isset($_GET["profile"])) {
     
     // Initialize OVERRIDES array for all profile types
@@ -659,8 +304,17 @@ if (isset($_GET["profile"])) {
     $OVERRIDES["TTSFUNCTION_PLAYER_VOICE_ID"] = isset($GLOBALS["TTSFUNCTION_PLAYER_VOICE_ID"]) ? $GLOBALS["TTSFUNCTION_PLAYER_VOICE_ID"] : "";
     $OVERRIDES["TTSFUNCTION_PLAYER_LANGUAGE"] = isset($GLOBALS["TTSFUNCTION_PLAYER_LANGUAGE"]) ? $GLOBALS["TTSFUNCTION_PLAYER_LANGUAGE"] : "";
     
-    // Check if this is The Narrator (by MD5)
-    $isNarratorProfile = ($_GET["profile"] === md5('The Narrator'));
+    // Direct narrator requests must load the narrator runtime profile even if the
+    // inbound request still carries the current NPC profile hash.
+    $isNarratorRequest = in_array($gameRequest[0], [
+        "narrator_inputtext",
+        "narration",
+        "narrator_welcome",
+        "narrator_quest_comment"
+    ], true);
+
+    // Check if this is The Narrator (by MD5) or an explicit narrator request.
+    $isNarratorProfile = $isNarratorRequest || ($_GET["profile"] === md5('The Narrator'));
     
     // If this is The Narrator, use Narrator class instead of NpcMaster
     if ($isNarratorProfile) {
@@ -823,7 +477,7 @@ if (isset($_GET["profile"])) {
             $currentProfileData = null;
 
             // Highest-confidence target extraction from player text payload.
-            if ($requestText !== "" && preg_match('/\(\s*(?:(?:talking|whispering)\s+to|speaking\s+loudly\s+to)\s+([^()]+?)(?:\s+from\s+far\s+away)?\s*\)/i', $requestText, $matches)) {
+            if ($requestText !== "" && preg_match('/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+([^()]+?)(?:\s+from\s+far\s+away)?\s*\)/i', $requestText, $matches)) {
                 $candidate = trim($matches[1]);
                 if ($candidate !== "") {
                     $fallbackNpcName = $candidate;
@@ -841,6 +495,7 @@ if (isset($_GET["profile"])) {
             $isNarratorScopedRequest = in_array($gameRequest[0], ["narrator_inputtext", "narration", "narrator_welcome"], true)
                 || stripos($requestText, '(Talking to The Narrator)') !== false
                 || stripos($requestText, '(Whispering to The Narrator)') !== false
+                || stripos($requestText, '(Shouting to The Narrator)') !== false
                 || ($fallbackNpcName !== null && strcasecmp($fallbackNpcName, "The Narrator") === 0);
 
             if ($fallbackNpcName !== null && strcasecmp($fallbackNpcName, "The Narrator") !== 0) {
@@ -999,14 +654,68 @@ if (isset($_GET["profile"])) {
     // error_log("Using profile {$GLOBALS["TTSFUNCTION_PLAYER"]} {$_GET["profile"]} / ".$path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
     
 } else {
-    //error_log(__FILE__.". Using default profile because NO GET PROFILE SPECIFIED");
-    $GLOBALS["USING_DEFAULT_PROFILE"]=true;
+    $isNarratorRequestWithoutProfile = in_array($gameRequest[0], [
+        "narrator_inputtext",
+        "narration",
+        "narrator_welcome",
+        "narrator_quest_comment"
+    ], true);
+
+    if ($isNarratorRequestWithoutProfile) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+        $narrator = new Narrator();
+        $narratorData = $narrator->getNarratorData();
+
+        if ($narratorData && isset($narratorData["profile_id"])) {
+            $profile = new CoreProfile();
+            $currentProfileData = $profile->getById($narratorData["profile_id"]);
+
+            if ($currentProfileData) {
+                $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] = $currentProfileData;
+
+                $connector = new LLMConnector();
+                $npcMaster = new NpcMaster(); // still needed for LLMRandomizer compatibility
+                $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $narratorData, $npcMaster);
+                $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+                $currentConnectorData = $connector->getById($connectorId);
+
+                if ($currentConnectorData) {
+                    $connector->setOldGlobals($currentConnectorData);
+                    $profile->setOldGlobals($currentProfileData);
+                    $narrator->loadCharacterIntoGlobals();
+                    $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
+
+                    $currentMode = $GLOBALS["db"]->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
+                    pipeline_status_set_context(
+                        $currentMode['value'] ?? 'STANDARD',
+                        $currentConnectorData['label'] ?? '',
+                        $currentConnectorData['model'] ?? ''
+                    );
+
+                    error_log("[CORE SYSTEM] Using Narrator profile without explicit profile hash, profile: {$currentProfileData["label"]}");
+                } else {
+                    Logger::error("[CORE SYSTEM] Narrator request without profile hash could not resolve connector");
+                    $GLOBALS["USING_DEFAULT_PROFILE"] = true;
+                }
+            } else {
+                Logger::error("[CORE SYSTEM] Narrator request without profile hash could not resolve profile");
+                $GLOBALS["USING_DEFAULT_PROFILE"] = true;
+            }
+        } else {
+            Logger::error("[CORE SYSTEM] Narrator request without profile hash has no narrator profile configured");
+            $GLOBALS["USING_DEFAULT_PROFILE"] = true;
+        }
+    } else {
+        //error_log(__FILE__.". Using default profile because NO GET PROFILE SPECIFIED");
+        $GLOBALS["USING_DEFAULT_PROFILE"]=true;
+    }
 }
 
 if (isset($GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"]) && $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] && ($GLOBALS["HERIKA_NAME"] ?? "") !== "The Narrator") {
     $npcMasterForVoiceRefresh = isset($npcMaster) && ($npcMaster instanceof NpcMaster)
         ? $npcMaster
         : new NpcMaster();
+    
     $refreshedNpcData = maybeQueueNpcVoiceRefresh($GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"], $npcMasterForVoiceRefresh);
     if ($refreshedNpcData) {
         $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $refreshedNpcData;
@@ -1065,8 +774,7 @@ $GLOBALS["active_profile"]=md5($GLOBALS["HERIKA_NAME"]);
 // This is the correct place, after parsing $gameRequest and before starting to do substitutions
 // Will change connector, and apply narrator settings
 if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"])) {
-
-    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
     $narrator = new Narrator();
     $narratorData = $narrator->getNarratorData();
     error_log("[CHIM CORE] [BOOK OVERRIDE] USING CORE PROFILE {$narratorData["npc_name"]}");
@@ -1149,10 +857,6 @@ if ($gameRequest[0]=="diary") {
         'id'
     );
 }
-
-
-
-
 
 
 // Exit if only a event info log.
@@ -1242,7 +946,9 @@ if (in_array($gameRequest[0],["bored"])) {
         logEvent($localGameRequest);
     }
     
-    if ((isset($GLOBALS["BORED_EVENT_SERVERSIDE"])&&($GLOBALS["BORED_EVENT_SERVERSIDE"]))) {
+    if (!empty($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"])) {
+        Logger::info("[NARRATOR_BORED] Using narrator bored flow");
+    } elseif ((isset($GLOBALS["BORED_EVENT_SERVERSIDE"])&&($GLOBALS["BORED_EVENT_SERVERSIDE"]))) {
         Logger::info("Redirecting bored event to rolemaster");
         `php service/manager.php rolemaster instruction ""`;
         terminate();
@@ -1296,6 +1002,14 @@ if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtex
     $FUNCTIONS_ARE_ENABLED=false;
 }
 
+// Direct narrator dialogue is an explicit action-capable request path.
+// Keep DB-backed narrator actions enabled so narrator_inputtext can expose
+// Kill_Target / Spawn_Item / Teleport_NPC instead of falling back to
+// speech-only JSON with an empty action list.
+if ($gameRequest[0] === "narrator_inputtext") {
+    $FUNCTIONS_ARE_ENABLED=true;
+}
+
 // Force actions when instruction issued
 if (in_array($gameRequest[0],["instruction"])) {
     $FUNCTIONS_ARE_ENABLED=true;
@@ -1307,11 +1021,6 @@ if (in_array($gameRequest[0],["suggestion"])) {
     $FUNCTIONS_ARE_ENABLED=false;
     // Remove any "SpeakerName:" prefix to prevent player/NPC attribution in suggestions
     $gameRequest[3] = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
-}
-
-// Disable functions for The Narrator
-if ($GLOBALS["HERIKA_NAME"]=="The Narrator") {
-    $FUNCTIONS_ARE_ENABLED=false;
 }
 
 $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
@@ -1330,30 +1039,63 @@ if (is_array($currentParty)) {
 
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"prerequest.php");
 
+// Non-LLM request handling.
+// We need to include this file asap. Most events are handled there.
+// Log events are handled there to, which are the most called requests, and we want to exit as fast as possible for them.
+// Most called events: 'request,'infonpc','infonpc_close'.
+
+require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
+
+
 if (in_array($gameRequest[0],["rechat","narration"]) ) {
     
     //RECHAT. Must choose if we continue conversation or no.
     // Note: narration is part of rechat system (random narrator interjections count as rechat rounds)
 
-    $rechatHistory=DataRechatHistory();
-    
-    if (sizeof($rechatHistory)>=(intval($GLOBALS["RECHAT_H"])))    {   // TOO MUCH RECHAT
-        Logger::info("Rechat discarded, rechatHistory:".sizeof($rechatHistory).">={$GLOBALS["RECHAT_H"]}");
-        // Lets try to summarize
-        SemaphoreManager::release("MAIN");
-        while(ob_get_length() && ob_end_clean());
-        require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."postrequest.php");
-        terminate();
+    if ($gameRequest[0] === "rechat") {
+        $rechatPayload = chimParseServerSideRechatPayload($gameRequest[3] ?? "");
+        $GLOBALS["RECHAT_PREVIOUS_SPEAKER"] = trim((string)($rechatPayload["speaker"] ?? ""));
+        $resolvedRechatTarget = chimResolveServerSideRechatTarget($rechatPayload);
+        $GLOBALS["RECHAT_REQUEST_PAYLOAD"] = $rechatPayload;
+        $GLOBALS["RECHAT_RESOLVED_TARGET"] = $resolvedRechatTarget;
+
+        if (empty($resolvedRechatTarget["selected"])) {
+            Logger::info("[RECHAT_SELECT] No valid responder selected; terminating rechat");
+            terminate();
+        }
+
+        if (!chimSwitchActiveNpcProfile($resolvedRechatTarget["selected"])) {
+            Logger::warn("[RECHAT_SELECT] Failed to switch active NPC profile to " . $resolvedRechatTarget["selected"]);
+            terminate();
+        }
     }
+
+    $rechatHistory=DataRechatHistory();
+    $currentSpeakerName = trim((string)($GLOBALS["HERIKA_NAME"] ?? ""));
     
     // Pre-calculated rechat budget with final-round closing prompt
 
-    $sessionKey = md5($GLOBALS["HERIKA_NAME"] . "_" . floor(time() / 120));
+    $sessionKey = isset($GLOBALS["RECHAT_RESOLVED_TARGET"])
+        ? chimBuildServerSideRechatSessionKey($GLOBALS["RECHAT_RESOLVED_TARGET"])
+        : md5($GLOBALS["HERIKA_NAME"] . "_" . floor(time() / 120));
     $budgetFile = sys_get_temp_dir() . "/chim_rechat_" . $sessionKey . ".json";
-    $currentRound = sizeof($rechatHistory); // rounds fired so far
+    $budgetStateWindow = 120;
+    $budgetState = null;
 
-    if ($currentRound === 0) {
-        // Pre-roll the entire conversation's rechat chain upfront
+    if (file_exists($budgetFile)) {
+        $loadedBudgetState = json_decode(file_get_contents($budgetFile), true);
+        if (is_array($loadedBudgetState) &&
+            isset($loadedBudgetState["budget"]) &&
+            isset($loadedBudgetState["used"]) &&
+            isset($loadedBudgetState["ts"]) &&
+            (time() - intval($loadedBudgetState["ts"]) <= $budgetStateWindow)) {
+            $budgetState = $loadedBudgetState;
+        } else {
+            @unlink($budgetFile);
+        }
+    }
+
+    if (!is_array($budgetState)) {
         $budget = 0;
         for ($i = 0; $i < intval($GLOBALS["RECHAT_H"]); $i++) {
             if (rand(1, 100) <= intval($GLOBALS["RECHAT_P"])) {
@@ -1366,40 +1108,37 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
             Logger::info("Rechat: pre-roll determined 0 rounds — terminating");
             terminate();
         }
-        file_put_contents($budgetFile, json_encode(['budget' => $budget, 'ts' => time()]));
-        Logger::info("Rechat: pre-rolled budget={$budget} for {$GLOBALS["HERIKA_NAME"]}");
-
-    } else {
-        // Subsequent rounds — check against pre-rolled budget
-        if (!file_exists($budgetFile)) {
-            // No budget file (edge case) — fall back to original CHIM behaviour
-            if (rand(1, 100) > intval($GLOBALS["RECHAT_P"])) {
-                Logger::info("Rechat: fallback probability check failed");
-                terminate();
-            }
-        } else {
-            $data = json_decode(file_get_contents($budgetFile), true);
-            $budget = intval($data['budget']);
-            if ($currentRound >= $budget) {
-                Logger::info("Rechat: pre-roll budget exhausted ({$currentRound}/{$budget}) — terminating");
-                @unlink($budgetFile);
-                terminate();
-            }
-        }
+        $budgetState = ['budget' => $budget, 'used' => 0, 'ts' => time()];
     }
 
+    $budget = intval($budgetState['budget'] ?? 0);
+    $currentRound = intval($budgetState['used'] ?? 0);
+    if ($currentRound >= $budget) {
+        Logger::info("Rechat: pre-roll budget exhausted ({$currentRound}/{$budget}) — terminating");
+        Logger::info("[RECHAT_COUNT] exhausted speaker={$GLOBALS["HERIKA_NAME"]} chain_id=" .
+            (isset($GLOBALS["RECHAT_RESOLVED_TARGET"]["chain_id"]) ? $GLOBALS["RECHAT_RESOLVED_TARGET"]["chain_id"] : "") .
+            " used={$currentRound} budget={$budget}");
+        @unlink($budgetFile);
+        terminate();
+    }
+
+    $budgetState['used'] = $currentRound + 1;
+    $budgetState['ts'] = time();
+    file_put_contents($budgetFile, json_encode($budgetState));
+    Logger::info("[RECHAT_COUNT] speaker={$GLOBALS["HERIKA_NAME"]} chain_id=" .
+        (isset($GLOBALS["RECHAT_RESOLVED_TARGET"]["chain_id"]) ? $GLOBALS["RECHAT_RESOLVED_TARGET"]["chain_id"] : "") .
+        " used={$budgetState['used']} budget={$budget}");
+
     // All gates passed — detect final round and inject closing prompt
-    $budget = isset($budget) ? $budget : intval($GLOBALS["RECHAT_H"]);
     if ($currentRound + 1 >= $budget) {
         $GLOBALS["PROMPT_HEAD"] .= "\n[This is your final response in this exchange. Conclude your current thought naturally — you are not leaving, just finishing what you were saying for now.]";
         Logger::info("Rechat: final round ({$currentRound}/{$budget}) — closing prompt injected");
     }
 
 
-    if (sizeof($rechatHistory)>1) {
+    if ($currentRound > 1) {
         // Lets make rechat wait a bit, so events while NPCs are speaking get into context// disabled if using new rechat fire event
         SemaphoreManager::release("MAIN");
-        Logger::info("HOLDING RECHAT EVENT ".sizeof($rechatHistory));
         // Check if this conflicts with smart rechat
         // Is this doing something?
         $semaphore_timeout = $GLOBALS["SEMAPHORES_TIMEOUT"] ?? 300;
@@ -1528,7 +1267,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         }
     }
 
-    $sqlfilter=" and type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction','infoaction','death','itemfound') or (type='chat' and data like '(Context%') ";  // Use prechat
+    $sqlfilter=" and (type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction','infoaction','death','itemfound','innerchat') or (type='chat' and COALESCE(delivery_state,'spoken')='spoken' and data like '(Context%') )";  // Use prechat
     // chat entries starting by "(Context%" are standard skyrim dialogue
 
     $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny => CHAOS MODE
@@ -1537,9 +1276,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     $sqlfilter=" and type<>'prechat' "; // Will dismiss prechat entries by default. prechat are LLM responses still not displayed in-game
 
 
-// Non-LLM request handling.
 
-require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
 
 // Handle narrator_welcome events (must be AFTER comm.php which converts init to narrator_welcome)
 if ($gameRequest[0] == "narrator_welcome") {
@@ -1699,25 +1436,107 @@ if ($MUST_END) {  // Shorthand for non LLM processing
         @ob_end_flush();
         @flush();
     }    
+    if (microtime(true) - $startTime > 0.5) {
+        error_log("*TRACE EARLY END SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
+        error_log("*TRACE EARLY END: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." resolving request");
+    }
     terminate();
+
 }
 if ($EXECUTION_MODE=="INJECTION_LOG") {
     
     terminate();
-    
+
 }
 
-//error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
+// What is this for?
+if (in_array($gameRequest[0], ["continue", "continue_group"], true) && empty($GLOBALS["RECHAT_PREVIOUS_SPEAKER"])) {
+    try {
+        $lastSpeechRow = $db->fetchOne("SELECT speaker FROM speech ORDER BY rowid DESC LIMIT 1");
+        $GLOBALS["RECHAT_PREVIOUS_SPEAKER"] = trim((string)($lastSpeechRow["speaker"] ?? ""));
+    } catch (\Throwable $e) {
+        $GLOBALS["RECHAT_PREVIOUS_SPEAKER"] = "";
+    }
+}
+
+
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 /**********************
  CONTEXT DATA BUILDING
 ***********************/
 
-$GLOBALS["DIRECT_NARRATOR_DIALOGUE"] = ($gameRequest[0] === "narrator_inputtext");
+$GLOBALS["DIRECT_NARRATOR_DIALOGUE"] = (
+    $gameRequest[0] === "narrator_inputtext"
+    || (
+        ($GLOBALS["HERIKA_NAME"] ?? "") === "The Narrator"
+        && in_array($gameRequest[0], ["cheatmode", "instruction"], true)
+    )
+);
+
+// Narrator-scoped requests must execute with the narrator runtime profile even
+// when the inbound request still carries a valid NPC profile hash. If that hash
+// wins earlier profile loading, narrator-only actions get filtered out of the
+// runtime function list before response processing.
+$isNarratorScopedRequest = in_array($gameRequest[0], [
+    "narrator_inputtext",
+    "narration",
+    "narrator_welcome",
+    "narrator_quest_comment",
+], true) || (
+    ($GLOBALS["HERIKA_NAME"] ?? "") === "The Narrator"
+    && in_array($gameRequest[0], ["cheatmode", "instruction"], true)
+);
+
+if ($isNarratorScopedRequest && (($GLOBALS["HERIKA_NAME"] ?? "") !== "The Narrator")) {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "narrator.class.php");
+
+    $narrator = new Narrator();
+    $narratorData = $narrator->getNarratorData();
+
+    if ($narratorData && isset($narratorData["profile_id"])) {
+        $profile = new CoreProfile();
+        $currentProfileData = $profile->getById($narratorData["profile_id"]);
+
+        if ($currentProfileData) {
+            $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] = $currentProfileData;
+
+            $connector = new LLMConnector();
+            $npcMaster = new NpcMaster();
+            $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $narratorData, $npcMaster);
+            $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
+            $currentConnectorData = $connector->getById($connectorId);
+
+            if ($currentConnectorData) {
+                $connector->setOldGlobals($currentConnectorData);
+                $profile->setOldGlobals($currentProfileData);
+                $narrator->loadCharacterIntoGlobals();
+
+                $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
+                $GLOBALS["CURRENT_CONNECTOR"] = $currentConnectorData['driver'] ?? ($GLOBALS["CURRENT_CONNECTOR"] ?? "");
+                unset($GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"], $GLOBALS["STOBE_CORE_CURRENT_NPC_DATA"]);
+                $GLOBALS["IS_NPC"] = false;
+                $GLOBALS["FUNCTIONS_ARE_ENABLED"] = true;
+
+                error_log("[CORE SYSTEM] Re-synced narrator runtime profile before prompt build");
+            } else {
+                error_log("[CORE SYSTEM] Failed to re-sync narrator runtime profile: connector not found");
+            }
+        } else {
+            error_log("[CORE SYSTEM] Failed to re-sync narrator runtime profile: profile not found");
+        }
+    } else {
+        error_log("[CORE SYSTEM] Failed to re-sync narrator runtime profile: narrator data missing");
+    }
+}
+
+error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)."");
 
 // Include prompts, command prompts and functions.
 require(__DIR__.DIRECTORY_SEPARATOR."prompt.includes.php");
 $gameRequest[0] = strtolower($gameRequest[0]); // one more time in case it was changed by an extension
+
+error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)."");
 
 // Inject training function for trainer NPCs (only if Training is enabled)
 if (in_array('Training', $GLOBALS["ENABLED_FUNCTIONS"]) && isset($currentNpcData) && $currentNpcData && $GLOBALS["HERIKA_NAME"] != "The Narrator") {
@@ -1767,6 +1586,29 @@ if (isset($GLOBALS["RANDOM_NARRATION_PROMPT"]) && $gameRequest[0] == "narration"
     Logger::info("[RANDOM_NARRATION] Injected narration prompt as cue");
 }
 
+if (!empty($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"]) && $gameRequest[0] == "bored") {
+    $boredPrompt = null;
+    try {
+        $promptData = $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'narrator_bored_prompt'");
+        if ($promptData) {
+            $boredPrompt = !empty($promptData['custom_prompt']) ? $promptData['custom_prompt'] : ($promptData['default_prompt'] ?? null);
+        }
+    } catch (Exception $e) {
+        Logger::warn("[NARRATOR_BORED] Failed to load narrator_bored_prompt from database: " . $e->getMessage());
+    }
+
+    if (!$boredPrompt) {
+        $boredPrompt = '({HERIKA_NAME} makes one short comment directly to {PLAYER_NAME} about something happening right now in the current scene. Keep it grounded in the present moment, do not ask follow-up questions, and do not continue the conversation.) {TEMPLATE_DIALOG}';
+    }
+
+    $PROMPTS["bored"]["cue"] = [strtr($boredPrompt, [
+        '{HERIKA_NAME}' => $GLOBALS["HERIKA_NAME"] ?? 'The Narrator',
+        '{PLAYER_NAME}' => $GLOBALS["PLAYER_NAME"] ?? 'Player',
+        '{TEMPLATE_DIALOG}' => $GLOBALS["TEMPLATE_DIALOG"] ?? '',
+    ])];
+    Logger::info("[NARRATOR_BORED] Injected narrator bored prompt");
+}
+
 // Inject narrator welcome prompt if this is a narrator_welcome event
 if ($gameRequest[0] == "narrator_welcome") {
     $welcomePrompt = isset($GLOBALS["NARRATOR_WELCOME_PROMPT"]) && !empty($GLOBALS["NARRATOR_WELCOME_PROMPT"]) 
@@ -1803,38 +1645,60 @@ if (!isset($GLOBALS["CACHE_PARTY"])) {
     $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
 } 
 
-if (in_array($gameRequest[0],["inputtext_s"])) {    // Stealth-targeted follower: scope to target NPC only
+if (in_array($gameRequest[0],["inputtext_s"]) && chimDecodeAudienceSnapshotField($gameRequest[4] ?? "") === "") {    // Stealth-targeted follower: scope to target NPC only
     $GLOBALS["CACHE_PEOPLE"]=$GLOBALS["HERIKA_NAME"];
 }
 
-// Scope all incoming events through spatial awareness when possible.
-$scopedPeople = buildScopedPeopleForEvent(
-    $gameRequest[0] ?? "",
-    $gameRequest[3] ?? "",
-    $GLOBALS["HERIKA_NAME"] ?? "",
-    $GLOBALS["CACHE_PEOPLE"] ?? ""
-);
-if (!empty($scopedPeople)) {
-    $GLOBALS["CACHE_PEOPLE"] = $scopedPeople;
-    Logger::info("Scoped CACHE_PEOPLE for {$gameRequest[0]}: " . $GLOBALS["CACHE_PEOPLE"]);
-}
-
-if (!empty($GLOBALS["HERIKA_NAME"])) {
-    $shouldAppendListener = shouldAutoAppendListenerToPeople(
-        $gameRequest[0] ?? "",
-        $gameRequest[3] ?? "",
-        $GLOBALS["HERIKA_NAME"]
-    );
-    $currentPeople = isset($GLOBALS["CACHE_PEOPLE"]) ? (string)$GLOBALS["CACHE_PEOPLE"] : "";
-    $peopleTokens = array_values(array_filter(array_map('trim', explode('|', $currentPeople))));
-    if ($shouldAppendListener && !in_array($GLOBALS["HERIKA_NAME"], $peopleTokens, true)) {
-        $peopleTokens[] = $GLOBALS["HERIKA_NAME"];
-        $GLOBALS["CACHE_PEOPLE"] = "|" . implode("|", $peopleTokens) . "|";
-        Logger::info("Added listener to CACHE_PEOPLE: " . $GLOBALS["HERIKA_NAME"]);
-    } elseif (!$shouldAppendListener) {
-        Logger::info("Skipped listener auto-append for scoped input event: " . $GLOBALS["HERIKA_NAME"]);
+if (($gameRequest[0] ?? "") === "infoloc") {
+    $scenePeople = DataBeingsInRange();
+    if (!empty($scenePeople)) {
+        $GLOBALS["CACHE_PEOPLE"] = $scenePeople;
     }
 }
+
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
+// Scope all incoming events through spatial awareness when possible.
+$playerInputEventTypes = ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"];
+$requestAudienceSnapshot = chimDecodeAudienceSnapshotField($gameRequest[4] ?? "");
+$hasAuthoritativeRequestAudience = (
+    in_array($gameRequest[0] ?? "", $playerInputEventTypes, true) &&
+    $requestAudienceSnapshot !== ""
+);
+
+if ($hasAuthoritativeRequestAudience) {
+    $GLOBALS["CACHE_PEOPLE"] = $requestAudienceSnapshot;
+    Logger::info("Scoped CACHE_PEOPLE for {$gameRequest[0]} from request audience snapshot: " . $GLOBALS["CACHE_PEOPLE"]);
+} else {
+    $scopedPeople = buildScopedPeopleForEvent(
+        $gameRequest[0] ?? "",
+        $gameRequest[3] ?? "",
+        $GLOBALS["HERIKA_NAME"] ?? "",
+        $GLOBALS["CACHE_PEOPLE"] ?? ""
+    );
+    if (!empty($scopedPeople)) {
+        $GLOBALS["CACHE_PEOPLE"] = $scopedPeople;
+        Logger::info("Scoped CACHE_PEOPLE for {$gameRequest[0]}: " . $GLOBALS["CACHE_PEOPLE"]);
+    }
+
+    if (!empty($GLOBALS["HERIKA_NAME"])) {
+        $shouldAppendListener = shouldAutoAppendListenerToPeople(
+            $gameRequest[0] ?? "",
+            $gameRequest[3] ?? "",
+            $GLOBALS["HERIKA_NAME"]
+        );
+        $currentPeople = isset($GLOBALS["CACHE_PEOPLE"]) ? (string)$GLOBALS["CACHE_PEOPLE"] : "";
+        $peopleTokens = array_values(array_filter(array_map('trim', explode('|', $currentPeople))));
+        if ($shouldAppendListener && !in_array($GLOBALS["HERIKA_NAME"], $peopleTokens, true)) {
+            $peopleTokens[] = $GLOBALS["HERIKA_NAME"];
+            $GLOBALS["CACHE_PEOPLE"] = "|" . implode("|", $peopleTokens) . "|";
+            Logger::info("Added listener to CACHE_PEOPLE: " . $GLOBALS["HERIKA_NAME"]);
+        } elseif (!$shouldAppendListener) {
+            Logger::info("Skipped listener auto-append for scoped input event: " . $GLOBALS["HERIKA_NAME"]);
+        }
+    }
+}
+
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 /// LOG INTO DB. Will use this later.
 if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
@@ -1843,6 +1707,8 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
     $data = isset($gameRequest[3]) ? $gameRequest[3] : '';
     
     // List of combat grunts to filter
+    // Not agree. Make it optional. A guy using a chair, even 6 times, a combat grunt, a cough ... all of that is context relevant.
+
     $combatGrunts = [
         'Unff!', 'Argh!', 'Off!', 'Ugh!', 'Gah!', 'Oof!', 'Urgh!', 'Ngh!', 
         'Aah!', 'Ouch!', 'Grr!', 'Hah!', 'Huh!', 'Hmm!', 'Oof', 'Argh', 
@@ -1862,95 +1728,42 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
     }
     
     if ($shouldLog) {
-        $eventPeople = buildScopedPeopleForEvent(
-            $gameRequest[0] ?? "",
-            $gameRequest[3] ?? "",
-            $GLOBALS["HERIKA_NAME"] ?? "",
-            $GLOBALS["CACHE_PEOPLE"] ?? ""
-        );
-        if (!empty($eventPeople)) {
-            $GLOBALS["CACHE_PEOPLE"] = $eventPeople;
-        }
-
-        $isPlayerInputEvent = in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s"], true);
-        if ($isPlayerInputEvent) {
-
-            // Race-safe spatial scope: if _speech arrived before inputtext, expand to audible companions now.
-            $speakerName = extractSpeakerNameFromInputEvent($gameRequest[3] ?? "");
-            $playerName = isset($GLOBALS["PLAYER_NAME"]) ? trim((string) $GLOBALS["PLAYER_NAME"]) : "";
-            if ($speakerName === "" && $playerName !== "") {
-                $speakerName = $playerName;
-            }
-            $isPlayerSpeaker = ($speakerName !== "" && $playerName !== "" && strcasecmp($speakerName, $playerName) === 0);
-            if ($isPlayerSpeaker) {
-                $speechGamets = intval($gameRequest[2] ?? 0);
-                if ($speechGamets > 0) {
-                    $playerEscaped = $db->escape($playerName);
-                    $speechRow = $db->fetchOne(
-                        "SELECT companions, listener, speaker, topic
-                         FROM speech
-                         WHERE gamets={$speechGamets}
-                           AND LOWER(speaker)=LOWER('{$playerEscaped}')
-                         ORDER BY ts DESC, rowid DESC
-                         LIMIT 1"
-                    );
-
-                    if (is_array($speechRow)) {
-                        $speechTopic = isset($speechRow["topic"]) ? trim((string) $speechRow["topic"]) : "";
-                        $hasSpatialTopic = stripos($speechTopic, "spatial:") !== false;
-                        if (!$hasSpatialTopic) {
-                            error_log("[SPATIAL_SCOPE] main.php skipped speech companion apply for gamets {$speechGamets}: topic lacks spatial metadata");
-                        }
-
-                        if ($hasSpatialTopic) {
-                        $spatialPeopleNames = [];
-                        $companionsPipe = isset($speechRow["companions"]) ? trim((string) $speechRow["companions"]) : "";
-                        if ($companionsPipe !== "") {
-                            foreach (explode("|", $companionsPipe) as $companionName) {
-                                $companionName = trim((string) $companionName);
-                                if ($companionName !== "") {
-                                    $spatialPeopleNames[] = $companionName;
-                                }
-                            }
-                        }
-
-                        $speechListener = isset($speechRow["listener"]) ? trim((string) $speechRow["listener"]) : "";
-                        if ($speechListener !== "") {
-                            $spatialPeopleNames[] = $speechListener;
-                        }
-
-                        $speechSpeaker = isset($speechRow["speaker"]) ? trim((string) $speechRow["speaker"]) : "";
-                        if ($speechSpeaker !== "") {
-                            $spatialPeopleNames[] = $speechSpeaker;
-                        }
-
-                        $spatialPeoplePipe = normalizePeoplePipeList($spatialPeopleNames);
-                        if ($spatialPeoplePipe !== "") {
-                            $eventPeople = $spatialPeoplePipe;
-                            $GLOBALS["CACHE_PEOPLE"] = $spatialPeoplePipe;
-                            error_log("[SPATIAL_SCOPE] main.php applied speech companions for gamets {$speechGamets}: {$spatialPeoplePipe}");
-                        }
-                        }
-                    }
-                }
+        if ($hasAuthoritativeRequestAudience) {
+            $eventPeople = $requestAudienceSnapshot;
+            $GLOBALS["CACHE_PEOPLE"] = $requestAudienceSnapshot;
+        } else {
+            $eventPeople = buildScopedPeopleForEvent(
+                $gameRequest[0] ?? "",
+                $gameRequest[3] ?? "",
+                $GLOBALS["HERIKA_NAME"] ?? "",
+                $GLOBALS["CACHE_PEOPLE"] ?? ""
+            );
+            if (!empty($eventPeople)) {
+                $GLOBALS["CACHE_PEOPLE"] = $eventPeople;
             }
         }
 
-        $db->insert(
-            'eventlog',
-            array(
-                'ts' => $gameRequest[1],
-                'gamets' => $gameRequest[2],
-                'type' => $gameRequest[0],
-                'data' => ($gameRequest[3]),
-                'sess' => (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST'))?'cli':'web',
-                'localts' => time(),
-                'people'=> $eventPeople,
-                'location'=>$GLOBALS["CACHE_LOCATION"],
-                'party'=>$GLOBALS["CACHE_PARTY"],
-                
-            )
+        if (in_array($gameRequest[0], $playerInputEventTypes, true)) {
+            chimSetCurrentTurnPeopleSnapshot($eventPeople);
+        }
+
+        $eventlogInsert = array(
+            'ts' => $gameRequest[1],
+            'gamets' => $gameRequest[2],
+            'type' => $gameRequest[0],
+            'data' => ($gameRequest[3]),
+            'sess' => (php_sapi_name()=="cli" && !getenv('PHPUNIT_TEST'))?'cli':'web',
+            'localts' => time(),
+            'people'=> $eventPeople,
+            'location'=>$GLOBALS["CACHE_LOCATION"],
+            'party'=>$GLOBALS["CACHE_PARTY"],
         );
+
+        if ($gameRequest[0] === "chat") {
+            $eventlogInsert["delivery_state"] = "spoken";
+        }
+
+        $db->insert('eventlog', $eventlogInsert);
     }
 
 }
@@ -2008,6 +1821,7 @@ if ($gameRequest[0] === 'instruction' && isset($gameRequest[3])) {
         $rpgCommentEventType = 'bleedout';
     }
 }
+
 if (!empty($rpgCommentEventType)) {
     $rpgCooldownSeconds = 60;
     $rpgCooldownKey = 'RPG_COMMENT_LAST_TIMESTAMP';
@@ -2089,6 +1903,7 @@ if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[
 
 // Offer memory in CONTEXT 
 
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext","rechat","narration","continue","continue_group"]) ) {
 
@@ -2109,6 +1924,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 } else
      $memoryInjectionCtx=[];
 
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 // Whisper-mode speaking behavior: make the NPC explicitly treat this exchange as whispered.
 if (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_EXECUTION_MODE"]) === "WHISPER") {
@@ -2121,8 +1937,10 @@ if (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_
 
 // array('role' => $currentSpeaker, 'content' => implode("\n", $buffer));
 
-// Action-enforcement prompt is disabled for direct narrator dialogue.
-$GLOBALS["ENFORCE_ACTIONS_PROMPT"] = empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]);
+// Action-enforcement prompt is hard-disabled globally.
+$GLOBALS["ENFORCE_ACTIONS_PROMPT"] = false;
+$GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"] = false;
+$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"] = "";
 
 
 // Rechat case
@@ -2132,11 +1950,8 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     if (isset($GLOBALS["RECHAT_ALLOW_ACTIONS"]) && $GLOBALS["RECHAT_ALLOW_ACTIONS"]) {
         $FUNCTIONS_ARE_ENABLED=true;
 
-        $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-        if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
-            $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
-        else
-            $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
+        $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
+        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
         
         // MinAI prompts are breaking rechat actor adressing "Respond to #target# as #herika_name#"
         $GLOBALS['action_prompts']=[];
@@ -2185,82 +2000,28 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
 // Instruction reinforcement
 if (in_array($gameRequest[0],["instruction"]) ) {
     
-    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
+    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
+    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
     
 }
 
 // Enforce actions
-if (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) {
-    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
-    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
-} else {
-    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-    if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
-        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
-    else
-        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
-}
-
-// Cooldown definitions
-$COOLDOWNMAP["ComeCloser"]=120/0.00864;
-$COOLDOWNMAP["WaitHere"]=300/0.00864;
-$COOLDOWNMAP["UseSoulGaze"]=300/0.00864;
-$COOLDOWNMAP["InspectSurroundings"]=100/0.00864;
-$COOLDOWNMAP["Inspect"]=300/0.00864;
-$COOLDOWNMAP["Relax"]=180/0.00864;
-$COOLDOWNMAP["MakeAToast"]=60/0.00864;
-$COOLDOWNMAP["Toast"]=60/0.00864;
-$COOLDOWNMAP["StartRitualCeremony"]=60/0.00864;
-$COOLDOWNMAP["Follow"]=60/0.00864;
-$COOLDOWNMAP["FollowPlayer"]=60/0.00864;
-
-if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-    $localActorName=$GLOBALS["db"]->escape($GLOBALS["HERIKA_NAME"]);
-    $lastActionsIssuedMap=$GLOBALS["db"]->fetchAll("SELECT * FROM (SELECT DISTINCT ON (action) * FROM actions_issued WHERE (actorname = '$localActorName' or actorname like '%$localActorName,%' or actorname='*') ORDER BY action, gamets DESC, ts DESC) AS sub ORDER BY gamets DESC, ts DESC");
-    if (isset($lastActionsIssuedMap[0])) {
-        foreach ($lastActionsIssuedMap as $lastActionsIssued) {
-
-            $ingamenow=convert_gamets2seconds($gameRequest[2]);
-            $lasttriggered=convert_gamets2seconds($lastActionsIssued["gamets"]);
-            $elapsedSecs=gamets2seconds_between($gameRequest[2],$lastActionsIssued["gamets"]);
-
-            if (isset($COOLDOWNMAP[$lastActionsIssued["action"]])) {
-                if (($ingamenow-$lasttriggered)<$COOLDOWNMAP[$lastActionsIssued["action"]]) {   // COnsider here use gamets and ts and id001 time functions
-                    error_log("{$lastActionsIssued["action"]} in cooldown for $localActorName, {$COOLDOWNMAP[$lastActionsIssued["action"]]} $ingamenow-$lasttriggered $elapsedSecs");
-                    unsetFunction($lastActionsIssued["action"]);
-                } else {
-                    error_log("{$lastActionsIssued["action"]} NOT in cooldown for $localActorName  {$COOLDOWNMAP[$lastActionsIssued["action"]]} $ingamenow-$lasttriggered $elapsedSecs");
-                }
-            }
-        }
-    }
-}
+$GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
+$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
 
 // Rolemaster stuff
 
 
 if (isset($GLOBALS["is_rolemastered"])) {
-    // ReturnBackHome is initially disabled. Les restore it from copy here. Only applies to rolemastered NPCs
     $GLOBALS["NPC_ROLEMASTERED"]=true;
-    $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
-    $GLOBALS["FUNCTIONS"][]=$GLOBALS["BASE_FUNCTIONS"]["ReturnBackHome"];
     error_log("{$GLOBALS["HERIKA_NAME"]} is_rolemastered");
-    if ((rand(0,5)!==0)){ // Remember goal from time to time
-        $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
-        $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"].="(consider character's goal and traits, check #Storyline as this actor is part of a storyline)";
-        /*if (isset($GLOBALS["ENFORCE_ACTIONS_PROMPT"]) && $GLOBALS["ENFORCE_ACTIONS_PROMPT"]) {
-            $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
-            if (isset($GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"]))
-                $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]=$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS_LANG"];
-            else
-                $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="(If {$GLOBALS["HERIKA_NAME"]} is just speaking, use action \"Talk\". If another action is even remotely contextually appropriate, use it, even if in doubt)";
-        }*/
-    }
+    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
+    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
 } 
 
 // MINIME_T5 STUFF, command assistant
+
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
     
@@ -2269,7 +2030,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $gameRequest[3]); // // assistant vs user war
         
-        $pattern = '/\(\s*(?:(?:talking|whispering)\s+to|speaking\s+loudly\s+to)\s+[^()]+(?:\s+from\s+far\s+away)?\s*\)/i';
+        $pattern = '/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+[^()]+(?:\s+from\s+far\s+away)?\s*\)/i';
         $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
         
         if (!in_array($gameRequest[0],["rechat","instruction"]) ) {// Dont use minime command force on rechat.
@@ -2291,8 +2052,8 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
                     );
                     Logger::info("ENFORCING COMMAND: <{$preCommand["is_command"]}>");
                     //$memoryInjectionCtx=[]; // Disable memories when command.
-                    $COMMAND_PROMPT_ENFORCE_ACTIONS.="(USER MAY WANTS YOU TO ISSUE ACTION {$preCommand["is_command"]}).";
-                    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=true;
+                    $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
+                    $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
                 } 
             }
         }
@@ -2308,6 +2069,8 @@ if (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) {
 
 
 // audit_log(__FILE__." [MINIME]  ".__LINE__);
+
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 // OGHMA STUFF - Only run if Oghma is enabled in profile
 // Helper function to properly check boolean values (handles string "false" from form submissions)
@@ -2338,6 +2101,8 @@ if (($minimeEnabled || $oghmaCustomEnabled) && $oghmaInfiniumEnabled) {
     }
 }
 
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
+
 if (sizeof($memoryInjectionCtx)>0) {
     // Persist memory injection
     $gameRequestCopy=$gameRequest;
@@ -2348,43 +2113,11 @@ if (sizeof($memoryInjectionCtx)>0) {
 
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
-if ($GLOBALS["HERIKA_NAME"] !== "The Narrator") {
-    $contextDataHistoric = array_values(array_filter($contextDataHistoric, function($entry) {
-        if (!is_array($entry)) return true;
-        $content = isset($entry['content']) ? (string)$entry['content'] : '';
-        if (preg_match('/\(\s*(?:Talking|Whispering|Speaking loudly)\s+to\s+The Narrator(?:\s+from\s+far\s+away)?\s*\)/i', $content)) return false;
-        return true;
-    }));
-    $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
-}
-
-// If enabled, hide narrator dialogue lines from NPC prompts, but keep narrator context
-if (!empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) && $GLOBALS["HERIKA_NAME"] !== "The Narrator") {
-    $isContextNarratorLine = function(string $content): bool {
-        if (strpos($content, 'The Narrator:') !== 0) return false;
-        // Keep known context markers
-        if (preg_match('/^The Narrator:\s*\(/', $content)) return true; // parenthetical events
-        if (strpos($content, 'The Narrator: background dialogue:') === 0) return true;
-        if (strpos($content, 'The Narrator: action moved to new location:') === 0) return true;
-        if (strpos($content, 'The Narrator: SCENARIO CHANGE') === 0) return true;
-        if (preg_match('/^The Narrator:\s*about\s+\d+\s+hours\s+later/i', $content)) return true;
-        return false;
-    };
-    // Filter only historic part to avoid dropping world info
-    $contextDataHistoric = array_values(array_filter($contextDataHistoric, function($entry) use ($isContextNarratorLine){
-        if (!is_array($entry)) return true;
-        $content = isset($entry['content']) ? (string)$entry['content'] : '';
-        // Remove user lines that are explicitly directed to The Narrator
-        if (stripos($content, '(Talking to The Narrator)') !== false) return false;
-        if (stripos($content, '(Whispering to The Narrator)') !== false) return false;
-        if (strpos($content, 'The Narrator:') === 0) {
-            // Remove narrator dialogue (non-context narrator lines)
-            return $isContextNarratorLine($content);
-        }
-        return true;
-    }));
-    $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
-}
+$contextDataHistoric = filterHistoricContextForNarratorVisibility(
+    $contextDataHistoric,
+    $GLOBALS["HERIKA_NAME"] ?? ""
+);
+$contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
 // audit_log(__FILE__." [OGHMA]  ".__LINE__);
 
@@ -2481,13 +2214,46 @@ if ($currentHold) {
     $rumorsText = build_rumor_prompt_xml($rumors);
 }
 
-// For narration events, simplify the command prompt (no actions needed for atmospheric descriptions)
-if ($gameRequest[0] === "narration" || $gameRequest[0] === "narrator_welcome") {
+// Narration-like requests should stay descriptive instead of drifting into
+// ordinary conversation turns.
+if ($gameRequest[0] === "vision") {
+    $GLOBALS["COMMAND_PROMPT"] = "Respond with a Soulgaze scene explanation only. Focus on what is visibly present in the provided scene context. Use the Talk action.";
+} else if ($gameRequest[0] === "narration" || $gameRequest[0] === "narrator_welcome") {
     $GLOBALS["COMMAND_PROMPT"] = "Respond with atmospheric narration only. Use the Talk action.";
 }
 
 // Ensure actions and nearby sections are added to PROMPT_HEAD before building system prompt
 require_once(__DIR__.DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+
+if ($gameRequest[0] === "narrator_inputtext") {
+    Logger::warn("[NARRATOR_DEBUG][MAIN][POST_JSON_REQUIRE] request={$gameRequest[0]} direct_flag=" . (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]) ? '1' : '0') . " herika=" . strval($GLOBALS["HERIKA_NAME"] ?? '') . " func_count=" . count(is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : []) . " prompt_actions_len=" . strlen(strval($GLOBALS["PROMPT_ACTIONS_LIST"] ?? '')) . " response_action=" . trim(strval($GLOBALS["responseTemplate"]["action"] ?? '')));
+}
+
+$narratorActionList = array_values(array_filter(
+    is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : [],
+    function ($value) {
+        return trim(strval($value)) !== "";
+    }
+));
+$narratorHasOnlyTalkAction = count($narratorActionList) === 1 && strcasecmp($narratorActionList[0], "Talk") === 0;
+
+if (
+    $gameRequest[0] === "narrator_inputtext"
+    && function_exists('chimEnsureNarratorJsonResponseState')
+    && (
+        empty($GLOBALS["PROMPT_ACTIONS_LIST"])
+        || empty($GLOBALS["FUNC_LIST"])
+        || trim(strval($GLOBALS["responseTemplate"]["action"] ?? "")) === ""
+        || $narratorHasOnlyTalkAction
+        || trim(strval($GLOBALS["responseTemplate"]["action"] ?? "")) === "Talk"
+    )
+) {
+    chimEnsureNarratorJsonResponseState('JSON_RESPONSE');
+}
+
+if ($gameRequest[0] === "narrator_inputtext") {
+    Logger::warn("[NARRATOR_DEBUG][MAIN][POST_REFRESH_CHECK] request={$gameRequest[0]} direct_flag=" . (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]) ? '1' : '0') . " herika=" . strval($GLOBALS["HERIKA_NAME"] ?? '') . " func_count=" . count(is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : []) . " prompt_actions_len=" . strlen(strval($GLOBALS["PROMPT_ACTIONS_LIST"] ?? '')) . " response_action=" . trim(strval($GLOBALS["responseTemplate"]["action"] ?? '')));
+}
 
 // Build nearby sections string
 $nearbySections = "";
@@ -2537,6 +2303,7 @@ if (isset($GLOBALS["TTSFUNCTION"]) && !empty($GLOBALS["TTSFUNCTION"])) {
     }
 }
 
+//chimFormatPromptXmlSections moved to misc.php, chimRemovePromptXmlBlock,chimApplyPromptContextOptionsToSystemPrompt moved to misc.php
 
 // Check for context overrides on ext dir (plugins) before system prompt build
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"context_pre.php");
@@ -2546,20 +2313,34 @@ if (isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
     $nearbySections = $GLOBALS["PROMPT_NEARBY_SECTIONS"];
 }
 
+$knowledgeSection = "";
 if (!empty($GLOBALS["OGHMA_HINT"])) {
+    $knowledgeSection = "\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"] . "\n</knowledge>";
+}
 
-    $head[] = array('role' => 'system', 'content' =>  
-        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>".$worldPrompt.$playerBioSection."\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"]."\n</knowledge>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
-        ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
+$systemPromptRaw = "<roleplay_instructions>\n" . $GLOBALS["PROMPT_HEAD"] .
+    "\n</roleplay_instructions>" . $worldPrompt .
+    "\n\n<character>\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBiography .
+    "\n</character>" . $knowledgeSection .
+    "\n\n<general_instructions>\n" . $GLOBALS["COMMAND_PROMPT"] .
+    "\n</general_instructions>" . $actionsList . $nearbySections . $paralinguisticTagsPrompt .
+    "\n" . $rumorsText . "\n";
 
-    );
+$systemPrompt = chimFormatPromptXmlSections(
+    strtr(
+        $systemPromptRaw,
+        ["#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"], "#HERIKA_NAME#" => $GLOBALS["HERIKA_NAME"]]
+    )
+);
+
+$systemPrompt = chimApplyPromptContextOptionsToSystemPrompt($systemPrompt);
+
+$head[] = array('role' => 'system', 'content' => $systemPrompt);
+
+if (!empty($GLOBALS["OGHMA_HINT"])) {
     //avoid reinjecting command prompt that we have already appended
     $GLOBALS["COMMAND_PROMPT"] = "";
 } else {
-    $head[] = array('role' => 'system', 'content' =>  
-        strtr("<roleplay_instructions>\n".$GLOBALS["PROMPT_HEAD"] . "\n</roleplay_instructions>".$worldPrompt.$playerBioSection."\n\n<character>\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n</character>\n\n<general_instructions>\n". $GLOBALS["COMMAND_PROMPT"]."\n</general_instructions>".$actionsList.$nearbySections.$paralinguisticTagsPrompt."\n$rumorsText\n",
-        ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
-    );
     //avoid reinjecting command prompt that we have already appended
     $GLOBALS["COMMAND_PROMPT"] = "";
 }
@@ -2679,9 +2460,12 @@ if ($gameRequest[0] == "funcret") {
     
 }
 
-error_log("*TRACE SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
 
-error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." secs building call");
+if (microtime(true) - $startTime > 0.5) {
+    error_log("*TRACE SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
+    error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." secs building call");
+}
+
 //returnLines(["Mmm..let me think"]);
 
 // Global switch. Needed id we need to stop processing because sme function requires it. Example, funcret conditions.

@@ -339,9 +339,9 @@ class RelationshipManager {
                 $lines[] = trim($tierLine);
             }
             $lines[] = "";
-            $lines[] = "[CURRENT RELATIONSHIPS]";
+            $lines[] = self::buildRelationshipHeading($npcName);
         } else {
-            $lines[] = "[RELATIONSHIPS]";
+            $lines[] = self::buildRelationshipHeading($npcName);
         }
 
         // Always include Player - use actual player name for context display
@@ -412,6 +412,16 @@ class RelationshipManager {
         }
 
         return implode("\n", $lines);
+    }
+
+    private static function buildRelationshipHeading($npcName) {
+        $npcName = trim((string)$npcName);
+        if ($npcName === '') {
+            return "[RELATIONSHIPS]";
+        }
+
+        $suffix = preg_match('/s$/i', $npcName) ? "'" : "'s";
+        return "[" . $npcName . $suffix . " RELATIONSHIPS]";
     }
 
     /**

@@ -19,6 +19,39 @@ $csvData = $gameRequest[4];
 $processedCount = 0;
 $errorCount = 0;
 
+if (!function_exists('chimNormalizeBiographyRelationshipSeed')) {
+    function chimNormalizeBiographyRelationshipSeed($value, &$errorMessage = '')
+    {
+        $errorMessage = '';
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_array($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        $trimmed = trim((string)$value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if ($trimmed[0] !== '{') {
+            $errorMessage = 'expected a JSON object with per-target relationship seeds';
+            return false;
+        }
+
+        $decoded = json_decode($trimmed, true);
+        if (!is_array($decoded)) {
+            $errorMessage = 'invalid JSON object';
+            return false;
+        }
+
+        return json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+}
+
 try {
     // Step 1: Detect and normalize encoding to UTF-8
     $detectedEncoding = 'UTF-8';
@@ -179,6 +212,16 @@ try {
         $skills = $getValue('skills') ?? $getValue('npc_skills');
         $speechstyle = $getValue('speechstyle') ?? $getValue('npc_speechstyle');
         $goals = $getValue('goals') ?? $getValue('npc_goals');
+
+        $relationshipError = '';
+        $relationships = chimNormalizeBiographyRelationshipSeed($relationships, $relationshipError);
+        if ($relationships === false) {
+            Logger::error(
+                "Biography Import: NPC '$npc_name' has invalid relationships field: $relationshipError"
+            );
+            $errorCount++;
+            continue;
+        }
         
         // Insert or update record using upsertRowOnConflict
         try {

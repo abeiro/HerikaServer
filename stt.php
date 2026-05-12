@@ -4,7 +4,12 @@
 /* STT entry point */
 
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
-require_once($path . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
+require_once($path . "lib" .DIRECTORY_SEPARATOR."runtime_bootstrap.php");
+chimRuntimeBootstrap($path, [
+    'load_general_settings' => true,
+    'load_stt_connector' => true,
+    'load_itt_connector' => false,
+]);
 require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."pipeline_status.php");

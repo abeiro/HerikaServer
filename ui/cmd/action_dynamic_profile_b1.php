@@ -8,21 +8,25 @@ if ($method === "POST") {
     error_reporting(0);
     ini_set("display_errors", 0);
     $enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . "../../" . DIRECTORY_SEPARATOR;
-    require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
+    require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php";
+    chimRuntimeBootstrap($enginePath, [
+        'load_general_settings' => true,
+        'load_stt_connector' => false,
+        'load_itt_connector' => false,
+        'load_tts_connector' => false,
+        'load_player_name' => true,
+        'load_narrator' => true,
+    ]);
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
-    require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php";
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
-
-    $FEATURES["MEMORY_EMBEDDING"]["ENABLED"] = false;
 
     if (isset($profile)) {
         $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"] = $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"];
         
         // Preserve global dynamic prompt settings before loading character profile
         $OVERRIDES["DYNAMIC_PROMPT_PERSONALITY"] = $GLOBALS["DYNAMIC_PROMPT_PERSONALITY"] ?? '';
-        $OVERRIDES["DYNAMIC_PROMPT_RELATIONSHIPS"] = $GLOBALS["DYNAMIC_PROMPT_RELATIONSHIPS"] ?? '';
         $OVERRIDES["DYNAMIC_PROMPT_OCCUPATION"] = $GLOBALS["DYNAMIC_PROMPT_OCCUPATION"] ?? '';
         $OVERRIDES["DYNAMIC_PROMPT_SKILLS"] = $GLOBALS["DYNAMIC_PROMPT_SKILLS"] ?? '';
         $OVERRIDES["DYNAMIC_PROMPT_SPEECHSTYLE"] = $GLOBALS["DYNAMIC_PROMPT_SPEECHSTYLE"] ?? '';
@@ -33,12 +37,19 @@ if ($method === "POST") {
         } else {
             Logger::info(__FILE__ . ". Using default profile because GET PROFILE NOT EXISTS");
         }
+        chimRuntimeApplyBootstrapOptions($enginePath, [
+            'load_general_settings' => true,
+            'load_stt_connector' => false,
+            'load_itt_connector' => false,
+            'load_tts_connector' => false,
+            'load_player_name' => true,
+            'load_narrator' => true,
+        ]);
         $GLOBALS["CURRENT_CONNECTOR"] = DMgetCurrentModel();
         $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"] = $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
         
         // Restore global dynamic prompt settings after loading character profile
         $GLOBALS["DYNAMIC_PROMPT_PERSONALITY"] = $OVERRIDES["DYNAMIC_PROMPT_PERSONALITY"];
-        $GLOBALS["DYNAMIC_PROMPT_RELATIONSHIPS"] = $OVERRIDES["DYNAMIC_PROMPT_RELATIONSHIPS"];
         $GLOBALS["DYNAMIC_PROMPT_OCCUPATION"] = $OVERRIDES["DYNAMIC_PROMPT_OCCUPATION"];
         $GLOBALS["DYNAMIC_PROMPT_SKILLS"] = $OVERRIDES["DYNAMIC_PROMPT_SKILLS"];
         $GLOBALS["DYNAMIC_PROMPT_SPEECHSTYLE"] = $OVERRIDES["DYNAMIC_PROMPT_SPEECHSTYLE"];
@@ -47,6 +58,7 @@ if ($method === "POST") {
         Logger::info(__FILE__ . ". Using default profile because NO GET PROFILE SPECIFIED");
         $GLOBALS["USING_DEFAULT_PROFILE"] = true;
     }
+    $FEATURES["MEMORY_EMBEDDING"]["ENABLED"] = false;
 
     $db = new sql();
     if (!$db) {
@@ -73,8 +85,13 @@ if ($method === "POST") {
             $fieldsToUpdate = $GLOBALS["DYNAMIC_PROFILE_FIELDS"];
         } else {
             // Default fields if none configured
-            $fieldsToUpdate = ["personality", "relationships"];
+            $fieldsToUpdate = ["personality", "occupation"];
         }
+
+        $supportedFields = ["personality", "occupation", "skills", "speechstyle", "goals"];
+        $fieldsToUpdate = array_values(array_filter($fieldsToUpdate, function ($field) use ($supportedFields) {
+            return in_array($field, $supportedFields, true);
+        }));
 
         // Function to update a single field using the same logic as individual files
         function updateSingleField($field, $jsonDataInput, $enginePath) {
@@ -124,7 +141,6 @@ if ($method === "POST") {
             // Field mapping
             $fieldMapping = [
                 'personality' => ['var' => 'HERIKA_PERSONALITY', 'prompt' => 'DYNAMIC_PROMPT_PERSONALITY', 'label' => 'personality traits'],
-                'relationships' => ['var' => 'HERIKA_RELATIONSHIPS', 'prompt' => 'DYNAMIC_PROMPT_RELATIONSHIPS', 'label' => 'relationships'],
                 'occupation' => ['var' => 'HERIKA_OCCUPATION', 'prompt' => 'DYNAMIC_PROMPT_OCCUPATION', 'label' => 'occupation and role'],
                 'skills' => ['var' => 'HERIKA_SKILLS', 'prompt' => 'DYNAMIC_PROMPT_SKILLS', 'label' => 'skills and abilities'],
                 'speechstyle' => ['var' => 'HERIKA_SPEECHSTYLE', 'prompt' => 'DYNAMIC_PROMPT_SPEECHSTYLE', 'label' => 'speech style'],
@@ -144,7 +160,6 @@ if ($method === "POST") {
             // Map to database prompt keys (lowercase with underscores)
             $dbPromptKeyMapping = [
                 'DYNAMIC_PROMPT_PERSONALITY' => 'dynamic_prompt_personality',
-                'DYNAMIC_PROMPT_RELATIONSHIPS' => 'dynamic_prompt_relationships',
                 'DYNAMIC_PROMPT_OCCUPATION' => 'dynamic_prompt_occupation',
                 'DYNAMIC_PROMPT_SKILLS' => 'dynamic_prompt_skills',
                 'DYNAMIC_PROMPT_SPEECHSTYLE' => 'dynamic_prompt_speechstyle',
@@ -184,7 +199,6 @@ if ($method === "POST") {
                 'HERIKA_BACKGROUND' => 'Basic Summary',
                 'HERIKA_PERSONALITY' => 'Personality Traits',
                 'HERIKA_APPEARANCE' => 'Physical Appearance',
-                'HERIKA_RELATIONSHIPS' => 'Relationships',
                 'HERIKA_OCCUPATION' => 'Occupation & Role',
                 'HERIKA_SKILLS' => 'Skills & Abilities',
                 'HERIKA_SPEECHSTYLE' => 'Speech Style',
@@ -269,6 +283,14 @@ if ($method === "POST") {
         $failedFields = [];
         $successCount = 0;
         $results = [];
+
+        if (empty($fieldsToUpdate)) {
+            echo json_encode([
+                "status" => "error",
+                "message" => "No supported dynamic profile fields were requested."
+            ]);
+            exit;
+        }
 
         foreach ($fieldsToUpdate as $field) {
             $result = updateSingleField($field, $jsonDataInput, $enginePath);

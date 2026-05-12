@@ -347,7 +347,7 @@ $typeIcons = array_merge($defaultTypes, $customTypes);
 
                     <div style="margin-top:14px; display:flex; gap:8px; justify-content:flex-end;">
                         <button type="button" onclick="closeDetailsModal()"
-                                style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:4px; color:#888; padding:8px 16px; cursor:pointer;">
+                                style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:4px; color:#ef4444; padding:8px 16px; cursor:pointer;">
                             Cancel
                         </button>
                         <button type="button" onclick="saveDetails()"

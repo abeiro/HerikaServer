@@ -6,8 +6,9 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     $enginePath = $GLOBALS["ENGINE_ROOT"];
     $GLOBALS["ENGINE_PATH"]=$enginePath;
 
-    require_once($enginePath . "lib/{$GLOBALS["DBDRIVER"]}.class.php");
+    
 	if (!isset($GLOBALS["db"])) { $GLOBALS["db"] = new sql(); }
+    
     require_once($enginePath . "prompts/command_prompt.php");
     require_once($enginePath . "lib/chat_helper_functions.php");
     require_once($enginePath . "lib/data_functions.php");
@@ -150,7 +151,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
         // Trigger if never updated, or if last update is older than configured threshold
         if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"]<($bglTriggerDaysAgoGamets)) {
             logger::info("[BACKGROUND-LIFE] Event for {$npc["npc_name"]}");
-            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life.php \"{$npc["npc_name"]}\" full ");
+            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_v2.php \"{$npc["npc_name"]}\" full forceaction");
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
                 Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
             }

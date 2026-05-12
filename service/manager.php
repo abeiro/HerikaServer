@@ -9,8 +9,19 @@ echo "[MANAGER] START".PHP_EOL;
 
 
 require_once("{$GLOBALS["ENGINE_ROOT"]}/service/lib/core_utils.php");
-require_once("{$GLOBALS["ENGINE_ROOT"]}/conf/conf.php");
+require_once("{$GLOBALS["ENGINE_ROOT"]}/lib/runtime_bootstrap.php");
+chimRuntimeBootstrap($GLOBALS["ENGINE_ROOT"], [
+    'load_general_settings' => true,
+    'load_stt_connector' => false,
+    'load_itt_connector' => false,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
 require_once("{$GLOBALS["ENGINE_ROOT"]}/lib/logger.php");
+
+if (isset($argv) && is_array($argv)) {
+    $GLOBALS["argv"] = $argv;
+}
 
 Logger::setCustomLog($GLOBALS["ENGINE_ROOT"]."log/manager.log");
 Logger::deleteLogIfTooLarge($GLOBALS["ENGINE_ROOT"]."log/manager.log");
@@ -30,6 +41,9 @@ function executeTaskAsync($taskname, $task) {
     } else if ($pid == 0) {
         // Child process - execute the task
         echo "[CHILD-$taskname] Starting task execution".PHP_EOL;
+        
+        unset($GLOBALS["db"]); // Ensure child process has its own DB connection
+
         Logger::info("Starting task execution in child process: $taskname (PID: " . posix_getpid() . ")");
         try {
             $task["fn"]();

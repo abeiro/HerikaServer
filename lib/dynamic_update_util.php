@@ -43,7 +43,6 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
                     'HERIKA_BACKGROUND' => isset($GLOBALS["HERIKA_BACKGROUND"]) ? $GLOBALS["HERIKA_BACKGROUND"] : '',
                     'HERIKA_PERSONALITY' => isset($GLOBALS["HERIKA_PERSONALITY"]) ? $GLOBALS["HERIKA_PERSONALITY"] : '',
                     'HERIKA_APPEARANCE' => isset($GLOBALS["HERIKA_APPEARANCE"]) ? $GLOBALS["HERIKA_APPEARANCE"] : '',
-                    'HERIKA_RELATIONSHIPS' => isset($GLOBALS["HERIKA_RELATIONSHIPS"]) ? $GLOBALS["HERIKA_RELATIONSHIPS"] : '',
                     'HERIKA_OCCUPATION' => isset($GLOBALS["HERIKA_OCCUPATION"]) ? $GLOBALS["HERIKA_OCCUPATION"] : '',
                     'HERIKA_SKILLS' => isset($GLOBALS["HERIKA_SKILLS"]) ? $GLOBALS["HERIKA_SKILLS"] : '',
                     'HERIKA_SPEECHSTYLE' => isset($GLOBALS["HERIKA_SPEECHSTYLE"]) ? $GLOBALS["HERIKA_SPEECHSTYLE"] : '',
@@ -209,7 +208,6 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
             $GLOBALS["HERIKA_BACKGROUND"] = $originalHerikaData['HERIKA_BACKGROUND'];
             $GLOBALS["HERIKA_PERSONALITY"] = $originalHerikaData['HERIKA_PERSONALITY'];
             $GLOBALS["HERIKA_APPEARANCE"] = $originalHerikaData['HERIKA_APPEARANCE'];
-            $GLOBALS["HERIKA_RELATIONSHIPS"] = $originalHerikaData['HERIKA_RELATIONSHIPS'];
             $GLOBALS["HERIKA_OCCUPATION"] = $originalHerikaData['HERIKA_OCCUPATION'];
             $GLOBALS["HERIKA_SKILLS"] = $originalHerikaData['HERIKA_SKILLS'];
             $GLOBALS["HERIKA_SPEECHSTYLE"] = $originalHerikaData['HERIKA_SPEECHSTYLE'];
@@ -1083,26 +1081,10 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
 
     $sqlfilter=" and type<>'prechat' and type<>'itemfound' and type<>'infoaction' and type<>'npcspellcast' ";
     $contextDataHistoric = DataLastDataExpandedFor("{$GLOBALS["HERIKA_NAME"]}", $lastNDataForContext * -1,$sqlfilter);
-    if (!empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) && $GLOBALS["HERIKA_NAME"] !== "The Narrator") {
-        $isContextNarratorLine = function(string $content): bool {
-            if (strpos($content, 'The Narrator:') !== 0) return false;
-            if (preg_match('/^The Narrator:\s*\(/', $content)) return true; // parenthetical
-            if (strpos($content, 'The Narrator: background dialogue:') === 0) return true;
-            if (strpos($content, 'The Narrator: action moved to new location:') === 0) return true;
-            if (strpos($content, 'The Narrator: SCENARIO CHANGE') === 0) return true;
-            if (preg_match('/^The Narrator:\s*about\s+\d+\s+hours\s+later/i', $content)) return true;
-            return false;
-        };
-        $contextDataHistoric = array_values(array_filter($contextDataHistoric, function($entry) use ($isContextNarratorLine){
-            if (!is_array($entry)) return true;
-            $content = isset($entry['content']) ? (string)$entry['content'] : '';
-            if (strpos($content, '(Talking to The Narrator)') !== false) return false;
-            if (strpos($content, 'The Narrator:') === 0) {
-                return $isContextNarratorLine($content);
-            }
-            return true;
-        }));
-    }
+    $contextDataHistoric = filterHistoricContextForNarratorVisibility(
+        $contextDataHistoric,
+        $GLOBALS["HERIKA_NAME"] ?? ""
+    );
     $historyData="";
     foreach ($contextDataHistoric as $element) {
     
@@ -1255,7 +1237,6 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     // Map field names to their corresponding HERIKA prompts
     $fieldMapping = [
         'personality' => 'DYNAMIC_PROMPT_PERSONALITY',
-        'relationships' => 'DYNAMIC_PROMPT_RELATIONSHIPS',
         'occupation' => 'DYNAMIC_PROMPT_OCCUPATION',
         'skills' => 'DYNAMIC_PROMPT_SKILLS',
         'speechstyle' =>'DYNAMIC_PROMPT_SPEECHSTYLE',
@@ -1292,7 +1273,6 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     // Map to database prompt keys (lowercase with underscores)
     $dbPromptKeyMapping = [
         'DYNAMIC_PROMPT_PERSONALITY' => 'dynamic_prompt_personality',
-        'DYNAMIC_PROMPT_RELATIONSHIPS' => 'dynamic_prompt_relationships',
         'DYNAMIC_PROMPT_OCCUPATION' => 'dynamic_prompt_occupation',
         'DYNAMIC_PROMPT_SKILLS' => 'dynamic_prompt_skills',
         'DYNAMIC_PROMPT_SPEECHSTYLE' => 'dynamic_prompt_speechstyle',
@@ -1343,7 +1323,6 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
                 'npc_static_bio' => 'Basic Summary',
                 'personality' => 'Personality Traits',
                 'appearance' => 'Physical Appearance',
-                'relationships' => 'Relationships',
                 'occupation' => 'Occupation & Role',
                 'skills' => 'Skills & Abilities',
                 'speechstyle' => 'Speech Style',
@@ -1361,46 +1340,6 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         }
 
         $profileContextString = !empty($profileContext) ? "\n\n* Current Character Profile:\n" . implode("\n\n", $profileContext) : '';
-
-        // ============================================
-        // BRIDGE: Inject CHIM Relationship System Data
-        // When updating 'relationships' field, feed in the quantified scores
-        // from extended_data.relationships (tracked in real-time by RelationshipLLM)
-        // ============================================
-        if ($field === 'relationships') {
-            $extended = json_decode($npcData['extended_data'] ?? '{}', true) ?: [];
-            $jsonbRels = $extended['relationships'] ?? [];
-
-            if (!empty($jsonbRels)) {
-                $profileContextString .= "\n\n**REAL-TIME RELATIONSHIP TRACKING DATA:**\n";
-                $profileContextString .= "(These scores are updated every conversation turn by the relationship system)\n\n";
-
-                foreach ($jsonbRels as $target => $data) {
-                    $aff = $data['aff'] ?? $data['affinity'] ?? 0;
-                    $type = $data['type'] ?? 'neutral';
-                    $lastChange = isset($data['last_change']) ? " (last change: {$data['last_change']})" : '';
-
-                    // Describe affinity in human terms
-                    $affDesc = '';
-                    if ($aff >= 80) $affDesc = 'deeply devoted';
-                    elseif ($aff >= 60) $affDesc = 'very fond';
-                    elseif ($aff >= 40) $affDesc = 'friendly';
-                    elseif ($aff >= 20) $affDesc = 'warm';
-                    elseif ($aff >= 6) $affDesc = 'slightly positive';
-                    elseif ($aff >= -5) $affDesc = 'neutral';
-                    elseif ($aff >= -20) $affDesc = 'slightly negative';
-                    elseif ($aff >= -40) $affDesc = 'unfriendly';
-                    elseif ($aff >= -60) $affDesc = 'hostile';
-                    else $affDesc = 'deeply hostile';
-
-                    $profileContextString .= "- **{$target}**: affinity={$aff} ({$affDesc}), type={$type}{$lastChange}\n";
-                }
-
-                $profileContextString .= "\n**IMPORTANT:** Use these quantified scores to inform your relationship prose. ";
-                $profileContextString .= "The affinity scores reflect actual tracked interactions. ";
-                $profileContextString .= "Higher affinity = stronger positive feelings. Type indicates relationship nature.\n";
-            }
-        }
 
         // Build prompt for this specific field
         $head = [

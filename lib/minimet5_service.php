@@ -54,6 +54,9 @@ function isMinimeT5Enabled() {
 }
 
 function minimeCommand($text) {
+    error_log("[DEPRECATED] minimeCommand called with text: " . $text);
+    return null; // Deprecated - no longer functional
+    
     if (isset($GLOBALS["mockMinimeCommand"])) {
         return call_user_func($GLOBALS["mockMinimeCommand"], $text);
     }

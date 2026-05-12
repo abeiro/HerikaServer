@@ -44,61 +44,229 @@ if (!function_exists('chimLoadManagedPromptTemplate')) {
     }
 }
 
-if (!function_exists('chimResolveImmediateReplyTargetName')) {
-    function chimResolveImmediateReplyTargetName()
+if (!function_exists('chimNormalizePromptActorName')) {
+    function chimNormalizePromptActorName(string $name): string
     {
-        $gameRequest = $GLOBALS["gameRequest"] ?? [];
-        $eventType = $gameRequest[0] ?? "";
-        if (!in_array($eventType, ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s"], true)) {
-            return "";
-        }
-
-        $speakerName = extractSpeakerNameFromInputEvent($gameRequest[3] ?? "");
-        if ($speakerName === "") {
-            $speakerName = trim((string)($GLOBALS["PLAYER_NAME"] ?? ""));
-        }
-
-        $herikaName = trim((string)($GLOBALS["HERIKA_NAME"] ?? ""));
-        if ($speakerName !== "" && $herikaName !== "" && strcasecmp($speakerName, $herikaName) === 0) {
-            return "";
-        }
-
-        return $speakerName;
+        return strtolower(trim($name));
     }
 }
 
-if (!function_exists('chimApplyResponseTargetContextToPrompt')) {
-    function chimApplyResponseTargetContextToPrompt($promptText, $speakerName)
+if (!function_exists('chimExtractDirectedListenerNamesFromText')) {
+    function chimExtractDirectedListenerNamesFromText(string $text): array
     {
-        $promptText = (string)$promptText;
-        $speakerName = trim((string)$speakerName);
-        if ($promptText === "" || $speakerName === "") {
-            return $promptText;
+        if ($text === '') {
+            return [];
         }
 
-        $herikaName = trim((string)($GLOBALS["HERIKA_NAME"] ?? ""));
-        if ($herikaName === "") {
-            return $promptText;
+        if (!preg_match('/\((talking|whispering|shouting)\s+to\s+([^)]+)\)/i', $text, $matches)) {
+            return [];
         }
 
-        $dialogueLead = "Write {$herikaName}'s next dialogue line.";
-        $dialogueLeadDirected = "Write {$herikaName}'s next dialogue line responding to {$speakerName}.";
-        if (strpos($promptText, $dialogueLead) !== false) {
-            return str_replace($dialogueLead, $dialogueLeadDirected, $promptText);
+        $raw = trim((string)($matches[2] ?? ''));
+        if ($raw === '') {
+            return [];
         }
 
-        $proseLead = "Write {$herikaName}'s next prose/narration.";
-        $proseLeadDirected = "Write {$herikaName}'s next prose/narration responding to {$speakerName}.";
-        if (strpos($promptText, $proseLead) !== false) {
-            return str_replace($proseLead, $proseLeadDirected, $promptText);
+        $parts = preg_split('/\s*(?:,| and )\s*/i', $raw);
+        $names = [];
+        foreach ($parts as $part) {
+            $part = trim((string)$part);
+            if ($part !== '') {
+                $names[] = $part;
+            }
         }
 
-        return rtrim($promptText) . " Respond directly to {$speakerName}, the last person.";
+        return array_values(array_unique($names));
     }
 }
 
-$responseTargetName = chimResolveImmediateReplyTargetName();
-$responseTargetContext = ($responseTargetName !== "") ? " responding to {$responseTargetName}." : "";
+if (!function_exists('chimIsStrictDirectedPlayerResponseContext')) {
+    function chimIsStrictDirectedPlayerResponseContext(): bool
+    {
+        if (empty($GLOBALS["ENFORCE_STRICT_RECHAT_RESPONSE"])) {
+            return false;
+        }
+
+        if (!isset($GLOBALS["gameRequest"]) || !is_array($GLOBALS["gameRequest"])) {
+            return false;
+        }
+
+        $eventType = strtolower(trim((string)($GLOBALS["gameRequest"][0] ?? '')));
+        if (!in_array($eventType, ['inputtext', 'inputtext_s', 'ginputtext', 'ginputtext_s'], true)) {
+            return false;
+        }
+
+        if (($GLOBALS["OVERRIDE_DIALOGUE_TARGET"] ?? false) === false) {
+            return true;
+        }
+
+        $actorName = trim((string)($GLOBALS["HERIKA_NAME"] ?? ''));
+        $requestText = trim((string)($GLOBALS["gameRequest"][3] ?? ''));
+        if ($actorName === '' || $requestText === '') {
+            return false;
+        }
+
+        $targetNames = chimExtractDirectedListenerNamesFromText($requestText);
+        if (empty($targetNames)) {
+            return false;
+        }
+
+        $actorNormalized = chimNormalizePromptActorName($actorName);
+        foreach ($targetNames as $targetName) {
+            if (chimNormalizePromptActorName($targetName) === $actorNormalized) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+if (!function_exists('chimGetRechatPreviousSpeakerName')) {
+    function chimGetRechatPreviousSpeakerName(): string
+    {
+        if (chimIsStrictDirectedPlayerResponseContext()) {
+            return trim((string)($GLOBALS["PLAYER_NAME"] ?? "Player"));
+        }
+
+        $speaker = trim((string)($GLOBALS["RECHAT_PREVIOUS_SPEAKER"] ?? ""));
+        if ($speaker === "") {
+            try {
+                global $db;
+                if (isset($db)) {
+                    $row = $db->fetchOne("SELECT speaker FROM speech ORDER BY rowid DESC LIMIT 1");
+                    $speaker = trim((string)($row["speaker"] ?? ""));
+                }
+            } catch (\Throwable $e) {
+                $speaker = "";
+            }
+        }
+        if ($speaker === "") {
+            $speaker = trim((string)($GLOBALS["PLAYER_NAME"] ?? ""));
+        }
+
+        return $speaker;
+    }
+}
+
+if (!function_exists('chimIsStrictRechatResponseEnabled')) {
+    function chimIsStrictRechatResponseEnabled(): bool
+    {
+        return !empty($GLOBALS["ENFORCE_STRICT_RECHAT_RESPONSE"]);
+    }
+}
+
+if (!function_exists('chimIsStrictRechatPromptContext')) {
+    function chimIsStrictRechatPromptContext(): bool
+    {
+        if (!chimIsStrictRechatResponseEnabled()) {
+            return false;
+        }
+
+        if (!isset($GLOBALS["gameRequest"]) || !is_array($GLOBALS["gameRequest"])) {
+            return false;
+        }
+
+        return in_array(($GLOBALS["gameRequest"][0] ?? ""), ["rechat", "continue", "continue_group"], true);
+    }
+}
+
+if (!function_exists('chimIsStrictResponsePromptContext')) {
+    function chimIsStrictResponsePromptContext(): bool
+    {
+        return chimIsStrictRechatPromptContext() || chimIsStrictDirectedPlayerResponseContext();
+    }
+}
+
+if (!function_exists('chimLoadManagedRechatCuePrompts')) {
+    function chimLoadManagedRechatCuePrompts(): array
+    {
+        $previousSpeaker = chimGetRechatPreviousSpeakerName();
+        $replacements = [
+            "{HERIKA_NAME}" => $GLOBALS["HERIKA_NAME"],
+            "{TEMPLATE_DIALOG}" => $GLOBALS["TEMPLATE_DIALOG"],
+            "{PREVIOUS_SPEAKER}" => $previousSpeaker,
+        ];
+
+        $strictFallback = "Dialogue turn for {HERIKA_NAME}. The previous speaker was {PREVIOUS_SPEAKER}. You must respond directly to {PREVIOUS_SPEAKER}.";
+        $relaxedFallbacks = [
+            "Dialogue turn for {HERIKA_NAME}. Respond naturally to whoever just spoke. Address the previous speaker directly. {TEMPLATE_DIALOG}",
+            "Dialogue turn for {HERIKA_NAME}. Continue the conversation naturally. Address whoever you're actually responding to. {TEMPLATE_DIALOG}",
+            "Dialogue turn for {HERIKA_NAME}. Focus on one actor - respond to whoever just spoke. {TEMPLATE_DIALOG}",
+        ];
+
+        if (chimIsStrictResponsePromptContext()) {
+            $strictPrompts = [];
+            for ($i = 1; $i <= 3; $i++) {
+                $strictPrompts[] = chimLoadManagedPromptTemplate(
+                    "rechat_response_prompt_strict_{$i}",
+                    $strictFallback,
+                    $replacements,
+                    "RECHAT_RESPONSE_PROMPT_STRICT"
+                );
+            }
+            return $strictPrompts;
+        }
+
+        $relaxedPrompts = [];
+        foreach ($relaxedFallbacks as $index => $fallbackPrompt) {
+            $relaxedPrompts[] = chimLoadManagedPromptTemplate(
+                "rechat_response_prompt_relaxed_" . ($index + 1),
+                $fallbackPrompt,
+                $replacements,
+                "RECHAT_RESPONSE_PROMPT_RELAXED"
+            );
+        }
+
+        return $relaxedPrompts;
+    }
+}
+
+if (!function_exists('chimLoadManagedRechatListenerPrompt')) {
+    function chimLoadManagedRechatListenerPrompt(): string
+    {
+        $replacements = [
+            "{HERIKA_NAME}" => $GLOBALS["HERIKA_NAME"],
+            "{PREVIOUS_SPEAKER}" => chimGetRechatPreviousSpeakerName(),
+        ];
+
+        if (chimIsStrictResponsePromptContext()) {
+            return chimLoadManagedPromptTemplate(
+                'rechat_listener_prompt_strict',
+                "specify who {HERIKA_NAME} is talking to. The listener must be exactly {PREVIOUS_SPEAKER}. Address the person who just spoke.",
+                $replacements,
+                "RECHAT_LISTENER_PROMPT_STRICT"
+            );
+        }
+
+        return chimLoadManagedPromptTemplate(
+            'rechat_listener_prompt_relaxed',
+            "specify who {HERIKA_NAME} is talking to. Address whoever just spoke - can be any person in the conversation.",
+            $replacements,
+            "RECHAT_LISTENER_PROMPT_RELAXED"
+        );
+    }
+}
+
+if (!function_exists('chimLoadManagedContinueCuePrompts')) {
+    function chimLoadManagedContinueCuePrompts(string $mode = 'continue'): array
+    {
+        if (chimIsStrictResponsePromptContext()) {
+            return chimLoadManagedRechatCuePrompts();
+        }
+
+        $fallback = ($mode === 'continue_group')
+            ? "Dialogue turn for {HERIKA_NAME}. Continue the ongoing group discussion. Build on what was just said and stay with the current topic. {TEMPLATE_DIALOG}"
+            : "Dialogue turn for {HERIKA_NAME}. Continue the ongoing discussion. Build on what was just said. {TEMPLATE_DIALOG}";
+
+        return [
+            strtr($fallback, [
+                "{HERIKA_NAME}" => $GLOBALS["HERIKA_NAME"],
+                "{TEMPLATE_DIALOG}" => $GLOBALS["TEMPLATE_DIALOG"],
+            ]),
+        ];
+    }
+}
 
 
 // Add narration instruction when inline narration mode expects leading asterisk narration blocks.
@@ -111,7 +279,7 @@ $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
 if ($inlineNarrationEnabled) {
     if ($inlineNarrationMode === 'npc') {
         $inlineDialoguePromptKey = 'dialogue_line_inline_response_npc';
-        $inlineDialogueFallback = " Write {HERIKA_NAME}'s next dialogue line{RESPONSE_TARGET_CONTEXT}."
+        $inlineDialogueFallback = " Write {HERIKA_NAME}'s next dialogue line."
             . " If needed, you may include one brief third-person narration block in single asterisks before the dialogue."
             . " Keep any spoken dialogue outside the asterisks, and do not wrap the entire reply in asterisks."
             . " Be original, creative, knowledgeable, use your own thoughts."
@@ -120,7 +288,7 @@ if ($inlineNarrationEnabled) {
         $inlineNarrationFallback = "You may include one brief third-person narration block in single asterisks before the dialogue (e.g., *She smiles softly*). Keep any spoken dialogue outside the asterisks. Do not wrap the entire reply in asterisks.";
     } else {
         $inlineDialoguePromptKey = 'dialogue_line_inline_response_narrator';
-        $inlineDialogueFallback = " Write {HERIKA_NAME}'s next prose/narration{RESPONSE_TARGET_CONTEXT}."
+        $inlineDialogueFallback = " Write {HERIKA_NAME}'s next prose/narration."
             . " Be original, creative, knowledgeable, use your own thoughts. "
             . " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}";
         $inlineNarrationPromptKey = 'inline_narration_prompt_narrator';
@@ -133,7 +301,6 @@ if ($inlineNarrationEnabled) {
         [
             "{HERIKA_NAME}" => $GLOBALS["HERIKA_NAME"],
             "{MAXIMUM_WORDS}" => $MAXIMUM_WORDS,
-            "{RESPONSE_TARGET_CONTEXT}" => $responseTargetContext,
         ],
         "DIALOGUE_LINE_INLINE_RESPONSE"
     );
@@ -148,22 +315,20 @@ if ($inlineNarrationEnabled) {
 } else {
     $TEMPLATE_DIALOG = chimLoadManagedPromptTemplate(
         'dialogue_line_response',
-        " Write {HERIKA_NAME}'s next dialogue line{RESPONSE_TARGET_CONTEXT}." .
+        " Write {HERIKA_NAME}'s next dialogue line." .
         " Be original, creative, knowledgeable, use your own thoughts. " .
         " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}",
         [
             "{HERIKA_NAME}" => $GLOBALS["HERIKA_NAME"],
             "{MAXIMUM_WORDS}" => $MAXIMUM_WORDS,
-            "{RESPONSE_TARGET_CONTEXT}" => $responseTargetContext,
         ],
         "DIALOGUE_LINE_RESPONSE"
     );
 }
 
-$TEMPLATE_DIALOG = chimApplyResponseTargetContextToPrompt($TEMPLATE_DIALOG, $responseTargetName);
-
 if ($directNarratorDialogue) {
-    $TEMPLATE_DIALOG .= " Reply directly to {$GLOBALS["PLAYER_NAME"]} in plain spoken dialogue only." .
+    $TEMPLATE_DIALOG .= " Reply directly to {$GLOBALS["PLAYER_NAME"]} in spoken dialogue." .
+        " If an narrator action matches the request, use it and keep the spoken line consistent with that action." .
         " Do not include third-person narration, scene description, stage directions, or text in asterisks.";
 }
 

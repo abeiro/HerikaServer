@@ -342,40 +342,14 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."misc_ui_functions.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."chat_helper_functions.php");
+require_once(LIB_PATH .DIRECTORY_SEPARATOR."eventlog_helper.php");
 
 // Include game timestamp utilities
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."utils_game_timestamp.php");
 
 $db = new sql();
 
-// Keep a single source of truth for which event types are visible/deletable in this page.
-$eventLogExcludedTypes = [
-    'prechat',
-    'rechat',
-    'infonpc',
-    'request',
-    'infonpc_close',
-    'addnpc',
-    'user_input',
-    'infosave',
-    'init',
-    'playerinfo',
-    'oghma_import',
-    'biography_import',
-    'dynamic_oghma_import',
-    'infoitems',
-    'description_import',
-    'backgroundaction',
-    'innerchat',
-    'npc_reanimated'
-];
-$eventLogExcludedTypesSql = implode(
-    ',',
-    array_map(function ($type) use ($db) {
-        return "'" . $db->escape($type) . "'";
-    }, $eventLogExcludedTypes)
-);
-$eventLogVisibleWhereClause = "type NOT IN ($eventLogExcludedTypesSql)";
+$eventLogVisibleWhereClause = chimBuildVisibleEventLogWhereClause($db);
 
 // Handle actions
 if (isset($_GET["clean"]) && $_GET["clean"]) {
@@ -394,28 +368,8 @@ if (isset($_GET["cleanlog"]) && $_GET["cleanlog"]) {
 if (isset($_GET['delete_last'])) {
     $delCount = (int)$_GET['delete_last'];
     if (in_array($delCount, [20, 50, 100])) {
-        $targetRows = $db->fetchAll("
-            SELECT rowid
-            FROM eventlog
-            WHERE $eventLogVisibleWhereClause
-            ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
-            LIMIT $delCount
-        ");
-
-        $targetRowids = [];
-        foreach ($targetRows as $targetRow) {
-            $targetRowid = intval($targetRow['rowid'] ?? 0);
-            if ($targetRowid > 0) {
-                $targetRowids[] = $targetRowid;
-            }
-        }
-
-        if (!empty($targetRowids)) {
-            $targetRowidsStr = implode(',', $targetRowids);
-            $db->query("DELETE FROM eventlog WHERE rowid IN ($targetRowidsStr)");
-        }
-
-        $deletedCount = count($targetRowids);
+        $deleteResult = chimDeleteLatestVisibleEventLogRows($db, $delCount);
+        $deletedCount = intval($deleteResult['deleted_count'] ?? 0);
         header("Location: events-memories.php?tab=eventlog&deleted=$deletedCount");
         exit;
     }

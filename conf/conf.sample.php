@@ -88,7 +88,7 @@ $INLINE_NARRATION_MODE="disabled"; // disabled|narrator|npc
 $REMOVE_PLAYER_AUTOCHAT_ASTERISKS=true; // keep AUTOCHAT / PLAYER_RESPEECH rewritten player text spoken-only by stripping leading narration / *asterisks*
 $REMOVE_ASTERISKS_FROM_PLAYER_INPUT=true; // filters *asterisked* player input from player TTS only
 $REMOVE_ASTERISKS_FROM_NPC_OUTPUT=true;
-$ENFORCE_ACTIONS_PROMPT=true;
+$ENFORCE_ACTIONS_PROMPT=false;
 $SUMMARY_PROMPT= 'Focus on key events, tagging characters, locations, and factions accurately. Ensure memories align and maintain chronological order while foreshadowing future arcs. Prioritize player agency, and use environmental cues to enhance storytelling and continuity.'; 
 $DYNAMIC_PROMPT = "(LEGACY - Use individual field prompts instead) "
     . "Last in-game date/time found: [date or \"No date\"] "
@@ -107,12 +107,6 @@ $DYNAMIC_PROMPT_PERSONALITY = "Based on the dialogue history and recent events, 
     . "Emphasize any past traumas or new traumas caused by the death of companions, allies, or other known characters, and how these events shape the character’s behavior and mindset. "
     . "Return ONLY the updated personality description in 3-5 sentences. Do not include any introductory text, meta-commentary, or phrases like 'Here is the updated personality' or 'The character's personality is'. "
     . "Start directly with the personality content.";
-
-$DYNAMIC_PROMPT_RELATIONSHIPS = "Based on recent interactions, update #HERIKA_NAME# relationships with other people and factions. "
-    . "Maintain all existing relevant relationships and add new ones or modify existing ones based on recent interactions. "
-    . "Focus on changed relationships, new relationships formed, evolved existing ones, and only remove relationships that are clearly no longer relevant. "
-    . "Return ONLY a bulleted list using * Name/Faction - Description format. Do not include any introductory text, meta-commentary, or phrases like 'Here are the updated relationships' or 'The character's relationships include'. "
-    . "Start directly with the first bullet point.";
 
 $DYNAMIC_PROMPT_OCCUPATION = "Based on story progression and events, update #HERIKA_NAME# occupation and role. "
     . "Maintain the current occupation unless significant changes have occurred. Add new responsibilities, changes in social status, and professional affiliations. "
@@ -150,8 +144,7 @@ $DETECT_MAGIC_EVENT=true; //Enable detection and logging of NPC spellcasting eve
 $MAGIC_EVENT_BLACKLIST=""; //Comma-separated list of magic events to exclude from logging.
 $LOCATION_BLACKLIST="Dark Brotherhood Sanctuary, Twilight Sepulcher"; //Comma-separated list of location names to exclude from Points of Interest context.
 $ITEM_BLACKLIST=""; //Comma-separated list of item/armor names to exclude from dynamic context.
-$CARRIAGE_DRIVERS="Bjorlam, Alfarinn, Kibell, Sigaar, Thaer, Engar, Gunjar, Markus"; //Comma-separated NPC names that can offer carriage fast travel.
-$FERRY_DRIVERS="Gort, Harlaug, Jolf"; //Comma-separated NPC names that can offer ferry fast travel.
+$SHORTER_NEARBY_ITEM_LIST=false; //Group duplicate nearby ground items into one counted entry and show a single representative RefID in item descriptions.
 $EVENT_TYPE_FILTER=""; //Comma-separated list of event types to exclude from context generation.
 $GROUND_ITEMS_DESCRIPTIONS_ONLY=false; //Only show nearby ground items that have descriptions in the database.
 $INVENTORY_ITEMS_DESCRIPTIONS_ONLY=false; //Only show inventory items that have descriptions in the database.
@@ -546,6 +539,14 @@ $ITT["openrouter"]["detail"]='low'; //(Low|high) fidelity image understanding.
 $ITT["openrouter"]["API_KEY"]=''; //OpenRouter API key.
 $ITT["openrouter"]["AI_VISION_PROMPT"]="Let's roleplay in the world of Skyrim. Describe this Skyrim image as if it is real life. Describe the environment, objects, and people you see at a fifth grade reading level. Ignore video game HUD and UI elements in your description."; //Prompt to send to the Vision API.
 $ITT["openrouter"]["AI_PROMPT"]='#HERIKA_NPC1# describes what they are seeing'; //Prompt sent to the LLM.
+//Custom OpenAI-Compatible Service
+$ITT["custom"]["url"]=''; //Endpoint for a custom OpenAI-compatible vision/chat completions service.
+$ITT["custom"]["model"]=''; //LLM model.
+$ITT["custom"]["max_tokens"]=1024; //Maximum tokens to generate.
+$ITT["custom"]["detail"]='low'; //(Low|high) fidelity image understanding.
+$ITT["custom"]["API_KEY"]=''; //Optional API key for the custom service.
+$ITT["custom"]["AI_VISION_PROMPT"]="Let's roleplay in the world of Skyrim. Describe this Skyrim image as if it is real life. Describe the environment, objects, and people you see at a fifth grade reading level. Ignore video game HUD and UI elements in your description."; //Prompt to send to the Vision API.
+$ITT["custom"]["AI_PROMPT"]='#HERIKA_NPC1# describes what they are seeing'; //Prompt sent to the LLM.
 //Azure
 $ITT["AZURE"]["ENDPOINT"]=""; //API endpoint.
 $ITT["AZURE"]["API_KEY"]=""; //API key.
@@ -583,6 +584,9 @@ $FEATURES["MISC"]["LIFE_LINK_PLUGIN"]=false; // WIP. Use life link plugin for dy
 
 $BORED_EVENT_SERVERSIDE=false;
 $RECHAT_ALLOW_ACTIONS=false;
+$RECHAT_MODE='random'; // tight = listener-only, conversational = focused back-and-forth, group = rotate around nearby NPCs, random = roll one mode per chain
+$ENFORCE_STRICT_RECHAT_RESPONSE=false; // if true, rechat responders must address the previous speaker directly
+$OPEN_RECHAT=true;
 $RANDOM_NARATION=false;
 $RANDOM_NARATION_CHANCE=15;
 $RANDOM_NARRATION_COOLDOWN=2;

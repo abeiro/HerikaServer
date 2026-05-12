@@ -35,4 +35,18 @@ final class EmoteMoodsTest extends TestCase
             $normalized
         );
     }
+
+    public function testExtractFirstEmoteMood_ReturnsOnlyTheFirstMoodFromDelimitedInput(): void
+    {
+        $selectedMood = extractFirstEmoteMood('horrified|disturbed|shaken');
+
+        $this->assertSame('horrified', $selectedMood);
+    }
+
+    public function testExtractFirstEmoteMood_NormalizesAliasesBeforeSelectingFirstMood(): void
+    {
+        $selectedMood = extractFirstEmoteMood('sardonic|teasing');
+
+        $this->assertSame('sarcastic', $selectedMood);
+    }
 }

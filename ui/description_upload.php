@@ -729,6 +729,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <a href="?action=export_custom_items" class="action-button export-csv">Export Custom Descriptions</a>
                 </div>
                 <p style="margin-top: 15px;">CSV format: baseid, name, description</p>
+                <p style="margin-top: 10px; color: #bbb;">
+                    Base IDs can use exact runtime FormIDs like <code>020098A0</code>, legacy wildcard keys like <code>XX0098A0</code> or <code>FEXXX822</code>,
+                    or stable plugin-aware keys like <code>Dawnguard.esm|000098A0</code>.
+                </p>
             </form>
         </div>
 
@@ -908,7 +912,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <div class="modal-body">
             <form action="" method="post">
                 <label for="new_baseid">Base ID (required):</label>
-                <small>Unique identifier for this entry (e.g., 0001397E).</small>
+                <small>Use an exact FormID, a legacy wildcard key, or a stable plugin-aware key like <code>SomeMod.esp|0000ABCD</code>.</small>
                 <input type="text" name="baseid" id="new_baseid" required>
 
                 <label for="new_name">Name:</label>

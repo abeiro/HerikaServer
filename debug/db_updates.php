@@ -1,6 +1,7 @@
 <?php 
 
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/logger.php");
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/settings.php");
 
 $checkVersion = function($tablename) {
     global $db;
@@ -83,8 +84,16 @@ try {
 
 // Bootstrap critical core tables early to avoid UI queries failing during initial load
 try {
+    if ($checkTableExists("general_settings") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/general_settings.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
     if ($checkTableExists("core_api_badge") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_api_badge.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
+    if ($checkTableExists("core_stt_connector") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_stt_connector.sql"));
         $db->execQuery("SET search_path TO public");
     }
     if ($checkTableExists("core_itt_connector") == -1) {
@@ -104,10 +113,14 @@ try {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_llm_connector.sql"));
         $db->execQuery("SET search_path TO public");
     }
-if ($checkTableExists("core_profiles") == -1) {
+    if ($checkTableExists("core_profiles") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles.sql"));
     $db->execQuery("SET search_path TO public");
 }
+    if ($checkTableExists("core_action") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_action.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
     if ($checkTableExists("core_npc_master") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_npc_master.sql"));
         $db->execQuery("SET search_path TO public");
@@ -122,6 +135,1554 @@ if ($checkTableExists("core_profiles") == -1) {
     }
 } catch (Exception $e) {
     Logger::warn("Bootstrap core tables: " . $e->getMessage());
+}
+
+if ($checkVersion("core_action") < 20260426001) {
+    Logger::debug("Applying core_action 20260426001 - add parameters/metadata/game function fields");
+
+    $db->execQuery("ALTER TABLE public.core_action ADD COLUMN IF NOT EXISTS parameters_json JSONB NOT NULL DEFAULT '{}'::jsonb");
+    $db->execQuery("ALTER TABLE public.core_action ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb");
+    $db->execQuery("ALTER TABLE public.core_action ADD COLUMN IF NOT EXISTS game_function BOOLEAN NOT NULL DEFAULT TRUE");
+    $db->execQuery("ALTER TABLE public.core_action ADD COLUMN IF NOT EXISTS script_proxy_program JSONB");
+
+    $db->execQuery("ALTER TABLE public.core_action_custom ADD COLUMN IF NOT EXISTS parameters_json JSONB NOT NULL DEFAULT '{}'::jsonb");
+    $db->execQuery("ALTER TABLE public.core_action_custom ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb");
+    $db->execQuery("ALTER TABLE public.core_action_custom ADD COLUMN IF NOT EXISTS game_function BOOLEAN NOT NULL DEFAULT TRUE");
+    $db->execQuery("ALTER TABLE public.core_action_custom ADD COLUMN IF NOT EXISTS script_proxy_program JSONB");
+
+    $db->execQuery("CREATE INDEX IF NOT EXISTS idx_core_action_game_function ON public.core_action (game_function)");
+    $db->execQuery("CREATE INDEX IF NOT EXISTS idx_core_action_custom_game_function ON public.core_action_custom (game_function)");
+
+    $db->execQuery("DROP VIEW IF EXISTS public.combined_core_action");
+    $db->execQuery("
+        CREATE VIEW public.combined_core_action AS
+        SELECT
+            c.id,
+            c.code_name,
+            c.action_name,
+            c.description,
+            c.return_message,
+            c.available_to_npc,
+            c.available_to_followers,
+            c.is_activated,
+            c.parameters_json,
+            c.metadata,
+            c.game_function,
+            c.script_proxy_program,
+            c.created_at,
+            c.updated_at
+        FROM public.core_action_custom c
+        UNION ALL
+        SELECT
+            b.id,
+            b.code_name,
+            b.action_name,
+            b.description,
+            b.return_message,
+            b.available_to_npc,
+            b.available_to_followers,
+            b.is_activated,
+            b.parameters_json,
+            b.metadata,
+            b.game_function,
+            b.script_proxy_program,
+            b.created_at,
+            b.updated_at
+        FROM public.core_action b
+        LEFT JOIN public.core_action_custom c ON LOWER(b.code_name) = LOWER(c.code_name)
+        WHERE c.code_name IS NULL
+    ");
+
+    $db->execQuery("
+        DELETE FROM public.core_action_custom
+        WHERE code_name IN ('AttackHunt', 'GetDateTime', 'SearchDiary', 'SetCurrentTask', 'ReadDiaryPage', 'SearchMemory')
+    ");
+    $db->execQuery("
+        DELETE FROM public.core_action
+        WHERE code_name IN ('AttackHunt', 'GetDateTime', 'SearchDiary', 'SetCurrentTask', 'ReadDiaryPage', 'SearchMemory')
+    ");
+
+    $updateVersion("core_action", 20260426001);
+    Logger::info("Applied patch core_action 20260426001");
+}
+
+if ($checkVersion("core_action") < 20260427001) {
+    Logger::debug("Applying core_action 20260427001 - add import_version field");
+
+    $db->execQuery("ALTER TABLE public.core_action ADD COLUMN IF NOT EXISTS import_version BIGINT NOT NULL DEFAULT 0");
+    $db->execQuery("ALTER TABLE public.core_action_custom ADD COLUMN IF NOT EXISTS import_version BIGINT NOT NULL DEFAULT 0");
+
+    $db->execQuery("UPDATE public.core_action SET import_version = 0 WHERE import_version IS NULL");
+    $db->execQuery("UPDATE public.core_action_custom SET import_version = 0 WHERE import_version IS NULL");
+
+    $db->execQuery("DROP VIEW IF EXISTS public.combined_core_action");
+    $db->execQuery("
+        CREATE VIEW public.combined_core_action AS
+        SELECT
+            c.id,
+            c.code_name,
+            c.action_name,
+            c.description,
+            c.return_message,
+            c.available_to_npc,
+            c.available_to_followers,
+            c.is_activated,
+            c.parameters_json,
+            c.metadata,
+            c.game_function,
+            c.import_version,
+            c.script_proxy_program,
+            c.created_at,
+            c.updated_at
+        FROM public.core_action_custom c
+        UNION ALL
+        SELECT
+            b.id,
+            b.code_name,
+            b.action_name,
+            b.description,
+            b.return_message,
+            b.available_to_npc,
+            b.available_to_followers,
+            b.is_activated,
+            b.parameters_json,
+            b.metadata,
+            b.game_function,
+            b.import_version,
+            b.script_proxy_program,
+            b.created_at,
+            b.updated_at
+        FROM public.core_action b
+        LEFT JOIN public.core_action_custom c ON LOWER(b.code_name) = LOWER(c.code_name)
+        WHERE c.code_name IS NULL
+    ");
+
+    $updateVersion("core_action", 20260427001);
+    Logger::info("Applied patch core_action 20260427001");
+}
+
+if ($checkVersion("core_action") < 20260428001) {
+    Logger::debug("Applying core_action 20260428001 - seed baseline actions from repo snapshot when empty");
+
+    $row = $db->fetchOne("SELECT COUNT(*) AS total FROM public.core_action");
+    $baseRowCount = intval($row['total'] ?? 0);
+    if ($baseRowCount === 0) {
+        $seedFile = __DIR__ . "/../data/core_action_seed.sql";
+        if (file_exists($seedFile) && trim(strval(file_get_contents($seedFile))) !== '') {
+            $db->execQuery(file_get_contents($seedFile));
+            Logger::info("Seeded public.core_action from core_action_seed.sql");
+        } else {
+            Logger::warn("core_action seed file missing or empty; leaving public.core_action unseeded");
+        }
+    }
+
+    $updateVersion("core_action", 20260428001);
+    Logger::info("Applied patch core_action 20260428001");
+}
+
+if ($checkVersion("core_action") < 20260429001) {
+    Logger::debug("Applying core_action 20260429001 - purge deprecated CHIM-Campfire imported actions");
+
+    $db->execQuery("
+        DELETE FROM public.core_action_custom
+        WHERE LOWER(code_name) LIKE 'extcmdchimcampfire_%'
+           OR COALESCE(LOWER(metadata->>'source'), '') = 'chim-campfire'
+           OR COALESCE(LOWER(metadata->>'integration'), '') = 'campfire'
+           OR COALESCE(LOWER(metadata->>'bridge_script'), '') = 'chimcampfire'
+           OR COALESCE(LOWER(metadata->>'import_filename'), '') = 'campfire_actions.csv'
+    ");
+
+    $updateVersion("core_action", 20260429001);
+    Logger::info("Applied patch core_action 20260429001");
+}
+
+if ($checkVersion("core_action") < 20260429002) {
+    Logger::debug("Applying core_action 20260429002 - add available_to_narrator field");
+
+    $db->execQuery("ALTER TABLE public.core_action ADD COLUMN IF NOT EXISTS available_to_narrator BOOLEAN NOT NULL DEFAULT FALSE");
+    $db->execQuery("ALTER TABLE public.core_action_custom ADD COLUMN IF NOT EXISTS available_to_narrator BOOLEAN NOT NULL DEFAULT FALSE");
+
+    $db->execQuery("UPDATE public.core_action SET available_to_narrator = FALSE WHERE available_to_narrator IS NULL");
+    $db->execQuery("UPDATE public.core_action_custom SET available_to_narrator = FALSE WHERE available_to_narrator IS NULL");
+
+    $db->execQuery("CREATE INDEX IF NOT EXISTS idx_core_action_available_to_narrator ON public.core_action (available_to_narrator)");
+    $db->execQuery("CREATE INDEX IF NOT EXISTS idx_core_action_custom_available_to_narrator ON public.core_action_custom (available_to_narrator)");
+
+    $db->execQuery("DROP VIEW IF EXISTS public.combined_core_action");
+    $db->execQuery("
+        CREATE VIEW public.combined_core_action AS
+        SELECT
+            c.id,
+            c.code_name,
+            c.action_name,
+            c.description,
+            c.return_message,
+            c.available_to_npc,
+            c.available_to_followers,
+            c.available_to_narrator,
+            c.is_activated,
+            c.parameters_json,
+            c.metadata,
+            c.game_function,
+            c.import_version,
+            c.script_proxy_program,
+            c.created_at,
+            c.updated_at
+        FROM public.core_action_custom c
+        UNION ALL
+        SELECT
+            b.id,
+            b.code_name,
+            b.action_name,
+            b.description,
+            b.return_message,
+            b.available_to_npc,
+            b.available_to_followers,
+            b.available_to_narrator,
+            b.is_activated,
+            b.parameters_json,
+            b.metadata,
+            b.game_function,
+            b.import_version,
+            b.script_proxy_program,
+            b.created_at,
+            b.updated_at
+        FROM public.core_action b
+        LEFT JOIN public.core_action_custom c ON LOWER(b.code_name) = LOWER(c.code_name)
+        WHERE c.code_name IS NULL
+    ");
+
+    $updateVersion("core_action", 20260429002);
+    Logger::info("Applied patch core_action 20260429002");
+}
+
+if ($checkVersion("core_action") < 20260429003) {
+    Logger::debug("Applying core_action 20260429003 - add narrator TeleportNPC baseline action");
+
+    $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            available_to_narrator,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        ) VALUES (
+            'TeleportNPC',
+            'Teleport_NPC',
+            'Narrator-only action. Teleports a chosen NPC, actor, or #PLAYER_NAME# to a named location from the location database. Put who to teleport in the target field and the destination in the item field.',
+            '#TARGET# teleports to #ITEM#.',
+            FALSE,
+            FALSE,
+            TRUE,
+            TRUE,
+            '{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"Actor to teleport. Use #PLAYER_NAME#, PLAYER, or me to teleport the player.\"},\"item\":{\"type\":\"string\",\"description\":\"REQUIRED: destination location name from the location database.\"}},\"required\":[\"item\"]}'::jsonb,
+            '{\"dispatch\":\"rolecommand\",\"builtin\":true,\"status\":\"active\",\"source\":\"functions.php\"}'::jsonb,
+            TRUE,
+            0,
+            NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ");
+
+    $updateVersion("core_action", 20260429003);
+    Logger::info("Applied patch core_action 20260429003");
+}
+
+if ($checkVersion("core_action") < 20260429004) {
+    Logger::debug("Applying core_action 20260429004 - add narrator SpawnItem baseline action");
+
+    $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            available_to_narrator,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        ) VALUES (
+            'SpawnItem',
+            'Spawn_Item',
+            'Narrator-only action. Spawns a named item from the descriptions database and gives it to a target actor or #PLAYER_NAME#. Put the recipient in the target field, the item name in the item field, and the quantity in the amount field.',
+            '#TARGET# receives #ITEM#.',
+            FALSE,
+            FALSE,
+            TRUE,
+            TRUE,
+            '{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"Recipient actor. Use #PLAYER_NAME#, PLAYER, or me to give the item to the player.\"},\"item\":{\"type\":\"string\",\"description\":\"REQUIRED: item name from the descriptions database.\"},\"amount\":{\"type\":\"integer\",\"description\":\"Quantity to spawn and give (default: 1).\"}},\"required\":[\"item\"]}'::jsonb,
+            '{\"dispatch\":\"rolecommand\",\"builtin\":true,\"status\":\"active\",\"source\":\"functions.php\"}'::jsonb,
+            TRUE,
+            0,
+            NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ");
+
+    $updateVersion("core_action", 20260429004);
+    Logger::info("Applied patch core_action 20260429004");
+}
+
+if ($checkVersion("core_action") < 20260429005) {
+    Logger::debug("Applying core_action 20260429005 - normalize narrator action descriptions");
+
+    $db->execQuery("
+        UPDATE public.core_action
+        SET
+            description = CASE
+                WHEN code_name = 'SpawnItem' THEN 'Create a named item from the descriptions database and give it to a target actor or #PLAYER_NAME#.'
+                WHEN code_name = 'TeleportNPC' THEN 'Teleport a chosen NPC, actor, or #PLAYER_NAME# to a named location from the location database.'
+                ELSE description
+            END,
+            parameters_json = CASE
+                WHEN code_name = 'SpawnItem' THEN '{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"Recipient actor. Use #PLAYER_NAME#, PLAYER, or me to give the item to the player.\"},\"item\":{\"type\":\"string\",\"description\":\"REQUIRED: item name from the descriptions database.\"},\"amount\":{\"type\":\"integer\",\"description\":\"Quantity to spawn and give (default: 1).\"}},\"required\":[\"item\"]}'::jsonb
+                WHEN code_name = 'TeleportNPC' THEN '{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"Actor to teleport. Use #PLAYER_NAME#, PLAYER, or me to teleport the player.\"},\"item\":{\"type\":\"string\",\"description\":\"REQUIRED: destination location name from the location database.\"}},\"required\":[\"item\"]}'::jsonb
+                ELSE parameters_json
+            END
+        WHERE code_name IN ('SpawnItem', 'TeleportNPC')
+    ");
+
+    $updateVersion("core_action", 20260429005);
+    Logger::info("Applied patch core_action 20260429005");
+}
+
+if ($checkVersion("core_action") < 20260429006) {
+    Logger::debug("Applying core_action 20260429006 - add narrator KillTarget baseline action");
+
+    $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            available_to_narrator,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        ) VALUES (
+            'KillTarget',
+            'Kill_Target',
+            'Kill a chosen NPC, actor, or #PLAYER_NAME# immediately.',
+            '#TARGET# is killed.',
+            FALSE,
+            FALSE,
+            TRUE,
+            TRUE,
+            '{\"type\":\"object\",\"required\":[\"target\"],\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"REQUIRED: actor to kill. Use #PLAYER_NAME#, PLAYER, or me to kill the player.\"}}}'::jsonb,
+            '{\"source\":\"functions.php\",\"status\":\"active\",\"builtin\":true,\"dispatch\":\"rolecommand\"}'::jsonb,
+            TRUE,
+            0,
+            NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ");
+
+    $updateVersion("core_action", 20260429006);
+    Logger::info("Applied patch core_action 20260429006");
+}
+
+if ($checkVersion("core_action") < 20260429007) {
+    Logger::debug("Applying core_action 20260429007 - add narrator CreateNewNPC baseline action");
+
+    $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            available_to_narrator,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        ) VALUES (
+            'CreateNewNPC',
+            'Create_New_NPC',
+            'Create and spawn a brand-new nearby NPC from a short creation brief.',
+            'A new NPC is being created nearby.',
+            FALSE,
+            FALSE,
+            TRUE,
+            TRUE,
+            '{\"type\":\"object\",\"required\":[\"target\"],\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"REQUIRED: short creation brief for the new nearby NPC.\"}}}'::jsonb,
+            '{\"source\":\"functions.php\",\"status\":\"active\",\"builtin\":true,\"dispatch\":\"server_action\"}'::jsonb,
+            FALSE,
+            0,
+            NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ");
+
+    $updateVersion("core_action", 20260429007);
+    Logger::info("Applied patch core_action 20260429007");
+}
+
+if ($checkVersion("core_action") < 20260429008) {
+    Logger::debug("Applying core_action 20260429008 - add narrator SpawnNPC baseline action");
+
+    $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            available_to_narrator,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        ) VALUES (
+            'SpawnNPC',
+            'Spawn_NPC',
+            'Spawn one or more NPCs near #PLAYER_NAME# from the SNQE NPC template datasets. Put the template key in the target field and the spawn count in amount.',
+            'Spawned #AMOUNT# #TARGET# near #PLAYER_NAME#.',
+            FALSE,
+            FALSE,
+            TRUE,
+            TRUE,
+            '{\"type\":\"object\",\"required\":[\"target\"],\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"REQUIRED: SNQE NPC template key from npc_templates or npc_own_templates.\"},\"amount\":{\"type\":\"integer\",\"description\":\"How many NPCs to spawn from that template key (default: 1, max: 10).\"}}}'::jsonb,
+            '{\"source\":\"functions.php\",\"status\":\"active\",\"builtin\":true,\"dispatch\":\"rolecommand\"}'::jsonb,
+            TRUE,
+            0,
+            NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ");
+
+    $updateVersion("core_action", 20260429008);
+    Logger::info("Applied patch core_action 20260429008");
+}
+
+if ($checkVersion("core_action") < 20260430001) {
+    Logger::debug("Applying core_action 20260430001 - seed dialogue_timing metadata for baseline action behavior");
+
+    $dialogueTimingUpdates = [
+        'Consume' => 'after',
+        'InspectSurroundings' => 'after',
+        'SpawnItem' => 'after',
+        'SpawnNPC' => 'after',
+        'TeleportNPC' => 'after',
+        'KillTarget' => 'after',
+        'CreateNewNPC' => 'before',
+    ];
+
+    foreach ($dialogueTimingUpdates as $codeName => $dialogueTiming) {
+        $escapedCodeName = $db->escape($codeName);
+        $escapedTiming = $db->escape($dialogueTiming);
+
+        $db->execQuery("
+            UPDATE public.core_action
+            SET metadata = jsonb_set(
+                COALESCE(metadata, '{}'::jsonb),
+                '{dialogue_timing}',
+                to_jsonb('{$escapedTiming}'::text),
+                true
+            ),
+            updated_at = NOW()
+            WHERE code_name = '{$escapedCodeName}'
+        ");
+
+        $db->execQuery("
+            UPDATE public.core_action_custom
+            SET metadata = jsonb_set(
+                COALESCE(metadata, '{}'::jsonb),
+                '{dialogue_timing}',
+                to_jsonb('{$escapedTiming}'::text),
+                true
+            ),
+            updated_at = NOW()
+            WHERE code_name = '{$escapedCodeName}'
+              AND (
+                  metadata IS NULL
+                  OR NOT (COALESCE(metadata, '{}'::jsonb) ? 'dialogue_timing')
+              )
+        ");
+    }
+
+    $updateVersion("core_action", 20260430001);
+    Logger::info("Applied patch core_action 20260430001");
+}
+
+if ($checkVersion("core_action") < 20260430002) {
+    Logger::debug("Applying core_action 20260430002 - update dialogue_timing metadata for baseline and CHIM-NFF actions");
+
+    $dialogueTimingUpdates = [
+        'AddBounty' => 'after',
+        'ArrestPlayer' => 'before',
+        'Attack' => 'after',
+        'Brawl' => 'after',
+        'CastSpell' => 'after',
+        'CheckInventory' => 'before',
+        'ComeCloser' => 'before',
+        'Consume' => 'after',
+        'DecreaseWalkSpeed' => 'before',
+        'Drink' => 'after',
+        'EndConversation' => 'before',
+        'ExtCmdCHIMNFF_BehindMe' => 'after',
+        'ExtCmdCHIMNFF_DismissFollower' => 'after',
+        'ExtCmdCHIMNFF_FollowMe' => 'after',
+        'ExtCmdCHIMNFF_OpenPlayerChest' => 'after',
+        'ExtCmdCHIMNFF_OpenSatchel' => 'before',
+        'ExtCmdCHIMNFF_RecruitFollower' => 'after',
+        'ExtCmdCHIMNFF_SetHomeBase' => 'after',
+        'ExtCmdCHIMNFF_StartAutoLoot' => 'after',
+        'ExtCmdCHIMNFF_StopAutoLoot' => 'after',
+        'ExtCmdCHIMNFF_TeachRightHandSpell' => 'after',
+        'ExtCmdCHIMNFF_WaitHere' => 'after',
+        'Follow' => 'after',
+        'FollowPlayer' => 'after',
+        'ForgiveCrime' => 'after',
+        'GiveGoldTo' => 'after',
+        'GiveItemTo' => 'after',
+        'GoToSleep' => 'before',
+        'HireCarriage' => 'before',
+        'HireFerry' => 'before',
+        'IncreaseWalkSpeed' => 'after',
+        'Inspect' => 'after',
+        'InspectSurroundings' => 'after',
+        'LeadTheWayTo' => 'after',
+        'MakeFollower' => 'after',
+        'MoveTo' => 'after',
+        'OpenInventory' => 'before',
+        'OpenInventory2' => 'before',
+        'PayBounty' => 'after',
+        'PickupItem' => 'after',
+        'ReadQuestJournal' => 'after',
+        'Relax' => 'before',
+        'RentRoom' => 'after',
+        'ReturnBackHome' => 'before',
+        'SheatheWeapon' => 'after',
+        'SpawnItem' => 'after',
+        'SpawnNPC' => 'after',
+        'StartRitualCeremony' => 'after',
+        'StopWalk' => 'after',
+        'Surrender' => 'after',
+        'TakeASeat' => 'after',
+        'TeleportNPC' => 'after',
+        'Toast' => 'after',
+        'Training' => 'before',
+        'TravelTo' => 'after',
+        'UseSoulGaze' => 'after',
+        'KillTarget' => 'after',
+        'CreateNewNPC' => 'before',
+    ];
+
+    foreach ($dialogueTimingUpdates as $codeName => $dialogueTiming) {
+        $escapedCodeName = $db->escape($codeName);
+        $escapedTiming = $db->escape($dialogueTiming);
+
+        $db->execQuery("
+            UPDATE public.core_action
+            SET metadata = jsonb_set(
+                COALESCE(metadata, '{}'::jsonb),
+                '{dialogue_timing}',
+                to_jsonb('{$escapedTiming}'::text),
+                true
+            ),
+            updated_at = NOW()
+            WHERE code_name = '{$escapedCodeName}'
+        ");
+
+        $db->execQuery("
+            UPDATE public.core_action_custom
+            SET metadata = jsonb_set(
+                COALESCE(metadata, '{}'::jsonb),
+                '{dialogue_timing}',
+                to_jsonb('{$escapedTiming}'::text),
+                true
+            ),
+            updated_at = NOW()
+            WHERE code_name = '{$escapedCodeName}'
+              AND (
+                  metadata IS NULL
+                  OR NOT (COALESCE(metadata, '{}'::jsonb) ? 'dialogue_timing')
+                  OR (COALESCE(metadata, '{}'::jsonb)->>'dialogue_timing') IN ('before', 'after', 'both', 'none')
+              )
+        ");
+    }
+
+    $updateVersion("core_action", 20260430002);
+    Logger::info("Applied patch core_action 20260430002");
+}
+
+if ($checkVersion("core_action") < 20260430003) {
+    Logger::debug("Applying core_action 20260430003 - change CheckInventory dialogue_timing to after");
+
+    $escapedCodeName = $db->escape('CheckInventory');
+    $escapedTiming = $db->escape('after');
+
+    $db->execQuery("
+        UPDATE public.core_action
+        SET metadata = jsonb_set(
+            COALESCE(metadata, '{}'::jsonb),
+            '{dialogue_timing}',
+            to_jsonb('{$escapedTiming}'::text),
+            true
+        ),
+        updated_at = NOW()
+        WHERE code_name = '{$escapedCodeName}'
+    ");
+
+    $db->execQuery("
+        UPDATE public.core_action_custom
+        SET metadata = jsonb_set(
+            COALESCE(metadata, '{}'::jsonb),
+            '{dialogue_timing}',
+            to_jsonb('{$escapedTiming}'::text),
+            true
+        ),
+        updated_at = NOW()
+        WHERE code_name = '{$escapedCodeName}'
+          AND (
+              metadata IS NULL
+              OR NOT (COALESCE(metadata, '{}'::jsonb) ? 'dialogue_timing')
+              OR (COALESCE(metadata, '{}'::jsonb)->>'dialogue_timing') = 'before'
+          )
+    ");
+
+    $updateVersion("core_action", 20260430003);
+    Logger::info("Applied patch core_action 20260430003");
+}
+
+if ($checkVersion("core_action") < 20260430004) {
+    Logger::debug("Applying core_action 20260430004 - change EndRitualCeremony dialogue_timing to after");
+
+    $escapedCodeName = $db->escape('EndRitualCeremony');
+    $escapedTiming = $db->escape('after');
+
+    $db->execQuery("
+        UPDATE public.core_action
+        SET metadata = jsonb_set(
+            COALESCE(metadata, '{}'::jsonb),
+            '{dialogue_timing}',
+            to_jsonb('{$escapedTiming}'::text),
+            true
+        ),
+        updated_at = NOW()
+        WHERE code_name = '{$escapedCodeName}'
+    ");
+
+    $db->execQuery("
+        UPDATE public.core_action_custom
+        SET metadata = jsonb_set(
+            COALESCE(metadata, '{}'::jsonb),
+            '{dialogue_timing}',
+            to_jsonb('{$escapedTiming}'::text),
+            true
+        ),
+        updated_at = NOW()
+        WHERE code_name = '{$escapedCodeName}'
+          AND (
+              metadata IS NULL
+              OR NOT (COALESCE(metadata, '{}'::jsonb) ? 'dialogue_timing')
+              OR (COALESCE(metadata, '{}'::jsonb)->>'dialogue_timing') = 'both'
+          )
+    ");
+
+    $updateVersion("core_action", 20260430004);
+    Logger::info("Applied patch core_action 20260430004");
+}
+
+if ($checkVersion("core_action") < 20260430005) {
+    Logger::debug("Applying core_action 20260430005 - remove deprecated dialogue_timing metadata");
+
+    $removeDialogueTimingSql = "
+        UPDATE %s
+        SET metadata = CASE
+            WHEN metadata IS NULL THEN NULL
+            ELSE jsonb_strip_nulls(
+                CASE
+                    WHEN jsonb_typeof(COALESCE(metadata->'custom_config', '{}'::jsonb)) = 'object'
+                         AND (COALESCE(metadata->'custom_config', '{}'::jsonb) ? 'dialogue_timing')
+                    THEN jsonb_set(
+                        COALESCE(metadata, '{}'::jsonb) - 'dialogue_timing',
+                        '{custom_config}',
+                        COALESCE(metadata->'custom_config', '{}'::jsonb) - 'dialogue_timing',
+                        true
+                    )
+                    ELSE COALESCE(metadata, '{}'::jsonb) - 'dialogue_timing'
+                END
+            )
+        END,
+        updated_at = NOW()
+        WHERE metadata IS NOT NULL
+          AND (
+              COALESCE(metadata, '{}'::jsonb) ? 'dialogue_timing'
+              OR (
+                  jsonb_typeof(COALESCE(metadata->'custom_config', '{}'::jsonb)) = 'object'
+                  AND (COALESCE(metadata->'custom_config', '{}'::jsonb) ? 'dialogue_timing')
+              )
+          )
+    ";
+
+    $db->execQuery(sprintf($removeDialogueTimingSql, 'public.core_action'));
+    $db->execQuery(sprintf($removeDialogueTimingSql, 'public.core_action_custom'));
+
+    $updateVersion("core_action", 20260430005);
+    Logger::info("Applied patch core_action 20260430005");
+}
+
+if ($checkVersion("core_action") < 20260430006) {
+    Logger::debug("Applying core_action 20260430006 - add ReadQuestJournal and UseSoulGaze to narrator actions");
+
+    $narratorCodes = ['ReadQuestJournal', 'UseSoulGaze'];
+    foreach ($narratorCodes as $codeName) {
+        $escapedCodeName = $db->escape($codeName);
+
+        $db->execQuery("
+            UPDATE public.core_action
+            SET available_to_narrator = TRUE,
+                updated_at = NOW()
+            WHERE code_name = '{$escapedCodeName}'
+        ");
+
+        $db->execQuery("
+            UPDATE public.core_action_custom
+            SET available_to_narrator = TRUE,
+                updated_at = NOW()
+            WHERE code_name = '{$escapedCodeName}'
+        ");
+    }
+
+    $updateVersion("core_action", 20260430006);
+    Logger::info("Applied patch core_action 20260430006");
+}
+
+if ($checkVersion("core_action") < 20260430007) {
+    Logger::debug("Applying core_action 20260430007 - seed metadata.funcret follow-up config for built-in actions");
+
+    $funcretConfigs = [
+        'GetTopicInfo' => ['mode' => 'handler', 'handler' => 'get_topic_info', 'arg_name' => 'topic'],
+        'LeadTheWayTo' => ['mode' => 'handler', 'handler' => 'lead_the_way_to', 'arg_name' => 'location'],
+        'MoveTo' => ['mode' => 'handler', 'handler' => 'move_to', 'arg_name' => 'target'],
+        'Attack' => ['mode' => 'handler', 'handler' => 'attack', 'arg_name' => 'target'],
+        'Inspect' => ['mode' => 'handler', 'handler' => 'inspect', 'arg_name' => 'target'],
+        'InspectSurroundings' => ['mode' => 'handler', 'handler' => 'inspect_surroundings', 'arg_name' => 'target'],
+        'GetTime' => ['mode' => 'handler', 'handler' => 'get_time', 'arg_name' => 'datestring'],
+        'get_current_mission' => ['mode' => 'handler', 'handler' => 'current_mission', 'arg_name' => 'description'],
+        'CheckInventory' => ['mode' => 'handler', 'handler' => 'check_inventory', 'arg_name' => 'target'],
+        'GiveItemTo' => ['mode' => 'handler', 'handler' => 'give_item_to', 'arg_name' => 'target'],
+        'GiveGoldTo' => ['mode' => 'handler', 'handler' => 'give_gold_to', 'arg_name' => 'target'],
+        'RentRoom' => ['mode' => 'handler', 'handler' => 'rent_room', 'arg_name' => 'target'],
+        'HireCarriage' => ['mode' => 'handler', 'handler' => 'hire_carriage', 'arg_name' => 'target'],
+        'HireFerry' => ['mode' => 'handler', 'handler' => 'hire_ferry', 'arg_name' => 'target'],
+        'AddBounty' => ['mode' => 'handler', 'handler' => 'add_bounty', 'arg_name' => 'target', 'use_functions_again' => true],
+        'PayBounty' => ['mode' => 'handler', 'handler' => 'pay_bounty', 'arg_name' => 'target'],
+        'ArrestPlayer' => ['mode' => 'handler', 'handler' => 'arrest_player', 'arg_name' => 'target'],
+        'ForgiveCrime' => ['mode' => 'handler', 'handler' => 'forgive_crime', 'arg_name' => 'target'],
+        'Consume' => ['mode' => 'none'],
+        'FollowPlayer' => ['mode' => 'none'],
+        'TakeGoldFromPlayer' => ['mode' => 'none'],
+    ];
+
+    foreach ($funcretConfigs as $codeName => $funcretConfig) {
+        $escapedCodeName = $db->escape($codeName);
+        $funcretJson = json_encode($funcretConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $funcretJsonLiteral = $db->escapeLiteral($funcretJson);
+
+        $db->execQuery("
+            UPDATE public.core_action
+            SET metadata = jsonb_set(
+                COALESCE(metadata, '{}'::jsonb),
+                '{funcret}',
+                {$funcretJsonLiteral}::jsonb,
+                true
+            ),
+            updated_at = NOW()
+            WHERE code_name = '{$escapedCodeName}'
+        ");
+
+        $db->execQuery("
+            UPDATE public.core_action_custom
+            SET metadata = jsonb_set(
+                COALESCE(metadata, '{}'::jsonb),
+                '{funcret}',
+                {$funcretJsonLiteral}::jsonb,
+                true
+            ),
+            updated_at = NOW()
+            WHERE code_name = '{$escapedCodeName}'
+        ");
+    }
+
+    $updateVersion("core_action", 20260430007);
+    Logger::info("Applied patch core_action 20260430007");
+}
+
+if ($checkVersion("core_action") < 20260430008) {
+    Logger::debug("Applying core_action 20260430008 - migrate legacy metadata.funcret follow-up config into metadata.followup");
+
+    $normalizeFollowupConfig = function ($config) {
+        if (!is_array($config)) {
+            return [];
+        }
+
+        $normalized = [];
+        if (array_key_exists('enabled', $config)) {
+            $normalized['enabled'] = !empty($config['enabled']);
+        }
+
+        $prompt = trim(strval($config['prompt'] ?? ''));
+        if ($prompt !== '') {
+            $normalized['prompt'] = $prompt;
+        }
+
+        $argName = trim(strval($config['arg_name'] ?? ''));
+        if ($argName !== '') {
+            $normalized['arg_name'] = $argName;
+        }
+
+        if (array_key_exists('use_functions_again', $config)) {
+            $normalized['use_functions_again'] = !empty($config['use_functions_again']);
+        }
+
+        return $normalized;
+    };
+
+    $convertLegacyFuncretConfig = function ($config) use ($normalizeFollowupConfig) {
+        if (!is_array($config) || count($config) === 0) {
+            return [];
+        }
+
+        $mode = strtolower(trim(strval($config['mode'] ?? '')));
+        $followupConfig = [];
+
+        if ($mode === 'none') {
+            $followupConfig['enabled'] = false;
+        } else if ($mode !== '') {
+            $followupConfig['enabled'] = true;
+        }
+
+        $instruction = trim(strval($config['instruction'] ?? ''));
+        if ($instruction === '' && $mode === 'generic') {
+            $instruction = 'Reply with one short in-character line reacting to the tool result below. Do not ask follow-up questions.';
+        }
+        if ($instruction !== '') {
+            $followupConfig['prompt'] = $instruction;
+        }
+
+        $argName = trim(strval($config['arg_name'] ?? ''));
+        if ($argName !== '') {
+            $followupConfig['arg_name'] = $argName;
+        }
+
+        if (array_key_exists('use_functions_again', $config)) {
+            $followupConfig['use_functions_again'] = !empty($config['use_functions_again']);
+        }
+
+        return $normalizeFollowupConfig($followupConfig);
+    };
+
+    $baseFollowupConfigs = [
+        'GetTopicInfo' => ['enabled' => true, 'arg_name' => 'topic', 'prompt' => 'Reply with one short in-character line about the requested topic using the tool result below. Do not ask follow-up questions.'],
+        'LeadTheWayTo' => ['enabled' => true, 'arg_name' => 'location', 'prompt' => 'Reply with one short in-character line acknowledging that you are now leading the player to the destination. Do not ask follow-up questions.'],
+        'MoveTo' => ['enabled' => true, 'arg_name' => 'target', 'prompt' => 'Reply with one short in-character line acknowledging that you moved to the target. Do not ask follow-up questions.'],
+        'Attack' => ['enabled' => true, 'arg_name' => 'target', 'prompt' => 'Reply with one short in-character combat line reacting to the attack outcome. Do not ask follow-up questions.'],
+        'Inspect' => ['enabled' => true, 'arg_name' => 'target', 'prompt' => 'Reply with one short in-character observation using the inspect result below. Do not ask follow-up questions.'],
+        'InspectSurroundings' => ['enabled' => true, 'arg_name' => 'target', 'prompt' => 'Reply with one short in-character observation about the surroundings using the tool result below. Do not ask follow-up questions.'],
+        'GetTime' => ['enabled' => true, 'arg_name' => 'datestring', 'prompt' => 'Reply with one short in-character line acknowledging the reported time. Do not ask follow-up questions.'],
+        'get_current_mission' => ['enabled' => true, 'arg_name' => 'description', 'prompt' => 'Reply with one short in-character line about the current mission using the tool result below. Do not ask follow-up questions.'],
+        'CheckInventory' => ['enabled' => true, 'arg_name' => 'target', 'prompt' => 'Reply with one short in-character line about the inventory result below. Do not ask follow-up questions.'],
+        'GiveItemTo' => ['enabled' => true, 'arg_name' => 'target', 'prompt' => 'Reply with one short in-character line reacting to the item handoff result below. Do not ask follow-up questions.'],
+        'GiveGoldTo' => ['enabled' => true, 'arg_name' => 'target', 'prompt' => 'Reply with one short in-character line reacting to the gold transfer result below. Do not ask follow-up questions.'],
+        'RentRoom' => ['enabled' => true, 'arg_name' => 'target', 'prompt' => 'Reply with one short in-character confirmation that the room rental is complete. Do not ask follow-up questions.'],
+        'HireCarriage' => ['enabled' => true, 'arg_name' => 'target', 'prompt' => 'Reply with one short in-character line accepting payment and ending the conversation. Do not ask follow-up questions.'],
+        'HireFerry' => ['enabled' => true, 'arg_name' => 'target', 'prompt' => 'Reply with one short in-character line accepting payment and ending the conversation. Do not ask follow-up questions.'],
+        'AddBounty' => ['enabled' => true, 'arg_name' => 'target', 'prompt' => 'You just added a bounty to the player. React in character. You may follow up with another action if appropriate.', 'use_functions_again' => true],
+        'PayBounty' => ['enabled' => true, 'arg_name' => 'target', 'prompt' => 'The player has already paid the bounty and stolen items were removed from inventory. This action is fully complete. Reply with one short confirmation line, do not ask follow-up questions, and end the conversation.'],
+        'ArrestPlayer' => ['enabled' => true, 'arg_name' => 'target', 'prompt' => 'You attempted to arrest the player. They get a submit or resist prompt; resist starts combat. Reply with one short stern final line. Do not ask follow-up questions.'],
+        'ForgiveCrime' => ['enabled' => true, 'arg_name' => 'target', 'prompt' => 'You forgave the player\'s crimes and cleared their bounty. Reply with one short in-character acknowledgment, warning, or blessing. Do not ask follow-up questions.'],
+        'Consume' => ['enabled' => false],
+        'FollowPlayer' => ['enabled' => false],
+        'TakeGoldFromPlayer' => ['enabled' => false],
+    ];
+
+    $syncFollowupMetadata = function ($tableName) use ($db, $baseFollowupConfigs, $normalizeFollowupConfig, $convertLegacyFuncretConfig) {
+        $rows = $db->fetchAll("SELECT id, code_name, metadata FROM public.{$tableName}");
+        foreach ($rows as $row) {
+            $rowId = intval($row['id'] ?? 0);
+            if ($rowId <= 0) {
+                continue;
+            }
+
+            $metadata = json_decode(strval($row['metadata'] ?? '{}'), true);
+            if (!is_array($metadata)) {
+                $metadata = [];
+            }
+
+            $codeName = trim(strval($row['code_name'] ?? ''));
+            $customConfig = is_array($metadata['custom_config'] ?? null) ? $metadata['custom_config'] : null;
+            $followupConfig = $normalizeFollowupConfig($metadata['followup'] ?? []);
+            $legacyFuncretConfig = is_array($metadata['funcret'] ?? null) ? $metadata['funcret'] : [];
+            $legacyConvertedConfig = $convertLegacyFuncretConfig($legacyFuncretConfig);
+            $changed = false;
+
+            if (count($followupConfig) === 0) {
+                if (isset($baseFollowupConfigs[$codeName])) {
+                    $followupConfig = $normalizeFollowupConfig($baseFollowupConfigs[$codeName]);
+                } else if (count($legacyConvertedConfig) > 0) {
+                    $followupConfig = $legacyConvertedConfig;
+                }
+            }
+
+            if (count($followupConfig) > 0) {
+                $metadata['followup'] = $followupConfig;
+                $changed = true;
+            }
+
+            if (array_key_exists('funcret', $metadata)) {
+                unset($metadata['funcret']);
+                $changed = true;
+            }
+
+            if (is_array($customConfig)) {
+                $legacyToNewCustomKeys = [
+                    'funcret_mode' => 'followup_enabled',
+                    'funcret_arg_name' => 'followup_arg_name',
+                    'funcret_instruction' => 'followup_prompt',
+                    'funcret_use_functions_again' => 'followup_use_functions_again',
+                ];
+
+                foreach ($legacyToNewCustomKeys as $legacyKey => $newKey) {
+                    if (!array_key_exists($legacyKey, $customConfig)) {
+                        continue;
+                    }
+
+                if (!array_key_exists($newKey, $customConfig)) {
+                    if ($legacyKey === 'funcret_mode') {
+                        $legacyMode = strtolower(trim(strval($customConfig[$legacyKey])));
+                        $customConfig[$newKey] = $legacyMode !== 'none';
+                    } else {
+                        $customConfig[$newKey] = $customConfig[$legacyKey];
+                    }
+                }
+
+                    unset($customConfig[$legacyKey]);
+                    $changed = true;
+                }
+
+                if ($changed) {
+                    $metadata['custom_config'] = $customConfig;
+                }
+            }
+
+            if (!$changed) {
+                continue;
+            }
+
+            $metadataJson = json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if (!is_string($metadataJson) || $metadataJson === '') {
+                $metadataJson = '{}';
+            }
+            $metadataJsonLiteral = $db->escapeLiteral($metadataJson);
+
+            $db->execQuery("
+                UPDATE public.{$tableName}
+                SET metadata = {$metadataJsonLiteral}::jsonb,
+                    updated_at = NOW()
+                WHERE id = {$rowId}
+            ");
+        }
+    };
+
+    $syncFollowupMetadata('core_action');
+    $syncFollowupMetadata('core_action_custom');
+
+    $updateVersion("core_action", 20260430008);
+    Logger::info("Applied patch core_action 20260430008");
+}
+
+if ($checkVersion("core_action") < 20260430009) {
+    Logger::debug("Applying core_action 20260430009 - remove legacy_external from followup metadata");
+
+    $stripLegacyExternal = function ($tableName) use ($db) {
+        $rows = $db->fetchAll("SELECT id, metadata FROM public.{$tableName}");
+        foreach ($rows as $row) {
+            $rowId = intval($row['id'] ?? 0);
+            if ($rowId <= 0) {
+                continue;
+            }
+
+            $metadata = json_decode(strval($row['metadata'] ?? '{}'), true);
+            if (!is_array($metadata)) {
+                continue;
+            }
+
+            $changed = false;
+
+            if (is_array($metadata['followup'] ?? null) && array_key_exists('legacy_external', $metadata['followup'])) {
+                unset($metadata['followup']['legacy_external']);
+                $changed = true;
+            }
+
+            if (is_array($metadata['custom_config'] ?? null) && array_key_exists('followup_legacy_external', $metadata['custom_config'])) {
+                unset($metadata['custom_config']['followup_legacy_external']);
+                $changed = true;
+            }
+
+            if (!$changed) {
+                continue;
+            }
+
+            $metadataJson = json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if (!is_string($metadataJson) || $metadataJson === '') {
+                $metadataJson = '{}';
+            }
+
+            $metadataJsonLiteral = $db->escapeLiteral($metadataJson);
+            $db->execQuery("
+                UPDATE public.{$tableName}
+                SET metadata = {$metadataJsonLiteral}::jsonb,
+                    updated_at = NOW()
+                WHERE id = {$rowId}
+            ");
+        }
+    };
+
+    $stripLegacyExternal('core_action');
+    $stripLegacyExternal('core_action_custom');
+
+    $updateVersion("core_action", 20260430009);
+    Logger::info("Applied patch core_action 20260430009");
+}
+
+if ($checkVersion("core_action") < 20260430010) {
+    Logger::debug("Applying core_action 20260430010 - normalize shared cost_gold action config");
+
+    $normalizeSharedCostField = function ($tableName) use ($db) {
+        $targetCodes = ['RentRoom', 'HireCarriage', 'HireFerry'];
+        $legacyKeys = ['rent_room_cost', 'hire_carriage_cost', 'hire_ferry_cost'];
+
+        $rows = $db->fetchAll("SELECT id, code_name, metadata FROM public.{$tableName}");
+        foreach ($rows as $row) {
+            $rowId = intval($row['id'] ?? 0);
+            $codeName = trim(strval($row['code_name'] ?? ''));
+            if ($rowId <= 0 || !in_array($codeName, $targetCodes, true)) {
+                continue;
+            }
+
+            $metadata = json_decode(strval($row['metadata'] ?? '{}'), true);
+            if (!is_array($metadata)) {
+                $metadata = [];
+            }
+
+            $changed = false;
+
+            if (is_array($metadata['editor_fields'] ?? null)) {
+                foreach ($metadata['editor_fields'] as &$editorField) {
+                    if (!is_array($editorField)) {
+                        continue;
+                    }
+
+                    $fieldKey = trim(strval($editorField['key'] ?? ''));
+                    if ($fieldKey === '' || !in_array($fieldKey, $legacyKeys, true)) {
+                        continue;
+                    }
+
+                    $editorField['key'] = 'cost_gold';
+                    $editorField['label'] = 'Gold Cost';
+                    $editorField['help'] = 'How much gold this action costs.';
+                    $changed = true;
+                }
+                unset($editorField);
+            }
+
+            if (is_array($metadata['parameter_template'] ?? null)) {
+                array_walk_recursive($metadata['parameter_template'], function (&$value) use (&$changed) {
+                    if (!is_string($value)) {
+                        return;
+                    }
+
+                    $updatedValue = str_replace(
+                        ['{{config.rent_room_cost}}', '{{config.hire_carriage_cost}}', '{{config.hire_ferry_cost}}'],
+                        '{{config.cost_gold}}',
+                        $value
+                    );
+
+                    if ($updatedValue !== $value) {
+                        $value = $updatedValue;
+                        $changed = true;
+                    }
+                });
+            }
+
+            if (is_array($metadata['custom_config'] ?? null)) {
+                foreach ($legacyKeys as $legacyKey) {
+                    if (!array_key_exists($legacyKey, $metadata['custom_config'])) {
+                        continue;
+                    }
+
+                    if (!array_key_exists('cost_gold', $metadata['custom_config'])) {
+                        $metadata['custom_config']['cost_gold'] = $metadata['custom_config'][$legacyKey];
+                    }
+
+                    unset($metadata['custom_config'][$legacyKey]);
+                    $changed = true;
+                }
+            }
+
+            if (!$changed) {
+                continue;
+            }
+
+            $metadataJson = json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if (!is_string($metadataJson) || $metadataJson === '') {
+                $metadataJson = '{}';
+            }
+
+            $metadataJsonLiteral = $db->escapeLiteral($metadataJson);
+            $db->execQuery("
+                UPDATE public.{$tableName}
+                SET metadata = {$metadataJsonLiteral}::jsonb,
+                    updated_at = NOW()
+                WHERE id = {$rowId}
+            ");
+        }
+    };
+
+    $normalizeSharedCostField('core_action');
+    $normalizeSharedCostField('core_action_custom');
+
+    $updateVersion("core_action", 20260430010);
+    Logger::info("Applied patch core_action 20260430010");
+}
+
+if ($checkVersion("core_action") < 20260430011) {
+    Logger::debug("Applying core_action 20260430011 - normalize cost placeholders in action text");
+
+    $normalizeCostPlaceholderText = function ($tableName, $rewriteCustomRows = false) use ($db) {
+        $targetRows = [
+            'RentRoom' => [
+                'description' => '#HERIKA_NAME# rents a room to #PLAYER_NAME# for {{config.cost_gold}} gold. Only innkeepers can use this action and it only applies to #PLAYER_NAME#.',
+                'return_message' => '#HERIKA_NAME# rented a room to #PLAYER_NAME# for {{config.cost_gold}} gold.',
+                'legacy_descriptions' => [
+                    '#HERIKA_NAME# rents a room to #PLAYER_NAME# for 10 gold. Only innkeepers can use this action and it only applies to #PLAYER_NAME#.',
+                ],
+                'legacy_return_messages' => [
+                    '#HERIKA_NAME# rented a room to #PLAYER_NAME# for 10 gold.',
+                ],
+            ],
+            'HireCarriage' => [
+                'description' => '#HERIKA_NAME# accepts {{config.cost_gold}} gold for carriage travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.',
+                'return_message' => '#HERIKA_NAME# accepted the {{config.cost_gold}} gold carriage fare to #TARGET# and ended the conversation.',
+                'legacy_descriptions' => [
+                    '#HERIKA_NAME# accepts 20 gold for carriage travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.',
+                ],
+                'legacy_return_messages' => [
+                    '#HERIKA_NAME# accepted the 20 gold carriage fare to #TARGET# and ended the conversation.',
+                ],
+            ],
+            'HireFerry' => [
+                'description' => '#HERIKA_NAME# accepts {{config.cost_gold}} gold for ferry travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.',
+                'return_message' => '#HERIKA_NAME# accepted the {{config.cost_gold}} gold ferry fare to #TARGET# and ended the conversation.',
+                'legacy_descriptions' => [
+                    '#HERIKA_NAME# accepts 50 gold for ferry travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.',
+                ],
+                'legacy_return_messages' => [
+                    '#HERIKA_NAME# accepted the 50 gold ferry fare to #TARGET# and ended the conversation.',
+                ],
+            ],
+        ];
+
+        $rows = $db->fetchAll("SELECT id, code_name, description, return_message FROM public.{$tableName}");
+        foreach ($rows as $row) {
+            $rowId = intval($row['id'] ?? 0);
+            $codeName = trim(strval($row['code_name'] ?? ''));
+            if ($rowId <= 0 || !isset($targetRows[$codeName])) {
+                continue;
+            }
+
+            $target = $targetRows[$codeName];
+            $description = strval($row['description'] ?? '');
+            $returnMessage = strval($row['return_message'] ?? '');
+            $newDescription = $description;
+            $newReturnMessage = $returnMessage;
+
+            if ($tableName === 'core_action') {
+                $newDescription = $target['description'];
+                $newReturnMessage = $target['return_message'];
+            } elseif ($rewriteCustomRows) {
+                if (in_array($description, $target['legacy_descriptions'], true)) {
+                    $newDescription = $target['description'];
+                }
+                if (in_array($returnMessage, $target['legacy_return_messages'], true)) {
+                    $newReturnMessage = $target['return_message'];
+                }
+            }
+
+            if ($newDescription === $description && $newReturnMessage === $returnMessage) {
+                continue;
+            }
+
+            $descriptionLiteral = $db->escapeLiteral($newDescription);
+            $returnMessageLiteral = $db->escapeLiteral($newReturnMessage);
+            $db->execQuery("
+                UPDATE public.{$tableName}
+                SET description = {$descriptionLiteral},
+                    return_message = {$returnMessageLiteral},
+                    updated_at = NOW()
+                WHERE id = {$rowId}
+            ");
+        }
+    };
+
+    $normalizeCostPlaceholderText('core_action', false);
+    $normalizeCostPlaceholderText('core_action_custom', true);
+
+    $updateVersion("core_action", 20260430011);
+    Logger::info("Applied patch core_action 20260430011");
+}
+
+if ($checkVersion("core_action") < 20260430012) {
+    Logger::debug("Applying core_action 20260430012 - normalize followup player references to #PLAYER_NAME#");
+
+    $normalizeFollowupPlayerReferences = function ($tableName) use ($db) {
+        $promptMap = [
+            'AddBounty' => [
+                'new' => 'You just added a bounty to #PLAYER_NAME#. React in character. You may follow up with another action if appropriate.',
+                'old' => [
+                    'You just added a bounty to the player. React in character. You may follow up with another action if appropriate.',
+                ],
+            ],
+            'PayBounty' => [
+                'new' => '#PLAYER_NAME# has already paid the bounty and stolen items were removed from inventory. This action is fully complete. Reply with one short confirmation line, do not ask follow-up questions, and end the conversation.',
+                'old' => [
+                    'The player has already paid the bounty and stolen items were removed from inventory. This action is fully complete. Reply with one short confirmation line, do not ask follow-up questions, and end the conversation.',
+                ],
+            ],
+            'ArrestPlayer' => [
+                'new' => 'You attempted to arrest #PLAYER_NAME#. They get a submit or resist prompt; resist starts combat. Reply with one short stern final line. Do not ask follow-up questions.',
+                'old' => [
+                    'You attempted to arrest the player. They get a submit or resist prompt; resist starts combat. Reply with one short stern final line. Do not ask follow-up questions.',
+                ],
+            ],
+            'ForgiveCrime' => [
+                'new' => 'You forgave #PLAYER_NAME#\'s crimes and cleared their bounty. Reply with one short in-character acknowledgment, warning, or blessing. Do not ask follow-up questions.',
+                'old' => [
+                    'You forgave the player\'s crimes and cleared their bounty. Reply with one short in-character acknowledgment, warning, or blessing. Do not ask follow-up questions.',
+                ],
+            ],
+        ];
+
+        $rows = $db->fetchAll("SELECT id, code_name, metadata FROM public.{$tableName}");
+        foreach ($rows as $row) {
+            $rowId = intval($row['id'] ?? 0);
+            $codeName = trim(strval($row['code_name'] ?? ''));
+            if ($rowId <= 0 || !isset($promptMap[$codeName])) {
+                continue;
+            }
+
+            $metadata = json_decode(strval($row['metadata'] ?? '{}'), true);
+            if (!is_array($metadata) || !is_array($metadata['followup'] ?? null)) {
+                continue;
+            }
+
+            $currentPrompt = strval($metadata['followup']['prompt'] ?? '');
+            if ($tableName !== 'core_action' && !in_array($currentPrompt, $promptMap[$codeName]['old'], true)) {
+                continue;
+            }
+
+            if ($currentPrompt === $promptMap[$codeName]['new']) {
+                continue;
+            }
+
+            $metadata['followup']['prompt'] = $promptMap[$codeName]['new'];
+            $metadataJson = json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if (!is_string($metadataJson) || $metadataJson === '') {
+                $metadataJson = '{}';
+            }
+
+            $metadataLiteral = $db->escapeLiteral($metadataJson);
+            $db->execQuery("
+                UPDATE public.{$tableName}
+                SET metadata = {$metadataLiteral}::jsonb,
+                    updated_at = NOW()
+                WHERE id = {$rowId}
+            ");
+        }
+    };
+
+    $normalizeFollowupPlayerReferences('core_action');
+    $normalizeFollowupPlayerReferences('core_action_custom');
+
+    $updateVersion("core_action", 20260430012);
+    Logger::info("Applied patch core_action 20260430012");
+}
+
+if ($checkVersion("core_action") < 20260430013) {
+    Logger::debug("Applying core_action 20260430013 - disable built-in followups for selected actions");
+
+    $disableBuiltInFollowups = function ($tableName, $rewriteCustomRows = false) use ($db) {
+        $targetCodes = [
+            'Attack',
+            'ForgiveCrime',
+            'GiveGoldTo',
+            'GiveItemTo',
+            'HireCarriage',
+            'HireFerry',
+            'LeadTheWayTo',
+            'MoveTo',
+            'RentRoom',
+        ];
+
+        $rows = $db->fetchAll("SELECT id, code_name, metadata FROM public.{$tableName}");
+        foreach ($rows as $row) {
+            $rowId = intval($row['id'] ?? 0);
+            $codeName = trim(strval($row['code_name'] ?? ''));
+            if ($rowId <= 0 || !in_array($codeName, $targetCodes, true)) {
+                continue;
+            }
+
+            $metadata = json_decode(strval($row['metadata'] ?? '{}'), true);
+            if (!is_array($metadata) || !is_array($metadata['followup'] ?? null)) {
+                continue;
+            }
+
+            if ($rewriteCustomRows) {
+                $customConfig = is_array($metadata['custom_config'] ?? null) ? $metadata['custom_config'] : [];
+                if (array_key_exists('followup_enabled', $customConfig)) {
+                    continue;
+                }
+            }
+
+            if (array_key_exists('enabled', $metadata['followup']) && empty($metadata['followup']['enabled'])) {
+                continue;
+            }
+
+            $metadata['followup']['enabled'] = false;
+            $metadataJson = json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if (!is_string($metadataJson) || $metadataJson === '') {
+                $metadataJson = '{}';
+            }
+
+            $metadataLiteral = $db->escapeLiteral($metadataJson);
+            $db->execQuery("
+                UPDATE public.{$tableName}
+                SET metadata = {$metadataLiteral}::jsonb,
+                    updated_at = NOW()
+                WHERE id = {$rowId}
+            ");
+        }
+    };
+
+    $disableBuiltInFollowups('core_action', false);
+    $disableBuiltInFollowups('core_action_custom', true);
+
+    $updateVersion("core_action", 20260430013);
+    Logger::info("Applied patch core_action 20260430013");
+}
+
+if ($checkVersion("core_action") < 20260430014) {
+    Logger::debug("Applying core_action 20260430014 - add CHIM-NFF Teach_Spell followup metadata");
+
+    $addTeachSpellFollowup = function ($tableName, $rewriteCustomRows = false) use ($db) {
+        $rows = $db->fetchAll("
+            SELECT id, metadata
+            FROM public.{$tableName}
+            WHERE LOWER(code_name) = LOWER('ExtCmdCHIMNFF_TeachRightHandSpell')
+        ");
+
+        foreach ($rows as $row) {
+            $rowId = intval($row['id'] ?? 0);
+            if ($rowId <= 0) {
+                continue;
+            }
+
+            $metadata = json_decode(strval($row['metadata'] ?? '{}'), true);
+            if (!is_array($metadata)) {
+                $metadata = [];
+            }
+
+            if ($rewriteCustomRows) {
+                $customConfig = is_array($metadata['custom_config'] ?? null) ? $metadata['custom_config'] : [];
+                if (array_key_exists('followup_enabled', $customConfig)) {
+                    continue;
+                }
+            }
+
+            $metadata['followup'] = [
+                'enabled' => true,
+                'arg_name' => 'target',
+                'prompt' => "Reply with one short in-character line reacting to learning #PLAYER_NAME#'s right-hand spell. Do not ask follow-up questions.",
+            ];
+
+            $metadataJson = json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if (!is_string($metadataJson) || $metadataJson === '') {
+                $metadataJson = '{}';
+            }
+
+            $metadataLiteral = $db->escapeLiteral($metadataJson);
+            $db->execQuery("
+                UPDATE public.{$tableName}
+                SET metadata = {$metadataLiteral}::jsonb,
+                    updated_at = NOW()
+                WHERE id = {$rowId}
+            ");
+        }
+    };
+
+    $addTeachSpellFollowup('core_action', false);
+    $addTeachSpellFollowup('core_action_custom', true);
+
+    $updateVersion("core_action", 20260430014);
+    Logger::info("Applied patch core_action 20260430014");
+}
+
+if ($checkVersion("core_action") < 20260430015) {
+    Logger::debug("Applying core_action 20260430015 - add ReadQuestJournal followup metadata");
+
+    $addReadQuestJournalFollowup = function ($tableName, $rewriteCustomRows = false) use ($db) {
+        $rows = $db->fetchAll("
+            SELECT id, metadata
+            FROM public.{$tableName}
+            WHERE LOWER(code_name) = LOWER('ReadQuestJournal')
+        ");
+
+        foreach ($rows as $row) {
+            $rowId = intval($row['id'] ?? 0);
+            if ($rowId <= 0) {
+                continue;
+            }
+
+            $metadata = json_decode(strval($row['metadata'] ?? '{}'), true);
+            if (!is_array($metadata)) {
+                $metadata = [];
+            }
+
+            if ($rewriteCustomRows) {
+                $customConfig = is_array($metadata['custom_config'] ?? null) ? $metadata['custom_config'] : [];
+                if (array_key_exists('followup_enabled', $customConfig)) {
+                    continue;
+                }
+            }
+
+            $metadata['followup'] = [
+                'enabled' => true,
+                'arg_name' => 'id_quest',
+                'prompt' => 'Reply with one short in-character line about the quest journal result below. Do not ask follow-up questions.',
+            ];
+
+            $metadataJson = json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if (!is_string($metadataJson) || $metadataJson === '') {
+                $metadataJson = '{}';
+            }
+
+            $metadataLiteral = $db->escapeLiteral($metadataJson);
+            $db->execQuery("
+                UPDATE public.{$tableName}
+                SET metadata = {$metadataLiteral}::jsonb,
+                    updated_at = NOW()
+                WHERE id = {$rowId}
+            ");
+        }
+    };
+
+    $addReadQuestJournalFollowup('core_action', false);
+    $addReadQuestJournalFollowup('core_action_custom', true);
+
+    $updateVersion("core_action", 20260430015);
+    Logger::info("Applied patch core_action 20260430015");
+}
+
+if ($checkVersion("game_plugins") < 20260427001) {
+    Logger::debug("Applying game_plugins 20260427001 - create loaded plugin manifest table");
+
+    $db->execQuery(file_get_contents(__DIR__ . "/../data/add_game_plugins.sql"));
+    $db->execQuery("SET search_path TO public");
+
+    $updateVersion("game_plugins", 20260427001);
+    Logger::info("Applied patch game_plugins 20260427001");
 }
 
 // Narrator is now managed via core_narrator table, not core_npc_master
@@ -1839,8 +3400,21 @@ if ($checkTableExists("core_api_badge") > 0 && $checkVersion("core_api_badge") <
         $db->execQuery("UPDATE public.core_api_badge SET label = 'Nano-GPT' WHERE LOWER(label) = 'nano-gpt'");
         $db->execQuery("UPDATE public.core_api_badge SET label = 'DeepL' WHERE LOWER(label) = 'deepl'");
         
-        // Add unique constraint
-        $db->execQuery("ALTER TABLE public.core_api_badge ADD CONSTRAINT core_api_badge_label_unique UNIQUE (label)");
+        // Add unique constraint once; reinstall/update paths can revisit this patch.
+        $db->execQuery("
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM pg_constraint
+                    WHERE conname = 'core_api_badge_label_unique'
+                      AND conrelid = 'public.core_api_badge'::regclass
+                ) THEN
+                    ALTER TABLE public.core_api_badge
+                    ADD CONSTRAINT core_api_badge_label_unique UNIQUE (label);
+                END IF;
+            END $$;
+        ");
         
         // Add case-insensitive index for faster lookups
         $db->execQuery("CREATE INDEX IF NOT EXISTS idx_core_api_badge_label_lower ON public.core_api_badge (LOWER(label))");
@@ -2466,7 +4040,7 @@ try {
             '-'::text AS speaker,
             '-'::text AS listener,
             memory.ts
-           FROM memory
+           FROM public.memory
           WHERE memory.message !~~ 'Dear Diary%'::text AND memory.message <> ''::text and event<>'backgroundlife_diary'::text
         UNION
          SELECT (((('(Context Location:'::text || speech.location) || ') '::text) || speech.speaker) || ': '::text) || speech.speech,
@@ -2475,7 +4049,7 @@ try {
             speech.speaker,
             speech.listener,
             speech.ts
-           FROM speech
+           FROM public.speech
           WHERE speech.speech <> ''::text
         UNION
          SELECT eventlog.data,
@@ -2484,7 +4058,7 @@ try {
             '-'::text AS text,
             '-'::text AS listener,
             eventlog.ts
-           FROM eventlog
+           FROM public.eventlog
           WHERE eventlog.type::text = ANY (ARRAY['death'::character varying::text, 'location'::character varying::text])) subquery
   ORDER BY gamets, ts");
     $updateVersion("memory_v",20251122001);
@@ -2545,6 +4119,10 @@ if ($checkTableExists("sneq_quests_saved") == -1) {
 
 
 
+// Some imported dump-style SQL files clear search_path; restore it before
+// running unqualified late-stage migrations.
+$db->execQuery("SET search_path TO public");
+
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS region text");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS hold text");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS tags text");
@@ -2556,9 +4134,9 @@ $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS refs text"
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS cleared boolean");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP");
 $db->execQuery("
-CREATE OR REPLACE VIEW locations_v
+CREATE OR REPLACE VIEW public.locations_v
 as
-select * FROM  locations
+select * FROM  public.locations
 where
 case 
   when formid=102771 and cleared=FALSE then FALSE -- Dustman's Cairn is closed until The Companions quest, 'Proving Honor' has been activated
@@ -2599,30 +4177,30 @@ if ($checkTableExists("master_packages") == -1) {
 
 $db->execQuery("CREATE INDEX IF NOT EXISTS event_log_type ON public.eventlog USING btree (type)");
 $db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_people_trgm
-ON eventlog
+ON public.eventlog
 USING gin (people gin_trgm_ops)");
 
 $db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_people_trgm2
-ON eventlog
+ON public.eventlog
 USING gin (data gin_trgm_ops)");
 
 $db->execQuery("CREATE INDEX IF NOT EXISTS idx_speech_speaker_trgm
-ON speech
+ON public.speech
 USING gin (speaker gin_trgm_ops)");
 
 $db->execQuery("CREATE INDEX IF NOT EXISTS idx_speech_listener_trgm
-ON speech
+ON public.speech
 USING gin (listener gin_trgm_ops)");
 
 $db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_gamets_pos
-ON eventlog (gamets)
+ON public.eventlog (gamets)
 WHERE gamets > 0");
 
 $db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_gamets_ts_pos
-ON eventlog (gamets DESC, ts DESC)");
+ON public.eventlog (gamets DESC, ts DESC)");
 
 $db->execQuery("CREATE INDEX IF NOT EXISTS   idx_speech_gamets_pos
-ON speech (gamets)
+ON public.speech (gamets)
 WHERE gamets > 0");
 
 
@@ -3886,31 +5464,894 @@ if ($checkVersion("prompts")<20260423001) {
 
 //----------------------------------------------------
 
+if ($checkVersion("core_action")<20260430016) {
+    Logger::debug(" try patch: core_action 20260430016");
+
+    $description = $db->escape("Send a short freeform director instruction to the server-side director mode so it can stage a scene or event.");
+    $returnMessage = $db->escape("The director is preparing a scene instruction.");
+    $parametersJson = $db->escape('{"type":"object","required":["target"],"properties":{"target":{"type":"string","description":"REQUIRED: short freeform director brief describing the scene instruction or event to stage."}}}');
+    $metadataJson = $db->escape('{"source":"functions.php","status":"active","builtin":true,"dispatch":"server_action"}');
+
+    $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            available_to_narrator,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        ) VALUES (
+            'DirectorCommand',
+            'Director_Command',
+            '{$description}',
+            '{$returnMessage}',
+            FALSE,
+            FALSE,
+            TRUE,
+            TRUE,
+            '{$parametersJson}'::jsonb,
+            '{$metadataJson}'::jsonb,
+            FALSE,
+            0,
+            NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $updateVersion("core_action",20260430016);
+    Logger::info("Applied patch core_action 20260430016 - Added DirectorCommand narrator server action");
+}
+
+//----------------------------------------------------
+// Add narrator_bored_prompt to prompts table
+// Version 20260430017
+//----------------------------------------------------
+
+if ($checkVersion("prompts")<20260430017) {
+    Logger::debug("Applying prompts table 20260430017 - Adding narrator_bored_prompt");
+
+    $narratorBoredPrompt = $db->escape(
+        "({HERIKA_NAME} makes one short comment directly to {PLAYER_NAME} about something happening right now in the current scene. Keep it grounded in the present moment, do not ask follow-up questions, and do not continue the conversation.) {TEMPLATE_DIALOG}"
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'narrator_bored_prompt',
+            '$narratorBoredPrompt',
+            'Prompt for narrator bored events directed at the player (contains {HERIKA_NAME}, {PLAYER_NAME}, and {TEMPLATE_DIALOG} placeholders). Used in: main.php narrator bored routing.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $updateVersion("prompts", 20260430017);
+    Logger::info("Applied patch prompts 20260430017 - Added narrator_bored_prompt");
+}
+
+if ($checkVersion("prompts")<20260502004) {
+    Logger::debug("Applying prompts table 20260502004 - Adding managed rechat strict/relaxed prompts");
+
+    $rechatResponsePromptRelaxed1 = $db->escape(
+        "Dialogue turn for {HERIKA_NAME}. Respond naturally to whoever just spoke. Address the previous speaker directly. {TEMPLATE_DIALOG}"
+    );
+    $rechatResponsePromptRelaxed2 = $db->escape(
+        "Dialogue turn for {HERIKA_NAME}. Continue the conversation naturally. Address whoever you're actually responding to. {TEMPLATE_DIALOG}"
+    );
+    $rechatResponsePromptRelaxed3 = $db->escape(
+        "Dialogue turn for {HERIKA_NAME}. Focus on one actor - respond to whoever just spoke. {TEMPLATE_DIALOG}"
+    );
+    $rechatResponsePromptStrict = $db->escape(
+        "Dialogue turn for {HERIKA_NAME}. The previous speaker was {PREVIOUS_SPEAKER}. You must respond directly to {PREVIOUS_SPEAKER}."
+    );
+    $rechatListenerPromptRelaxed = $db->escape(
+        "specify who {HERIKA_NAME} is talking to. Address whoever just spoke - can be any person in the conversation."
+    );
+    $rechatListenerPromptStrict = $db->escape(
+        "specify who {HERIKA_NAME} is talking to. The listener must be exactly {PREVIOUS_SPEAKER}. Address the person who just spoke."
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'rechat_response_prompt_relaxed_1',
+            '$rechatResponsePromptRelaxed1',
+            'Relaxed rechat cue variant 1. Supports placeholders: {HERIKA_NAME}, {TEMPLATE_DIALOG}. Used in: prompts/prompts.php for standard rechat turns.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'rechat_response_prompt_relaxed_2',
+            '$rechatResponsePromptRelaxed2',
+            'Relaxed rechat cue variant 2. Supports placeholders: {HERIKA_NAME}, {TEMPLATE_DIALOG}. Used in: prompts/prompts.php for standard rechat turns.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'rechat_response_prompt_relaxed_3',
+            '$rechatResponsePromptRelaxed3',
+            'Relaxed rechat cue variant 3. Supports placeholders: {HERIKA_NAME}, {TEMPLATE_DIALOG}. Used in: prompts/prompts.php for standard rechat turns.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    for ($i = 1; $i <= 3; $i++) {
+        $db->execQuery("
+            INSERT INTO public.prompts (prompt_key, default_prompt, description)
+            VALUES (
+                'rechat_response_prompt_strict_{$i}',
+                '$rechatResponsePromptStrict',
+                'Strict rechat cue variant {$i}. Supports placeholders: {HERIKA_NAME}, {PREVIOUS_SPEAKER}. Used in: prompts/prompts.php when strict rechat enforcement is enabled.'
+            )
+            ON CONFLICT (prompt_key) DO UPDATE SET
+                default_prompt = EXCLUDED.default_prompt,
+                description = EXCLUDED.description,
+                updated_at = CURRENT_TIMESTAMP
+        ");
+    }
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'rechat_listener_prompt_relaxed',
+            '$rechatListenerPromptRelaxed',
+            'Relaxed listener instruction for rechat JSON responses. Supports placeholders: {HERIKA_NAME}. Used in: functions/json_response.php.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'rechat_listener_prompt_strict',
+            '$rechatListenerPromptStrict',
+            'Strict listener instruction for rechat JSON responses. Supports placeholders: {HERIKA_NAME}, {PREVIOUS_SPEAKER}. Used in: functions/json_response.php when strict rechat enforcement is enabled.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $updateVersion("prompts", 20260502004);
+    Logger::info("Applied patch prompts 20260502004 - Added managed rechat strict/relaxed prompts");
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("utterance_delivery") < 20260502001) {
+    Logger::debug(" try patch: utterance_delivery 20260502001");
+    $b_ok = true;
+
+    try {
+        $db->execQuery("ALTER TABLE public.eventlog ADD COLUMN IF NOT EXISTS utterance_id TEXT;");
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'eventlog' table (utterance_id): " . $e->getMessage());
+    }
+
+    try {
+        $db->execQuery("ALTER TABLE public.eventlog ADD COLUMN IF NOT EXISTS delivery_state TEXT;");
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'eventlog' table (delivery_state): " . $e->getMessage());
+    }
+
+    try {
+        $db->execQuery("ALTER TABLE public.speech ADD COLUMN IF NOT EXISTS utterance_id TEXT;");
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'speech' table (utterance_id): " . $e->getMessage());
+    }
+
+    try {
+        $db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_utterance_id ON public.eventlog (utterance_id);");
+        $db->execQuery("CREATE INDEX IF NOT EXISTS idx_eventlog_delivery_state ON public.eventlog (delivery_state);");
+        $db->execQuery("CREATE INDEX IF NOT EXISTS idx_speech_utterance_id ON public.speech (utterance_id);");
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error creating utterance delivery indexes: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("utterance_delivery", 20260502001);
+        Logger::info("Applied patch utterance_delivery 20260502001");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("general_settings") < 20260502002) {
+    Logger::debug("Applying general_settings 20260502002 - create database-backed general settings table");
+    $b_ok = true;
+
+    try {
+        if ($checkTableExists("general_settings") == -1) {
+            $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/general_settings.sql"));
+            $db->execQuery("SET search_path TO public");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error ensuring 'general_settings' table: " . $e->getMessage());
+    }
+
+    try {
+        $db->execQuery("ALTER TABLE public.general_settings ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';");
+        $db->execQuery("ALTER TABLE public.general_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;");
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'general_settings' table: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260502002);
+        Logger::info("Applied patch general_settings 20260502002");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("core_stt_connector") < 20260502002) {
+    Logger::debug("Applying core_stt_connector 20260502002 - add api badge and URL support");
+    $b_ok = true;
+
+    try {
+        if ($checkTableExists("core_stt_connector") == -1) {
+            $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_stt_connector.sql"));
+            $db->execQuery("SET search_path TO public");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error ensuring 'core_stt_connector' table: " . $e->getMessage());
+    }
+
+    try {
+        $db->execQuery("ALTER TABLE public.core_stt_connector ADD COLUMN IF NOT EXISTS api_badge_id integer;");
+        $db->execQuery("ALTER TABLE public.core_stt_connector ADD COLUMN IF NOT EXISTS url text;");
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'core_stt_connector' table: " . $e->getMessage());
+    }
+
+    try {
+        $fkExists = $db->fetchAll("
+            SELECT 1
+            FROM pg_constraint
+            WHERE conname = 'stt_connector_api_badge_id_fkey'
+            LIMIT 1
+        ");
+        if (!$fkExists) {
+            $db->execQuery("
+                ALTER TABLE public.core_stt_connector
+                ADD CONSTRAINT stt_connector_api_badge_id_fkey
+                FOREIGN KEY (api_badge_id) REFERENCES public.core_api_badge(id)
+            ");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error ensuring 'core_stt_connector' FK: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("core_stt_connector", 20260502002);
+        Logger::info("Applied patch core_stt_connector 20260502002");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("core_itt_connector") < 20260502002) {
+    Logger::debug("Applying core_itt_connector 20260502002 - add api badge and URL support");
+    $b_ok = true;
+
+    try {
+        if ($checkTableExists("core_itt_connector") == -1) {
+            $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_itt_connector.sql"));
+            $db->execQuery("SET search_path TO public");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error ensuring 'core_itt_connector' table: " . $e->getMessage());
+    }
+
+    try {
+        $db->execQuery("ALTER TABLE public.core_itt_connector ADD COLUMN IF NOT EXISTS api_badge_id integer;");
+        $db->execQuery("ALTER TABLE public.core_itt_connector ADD COLUMN IF NOT EXISTS url text;");
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error altering 'core_itt_connector' table: " . $e->getMessage());
+    }
+
+    try {
+        $fkExists = $db->fetchAll("
+            SELECT 1
+            FROM pg_constraint
+            WHERE conname = 'itt_connector_api_badge_id_fkey'
+            LIMIT 1
+        ");
+        if (!$fkExists) {
+            $db->execQuery("
+                ALTER TABLE public.core_itt_connector
+                ADD CONSTRAINT itt_connector_api_badge_id_fkey
+                FOREIGN KEY (api_badge_id) REFERENCES public.core_api_badge(id)
+            ");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error ensuring 'core_itt_connector' FK: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("core_itt_connector", 20260502002);
+        Logger::info("Applied patch core_itt_connector 20260502002");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("general_settings") < 20260502003) {
+    Logger::debug("Applying general_settings 20260502003 - migrate legacy conf values and active STT/ITT selections");
+    $b_ok = true;
+
+    try {
+        $managedDescriptions = chimGetManagedGeneralSettingDescriptions();
+        foreach (chimGetManagedGeneralSettingIds() as $settingId) {
+            $definition = chimGetSchemaDefinition($settingId);
+            $hasLegacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+            if ($hasLegacyValue === "__CHIM_SETTING_MISSING__") {
+                if ($settingId === 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARYS') {
+                    $currentValue = true;
+                } elseif (array_key_exists('default', $definition)) {
+                    $currentValue = $definition['default'];
+                } else {
+                    continue;
+                }
+            } else {
+                $currentValue = $hasLegacyValue;
+            }
+
+            $description = $managedDescriptions[$settingId] ?? chimGetSchemaDescription($settingId);
+            if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+                throw new Exception("Failed writing general setting '{$settingId}'");
+            }
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error migrating legacy global settings: " . $e->getMessage());
+    }
+
+    try {
+        require_once(__DIR__ . "/../lib/core/stt_connector.class.php");
+        $sttConnector = new STTConnector();
+        $sttRow = $sttConnector->ensureLegacySelectionFromGlobals();
+        if ($sttRow && intval($sttRow['id'] ?? 0) > 0) {
+            $description = chimGetManagedGeneralSettingDescriptions()['GLOBAL_STT_CONNECTOR_ID'] ?? 'Active global STT connector.';
+            if (!chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', intval($sttRow['id']), $description)) {
+                throw new Exception("Failed writing GLOBAL_STT_CONNECTOR_ID");
+            }
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error migrating legacy STT connector selection: " . $e->getMessage());
+    }
+
+    try {
+        require_once(__DIR__ . "/../lib/core/itt_connector.class.php");
+        $ittConnector = new ITTConnector();
+        $ittRow = $ittConnector->ensureLegacySelectionFromGlobals();
+        if ($ittRow && intval($ittRow['id'] ?? 0) > 0) {
+            $description = chimGetManagedGeneralSettingDescriptions()['GLOBAL_ITT_CONNECTOR_ID'] ?? 'Active global ITT connector.';
+            if (!chimSetGeneralSetting('GLOBAL_ITT_CONNECTOR_ID', intval($ittRow['id']), $description)) {
+                throw new Exception("Failed writing GLOBAL_ITT_CONNECTOR_ID");
+            }
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error migrating legacy ITT connector selection: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260502003);
+        Logger::info("Applied patch general_settings 20260502003");
+    }
+}
+
+if ($checkVersion("general_settings") < 20260502004) {
+    Logger::debug("Applying general_settings 20260502004 - add strict rechat response setting");
+    $b_ok = true;
+
+    try {
+        $settingId = 'ENFORCE_STRICT_RECHAT_RESPONSE';
+        $definition = chimGetSchemaDefinition($settingId);
+        $hasLegacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+        $currentValue = ($hasLegacyValue === "__CHIM_SETTING_MISSING__")
+            ? ($definition['default'] ?? false)
+            : $hasLegacyValue;
+        $description = chimGetManagedGeneralSettingDescriptions()[$settingId] ?? chimGetSchemaDescription($settingId);
+
+        if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+            throw new Exception("Failed writing general setting '{$settingId}'");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error adding strict rechat response setting: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260502004);
+        Logger::info("Applied patch general_settings 20260502004");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("general_settings") < 20260502005) {
+    Logger::debug("Applying general_settings 20260502005 - add prompt context options setting");
+    $b_ok = true;
+
+    try {
+        $settingId = 'PROMPT_CONTEXT_OPTIONS';
+        $definition = chimGetSchemaDefinition($settingId);
+        $hasLegacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+        $currentValue = ($hasLegacyValue === "__CHIM_SETTING_MISSING__")
+            ? chimGetDefaultPromptContextOptions()
+            : chimNormalizePromptContextOptions($hasLegacyValue);
+        $description = chimGetManagedGeneralSettingDescriptions()[$settingId] ?? chimGetSchemaDescription($settingId);
+
+        if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+            throw new Exception("Failed writing general setting '{$settingId}'");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error adding prompt context options setting: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260502005);
+        Logger::info("Applied patch general_settings 20260502005");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("general_settings") < 20260502006) {
+    Logger::debug("Applying general_settings 20260502006 - add transformation detection setting");
+    $b_ok = true;
+
+    try {
+        $settingId = 'TRANSFORMATION_DETECTION';
+        $definition = chimGetSchemaDefinition($settingId);
+        $hasLegacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+        $currentValue = ($hasLegacyValue === "__CHIM_SETTING_MISSING__")
+            ? ($definition['default'] ?? true)
+            : $hasLegacyValue;
+        $description = chimGetManagedGeneralSettingDescriptions()[$settingId] ?? chimGetSchemaDescription($settingId);
+
+        if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+            throw new Exception("Failed writing general setting '{$settingId}'");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error adding transformation detection setting: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260502006);
+        Logger::info("Applied patch general_settings 20260502006");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("core_action") < 20260502001) {
+    Logger::debug("Applying core_action 20260502001 - hide Drink and Toast while NPC is sitting");
+    $b_ok = true;
+
+    try {
+        $syncSittingRestrictions = function ($tableName) use ($db, $checkTableExists) {
+            if ($checkTableExists($tableName) == -1) {
+                return;
+            }
+
+            $rows = $db->fetchAll("
+                SELECT id, code_name, metadata
+                FROM public.{$tableName}
+                WHERE LOWER(code_name) IN ('drink', 'toast')
+            ");
+
+            foreach ($rows as $row) {
+                $rowId = intval($row['id'] ?? 0);
+                if ($rowId <= 0) {
+                    continue;
+                }
+
+                $metadata = json_decode(strval($row['metadata'] ?? '{}'), true);
+                if (!is_array($metadata)) {
+                    $metadata = [];
+                }
+
+                $requirements = is_array($metadata['requirements'] ?? null) ? $metadata['requirements'] : [];
+                $activityRequirements = is_array($requirements['activity'] ?? null) ? $requirements['activity'] : [];
+                $currentActionNotIn = $activityRequirements['current_action_not_in'] ?? [];
+                if (!is_array($currentActionNotIn)) {
+                    $currentActionNotIn = [$currentActionNotIn];
+                }
+
+                $normalizedValues = [];
+                foreach ($currentActionNotIn as $value) {
+                    $normalizedValue = strtolower(trim(strval($value)));
+                    if ($normalizedValue !== '') {
+                        $normalizedValues[$normalizedValue] = true;
+                    }
+                }
+
+                if (isset($normalizedValues['sitting'])) {
+                    continue;
+                }
+
+                $currentActionNotIn[] = 'sitting';
+                $activityRequirements['current_action_not_in'] = array_values(array_unique(array_map(
+                    function ($value) {
+                        return strtolower(trim(strval($value)));
+                    },
+                    $currentActionNotIn
+                )));
+                $requirements['activity'] = $activityRequirements;
+                $metadata['requirements'] = $requirements;
+
+                $metadataJson = json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                if (!is_string($metadataJson) || $metadataJson === '') {
+                    $metadataJson = '{}';
+                }
+
+                $metadataLiteral = $db->escapeLiteral($metadataJson);
+                $db->execQuery("
+                    UPDATE public.{$tableName}
+                    SET metadata = {$metadataLiteral}::jsonb,
+                        updated_at = NOW()
+                    WHERE id = {$rowId}
+                ");
+            }
+        };
+
+        $syncSittingRestrictions('core_action');
+        $syncSittingRestrictions('core_action_custom');
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error syncing sitting restrictions for Drink/Toast: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("core_action", 20260502001);
+        Logger::info("Applied patch core_action 20260502001");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("core_action") < 20260502002) {
+    Logger::debug("Applying core_action 20260502002 - hide StartRitualCeremony while NPC is sitting");
+    $b_ok = true;
+
+    try {
+        $syncSittingRestrictions = function ($tableName) use ($db, $checkTableExists) {
+            if ($checkTableExists($tableName) == -1) {
+                return;
+            }
+
+            $rows = $db->fetchAll("
+                SELECT id, code_name, metadata
+                FROM public.{$tableName}
+                WHERE LOWER(code_name) = 'startritualceremony'
+            ");
+
+            foreach ($rows as $row) {
+                $rowId = intval($row['id'] ?? 0);
+                if ($rowId <= 0) {
+                    continue;
+                }
+
+                $metadata = json_decode(strval($row['metadata'] ?? '{}'), true);
+                if (!is_array($metadata)) {
+                    $metadata = [];
+                }
+
+                $requirements = is_array($metadata['requirements'] ?? null) ? $metadata['requirements'] : [];
+                $activityRequirements = is_array($requirements['activity'] ?? null) ? $requirements['activity'] : [];
+                $currentActionNotIn = $activityRequirements['current_action_not_in'] ?? [];
+                if (!is_array($currentActionNotIn)) {
+                    $currentActionNotIn = [$currentActionNotIn];
+                }
+
+                $normalizedValues = [];
+                foreach ($currentActionNotIn as $value) {
+                    $normalizedValue = strtolower(trim(strval($value)));
+                    if ($normalizedValue !== '') {
+                        $normalizedValues[$normalizedValue] = true;
+                    }
+                }
+
+                if (isset($normalizedValues['sitting'])) {
+                    continue;
+                }
+
+                $currentActionNotIn[] = 'sitting';
+                $activityRequirements['current_action_not_in'] = array_values(array_unique(array_map(
+                    function ($value) {
+                        return strtolower(trim(strval($value)));
+                    },
+                    $currentActionNotIn
+                )));
+                $requirements['activity'] = $activityRequirements;
+                $metadata['requirements'] = $requirements;
+
+                $metadataJson = json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                if (!is_string($metadataJson) || $metadataJson === '') {
+                    $metadataJson = '{}';
+                }
+
+                $metadataLiteral = $db->escapeLiteral($metadataJson);
+                $db->execQuery("
+                    UPDATE public.{$tableName}
+                    SET metadata = {$metadataLiteral}::jsonb,
+                        updated_at = NOW()
+                    WHERE id = {$rowId}
+                ");
+            }
+        };
+
+        $syncSittingRestrictions('core_action');
+        $syncSittingRestrictions('core_action_custom');
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error syncing sitting restrictions for StartRitualCeremony: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("core_action", 20260502002);
+        Logger::info("Applied patch core_action 20260502002");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("general_settings") < 20260511001) {
+    Logger::debug("Applying general_settings 20260511001 - ensure rechat mode defaults to random for new installs");
+    $b_ok = true;
+
+    try {
+        $settingId = 'RECHAT_MODE';
+        $existingRow = chimGetGeneralSettingRow($settingId);
+
+        if (!$existingRow) {
+            $definition = chimGetSchemaDefinition($settingId);
+            $hasLegacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+
+            if ($hasLegacyValue !== "__CHIM_SETTING_MISSING__") {
+                $currentValue = $hasLegacyValue;
+            } elseif (array_key_exists('OPEN_RECHAT', $GLOBALS)) {
+                $currentValue = !empty($GLOBALS['OPEN_RECHAT']) ? 'conversational' : 'tight';
+            } else {
+                $currentValue = $definition['default'] ?? 'random';
+            }
+
+            $description = chimGetManagedGeneralSettingDescriptions()[$settingId] ?? chimGetSchemaDescription($settingId);
+            if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+                throw new Exception("Failed writing general setting '{$settingId}'");
+            }
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error ensuring default rechat mode setting: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260511001);
+        Logger::info("Applied patch general_settings 20260511001");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("core_action") < 20260502011) {
+    Logger::debug("Applying core_action 20260502011 - sync sitting restrictions for Drink, Toast, and StartRitualCeremony");
+    $b_ok = true;
+
+    try {
+        $syncSittingRestrictions = function ($tableName) use ($db, $checkTableExists) {
+            if ($checkTableExists($tableName) == -1) {
+                return;
+            }
+
+            $targets = [
+                'drink' => ['sitting'],
+                'toast' => ['sitting'],
+                'startritualceremony' => ['sitting'],
+            ];
+
+            $rows = $db->fetchAll("
+                SELECT id, code_name, metadata
+                FROM public.{$tableName}
+                WHERE LOWER(code_name) IN ('drink', 'toast', 'startritualceremony')
+            ");
+
+            foreach ($rows as $row) {
+                $rowId = intval($row['id'] ?? 0);
+                $codeName = strtolower(trim(strval($row['code_name'] ?? '')));
+                if ($rowId <= 0 || !isset($targets[$codeName])) {
+                    continue;
+                }
+
+                $metadata = json_decode(strval($row['metadata'] ?? '{}'), true);
+                if (!is_array($metadata)) {
+                    $metadata = [];
+                }
+
+                $requirements = is_array($metadata['requirements'] ?? null) ? $metadata['requirements'] : [];
+                $activityRequirements = is_array($requirements['activity'] ?? null) ? $requirements['activity'] : [];
+                $currentActionNotIn = $activityRequirements['current_action_not_in'] ?? [];
+                if (!is_array($currentActionNotIn)) {
+                    $currentActionNotIn = [$currentActionNotIn];
+                }
+
+                $normalizedValues = [];
+                foreach ($currentActionNotIn as $value) {
+                    $normalizedValue = strtolower(trim(strval($value)));
+                    if ($normalizedValue !== '') {
+                        $normalizedValues[$normalizedValue] = true;
+                    }
+                }
+
+                $changed = false;
+                foreach ($targets[$codeName] as $requiredValue) {
+                    if (!isset($normalizedValues[$requiredValue])) {
+                        $currentActionNotIn[] = $requiredValue;
+                        $normalizedValues[$requiredValue] = true;
+                        $changed = true;
+                    }
+                }
+
+                if (!$changed) {
+                    continue;
+                }
+
+                $activityRequirements['current_action_not_in'] = array_values(array_unique(array_map(
+                    function ($value) {
+                        return strtolower(trim(strval($value)));
+                    },
+                    $currentActionNotIn
+                )));
+                $requirements['activity'] = $activityRequirements;
+                $metadata['requirements'] = $requirements;
+
+                $metadataJson = json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                if (!is_string($metadataJson) || $metadataJson === '') {
+                    $metadataJson = '{}';
+                }
+
+                $metadataLiteral = $db->escapeLiteral($metadataJson);
+                $db->execQuery("
+                    UPDATE public.{$tableName}
+                    SET metadata = {$metadataLiteral}::jsonb,
+                        updated_at = NOW()
+                    WHERE id = {$rowId}
+                ");
+            }
+        };
+
+        $syncSittingRestrictions('core_action');
+        $syncSittingRestrictions('core_action_custom');
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error syncing higher-version sitting restrictions: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("core_action", 20260502011);
+        Logger::info("Applied patch core_action 20260502011");
+    }
+}
+
+//----------------------------------------------------
+
 // Relationship Evaluation and Initialization Queues
-$db->execQuery("CREATE TABLE IF NOT EXISTS relationship_eval_queue (
+$db->execQuery("CREATE TABLE IF NOT EXISTS public.relationship_eval_queue (
                 id SERIAL PRIMARY KEY,
                 npc_id INTEGER NOT NULL UNIQUE,
                 eval_data JSONB NOT NULL,
                 created_at TIMESTAMP DEFAULT NOW()  )");
 
-$db->execQuery("CREATE TABLE IF NOT EXISTS relationship_init_queue (
+$db->execQuery("CREATE TABLE IF NOT EXISTS public.relationship_init_queue (
                 id SERIAL PRIMARY KEY,
                 npc_id INTEGER NOT NULL UNIQUE,
                 init_data JSONB NOT NULL,
                 created_at TIMESTAMP DEFAULT NOW()  )");
 
 $db->execQuery("
-            ALTER TABLE relationship_init_queue
+            ALTER TABLE public.relationship_init_queue
             ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0
         ");
 $db->execQuery("
-            ALTER TABLE relationship_init_queue
+            ALTER TABLE public.relationship_init_queue
             ADD COLUMN IF NOT EXISTS last_error TEXT
         ");
 $db->execQuery("
-            ALTER TABLE relationship_eval_queue
+            ALTER TABLE public.relationship_eval_queue
             ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0
         ");
+
+//----------------------------------------------------
+// Refresh base bio template relationship metadata from canonical SQL
+// Version 20260505003
+//----------------------------------------------------
+if ($checkVersion("bio_templates_relationship_refresh") < 20260505003) {
+    Logger::debug("Applying bio_templates_relationship_refresh 20260505003");
+    try {
+        $sqlFile = __DIR__ . "/../data/relationship_metadata.sql";
+        if (file_exists($sqlFile)) {
+            $sqlContent = file_get_contents($sqlFile);
+            if ($sqlContent !== false && strlen($sqlContent) > 0) {
+                $db->execQuery($sqlContent);
+                $db->execQuery("
+                    UPDATE public.bio_templates_custom
+                       SET relationships = NULL
+                     WHERE relationships IS NOT NULL
+                       AND btrim(relationships) <> ''
+                       AND left(ltrim(relationships), 1) <> '{'
+                ");
+                $updateVersion("bio_templates_relationship_refresh", 20260505003);
+                Logger::info("Applied patch bio_templates_relationship_refresh 20260505003");
+            } else {
+                Logger::warn("relationship metadata file is empty: " . $sqlFile);
+            }
+        } else {
+            Logger::warn("relationship metadata file not found: " . $sqlFile);
+        }
+    } catch (Exception $e) {
+        Logger::error("Error applying bio_templates relationship refresh: " . $e->getMessage());
+    }
+}
+
 Logger::info(__FILE__." update file processed");
 
 //----------------------------------------------------

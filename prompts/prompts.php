@@ -155,22 +155,35 @@ $PROMPTS=array(
     ],
 
     "inputtext"=>[
-        "cue"=>[
-            //"$TEMPLATE_ACTION {$GLOBALS["HERIKA_NAME"]} replies to {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}", // Response maybe is not a reply, AI can talk to another NPC
-            "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
-        ]
+        "cue"=>(function () use ($TEMPLATE_ACTION) {
+            if (function_exists('chimIsStrictDirectedPlayerResponseContext') && chimIsStrictDirectedPlayerResponseContext()) {
+                return chimLoadManagedRechatCuePrompts();
+            }
+
+            return [
+                "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+            ];
+        })()
             // Prompt is implicit
 
     ],
     "narrator_inputtext"=>[
-        "cue"=>[
-            "The Narrator replies directly to {$GLOBALS["PLAYER_NAME"]} in plain spoken dialogue only. {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
-        ]
+        "cue"=>(function () use ($TEMPLATE_ACTION) {
+            return [
+                "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+            ];
+        })()
     ],
     "inputtext_s"=>[
-        "cue"=>[
-            "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
-        ],
+        "cue"=>(function () use ($TEMPLATE_ACTION) {
+            if (function_exists('chimIsStrictDirectedPlayerResponseContext') && chimIsStrictDirectedPlayerResponseContext()) {
+                return chimLoadManagedRechatCuePrompts();
+            }
+
+            return [
+                "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+            ];
+        })(),
         "extra"=>["mood"=>"whispering"]
     ],
     // Database Prompt (Memory)
@@ -187,10 +200,8 @@ $PROMPTS=array(
             "GetDateTime"=>"({$GLOBALS["HERIKA_NAME"]} answers with the current date and time in short sentence){$GLOBALS["TEMPLATE_DIALOG"]}",
             "MoveTo"=>"({$GLOBALS["HERIKA_NAME"]} talks, eg: makes a comment about movement to the destination){$GLOBALS["TEMPLATE_DIALOG"]}",
             "CheckInventory"=>"({$GLOBALS["HERIKA_NAME"]} talks about inventory and backpack items){$GLOBALS["TEMPLATE_DIALOG"]}",
-            "Inspect"=>"({$GLOBALS["HERIKA_NAME"]} talks about items inspected, short speech){$GLOBALS["TEMPLATE_DIALOG"]}",
             "ReadQuestJournal"=>"({$GLOBALS["HERIKA_NAME"]} talks about quests they have read in the quest journal){$GLOBALS["TEMPLATE_DIALOG"]}",
             "TravelTo"=>"({$GLOBALS["HERIKA_NAME"]} talks about the journey){$GLOBALS["TEMPLATE_DIALOG"]}",
-            "InspectSurroundings"=>"({$GLOBALS["HERIKA_NAME"]} talks about seen actors, or to the actor its looking for){$GLOBALS["TEMPLATE_DIALOG"]}",
             "GiveGoldTo"=>"({$GLOBALS["HERIKA_NAME"]} Talks about coins or gold given.{$GLOBALS["TEMPLATE_DIALOG"]}",
             "Brawl"=>"({$GLOBALS["HERIKA_NAME"]} {$GLOBALS["TEMPLATE_DIALOG"]}"
             
@@ -218,29 +229,15 @@ $PROMPTS=array(
     // Database Prompt (Rechat)
     // Encourages natural multi-party conversation - NPCs can address each other directly
     "rechat"=>[ 
-        "cue"=>[
-            ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]==0)
-                ?"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Respond naturally to whoever just spoke. Address the previous speaker directly. {$GLOBALS["TEMPLATE_DIALOG"]}"
-                :"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Respond to the previous speaker directly. {$GLOBALS["TEMPLATE_DIALOG"]}",
-            ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]==0)
-                ?"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Continue the conversation naturally. Address whoever you're actually responding to. {$GLOBALS["TEMPLATE_DIALOG"]}"
-                :"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Continue naturally. {$GLOBALS["TEMPLATE_DIALOG"]}",
-            ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]==0)
-                ?"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Focus on one actor - respond to whoever just spoke. {$GLOBALS["TEMPLATE_DIALOG"]}"
-                :"Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Focus on one actor. {$GLOBALS["TEMPLATE_DIALOG"]}"
-        ]
+        "cue"=>chimLoadManagedRechatCuePrompts()
         
     ],
     "continue"=>[
-        "cue"=>[
-            "Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Continue the ongoing discussion. Build on what was just said. {$GLOBALS["TEMPLATE_DIALOG"]}"
-        ],
+        "cue"=>chimLoadManagedContinueCuePrompts("continue"),
         "player_request"=>["{$GLOBALS["PLAYER_NAME"]} gestures for {$GLOBALS['HERIKA_NAME']} to continue."]
     ],
     "continue_group"=>[
-        "cue"=>[
-            "Dialogue turn for {$GLOBALS['HERIKA_NAME']}. Continue the ongoing group discussion. Build on what was just said and stay with the current topic. {$GLOBALS["TEMPLATE_DIALOG"]}"
-        ],
+        "cue"=>chimLoadManagedContinueCuePrompts("continue_group"),
         "player_request"=>["{$GLOBALS["PLAYER_NAME"]} gestures for the conversation to continue."]
     ],
     // Database Prompt (Diary)
@@ -308,7 +305,7 @@ $PROMPTS=array(
     ],
     // Database Prompt (Welcome)
     "welcome"=>[ 
-        "cue"=>["{$gameRequest[3]}. {$GLOBALS["HERIKA_NAME"]} should Inspect surroundings to see who is in scene. Write {$GLOBALS["HERIKA_NAME"]}'s prose/narration."],
+        "cue"=>["{$gameRequest[3]}. {$GLOBALS["HERIKA_NAME"]} should identify who is in the scene and write {$GLOBALS["HERIKA_NAME"]}'s prose/narration."],
         "player_request"=>["The Narrator: {$gameRequest[3]}"],
     ],
     "cheatmode"=>[

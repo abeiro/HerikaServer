@@ -27,7 +27,6 @@ $ENABLED_FUNCTIONS_LOCAL=[
     'StopWalk',
     'TravelTo',
     'SearchMemory',
-    'GiveItemToPlayer',
     'FollowPlayer',
     'ComeCloser',
     'Brawl',
@@ -68,14 +67,13 @@ $F_TRANSLATIONS_LOCAL["StopWalk"]="Stoppt sofort alle Handlungen von {$GLOBALS["
 $F_TRANSLATIONS_LOCAL["TravelTo"]="Nur verwenden, wenn {$GLOBALS["PLAYER_NAME"]} es ausdrücklich anordnet. Führt {$GLOBALS["PLAYER_NAME"]} in eine Stadt.";
 $F_TRANSLATIONS_LOCAL["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} versucht sich zu erinnern. Antwort erfolgt in Hashtags.";
 $F_TRANSLATIONS_LOCAL["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} bleibt an der aktuellen Stelle stehen und wartet.";
-$F_TRANSLATIONS_LOCAL["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} gibt {$GLOBALS["PLAYER_NAME"]} einen Gegenstand (Ziel = Gegenstand).";
 $F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["HERIKA_NAME"]} nimmt eine bestimmte Menge Gold von {$GLOBALS["PLAYER_NAME"]}, sobald {$GLOBALS["PLAYER_NAME"]} zustimmt.";
 $F_TRANSLATIONS_LOCAL["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} folgt {$GLOBALS["PLAYER_NAME"]}.";
 $F_TRANSLATIONS_LOCAL["ComeCloser"]="{$GLOBALS["HERIKA_NAME"]} nähert sich {$GLOBALS["PLAYER_NAME"]}.";
 $F_TRANSLATIONS_LOCAL["Brawl"]="{$GLOBALS["HERIKA_NAME"]} startet einen nicht-tödlichen Kampf mit einer anderen Person und nutzt dabei Waffen.";
 $F_TRANSLATIONS_LOCAL["ReturnBackHome"]="{$GLOBALS["HERIKA_NAME"]} reist zurück nach Hause bzw. an ihren Ursprungsort.";
-$F_TRANSLATIONS_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gibt einer einzelnen Person/einem NPC etwas Gold. Die Menge ergibt sich aus dem Dialog und muss nicht angegeben werden.";
-$F_TRANSLATIONS_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gibt einer einzelnen Person/einem NPC einen Gegenstand. Was genau gegeben wird, ergibt sich aus dem Dialog.";
+$F_TRANSLATIONS_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gibt einer einzelnen Person/einem NPC oder {$GLOBALS["PLAYER_NAME"]} Gold. Empfänger und Betrag müssen angegeben werden.";
+$F_TRANSLATIONS_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gibt einer einzelnen Person/einem NPC oder {$GLOBALS["PLAYER_NAME"]} einen Gegenstand. Empfänger und exakter Gegenstandsname müssen angegeben werden.";
 $F_TRANSLATIONS_LOCAL["GoToSleep"]="{$GLOBALS["HERIKA_NAME"]} legt sich schlafen.";
 $F_TRANSLATIONS_LOCAL["UseSoulGaze"]="Verwendet den Zauber Seelenschau. Dadurch kann {$GLOBALS["HERIKA_NAME"]} die Umgebung durch die Augen von {$GLOBALS["PLAYER_NAME"]} sehr genau wahrnehmen. Der Zauber stört allerdings den Anwender etwas.";
 $F_TRANSLATIONS_LOCAL["CastSpell"]="{$GLOBALS["HERIKA_NAME"]} wirkt einen Zauber auf einen Zielakteur. Muss den Zaubernamen aus <spells> und den Namen des Zielakteurs angeben. Verwende 'self' als Ziel für selbstgerichtete Zauber.";
@@ -109,8 +107,7 @@ $F_RETURNMESSAGES_LOCAL["StopWalk"]="Stoppt sofort alle Handlungen von {$GLOBALS
 $F_RETURNMESSAGES_LOCAL["TravelTo"]="{$GLOBALS["HERIKA_NAME"]} reist nach #TARGET#.";
 $F_RETURNMESSAGES_LOCAL["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} versucht sich zu erinnern. Antworte nur kurz wie 'Lasst mich nachdenken' und warte dann.";
 $F_RETURNMESSAGES_LOCAL["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} bleibt an dieser Stelle stehen und wartet.";
-$F_RETURNMESSAGES_LOCAL["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} hat #TARGET# an {$GLOBALS["PLAYER_NAME"]} gegeben. Wenn das ein Handel war, könnte TakeGoldFromPlayer nötig sein.";
-$F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["PLAYER_NAME"]} hat #TARGET# Goldstücke an {$GLOBALS["HERIKA_NAME"]} gegeben. Wenn das ein Handel war, könnte GiveItemToPlayer nötig sein.";
+$F_RETURNMESSAGES_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["PLAYER_NAME"]} hat #TARGET# Goldstücke an {$GLOBALS["HERIKA_NAME"]} gegeben. Wenn das ein Handel war, könnte GiveItemTo nötig sein.";
 $F_RETURNMESSAGES_LOCAL["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} folgt {$GLOBALS["PLAYER_NAME"]}.";
 $F_RETURNMESSAGES_LOCAL["Brawl"]="{$GLOBALS["HERIKA_NAME"]} greift #TARGET# in einem nicht-tödlichen Kampf an.";
 $F_RETURNMESSAGES_LOCAL["ReturnBackHome"]="{$GLOBALS["HERIKA_NAME"]} kehrt nach Hause zurück.";
@@ -152,9 +149,8 @@ $F_NAMES_LOCAL["StopWalk"]="StehenBleiben";
 $F_NAMES_LOCAL["TravelTo"]="ReisenNach";
 $F_NAMES_LOCAL["SearchMemory"]="Erinnern";
 $F_NAMES_LOCAL["WaitHere"]="HierWarten";
-$F_NAMES_LOCAL["GiveItemToPlayer"]="GegenstandAnSpielerGeben";
 $F_NAMES_LOCAL["TakeGoldFromPlayer"]="GoldVonSpielerNehmen";
-$F_NAMES_LOCAL["FollowPlayer"]="SpielerFolgen";
+$F_NAMES_LOCAL["FollowPlayer"]="Folge{$GLOBALS["PLAYER_NAME"]}";
 $F_NAMES_LOCAL["ComeCloser"]="NäherKommen";
 $F_NAMES_LOCAL["Brawl"]="Kämpfen";
 $F_NAMES_LOCAL["ReturnBackHome"]="NachHauseGehen";
@@ -520,20 +516,6 @@ $GLOBALS["FUNCTIONS"] = [
                     ]
                 ],
                 "required" =>[""]
-            ]
-    ],
-    [
-            "name" => $F_NAMES_LOCAL["GiveItemToPlayer"],
-            "description" => $F_TRANSLATIONS_LOCAL["GiveItemToPlayer"],
-            "parameters" => [
-                "type" => "object",
-                "properties" => [
-                    "target" => [
-                        "type" => "string",
-                        "description" => "",
-                    ]
-                ],
-                "required" =>["target"]
             ]
     ],
     [

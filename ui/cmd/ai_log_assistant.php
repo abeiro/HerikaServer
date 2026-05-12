@@ -7,11 +7,16 @@
 header('Content-Type: application/json');
 
 $enginePath = dirname(__DIR__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
 
-$db = new sql();
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
+
+$db = $GLOBALS["db"];
 
 // Get request data
 $requestData = json_decode(file_get_contents('php://input'), true);
@@ -269,10 +274,10 @@ Response queued in `responselog` table, fetched by game mod via `comm.php`
 | `output_from_llm.log` | Raw LLM responses with timestamps |
 | `context_sent_to_llm.log` | Full context sent to LLM |
 | `context_sent_to_llm_fast.log` | Context for fast/helper calls |
-| `ouput_to_plugin.log` | Data sent back to game mod |
+| `output_to_plugin.log` | Data sent back to game mod |
 | `stt.log` | Speech-to-text processing |
 | `vision.log` | Vision/image processing |
-| `debugstream.log` | Streaming response debug data |
+| `debugStream.log` | Streaming response debug data |
 | `monitor.log` | Service monitor logs |
 | `service.log` | Background service logs |
 

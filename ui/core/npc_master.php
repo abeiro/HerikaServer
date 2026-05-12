@@ -2,9 +2,14 @@
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . "../../";
 
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
@@ -13,8 +18,6 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.p
 $GLOBALS["ENGINE_PATH"]=$enginePath;
 
 require_once("{$enginePath}/lib/core/npc_master.class.php");
-
-$CONF_SAMPLE_VARS=extract_assignments("$enginePath/conf/conf.php");
 
 
 //function renderSelect($obj, $fieldName, $labelText, $selectedValue = "") 
@@ -434,6 +437,52 @@ if (!function_exists('chimUiAutoLockProfileEnabled')) {
     }
 }
 
+if (!function_exists('chimDecodeRelationshipSeedValue')) {
+    function chimDecodeRelationshipSeedValue($value): ?array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '' || $trimmed[0] !== '{') {
+            return null;
+        }
+
+        $decoded = json_decode($trimmed, true);
+        return is_array($decoded) ? $decoded : null;
+    }
+}
+
+if (!function_exists('chimMergeRelationshipSeedIntoExtendedData')) {
+    function chimMergeRelationshipSeedIntoExtendedData(array &$data, $seedSource): void
+    {
+        $relationshipSeed = chimDecodeRelationshipSeedValue($seedSource);
+        if (!is_array($relationshipSeed)) {
+            return;
+        }
+
+        $extendedData = [];
+        if (!empty($data['extended_data'])) {
+            if (is_array($data['extended_data'])) {
+                $extendedData = $data['extended_data'];
+            } else {
+                $decoded = json_decode((string)$data['extended_data'], true);
+                if (is_array($decoded)) {
+                    $extendedData = $decoded;
+                }
+            }
+        }
+
+        $extendedData['relationships'] = $relationshipSeed;
+        $data['extended_data'] = json_encode($extendedData, JSON_UNESCAPED_UNICODE);
+    }
+}
+
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
     if (chimUiAutoLockProfileEnabled()) {
@@ -539,28 +588,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
             $_POST['lock_profile'] = 1;
         }
         if ($id <= 0) {
-            // Create new NPC and return ID
-            $allowed = [
-                'npc_name','npc_favorite','lock_profile','prompt_head','npc_static_bio','oghma_knowledge_tags','emote_moods','personality','relationships','occupation','appearance','skills','speechstyle','goals','voiceid','metadata','extended_data','gender','race','refid','profile_id','dynamic_profile','gamets_last_updated','base','core','tags'
-            ];
-            $cols = [];
-            $vals = [];
-            foreach ($allowed as $k){
-                if (!array_key_exists($k, $_POST)) continue;
-                $v = $_POST[$k];
-                if (in_array($k, ['npc_favorite','lock_profile','dynamic_profile'], true)) { $v = ($v==='1'||$v===1||$v===true)?1:0; }
-                $cols[] = $k;
-                $vals[] = "'".$GLOBALS['db']->escape((string)$v)."'";
-            }
-            // md5 of npc_name if present
-            if (!empty($_POST['npc_name'])){
-                $cols[] = 'md5';
-                $vals[] = "'".md5((string)$_POST['npc_name'])."'";
-            }
-            if (empty($cols)) { echo json_encode(["ok"=>false, "error"=>"No fields to insert"]); exit; }
-            $sql = "INSERT INTO core_npc_master (".implode(',', $cols).") VALUES (".implode(',', $vals).") RETURNING id";
-            $row = $GLOBALS['db']->fetchOne($sql);
-            $newId = is_array($row) ? ($row['id'] ?? null) : null;
+            $newId = $npc->create($_POST);
             if (!$newId) { echo json_encode(["ok"=>false, "error"=>"Insert failed"]); exit; }
             echo json_encode(["ok"=>true, "id"=>$newId]);
         } else {
@@ -822,7 +850,6 @@ if (isset($_GET["export"]) && is_numeric($_GET["export"])) {
         'oghma_knowledge_tags' => $exportRow['oghma_knowledge_tags'] ?? '',
         'emote_moods' => $exportRow['emote_moods'] ?? '',
         'personality' => $exportRow['personality'] ?? '',
-        'relationships' => $exportRow['relationships'] ?? '',
         'occupation' => $exportRow['occupation'] ?? '',
         'appearance' => $exportRow['appearance'] ?? '',
         'skills' => $exportRow['skills'] ?? '',
@@ -876,7 +903,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_npc"])) {
         // Build NPC data from import
         $npcData = [];
         $allowedFields = ['npc_favorite', 'lock_profile', 'prompt_head', 'npc_static_bio', 
-            'oghma_knowledge_tags', 'emote_moods', 'personality', 'relationships', 
+            'oghma_knowledge_tags', 'emote_moods', 'personality',
             'occupation', 'appearance', 'skills', 'speechstyle', 'goals', 'voiceid',
             'gender', 'race', 'dynamic_profile', 'base', 'core', 'tags'];
         
@@ -893,6 +920,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_npc"])) {
         if (isset($importData['extended_data']) && is_array($importData['extended_data'])) {
             $npcData['extended_data'] = json_encode($importData['extended_data']);
         }
+        chimMergeRelationshipSeedIntoExtendedData($npcData, $importData['relationships'] ?? null);
         
         if ($targetId > 0) {
             // Import to existing NPC
@@ -1542,9 +1570,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         if ($profileId !== null) $data['profile_id'] = $profileId;
         if ($includeCore) { $data['core'] = $r['core'] ?? null; }
         if ($includeExt) {
-            foreach (['npc_static_bio','personality','appearance','relationships','occupation','skills','speechstyle','goals'] as $f) {
+            foreach (['npc_static_bio','personality','appearance','occupation','skills','speechstyle','goals'] as $f) {
                 $data[$f] = $r[$f] ?? null;
             }
+            chimMergeRelationshipSeedIntoExtendedData($data, $r['relationships'] ?? null);
         }
         if ($includeOgh) { $data['oghma_knowledge_tags'] = $r['oghma_knowledge_tags'] ?? null; }
         if ($includeVM) {
@@ -2056,15 +2085,42 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 
         
 
+        <style>
+            #relationship-editor-section {
+                margin-top: 0;
+            }
+
+            #relationship-editor-section > details.metadata-skills-view {
+                border: none !important;
+                border-radius: 0 !important;
+                padding: 0 !important;
+                background: transparent !important;
+                margin-top: 0 !important;
+                box-shadow: none !important;
+            }
+
+            #relationship-editor-section > details.metadata-skills-view > summary {
+                display: none !important;
+            }
+
+            #relationship-editor-section > details.metadata-skills-view > small.hint {
+                display: none !important;
+            }
+        </style>
+
         <div class="form-item">
-            <label for="relationships">Relationships</label>
-            <textarea id="relationships" name="relationships" placeholder="Key allies, rivals, factions, and opinions."><?= htmlspecialchars($editItem["relationships"] ?? "") ?></textarea>
-            <small class="hint">Named entities the NPC knows and how they feel about them.</small>
+            <label>Relationships</label>
         </div>
 
         <?php if (file_exists(__DIR__."/../../ext/relationship_system/relationship_editor.php")) {
             include(__DIR__."/../../ext/relationship_system/relationship_editor.php");
         } ?>
+
+        <div class="form-item">
+            <label for="relationships">Relationships (Deprecated)</label>
+            <textarea id="relationships" name="relationships" placeholder="Legacy relationship text."><?= htmlspecialchars($editItem["relationships"] ?? "") ?></textarea>
+            <small class="hint">This legacy text field is still editable, but it is no longer used in prompting. Prompt relationship context comes from Relationships above.</small>
+        </div>
 
         <div class="form-item">
             <label for="occupation">Occupation</label>
@@ -2418,6 +2474,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             $reservedKeys = [ 'middle_term_enabled', 'individual_memory_enabled', 'auto_diary_enabled', 'auto_diary_wait_enabled', 'chim_core_migrated', 'salutation_after_a_while'];
             $extendedDataRaw = isset($editItem["extended_data"]) ? $editItem["extended_data"] : '{}';
             $extendedDataObj = json_decode($extendedDataRaw, true) ?: [];
+            $npcOverrideCatalog = chimGetOverrideableGeneralSettingsCatalog();
             $currentOverrides = [];
             $systemFields = [];
             foreach ($extendedDataObj as $key => $value) {
@@ -2430,7 +2487,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             $overrideEditorConfig = [
                 'mode' => 'npc',
                 'fieldName' => 'extended_data',
-                'allowedSettings' => ['TTSFUNCTION','RECHAT_H','RECHAT_P','RECHAT_ALLOW_ACTIONS','CORE_LANG','MAX_WORDS_LIMIT','DIARY_PROMPT','DIARY_COOLDOWN','COMBAT_BARK_COOLDOWN','OGHMA_INFINIUM','OGHMA_AMOUNT','CONTEXT_HISTORY','CONTEXT_HISTORY_DIARY','CONTEXT_HISTORY_DYNAMIC_PROFILE','QUEST_COMMENT','QUEST_COMMENT_CHANCE','BORED_EVENT','BORED_EVENT_SERVERSIDE','LANG_LLM_XTTS'],
+                'settingsCatalog' => $npcOverrideCatalog,
                 'reservedKeys' => $reservedKeys,
                 'currentData' => $currentOverrides,
                 'systemFields' => $systemFields,
@@ -3631,15 +3688,29 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         const d = j.data || {};
         function setVal(id, val){ const el = doc ? doc.getElementById(id) : null; if (el) el.value = String(val); }
         function applyIfFilled(id, val){ if (val==null) return; const s=String(val).trim(); if (!s) return; setVal(id, s); }
+        function applyRelationshipSeed(val){
+          if (val == null || !doc) return;
+          const raw = String(val).trim();
+          if (!raw || raw.charAt(0) !== '{') return;
+          let parsed = null;
+          try { parsed = JSON.parse(raw); } catch(_e) { parsed = null; }
+          if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return;
+          const ext = doc.getElementById('extended_data');
+          if (!ext) return;
+          let obj = {};
+          try { obj = JSON.parse(String(ext.value||'')||'{}')||{}; } catch(_e) { obj = {}; }
+          obj.relationships = parsed;
+          ext.value = JSON.stringify(obj);
+        }
         applyIfFilled('core', d.core);
         applyIfFilled('npc_static_bio', d.npc_static_bio);
         applyIfFilled('personality', d.personality);
         applyIfFilled('appearance', d.appearance);
-        applyIfFilled('relationships', d.relationships);
         applyIfFilled('occupation', d.occupation);
         applyIfFilled('skills', d.skills);
         applyIfFilled('speechstyle', d.speechstyle);
         applyIfFilled('goals', d.goals);
+        applyRelationshipSeed(d.relationships);
         applyIfFilled('oghma_knowledge_tags', d.oghma_knowledge_tags);
         applyIfFilled('voiceid', d.voiceid);
         applyIfFilled('gender', d.gender);
@@ -4256,10 +4327,25 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       const doc = iframe && iframe.contentDocument; if (!doc) return;
       function setVal(id, val){ const el = doc.getElementById(id); if (el) el.value = val==null?'':String(val); }
       function setChk(id, on){ const el = doc.getElementById(id); if (el && el.type==='checkbox') el.checked = !!on; }
+      function applyRelationshipSeed(val){
+        if (val == null) return;
+        const raw = String(val).trim();
+        if (!raw || raw.charAt(0) !== '{') return;
+        let parsed = null;
+        try { parsed = JSON.parse(raw); } catch(_e) { parsed = null; }
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return;
+        const ext = doc.getElementById('extended_data');
+        if (!ext) return;
+        let obj = {};
+        try { obj = JSON.parse(String(ext.value||'')||'{}')||{}; } catch(_e) { obj = {}; }
+        obj.relationships = parsed;
+        ext.value = JSON.stringify(obj);
+      }
       setVal('npc_name', d.npc_name||'');
       if (incCore && incCore.checked) setVal('core', d.core||'');
       if (incExt && incExt.checked) {
-        setVal('npc_static_bio', d.npc_static_bio||''); setVal('personality', d.personality||''); setVal('appearance', d.appearance||''); setVal('relationships', d.relationships||''); setVal('occupation', d.occupation||''); setVal('skills', d.skills||''); setVal('speechstyle', d.speechstyle||''); setVal('goals', d.goals||'');
+        setVal('npc_static_bio', d.npc_static_bio||''); setVal('personality', d.personality||''); setVal('appearance', d.appearance||''); setVal('occupation', d.occupation||''); setVal('skills', d.skills||''); setVal('speechstyle', d.speechstyle||''); setVal('goals', d.goals||'');
+        applyRelationshipSeed(d.relationships||'');
       }
       if (incOgh && incOgh.checked) setVal('oghma_knowledge_tags', d.oghma_knowledge_tags||'');
       if (incVM && incVM.checked) { setVal('voiceid', d.voiceid||''); setVal('gender', d.gender||''); setVal('race', d.race||''); setVal('refid', d.refid||''); }

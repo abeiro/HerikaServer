@@ -6,7 +6,7 @@
 // $overrideEditorConfig = [
 //     'mode' => 'npc' | 'profile',  // Which mode to operate in
 //     'fieldName' => 'extended_data' | 'metadata',  // Which field to save to
-//     'allowedSettings' => [...],  // Array of setting keys to allow
+//     'settingsCatalog' => [...],  // Setting schema keyed by runtime override key
 //     'reservedKeys' => [...],  // Keys that should not appear in UI (only for npc mode)
 //     'currentData' => [],  // Current override data
 //     'systemFields' => [],  // System-managed fields (only for npc mode)
@@ -18,7 +18,7 @@ if (!isset($overrideEditorConfig)) {
 
 $mode = $overrideEditorConfig['mode'] ?? 'npc';
 $fieldName = $overrideEditorConfig['fieldName'] ?? 'extended_data';
-$allowedSettings = $overrideEditorConfig['allowedSettings'] ?? [];
+$settingsCatalog = $overrideEditorConfig['settingsCatalog'] ?? [];
 $reservedKeys = $overrideEditorConfig['reservedKeys'] ?? [];
 $currentData = $overrideEditorConfig['currentData'] ?? [];
 $systemFields = $overrideEditorConfig['systemFields'] ?? [];
@@ -47,121 +47,7 @@ function ovr_icon_for(string $key): string {
     return '⚙️';
 }
 
-// Full schema definition
-$fullSchema = [
-    'TTSFUNCTION' => [
-        'type' => 'select',
-        'values' => ['none','melotts','xtts-fastapi','xvasynth','azure','11labs','openai','kokoro','koboldcpp','zonos_gradio','piper-tts','mimic3','deepgram','cartesia'],
-        'description' => 'Text-to-Speech service. Overrides global TTS selection.',
-        'category' => 'Core Settings'
-    ],
-    'RECHAT_H' => [
-        'type' => 'integer',
-        'description' => 'Rechat Rounds. Higher values increase back-and-forth conversation. 1 = 1 Round | 2 = 2 Rounds | 3 = 3 Rounds etc',
-        'category' => 'Rechat'
-    ],
-    'RECHAT_P' => [
-        'type' => 'integer',
-        'description' => 'Rechat Probability. Chance of continuing an ongoing conversation. 0 = Never | 50 = 50% | 100 = Always',
-        'category' => 'Rechat'
-    ],
-    'RECHAT_ALLOW_ACTIONS' => [
-        'type' => 'boolean',
-        'description' => 'Allow triggering actions during Rechat conversations.',
-        'category' => 'Rechat'
-    ],
-    'CORE_LANG' => [
-        'type' => 'select',
-        'values' => ['','en','de','es','fr','jp'],
-        'description' => 'Custom Language. Leave blank for English.',
-        'category' => 'Core Settings'
-    ],
-    'ENFORCE_ACTIONS_PROMPT' => [
-        'type' => 'boolean',
-        'description' => 'Encourage using actions more often.',
-        'category' => 'Core Settings'
-    ],
-    'MAX_WORDS_LIMIT' => [
-        'type' => 'integer',
-        'description' => 'Enforce a word limit for responses. Leave as 0 for no limit.',
-        'category' => 'Core Settings'
-    ],
-    'DIARY_PROMPT' => [
-        'type' => 'longstring',
-        'description' => 'Custom instructions for generating diary entries.',
-        'category' => 'Diary'
-    ],
-    'DIARY_COOLDOWN' => [
-        'type' => 'integer',
-        'description' => 'Cooldown in seconds between diary entries to prevent spam.',
-        'category' => 'Diary'
-    ],
-    'COMBAT_BARK_COOLDOWN' => [
-        'type' => 'integer',
-        'description' => 'Cooldown in seconds between combat barks. Global across all NPCs in the party.',
-        'category' => 'Combat'
-    ],
-    'OGHMA_INFINIUM' => [
-        'type' => 'boolean',
-        'description' => 'Enable Oghma knowledge lookups. MiniMe-T5 is auto-detected when the service is running.',
-        'category' => 'Oghma'
-    ],
-    'OGHMA_AMOUNT' => [
-        'type' => 'select',
-        'values' => ['1','2','3'],
-        'description' => 'Number of Oghma keywords to extract from each response.',
-        'category' => 'Oghma'
-    ],
-    'CONTEXT_HISTORY' => [
-        'type' => 'integer',
-        'description' => 'Amount of context history (dialogue and events) sent to LLM. Higher = more tokens used. Recommend max 100',
-        'category' => 'Context History'
-    ],
-    'CONTEXT_HISTORY_DIARY' => [
-        'type' => 'integer',
-        'description' => 'Amount of context history for diary entries. If 0, uses regular CONTEXT_HISTORY value.',
-        'category' => 'Context History'
-    ],
-    'CONTEXT_HISTORY_DYNAMIC_PROFILE' => [
-        'type' => 'integer',
-        'description' => 'Amount of context history for dynamic profile updates. If 0, uses regular CONTEXT_HISTORY value.',
-        'category' => 'Context History'
-    ],
-    'QUEST_COMMENT' => [
-        'type' => 'boolean',
-        'description' => 'Will trigger talking about new quest objectives.',
-        'category' => 'Quest'
-    ],
-    'QUEST_COMMENT_CHANCE' => [
-        'type' => 'select',
-        'values' => ['10%','25%','50%','75%','100%'],
-        'description' => 'Chance of commenting on quest updates.',
-        'category' => 'Quest'
-    ],
-    'BORED_EVENT' => [
-        'type' => 'integer',
-        'description' => 'Bored Event Probability. Chance of starting random conversations. 0 = Never | 50 = 50% | 100 = Always. Note: Bored Event Chance can be configured ingame in the CHIM MCM menu',
-        'category' => 'Behavior'
-    ],
-    'BORED_EVENT_SERVERSIDE' => [
-        'type' => 'boolean',
-        'description' => 'Smart Bored Events. Uses director to generate dynamic topics (slower but better quality).',
-        'category' => 'Behavior'
-    ],
-    'LANG_LLM_XTTS' => [
-        'type' => 'boolean',
-        'description' => 'XTTS Only! Will offer a language field to LLM.',
-        'category' => 'Language/Voice'
-    ]
-];
-
-// Filter schema to only allowed settings
-$schema = [];
-foreach ($allowedSettings as $key) {
-    if (isset($fullSchema[$key])) {
-        $schema[$key] = $fullSchema[$key];
-    }
-}
+$schema = is_array($settingsCatalog) ? $settingsCatalog : [];
 ?>
 
 <style>
@@ -546,6 +432,9 @@ foreach ($allowedSettings as $key) {
     
     // Custom label mapping
     function getLabel(key) {
+        if (SCHEMA[key] && SCHEMA[key].ui_label) {
+            return SCHEMA[key].ui_label;
+        }
         const customLabels = {
             'RECHAT_H': 'RECHAT RESPONSE ROUNDS',
             'RECHAT_P': 'RECHAT PROBAILITY',
@@ -555,7 +444,14 @@ foreach ($allowedSettings as $key) {
             'CONTEXT_HISTORY_DIARY': 'CONTEXT HISTORY DIARY EVENT COUNT',
             'CONTEXT_HISTORY_DYNAMIC_PROFILE': 'CONTEXT HISTORY DYNAMIC PROFILE EVENT COUNT'
         };
-        return customLabels[key.toUpperCase()] || key.toUpperCase();
+        const normalizedKey = String(key).toUpperCase();
+        if (customLabels[normalizedKey]) {
+            return customLabels[normalizedKey];
+        }
+        return String(key)
+            .split('@')
+            .map(part => part.replace(/_/g, ' '))
+            .join(' -> ');
     }
     
     // Render overrides list
@@ -565,8 +461,8 @@ foreach ($allowedSettings as $key) {
         
         const keys = Object.keys(overridesState);
         if (keys.length === 0) {
-            const emptyMsg = IS_PROFILE_MODE 
-                ? 'No global overrides set. Click "Add Global Setting Override" to customize settings for this profile.'
+            const emptyMsg = IS_PROFILE_MODE
+                ? 'No overrides set. Click "Add Override" to customize settings for this profile.'
                 : 'No overrides set. Click "Add Override" to customize settings for this NPC.';
             list.innerHTML = `<div class="${PREFIX}ovr-empty">${emptyMsg}</div>`;
             return;
@@ -576,7 +472,9 @@ foreach ($allowedSettings as $key) {
             if (key == "middle_term_memory")
                 return;
             const value = overridesState[key];
-            const displayValue = typeof value === 'boolean' ? (value ? 'true' : 'false') : JSON.stringify(value);
+            const displayValue = (Array.isArray(value) || (value && typeof value === 'object'))
+                ? JSON.stringify(value)
+                : String(value);
             return `
                 <div class="${PREFIX}ovr-item" data-key="${escapeHtml(key)}">
                     <div class="${PREFIX}ovr-icon">${getIcon(key)}</div>
@@ -641,7 +539,11 @@ foreach ($allowedSettings as $key) {
         
         container.querySelectorAll('input[name^="meta_vis["]').forEach(el => el.remove());
         
-        const allKeys = Object.keys(SCHEMA);
+        const allKeys = Array.from(new Set([
+            ...Object.keys(SCHEMA),
+            ...Object.keys(CURRENT_DATA || {}),
+            ...Object.keys(overridesState || {})
+        ]));
         for (const key of allKeys) {
             const input = document.createElement('input');
             input.type = 'hidden';
@@ -655,7 +557,7 @@ foreach ($allowedSettings as $key) {
     function openAddModal() {
         editingKey = null;
         selectedSetting = null;
-        el('ovr-modal-title').textContent = IS_PROFILE_MODE ? 'Add Global Setting Override' : 'Add Override';
+        el('ovr-modal-title').textContent = 'Add Override';
         el('ovr-select-stage').style.display = 'block';
         el('ovr-value-stage').style.display = 'none';
         el('ovr-modal-save').style.display = 'none';
@@ -674,7 +576,7 @@ foreach ($allowedSettings as $key) {
     function editOverride(key) {
         editingKey = key;
         selectedSetting = key;
-        el('ovr-modal-title').textContent = IS_PROFILE_MODE ? 'Edit Global Setting Override' : 'Edit Override';
+        el('ovr-modal-title').textContent = 'Edit Override';
         el('ovr-select-stage').style.display = 'none';
         el('ovr-value-stage').style.display = 'block';
         el('ovr-modal-save').style.display = 'block';
@@ -712,9 +614,9 @@ foreach ($allowedSettings as $key) {
             for (const [category, keys] of Object.entries(categories)) {
                 const filteredKeys = keys.filter(key => {
                     if (!filter) return true;
-                    const label = key.toUpperCase();
+                    const label = getLabel(key).toLowerCase();
                     const desc = (SCHEMA[key].description || '').toLowerCase();
-                    return label.includes(filterLower.toUpperCase()) || desc.includes(filterLower) || key.toLowerCase().includes(filterLower);
+                    return label.includes(filterLower) || desc.includes(filterLower) || key.toLowerCase().includes(filterLower);
                 });
                 
                 if (filteredKeys.length === 0) continue;
@@ -727,7 +629,7 @@ foreach ($allowedSettings as $key) {
                     const desc = (schema.description || '').substring(0, 120);
                     html += `
                         <div class="${PREFIX}ovr-setting-option" data-key="${escapeHtml(key)}">
-                            <div class="${PREFIX}ovr-setting-name">${getIcon(key)} ${escapeHtml(key.toUpperCase())}</div>
+                            <div class="${PREFIX}ovr-setting-name">${getIcon(key)} ${escapeHtml(getLabel(key))}</div>
                             <div class="${PREFIX}ovr-setting-desc">${escapeHtml(desc)}${desc.length >= 120 ? '...' : ''}</div>
                         </div>
                     `;
@@ -747,7 +649,7 @@ foreach ($allowedSettings as $key) {
                 const desc = (schema.description || '').substring(0, 120);
                 html += `
                     <div class="${PREFIX}ovr-setting-option" data-key="${escapeHtml(key)}">
-                        <div class="${PREFIX}ovr-setting-name">${getIcon(key)} ${escapeHtml(key.toUpperCase())}</div>
+                        <div class="${PREFIX}ovr-setting-name">${getIcon(key)} ${escapeHtml(getLabel(key))}</div>
                         <div class="${PREFIX}ovr-setting-desc">${escapeHtml(desc)}${desc.length >= 120 ? '...' : ''}</div>
                     </div>
                 `;
@@ -782,6 +684,7 @@ foreach ($allowedSettings as $key) {
         const type = schema.type || 'string';
         const desc = (schema.description || '').replace(/<[^>]*>/g, '');
         const values = schema.values || [];
+        const valueLabels = schema.value_labels || {};
         
         let inputHtml = '';
         let validationHint = '';
@@ -798,18 +701,18 @@ foreach ($allowedSettings as $key) {
             inputHtml = `
                 <select id="${PREFIX}ovr-value-input" class="${PREFIX}ovr-input" required>
                     <option value="">-- Select --</option>
-                    ${values.map(v => `<option value="${escapeHtml(v)}" ${String(currentValue) === String(v) ? 'selected' : ''}>${escapeHtml(displayNames[v] || v)}</option>`).join('')}
+                    ${values.map(v => `<option value="${escapeHtml(v)}" ${String(currentValue) === String(v) ? 'selected' : ''}>${escapeHtml(valueLabels[v] || displayNames[v] || v)}</option>`).join('')}
                 </select>
             `;
-            validationHint = `<div style="color:#9fb1c9; font-size:11px; margin-top:4px;">✓ Valid options: ${values.map(v => displayNames[v] || v).join(', ')}</div>`;
+            validationHint = `<div style="color:#9fb1c9; font-size:11px; margin-top:4px;">Valid options: ${values.map(v => valueLabels[v] || displayNames[v] || v).join(', ')}</div>`;
         } else if (type === 'integer') {
             const val = currentValue ?? '';
             inputHtml = `<input type="number" id="${PREFIX}ovr-value-input" class="${PREFIX}ovr-input" value="${escapeHtml(val)}" placeholder="Enter integer" step="1" required>`;
-            validationHint = `<div style="color:#9fb1c9; font-size:11px; margin-top:4px;">✓ Must be a whole number</div>`;
+            validationHint = `<div style="color:#9fb1c9; font-size:11px; margin-top:4px;">Must be a whole number</div>`;
         } else if (type === 'number') {
             const val = currentValue ?? '';
             inputHtml = `<input type="number" id="${PREFIX}ovr-value-input" class="${PREFIX}ovr-input" value="${escapeHtml(val)}" placeholder="Enter number" step="any" required>`;
-            validationHint = `<div style="color:#9fb1c9; font-size:11px; margin-top:4px;">✓ Must be a valid number</div>`;
+            validationHint = `<div style="color:#9fb1c9; font-size:11px; margin-top:4px;">Must be a valid number</div>`;
         } else if (type === 'longstring') {
             inputHtml = `<textarea id="${PREFIX}ovr-value-input" class="${PREFIX}ovr-input" rows="6" placeholder="Enter value" required>${escapeHtml(currentValue ?? '')}</textarea>`;
         } else {
@@ -818,7 +721,7 @@ foreach ($allowedSettings as $key) {
         
         form.innerHTML = `
             <div class="${PREFIX}ovr-input-group">
-                <label class="${PREFIX}ovr-input-label">${getIcon(key)} ${escapeHtml(key.toUpperCase())}</label>
+                <label class="${PREFIX}ovr-input-label">${getIcon(key)} ${escapeHtml(getLabel(key))}</label>
                 <div style="color:#9fb1c9; font-size:12px; margin-bottom:8px;">${escapeHtml(desc)}</div>
                 ${inputHtml}
                 ${validationHint}

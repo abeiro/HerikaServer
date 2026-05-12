@@ -20,39 +20,147 @@
         }
     }
 
-    setActions();
-    setResponseTemplate();
-    setStructuredOutputTemplate();
-    setGBNFGrammar();
-
-    // allow for edits to the json templates by extensions
-    requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"json_response_custom.php");
-
-    if (isset($GLOBALS["HOOKS"]) && isset($GLOBALS["HOOKS"]["JSON_TEMPLATE"]) && is_array($GLOBALS["HOOKS"]["JSON_TEMPLATE"])) {
-        foreach ($GLOBALS["HOOKS"]["JSON_TEMPLATE"] as $hook) {
-            call_user_func($hook);
-
+    if (!function_exists('chimIsVisionRequest')) {
+        function chimIsVisionRequest() {
+            return isset($GLOBALS["gameRequest"][0]) && $GLOBALS["gameRequest"][0] === "vision";
         }
     }
+
+    if (!function_exists('chimShouldExposePromptActions')) {
+        function chimShouldExposePromptActions() {
+            if (chimIsVisionRequest()) {
+                return false;
+            }
+
+            if (chimIsDirectNarratorDialogue()) {
+                return true;
+            }
+
+            return isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"];
+        }
+    }
+
+    if (!function_exists('chimApplyJsonTemplateHooks')) {
+        function chimApplyJsonTemplateHooks() {
+            if (isset($GLOBALS["HOOKS"]) && isset($GLOBALS["HOOKS"]["JSON_TEMPLATE"]) && is_array($GLOBALS["HOOKS"]["JSON_TEMPLATE"])) {
+                foreach ($GLOBALS["HOOKS"]["JSON_TEMPLATE"] as $hook) {
+                    call_user_func($hook);
+                }
+            }
+        }
+    }
+
+    if (!function_exists('chimRefreshJsonResponseState')) {
+        function chimRefreshJsonResponseState($loadExtensionCustomizers = false) {
+            global $FUNC_LIST;
+            global $responseTemplate;
+            global $structuredOutputTemplate;
+            global $grammar;
+
+            $FUNC_LIST = [];
+            $responseTemplate = [];
+            $structuredOutputTemplate = array();
+            $grammar = "";
+
+            setActions();
+            setResponseTemplate();
+            setStructuredOutputTemplate();
+            setGBNFGrammar();
+
+            if ($loadExtensionCustomizers && empty($GLOBALS["CHIM_JSON_RESPONSE_EXT_LOADED"])) {
+                // Allow one-time direct template edits from extensions on initial load.
+                requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"json_response_custom.php");
+                $GLOBALS["CHIM_JSON_RESPONSE_EXT_LOADED"] = true;
+            }
+
+            chimApplyJsonTemplateHooks();
+        }
+    }
+
+    if (!function_exists('chimNarratorJsonResponseNeedsRefresh')) {
+        function chimNarratorJsonResponseNeedsRefresh(): bool
+        {
+            if (!chimIsDirectNarratorDialogue()) {
+                return false;
+            }
+
+            $actionTemplate = trim(strval($GLOBALS["responseTemplate"]["action"] ?? ""));
+            $funcList = array_values(array_filter(
+                is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : [],
+                function ($value) {
+                    return trim(strval($value)) !== "";
+                }
+            ));
+
+            $structuredActionProperty = $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"]["action"] ?? null;
+            $structuredActionEnum = [];
+            if (is_array($structuredActionProperty) && isset($structuredActionProperty["enum"]) && is_array($structuredActionProperty["enum"])) {
+                $structuredActionEnum = array_values(array_filter($structuredActionProperty["enum"], function ($value) {
+                    return trim(strval($value)) !== "";
+                }));
+            }
+
+            $hasOnlyTalkAction = count($funcList) === 1 && strcasecmp($funcList[0], "Talk") === 0;
+
+            return (
+                empty($GLOBALS["PROMPT_ACTIONS_LIST"])
+                || empty($funcList)
+                || $actionTemplate === ""
+                || strcasecmp($actionTemplate, "Talk") === 0
+                || empty($structuredActionEnum)
+                || $hasOnlyTalkAction
+            );
+        }
+    }
+
+    if (!function_exists('chimEnsureNarratorJsonResponseState')) {
+        function chimEnsureNarratorJsonResponseState($logContext = 'JSON_RESPONSE')
+        {
+            if (!function_exists('chimRefreshJsonResponseState')) {
+                return;
+            }
+
+            $requestType = strtolower(trim(strval($GLOBALS["gameRequest"][0] ?? '')));
+            $directNarratorDialogue = chimIsDirectNarratorDialogue();
+            if (!$directNarratorDialogue) {
+                if ($requestType === 'narrator_inputtext' || strcasecmp(trim(strval($GLOBALS["HERIKA_NAME"] ?? '')), 'The Narrator') === 0) {
+                    Logger::warn("[{$logContext}] Skipping narrator JSON refresh because chimIsDirectNarratorDialogue() is false (request={$requestType}, direct_flag=" . (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]) ? '1' : '0') . ", herika=" . strval($GLOBALS["HERIKA_NAME"] ?? '') . ")");
+                }
+                return;
+            }
+
+            if (!chimNarratorJsonResponseNeedsRefresh()) {
+                Logger::info("[{$logContext}] Narrator JSON response state already complete (request={$requestType}, actions=" . count(is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : []) . ", response_action=" . trim(strval($GLOBALS["responseTemplate"]["action"] ?? '')) . ")");
+                return;
+            }
+
+            Logger::warn("[{$logContext}] Rebuilding narrator JSON response state because prompt actions/schema were incomplete");
+            chimRefreshJsonResponseState();
+            Logger::warn("[{$logContext}] Narrator JSON response state after rebuild: actions=" . count(is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : []) . ", prompt_actions_len=" . strlen(strval($GLOBALS["PROMPT_ACTIONS_LIST"] ?? '')) . ", response_action=" . trim(strval($GLOBALS["responseTemplate"]["action"] ?? '')));
+        }
+    }
+
+    chimRefreshJsonResponseState(true);
 
     // specify the available actions which will be made available in the context
     Function setActions() {
         // Initialize actions list
         $GLOBALS["PROMPT_ACTIONS_LIST"] = "";
         
-        // Skip actions list for narration events (The Narrator doesn't need action options for atmospheric descriptions)
-        if (isset($GLOBALS["gameRequest"]) && $GLOBALS["gameRequest"][0] === "narration") {
-            $GLOBALS["FUNC_LIST"] = ["Talk"];  // Only Talk action for narration
-            return;
-        }
-
-        if (chimIsDirectNarratorDialogue()) {
+        // Narration-style requests should not browse the full action catalog, but
+        // they still need a stable Talk action in the response schema.
+        if (isset($GLOBALS["gameRequest"]) && in_array($GLOBALS["gameRequest"][0], ["narration", "vision"], true)) {
             $GLOBALS["FUNC_LIST"] = ["Talk"];
             return;
         }
-        
+
+        $shouldExposePromptActions = chimShouldExposePromptActions();
+        if ($shouldExposePromptActions && empty($GLOBALS["FUNCTIONS_ARE_ENABLED"])) {
+            $GLOBALS["FUNCTIONS_ARE_ENABLED"] = true;
+        }
+
         // Build actions list separately (not in PROMPT_HEAD)
-        if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+        if ($shouldExposePromptActions) {
             $GLOBALS["PROMPT_ACTIONS_LIST"] = "\n<available_actions_list>\n";
             $GLOBALS["PROMPT_ACTIONS_LIST"] .= $GLOBALS["COMMAND_PROMPT_FUNCTIONS"];
             
@@ -67,33 +175,51 @@
                     continue;
                 }
 
+                $actionDescription = function_exists('herikaGetPromptActionDescription')
+                    ? herikaGetPromptActionDescription($fname, $function["description"] ?? '')
+                    : strval($function["description"] ?? '');
+
                 $GLOBALS["FUNC_LIST"][]=$function["name"];
-                if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"] || $function["name"]==$GLOBALS["F_NAMES"]["Brawl"] || $function["name"]==$GLOBALS["F_NAMES"]["AttackHunt"]) {
-                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+                if ($function["name"]==$GLOBALS["F_NAMES"]["Attack"] || $function["name"]==$GLOBALS["F_NAMES"]["Brawl"]) {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription})";
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";
-                } else if ($function["name"]==$GLOBALS["F_NAMES"]["SearchMemory"]) {
-                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]}(keywords to search ({$function["description"]})";
                 } else if ($fname == "GiveGoldTo") {
                     require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
                     $goldAmount = getGoldFromMetadata();
-                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). You currently have {$goldAmount} gold. Put the amount in the 'item' field.";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). You currently have {$goldAmount} gold. Put the amount in the 'item' field.";
                 } else if ($fname == "HireCarriage") {
                     $majorDestinations = "Whiterun, Solitude, Markarth, Riften, Windhelm";
                     $minorDestinations = "Morthal, Dawnstar, Falkreath, Winterhold, Darkwater Crossing, Dragon Bridge, Ivarstead, Karthwasten, Kynesgrove, Old Hroldan, Riverwood, Rorikstead, Shor's Stone, Stonehills";
-                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). Vanilla carriage costs: 20 gold for major destinations ({$majorDestinations}) and 50 gold for minor destinations ({$minorDestinations}). Put the destination in the 'target' field. Keep the spoken line short, accept payment, and do not ask questions.";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Vanilla carriage costs: 20 gold for major destinations ({$majorDestinations}) and 50 gold for minor destinations ({$minorDestinations}). Put the destination in the 'target' field. Keep the spoken line short, accept payment, and do not ask questions.";
                 } else if ($fname == "HireFerry") {
                     $fiftyGoldDestinations = "Windhelm, Dawnstar, Solitude, Giant's Tooth";
-                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). Vanilla ferry costs: 50 gold for {$fiftyGoldDestinations}, 500 gold for Icewater Jetty, and free travel to Castle Volkihar. Put the destination in the 'target' field. Keep the spoken line short, accept payment when needed, and do not ask questions.";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Vanilla ferry costs: 50 gold for {$fiftyGoldDestinations}, 500 gold for Icewater Jetty, and free travel to Castle Volkihar. Put the destination in the 'target' field. Keep the spoken line short, accept payment when needed, and do not ask questions.";
                 } else if ($fname == "AddBounty") {
-                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). Crime types and vanilla bounty amounts: Assault=40 (violent), Murder=1000 (violent), Theft=100, Pickpocketing=25, Trespassing=5, Jailbreak=100, Custom (specify amount in 'item' field). Put the crime type in 'target'.";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Crime types and vanilla bounty amounts: Assault=40 (violent), Murder=1000 (violent), Theft=100, Pickpocketing=25, Trespassing=5, Jailbreak=100, Custom (specify amount in 'item' field). Put the crime type in 'target'.";
                 } else if ($fname == "PayBounty") {
-                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). Use when the player agrees to pay now. Bounty payment and stolen-item confiscation happen immediately in one step. After using it, reply with a short confirmation and end the conversation.";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Use when {$GLOBALS["PLAYER_NAME"]} agrees to pay now. Bounty payment and stolen-item confiscation happen immediately in one step. After using it, reply with a short confirmation and end the conversation.";
                 } else if ($fname == "ArrestPlayer") {
-                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). Use for serious crimes or if the player refuses to pay their bounty. The player gets a submit/resist popup. Submit sends them to jail with inventory confiscated. Resist makes guards attack.";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Use for serious crimes or if {$GLOBALS["PLAYER_NAME"]} refuses to pay their bounty. {$GLOBALS["PLAYER_NAME"]} gets a submit/resist popup. Submit sends them to jail with inventory confiscated. Resist makes guards attack.";
                 } else if ($fname == "ForgiveCrime") {
-                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]}). Use when the player successfully persuades, bribes, or invokes thane status to clear their bounty.";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Use when {$GLOBALS["PLAYER_NAME"]} successfully persuades, bribes, or invokes thane status to clear their bounty.";
+                } else if ($fname == "TeachRightHandSpell") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Do not put anything in the 'target' or 'item' field. This action automatically teaches whatever spell {$GLOBALS["PLAYER_NAME"]} currently has equipped in the right hand.";
+                } else if ($fname == "Consume") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put the exact item name from <inventory> in the 'target' field. Only use this for food, drinks, or potions already in inventory. Leave 'item' blank unless you need it as a fallback copy of the same item name. The spoken reply for this action happens after the item is consumed, so use it only when {$GLOBALS["HERIKA_NAME"]} is actually going to eat or drink the item.";
+                } else if ($fname == "SpawnItem") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put the recipient in the 'target' field, the item name in the 'item' field, and the quantity in the 'amount' field. Use '{$GLOBALS["PLAYER_NAME"]}', 'PLAYER', or 'me' to give the item to the player.";
+                } else if ($fname == "SpawnNPC") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put the SNQE NPC template key in the 'target' field, leave 'item' blank, and put the spawn count in the 'amount' field.";
+                } else if ($fname == "CreateNewNPC") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put a short creation brief for the new NPC in the 'target' field. Leave 'item' and 'amount' blank.";
+                } else if ($fname == "DirectorCommand") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put a short freeform director brief in the 'target' field. Leave 'item' and 'amount' blank.";
+                } else if ($fname == "TeleportNPC") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put who to teleport in the 'target' field and the destination location name in the 'item' field. Use '{$GLOBALS["PLAYER_NAME"]}', 'PLAYER', or 'me' to teleport the player.";
+                } else if ($fname == "KillTarget") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put only the victim in the 'target' field. Leave 'item' and 'amount' blank.";
                 } else {
-                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$function["description"]})";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription})";
                 }
             }
             
@@ -107,6 +233,9 @@
     Function setResponseTemplate() {
         $moods=normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "");
         shuffle($moods);
+        $moodDescription = empty($moods)
+            ? "choose exactly one mood while speaking, never combine moods"
+            : "choose exactly one mood while speaking from this list, never combine moods: ".implode("|", $moods);
     
         // Auto-detect language from TTS config if LLM_LANG not set
         if (!isset($GLOBALS["LLM_LANG"]) && isset($GLOBALS["LANG_LLM_XTTS"]) && $GLOBALS["LANG_LLM_XTTS"]) {
@@ -124,18 +253,18 @@
     
         // Build listener description - for rechat events, encourage addressing the previous speaker
         $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order";
-        if (isset($GLOBALS["gameRequest"])) {
-            if (in_array($GLOBALS["gameRequest"][0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s"], true)) {
-                $replyTargetName = extractSpeakerNameFromInputEvent($GLOBALS["gameRequest"][3] ?? "");
-                if ($replyTargetName === "") {
-                    $replyTargetName = trim((string)($GLOBALS["PLAYER_NAME"] ?? ""));
-                }
-                if ($replyTargetName !== "") {
-                    $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to. Treat {$replyTargetName}, who just spoke, as the current addressee unless the reply clearly shifts to someone else.";
-                }
-            } elseif (in_array($GLOBALS["gameRequest"][0], ["rechat"], true)) {
-                $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to. Address whoever just spoke - can be any person in the conversation.";
-            }
+        if (chimIsVisionRequest()) {
+            $listenerDesc = "leave blank unless {$GLOBALS["HERIKA_NAME"]} directly addresses someone while explaining the Soulgaze vision";
+        } elseif (
+            isset($GLOBALS["gameRequest"]) &&
+            (
+                (function_exists('chimIsStrictResponsePromptContext') && chimIsStrictResponsePromptContext()) ||
+                in_array($GLOBALS["gameRequest"][0], ["rechat"], true)
+            )
+        ) {
+            $listenerDesc = function_exists('chimLoadManagedRechatListenerPrompt')
+                ? chimLoadManagedRechatListenerPrompt()
+                : "specify who {$GLOBALS["HERIKA_NAME"]} is talking to. Address whoever just spoke - can be any person in the conversation.";
         }
     
         // Determine message description based on inline narration mode.
@@ -148,10 +277,12 @@
         }
         $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
         $messageDescription = "lines of dialogue";
-        if ($inlineNarrationEnabled) {
+        if (chimIsVisionRequest()) {
+            $messageDescription = "{$GLOBALS["HERIKA_NAME"]}'s spoken Soulgaze explanation of the current scene. Describe only what is visibly present right now through {$GLOBALS["PLAYER_NAME"]}'s eyes, focusing on people, environment, objects, and immediate activity. Do not continue unrelated conversation, do not answer stale dialogue, and do not invent unseen details.";
+        } elseif ($inlineNarrationEnabled) {
             $messageDescription = "If needed, start with one brief third-person narration block in single asterisks, then put {$GLOBALS["HERIKA_NAME"]}'s spoken text after it. Example: *She smiles* It's good to see you again, my friend! Do not wrap the entire reply in asterisks, and keep spoken dialogue outside the asterisks.";
         } elseif (chimIsDirectNarratorDialogue()) {
-            $messageDescription = "plain spoken dialogue addressed directly to {$GLOBALS["PLAYER_NAME"]}. Do not include third-person narration, scene description, stage directions, or text in asterisks.";
+            $messageDescription = "plain spoken dialogue addressed directly to {$GLOBALS["PLAYER_NAME"]}. Keep the spoken reply consistent with the chosen narrator action when you use one. Do not include third-person narration, scene description, stage directions, or text in asterisks.";
         }
     
         if (isset($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])&&($GLOBALS["FEATURES"]["MISC"]["JSON_DIALOGUE_FORMAT_REORDER"])) {
@@ -160,10 +291,11 @@
                     "character"=>$GLOBALS["HERIKA_NAME"],
                     "listener"=>$listenerDesc,
                     "message"=>$messageDescription,
-                    "mood"=>implode("|",$moods),
+                    "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor|action destination location name",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50')",
+                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem, this is the actor who should receive the spawned item. For SpawnNPC, this is the SNQE NPC template key to spawn near {$GLOBALS["PLAYER_NAME"]}. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. For DirectorCommand, this is a short freeform director brief describing the scene instruction or event to stage. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including SpawnNPC and CreateNewNPC and DirectorCommand.",
+                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC or DirectorCommand. Use a positive integer when needed.",
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                 ];
             } else {
@@ -171,10 +303,11 @@
                     "character"=>$GLOBALS["HERIKA_NAME"],
                     "listener"=>$listenerDesc,
                     "message"=>$messageDescription,
-                    "mood"=>implode("|",$moods),
+                    "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor|action destination location name",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50')"
+                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem, this is the actor who should receive the spawned item. For SpawnNPC, this is the SNQE NPC template key to spawn near {$GLOBALS["PLAYER_NAME"]}. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. For DirectorCommand, this is a short freeform director brief describing the scene instruction or event to stage. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including SpawnNPC and CreateNewNPC and DirectorCommand.",
+                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC or DirectorCommand. Use a positive integer when needed."
                 ];
             }
         } else {
@@ -182,10 +315,11 @@
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
                     "listener"=>$listenerDesc,
-                    "mood"=>implode("|",$moods),
+                    "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor|action destination location name",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50')",
+                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem, this is the actor who should receive the spawned item. For SpawnNPC, this is the SNQE NPC template key to spawn near {$GLOBALS["PLAYER_NAME"]}. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. For DirectorCommand, this is a short freeform director brief describing the scene instruction or event to stage. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including SpawnNPC and CreateNewNPC and DirectorCommand.",
+                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC or DirectorCommand. Use a positive integer when needed.",
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                     "message"=>$messageDescription
                 ];
@@ -193,10 +327,11 @@
                 $GLOBALS["responseTemplate"] = [
                     "character"=>$GLOBALS["HERIKA_NAME"],
                     "listener"=>$listenerDesc,
-                    "mood"=>implode("|",$moods),
+                    "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor|action destination location name",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells)",
+                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem, this is the actor who should receive the spawned item. For SpawnNPC, this is the SNQE NPC template key to spawn near {$GLOBALS["PLAYER_NAME"]}. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including SpawnNPC and CreateNewNPC.",
+                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC. Use a positive integer when needed.",
                     "message"=>$messageDescription
                 ];
             }
@@ -232,6 +367,10 @@
     Function setStructuredOutputTemplate() {
         $moods=normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "");
         shuffle($moods);
+        $moodDescription = "choose exactly one mood while speaking, never combine moods";
+        $listenerDescription = chimIsVisionRequest()
+            ? "leave blank unless {$GLOBALS["HERIKA_NAME"]} directly addresses someone while explaining the Soulgaze vision"
+            : "specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order";
 
         // Determine message description based on inline narration mode.
         $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
@@ -243,10 +382,12 @@
         }
         $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
         $messageDescription = "lines of {$GLOBALS["HERIKA_NAME"]}'s dialogue";
-        if ($inlineNarrationEnabled) {
+        if (chimIsVisionRequest()) {
+            $messageDescription = "{$GLOBALS["HERIKA_NAME"]}'s spoken Soulgaze explanation of the current scene. Describe only what is visibly present right now through {$GLOBALS["PLAYER_NAME"]}'s eyes, focusing on people, environment, objects, and immediate activity. Do not continue unrelated conversation, do not answer stale dialogue, and do not invent unseen details.";
+        } elseif ($inlineNarrationEnabled) {
             $messageDescription = "If needed, start with one brief third-person narration block in single asterisks, then put {$GLOBALS["HERIKA_NAME"]}'s spoken text after it. Example: *She smiles* It's good to see you again, my friend! Do not wrap the entire reply in asterisks, and keep spoken dialogue outside the asterisks.";
         } elseif (chimIsDirectNarratorDialogue()) {
-            $messageDescription = "plain spoken dialogue addressed directly to {$GLOBALS["PLAYER_NAME"]}. Do not include third-person narration, scene description, stage directions, or text in asterisks.";
+            $messageDescription = "plain spoken dialogue addressed directly to {$GLOBALS["PLAYER_NAME"]}. Keep the spoken reply consistent with the chosen narrator action when you use one. Do not include third-person narration, scene description, stage directions, or text in asterisks.";
         }
 
         $GLOBALS["structuredOutputTemplate"] = array(
@@ -262,7 +403,7 @@
                         ),
                         "listener" => array(
                             "type" => "string",
-                            "description" => "specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
+                            "description" => $listenerDescription,
                         ),
                         "message" => array(
                             "type" => "string",
@@ -271,11 +412,11 @@
                         "mood" => empty($moods) ?
                             array(
                                 "type" => "string",
-                                "description" => "mood to use while speaking"
+                                "description" => $moodDescription
                             ) :
                             array(
                                 "type" => "string",
-                                "description" => "mood to use while speaking",
+                                "description" => $moodDescription,
                                 "enum" => $moods
                             ),
                         "action" => empty($GLOBALS["FUNC_LIST"]) ? 
@@ -290,11 +431,15 @@
                             ),
                         "target" => array(
                             "type" => "string",
-                            "description" => "action target actor| action destination location name"
+                            "description" => "action target actor| exact inventory item name when action is Consume| actor to teleport when action is TeleportNPC| actor to receive the spawned item when action is SpawnItem| SNQE NPC template key when action is SpawnNPC| actor to kill when action is KillTarget| short creation brief when action is CreateNewNPC| short freeform director brief when action is DirectorCommand. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target. Also used for specifying destination when using Travel_To"
                         ),
                         "item" => array(
                             "type" => "string",
-                            "description" => "item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact name from inventory, nearby_items, or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50')"
+                            "description" => "item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact name from inventory, nearby_items, the representative RefID:ItemName shown in grouped ITEM DESCRIPTIONS, or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). For Consume, leave item blank unless target is empty and you need item as the same exact inventory item name fallback. Leave item blank for SpawnNPC and CreateNewNPC and DirectorCommand."
+                        ),
+                        "amount" => array(
+                            "type" => "integer",
+                            "description" => "quantity to give or spawn when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC. Optional when action is GiveItemTo. Leave blank for CreateNewNPC and DirectorCommand. Use a positive integer."
                         )
                     ),
                     "required" => [

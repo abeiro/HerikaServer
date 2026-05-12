@@ -4,15 +4,21 @@ $GLOBALS["ENGINE_ROOT"] = __DIR__ . DIRECTORY_SEPARATOR;
 $GLOBALS["ENGINE_PATH"] = $GLOBALS["ENGINE_ROOT"];
 $enginePath             = $GLOBALS["ENGINE_ROOT"];
 
-require_once $enginePath . "conf/conf.php";
+require_once $enginePath . "lib/runtime_bootstrap.php";
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_stt_connector' => false,
+    'load_itt_connector' => false,
+    'load_player_name' => true,
+]);
 require_once $enginePath . "lib/logger.php";
 require_once $enginePath . "lib/model_dynmodel.php";
-require_once $enginePath . "lib/{$GLOBALS["DBDRIVER"]}.class.php";
-$GLOBALS["db"] = new sql();
 require_once $enginePath . "prompts/command_prompt.php";
 require_once $enginePath . "lib/chat_helper_functions.php";
 require_once $enginePath . "lib/data_functions.php";
 require_once $enginePath . "lib/rolemaster_helpers.php";
+
+$GLOBALS["db"] = $GLOBALS["db"] ?? new sql();
 
 // New profile system
 require_once $enginePath . "lib/core/api_badge.class.php";

@@ -375,7 +375,9 @@ class ReplicateFluxKleinHandler {
             ];
             
             // Call the Replicate API with Gemini 2.5 Flash
-            $description = $this->callGeminiVisionAPI($payload);
+            //$description = $this->callGeminiVisionAPI($payload);
+            
+            $description='';
             
             return [
                 "status" => "success",

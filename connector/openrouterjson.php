@@ -320,6 +320,14 @@ class openrouterjson
 
         require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
 
+        if (function_exists('chimEnsureNarratorJsonResponseState')) {
+            chimEnsureNarratorJsonResponseState('OPENROUTERJSON');
+        }
+
+        if (($GLOBALS["gameRequest"][0] ?? '') === "narrator_inputtext") {
+            Logger::warn("[NARRATOR_DEBUG][OPENROUTERJSON][PRE_SERIALIZE] request=" . strval($GLOBALS["gameRequest"][0] ?? '') . " direct_flag=" . (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]) ? '1' : '0') . " herika=" . strval($GLOBALS["HERIKA_NAME"] ?? '') . " func_count=" . count(is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : []) . " prompt_actions_len=" . strlen(strval($GLOBALS["PROMPT_ACTIONS_LIST"] ?? '')) . " response_action=" . trim(strval($GLOBALS["responseTemplate"]["action"] ?? '')));
+        }
+
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             $contextData[0]["content"].=$GLOBALS["COMMAND_PROMPT"];
         }
@@ -425,18 +433,20 @@ class openrouterjson
                         $lastActionName=$element["tool_calls"][0]["function"]["name"];
                         $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
                         $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
+                        if (!is_array($localArguments)) {
+                            $localArguments = [];
+                        }
+                        $actionTargetValue = herikaExtractActionArgumentTargetValue($localArguments);
                         if (isset($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName])) {
-                            $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
-                                        "#TARGET#"=>current($localArguments),
-                                        ]);
+                            $lastAction=herikaFormatReturnMessageTemplate($localFuncCodeName, $localArguments);
                         }
                         $contextDataCopy[]=[
                                 "role"=>"assistant",
-                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\",\"target\": \"".current($localArguments)."\", \"message\": \"\"}"
+                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\",\"target\": \"".$actionTargetValue."\", \"message\": \"\"}"
                             ];
                             
                         $gameRequestCopy=$GLOBALS["gameRequest"];    
-                        $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\", \"target\": \"".current($localArguments)."\", \"message\": \"\"}";
+                        $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\", \"target\": \"".$actionTargetValue."\", \"message\": \"\"}";
                         $gameRequestCopy[0]="logaction";
                         logEvent($gameRequestCopy);   
                         
@@ -496,7 +506,8 @@ class openrouterjson
                             $pb["system"].=$element["content"]."\n";
                             
                            
-                            if (strpos($element["content"],"Error")===0) {
+                             $GLOBALS["PATCH_STORE_FUNC_RES_ACTION"] = $localFuncCodeName;
+                             if (strpos($element["content"],"Error")===0) {
                                 $GLOBALS["PATCH_STORE_FUNC_RES"]="{$GLOBALS["HERIKA_NAME"]} issued ACTION, but {$element["content"]}";
                                 $contextDataCopy[]=[
                                     "role"=>"user",
@@ -752,7 +763,7 @@ class openrouterjson
                 $target = substr($this->_websearch_text, 0, $i_pos);
                 $search_text = substr($this->_websearch_text,strlen($target)+1);
                 $search_text = preg_replace(
-                    '/\s*\(\s*(?:(?:talking|whispering)\s+to|speaking\s+loudly\s+to)\s+[^()]+(?:\s+from\s+far\s+away)?\s*\)\s*$/i',
+                    '/\s*\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+[^()]+(?:\s+from\s+far\s+away)?\s*\)\s*$/i',
                     '',
                     $search_text
                 );
@@ -1020,6 +1031,7 @@ class openrouterjson
                         }
                         
                         if (isset($finalData["mood"])) {
+                            $finalData["mood"] = extractFirstEmoteMood($finalData["mood"]);
                             $GLOBALS["SCRIPTLINE_ANIMATION"]=GetAnimationHex($finalData["mood"]);
                             $GLOBALS["SCRIPTLINE_EXPRESSION"]=GetExpression($finalData["mood"]);
                         }
@@ -1095,16 +1107,18 @@ class openrouterjson
             Logger::info("Old function scheme");
             $parameterArr = json_decode($this->_parameterBuff, true);
             if (is_array($parameterArr)) {
-                $parameter = current($parameterArr); // Only support for one parameter
+                $parameter = $parameterArr;
+                $functionCodeName = getFunctionCodeName($this->_functionName);
+                $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
+                $commandStr = "{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@$parameter\r\n";
 
-                if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")])) {
-                    $functionCodeName=getFunctionCodeName($this->_functionName);
-                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@$parameter\r\n";
+                if (!isset($alreadysent[md5($commandStr)])) {
+                    $this->_commandBuffer[] = $commandStr;
                     //echo "Herika|command|$functionCodeName@$parameter\r\n";
 
                 }
 
-                $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n";
+                $alreadysent[md5($commandStr)] = $commandStr;
                 if (ob_get_level()) @ob_flush();
             } else 
                 return null;
@@ -1122,88 +1136,10 @@ class openrouterjson
 
                 if (!isset($parsedResponse["target"]))    
                     $parsedResponse["target"] = "";
-                
-                // Build parameter string - use JSON for functions with multiple parameters
-                $functionDef=findFunctionByName(trim($parsedResponse["action"]));
-                $paramString = "";
-                $functionCodeName = "";
-                if (isset($functionDef)) {
-                    $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                    $paramCount = count($functionDef["parameters"]["properties"] ?? []);
-                    
-                    // For functions with multiple parameters, send as JSON
-                    if ($paramCount > 1) {
-                        $params = [];
-                        foreach (array_keys($functionDef["parameters"]["properties"] ?? []) as $paramName) {
-                            if (isset($parsedResponse[$paramName])) {
-                                $paramValue = $parsedResponse[$paramName];
-                                // Convert to appropriate type based on function definition
-                                $paramType = $functionDef["parameters"]["properties"][$paramName]["type"] ?? "string";
-                                if ($paramType === "integer" && is_numeric($paramValue)) {
-                                    $paramValue = intval($paramValue);
-                                }
-                                $params[$paramName] = $paramValue;
-                            }
-                        }
-                        
-                        // Check if required parameters are missing (validate against original $parsedResponse)
-                        $requiredParams = $functionDef["parameters"]["required"] ?? [];
-                        $missingParams = [];
-                        foreach ($requiredParams as $reqParam) {
-                            // Check $parsedResponse for original params, not $params (which may be converted)
-                            if (!isset($parsedResponse[$reqParam]) || $parsedResponse[$reqParam] === "") {
-                                $missingParams[] = $reqParam;
-                            }
-                        }
-                        
-                        if (!empty($missingParams)) {
-                            Logger::warn("openrouterjson: Missing required parameters for {$functionCodeName}: " . implode(", ", $missingParams) . ". Skipping command.");
-                            // Skip this command by setting action to empty
-                            $parsedResponse["action"] = "";
-                            $functionCodeName = "";
-                        } else {
-                            $paramString = json_encode($params);
-                            Logger::info("openrouterjson: Multi-param function {$functionCodeName}, params: {$paramString}");
-                        }
-                    } else {
-                        // Legacy: single parameter as plain string
-                        $paramString = $parsedResponse["target"] ?? "";
-                    }
-                } else {
-                    $paramString = $parsedResponse["target"] ?? "";
-                    $functionCodeName = $parsedResponse["action"] ?? "";
-                }
-                
-                $commandStr = "{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$paramString}\r\n";
-                Logger::info("openrouterjson: Sending command: {$commandStr}");
-                if (!empty($parsedResponse["action"])) {
-                    if (!isset($alreadysent[md5($commandStr)])) {
-                        
-                        if (isset($functionDef)) {
-                            if (strlen($functionDef["parameters"]["required"][0] ?? '')>0) {
-                                if (!empty($paramString)) {
-                                    $this->_commandBuffer[]=$commandStr;
-                                }
-                                else {
-                                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@\r\n";
-                                    Logger::warn("openrouterjson: Missing required parameter: target");
-                                    // Change. we allow this. Post filter maybe can fix.
-                                }
-                                    
-                            } else {
-                                $this->_commandBuffer[]=$commandStr;
-                            }
-                        } elseif ($parsedResponse["action"] != "Talk") {
-                            Logger::warn("openrouterjson: Function not found for {$parsedResponse["action"]}");
-                        }
-                        
-                        $alreadysent[md5($commandStr)]=end($this->_commandBuffer);
-                    
-                    } else {
-                         Logger::warn("openrouterjson: Function not found for {$parsedResponse["action"]} already sent");
-                    }
-                        
-                }
+
+                $executionContext = buildFunctionExecutionContextFromResponse($parsedResponse);
+                Logger::info("openrouterjson: Prepared command payload for " . strval($executionContext["function_code_name"] ?? ""));
+                queueFunctionExecutionCommand($this->_commandBuffer, $alreadysent, $executionContext, "openrouterjson");
                 
                 if (ob_get_level()) @ob_flush();
             } else {
@@ -1239,6 +1175,11 @@ class openrouterjson
     {
         
         $this->init_connector($customParms);
+
+        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+        if (function_exists('chimEnsureNarratorJsonResponseState')) {
+            chimEnsureNarratorJsonResponseState('OPENROUTERJSON_FAST');
+        }
         
         if (empty($callName))
             $callName=$this->name;

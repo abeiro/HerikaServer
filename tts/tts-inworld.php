@@ -1,5 +1,7 @@
 <?php
 
+require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."emote_moods.php");
+
 /**
  * Inworld TTS Implementation
  * 
@@ -566,7 +568,6 @@ function mapLanguageToInworld($langCode) {
         'hi' => 'hi-IN',
         'he' => 'he-IL'
     );
-
     $legacyLangMap = array(
         'EN_US' => 'en-US',
         'ZH_CN' => 'zh-CN',
@@ -584,7 +585,6 @@ function mapLanguageToInworld($langCode) {
         'HI_IN' => 'hi-IN',
         'HE_IL' => 'he-IL'
     );
-
     $langCode = trim((string) $langCode);
     $langLower = strtolower($langCode);
 
@@ -606,7 +606,6 @@ function mapLanguageToInworld($langCode) {
     if (isset($langMap[$langLower])) {
         return $langMap[$langLower];
     }
-
     // Try tolerant normalization for inputs like en_us or EN-US.
     $langNormalized = str_replace('_', '-', $langCode);
     if (preg_match('/^([A-Za-z]{2})-([A-Za-z]{2})$/', $langNormalized, $matches)) {
@@ -748,9 +747,9 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
     // emotions:
     $b_emotions = isset($GLOBALS["LAST_LLM_RESPONSE"]) && ($GLOBALS['use_emotions_expression'] ?? false);
     if (isEmotionCapable() && $b_emotions) {
-        $s_mood = strtolower($GLOBALS["LAST_LLM_RESPONSE"]["mood"] ?? "");
+        $s_mood = strtolower(extractFirstEmoteMood($GLOBALS["LAST_LLM_RESPONSE"]["mood"] ?? ""));
         if (isset($GLOBALS["FORCE_MOOD"]) && (strlen($GLOBALS["FORCE_MOOD"]) > 0)) {
-            $s_mood = strtolower($GLOBALS["FORCE_MOOD"]);
+            $s_mood = strtolower(extractFirstEmoteMood($GLOBALS["FORCE_MOOD"]));
         }
         
         if (($s_mood == "whispering") || ($s_mood == "laughing"))  {

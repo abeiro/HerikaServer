@@ -34,8 +34,10 @@ if (!isset($GLOBALS["CURRENT_CONNECTOR"]) || (!file_exists($enginePath."connecto
         // Function stuff
         require($enginePath . "functions/functions_instruction.php");
 
-        $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
-        $GLOBALS["FUNCTIONS"][]=$GLOBALS["BASE_FUNCTIONS"]["ReturnBackHome"];
+        if (!function_exists('herikaActionCatalogIsActionEnabled') || herikaActionCatalogIsActionEnabled("ReturnBackHome")) {
+            $GLOBALS["ENABLED_FUNCTIONS"][]="ReturnBackHome";
+            $GLOBALS["FUNCTIONS"][]=$GLOBALS["BASE_FUNCTIONS"]["ReturnBackHome"];
+        }
 
         $fnames=[];
         foreach ($GLOBALS["F_NAMES"] as $functionCode=>$functionName) {

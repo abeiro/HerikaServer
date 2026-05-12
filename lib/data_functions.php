@@ -7,6 +7,9 @@ require_once(__DIR__."/utils_game_timestamp.php");
 require_once(__DIR__."/lazy_xml.php");
 require_once(__DIR__."/model_dynmodel.php");
 require_once(__DIR__."/emote_moods.php");
+require_once(__DIR__."/core/activity_status.php");
+require_once(__DIR__."/core/transformation_state.php");
+require_once(__DIR__."/core/game_plugins.php");
 require_once(__DIR__."/core/npc_master.class.php");
 
 
@@ -21,7 +24,7 @@ function SaveOriginalHerikaName() {
     $b_already_saved = ($GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] ?? false);
     if (!$b_already_saved) {
         $herika = ($GLOBALS["HERIKA_NAME"] ?? "");
-        if ((strlen($herika) > 0) && ($herika != "Player") && ($herika != "LLMFallback") && (stripos($herika, "Narrator") === false) && (stripos($herika, "actor") === false) && (stripos($herika, "everyone") === false) && (stripos($herika, "*") === false) && (stripos($herika, "none") === false) ) {
+                if ((strlen($herika) > 0) && ($herika !== "The Narrator") && ($herika !== "Player") && ($herika !== "LLMFallback") && (stripos($herika, "Narrator") === false) && (stripos($herika, "actor") === false) && (stripos($herika, "everyone") === false) && (stripos($herika, "*") === false) && (stripos($herika, "none") === false) ) {
             $GLOBALS["ORIGINAL_HERIKA_NAME"] = $herika;
             $GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] = true;
         }
@@ -31,20 +34,39 @@ function SaveOriginalHerikaName() {
 function GetOriginalHerikaName() {
     $b_already_saved = ($GLOBALS["ORIGINAL_HERIKA_NAME_SAVED"] ?? false);
     if ($b_already_saved) {
-        $herika = $GLOBALS["ORIGINAL_HERIKA_NAME"];
+        $herika = $GLOBALS["ORIGINAL_HERIKA_NAME"] ?? '';
     } else {
         $herika = $GLOBALS["HERIKA_NAME"];
     }
     return $herika;
 } 
 
+function get_connector_id($s_driver='', $s_model='', $s_url='') {
+    $i_res = -1;
+    if (isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
+        $i_res = $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["id"] ?? -1;
+    }
+    if ($i_res < 0) {
+        if ((strlen($s_model) > 0) && (strlen($s_url) > 0)  && (strlen($s_driver) > 0)) {
+            $query = "SELECT id FROM public.core_llm_connector WHERE (url='{$s_url}') AND (model='{$s_model}') AND (driver='{$s_driver}') LIMIT 1 ";
+            $ret = $GLOBALS["db"]->fetchAll($query);
+            if ($ret) {
+                $i_res = intval($ret[0]['id'] ?? -1);
+            }
+        }
+    }
+    return $i_res;
+}
+
 function ReplacePlayerNamePlaceholder($s_input) {
     //replace #PLAYER_NAME# with player name
     $s_res = $s_input;
     if ((strlen(trim($s_input))) > 12) {
         $s_res = strtr($s_input, [
+            "{HERIKA_NAME}" =>$GLOBALS["HERIKA_NAME"],
+            "{PLAYER_NAME}"=>$GLOBALS["PLAYER_NAME"],
             "#HERIKA_NAME#" =>$GLOBALS["HERIKA_NAME"],
-            "#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"] 
+            "#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]
         ]);
     }
     return $s_res;
@@ -214,44 +236,107 @@ function isItemBlacklisted($itemName) {
 }
 
 /**
- * Lookup description from descriptions table, supporting mod FormIDs (XX prefix)
- * Tries exact FormID first, then falls back to XX-prefixed version for mod items
+ * Lookup description from the merged descriptions view using runtime, legacy, or stable keys.
+ * Supports:
+ * - exact runtime FormIDs (e.g. 020098A0)
+ * - legacy wildcard keys (e.g. XX0098A0, FEXXX822)
+ * - stable plugin-aware keys (e.g. Dawnguard.esm|000098A0)
  * 
- * @param string $formId The FormID to lookup (hex format, e.g., "0303572F")
- * @return array|null Array with 'name' and 'description' keys, or null if not found
+ * @param string $formId The identifier to lookup
+ * @return array|null Array with 'baseid', 'name', and 'description' keys, or null if not found
  */
 function lookupDescriptionByFormID(string $formId): ?array {
     global $db;
-    
-    // Ensure FormID is properly formatted (8 hex digits, uppercase)
-    $formId = strtoupper(str_replace('0x', '', $formId));
-    $formId = str_pad($formId, 8, '0', STR_PAD_LEFT);
-    
-    // Try exact FormID first
-    $escapedFormId = $db->escape($formId);
-    $record = $db->fetchOne(
-        "SELECT name, description FROM descriptions WHERE baseid = '{$escapedFormId}' LIMIT 1"
-    );
-    
-    if ($record && !empty($record['name'])) {
-        return $record;
-    }
-    
-    // If not found and FormID starts with a mod index (first 2 digits not 00-03), try XX prefix
-    $modIndex = substr($formId, 0, 2);
-    if ($modIndex !== '00' && $modIndex !== '01' && $modIndex !== '02' && $modIndex !== '03') {
-        // Replace first 2 digits with XX for mod item lookup
-        $xxFormId = 'XX' . substr($formId, 2);
-        $escapedXXFormId = $db->escape($xxFormId);
+
+    foreach (chimBuildDescriptionBaseIdCandidates($formId) as $candidateBaseId) {
+        $escapedBaseId = $db->escape($candidateBaseId);
         $record = $db->fetchOne(
-            "SELECT name, description FROM descriptions WHERE baseid = '{$escapedXXFormId}' LIMIT 1"
+            "SELECT baseid, name, description FROM combined_descriptions WHERE baseid = '{$escapedBaseId}' LIMIT 1"
         );
-        
+
         if ($record && !empty($record['name'])) {
             return $record;
         }
     }
-    
+
+    return null;
+}
+
+/**
+ * Lookup description only by exact runtime FormID or stable plugin-aware key.
+ * This deliberately skips legacy wildcard keys and name fallback to avoid
+ * cross-matching unrelated item descriptions for spells.
+ *
+ * @param string $formId The runtime or stable identifier to lookup
+ * @return array|null Array with 'baseid', 'name', and 'description' keys, or null if not found
+ */
+function lookupStrictDescriptionByFormID(string $formId): ?array {
+    global $db;
+
+    $candidates = [];
+    $pushCandidate = function ($candidate) use (&$candidates): void {
+        $candidate = trim((string) $candidate);
+        if ($candidate === '') {
+            return;
+        }
+
+        if (strpos($candidate, '|') !== false) {
+            $parsedStable = chimParseStableFormReference($candidate);
+            if ($parsedStable) {
+                $candidate = $parsedStable['stable_key'];
+            }
+        } else {
+            $candidate = strtoupper($candidate);
+        }
+
+        if (!in_array($candidate, $candidates, true)) {
+            $candidates[] = $candidate;
+        }
+    };
+
+    $formId = trim($formId);
+    if ($formId === '') {
+        return null;
+    }
+
+    $parsedStableReference = chimParseStableFormReference($formId);
+    if ($parsedStableReference) {
+        $pushCandidate($parsedStableReference['stable_key']);
+
+        $pluginRow = chimGetLoadedGamePluginByName($parsedStableReference['plugin_name']);
+        if ($pluginRow && !empty($pluginRow['formid_prefix'])) {
+            $runtimeFormId = chimComputeRuntimeFormIdFromPrefix(
+                $pluginRow['formid_prefix'],
+                $parsedStableReference['local_formid']
+            );
+            if ($runtimeFormId) {
+                $pushCandidate($runtimeFormId);
+            }
+        }
+    } else {
+        $runtimeFormId = chimNormalizeRuntimeFormId($formId);
+        if ($runtimeFormId !== '') {
+            $pushCandidate($runtimeFormId);
+
+            $pluginRow = chimGetLoadedGamePluginByRuntimeFormId($runtimeFormId);
+            $localFormId = chimExtractLocalFormIdFromRuntimeFormId($runtimeFormId);
+            if ($pluginRow && !empty($pluginRow['plugin_name']) && $localFormId !== '') {
+                $pushCandidate(chimBuildStableFormReference($pluginRow['plugin_name'], $localFormId));
+            }
+        }
+    }
+
+    foreach ($candidates as $candidateBaseId) {
+        $escapedBaseId = $db->escape($candidateBaseId);
+        $record = $db->fetchOne(
+            "SELECT baseid, name, description FROM combined_descriptions WHERE baseid = '{$escapedBaseId}' LIMIT 1"
+        );
+
+        if ($record && !empty($record['description'])) {
+            return $record;
+        }
+    }
+
     return null;
 }
 
@@ -591,6 +676,11 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                             }
                         }
                     }
+
+                    $activityStatus = chimNormalizeActivityStatus($metaData);
+                    if (!empty($activityStatus['fresh']) && !empty($activityStatus['summary'])) {
+                        $profileString .= ". Current activity: " . $activityStatus['summary'];
+                    }
                     
                     // Add equipment if available
                     if (isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
@@ -715,6 +805,10 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         $formattedItems = [];
         $seenBaseIDs = [];
         $itemDescriptions = [];
+        $groupedItems = [];
+        $playerName = $GLOBALS["PLAYER_NAME"] ?? "Player";
+        $playerLookingTag = " ({$playerName} is looking at this)";
+        $shorterNearbyItemList = !empty($GLOBALS["SHORTER_NEARBY_ITEM_LIST"]);
         
         foreach ($itemsList as $item) {
             $trimmedItem = trim($item);
@@ -729,8 +823,8 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 $baseID = $parts[1];
                 $itemName = $parts[2];
                 
-                // Strip (STEALING) tag for blacklist check
-                $itemNameClean = str_replace(' (STEALING)', '', $itemName);
+                // Strip prompt-only tags for blacklist and description lookup.
+                $itemNameClean = str_replace([' (STEALING)', $playerLookingTag], '', $itemName);
                 
                 // Skip blacklisted items
                 if (isItemBlacklisted($itemNameClean)) {
@@ -742,11 +836,8 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 if (!in_array($baseID, $seenBaseIDs)) {
                     $seenBaseIDs[] = $baseID;
                     
-                    // Look up description from descriptions table
-                    $baseIDDec = hexdec(str_replace('0x', '', $baseID));
-                    $descRecord = $GLOBALS["db"]->fetchOne(
-                        "SELECT description FROM descriptions WHERE baseid = '{$baseIDDec}' LIMIT 1"
-                    );
+                    // Look up description through the shared runtime/stable/legacy resolver
+                    $descRecord = lookupDescriptionByFormID($baseID);
                     
                     if ($descRecord && !empty($descRecord['description'])) {
                         // Store description under clean name (without STEALING tag)
@@ -760,25 +851,60 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     continue;
                 }
                 
-                // Format for display: "RefID:ItemName" (hide BaseID from NPC, keep STEALING tag)
-                $displayItem = "{$refID}:{$itemName}";
-                $formattedItems[] = $displayItem;
+                if ($shorterNearbyItemList) {
+                    $groupKey = $itemName;
+                    if (!isset($groupedItems[$groupKey])) {
+                        $groupedItems[$groupKey] = [
+                            'count' => 0,
+                            'sample_refid' => $refID,
+                            'sample_item_name' => $itemName,
+                            'description' => $itemDescriptions[$itemNameClean] ?? '',
+                        ];
+                    }
+                    $groupedItems[$groupKey]['count']++;
+                    if (empty($groupedItems[$groupKey]['description']) && !empty($itemDescriptions[$itemNameClean])) {
+                        $groupedItems[$groupKey]['description'] = $itemDescriptions[$itemNameClean];
+                    }
+                } else {
+                    // Format for display: "RefID:ItemName" (hide BaseID from NPC, keep STEALING tag)
+                    $displayItem = "{$refID}:{$itemName}";
+                    $formattedItems[] = $displayItem;
+                }
             } elseif (count($parts) == 2) {
                 // Old format without BaseID - just use as-is
                 $refID = $parts[0];
                 $itemName = $parts[1];
                 
-                // Strip (STEALING) tag for blacklist check
-                $itemNameClean = str_replace(' (STEALING)', '', $itemName);
+                // Strip prompt-only tags for blacklist checks.
+                $itemNameClean = str_replace([' (STEALING)', $playerLookingTag], '', $itemName);
                 
                 // Skip blacklisted items
                 if (isItemBlacklisted($itemNameClean)) {
                     continue;
                 }
                 
-                // Keep STEALING tag in display
-                $displayItem = "{$refID}:{$itemName}";
-                $formattedItems[] = $displayItem;
+                if ($shorterNearbyItemList) {
+                    $groupKey = $itemName;
+                    if (!isset($groupedItems[$groupKey])) {
+                        $groupedItems[$groupKey] = [
+                            'count' => 0,
+                            'sample_refid' => $refID,
+                            'sample_item_name' => $itemName,
+                            'description' => '',
+                        ];
+                    }
+                    $groupedItems[$groupKey]['count']++;
+                } else {
+                    // Keep STEALING tag in display
+                    $displayItem = "{$refID}:{$itemName}";
+                    $formattedItems[] = $displayItem;
+                }
+            }
+        }
+
+        if ($shorterNearbyItemList && !empty($groupedItems)) {
+            foreach ($groupedItems as $group) {
+                $formattedItems[] = "{$group['count']}x {$group['sample_item_name']}";
             }
         }
         
@@ -787,15 +913,28 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
             
             // Add descriptions for unique items if available
             $descriptionText = "";
-            if (!empty($itemDescriptions)) {
+            if ($shorterNearbyItemList) {
+                $descParts = [];
+                foreach ($groupedItems as $group) {
+                    if (!empty($group['description'])) {
+                        $descParts[] = "{$group['sample_refid']}:{$group['sample_item_name']}: {$group['description']}";
+                    }
+                }
+                if (!empty($descParts)) {
+                    $descriptionText = "\n\n# ITEM DESCRIPTIONS\n## " . implode("\n## ", $descParts);
+                }
+            } elseif (!empty($itemDescriptions)) {
                 $descParts = [];
                 foreach ($itemDescriptions as $name => $desc) {
                     $descParts[] = "{$name}: {$desc}";
                 }
                 $descriptionText = "\n\n# ITEM DESCRIPTIONS\n## " . implode("\n## ", $descParts);
             }
-            
-            $contextContent = "<nearby_items>\n# NEARBY ITEMS (format: RefID:ItemName)\n## {$itemsText}{$descriptionText}\n</nearby_items>";
+
+            $nearbyItemsHeader = $shorterNearbyItemList
+                ? "# NEARBY ITEMS (grouped unique counts; use representative RefID from ITEM DESCRIPTIONS for PickupItem)"
+                : "# NEARBY ITEMS (format: RefID:ItemName)";
+            $contextContent = "<nearby_items>\n{$nearbyItemsHeader}\n## {$itemsText}{$descriptionText}\n</nearby_items>";
             if (!isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
                 $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
             }
@@ -1110,6 +1249,119 @@ function DataPosibleInspectTargets($pack=true)
     return $GLOBALS["CACHE_POSIBLE_INSPECT_TARGETS"][(int)$pack];
 }
 
+function chimDescribeConditionStat(string $kind, float $cur, float $max): string
+{
+    if ($max <= 0) {
+        return "Unknown";
+    }
+
+    $pct = ($cur < 0 ? 0.0 : ($cur > $max ? $max : $cur)) / $max * 100.0;
+    if ($kind === 'health') {
+        if ($pct >= 75.0) {
+            return "Near full health";
+        }
+        if ($pct >= 50.0) {
+            return "Wounded";
+        }
+        if ($pct >= 25.0) {
+            return "Badly wounded";
+        }
+        return "On the brink of collapse";
+    }
+
+    if ($kind === 'magicka') {
+        if ($pct >= 75.0) {
+            return "Magicka reserves strong";
+        }
+        if ($pct >= 50.0) {
+            return "Magicka reserves middling";
+        }
+        if ($pct >= 25.0) {
+            return "Magicka reserves low";
+        }
+        return "Magicka nearly drained";
+    }
+
+    if ($pct >= 75.0) {
+        return "Well-rested";
+    }
+    if ($pct >= 50.0) {
+        return "Winded";
+    }
+    if ($pct >= 25.0) {
+        return "Exhausted";
+    }
+    return "Spent";
+}
+
+function chimBuildCurrentConditionLinesFromMetadata($stats, array $metadata = [])
+{
+    $lines = [];
+
+    if (is_array($stats) && !empty($stats)) {
+        $h = chimDescribeConditionStat('health', (float)($stats['health'] ?? 0), (float)($stats['health_max'] ?? 0));
+        $m = chimDescribeConditionStat('magicka', (float)($stats['magicka'] ?? 0), (float)($stats['magicka_max'] ?? 0));
+        $st = chimDescribeConditionStat('stamina', (float)($stats['stamina'] ?? 0), (float)($stats['stamina_max'] ?? 0));
+
+        if ($h !== 'Unknown') {
+            $lines[] = "  • Health: {$h}";
+        }
+        if ($m !== 'Unknown') {
+            $lines[] = "  • Magicka: {$m}";
+        }
+        if ($st !== 'Unknown') {
+            $lines[] = "  • Stamina: {$st}";
+        }
+    }
+
+    $lines = array_merge($lines, chimBuildTransformationStateConditionLines($metadata));
+
+    return $lines;
+}
+
+function chimBuildCurrentConditionBlockFromMetadata($stats, array $metadata = [])
+{
+    $lines = chimBuildCurrentConditionLinesFromMetadata($stats, $metadata);
+    if (empty($lines)) {
+        return '';
+    }
+
+    return "<condition>\n#Condition\n" . implode("\n", $lines) . "\n</condition>";
+}
+
+function chimBuildNpcInspectSummary(string $npcName)
+{
+    $npcName = trim($npcName);
+    if ($npcName === '') {
+        return '';
+    }
+
+    $npcMaster = new NpcMaster();
+    $currentNpcData = $npcMaster->getByName($npcName);
+    if (!is_array($currentNpcData) || empty($currentNpcData)) {
+        return '';
+    }
+
+    $metaData = $npcMaster->getMetaData($currentNpcData);
+    if (!is_array($metaData)) {
+        $metaData = [];
+    }
+
+    $sections = [];
+
+    $conditionBlock = chimBuildCurrentConditionBlockFromMetadata($metaData['stats'] ?? null, $metaData);
+    if ($conditionBlock !== '') {
+        $sections[] = $conditionBlock;
+    }
+
+    $activityStatus = chimNormalizeActivityStatus($metaData);
+    if (!empty($activityStatus['summary'])) {
+        $sections[] = "<activity>\n#Activity\n" . ucfirst($activityStatus['summary']) . ".\n</activity>";
+    }
+
+    return implode("\n", $sections);
+}
+
 function DataQuestJournal($quest)
 {
     global $db;
@@ -1167,7 +1419,7 @@ function DataQuestJournal($quest)
 }
 
 function removeTalkingToOccurrences($input) {
-    $pattern = '/\(talking to [^()]+\)/i';
+    $pattern = '/\((?:talking|whispering|shouting)\s+to\s+[^()]+\)/i';
     preg_match_all($pattern, $input, $matches, PREG_OFFSET_CAPTURE);
 
     // Get all positions of the matches
@@ -1190,6 +1442,27 @@ function removeTalkingToOccurrences($input) {
     }
 
     return $input;
+}
+
+function moveDialogueTargetSuffixToEnd($input) {
+    $input = trim((string)$input);
+    if ($input === "") {
+        return "";
+    }
+
+    $pattern = '/\s*(\((?:talking|whispering|shouting)\s+to [^()]+?\)|\(speaking loudly to [^()]+?\))\s*/i';
+    if (preg_match_all($pattern, $input, $matches) !== 1 || empty($matches[1])) {
+        return trim(preg_replace('/\s+/', ' ', $input));
+    }
+
+    $targetSuffix = trim((string)end($matches[1]));
+    $withoutSuffix = preg_replace($pattern, ' ', $input);
+    $withoutSuffix = trim(preg_replace('/\s+/', ' ', (string)$withoutSuffix));
+    if ($withoutSuffix === "") {
+        return $targetSuffix;
+    }
+
+    return "{$withoutSuffix} {$targetSuffix}";
 }
 
 
@@ -1234,14 +1507,14 @@ function DataLastDataExpandedForNPC($actor, $lastNelements = -10,$sqlfilter="") 
             else if ($speechEvent["speaker"]=="The Narrator")
                 continue;
             
-            $talkingto="";
-            if ($lastListener!="The Narrator")
-                $talkingto="(talking to {$lastListener})";
-            
-            if ($lastSpeaker==$GLOBALS["PLAYER_NAME"])
-                $talkingto="";
-            
             if (($lastSpeaker!=$speechEvent["speaker"])&&($lastSpeaker!=null)) {
+                $talkingto="";
+                if ($lastListener!="The Narrator")
+                    $talkingto="(talking to {$lastListener})";
+                
+                if ($lastSpeaker==$GLOBALS["PLAYER_NAME"])
+                    $talkingto="";
+
                 $lastDialogFull[$speechEvent["ts"]] = array('role' => $currentSpeaker, 'content' => "$lastSpeaker: $buffer $talkingto");   
                 $buffer="";
                 $lastSpeaker=$speechEvent["speaker"];
@@ -1268,11 +1541,18 @@ function DataLastDataExpandedForNPC($actor, $lastNelements = -10,$sqlfilter="") 
 
         ksort($lastDialogFull);
         
-        $results = $db->fetchAll("SELECT gamets,data,ts FROM eventlog where type in ('inputtext','inputtext_s','ginputtext','ginputtext_s','narrator_inputtext')
-            order by gamets desc LIMIT 1 OFFSET 0");    
+        $results = $db->fetchAll("SELECT gamets,data,ts
+            FROM eventlog
+            WHERE type in ('inputtext','inputtext_s','ginputtext','ginputtext_s','narrator_inputtext')
+              AND people like '%$actorcn%'
+            ORDER BY gamets desc, ts desc");
         $rawData=[];
         foreach ($results as $row) {
-            $lastDialogFull[]= array('role' => 'user', 'content' => "{$row["data"]}");  
+            $rawData[] = $row;
+        }
+        $rawData = array_reverse($rawData);
+        foreach ($rawData as $row) {
+            $lastDialogFull[] = array('role' => 'user', 'content' => "{$row["data"]}");
         }
 
        
@@ -1577,6 +1857,40 @@ function getTimeCategory($hoursAgo) {
 }
 
 
+function herikaShouldExcludeEventFromPromptContext(array $row): bool
+{
+    $type = strtolower(trim(strval($row['type'] ?? '')));
+    $data = trim(strval($row['data'] ?? ''));
+
+    static $csvImportEventTypes = [
+        'biography_import',
+        'oghma_import',
+        'dynamic_oghma_import',
+        'description_import',
+        'custom_action_import',
+        'item_import',
+        'npcvoice_refresh',
+    ];
+
+    if (in_array($type, $csvImportEventTypes, true)) {
+        return true;
+    }
+
+    if ($type === 'status_msg' && stripos($data, 'csv_import@') === 0) {
+        return true;
+    }
+
+    if (preg_match('/^CSV upload(?:\s*\(|:| failed:)/i', $data) === 1) {
+        return true;
+    }
+
+    if (preg_match('/^[^@]+@[0-9a-f]{8}@nullvoicetype$/i', $data) === 1) {
+        return true;
+    }
+
+    return false;
+}
+
 function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
 
     global $db;
@@ -1599,12 +1913,16 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         $removeBooks ="and type<>'contentbook' " ;
     }
     
+    $ext_sqlfilter1 = $GLOBALS["EXT_CONTEXT_SQL_FILTER1"] ?? "";
+    $ext_sqlfilter2 = $GLOBALS["EXT_CONTEXT_SQL_FILTER2"] ?? "";
+
     $lastDialogFull = array();
-    $actorEscaped=$db->escape($actor);
-    $playerEscaped=$db->escape($GLOBALS["PLAYER_NAME"]);
-    
-    if (empty($actorEscaped))
-        $actorEscaped="%";
+    $b_actor = (strlen($actor) > 0);
+    if ($b_actor)
+        $actorEscaped=$db->escape($actor);
+    else
+        $actorEscaped='';
+    //$playerEscaped=$db->escape($GLOBALS["PLAYER_NAME"]);
 
     $query="select  
     case 
@@ -1612,6 +1930,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type like 'info%' or type like 'funcret%' or type like 'location%' then 'CONTEXTI'
       when a.data like '%background chat%' then 'BACKDIAG'
       when type='book' then 'BOOKEVT' 
+      when type='contentbook' then 'BOOKEVT'
       when type='quest' then 'QUEST' 
       when type='itemfound' then 'ITEM' 
       when type='rpg_word' then 'RPG_WORD' 
@@ -1631,25 +1950,32 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type like 'ext_%' then 'PLUGIN'
       else '' 
     end as subtype,a.data  as data , gamets,localts,type,location
-    FROM  eventlog a WHERE 1=1
-    and type<>'combatend'  
-    and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book' and type<>'addnpc' and type<>'infonpc' and type<>'infoitems'  
-    and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'  and type<>'infonpc_close' and type<>'instruction'
+    FROM  eventlog a WHERE
+    type<>'combatend'
+    and type<>'bored' and type<>'init' and type<>'infoloc' and type<>'info' and type<>'funcret' and type<>'book'
+    and type<>'addnpc' and type<>'infonpc' and type<>'infoitems'
+    and type<>'updateprofile' and type<>'rechat' and type<>'setconf' and  type<>'status_msg'  and type<>'user_input'
+    and type<>'infonpc_close' and type<>'instruction'
     and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region' and type<>'named_cell'
-    ".(($actorEscaped)?" 
-    and (
-     people like '%|$actorEscaped|%' 
-     or people like '$actorEscaped' 
+    AND type<>'narrator_welcome'
+    and (type<>'chat' or COALESCE(delivery_state, 'spoken')='spoken')
+    AND type<>'funccall' AND type<>'togglemodel'
+    {$removeBooks} {$sqlfilter} {$ext_sqlfilter1}
+    ".(($b_actor) ? "
+    AND (
+     people like '%|$actorEscaped|%'
+     or people like '$actorEscaped'
      or people like '%|$actorEscaped (busy)|%'
-     OR people LIKE '%|$actorEscaped (hostile)|%' 
-     OR people LIKE '%|$actorEscaped (in combat)|%' 
-     or type='info_timeforward' )
-    ":"")." 
-    and type<>'funccall' $removeBooks  and type<>'togglemodel' $sqlfilter  ".
-    ((false)?" and gamets>".($currentGameTs-(60*60*60*60)):"").
-    " order by gamets desc, ts desc, rowid desc LIMIT $nRecordsLimit OFFSET 0";  
+     or people like '%|$actorEscaped (hostile)|%'
+     or people like '%|$actorEscaped (in combat)|%'
+     or people like '%|$actorEscaped (restrained)|%'
+     or type='info_timeforward'
+    )" : " ").
+    //((false)?" and gamets>".($currentGameTs-(60*60*60*60)):"").
+    " {$ext_sqlfilter2} 
+    ORDER BY gamets desc, ts desc, rowid desc LIMIT {$nRecordsLimit} OFFSET 0 ";
     
-    // OR people LIKE '%|$actorEscaped (far away)|%') this can be confusing in whisper mode
+    // Keep generic far-away actors out of historic context. Shared narrator rows are flattened on write.
     $results = $db->fetchAll($query);
 
     // Filter blacklisted event types
@@ -1665,6 +1991,10 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             return true;
         });
     }
+
+    $results = array_filter($results, function ($row) {
+        return !herikaShouldExcludeEventFromPromptContext($row);
+    });
 
     //error_log($query);
     $rawData=[];
@@ -2157,7 +2487,7 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
                 else if ($lastSpeaker=="backgroundchat")
                     $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", removeEmptyElements($buffer)));
                 else 
-                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode(" ", removeEmptyElements($buffer)));
+                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => moveDialogueTargetSuffixToEnd(implode(" ", removeEmptyElements($buffer))));
             }
             $buffer = [];
             $buffer[] = $line["content"];
@@ -2188,7 +2518,7 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
         else if ($lastSpeaker=="backgroundchat")
             $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $bufferCopy));
         else 
-            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode(" ", $bufferCopy));
+            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => moveDialogueTargetSuffixToEnd(implode(" ", $bufferCopy)));
     }
 
     $contextDataHistory=[];
@@ -2524,9 +2854,9 @@ function DataSpeechJournal($topic,$limit=50)
     $lastDialogFull = [];
     $tn=$db->escape($topic);
     $results = $db->fetchAll("SElECT  speaker,speech,location,listener,topic as quest, convert_gamets2skyrim_date(gamets) AS sk_date, gamets FROM speech
-      where (speaker like '%$tn%' or  listener like '%$tn%' or location like '%$tn%' or  
+     where (speaker like '%$tn%' or  listener like '%$tn%' or location like '%$tn%' or  
       companions like '%|$tn|%' or  companions like '%$tn%' OR companions LIKE '%|$tn (busy)|%' 
-      OR companions LIKE '%|$tn (hostile)|%' ) 
+      OR companions LIKE '%|$tn (hostile)|%' OR companions LIKE '%|$tn (restrained)|%' ) 
       and listener<>'unknown' 
       order by rowid desc");
     if (!$results) {
@@ -3332,29 +3662,29 @@ function DataRechatHistory()
 {
 
     global $db;
-    // We only need the current post-input rechat chain length.
-    // Fetch recent candidate rows, then drop anything before the latest player turn.
-    $historyRows = $db->fetchAll("select type,gamets,ts FROM eventlog a WHERE type in ('rechat','narration','inputtext','inputtext_s','ginputtext','ginputtext_s','narrator_inputtext')
-    and localts>".(time()-120)." order by gamets desc,ts desc LIMIT 50 OFFSET 0");
-
-    return chimFilterRechatHistorySinceLatestInput(array_reverse($historyRows));
+    // Include only actual rechat turns. Player input is not part of the rechat budget.
+    // Keep the row payload so callers can scope the count to the current speaker.
+    $lastRechat=$db->fetchAll("select type,data,gamets FROM  eventlog a  WHERE type in ('rechat','narration') 
+    and localts>".(time()-120)."  order by gamets desc,ts desc LIMIT 10 OFFSET 0");
+    
+    return $lastRechat;
 
 }
 
 
 
 function extractDialogueTarget($string) {
-    // Check if the string contains "(talking to"
-    if ($string && strpos($string, '(talking to') !== false) {
+    // Check if the string contains a directed-dialogue tag.
+    if ($string && preg_match('/\((?:talking|whispering|shouting)\s+to\s+/i', $string)) {
         // Extract the target's name using regular expression
-        preg_match('/\(talking to ([^\)]+)\)/', $string, $matches);
+        preg_match('/\((?:talking|whispering|shouting)\s+to\s+([^\)]+)\)/i', $string, $matches);
         
         // Check if a match is found and extract the target's name
         if (isset($matches[1])) {
             $target = $matches[1];
 
-            // Remove the "(talking to ...)" part from the original string
-            $cleanedString = preg_replace('/\(talking to [^\)]+\)/', '', $string);
+            // Remove the directed-dialogue tag from the original string
+            $cleanedString = preg_replace('/\((?:talking|whispering|shouting)\s+to\s+[^\)]+\)/i', '', $string);
             if (strpos($cleanedString,"{$GLOBALS["HERIKA_NAME"]}:")===0) {
                 $cleanedString=str_replace("{$GLOBALS["HERIKA_NAME"]}:","",$cleanedString);
             }
@@ -4544,6 +4874,21 @@ function call_llm_internal() {
         error_log("[CLEAN_CONTEXT_FOCUS_CHAT] Using 2-step schema, model: {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
 
 
+        if ($gameRequest[0] === "narrator_inputtext") {
+            require_once($GLOBALS["ENGINE_PATH"]."/functions".DIRECTORY_SEPARATOR."json_response.php");
+            if (function_exists('chimEnsureNarratorJsonResponseState')) {
+                chimEnsureNarratorJsonResponseState('DATA_FUNCTIONS_FAST_STANDARD');
+            }
+            if (
+                !empty($GLOBALS["PROMPT_ACTIONS_LIST"])
+                && isset($contextData[0]["content"])
+                && strpos($contextData[0]["content"], '<available_actions_list>') === false
+            ) {
+                $contextData[0]["content"] .= "\n" . $GLOBALS["PROMPT_ACTIONS_LIST"];
+                Logger::warn("[NARRATOR_DEBUG][DATA_FUNCTIONS][FAST_STANDARD_CONTEXT] injected available_actions_list into narrator system prompt");
+            }
+        }
+
         $buffer=$connectionHandler->fast_request($contextData,$overrideParameters,'standard');
         snapshot_response_prompt_debug_data($currentConnectorData);
         $preserveAsterisksInContext = isset($GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"]) ? (bool)$GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"] : false;
@@ -4651,10 +4996,28 @@ function call_llm_internal() {
 
     ///// PATCH. STORE FUNCTION RESULT ONCE RESULT PROMPT HAS BEEN BUILT.
     if (isset($GLOBALS["PATCH_STORE_FUNC_RES"])) {
-        $gameRequestCopy=$gameRequest;
-        $gameRequestCopy[0]="infoaction";
-        $gameRequestCopy[3]=$GLOBALS["PATCH_STORE_FUNC_RES"];
-        logEvent($gameRequestCopy);
+        $patchStoreFuncResAction = trim(strval($GLOBALS["PATCH_STORE_FUNC_RES_ACTION"] ?? ""));
+        $skipPatchStoreFuncResLog = $patchStoreFuncResAction !== ""
+            && function_exists('isNarratorPrivateActionName')
+            && isNarratorPrivateActionName($patchStoreFuncResAction);
+
+        if (
+            !$skipPatchStoreFuncResLog
+            && $patchStoreFuncResAction !== ''
+            && function_exists('herikaActionCatalogMetadataFlagEnabled')
+            && herikaActionCatalogMetadataFlagEnabled($patchStoreFuncResAction, 'suppress_placeholder_infoaction')
+        ) {
+            $skipPatchStoreFuncResLog = true;
+        }
+
+        if (!$skipPatchStoreFuncResLog) {
+            $gameRequestCopy=$gameRequest;
+            $gameRequestCopy[0]="infoaction";
+            $gameRequestCopy[3]=$GLOBALS["PATCH_STORE_FUNC_RES"];
+            logEvent($gameRequestCopy);
+        }
+
+        unset($GLOBALS["PATCH_STORE_FUNC_RES"], $GLOBALS["PATCH_STORE_FUNC_RES_ACTION"]);
     }
     ///// PATCH
 
@@ -4939,7 +5302,7 @@ function call_llm_internal() {
                     
                     if (isset($actionParts2[1])) {
                         // Parameter part 
-                        if ($actionParts2[0]=="Attack"||$actionParts2[0]=="AttackHunt") {
+                        if ($actionParts2[0]=="Attack") {
                             // Lets polish the parameters
                             $localtarget=$actionParts2[1];
                             $mang1=explode(",",$localtarget);
@@ -4955,22 +5318,6 @@ function call_llm_internal() {
                                 $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Attack@{$mang3[0]}";
 
                             error_log("[ACTION POSTFILTER Attack] $localtarget => {$mang3[0]} => $mang4");
-                        } else if ($actionParts2[0]=="Inspect") {
-                            // Lets polish the parammeters
-                            $localtarget=$actionParts2[1];
-                            $mang1=explode(",",$localtarget);
-                            $mang2=explode(" and ",$mang1[0]);
-                            $mang3=explode("(",$mang2[0]);
-                            $mang4=FindClosestActorName($mang3[0]);
-
-                            if ($mang4)
-                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Inspect@{$mang4}";
-                            else
-                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|Inspect@{$mang3[0]}";
-
-                            error_log("[ACTION POSTFILTER GiveItemTo] $localtarget => {$mang3[0]} => $mang4");
-
-
                         } else if ($actionParts2[0]=="GiveItemTo") {
                             // Check if parameter is JSON (multi-param) - skip post-filtering for JSON
                             if (isset($actionParts2[1]) && substr(trim($actionParts2[1]), 0, 1) === '{') {
@@ -5248,19 +5595,6 @@ function call_llm_internal() {
                             } else
                                 $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TakeGoldFromPlayer@$mang4";
 
-                        } else if ($actionParts2[0]=="SetCurrentTask") {
-                            // Lets polish the parammeters
-                            if (empty(trim($actionParts2[1]))) {
-                                //$speech=implode(" ".$talkedSoFar); typo? if not, what does this do
-                                //trying
-                                $speech=implode(" ", $talkedSoFar);
-                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|SetCurrentTask@$speech";
-                                error_log("[ACTION POSTFILTER SetCurrentTask, using speech as parameter $speech] ");
-                            
-                            } else {
-                                error_log("[ACTION POSTFILTER SetCurrentTask, using target as parameter {$actionParts2[1]}] ");
-                            }
-
                         } else if ($actionParts2[0]=="PickupItem") {
                             // Parse item parameter - can be JSON or plain string
                             $itemParam = trim($actionParts2[1]);
@@ -5380,7 +5714,9 @@ function call_llm_internal() {
                         'ts' => $gameRequest[1],
                         'gamets' => $gameRequest[2],
                         'localts'=>time(),
-                        'original'=>$copyActions[$n]
+                        'original'=>function_exists('herikaActionCatalogApplyFollowupChainToActionsIssuedOriginal')
+                            ? herikaActionCatalogApplyFollowupChainToActionsIssuedOriginal($copyActions[$n])
+                            : $copyActions[$n]
                     )
                 );
 
@@ -5636,6 +5972,10 @@ function DataRetrieveLastTimeTalk($s_player_name, $s_npc_name) {
 
 function GetAnimationHex($mood)
 {
+    $mood = extractFirstEmoteMood($mood);
+    if ($mood === '') {
+        return "";
+    }
 
     //error_log("Getting animation for mood: $mood");
     $ANIMATIONS=[
@@ -5777,7 +6117,11 @@ function GetAnimationHex($mood)
 
 
 function GetExpression($mood) {
-    $EXPRESSIONS=[
+     $mood = extractFirstEmoteMood($mood);
+     if ($mood === '') {
+         return "";
+     }
+     $EXPRESSIONS=[
      "DialogueAnger",    "DialogueFear",    "DialogueHappy",     "DialogueSad",
      "DialogueSurprise", "DialoguePuzzled", "DialogueDisgusted", "MoodNeutral",
      "MoodAnger",        "MoodFear",        "MoodHappy",        "MoodSad",
@@ -5903,8 +6247,8 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
                 // Query for new HERIKA fields (bio tables)
                 $npcNewFields = $db->fetchAll("SELECT npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags, voiceid, gender, race, refid FROM combined_bio_templates where npc_name='$codename'");
             } else {
-                // For translated templates, set empty new fields for now
-                $npcNewFields = [0 => ['npc_background' => '', 'npc_personality' => '', 'npc_appearance' => '', 'npc_relationships' => '', 'npc_occupation' => '', 'npc_skills' => '', 'npc_speechstyle' => '', 'npc_goals' => '']];
+                // Keep translated core text, but still seed structured metadata from the bio template view.
+                $npcNewFields = $db->fetchAll("SELECT npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, oghma_knowledge_tags, voiceid, gender, race, refid FROM combined_bio_templates where npc_name='$codename'");
             }
         }
 
@@ -6062,8 +6406,24 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
         $currentData = $npcMaster->GetByName($npcname);
         $currentData["voiceid"] = $voiceid;
 
-        $currentData['metadata'] = json_encode([]);
-        $currentData['extended_data'] = json_encode(["chim_core_migrated" => 2]);
+        $existingMetadata = [];
+        if (!empty($currentData['metadata'])) {
+            $decodedMetadata = json_decode((string)$currentData['metadata'], true);
+            if (is_array($decodedMetadata)) {
+                $existingMetadata = $decodedMetadata;
+            }
+        }
+        $currentData['metadata'] = json_encode($existingMetadata, JSON_UNESCAPED_UNICODE);
+
+        $existingExtendedData = [];
+        if (!empty($currentData['extended_data'])) {
+            $decodedExtendedData = json_decode((string)$currentData['extended_data'], true);
+            if (is_array($decodedExtendedData)) {
+                $existingExtendedData = $decodedExtendedData;
+            }
+        }
+        $existingExtendedData['chim_core_migrated'] = 2;
+        $currentData['extended_data'] = json_encode($existingExtendedData, JSON_UNESCAPED_UNICODE);
         $currentData['profile_id'] = 1; // Default profile
         $currentData['md5'] = md5($currentData["npc_name"]);
         $currentData['gamets_last_updated'] = $GLOBALS["gameRequest"][2];
@@ -6104,12 +6464,11 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
     $getItemDescription = function($itemName, $baseid = null) {
         global $db;
         
-        // Try by baseid first if provided
+        // Try the shared runtime/stable/legacy baseid resolver first if provided
         if (!empty($baseid)) {
-            $escapedBaseid = $db->escape($baseid);
-            $result = $db->fetchAll("SELECT description FROM combined_descriptions WHERE baseid='{$escapedBaseid}' LIMIT 1");
-            if (!empty($result) && !empty($result[0]['description'])) {
-                return $result[0]['description'];
+            $record = lookupDescriptionByFormID((string) $baseid);
+            if (!empty($record['description'])) {
+                return $record['description'];
             }
         }
         
@@ -6130,22 +6489,34 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
         'HERIKA_BACKGROUND' => 'Basic Summary',
         'HERIKA_PERSONALITY' => 'Personality', 
         'HERIKA_APPEARANCE' => 'Appearance',
-        'HERIKA_RELATIONSHIPS' => 'Relationships',
         'HERIKA_OCCUPATION' => 'Occupation',
         'HERIKA_SKILLS' => 'Skills',
         'HERIKA_SPEECHSTYLE' => 'Speech Style',
         'HERIKA_GOALS' => 'Goals'
     ];
+    $hasStructuredBiographyFields = false;
+    foreach (array_keys($herikaFields) as $structuredFieldName) {
+        if (isset($FOLLOWER_CONF[$structuredFieldName]) && !empty(trim((string)$FOLLOWER_CONF[$structuredFieldName]))) {
+            $hasStructuredBiographyFields = true;
+            break;
+        }
+    }
     $SKILLS_ADD="";
     $EQUIPMENT_ADD="";
     $TARGET_EQUIPMENT_ADD="";
     $STATS_ADD="";
     $SPELLS_ADD="";
+    $ACTIVITY_ADD="";
     
     $npcMaster=new NpcMaster();
     $currentNpcData=$npcMaster->getByName($FOLLOWER_CONF["HERIKA_NAME"]);
     $metaData=$npcMaster->getMetaData($currentNpcData);
     $extendedData=$npcMaster->getExtendedData($currentNpcData);
+    $activityStatus = chimNormalizeActivityStatus($metaData);
+
+    if (!empty($activityStatus['summary'])) {
+        $ACTIVITY_ADD = "\n\n<activity>\n#Activity\n" . ucfirst($activityStatus['summary']) . ".\n</activity>\n";
+    }
     
     if (isset($metaData["skills"])) {
         // Convert numeric skills to descriptive levels, grouped by category
@@ -6310,7 +6681,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
         }
         
         if (!empty($equipmentParts)) {
-            $INVENTORY_ADD = "\n<inventory>\n#Current Inventory:\n" . implode(", ", $equipmentParts)."\n</inventory>";
+            $INVENTORY_ADD = "\n<inventory>\n#Inventory\n" . implode(", ", $equipmentParts)."\n</inventory>";
         }
     }
     
@@ -6347,11 +6718,18 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
 			if ($m !== 'Unknown') { $lines[] = "  • Magicka: {$m}"; }
 			if ($st !== 'Unknown') { $lines[] = "  • Stamina: {$st}"; }
 			if (!empty($lines)) {
-				$STATS_ADD = "\n\n<current_condition>\n#Current Condition\n" . implode("\n", $lines)."\n</current_condition>\n";
+				$STATS_ADD = "\n\n<condition>\n#Condition\n" . implode("\n", $lines)."\n</condition>\n";
 			}
 		}
 	}
     
+    $conditionLines = chimBuildCurrentConditionLinesFromMetadata($metaData["stats"] ?? null, $metaData);
+    if (!empty($conditionLines)) {
+        $STATS_ADD = "\n\n<condition>\n#Condition\n" . implode("\n", $conditionLines)."\n</condition>\n";
+    } else {
+        $STATS_ADD = "";
+    }
+
     // Add NPC's known spells (skip for The Narrator)
     if ($FOLLOWER_CONF["HERIKA_NAME"] !== "The Narrator" && isset($metaData["spells"]) && is_array($metaData["spells"])) {
         $spellParts = [];
@@ -6385,11 +6763,14 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
                 continue;
             }
             
-            // Only add spells that have descriptions in the database
+            // Only add spells that have exact/stable spell descriptions in the database.
+            // Do not use legacy wildcard or name fallback here; those can collide with
+            // unrelated item descriptions after mod-aware FormID resolution.
             $description = null;
             if (!empty($baseid) && !in_array($baseid, $describedBaseids)) {
-                $description = $getItemDescription($spellName, $baseid);
-                if ($description) {
+                $record = lookupStrictDescriptionByFormID((string) $baseid);
+                if (!empty($record['description'])) {
+                    $description = $record['description'];
                     $describedBaseids[] = $baseid;
                 }
             }
@@ -6513,20 +6894,21 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
                 $dynamicBio.=!empty($SKILLS_ADD) ?"\n<rpg_skills>\n$SKILLS_ADD\n</rpg_skills>\n": "";
             }
             
-            // Add equipment and reanimation status right after HERIKA_APPEARANCE section
-            if ($fieldName=="HERIKA_APPEARANCE") {
-                // Check if this NPC is reanimated
-                $extendedData = $npcMaster->getExtendedData($currentNpcData);
-                if (empty($GLOBALS["DISABLE_REANIMATION_TRACKING"]) && isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
-                    $dynamicBio .= "\n<reanimation_status>\nYou have been reanimated from death as a zombie. Your skin has a deathly pale, greyish pallor with a corpse-like appearance. Your eyes are glazed and lifeless, and your movements are stiff and unnatural.\n</reanimation_status>";
-                }
-                
-                $dynamicBio.=$EQUIPMENT_ADD ?? "";
-                $dynamicBio.=$TARGET_EQUIPMENT_ADD ?? "";
-                $dynamicBio.=$INVENTORY_ADD ?? "";
-                $dynamicBio.=$STATS_ADD ?? "";
-                $dynamicBio.=$SPELLS_ADD ?? "";
+        }
+
+        if ($fieldName=="HERIKA_APPEARANCE" && $hasStructuredBiographyFields) {
+            // Check if this NPC is reanimated
+            $extendedData = $npcMaster->getExtendedData($currentNpcData);
+            if (empty($GLOBALS["DISABLE_REANIMATION_TRACKING"]) && isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
+                $dynamicBio .= "\n<reanimation_status>\nYou have been reanimated from death as a zombie. Your skin has a deathly pale, greyish pallor with a corpse-like appearance. Your eyes are glazed and lifeless, and your movements are stiff and unnatural.\n</reanimation_status>";
             }
+
+            $dynamicBio.=$EQUIPMENT_ADD ?? "";
+            $dynamicBio.=$TARGET_EQUIPMENT_ADD ?? "";
+            $dynamicBio.=$INVENTORY_ADD ?? "";
+            $dynamicBio.=$ACTIVITY_ADD ?? "";
+            $dynamicBio.=$STATS_ADD ?? "";
+            $dynamicBio.=$SPELLS_ADD ?? "";
         }
     }
     
@@ -6621,7 +7003,6 @@ function buildDynamicProfileDisplay() {
         'HERIKA_BACKGROUND' => 'Background',
         'HERIKA_PERSONALITY' => 'Personality', 
         'HERIKA_APPEARANCE' => 'Appearance',
-        'HERIKA_RELATIONSHIPS' => 'Relationships',
         'HERIKA_OCCUPATION' => 'Occupation',
         'HERIKA_SKILLS' => 'Skills',
         'HERIKA_SPEECHSTYLE' => 'Speech Style',

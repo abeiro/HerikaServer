@@ -8,15 +8,14 @@ $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 $GLOBALS["ENGINE_ROOT"] = $enginePath;
 $GLOBALS["ENGINE_PATH"] = $GLOBALS["ENGINE_ROOT"]; // Todo, make this uniform
 
-require_once $enginePath . "conf/conf.php";
-
-if (! isset($GLOBALS["DBDRIVER"])) {
-    $GLOBALS["DBDRIVER"] = "postgresql";
-}
+require_once $enginePath . "lib/runtime_bootstrap.php";
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
 
 require_once $enginePath . "lib/logger.php";
-require_once $enginePath . "lib/{$GLOBALS["DBDRIVER"]}.class.php";
-if (! isset($GLOBALS["db"])) {$GLOBALS["db"] = new sql();}
 require_once $enginePath . "lib/model_dynmodel.php";
 require_once $enginePath . "lib/chat_helper_functions.php";
 require_once $enginePath . "lib/memory_helper_vectordb.php";
@@ -28,6 +27,26 @@ require_once $enginePath . "lib/core/llm_connector.class.php";
 require_once $enginePath . "lib/core/tts_connector.class.php";
 require_once $enginePath . "lib/core/npc_master.class.php";
 require_once $enginePath . "lib/core/core_profiles.class.php";
+
+function chimResolveSummaryConnectorRuntime(): ?array
+{
+    $connectorId = intval($GLOBALS["CORE_CONNECTOR_SUMMARY"] ?? 0);
+    if ($connectorId <= 0) {
+        return null;
+    }
+
+    $connector = new LLMConnector();
+    $currentConnectorData = $connector->getById($connectorId);
+    if (!$currentConnectorData) {
+        return null;
+    }
+
+    $connector->setOldGlobals($currentConnectorData);
+    $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
+    $GLOBALS["CURRENT_CONNECTOR"] = $currentConnectorData["driver"];
+
+    return [$connector, $currentConnectorData];
+}
 
 function resyncMemorySummaries($db, $forceAll = false, $onlyFix = false)
 {
@@ -255,18 +274,14 @@ function syncIndividualMemorySummaries($db, $connectionHandler = null, $maxBatch
     }
 
     if (!$connectionHandler) {
-        $CONF_SAMPLE_VARS = extract_assignments("{$GLOBALS["ENGINE_ROOT"]}/conf/conf.php");
-        $connector = new LLMConnector();
-        $currentConnectorData = $connector->getById($CONF_SAMPLE_VARS["CORE_CONNECTOR_SUMMARY"]);
-        if (!$currentConnectorData) {
+        $summaryConnectorState = chimResolveSummaryConnectorRuntime();
+        if (!$summaryConnectorState) {
             echo "No summary connector configured. Skipping individual memory sync." . PHP_EOL;
             return 0;
         }
 
+        [$connector, $currentConnectorData] = $summaryConnectorState;
         $connectionHandler = $connector->getConnector($currentConnectorData);
-        $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
-        $GLOBALS["CURRENT_CONNECTOR"] = $currentConnectorData["driver"];
-        $connector->setOldGlobals($currentConnectorData);
     }
 
     $summaryPromptValue = '';
@@ -496,14 +511,14 @@ Note: Memories are stored in memory_summary table, which holds info from events/
             $profile            = new CoreProfile();
             $currentProfileData = $profile->getById($currentNpcData["profile_id"]);
 
-            $connector            = new LLMConnector();
-            $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_SUMMARY"]);
+            $summaryConnectorState = chimResolveSummaryConnectorRuntime();
+            if (!$summaryConnectorState) {
+                die("No summary connector configured." . PHP_EOL);
+            }
 
-            $connector->setOldGlobals($currentConnectorData);
+            [$connector, $currentConnectorData] = $summaryConnectorState;
             $profile->setOldGlobals($currentProfileData);
             $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
-
-            $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
         } else {
             $GLOBALS["MINIME_T5"]   = true;
             $GLOBALS["HERIKA_NAME"] = "%";
@@ -712,24 +727,21 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         } else {
             echo "Found {$entries_to_process_count} entries to process. Starting summarization..." . PHP_EOL;
 
-            $CONF_SAMPLE_VARS = extract_assignments("{$GLOBALS["ENGINE_ROOT"]}/conf/conf.php");
+            $summaryConnectorState = chimResolveSummaryConnectorRuntime();
+            if (!$summaryConnectorState) {
+                echo "No summary connector configured. Skipping summarization." . PHP_EOL;
+            } else {
+                [$connector, $currentConnectorData] = $summaryConnectorState;
+                $connectionHandler = $connector->getConnector($currentConnectorData);
 
-            $connector            = new LLMConnector();
-            $currentConnectorData = $connector->getById($CONF_SAMPLE_VARS["CORE_CONNECTOR_SUMMARY"]);
-            $connectionHandler    = $connector->getConnector($currentConnectorData);
+                error_log("Using connector {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
 
-            $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
-            $GLOBALS["CURRENT_CONNECTOR"]                = $currentConnectorData["driver"];
-            $connector->setOldGlobals($currentConnectorData);
+                $results_query = "select gamets_truncated,packed_message,uid,classifier,rowid,companions from memory_summary where (gamets_truncated>{$maxRow} or summary is null)  order by gamets_truncated asc ";
+                $results       = $db->query($results_query);
 
-            error_log("Using connector {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
+                $toUpdate = [];
 
-            $results_query = "select gamets_truncated,packed_message,uid,classifier,rowid,companions from memory_summary where (gamets_truncated>{$maxRow} or summary is null)  order by gamets_truncated asc ";
-            $results       = $db->query($results_query);
-
-            $toUpdate = [];
-
-            while ($row = $db->fetchArray($results)) {
+                while ($row = $db->fetchArray($results)) {
 
                 if (isset($argv[3])) { // User-defined limit for number of entries to process
                     if ($processed_in_loop_counter >= ($argv[3] + 0)) {
@@ -892,12 +904,13 @@ Note: Memories are stored in memory_summary table, which holds info from events/
 
                 $toUpdate = []; // Reset for next iteration as in original script
 
-            } // End while loop
+                } // End while loop
 
-            if ($processed_in_loop_counter > 0) {
-                echo "Attempted summarization for {$processed_in_loop_counter} entries (out of {$entries_to_process_count} found needing update)." . PHP_EOL;
-            } elseif ($entries_to_process_count > 0) {
-                echo "Found {$entries_to_process_count} entries, but 0 were processed in this run (check logs for details or processing limit if set via third argument)." . PHP_EOL;
+                if ($processed_in_loop_counter > 0) {
+                    echo "Attempted summarization for {$processed_in_loop_counter} entries (out of {$entries_to_process_count} found needing update)." . PHP_EOL;
+                } elseif ($entries_to_process_count > 0) {
+                    echo "Found {$entries_to_process_count} entries, but 0 were processed in this run (check logs for details or processing limit if set via third argument)." . PHP_EOL;
+                }
             }
         }
 
