@@ -340,7 +340,7 @@
         }
 
         // emotions expression:
-        if ($GLOBALS['use_emotions_expression']) {
+        if (isset($GLOBALS['use_emotions_expression']) && $GLOBALS['use_emotions_expression']) {
             if (!array_key_exists("emotion", $GLOBALS["responseTemplate"])) {
                 $GLOBALS["responseTemplate"]["emotion"] = 
                 "calm|surprised|aroused|desire|love|happy|amusement|gratitude|proud|anxious|fearful|panic|grieving|envious|jealous|sad|disappointed|ashamed|angry|offended|disgusted|sarcastic";
@@ -484,7 +484,7 @@
         }
 
         // emotions expression:
-        if ($GLOBALS['use_emotions_expression']) {
+        if (isset($GLOBALS['use_emotions_expression']) && $GLOBALS['use_emotions_expression']) {
             $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(
                 $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"], array(
                     "emotion" => array(
