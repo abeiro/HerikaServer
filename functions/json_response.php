@@ -50,6 +50,14 @@
         }
     }
 
+    if (!function_exists('chimEnsureRecursiveRequireHelper')) {
+        function chimEnsureRecursiveRequireHelper() {
+            if (!function_exists('requireFilesRecursively')) {
+                require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."data_functions.php");
+            }
+        }
+    }
+
     if (!function_exists('chimRefreshJsonResponseState')) {
         function chimRefreshJsonResponseState($loadExtensionCustomizers = false) {
             global $FUNC_LIST;
@@ -69,6 +77,7 @@
 
             if ($loadExtensionCustomizers && empty($GLOBALS["CHIM_JSON_RESPONSE_EXT_LOADED"])) {
                 // Allow one-time direct template edits from extensions on initial load.
+                chimEnsureRecursiveRequireHelper();
                 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"json_response_custom.php");
                 $GLOBALS["CHIM_JSON_RESPONSE_EXT_LOADED"] = true;
             }
