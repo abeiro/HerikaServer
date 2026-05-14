@@ -135,9 +135,13 @@ function stt($file)
     $responseParsed = json_decode($response, true);
 
     if (!is_array($responseParsed)) {
+        $decodeMessage = 'Failed to parse JSON response from LocalWhisper.';
+        if (preg_match('/^\s*<!DOCTYPE html/i', $response) || preg_match('/<html/i', $response)) {
+            $decodeMessage = 'Endpoint returned HTML instead of JSON. LocalWhisper URL likely points to a web page or wrong route.';
+        }
         sttLocalWhisperSetDiagnostic($baseDiagnostic + [
             'stage' => 'decode',
-            'message' => 'Failed to parse JSON response from LocalWhisper.',
+            'message' => $decodeMessage,
             'response_excerpt' => substr($response, 0, 1000),
             'json_error' => function_exists('json_last_error_msg') ? json_last_error_msg() : 'Unknown JSON error',
         ]);
