@@ -5,18 +5,36 @@
 error_reporting(E_ALL);
 
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
-require_once($path . "conf".DIRECTORY_SEPARATOR."conf.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
+$GLOBALS["ENGINE_PATH"] = $path;
+require_once($path . "lib" .DIRECTORY_SEPARATOR."runtime_bootstrap.php");
 
 $startTime = microtime(true);
-Logger::info("CSV Import endpoint started: " . $startTime);
-$GLOBALS["AUDIT_RUNID_REQUEST"] = "CSV_IMPORT";
 
 // Set JSON response header
 header('Content-Type: application/json');
+
+try {
+    chimRuntimeBootstrap($path, [
+        'load_general_settings' => true,
+        'load_stt_connector' => false,
+        'load_itt_connector' => false,
+    ]);
+    require_once($path . "lib" .DIRECTORY_SEPARATOR."auditing.php");
+    require_once($path . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
+    require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
+} catch (Throwable $e) {
+    http_response_code(500);
+    error_log("CSV Import bootstrap failed: " . $e->getMessage());
+    echo json_encode([
+        'success' => false,
+        'error' => 'Server bootstrap failed',
+        'details' => $e->getMessage(),
+    ]);
+    exit;
+}
+
+Logger::info("CSV Import endpoint started: " . $startTime);
+$GLOBALS["AUDIT_RUNID_REQUEST"] = "CSV_IMPORT";
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -114,7 +132,7 @@ try {
         'processing_time' => round(microtime(true) - $startTime, 3)
     ]);
     
-} catch (Exception $e) {
+} catch (Throwable $e) {
     Logger::error("CSV Import error: " . $e->getMessage());
     
     // Clean up file on error

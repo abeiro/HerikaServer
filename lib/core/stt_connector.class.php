@@ -37,7 +37,7 @@ class STTConnector
     ];
 
     private static $localUrlDefaultMap = [
-        'localwhisper' => 'http://127.0.0.1:8081',
+        'localwhisper' => 'http://127.0.0.1:9876/api/v0/transcribe',
     ];
 
     public function create($data)
