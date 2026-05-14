@@ -1244,7 +1244,7 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     ];
     
     if (!isset($fieldMapping[$field])) {
-        Logger::warning("updateDynamicProfileField: Unknown field '$field' for $npcName");
+        Logger::warn("updateDynamicProfileField: Unknown field '$field' for $npcName");
         return false;
     }
 
@@ -1298,7 +1298,7 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     }
     
     if (empty($updatePrompt)) {
-        Logger::warning("updateDynamicProfileField: No prompt configured for field '$field' ($promptName)");
+        Logger::warn("updateDynamicProfileField: No prompt configured for field '$field' ($promptName)");
         return false;
     }
     
