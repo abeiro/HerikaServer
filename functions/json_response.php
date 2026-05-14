@@ -50,6 +50,14 @@
         }
     }
 
+    if (!function_exists('chimEnsureRecursiveRequireHelper')) {
+        function chimEnsureRecursiveRequireHelper() {
+            if (!function_exists('requireFilesRecursively')) {
+                require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."data_functions.php");
+            }
+        }
+    }
+
     if (!function_exists('chimRefreshJsonResponseState')) {
         function chimRefreshJsonResponseState($loadExtensionCustomizers = false) {
             global $FUNC_LIST;
@@ -69,6 +77,7 @@
 
             if ($loadExtensionCustomizers && empty($GLOBALS["CHIM_JSON_RESPONSE_EXT_LOADED"])) {
                 // Allow one-time direct template edits from extensions on initial load.
+                chimEnsureRecursiveRequireHelper();
                 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"json_response_custom.php");
                 $GLOBALS["CHIM_JSON_RESPONSE_EXT_LOADED"] = true;
             }
@@ -208,6 +217,8 @@
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put the exact item name from <inventory> in the 'target' field. Only use this for food, drinks, or potions already in inventory. Leave 'item' blank unless you need it as a fallback copy of the same item name. The spoken reply for this action happens after the item is consumed, so use it only when {$GLOBALS["HERIKA_NAME"]} is actually going to eat or drink the item.";
                 } else if ($fname == "SpawnItem") {
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put the recipient in the 'target' field, the item name in the 'item' field, and the quantity in the 'amount' field. Use '{$GLOBALS["PLAYER_NAME"]}', 'PLAYER', or 'me' to give the item to the player.";
+                } else if ($fname == "SpawnGold") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put the recipient in the 'target' field, put the gold amount in the 'amount' field, and leave 'item' blank. Use '{$GLOBALS["PLAYER_NAME"]}', 'PLAYER', or 'me' to give the gold to the player.";
                 } else if ($fname == "SpawnNPC") {
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put the SNQE NPC template key in the 'target' field, leave 'item' blank, and put the spawn count in the 'amount' field.";
                 } else if ($fname == "CreateNewNPC") {
@@ -293,9 +304,9 @@
                     "message"=>$messageDescription,
                     "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem, this is the actor who should receive the spawned item. For SpawnNPC, this is the SNQE NPC template key to spawn near {$GLOBALS["PLAYER_NAME"]}. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. For DirectorCommand, this is a short freeform director brief describing the scene instruction or event to stage. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including SpawnNPC and CreateNewNPC and DirectorCommand.",
-                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC or DirectorCommand. Use a positive integer when needed.",
+                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem and SpawnGold, this is the actor who should receive the spawned item or gold. For SpawnNPC, this is the SNQE NPC template key to spawn near {$GLOBALS["PLAYER_NAME"]}. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. For DirectorCommand, this is a short freeform director brief describing the scene instruction or event to stage. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including SpawnGold and SpawnNPC and CreateNewNPC and DirectorCommand.",
+                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC or SpawnGold. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC or DirectorCommand. Use a positive integer when needed.",
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                 ];
             } else {
@@ -305,9 +316,9 @@
                     "message"=>$messageDescription,
                     "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem, this is the actor who should receive the spawned item. For SpawnNPC, this is the SNQE NPC template key to spawn near {$GLOBALS["PLAYER_NAME"]}. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. For DirectorCommand, this is a short freeform director brief describing the scene instruction or event to stage. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including SpawnNPC and CreateNewNPC and DirectorCommand.",
-                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC or DirectorCommand. Use a positive integer when needed."
+                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem and SpawnGold, this is the actor who should receive the spawned item or gold. For SpawnNPC, this is the SNQE NPC template key to spawn near {$GLOBALS["PLAYER_NAME"]}. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. For DirectorCommand, this is a short freeform director brief describing the scene instruction or event to stage. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including SpawnGold and SpawnNPC and CreateNewNPC and DirectorCommand.",
+                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC or SpawnGold. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC or DirectorCommand. Use a positive integer when needed."
                 ];
             }
         } else {
@@ -317,9 +328,9 @@
                     "listener"=>$listenerDesc,
                     "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem, this is the actor who should receive the spawned item. For SpawnNPC, this is the SNQE NPC template key to spawn near {$GLOBALS["PLAYER_NAME"]}. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. For DirectorCommand, this is a short freeform director brief describing the scene instruction or event to stage. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including SpawnNPC and CreateNewNPC and DirectorCommand.",
-                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC or DirectorCommand. Use a positive integer when needed.",
+                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem and SpawnGold, this is the actor who should receive the spawned item or gold. For SpawnNPC, this is the SNQE NPC template key to spawn near {$GLOBALS["PLAYER_NAME"]}. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. For DirectorCommand, this is a short freeform director brief describing the scene instruction or event to stage. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including SpawnGold and SpawnNPC and CreateNewNPC and DirectorCommand.",
+                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC or SpawnGold. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC or DirectorCommand. Use a positive integer when needed.",
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                     "message"=>$messageDescription
                 ];
@@ -329,16 +340,16 @@
                     "listener"=>$listenerDesc,
                     "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem, this is the actor who should receive the spawned item. For SpawnNPC, this is the SNQE NPC template key to spawn near {$GLOBALS["PLAYER_NAME"]}. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
-                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including SpawnNPC and CreateNewNPC.",
-                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC. Use a positive integer when needed.",
+                    "target"=>"action target actor. For TeleportNPC, this is the actor to teleport. For SpawnItem and SpawnGold, this is the actor who should receive the spawned item or gold. For SpawnNPC, this is the SNQE NPC template key to spawn near {$GLOBALS["PLAYER_NAME"]}. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
+                    "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact item name from inventory or spell name from spells) OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including SpawnGold and SpawnNPC and CreateNewNPC.",
+                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC or SpawnGold. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC. Use a positive integer when needed.",
                     "message"=>$messageDescription
                 ];
             }
         }
 
         // emotions expression:
-        if ($GLOBALS['use_emotions_expression']) {
+        if (isset($GLOBALS['use_emotions_expression']) && $GLOBALS['use_emotions_expression']) {
             if (!array_key_exists("emotion", $GLOBALS["responseTemplate"])) {
                 $GLOBALS["responseTemplate"]["emotion"] = 
                 "calm|surprised|aroused|desire|love|happy|amusement|gratitude|proud|anxious|fearful|panic|grieving|envious|jealous|sad|disappointed|ashamed|angry|offended|disgusted|sarcastic";
@@ -431,15 +442,15 @@
                             ),
                         "target" => array(
                             "type" => "string",
-                            "description" => "action target actor| exact inventory item name when action is Consume| actor to teleport when action is TeleportNPC| actor to receive the spawned item when action is SpawnItem| SNQE NPC template key when action is SpawnNPC| actor to kill when action is KillTarget| short creation brief when action is CreateNewNPC| short freeform director brief when action is DirectorCommand. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target. Also used for specifying destination when using Travel_To"
+                "description" => "action target actor| exact inventory item name when action is Consume| actor to teleport when action is TeleportNPC| actor to receive spawned gold when action is SpawnGold| actor to receive the spawned item when action is SpawnItem| SNQE NPC template key when action is SpawnNPC| actor to kill when action is KillTarget| short creation brief when action is CreateNewNPC| short freeform director brief when action is DirectorCommand. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target. Also used for specifying destination when using Travel_To"
                         ),
                         "item" => array(
                             "type" => "string",
-                            "description" => "item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact name from inventory, nearby_items, the representative RefID:ItemName shown in grouped ITEM DESCRIPTIONS, or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). For Consume, leave item blank unless target is empty and you need item as the same exact inventory item name fallback. Leave item blank for SpawnNPC and CreateNewNPC and DirectorCommand."
+                "description" => "item name (REQUIRED when action is GiveItemTo or PickupItem or CastSpell - use exact name from inventory, nearby_items, the representative RefID:ItemName shown in grouped ITEM DESCRIPTIONS, or spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). For Consume, leave item blank unless target is empty and you need item as the same exact inventory item name fallback. Leave item blank for SpawnGold and SpawnNPC and CreateNewNPC and DirectorCommand."
                         ),
                         "amount" => array(
                             "type" => "integer",
-                            "description" => "quantity to give or spawn when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC. Optional when action is GiveItemTo. Leave blank for CreateNewNPC and DirectorCommand. Use a positive integer."
+                "description" => "quantity to give or spawn when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC or SpawnGold. Optional when action is GiveItemTo. Leave blank for CreateNewNPC and DirectorCommand. Use a positive integer."
                         )
                     ),
                     "required" => [
@@ -482,7 +493,7 @@
         }
 
         // emotions expression:
-        if ($GLOBALS['use_emotions_expression']) {
+        if (isset($GLOBALS['use_emotions_expression']) && $GLOBALS['use_emotions_expression']) {
             $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"] = array_merge(
                 $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"], array(
                     "emotion" => array(

@@ -6292,6 +6292,81 @@ if ($checkVersion("core_action") < 20260502011) {
     }
 }
 
+if ($checkVersion("core_action") < 20260512001) {
+    Logger::debug("Applying core_action 20260512001 - add narrator SpawnGold action");
+
+    $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            available_to_narrator,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        ) VALUES (
+            'SpawnGold',
+            'Spawn_Gold',
+            'Create gold and give it to a target actor or #PLAYER_NAME#.',
+            '#TARGET# receives #AMOUNT# gold.',
+            FALSE,
+            FALSE,
+            TRUE,
+            FALSE,
+            '{\"type\":\"object\",\"required\":[\"amount\"],\"properties\":{\"amount\":{\"type\":\"integer\",\"description\":\"REQUIRED: positive integer amount of gold to create and give (max: 1000000).\"},\"target\":{\"type\":\"string\",\"description\":\"Recipient actor. Use #PLAYER_NAME#, PLAYER, or me to give the gold to the player.\"}}}'::jsonb,
+            '{\"source\":\"functions.php\",\"status\":\"active\",\"builtin\":true,\"dispatch\":\"rolecommand\"}'::jsonb,
+            TRUE,
+            0,
+            NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ");
+
+    $updateVersion("core_action", 20260512001);
+    Logger::info("Applied patch core_action 20260512001");
+}
+
+if ($checkVersion("core_action") < 20260512002) {
+    Logger::debug("Applying core_action 20260512002 - disable narrator-private gameplay actions by default");
+
+    $db->execQuery("
+        UPDATE public.core_action
+           SET is_activated = FALSE,
+               updated_at = NOW()
+         WHERE code_name IN (
+            'CreateNewNPC',
+            'DirectorCommand',
+            'KillTarget',
+            'SpawnGold',
+            'SpawnItem',
+            'SpawnNPC',
+            'TeleportNPC'
+         )
+    ");
+
+    $updateVersion("core_action", 20260512002);
+    Logger::info("Applied patch core_action 20260512002");
+}
+
 //----------------------------------------------------
 
 // Relationship Evaluation and Initialization Queues

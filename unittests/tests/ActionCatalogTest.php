@@ -43,10 +43,19 @@ final class ActionCatalogTest extends TestCase
         $this->assertTrue($rows['Surrender']['is_activated']);
 
         $this->assertTrue($rows['KillTarget']['available_to_narrator']);
+        $this->assertFalse($rows['KillTarget']['is_activated']);
         $this->assertTrue($rows['SpawnNPC']['available_to_narrator']);
+        $this->assertFalse($rows['SpawnNPC']['is_activated']);
         $this->assertTrue($rows['SpawnItem']['available_to_narrator']);
+        $this->assertFalse($rows['SpawnItem']['is_activated']);
+        $this->assertTrue($rows['SpawnGold']['available_to_narrator']);
+        $this->assertFalse($rows['SpawnGold']['is_activated']);
+        $this->assertTrue($rows['CreateNewNPC']['available_to_narrator']);
+        $this->assertFalse($rows['CreateNewNPC']['is_activated']);
         $this->assertTrue($rows['DirectorCommand']['available_to_narrator']);
+        $this->assertFalse($rows['DirectorCommand']['is_activated']);
         $this->assertTrue($rows['TeleportNPC']['available_to_narrator']);
+        $this->assertFalse($rows['TeleportNPC']['is_activated']);
     }
 
     public function testBuildActionCatalogSeedRows_AssignsScopesAndSkipsRetiredActions(): void
@@ -68,31 +77,43 @@ final class ActionCatalogTest extends TestCase
                 'available_to_npc' => false,
                 'available_to_followers' => false,
                 'available_to_narrator' => true,
-                'is_activated' => true,
+                'is_activated' => false,
             ],
             'KillTarget' => [
                 'available_to_npc' => false,
                 'available_to_followers' => false,
                 'available_to_narrator' => true,
-                'is_activated' => true,
+                'is_activated' => false,
             ],
             'SpawnNPC' => [
                 'available_to_npc' => false,
                 'available_to_followers' => false,
                 'available_to_narrator' => true,
-                'is_activated' => true,
+                'is_activated' => false,
             ],
             'SpawnItem' => [
                 'available_to_npc' => false,
                 'available_to_followers' => false,
                 'available_to_narrator' => true,
-                'is_activated' => true,
+                'is_activated' => false,
+            ],
+            'SpawnGold' => [
+                'available_to_npc' => false,
+                'available_to_followers' => false,
+                'available_to_narrator' => true,
+                'is_activated' => false,
+            ],
+            'CreateNewNPC' => [
+                'available_to_npc' => false,
+                'available_to_followers' => false,
+                'available_to_narrator' => true,
+                'is_activated' => false,
             ],
             'DirectorCommand' => [
                 'available_to_npc' => false,
                 'available_to_followers' => false,
                 'available_to_narrator' => true,
-                'is_activated' => true,
+                'is_activated' => false,
             ],
         ];
 
@@ -103,6 +124,8 @@ final class ActionCatalogTest extends TestCase
                 'KillTarget' => 'KillTarget',
                 'SpawnNPC' => 'SpawnNPC',
                 'SpawnItem' => 'SpawnItem',
+                'SpawnGold' => 'SpawnGold',
+                'CreateNewNPC' => 'CreateNewNPC',
                 'DirectorCommand' => 'DirectorCommand',
                 'TeleportNPC' => 'TeleportNPC',
                 'AttackHunt' => 'Hunt',
@@ -170,6 +193,25 @@ final class ActionCatalogTest extends TestCase
                         'required' => ['item'],
                     ],
                 ],
+                'SpawnGold' => [
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'target' => ['type' => 'string'],
+                            'amount' => ['type' => 'integer'],
+                        ],
+                        'required' => ['amount'],
+                    ],
+                ],
+                'CreateNewNPC' => [
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'target' => ['type' => 'string'],
+                        ],
+                        'required' => ['target'],
+                    ],
+                ],
                 'DirectorCommand' => [
                     'parameters' => [
                         'type' => 'object',
@@ -197,27 +239,37 @@ final class ActionCatalogTest extends TestCase
         $this->assertFalse($rows['TeleportNPC']['available_to_npc']);
         $this->assertFalse($rows['TeleportNPC']['available_to_followers']);
         $this->assertTrue($rows['TeleportNPC']['available_to_narrator']);
-        $this->assertTrue($rows['TeleportNPC']['is_activated']);
+        $this->assertFalse($rows['TeleportNPC']['is_activated']);
 
         $this->assertFalse($rows['KillTarget']['available_to_npc']);
         $this->assertFalse($rows['KillTarget']['available_to_followers']);
         $this->assertTrue($rows['KillTarget']['available_to_narrator']);
-        $this->assertTrue($rows['KillTarget']['is_activated']);
+        $this->assertFalse($rows['KillTarget']['is_activated']);
 
         $this->assertFalse($rows['SpawnNPC']['available_to_npc']);
         $this->assertFalse($rows['SpawnNPC']['available_to_followers']);
         $this->assertTrue($rows['SpawnNPC']['available_to_narrator']);
-        $this->assertTrue($rows['SpawnNPC']['is_activated']);
+        $this->assertFalse($rows['SpawnNPC']['is_activated']);
 
         $this->assertFalse($rows['SpawnItem']['available_to_npc']);
         $this->assertFalse($rows['SpawnItem']['available_to_followers']);
         $this->assertTrue($rows['SpawnItem']['available_to_narrator']);
-        $this->assertTrue($rows['SpawnItem']['is_activated']);
+        $this->assertFalse($rows['SpawnItem']['is_activated']);
+
+        $this->assertFalse($rows['SpawnGold']['available_to_npc']);
+        $this->assertFalse($rows['SpawnGold']['available_to_followers']);
+        $this->assertTrue($rows['SpawnGold']['available_to_narrator']);
+        $this->assertFalse($rows['SpawnGold']['is_activated']);
+
+        $this->assertFalse($rows['CreateNewNPC']['available_to_npc']);
+        $this->assertFalse($rows['CreateNewNPC']['available_to_followers']);
+        $this->assertTrue($rows['CreateNewNPC']['available_to_narrator']);
+        $this->assertFalse($rows['CreateNewNPC']['is_activated']);
 
         $this->assertFalse($rows['DirectorCommand']['available_to_npc']);
         $this->assertFalse($rows['DirectorCommand']['available_to_followers']);
         $this->assertTrue($rows['DirectorCommand']['available_to_narrator']);
-        $this->assertTrue($rows['DirectorCommand']['is_activated']);
+        $this->assertFalse($rows['DirectorCommand']['is_activated']);
     }
 
     public function testBuildActionCatalogSeedRows_SeedsParametersMetadataAndScriptProxyProgram(): void
@@ -229,6 +281,7 @@ final class ActionCatalogTest extends TestCase
                 'KillTarget' => 'KillTarget',
                 'SpawnNPC' => 'SpawnNPC',
                 'SpawnItem' => 'SpawnItem',
+                'SpawnGold' => 'SpawnGold',
                 'DirectorCommand' => 'DirectorCommand',
                 'TeleportNPC' => 'TeleportNPC',
             ],
@@ -295,6 +348,16 @@ final class ActionCatalogTest extends TestCase
                         'required' => ['item'],
                     ],
                 ],
+                'SpawnGold' => [
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'target' => ['type' => 'string'],
+                            'amount' => ['type' => 'integer'],
+                        ],
+                        'required' => ['amount'],
+                    ],
+                ],
                 'DirectorCommand' => [
                     'parameters' => [
                         'type' => 'object',
@@ -333,6 +396,10 @@ final class ActionCatalogTest extends TestCase
         $this->assertSame('rolecommand', $rows['SpawnItem']['metadata']['dispatch']);
         $this->assertTrue($rows['SpawnItem']['game_function']);
         $this->assertNull($rows['SpawnItem']['script_proxy_program']);
+
+        $this->assertSame('rolecommand', $rows['SpawnGold']['metadata']['dispatch']);
+        $this->assertTrue($rows['SpawnGold']['game_function']);
+        $this->assertNull($rows['SpawnGold']['script_proxy_program']);
 
         $this->assertSame('server_action', $rows['DirectorCommand']['metadata']['dispatch']);
         $this->assertFalse($rows['DirectorCommand']['game_function']);

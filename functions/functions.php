@@ -52,6 +52,7 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'HireCarriage',
     'HireFerry',
     'SpawnItem',
+    'SpawnGold',
     'SpawnNPC',
     'CreateNewNPC',
     'DirectorCommand',
@@ -961,6 +962,7 @@ $F_TRANSLATIONS_LOCAL["RentRoom"] = "#HERIKA_NAME# rents a room to #PLAYER_NAME#
 $F_TRANSLATIONS_LOCAL["HireCarriage"] = "#HERIKA_NAME# accepts {{config.cost_gold}} gold for carriage travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
 $F_TRANSLATIONS_LOCAL["HireFerry"] = "#HERIKA_NAME# accepts {{config.cost_gold}} gold for ferry travel and transports #PLAYER_NAME# to the specified destination. Reply with one short acceptance line, do not ask follow-up questions, then end the conversation.";
 $F_TRANSLATIONS_LOCAL["SpawnItem"] = "Create a named item from the descriptions database and give it to a target actor or #PLAYER_NAME#.";
+$F_TRANSLATIONS_LOCAL["SpawnGold"] = "Create gold and give it to a target actor or #PLAYER_NAME#.";
 $F_TRANSLATIONS_LOCAL["SpawnNPC"] = "Spawn one or more NPCs near #PLAYER_NAME# from the SNQE NPC template datasets. Put the template key in the target field and the spawn count in amount.";
 $F_TRANSLATIONS_LOCAL["CreateNewNPC"] = "Create and spawn a brand-new nearby NPC from a short creation brief. Put the creation brief in the target field and leave item and amount blank.";
 $F_TRANSLATIONS_LOCAL["DirectorCommand"] = "Issue a freeform director instruction for the server-side director mode to turn into scene actions. Put the director brief in the target field and leave item and amount blank.";
@@ -1015,6 +1017,7 @@ $F_RETURNMESSAGES_LOCAL["RentRoom"] = "#HERIKA_NAME# rented a room to #PLAYER_NA
 $F_RETURNMESSAGES_LOCAL["HireCarriage"] = "#HERIKA_NAME# accepted the {{config.cost_gold}} gold carriage fare to #TARGET# and ended the conversation.";
 $F_RETURNMESSAGES_LOCAL["HireFerry"] = "#HERIKA_NAME# accepted the {{config.cost_gold}} gold ferry fare to #TARGET# and ended the conversation.";
 $F_RETURNMESSAGES_LOCAL["SpawnItem"] = "#TARGET# receives #ITEM#.";
+$F_RETURNMESSAGES_LOCAL["SpawnGold"] = "#TARGET# receives #AMOUNT# gold.";
 $F_RETURNMESSAGES_LOCAL["SpawnNPC"] = "Spawned #AMOUNT# #TARGET# near #PLAYER_NAME#.";
 $F_RETURNMESSAGES_LOCAL["CreateNewNPC"] = "A new NPC is being created nearby.";
 $F_RETURNMESSAGES_LOCAL["DirectorCommand"] = "The director is preparing a scene instruction.";
@@ -1069,6 +1072,7 @@ $F_NAMES_LOCAL["RentRoom"] = "RentRoom";
 $F_NAMES_LOCAL["HireCarriage"] = "HireCarriage";
 $F_NAMES_LOCAL["HireFerry"] = "HireFerry";
 $F_NAMES_LOCAL["SpawnItem"] = "SpawnItem";
+$F_NAMES_LOCAL["SpawnGold"] = "SpawnGold";
 $F_NAMES_LOCAL["SpawnNPC"] = "SpawnNPC";
 $F_NAMES_LOCAL["CreateNewNPC"] = "CreateNewNPC";
 $F_NAMES_LOCAL["DirectorCommand"] = "DirectorCommand";
@@ -1521,6 +1525,24 @@ $GLOBALS["FUNCTIONS"] = [
                 ],
             ],
             "required" => ["item"],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["SpawnGold"],
+        "description" => $F_TRANSLATIONS_LOCAL["SpawnGold"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "target" => [
+                    "type" => "string",
+                    "description" => "Recipient actor. Use #PLAYER_NAME#, PLAYER, or me to give the gold to the player.",
+                ],
+                "amount" => [
+                    "type" => "integer",
+                    "description" => "REQUIRED: positive integer amount of gold to create and give (max: 1000000).",
+                ],
+            ],
+            "required" => ["amount"],
         ],
     ],
     [
@@ -2888,6 +2910,49 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 );
 
                 error_log("[ACTION POSTFILTER SpawnItem] Queued {$roleCommand}");
+                unset($actionsCopy[$n]);
+
+            } else if ($actionCodeNameResolved == "SpawnGold") {
+                $rawParameter = implode("@", array_slice($actionParts2, 1));
+                $payload = decodeFunctionExecutionParameterPayload($rawParameter);
+                if (!is_array($payload)) {
+                    $payload = [];
+                }
+
+                $targetName = trim(strval($payload["target"] ?? ""));
+                $goldAmountSource = $payload["amount"] ?? ($payload["item"] ?? 1);
+                $goldAmount = herikaNormalizePositiveActionAmount($goldAmountSource, 1, 1000000);
+
+                $targetName = herikaNormalizeNarratorActorTargetForRoleCommand($targetName);
+                $targetNameEscaped = str_replace('@', '', $targetName);
+                $roleCommand = "rolecommand|SpawnGoldRaw@{$targetNameEscaped}@{$goldAmount}";
+
+                $GLOBALS["db"]->insert(
+                    'responselog',
+                    array(
+                        'localts' => time(),
+                        'sent' => 0,
+                        'actor' => "rolemaster",
+                        'text' => '',
+                        'action' => $roleCommand,
+                        'tag' => ""
+                    )
+                );
+
+                $GLOBALS["db"]->insert(
+                    'actions_issued',
+                    array(
+                        'action' => "SpawnGold",
+                        'fullcall' => $actionParts[0] . "|" . $actionParts[1] . "|" . $actionParts[2],
+                        'actorname' => $actionParts[0],
+                        'ts' => $gameRequest[1],
+                        'gamets' => $gameRequest[2],
+                        'localts' => time(),
+                        'original' => chimPrepareActionsIssuedOriginalValue('')
+                    )
+                );
+
+                error_log("[ACTION POSTFILTER SpawnGold] Queued {$roleCommand}");
                 unset($actionsCopy[$n]);
 
             } else if ($actionCodeNameResolved == "SpawnNPC") {
