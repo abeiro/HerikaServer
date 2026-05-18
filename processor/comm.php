@@ -11,6 +11,14 @@ if (!isset($gameRequest[3])) {
 }
 $gameRequest[3] = @mb_convert_encoding((string)$gameRequest[3], 'UTF-8', 'UTF-8');
 
+// Auto-sync player_name when game prefix doesn't match what core_player has.
+// Plugin sends "<PlayerName>: <text>" — that prefix is the live player name from Skyrim.
+if (function_exists('chimMaybeSyncPlayerName')
+    && in_array($gameRequest[0] ?? '', ['inputtext', 'inputtext_s', 'ginputtext', 'ginputtext_s'], true)
+    && preg_match('/^([A-Za-z][A-Za-z0-9_\' -]{0,40}):\s/', (string)$gameRequest[3], $_chimPlayerNameMatch)) {
+    chimMaybeSyncPlayerName($_chimPlayerNameMatch[1]);
+}
+
 if (!function_exists("resolvePeopleForIncomingEvent")) {
     function resolvePeopleForIncomingEvent($eventType, $eventData, $fallbackPeople = "")
     {

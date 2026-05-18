@@ -170,11 +170,14 @@ if (!function_exists('chimRuntimeBootstrap')) {
         $confPath = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
         $confSamplePath = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php";
 
+        // require (not require_once): re-injects vars into local scope on every
+        // bootstrap call, so $GLOBALS["DBDRIVER"] populates even when conf.php
+        // was already loaded earlier in the request by another extension.
         if (file_exists($confSamplePath)) {
-            require_once($confSamplePath);
+            require($confSamplePath);
         }
         if (file_exists($confPath)) {
-            require_once($confPath);
+            require($confPath);
         }
 
         chimRuntimeImportConfigVariables(get_defined_vars());

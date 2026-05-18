@@ -1193,4 +1193,60 @@ if (!function_exists('chimLoadNarratorSettingsIntoGlobals')) {
     }
 }
 
+if (!function_exists('chimMaybeSyncPlayerName')) {
+    // Self-heal core_player.player_name when game's player differs from configured name.
+    // Trusted only when candidate is non-empty, not narrator/Player, and not in core_npc_master.
+    function chimMaybeSyncPlayerName($candidateName): bool
+    {
+        if (!is_string($candidateName)) return false;
+        $candidate = trim($candidateName);
+        if ($candidate === '') return false;
+        if (strcasecmp($candidate, 'The Narrator') === 0) return false;
+        if (strcasecmp($candidate, 'Player') === 0) return false;
+
+        $current = trim((string)($GLOBALS["PLAYER_NAME"] ?? ''));
+        if ($current !== '' && strcasecmp($current, $candidate) === 0) return false;
+
+        static $cache = [];
+        $key = strtolower($candidate);
+        if (array_key_exists($key, $cache)) return $cache[$key];
+
+        if (!isset($GLOBALS["db"]) || !is_object($GLOBALS["db"])) {
+            $cache[$key] = false;
+            return false;
+        }
+
+        try {
+            $escaped = $GLOBALS["db"]->escape($candidate);
+            $row = $GLOBALS["db"]->fetchOne(
+                "SELECT 1 FROM core_npc_master WHERE LOWER(npc_name) = LOWER('{$escaped}') LIMIT 1"
+            );
+            if ($row) {
+                $cache[$key] = false;
+                return false;
+            }
+        } catch (\Throwable $e) {
+            $cache[$key] = false;
+            return false;
+        }
+
+        if (!class_exists('Player')) {
+            require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+        }
+
+        try {
+            $player = new Player();
+            $player->set('player_name', $candidate);
+            $GLOBALS["PLAYER_NAME"] = $candidate;
+            Logger::info("[CHIM] Auto-synced player_name: '{$current}' -> '{$candidate}'");
+            $cache[$key] = true;
+            return true;
+        } catch (\Throwable $e) {
+            Logger::warn("[CHIM] chimMaybeSyncPlayerName failed: " . $e->getMessage());
+            $cache[$key] = false;
+            return false;
+        }
+    }
+}
+
 ?>

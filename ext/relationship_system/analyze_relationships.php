@@ -24,7 +24,8 @@ $enginePath = __DIR__ . '/../../';
 $GLOBALS["ENGINE_PATH"] = $enginePath;
 
 require_once $enginePath . "conf/conf.php";
-require_once $enginePath . "lib/{$GLOBALS["DBDRIVER"]}.class.php";
+// Hardcode driver: $GLOBALS["DBDRIVER"] is empty when conf.php was previously loaded in a non-global scope, producing lib/.class.php → fatal.
+require_once $enginePath . "lib/postgresql.class.php";
 require_once $enginePath . "lib/core/llm_connector.class.php";
 require_once $enginePath . "lib/core/api_badge.class.php";
 require_once $enginePath . "lib/core/npc_master.class.php";
