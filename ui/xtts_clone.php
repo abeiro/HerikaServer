@@ -111,6 +111,30 @@ if (!function_exists('chimTtsStudioResolveConnectorRow')) {
     }
 }
 
+if (!function_exists('chimTtsStudioResolveConnectorMetadata')) {
+    function chimTtsStudioResolveConnectorMetadata(string $driver): array
+    {
+        $ttsConnector = new TTSConnector();
+        $driver = $ttsConnector->normalizeDriverValue($driver);
+        if ($driver === '') {
+            return [];
+        }
+
+        $row = chimTtsStudioResolveConnectorRow($driver);
+        if (!is_array($row)) {
+            return [];
+        }
+
+        return $ttsConnector->applyForcedMetadataDefaults(
+            $driver,
+            $ttsConnector->stripVoiceMetadataForDriver(
+                $driver,
+                $ttsConnector->decodeMetadata($row['metadata'] ?? '{}')
+            )
+        );
+    }
+}
+
 if (!function_exists('chimTtsStudioResolveEndpointForDriver')) {
     function chimTtsStudioResolveEndpointForDriver(string $driver): string
     {
@@ -556,6 +580,15 @@ if (isset($_GET['action']) && ($_GET['action'] === 'test_cartesia' || $_GET['act
     
     if ($_GET['action'] === 'test_inworld') {
         $voice = $_GET['voice'];
+        $inworldStatus = getInworldConfigurationStatus();
+        if (!$inworldStatus['configured']) {
+            header('Content-Type: application/json');
+            http_response_code(400);
+            echo json_encode(['error' => $inworldStatus['message'] !== '' ? $inworldStatus['message'] : 'Inworld is not fully configured.']);
+            exit;
+        }
+
+        chimTtsStudioApplyConnectorGlobals('inworld');
         $clonedVoices = getClonedVoicesForTest('inworld');
         
         if (!isset($clonedVoices[$voice]) || empty($clonedVoices[$voice])) {
@@ -850,19 +883,35 @@ function isProviderConfigured($provider) {
 
 function getInworldConfigurationStatus(): array
 {
-    $hasApiCredential = isProviderConfigured('inworld');
-    $workspace = trim(strval($GLOBALS["TTS"]["INWORLD"]["workspace"] ?? ''));
+    $row = chimTtsStudioResolveConnectorRow('inworld');
+    $metadata = chimTtsStudioResolveConnectorMetadata('inworld');
+    $hasConnector = is_array($row);
+
+    $hasApiCredential = false;
+    $apiBadgeId = intval($row['api_badge_id'] ?? 0);
+    if ($apiBadgeId > 0 && isset($GLOBALS["db"]) && $GLOBALS["db"]) {
+        $badgeRow = $GLOBALS["db"]->fetchOne("SELECT api_key FROM core_api_badge WHERE id = {$apiBadgeId} LIMIT 1");
+        $hasApiCredential = is_array($badgeRow) && !empty($badgeRow['api_key']);
+    }
+    if (!$hasApiCredential) {
+        $hasApiCredential = isProviderConfigured('inworld');
+    }
+
+    $workspace = trim(strval($metadata['workspace'] ?? ($GLOBALS["TTS"]["INWORLD"]["workspace"] ?? '')));
     $hasWorkspace = ($workspace !== '');
 
-    if ($hasApiCredential && $hasWorkspace) {
+    if ($hasConnector && $hasApiCredential && $hasWorkspace) {
         return [
             'configured' => true,
-            'title' => 'Inworld API badge and workspace are configured',
+            'title' => 'Inworld connector, API badge, and workspace are configured',
             'message' => '',
         ];
     }
 
     $missingParts = [];
+    if (!$hasConnector) {
+        $missingParts[] = 'connector';
+    }
     if (!$hasApiCredential) {
         $missingParts[] = 'API credential';
     }
@@ -873,7 +922,7 @@ function getInworldConfigurationStatus(): array
     return [
         'configured' => false,
         'title' => 'Missing Inworld ' . implode(' and ', $missingParts),
-        'message' => 'Please configure your Inworld ' . implode(' and ', $missingParts) . ' before syncing voices.',
+        'message' => 'Please configure your active Inworld connector ' . implode(' and ', $missingParts) . ' before syncing voices.',
     ];
 }
 
@@ -1286,6 +1335,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Inworld sync handler (all missing)
     if (isset($_POST['action']) && $_POST['action'] === 'sync_inworld') {
+        $inworldStatus = getInworldConfigurationStatus();
+        if (!$inworldStatus['configured']) {
+            $inworldMessage .= "<p style='color:red;'><strong>" . htmlspecialchars($inworldStatus['message']) . "</strong></p>";
+        } else {
+            chimTtsStudioApplyConnectorGlobals('inworld');
         $localVoices = getLocalVoices();
         $clonedVoices = getClonedVoices('inworld');
         $syncedCount = 0;
@@ -1335,10 +1389,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($syncedCount === 0 && $errorCount === 0 && $rateLimitCount === 0) {
             $inworldMessage .= "<p>All voices are already synced to Inworld.</p>";
         }
+        }
     }
     
     // Inworld single voice sync handler
     if (isset($_POST['action']) && $_POST['action'] === 'sync_inworld_single' && isset($_POST['voice'])) {
+        $inworldStatus = getInworldConfigurationStatus();
+        if (!$inworldStatus['configured']) {
+            $inworldMessage .= "<p style='color:red;'><strong>" . htmlspecialchars($inworldStatus['message']) . "</strong></p>";
+        } else {
+            chimTtsStudioApplyConnectorGlobals('inworld');
         $voice = $_POST['voice'];
         $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
         if (file_exists($voiceSamplePath)) {
@@ -1352,6 +1412,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } else {
             $inworldMessage .= "<p style='color:red;'><strong>Voice file not found: {$voice}</strong></p>";
+        }
         }
     }
     
@@ -3175,7 +3236,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php if (!$inworldConfigured): ?>
                 <div style="background: rgba(244, 67, 54, 0.1); border: 2px solid #f44336; border-radius: 8px; padding: 16px; margin: 20px 0; color: #f8f9fa;">
                     <p style="margin: 0; font-weight: 600; color: #f44336;">⚠️ Inworld is not fully configured</p>
-                    <p style="margin: 8px 0 0 0;"><?php echo htmlspecialchars($inworldStatus['message']); ?> Set the API credential in <a href="<?php echo $webRoot; ?>/ui/core/api_badge.php" style="color: yellow;">API Badge</a> and the workspace in your TTS settings.</p>
+                    <p style="margin: 8px 0 0 0;"><?php echo htmlspecialchars($inworldStatus['message']); ?> Set the API credential in <a href="<?php echo $webRoot; ?>/ui/core/api_badge.php" style="color: yellow;">API Badge</a> and the workspace on your active Inworld TTS connector.</p>
                 </div>
             <?php endif; ?>
             
