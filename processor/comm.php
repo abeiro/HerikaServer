@@ -717,29 +717,29 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
         if ($audiblePeoplePipe !== "") {
             if ($isWhisperMode && $isPlayerSpeech) {
-                $db->upsertRowOnConflict(
+                $db->upsertRow(
                     'conf_opts',
                     array(
                         'id' => 'chim_whisper_people',
                         'value' => $audiblePeoplePipe
                     ),
-                    "id"
+                    "id='chim_whisper_people'"
                 );
-                $db->upsertRowOnConflict(
+                $db->upsertRow(
                     'conf_opts',
                     array(
                         'id' => 'chim_whisper_target',
                         'value' => $speechListener
                     ),
-                    "id"
+                    "id='chim_whisper_target'"
                 );
-                $db->upsertRowOnConflict(
+                $db->upsertRow(
                     'conf_opts',
                     array(
                         'id' => 'chim_whisper_updated',
                         'value' => (string)time()
                     ),
-                    "id"
+                    "id='chim_whisper_updated'"
                 );
             }
 
@@ -1293,13 +1293,14 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         }
         
 
-        $db->upsertRowOnConflict(
+        $confOptId = $db->escape($vars[0]);
+        $db->upsertRow(
             'conf_opts',
             array(
                 'id' => $vars[0],
                 'value' => $vars[1]
             ),
-            "id"
+            "id='{$confOptId}'"
         );
     
     
