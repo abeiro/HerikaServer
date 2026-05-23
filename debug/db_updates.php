@@ -4924,6 +4924,27 @@ if ($checkVersion("core_narrator")<20260417001) {
 }
 
 //----------------------------------------------------
+// NARRATOR AUTO DIARY FEATURE - Add auto_diary_enabled toggle
+// Version 20260522001
+//----------------------------------------------------
+
+if ($checkVersion("core_narrator")<20260522001) {
+    Logger::debug("Applying core_narrator migration 20260522001 - Adding auto_diary_enabled toggle");
+
+    // Add auto_diary_enabled field (default to disabled)
+    $db->execQuery("
+        INSERT INTO public.core_narrator (id, value)
+        VALUES ('auto_diary_enabled', '0')
+        ON CONFLICT (id) DO NOTHING
+    ");
+
+    Logger::info("Added auto_diary_enabled to core_narrator (defaults to disabled)");
+
+    $updateVersion("core_narrator", 20260522001);
+    Logger::info("Applied patch core_narrator 20260522001 - Added auto_diary_enabled toggle");
+}
+
+//----------------------------------------------------
 // Background Life Prompts - Style prompts for letters and inner thoughts
 // Version 20260118001 (fixed: was 20251207001 which was out of order and never applied)
 //----------------------------------------------------
