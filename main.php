@@ -2461,7 +2461,7 @@ if ($gameRequest[0] == "funcret") {
 }
 
 
-if (microtime(true) - $startTime > 0.5) {
+if (microtime(true) - $startTime > 0.25) {
     error_log("*TRACE SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
     error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." secs building call");
 }
