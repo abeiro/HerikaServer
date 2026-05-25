@@ -16,9 +16,6 @@ $configFilepath = $rootPath . "conf" . DIRECTORY_SEPARATOR;
 require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
 // Load configuration files in the correct order
 require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php");  // Should contain defaults
-if (file_exists($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php")) {
-    require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php");  // Should contain current ones
-}
 
 function herikaQuickstartMiniMeDefaultUrl(): string {
     return 'http://127.0.0.1:8082/';
@@ -157,6 +154,76 @@ function herikaQuickstartEnsureActiveSttConnectorId(STTConnector $connector): in
         chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', $createdId, chimGetSchemaDescription('GLOBAL_STT_CONNECTOR_ID'));
     }
     return $createdId;
+}
+
+function herikaQuickstartNormalizeTtsDriver(TTSConnector $connector, $driver): string {
+    $normalizedDriver = $connector->normalizeDriverValue($driver);
+    if ($normalizedDriver === '') {
+        $normalizedDriver = 'none';
+    }
+    return $normalizedDriver;
+}
+
+function herikaQuickstartEnsureTtsConnectorForDriver(TTSConnector $connector, string $selectedDriver): ?array {
+    $selectedDriver = herikaQuickstartNormalizeTtsDriver($connector, $selectedDriver);
+
+    $existingRow = chimResolvePreferredTtsConnectorRow($selectedDriver);
+    if ($existingRow) {
+        return $existingRow;
+    }
+
+    $metadata = $connector->applyForcedMetadataDefaults($selectedDriver, []);
+    $payload = [
+        'driver' => $selectedDriver,
+        'label' => ($selectedDriver === 'none') ? 'Disabled TTS' : ('Default ' . $connector->getDisplayName($selectedDriver)),
+        'metadata' => json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        'api_badge_id' => $connector->driverUsesApiBadge($selectedDriver)
+            ? $connector->getDefaultApiBadgeIdForDriver($selectedDriver)
+            : null,
+        'url' => $connector->driverSupportsEditableUrl($selectedDriver)
+            ? $connector->getDefaultUrlForDriver($selectedDriver)
+            : null,
+        'voice_field' => ($selectedDriver === 'none') ? null : $connector->getVoiceFieldForDriver($selectedDriver),
+    ];
+
+    $createdId = $connector->create($payload);
+    if ($createdId <= 0) {
+        return null;
+    }
+
+    return $connector->getById($createdId) ?: null;
+}
+
+function herikaQuickstartApplyTtsSelection(TTSConnector $connector, $selectedDriver): int {
+    $selectedDriver = herikaQuickstartNormalizeTtsDriver($connector, $selectedDriver);
+    $previousPreferredRow = chimResolvePreferredTtsConnectorRow();
+    $previousPreferredId = intval($previousPreferredRow['id'] ?? 0);
+
+    $selectedRow = herikaQuickstartEnsureTtsConnectorForDriver($connector, $selectedDriver);
+    $selectedId = intval($selectedRow['id'] ?? 0);
+    if ($selectedId <= 0) {
+        return 0;
+    }
+
+    if ($previousPreferredId > 0 && $previousPreferredId !== $selectedId) {
+        $GLOBALS['db']->query("UPDATE core_profiles SET tts_connector_id = {$selectedId} WHERE tts_connector_id = {$previousPreferredId}");
+    }
+    $GLOBALS['db']->query("UPDATE core_profiles SET tts_connector_id = {$selectedId} WHERE tts_connector_id IS NULL OR default_narrator = '1' OR default_npc = '1'");
+
+    if (!class_exists('Player')) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+    }
+
+    try {
+        $player = new Player();
+        $currentPlayerConnectorId = intval($player->get('tts_connector_id') ?? 0);
+        if ($currentPlayerConnectorId <= 0 || $currentPlayerConnectorId === $previousPreferredId || $currentPlayerConnectorId === $selectedId) {
+            $player->set('tts_connector_id', strval($selectedId));
+        }
+    } catch (Throwable $_e) {
+    }
+
+    return $selectedId;
 }
 
 function herikaQuickstartGetLlmConnectorLabelById($db, int $id): string {
@@ -298,122 +365,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
         exit;
     }
 
-    if ($action === 'save_conf') {
-        require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . 'conf_loader.php');
-        $confSchemaFlat = conf_loader_load_schema();
-        $currentConf = conf_loader_load();
-        $allPairs = [];
-        foreach ($currentConf as $pname => $parms) {
-            $fieldName = strtr($pname, [" " => "@"]); // flatten
-            $type = $parms['type'] ?? ($confSchemaFlat[$pname]['type'] ?? 'string');
-            $val = $parms['currentValue'] ?? '';
-            if ($type === 'boolean') $allPairs[$fieldName] = $val ? 'true' : 'false';
-            else if ($type === 'selectmultiple') $allPairs[$fieldName] = is_array($val) ? $val : [];
-            else $allPairs[$fieldName] = (string)$val;
-        }
-        // Override with posted values from Quickstart form
-        foreach ($_POST as $k => $v) {
-            if ($k === 'qs_action' || $k === 'profile') continue;
-            $plain = strtr($k, ["@" => " "]);
-            $type = $confSchemaFlat[$plain]['type'] ?? 'string';
-            if (is_array($v)) {
-                $allPairs[$k] = $v;
-            } else if ($type === 'number') {
-                if ($v === '') continue; else $allPairs[$k] = (string)$v;
-            } else if ($type === 'boolean') {
-                $allPairs[$k] = ($v === 'true') ? 'true' : 'false';
-            } else {
-                $allPairs[$k] = (string)$v;
-            }
-        }
-        
-        // Save PLAYER_NAME to core_player table
-        if (isset($_POST['PLAYER_NAME']) && $_POST['PLAYER_NAME'] !== '') {
-            try {
-                require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
-                $player = new Player();
-                $player->set('player_name', $_POST['PLAYER_NAME']);
-            } catch (Exception $e) {
-                // Silently fail, will still save to conf.php
-            }
-        }
-        
-        // Build and write conf.php
-        $buffer = "<?php" . PHP_EOL;
-        $oldGroup = '';
-        $oldSubGroup = '';
-        $process_slashes = function(string $s_input): string { $sx = str_replace("\\'", "'", $s_input); return addcslashes($sx, "'"); };
-        foreach ($allPairs as $k => $v) {
-            $full = explode('@', $k);
-            $plain = strtr($k, ['@' => ' ']);
-            $type = $confSchemaFlat[$plain]['type'] ?? 'string';
-            if (is_array($v)) $value = json_encode($v, true);
-            else if ($type === 'number') { if ($v === '') continue; else $value = "" . addcslashes($v, "'") . ""; }
-            else if ($type === 'boolean') $value = ($v === 'true') ? 'true' : 'false';
-            else $value = "'" . $process_slashes((string)$v) . "'";
-            if ($oldGroup !== $full[0]) { $buffer .= PHP_EOL . PHP_EOL; $oldGroup = $full[0]; }
-            if (isset($full[1]) && $oldSubGroup !== $full[1]) { $buffer .= PHP_EOL; $oldSubGroup = $full[1]; }
-            if (count($full) === 1) { if (isset($confSchemaFlat[$plain]['description'])) $buffer .= "//" . $confSchemaFlat[$plain]['description'] . PHP_EOL; $buffer .= '$' . $full[0] . '=' . $value . ';' . PHP_EOL; }
-            else if (count($full) === 2) { $inline = isset($confSchemaFlat[$plain]['description']) ? ("//" . $confSchemaFlat[$plain]['description']) : ''; $buffer .= '$' . $full[0] . '["' . $full[1] . '"]=' . $value . ';' . "\t" . $inline . PHP_EOL; }
-            else if (count($full) === 3) { $inline = isset($confSchemaFlat[$plain]['description']) ? ("//" . $confSchemaFlat[$plain]['description']) : ''; $buffer .= '$' . $full[0] . '["' . $full[1] . '"]["' . $full[2] . '"]=' . $value . ';' . "\t" . $inline . PHP_EOL; }
-        }
-        $buffer .= "?>" . PHP_EOL;
-        $target = $rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
-        $result = @file_put_contents($target, $buffer);
-        if ($result !== false) {
-            try {
-                include($target);
-                require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "api_badge.class.php");
-                require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "settings.php");
-                require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "stt_connector.class.php");
-                require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
-                $ttsConnector = new TTSConnector();
-                $ttsConnector->ensureLegacyConnectorMigration(true);
-                $ttsConnector->importLegacyPlayerSettings();
+    if ($action === 'save_quickstart') {
+        $result = false;
+        try {
+            require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "settings.php");
+            require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+            require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "stt_connector.class.php");
+            require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
 
-                $sttConnector = new STTConnector();
-                $activeSttId = herikaQuickstartEnsureActiveSttConnectorId($sttConnector);
-                $selectedSttDriver = $sttConnector->normalizeDriverValue($_POST['STTFUNCTION'] ?? ($GLOBALS["STTFUNCTION"] ?? 'none'));
-                if ($selectedSttDriver === '') {
-                    $selectedSttDriver = 'none';
-                }
-                $existingStt = $activeSttId > 0 ? $sttConnector->getById($activeSttId) : null;
-                $existingSttDriver = $sttConnector->normalizeDriverValue($existingStt['driver'] ?? '');
-                $metadata = ($existingStt && $existingSttDriver === $selectedSttDriver)
-                    ? $sttConnector->decodeMetadata($existingStt['metadata'] ?? '{}')
-                    : [];
-                $url = null;
-                if ($sttConnector->driverSupportsEditableUrl($selectedSttDriver)) {
-                    if ($existingStt && $existingSttDriver === $selectedSttDriver) {
-                        $url = trim(strval($existingStt['url'] ?? ''));
-                    }
-                    if ($url === '') {
-                        $url = $sttConnector->getDefaultUrlForDriver($selectedSttDriver);
-                    }
-                }
-                $sttPayload = [
-                    'driver' => $selectedSttDriver,
-                    'label' => ($selectedSttDriver === 'none') ? 'Disabled STT' : ('Global ' . $sttConnector->getDisplayName($selectedSttDriver)),
-                    'metadata' => json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-                    'api_badge_id' => $sttConnector->driverUsesApiBadge($selectedSttDriver)
-                        ? $sttConnector->getDefaultApiBadgeIdForDriver($selectedSttDriver)
-                        : null,
-                    'url' => $url,
-                ];
-                if ($activeSttId > 0 && $existingStt) {
-                    $sttConnector->update($activeSttId, $sttPayload);
-                    chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', $activeSttId, chimGetSchemaDescription('GLOBAL_STT_CONNECTOR_ID'));
-                } else {
-                    $savedSttId = $sttConnector->create($sttPayload);
-                    if ($savedSttId > 0) {
-                        chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', $savedSttId, chimGetSchemaDescription('GLOBAL_STT_CONNECTOR_ID'));
-                    }
-                }
-            } catch (Throwable $_e) {
-                // Keep quickstart save successful even if connector sync is unavailable.
+            if (isset($_POST['PLAYER_NAME']) && trim(strval($_POST['PLAYER_NAME'])) !== '') {
+                $player = new Player();
+                $player->set('player_name', trim(strval($_POST['PLAYER_NAME'])));
             }
+
+            $ttsConnector = new TTSConnector();
+            $selectedTtsDriver = herikaQuickstartNormalizeTtsDriver($ttsConnector, $_POST['TTSFUNCTION'] ?? ($GLOBALS["TTSFUNCTION"] ?? 'none'));
+            $savedTtsId = herikaQuickstartApplyTtsSelection($ttsConnector, $selectedTtsDriver);
+
+            $sttConnector = new STTConnector();
+            $activeSttId = herikaQuickstartEnsureActiveSttConnectorId($sttConnector);
+            $selectedSttDriver = $sttConnector->normalizeDriverValue($_POST['STTFUNCTION'] ?? ($GLOBALS["STTFUNCTION"] ?? 'none'));
+            if ($selectedSttDriver === '') {
+                $selectedSttDriver = 'none';
+            }
+            $existingStt = $activeSttId > 0 ? $sttConnector->getById($activeSttId) : null;
+            $existingSttDriver = $sttConnector->normalizeDriverValue($existingStt['driver'] ?? '');
+            $metadata = ($existingStt && $existingSttDriver === $selectedSttDriver)
+                ? $sttConnector->decodeMetadata($existingStt['metadata'] ?? '{}')
+                : [];
+            $url = null;
+            if ($sttConnector->driverSupportsEditableUrl($selectedSttDriver)) {
+                if ($existingStt && $existingSttDriver === $selectedSttDriver) {
+                    $url = trim(strval($existingStt['url'] ?? ''));
+                }
+                if ($url === '') {
+                    $url = $sttConnector->getDefaultUrlForDriver($selectedSttDriver);
+                }
+            }
+            $sttPayload = [
+                'driver' => $selectedSttDriver,
+                'label' => ($selectedSttDriver === 'none') ? 'Disabled STT' : ('Global ' . $sttConnector->getDisplayName($selectedSttDriver)),
+                'metadata' => json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                'api_badge_id' => $sttConnector->driverUsesApiBadge($selectedSttDriver)
+                    ? $sttConnector->getDefaultApiBadgeIdForDriver($selectedSttDriver)
+                    : null,
+                'url' => $url,
+            ];
+            if ($activeSttId > 0 && $existingStt) {
+                $sttConnector->update($activeSttId, $sttPayload);
+                chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', $activeSttId, chimGetSchemaDescription('GLOBAL_STT_CONNECTOR_ID'));
+                $savedSttId = $activeSttId;
+            } else {
+                $savedSttId = $sttConnector->create($sttPayload);
+                if ($savedSttId > 0) {
+                    chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', $savedSttId, chimGetSchemaDescription('GLOBAL_STT_CONNECTOR_ID'));
+                }
+            }
+
+            $result = ($savedTtsId > 0) && (intval($savedSttId ?? 0) > 0);
+        } catch (Throwable $_e) {
+            $result = false;
         }
-        echo json_encode([ 'ok' => $result !== false ]);
+        echo json_encode([ 'ok' => $result ]);
         exit;
     }
 
@@ -429,42 +442,15 @@ $webRoot = rtrim($webRoot, '/');
 
 $TITLE = "CHIM - Quickstart";
 
-require($rootPath . "conf" . DIRECTORY_SEPARATOR . 'conf_loader.php');
-
-$configFilepath = realpath($configFilepath) . DIRECTORY_SEPARATOR;
-
-// Function to compare modification dates
-function compareFileModificationDate($a, $b) {
-    return filemtime($b) - filemtime($a);
-}
-
-// Profile selection
-foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf) {
-    if (file_exists($mconf)) {
-        $filename = basename($mconf);
-        $pattern = '/conf_([a-f0-9]+)\.php/';
-        preg_match($pattern, $filename, $matches);
-        $hash = $matches[1];
-        $GLOBALS["PROFILES"]["$hash"] = $mconf;
-    }
-}
-
-// Sort the profiles by modification date descending
-if (is_array($GLOBALS["PROFILES"])) {
-    usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
-} else {
-    $GLOBALS["PROFILES"] = [];
-}
-
-$GLOBALS["PROFILES"] = array_merge(["default" => "$configFilepath/conf.php"], $GLOBALS["PROFILES"]);
-
-if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROFILES"])) {
-    require_once($_SESSION["PROFILE"]);
-} else {
-    $_SESSION["PROFILE"] = "$configFilepath/conf.php";
-    require_once($_SESSION["PROFILE"]);
-}
-// End of profile selection
+require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrapIfNeeded($rootPath, [
+    'load_general_settings' => true,
+    'load_stt_connector' => true,
+    'load_itt_connector' => false,
+    'load_tts_connector' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
 
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
@@ -473,27 +459,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 $rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 $configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR;
-$rootEnginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
-
 $configFilepath = realpath($configFilepath) . DIRECTORY_SEPARATOR;
 
-// Include necessary files
-require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
-require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php"); // Defaults
-if (file_exists($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php")) {
-    require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php"); // Current configs
-}
 require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "llm_randomizer.php");
 require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . 'conf_loader.php');
-require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "settings.php");
+require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
 require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "stt_connector.class.php");
-
-/* DB update logic */
-require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
-$db = new sql();
-/* Check for database updates */
-require_once(__DIR__."/../debug/db_updates.php");
-/* END of check database for updates */
+$db = $GLOBALS['db'];
 
 // Load current configurations
 $currentConf = conf_loader_load();
@@ -503,7 +475,16 @@ $quickstartSttConnector = new STTConnector();
 $quickstartActiveSttId = herikaQuickstartEnsureActiveSttConnectorId($quickstartSttConnector);
 $quickstartActiveSttRow = $quickstartActiveSttId > 0 ? $quickstartSttConnector->getById($quickstartActiveSttId) : [];
 $quickstartActiveSttDriver = $quickstartSttConnector->normalizeDriverValue($quickstartActiveSttRow['driver'] ?? ($GLOBALS["STTFUNCTION"] ?? ''));
-$quickstartSttDriverOptions = $quickstartSttConnector->getDriverOptions();
+$quickstartTtsConnector = new TTSConnector();
+$quickstartActiveTtsRow = chimResolvePreferredTtsConnectorRow();
+$quickstartActiveTtsDriver = herikaQuickstartNormalizeTtsDriver($quickstartTtsConnector, $quickstartActiveTtsRow['driver'] ?? ($GLOBALS["TTSFUNCTION"] ?? ''));
+
+if (isset($currentConf['TTSFUNCTION']) && in_array($quickstartActiveTtsDriver, $quickstartTtsConnector->getDriverOptions(), true)) {
+    $currentConf['TTSFUNCTION']['currentValue'] = $quickstartActiveTtsDriver;
+}
+if (isset($currentConf['STTFUNCTION']) && in_array($quickstartActiveSttDriver, $quickstartSttConnector->getDriverOptions(), true)) {
+    $currentConf['STTFUNCTION']['currentValue'] = $quickstartActiveSttDriver;
+}
 
 // Filter the configurations you want to display in the Quickstart Menu
 $quickstartKeys = [
@@ -519,9 +500,7 @@ $quickstartConf = array_filter($currentConf, function($key) use ($quickstartKeys
 echo '<link rel="stylesheet" href="'.$webRoot.'/ui/css/main.css">';
 echo '<main class="qs-page">';
 echo '<div class="qs-shell">
-        <form action="" method="post" name="mainC" class="confwizard" id="top">
-            <input type="hidden" name="profile" value="' . htmlspecialchars($_SESSION["PROFILE"]) . '" />
-      ';
+        <form action="" method="post" name="mainC" class="confwizard" id="top">';
 
 // Main Heading
 echo '<section class="qs-section qs-header-card">
@@ -597,12 +576,6 @@ echo '<section class="qs-section" id="qs_minime_section">
         </div>
       </section>';
 
-if ($_SESSION["PROFILE"] == "$configFilepath/conf.php") {
-    $DEFAULT_PROFILE = true;
-} else {
-    $DEFAULT_PROFILE = false;
-}
-
 $access = ["basic" => 0, "pro" => 1, "wip" => 2];
 
 foreach ($quickstartConf as $pname => $parms) {
@@ -626,14 +599,6 @@ foreach ($quickstartConf as $pname => $parms) {
     }
 
     $FORCE_DISABLED = "";
-
-    // Handle scope and constant parameters
-    if ($DEFAULT_PROFILE && $fieldName == "HERIKA_NAME") {
-        $fieldValue = "The Narrator";
-        $FORCE_DISABLED = " readonly='true' ";
-    } else {
-        $FORCE_DISABLED = "";
-    }
 
     if (isset($parms["scope"]) && $parms["scope"] == "global") {
         $FORCE_DISABLED = "";
@@ -681,7 +646,6 @@ foreach ($quickstartConf as $pname => $parms) {
             'pockettts'    => 'PocketTTS',
             'chatterbox'   => 'Chatterbox',
             'xtts-fastapi' => 'XTTS',
-            'melotts'      => 'MeloTTS',
             'parakeet'     => 'Parakeet',
             'deepgram'     => 'Deepgram',
             'localwhisper' => 'Local Whisper',
@@ -693,9 +657,12 @@ foreach ($quickstartConf as $pname => $parms) {
         ];
         $recommendedValues = [];
         if ($pname == "TTSFUNCTION") {
-            $parms["values"] = ["pockettts","chatterbox","xtts-fastapi","melotts"];
+            $parms["values"] = ["pockettts","chatterbox","xtts-fastapi","inworld"];
+            if (in_array($quickstartActiveTtsDriver, $parms["values"], true)) {
+                $parms["currentValue"] = $quickstartActiveTtsDriver;
+            }
             $recommendedValues = ["pockettts", "chatterbox"];
-            $parms["description"] = "Select the TTS service you wish to use. Recommended: PocketTTS or Chatterbox. <br>You can install PocketTTS, Chatterbox, XTTS and MeloTTS in the CHIM Launcher under <b>Install Components.</b>";
+            $parms["description"] = "Select the TTS service you wish to use. Recommended: PocketTTS or Chatterbox. <br>You can install PocketTTS, Chatterbox, XTTS and configure Inworld in CHIM. For provider-specific settings and advanced endpoint editing, use the <a href='" . $webRoot . "/ui/core/tts_connectors.php' target='_blank'>TTS Connectors</a> page.";
         } else if ($pname == "STTFUNCTION") {
             $parms["values"] = ["parakeet", "deepgram"];
             if (in_array($quickstartActiveSttDriver, $parms["values"], true)) {
@@ -1285,10 +1252,10 @@ async function saveQuickstartAndDB(){
     fdm.append("qs_action", "profile_quicksave_metadata");
     await fetch("quickstart.php", { method: "POST", body: fdm, cache: "no-store", credentials: "same-origin" });
 
-    // 3) Save conf.php with all form values
+    // 3) Save quickstart selections to the database
     const form = document.getElementById("top");
     const fdw = new FormData(form);
-    fdw.append("qs_action", "save_conf");
+    fdw.append("qs_action", "save_quickstart");
     await fetch("quickstart.php", { method: "POST", body: fdw, cache: "no-store", credentials: "same-origin" });
 
     // Notify user, then redirect
