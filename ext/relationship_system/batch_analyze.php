@@ -21,11 +21,14 @@
 $enginePath = __DIR__ . '/../../';
 $GLOBALS["ENGINE_PATH"] = $enginePath;
 
-require_once $enginePath . "conf/conf.php";
-// Hardcode driver: $GLOBALS["DBDRIVER"] is empty when conf.php was previously loaded in a non-global scope, producing lib/.class.php → fatal.
-require_once $enginePath . "lib/postgresql.class.php";
-
-$GLOBALS["db"] = new sql();
+// This /ext endpoint runs outside the main request pipeline, so bootstrap it locally.
+require_once $enginePath . "lib/runtime_bootstrap.php";
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_stt_connector' => false,
+    'load_itt_connector' => false,
+    'load_player_name' => true,
+]);
 
 // Handle CLI vs web
 $isCli = php_sapi_name() === 'cli';
