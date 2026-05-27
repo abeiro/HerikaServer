@@ -1711,7 +1711,7 @@ function getTimeColor($time) {
             // Set the table parameter for delete functionality
             $_GET["table"] = "books";
 
-            echo "<p>Books that have been read and processed by the AI system.</p>";
+            echo "<p>Books that have been summarized by CHIM NPCs.</p>";
 
             if (!empty($mappedResults)) {
                 print_array_as_table($mappedResults);
