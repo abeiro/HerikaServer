@@ -865,7 +865,11 @@ function cleanupDisplayText($text, $speakerName = null) {
 
 function formatPlayerSubtitleText($text, $speakerName = null) {
     $speakerName = $speakerName ?? ($GLOBALS["PLAYER_NAME"] ?? null);
-    $subtitleText = preg_replace('/\s*\(Talking to [^)]+\)\s*$/i', '', $text);
+    $subtitleText = preg_replace(
+        '/\s*\((?:(?:Talking|Whispering|Shouting) to [^)]+|speaking loudly to [^)]+ from far away)\)\s*$/i',
+        '',
+        $text
+    );
     return cleanupDisplayText($subtitleText, $speakerName);
 }
 
