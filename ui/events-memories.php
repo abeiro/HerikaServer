@@ -604,19 +604,13 @@ function getTimeColor($time) {
             
             // Event Log title with integrated monitor toggle and delete buttons
             $isAutoRefresh = $eventLogAutoRefresh;
-            $eventLogDeleteLatest20Params = $eventLogCurrentPageParams;
-            $eventLogDeleteLatest20Params['delete_last'] = 20;
-            $eventLogDeleteLatest50Params = $eventLogCurrentPageParams;
-            $eventLogDeleteLatest50Params['delete_last'] = 50;
-            $eventLogDeleteLatest100Params = $eventLogCurrentPageParams;
-            $eventLogDeleteLatest100Params['delete_last'] = 100;
             $eventLogUrlBuilder = function(array $overrides = []) use ($eventLogBaseParams) {
                 return 'events-memories.php?' . http_build_query(array_merge($eventLogBaseParams, $overrides));
             };
             echo "<div style='display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0;'>";
             
             echo "<button id='live-toggle-btn-eventlog' onclick=\"toggleAutoRefreshEventLog()\" class='btn-base " . ($isAutoRefresh ? "btn-secondary" : "btn-primary") . "' style='padding: 8px 12px; font-size: 0.9em;' title='Toggle live monitoring'>";
-            echo $isAutoRefresh ? "⏸️ Stop Live" : "📡 Monitor Live";
+            echo $isAutoRefresh ? "⏸️ Stop Live" : "Auto Refresh";
             echo "</button>";
             
             if ($isAutoRefresh) {
@@ -628,10 +622,16 @@ function getTimeColor($time) {
             // Add delete buttons inline
             echo "<div style='margin-left: auto; display: flex; gap: 5px; flex-wrap: wrap; align-items: center;'>";
             echo "<button id='deleteSelectedBtn' onclick='deleteSelectedEvents()' class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em; display: none;'>🗑️ Delete Selected (<span id='selectedCount'>0</span>)</button>";
-            echo "<button onclick=\"if(confirm('Are you sure you want to delete the last 20 events?')) window.location.href='" . htmlspecialchars('events-memories.php?' . http_build_query($eventLogDeleteLatest20Params), ENT_QUOTES) . "'\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete Latest 20</button>";
-            echo "<button onclick=\"if(confirm('Are you sure you want to delete the last 50 events?')) window.location.href='" . htmlspecialchars('events-memories.php?' . http_build_query($eventLogDeleteLatest50Params), ENT_QUOTES) . "'\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete Latest 50</button>";
-            echo "<button onclick=\"if(confirm('Are you sure you want to delete the last 100 events?')) window.location.href='" . htmlspecialchars('events-memories.php?' . http_build_query($eventLogDeleteLatest100Params), ENT_QUOTES) . "'\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete Latest 100</button>";
-            echo "<button onclick=\"deleteAllEventsConfirm()\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em; background-color: #dc2626; font-weight: bold;'>⚠️ Delete ALL</button>";
+            echo "<div style='display: inline-flex; gap: 5px; align-items: center; flex-wrap: nowrap; white-space: nowrap;'>";
+            echo "<select id='delete-action-select' style='padding: 5px 8px; border-radius: 4px; border: 1px solid #666; background: #2a2a2a; color: #f8f9fa; min-width: 170px; font-size: 0.8em;'>";
+            echo "<option value=''>Delete...</option>";
+            echo "<option value='20'>Delete Latest 20</option>";
+            echo "<option value='50'>Delete Latest 50</option>";
+            echo "<option value='100'>Delete Latest 100</option>";
+            echo "<option value='all'>Delete ALL</option>";
+            echo "</select>";
+            echo "<button onclick='handleDeletePresetAction()' class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete</button>";
+            echo "</div>";
             echo "</div>";
             echo "</div>";
             
@@ -1011,7 +1011,7 @@ function getTimeColor($time) {
                     
                     autoRefreshIntervalEventLog = setInterval(updateEventTableEventLog, 5000);
                 } else {
-                    btn.textContent = '📡 Monitor Live';
+                    btn.textContent = 'Auto Refresh';
                     btn.className = 'btn-base btn-primary';
                     btn.style.padding = '8px 12px';
                     btn.style.fontSize = '0.9em';
@@ -2023,6 +2023,47 @@ function applyEventLogTypeFilter(eventType) {
     fallbackUrl.searchParams.set('page', '1');
     fallbackUrl.searchParams.set('hide_event_type', eventType);
     window.location.href = fallbackUrl.toString();
+}
+
+function handleDeletePresetAction() {
+    const select = document.getElementById('delete-action-select');
+    const action = select ? String(select.value || '') : '';
+    if (!action) {
+        return;
+    }
+
+    if (action === 'all') {
+        if (select) {
+            select.value = '';
+        }
+        deleteAllEventsConfirm();
+        return;
+    }
+
+    const deleteCount = parseInt(action, 10);
+    if (![20, 50, 100].includes(deleteCount)) {
+        if (select) {
+            select.value = '';
+        }
+        return;
+    }
+
+    if (confirm(`Are you sure you want to delete the last ${deleteCount} events?`)) {
+        if (typeof window.buildEventLogPageUrl === 'function') {
+            window.location.href = window.buildEventLogPageUrl({
+                deleteLast: deleteCount,
+                autorefresh: window.location.search.includes('autorefresh=true')
+            });
+            return;
+        }
+
+        const fallbackUrl = new URL(window.location.href);
+        fallbackUrl.searchParams.set('tab', 'eventlog');
+        fallbackUrl.searchParams.set('delete_last', String(deleteCount));
+        window.location.href = fallbackUrl.toString();
+    } else if (select) {
+        select.value = '';
+    }
 }
 
 function removeHiddenEventType(eventType) {
