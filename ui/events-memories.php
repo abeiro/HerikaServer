@@ -349,7 +349,80 @@ require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."uti
 
 $db = new sql();
 
-$eventLogVisibleWhereClause = chimBuildVisibleEventLogWhereClause($db);
+$eventLogLimit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 100;
+$eventLogPage = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
+$eventLogAutoRefresh = isset($_GET["autorefresh"]) && $_GET["autorefresh"];
+$eventLogHiddenTypes = chimGetPersistedEventLogHiddenTypes($db);
+
+if (isset($_GET['hide_event_type'])) {
+    $typeToHide = trim((string)$_GET['hide_event_type']);
+    if ($typeToHide !== '') {
+        $eventLogHiddenTypes[] = $typeToHide;
+        chimSavePersistedEventLogHiddenTypes($db, $eventLogHiddenTypes);
+    }
+
+    $redirectParams = [
+        'tab' => 'eventlog',
+        'page' => 1,
+        'limit' => $eventLogLimit,
+    ];
+    if ($eventLogAutoRefresh) {
+        $redirectParams['autorefresh'] = 'true';
+    }
+    header("Location: events-memories.php?" . http_build_query($redirectParams));
+    exit;
+}
+
+if (isset($_GET['show_event_type'])) {
+    $typeToShow = trim((string)$_GET['show_event_type']);
+    $eventLogHiddenTypes = array_values(array_filter($eventLogHiddenTypes, function($type) use ($typeToShow) {
+        return $type !== $typeToShow;
+    }));
+    chimSavePersistedEventLogHiddenTypes($db, $eventLogHiddenTypes);
+
+    $redirectParams = [
+        'tab' => 'eventlog',
+        'page' => 1,
+        'limit' => $eventLogLimit,
+    ];
+    if ($eventLogAutoRefresh) {
+        $redirectParams['autorefresh'] = 'true';
+    }
+    header("Location: events-memories.php?" . http_build_query($redirectParams));
+    exit;
+}
+
+if (isset($_GET['clear_hidden_event_types']) && $_GET['clear_hidden_event_types']) {
+    chimSavePersistedEventLogHiddenTypes($db, []);
+    $eventLogHiddenTypes = [];
+
+    $redirectParams = [
+        'tab' => 'eventlog',
+        'page' => 1,
+        'limit' => $eventLogLimit,
+    ];
+    if ($eventLogAutoRefresh) {
+        $redirectParams['autorefresh'] = 'true';
+    }
+    header("Location: events-memories.php?" . http_build_query($redirectParams));
+    exit;
+}
+
+$eventLogHiddenTypes = chimNormalizeEventLogTypeList($eventLogHiddenTypes);
+$eventLogTypeOptions = chimGetVisibleEventLogTypes($db, $eventLogHiddenTypes);
+$eventLogVisibleWhereClause = chimBuildVisibleEventLogWhereClause($db, '', $eventLogHiddenTypes);
+
+$eventLogBaseParams = [
+    'tab' => 'eventlog',
+    'limit' => $eventLogLimit,
+];
+if ($eventLogAutoRefresh) {
+    $eventLogBaseParams['autorefresh'] = 'true';
+}
+
+$eventLogCurrentPageParams = $eventLogBaseParams;
+$eventLogCurrentPageParams['page'] = $eventLogPage;
+$eventLogCurrentPageUrl = 'events-memories.php?' . http_build_query($eventLogCurrentPageParams);
 
 // Handle actions
 if (isset($_GET["clean"]) && $_GET["clean"]) {
@@ -368,9 +441,11 @@ if (isset($_GET["cleanlog"]) && $_GET["cleanlog"]) {
 if (isset($_GET['delete_last'])) {
     $delCount = (int)$_GET['delete_last'];
     if (in_array($delCount, [20, 50, 100])) {
-        $deleteResult = chimDeleteLatestVisibleEventLogRows($db, $delCount);
+        $deleteResult = chimDeleteLatestVisibleEventLogRows($db, $delCount, '', $eventLogHiddenTypes);
         $deletedCount = intval($deleteResult['deleted_count'] ?? 0);
-        header("Location: events-memories.php?tab=eventlog&deleted=$deletedCount");
+        $redirectParams = $eventLogCurrentPageParams;
+        $redirectParams['deleted'] = $deletedCount;
+        header("Location: events-memories.php?" . http_build_query($redirectParams));
         exit;
     }
 }
@@ -413,16 +488,22 @@ if (isset($_POST['delete_selected']) && !empty($_POST['rowids'])) {
             $deletedCount = count($existingRowids);
             Logger::info("Bulk delete executed: $deletedCount events deleted.");
             
-            header("Location: events-memories.php?tab=eventlog&deleted=" . $deletedCount);
+            $redirectParams = $eventLogCurrentPageParams;
+            $redirectParams['deleted'] = $deletedCount;
+            header("Location: events-memories.php?" . http_build_query($redirectParams));
             exit;
         } else {
             Logger::warn("Bulk delete attempted but no valid rowids after sanitization");
-            header("Location: events-memories.php?tab=eventlog&error=invalid_ids");
+            $redirectParams = $eventLogCurrentPageParams;
+            $redirectParams['error'] = 'invalid_ids';
+            header("Location: events-memories.php?" . http_build_query($redirectParams));
             exit;
         }
     } else {
         Logger::warn("Bulk delete attempted but rowids is not an array: " . json_encode($rowids));
-        header("Location: events-memories.php?tab=eventlog&error=invalid_format");
+        $redirectParams = $eventLogCurrentPageParams;
+        $redirectParams['error'] = 'invalid_format';
+        header("Location: events-memories.php?" . http_build_query($redirectParams));
         exit;
     }
 } else if (isset($_POST['delete_selected'])) {
@@ -522,7 +603,16 @@ function getTimeColor($time) {
             }
             
             // Event Log title with integrated monitor toggle and delete buttons
-            $isAutoRefresh = isset($_GET["autorefresh"]) && $_GET["autorefresh"];
+            $isAutoRefresh = $eventLogAutoRefresh;
+            $eventLogDeleteLatest20Params = $eventLogCurrentPageParams;
+            $eventLogDeleteLatest20Params['delete_last'] = 20;
+            $eventLogDeleteLatest50Params = $eventLogCurrentPageParams;
+            $eventLogDeleteLatest50Params['delete_last'] = 50;
+            $eventLogDeleteLatest100Params = $eventLogCurrentPageParams;
+            $eventLogDeleteLatest100Params['delete_last'] = 100;
+            $eventLogUrlBuilder = function(array $overrides = []) use ($eventLogBaseParams) {
+                return 'events-memories.php?' . http_build_query(array_merge($eventLogBaseParams, $overrides));
+            };
             echo "<div style='display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0;'>";
             
             echo "<button id='live-toggle-btn-eventlog' onclick=\"toggleAutoRefreshEventLog()\" class='btn-base " . ($isAutoRefresh ? "btn-secondary" : "btn-primary") . "' style='padding: 8px 12px; font-size: 0.9em;' title='Toggle live monitoring'>";
@@ -538,9 +628,9 @@ function getTimeColor($time) {
             // Add delete buttons inline
             echo "<div style='margin-left: auto; display: flex; gap: 5px; flex-wrap: wrap; align-items: center;'>";
             echo "<button id='deleteSelectedBtn' onclick='deleteSelectedEvents()' class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em; display: none;'>🗑️ Delete Selected (<span id='selectedCount'>0</span>)</button>";
-            echo "<button onclick=\"if(confirm('Are you sure you want to delete the last 20 events?')) window.location.href='events-memories.php?tab=eventlog&delete_last=20'\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete Latest 20</button>";
-            echo "<button onclick=\"if(confirm('Are you sure you want to delete the last 50 events?')) window.location.href='events-memories.php?tab=eventlog&delete_last=50'\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete Latest 50</button>";
-            echo "<button onclick=\"if(confirm('Are you sure you want to delete the last 100 events?')) window.location.href='events-memories.php?tab=eventlog&delete_last=100'\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete Latest 100</button>";
+            echo "<button onclick=\"if(confirm('Are you sure you want to delete the last 20 events?')) window.location.href='" . htmlspecialchars('events-memories.php?' . http_build_query($eventLogDeleteLatest20Params), ENT_QUOTES) . "'\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete Latest 20</button>";
+            echo "<button onclick=\"if(confirm('Are you sure you want to delete the last 50 events?')) window.location.href='" . htmlspecialchars('events-memories.php?' . http_build_query($eventLogDeleteLatest50Params), ENT_QUOTES) . "'\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete Latest 50</button>";
+            echo "<button onclick=\"if(confirm('Are you sure you want to delete the last 100 events?')) window.location.href='" . htmlspecialchars('events-memories.php?' . http_build_query($eventLogDeleteLatest100Params), ENT_QUOTES) . "'\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em;'>Delete Latest 100</button>";
             echo "<button onclick=\"deleteAllEventsConfirm()\" class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em; background-color: #dc2626; font-weight: bold;'>⚠️ Delete ALL</button>";
             echo "</div>";
             echo "</div>";
@@ -550,8 +640,8 @@ function getTimeColor($time) {
             echo "ℹ️ <strong>Note:</strong> Not all events will show up in AI context. Any blacklist settings will not be used for context. This is a raw log of some of the more relevant events.";
             echo "</div>";
 
-            $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 100;
-            $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
+            $limit = $eventLogLimit;
+            $page = $eventLogPage;
             $offset = ($page - 1) * $limit;
             
             $results = $db->fetchAll(
@@ -636,10 +726,10 @@ function getTimeColor($time) {
             $totalRecords = $countResult[0]['total'];
             $totalPages = ceil($totalRecords / $limit);
             
-            echo "<div class='pagination-buttons' style='margin: 10px 0;'>";
+            echo "<div class='pagination-buttons' style='margin: 10px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;'>";
             
             if ($page > 1) {
-                echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$prevPage&limit=$limit'\" class='btn-base btn-primary'>Previous</button> ";
+                echo "<button onclick=\"window.location.href='" . htmlspecialchars($eventLogUrlBuilder(['page' => $prevPage]), ENT_QUOTES) . "'\" class='btn-base btn-primary'>Previous</button> ";
             }
             
             // Smart pagination: show current page and surrounding pages
@@ -647,17 +737,17 @@ function getTimeColor($time) {
                 // Show all pages if 10 or fewer
                 for ($i = 1; $i <= $totalPages; $i++) {
                     if ($i == $page) {
-                        echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$i&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$i</button> ";
+                        echo "<button onclick=\"window.location.href='" . htmlspecialchars($eventLogUrlBuilder(['page' => $i]), ENT_QUOTES) . "'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$i</button> ";
                     } else {
-                        echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$i&limit=$limit'\" class='btn-base btn-primary'>$i</button> ";
+                        echo "<button onclick=\"window.location.href='" . htmlspecialchars($eventLogUrlBuilder(['page' => $i]), ENT_QUOTES) . "'\" class='btn-base btn-primary'>$i</button> ";
                     }
                 }
             } else {
                 // Always show first page
                 if ($page == 1) {
-                    echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=1&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>1</button> ";
+                    echo "<button onclick=\"window.location.href='" . htmlspecialchars($eventLogUrlBuilder(['page' => 1]), ENT_QUOTES) . "'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>1</button> ";
                 } else {
-                    echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=1&limit=$limit'\" class='btn-base btn-primary'>1</button> ";
+                    echo "<button onclick=\"window.location.href='" . htmlspecialchars($eventLogUrlBuilder(['page' => 1]), ENT_QUOTES) . "'\" class='btn-base btn-primary'>1</button> ";
                 }
                 
                 // Show ellipsis if current page is far from start
@@ -671,9 +761,9 @@ function getTimeColor($time) {
                 
                 for ($i = $start; $i <= $end; $i++) {
                     if ($i == $page) {
-                        echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$i&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$i</button> ";
+                        echo "<button onclick=\"window.location.href='" . htmlspecialchars($eventLogUrlBuilder(['page' => $i]), ENT_QUOTES) . "'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$i</button> ";
                     } else {
-                        echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$i&limit=$limit'\" class='btn-base btn-primary'>$i</button> ";
+                        echo "<button onclick=\"window.location.href='" . htmlspecialchars($eventLogUrlBuilder(['page' => $i]), ENT_QUOTES) . "'\" class='btn-base btn-primary'>$i</button> ";
                     }
                 }
                 
@@ -684,14 +774,32 @@ function getTimeColor($time) {
                 
                 // Always show last page
                 if ($page == $totalPages) {
-                    echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$totalPages&limit=$limit'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$totalPages</button> ";
+                    echo "<button onclick=\"window.location.href='" . htmlspecialchars($eventLogUrlBuilder(['page' => $totalPages]), ENT_QUOTES) . "'\" class='btn-base btn-secondary' style='background-color: #6c757d;'>$totalPages</button> ";
                 } else {
-                    echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$totalPages&limit=$limit'\" class='btn-base btn-primary'>$totalPages</button> ";
+                    echo "<button onclick=\"window.location.href='" . htmlspecialchars($eventLogUrlBuilder(['page' => $totalPages]), ENT_QUOTES) . "'\" class='btn-base btn-primary'>$totalPages</button> ";
                 }
             }
             
             if ($page < $totalPages) {
-                echo "<button onclick=\"window.location.href='events-memories.php?tab=eventlog&page=$nextPage&limit=$limit'\" class='btn-base btn-primary'>Next</button>";
+                echo "<button onclick=\"window.location.href='" . htmlspecialchars($eventLogUrlBuilder(['page' => $nextPage]), ENT_QUOTES) . "'\" class='btn-base btn-primary'>Next</button>";
+            }
+
+            echo "<span style='margin-left: 8px; color: #9fb1c9; font-size: 0.85em;'>Hide:</span>";
+            echo "<select id='event-type-filter' onchange='applyEventLogTypeFilter(this.value)' style='padding: 5px 8px; border-radius: 4px; border: 1px solid #666; background: #2a2a2a; color: #f8f9fa; min-width: 150px; max-width: 180px; font-size: 0.8em;'>";
+            echo "<option value=''>Hide event...</option>";
+            foreach ($eventLogTypeOptions as $eventLogTypeOption) {
+                $eventTypeValue = (string)($eventLogTypeOption['type'] ?? '');
+                if ($eventTypeValue === '') {
+                    continue;
+                }
+                echo "<option value='" . htmlspecialchars($eventTypeValue, ENT_QUOTES) . "'>" . htmlspecialchars($eventTypeValue) . "</option>";
+            }
+            echo "</select>";
+
+            if (!empty($eventLogHiddenTypes)) {
+                foreach ($eventLogHiddenTypes as $hiddenEventType) {
+                    echo "<button type='button' onclick='removeHiddenEventType(" . json_encode($hiddenEventType) . ")' class='btn-base' style='padding: 4px 8px; font-size: 0.75em; background: #3a3a3a; color: #f8f9fa; border-color: #555;'>" . htmlspecialchars($hiddenEventType) . " ×</button>";
+                }
             }
             
             echo "</div>";
@@ -700,7 +808,7 @@ function getTimeColor($time) {
             function deleteAllEventsConfirm() {
                 var userInput = prompt('THIS WILL DELETE ALL EVENTS IN THE EVENT LOG!\\n\\nEvents are used for AI context. This action cannot be undone.\\n\\nTo confirm this dangerous operation, please type exactly: Delete');
                 if (userInput === 'Delete') {
-                    window.location.href = 'events-memories.php?reset=true&table=event';
+                    window.location.href = " . json_encode($eventLogUrlBuilder(['page' => 1, 'reset' => 'true'])) . ";
                 } else if (userInput !== null) {
                     alert('Operation cancelled. You must type exactly \"Delete\" to confirm.');
                 }
@@ -720,6 +828,47 @@ function getTimeColor($time) {
             const currentPageEventLog = $page;
             const currentLimitEventLog = $limit;
             const headersEventLog = " . json_encode($columnHeaders) . ";
+            const eventLogApiBaseUrl = " . json_encode($webRoot . "/ui/api/eventlog.php") . ";
+
+            function buildEventLogPageUrl(overrides = {}) {
+                const params = new URLSearchParams();
+                params.set('tab', 'eventlog');
+                params.set('page', String(overrides.page !== undefined ? overrides.page : currentPageEventLog));
+                params.set('limit', String(overrides.limit !== undefined ? overrides.limit : currentLimitEventLog));
+
+                const autoRefreshValue = overrides.autorefresh !== undefined ? overrides.autorefresh : isLiveModeEventLog;
+                if (autoRefreshValue) {
+                    params.set('autorefresh', 'true');
+                }
+
+                if (overrides.deleteLast !== undefined) {
+                    params.set('delete_last', String(overrides.deleteLast));
+                }
+
+                if (overrides.reset) {
+                    params.set('reset', 'true');
+                }
+
+                if (overrides.hideEventType) {
+                    params.set('hide_event_type', overrides.hideEventType);
+                }
+
+                if (overrides.showEventType) {
+                    params.set('show_event_type', overrides.showEventType);
+                }
+
+                if (overrides.clearHiddenEventTypes) {
+                    params.set('clear_hidden_event_types', '1');
+                }
+
+                return 'events-memories.php?' + params.toString();
+            }
+
+            window.buildEventLogPageUrl = buildEventLogPageUrl;
+            window.chimEventLogState = {
+                currentPage: currentPageEventLog,
+                currentLimit: currentLimitEventLog
+            };
             
             function getLastRowIdEventLog() {
                 const table = document.querySelector('#eventlog-table-container table');
@@ -750,8 +899,12 @@ function getTimeColor($time) {
                 }
                 
                 const sinceRowId = lastRowIdEventLog;
-                
-                fetch('" . $webRoot . "/ui/api/eventlog.php?since_rowid=' + sinceRowId)
+
+                const apiParams = new URLSearchParams();
+                apiParams.set('since_rowid', String(sinceRowId));
+                apiParams.set('use_saved_filters', '1');
+
+                fetch(eventLogApiBaseUrl + '?' + apiParams.toString())
                     .then(response => response.json())
                     .then(data => {
                         if (data.success && data.data.length > 0) {
@@ -842,7 +995,7 @@ function getTimeColor($time) {
                 if (isLiveModeEventLog) {
                     // If not on page 1, navigate to page 1 with autorefresh enabled
                     if (currentPageEventLog !== 1) {
-                        window.location.href = 'events-memories.php?tab=eventlog&page=1&limit=' + currentLimitEventLog + '&autorefresh=true';
+                        window.location.href = buildEventLogPageUrl({ page: 1, autorefresh: true });
                         return;
                     }
                     
@@ -1851,6 +2004,65 @@ function updateSelectedCount() {
     }
 }
 
+function applyEventLogTypeFilter(eventType) {
+    if (!eventType) {
+        return;
+    }
+
+    if (typeof window.buildEventLogPageUrl === 'function') {
+        window.location.href = window.buildEventLogPageUrl({
+            page: 1,
+            hideEventType: eventType,
+            autorefresh: window.location.search.includes('autorefresh=true')
+        });
+        return;
+    }
+
+    const fallbackUrl = new URL(window.location.href);
+    fallbackUrl.searchParams.set('tab', 'eventlog');
+    fallbackUrl.searchParams.set('page', '1');
+    fallbackUrl.searchParams.set('hide_event_type', eventType);
+    window.location.href = fallbackUrl.toString();
+}
+
+function removeHiddenEventType(eventType) {
+    if (!eventType) {
+        return;
+    }
+
+    if (typeof window.buildEventLogPageUrl === 'function') {
+        window.location.href = window.buildEventLogPageUrl({
+            page: 1,
+            showEventType: eventType,
+            autorefresh: window.location.search.includes('autorefresh=true')
+        });
+        return;
+    }
+
+    const fallbackUrl = new URL(window.location.href);
+    fallbackUrl.searchParams.set('tab', 'eventlog');
+    fallbackUrl.searchParams.set('page', '1');
+    fallbackUrl.searchParams.set('show_event_type', eventType);
+    window.location.href = fallbackUrl.toString();
+}
+
+function clearHiddenEventTypes() {
+    if (typeof window.buildEventLogPageUrl === 'function') {
+        window.location.href = window.buildEventLogPageUrl({
+            page: 1,
+            clearHiddenEventTypes: true,
+            autorefresh: window.location.search.includes('autorefresh=true')
+        });
+        return;
+    }
+
+    const fallbackUrl = new URL(window.location.href);
+    fallbackUrl.searchParams.set('tab', 'eventlog');
+    fallbackUrl.searchParams.set('page', '1');
+    fallbackUrl.searchParams.set('clear_hidden_event_types', '1');
+    window.location.href = fallbackUrl.toString();
+}
+
 function deleteSelectedEvents() {
     const checkboxes = document.querySelectorAll('.event-checkbox:checked');
     const rowids = Array.from(checkboxes).map(cb => cb.getAttribute('data-rowid'));
@@ -1867,7 +2079,11 @@ function deleteSelectedEvents() {
     // Create a form and submit it
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = 'events-memories.php?tab=eventlog';
+    if (typeof window.buildEventLogPageUrl === 'function') {
+        form.action = window.buildEventLogPageUrl();
+    } else {
+        form.action = 'events-memories.php?tab=eventlog';
+    }
     
     const deleteInput = document.createElement('input');
     deleteInput.type = 'hidden';
