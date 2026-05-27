@@ -318,19 +318,30 @@ if (!$isEmbed) {
         gap: 12px;
     }
 
+    .section-title-text {
+        font-family: 'MagicCards', serif !important;
+        color: inherit;
+        text-shadow: inherit;
+        word-spacing: inherit;
+    }
+
     .section-status-indicator {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        font-size: 0.5em;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        word-spacing: normal;
-        text-shadow: none;
+        font-family: 'MagicCards', serif;
+        font-size: 0.62em;
+        font-weight: 400;
+        letter-spacing: 0;
+        text-transform: none;
+        word-spacing: 4px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.35);
         color: #d9d9d9;
         white-space: nowrap;
+    }
+
+    #player_tts_status_text {
+        font-family: 'MagicCards', serif !important;
     }
 
     .section-status-indicator .status-dot {
@@ -620,6 +631,10 @@ if (!$isEmbed) {
 
     .speech-style-tools label {
         margin-top: 4px;
+        font-family: 'MagicCards', serif;
+        color: rgb(242, 124, 17);
+        font-size: 1.1em;
+        word-spacing: 4px;
     }
 
     /* Toast Notification */
@@ -1114,7 +1129,7 @@ if (!$isEmbed) {
 
             <div class="content-section player-tts-section">
                 <h2 class="section-title-with-status">
-                    <span>Player TTS</span>
+                    <span class="section-title-text">Player TTS</span>
                     <span
                         id="player_tts_status_indicator"
                         class="section-status-indicator <?php echo $playerTtsConnectorId !== '' ? 'status-enabled' : 'status-disabled'; ?>"
