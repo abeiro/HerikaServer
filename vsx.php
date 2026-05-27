@@ -10,7 +10,7 @@ chimRuntimeBootstrap($path, [
     'load_general_settings' => true,
     'load_stt_connector' => false,
     'load_itt_connector' => false,
-    'load_tts_connector' => 'xtts-fastapi',
+    'load_tts_connector' => 'pockettts',
     'load_player_name' => true,
 ]);
 require_once $path . "lib/utils.php";
@@ -40,9 +40,9 @@ function chimVsxResolveCloneTtsRuntime(string $actorName): array
     $ttsConnector = new TTSConnector();
     $supportedCloneDrivers = ['xtts-fastapi', 'chatterbox', 'pockettts'];
 
-    $fallbackDriver = $ttsConnector->normalizeDriverValue($GLOBALS["TTSFUNCTION"] ?? 'xtts-fastapi');
+    $fallbackDriver = $ttsConnector->normalizeDriverValue($GLOBALS["TTSFUNCTION"] ?? 'pockettts');
     if ($fallbackDriver === '') {
-        $fallbackDriver = 'xtts-fastapi';
+        $fallbackDriver = 'pockettts';
     }
 
     $selectedDriver = $fallbackDriver;

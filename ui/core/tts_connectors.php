@@ -295,7 +295,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
                 $visibleMap[$ttsConnector->normalizeDriverValue($visibleOption)] = true;
             }
             if ($driver === '' || !isset($visibleMap[$driver])) {
-                $driver = $ttsConnector->normalizeDriverValue($visibleOptions[0] ?? 'xtts-fastapi');
+                $driver = $ttsConnector->normalizeDriverValue($visibleOptions[0] ?? 'pockettts');
             }
 
             $metadataRaw = trim(strval($dataMap['metadata'] ?? '{}'));
@@ -334,7 +334,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
 
 if (isset($_GET['create_blank'])) {
     $options = ttsVisibleDriverOptions($ttsConnector);
-    $newDriver = 'xtts-fastapi';
+    $newDriver = 'pockettts';
     foreach ($options as $option) {
         $candidate = $ttsConnector->normalizeDriverValue($option);
         if ($candidate !== '') {
@@ -385,7 +385,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_connector'])) {
         $visibleDriverMap[$ttsConnector->normalizeDriverValue($visibleDriverOption)] = true;
     }
     if ($driver === '' || !isset($visibleDriverMap[$driver])) {
-        $driver = $ttsConnector->normalizeDriverValue($visibleDriverOptions[0] ?? 'xtts-fastapi');
+        $driver = $ttsConnector->normalizeDriverValue($visibleDriverOptions[0] ?? 'pockettts');
     }
 
     $existing = $editId > 0 ? $ttsConnector->getById($editId) : null;
@@ -452,7 +452,7 @@ $currentMetadata = $ttsConnector->decodeMetadata($editItem['metadata'] ?? '{}');
 $driverOptions = ttsVisibleDriverOptions($ttsConnector);
 $groupedDriverOptions = ttsGroupedDriverOptions($ttsConnector, $driverOptions);
 if ($currentDriver === '' || $currentDriver === 'none') {
-    $currentDriver = $ttsConnector->normalizeDriverValue($driverOptions[0] ?? 'xtts-fastapi');
+    $currentDriver = $ttsConnector->normalizeDriverValue($driverOptions[0] ?? 'pockettts');
 }
 
 if (!$isEmbed) {
