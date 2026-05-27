@@ -311,6 +311,55 @@ if (!$isEmbed) {
         border-bottom: 1px solid rgba(242, 124, 17, 0.2);
     }
 
+    .content-section h2.section-title-with-status {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .section-status-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 0.5em;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        word-spacing: normal;
+        text-shadow: none;
+        color: #d9d9d9;
+        white-space: nowrap;
+    }
+
+    .section-status-indicator .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #c84b4b;
+        box-shadow: 0 0 0 2px rgba(200, 75, 75, 0.2);
+        flex: 0 0 auto;
+    }
+
+    .section-status-indicator.status-enabled {
+        color: #8fd0a6;
+    }
+
+    .section-status-indicator.status-enabled .status-dot {
+        background: #2d8a57;
+        box-shadow: 0 0 0 2px rgba(45, 138, 87, 0.22);
+    }
+
+    .section-status-indicator.status-disabled {
+        color: #d98d8d;
+    }
+
+    .section-status-indicator.status-disabled .status-dot {
+        background: #c84b4b;
+        box-shadow: 0 0 0 2px rgba(200, 75, 75, 0.2);
+    }
+
     .full-width-section {
         grid-column: 1 / -1;
     }
@@ -984,12 +1033,22 @@ if (!$isEmbed) {
         function syncPlayerProviderPanels() {
             const connectorSelect = document.getElementById('tts_connector_id');
             const elevenPanel = document.getElementById('player_tts_elevenlabs_panel');
+            const statusIndicator = document.getElementById('player_tts_status_indicator');
+            const statusText = document.getElementById('player_tts_status_text');
             if (!connectorSelect || !elevenPanel) return;
 
             const selectedId = connectorSelect.value || '';
             const selectedMeta = PLAYER_TTS_CONNECTOR_META[selectedId] || null;
             const selectedDriver = selectedMeta && selectedMeta.driver ? String(selectedMeta.driver).toLowerCase() : '';
             elevenPanel.style.display = selectedDriver === '11labs' ? 'block' : 'none';
+
+            if (statusIndicator && statusText) {
+                const isEnabled = selectedId !== '';
+                statusIndicator.classList.toggle('status-enabled', isEnabled);
+                statusIndicator.classList.toggle('status-disabled', !isEnabled);
+                statusText.textContent = isEnabled ? 'Enabled' : 'Disabled';
+                statusIndicator.setAttribute('title', isEnabled ? 'Player TTS is enabled' : 'Player TTS is disabled');
+            }
         }
         </script>
 
@@ -1054,7 +1113,17 @@ if (!$isEmbed) {
             </div>
 
             <div class="content-section player-tts-section">
-                <h2>Player TTS</h2>
+                <h2 class="section-title-with-status">
+                    <span>Player TTS</span>
+                    <span
+                        id="player_tts_status_indicator"
+                        class="section-status-indicator <?php echo $playerTtsConnectorId !== '' ? 'status-enabled' : 'status-disabled'; ?>"
+                        title="<?php echo $playerTtsConnectorId !== '' ? 'Player TTS is enabled' : 'Player TTS is disabled'; ?>"
+                    >
+                        <span class="status-dot" aria-hidden="true"></span>
+                        <span id="player_tts_status_text"><?php echo $playerTtsConnectorId !== '' ? 'Enabled' : 'Disabled'; ?></span>
+                    </span>
+                </h2>
                 <label for="tts_connector_id">TTS Connector</label>
                 <select id="tts_connector_id" name="tts_connector_id">
                     <option value="">Disabled</option>
