@@ -3937,6 +3937,41 @@ function DataBeingsOrDeathsInRangeExcluding($excludeNPC="", $excludePlayer=true)
     return $GLOBALS["CACHE_BEINGS_OR_DEATHS_IN_RANGE_EXCLUDING"][$excludeNPC][(int)$excludePlayer];
 }
 
+function chimDataActorStatusSuffixPattern()
+{
+    return '/\s*\((?:busy|hostile|in combat|far away|too far away|restrained|dead|disabled|unavailable|audible|narrator|checking(?: hearing|: [^)]+)?|can hear you(?:, muffled|: [^)]+)?|can[\'"]?t hear you(?: clearly)?(?:: [^)]+)?|no (?:target|crosshair target))\)\s*$/iu';
+}
+
+function chimDataStripActorStateSuffix($name)
+{
+    $name = trim((string)$name);
+    if ($name === "") {
+        return "";
+    }
+
+    $name = trim($name, "|");
+    $name = preg_replace(chimDataActorStatusSuffixPattern(), '', $name);
+    return trim((string)$name);
+}
+
+function chimDataActorStatusBlocksCloseRange($token)
+{
+    if (!preg_match('/\s*\(([^()]*)\)\s*$/u', (string)$token, $matches)) {
+        return false;
+    }
+
+    $status = strtolower(trim((string)$matches[1]));
+    if ($status === "") {
+        return false;
+    }
+
+    if (strpos($status, "can hear you") === 0) {
+        return false;
+    }
+
+    return preg_match('/^(?:busy|hostile|in combat|far away|too far away|restrained|dead|disabled|unavailable|checking|can[\'"]?t hear you|no target|no crosshair target)/i', $status) === 1;
+}
+
 function DataBeingsInCloseRange($excludeFarAway=false)
 {
 
@@ -3955,29 +3990,35 @@ function DataBeingsInCloseRange($excludeFarAway=false)
             $beings=strtr($s_npcs,["beings in range:"=>""]);
         } else 
             $beings=$s_npcs;
-        $beingsArray=explode("/",$beings);
+        $beingsArray=preg_split('/[\/|]/', $beings);
+        if (!is_array($beingsArray))
+            $beingsArray=[];
         $beingsArrayNew=[];
         foreach ($beingsArray as $k=>$v) {
-            if ($excludeFarAway && strpos($v,"(far away)")>0)
+            $v = trim((string)$v);
+            if ($excludeFarAway && chimDataActorStatusBlocksCloseRange($v))
                 continue;
-            if (strpos($v,"(dead)")>0) //??
+            if (preg_match('/\((?:dead|disabled)\)\s*$/i', $v)) //??
                 continue;
             if (empty($v))
                 continue;
+            $actorName = chimDataStripActorStateSuffix($v);
+            if (empty($actorName))
+                continue;
             //if (strpos($v,")")===false) 
-                if (strpos($v,"Horse")!==0) 
-                    if (strpos($v,"Chicken")!==0) 
-                    if (strpos($v,"Goat")!==0) 
-                    if (strpos($v,"House Cat")!==0) 
-                    if (strpos($v,"Stray Cat")!==0) 
-                    if (strpos($v,"Cow")!==0) 
-                    if (strpos($v,"Deer")!==0) 
-                    if (strpos($v,"Elk")!==0) 
-                    if (strpos($v,"Bear")!==0) 
-                    if (strpos($v,"Rabbit")!==0) 
-                    if (strpos($v,"Troll")!==0) 
-                    if (strpos($v,"Fox")!==0) 
-                        $beingsArrayNew[]=$v;
+                if (strpos($actorName,"Horse")!==0)
+                    if (strpos($actorName,"Chicken")!==0)
+                    if (strpos($actorName,"Goat")!==0)
+                    if (strpos($actorName,"House Cat")!==0)
+                    if (strpos($actorName,"Stray Cat")!==0)
+                    if (strpos($actorName,"Cow")!==0)
+                    if (strpos($actorName,"Deer")!==0)
+                    if (strpos($actorName,"Elk")!==0)
+                    if (strpos($actorName,"Bear")!==0)
+                    if (strpos($actorName,"Rabbit")!==0)
+                    if (strpos($actorName,"Troll")!==0)
+                    if (strpos($actorName,"Fox")!==0)
+                        $beingsArrayNew[]=$actorName;
         }
         $beingsFormatted=implode("|",$beingsArrayNew);
         $s_res = "|".$beingsFormatted."|";

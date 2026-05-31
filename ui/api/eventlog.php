@@ -33,9 +33,12 @@ $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
 $offset = ($page - 1) * $limit;
 $sinceRowId = isset($_GET["since_rowid"]) ? intval($_GET["since_rowid"]) : 0;
 $sinceGamets = isset($_GET["since_gamets"]) ? intval($_GET["since_gamets"]) : 0;
+$selectedEventType = isset($_GET["event_type"]) ? trim((string)$_GET["event_type"]) : '';
+$applySavedFilters = isset($_GET["use_saved_filters"]) && $_GET["use_saved_filters"];
+$savedHiddenTypes = $applySavedFilters ? chimGetPersistedEventLogHiddenTypes($db) : [];
 
-// Base event type filter - exclude internal events and location context
-$typeFilter = chimBuildVisibleEventLogWhereClause($db) . " AND type NOT IN ('infoloc','location')";
+// Base event type filter for the HerikaServer Events page.
+$typeFilter = chimBuildVisibleEventLogWhereClause($db, $selectedEventType, $savedHiddenTypes);
 
 // If specific event types are requested (for MCM conversation history panel)
 if (isset($_GET["event_types"]) && !empty($_GET["event_types"])) {

@@ -325,6 +325,7 @@ class Narrator
                 isset($GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'] : (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] : true),
             ],
             'diary_enabled' => ['NARRATOR_DIARY_ENABLED', 'bool', false],
+            'auto_diary_enabled' => ['NARRATOR_AUTO_DIARY_ENABLED', 'bool', false],
             'connector_id' => ['NARRATOR_CONNECTOR_ID', 'int', null],
             'diary_connector_id' => ['NARRATOR_DIARY_CONNECTOR_ID', 'int', null],
         ];

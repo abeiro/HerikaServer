@@ -4924,6 +4924,27 @@ if ($checkVersion("core_narrator")<20260417001) {
 }
 
 //----------------------------------------------------
+// NARRATOR AUTO DIARY FEATURE - Add auto_diary_enabled toggle
+// Version 20260522001
+//----------------------------------------------------
+
+if ($checkVersion("core_narrator")<20260522001) {
+    Logger::debug("Applying core_narrator migration 20260522001 - Adding auto_diary_enabled toggle");
+
+    // Add auto_diary_enabled field (default to disabled)
+    $db->execQuery("
+        INSERT INTO public.core_narrator (id, value)
+        VALUES ('auto_diary_enabled', '0')
+        ON CONFLICT (id) DO NOTHING
+    ");
+
+    Logger::info("Added auto_diary_enabled to core_narrator (defaults to disabled)");
+
+    $updateVersion("core_narrator", 20260522001);
+    Logger::info("Applied patch core_narrator 20260522001 - Added auto_diary_enabled toggle");
+}
+
+//----------------------------------------------------
 // Background Life Prompts - Style prompts for letters and inner thoughts
 // Version 20260118001 (fixed: was 20251207001 which was out of order and never applied)
 //----------------------------------------------------
@@ -6399,23 +6420,43 @@ $db->execQuery("
 // Refresh base bio template relationship metadata from canonical SQL
 // Version 20260505003
 //----------------------------------------------------
-if ($checkVersion("bio_templates_relationship_refresh") < 20260505003) {
+$relationshipMetadataNeedsRefresh = $checkVersion("bio_templates_relationship_refresh") < 20260505003;
+if (!$relationshipMetadataNeedsRefresh) {
+    try {
+        $relationshipSentinel = $db->fetchOne("SELECT relationships FROM public.bio_templates WHERE npc_name = 'corpulus_vinius' LIMIT 1");
+        $sentinelRelationships = ltrim(trim((string)($relationshipSentinel['relationships'] ?? '')));
+        if ($sentinelRelationships === '' || $sentinelRelationships[0] !== '{') {
+            $relationshipMetadataNeedsRefresh = true;
+            Logger::warn("Reapplying bio_templates relationship metadata because sentinel row corpulus_vinius is stale.");
+        }
+    } catch (Throwable $e) {
+        $relationshipMetadataNeedsRefresh = true;
+        Logger::warn("Reapplying bio_templates relationship metadata because sentinel verification failed: " . $e->getMessage());
+    }
+}
+
+if ($relationshipMetadataNeedsRefresh) {
     Logger::debug("Applying bio_templates_relationship_refresh 20260505003");
     try {
         $sqlFile = __DIR__ . "/../data/relationship_metadata.sql";
         if (file_exists($sqlFile)) {
             $sqlContent = file_get_contents($sqlFile);
             if ($sqlContent !== false && strlen($sqlContent) > 0) {
-                $db->execQuery($sqlContent);
-                $db->execQuery("
+                $sqlContent = preg_replace('/^\xEF\xBB\xBF/', '', $sqlContent);
+                $refreshResult = $db->execQuery($sqlContent);
+                $cleanupResult = $db->execQuery("
                     UPDATE public.bio_templates_custom
                        SET relationships = NULL
                      WHERE relationships IS NOT NULL
                        AND btrim(relationships) <> ''
                        AND left(ltrim(relationships), 1) <> '{'
                 ");
-                $updateVersion("bio_templates_relationship_refresh", 20260505003);
-                Logger::info("Applied patch bio_templates_relationship_refresh 20260505003");
+                if ($refreshResult && $cleanupResult) {
+                    $updateVersion("bio_templates_relationship_refresh", 20260505003);
+                    Logger::info("Applied patch bio_templates_relationship_refresh 20260505003");
+                } else {
+                    Logger::error("Failed to apply bio_templates_relationship_refresh 20260505003 - canonical relationship metadata refresh did not execute cleanly.");
+                }
             } else {
                 Logger::warn("relationship metadata file is empty: " . $sqlFile);
             }

@@ -3,9 +3,17 @@
 $enginePath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR;
 $GLOBALS["ENGINE_PATH"] = $enginePath;
 
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_stt_connector' => false,
+    'load_itt_connector' => false,
+    'load_tts_connector' => false,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php");
@@ -22,7 +30,7 @@ if ($webRoot === '/') {
 $webRoot = rtrim($webRoot, '/');
 $isEmbed = isset($_GET['embed']) && strval($_GET['embed']) === '1';
 
-$GLOBALS["db"] = new sql();
+$GLOBALS["db"] = $GLOBALS["db"] ?? new sql();
 $ttsConnector = new TTSConnector();
 
 if (function_exists('requireFilesRecursively')) {

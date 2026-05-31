@@ -23,15 +23,19 @@ header('Content-Type: application/json');
 $enginePath = __DIR__ . '/../../';
 $GLOBALS["ENGINE_PATH"] = $enginePath;
 
-require_once $enginePath . "conf/conf.php";
-require_once $enginePath . "lib/{$GLOBALS["DBDRIVER"]}.class.php";
+// This /ext endpoint runs outside the main request pipeline, so bootstrap it locally.
+require_once $enginePath . "lib/runtime_bootstrap.php";
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_stt_connector' => false,
+    'load_itt_connector' => false,
+    'load_player_name' => true,
+]);
 require_once $enginePath . "lib/core/llm_connector.class.php";
 require_once $enginePath . "lib/core/api_badge.class.php";
 require_once $enginePath . "lib/core/npc_master.class.php";
 require_once $enginePath . "lib/core/core_profiles.class.php";
 require_once $enginePath . "lib/logger.php";
-
-$GLOBALS["db"] = new sql();
 
 // Get POST data
 $npcId = intval($_POST['npc_id'] ?? 0);

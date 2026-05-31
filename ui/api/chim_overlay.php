@@ -24,6 +24,23 @@ require_once(LIB_PATH .DIRECTORY_SEPARATOR."core".DIRECTORY_SEPARATOR."player.cl
 
 $db = new sql();
 
+function chimOverlayActorStatusSuffixPattern()
+{
+    return '/\s*\((?:busy|hostile|in combat|far away|too far away|restrained|dead|disabled|unavailable|audible|narrator|checking(?: hearing|: [^)]+)?|can hear you(?:, muffled|: [^)]+)?|can[\'"]?t hear you(?: clearly)?(?:: [^)]+)?|no (?:target|crosshair target))\)\s*$/iu';
+}
+
+function chimOverlayCleanActorName($name)
+{
+    $name = trim((string)$name);
+    if ($name === "") {
+        return "";
+    }
+
+    $name = trim($name, "|/");
+    $name = preg_replace(chimOverlayActorStatusSuffixPattern(), '', $name);
+    return trim((string)$name);
+}
+
 // Set JSON header
 header('Content-Type: application/json');
 
@@ -106,18 +123,21 @@ $lastClose = $db->fetchOne("
 
 if ($lastClose && isset($lastClose['data'])) {
     $npcData = $lastClose['data'];
-    // Parse pipe-delimited NPC list
-    $npcs = explode('|', trim($npcData, '|'));
+    // Parse current slash-delimited DLL output and older pipe-delimited rows.
+    $npcs = preg_split('/[\/|]/', trim($npcData, "|/"));
+    if (!is_array($npcs)) {
+        $npcs = [];
+    }
     
     foreach ($npcs as $npc) {
-        $npc = trim($npc);
-        if (!empty($npc)) {
-            // Remove status indicators like "(busy)" or "(hostile)"
-            $cleanName = preg_replace('/\s*\([^)]+\)\s*$/', '', $npc);
-            if (!empty($cleanName) && $cleanName !== 'The Narrator') {
-                $activeAgents[] = $cleanName;
-            }
+        $cleanName = chimOverlayCleanActorName($npc);
+        if ($cleanName === "" || strcasecmp($cleanName, 'The Narrator') === 0) {
+            continue;
         }
+        if (!empty($GLOBALS["PLAYER_NAME"]) && strcasecmp($cleanName, (string)$GLOBALS["PLAYER_NAME"]) === 0) {
+            continue;
+        }
+        $activeAgents[] = $cleanName;
     }
     
     // Remove duplicates and limit to reasonable number

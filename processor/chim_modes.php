@@ -105,13 +105,13 @@ if ($EXECUTION_MODE=="STANDARD") {
     $userWish=explode(":",$gameRequest[3]);
     $output='';
     $instruction=escapeshellarg("{$userWish[1]}");
-    $db->upsertRowOnConflict(
+    $db->upsertRow(
         'conf_opts',
         array(
             'id' => 'chim_mode',
             'value' => 'STANDARD'
         ),
-        "id"
+        "id='chim_mode'"
     );
     exec("php /var/www/html/HerikaServer/service/manager.php rolemaster instruction \"$instruction\" notify", $output, $returnCode);
     terminate();
@@ -125,13 +125,13 @@ if ($EXECUTION_MODE=="STANDARD") {
     $userWish=explode(":",$gameRequest[3]);
     $output='';
     $instruction=escapeshellarg("{$userWish[1]}");
-    $db->upsertRowOnConflict(
+    $db->upsertRow(
         'conf_opts',
         array(
             'id' => 'chim_mode',
             'value' => 'STANDARD'
         ),
-        "id"
+        "id='chim_mode'"
     );
     $GLOBALS["db"]->insert(
         'responselog',
@@ -214,13 +214,13 @@ if ($EXECUTION_MODE != "WHISPER") {
 }
 
 // Store current mode as previous for next check
-$db->upsertRowOnConflict(
+$db->upsertRow(
     'conf_opts',
     array(
         'id' => 'chim_mode_previous',
         'value' => $EXECUTION_MODE
     ),
-    "id"
+    "id='chim_mode_previous'"
 );
 
 

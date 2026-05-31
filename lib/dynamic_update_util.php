@@ -505,11 +505,11 @@ function processAutoDiary($gameRequest, $eventType) {
         }
     }
     
-    // Add The Narrator if diary is enabled for narrator
+    // Add The Narrator if auto diary is enabled for narrator
     // The Narrator is always "nearby" (conceptually omnipresent)
-    if (isset($GLOBALS["NARRATOR_DIARY_ENABLED"]) && $GLOBALS["NARRATOR_DIARY_ENABLED"]) {
+    if (!empty($GLOBALS["NARRATOR_AUTO_DIARY_ENABLED"])) {
         $nearbyNpcs[] = "The Narrator";
-        Logger::info("AUTO_DIARY: Added The Narrator to auto diary processing (toggle enabled)");
+        Logger::info("AUTO_DIARY: Added The Narrator to auto diary processing (auto toggle enabled)");
     }
     
     if (empty($nearbyNpcs) && !$playerDiaryEnabled) {
@@ -581,9 +581,9 @@ function processAutoDiary($gameRequest, $eventType) {
         
         // Special handling for The Narrator
         if ($npcName === "The Narrator") {
-            // Check if narrator diary is enabled
-            if (!isset($GLOBALS["NARRATOR_DIARY_ENABLED"]) || !$GLOBALS["NARRATOR_DIARY_ENABLED"]) {
-                Logger::debug("AUTO_DIARY: The Narrator diary is disabled, skipping");
+            // Check if narrator auto diary is enabled
+            if (empty($GLOBALS["NARRATOR_AUTO_DIARY_ENABLED"])) {
+                Logger::debug("AUTO_DIARY: The Narrator auto diary is disabled, skipping");
                 continue;
             }
             
@@ -1244,7 +1244,7 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     ];
     
     if (!isset($fieldMapping[$field])) {
-        Logger::warning("updateDynamicProfileField: Unknown field '$field' for $npcName");
+        Logger::warn("updateDynamicProfileField: Unknown field '$field' for $npcName");
         return false;
     }
 
@@ -1298,7 +1298,7 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     }
     
     if (empty($updatePrompt)) {
-        Logger::warning("updateDynamicProfileField: No prompt configured for field '$field' ($promptName)");
+        Logger::warn("updateDynamicProfileField: No prompt configured for field '$field' ($promptName)");
         return false;
     }
     
