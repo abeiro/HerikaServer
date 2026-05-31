@@ -865,7 +865,11 @@ function cleanupDisplayText($text, $speakerName = null) {
 
 function formatPlayerSubtitleText($text, $speakerName = null) {
     $speakerName = $speakerName ?? ($GLOBALS["PLAYER_NAME"] ?? null);
-    $subtitleText = preg_replace('/\s*\(Talking to [^)]+\)\s*$/i', '', $text);
+    $subtitleText = preg_replace(
+        '/\s*\((?:(?:Talking|Whispering|Shouting) to [^)]+|speaking loudly to [^)]+ from far away)\)\s*$/i',
+        '',
+        $text
+    );
     return cleanupDisplayText($subtitleText, $speakerName);
 }
 
@@ -2609,6 +2613,11 @@ function normalizeDialogTextForComparison($text)
     return mb_strtolower($text, 'UTF-8');
 }
 
+function chimActorStatusSuffixPattern()
+{
+    return '/\s*\((?:busy|hostile|in combat|far away|too far away|restrained|dead|disabled|unavailable|audible|narrator|checking(?: hearing|: [^)]+)?|can hear you(?:, muffled|: [^)]+)?|can[\'"]?t hear you(?: clearly)?(?:: [^)]+)?|no (?:target|crosshair target))\)\s*$/iu';
+}
+
 function stripActorStateSuffix($name)
 {
     $name = trim((string)$name);
@@ -2617,7 +2626,7 @@ function stripActorStateSuffix($name)
     }
 
     $name = trim($name, "|");
-    $name = preg_replace('/\s*\((?:busy|hostile|in combat|far away|restrained|dead|disabled)\)\s*$/i', '', $name);
+    $name = preg_replace(chimActorStatusSuffixPattern(), '', $name);
     return trim((string)$name);
 }
 
@@ -2830,7 +2839,7 @@ function chimResolveEffectiveRechatMode($configuredMode, array $members)
 
 function normalizeDialogueListenerName($listenerName)
 {
-    $listenerName = trim((string)$listenerName);
+    $listenerName = stripActorStateSuffix($listenerName);
     if ($listenerName === "") {
         return "";
     }
@@ -3657,7 +3666,7 @@ function extractEventPayloadParticipants($eventType, $eventData)
     }
 
     if ($eventType === "infonpc_close") {
-        return extractActorNamesFromDelimitedEventPayload($eventData, '/\s*\/\s*/u');
+        return extractActorNamesFromDelimitedEventPayload($eventData, '/\s*[\/|]\s*/u');
     }
 
     if ($eventType === "infonpc") {

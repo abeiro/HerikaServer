@@ -6420,23 +6420,43 @@ $db->execQuery("
 // Refresh base bio template relationship metadata from canonical SQL
 // Version 20260505003
 //----------------------------------------------------
-if ($checkVersion("bio_templates_relationship_refresh") < 20260505003) {
+$relationshipMetadataNeedsRefresh = $checkVersion("bio_templates_relationship_refresh") < 20260505003;
+if (!$relationshipMetadataNeedsRefresh) {
+    try {
+        $relationshipSentinel = $db->fetchOne("SELECT relationships FROM public.bio_templates WHERE npc_name = 'corpulus_vinius' LIMIT 1");
+        $sentinelRelationships = ltrim(trim((string)($relationshipSentinel['relationships'] ?? '')));
+        if ($sentinelRelationships === '' || $sentinelRelationships[0] !== '{') {
+            $relationshipMetadataNeedsRefresh = true;
+            Logger::warn("Reapplying bio_templates relationship metadata because sentinel row corpulus_vinius is stale.");
+        }
+    } catch (Throwable $e) {
+        $relationshipMetadataNeedsRefresh = true;
+        Logger::warn("Reapplying bio_templates relationship metadata because sentinel verification failed: " . $e->getMessage());
+    }
+}
+
+if ($relationshipMetadataNeedsRefresh) {
     Logger::debug("Applying bio_templates_relationship_refresh 20260505003");
     try {
         $sqlFile = __DIR__ . "/../data/relationship_metadata.sql";
         if (file_exists($sqlFile)) {
             $sqlContent = file_get_contents($sqlFile);
             if ($sqlContent !== false && strlen($sqlContent) > 0) {
-                $db->execQuery($sqlContent);
-                $db->execQuery("
+                $sqlContent = preg_replace('/^\xEF\xBB\xBF/', '', $sqlContent);
+                $refreshResult = $db->execQuery($sqlContent);
+                $cleanupResult = $db->execQuery("
                     UPDATE public.bio_templates_custom
                        SET relationships = NULL
                      WHERE relationships IS NOT NULL
                        AND btrim(relationships) <> ''
                        AND left(ltrim(relationships), 1) <> '{'
                 ");
-                $updateVersion("bio_templates_relationship_refresh", 20260505003);
-                Logger::info("Applied patch bio_templates_relationship_refresh 20260505003");
+                if ($refreshResult && $cleanupResult) {
+                    $updateVersion("bio_templates_relationship_refresh", 20260505003);
+                    Logger::info("Applied patch bio_templates_relationship_refresh 20260505003");
+                } else {
+                    Logger::error("Failed to apply bio_templates_relationship_refresh 20260505003 - canonical relationship metadata refresh did not execute cleanly.");
+                }
             } else {
                 Logger::warn("relationship metadata file is empty: " . $sqlFile);
             }

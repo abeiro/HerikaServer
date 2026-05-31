@@ -308,7 +308,7 @@ $CONNECTOR["llamacpp"]["eos_token"]='';	//EOS token LLM uses.
 $CONNECTOR["llamacpp"]["template"]='alpaca'; //Prompt Format. Specified in the HuggingFace model card.
 
 //[Text-to-Speech Service]
-$TTSFUNCTION="mimic3";
+$TTSFUNCTION="pockettts";
 
 //[Text-to-Speech Endpoints]
 //MeloTTS
