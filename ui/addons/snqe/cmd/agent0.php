@@ -29,7 +29,7 @@ $connector->setOldGlobals($currentConnectorData);
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-$MODEL_1 = "x-ai/grok-4.1-fast"; // Initial quest generator
+$MODEL_1 = "google/gemma-4-26b-a4b-it"; // Initial quest generator
 $MODEL_2 = "google/gemini-3-flash-preview";   // Quest steps generator
 
 
