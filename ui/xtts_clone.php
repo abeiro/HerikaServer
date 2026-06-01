@@ -524,6 +524,16 @@ if (isset($_GET['action']) && ($_GET['action'] === 'test_cartesia' || $_GET['act
         if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
             return [];
         }
+        if ($provider === 'cartesia') {
+            chimTtsStudioApplyConnectorGlobals('cartesia');
+            require_once(__DIR__ . '/../tts/tts-cartesia.php');
+            return getCartesiaCachedVoicesMap(true);
+        }
+        if ($provider === 'inworld') {
+            chimTtsStudioApplyConnectorGlobals('inworld');
+            require_once(__DIR__ . '/../tts/tts-inworld.php');
+            return getInworldCachedVoicesMap(true);
+        }
         $db = $GLOBALS["db"];
         $prefix = $provider . '_voice_id_';
         $prefixEscaped = $db->escape($prefix);
@@ -538,6 +548,15 @@ if (isset($_GET['action']) && ($_GET['action'] === 'test_cartesia' || $_GET['act
     
     if ($_GET['action'] === 'test_cartesia') {
         $voice = $_GET['voice'];
+        $cartesiaStatus = getCartesiaConfigurationStatus();
+        if (!$cartesiaStatus['configured']) {
+            header('Content-Type: application/json');
+            http_response_code(400);
+            echo json_encode(['error' => $cartesiaStatus['message'] !== '' ? $cartesiaStatus['message'] : 'Cartesia is not fully configured.']);
+            exit;
+        }
+
+        chimTtsStudioApplyConnectorGlobals('cartesia');
         $clonedVoices = getClonedVoicesForTest('cartesia');
         
         if (!isset($clonedVoices[$voice]) || empty($clonedVoices[$voice])) {
@@ -723,6 +742,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'batch_process' && isset($_GET
         } elseif ($provider === 'cartesia') {
             // Load Cartesia TTS functions
             require_once($enginePath . 'tts' . DIRECTORY_SEPARATOR . 'tts-cartesia.php');
+            chimTtsStudioApplyConnectorGlobals('cartesia');
             
             $voiceBasename = pathinfo($voiceName, PATHINFO_FILENAME);
             $result = getOrCreateCartesiaVoice($voiceBasename);
@@ -737,13 +757,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'batch_process' && isset($_GET
                     $response['message'] = 'Rate limit reached. Please wait before uploading more.';
                     $response['rateLimit'] = true;
                 } else {
-                    $response['message'] = 'Failed to generate voice. Check API configuration.';
+                    $detailedError = function_exists('getCartesiaLastError') ? getCartesiaLastError() : '';
+                    $response['message'] = $detailedError !== '' ? $detailedError : 'Failed to generate voice. Check API configuration.';
                 }
             }
             
         } elseif ($provider === 'inworld') {
             // Load Inworld TTS functions
             require_once($enginePath . 'tts' . DIRECTORY_SEPARATOR . 'tts-inworld.php');
+            chimTtsStudioApplyConnectorGlobals('inworld');
             
             $voiceBasename = pathinfo($voiceName, PATHINFO_FILENAME);
             $result = getOrCreateInworldVoice($voiceBasename);
@@ -758,7 +780,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'batch_process' && isset($_GET
                     $response['message'] = 'Rate limit reached. Please wait before uploading more.';
                     $response['rateLimit'] = true;
                 } else {
-                    $response['message'] = 'Failed to generate voice. Check API configuration.';
+                    $detailedError = function_exists('getInworldLastError') ? getInworldLastError() : '';
+                    $response['message'] = $detailedError !== '' ? $detailedError : 'Failed to generate voice. Check API configuration.';
                 }
             }
             
@@ -858,6 +881,16 @@ function getClonedVoices($provider) {
     if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
         return [];
     }
+    if ($provider === 'cartesia') {
+        chimTtsStudioApplyConnectorGlobals('cartesia');
+        require_once(__DIR__ . '/../tts/tts-cartesia.php');
+        return getCartesiaCachedVoicesMap(true);
+    }
+    if ($provider === 'inworld') {
+        chimTtsStudioApplyConnectorGlobals('inworld');
+        require_once(__DIR__ . '/../tts/tts-inworld.php');
+        return getInworldCachedVoicesMap(true);
+    }
     $db = $GLOBALS["db"];
     $prefix = $provider . '_voice_id_';
     $prefixEscaped = $db->escape($prefix);
@@ -879,6 +912,55 @@ function isProviderConfigured($provider) {
     $providerLower = strtolower($provider);
     $row = $db->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='{$providerLower}' LIMIT 1");
     return (is_array($row) && !empty($row['api_key']));
+}
+
+function getCartesiaConfigurationStatus(): array
+{
+    $row = chimTtsStudioResolveConnectorRow('cartesia');
+    $hasConnector = is_array($row);
+
+    $hasApiCredential = false;
+    $apiBadgeId = intval($row['api_badge_id'] ?? 0);
+    if ($apiBadgeId > 0 && isset($GLOBALS["db"]) && $GLOBALS["db"]) {
+        $badgeRow = $GLOBALS["db"]->fetchOne("SELECT api_key FROM core_api_badge WHERE id = {$apiBadgeId} LIMIT 1");
+        $hasApiCredential = is_array($badgeRow) && !empty($badgeRow['api_key']);
+    }
+    if (!$hasApiCredential) {
+        $hasApiCredential = isProviderConfigured('cartesia');
+    }
+
+    if ($hasConnector && $hasApiCredential) {
+        return [
+            'configured' => true,
+            'title' => 'Cartesia connector and API badge are configured',
+            'message' => '',
+        ];
+    }
+
+    $missingParts = [];
+    if (!$hasConnector) {
+        $missingParts[] = 'connector';
+    }
+    if (!$hasApiCredential) {
+        $missingParts[] = 'API credential';
+    }
+
+    $message = '';
+    if (!$hasConnector) {
+        $message = 'Please configure an active Cartesia connector';
+        if (!$hasApiCredential) {
+            $message .= ' and API credential';
+        }
+        $message .= ' before syncing voices.';
+    } else {
+        $message = 'Please configure your active Cartesia connector API credential before syncing voices.';
+    }
+
+    return [
+        'configured' => false,
+        'title' => 'Missing Cartesia ' . implode(' and ', $missingParts),
+        'message' => $message,
+    ];
 }
 
 function getInworldConfigurationStatus(): array
@@ -919,10 +1001,31 @@ function getInworldConfigurationStatus(): array
         $missingParts[] = 'workspace';
     }
 
+    $message = '';
+    if (!$hasConnector) {
+        $message = 'Please configure an active Inworld connector';
+        if (!$hasApiCredential) {
+            $message .= ' and API credential';
+        }
+        if (!$hasWorkspace) {
+            $message .= ($hasApiCredential ? ' and workspace' : ' and workspace');
+        }
+        $message .= ' before syncing voices.';
+    } else {
+        $details = [];
+        if (!$hasApiCredential) {
+            $details[] = 'API credential';
+        }
+        if (!$hasWorkspace) {
+            $details[] = 'workspace';
+        }
+        $message = 'Please configure your active Inworld connector ' . implode(' and ', $details) . ' before syncing voices.';
+    }
+
     return [
         'configured' => false,
         'title' => 'Missing Inworld ' . implode(' and ', $missingParts),
-        'message' => 'Please configure your active Inworld connector ' . implode(' and ', $missingParts) . ' before syncing voices.',
+        'message' => $message,
     ];
 }
 
@@ -1172,9 +1275,12 @@ $ttsStudioProviderStatuses = [
     'xtts' => chimTtsStudioProbeEndpointStatus('xtts-fastapi', $xttsStudioEndpoints['xtts-fastapi'] ?? ''),
     'chatterbox' => chimTtsStudioProbeEndpointStatus('chatterbox', $xttsStudioEndpoints['chatterbox'] ?? ''),
     'pockettts' => chimTtsStudioProbeEndpointStatus('pockettts', $xttsStudioEndpoints['pockettts'] ?? ''),
-    'cartesia' => isProviderConfigured('cartesia')
-        ? ['label' => 'Configured', 'class' => 'configured', 'title' => 'Cartesia API badge is configured']
-        : ['label' => 'Not Configured', 'class' => 'unconfigured', 'title' => 'Cartesia API badge is not configured'],
+    'cartesia' => (function () {
+        $status = getCartesiaConfigurationStatus();
+        return $status['configured']
+            ? ['label' => 'Configured', 'class' => 'configured', 'title' => $status['title']]
+            : ['label' => 'Not Configured', 'class' => 'unconfigured', 'title' => $status['title']];
+    })(),
     'inworld' => (function () {
         $status = getInworldConfigurationStatus();
         return $status['configured']
@@ -1193,80 +1299,95 @@ $inworldMessage = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Cartesia sync handler (all missing)
     if (isset($_POST['action']) && $_POST['action'] === 'sync_cartesia') {
-        $localVoices = getLocalVoices();
-        $clonedVoices = getClonedVoices('cartesia');
-        $syncedCount = 0;
-        $errorCount = 0;
-        $rateLimitCount = 0;
-        $firstVoice = true;
-        
-        foreach ($localVoices as $voice) {
-            if (!isset($clonedVoices[$voice])) {
-                $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
-                if (file_exists($voiceSamplePath)) {
-                    // Add delay between requests to avoid rate limiting (2 seconds)
-                    if (!$firstVoice) {
-                        sleep(2);
-                    }
-                    $firstVoice = false;
-                    
-                    $result = getOrCreateCartesiaVoice($voice);
-                    if ($result !== false) {
-                        $syncedCount++;
-                    } else {
-                        $errorCount++;
-                        // Check if it's a rate limit error by checking error logs
-                        $errorMsg = error_get_last();
-                        if ($errorMsg && (strpos($errorMsg['message'], '429') !== false || strpos($errorMsg['message'], 'Too Many Requests') !== false)) {
-                            $rateLimitCount++;
-                            $cartesiaMessage .= "<p style='color:orange;'>Rate limit hit while generating voice: {$voice}. Please wait a moment and try syncing remaining voices.</p>";
-                            // Stop syncing if we hit rate limit
-                            break;
+        $cartesiaStatus = getCartesiaConfigurationStatus();
+        if (!$cartesiaStatus['configured']) {
+            $cartesiaMessage .= "<p style='color:red;'><strong>" . htmlspecialchars($cartesiaStatus['message']) . "</strong></p>";
+        } else {
+            chimTtsStudioApplyConnectorGlobals('cartesia');
+            $localVoices = getLocalVoices();
+            $clonedVoices = getClonedVoices('cartesia');
+            $syncedCount = 0;
+            $errorCount = 0;
+            $rateLimitCount = 0;
+            $firstVoice = true;
+            
+            foreach ($localVoices as $voice) {
+                if (!isset($clonedVoices[$voice])) {
+                    $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
+                    if (file_exists($voiceSamplePath)) {
+                        // Add delay between requests to avoid rate limiting (2 seconds)
+                        if (!$firstVoice) {
+                            sleep(2);
+                        }
+                        $firstVoice = false;
+                        
+                        $result = getOrCreateCartesiaVoice($voice);
+                        if ($result !== false) {
+                            $syncedCount++;
                         } else {
-                            $cartesiaMessage .= "<p>Error generating voice: {$voice}</p>";
+                            $errorCount++;
+                            $detailedError = function_exists('getCartesiaLastError') ? getCartesiaLastError() : '';
+                            $errorMsg = error_get_last();
+                            if ($errorMsg && (strpos($errorMsg['message'], '429') !== false || strpos($errorMsg['message'], 'Too Many Requests') !== false)) {
+                                $rateLimitCount++;
+                                $cartesiaMessage .= "<p style='color:orange;'>Rate limit hit while generating voice: {$voice}. Please wait a moment and try syncing remaining voices.</p>";
+                                break;
+                            } else {
+                                $suffix = $detailedError !== '' ? ' ' . htmlspecialchars($detailedError) : '';
+                                $cartesiaMessage .= "<p>Error generating voice: {$voice}.{$suffix}</p>";
+                            }
                         }
                     }
                 }
             }
-        }
-        
-        if ($syncedCount > 0) {
-            $cartesiaMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully synced {$syncedCount} voice(s) to Cartesia.</strong></p>";
-        }
-        if ($rateLimitCount > 0) {
-            $cartesiaMessage .= "<p style='color:orange;'><strong>Hit rate limit after {$syncedCount} voices. Please wait a few minutes before syncing remaining voices.</strong></p>";
-        }
-        if ($errorCount > 0 && $rateLimitCount === 0) {
-            $cartesiaMessage .= "<p style='color:red;'><strong>Failed to sync {$errorCount} voice(s).</strong></p>";
-        }
-        if ($syncedCount === 0 && $errorCount === 0 && $rateLimitCount === 0) {
-            $cartesiaMessage .= "<p>All voices are already synced to Cartesia.</p>";
+            
+            if ($syncedCount > 0) {
+                $cartesiaMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully synced {$syncedCount} voice(s) to Cartesia.</strong></p>";
+            }
+            if ($rateLimitCount > 0) {
+                $cartesiaMessage .= "<p style='color:orange;'><strong>Hit rate limit after {$syncedCount} voices. Please wait a few minutes before syncing remaining voices.</strong></p>";
+            }
+            if ($errorCount > 0 && $rateLimitCount === 0) {
+                $cartesiaMessage .= "<p style='color:red;'><strong>Failed to sync {$errorCount} voice(s).</strong></p>";
+            }
+            if ($syncedCount === 0 && $errorCount === 0 && $rateLimitCount === 0) {
+                $cartesiaMessage .= "<p>All voices are already synced to Cartesia.</p>";
+            }
         }
     }
     
     // Cartesia single voice sync handler
     if (isset($_POST['action']) && $_POST['action'] === 'sync_cartesia_single' && isset($_POST['voice'])) {
-        $voice = $_POST['voice'];
-        $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
-        if (file_exists($voiceSamplePath)) {
-            $result = getOrCreateCartesiaVoice($voice);
-            if ($result !== false && !empty($result)) {
-                // Redirect to refresh the page and show updated status
-                header('Location: ' . $webRoot . '/ui/xtts_clone.php?tab=cartesia&synced=' . urlencode($voice));
-                exit;
-            } else {
-                $cartesiaMessage .= "<p style='color:red;'><strong>Failed to generate voice '{$voice}' for Cartesia. Please check API configuration and logs.</strong></p>";
-            }
+        $cartesiaStatus = getCartesiaConfigurationStatus();
+        if (!$cartesiaStatus['configured']) {
+            $cartesiaMessage .= "<p style='color:red;'><strong>" . htmlspecialchars($cartesiaStatus['message']) . "</strong></p>";
         } else {
-            $cartesiaMessage .= "<p style='color:red;'><strong>Voice file not found: {$voice}</strong></p>";
+            chimTtsStudioApplyConnectorGlobals('cartesia');
+            $voice = $_POST['voice'];
+            $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
+            if (file_exists($voiceSamplePath)) {
+                $result = getOrCreateCartesiaVoice($voice);
+                if ($result !== false && !empty($result)) {
+                    // Redirect to refresh the page and show updated status
+                    header('Location: ' . $webRoot . '/ui/xtts_clone.php?tab=cartesia&synced=' . urlencode($voice));
+                    exit;
+                } else {
+                    $detailedError = function_exists('getCartesiaLastError') ? getCartesiaLastError() : '';
+                    $suffix = $detailedError !== '' ? ' ' . htmlspecialchars($detailedError) : ' Please check API configuration and logs.';
+                    $cartesiaMessage .= "<p style='color:red;'><strong>Failed to generate voice '{$voice}' for Cartesia.{$suffix}</strong></p>";
+                }
+            } else {
+                $cartesiaMessage .= "<p style='color:red;'><strong>Voice file not found: {$voice}</strong></p>";
+            }
         }
     }
     
     // Cartesia clear cache handler
     if (isset($_POST['action']) && $_POST['action'] === 'clear_cartesia_cache') {
         $db = $GLOBALS["db"];
-        $prefixEscaped = $db->escape('cartesia_voice_id_');
-        $db->execQuery("DELETE FROM conf_opts WHERE id LIKE '{$prefixEscaped}%'");
+        $legacyPrefixEscaped = $db->escape('cartesia_voice_id_');
+        $scopedPrefixEscaped = $db->escape('cartesia_voice_scope_');
+        $db->execQuery("DELETE FROM conf_opts WHERE id LIKE '{$legacyPrefixEscaped}%' OR id LIKE '{$scopedPrefixEscaped}%'");
         $cartesiaMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Cartesia voice cache cleared.</strong></p>";
     }
     
@@ -1362,6 +1483,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $syncedCount++;
                     } else {
                         $errorCount++;
+                        $detailedError = function_exists('getInworldLastError') ? getInworldLastError() : '';
                         // Check if it's a rate limit error
                         $errorMsg = error_get_last();
                         if ($errorMsg && (strpos($errorMsg['message'], '429') !== false || strpos($errorMsg['message'], 'Too Many Requests') !== false)) {
@@ -1370,7 +1492,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             // Stop syncing if we hit rate limit
                             break;
                         } else {
-                            $inworldMessage .= "<p>Error generating voice: {$voice}</p>";
+                            $suffix = $detailedError !== '' ? ' ' . htmlspecialchars($detailedError) : '';
+                            $inworldMessage .= "<p>Error generating voice: {$voice}.{$suffix}</p>";
                         }
                     }
                 }
@@ -1408,7 +1531,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: ' . $webRoot . '/ui/xtts_clone.php?tab=inworld&synced=' . urlencode($voice));
                 exit;
             } else {
-                $inworldMessage .= "<p style='color:red;'><strong>Failed to generate voice '{$voice}' for Inworld. Please check API configuration and logs.</strong></p>";
+                $detailedError = function_exists('getInworldLastError') ? getInworldLastError() : '';
+                $suffix = $detailedError !== '' ? ' ' . htmlspecialchars($detailedError) : ' Please check API configuration and logs.';
+                $inworldMessage .= "<p style='color:red;'><strong>Failed to generate voice '{$voice}' for Inworld.{$suffix}</strong></p>";
             }
         } else {
             $inworldMessage .= "<p style='color:red;'><strong>Voice file not found: {$voice}</strong></p>";
@@ -1419,8 +1544,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Inworld clear cache handler
     if (isset($_POST['action']) && $_POST['action'] === 'clear_inworld_cache') {
         $db = $GLOBALS["db"];
-        $prefixEscaped = $db->escape('inworld_voice_id_');
-        $db->execQuery("DELETE FROM conf_opts WHERE id LIKE '{$prefixEscaped}%'");
+        $legacyPrefixEscaped = $db->escape('inworld_voice_id_');
+        $scopedPrefixEscaped = $db->escape('inworld_voice_scope_');
+        $db->execQuery("DELETE FROM conf_opts WHERE id LIKE '{$legacyPrefixEscaped}%' OR id LIKE '{$scopedPrefixEscaped}%'");
         $inworldMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Inworld voice cache cleared.</strong></p>";
     }
     

@@ -9,7 +9,7 @@ require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTOR
  * - Voice cloning from local voice samples
  * - Text-to-speech generation using cloned voices
  * - Automatic voice cloning when first needed (like XTTS)
- * - Caching of Inworld voice IDs in conf_opts database
+ * - Connector-scoped caching of Inworld voice IDs in conf_opts
  */
 
 
@@ -129,6 +129,448 @@ function isInNonVerbalVocalizationList($s_markup) {
     return $b_res;
 }
 
+function setInworldLastError(string $message): void {
+    $GLOBALS["INWORLD_LAST_ERROR_MESSAGE"] = trim($message);
+}
+
+function getInworldLastError(): string {
+    return trim(strval($GLOBALS["INWORLD_LAST_ERROR_MESSAGE"] ?? ''));
+}
+
+function clearInworldLastError(): void {
+    unset($GLOBALS["INWORLD_LAST_ERROR_MESSAGE"]);
+}
+
+function ensureInworldDb() {
+    if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
+        require_once(__DIR__ . "/../lib/{$GLOBALS["DBDRIVER"]}.class.php");
+    }
+    if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
+        $GLOBALS["db"] = new sql();
+    }
+    return $GLOBALS["db"] ?? null;
+}
+
+function normalizeInworldWorkspaceName($workspace): string {
+    $workspace = trim(strval($workspace));
+    if (strpos($workspace, 'workspaces/') === 0) {
+        $workspace = substr($workspace, strlen('workspaces/'));
+    }
+    return trim($workspace, "/ \t\n\r\0\x0B");
+}
+
+function resolveInworldConnectorRow(): ?array {
+    $db = ensureInworldDb();
+    if (!$db) {
+        return null;
+    }
+    if (!class_exists('TTSConnector')) {
+        require_once(__DIR__ . "/../lib/core/tts_connector.class.php");
+    }
+
+    $ttsConnector = new TTSConnector();
+    $candidateIds = [
+        intval($GLOBALS["CHIM_CORE_CURRENT_TTS_CONNECTOR_ID"] ?? 0),
+        intval($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]['tts_connector_id'] ?? 0),
+    ];
+
+    foreach ($candidateIds as $candidateId) {
+        if ($candidateId <= 0) {
+            continue;
+        }
+        $row = $ttsConnector->getById($candidateId);
+        if (is_array($row) && $ttsConnector->normalizeDriverValue($row['driver'] ?? '') === 'inworld') {
+            return $row;
+        }
+    }
+
+    $rows = array_values(array_filter($ttsConnector->readAll(), function ($row) use ($ttsConnector) {
+        return $ttsConnector->normalizeDriverValue($row['driver'] ?? '') === 'inworld';
+    }));
+    if (empty($rows)) {
+        return null;
+    }
+
+    $profileUsageMap = [];
+    $usageRows = $db->fetchAll(
+        "SELECT tts_connector_id, COUNT(*) AS c FROM core_profiles WHERE tts_connector_id IS NOT NULL GROUP BY tts_connector_id"
+    );
+    foreach ($usageRows as $usageRow) {
+        $profileUsageMap[intval($usageRow['tts_connector_id'] ?? 0)] = intval($usageRow['c'] ?? 0);
+    }
+
+    $playerConnectorId = 0;
+    $playerRow = $db->fetchOne("SELECT value FROM core_player WHERE id = 'tts_connector_id' LIMIT 1");
+    if (is_array($playerRow)) {
+        $playerConnectorId = intval($playerRow['value'] ?? 0);
+    }
+
+    usort($rows, function ($a, $b) use ($profileUsageMap, $playerConnectorId) {
+        $aId = intval($a['id'] ?? 0);
+        $bId = intval($b['id'] ?? 0);
+        $aPlayer = ($aId > 0 && $aId === $playerConnectorId) ? 1 : 0;
+        $bPlayer = ($bId > 0 && $bId === $playerConnectorId) ? 1 : 0;
+        if ($aPlayer !== $bPlayer) {
+            return $bPlayer <=> $aPlayer;
+        }
+
+        $aUsage = $profileUsageMap[$aId] ?? 0;
+        $bUsage = $profileUsageMap[$bId] ?? 0;
+        if ($aUsage !== $bUsage) {
+            return $bUsage <=> $aUsage;
+        }
+
+        $aLabel = strtolower(trim(strval($a['label'] ?? '')));
+        $bLabel = strtolower(trim(strval($b['label'] ?? '')));
+        if ($aLabel !== $bLabel) {
+            return $aLabel <=> $bLabel;
+        }
+
+        return $aId <=> $bId;
+    });
+
+    return $ttsConnector->getById(intval($rows[0]['id'] ?? 0));
+}
+
+function hydrateInworldConnectorGlobals(): ?array {
+    $row = resolveInworldConnectorRow();
+    if (!is_array($row)) {
+        return null;
+    }
+    if (!class_exists('TTSConnector')) {
+        require_once(__DIR__ . "/../lib/core/tts_connector.class.php");
+    }
+    $ttsConnector = new TTSConnector();
+    $ttsConnector->setOldGlobals($row);
+    return $row;
+}
+
+function getInworldActiveConfig(): array {
+    $row = null;
+    $connectorId = intval($GLOBALS["CHIM_CORE_CURRENT_TTS_CONNECTOR_ID"] ?? 0);
+    $workspace = normalizeInworldWorkspaceName($GLOBALS["TTS"]["INWORLD"]["workspace"] ?? '');
+    $apiCredential = trim(strval($GLOBALS["TTS"]["INWORLD"]["API_KEY"] ?? ''));
+
+    if ($connectorId <= 0 || $workspace === '' || $apiCredential === '') {
+        $row = hydrateInworldConnectorGlobals();
+        $connectorId = intval($GLOBALS["CHIM_CORE_CURRENT_TTS_CONNECTOR_ID"] ?? ($row['id'] ?? 0));
+        $workspace = normalizeInworldWorkspaceName($GLOBALS["TTS"]["INWORLD"]["workspace"] ?? '');
+        $apiCredential = trim(strval($GLOBALS["TTS"]["INWORLD"]["API_KEY"] ?? ''));
+    } else {
+        $row = resolveInworldConnectorRow();
+    }
+
+    if (is_array($row)) {
+        if ($workspace === '') {
+            if (!class_exists('TTSConnector')) {
+                require_once(__DIR__ . "/../lib/core/tts_connector.class.php");
+            }
+            $ttsConnector = new TTSConnector();
+            $metadata = $ttsConnector->decodeMetadata($row['metadata'] ?? '{}');
+            $workspace = normalizeInworldWorkspaceName($metadata['workspace'] ?? '');
+        }
+        if ($apiCredential === '') {
+            $db = ensureInworldDb();
+            $apiBadgeId = intval($row['api_badge_id'] ?? 0);
+            if ($db && $apiBadgeId > 0) {
+                $badgeRow = $db->fetchOne("SELECT api_key FROM core_api_badge WHERE id = {$apiBadgeId} LIMIT 1");
+                if (is_array($badgeRow) && !empty($badgeRow['api_key'])) {
+                    $apiCredential = trim(strval($badgeRow['api_key']));
+                }
+            }
+        }
+    }
+
+    return [
+        'connector_id' => $connectorId,
+        'workspace' => $workspace,
+        'workspace_path' => $workspace !== '' ? "workspaces/{$workspace}" : '',
+        'api_key' => $apiCredential,
+        'row' => $row,
+    ];
+}
+
+function inworldVoiceIdMatchesWorkspace($voiceId, $workspace): bool {
+    $voiceId = trim(strval($voiceId));
+    $workspace = normalizeInworldWorkspaceName($workspace);
+    if ($voiceId === '') {
+        return false;
+    }
+    if ($workspace === '') {
+        return true;
+    }
+    return strpos($voiceId, $workspace . '__') === 0;
+}
+
+function getInworldVoiceCachePrefix(?array $config = null): string {
+    $config = is_array($config) ? $config : getInworldActiveConfig();
+    $connectorId = intval($config['connector_id'] ?? 0);
+    $workspace = normalizeInworldWorkspaceName($config['workspace'] ?? '');
+    if ($connectorId <= 0 && $workspace === '') {
+        return 'inworld_voice_id_';
+    }
+
+    $scopeHash = substr(md5(json_encode([
+        'connector_id' => $connectorId,
+        'workspace' => strtolower($workspace),
+    ])), 0, 12);
+
+    return "inworld_voice_scope_{$scopeHash}__";
+}
+
+function getInworldVoiceCachePrefixes(?array $config = null, bool $includeLegacy = true): array {
+    $config = is_array($config) ? $config : getInworldActiveConfig();
+    $prefixes = [];
+    $scopedPrefix = getInworldVoiceCachePrefix($config);
+    if ($scopedPrefix !== 'inworld_voice_id_') {
+        $prefixes[] = $scopedPrefix;
+    }
+    if ($includeLegacy || empty($prefixes)) {
+        $prefixes[] = 'inworld_voice_id_';
+    }
+    return array_values(array_unique($prefixes));
+}
+
+function getInworldVoiceCacheKey($voiceName, ?array $config = null): string {
+    return getInworldVoiceCachePrefix($config) . $voiceName;
+}
+
+function getCachedInworldVoiceId($voiceName, ?array $config = null): string {
+    $db = ensureInworldDb();
+    if (!$db) {
+        return '';
+    }
+
+    $config = is_array($config) ? $config : getInworldActiveConfig();
+    $prefixes = getInworldVoiceCachePrefixes($config, true);
+    $scopedPrefix = getInworldVoiceCachePrefix($config);
+    $workspace = $config['workspace'] ?? '';
+
+    foreach ($prefixes as $prefix) {
+        $optKeyEscaped = $db->escape($prefix . $voiceName);
+        $row = $db->fetchOne("SELECT value FROM conf_opts WHERE id = '{$optKeyEscaped}' LIMIT 1");
+        $voiceId = trim(strval($row['value'] ?? ''));
+        if ($voiceId === '') {
+            continue;
+        }
+        if ($prefix === 'inworld_voice_id_' && !inworldVoiceIdMatchesWorkspace($voiceId, $workspace)) {
+            continue;
+        }
+        if ($prefix === 'inworld_voice_id_' && $scopedPrefix !== 'inworld_voice_id_') {
+            $voiceIdEscaped = $db->escape($voiceId);
+            $scopedKeyEscaped = $db->escape($scopedPrefix . $voiceName);
+            $db->execQuery(
+                "INSERT INTO conf_opts (id, value) VALUES ('{$scopedKeyEscaped}', '{$voiceIdEscaped}')
+                 ON CONFLICT(id) DO UPDATE SET value = '{$voiceIdEscaped}'"
+            );
+        }
+        return $voiceId;
+    }
+
+    return '';
+}
+
+function storeCachedInworldVoiceId($voiceName, $voiceId, ?array $config = null): void {
+    $db = ensureInworldDb();
+    if (!$db) {
+        return;
+    }
+
+    $optKeyEscaped = $db->escape(getInworldVoiceCacheKey($voiceName, $config));
+    $voiceIdEscaped = $db->escape($voiceId);
+    $db->execQuery(
+        "INSERT INTO conf_opts (id, value) VALUES ('{$optKeyEscaped}', '{$voiceIdEscaped}')
+         ON CONFLICT(id) DO UPDATE SET value = '{$voiceIdEscaped}'"
+    );
+}
+
+function deleteCachedInworldVoiceId($voiceName, ?array $config = null, bool $includeLegacy = true): void {
+    $db = ensureInworldDb();
+    if (!$db) {
+        return;
+    }
+
+    foreach (getInworldVoiceCachePrefixes($config, $includeLegacy) as $prefix) {
+        $optKeyEscaped = $db->escape($prefix . $voiceName);
+        $db->execQuery("DELETE FROM conf_opts WHERE id = '{$optKeyEscaped}'");
+    }
+}
+
+function getInworldCachedVoicesMap(bool $includeLegacy = true, ?array $config = null): array {
+    $db = ensureInworldDb();
+    if (!$db) {
+        return [];
+    }
+
+    $config = is_array($config) ? $config : getInworldActiveConfig();
+    $workspace = $config['workspace'] ?? '';
+    $cloned = [];
+
+    foreach (getInworldVoiceCachePrefixes($config, $includeLegacy) as $prefix) {
+        $prefixEscaped = $db->escape($prefix);
+        $rows = $db->fetchAll("SELECT id, value FROM conf_opts WHERE id LIKE '{$prefixEscaped}%'");
+        foreach ($rows as $row) {
+            $voiceName = substr(strval($row['id'] ?? ''), strlen($prefix));
+            $voiceId = trim(strval($row['value'] ?? ''));
+            if ($voiceName === '' || $voiceId === '') {
+                continue;
+            }
+            if ($prefix === 'inworld_voice_id_' && !inworldVoiceIdMatchesWorkspace($voiceId, $workspace)) {
+                continue;
+            }
+            if (!isset($cloned[$voiceName])) {
+                $cloned[$voiceName] = $voiceId;
+            }
+        }
+    }
+
+    return $cloned;
+}
+
+function normalizeInworldVoiceLookupToken($value): string {
+    $value = strtolower(trim(strval($value)));
+    if ($value === '') {
+        return '';
+    }
+
+    return preg_replace('/[^a-z0-9]+/', '', $value);
+}
+
+function getInworldRemoteVoicesCacheKey(?array $config = null): string {
+    $config = is_array($config) ? $config : getInworldActiveConfig();
+    return substr(md5(json_encode([
+        'connector_id' => intval($config['connector_id'] ?? 0),
+        'workspace' => normalizeInworldWorkspaceName($config['workspace'] ?? ''),
+    ])), 0, 16);
+}
+
+function inworldVoiceRowMatchesWorkspace(array $voiceRow, string $workspace): bool {
+    $workspace = normalizeInworldWorkspaceName($workspace);
+    if ($workspace === '') {
+        return true;
+    }
+
+    $voiceId = trim(strval($voiceRow['voiceId'] ?? ''));
+    if ($voiceId !== '' && inworldVoiceIdMatchesWorkspace($voiceId, $workspace)) {
+        return true;
+    }
+
+    $name = trim(strval($voiceRow['name'] ?? ''));
+    if ($name !== '' && strpos($name, "workspaces/{$workspace}/") === 0) {
+        return true;
+    }
+
+    foreach (['workspace', 'workspaceId', 'workspace_id'] as $field) {
+        $workspaceValue = normalizeInworldWorkspaceName($voiceRow[$field] ?? '');
+        if ($workspaceValue !== '' && $workspaceValue === $workspace) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function listExistingInworldWorkspaceVoices(?array $config = null): array {
+    $config = is_array($config) ? $config : getInworldActiveConfig();
+    $apiCredential = trim(strval($config['api_key'] ?? ''));
+    $workspace = normalizeInworldWorkspaceName($config['workspace'] ?? '');
+    if ($apiCredential === '') {
+        return [];
+    }
+
+    $cacheKey = getInworldRemoteVoicesCacheKey($config);
+    if (isset($GLOBALS['INWORLD_REMOTE_VOICES_CACHE'][$cacheKey]) && is_array($GLOBALS['INWORLD_REMOTE_VOICES_CACHE'][$cacheKey])) {
+        return $GLOBALS['INWORLD_REMOTE_VOICES_CACHE'][$cacheKey];
+    }
+
+    $voices = [];
+    $pageToken = '';
+
+    do {
+        $query = [
+            'filter' => 'source = "IVC"',
+            'orderBy' => 'created_at desc',
+            'pageSize' => 2000,
+        ];
+        if ($pageToken !== '') {
+            $query['pageToken'] = $pageToken;
+        }
+
+        $url = 'https://api.inworld.ai/voices/v1/voices?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'header' => "Authorization: Basic {$apiCredential}\r\n",
+                'ignore_errors' => true,
+                'timeout' => 30,
+            ],
+        ]);
+
+        $response = @file_get_contents($url, false, $context);
+        $httpStatusLine = $http_response_header[0] ?? '';
+        $httpCode = 0;
+        if (preg_match('/\s(\d{3})\s/', $httpStatusLine, $matches)) {
+            $httpCode = intval($matches[1]);
+        }
+
+        if ($response === false) {
+            $error = error_get_last();
+            Logger::warn("Failed to list Inworld voices: " . ($error['message'] ?? 'Unknown error'));
+            break;
+        }
+
+        if ($httpCode >= 400) {
+            Logger::warn("Inworld list voices API returned HTTP {$httpCode}: " . substr($response, 0, 500));
+            break;
+        }
+
+        $result = json_decode($response, true);
+        if (!is_array($result)) {
+            Logger::warn("Invalid response from Inworld list voices API: " . substr($response, 0, 500));
+            break;
+        }
+
+        foreach (($result['voices'] ?? []) as $voiceRow) {
+            if (is_array($voiceRow) && inworldVoiceRowMatchesWorkspace($voiceRow, $workspace)) {
+                $voices[] = $voiceRow;
+            }
+        }
+
+        $pageToken = trim(strval($result['nextPageToken'] ?? ''));
+    } while ($pageToken !== '');
+
+    $GLOBALS['INWORLD_REMOTE_VOICES_CACHE'][$cacheKey] = $voices;
+    return $voices;
+}
+
+function getExistingInworldVoiceIdByName($voiceName, ?array $config = null): string {
+    $normalizedNeedle = normalizeInworldVoiceLookupToken($voiceName);
+    if ($normalizedNeedle === '') {
+        return '';
+    }
+
+    foreach (listExistingInworldWorkspaceVoices($config) as $voiceRow) {
+        $candidates = [
+            $voiceRow['displayName'] ?? '',
+            $voiceRow['voiceId'] ?? '',
+        ];
+
+        $fullName = trim(strval($voiceRow['name'] ?? ''));
+        if ($fullName !== '') {
+            $parts = explode('/', $fullName);
+            $candidates[] = end($parts);
+        }
+
+        foreach ($candidates as $candidate) {
+            if (normalizeInworldVoiceLookupToken($candidate) === $normalizedNeedle) {
+                return trim(strval($voiceRow['voiceId'] ?? ''));
+            }
+        }
+    }
+
+    return '';
+}
+
 
 /**
  * Get or create Inworld voice ID for a given voice sample
@@ -137,25 +579,25 @@ function isInNonVerbalVocalizationList($s_markup) {
  * @return string|false The Inworld voice ID or false on error
  */
 function getOrCreateInworldVoice($voiceName) {
-    global $db;
-    
-    if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
-        require_once(__DIR__ . "/../lib/{$GLOBALS["DBDRIVER"]}.class.php");
+    $db = ensureInworldDb();
+    if (!$db) {
+        return false;
     }
-    if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
-        $GLOBALS["db"] = new sql();
+
+    clearInworldLastError();
+    $config = getInworldActiveConfig();
+
+    $cachedVoiceId = getCachedInworldVoiceId($voiceName, $config);
+    if ($cachedVoiceId !== '') {
+        Logger::info("Using cached Inworld voice ID for {$voiceName}: {$cachedVoiceId}");
+        return $cachedVoiceId;
     }
-    
-    $db = $GLOBALS["db"];
-    
-    // Check if we already have an Inworld voice ID for this voice
-    $optKey = "inworld_voice_id_{$voiceName}";
-    $optKeyEscaped = $db->escape($optKey);
-    $row = $db->fetchOne("SELECT value FROM conf_opts WHERE id = '{$optKeyEscaped}'");
-    
-    if (is_array($row) && !empty($row['value'])) {
-        Logger::info("Using cached Inworld voice ID for {$voiceName}: {$row['value']}");
-        return $row['value'];
+
+    $existingVoiceId = getExistingInworldVoiceIdByName($voiceName, $config);
+    if ($existingVoiceId !== '') {
+        Logger::info("Found existing Inworld voice for {$voiceName}: {$existingVoiceId}");
+        storeCachedInworldVoiceId($voiceName, $existingVoiceId, $config);
+        return $existingVoiceId;
     }
     
     // No cached voice ID, need to clone the voice
@@ -180,6 +622,7 @@ function getOrCreateInworldVoice($voiceName) {
     }
     
     if ($voiceSamplePath === null || !file_exists($voiceSamplePath)) {
+        setInworldLastError("Voice sample not found for {$voiceName}.");
         Logger::error("Voice sample not found: {$voiceName}.wav");
         Logger::error("Searched paths:");
         foreach ($possiblePaths as $testPath) {
@@ -199,20 +642,18 @@ function getOrCreateInworldVoice($voiceName) {
     $fileSize = filesize($voiceSamplePath);
     Logger::info("Found voice sample at {$voiceSamplePath} (size: " . number_format($fileSize) . " bytes)");
     
-    $inworldVoiceId = cloneVoiceToInworld($voiceName, $voiceSamplePath);
+    $inworldVoiceId = cloneVoiceToInworld($voiceName, $voiceSamplePath, $config);
     
     if ($inworldVoiceId === false) {
+        if (getInworldLastError() === '') {
+            setInworldLastError("Failed to clone voice {$voiceName} to Inworld.");
+        }
         Logger::error("Failed to clone voice {$voiceName} to Inworld");
         return false;
     }
     
-    // Cache the voice ID in the database
-    $optKeyEscaped = $db->escape($optKey);
-    $voiceIdEscaped = $db->escape($inworldVoiceId);
-    $db->execQuery(
-        "INSERT INTO conf_opts (id, value) VALUES ('{$optKeyEscaped}', '{$voiceIdEscaped}') 
-         ON CONFLICT(id) DO UPDATE SET value = '{$voiceIdEscaped}'"
-    );
+    storeCachedInworldVoiceId($voiceName, $inworldVoiceId, $config);
+    clearInworldLastError();
     
     Logger::info("Successfully cloned voice {$voiceName} to Inworld with ID: {$inworldVoiceId}");
     
@@ -224,46 +665,34 @@ function getOrCreateInworldVoice($voiceName) {
  * 
  * @param string $voiceName The name to give the voice
  * @param string $voiceSamplePath Path to the voice sample file
+ * @param array|null $config Resolved connector-scoped Inworld configuration
  * @return string|false The Inworld voice ID or false on error
  */
-function cloneVoiceToInworld($voiceName, $voiceSamplePath) {
-    $apiCredential = '';
-    
-    // Try to get API credential from API badge first
-    try {
-        global $db;
-        if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
-            require_once(__DIR__ . "/../lib/{$GLOBALS["DBDRIVER"]}.class.php");
-        }
-        if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
-            $GLOBALS["db"] = new sql();
-        }
-        $row = $GLOBALS["db"]->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='inworld' LIMIT 1");
-        if (is_array($row) && !empty($row['api_key'])) {
-            $apiCredential = trim($row['api_key']);
-        }
-    } catch (Throwable $_e) {}
-    
+function cloneVoiceToInworld($voiceName, $voiceSamplePath, ?array $config = null) {
+    $config = is_array($config) ? $config : getInworldActiveConfig();
+    $apiCredential = trim(strval($config['api_key'] ?? ''));
+
     if (empty($apiCredential)) {
+        setInworldLastError('Inworld API credential not found. Please set it in the API Badge page.');
         Logger::error("Inworld API credential not found. Please set it in the API Badge page.");
         return false;
     }
-    
-    // Get workspace ID from config
-    $workspace = $GLOBALS["TTS"]["INWORLD"]["workspace"] ?? '';
+
+    $workspace = normalizeInworldWorkspaceName($config['workspace'] ?? '');
     if (empty($workspace)) {
+        setInworldLastError('Inworld workspace ID not configured. Please set it on the active Inworld TTS connector.');
         Logger::error("Inworld workspace ID not configured. Please set it in TTS settings.");
         return false;
     }
-    
-    // Ensure workspace format is correct (workspaces/{workspace})
-    if (strpos($workspace, 'workspaces/') !== 0) {
-        $workspace = "workspaces/{$workspace}";
+
+    $workspacePath = trim(strval($config['workspace_path'] ?? ''));
+    if ($workspacePath === '') {
+        $workspacePath = "workspaces/{$workspace}";
     }
     
     Logger::info("Cloning voice {$voiceName} to Inworld...");
     
-    $url = "https://api.inworld.ai/voices/v1/{$workspace}/voices:clone";
+    $url = "https://api.inworld.ai/voices/v1/{$workspacePath}/voices:clone";
     
     // Get language from config
     $language = $GLOBALS["TTS"]["INWORLD"]["language"] ?? 'en-US';
@@ -305,16 +734,23 @@ function cloneVoiceToInworld($voiceName, $voiceSamplePath) {
             'header' => "Authorization: {$authHeader}\r\n" .
                        "Content-Type: application/json\r\n",
             'content' => json_encode($data),
+            'ignore_errors' => true,
             'timeout' => 60
         )
     );
     
     $context = stream_context_create($options);
     $response = @file_get_contents($url, false, $context);
+    $httpStatusLine = $http_response_header[0] ?? '';
+    $httpCode = 0;
+    if (preg_match('/\s(\d{3})\s/', $httpStatusLine, $matches)) {
+        $httpCode = intval($matches[1]);
+    }
     
     if ($response === false) {
         $error = error_get_last();
         $errorMsg = $error['message'] ?? 'Unknown error';
+        setInworldLastError($errorMsg);
         Logger::error("Failed to clone voice to Inworld: " . $errorMsg);
         
         // Log HTTP response headers for debugging
@@ -333,13 +769,29 @@ function cloneVoiceToInworld($voiceName, $voiceSamplePath) {
         
         return false;
     }
+
+    if ($httpCode >= 400) {
+        Logger::error("Inworld clone API returned HTTP {$httpCode}");
+        $errorBody = json_decode($response, true);
+        if (is_array($errorBody) && !empty($errorBody['message'])) {
+            setInworldLastError(strval($errorBody['message']));
+            Logger::error("Inworld clone API message: " . $errorBody['message']);
+        } else {
+            setInworldLastError("Inworld clone API returned HTTP {$httpCode}.");
+            Logger::error("Inworld clone API response: " . substr($response, 0, 500));
+        }
+        return false;
+    }
     
     $result = json_decode($response, true);
     
     if (!isset($result['voice']['voiceId'])) {
+        setInworldLastError('Invalid response from Inworld clone API.');
         Logger::error("Invalid response from Inworld clone API: " . $response);
         return false;
     }
+
+    clearInworldLastError();
     
     return $result['voice']['voiceId'];
 }
@@ -354,23 +806,9 @@ function cloneVoiceToInworld($voiceName, $voiceSamplePath) {
  * @return string|false The audio data or false on error
  */
 function generateInworldTTS($text, $voiceId, $mood = 'normal', $outputFile = null) {
-    $apiCredential = '';
-    
-    // Try to get API credential from API badge first
-    try {
-        global $db;
-        if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
-            require_once(__DIR__ . "/../lib/{$GLOBALS["DBDRIVER"]}.class.php");
-        }
-        if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
-            $GLOBALS["db"] = new sql();
-        }
-        $row = $GLOBALS["db"]->fetchOne("SELECT api_key FROM core_api_badge WHERE lower(label)='inworld' LIMIT 1");
-        if (is_array($row) && !empty($row['api_key'])) {
-            $apiCredential = trim($row['api_key']);
-        }
-    } catch (Throwable $_e) {}
-    
+    $config = getInworldActiveConfig();
+    $apiCredential = trim(strval($config['api_key'] ?? ''));
+
     if (empty($apiCredential)) {
         Logger::error("Inworld API credential not found");
         return false;
@@ -388,7 +826,7 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal', $outputFile = nul
     if ($speed > 1.5) $speed = 1.5;
     
     // Get temperature
-    $temperature = $GLOBALS["TTS"]["INWORLD"]["temperature"] ?? 1.1;
+    $temperature = $GLOBALS["TTS"]["INWORLD"]["temperature"] ?? 1.0;
     $temperature = floatval($temperature);
     if ($temperature < 0.0) $temperature = 0.0;
     if ($temperature > 2.0) $temperature = 2.0;
@@ -699,6 +1137,7 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
     
     // Get voice name
     $voiceName = getInworldVoiceName();
+    $config = getInworldActiveConfig();
     
     // Get or create Inworld voice ID
     $inworldVoiceId = getOrCreateInworldVoice($voiceName);
@@ -713,13 +1152,7 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
         Logger::error("Invalid Inworld voice ID format for {$voiceName}: {$inworldVoiceId}");
         // Clear invalid cache and retry
         try {
-            if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
-                require_once(__DIR__ . "/../lib/{$GLOBALS["DBDRIVER"]}.class.php");
-                $GLOBALS["db"] = new sql();
-            }
-            $optKey = "inworld_voice_id_{$voiceName}";
-            $optKeyEscaped = $GLOBALS["db"]->escape($optKey);
-            $GLOBALS["db"]->execQuery("DELETE FROM conf_opts WHERE id = '{$optKeyEscaped}'");
+            deleteCachedInworldVoiceId($voiceName, $config, true);
             Logger::info("Cleared invalid voice ID cache for {$voiceName}, retrying...");
             $inworldVoiceId = getOrCreateInworldVoice($voiceName);
             if ($inworldVoiceId === false || empty($inworldVoiceId)) {
@@ -821,17 +1254,11 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
         Logger::error("Failed to generate TTS from Inworld for voice {$voiceName} (ID: {$inworldVoiceId})");
         // If TTS generation fails, the voice ID might be invalid - clear cache and retry once
         try {
-            if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
-                require_once(__DIR__ . "/../lib/{$GLOBALS["DBDRIVER"]}.class.php");
-                $GLOBALS["db"] = new sql();
-            }
-            $optKey = "inworld_voice_id_{$voiceName}";
-            $optKeyEscaped = $GLOBALS["db"]->escape($optKey);
-            $cachedId = $GLOBALS["db"]->fetchOne("SELECT value FROM conf_opts WHERE id = '{$optKeyEscaped}'");
+            $cachedId = getCachedInworldVoiceId($voiceName, $config);
             // Only retry if we had a cached ID (not a fresh clone attempt)
-            if (is_array($cachedId) && !empty($cachedId['value']) && $cachedId['value'] === $inworldVoiceId) {
+            if ($cachedId !== '' && $cachedId === $inworldVoiceId) {
                 Logger::info("TTS generation failed with cached voice ID, clearing cache and retrying clone for {$voiceName}...");
-                $GLOBALS["db"]->execQuery("DELETE FROM conf_opts WHERE id = '{$optKeyEscaped}'");
+                deleteCachedInworldVoiceId($voiceName, $config, true);
                 $inworldVoiceId = getOrCreateInworldVoice($voiceName);
                 if ($inworldVoiceId !== false && !empty($inworldVoiceId)) {
                     $response = generateInworldTTS($textString, $inworldVoiceId, $mood, $oname);
