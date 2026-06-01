@@ -69,7 +69,7 @@ if (!function_exists('chimLoadRawConfSchema')) {
 }
 
 if (!function_exists('chimFlattenConfSchema')) {
-    function chimFlattenConfSchema(array $node = null, string $prefix = ''): array
+    function chimFlattenConfSchema(?array $node = null, string $prefix = ''): array
     {
         if ($node === null) {
             $node = chimLoadRawConfSchema();
