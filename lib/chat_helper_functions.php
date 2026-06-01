@@ -902,10 +902,20 @@ function shouldStripAsterisksFromCleanContextBuffer() {
 function saveCurrentVoiceSettings() {
     return [
         'tts' => isset($GLOBALS['TTS']) ? $GLOBALS['TTS'] : [],
+        'has_tts_function' => array_key_exists('TTSFUNCTION', $GLOBALS),
+        'tts_function' => $GLOBALS['TTSFUNCTION'] ?? null,
+        'has_tts_function_alias' => array_key_exists('TTS_FUNCTION', $GLOBALS),
+        'tts_function_alias' => $GLOBALS['TTS_FUNCTION'] ?? null,
+        'has_current_tts_connector_id' => array_key_exists('CHIM_CORE_CURRENT_TTS_CONNECTOR_ID', $GLOBALS),
+        'current_tts_connector_id' => $GLOBALS['CHIM_CORE_CURRENT_TTS_CONNECTOR_ID'] ?? null,
         'has_patch_override_voice' => array_key_exists('PATCH_OVERRIDE_VOICE', $GLOBALS),
         'patch_override_voice' => $GLOBALS['PATCH_OVERRIDE_VOICE'] ?? null,
         'has_patch_override_voice_id' => array_key_exists('PATCH_OVERRIDE_VOICE_ID', $GLOBALS),
         'patch_override_voice_id' => $GLOBALS['PATCH_OVERRIDE_VOICE_ID'] ?? null,
+        'has_patch_override_tts_language' => array_key_exists('PATCH_OVERRIDE_TTS_LANGUAGE', $GLOBALS),
+        'patch_override_tts_language' => $GLOBALS['PATCH_OVERRIDE_TTS_LANGUAGE'] ?? null,
+        'has_patch_override_tts_options' => array_key_exists('PATCH_OVERRIDE_TTS_OPTIONS', $GLOBALS),
+        'patch_override_tts_options' => $GLOBALS['PATCH_OVERRIDE_TTS_OPTIONS'] ?? null,
     ];
 }
 
@@ -936,7 +946,29 @@ function applyVoiceIdToTtsGlobals(string $voiceid): void
  */
 function loadNarratorVoiceSettings() {
     require_once(__DIR__ . "/core/narrator.class.php");
+    require_once(__DIR__ . "/core/core_profiles.class.php");
+    require_once(__DIR__ . "/core/tts_connector.class.php");
+
     $narrator = new Narrator();
+    $profileId = $narrator->getProfileId();
+    if ($profileId) {
+        $profileManager = new CoreProfiles();
+        $profileData = $profileManager->getById($profileId);
+        if (is_array($profileData) && !empty($profileData)) {
+            $ttsConnectorId = intval($profileData['tts_connector_id'] ?? 0);
+            if ($ttsConnectorId > 0) {
+                $ttsConnector = new TTSConnector();
+                $connectorData = $ttsConnector->getById($ttsConnectorId);
+                if (is_array($connectorData) && !empty($connectorData)) {
+                    $ttsConnector->setOldGlobals($connectorData);
+                }
+            }
+        }
+    }
+
+    unset($GLOBALS['PATCH_OVERRIDE_TTS_LANGUAGE']);
+    unset($GLOBALS['PATCH_OVERRIDE_TTS_OPTIONS']);
+
     $voiceid = $narrator->get('voiceid');
 
     if (!$voiceid) {
@@ -962,6 +994,24 @@ function restoreVoiceSettings($savedSettings) {
         $GLOBALS['TTS'] = $savedSettings;
     }
 
+    if (!empty($savedSettings['has_tts_function'])) {
+        $GLOBALS['TTSFUNCTION'] = $savedSettings['tts_function'];
+    } else {
+        unset($GLOBALS['TTSFUNCTION']);
+    }
+
+    if (!empty($savedSettings['has_tts_function_alias'])) {
+        $GLOBALS['TTS_FUNCTION'] = $savedSettings['tts_function_alias'];
+    } else {
+        unset($GLOBALS['TTS_FUNCTION']);
+    }
+
+    if (!empty($savedSettings['has_current_tts_connector_id'])) {
+        $GLOBALS['CHIM_CORE_CURRENT_TTS_CONNECTOR_ID'] = $savedSettings['current_tts_connector_id'];
+    } else {
+        unset($GLOBALS['CHIM_CORE_CURRENT_TTS_CONNECTOR_ID']);
+    }
+
     if (!empty($savedSettings['has_patch_override_voice'])) {
         $GLOBALS['PATCH_OVERRIDE_VOICE'] = $savedSettings['patch_override_voice'];
     } else {
@@ -972,6 +1022,18 @@ function restoreVoiceSettings($savedSettings) {
         $GLOBALS['PATCH_OVERRIDE_VOICE_ID'] = $savedSettings['patch_override_voice_id'];
     } else {
         unset($GLOBALS['PATCH_OVERRIDE_VOICE_ID']);
+    }
+
+    if (!empty($savedSettings['has_patch_override_tts_language'])) {
+        $GLOBALS['PATCH_OVERRIDE_TTS_LANGUAGE'] = $savedSettings['patch_override_tts_language'];
+    } else {
+        unset($GLOBALS['PATCH_OVERRIDE_TTS_LANGUAGE']);
+    }
+
+    if (!empty($savedSettings['has_patch_override_tts_options'])) {
+        $GLOBALS['PATCH_OVERRIDE_TTS_OPTIONS'] = $savedSettings['patch_override_tts_options'];
+    } else {
+        unset($GLOBALS['PATCH_OVERRIDE_TTS_OPTIONS']);
     }
 }
 

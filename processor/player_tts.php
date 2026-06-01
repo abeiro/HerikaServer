@@ -39,6 +39,10 @@ if (!class_exists('TTSConnector')) {
 }
 
 $origTTS = $GLOBALS["TTSFUNCTION"] ?? '';
+$hadTtsFunctionAlias = array_key_exists("TTS_FUNCTION", $GLOBALS);
+$origTtsFunctionAlias = $GLOBALS["TTS_FUNCTION"] ?? null;
+$hadCurrentTtsConnectorId = array_key_exists("CHIM_CORE_CURRENT_TTS_CONNECTOR_ID", $GLOBALS);
+$origCurrentTtsConnectorId = $GLOBALS["CHIM_CORE_CURRENT_TTS_CONNECTOR_ID"] ?? null;
 $origName = $GLOBALS["HERIKA_NAME"] ?? '';
 $hadPatchOverrideVoice = array_key_exists("PATCH_OVERRIDE_VOICE", $GLOBALS);
 $hadPatchOverrideVoiceId = array_key_exists("PATCH_OVERRIDE_VOICE_ID", $GLOBALS);
@@ -62,6 +66,8 @@ try {
         $ttsConnector->setOldGlobals($currentConnector);
         $GLOBALS["TTSFUNCTION_PLAYER"] = strval($currentConnector['driver'] ?? '');
         $playerDriver = strtolower(trim(strval($currentConnector['driver'] ?? '')));
+        $GLOBALS["TTSFUNCTION"] = $playerDriver;
+        $GLOBALS["TTS_FUNCTION"] = $playerDriver;
 
         $playerVoiceId = trim(strval($player->get('tts_voice_override') ?? ''));
         $voiceIdOverride = trim(strval($player->get('tts_voice_id_override') ?? ''));
@@ -165,6 +171,16 @@ try {
     }
 
     $GLOBALS["TTSFUNCTION"] = $origTTS;
+    if ($hadTtsFunctionAlias) {
+        $GLOBALS["TTS_FUNCTION"] = $origTtsFunctionAlias;
+    } else {
+        unset($GLOBALS["TTS_FUNCTION"]);
+    }
+    if ($hadCurrentTtsConnectorId) {
+        $GLOBALS["CHIM_CORE_CURRENT_TTS_CONNECTOR_ID"] = $origCurrentTtsConnectorId;
+    } else {
+        unset($GLOBALS["CHIM_CORE_CURRENT_TTS_CONNECTOR_ID"]);
+    }
     unset($GLOBALS["SCRIPTLINE_ANIMATION_SENT"]);
     $GLOBALS["HERIKA_NAME"] = $origName;
     unset($GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"]);

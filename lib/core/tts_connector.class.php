@@ -113,6 +113,12 @@ class TTSConnector
             'language' => 'en',
             'voicelogic' => 'voicetype',
         ],
+        'inworld' => [
+            'language' => 'en-US',
+            'model_id' => 'inworld-tts-1',
+            'temperature' => 1.0,
+            'speed' => 1.0,
+        ],
         'mimic3' => [
             'rate' => 1,
             'volume' => 60,
@@ -656,6 +662,8 @@ class TTSConnector
         if (!$currentTTSData) {
             return;
         }
+
+        $GLOBALS["CHIM_CORE_CURRENT_TTS_CONNECTOR_ID"] = intval($currentTTSData['id'] ?? 0);
 
         $driver = $this->normalizeDriver($currentTTSData["driver"] ?? '');
         if ($driver === '') {
