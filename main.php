@@ -1433,8 +1433,10 @@ if ($gameRequest[0] == "narrator_quest_comment") {
 if ($MUST_END) {  // Shorthand for non LLM processing
     echo 'X-CUSTOM-CLOSE'.PHP_EOL;
     if (!getenv("PHPUNIT_TEST")) {
-        @ob_end_flush();
-        @flush();
+        if (ob_get_length() !== false) {
+            @ob_end_flush();
+            @flush();
+        }
     }    
     if (microtime(true) - $startTime > 0.5) {
         error_log("*TRACE EARLY END SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
