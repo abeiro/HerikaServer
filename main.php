@@ -2227,34 +2227,15 @@ if ($gameRequest[0] === "vision") {
 // Ensure actions and nearby sections are added to PROMPT_HEAD before building system prompt
 require_once(__DIR__.DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
 
-if ($gameRequest[0] === "narrator_inputtext") {
-    Logger::warn("[NARRATOR_DEBUG][MAIN][POST_JSON_REQUIRE] request={$gameRequest[0]} direct_flag=" . (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]) ? '1' : '0') . " herika=" . strval($GLOBALS["HERIKA_NAME"] ?? '') . " func_count=" . count(is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : []) . " prompt_actions_len=" . strlen(strval($GLOBALS["PROMPT_ACTIONS_LIST"] ?? '')) . " response_action=" . trim(strval($GLOBALS["responseTemplate"]["action"] ?? '')));
-}
-
-$narratorActionList = array_values(array_filter(
-    is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : [],
-    function ($value) {
-        return trim(strval($value)) !== "";
-    }
-));
-$narratorHasOnlyTalkAction = count($narratorActionList) === 1 && strcasecmp($narratorActionList[0], "Talk") === 0;
-
 if (
     $gameRequest[0] === "narrator_inputtext"
     && function_exists('chimEnsureNarratorJsonResponseState')
     && (
-        empty($GLOBALS["PROMPT_ACTIONS_LIST"])
-        || empty($GLOBALS["FUNC_LIST"])
-        || trim(strval($GLOBALS["responseTemplate"]["action"] ?? "")) === ""
-        || $narratorHasOnlyTalkAction
-        || trim(strval($GLOBALS["responseTemplate"]["action"] ?? "")) === "Talk"
+        !function_exists('chimNarratorJsonResponseNeedsRefresh')
+        || chimNarratorJsonResponseNeedsRefresh()
     )
 ) {
     chimEnsureNarratorJsonResponseState('JSON_RESPONSE');
-}
-
-if ($gameRequest[0] === "narrator_inputtext") {
-    Logger::warn("[NARRATOR_DEBUG][MAIN][POST_REFRESH_CHECK] request={$gameRequest[0]} direct_flag=" . (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]) ? '1' : '0') . " herika=" . strval($GLOBALS["HERIKA_NAME"] ?? '') . " func_count=" . count(is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : []) . " prompt_actions_len=" . strlen(strval($GLOBALS["PROMPT_ACTIONS_LIST"] ?? '')) . " response_action=" . trim(strval($GLOBALS["responseTemplate"]["action"] ?? '')));
 }
 
 // Build nearby sections string

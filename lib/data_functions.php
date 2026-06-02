@@ -4926,7 +4926,6 @@ function call_llm_internal() {
                 && strpos($contextData[0]["content"], '<available_actions_list>') === false
             ) {
                 $contextData[0]["content"] .= "\n" . $GLOBALS["PROMPT_ACTIONS_LIST"];
-                Logger::warn("[NARRATOR_DEBUG][DATA_FUNCTIONS][FAST_STANDARD_CONTEXT] injected available_actions_list into narrator system prompt");
             }
         }
 
