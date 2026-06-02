@@ -1924,6 +1924,8 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         $actorEscaped='';
     //$playerEscaped=$db->escape($GLOBALS["PLAYER_NAME"]);
 
+    $visibleChatStateSql = chimBuildChatDeliveryStateSql('delivery_state');
+
     $query="select  
     case 
       when type='infoaction' and a.data like '#%MEMORY%' then 'MEMORY'
@@ -1958,7 +1960,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     and type<>'infonpc_close' and type<>'instruction'
     and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region' and type<>'named_cell'
     AND type<>'narrator_welcome'
-    and (type<>'chat' or COALESCE(delivery_state, 'spoken')='spoken')
+    and (type<>'chat' or {$visibleChatStateSql})
     AND type<>'funccall' AND type<>'togglemodel'
     {$removeBooks} {$sqlfilter} {$ext_sqlfilter1}
     ".(($b_actor) ? "

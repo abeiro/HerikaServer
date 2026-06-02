@@ -109,7 +109,8 @@ final class CommTest extends DatabaseTestCase
                 'localts' => 2,
                 'people'=> "|Lydia|",
                 'location'=> "",
-                'party'=> "[]"
+                'party'=> "[]",
+                'delivery_state' => 'emitted'
             )
         );
         $testDb->close();
@@ -131,6 +132,65 @@ final class CommTest extends DatabaseTestCase
         });
 
         // comm.php?data=funcret|100|200|command@InspectSurroundings@@Ghost(hostile),Skeleton(dead),Lydia, (base64 encoded)
+        $encodedData = base64_encode("funcret|100|200|command@InspectSurroundings@@Ghost(hostile),Skeleton(dead),Lydia,");
+        $_SERVER["QUERY_STRING"] = "data={$encodedData}";
+        require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
+    }
+
+    public function testComm_WhenLatestAssistantMessageIsPending_ContextShouldStillContainContentExample(): void
+    {
+        require("conf.php");
+        $GLOBALS["HERIKA_NAME"] = "Lydia";
+        $GLOBALS["HERIKA_PERS"] = "Roleplay as Lydia.";
+
+        $testDb = new sql();
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "0",
+                'gamets' => "0",
+                'type' => "inputtext",
+                'data' => "Prisoner:Inspect the area again. (Talking to Lydia)",
+                'sess' => 'pending',
+                'localts' => 0,
+                'people'=> "|Lydia|",
+                'location'=> "",
+                'party'=> "[]"
+            )
+        );
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "0",
+                'gamets' => "0",
+                'type' => "chat",
+                'data' => "Lydia: This line should stay hidden until emitted. (talking to Prisoner)",
+                'sess' => 'pending',
+                'localts' => 2,
+                'people'=> "|Lydia|",
+                'location'=> "",
+                'party'=> "[]",
+                'delivery_state' => 'pending'
+            )
+        );
+        $testDb->close();
+
+        $GLOBALS["mockConnectorSend"]=$this->createMock(CallableMock::class);
+        $GLOBALS["mockConnectorSend"]->expects($this->once())
+        ->method('__invoke')
+        ->with(
+            $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
+            $this->callback(function ($streamContext) {
+                $expectedPrompt = ["role"=>"user", "content"=>"The Narrator: Prisoner looks at The Narrator"];
+                $this->expectPromptInContext($streamContext, $expectedPrompt);
+
+                return true;
+            })
+        )
+        ->willReturnCallback(function($url, $context) {
+            return $this->defaultConnectorResponse($url, $context);
+        });
+
         $encodedData = base64_encode("funcret|100|200|command@InspectSurroundings@@Ghost(hostile),Skeleton(dead),Lydia,");
         $_SERVER["QUERY_STRING"] = "data={$encodedData}";
         require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
@@ -393,6 +453,41 @@ final class CommTest extends DatabaseTestCase
         $this->assertSame("chat", $rows[0]["type"]);
         $this->assertSame("The Narrator: Unit test message (talking to Prisoner)", $rows[0]["data"]);
         $this->assertSame("pending", $rows[0]["sess"]);
+        $this->assertSame("emitted", $rows[0]["delivery_state"]);
+    }
+
+    public function testComm_WhenSpeechIsAborted_EmittedChatRowShouldBeMarkedAborted(): void
+    {
+        require("conf.php");
+
+        $testDb = new sql();
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "100",
+                'gamets' => "200",
+                'type' => "chat",
+                'data' => "Lydia: Hold there. (talking to Prisoner)",
+                'sess' => 'pending',
+                'localts' => 10,
+                'people'=> "|Lydia|Prisoner|",
+                'location'=> "",
+                'party'=> "[]",
+                'delivery_state' => 'emitted',
+                'utterance_id' => 'utt_abort_1'
+            )
+        );
+        $testDb->close();
+
+        $encodedData = base64_encode('_speech_abort|101|201|{"utterance_ids":["utt_abort_1"]}');
+        $_SERVER["QUERY_STRING"] = "data={$encodedData}";
+        require(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."comm.php");
+
+        $testDb = new sql();
+        $rows = $testDb->fetchAll("SELECT delivery_state FROM eventlog WHERE utterance_id='utt_abort_1' ORDER BY rowid DESC LIMIT 1;");
+        $testDb->close();
+
+        $this->assertSame("aborted", $rows[0]["delivery_state"]);
     }
 
     public function testComm_WhenNarratorInputTextAndHideFromContextDisabled_NarratorReplyShouldKeepNearbyPeopleInEventLog(): void
