@@ -1798,7 +1798,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     
     
     $splitNameBase=explode("/",$gameRequest[3]);
-    if ($splitNameBase[0] && $splitNameBase[1]) {
+    if (!empty($splitNameBase[0]) && isset($splitNameBase[1]) && $splitNameBase[1] !== '') {
         $npcMaster=new NpcMaster();
         $currentNpcData = $npcMaster->getByName($splitNameBase[0]);
         
@@ -1822,11 +1822,26 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
             }
 
-            $meta['last_coords'] = [$splitNameBase[1],$splitNameBase[2],$splitNameBase[3],$splitNameBase[4],
+            $previousLastCoords = is_array($meta["last_coords"] ?? null) ? $meta["last_coords"] : [];
+            $meta['last_coords'] = [
+                $splitNameBase[1],
+                $splitNameBase[2] ?? '',
+                $splitNameBase[3] ?? '',
+                $splitNameBase[4] ?? '',
                 "last_updated"=>$gameRequest[2],
-                "nearest_npc"=>[$splitNameBase[6]=>$splitNameBase[5]],
-                "state"=>$splitNameBase[7]
             ];
+
+            if (isset($splitNameBase[5], $splitNameBase[6]) && $splitNameBase[5] !== '' && $splitNameBase[6] !== '') {
+                $meta['last_coords']["nearest_npc"] = [$splitNameBase[6] => $splitNameBase[5]];
+            } elseif (array_key_exists("nearest_npc", $previousLastCoords)) {
+                $meta['last_coords']["nearest_npc"] = $previousLastCoords["nearest_npc"];
+            }
+
+            if (isset($splitNameBase[7]) && $splitNameBase[7] !== '') {
+                $meta['last_coords']["state"] = $splitNameBase[7];
+            } elseif (array_key_exists("state", $previousLastCoords)) {
+                $meta['last_coords']["state"] = $previousLastCoords["state"];
+            }
             
             // Save back to database
             $currentNpcData = $npcMaster->setMetadata($currentNpcData, $meta);
