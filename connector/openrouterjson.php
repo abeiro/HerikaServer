@@ -324,10 +324,6 @@ class openrouterjson
             chimEnsureNarratorJsonResponseState('OPENROUTERJSON');
         }
 
-        if (($GLOBALS["gameRequest"][0] ?? '') === "narrator_inputtext") {
-            Logger::warn("[NARRATOR_DEBUG][OPENROUTERJSON][PRE_SERIALIZE] request=" . strval($GLOBALS["gameRequest"][0] ?? '') . " direct_flag=" . (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]) ? '1' : '0') . " herika=" . strval($GLOBALS["HERIKA_NAME"] ?? '') . " func_count=" . count(is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : []) . " prompt_actions_len=" . strlen(strval($GLOBALS["PROMPT_ACTIONS_LIST"] ?? '')) . " response_action=" . trim(strval($GLOBALS["responseTemplate"]["action"] ?? '')));
-        }
-
         if (isset($GLOBALS["FUNCTIONS_ARE_ENABLED"]) && $GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
             $contextData[0]["content"].=$GLOBALS["COMMAND_PROMPT"];
         }
