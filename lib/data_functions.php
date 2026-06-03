@@ -2598,16 +2598,16 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     $localStartTime=microtime(true);
 
     $ctx1=buildHistoricContext($actor, $lastNelements ,$sqlfilter);    
-    //error_log("[buildHistoricContext] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
+    error_log("[buildHistoricContext] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
 
 
     $ctx2=compactHistoricContext($ctx1,$actor,false);  // Don't compact Context Info
 
-    //error_log("[compactHistoricContext] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
+    error_log("[compactHistoricContext] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
 
     $ctx3=replaceRoles($ctx2,$actor,$lastNelements);
       
-    //error_log("[replaceRoles] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
+    error_log("[replaceRoles] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
 
     // Cases of self rechat
     if ((sizeof($ctx3)>3)&&(($GLOBALS["gameRequest"][3] ?? "")=="rechat")) {
