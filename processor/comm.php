@@ -589,11 +589,17 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             $quotedIds = array_map(function ($escapedId) {
                 return "'" . $escapedId . "'";
             }, array_values($utteranceIds));
+            $abortableChatStateSql = chimBuildChatDeliveryStateSql(
+                'delivery_state',
+                chimGetInFlightChatDeliveryStates(),
+                'emitted'
+            );
             $db->execQuery(
-                "DELETE FROM public.eventlog
+                "UPDATE public.eventlog
+                 SET delivery_state='aborted'
                  WHERE type='chat'
                    AND utterance_id IN (" . implode(",", $quotedIds) . ")
-                   AND COALESCE(delivery_state, 'pending')='pending'"
+                   AND {$abortableChatStateSql}"
             );
         }
     }
@@ -606,6 +612,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
    
     // error_log(print_r($speech,true));
     if (is_array($speech)) {
+        $nonAbortedChatStateSql = "COALESCE(delivery_state, 'emitted')<>'aborted'";
         $speechSpeaker = isset($speech["speaker"]) ? trim((string)$speech["speaker"]) : "";
         $speechListener = isset($speech["listener"]) ? trim((string)$speech["listener"]) : "";
         $speechUtteranceId = isset($speech["utterance_id"]) ? trim((string)$speech["utterance_id"]) : "";
@@ -674,6 +681,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                  FROM eventlog
                  WHERE type='chat'
                    AND utterance_id='{$speechUtteranceIdEscaped}'
+                   AND {$nonAbortedChatStateSql}
                  ORDER BY rowid DESC"
             );
             foreach ((array)$matchedRows as $matchedRow) {
@@ -785,6 +793,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                          FROM eventlog
                          WHERE gamets={$speechGamets}
                            AND type='chat'
+                           AND {$nonAbortedChatStateSql}
                            AND data ILIKE '{$speakerEscaped}:%'
                          ORDER BY ts DESC, rowid DESC
                          LIMIT 40"
@@ -812,6 +821,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                         "SELECT rowid, gamets, data
                          FROM eventlog
                          WHERE type='chat'
+                           AND {$nonAbortedChatStateSql}
                            AND localts>" . (time() - 180) . "
                            AND data ILIKE '{$speakerEscaped}:%'
                          ORDER BY rowid DESC
@@ -916,7 +926,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                         if ($rowIdToUpdate <= 0) {
                             continue;
                         }
-                        $db->update("eventlog", "delivery_state='spoken'", "rowid={$rowIdToUpdate}");
+                        $db->update("eventlog", "delivery_state='spoken'", "rowid={$rowIdToUpdate} AND {$nonAbortedChatStateSql}");
                     }
                 }
             } elseif (!empty($matchedUtteranceRowIds)) {
@@ -924,7 +934,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     if ($matchedRowId <= 0) {
                         continue;
                     }
-                    $db->update("eventlog", "delivery_state='spoken'", "rowid={$matchedRowId}");
+                    $db->update("eventlog", "delivery_state='spoken'", "rowid={$matchedRowId} AND {$nonAbortedChatStateSql}");
                 }
             }
         }

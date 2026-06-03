@@ -1693,7 +1693,7 @@ function returnLines($lines,$writeOutput=true)
             $originalRequest[3]="{$outBuffer["actor"]}: $responseForContext $addonlistener";
             $originalRequest[5] = [
                 'utterance_id' => $GLOBALS["SCRIPTLINE_UTTERANCE_ID"] ?? chimGenerateUtteranceId(),
-                'delivery_state' => 'pending'
+                'delivery_state' => 'emitted'
             ];
             logEvent($originalRequest);
         }
@@ -2310,6 +2310,7 @@ function getGametsLimitFor($actor) {
     $actorEscaped = $db->escape($actor);
     $limit = (int) $GLOBALS["CONTEXT_HISTORY"];
 
+    $visibleChatStateSql = chimBuildChatDeliveryStateSql('delivery_state');
     $query = "
         SELECT 
             (MAX(gamets) - MIN(gamets)) * 0.0000024 AS hour_threshold
@@ -2317,7 +2318,7 @@ function getGametsLimitFor($actor) {
             SELECT gamets 
             FROM eventlog 
             WHERE type='chat'
-            AND COALESCE(delivery_state, 'spoken')='spoken'
+            AND {$visibleChatStateSql}
             and people LIKE '%$actorEscaped%'
             ORDER BY gamets DESC
             LIMIT $limit
@@ -3507,6 +3508,46 @@ function extractCoreUtteranceFromChatEvent($eventData)
 
     $eventData = preg_replace('/\s*\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+[^)]*\)\s*$/iu', '', $eventData);
     return trim((string)$eventData);
+}
+
+function chimGetVisibleChatDeliveryStates()
+{
+    return ['emitted', 'spoken'];
+}
+
+function chimGetInFlightChatDeliveryStates()
+{
+    return ['pending', 'emitted'];
+}
+
+function chimBuildChatDeliveryStateSql($column = 'delivery_state', array $states = null, $legacyDefault = 'spoken')
+{
+    $column = trim((string)$column);
+    if ($column === '') {
+        $column = 'delivery_state';
+    }
+
+    if ($states === null) {
+        $states = chimGetVisibleChatDeliveryStates();
+    }
+
+    $normalizedStates = array_values(array_unique(array_filter(array_map(static function ($state) {
+        return trim((string)$state);
+    }, $states))));
+    if (empty($normalizedStates)) {
+        $normalizedStates = ['spoken'];
+    }
+
+    $legacyDefault = trim((string)$legacyDefault);
+    if ($legacyDefault === '') {
+        $legacyDefault = 'spoken';
+    }
+
+    $quotedStates = array_map(static function ($state) {
+        return "'" . str_replace("'", "''", $state) . "'";
+    }, $normalizedStates);
+
+    return "COALESCE({$column}, '{$legacyDefault}') IN (" . implode(', ', $quotedStates) . ")";
 }
 
 function lookupSpatialCompanionsFromSpeech($speakerName, $listenerName = "", $utterance = "")
