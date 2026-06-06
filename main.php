@@ -1667,10 +1667,15 @@ $hasAuthoritativeRequestAudience = (
     in_array($gameRequest[0] ?? "", $playerInputEventTypes, true) &&
     $requestAudienceSnapshot !== ""
 );
+$resolvedRechatPeople = "";
+if (($gameRequest[0] ?? "") === "rechat" && isset($GLOBALS["RECHAT_RESOLVED_TARGET"])) {
+    $resolvedRechatPeople = (string)($GLOBALS["RECHAT_RESOLVED_TARGET"]["people_pipe"] ?? "");
+}
+$authoritativePeople = $hasAuthoritativeRequestAudience ? $requestAudienceSnapshot : $resolvedRechatPeople;
 
-if ($hasAuthoritativeRequestAudience) {
-    $GLOBALS["CACHE_PEOPLE"] = $requestAudienceSnapshot;
-    Logger::info("Scoped CACHE_PEOPLE for {$gameRequest[0]} from request audience snapshot: " . $GLOBALS["CACHE_PEOPLE"]);
+if ($authoritativePeople !== "") {
+    $GLOBALS["CACHE_PEOPLE"] = $authoritativePeople;
+    Logger::info("Scoped CACHE_PEOPLE for {$gameRequest[0]}: " . $GLOBALS["CACHE_PEOPLE"]);
 } else {
     $scopedPeople = buildScopedPeopleForEvent(
         $gameRequest[0] ?? "",
@@ -1731,9 +1736,9 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
     }
     
     if ($shouldLog) {
-        if ($hasAuthoritativeRequestAudience) {
-            $eventPeople = $requestAudienceSnapshot;
-            $GLOBALS["CACHE_PEOPLE"] = $requestAudienceSnapshot;
+        if ($authoritativePeople !== "") {
+            $eventPeople = $authoritativePeople;
+            $GLOBALS["CACHE_PEOPLE"] = $authoritativePeople;
         } else {
             $eventPeople = buildScopedPeopleForEvent(
                 $gameRequest[0] ?? "",
