@@ -3058,8 +3058,6 @@ function chimParseServerSideRechatPayload($rawData)
         "listener_hint" => "",
         "rechat_target_hint" => "",
         "origin_line" => trim((string)$rawData),
-        "audience" => [],
-        "chain_members" => [],
         "rechat_depth" => 0,
         "chain_id" => "",
     ];
@@ -3089,12 +3087,6 @@ function chimParseServerSideRechatPayload($rawData)
     if (!empty($decoded["rechat_depth"])) {
         $payload["rechat_depth"] = max(0, intval($decoded["rechat_depth"]));
     }
-    if (!empty($decoded["audience"]) && is_array($decoded["audience"])) {
-        $payload["audience"] = chimNormalizeRechatActorList($decoded["audience"]);
-    }
-    if (!empty($decoded["chain_members"]) && is_array($decoded["chain_members"])) {
-        $payload["chain_members"] = chimNormalizeRechatActorList($decoded["chain_members"]);
-    }
     if (!empty($decoded["chain_id"])) {
         $payload["chain_id"] = trim((string)$decoded["chain_id"]);
     }
@@ -3102,38 +3094,90 @@ function chimParseServerSideRechatPayload($rawData)
     return $payload;
 }
 
-function chimGetLatestSpeechRechatContext($speakerName)
+function chimLookupPreviousRechatPeopleScope($speakerName, $originLine, $maxAgeSeconds = 300)
 {
     global $db;
 
     $speakerName = normalizeDialogueListenerName($speakerName);
+    $empty = [
+        "audience" => [],
+        "people_pipe" => "",
+        "source" => "eventlog_none",
+        "rowid" => 0,
+        "matched_origin" => false,
+    ];
+
     if ($speakerName === "") {
-        return [
-            "listener" => "",
-            "audience" => [],
-        ];
+        $empty["source"] = "eventlog_missing_speaker";
+        return $empty;
     }
 
-    $escapedSpeaker = $db->escape($speakerName);
-    $row = $db->fetchOne(
-        "SELECT listener, companions
-         FROM speech
-         WHERE speaker = '{$escapedSpeaker}'
+    $speakerNormalized = normalizeActorNameForComparison($speakerName);
+    if ($speakerNormalized === "") {
+        $empty["source"] = "eventlog_invalid_speaker";
+        return $empty;
+    }
+
+    $originNormalized = normalizeDialogTextForComparison($originLine);
+    $ageSeconds = max(30, intval($maxAgeSeconds));
+    $cutoff = time() - $ageSeconds;
+
+    $rows = $db->fetchAll(
+        "SELECT rowid, data, people
+         FROM eventlog
+         WHERE localts > {$cutoff}
+           AND type = 'chat'
+           AND people IS NOT NULL
+           AND TRIM(people) <> ''
          ORDER BY rowid DESC
-         LIMIT 1"
+         LIMIT 120"
     );
 
-    if (!$row) {
-        return [
-            "listener" => "",
-            "audience" => [],
-        ];
+    if (!is_array($rows) || empty($rows)) {
+        return $empty;
     }
 
-    return [
-        "listener" => normalizeDialogueListenerName($row["listener"] ?? ""),
-        "audience" => chimExtractPeopleListFromPipeString($row["companions"] ?? ""),
-    ];
+    $latestSpeakerMatch = null;
+    foreach ($rows as $row) {
+        $rowData = (string)($row["data"] ?? "");
+        $rowSpeaker = normalizeDialogueListenerName(extractSpeakerNameFromChatEvent($rowData));
+        if (normalizeActorNameForComparison($rowSpeaker) !== $speakerNormalized) {
+            continue;
+        }
+
+        $audience = chimExtractPeopleListFromPipeString($row["people"] ?? "");
+        if (empty($audience)) {
+            continue;
+        }
+
+        $peoplePipe = normalizePeoplePipeList($audience);
+        if ($peoplePipe === "") {
+            continue;
+        }
+
+        $candidate = [
+            "audience" => $audience,
+            "people_pipe" => $peoplePipe,
+            "source" => "eventlog_latest_speaker",
+            "rowid" => intval($row["rowid"] ?? 0),
+            "matched_origin" => false,
+        ];
+
+        if ($latestSpeakerMatch === null) {
+            $latestSpeakerMatch = $candidate;
+        }
+
+        if ($originNormalized !== "") {
+            $rowOriginNormalized = normalizeDialogTextForComparison(extractCoreUtteranceFromChatEvent($rowData));
+            if ($rowOriginNormalized === $originNormalized) {
+                $candidate["source"] = "eventlog_origin";
+                $candidate["matched_origin"] = true;
+                return $candidate;
+            }
+        }
+    }
+
+    return ($latestSpeakerMatch !== null) ? $latestSpeakerMatch : $empty;
 }
 
 function chimResolveServerSideRechatTarget(array $payload)
@@ -3142,36 +3186,44 @@ function chimResolveServerSideRechatTarget(array $payload)
     $listenerHint = normalizeDialogueListenerName($payload["listener_hint"] ?? "");
     $rechatTargetHint = normalizeDialogueListenerName($payload["rechat_target_hint"] ?? "");
     $configuredRechatMode = chimGetRechatMode();
-    $speechContext = chimGetLatestSpeechRechatContext($speakerName);
 
-    if ($listenerHint === "" && !empty($speechContext["listener"])) {
-        $listenerHint = $speechContext["listener"];
-    }
+    $peopleScope = chimLookupPreviousRechatPeopleScope($speakerName, $payload["origin_line"] ?? "");
+    $audience = $peopleScope["audience"] ?? [];
+    $candidateSource = $peopleScope["source"] ?? "eventlog_none";
+    $peoplePipe = $peopleScope["people_pipe"] ?? "";
 
-    $audience = chimNormalizeRechatActorList(array_merge(
-        $payload["audience"] ?? [],
-        $payload["chain_members"] ?? [],
-        $speechContext["audience"] ?? []
-    ));
     $rechatMode = chimResolveEffectiveRechatMode($configuredRechatMode, array_merge(
         [$speakerName, $listenerHint, $rechatTargetHint],
         $audience
     ));
 
     $candidates = [];
-    if ($rechatMode === "tight") {
-        if ($listenerHint !== "") {
-            $candidates[] = $listenerHint;
-        }
-    } elseif ($rechatMode === "conversational") {
-        if ($rechatTargetHint !== "") {
-            $candidates[] = $rechatTargetHint;
-        }
-        if ($listenerHint !== "") {
-            $candidates[] = $listenerHint;
+    $isInAudience = function ($candidateName) use ($audience) {
+        $candidateName = normalizeDialogueListenerName($candidateName);
+        if ($candidateName === "") {
+            return false;
         }
         foreach ($audience as $audienceName) {
-            $candidates[] = $audienceName;
+            if (strcasecmp($candidateName, $audienceName) === 0) {
+                return true;
+            }
+        }
+        return false;
+    };
+    $addCandidate = function ($candidateName) use (&$candidates, $isInAudience) {
+        $candidateName = normalizeDialogueListenerName($candidateName);
+        if ($candidateName !== "" && $isInAudience($candidateName)) {
+            $candidates[] = $candidateName;
+        }
+    };
+
+    if ($rechatMode === "tight") {
+        $addCandidate($listenerHint);
+    } elseif ($rechatMode === "conversational") {
+        $addCandidate($rechatTargetHint);
+        $addCandidate($listenerHint);
+        foreach ($audience as $audienceName) {
+            $addCandidate($audienceName);
         }
     } else {
         foreach ($audience as $audienceName) {
@@ -3181,24 +3233,21 @@ function chimResolveServerSideRechatTarget(array $payload)
             if ($listenerHint !== "" && strcasecmp($audienceName, $listenerHint) === 0) {
                 continue;
             }
-            $candidates[] = $audienceName;
+            $addCandidate($audienceName);
         }
-        if ($rechatTargetHint !== "") {
-            $candidates[] = $rechatTargetHint;
-        }
-        if ($listenerHint !== "") {
-            $candidates[] = $listenerHint;
-        }
+        $addCandidate($rechatTargetHint);
+        $addCandidate($listenerHint);
         foreach ($audience as $audienceName) {
-            $candidates[] = $audienceName;
+            $addCandidate($audienceName);
         }
     }
 
-    $candidates = chimNormalizeRechatActorList($candidates);
+    $rawCandidates = chimNormalizeRechatActorList($candidates);
     $npcMaster = new NpcMaster();
+    $validCandidates = [];
     $selected = "";
 
-    foreach ($candidates as $candidate) {
+    foreach ($rawCandidates as $candidate) {
         if ($candidate === "") {
             continue;
         }
@@ -3215,17 +3264,30 @@ function chimResolveServerSideRechatTarget(array $payload)
             continue;
         }
 
-        $selected = $candidate;
-        break;
+        $validCandidates[] = $candidate;
+        if ($selected === "") {
+            $selected = $candidate;
+        }
     }
+
+    Logger::info(
+        "[RECHAT_SELECT] speaker={$speakerName} listener_hint={$listenerHint} target_hint={$rechatTargetHint} mode={$rechatMode} configured_mode={$configuredRechatMode} source={$candidateSource} people_rowid=" .
+        intval($peopleScope["rowid"] ?? 0) . " matched_origin=" . (!empty($peopleScope["matched_origin"]) ? "true" : "false") . " source_companions=" .
+        implode(",", $audience) . " raw_candidates=" . implode(",", $rawCandidates) . " candidates=" .
+        implode(",", $validCandidates) . " selected={$selected}"
+    );
 
     return [
         "speaker" => $speakerName,
         "listener_hint" => $listenerHint,
         "rechat_target_hint" => $rechatTargetHint,
         "audience" => $audience,
-        "chain_members" => chimNormalizeRechatActorList($payload["chain_members"] ?? []),
-        "candidates" => $candidates,
+        "people_pipe" => $peoplePipe,
+        "candidate_source" => $candidateSource,
+        "people_rowid" => intval($peopleScope["rowid"] ?? 0),
+        "matched_origin" => !empty($peopleScope["matched_origin"]),
+        "raw_candidates" => $rawCandidates,
+        "candidates" => $validCandidates,
         "selected" => $selected,
         "mode" => $rechatMode,
         "configured_mode" => $configuredRechatMode,
@@ -3241,13 +3303,10 @@ function chimBuildServerSideRechatSessionKey(array $resolvedTarget)
         return md5("chain_" . $chainId);
     }
 
-    $members = $resolvedTarget["chain_members"] ?? [];
-    if (empty($members)) {
-        $members = array_merge(
-            [$resolvedTarget["speaker"] ?? "", $resolvedTarget["listener_hint"] ?? "", $resolvedTarget["rechat_target_hint"] ?? ""],
-            $resolvedTarget["audience"] ?? []
-        );
-    }
+    $members = array_merge(
+        [$resolvedTarget["speaker"] ?? "", $resolvedTarget["listener_hint"] ?? "", $resolvedTarget["rechat_target_hint"] ?? ""],
+        $resolvedTarget["audience"] ?? []
+    );
 
     $members = chimNormalizeRechatActorList($members);
     sort($members, SORT_NATURAL | SORT_FLAG_CASE);
