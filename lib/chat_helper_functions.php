@@ -18,6 +18,10 @@ function callConfiguredTts($textString, $mood, $stringforhash)
         return false;
     }
 
+    if (strcasecmp($ttsFunction, 'none') === 0) {
+        return false;
+    }
+
     $specialFiles = [
         'stylettsv2' => __DIR__ . "/../tts/tts-stylettsv2-2.php",
     ];
@@ -58,7 +62,11 @@ function canRetryNpcTtsWithFallback(): bool
 function callNpcTtsWithFallback($textString, $mood, $stringforhash)
 {
     $ttsOutput = callConfiguredTts($textString, $mood, $stringforhash);
-    if ($ttsOutput || !canRetryNpcTtsWithFallback()) {
+    if ($ttsOutput) {
+        return $ttsOutput;
+    }
+
+    if (!canRetryNpcTtsWithFallback()) {
         return $ttsOutput;
     }
 
