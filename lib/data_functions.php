@@ -611,7 +611,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 if (isset($currentNpcData["core"]) && !empty($currentNpcData["core"])) {
                     // NPC name should always be at core section.
                     $npcName = $currentNpcData["npc_name"];
-                    
+                    error_log("[DataLastInfoFor] Actors around, Checking NPC Name: " . $npcName." actors in range: ".$actorsInRangeList);
                     // Format gender (capitalize first letter)
                     $gender = !empty($currentNpcData["gender"]) ? ucfirst(strtolower(trim($currentNpcData["gender"]))) : "";
                     $race = !empty($currentNpcData["race"]) ? trim($currentNpcData["race"]) : "";
@@ -742,8 +742,10 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     $actorDetailedListWithProfile[] = $profileString;
 
                 }
-                else
-                    $actorDetailedListWithProfile[]="$ittext";
+                else {
+                    error_log("[DataLastInfoFor] Actors around, Checking NPC Name: " . $ittext. " with no profile data, actors in range: ".$actorsInRangeList);
+                    $actorDetailedListWithProfile[] = $ittext;
+                }
                 
             }
         }
@@ -1015,6 +1017,19 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<scene_notes>\n# SCENE NOTES \n## ".implode(".",$notes)."</scene_notes>";
     }
         
+    // This is intended to give info about nearby actors, ALL actors (dead ones included).
+
+    $nearbyActors=DataBeingsOrDeathsInRangeExcluding("",true);
+    $nearbyActorsList="";
+    if ($nearbyActors) {
+        foreach (explode("|",$nearbyActors) as $k=>$v) {
+            $nearbyActor=trim($v);
+            if (!empty($nearbyActor))
+                $nearbyActorsList.=",$nearbyActor";
+        }
+        $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<actors_nearby>\n$nearbyActorsList</actors_nearby>";
+    }
+    
 
     $lastDialog=[];
     // This function originally returned an array, now it's directly filling PROMPT_NEARBY_SECTIONS.
@@ -3925,6 +3940,7 @@ function DataBeingsOrDeathsInRangeExcluding($excludeNPC="", $excludePlayer=true)
     $beingsArrayNew=[];
     if (!$excludePlayer)
         $beingsArrayNew[]="{$GLOBALS["PLAYER_NAME"]}";  // Add player to beings in range
+
     foreach ($beingsArray as $k=>$v) {
         if (strpos($v,")")!==0) {
             if (strpos($v,"Horse")!==0) 
@@ -5253,7 +5269,7 @@ function call_llm_internal() {
             continue;
         }
 
-        $position = findFastSentencePosition($buffer);
+        $position = findFastSentencePosition($buffer,$INCREMENTAL_SENTENCESIZE);
 
         //echo "<$buffer>".PHP_EOL;
         if (($position !== false) && ($gameRequest[0] === "narration" || $position>$INCREMENTAL_SENTENCESIZE)) {
