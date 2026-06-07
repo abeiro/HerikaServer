@@ -7014,7 +7014,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
         error_log("[SNQE] Current quest data for quest_id {$extendedData["starring_in_quest"]}: {$quest["briefing"]}");
         if ($quest) {
             $questData = json_decode($quest["quest_data"], true);
-            $dynamicBio .= "\n<storyline_starring>\n#Current Quest\nYou are currently starring in the quest: {$questData["briefing"]} \n</storyline_starring>";
+            $dynamicBio .= "\n<storyline_starring>\n#Current Quest\nYou are currently starring in the quest:{$quest["title"]}\n{$questData["briefing"]} \n</storyline_starring>";
 
             // Find this NPC's key in the quest npcs list by matching name
             $thisNpcKey = null;

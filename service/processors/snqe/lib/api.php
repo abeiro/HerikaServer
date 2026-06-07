@@ -2363,7 +2363,7 @@ function WaitAtLocation(
         return "done";
     } else {
 
-        $sceneNoteData = "#Storyline: {$GLOBALS["PLAYER_NAME"]} and companions should travel to <$location>, next scene will happen there";
+        $sceneNoteData = "#Storyline: Quest: {$quest["title"]} : {$GLOBALS["PLAYER_NAME"]} and companions should travel to <$location>, next scene will happen there";
         $sceneNoteDataEsc = $GLOBALS["db"]->escape($sceneNoteData);
         // Check if row with same data already exists
         $existingRow = $GLOBALS["db"]->fetchOne(
