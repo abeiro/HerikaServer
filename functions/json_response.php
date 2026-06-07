@@ -481,7 +481,7 @@
                             ),
                         "target" => array(
                             "type" => "string",
-                "description" => "action target actor| exact inventory item name when action is Consume| actor to teleport when action is TeleportNPC| actor to receive spawned gold when action is SpawnGold| actor to receive the spawned item when action is SpawnItem| SNQE NPC template key when action is SpawnNPC| actor to kill when action is KillTarget| short creation brief when action is CreateNewNPC| short freeform director brief when action is DirectorCommand. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target. Also used for specifying destination when using Travel_To"
+                "description" => "action target actor| destination when action is Travel_To|exact inventory item name when action is Consume| actor to teleport when action is TeleportNPC| actor to receive spawned gold when action is SpawnGold| actor to receive the spawned item when action is SpawnItem| SNQE NPC template key when action is SpawnNPC| actor to kill when action is KillTarget| short creation brief when action is CreateNewNPC| short freeform director brief when action is DirectorCommand. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target. Also used for specifying destination when using Travel_To"
                         ),
                         "item" => array(
                             "type" => "string",

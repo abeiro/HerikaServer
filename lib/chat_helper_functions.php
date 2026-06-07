@@ -256,7 +256,9 @@ function cleanResponse($rawResponse)
 }
 
 // replace findDotPosition with first EOS split detection - same logic as split_at_end_of_sentence
-function findFastSentencePosition($s_string) {
+// This sentence will never be splitted: "It is, my Thane. The crisp air here is better than the soot of Whiterun. I've been honing my blade since dawn."
+
+function findFastSentencePosition($s_string,$min_sentence_size=0) {
     // Find the position of the first sentence-ending punctuation followed by a space
     // This preserves ellipsis (...) because we require a space after the punctuation
     $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/'); // .?!。？！
@@ -274,6 +276,10 @@ function findFastSentencePosition($s_string) {
             // Use the end of the matched punctuation so that multi-byte characters
             // (e.g. Japanese 。！？ which are 3 bytes in UTF-8) are not split mid-character.
             $endPosition = $position + strlen($match[0]) - 1;
+            if ($min_sentence_size > 0 && $endPosition <= $min_sentence_size) {
+                continue;
+            }
+
             $candidate = substr($s_string, 0, $endPosition + 1);
             if (hasUnclosedSingleAsteriskBlock($candidate)) {
                 continue;
