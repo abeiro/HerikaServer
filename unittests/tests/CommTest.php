@@ -812,6 +812,54 @@ final class CommTest extends DatabaseTestCase
         $this->assertSame("init", $rows[2]["data"]);
     }
 
+    public function testRechatPeopleSourceOfTruth_ShouldUseLatestMatchingPeopleScope(): void
+    {
+        // default test config
+        require("conf.php");
+        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."chat_helper_functions.php");
+
+        $testDb = new sql();
+        $GLOBALS["db"] = $testDb;
+        $now = time();
+
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "100",
+                'gamets' => "100",
+                'type' => "chat",
+                'data' => "Lisette: Older broad line. (talking to RANGROO)",
+                'sess' => 'pending',
+                'localts' => $now - 20,
+                'people'=> "|Lisette|RANGROO|Pantea Ateia|Belrand|",
+                'location'=> "",
+                'party'=> "[]",
+                'delivery_state' => 'spoken'
+            )
+        );
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "200",
+                'gamets' => "200",
+                'type' => "chat",
+                'data' => "Lisette: Latest tight line. (talking to RANGROO)",
+                'sess' => 'pending',
+                'localts' => $now - 10,
+                'people'=> "|Lisette|RANGROO|",
+                'location'=> "",
+                'party'=> "[]",
+                'delivery_state' => 'spoken'
+            )
+        );
+
+        $people = lookupConversationPeopleSourceOfTruth("Lisette", "RANGROO", 300);
+        $testDb->close();
+        unset($GLOBALS["db"]);
+
+        $this->assertSame("|Lisette|RANGROO|", $people);
+    }
+
     public function testComm_WhenLinesAreNotJapanese_PhoneticTextShouldBeNotSentToScriptQueue(): void
     {
         // default test config

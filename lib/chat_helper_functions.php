@@ -4157,7 +4157,6 @@ function lookupConversationPeopleSourceOfTruth($speakerName, $targetName, $maxAg
         return "";
     }
 
-    $fallbackPipe = "";
     foreach ($rows as $row) {
         $rowType = strtolower((string)($row["type"] ?? ""));
         $rowData = (string)($row["data"] ?? "");
@@ -4205,28 +4204,10 @@ function lookupConversationPeopleSourceOfTruth($speakerName, $targetName, $maxAg
             continue;
         }
 
-        $hasExtraAudience = false;
-        foreach ($rowNames as $audienceName) {
-            $audienceNormalized = normalizeActorNameForComparison($audienceName);
-            if ($audienceNormalized === "" || $audienceNormalized === "the narrator") {
-                continue;
-            }
-            if ($audienceNormalized !== $speakerNormalized && $audienceNormalized !== $targetNormalized) {
-                $hasExtraAudience = true;
-                break;
-            }
-        }
-
-        if ($hasExtraAudience) {
-            return $candidatePipe;
-        }
-
-        if ($fallbackPipe === "") {
-            $fallbackPipe = $candidatePipe;
-        }
+        return $candidatePipe;
     }
 
-    return $fallbackPipe;
+    return "";
 }
 
 function buildScopedPeopleFromSpatialEvidence($eventType, $eventData, $listenerName, $fallbackPeople = "")
