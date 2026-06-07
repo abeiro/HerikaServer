@@ -309,7 +309,7 @@ if (!function_exists('race_icon_web_path')) {
         }
         
         // Add your handler code here
-        `php $enginePath/debug/simple_llm_request_with_context_life.php "$npcName" full forceaction`;
+        `php $enginePath/debug/simple_llm_request_with_context_life_v2.php "$npcName" full forceaction`;
 
         echo json_encode(['ok' => true, 'message' => "Action request processed for $npcName"]);
     }

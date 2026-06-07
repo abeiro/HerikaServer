@@ -589,11 +589,17 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             $quotedIds = array_map(function ($escapedId) {
                 return "'" . $escapedId . "'";
             }, array_values($utteranceIds));
+            $abortableChatStateSql = chimBuildChatDeliveryStateSql(
+                'delivery_state',
+                chimGetInFlightChatDeliveryStates(),
+                'emitted'
+            );
             $db->execQuery(
-                "DELETE FROM public.eventlog
+                "UPDATE public.eventlog
+                 SET delivery_state='aborted'
                  WHERE type='chat'
                    AND utterance_id IN (" . implode(",", $quotedIds) . ")
-                   AND COALESCE(delivery_state, 'pending')='pending'"
+                   AND {$abortableChatStateSql}"
             );
         }
     }
@@ -606,6 +612,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
    
     // error_log(print_r($speech,true));
     if (is_array($speech)) {
+        $nonAbortedChatStateSql = "COALESCE(delivery_state, 'emitted')<>'aborted'";
         $speechSpeaker = isset($speech["speaker"]) ? trim((string)$speech["speaker"]) : "";
         $speechListener = isset($speech["listener"]) ? trim((string)$speech["listener"]) : "";
         $speechUtteranceId = isset($speech["utterance_id"]) ? trim((string)$speech["utterance_id"]) : "";
@@ -674,6 +681,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                  FROM eventlog
                  WHERE type='chat'
                    AND utterance_id='{$speechUtteranceIdEscaped}'
+                   AND {$nonAbortedChatStateSql}
                  ORDER BY rowid DESC"
             );
             foreach ((array)$matchedRows as $matchedRow) {
@@ -785,6 +793,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                          FROM eventlog
                          WHERE gamets={$speechGamets}
                            AND type='chat'
+                           AND {$nonAbortedChatStateSql}
                            AND data ILIKE '{$speakerEscaped}:%'
                          ORDER BY ts DESC, rowid DESC
                          LIMIT 40"
@@ -812,6 +821,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                         "SELECT rowid, gamets, data
                          FROM eventlog
                          WHERE type='chat'
+                           AND {$nonAbortedChatStateSql}
                            AND localts>" . (time() - 180) . "
                            AND data ILIKE '{$speakerEscaped}:%'
                          ORDER BY rowid DESC
@@ -916,7 +926,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                         if ($rowIdToUpdate <= 0) {
                             continue;
                         }
-                        $db->update("eventlog", "delivery_state='spoken'", "rowid={$rowIdToUpdate}");
+                        $db->update("eventlog", "delivery_state='spoken'", "rowid={$rowIdToUpdate} AND {$nonAbortedChatStateSql}");
                     }
                 }
             } elseif (!empty($matchedUtteranceRowIds)) {
@@ -924,7 +934,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     if ($matchedRowId <= 0) {
                         continue;
                     }
-                    $db->update("eventlog", "delivery_state='spoken'", "rowid={$matchedRowId}");
+                    $db->update("eventlog", "delivery_state='spoken'", "rowid={$matchedRowId} AND {$nonAbortedChatStateSql}");
                 }
             }
         }
@@ -1798,7 +1808,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     
     
     $splitNameBase=explode("/",$gameRequest[3]);
-    if ($splitNameBase[0] && $splitNameBase[1]) {
+    if (!empty($splitNameBase[0]) && isset($splitNameBase[1]) && $splitNameBase[1] !== '') {
         $npcMaster=new NpcMaster();
         $currentNpcData = $npcMaster->getByName($splitNameBase[0]);
         
@@ -1822,11 +1832,26 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
             }
 
-            $meta['last_coords'] = [$splitNameBase[1],$splitNameBase[2],$splitNameBase[3],$splitNameBase[4],
+            $previousLastCoords = is_array($meta["last_coords"] ?? null) ? $meta["last_coords"] : [];
+            $meta['last_coords'] = [
+                $splitNameBase[1],
+                $splitNameBase[2] ?? '',
+                $splitNameBase[3] ?? '',
+                $splitNameBase[4] ?? '',
                 "last_updated"=>$gameRequest[2],
-                "nearest_npc"=>[$splitNameBase[6]=>$splitNameBase[5]],
-                "state"=>$splitNameBase[7]
             ];
+
+            if (isset($splitNameBase[5], $splitNameBase[6]) && $splitNameBase[5] !== '' && $splitNameBase[6] !== '') {
+                $meta['last_coords']["nearest_npc"] = [$splitNameBase[6] => $splitNameBase[5]];
+            } elseif (array_key_exists("nearest_npc", $previousLastCoords)) {
+                $meta['last_coords']["nearest_npc"] = $previousLastCoords["nearest_npc"];
+            }
+
+            if (isset($splitNameBase[7]) && $splitNameBase[7] !== '') {
+                $meta['last_coords']["state"] = $splitNameBase[7];
+            } elseif (array_key_exists("state", $previousLastCoords)) {
+                $meta['last_coords']["state"] = $previousLastCoords["state"];
+            }
             
             // Save back to database
             $currentNpcData = $npcMaster->setMetadata($currentNpcData, $meta);

@@ -20,6 +20,13 @@
 <!-- Explain the motivation behind these changes. What problem does this solve? -->
 
 
+## Maintainer Discussion
+
+<!-- PRs should be discussed with RANGROO or tyler.maister in Discord before submission. -->
+
+- [ ] I discussed this PR with `RANGROO` or `tyler.maister` in Discord.
+
+
 
 ## Related PRs
 

@@ -82,14 +82,15 @@ final class HistoricContextTest extends DatabaseTestCase
         string $people,
         int $ts,
         int $gameTs,
-        int $localTs
+        int $localTs,
+        ?string $deliveryState = null
     ): void {
         $connection = pg_connect($this->connString);
         $this->assertNotFalse($connection);
         pg_query_params(
             $connection,
-            "INSERT INTO eventlog (ts, gamets, type, data, sess, localts, people, location, party)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+            "INSERT INTO eventlog (ts, gamets, type, data, sess, localts, people, location, party, delivery_state)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
             [
                 (string)$ts,
                 (string)$gameTs,
@@ -100,6 +101,7 @@ final class HistoricContextTest extends DatabaseTestCase
                 $people,
                 "",
                 "[]",
+                $deliveryState,
             ]
         );
         pg_close($connection);
@@ -160,6 +162,66 @@ final class HistoricContextTest extends DatabaseTestCase
         }, $context);
 
         $this->assertNotContains("Belethor: Everything's for sale, my friend.", $contents);
+    }
+
+    public function testBuildHistoricContextIncludesEmittedChatRows(): void
+    {
+        $this->insertEvent(
+            "chat",
+            "Lydia: The perimeter is secure, my Thane. (talking to Prisoner)",
+            "|Lydia|Prisoner|",
+            100,
+            100,
+            100,
+            "emitted"
+        );
+
+        $context = buildHistoricContext("Lydia", -5);
+        $contents = array_map(static function (array $row): string {
+            return (string)($row["content"] ?? "");
+        }, $context);
+
+        $this->assertContains("Lydia: The perimeter is secure, my Thane. (talking to Prisoner)", $contents);
+    }
+
+    public function testBuildHistoricContextExcludesPendingChatRows(): void
+    {
+        $this->insertEvent(
+            "chat",
+            "Lydia: I have not actually said this yet. (talking to Prisoner)",
+            "|Lydia|Prisoner|",
+            100,
+            100,
+            100,
+            "pending"
+        );
+
+        $context = buildHistoricContext("Lydia", -5);
+        $contents = array_map(static function (array $row): string {
+            return (string)($row["content"] ?? "");
+        }, $context);
+
+        $this->assertNotContains("Lydia: I have not actually said this yet. (talking to Prisoner)", $contents);
+    }
+
+    public function testBuildHistoricContextExcludesAbortedChatRows(): void
+    {
+        $this->insertEvent(
+            "chat",
+            "Lydia: This line was canceled. (talking to Prisoner)",
+            "|Lydia|Prisoner|",
+            100,
+            100,
+            100,
+            "aborted"
+        );
+
+        $context = buildHistoricContext("Lydia", -5);
+        $contents = array_map(static function (array $row): string {
+            return (string)($row["content"] ?? "");
+        }, $context);
+
+        $this->assertNotContains("Lydia: This line was canceled. (talking to Prisoner)", $contents);
     }
 
     public function testNormalizeActorNameForComparisonStripsRestrainedSuffix(): void

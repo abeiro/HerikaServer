@@ -998,8 +998,8 @@ $F_RETURNMESSAGES_LOCAL["OpenInventory"] = "Initiates trading or exchange items 
 $F_RETURNMESSAGES_LOCAL["OpenInventory2"] = "#PLAYER_NAME# gives items to #HERIKA_NAME#. Accept gift.";
 $F_RETURNMESSAGES_LOCAL["Attack"] = "#HERIKA_NAME# attacks #TARGET#.";
 $F_RETURNMESSAGES_LOCAL["Follow"] = "#HERIKA_NAME# follows #TARGET#.";
-$F_RETURNMESSAGES_LOCAL["Inspect"] = "";
-$F_RETURNMESSAGES_LOCAL["InspectSurroundings"] = "";
+$F_RETURNMESSAGES_LOCAL["Inspect"] = "#HERIKA_NAME# inspects #TARGET# and see this: #RESULT#";
+$F_RETURNMESSAGES_LOCAL["InspectSurroundings"] = "#HERIKA_NAME# takes a look around and see this: #RESULT#";
 $F_RETURNMESSAGES_LOCAL["CheckInventory"] = "#HERIKA_NAME#'s INVENTORY:#RESULT#";
 $F_RETURNMESSAGES_LOCAL["SheatheWeapon"] = "Sheathes/put away current weapon";
 $F_RETURNMESSAGES_LOCAL["Relax"] = "#HERIKA_NAME# is relaxed. Time to enjoy life.";
@@ -2726,6 +2726,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
             // Parameter part 
             if ($actionCodeNameResolved=="Drink") {
                
+                error_log("[ACTION POSTFILTER Drink] Executed server-side");
                 // Make NPC to toast
                 $npcMaster = new Npcmaster();
                 $npcData   = $npcMaster->getByName($actionParts[0]);

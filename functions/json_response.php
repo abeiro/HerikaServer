@@ -86,13 +86,9 @@
         }
     }
 
-    if (!function_exists('chimNarratorJsonResponseNeedsRefresh')) {
-        function chimNarratorJsonResponseNeedsRefresh(): bool
+    if (!function_exists('chimGetNarratorJsonResponseStateSummary')) {
+        function chimGetNarratorJsonResponseStateSummary(): array
         {
-            if (!chimIsDirectNarratorDialogue()) {
-                return false;
-            }
-
             $actionTemplate = trim(strval($GLOBALS["responseTemplate"]["action"] ?? ""));
             $funcList = array_values(array_filter(
                 is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : [],
@@ -111,7 +107,7 @@
 
             $hasOnlyTalkAction = count($funcList) === 1 && strcasecmp($funcList[0], "Talk") === 0;
 
-            return (
+            $needsRefresh = chimIsDirectNarratorDialogue() && (
                 empty($GLOBALS["PROMPT_ACTIONS_LIST"])
                 || empty($funcList)
                 || $actionTemplate === ""
@@ -119,6 +115,46 @@
                 || empty($structuredActionEnum)
                 || $hasOnlyTalkAction
             );
+
+            return [
+                "request" => strtolower(trim(strval($GLOBALS["gameRequest"][0] ?? ''))),
+                "direct_flag" => !empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]) ? '1' : '0',
+                "herika" => strval($GLOBALS["HERIKA_NAME"] ?? ''),
+                "func_count" => count($funcList),
+                "prompt_actions_len" => strlen(strval($GLOBALS["PROMPT_ACTIONS_LIST"] ?? "")),
+                "response_action" => $actionTemplate,
+                "structured_action_count" => count($structuredActionEnum),
+                "has_only_talk_action" => $hasOnlyTalkAction,
+                "needs_refresh" => $needsRefresh,
+            ];
+        }
+    }
+
+    if (!function_exists('chimFormatNarratorJsonResponseStateSummary')) {
+        function chimFormatNarratorJsonResponseStateSummary(?array $summary = null): string
+        {
+            $summary = $summary ?? chimGetNarratorJsonResponseStateSummary();
+
+            return "request=" . strval($summary["request"] ?? '') .
+                " direct_flag=" . strval($summary["direct_flag"] ?? '0') .
+                " herika=" . strval($summary["herika"] ?? '') .
+                " func_count=" . strval($summary["func_count"] ?? 0) .
+                " prompt_actions_len=" . strval($summary["prompt_actions_len"] ?? 0) .
+                " response_action=" . strval($summary["response_action"] ?? '') .
+                " structured_action_count=" . strval($summary["structured_action_count"] ?? 0) .
+                " has_only_talk_action=" . (!empty($summary["has_only_talk_action"]) ? '1' : '0');
+        }
+    }
+
+    if (!function_exists('chimNarratorJsonResponseNeedsRefresh')) {
+        function chimNarratorJsonResponseNeedsRefresh(): bool
+        {
+            if (!chimIsDirectNarratorDialogue()) {
+                return false;
+            }
+
+            $summary = chimGetNarratorJsonResponseStateSummary();
+            return !empty($summary["needs_refresh"]);
         }
     }
 
@@ -133,19 +169,22 @@
             $directNarratorDialogue = chimIsDirectNarratorDialogue();
             if (!$directNarratorDialogue) {
                 if ($requestType === 'narrator_inputtext' || strcasecmp(trim(strval($GLOBALS["HERIKA_NAME"] ?? '')), 'The Narrator') === 0) {
-                    Logger::warn("[{$logContext}] Skipping narrator JSON refresh because chimIsDirectNarratorDialogue() is false (request={$requestType}, direct_flag=" . (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]) ? '1' : '0') . ", herika=" . strval($GLOBALS["HERIKA_NAME"] ?? '') . ")");
+                    Logger::warn("[{$logContext}] Skipping narrator JSON refresh because chimIsDirectNarratorDialogue() is false (" . chimFormatNarratorJsonResponseStateSummary() . ")");
                 }
                 return;
             }
 
-            if (!chimNarratorJsonResponseNeedsRefresh()) {
-                Logger::info("[{$logContext}] Narrator JSON response state already complete (request={$requestType}, actions=" . count(is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : []) . ", response_action=" . trim(strval($GLOBALS["responseTemplate"]["action"] ?? '')) . ")");
+            $stateSummary = chimGetNarratorJsonResponseStateSummary();
+            if (empty($stateSummary["needs_refresh"])) {
                 return;
             }
 
-            Logger::warn("[{$logContext}] Rebuilding narrator JSON response state because prompt actions/schema were incomplete");
+            Logger::warn("[{$logContext}] Rebuilding narrator JSON response state because prompt actions/schema were incomplete (" . chimFormatNarratorJsonResponseStateSummary($stateSummary) . ")");
             chimRefreshJsonResponseState();
-            Logger::warn("[{$logContext}] Narrator JSON response state after rebuild: actions=" . count(is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : []) . ", prompt_actions_len=" . strlen(strval($GLOBALS["PROMPT_ACTIONS_LIST"] ?? '')) . ", response_action=" . trim(strval($GLOBALS["responseTemplate"]["action"] ?? '')));
+            $stateSummary = chimGetNarratorJsonResponseStateSummary();
+            if (!empty($stateSummary["needs_refresh"])) {
+                Logger::warn("[{$logContext}] Narrator JSON response state still incomplete after rebuild (" . chimFormatNarratorJsonResponseStateSummary($stateSummary) . ")");
+            }
         }
     }
 
@@ -442,7 +481,7 @@
                             ),
                         "target" => array(
                             "type" => "string",
-                "description" => "action target actor| exact inventory item name when action is Consume| actor to teleport when action is TeleportNPC| actor to receive spawned gold when action is SpawnGold| actor to receive the spawned item when action is SpawnItem| SNQE NPC template key when action is SpawnNPC| actor to kill when action is KillTarget| short creation brief when action is CreateNewNPC| short freeform director brief when action is DirectorCommand. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target. Also used for specifying destination when using Travel_To"
+                "description" => "action target actor| destination when action is Travel_To|exact inventory item name when action is Consume| actor to teleport when action is TeleportNPC| actor to receive spawned gold when action is SpawnGold| actor to receive the spawned item when action is SpawnItem| SNQE NPC template key when action is SpawnNPC| actor to kill when action is KillTarget| short creation brief when action is CreateNewNPC| short freeform director brief when action is DirectorCommand. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target. Also used for specifying destination when using Travel_To"
                         ),
                         "item" => array(
                             "type" => "string",

@@ -1267,7 +1267,8 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         }
     }
 
-    $sqlfilter=" and (type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction','infoaction','death','itemfound','innerchat') or (type='chat' and COALESCE(delivery_state,'spoken')='spoken' and data like '(Context%') )";  // Use prechat
+    $visibleChatStateSql = chimBuildChatDeliveryStateSql('delivery_state');
+    $sqlfilter=" and (type in ('prechat','inputtext','ginputtext','infonpc','infonpc_close','logaction','infoaction','death','itemfound','innerchat') or (type='chat' and {$visibleChatStateSql} and data like '(Context%') )";  // Use prechat
     // chat entries starting by "(Context%" are standard skyrim dialogue
 
     $FUNCTIONS_ARE_ENABLED=false;       // Enabling this can be funny => CHAOS MODE
@@ -1433,8 +1434,10 @@ if ($gameRequest[0] == "narrator_quest_comment") {
 if ($MUST_END) {  // Shorthand for non LLM processing
     echo 'X-CUSTOM-CLOSE'.PHP_EOL;
     if (!getenv("PHPUNIT_TEST")) {
-        @ob_end_flush();
-        @flush();
+        if (ob_get_length() !== false) {
+            @ob_end_flush();
+            @flush();
+        }
     }    
     if (microtime(true) - $startTime > 0.5) {
         error_log("*TRACE EARLY END SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
@@ -1664,10 +1667,15 @@ $hasAuthoritativeRequestAudience = (
     in_array($gameRequest[0] ?? "", $playerInputEventTypes, true) &&
     $requestAudienceSnapshot !== ""
 );
+$resolvedRechatPeople = "";
+if (($gameRequest[0] ?? "") === "rechat" && isset($GLOBALS["RECHAT_RESOLVED_TARGET"])) {
+    $resolvedRechatPeople = (string)($GLOBALS["RECHAT_RESOLVED_TARGET"]["people_pipe"] ?? "");
+}
+$authoritativePeople = $hasAuthoritativeRequestAudience ? $requestAudienceSnapshot : $resolvedRechatPeople;
 
-if ($hasAuthoritativeRequestAudience) {
-    $GLOBALS["CACHE_PEOPLE"] = $requestAudienceSnapshot;
-    Logger::info("Scoped CACHE_PEOPLE for {$gameRequest[0]} from request audience snapshot: " . $GLOBALS["CACHE_PEOPLE"]);
+if ($authoritativePeople !== "") {
+    $GLOBALS["CACHE_PEOPLE"] = $authoritativePeople;
+    Logger::info("Scoped CACHE_PEOPLE for {$gameRequest[0]}: " . $GLOBALS["CACHE_PEOPLE"]);
 } else {
     $scopedPeople = buildScopedPeopleForEvent(
         $gameRequest[0] ?? "",
@@ -1728,9 +1736,9 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
     }
     
     if ($shouldLog) {
-        if ($hasAuthoritativeRequestAudience) {
-            $eventPeople = $requestAudienceSnapshot;
-            $GLOBALS["CACHE_PEOPLE"] = $requestAudienceSnapshot;
+        if ($authoritativePeople !== "") {
+            $eventPeople = $authoritativePeople;
+            $GLOBALS["CACHE_PEOPLE"] = $authoritativePeople;
         } else {
             $eventPeople = buildScopedPeopleForEvent(
                 $gameRequest[0] ?? "",
@@ -2225,34 +2233,15 @@ if ($gameRequest[0] === "vision") {
 // Ensure actions and nearby sections are added to PROMPT_HEAD before building system prompt
 require_once(__DIR__.DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
 
-if ($gameRequest[0] === "narrator_inputtext") {
-    Logger::warn("[NARRATOR_DEBUG][MAIN][POST_JSON_REQUIRE] request={$gameRequest[0]} direct_flag=" . (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]) ? '1' : '0') . " herika=" . strval($GLOBALS["HERIKA_NAME"] ?? '') . " func_count=" . count(is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : []) . " prompt_actions_len=" . strlen(strval($GLOBALS["PROMPT_ACTIONS_LIST"] ?? '')) . " response_action=" . trim(strval($GLOBALS["responseTemplate"]["action"] ?? '')));
-}
-
-$narratorActionList = array_values(array_filter(
-    is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : [],
-    function ($value) {
-        return trim(strval($value)) !== "";
-    }
-));
-$narratorHasOnlyTalkAction = count($narratorActionList) === 1 && strcasecmp($narratorActionList[0], "Talk") === 0;
-
 if (
     $gameRequest[0] === "narrator_inputtext"
     && function_exists('chimEnsureNarratorJsonResponseState')
     && (
-        empty($GLOBALS["PROMPT_ACTIONS_LIST"])
-        || empty($GLOBALS["FUNC_LIST"])
-        || trim(strval($GLOBALS["responseTemplate"]["action"] ?? "")) === ""
-        || $narratorHasOnlyTalkAction
-        || trim(strval($GLOBALS["responseTemplate"]["action"] ?? "")) === "Talk"
+        !function_exists('chimNarratorJsonResponseNeedsRefresh')
+        || chimNarratorJsonResponseNeedsRefresh()
     )
 ) {
     chimEnsureNarratorJsonResponseState('JSON_RESPONSE');
-}
-
-if ($gameRequest[0] === "narrator_inputtext") {
-    Logger::warn("[NARRATOR_DEBUG][MAIN][POST_REFRESH_CHECK] request={$gameRequest[0]} direct_flag=" . (!empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"]) ? '1' : '0') . " herika=" . strval($GLOBALS["HERIKA_NAME"] ?? '') . " func_count=" . count(is_array($GLOBALS["FUNC_LIST"] ?? null) ? $GLOBALS["FUNC_LIST"] : []) . " prompt_actions_len=" . strlen(strval($GLOBALS["PROMPT_ACTIONS_LIST"] ?? '')) . " response_action=" . trim(strval($GLOBALS["responseTemplate"]["action"] ?? '')));
 }
 
 // Build nearby sections string
@@ -2461,7 +2450,7 @@ if ($gameRequest[0] == "funcret") {
 }
 
 
-if (microtime(true) - $startTime > 0.5) {
+if (microtime(true) - $startTime > 0.25) {
     error_log("*TRACE SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
     error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." secs building call");
 }

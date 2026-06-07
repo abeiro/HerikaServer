@@ -25,3 +25,7 @@ gamets: skyrim internal time. starts at 10'000'000 on save game creation
 localts: unix timestamp of the server
 ts: no idea, but I am pretty sure it's coming from Skyrim
 
+## PR Submissions
+
+Building AI systems is complex, and changes can unintentionally affect other connected systems. Before opening a pull request, follow the repository PR template and make sure the change has been discussed with either `RANGROO` or `tyler.maister` in Discord. When adding new features, prefer making them optional or toggleable where practical.
+

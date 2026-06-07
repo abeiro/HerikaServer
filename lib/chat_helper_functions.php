@@ -18,6 +18,10 @@ function callConfiguredTts($textString, $mood, $stringforhash)
         return false;
     }
 
+    if (strcasecmp($ttsFunction, 'none') === 0) {
+        return false;
+    }
+
     $specialFiles = [
         'stylettsv2' => __DIR__ . "/../tts/tts-stylettsv2-2.php",
     ];
@@ -58,7 +62,11 @@ function canRetryNpcTtsWithFallback(): bool
 function callNpcTtsWithFallback($textString, $mood, $stringforhash)
 {
     $ttsOutput = callConfiguredTts($textString, $mood, $stringforhash);
-    if ($ttsOutput || !canRetryNpcTtsWithFallback()) {
+    if ($ttsOutput) {
+        return $ttsOutput;
+    }
+
+    if (!canRetryNpcTtsWithFallback()) {
         return $ttsOutput;
     }
 
@@ -248,7 +256,9 @@ function cleanResponse($rawResponse)
 }
 
 // replace findDotPosition with first EOS split detection - same logic as split_at_end_of_sentence
-function findFastSentencePosition($s_string) {
+// This sentence will never be splitted: "It is, my Thane. The crisp air here is better than the soot of Whiterun. I've been honing my blade since dawn."
+
+function findFastSentencePosition($s_string,$min_sentence_size=0) {
     // Find the position of the first sentence-ending punctuation followed by a space
     // This preserves ellipsis (...) because we require a space after the punctuation
     $eosPunc = preg_quote(getEndOfSentencePunctuation(), '/'); // .?!。？！
@@ -266,6 +276,10 @@ function findFastSentencePosition($s_string) {
             // Use the end of the matched punctuation so that multi-byte characters
             // (e.g. Japanese 。！？ which are 3 bytes in UTF-8) are not split mid-character.
             $endPosition = $position + strlen($match[0]) - 1;
+            if ($min_sentence_size > 0 && $endPosition <= $min_sentence_size) {
+                continue;
+            }
+
             $candidate = substr($s_string, 0, $endPosition + 1);
             if (hasUnclosedSingleAsteriskBlock($candidate)) {
                 continue;
@@ -1693,7 +1707,7 @@ function returnLines($lines,$writeOutput=true)
             $originalRequest[3]="{$outBuffer["actor"]}: $responseForContext $addonlistener";
             $originalRequest[5] = [
                 'utterance_id' => $GLOBALS["SCRIPTLINE_UTTERANCE_ID"] ?? chimGenerateUtteranceId(),
-                'delivery_state' => 'pending'
+                'delivery_state' => 'emitted'
             ];
             logEvent($originalRequest);
         }
@@ -2310,6 +2324,7 @@ function getGametsLimitFor($actor) {
     $actorEscaped = $db->escape($actor);
     $limit = (int) $GLOBALS["CONTEXT_HISTORY"];
 
+    $visibleChatStateSql = chimBuildChatDeliveryStateSql('delivery_state');
     $query = "
         SELECT 
             (MAX(gamets) - MIN(gamets)) * 0.0000024 AS hour_threshold
@@ -2317,7 +2332,7 @@ function getGametsLimitFor($actor) {
             SELECT gamets 
             FROM eventlog 
             WHERE type='chat'
-            AND COALESCE(delivery_state, 'spoken')='spoken'
+            AND {$visibleChatStateSql}
             and people LIKE '%$actorEscaped%'
             ORDER BY gamets DESC
             LIMIT $limit
@@ -3057,8 +3072,6 @@ function chimParseServerSideRechatPayload($rawData)
         "listener_hint" => "",
         "rechat_target_hint" => "",
         "origin_line" => trim((string)$rawData),
-        "audience" => [],
-        "chain_members" => [],
         "rechat_depth" => 0,
         "chain_id" => "",
     ];
@@ -3088,51 +3101,11 @@ function chimParseServerSideRechatPayload($rawData)
     if (!empty($decoded["rechat_depth"])) {
         $payload["rechat_depth"] = max(0, intval($decoded["rechat_depth"]));
     }
-    if (!empty($decoded["audience"]) && is_array($decoded["audience"])) {
-        $payload["audience"] = chimNormalizeRechatActorList($decoded["audience"]);
-    }
-    if (!empty($decoded["chain_members"]) && is_array($decoded["chain_members"])) {
-        $payload["chain_members"] = chimNormalizeRechatActorList($decoded["chain_members"]);
-    }
     if (!empty($decoded["chain_id"])) {
         $payload["chain_id"] = trim((string)$decoded["chain_id"]);
     }
 
     return $payload;
-}
-
-function chimGetLatestSpeechRechatContext($speakerName)
-{
-    global $db;
-
-    $speakerName = normalizeDialogueListenerName($speakerName);
-    if ($speakerName === "") {
-        return [
-            "listener" => "",
-            "audience" => [],
-        ];
-    }
-
-    $escapedSpeaker = $db->escape($speakerName);
-    $row = $db->fetchOne(
-        "SELECT listener, companions
-         FROM speech
-         WHERE speaker = '{$escapedSpeaker}'
-         ORDER BY rowid DESC
-         LIMIT 1"
-    );
-
-    if (!$row) {
-        return [
-            "listener" => "",
-            "audience" => [],
-        ];
-    }
-
-    return [
-        "listener" => normalizeDialogueListenerName($row["listener"] ?? ""),
-        "audience" => chimExtractPeopleListFromPipeString($row["companions"] ?? ""),
-    ];
 }
 
 function chimResolveServerSideRechatTarget(array $payload)
@@ -3141,36 +3114,45 @@ function chimResolveServerSideRechatTarget(array $payload)
     $listenerHint = normalizeDialogueListenerName($payload["listener_hint"] ?? "");
     $rechatTargetHint = normalizeDialogueListenerName($payload["rechat_target_hint"] ?? "");
     $configuredRechatMode = chimGetRechatMode();
-    $speechContext = chimGetLatestSpeechRechatContext($speakerName);
 
-    if ($listenerHint === "" && !empty($speechContext["listener"])) {
-        $listenerHint = $speechContext["listener"];
+    $peoplePipe = "";
+    foreach ([$rechatTargetHint, $listenerHint] as $scopeTarget) {
+        if ($scopeTarget === "") {
+            continue;
+        }
+        $peoplePipe = lookupConversationPeopleSourceOfTruth($speakerName, $scopeTarget);
+        if ($peoplePipe !== "") {
+            break;
+        }
     }
+    $audience = chimExtractPeopleListFromPipeString($peoplePipe);
 
-    $audience = chimNormalizeRechatActorList(array_merge(
-        $payload["audience"] ?? [],
-        $payload["chain_members"] ?? [],
-        $speechContext["audience"] ?? []
-    ));
     $rechatMode = chimResolveEffectiveRechatMode($configuredRechatMode, array_merge(
         [$speakerName, $listenerHint, $rechatTargetHint],
         $audience
     ));
 
     $candidates = [];
-    if ($rechatMode === "tight") {
-        if ($listenerHint !== "") {
-            $candidates[] = $listenerHint;
-        }
-    } elseif ($rechatMode === "conversational") {
-        if ($rechatTargetHint !== "") {
-            $candidates[] = $rechatTargetHint;
-        }
-        if ($listenerHint !== "") {
-            $candidates[] = $listenerHint;
+    $addCandidate = function ($candidateName) use (&$candidates, $audience) {
+        $candidateName = normalizeDialogueListenerName($candidateName);
+        if ($candidateName === "") {
+            return;
         }
         foreach ($audience as $audienceName) {
-            $candidates[] = $audienceName;
+            if (strcasecmp($candidateName, $audienceName) === 0) {
+                $candidates[] = $candidateName;
+                return;
+            }
+        }
+    };
+
+    if ($rechatMode === "tight") {
+        $addCandidate($listenerHint);
+    } elseif ($rechatMode === "conversational") {
+        $addCandidate($rechatTargetHint);
+        $addCandidate($listenerHint);
+        foreach ($audience as $audienceName) {
+            $addCandidate($audienceName);
         }
     } else {
         foreach ($audience as $audienceName) {
@@ -3180,16 +3162,12 @@ function chimResolveServerSideRechatTarget(array $payload)
             if ($listenerHint !== "" && strcasecmp($audienceName, $listenerHint) === 0) {
                 continue;
             }
-            $candidates[] = $audienceName;
+            $addCandidate($audienceName);
         }
-        if ($rechatTargetHint !== "") {
-            $candidates[] = $rechatTargetHint;
-        }
-        if ($listenerHint !== "") {
-            $candidates[] = $listenerHint;
-        }
+        $addCandidate($rechatTargetHint);
+        $addCandidate($listenerHint);
         foreach ($audience as $audienceName) {
-            $candidates[] = $audienceName;
+            $addCandidate($audienceName);
         }
     }
 
@@ -3223,7 +3201,7 @@ function chimResolveServerSideRechatTarget(array $payload)
         "listener_hint" => $listenerHint,
         "rechat_target_hint" => $rechatTargetHint,
         "audience" => $audience,
-        "chain_members" => chimNormalizeRechatActorList($payload["chain_members"] ?? []),
+        "people_pipe" => $peoplePipe,
         "candidates" => $candidates,
         "selected" => $selected,
         "mode" => $rechatMode,
@@ -3240,13 +3218,10 @@ function chimBuildServerSideRechatSessionKey(array $resolvedTarget)
         return md5("chain_" . $chainId);
     }
 
-    $members = $resolvedTarget["chain_members"] ?? [];
-    if (empty($members)) {
-        $members = array_merge(
-            [$resolvedTarget["speaker"] ?? "", $resolvedTarget["listener_hint"] ?? "", $resolvedTarget["rechat_target_hint"] ?? ""],
-            $resolvedTarget["audience"] ?? []
-        );
-    }
+    $members = array_merge(
+        [$resolvedTarget["speaker"] ?? "", $resolvedTarget["listener_hint"] ?? "", $resolvedTarget["rechat_target_hint"] ?? ""],
+        $resolvedTarget["audience"] ?? []
+    );
 
     $members = chimNormalizeRechatActorList($members);
     sort($members, SORT_NATURAL | SORT_FLAG_CASE);
@@ -3507,6 +3482,46 @@ function extractCoreUtteranceFromChatEvent($eventData)
 
     $eventData = preg_replace('/\s*\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+[^)]*\)\s*$/iu', '', $eventData);
     return trim((string)$eventData);
+}
+
+function chimGetVisibleChatDeliveryStates()
+{
+    return ['emitted', 'spoken'];
+}
+
+function chimGetInFlightChatDeliveryStates()
+{
+    return ['pending', 'emitted'];
+}
+
+function chimBuildChatDeliveryStateSql($column = 'delivery_state', array $states = null, $legacyDefault = 'spoken')
+{
+    $column = trim((string)$column);
+    if ($column === '') {
+        $column = 'delivery_state';
+    }
+
+    if ($states === null) {
+        $states = chimGetVisibleChatDeliveryStates();
+    }
+
+    $normalizedStates = array_values(array_unique(array_filter(array_map(static function ($state) {
+        return trim((string)$state);
+    }, $states))));
+    if (empty($normalizedStates)) {
+        $normalizedStates = ['spoken'];
+    }
+
+    $legacyDefault = trim((string)$legacyDefault);
+    if ($legacyDefault === '') {
+        $legacyDefault = 'spoken';
+    }
+
+    $quotedStates = array_map(static function ($state) {
+        return "'" . str_replace("'", "''", $state) . "'";
+    }, $normalizedStates);
+
+    return "COALESCE({$column}, '{$legacyDefault}') IN (" . implode(', ', $quotedStates) . ")";
 }
 
 function lookupSpatialCompanionsFromSpeech($speakerName, $listenerName = "", $utterance = "")
@@ -4148,7 +4163,6 @@ function lookupConversationPeopleSourceOfTruth($speakerName, $targetName, $maxAg
         return "";
     }
 
-    $fallbackPipe = "";
     foreach ($rows as $row) {
         $rowType = strtolower((string)($row["type"] ?? ""));
         $rowData = (string)($row["data"] ?? "");
@@ -4196,28 +4210,10 @@ function lookupConversationPeopleSourceOfTruth($speakerName, $targetName, $maxAg
             continue;
         }
 
-        $hasExtraAudience = false;
-        foreach ($rowNames as $audienceName) {
-            $audienceNormalized = normalizeActorNameForComparison($audienceName);
-            if ($audienceNormalized === "" || $audienceNormalized === "the narrator") {
-                continue;
-            }
-            if ($audienceNormalized !== $speakerNormalized && $audienceNormalized !== $targetNormalized) {
-                $hasExtraAudience = true;
-                break;
-            }
-        }
-
-        if ($hasExtraAudience) {
-            return $candidatePipe;
-        }
-
-        if ($fallbackPipe === "") {
-            $fallbackPipe = $candidatePipe;
-        }
+        return $candidatePipe;
     }
 
-    return $fallbackPipe;
+    return "";
 }
 
 function buildScopedPeopleFromSpatialEvidence($eventType, $eventData, $listenerName, $fallbackPeople = "")

@@ -9,23 +9,47 @@ $GLOBALS["SCRIPTLINE_EXPRESSION"] = "";
 $GLOBALS["SCRIPTLINE_LISTENER"] = "";
 $GLOBALS["SCRIPTLINE_ANIMATION"] = "";
 
+/** Conversion factor: in-game time units (gamets) → real hours */
+define('GAMETS_TO_HOURS', 0.0000024);
+
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-$file = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . 'CurrentModel_.json';
+
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "rolemaster_helpers.php";
 $GLOBALS["ENGINE_PATH"] = $enginePath;
 
-$db = new sql();
+
+// ─── Includes ─────────────────────────────────────────────────────────────────
+
+require_once $enginePath . 'lib/runtime_bootstrap.php';
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
+require_once $enginePath . 'lib/model_dynmodel.php';
+require_once $enginePath . 'lib/chat_helper_functions.php';
+require_once $enginePath . 'lib/data_functions.php';
+require_once $enginePath . 'lib/logger.php';
+require_once $enginePath . 'lib/utils_game_timestamp.php';
+require_once $enginePath . 'lib/rolemaster_helpers.php';
+require_once $enginePath . 'lib/scriptproxy_papyrus.php';
+require_once $enginePath . 'lib/core/player.class.php';
+require_once $enginePath . 'lib/core/npc_master.class.php';
+require_once $enginePath . 'lib/core/api_badge.class.php';
+require_once $enginePath . 'lib/core/core_profiles.class.php';
+require_once $enginePath . 'lib/core/llm_connector.class.php';
+require_once $enginePath . 'lib/core/tts_connector.class.php';
+require_once $enginePath . 'lib/lazy_xml.php';
+require_once $enginePath . 'debug/background_action_handler.php';
+
+// ─── Database ─────────────────────────────────────────────────────────────────
+
+$db = $GLOBALS["db"];
+
 
 // Load PLAYER_NAME from core_player table
 try {
@@ -49,11 +73,7 @@ try {
     }
 }
 
-require_once $enginePath . "lib/core/npc_master.class.php";
-require_once $enginePath . "lib/core/api_badge.class.php";
-require_once $enginePath . "lib/core/core_profiles.class.php";
-require_once $enginePath . "lib/core/llm_connector.class.php";
-require_once $enginePath . "lib/core/tts_connector.class.php";
+
 
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "lazy_xml.php";
 require_once $enginePath . "debug" . DIRECTORY_SEPARATOR . "background_action_handler.php";
@@ -177,10 +197,14 @@ if (($last_gamets - $lastItNumber) < ((24 * 3) / 0.0000024)) {
 
     if (isset($argv[2]) && $argv[2] == "forceletter")
         error_log("[BACKGROUND LIFE] $npcNameEsc Last iteration less than 3 days ago...bypassing by forceletter");
-    if (isset($argv[3]) && $argv[3] == "forceaction")
+    
+    else if (isset($argv[3]) && $argv[3] == "forceaction")
         error_log("[BACKGROUND LIFE] $npcNameEsc Last iteration less than 3 days ago...bypassing by forceaction");
-    else
+    else {
+        error_log("[BACKGROUND LIFE] $npcNameEsc Last iteration less than 3 days ago...suspended: ".implode("|",$argv));
         return;
+    }
+        
 }
 
 $task = "";

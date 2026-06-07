@@ -369,7 +369,7 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
         $factionsArray[] = $faction["formid"];
     }
     $vendorFactionsNpcBelongs = $db->fetchAll("SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
-        formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null");
+        formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
 
     if ($vendorFactionsNpcBelongs) {
         foreach ($vendorFactionsNpcBelongs as $vendorFaction) {
@@ -425,8 +425,11 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             $factionsArray[] = $faction["formid"];
         }
         $vendorFactionsNpcBelongs = $db->fetchAll("SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
-         formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null");
+         formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
 
+        error_log("[handleFindNPCAction] Query to obtain vendor faction chest: SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
+         formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
+         
         if ($vendorFactionsNpcBelongs) {
             $stockString = " $resolvedName seems to be a trader, use action SpeakTo to dialogue and obtain his stock information. ";
 
@@ -541,9 +544,12 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
         $factionsArray[] = $faction["formid"];
     }
     $vendorFactionsNpcBelongs = $db->fetchAll("SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
-        formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null");
+        formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
 
-    if ($vendorFactionsNpcBelongs) {
+    error_log("[handleSpeakToAction] Query to obtain vendor faction chest: SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
+        formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'" );
+
+    if ($vendorFactionsNpcBelongs && sizeof($vendorFactionsNpcBelongs) > 0  ) {
         $stockString = " $resolvedName seems to be a trader, selling: ";
         foreach ($vendorFactionsNpcBelongs as $vendorFaction) {
             $stockString .= " {$vendorFaction['stock']}.";

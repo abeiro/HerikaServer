@@ -611,7 +611,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 if (isset($currentNpcData["core"]) && !empty($currentNpcData["core"])) {
                     // NPC name should always be at core section.
                     $npcName = $currentNpcData["npc_name"];
-                    
+                    error_log("[DataLastInfoFor] Actors around, Checking NPC Name: " . $npcName." actors in range: ".$actorsInRangeList);
                     // Format gender (capitalize first letter)
                     $gender = !empty($currentNpcData["gender"]) ? ucfirst(strtolower(trim($currentNpcData["gender"]))) : "";
                     $race = !empty($currentNpcData["race"]) ? trim($currentNpcData["race"]) : "";
@@ -742,8 +742,10 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     $actorDetailedListWithProfile[] = $profileString;
 
                 }
-                else
-                    $actorDetailedListWithProfile[]="$ittext";
+                else {
+                    error_log("[DataLastInfoFor] Actors around, Checking NPC Name: " . $ittext. " with no profile data, actors in range: ".$actorsInRangeList);
+                    $actorDetailedListWithProfile[] = $ittext;
+                }
                 
             }
         }
@@ -1015,6 +1017,19 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<scene_notes>\n# SCENE NOTES \n## ".implode(".",$notes)."</scene_notes>";
     }
         
+    // This is intended to give info about nearby actors, ALL actors (dead ones included).
+
+    $nearbyActors=DataBeingsOrDeathsInRangeExcluding("",true);
+    $nearbyActorsList="";
+    if ($nearbyActors) {
+        foreach (explode("|",$nearbyActors) as $k=>$v) {
+            $nearbyActor=trim($v);
+            if (!empty($nearbyActor))
+                $nearbyActorsList.=",$nearbyActor";
+        }
+        $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<actors_nearby>\n$nearbyActorsList</actors_nearby>";
+    }
+    
 
     $lastDialog=[];
     // This function originally returned an array, now it's directly filling PROMPT_NEARBY_SECTIONS.
@@ -1924,6 +1939,8 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         $actorEscaped='';
     //$playerEscaped=$db->escape($GLOBALS["PLAYER_NAME"]);
 
+    $visibleChatStateSql = chimBuildChatDeliveryStateSql('delivery_state');
+
     $query="select  
     case 
       when type='infoaction' and a.data like '#%MEMORY%' then 'MEMORY'
@@ -1958,7 +1975,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     and type<>'infonpc_close' and type<>'instruction'
     and type<>'request' and type<>'playerinfo' and type<>'im_alive' and type<>'region' and type<>'named_cell'
     AND type<>'narrator_welcome'
-    and (type<>'chat' or COALESCE(delivery_state, 'spoken')='spoken')
+    and (type<>'chat' or {$visibleChatStateSql})
     AND type<>'funccall' AND type<>'togglemodel'
     {$removeBooks} {$sqlfilter} {$ext_sqlfilter1}
     ".(($b_actor) ? "
@@ -2596,16 +2613,16 @@ function DataLastDataExpandedFor($actor, $lastNelements = -10,$sqlfilter="")
     $localStartTime=microtime(true);
 
     $ctx1=buildHistoricContext($actor, $lastNelements ,$sqlfilter);    
-    //error_log("[buildHistoricContext] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
+    error_log("[buildHistoricContext] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
 
 
     $ctx2=compactHistoricContext($ctx1,$actor,false);  // Don't compact Context Info
 
-    //error_log("[compactHistoricContext] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
+    error_log("[compactHistoricContext] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
 
     $ctx3=replaceRoles($ctx2,$actor,$lastNelements);
       
-    //error_log("[replaceRoles] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
+    error_log("[replaceRoles] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
 
     // Cases of self rechat
     if ((sizeof($ctx3)>3)&&(($GLOBALS["gameRequest"][3] ?? "")=="rechat")) {
@@ -3923,6 +3940,7 @@ function DataBeingsOrDeathsInRangeExcluding($excludeNPC="", $excludePlayer=true)
     $beingsArrayNew=[];
     if (!$excludePlayer)
         $beingsArrayNew[]="{$GLOBALS["PLAYER_NAME"]}";  // Add player to beings in range
+
     foreach ($beingsArray as $k=>$v) {
         if (strpos($v,")")!==0) {
             if (strpos($v,"Horse")!==0) 
@@ -4926,7 +4944,6 @@ function call_llm_internal() {
                 && strpos($contextData[0]["content"], '<available_actions_list>') === false
             ) {
                 $contextData[0]["content"] .= "\n" . $GLOBALS["PROMPT_ACTIONS_LIST"];
-                Logger::warn("[NARRATOR_DEBUG][DATA_FUNCTIONS][FAST_STANDARD_CONTEXT] injected available_actions_list into narrator system prompt");
             }
         }
 
@@ -5252,7 +5269,7 @@ function call_llm_internal() {
             continue;
         }
 
-        $position = findFastSentencePosition($buffer);
+        $position = findFastSentencePosition($buffer,$INCREMENTAL_SENTENCESIZE);
 
         //echo "<$buffer>".PHP_EOL;
         if (($position !== false) && ($gameRequest[0] === "narration" || $position>$INCREMENTAL_SENTENCESIZE)) {
@@ -6997,7 +7014,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
         error_log("[SNQE] Current quest data for quest_id {$extendedData["starring_in_quest"]}: {$quest["briefing"]}");
         if ($quest) {
             $questData = json_decode($quest["quest_data"], true);
-            $dynamicBio .= "\n<storyline_starring>\n#Current Quest\nYou are currently starring in the quest: {$questData["briefing"]} \n</storyline_starring>";
+            $dynamicBio .= "\n<storyline_starring>\n#Current Quest\nYou are currently starring in the quest:{$quest["title"]}\n{$questData["briefing"]} \n</storyline_starring>";
 
             // Find this NPC's key in the quest npcs list by matching name
             $thisNpcKey = null;
