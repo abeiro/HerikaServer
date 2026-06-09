@@ -146,14 +146,7 @@ if (!function_exists('chimTtsStudioResolveEndpointForDriver')) {
 
         $row = chimTtsStudioResolveConnectorRow($driver);
         if (is_array($row)) {
-            $metadata = $ttsConnector->decodeMetadata($row['metadata'] ?? '{}');
-            foreach (['endpoint', 'url', 'URL'] as $key) {
-                if (!empty($metadata[$key])) {
-                    return normalize_endpoint_url(strval($metadata[$key]));
-                }
-            }
-
-            $rowUrl = trim(strval($row['url'] ?? ''));
+            $rowUrl = $ttsConnector->resolveConnectorUrl($row);
             if ($rowUrl !== '') {
                 return normalize_endpoint_url($rowUrl);
             }
