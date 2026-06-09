@@ -243,7 +243,7 @@ function herikaResolveSpawnItemDescriptionMatch($requestedItemName)
     }
 
     $escapedName = $GLOBALS["db"]->escape($requestedItemName);
-    $buildCandidates = function ($rows, $reason) {
+    $buildCandidates = function ($rows, $reason,) use ($requestedItemName) {
         $candidates = [];
         foreach ((array) $rows as $row) {
             if (!is_array($row)) {
@@ -2417,6 +2417,7 @@ function queueFunctionExecutionCommand(&$commandBuffer, &$alreadySent, $executio
     }
 
     if (!empty($executionContext["has_required_parameters"]) && !empty($executionContext["parameter_is_empty"])) {
+        Logger::warn("{$connectorName}: Missing required parameter(s) for " . strval($executionContext["function_code_name"] ?? $actionName) . ": " . implode(", ", $missingRequired));
         return false;
     }
 

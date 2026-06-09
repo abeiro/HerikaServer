@@ -1853,6 +1853,7 @@ function herikaActionCatalogRowMatchesRequirements($row, $context = null)
 
     $cooldownSeconds = intval($metadata['cooldown_seconds'] ?? 0);
     if ($cooldownSeconds > 0 && herikaActionCatalogIsActionOnCooldown($row['code_name'] ?? '', $cooldownSeconds)) {
+        error_log("[FUNCTIONS COOLDOWN] Action '{$row['code_name']}' is on cooldown for {$cooldownSeconds} seconds.");
         return false;
     }
 

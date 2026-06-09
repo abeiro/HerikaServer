@@ -636,7 +636,7 @@ $refHexString = convertSignedToUnsignedHex(hexdec($currentNpcData['refid']));
 $recordDiaryEntry=true;
 if (!empty($parsed['action'])) {
     [$actionCmd, $actionArg] = array_pad(explode(':', $parsed['action'], 2), 2, null);
-
+    error_log("[BGL] Chosen action: $actionCmd, argument: $actionArg");
     switch ($actionCmd) {
         case 'TravelTo':
             handleTravelToAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $lastEventParsed, $db);
