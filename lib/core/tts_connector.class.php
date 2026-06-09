@@ -807,7 +807,7 @@ class TTSConnector
     private function resolveUrlFromMetadata(array $metadata): string
     {
         foreach (['endpoint', 'url', 'URL'] as $key) {
-            if (isset($metadata[$key]) && trim(strval($metadata[$key])) !== '') {
+            if (isset($metadata[$key]) && is_scalar($metadata[$key]) && trim(strval($metadata[$key])) !== '') {
                 return trim(strval($metadata[$key]));
             }
         }

@@ -148,7 +148,7 @@ if (!function_exists('chimTtsStudioResolveEndpointForDriver')) {
         if (is_array($row)) {
             $metadata = $ttsConnector->decodeMetadata($row['metadata'] ?? '{}');
             foreach (['endpoint', 'url', 'URL'] as $key) {
-                if (!empty($metadata[$key])) {
+                if (!empty($metadata[$key]) && is_scalar($metadata[$key])) {
                     return normalize_endpoint_url(strval($metadata[$key]));
                 }
             }
