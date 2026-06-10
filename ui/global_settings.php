@@ -917,6 +917,174 @@ h1.gs-title {
     background: rgba(56, 56, 56, 0.98);
 }
 
+.global-test-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    background: rgba(0, 0, 0, 0.74);
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.global-test-shell {
+    width: min(960px, 96vw);
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: #1e1e1e;
+    border: 1px solid #4a4a4a;
+    border-radius: 14px;
+    color: #e9efff;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+
+.global-test-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    border-bottom: 1px solid #343434;
+}
+
+.global-test-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: rgb(242, 124, 17);
+}
+
+.global-test-subtitle {
+    color: #9fb1c9;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.global-test-body {
+    overflow: auto;
+    padding: 16px 20px 20px;
+}
+
+.global-test-summary {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.global-test-card {
+    background: #262626;
+    border: 1px solid #393939;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.global-test-card .num {
+    font-size: 20px;
+    font-weight: 800;
+    color: #fff;
+}
+
+.global-test-card .lbl {
+    color: #9fb1c9;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.global-test-progress {
+    height: 8px;
+    background: #2e2e2e;
+    border-radius: 99px;
+    overflow: hidden;
+    border: 1px solid #3c3c3c;
+    margin-bottom: 14px;
+}
+
+.global-test-progress > div {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, rgb(242, 124, 17), #ffd089);
+    transition: width 0.2s ease;
+}
+
+.global-test-group {
+    border: 1px solid #383838;
+    border-radius: 10px;
+    background: #242424;
+    overflow: hidden;
+}
+
+.global-test-group-title {
+    padding: 10px 12px;
+    background: #2a2a2a;
+    border-bottom: 1px solid #383838;
+    font-weight: 700;
+}
+
+.global-test-slots {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px;
+}
+
+.global-test-slot {
+    display: grid;
+    grid-template-columns: 150px 78px 1fr;
+    gap: 8px;
+    align-items: start;
+    border: 1px solid #363636;
+    background: #202020;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 12px;
+}
+
+.global-test-slot .slot-name {
+    color: #f0f4ff;
+    font-weight: 700;
+}
+
+.global-test-badge {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+}
+
+.global-test-badge.pending { color: #d7dfef; border-color: #626262; background: #333; }
+.global-test-badge.pass { color: #bdf4cb; border-color: #2f8050; background: #16351f; }
+.global-test-badge.warn { color: #ffe2a3; border-color: #9c6a18; background: #3f2c0d; }
+.global-test-badge.fail { color: #ffb6b6; border-color: #923232; background: #421616; }
+.global-test-badge.skipped { color: #9fb1c9; border-color: #465164; background: #252b35; }
+
+.global-test-message {
+    color: #cfd9ea;
+    overflow-wrap: anywhere;
+}
+
+.global-test-detail {
+    color: #8390a6;
+    margin-top: 3px;
+    overflow-wrap: anywhere;
+}
+
+.global-test-close {
+    background: #303030;
+    color: #e9efff;
+    border: 1px solid #555;
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
 @media (max-width: 1000px) {
     .provider-card {
         grid-template-columns: 1fr;
@@ -960,6 +1128,18 @@ h1.gs-title {
     .filter-modal-actions button {
         flex: 1 1 auto;
     }
+
+    .global-test-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .global-test-slots {
+        grid-template-columns: 1fr;
+    }
+
+    .global-test-slot {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 
@@ -968,6 +1148,7 @@ h1.gs-title {
         <div class="page-header-row">
             <h1 class="gs-title">Global Settings</h1>
             <div class="page-header-actions">
+                <button type="button" id="global_connector_test_btn" class="btn-save-green">Test Global Connectors</button>
                 <button type="submit" class="btn-save-green" name="save_all" value="1" form="gs_form">Save All</button>
             </div>
         </div>
@@ -1134,6 +1315,23 @@ h1.gs-title {
         </div>
     </form>
 
+    <div id="global-connector-test-modal" class="global-test-modal" aria-hidden="true">
+        <div class="global-test-shell" role="dialog" aria-modal="true" aria-labelledby="global-connector-test-title">
+            <div class="global-test-head">
+                <div>
+                    <div id="global-connector-test-title" class="global-test-title">Test Global Connectors</div>
+                    <div class="global-test-subtitle">Testing enabled global connector slots once, then applying shared connector results to every matching slot.</div>
+                </div>
+                <button type="button" id="global-connector-test-close" class="global-test-close">Close</button>
+            </div>
+            <div class="global-test-body">
+                <div id="global-connector-test-summary" class="global-test-summary"></div>
+                <div class="global-test-progress"><div id="global-connector-test-progress-fill"></div></div>
+                <div id="global-connector-test-results"></div>
+            </div>
+        </div>
+    </div>
+
     <div id="filterBrowseModal" class="filter-modal-backdrop" aria-hidden="true">
         <div class="filter-modal-panel" role="dialog" aria-modal="true" aria-labelledby="filterBrowseModalTitle">
             <div class="filter-modal-head">
@@ -1160,6 +1358,227 @@ h1.gs-title {
 </main>
 
 <script>
+(() => {
+    const apiUrl = <?php echo json_encode($webRoot . '/ui/api/profile_connector_tests.php', JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+    const modal = document.getElementById('global-connector-test-modal');
+    const openBtn = document.getElementById('global_connector_test_btn');
+    const closeBtn = document.getElementById('global-connector-test-close');
+    const summaryEl = document.getElementById('global-connector-test-summary');
+    const resultsEl = document.getElementById('global-connector-test-results');
+    const progressFill = document.getElementById('global-connector-test-progress-fill');
+    let cancelled = false;
+
+    if (!modal || !openBtn || !closeBtn || !summaryEl || !resultsEl || !progressFill) {
+        return;
+    }
+
+    function esc(value) {
+        return (value == null ? '' : String(value)).replace(/[&<>"']/g, c => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        }[c]));
+    }
+
+    function attr(value) {
+        return esc(value).replace(/`/g, '&#096;');
+    }
+
+    function statusLabel(status) {
+        const labels = { pass: 'Pass', warn: 'Warn', fail: 'Fail', skipped: 'Skipped', pending: 'Pending' };
+        return labels[String(status || '').toLowerCase()] || 'Pending';
+    }
+
+    function renderSummary() {
+        const counts = { pass: 0, warn: 0, fail: 0, skipped: 0, pending: 0 };
+        document.querySelectorAll('#global-connector-test-results .global-test-slot').forEach(slot => {
+            const status = String(slot.getAttribute('data-status') || 'pending').toLowerCase();
+            if (Object.prototype.hasOwnProperty.call(counts, status)) counts[status]++;
+            else counts.pending++;
+        });
+
+        summaryEl.innerHTML = [
+            ['pass', 'Passed'],
+            ['warn', 'Warnings'],
+            ['fail', 'Failed'],
+            ['skipped', 'Skipped'],
+            ['pending', 'Pending']
+        ].map(([key, label]) => `
+            <div class="global-test-card">
+                <div class="num">${counts[key]}</div>
+                <div class="lbl">${label}</div>
+            </div>
+        `).join('');
+    }
+
+    function setProgress(done, total) {
+        const safeTotal = Math.max(1, Number(total || 0));
+        const pct = Math.max(0, Math.min(100, Math.round((Number(done || 0) / safeTotal) * 100)));
+        progressFill.style.width = pct + '%';
+    }
+
+    function renderPlan(plan) {
+        const profiles = Array.isArray(plan.profiles) ? plan.profiles : [];
+        let html = '';
+
+        profiles.forEach(profile => {
+            html += `
+                <div class="global-test-group">
+                    <div class="global-test-group-title">${esc(profile.label || 'Global Connectors')}</div>
+                    <div class="global-test-slots">
+            `;
+            (profile.slots || []).forEach(slot => {
+                const status = slot.status || 'pending';
+                html += `
+                    <div class="global-test-slot" data-status="${attr(status)}" data-job-key="${attr(slot.job_key || '')}">
+                        <div class="slot-name">${esc(slot.label || slot.field || 'Connector')}</div>
+                        <div><span class="global-test-badge ${attr(status)}">${statusLabel(status)}</span></div>
+                        <div>
+                            <div class="global-test-message">${esc(slot.message || '')}</div>
+                            <div class="global-test-detail"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div></div>';
+        });
+
+        resultsEl.innerHTML = html || '<div class="global-test-card">No global connectors found.</div>';
+        renderSummary();
+    }
+
+    function detailFromResult(result) {
+        const details = result && result.details ? result.details : {};
+        const chunks = [];
+        if (details.label) chunks.push(details.label);
+        if (details.driver) chunks.push('driver: ' + details.driver);
+        if (details.model) chunks.push('model: ' + details.model);
+        if (details.url) chunks.push('url: ' + details.url);
+        if (Number(result.elapsed_ms || 0) > 0) chunks.push(String(result.elapsed_ms) + 'ms');
+        if (details.response_preview) chunks.push('response: ' + details.response_preview);
+        return chunks.join(' | ');
+    }
+
+    function applyJobResult(result) {
+        const jobKey = result && result.job_key ? String(result.job_key) : '';
+        if (!jobKey) return;
+
+        document.querySelectorAll('#global-connector-test-results .global-test-slot').forEach(slot => {
+            if (String(slot.getAttribute('data-job-key') || '') !== jobKey) return;
+            const status = String(result.status || 'fail').toLowerCase();
+            slot.setAttribute('data-status', status);
+
+            const badge = slot.querySelector('.global-test-badge');
+            if (badge) {
+                badge.className = 'global-test-badge ' + status;
+                badge.textContent = statusLabel(status);
+            }
+
+            const message = slot.querySelector('.global-test-message');
+            if (message) message.textContent = result.message || '';
+
+            const detail = slot.querySelector('.global-test-detail');
+            if (detail) detail.textContent = detailFromResult(result);
+        });
+
+        renderSummary();
+    }
+
+    async function fetchJson(url) {
+        const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
+        const text = await response.text();
+        let json = null;
+        try {
+            json = JSON.parse(text);
+        } catch (_error) {
+            throw new Error('Invalid JSON response: ' + text.slice(0, 160));
+        }
+
+        if (!response.ok || !json || json.ok !== true) {
+            throw new Error((json && json.error) ? json.error : ('HTTP ' + response.status));
+        }
+
+        return json;
+    }
+
+    async function testJob(job) {
+        const url = apiUrl + '?action=test&type=' + encodeURIComponent(job.type) + '&id=' + encodeURIComponent(job.id) + '&_=' + Date.now();
+        try {
+            const json = await fetchJson(url);
+            return json.result;
+        } catch (error) {
+            return {
+                job_key: String(job.type) + ':' + String(job.id),
+                type: job.type,
+                id: job.id,
+                status: 'fail',
+                message: error.message || 'Connector test failed',
+                details: {},
+                elapsed_ms: 0
+            };
+        }
+    }
+
+    async function runJobs(jobs) {
+        let completed = 0;
+        const total = jobs.length;
+        setProgress(0, total);
+        const queue = jobs.slice();
+        const workers = Array.from({ length: Math.min(2, Math.max(1, total)) }, async () => {
+            while (!cancelled && queue.length > 0) {
+                const job = queue.shift();
+                const result = await testJob(job);
+                applyJobResult(result);
+                completed++;
+                setProgress(completed, total);
+            }
+        });
+        await Promise.all(workers);
+    }
+
+    async function openGlobalConnectorTestModal() {
+        cancelled = false;
+        modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', 'false');
+        summaryEl.innerHTML = '';
+        resultsEl.innerHTML = '<div class="global-test-card">Building global connector test plan...</div>';
+        setProgress(0, 1);
+
+        try {
+            const planJson = await fetchJson(apiUrl + '?action=plan&scope=global&_=' + Date.now());
+            const plan = planJson.plan || {};
+            const jobs = Array.isArray(plan.jobs) ? plan.jobs : [];
+            renderPlan(plan);
+            if (jobs.length === 0) {
+                setProgress(1, 1);
+                return;
+            }
+            await runJobs(jobs);
+        } catch (error) {
+            resultsEl.innerHTML = '<div class="global-test-card"><span style="color:#ff9898;">' + esc(error.message || 'Failed to run global connector tests') + '</span></div>';
+            renderSummary();
+            setProgress(1, 1);
+        }
+    }
+
+    function closeGlobalConnectorTestModal() {
+        cancelled = true;
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    openBtn.addEventListener('click', openGlobalConnectorTestModal);
+    closeBtn.addEventListener('click', closeGlobalConnectorTestModal);
+    modal.addEventListener('click', event => {
+        if (event.target === modal) closeGlobalConnectorTestModal();
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && modal.style.display === 'flex') closeGlobalConnectorTestModal();
+    });
+})();
+
 const filterBrowseConfigs = <?php echo json_encode($filterBrowseFieldConfigs, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
 const filterBrowseEndpoint = <?php echo json_encode($webRoot . '/ui/api/filter_candidates.php', JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
 

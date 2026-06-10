@@ -165,6 +165,119 @@ a .bi-trash {
                 inset 0 1px rgba(255, 255, 255, 0.1);
 }
 
+/* Connector page button styles */
+.btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.btn-row .btn-save,
+.btn-row .btn-primary,
+.btn-row .btn-secondary,
+.btn-row .btn-danger,
+.btn-row .btn-cancel,
+.btn-row .modal-close {
+    margin: 0;
+}
+
+.btn-save,
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.btn-cancel,
+.modal-close,
+.connector-button {
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    border: 1px solid rgba(138, 155, 182, 0.35);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+    box-shadow: none;
+    transform: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-save,
+.connector-button.save {
+    background: linear-gradient(135deg, rgba(32, 122, 74, 0.9), rgba(23, 101, 57, 0.9));
+    color: #fff;
+}
+
+.btn-save:hover,
+.connector-button.save:hover {
+    background: linear-gradient(135deg, rgba(42, 142, 94, 0.95), rgba(32, 122, 74, 0.95));
+}
+
+.btn-primary,
+.connector-button.primary {
+    background: #204e7a;
+    color: #fff;
+}
+
+.btn-primary:hover,
+.connector-button.primary:hover {
+    background: #285c8f;
+}
+
+.btn-secondary,
+.btn-cancel,
+.modal-close,
+.connector-button.secondary {
+    background: #3a3a3a;
+    color: #fff;
+}
+
+.btn-secondary:hover,
+.btn-cancel:hover,
+.modal-close:hover,
+.connector-button.secondary:hover {
+    background: #4a4a4a;
+}
+
+.btn-danger,
+.connector-button.danger {
+    background: #8b0000;
+    color: #fff;
+    border-color: #660000;
+}
+
+.btn-danger:hover,
+.connector-button.danger:hover {
+    background: #a00000;
+}
+
+.btn-save:focus,
+.btn-primary:focus,
+.btn-secondary:focus,
+.btn-danger:focus,
+.btn-cancel:focus,
+.modal-close:focus,
+.connector-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(138, 155, 182, 0.18);
+}
+
+.btn-save:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled,
+.btn-cancel:disabled,
+.modal-close:disabled,
+.connector-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 /* Refresh button specific styles */
 .refresh-button {
     background-color: rgba(23, 162, 184, 0.8);
