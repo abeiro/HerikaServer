@@ -1100,6 +1100,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                                         <div class='modal-content'>
                                                             <span class='close-btn' onclick=\"closeModal('locationsModal')\">&times;</span>
                                                             <h3>Available Locations</h3>
+                                                            <p style='color: #aaa; margin-top: -6px;'>Sync locations in-game from CHIM MCM &gt; Tools.</p>
                                                             <table class='modal-table'>
                                                                 <tr><th>Name</th><th>FormID</th></tr>";
                                 foreach ($locationsData as $location) {
