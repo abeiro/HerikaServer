@@ -1435,7 +1435,7 @@ if (isset($_POST["animation"])) {
         echo '</tr></table>';
         echo '<br>';
         echo '<p>You can make your own plugin quite easily!</p>';
-        echo '<p><a href="https://dwemerdynamics.hostwiki.io/en/CHIM-Plugins" target="_blank">Check out our guide in the manual to learn how to make your own plugin.</a></p>';
+        echo '<p><a href="https://dwemerdynamics.com/chim/plugins.html" target="_blank">Check out our guide in the manual to learn how to make your own plugin.</a></p>';
         echo '</body>';
     }
 
