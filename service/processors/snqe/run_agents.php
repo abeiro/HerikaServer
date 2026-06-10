@@ -159,8 +159,13 @@ if ($mode === 'start_from_context') {
         if ($npc) {
             $npcMaster = new NpcMaster();
             $npcData = $npcMaster->getByName(trim($npc));
-            $npcDataExt = $npcMaster->getMetadata($npcData);
-            if (isset($npcDataExt["is_rolemastered"]) && $npcDataExt["is_rolemastered"]) {
+            $npcMetadata = $npcMaster->getMetadata($npcData);
+            if (herikaResolveNpcRolemasterState(trim($npc), [
+                'npc_data' => $npcData,
+                'metadata' => $npcMetadata,
+                'load_lookup' => false,
+                'use_global' => false,
+            ])) {
                 $rolemasteredNpcList[] = $npc;
             }
         }

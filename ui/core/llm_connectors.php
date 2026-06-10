@@ -969,7 +969,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         modal.style.cssText = 'position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.65); z-index:10000;';
         modal.innerHTML = `
             <div style="width:90%; max-width:1200px; height:80vh; background:#2a2a2a; border:1px solid #4a4a4a; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.6); position:relative; overflow:hidden;">
-                <button id=\"llmtest_close\" style=\"position:absolute; top:8px; right:10px; background:#3a3a3a; color:#fff; border:1px solid #4a4a4a; border-radius:6px; padding:4px 10px; cursor:pointer; z-index:3;\">Close</button>
+                <button id=\"llmtest_close\" class=\"btn-secondary\" style=\"position:absolute; top:8px; right:10px; z-index:3;\">Close</button>
                 <div id=\"llmtest_loading\" style=\"position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4); z-index:2;\">
                     <div style=\"width:48px; height:48px; border:4px solid rgba(255,255,255,0.25); border-top-color:#ffb862; border-radius:50%; animation: llmspin 1s linear infinite;\"></div>
                 </div>
@@ -2216,7 +2216,7 @@ function llmClamp(rangeId, numberId, min, max){ const r = document.getElementByI
     modal.style.cssText = 'position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.65); z-index:10000;';
     modal.innerHTML = `
         <div style="width:90%; max-width:1200px; height:80vh; background:#111; border:1px solid rgba(138,155,182,0.4); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.6); position:relative; overflow:hidden;">
-            <button id=\"llmtest_close\" style=\"position:absolute; top:8px; right:10px; background:#300; color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:4px 10px; cursor:pointer; z-index:3;\">Close</button>
+            <button id=\"llmtest_close\" class=\"btn-secondary\" style=\"position:absolute; top:8px; right:10px; z-index:3;\">Close</button>
             <div id=\"llmtest_loading\" style=\"position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4); z-index:2;\">
                 <div style=\"width:48px; height:48px; border:4px solid rgba(255,255,255,0.25); border-top-color:#ffb862; border-radius:50%; animation: llmspin 1s linear infinite;\"></div>
             </div>

@@ -1982,8 +1982,11 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         // Check  if DYNAMIC_PROFILE is enabled for NPC's profile.
         $profile=new CoreProfile();
         $currentProfileData=$profile->getById($npcData["profile_id"]);
-        $profile_metadata=json_decode($currentProfileData["metadata"],true);
-        if ($profile_metadata["DYNAMIC_PROFILE_ENABLED"])
+        $profile_metadata=json_decode($currentProfileData["metadata"] ?? "",true);
+        if (!is_array($profile_metadata)) {
+            $profile_metadata = [];
+        }
+        if (!empty($profile_metadata["DYNAMIC_PROFILE_ENABLED"]))
             $isDynamicEnabled=true;
         
 
@@ -2002,7 +2005,9 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         Logger::info("updateprofiles_batch_async: No profiles to update - none had DYNAMIC_PROFILE enabled");
     }
     
-    @ob_flush();
+    if (ob_get_level() > 0) {
+        @ob_flush();
+    }
     @flush();
     
     // Process in background if we have enabled NPCs

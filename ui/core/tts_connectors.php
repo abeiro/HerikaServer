@@ -495,7 +495,7 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
 .conn-sub { color: #9fb1c9; font-size: 12px; margin-top: 4px; overflow-wrap: anywhere; }
 .conn-usage { color: #9fb1c9; font-size: 12px; margin-top: 8px; }
 .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-.btn-row .btn-save, .btn-row .btn-primary, .btn-row .btn-danger { margin: 0; }
+.btn-row .btn-save, .btn-row .btn-primary, .btn-row .btn-secondary, .btn-row .btn-danger { margin: 0; }
 .placeholder { padding: 24px; border: 1px dashed #4a4a4a; border-radius: 10px; background: rgba(20,20,20,.65); color: #9fb1c9; }
 .editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .field-block { margin-bottom: 12px; }
@@ -771,7 +771,7 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
 
     <div id="tts_test_modal">
         <div class="inner">
-            <button type="button" class="btn-danger" id="tts_test_close">Close</button>
+            <button type="button" class="btn-secondary" id="tts_test_close">Close</button>
             <iframe id="tts_test_iframe" src="about:blank"></iframe>
         </div>
     </div>

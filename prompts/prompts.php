@@ -309,7 +309,7 @@ $PROMPTS=array(
         "player_request"=>["The Narrator: {$gameRequest[3]}"],
     ],
     "cheatmode"=>[
-        "cue"=>["PRIORITY INSTRUCTION -  " . ($currentNpcData["npc_name"] ?? $GLOBALS["HERIKA_NAME"] ?? "NPC") . " must do this, even if breaks character's roleplay: $gameRequest[3]}"],
+        "cue"=>["PRIORITY INSTRUCTION -  " . ($currentNpcData["npc_name"] ?? $GLOBALS["HERIKA_NAME"] ?? "NPC") . " must do this, even if breaks character's roleplay: $gameRequest[3]"],
         "player_request"=>[""],
     ],
 );

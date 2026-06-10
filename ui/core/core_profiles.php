@@ -188,6 +188,32 @@ h1.api-title {
 .slot-row { display:flex; align-items:center; justify-content:flex-start; gap:10px; padding:2px 0; }
 .slot-key { color:#fff; font-weight:700; min-width:70px; white-space:nowrap; }
 .slot-val { color:#cfd9ea; overflow-wrap:anywhere; }
+.profile-test-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.74); z-index:10000; align-items:center; justify-content:center; padding:24px; }
+.profile-test-shell { width:min(1120px, 96vw); max-height:90vh; overflow:hidden; display:flex; flex-direction:column; background:#1e1e1e; border:1px solid #4a4a4a; border-radius:14px; color:#e9efff; box-shadow:0 18px 48px rgba(0,0,0,.45); }
+.profile-test-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:18px 20px; border-bottom:1px solid #343434; }
+.profile-test-title { font-size:18px; font-weight:800; color:rgb(242,124,17); }
+.profile-test-subtitle { color:#9fb1c9; font-size:13px; margin-top:4px; }
+.profile-test-body { overflow:auto; padding:16px 20px 20px; }
+.profile-test-summary { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:8px; margin-bottom:12px; }
+.profile-test-card { background:#262626; border:1px solid #393939; border-radius:10px; padding:10px; }
+.profile-test-card .num { font-size:20px; font-weight:800; color:#fff; }
+.profile-test-card .lbl { color:#9fb1c9; font-size:12px; margin-top:2px; }
+.profile-test-progress { height:8px; background:#2e2e2e; border-radius:99px; overflow:hidden; border:1px solid #3c3c3c; margin-bottom:14px; }
+.profile-test-progress > div { height:100%; width:0%; background:linear-gradient(90deg, rgb(242,124,17), #ffd089); transition:width .2s ease; }
+.profile-test-profile { border:1px solid #383838; border-radius:10px; background:#242424; margin-bottom:10px; overflow:hidden; }
+.profile-test-profile-title { padding:10px 12px; display:flex; justify-content:space-between; gap:12px; background:#2a2a2a; border-bottom:1px solid #383838; font-weight:700; }
+.profile-test-slots { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; padding:10px; }
+@media (max-width: 840px) { .profile-test-summary { grid-template-columns:repeat(2, minmax(0, 1fr)); } .profile-test-slots { grid-template-columns:1fr; } }
+.profile-test-slot { display:grid; grid-template-columns:115px 78px 1fr; gap:8px; align-items:start; border:1px solid #363636; background:#202020; border-radius:8px; padding:8px; font-size:12px; }
+.profile-test-slot .slot-name { color:#f0f4ff; font-weight:700; }
+.profile-test-badge { display:inline-flex; justify-content:center; align-items:center; border-radius:999px; padding:2px 8px; font-size:11px; font-weight:800; text-transform:uppercase; border:1px solid transparent; }
+.profile-test-badge.pending { color:#d7dfef; border-color:#626262; background:#333; }
+.profile-test-badge.pass { color:#bdf4cb; border-color:#2f8050; background:#16351f; }
+.profile-test-badge.warn { color:#ffe2a3; border-color:#9c6a18; background:#3f2c0d; }
+.profile-test-badge.fail { color:#ffb6b6; border-color:#923232; background:#421616; }
+.profile-test-badge.skipped { color:#9fb1c9; border-color:#465164; background:#252b35; }
+.profile-test-message { color:#cfd9ea; overflow-wrap:anywhere; }
+.profile-test-detail { color:#8390a6; margin-top:3px; overflow-wrap:anywhere; }
 .pf-tabs { display:flex; gap:6px; flex-wrap:wrap; margin: 8px 0 10px; border-bottom: 2px solid #3a3a3a; }
 .pf-tab { 
     background: rgba(42, 42, 42, 0.8); 
@@ -1056,6 +1082,7 @@ $ittById = $byId($ittRows);
             </form>
             <button type="button" id="import_profile_btn" class="btn-primary">Import Profile</button>
             <button type="button" id="open_import_rules_btn" class="btn-primary">Profile Rules</button>
+            <button type="button" id="profile_test_all_btn" class="btn-primary">Test All Profiles</button>
         </div>
         <div id="profiles_list" class="conn-list"></div>
         <script>
@@ -1230,11 +1257,251 @@ $ittById = $byId($ittRows);
                 <label style="font-size:13px; font-weight:600; margin-bottom:4px; display:block;">New default profile:</label>
                 <select id="replace-profile-select" style="width:100%; padding:8px; background:#2a2a2a; color:#e9efff; border:1px solid #4a4a4a; border-radius:6px; margin-bottom:16px;"></select>
                 <div style="display:flex; gap:8px; justify-content:flex-end;">
-                    <button type="button" onclick="closeReplaceModal()" style="background:#3a3a3a; color:#e9efff; border:1px solid #4a4a4a; border-radius:6px; padding:8px 16px; cursor:pointer;">Cancel</button>
-                    <button type="button" id="replace-confirm-btn" style="background:#8b0000; color:#fff; border:1px solid #660000; border-radius:6px; padding:8px 16px; cursor:pointer; font-weight:700;">Delete & Replace</button>
+                    <button type="button" class="btn-secondary" onclick="closeReplaceModal()">Cancel</button>
+                    <button type="button" id="replace-confirm-btn" class="btn-danger">Delete & Replace</button>
                 </div>
             </div>
         </div>
+
+        <div id="profile-test-modal" class="profile-test-modal" aria-hidden="true">
+            <div class="profile-test-shell" role="dialog" aria-modal="true" aria-labelledby="profile-test-title">
+                <div class="profile-test-head">
+                    <div>
+                        <div id="profile-test-title" class="profile-test-title">Test All Profiles</div>
+                        <div id="profile-test-subtitle" class="profile-test-subtitle">Testing every selected connector once, then applying shared connector results to each profile.</div>
+                    </div>
+                    <button type="button" id="profile-test-close" class="btn-secondary">Close</button>
+                </div>
+                <div class="profile-test-body">
+                    <div id="profile-test-summary" class="profile-test-summary"></div>
+                    <div class="profile-test-progress"><div id="profile-test-progress-fill"></div></div>
+                    <div id="profile-test-results"></div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        (function(){
+            const API_URL = <?= json_encode($webRoot . '/ui/api/profile_connector_tests.php') ?>;
+            const modal = document.getElementById('profile-test-modal');
+            const openBtn = document.getElementById('profile_test_all_btn');
+            const closeBtn = document.getElementById('profile-test-close');
+            const summaryEl = document.getElementById('profile-test-summary');
+            const resultsEl = document.getElementById('profile-test-results');
+            const progressFill = document.getElementById('profile-test-progress-fill');
+            let cancelled = false;
+
+            function esc(value) {
+                return (value == null ? '' : String(value)).replace(/[&<>"']/g, c => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[c]));
+            }
+
+            function attr(value) {
+                return esc(value).replace(/`/g, '&#096;');
+            }
+
+            function statusLabel(status) {
+                const s = String(status || 'pending').toLowerCase();
+                if (s === 'pass') return 'Pass';
+                if (s === 'warn') return 'Warn';
+                if (s === 'fail') return 'Fail';
+                if (s === 'skipped') return 'Skipped';
+                return 'Pending';
+            }
+
+            function renderSummary() {
+                const counts = { pass: 0, warn: 0, fail: 0, skipped: 0, pending: 0 };
+                document.querySelectorAll('#profile-test-results .profile-test-slot').forEach(slot => {
+                    const status = String(slot.getAttribute('data-status') || 'pending').toLowerCase();
+                    if (Object.prototype.hasOwnProperty.call(counts, status)) counts[status]++;
+                    else counts.pending++;
+                });
+                summaryEl.innerHTML = [
+                    ['pass', 'Passed'],
+                    ['warn', 'Warnings'],
+                    ['fail', 'Failed'],
+                    ['skipped', 'Skipped'],
+                    ['pending', 'Pending']
+                ].map(([key, label]) => `
+                    <div class="profile-test-card">
+                        <div class="num">${counts[key]}</div>
+                        <div class="lbl">${label}</div>
+                    </div>
+                `).join('');
+            }
+
+            function setProgress(done, total) {
+                const pct = total > 0 ? Math.round((done / total) * 100) : 100;
+                progressFill.style.width = pct + '%';
+            }
+
+            function renderPlan(plan) {
+                const profiles = Array.isArray(plan.profiles) ? plan.profiles : [];
+                let html = '';
+                profiles.forEach(profile => {
+                    const flags = [];
+                    if (profile.default_npc) flags.push('Default NPC');
+                    if (profile.default_narrator) flags.push('Default Narrator');
+                    html += `
+                        <div class="profile-test-profile">
+                            <div class="profile-test-profile-title">
+                                <span>${esc(profile.label || ('Profile #' + profile.id))}</span>
+                                <span style="color:#9fb1c9; font-size:12px;">${esc(flags.join(' / '))}</span>
+                            </div>
+                            <div class="profile-test-slots">
+                    `;
+                    (profile.slots || []).forEach(slot => {
+                        const status = slot.status || 'pending';
+                        html += `
+                            <div class="profile-test-slot" data-status="${attr(status)}" data-job-key="${attr(slot.job_key || '')}">
+                                <div class="slot-name">${esc(slot.label || slot.field || 'Connector')}</div>
+                                <div><span class="profile-test-badge ${attr(status)}">${statusLabel(status)}</span></div>
+                                <div>
+                                    <div class="profile-test-message">${esc(slot.message || '')}</div>
+                                    <div class="profile-test-detail"></div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div></div>';
+                });
+                resultsEl.innerHTML = html || '<div class="profile-test-card">No profiles found.</div>';
+                renderSummary();
+            }
+
+            function detailFromResult(result) {
+                const details = result && result.details ? result.details : {};
+                const chunks = [];
+                if (details.label) chunks.push(details.label);
+                if (details.driver) chunks.push('driver: ' + details.driver);
+                if (details.model) chunks.push('model: ' + details.model);
+                if (details.url) chunks.push('url: ' + details.url);
+                if (Number(result.elapsed_ms || 0) > 0) chunks.push(String(result.elapsed_ms) + 'ms');
+                if (details.response_preview) chunks.push('response: ' + details.response_preview);
+                if (details.generated_file) chunks.push('audio: ' + details.generated_file);
+                return chunks.join(' | ');
+            }
+
+            function applyJobResult(result) {
+                const jobKey = result && result.job_key ? String(result.job_key) : '';
+                if (!jobKey) return;
+                document.querySelectorAll('#profile-test-results .profile-test-slot').forEach(slot => {
+                    if (String(slot.getAttribute('data-job-key') || '') !== jobKey) return;
+                    const status = String(result.status || 'fail').toLowerCase();
+                    slot.setAttribute('data-status', status);
+                    const badge = slot.querySelector('.profile-test-badge');
+                    if (badge) {
+                        badge.className = 'profile-test-badge ' + status;
+                        badge.textContent = statusLabel(status);
+                    }
+                    const message = slot.querySelector('.profile-test-message');
+                    if (message) message.textContent = result.message || '';
+                    const detail = slot.querySelector('.profile-test-detail');
+                    if (detail) detail.textContent = detailFromResult(result);
+                });
+                renderSummary();
+            }
+
+            async function fetchJson(url) {
+                const response = await fetch(url, { credentials: 'same-origin' });
+                const text = await response.text();
+                let json = null;
+                try {
+                    json = JSON.parse(text);
+                } catch (_error) {
+                    throw new Error('Invalid JSON response: ' + text.slice(0, 160));
+                }
+                if (!response.ok || !json || json.ok !== true) {
+                    throw new Error((json && json.error) ? json.error : ('HTTP ' + response.status));
+                }
+                return json;
+            }
+
+            async function testJob(job) {
+                const url = API_URL + '?action=test&type=' + encodeURIComponent(job.type) + '&id=' + encodeURIComponent(job.id) + '&_=' + Date.now();
+                try {
+                    const json = await fetchJson(url);
+                    return json.result;
+                } catch (error) {
+                    return {
+                        job_key: String(job.type) + ':' + String(job.id),
+                        type: job.type,
+                        id: job.id,
+                        status: 'fail',
+                        message: error.message || 'Connector test failed',
+                        details: {},
+                        elapsed_ms: 0
+                    };
+                }
+            }
+
+            async function runJobs(jobs) {
+                let completed = 0;
+                const total = jobs.length;
+                setProgress(0, total);
+                const queue = jobs.slice();
+                const workers = Array.from({ length: Math.min(2, Math.max(1, total)) }, async () => {
+                    while (!cancelled && queue.length > 0) {
+                        const job = queue.shift();
+                        const result = await testJob(job);
+                        applyJobResult(result);
+                        completed++;
+                        setProgress(completed, total);
+                    }
+                });
+                await Promise.all(workers);
+            }
+
+            async function openProfileTestModal() {
+                if (!modal) return;
+                cancelled = false;
+                modal.style.display = 'flex';
+                modal.setAttribute('aria-hidden', 'false');
+                summaryEl.innerHTML = '';
+                resultsEl.innerHTML = '<div class="profile-test-card">Building profile connector test plan...</div>';
+                setProgress(0, 1);
+
+                try {
+                    const planJson = await fetchJson(API_URL + '?action=plan&_=' + Date.now());
+                    const plan = planJson.plan || {};
+                    const jobs = Array.isArray(plan.jobs) ? plan.jobs : [];
+                    renderPlan(plan);
+                    if (jobs.length === 0) {
+                        setProgress(1, 1);
+                        return;
+                    }
+                    await runJobs(jobs);
+                } catch (error) {
+                    resultsEl.innerHTML = '<div class="profile-test-card"><span style="color:#ff9898;">' + esc(error.message || 'Failed to run profile tests') + '</span></div>';
+                    renderSummary();
+                    setProgress(1, 1);
+                }
+            }
+
+            function closeProfileTestModal() {
+                cancelled = true;
+                if (!modal) return;
+                modal.style.display = 'none';
+                modal.setAttribute('aria-hidden', 'true');
+            }
+
+            if (openBtn) openBtn.addEventListener('click', openProfileTestModal);
+            if (closeBtn) closeBtn.addEventListener('click', closeProfileTestModal);
+            if (modal) {
+                modal.addEventListener('click', event => {
+                    if (event.target === modal) closeProfileTestModal();
+                });
+            }
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape' && modal && modal.style.display === 'flex') closeProfileTestModal();
+            });
+        })();
+        </script>
     </div>
     <div class="llm-right">
         <div class="form-container wide-centered">
@@ -1867,7 +2134,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
                     <div>Metadata</div><input name=\"metadata\" value=\"${escapeHtml(val('metadata'))}\">
                 </div>
                 <div style=\"margin-top:8px; display:flex; gap:8px;\">
-                    <button type=\"button\" class=\"action-button save\">Save</button>
+                    <button type=\"button\" class=\"btn-save save\">Save</button>
                 </div>
             `;
         } else if (type==='tts'){
@@ -1880,7 +2147,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
                     <div>API Badge</div>${renderApiBadgeSelect('api_badge_id', val('api_badge_id'))}
                 </div>
                 <div style=\"margin-top:8px; display:flex; gap:8px;\">
-                    <button type=\"button\" class=\"action-button save\">Save</button>
+                    <button type=\"button\" class=\"btn-save save\">Save</button>
                 </div>
             `;
         }
@@ -2144,7 +2411,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
                 <div>JSON Schema</div><input name="json_schema" type="checkbox" value="1" ${bool(conn.json_schema)}>
             </div>
             <div style="margin-top:8px; display:flex; gap:8px;">
-                <button type="button" class="action-button save">Save</button>
+                <button type="button" class="btn-save save">Save</button>
                 <button type="button" class="btn-secondary cancel">Cancel</button>
             </div>
         `;
@@ -2312,7 +2579,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
 #import_profile_modal .modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; }
 #import_profile_modal .modal-title { margin:0; font-weight:700; color: rgb(242, 124, 17); font-family: 'MagicCards', serif; word-spacing: 6px; font-size: 1.6em; }
 #import_profile_modal .modal-body { background:#2a2a2a; overflow:auto; max-height: calc(90vh - 60px); }
-#import_profile_modal .modal-close { background:#3a3a3a; color:#fff; border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; cursor:pointer; }
+#import_profile_modal .modal-close { background:#3a3a3a; color:#fff; border:1px solid rgba(138,155,182,.35); border-radius:8px; padding:8px 14px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:700; }
 #import_profile_modal .modal-close:hover { background:#4a4a4a; }
 </style>
 
@@ -2337,7 +2604,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
 #import_rules_modal .modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; position:sticky; top:0; z-index:2; }
 #import_rules_modal .modal-title { margin:0; font-weight:700; color: rgb(242, 124, 17); font-family: 'MagicCards', serif; word-spacing: 6px; font-size: 1.6em; }
 #import_rules_modal .modal-body { background:#2a2a2a; overflow:auto; max-height: calc(90vh - 60px); }
-#import_rules_modal .modal-close { background:#3a3a3a; color:#fff; border:1px solid #4a4a4a; border-radius:6px; padding:6px 12px; cursor:pointer; }
+#import_rules_modal .modal-close { background:#3a3a3a; color:#fff; border:1px solid rgba(138,155,182,.35); border-radius:8px; padding:8px 14px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:700; }
 #import_rules_modal .modal-close:hover { background:#4a4a4a; }
 #import_rules_modal .modal-actions { display:flex; gap:8px; align-items:center; }
 
@@ -2355,11 +2622,14 @@ const saveAllBtn = document.getElementById('btn_save_all');
 .rule-input:focus { border-color: rgb(242, 124, 17); outline: none; }
 .rule-input.json { font-family: monospace; min-height: 60px; }
 .rule-checkbox { accent-color: rgb(242, 124, 17); transform: scale(1.4); cursor: pointer; }
-.btn-rule-edit { background: #3a3a3a; color: #e9efff; border: 1px solid #4a4a4a; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; }
-.btn-rule-edit:hover { background: #4a4a4a; }
-.btn-rule-save { background: rgb(242, 124, 17); color: #111; border: 1px solid rgb(242, 124, 17); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-weight: 700; font-size: 12px; }
-.btn-rule-cancel { background: #3a3a3a; color: #e9efff; border: 1px solid #4a4a4a; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; }
-.btn-rule-delete { background: #8b0000; color: #fff; border: 1px solid #660000; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; }
+.btn-rule-edit, .btn-rule-save, .btn-rule-cancel, .btn-rule-delete { color:#fff; border:1px solid rgba(138,155,182,.35); border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:700; font-size:12px; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+.btn-rule-edit { background:#204e7a; }
+.btn-rule-edit:hover { background:#285c8f; }
+.btn-rule-save { background:linear-gradient(135deg, rgba(32,122,74,.9), rgba(23,101,57,.9)); }
+.btn-rule-save:hover { background:linear-gradient(135deg, rgba(42,142,94,.95), rgba(32,122,74,.95)); }
+.btn-rule-cancel { background:#3a3a3a; }
+.btn-rule-cancel:hover { background:#4a4a4a; }
+.btn-rule-delete { background: #8b0000; border-color: #660000; }
 .btn-rule-delete:hover { background: #a00000; }
 </style>
 

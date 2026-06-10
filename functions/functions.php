@@ -1735,7 +1735,7 @@ $GLOBALS["FUNCTIONS"] = [
                     "description" => "Keep it blank",
                 ],
             ],
-            "required" => [""],
+            "required" => [],
         ],
     ],
     [
@@ -2311,7 +2311,17 @@ function normalizeFunctionParameterValueFromSchema($parameterSchema, $value)
 
 function functionDefinitionHasRequiredParameters($functionDef)
 {
-    return is_array($functionDef) && count($functionDef["parameters"]["required"] ?? []) > 0;
+    if (!is_array($functionDef)) {
+        return false;
+    }
+
+    foreach (($functionDef["parameters"]["required"] ?? []) as $requiredParameter) {
+        if (trim(strval($requiredParameter)) !== "") {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 function functionExecutionParameterValueIsEmpty($parameterValue)
