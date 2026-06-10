@@ -541,6 +541,22 @@ if (isset($_GET['delete_memory']) && !empty($_GET['delete_memory'])) {
 
 // Get active tab from URL parameter, default to 'eventlog'
 $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'eventlog';
+if ($activeTab === 'responselog') {
+    $redirectParams = [];
+    if (isset($_GET['page'])) {
+        $redirectParams['page'] = max(1, intval($_GET['page']));
+    }
+    if (isset($_GET['limit'])) {
+        $redirectParams['limit'] = max(10, intval($_GET['limit']));
+    }
+
+    $redirectUrl = 'ai-response.php';
+    if (!empty($redirectParams)) {
+        $redirectUrl .= '?' . http_build_query($redirectParams);
+    }
+    header('Location: ' . $redirectUrl);
+    exit;
+}
 
 // Function to determine color based on time value
 function getTimeColor($time) {
@@ -1034,6 +1050,15 @@ function getTimeColor($time) {
         </div>
 
         <!-- Response Log Tab -->
+        <div id="responselog-tab" class="tab-content">
+            <div style="background: #2a2a2a; border-left: 4px solid rgb(242, 124, 17); padding: 12px 15px; border-radius: 5px; margin: 15px 0; font-size: 0.9em;">
+                <span style="color: rgb(242, 124, 17); font-weight: bold;">AI Responses:</span>
+                <span style="color: #f8f9fa;">The AI response log now lives on the dedicated AI Responses page.</span>
+                <a class="btn-base btn-primary" style="margin-left: 10px; padding: 6px 10px; font-size: 0.85em;" href="ai-response.php">Open AI Responses</a>
+            </div>
+        </div>
+
+        <?php if (false): ?>
         <div id="responselog-tab" class="tab-content <?php echo $activeTab === 'responselog' ? 'active' : ''; ?>">
             <?php
             // Add subtitle description
@@ -1510,6 +1535,7 @@ function getTimeColor($time) {
             }
             ?>
         </div>
+        <?php endif; ?>
 
         
         <!-- Memory Summaries Tab -->
@@ -1964,6 +1990,11 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 function switchTab(tabName) {
+    if (tabName === 'responselog') {
+        window.location.href = 'ai-response.php';
+        return;
+    }
+
     // Hide all tab contents
     const tabContents = document.querySelectorAll('.tab-content');
     tabContents.forEach(content => {
