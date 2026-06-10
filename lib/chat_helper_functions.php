@@ -4543,7 +4543,7 @@ function buildScopedPeopleForEvent($eventType, $eventData, $listenerName, $fallb
     }
 
     $effectiveFallback = $fallbackPeople;
-    if (isStrictSpatialPeopleModeEnabled() && $eventType !== "infoaction") {
+    if (isStrictSpatialPeopleModeEnabled() && !in_array($eventType, ["infoaction", "funcret"], true)) {
         $strictFallback = buildStrictFallbackPeopleForEvent($eventType, $eventData, $listenerName, $fallbackPeople);
         if ($strictFallback !== "") {
             $effectiveFallback = $strictFallback;
@@ -4561,7 +4561,7 @@ function buildScopedPeopleForEvent($eventType, $eventData, $listenerName, $fallb
         return buildScopedPeopleForChatEvent($eventData, $effectiveFallback);
     }
 
-    if ($eventType === "infoaction") {
+    if (in_array($eventType, ["infoaction", "funcret"], true)) {
         return buildScopedPeopleForInfoActionEvent($eventData, $effectiveFallback);
     }
 
@@ -4648,6 +4648,12 @@ function logEvent($dataArray,$forcePeople='')
 
         $eventType = strtolower((string)($dataArray[0] ?? ""));
         $defaultPeopleFallback = $GLOBALS["CACHE_PEOPLE_LIMITED"];
+        if (in_array($eventType, ["infoaction", "funcret"], true)) {
+            $actionPeopleFallback = $GLOBALS["CACHE_PEOPLE"] ?? DataBeingsInCloseRange(false);
+            if ($actionPeopleFallback !== "") {
+                $defaultPeopleFallback = $actionPeopleFallback;
+            }
+        }
         if ($eventType === "infoloc") {
             $defaultPeopleFallback = DataBeingsInRange();
             if ($defaultPeopleFallback === "") {

@@ -1063,6 +1063,27 @@ function DataLocationsAround($current_location = "") {
     return $s_res;
 } 
 
+function ParseNpcCloseActorNames($data)
+{
+    $beings = strtr((string)$data, ["beings in range:" => ""]);
+    $beingsArray = explode("/", $beings);
+    $retData = [];
+
+    foreach ($beingsArray as $v) {
+        $v = trim(preg_replace('/\s*\([^)]*\)/', '', $v));
+        if (empty($v)) {
+            continue;
+        }
+        if (strpos($v, "Horse") === 0 || strpos($v, "Chicken") === 0) {
+            continue;
+        }
+
+        $retData[$v] = $v;
+    }
+
+    return array_values($retData);
+}
+
 function DataPosibleLocationsToGo()
 {
     if (isset($GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO"])) {
@@ -1144,6 +1165,24 @@ function DataPosibleLocationsToGo()
     //error_log("DataPosibleLocationsToGo: ".print_r($retData,true));
     $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO"] = array_values($retData);
     return $GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO"];
+}
+
+function DataPosibleMoveToTargets()
+{
+    if (isset($GLOBALS["CACHE_POSIBLE_MOVETO_TARGETS"])) {
+        return $GLOBALS["CACHE_POSIBLE_MOVETO_TARGETS"];
+    }
+
+    global $db;
+    $results = $db->fetchAll("SELECT a.data AS data FROM eventlog a WHERE type IN ('infonpc_close') ORDER BY gamets DESC, ts DESC LIMIT 1 OFFSET 0");
+    $retData = [];
+
+    if (is_array($results) && isset($results[0]["data"])) {
+        $retData = ParseNpcCloseActorNames($results[0]["data"]);
+    }
+
+    $GLOBALS["CACHE_POSIBLE_MOVETO_TARGETS"] = array_values($retData);
+    return $GLOBALS["CACHE_POSIBLE_MOVETO_TARGETS"];
 }
 
 function DataPosibleLocationsToGoWide()
@@ -4094,20 +4133,7 @@ function FindClosestActorName($actorName)
         return "";
     }
 
-    $beings = strtr($lastLoc[0]["data"], ["beings in range:" => ""]);
-    $beingsArray = explode("/", $beings);
-    $beingsArrayCleaned = [];
-
-    foreach ($beingsArray as $v) {
-        // Remove all text within parentheses and trim whitespace
-        $v = trim(preg_replace('/\s*\([^)]*\)/', '', $v));
-        if (empty($v))
-            continue;
-        // Exclude certain entities
-        if (strpos($v, "Horse") !== 0 && strpos($v, "Chicken") !== 0) {
-            $beingsArrayCleaned[] = $v;
-        }
-    }
+    $beingsArrayCleaned = ParseNpcCloseActorNames($lastLoc[0]["data"]);
 
     if (empty($beingsArrayCleaned)) {
         return "";
@@ -5047,38 +5073,6 @@ function call_llm_internal() {
         $connectionHandler->open($contextData,$overrideParameters);
         snapshot_response_prompt_debug_data();
     }
-
-
-
-
-
-    ///// PATCH. STORE FUNCTION RESULT ONCE RESULT PROMPT HAS BEEN BUILT.
-    if (isset($GLOBALS["PATCH_STORE_FUNC_RES"])) {
-        $patchStoreFuncResAction = trim(strval($GLOBALS["PATCH_STORE_FUNC_RES_ACTION"] ?? ""));
-        $skipPatchStoreFuncResLog = $patchStoreFuncResAction !== ""
-            && function_exists('isNarratorPrivateActionName')
-            && isNarratorPrivateActionName($patchStoreFuncResAction);
-
-        if (
-            !$skipPatchStoreFuncResLog
-            && $patchStoreFuncResAction !== ''
-            && function_exists('herikaActionCatalogMetadataFlagEnabled')
-            && herikaActionCatalogMetadataFlagEnabled($patchStoreFuncResAction, 'suppress_placeholder_infoaction')
-        ) {
-            $skipPatchStoreFuncResLog = true;
-        }
-
-        if (!$skipPatchStoreFuncResLog) {
-            $gameRequestCopy=$gameRequest;
-            $gameRequestCopy[0]="infoaction";
-            $gameRequestCopy[3]=$GLOBALS["PATCH_STORE_FUNC_RES"];
-            logEvent($gameRequestCopy);
-        }
-
-        unset($GLOBALS["PATCH_STORE_FUNC_RES"], $GLOBALS["PATCH_STORE_FUNC_RES_ACTION"]);
-    }
-    ///// PATCH
-
     error_log("[FALLBACK DEBUG] Checking primary_handler status: " . ($connectionHandler->primary_handler === false ? "FALSE" : "OK"));
     
     if ($connectionHandler->primary_handler === false) {
@@ -5246,6 +5240,7 @@ function call_llm_internal() {
         if ($tmpData==-1 || (isset($GLOBALS["VALIDATE_LLM_OUTPUT_FNCT"]) && !$GLOBALS["VALIDATE_LLM_OUTPUT_FNCT"]($tmpData))) {
             Logger::warn("Invalid JSON Output.");
             $outputWasValid=false;
+            $buffer="";
             $breakFlag=true;
         }
         else {
@@ -5309,7 +5304,7 @@ function call_llm_internal() {
     } // --- end while
     
     
-    if (trim($buffer)) {
+    if ($outputWasValid && trim($buffer)) {
         Logger::info("REMAINING DATA <$buffer>");
         $sentences=split_sentences_stream(cleanResponse(trim($buffer)));
 
@@ -5334,7 +5329,7 @@ function call_llm_internal() {
         $totalProcessedData.=trim($buffer);
     }
 
-    if ($GLOBALS["FUNCTIONS_ARE_ENABLED"])  {
+    if ($GLOBALS["FUNCTIONS_ARE_ENABLED"] && $outputWasValid)  {
         $actions=$connectionHandler->processActions();
         if (isset($GLOBALS["action_post_process_fnct"])) {
             $actions=$GLOBALS["action_post_process_fnct"]($actions);
@@ -5546,61 +5541,42 @@ function call_llm_internal() {
                             }
                             
                         } else if ($actionParts2[0]=="MoveTo") {
-                            // Lets polish the parammeters
-                            $localtarget=$actionParts2[1];
+                            // MoveTo is actor-only. Locations must remain TravelTo.
+                            $localtarget=$actionParts2[1] ?? "";
                             $mang1=explode(",",$localtarget);
                             $mang2=explode(" and ",$mang1[0]);
                             $mang3=explode("(",$mang2[0]);
                             $mang4=explode("--",$mang3[0]);
                             
-                            $destination=$mang4[0];
+                            $target=trim($mang4[0]);
+                            $resolvedTarget="";
 
-                            error_log("[ACTION POSTFILTER MoveTo]  $localtarget => {$mang4[0]} => $destination");
-
-                            //MoveTo will be rewritten as TravelTo with some post-filtering, to avoid confusion with Follow action and also to be able to apply some heuristics to polish the destination parameter, which is usually the most error-prone one.
-
-                            $destinationName=$GLOBALS["db"]->escape(trim($destination));
-                            $dbDestination=$GLOBALS["db"]->fetchOne("SELECT name, similarity(name, '$destinationName') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
-                            $dbDestinationRegion=$GLOBALS["db"]->fetchOne("SELECT name, similarity(region, '$destinationName') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
-
-                            $contextDestinations=DataPosibleLocationsToGo();
-
-                            if (in_array(trim($localtarget),$contextDestinations)) {
-                                // Perfect match
-                                error_log("[ACTION POSTFILTER MoveTo] Seems valid as-is (context destination): <$localtarget> => $localtarget");
-                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$localtarget";
-
-                            } else if (in_array($destination,$contextDestinations)) {
-                                error_log("[ACTION POSTFILTER MoveTo] Seemd valid (context destination): $localtarget => $destination");
-                                $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$destination";
-
-                            } else {
-                                if ($isRolemasteredNpc) {
-                                    if (stripos($destination,"home")===0) {
-                                        // Rolemastered NPC wants to return back home
-                                        $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|ReturnBackHome@"; 
-                                        continue;
-
-                                    }
-
-                                } 
-                                if (is_array($dbDestination) && isset($dbDestination["formid"])) {
-                                    $destination=$dbDestination["formid"];
-                                    error_log("[ACTION POSTFILTER MoveTo] found database entry for $localtarget => $destination => {$dbDestination["name"]}, similarity ({$dbDestination["sim"]})");
-                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelToRaw@$destination";    
-                                
-                                } else if (is_array($dbDestinationRegion) && isset($dbDestinationRegion["formid"])) {
-
-                                    $destination=$dbDestinationRegion["formid"];
-                                    error_log("[ACTION POSTFILTER MoveTo] found database (searching by region) entry for $localtarget => $destination => {$dbDestinationRegion["name"]}, similarity ({$dbDestinationRegion["sim"]})");
-                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelToRaw@$destination";    
-                                } else if (stripos($destination,"outside")!==false) {
-                                    $destination=DataLastKnownLocationHuman(true,false);
-                                    error_log("[ACTION POSTFILTER MoveTo] reference to outside detected , $localtarget => $destination");
-                                    
-                                } else
-                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$destination";
+                            if ($target !== "" && isset($GLOBALS["PLAYER_NAME"]) && strcasecmp($target, $GLOBALS["PLAYER_NAME"]) === 0) {
+                                $resolvedTarget=$GLOBALS["PLAYER_NAME"];
                             }
+
+                            if ($resolvedTarget === "") {
+                                foreach (DataPosibleMoveToTargets() as $candidateTarget) {
+                                    if (strcasecmp($target, $candidateTarget) === 0) {
+                                        $resolvedTarget=$candidateTarget;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if ($resolvedTarget === "") {
+                                $closestTarget=FindClosestActorName($target);
+                                if ($closestTarget !== "" && levenshtein(strtolower($target), strtolower($closestTarget)) <= 3) {
+                                    $resolvedTarget=$closestTarget;
+                                }
+                            }
+
+                            if ($resolvedTarget === "") {
+                                $resolvedTarget=$target;
+                            }
+
+                            error_log("[ACTION POSTFILTER MoveTo] $localtarget => $target => $resolvedTarget");
+                            $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|MoveTo@$resolvedTarget";
                             
                         }  else if ($actionParts2[0]=="FollowPlayer") {
                             

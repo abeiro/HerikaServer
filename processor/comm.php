@@ -1441,35 +1441,40 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     }
 
     if ($currentNpcData) {
-        $currentNpcData["base"]=$splitNameBase[1];
+        $currentNpcData["base"]=$splitNameBase[1] ?? "";
         if (sizeof($splitNameBase)>1) {
       
-            $currentNpcData["gender"]=$splitNameBase[2];
-            $currentNpcData["race"]=$splitNameBase[3];
-            $currentNpcData["refid"]=$splitNameBase[4];
+            $currentNpcData["gender"]=$splitNameBase[2] ?? "";
+            $currentNpcData["race"]=$splitNameBase[3] ?? "";
+            $currentNpcData["refid"]=$splitNameBase[4] ?? "";
             
 
             $meta=$npcMaster->getMetadata($currentNpcData);
             // NPC skills
-            $meta["skills"]["archery"]=$splitNameBase[5];
-            $meta["skills"]["block"]=$splitNameBase[6];
-            $meta["skills"]["onehanded"]=$splitNameBase[7];
-            $meta["skills"]["twohanded"]=$splitNameBase[8];
-            $meta["skills"]["conjuration"]=$splitNameBase[9];
-            $meta["skills"]["destruction"]=$splitNameBase[10];
-            $meta["skills"]["restoration"]=$splitNameBase[11];
-            $meta["skills"]["alteration"]=$splitNameBase[12];
-            $meta["skills"]["illusion"]=$splitNameBase[13];
-            $meta["skills"]["heavyarmor"]=$splitNameBase[14];
-            $meta["skills"]["lightarmor"]=$splitNameBase[15];
-            $meta["skills"]["lockpicking"]=$splitNameBase[16];
-            $meta["skills"]["pickpocket"]=$splitNameBase[17];
-            $meta["skills"]["sneak"]=$splitNameBase[18];
-            $meta["skills"]["speech"]=$splitNameBase[19];
-            $meta["skills"]["smithing"]=$splitNameBase[20];
-            $meta["skills"]["alchemy"]=$splitNameBase[21];
-            $meta["skills"]["enchanting"]=$splitNameBase[22];
-            
+            $skillFields = [
+                5 => "archery",
+                6 => "block",
+                7 => "onehanded",
+                8 => "twohanded",
+                9 => "conjuration",
+                10 => "destruction",
+                11 => "restoration",
+                12 => "alteration",
+                13 => "illusion",
+                14 => "heavyarmor",
+                15 => "lightarmor",
+                16 => "lockpicking",
+                17 => "pickpocket",
+                18 => "sneak",
+                19 => "speech",
+                20 => "smithing",
+                21 => "alchemy",
+                22 => "enchanting",
+            ];
+            foreach ($skillFields as $index => $skillName) {
+                $meta["skills"][$skillName]=$splitNameBase[$index] ?? "";
+            }
+
             // NPC equipment (10 slots from Skyrim) - format: name^baseid
             $equipmentSlots = [
                 23 => 'helmet',
