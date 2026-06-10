@@ -5352,6 +5352,10 @@ function call_llm_internal() {
             // ACTION POST-FILTER
             
             if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
+                $isRolemasteredNpc = (
+                    (!empty($GLOBALS["NPC_ROLEMASTERED"])) ||
+                    herikaResolveNpcRolemasterState($GLOBALS["HERIKA_NAME"] ?? '', ['load_lookup' => true])
+                );
                 $copyActions=[];
                 foreach ($actions as $n=>$action) {
                     $copyActions[$n]=$actions[$n];
@@ -5514,7 +5518,7 @@ function call_llm_internal() {
                                 $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$destination";
 
                             } else {
-                                if (isset($GLOBALS["NPC_ROLEMASTERED"]) && $GLOBALS["NPC_ROLEMASTERED"]) {
+                                if ($isRolemasteredNpc) {
                                     if (stripos($destination,"home")===0) {
                                         // Rolemastered NPC wants to return back home
                                         $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|ReturnBackHome@"; 
@@ -5571,7 +5575,7 @@ function call_llm_internal() {
                                 $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelTo@$destination";
 
                             } else {
-                                if (isset($GLOBALS["NPC_ROLEMASTERED"]) && $GLOBALS["NPC_ROLEMASTERED"]) {
+                                if ($isRolemasteredNpc) {
                                     if (stripos($destination,"home")===0) {
                                         // Rolemastered NPC wants to return back home
                                         $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|ReturnBackHome@"; 

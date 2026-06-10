@@ -1,6 +1,7 @@
 <?php
 
 require_once(__DIR__ . DIRECTORY_SEPARATOR . 'game_plugins.php');
+require_once(__DIR__ . DIRECTORY_SEPARATOR . 'npc_master.class.php');
 
 function herikaGetRetiredActionCodes()
 {
@@ -649,7 +650,48 @@ function herikaActionCatalogNormalizeParameterSchema($parameters)
         $parameters['required'] = [];
     }
 
+    $normalizedRequired = [];
+    foreach ($parameters['required'] as $requiredField) {
+        $requiredField = trim(strval($requiredField));
+        if ($requiredField !== '' && !in_array($requiredField, $normalizedRequired, true)) {
+            $normalizedRequired[] = $requiredField;
+        }
+    }
+    $parameters['required'] = $normalizedRequired;
+
     return $parameters;
+}
+
+function herikaActionCatalogApplyCompatibilityOverrides($row)
+{
+    if (!is_array($row)) {
+        return $row;
+    }
+
+    $codeName = trim(strval($row['code_name'] ?? ''));
+    if ($codeName !== 'ReturnBackHome') {
+        return $row;
+    }
+
+    $row['parameters_json'] = herikaActionCatalogNormalizeParameterSchema($row['parameters_json'] ?? null);
+    $row['parameters_json']['required'] = [];
+
+    $metadata = is_array($row['metadata'] ?? null)
+        ? $row['metadata']
+        : herikaActionCatalogDecodeJson($row['metadata'] ?? [], []);
+    $requirements = is_array($metadata['requirements'] ?? null) ? $metadata['requirements'] : [];
+    if (
+        herikaActionCatalogToBool($requirements['requires_rolemaster'] ?? false)
+        && empty($row['available_to_npc'])
+        && empty($row['available_to_followers'])
+        && empty($row['available_to_narrator'])
+    ) {
+        $row['available_to_npc'] = true;
+        $row['available_to_followers'] = true;
+    }
+
+    $row['metadata'] = $metadata;
+    return $row;
 }
 
 function herikaActionCatalogGetBaseScriptProxyPrograms()
@@ -1455,8 +1497,6 @@ function herikaActionCatalogGetRuntimeRequirementContext()
     $extended = is_array($lookup['extended']) ? $lookup['extended'] : [];
     $activityStatus = chimNormalizeActivityStatus($metadata);
 
-    $metadataRolemaster = !empty($metadata['is_rolemastered']) || !empty($extended['is_rolemastered']);
-
     $cachedKey = $cacheKey;
     $cachedContext = [
         'npc_name' => trim(strval($GLOBALS["HERIKA_NAME"] ?? '')),
@@ -1464,7 +1504,12 @@ function herikaActionCatalogGetRuntimeRequirementContext()
         'request_type' => $requestType,
         'is_rechat' => in_array($requestType, ['rechat', 'narration'], true),
         'is_npc_mode' => !empty($GLOBALS["IS_NPC"]),
-        'is_rolemastered' => !empty($GLOBALS["is_rolemastered"]) || $metadataRolemaster,
+        'is_rolemastered' => herikaResolveNpcRolemasterState($GLOBALS["HERIKA_NAME"] ?? '', [
+            'metadata' => $metadata,
+            'extended' => $extended,
+            'npc_data' => $lookup['npc_data'],
+            'load_lookup' => false,
+        ]),
         'npc_master' => $lookup['npc_master'],
         'npc_data' => $lookup['npc_data'],
         'npc_metadata' => $metadata,
@@ -2314,7 +2359,7 @@ function herikaGetActionCatalogRowsByCode()
             continue;
         }
 
-        $GLOBALS["HERIKA_ACTION_CATALOG_ROWS_BY_CODE"][$codeName] = [
+        $normalizedRow = [
             'code_name' => $codeName,
             'action_name' => herikaNormalizeActionCatalogDisplayActionName(strval($row['action_name'] ?? $codeName)),
             'description' => strval($row['description'] ?? ''),
@@ -2331,6 +2376,7 @@ function herikaGetActionCatalogRowsByCode()
             'import_version' => herikaActionCatalogNormalizeImportVersion($row['import_version'] ?? 0),
             'script_proxy_program' => herikaActionCatalogDecodeJson($row['script_proxy_program'] ?? null, []),
         ];
+        $GLOBALS["HERIKA_ACTION_CATALOG_ROWS_BY_CODE"][$codeName] = herikaActionCatalogApplyCompatibilityOverrides($normalizedRow);
     }
 
     return $GLOBALS["HERIKA_ACTION_CATALOG_ROWS_BY_CODE"];
@@ -2574,6 +2620,7 @@ function herikaActionCatalogIsNarratorMode()
 
 function herikaActionCatalogBuildFunctionEntryFromRow($row)
 {
+    $row = herikaActionCatalogApplyCompatibilityOverrides($row);
     if (!is_array($row) || empty($row['code_name']) || trim(strval($row['action_name'] ?? '')) === '') {
         return null;
     }

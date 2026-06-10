@@ -185,6 +185,9 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
             $currentData["appearance"]=$response["appearance"];
             $currentData["core"]="{$response["name"]} ({$response["race"]} {$response["gender"]}";
             $currentData["speechstyle"]=$response["speechStyle"];
+            $currentMetadata = $npcMaster->getMetadata($currentData);
+            $currentMetadata["is_rolemastered"] = true;
+            $currentData = $npcMaster->setMetadata($currentData, $currentMetadata);
         
             $npcMaster->updateByArray($currentData);
 
