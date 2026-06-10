@@ -252,7 +252,7 @@ $PROMPTS=array(
         "player_request"=>["El Narrador: {$gameRequest[3]}"],
     ],
      "cheatmode"=>[ 
-        "cue"=>["INSTRUCCION PRIORITARIA -  {$currentNpcData["npc_name"]} debe de hacer esto, incluso aunque rompa el roleplay: $gameRequest[3]}"],
+        "cue"=>["INSTRUCCION PRIORITARIA -  {$currentNpcData["npc_name"]} debe de hacer esto, incluso aunque rompa el roleplay: $gameRequest[3]"],
         "player_request"=>[""],
     ],
 );
