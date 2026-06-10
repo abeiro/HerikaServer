@@ -399,7 +399,7 @@ $suggested",
             if (strpos(DataBeingsOrDeathsInRangeExcluding(), $npc) == false) {
                 $outofscene = "(out of scene)";
             } else {
-                $outofscene = "";
+                $outofscene = "(present)";
             }
 
             $lac = explode("|", $lastAction["original"]);
@@ -526,7 +526,7 @@ If no nearby entrances, this means current location has no passages/doors/chambe
         'role' => 'user',
         'content' => "You may:
 - Spawn **small portable items** (amulets, rings, books, notes, keys).
-- Spawn **new NPC actors**.
+- Spawn **new NPC actors**. (avoid reusing Skyrim vanilla NPCs, create new ones fitting the world and scenario).
 - Spawn **new enemies**.
 - Instruct NPCs or enemies to **speak, fight, move, or travel**.
 
