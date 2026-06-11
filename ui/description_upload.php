@@ -36,7 +36,7 @@ if (!$conn) {
 
 // EXPORT CUSTOM DESCRIPTIONS
 if (isset($_GET['action']) && $_GET['action'] == 'export_custom_items') {
-    $export_query = "SELECT baseid, name, description FROM {$schema}.descriptions_custom ORDER BY baseid ASC";
+    $export_query = "SELECT plugin, baseid, name, description FROM {$schema}.descriptions_custom ORDER BY plugin ASC, baseid ASC";
     $export_result = pg_query($conn, $export_query);
 
     if ($export_result) {
@@ -46,10 +46,11 @@ if (isset($_GET['action']) && $_GET['action'] == 'export_custom_items') {
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         
         $output = fopen('php://output', 'w');
-        fputcsv($output, array('baseid', 'name', 'description'));
+        fputcsv($output, array('plugin', 'baseid', 'name', 'description'));
         
         while ($row = pg_fetch_assoc($export_result)) {
             fputcsv($output, array(
+                $row['plugin'],
                 $row['baseid'],
                 $row['name'],
                 $row['description']
@@ -69,27 +70,27 @@ if (isset($_GET['action']) && $_GET['action'] == 'download_example') {
     header('Content-Disposition: attachment; filename="' . $filename . '"');
     
     $output = fopen('php://output', 'w');
-    fputcsv($output, array('baseid', 'name', 'description'));
+    fputcsv($output, array('plugin', 'baseid', 'name', 'description'));
     
     // Weapons
-    fputcsv($output, array('0001397E', 'Iron Sword', 'A standard iron sword with a worn leather grip.'));
-    fputcsv($output, array('00013948', 'Steel Dagger', 'A sharp steel dagger with a simple crossguard.'));
-    fputcsv($output, array('00013989', 'Iron War Axe', 'A crude but effective one-handed axe with a chipped blade.'));
+    fputcsv($output, array('Skyrim.esm', '0001397E', 'Iron Sword', 'A standard iron sword with a worn leather grip.'));
+    fputcsv($output, array('Skyrim.esm', '00013948', 'Steel Dagger', 'A sharp steel dagger with a simple crossguard.'));
+    fputcsv($output, array('Skyrim.esm', '00013989', 'Iron War Axe', 'A crude but effective one-handed axe with a chipped blade.'));
     
     // Armor
-    fputcsv($output, array('00013ED8', 'Iron Armor', 'Heavy iron cuirass with simple steel rivets and worn leather straps.'));
-    fputcsv($output, array('00012E4D', 'Iron Helmet', 'A basic iron helmet with minimal decoration and a T-shaped face guard.'));
-    fputcsv($output, array('0003619E', 'Leather Armor', 'Light armor made from tanned leather with reinforced shoulders.'));
-    fputcsv($output, array('00013920', 'Leather Boots', 'Sturdy leather boots with reinforced soles for travel.'));
-    fputcsv($output, array('000D7A8C', 'Hide Shield', 'A round wooden shield covered in thick animal hide.'));
+    fputcsv($output, array('Skyrim.esm', '00013ED8', 'Iron Armor', 'Heavy iron cuirass with simple steel rivets and worn leather straps.'));
+    fputcsv($output, array('Skyrim.esm', '00012E4D', 'Iron Helmet', 'A basic iron helmet with minimal decoration and a T-shaped face guard.'));
+    fputcsv($output, array('Skyrim.esm', '0003619E', 'Leather Armor', 'Light armor made from tanned leather with reinforced shoulders.'));
+    fputcsv($output, array('Skyrim.esm', '00013920', 'Leather Boots', 'Sturdy leather boots with reinforced soles for travel.'));
+    fputcsv($output, array('Skyrim.esm', '000D7A8C', 'Hide Shield', 'A round wooden shield covered in thick animal hide.'));
     
     // Household Objects
-    fputcsv($output, array('00064B3F', 'Apple', 'A fresh red apple with a crisp texture.'));
-    fputcsv($output, array('00064B41', 'Bread', 'A round loaf of crusty bread, still slightly warm.'));
-    fputcsv($output, array('00034CDF', 'Ale', 'A clay bottle of Nord ale with a strong, bitter smell.'));
-    fputcsv($output, array('0003365B', 'Woodcutter\'s Axe', 'A simple iron axe designed for chopping wood, not combat.'));
-    fputcsv($output, array('000211E6', 'Wooden Plate', 'A plain wooden plate, worn smooth from years of use.'));
-    fputcsv($output, array('00032A07', 'Goblet', 'An ornate silver goblet with intricate engravings.'));
+    fputcsv($output, array('Skyrim.esm', '00064B3F', 'Apple', 'A fresh red apple with a crisp texture.'));
+    fputcsv($output, array('Skyrim.esm', '00064B41', 'Bread', 'A round loaf of crusty bread, still slightly warm.'));
+    fputcsv($output, array('Skyrim.esm', '00034CDF', 'Ale', 'A clay bottle of Nord ale with a strong, bitter smell.'));
+    fputcsv($output, array('Skyrim.esm', '0003365B', 'Woodcutter\'s Axe', 'A simple iron axe designed for chopping wood, not combat.'));
+    fputcsv($output, array('Skyrim.esm', '000211E6', 'Wooden Plate', 'A plain wooden plate, worn smooth from years of use.'));
+    fputcsv($output, array('Skyrim.esm', '00032A07', 'Goblet', 'An ornate silver goblet with intricate engravings.'));
     
     fclose($output);
     exit;
@@ -106,17 +107,29 @@ $isEmbed = (isset($_GET['embed']) && $_GET['embed'] == '1');
 
 $debugPaneLink = false;
 
+function normalizeDescriptionManagerBaseId($baseid): string
+{
+    $baseid = trim((string) $baseid);
+    if (preg_match('/^(XX[0-9A-Fa-f]{6}|FEXXX[0-9A-Fa-f]{3}|[0-9A-Fa-f]{8})$/', $baseid)) {
+        return strtoupper($baseid);
+    }
+
+    return $baseid;
+}
+
 //
 // ────────────────────────────────────────────────────────────────────
 //   INDIVIDUAL UPLOAD
 // ────────────────────────────────────────────────────────────────────
 //
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual'])) {
+    $plugin = trim($_POST['plugin'] ?? '');
     $baseid = trim($_POST['baseid'] ?? '');
     $name = trim($_POST['name'] ?? '');
     $description = trim($_POST['description'] ?? '');
 
     if (!empty($baseid)) {
+        $baseid = normalizeDescriptionManagerBaseId($baseid);
         // Truncate baseid to 128 characters
         if (strlen($baseid) > 128) {
             $baseid = substr($baseid, 0, 128);
@@ -124,15 +137,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
 
         $query = "
             INSERT INTO {$schema}.descriptions_custom
-                (baseid, name, description)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (baseid)
+                (plugin, baseid, name, description)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (plugin, baseid)
             DO UPDATE SET
                 name = EXCLUDED.name,
                 description = EXCLUDED.description
         ";
 
-        $params = [$baseid, $name, $description];
+        $params = [$plugin, $baseid, $name, $description];
         $result = pg_query_params($conn, $query, $params);
 
         if ($result) {
@@ -160,16 +173,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
 
         if (in_array($fileExtension, $allowedfileExtensions)) {
             if (($handle = fopen($fileTmpPath, 'r')) !== false) {
-                // Skip header row
-                fgetcsv($handle, 1000, ',');
+                $header = fgetcsv($handle, 1000, ',');
+                $hasPluginColumn = is_array($header) && strtolower(trim($header[0] ?? '')) === 'plugin';
+                $csvHeaderValid = $hasPluginColumn;
+                if (!$hasPluginColumn) {
+                    $message .= '<p>Invalid CSV header. Expected: plugin, baseid, name, description.</p>';
+                    fclose($handle);
+                    $handle = false;
+                }
 
                 $rowCount = 0;
-                while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                    $baseid      = trim($data[0] ?? '');
-                    $name        = $data[1] ?? '';
-                    $description = $data[2] ?? '';
+                while ($handle !== false && ($data = fgetcsv($handle, 1000, ',')) !== false) {
+                    $plugin = trim($data[0] ?? '');
+                    $baseid = trim($data[1] ?? '');
+                    $name = $data[2] ?? '';
+                    $description = $data[3] ?? '';
 
                     if (!empty($baseid)) {
+                        $baseid = normalizeDescriptionManagerBaseId($baseid);
                         // Truncate baseid to 128 characters
                         if (strlen($baseid) > 128) {
                             $baseid = substr($baseid, 0, 128);
@@ -177,17 +198,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
 
                         $query = "
                             INSERT INTO $schema.descriptions_custom (
+                                plugin,
                                 baseid,
                                 name,
                                 description
                             )
-                            VALUES ($1, $2, $3)
-                            ON CONFLICT (baseid)
+                            VALUES ($1, $2, $3, $4)
+                            ON CONFLICT (plugin, baseid)
                             DO UPDATE SET
                                 name = EXCLUDED.name,
                                 description = EXCLUDED.description
                         ";
                         $result = pg_query_params($conn, $query, [
+                            $plugin,
                             $baseid,
                             $name,
                             $description
@@ -202,9 +225,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                         $message .= "<p>Skipping empty or invalid row (baseid missing).</p>";
                     }
                 }
-                fclose($handle);
+                if ($handle !== false) {
+                    fclose($handle);
+                }
 
-                $message .= "<p>$rowCount records inserted/updated successfully from the CSV file.</p>";
+                if ($csvHeaderValid) {
+                    $message .= "<p>$rowCount records inserted/updated successfully from the CSV file.</p>";
+                }
             } else {
                 $message .= '<p>Error opening the CSV file.</p>';
             }
@@ -239,27 +266,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['truncate_items'])) {
 //
 $formAction = '?#table';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] == 'update_single') {
-    $baseid_original = $_POST['baseid_original'] ?? '';
+    $plugin = trim($_POST['plugin'] ?? '');
     $baseid = trim($_POST['baseid'] ?? '');
     $name = trim($_POST['name'] ?? '');
     $description = trim($_POST['description'] ?? '');
 
     if (!empty($baseid)) {
+        $baseid = normalizeDescriptionManagerBaseId($baseid);
         if (strlen($baseid) > 128) {
             $baseid = substr($baseid, 0, 128);
         }
 
         $query = "
             INSERT INTO {$schema}.descriptions_custom
-                (baseid, name, description)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (baseid)
+                (plugin, baseid, name, description)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (plugin, baseid)
             DO UPDATE SET
                 name = EXCLUDED.name,
                 description = EXCLUDED.description
         ";
 
-        $params = [$baseid, $name, $description];
+        $params = [$plugin, $baseid, $name, $description];
         $result = pg_query_params($conn, $query, $params);
 
         if ($result) {
@@ -479,25 +507,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     /* Column width optimization */
     .table-container th:nth-child(1),
     .table-container td:nth-child(1) {
-        width: 15%;
+        width: 14%;
         min-width: 120px;
     }
 
     .table-container th:nth-child(2),
     .table-container td:nth-child(2) {
-        width: 20%;
-        min-width: 150px;
+        width: 16%;
+        min-width: 140px;
     }
 
     .table-container th:nth-child(3),
     .table-container td:nth-child(3) {
-        width: 50%;
-        min-width: 250px;
+        width: 18%;
+        min-width: 150px;
     }
 
     .table-container th:nth-child(4),
     .table-container td:nth-child(4) {
-        width: 15%;
+        width: 40%;
+        min-width: 250px;
+    }
+
+    .table-container th:nth-child(5),
+    .table-container td:nth-child(5) {
+        width: 12%;
         min-width: 100px;
     }
 
@@ -728,10 +762,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <a href="?action=download_example" class="action-button download-csv">Download Example CSV</a>
                     <a href="?action=export_custom_items" class="action-button export-csv">Export Custom Descriptions</a>
                 </div>
-                <p style="margin-top: 15px;">CSV format: baseid, name, description</p>
+                <p style="margin-top: 15px;">CSV format: plugin, baseid, name, description</p>
                 <p style="margin-top: 10px; color: #bbb;">
-                    Base IDs can use exact runtime FormIDs like <code>020098A0</code>, legacy wildcard keys like <code>XX0098A0</code> or <code>FEXXX822</code>,
-                    or stable plugin-aware keys like <code>Dawnguard.esm|000098A0</code>.
+                    Use the plugin filename in the first column, such as <code>Skyrim.esm</code>, and the local FormID in the baseid column, such as <code>000098A0</code>.
+                    Leave plugin blank only for legacy wildcard keys like <code>XX0098A0</code> or <code>FEXXX822</code>.
                 </p>
             </form>
         </div>
@@ -768,7 +802,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     SELECT *
                     FROM {$schema}.combined_descriptions
                     WHERE LOWER(name) LIKE LOWER($1) 
-                    AND (LOWER(baseid) LIKE LOWER($2) OR LOWER(name) LIKE LOWER($2))
+                    AND (LOWER(plugin) LIKE LOWER($2) OR LOWER(baseid) LIKE LOWER($2) OR LOWER(name) LIKE LOWER($2))
                     ORDER BY name ASC
                 ";
                 $params_combined = [$letter . '%', '%' . $searchTerm . '%'];
@@ -786,7 +820,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $query_combined = "
                     SELECT *
                     FROM {$schema}.combined_descriptions
-                    WHERE LOWER(baseid) LIKE LOWER($1) OR LOWER(name) LIKE LOWER($1)
+                    WHERE LOWER(plugin) LIKE LOWER($1) OR LOWER(baseid) LIKE LOWER($1) OR LOWER(name) LIKE LOWER($1)
                     ORDER BY name ASC
                 ";
                 $params_combined = ['%' . $searchTerm . '%'];
@@ -834,6 +868,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             echo '<table>';
             echo '<tr>';
             echo '  <th>Base ID</th>';
+            echo '  <th>Plugin</th>';
             echo '  <th>Name</th>';
             echo '  <th>Description</th>';
             echo '  <th>Actions</th>';
@@ -843,11 +878,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             while ($row = pg_fetch_assoc($result_combined)) {
                 echo '<tr>';
                 echo '  <td>' . htmlspecialchars($row['baseid'] ?? '') . '</td>';
+                echo '  <td>' . htmlspecialchars($row['plugin'] ?? '') . '</td>';
                 echo '  <td>' . htmlspecialchars($row['name'] ?? '') . '</td>';
                 echo '  <td style="max-width: 400px; word-wrap: break-word;">' . nl2br(htmlspecialchars(substr($row['description'] ?? '', 0, 200))) . (strlen($row['description'] ?? '') > 200 ? '...' : '') . '</td>';
                 
                 echo '<td>';
                 $jsData = [
+                    'plugin' => $row['plugin'] ?? '',
                     'baseid' => $row['baseid'],
                     'name' => $row['name'] ?? '',
                     'description' => $row['description'] ?? ''
@@ -881,7 +918,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <div class="modal-body">
             <form action="<?php echo $formAction; ?>" method="post">
                 <input type="hidden" name="action" value="update_single">
-                <input type="hidden" name="baseid_original" id="edit_baseid_original">
+
+                <label for="edit_plugin">Plugin:</label>
+                <small>Plugin cannot be changed after creation. Create a new entry if you need to move it.</small>
+                <input type="text" name="plugin" id="edit_plugin" readonly style="background-color: #2a2a2a; cursor: not-allowed;">
 
                 <label for="edit_baseid">Base ID:</label>
                 <small>Base IDs cannot be changed after creation. If you need to change an ID, create a new entry.</small>
@@ -911,8 +951,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         </div>
         <div class="modal-body">
             <form action="" method="post">
+                <label for="new_plugin">Plugin:</label>
+                <small>Use the source plugin filename, for example <code>Skyrim.esm</code>. Leave blank only for legacy wildcard keys.</small>
+                <input type="text" name="plugin" id="new_plugin">
+
                 <label for="new_baseid">Base ID (required):</label>
-                <small>Use an exact FormID, a legacy wildcard key, or a stable plugin-aware key like <code>SomeMod.esp|0000ABCD</code>.</small>
+                <small>Use the local FormID, for example <code>0000ABCD</code>, or a legacy wildcard key like <code>XX000ABC</code>.</small>
                 <input type="text" name="baseid" id="new_baseid" required>
 
                 <label for="new_name">Name:</label>
@@ -935,7 +979,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 <script>
 function openEditModal(data) {
     const modal = document.getElementById('editModal');
-    document.getElementById('edit_baseid_original').value = data.baseid;
+    document.getElementById('edit_plugin').value = data.plugin || '';
     document.getElementById('edit_baseid').value = data.baseid;
     document.getElementById('edit_name').value = data.name || '';
     document.getElementById('edit_description').value = data.description || '';
@@ -950,6 +994,7 @@ function closeEditModal() {
 
 function openNewEntryModal() {
     const modal = document.getElementById('newEntryModal');
+    document.getElementById('new_plugin').value = '';
     document.getElementById('new_baseid').value = '';
     document.getElementById('new_name').value = '';
     document.getElementById('new_description').value = '';

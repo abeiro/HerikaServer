@@ -242,7 +242,7 @@ function herikaResolveSpawnItemDescriptionMatch($requestedItemName)
     }
 
     $escapedName = $GLOBALS["db"]->escape($requestedItemName);
-    $buildCandidates = function ($rows, $reason) {
+    $buildCandidates = function ($rows, $reason) use ($requestedItemName) {
         $candidates = [];
         foreach ((array) $rows as $row) {
             if (!is_array($row)) {
@@ -250,15 +250,20 @@ function herikaResolveSpawnItemDescriptionMatch($requestedItemName)
             }
 
             $baseId = trim(strval($row['baseid'] ?? ''));
-            $runtimeFormId = herikaResolveSpawnItemBaseIdToRuntimeFormId($baseId);
+            $plugin = trim(strval($row['plugin'] ?? ''));
+            $lookupBaseId = ($plugin !== '' && $baseId !== '')
+                ? chimBuildStableFormReference($plugin, $baseId)
+                : $baseId;
+            $runtimeFormId = herikaResolveSpawnItemBaseIdToRuntimeFormId($lookupBaseId);
             if ($runtimeFormId === null) {
                 continue;
             }
 
             $candidate = [
                 'baseid' => $baseId,
+                'plugin' => $plugin,
                 'runtime_formid' => $runtimeFormId,
-                'name' => trim(strval($row['name'] ?? $requestedItemName)),//requestedItemName is undefined in this scope. Must fix
+                'name' => trim(strval($row['name'] ?? $requestedItemName)),
                 'description' => trim(strval($row['description'] ?? '')),
                 'match_reason' => $reason,
                 'similarity' => isset($row['sim']) ? floatval($row['sim']) : 1.0,
@@ -307,10 +312,10 @@ function herikaResolveSpawnItemDescriptionMatch($requestedItemName)
     };
 
     $exactRows = $GLOBALS["db"]->fetchAll("
-        SELECT baseid, name, description
+        SELECT plugin, baseid, name, description
         FROM combined_descriptions
         WHERE LOWER(name) = LOWER('{$escapedName}')
-        ORDER BY baseid ASC
+        ORDER BY plugin ASC, baseid ASC
         LIMIT 12
     ");
     $exactCandidates = $buildCandidates($exactRows, 'exact_name');
@@ -329,10 +334,10 @@ function herikaResolveSpawnItemDescriptionMatch($requestedItemName)
     }
 
     $similarityRows = $GLOBALS["db"]->fetchAll("
-        SELECT baseid, name, description, similarity(name, '{$escapedName}') AS sim
+        SELECT plugin, baseid, name, description, similarity(name, '{$escapedName}') AS sim
         FROM combined_descriptions
         WHERE similarity(name, '{$escapedName}') > 0.55
-        ORDER BY sim DESC, name ASC
+        ORDER BY sim DESC, name ASC, plugin ASC, baseid ASC
         LIMIT 8
     ");
     $similarityCandidates = $buildCandidates($similarityRows, 'similar_name');

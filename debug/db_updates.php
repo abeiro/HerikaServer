@@ -3920,9 +3920,11 @@ if ($checkVersion("descriptions")<20241114001) {
     Logger::debug("Applying descriptions 20241114001");
     $db->execQuery("
         CREATE TABLE IF NOT EXISTS public.descriptions (
-            baseid character varying(128) NOT NULL PRIMARY KEY,
+            plugin text NOT NULL DEFAULT '',
+            baseid character varying(128) NOT NULL,
             name text,
-            description text
+            description text,
+            PRIMARY KEY (plugin, baseid)
         );
     ");
     $updateVersion("descriptions",20241114001);
@@ -3933,9 +3935,11 @@ if ($checkVersion("descriptions_custom")<20241114001) {
     Logger::debug("Applying descriptions_custom 20241114001");
     $db->execQuery("
         CREATE TABLE IF NOT EXISTS public.descriptions_custom (
-            baseid character varying(128) NOT NULL PRIMARY KEY,
+            plugin text NOT NULL DEFAULT '',
+            baseid character varying(128) NOT NULL,
             name text,
-            description text
+            description text,
+            PRIMARY KEY (plugin, baseid)
         );
     ");
     $updateVersion("descriptions_custom",20241114001);
@@ -4002,22 +4006,119 @@ if ($checkVersion("faction_descriptions")<20250115001) {
     Logger::info("Applied patch faction_descriptions 20250115001");
 }
 
+if ($checkVersion("descriptions_schema_plugin_column")<20260611005) {
+    Logger::debug("Applying descriptions_schema_plugin_column 20260611005");
+
+    foreach (['descriptions', 'descriptions_custom'] as $tableName) {
+        $db->execQuery("ALTER TABLE public.{$tableName} ADD COLUMN IF NOT EXISTS plugin text NOT NULL DEFAULT ''");
+        $db->execQuery("ALTER TABLE public.{$tableName} DROP CONSTRAINT IF EXISTS {$tableName}_pkey");
+        $db->execQuery("
+            UPDATE public.{$tableName}
+               SET plugin = split_part(baseid, '|', 1),
+                   baseid = split_part(baseid, '|', 2)
+             WHERE plugin = ''
+               AND position('|' in baseid) > 0
+        ");
+        $db->execQuery("
+            DELETE FROM public.{$tableName} a
+             USING public.{$tableName} b
+             WHERE a.ctid < b.ctid
+               AND a.plugin = b.plugin
+               AND a.baseid = b.baseid
+        ");
+        $db->execQuery("ALTER TABLE public.{$tableName} ADD PRIMARY KEY (plugin, baseid)");
+    }
+
+    $updateVersion("descriptions_schema_plugin_column", 20260611005);
+    Logger::info("Applied patch descriptions_schema_plugin_column 20260611005");
+}
+
+if ($checkVersion("descriptions_defaults")<20260611005) {
+    Logger::debug("Applying descriptions_defaults 20260611005");
+
+    $sqlFile = __DIR__ . '/../data/descriptions_20241114001.sql';
+    if (file_exists($sqlFile)) {
+        $sql = file_get_contents($sqlFile);
+        if ($sql !== false) {
+            $sql = str_replace(
+                "ON CONFLICT (plugin, baseid) DO NOTHING;",
+                "ON CONFLICT (plugin, baseid) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description;",
+                $sql
+            );
+            $db->execQuery($sql);
+            Logger::info("Refreshed descriptions from descriptions_20241114001.sql");
+        } else {
+            Logger::warn("Could not read descriptions_20241114001.sql for descriptions default refresh");
+        }
+    } else {
+        Logger::warn("descriptions_20241114001.sql not found at $sqlFile for descriptions default refresh");
+    }
+
+    // Remove old default runtime keys that would otherwise be checked before plugin-aware keys.
+    // User edits live in descriptions_custom and are intentionally left untouched.
+    $db->execQuery("
+        WITH obsolete_runtime AS (
+            SELECT baseid AS old_baseid,
+                   CASE
+                       WHEN UPPER(SUBSTRING(baseid FROM 1 FOR 2)) = '00'
+                           THEN 'Skyrim.esm|' || UPPER(baseid)
+                       WHEN UPPER(SUBSTRING(baseid FROM 1 FOR 2)) = '02'
+                           THEN 'Dawnguard.esm|00' || UPPER(SUBSTRING(baseid FROM 3))
+                       WHEN UPPER(SUBSTRING(baseid FROM 1 FOR 2)) = '03'
+                           THEN 'HearthFires.esm|00' || UPPER(SUBSTRING(baseid FROM 3))
+                       WHEN UPPER(SUBSTRING(baseid FROM 1 FOR 2)) = '04'
+                           THEN 'Dragonborn.esm|00' || UPPER(SUBSTRING(baseid FROM 3))
+                       ELSE baseid
+                   END AS stable_baseid
+              FROM public.descriptions
+             WHERE UPPER(baseid) ~ '^(00|02|03|04)[0-9A-F]{6}$'
+        )
+        DELETE FROM public.descriptions d
+         USING obsolete_runtime o
+         WHERE d.baseid = o.old_baseid
+           AND d.plugin = ''
+           AND d.baseid <> o.stable_baseid
+           AND EXISTS (
+               SELECT 1
+                 FROM public.descriptions stable
+                WHERE stable.plugin || '|' || stable.baseid = o.stable_baseid
+           )
+    ");
+
+    // Legacy wildcard defaults are safe to remove only when the refreshed stable row is identical.
+    $db->execQuery("
+        DELETE FROM public.descriptions old_default
+         USING public.descriptions stable
+         WHERE UPPER(old_default.baseid) ~ '^(XX[0-9A-F]{6}|FEXXX[0-9A-F]{3})$'
+           AND old_default.plugin = ''
+           AND stable.plugin <> ''
+           AND stable.name IS NOT DISTINCT FROM old_default.name
+           AND stable.description IS NOT DISTINCT FROM old_default.description
+    ");
+
+    $updateVersion("descriptions_defaults", 20260611005);
+    Logger::info("Applied patch descriptions_defaults 20260611005");
+}
+
 // Always (re)create combined view once base tables exist
 try {
     $db->execQuery("DROP VIEW IF EXISTS public.combined_descriptions CASCADE;");
     $db->execQuery("
         CREATE VIEW public.combined_descriptions AS
-        SELECT c.baseid,
+        SELECT c.plugin,
+               c.baseid,
                c.name,
                c.description
           FROM public.descriptions_custom c
         UNION ALL
-        SELECT i.baseid,
+        SELECT i.plugin,
+               i.baseid,
                i.name,
                i.description
           FROM (public.descriptions i
                 LEFT JOIN public.descriptions_custom c
-                  ON ((i.baseid)::text = (c.baseid)::text))
+                  ON ((i.plugin)::text = (c.plugin)::text
+                 AND (i.baseid)::text = (c.baseid)::text))
          WHERE c.baseid IS NULL;
     ");
     $updateVersion("combined_descriptions",20241114001);
