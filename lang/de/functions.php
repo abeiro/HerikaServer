@@ -16,7 +16,6 @@ $ENABLED_FUNCTIONS_LOCAL=[
     'CheckInventory',
     'SheatheWeapon',
     'Relax',
-    'LeadTheWayTo',
     'TakeASeat',
     'ReadQuestJournal',
     'IncreaseWalkSpeed',
@@ -94,7 +93,6 @@ $F_RETURNMESSAGES_LOCAL["Follow"]="{$GLOBALS["HERIKA_NAME"]} folgt #TARGET#.";
 $F_RETURNMESSAGES_LOCAL["CheckInventory"]="Inventar von {$GLOBALS["HERIKA_NAME"]}: #RESULT#";
 $F_RETURNMESSAGES_LOCAL["SheatheWeapon"]="Steckt die aktuelle Waffe weg.";
 $F_RETURNMESSAGES_LOCAL["Relax"]="{$GLOBALS["HERIKA_NAME"]} entspannt sich und genießt den Moment.";
-$F_RETURNMESSAGES_LOCAL["LeadTheWayTo"]="Nur verwenden, wenn {$GLOBALS["PLAYER_NAME"]} dies ausdrücklich befiehlt. Führt {$GLOBALS["PLAYER_NAME"]} zu einer Stadt.";
 $F_RETURNMESSAGES_LOCAL["TakeASeat"]="{$GLOBALS["HERIKA_NAME"]} setzt sich auf einen nahen Stuhl oder ein Möbelstück.";
 $F_RETURNMESSAGES_LOCAL["ReadQuestJournal"]="";
 $F_RETURNMESSAGES_LOCAL["IncreaseWalkSpeed"]="Erhöht das Lauftempo von {$GLOBALS["HERIKA_NAME"]}.";
@@ -136,7 +134,6 @@ $F_NAMES_LOCAL["Follow"]="Folgen";
 $F_NAMES_LOCAL["CheckInventory"]="InventarAuflisten";
 $F_NAMES_LOCAL["SheatheWeapon"]="WaffeWegstecken";
 $F_NAMES_LOCAL["Relax"]="Entspannen";
-//$F_NAMES_LOCAL["LeadTheWayTo"]="Hinführen";
 $F_NAMES_LOCAL["TakeASeat"]="Hinsetzen";
 $F_NAMES_LOCAL["ReadQuestJournal"]="QuestTagebuchLesen";
 $F_NAMES_LOCAL["IncreaseWalkSpeed"]="SchnellerGehen";
@@ -343,21 +340,6 @@ $GLOBALS["FUNCTIONS"] = [
             "required" => []
         ]
     ],
-    /*[
-        "name" => $F_NAMES_LOCAL["LeadTheWayTo"],
-        "description" => $F_TRANSLATIONS_LOCAL["LeadTheWayTo"],
-        "parameters" => [
-            "type" => "object",
-            "properties" => [
-                "location" => [
-                    "type" => "string",
-                    "description" => "Stadt oder Ort, zu dem gereist werden soll. Nur auf ausdrücklichen Befehl von {$GLOBALS["PLAYER_NAME"]}"
-                    
-                ]
-            ],
-            "required" => ["location"]
-        ]
-    ],*/
     [
         "name" => $F_NAMES_LOCAL["TravelTo"],
         "description" => $F_TRANSLATIONS_LOCAL["TravelTo"],
@@ -743,7 +725,6 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'CheckInventory',
         //'SheatheWeapon',
         'Relax',
-        //'LeadTheWayTo',
         'TakeASeat',
         'IncreaseWalkSpeed',
         'DecreaseWalkSpeed',
@@ -776,7 +757,6 @@ if (isset($GLOBALS["IS_NPC"])&&$GLOBALS["IS_NPC"]) {
         'CheckInventory',
         'SheatheWeapon',
         'Relax',
-        //'LeadTheWayTo',
         'TakeASeat',
         'ReadQuestJournal',
         'IncreaseWalkSpeed',

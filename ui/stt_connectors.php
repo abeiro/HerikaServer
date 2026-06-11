@@ -337,14 +337,6 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
 .layout { display: grid; grid-template-columns: minmax(280px, 340px) 1fr; gap: 18px; align-items: start; }
 .left-col, .right-col { background: linear-gradient(180deg, rgba(42,42,42,.95), rgba(34,34,34,.98)); border: 1px solid #3a3a3a; border-radius: 10px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.15), inset 0 1px rgba(255,255,255,.03); }
 .left-col { position: sticky; top: 90px; max-height: calc(100vh - 110px); overflow: hidden; }
-.btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-.btn-row .btn-save, .btn-row .btn-primary, .btn-row .btn-secondary { margin: 0; }
-.btn-save, .btn-primary, .btn-secondary { border-radius: 8px; padding: 8px 14px; cursor: pointer; border: 1px solid rgba(138,155,182,.35); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
-.btn-save { background: linear-gradient(135deg, rgba(32,122,74,.9), rgba(23,101,57,.9)); color: #fff; }
-.btn-primary { background: #204e7a; color: #fff; }
-.btn-primary:hover { background: #285c8f; }
-.btn-secondary { background: #3a3a3a; color: #fff; }
-.btn-secondary:hover { background: #4a4a4a; }
 .list-wrap { display: flex; flex-direction: column; gap: 10px; overflow: auto; max-height: calc(100vh - 280px); padding-right: 4px; }
 .group-title { color: #f3d6a8; font-family: 'MagicCards', serif; word-spacing: 6px; font-size: 1.05em; margin: 8px 0 0; }
 .conn-card { border: 1px solid #3a3a3a; border-radius: 10px; background: linear-gradient(135deg, rgba(42,42,42,.95), rgba(34,34,34,.98)); padding: 12px; cursor: pointer; transition: all .2s ease; box-shadow: 0 1px 4px rgba(0,0,0,.1); }

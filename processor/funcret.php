@@ -47,6 +47,51 @@ if (!function_exists('chimBuildMetadataFollowupRequest')) {
 	}
 }
 
+if (!function_exists('chimShouldSkipFuncretInfoActionLog')) {
+	function chimShouldSkipFuncretInfoActionLog($functionCodeName)
+	{
+		$functionCodeName = trim(strval($functionCodeName));
+		if ($functionCodeName === '') {
+			return true;
+		}
+
+		if (function_exists('isNarratorPrivateActionName') && isNarratorPrivateActionName($functionCodeName)) {
+			return true;
+		}
+
+		return function_exists('herikaActionCatalogMetadataFlagEnabled')
+			&& herikaActionCatalogMetadataFlagEnabled($functionCodeName, 'suppress_placeholder_infoaction');
+	}
+}
+
+if (!function_exists('chimLogFuncretResultInfoAction')) {
+	function chimLogFuncretResultInfoAction($functionCodeName, $argName, $argValue, $resultText)
+	{
+		if (!function_exists('logEvent') || !function_exists('herikaBuildFuncretResultInfoActionMessage')) {
+			return false;
+		}
+
+		if (chimShouldSkipFuncretInfoActionLog($functionCodeName)) {
+			return false;
+		}
+
+		$message = herikaBuildFuncretResultInfoActionMessage($functionCodeName, $argName, $argValue, $resultText);
+		if ($message === '') {
+			return false;
+		}
+
+		$gameRequestCopy = $GLOBALS["gameRequest"] ?? [];
+		if (!is_array($gameRequestCopy)) {
+			return false;
+		}
+
+		$gameRequestCopy[0] = "infoaction";
+		$gameRequestCopy[3] = $message;
+		logEvent($gameRequestCopy);
+		return true;
+	}
+}
+
 if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . ".last_tool_call_openai.id.txt")) {
 	$lastCallId = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . ".last_tool_call_openai.id.txt");
 } else {
@@ -65,6 +110,17 @@ $functionCodeName = $returnFunction[1];
 $useFunctionsAgain = false;
 $argName = "target";
 $currentFollowupChainDepth = 0;
+$followupConfig = function_exists('herikaActionCatalogGetResolvedFollowupConfig')
+	? herikaActionCatalogGetResolvedFollowupConfig($functionCodeName)
+	: [];
+$argName = function_exists('herikaResolveFuncretArgumentName')
+	? herikaResolveFuncretArgumentName($functionCodeName, $followupConfig)
+	: trim(strval($followupConfig['arg_name'] ?? 'target'));
+if ($argName === '') {
+	$argName = 'target';
+}
+
+chimLogFuncretResultInfoAction($functionCodeName, $argName, $returnFunction[2] ?? '', $returnFunction[3] ?? '');
 
 if (isset($returnFunction[2])) {
 	// Patch. 
@@ -72,20 +128,12 @@ if (isset($returnFunction[2])) {
 
 	error_log("[CHIM] Checking <$functionCodeName> <{$returnFunction[1]}>");
 
-	$followupConfig = function_exists('herikaActionCatalogGetResolvedFollowupConfig')
-		? herikaActionCatalogGetResolvedFollowupConfig($functionCodeName)
-		: [];
 	$followupEnabled = !empty($followupConfig['enabled']);
 	$followupPrompt = trim(strval($followupConfig['prompt'] ?? ''));
 
 	if (!$followupEnabled) {
 		terminate();
 
-	}
-
-	$argName = trim(strval($followupConfig['arg_name'] ?? 'target'));
-	if ($argName === '') {
-		$argName = 'target';
 	}
 
 	$useFunctionsAgain = !empty($followupConfig['use_functions_again']);

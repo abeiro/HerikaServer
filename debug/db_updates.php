@@ -6388,6 +6388,85 @@ if ($checkVersion("core_action") < 20260512002) {
     Logger::info("Applied patch core_action 20260512002");
 }
 
+if ($checkVersion("core_action") < 20260610001) {
+    Logger::debug("Applying core_action 20260610001 - make MoveTo actor-only");
+
+    $db->execQuery("
+        UPDATE public.core_action
+           SET description = 'Move to a visible nearby actor or NPC. Use TravelTo for places, buildings, cities, doors, or locations.',
+               return_message = '#HERIKA_NAME# moves to #TARGET#.',
+               parameters_json = '{\"type\":\"object\",\"required\":[\"target\"],\"properties\":{\"target\":{\"enum\":[],\"type\":\"string\",\"description\":\"Visible nearby target NPC, actor, or being. Do not use this for places, buildings, cities, doors, or locations.\"}}}'::jsonb,
+               updated_at = NOW()
+         WHERE code_name = 'MoveTo'
+    ");
+
+    $db->execQuery("
+        UPDATE public.core_action_custom
+           SET description = 'Move to a visible nearby actor or NPC. Use TravelTo for places, buildings, cities, doors, or locations.',
+               return_message = '#HERIKA_NAME# moves to #TARGET#.',
+               parameters_json = '{\"type\":\"object\",\"required\":[\"target\"],\"properties\":{\"target\":{\"enum\":[],\"type\":\"string\",\"description\":\"Visible nearby target NPC, actor, or being. Do not use this for places, buildings, cities, doors, or locations.\"}}}'::jsonb,
+               updated_at = NOW()
+         WHERE code_name = 'MoveTo'
+           AND (
+                description = 'Move to a visible building or visible actor, also used to guide #PLAYER_NAME# to an actor or building.'
+                OR return_message = 'Walk to a visible building or visible actor, also used to guide #PLAYER_NAME# to an actor or building.'
+           )
+    ");
+
+    $updateVersion("core_action", 20260610001);
+    Logger::info("Applied patch core_action 20260610001");
+}
+
+if ($checkVersion("core_action") < 20260610002) {
+    Logger::debug("Applying core_action 20260610002 - clarify TravelTo long-distance targets");
+
+    $db->execQuery("
+        UPDATE public.core_action
+           SET description = 'Travel long distance to a building, city, door or other location. Also known as lead the way.',
+               parameters_json = '{\"type\":\"object\",\"required\":[\"location\"],\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"Building, city, door, or other location to travel to.\"}}}'::jsonb,
+               updated_at = NOW()
+         WHERE code_name = 'TravelTo'
+    ");
+
+    $db->execQuery("
+        UPDATE public.core_action_custom
+           SET description = 'Travel long distance to a building, city, door or other location. Also known as lead the way.',
+               parameters_json = '{\"type\":\"object\",\"required\":[\"location\"],\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"Building, city, door, or other location to travel to.\"}}}'::jsonb,
+               updated_at = NOW()
+         WHERE code_name = 'TravelTo'
+           AND (
+                description = 'Only use if #PLAYER_NAME# explicitly suggests it. Guide #PLAYER_NAME# to a town or city. Also known as lead the way.'
+                OR description = 'Use it to move to major locations and landmarks and POIs.'
+           )
+    ");
+
+    $updateVersion("core_action", 20260610002);
+    Logger::info("Applied patch core_action 20260610002");
+}
+
+if ($checkVersion("core_action") < 20260610003) {
+    Logger::debug("Applying core_action 20260610003 - deactivate legacy LeadTheWayTo");
+
+    $db->execQuery("
+        UPDATE public.core_action
+           SET is_activated = FALSE,
+               metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{status}', '\"inactive\"'::jsonb, true),
+               updated_at = NOW()
+         WHERE code_name = 'LeadTheWayTo'
+    ");
+
+    $db->execQuery("
+        UPDATE public.core_action_custom
+           SET is_activated = FALSE,
+               metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{status}', '\"inactive\"'::jsonb, true),
+               updated_at = NOW()
+         WHERE code_name = 'LeadTheWayTo'
+    ");
+
+    $updateVersion("core_action", 20260610003);
+    Logger::info("Applied patch core_action 20260610003");
+}
+
 //----------------------------------------------------
 
 // Relationship Evaluation and Initialization Queues

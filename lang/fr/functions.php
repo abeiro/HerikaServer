@@ -14,7 +14,6 @@ $ENABLED_FUNCTIONS=[
     'CheckInventory',
     'SheatheWeapon',
     'Relax',
-    'LeadTheWayTo',
     'TakeASeat',
     'ReadQuestJournal',
     'IncreaseWalkSpeed',
@@ -43,7 +42,6 @@ $F_TRANSLATIONS["Follow"]="Se déplace et suit un PNJ, acteur ou être";
 $F_TRANSLATIONS["CheckInventory"]="Cherche dans l'inventaire, le sac ou la poche de {$GLOBALS["HERIKA_NAME"]}. Affiche l'inventaire";
 $F_TRANSLATIONS["SheatheWeapon"]="Rengaine l'arme actuelle";
 $F_TRANSLATIONS["Relax"]="Arrête de chercher des missions. Détends-toi et repose-toi";
-$F_TRANSLATIONS["LeadTheWayTo"]="À utiliser seulement si {$GLOBALS["PLAYER_NAME"]} le demande explicitement. Guide {$GLOBALS["PLAYER_NAME"]} vers un village ou une ville";
 $F_TRANSLATIONS["TakeASeat"]="{$GLOBALS["HERIKA_NAME"]} s'assoit sur une chaise ou un meuble proche";
 $F_TRANSLATIONS["ReadQuestJournal"]="À utiliser seulement si {$GLOBALS["PLAYER_NAME"]} demande explicitement une mission. Récupère les informations sur les missions en cours";
 $F_TRANSLATIONS["IncreaseWalkSpeed"]="Augmente la vitesse de déplacement de {$GLOBALS["HERIKA_NAME"]}";
@@ -73,7 +71,6 @@ $F_RETURNMESSAGES["Follow"]="Se déplace et suit un PNJ, acteur ou être";
 $F_RETURNMESSAGES["CheckInventory"]="INVENTAIRE de {$GLOBALS["HERIKA_NAME"]} :#RESULT#";
 $F_RETURNMESSAGES["SheatheWeapon"]="Rengaine l'arme actuelle";
 $F_RETURNMESSAGES["Relax"]="{$GLOBALS["HERIKA_NAME"]} est détendue. Temps de profiter de la vie";
-$F_RETURNMESSAGES["LeadTheWayTo"]="À utiliser seulement si {$GLOBALS["PLAYER_NAME"]} le demande explicitement. Guide {$GLOBALS["PLAYER_NAME"]} vers un village ou une ville";
 $F_RETURNMESSAGES["TakeASeat"]="{$GLOBALS["HERIKA_NAME"]} s'assoit sur une chaise ou un meuble proche";
 $F_RETURNMESSAGES["ReadQuestJournal"]="";
 $F_RETURNMESSAGES["IncreaseWalkSpeed"]="Augmente la vitesse/le pas de {$GLOBALS["HERIKA_NAME"]}";

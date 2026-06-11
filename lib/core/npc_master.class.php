@@ -4,6 +4,152 @@ if (!function_exists('chimParseStableFormReference')) {
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "game_plugins.php");
 }
 
+if (!function_exists('herikaRolemasterStateToBool')) {
+    function herikaRolemasterStateToBool($value)
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return $value != 0;
+        }
+
+        $text = strtolower(trim(strval($value)));
+        if ($text === '' || $text === '0' || $text === 'false' || $text === 'f' || $text === 'no' || $text === 'off' || $text === 'null') {
+            return false;
+        }
+
+        return in_array($text, ['1', 'true', 't', 'yes', 'on'], true);
+    }
+}
+
+if (!function_exists('herikaRolemasterStateResetCache')) {
+    function herikaRolemasterStateResetCache()
+    {
+        unset($GLOBALS['HERIKA_ROLEMASTER_LOOKUP_CACHE']);
+        unset($GLOBALS['HERIKA_ROLEMASTER_LEGACY_CACHE']);
+    }
+}
+
+if (!function_exists('herikaRolemasterStateGetLegacyFlag')) {
+    function herikaRolemasterStateGetLegacyFlag($npcName = '')
+    {
+        $npcName = trim(strval($npcName));
+        if ($npcName === '') {
+            return false;
+        }
+
+        if (!isset($GLOBALS['HERIKA_ROLEMASTER_LEGACY_CACHE']) || !is_array($GLOBALS['HERIKA_ROLEMASTER_LEGACY_CACHE'])) {
+            $GLOBALS['HERIKA_ROLEMASTER_LEGACY_CACHE'] = [];
+        }
+
+        if (array_key_exists($npcName, $GLOBALS['HERIKA_ROLEMASTER_LEGACY_CACHE'])) {
+            return $GLOBALS['HERIKA_ROLEMASTER_LEGACY_CACHE'][$npcName];
+        }
+
+        if (
+            !isset($GLOBALS['db']) ||
+            !is_object($GLOBALS['db']) ||
+            !method_exists($GLOBALS['db'], 'escape') ||
+            !method_exists($GLOBALS['db'], 'fetchOne')
+        ) {
+            $GLOBALS['HERIKA_ROLEMASTER_LEGACY_CACHE'][$npcName] = false;
+            return false;
+        }
+
+        $namedKey = $GLOBALS['db']->escape($npcName . '_is_rolemastered');
+        $row = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='{$namedKey}' LIMIT 1");
+
+        if (is_array($row)) {
+            $rawValue = $row['value'] ?? null;
+        } else {
+            $rawValue = $row;
+        }
+
+        $resolved = herikaRolemasterStateToBool($rawValue);
+        $GLOBALS['HERIKA_ROLEMASTER_LEGACY_CACHE'][$npcName] = $resolved;
+
+        return $resolved;
+    }
+}
+
+if (!function_exists('herikaResolveNpcRolemasterState')) {
+    function herikaResolveNpcRolemasterState($npcName = '', array $options = [])
+    {
+        $npcName = trim(strval($npcName));
+        if ($npcName === '') {
+            $npcName = trim(strval($GLOBALS['HERIKA_NAME'] ?? ''));
+        }
+
+        $useGlobal = !array_key_exists('use_global', $options) || !empty($options['use_global']);
+        if ($useGlobal && !empty($GLOBALS['is_rolemastered'])) {
+            return true;
+        }
+
+        $npcData = is_array($options['npc_data'] ?? null) ? $options['npc_data'] : null;
+        if (is_array($npcData) && !empty($npcData['is_rolemastered'])) {
+            return true;
+        }
+
+        $metadata = is_array($options['metadata'] ?? null) ? $options['metadata'] : null;
+        $extended = is_array($options['extended'] ?? null) ? $options['extended'] : null;
+        $loadLookup = !array_key_exists('load_lookup', $options) || !empty($options['load_lookup']);
+
+        if (($metadata === null || $extended === null) && $loadLookup && $npcName !== '' && class_exists('NpcMaster')) {
+            if (!isset($GLOBALS['HERIKA_ROLEMASTER_LOOKUP_CACHE']) || !is_array($GLOBALS['HERIKA_ROLEMASTER_LOOKUP_CACHE'])) {
+                $GLOBALS['HERIKA_ROLEMASTER_LOOKUP_CACHE'] = [];
+            }
+
+            if (!array_key_exists($npcName, $GLOBALS['HERIKA_ROLEMASTER_LOOKUP_CACHE'])) {
+                $lookup = [
+                    'npc_data' => [],
+                    'metadata' => [],
+                    'extended' => [],
+                ];
+
+                $npcMaster = new NpcMaster();
+                $lookupNpcData = $npcMaster->getByName($npcName);
+                if (is_array($lookupNpcData) && count($lookupNpcData) > 0) {
+                    $lookup['npc_data'] = $lookupNpcData;
+                    $lookup['metadata'] = $npcMaster->getMetadata($lookupNpcData);
+                    $lookup['extended'] = $npcMaster->getExtendedData($lookupNpcData);
+                }
+
+                $GLOBALS['HERIKA_ROLEMASTER_LOOKUP_CACHE'][$npcName] = $lookup;
+            }
+
+            $lookup = $GLOBALS['HERIKA_ROLEMASTER_LOOKUP_CACHE'][$npcName];
+            if ($npcData === null && is_array($lookup['npc_data'])) {
+                $npcData = $lookup['npc_data'];
+            }
+            if ($metadata === null && is_array($lookup['metadata'])) {
+                $metadata = $lookup['metadata'];
+            }
+            if ($extended === null && is_array($lookup['extended'])) {
+                $extended = $lookup['extended'];
+            }
+        }
+
+        if (is_array($npcData) && !empty($npcData['is_rolemastered'])) {
+            return true;
+        }
+        if (is_array($metadata) && !empty($metadata['is_rolemastered'])) {
+            return true;
+        }
+        if (is_array($extended) && !empty($extended['is_rolemastered'])) {
+            return true;
+        }
+
+        $useLegacy = !array_key_exists('use_legacy', $options) || !empty($options['use_legacy']);
+        if ($useLegacy) {
+            return herikaRolemasterStateGetLegacyFlag($npcName);
+        }
+
+        return false;
+    }
+}
+
 class NpcMaster
 {
     private $table = "core_npc_master";

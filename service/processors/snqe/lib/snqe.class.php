@@ -175,8 +175,12 @@ class SNQEQuestManager
                     'updated_at' => $runningQuest["updated_at"],
                 ]
             );
-        } else 
-            unlink($GLOBALS["ENGINE_PATH"] . "/log/snqe_state.json");
+        } else {
+            $stateFile = $GLOBALS["ENGINE_PATH"] . "/log/snqe_state.json";
+            if (file_exists($stateFile)) {
+                unlink($stateFile);
+            }
+        }
 
     }
 }

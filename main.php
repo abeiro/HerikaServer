@@ -2018,9 +2018,10 @@ $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
 $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
 
 // Rolemaster stuff
-
-
-if (isset($GLOBALS["is_rolemastered"])) {
+if (herikaResolveNpcRolemasterState($GLOBALS["HERIKA_NAME"] ?? '', [
+    'npc_data' => $currentNpcData ?? null,
+])) {
+    $GLOBALS["is_rolemastered"]=true;
     $GLOBALS["NPC_ROLEMASTERED"]=true;
     error_log("{$GLOBALS["HERIKA_NAME"]} is_rolemastered");
     $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;

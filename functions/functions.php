@@ -23,7 +23,6 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'CheckInventory',
     'SheatheWeapon',
     'Relax',
-    'LeadTheWayTo',
     'TakeASeat',
     'ReadQuestJournal',
     'Surrender',
@@ -938,7 +937,7 @@ function herikaExtractActionArgumentTargetValue($arguments)
 
 // We must use internal keys here.
 
-$F_TRANSLATIONS_LOCAL["MoveTo"] = "Move to a visible building or visible actor, also used to guide #PLAYER_NAME# to an actor or building.";
+$F_TRANSLATIONS_LOCAL["MoveTo"] = "Move to a visible nearby actor or NPC. Use TravelTo for places, buildings, cities, doors, or locations.";
 $F_TRANSLATIONS_LOCAL["OpenInventory"] = "Initiates trading or exchange items with #PLAYER_NAME#.";
 $F_TRANSLATIONS_LOCAL["OpenInventory2"] = "Initiates trading; #PLAYER_NAME# must give items to #HERIKA_NAME#.";
 $F_TRANSLATIONS_LOCAL["Attack"] = "Attack with intention to kill a target actor or entity.";
@@ -948,14 +947,14 @@ $F_TRANSLATIONS_LOCAL["InspectSurroundings"] = "Look around and assess who or wh
 $F_TRANSLATIONS_LOCAL["CheckInventory"] = "Search in #HERIKA_NAME#'s inventory, backpack, or pocket. List their inventory contents.";
 $F_TRANSLATIONS_LOCAL["SheatheWeapon"] = "Sheathes/put away current weapon";
 $F_TRANSLATIONS_LOCAL["Relax"] = "Stop whatever you are doing and relax at the current location.Used to Unwind,Loosen Up,Enjoy Moment,Chill";
-$F_TRANSLATIONS_LOCAL["TravelTo"] = "Use it to move to major locations and landmarks and POIs.";
+$F_TRANSLATIONS_LOCAL["TravelTo"] = "Travel long distance to a building, city, door or other location. Also known as lead the way.";
 $F_TRANSLATIONS_LOCAL["TakeASeat"] = "#HERIKA_NAME# takes a seat at a nearby seating location.";
 $F_TRANSLATIONS_LOCAL["ReadQuestJournal"] = "Only use if #PLAYER_NAME# explicitly asks about a quest. Read the quest journal and get information about current quests.";
 $F_TRANSLATIONS_LOCAL["Surrender"] = "#HERIKA_NAME# yields, raises their hands, and stops resisting.";
 $F_TRANSLATIONS_LOCAL["IncreaseWalkSpeed"] = "Increase #HERIKA_NAME#'s speed when moving or travelling.";
 $F_TRANSLATIONS_LOCAL["DecreaseWalkSpeed"] = "Decrease #HERIKA_NAME#'s speed when moving or travelling.";
 $F_TRANSLATIONS_LOCAL["StopWalk"] = "Stop all of #HERIKA_NAME#'s actions immediately.";
-$F_TRANSLATIONS_LOCAL["TravelTo"] = "Only use if #PLAYER_NAME# explicitly suggests it. Guide #PLAYER_NAME# to a town or city. Also known as lead the way.";
+$F_TRANSLATIONS_LOCAL["TravelTo"] = "Travel long distance to a building, city, door or other location. Also known as lead the way.";
 $F_TRANSLATIONS_LOCAL["WaitHere"] = "#HERIKA_NAME# waits and loiters at the current location.";
 $F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"] = "#HERIKA_NAME# takes the amount in property target of gold from #PLAYER_NAME#, once #PLAYER_NAME# agrees. Infer the amount from context.";
 $F_TRANSLATIONS_LOCAL["RentRoom"] = "#HERIKA_NAME# rents a room to #PLAYER_NAME# for {{config.cost_gold}} gold. Only innkeepers can use this action and it only applies to #PLAYER_NAME#.";
@@ -993,7 +992,7 @@ $F_TRANSLATIONS_LOCAL["EndRitualCeremony"] = "Concludes a ritual or ceremony, ma
 $F_TRANSLATIONS_LOCAL["Training"] = "Opens training menu to improve skills with a trainer.";
 $F_TRANSLATIONS_LOCAL["EndConversation"] = "#HERIKA_NAME# ends the conversation and becomes unavailable to talk for a short time.";
 
-$F_RETURNMESSAGES_LOCAL["MoveTo"] = "Walk to a visible building or visible actor, also used to guide #PLAYER_NAME# to an actor or building.";
+$F_RETURNMESSAGES_LOCAL["MoveTo"] = "#HERIKA_NAME# moves to #TARGET#.";
 $F_RETURNMESSAGES_LOCAL["OpenInventory"] = "Initiates trading or exchange items with #PLAYER_NAME#.";
 $F_RETURNMESSAGES_LOCAL["OpenInventory2"] = "#PLAYER_NAME# gives items to #HERIKA_NAME#. Accept gift.";
 $F_RETURNMESSAGES_LOCAL["Attack"] = "#HERIKA_NAME# attacks #TARGET#.";
@@ -1003,7 +1002,6 @@ $F_RETURNMESSAGES_LOCAL["InspectSurroundings"] = "#HERIKA_NAME# takes a look aro
 $F_RETURNMESSAGES_LOCAL["CheckInventory"] = "#HERIKA_NAME#'s INVENTORY:#RESULT#";
 $F_RETURNMESSAGES_LOCAL["SheatheWeapon"] = "Sheathes/put away current weapon";
 $F_RETURNMESSAGES_LOCAL["Relax"] = "#HERIKA_NAME# is relaxed. Time to enjoy life.";
-$F_RETURNMESSAGES_LOCAL["LeadTheWayTo"] = "Only use if #PLAYER_NAME# explicitly orders it. Guide #PLAYER_NAME# to a town or city.";
 $F_RETURNMESSAGES_LOCAL["TakeASeat"] = "#HERIKA_NAME# sits in a nearby chair or piece of furniture.";
 $F_RETURNMESSAGES_LOCAL["ReadQuestJournal"] = "";
 $F_RETURNMESSAGES_LOCAL["Surrender"] = "#HERIKA_NAME# surrenders and raises their hands.";
@@ -1058,7 +1056,6 @@ $F_NAMES_LOCAL["InspectSurroundings"] = "InspectSurroundings";
 $F_NAMES_LOCAL["CheckInventory"] = "CheckInventory";
 $F_NAMES_LOCAL["SheatheWeapon"] = "SheatheWeapon";
 $F_NAMES_LOCAL["Relax"] = "Relax";
-//$F_NAMES_LOCAL["LeadTheWayTo"]="LeadTheWayTo";
 $F_NAMES_LOCAL["TakeASeat"] = "TakeASeat";
 $F_NAMES_LOCAL["ReadQuestJournal"] = "ReadQuestJournal";
 $F_NAMES_LOCAL["Surrender"] = "Surrender";
@@ -1181,7 +1178,7 @@ $GLOBALS["FUNCTIONS"] = [
             "properties" => [
                 "target" => [
                     "type" => "string",
-                    "description" => "Visible Target NPC, Actor, or being, or building.",
+                    "description" => "Visible nearby target NPC, actor, or being. Do not use this for places, buildings, cities, doors, or locations.",
                     "enum" => isset($GLOBALS['FUNCTION_PARM_MOVETO']) ? $GLOBALS['FUNCTION_PARM_MOVETO'] : [],
                 ],
             ],
@@ -1315,21 +1312,6 @@ $GLOBALS["FUNCTIONS"] = [
             "required" => [],
         ],
     ],
-    /*[
-        "name" => $F_NAMES_LOCAL["LeadTheWayTo"],
-        "description" => $F_TRANSLATIONS_LOCAL["LeadTheWayTo"],
-        "parameters" => [
-            "type" => "object",
-            "properties" => [
-                "location" => [
-                    "type" => "string",
-                    "description" => "Town or City to travel to, only if {$GLOBALS["PLAYER_NAME"]} explicitly orders it"
-
-                ]
-            ],
-            "required" => ["location"]
-        ]
-    ],*/
     [
         "name" => $F_NAMES_LOCAL["TravelTo"],
         "description" => $F_TRANSLATIONS_LOCAL["TravelTo"],
@@ -1338,7 +1320,7 @@ $GLOBALS["FUNCTIONS"] = [
             "properties" => [
                 "location" => [
                     "type" => "string",
-                    "description" => "Town or City to travel to, only if {$GLOBALS["PLAYER_NAME"]} explicitly orders it",
+                    "description" => "Building, city, door, or other location to travel to.",
 
                 ],
             ],
@@ -1735,7 +1717,7 @@ $GLOBALS["FUNCTIONS"] = [
                     "description" => "Keep it blank",
                 ],
             ],
-            "required" => [""],
+            "required" => [],
         ],
     ],
     [
@@ -2198,6 +2180,101 @@ function herikaFormatReturnMessageTemplate($codeName, $primaryArgument = '', arr
     );
 }
 
+function herikaResolveFuncretArgumentName($codeName, array $followupConfig = [])
+{
+    $argName = trim(strval($followupConfig['arg_name'] ?? ''));
+    if ($argName !== '') {
+        return $argName;
+    }
+
+    $row = function_exists('herikaGetActionCatalogRow')
+        ? herikaGetActionCatalogRow($codeName)
+        : null;
+    if (!is_array($row)) {
+        return 'target';
+    }
+
+    $parameters = $row['parameters_json'] ?? [];
+    if (!is_array($parameters)) {
+        $decodedParameters = json_decode(strval($parameters), true);
+        $parameters = is_array($decodedParameters) ? $decodedParameters : [];
+    }
+
+    $required = $parameters['required'] ?? [];
+    if (!is_array($required)) {
+        $required = [$required];
+    }
+    foreach ($required as $requiredName) {
+        $requiredName = trim(strval($requiredName));
+        if ($requiredName !== '') {
+            return $requiredName;
+        }
+    }
+
+    $properties = $parameters['properties'] ?? [];
+    if (!is_array($properties)) {
+        return 'target';
+    }
+
+    foreach (['target', 'location', 'item', 'amount', 'speed'] as $preferredName) {
+        if (array_key_exists($preferredName, $properties)) {
+            return $preferredName;
+        }
+    }
+
+    foreach (array_keys($properties) as $propertyName) {
+        $propertyName = trim(strval($propertyName));
+        if ($propertyName !== '') {
+            return $propertyName;
+        }
+    }
+
+    return 'target';
+}
+
+function herikaBuildFuncretResultInfoActionMessage($codeName, $argName = 'target', $argValue = '', $resultText = '')
+{
+    $codeName = trim(strval($codeName));
+    if ($codeName === '') {
+        return '';
+    }
+
+    $argName = trim(strval($argName));
+    if ($argName === '') {
+        $argName = 'target';
+    }
+
+    $resultText = trim(strval($resultText));
+    $herikaName = strval($GLOBALS["HERIKA_NAME"] ?? 'NPC');
+    if ($resultText !== '' && stripos($resultText, 'error') === 0) {
+        return "{$herikaName} issued ACTION, but {$resultText}";
+    }
+
+    $arguments = [];
+    if (is_array($argValue)) {
+        $arguments = $argValue;
+    } elseif (is_scalar($argValue) || $argValue === null) {
+        $arguments[$argName] = trim(strval($argValue ?? ''));
+    }
+
+    $message = herikaFormatReturnMessageTemplate(
+        $codeName,
+        $arguments,
+        ['#RESULT#' => $resultText]
+    );
+    $message = trim(strval($message));
+    if ($message !== '') {
+        return $message;
+    }
+
+    if ($resultText === '') {
+        return '';
+    }
+
+    $actionName = function_exists('getFunctionTrlName') ? getFunctionTrlName($codeName) : $codeName;
+    return "{$herikaName} issued ACTION {$actionName}: {$resultText}";
+}
+
 function herikaFormatActionPromptTemplate($template, array $extraReplacements = [], $rowOrCode = null, array $extraContext = [])
 {
     $template = strval($template);
@@ -2311,7 +2388,17 @@ function normalizeFunctionParameterValueFromSchema($parameterSchema, $value)
 
 function functionDefinitionHasRequiredParameters($functionDef)
 {
-    return is_array($functionDef) && count($functionDef["parameters"]["required"] ?? []) > 0;
+    if (!is_array($functionDef)) {
+        return false;
+    }
+
+    foreach (($functionDef["parameters"]["required"] ?? []) as $requiredParameter) {
+        if (trim(strval($requiredParameter)) !== "") {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 function functionExecutionParameterValueIsEmpty($parameterValue)

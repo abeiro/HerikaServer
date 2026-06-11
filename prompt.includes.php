@@ -27,7 +27,7 @@ $PROMPT_HEAD = ($GLOBALS["PROMPT_HEAD"]) ? $GLOBALS["PROMPT_HEAD"] : "Let\'s rol
  */
 
 error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
-$FUNCTION_PARM_MOVETO=DataPosibleLocationsToGo();		// To avoid moving to non existant target, lets limit available targets to the real ones in function definition
+$FUNCTION_PARM_MOVETO=DataPosibleMoveToTargets();		// Move_To is actor-only; locations should use TravelTo.
 if (!isset($FUNCTION_PARM_MOVETO))
 	$FUNCTION_PARM_MOVETO=[];
 $FUNCTION_PARM_MOVETO[]=$GLOBALS["PLAYER_NAME"];

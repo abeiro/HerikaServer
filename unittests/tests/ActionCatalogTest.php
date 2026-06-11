@@ -433,6 +433,52 @@ final class ActionCatalogTest extends TestCase
         unset($GLOBALS['HERIKA_ACTION_CATALOG_ROWS_BY_CODE']);
     }
 
+    public function testResolveNpcRolemasterState_FallsBackToLegacyConfOptWhenMetadataIsMissing(): void
+    {
+        $previousDb = $GLOBALS['db'] ?? null;
+        $hadDb = array_key_exists('db', $GLOBALS);
+        $previousRolemaster = $GLOBALS['is_rolemastered'] ?? null;
+        $hadRolemaster = array_key_exists('is_rolemastered', $GLOBALS);
+
+        $GLOBALS['db'] = new class {
+            public function escape($value)
+            {
+                return str_replace("'", "''", strval($value));
+            }
+
+            public function fetchOne($sql)
+            {
+                return ['value' => '1'];
+            }
+        };
+
+        unset($GLOBALS['is_rolemastered']);
+        herikaRolemasterStateResetCache();
+
+        try {
+            $this->assertTrue(herikaResolveNpcRolemasterState('Mallory Mucklow', [
+                'metadata' => [],
+                'extended' => [],
+                'load_lookup' => false,
+                'use_global' => false,
+            ]));
+        } finally {
+            herikaRolemasterStateResetCache();
+
+            if ($hadDb) {
+                $GLOBALS['db'] = $previousDb;
+            } else {
+                unset($GLOBALS['db']);
+            }
+
+            if ($hadRolemaster) {
+                $GLOBALS['is_rolemastered'] = $previousRolemaster;
+            } else {
+                unset($GLOBALS['is_rolemastered']);
+            }
+        }
+    }
+
     public function testBuildActionCatalogSeedRows_SeedsBuiltinRequirementsAndCooldownMetadata(): void
     {
         $rows = herikaBuildActionCatalogSeedRows(

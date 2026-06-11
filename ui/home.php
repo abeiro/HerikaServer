@@ -690,7 +690,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         <h1>Dwemer Dashboard</h1>
 
         <div class="dashboard-buttons">
-            <button onclick="window.open('https://dwemerdynamics.hostwiki.io/', '_blank')" class="dashboard-btn">
+            <button onclick="window.open('https://dwemerdynamics.com/chim/index.html', '_blank')" class="dashboard-btn">
                 <span class="btn-icon">📚</span> CHIM Wiki
             </button>
             <button onclick="window.open('https://docs.google.com/spreadsheets/d/1UtAR_r18wskmTMMsg8IlhVvr1Fn9tHvRJT8drH6RuzY/edit?gid=1257158105#gid=1257158105', '_blank')" class="dashboard-btn">
@@ -1100,6 +1100,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                                         <div class='modal-content'>
                                                             <span class='close-btn' onclick=\"closeModal('locationsModal')\">&times;</span>
                                                             <h3>Available Locations</h3>
+                                                            <p style='color: #aaa; margin-top: -6px;'>Sync locations in-game from CHIM MCM &gt; Tools.</p>
                                                             <table class='modal-table'>
                                                                 <tr><th>Name</th><th>FormID</th></tr>";
                                 foreach ($locationsData as $location) {
