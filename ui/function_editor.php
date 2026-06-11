@@ -1373,6 +1373,34 @@ if (!$isEmbed) {
         font-size: 0.92em;
         line-height: 1.45;
     }
+    .parameter-schema-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        width: fit-content;
+        margin-top: 12px;
+        padding: 7px 10px;
+        border: 1px solid rgba(216, 165, 76, 0.42);
+        border-radius: 8px;
+        background: rgba(98, 73, 27, 0.22);
+        color: #f3d8a0;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+    }
+    .parameter-schema-toggle:hover {
+        background: rgba(98, 73, 27, 0.34);
+        border-color: rgba(216, 165, 76, 0.7);
+        color: #ffe3ad;
+    }
+    .parameter-schema-toggle::before {
+        content: "▸";
+        font-size: 0.9em;
+        line-height: 1;
+    }
+    details[open] > .parameter-schema-toggle::before {
+        content: "▾";
+    }
     .table-container code {
         white-space: nowrap;
     }
@@ -1811,7 +1839,7 @@ if (!$isEmbed) {
                                                     </div>
                                                 </div>
                                                 <div class="editor-controls">
-                                                    <button type="submit" class="btn-save">Save Text</button>
+                                                    <button type="submit" class="btn-save">Save Info</button>
                                                 </div>
                                             </form>
                                         </div>
@@ -1878,7 +1906,7 @@ if (!$isEmbed) {
                                                         </div>
                                                     <?php endforeach; ?>
                                                     <div class="editor-controls">
-                                                        <button type="submit" class="btn-save">Save</button>
+                                                        <button type="submit" class="btn-save">Save Config</button>
                                                     </div>
                                                 </form>
                                             </div>
@@ -1888,12 +1916,13 @@ if (!$isEmbed) {
                                     </td>
                                     <td style="min-width: 420px;">
                                         <?php echo $parametersRendered; ?>
-                                        <div class="inline-action-editor" style="margin-top: 12px;">
-                                            <form method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>">
+                                        <details class="inline-action-editor" style="margin-top: 12px;">
+                                            <summary class="parameter-schema-toggle">Advanced: Edit Parameter Schema</summary>
+                                            <form method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>" style="margin-top: 10px;">
                                                 <input type="hidden" name="action" value="update_action_parameters">
                                                 <input type="hidden" name="code_name" value="<?php echo h($codeName); ?>">
                                                 <div class="config-field">
-                                                    <label for="<?php echo h('parameters-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>">Edit Parameter Schema</label>
+                                                    <label for="<?php echo h('parameters-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>">Parameter Schema JSON</label>
                                                     <div class="editor-controls">
                                                         <textarea
                                                             id="<?php echo h('parameters-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>"
@@ -1911,11 +1940,11 @@ if (!$isEmbed) {
                                                     <button type="submit" class="btn-save">Save Parameters</button>
                                                 </div>
                                             </form>
-                                        </div>
+                                        </details>
                                     </td>
                                     <td style="min-width: 320px;">
                                         <details>
-                                            <summary class="return-preview" style="cursor:pointer;">Metadata JSON</summary>
+                                            <summary class="parameter-schema-toggle">Metadata JSON</summary>
                                             <pre class="json-preview"><?php echo h($metadataPreview); ?></pre>
                                         </details>
                                         <?php if (!in_array(trim($scriptProxyPreview), ["", "[]", "{}"], true)): ?>
