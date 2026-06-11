@@ -621,7 +621,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
             $messageType = "err";
         } else {
             $submittedName = functionEditorNormalizeSubmittedActionTextValue($_POST["action_name"] ?? "", "Action name", false);
-            $submittedDescription = functionEditorNormalizeSubmittedActionTextValue($_POST["description"] ?? "", "Description", true);
+            $submittedDescription = functionEditorNormalizeSubmittedActionTextValue($_POST["description"] ?? "", "Prompt", true);
             $submittedReturnMessage = functionEditorNormalizeSubmittedActionTextValue($_POST["return_message"] ?? "", "Return message", true);
 
             $errorMessage = trim(implode(' ', array_filter([
@@ -1373,6 +1373,34 @@ if (!$isEmbed) {
         font-size: 0.92em;
         line-height: 1.45;
     }
+    .parameter-schema-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        width: fit-content;
+        margin-top: 12px;
+        padding: 7px 10px;
+        border: 1px solid rgba(216, 165, 76, 0.42);
+        border-radius: 8px;
+        background: rgba(98, 73, 27, 0.22);
+        color: #f3d8a0;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+    }
+    .parameter-schema-toggle:hover {
+        background: rgba(98, 73, 27, 0.34);
+        border-color: rgba(216, 165, 76, 0.7);
+        color: #ffe3ad;
+    }
+    .parameter-schema-toggle::before {
+        content: "▸";
+        font-size: 0.9em;
+        line-height: 1;
+    }
+    details[open] > .parameter-schema-toggle::before {
+        content: "▾";
+    }
     .table-container code {
         white-space: nowrap;
     }
@@ -1598,7 +1626,7 @@ if (!$isEmbed) {
                                                         <code><?php echo h($activeCodeName); ?></code>
                                                     </div>
                                                     <div class="active-action-description">
-                                                        <?php echo $activeDescription !== "" ? nl2br(h($activeDescription)) : '<em>No description provided.</em>'; ?>
+                                                        <?php echo $activeDescription !== "" ? nl2br(h($activeDescription)) : '<em>No prompt provided.</em>'; ?>
                                                     </div>
                                                 </div>
                                             <?php endforeach; ?>
@@ -1727,20 +1755,25 @@ if (!$isEmbed) {
                                     $codeName,
                                     $actionNameValue,
                                 ]))));
-                                $rowScope = "dynamic";
+                                $rowScopes = [];
+                                if ($isNpc) {
+                                    $rowScopes[] = "npc";
+                                }
+                                if ($isFollowers) {
+                                    $rowScopes[] = "followers";
+                                }
                                 if ($isNarrator) {
-                                    $rowScope = "narrator";
-                                } elseif ($isFollowers) {
-                                    $rowScope = "followers";
-                                } elseif ($isNpc) {
-                                    $rowScope = "npc";
+                                    $rowScopes[] = "narrator";
+                                }
+                                if (count($rowScopes) === 0) {
+                                    $rowScopes[] = "dynamic";
                                 }
                                 ?>
                                 <tr
                                     class="action-row"
                                     data-search="<?php echo h($searchBlob); ?>"
                                     data-state="<?php echo $enabled ? 'enabled' : 'disabled'; ?>"
-                                    data-scope="<?php echo h($rowScope); ?>"
+                                    data-scope="<?php echo h(implode(' ', $rowScopes)); ?>"
                                     data-dispatch="<?php echo $isGameFunction ? 'game' : 'server'; ?>"
                                     data-source="<?php echo $isCustom ? 'custom' : 'base'; ?>"
                                 >
@@ -1767,9 +1800,6 @@ if (!$isEmbed) {
                                     <td style="max-width: 360px;">
                                         <div style="margin-bottom:8px;"><strong><?php echo h($actionNameValue); ?></strong></div>
                                         <?php echo nl2br(h($descriptionValue)); ?>
-                                        <span class="return-preview">
-                                            Return: <?php echo trim($returnMessageValue) !== "" ? nl2br(h($returnMessageValue)) : '<em>None</em>'; ?>
-                                        </span>
                                         <div class="inline-action-editor" style="margin-top: 12px;">
                                             <form method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>">
                                                 <input type="hidden" name="action" value="update_action_text_fields">
@@ -1786,7 +1816,7 @@ if (!$isEmbed) {
                                                     </div>
                                                 </div>
                                                 <div class="config-field" style="margin-bottom: 12px;">
-                                                    <label for="<?php echo h('text-description-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>">Description</label>
+                                                    <label for="<?php echo h('text-description-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>">Prompt</label>
                                                     <div class="editor-controls">
                                                         <textarea
                                                             id="<?php echo h('text-description-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>"
@@ -1805,11 +1835,11 @@ if (!$isEmbed) {
                                                         ><?php echo h($returnMessageValue); ?></textarea>
                                                     </div>
                                                     <div class="helper-text">
-                                                        Edit the visible action name, the prompt description, and the default return text from this row.
+                                                        Edit the visible action name, the prompt text, and the default return text from this row.
                                                     </div>
                                                 </div>
                                                 <div class="editor-controls">
-                                                    <button type="submit" class="btn-save">Save Text</button>
+                                                    <button type="submit" class="btn-save">Save Info</button>
                                                 </div>
                                             </form>
                                         </div>
@@ -1876,7 +1906,7 @@ if (!$isEmbed) {
                                                         </div>
                                                     <?php endforeach; ?>
                                                     <div class="editor-controls">
-                                                        <button type="submit" class="btn-save">Save</button>
+                                                        <button type="submit" class="btn-save">Save Config</button>
                                                     </div>
                                                 </form>
                                             </div>
@@ -1886,12 +1916,13 @@ if (!$isEmbed) {
                                     </td>
                                     <td style="min-width: 420px;">
                                         <?php echo $parametersRendered; ?>
-                                        <div class="inline-action-editor" style="margin-top: 12px;">
-                                            <form method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>">
+                                        <details class="inline-action-editor" style="margin-top: 12px;">
+                                            <summary class="parameter-schema-toggle">Advanced: Edit Parameter Schema</summary>
+                                            <form method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>" style="margin-top: 10px;">
                                                 <input type="hidden" name="action" value="update_action_parameters">
                                                 <input type="hidden" name="code_name" value="<?php echo h($codeName); ?>">
                                                 <div class="config-field">
-                                                    <label for="<?php echo h('parameters-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>">Edit Parameter Schema</label>
+                                                    <label for="<?php echo h('parameters-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>">Parameter Schema JSON</label>
                                                     <div class="editor-controls">
                                                         <textarea
                                                             id="<?php echo h('parameters-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>"
@@ -1909,11 +1940,11 @@ if (!$isEmbed) {
                                                     <button type="submit" class="btn-save">Save Parameters</button>
                                                 </div>
                                             </form>
-                                        </div>
+                                        </details>
                                     </td>
                                     <td style="min-width: 320px;">
                                         <details>
-                                            <summary class="return-preview" style="cursor:pointer;">Metadata JSON</summary>
+                                            <summary class="parameter-schema-toggle">Metadata JSON</summary>
                                             <pre class="json-preview"><?php echo h($metadataPreview); ?></pre>
                                         </details>
                                         <?php if (!in_array(trim($scriptProxyPreview), ["", "[]", "{}"], true)): ?>
@@ -1998,7 +2029,8 @@ document.addEventListener("DOMContentLoaded", function() {
         rows.forEach((row) => {
             const matchesSearch = searchValue === "" || (row.dataset.search || "").includes(searchValue);
             const matchesState = stateValue === "all" || row.dataset.state === stateValue;
-            const matchesScope = scopeValue === "all" || row.dataset.scope === scopeValue;
+            const rowScopes = (row.dataset.scope || "").split(/\s+/).filter(Boolean);
+            const matchesScope = scopeValue === "all" || rowScopes.includes(scopeValue);
             const matchesDispatch = dispatchValue === "all" || row.dataset.dispatch === dispatchValue;
             const matchesSource = sourceValue === "all" || row.dataset.source === sourceValue;
             const visible = matchesSearch && matchesState && matchesScope && matchesDispatch && matchesSource;

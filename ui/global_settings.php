@@ -690,6 +690,22 @@ h1.gs-title {
     background: linear-gradient(135deg, rgba(42, 142, 94, 0.95), rgba(32, 122, 74, 0.95));
 }
 
+.btn-action-blue {
+    background: linear-gradient(135deg, rgba(34, 84, 173, 0.95), rgba(24, 62, 130, 0.98));
+    color: #e8f1ff;
+    border: 1px solid rgba(77, 144, 254, 0.42);
+    border-radius: 8px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.btn-action-blue:hover {
+    background: linear-gradient(135deg, rgba(46, 101, 198, 0.98), rgba(34, 84, 173, 0.98));
+    border-color: rgba(106, 169, 255, 0.62);
+}
+
 .btn-action {
     background: #8b0000;
     border: 1px solid #a52a2a;
@@ -1148,7 +1164,7 @@ h1.gs-title {
         <div class="page-header-row">
             <h1 class="gs-title">Global Settings</h1>
             <div class="page-header-actions">
-                <button type="button" id="global_connector_test_btn" class="btn-save-green">Test Global Connectors</button>
+                <button type="button" id="global_connector_test_btn" class="btn-action-blue">Test Global Connectors</button>
                 <button type="submit" class="btn-save-green" name="save_all" value="1" form="gs_form">Save All</button>
             </div>
         </div>

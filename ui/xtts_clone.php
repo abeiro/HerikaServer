@@ -2898,7 +2898,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <p><strong>Only required for online XTTS instances.</strong></p>
                 <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
                 <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
-                <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.hostwiki.io/en/Vast-AI" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
+                <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.com/chim/remote-hosting-guide.html" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
                 <p>Cached voices are stored in <code>data/voices</code>. <a href="<?php echo $webRoot; ?>/data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>
                 <div class="button-group">
                     <input type="submit" name="upload_all" value="Sync Voice Cache" class="action-button edit">
@@ -3048,7 +3048,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <p><strong>Only required for online Chatterbox instances.</strong></p>
                 <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
                 <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
-                <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.hostwiki.io/en/Vast-AI" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
+                <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.com/chim/remote-hosting-guide.html" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
                 <p>Cached voices are stored in <code>data/voices</code>. <a href="<?php echo $webRoot; ?>/data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>
                 <div class="button-group">
                     <input type="submit" name="upload_all" value="Sync Voice Cache" class="action-button edit">
@@ -3183,7 +3183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <p><strong>Only required for online PocketTTS instances.</strong></p>
                 <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
                 <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
-                <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.hostwiki.io/en/Vast-AI" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
+                <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.com/chim/remote-hosting-guide.html" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
                 <p>Cached voices are stored in <code>data/voices</code>. <a href="<?php echo $webRoot; ?>/data/voices" style="color: yellow;" target="_blank">View Cache Directory</a></p>
                 <div class="button-group">
                     <input type="submit" name="upload_all" value="Sync Voice Cache" class="action-button edit">
@@ -3223,7 +3223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="content-section full-width-section">
             <h1>Cartesia Voice Cacje</h1>
             <p>Manage voice generation for Cartesia TTS. Voices are generated from local .wav files in <code>data/voices</code>.</p>
-            <p>For detailed information, see our <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options#cartesia" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cartesia TTS Guide</a>.</p>
+            <p>For detailed information, see our <a href="https://dwemerdynamics.com/chim/tts.html#Cartesia" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cartesia TTS Guide</a>.</p>
             
             <?php
             $cartesiaConfigured = isProviderConfigured('cartesia');
@@ -3342,7 +3342,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="content-section full-width-section">
             <h1>Inworld Voice Cache</h1>
             <p>Manage voice generation for Inworld TTS. Voices are generated from local .wav files in <code>data/voices</code>.</p>
-            <p>For detailed information, see our <a href="https://dwemerdynamics.hostwiki.io/en/TTS-Options#inworld" style="color: yellow;" target="_blank" rel="noopener noreferrer">Inworld TTS Guide</a>.</p>
+            <p>For detailed information, see our <a href="https://dwemerdynamics.com/chim/tts.html#Inworld" style="color: yellow;" target="_blank" rel="noopener noreferrer">Inworld TTS Guide</a>.</p>
             
             <?php
             $inworldStatus = getInworldConfigurationStatus();

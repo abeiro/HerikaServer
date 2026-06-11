@@ -1284,7 +1284,6 @@ function herikaActionCatalogBuildBaseFollowupConfig($codeName)
         'GiveItemTo',
         'HireCarriage',
         'HireFerry',
-        'LeadTheWayTo',
         'MoveTo',
         'RentRoom',
         'TakeGoldFromPlayer',
@@ -1292,7 +1291,6 @@ function herikaActionCatalogBuildBaseFollowupConfig($codeName)
 
     $promptMap = [
         'GetTopicInfo' => ['arg_name' => 'topic', 'prompt' => 'Reply with one short in-character line about the requested topic using the tool result below. Do not ask follow-up questions.'],
-        'LeadTheWayTo' => ['arg_name' => 'location', 'prompt' => 'Reply with one short in-character line acknowledging that you are now leading the player to the destination. Do not ask follow-up questions.'],
         'MoveTo' => ['arg_name' => 'target', 'prompt' => 'Reply with one short in-character line acknowledging that you moved to the target. Do not ask follow-up questions.'],
         'Attack' => ['arg_name' => 'target', 'prompt' => 'Reply with one short in-character combat line reacting to the attack outcome. Do not ask follow-up questions.'],
         'Inspect' => ['arg_name' => 'target', 'prompt' => 'Reply with one short in-character observation using the inspect result below. Do not ask follow-up questions.'],
@@ -3574,6 +3572,107 @@ function herikaActionCatalogExecuteScriptProxyNpcMetadataUpdates($npcMetadataUpd
     );
 }
 
+function herikaActionCatalogBuildScriptProxyReturnArguments($context)
+{
+    $arguments = is_array($context['parameters'] ?? null) ? $context['parameters'] : [];
+    $parameterTarget = trim(strval($context['parameter_target'] ?? ''));
+    $parameterRaw = trim(strval($context['parameter_raw'] ?? ''));
+
+    if (!array_key_exists('target', $arguments) && $parameterTarget !== '') {
+        $arguments['target'] = $parameterTarget;
+    }
+    if (!array_key_exists('location', $arguments) && array_key_exists('target', $arguments)) {
+        $arguments['location'] = $arguments['target'];
+    }
+    if (count($arguments) === 0 && $parameterRaw !== '') {
+        $arguments['target'] = $parameterRaw;
+        $arguments['location'] = $parameterRaw;
+    }
+
+    return $arguments;
+}
+
+function herikaActionCatalogBuildScriptProxyInfoActionMessage($codeName, $context, $row)
+{
+    $codeName = trim(strval($codeName));
+    if ($codeName === '') {
+        return '';
+    }
+
+    $arguments = herikaActionCatalogBuildScriptProxyReturnArguments($context);
+    $actorName = trim(strval($context['actor_name'] ?? ''));
+    $hadHerikaName = array_key_exists('HERIKA_NAME', $GLOBALS);
+    $previousHerikaName = $GLOBALS['HERIKA_NAME'] ?? null;
+
+    if ($actorName !== '') {
+        $GLOBALS['HERIKA_NAME'] = $actorName;
+    }
+
+    if (function_exists('herikaBuildFuncretResultInfoActionMessage')) {
+        $message = herikaBuildFuncretResultInfoActionMessage($codeName, 'target', $arguments, '');
+    } else {
+        $template = is_array($row) ? trim(strval($row['return_message'] ?? '')) : '';
+        $message = strtr($template, [
+            '#TARGET#' => trim(strval($arguments['target'] ?? '')),
+            '#ITEM#' => trim(strval($arguments['item'] ?? ($arguments['location'] ?? ''))),
+            '#AMOUNT#' => trim(strval($arguments['amount'] ?? '')),
+            '#LOCATION#' => trim(strval($arguments['location'] ?? ($arguments['item'] ?? ''))),
+            '#HERIKA_NAME#' => strval($GLOBALS['HERIKA_NAME'] ?? 'NPC'),
+            '#PLAYER_NAME#' => strval($GLOBALS['PLAYER_NAME'] ?? 'Player'),
+        ]);
+    }
+
+    if ($hadHerikaName) {
+        $GLOBALS['HERIKA_NAME'] = $previousHerikaName;
+    } else {
+        unset($GLOBALS['HERIKA_NAME']);
+    }
+
+    return trim(strval($message));
+}
+
+function herikaActionCatalogShouldLogScriptProxyInfoAction($codeName, $row)
+{
+    $codeName = trim(strval($codeName));
+    if ($codeName === '' || !is_array($row) || trim(strval($row['return_message'] ?? '')) === '') {
+        return false;
+    }
+
+    if (function_exists('isNarratorPrivateActionName') && isNarratorPrivateActionName($codeName)) {
+        return false;
+    }
+
+    $metadata = $row['metadata'] ?? [];
+    if (!is_array($metadata)) {
+        $metadata = herikaActionCatalogDecodeJson($metadata, []);
+    }
+
+    return empty($metadata['suppress_placeholder_infoaction']);
+}
+
+function herikaActionCatalogLogScriptProxyInfoAction($codeName, $context, $row)
+{
+    if (!function_exists('logEvent') || !herikaActionCatalogShouldLogScriptProxyInfoAction($codeName, $row)) {
+        return false;
+    }
+
+    $message = herikaActionCatalogBuildScriptProxyInfoActionMessage($codeName, $context, $row);
+    if ($message === '') {
+        return false;
+    }
+
+    $gameRequestCopy = $GLOBALS['gameRequest'] ?? [];
+    if (!is_array($gameRequestCopy)) {
+        return false;
+    }
+
+    $gameRequestCopy[0] = 'infoaction';
+    $gameRequestCopy[3] = $message;
+    logEvent($gameRequestCopy);
+
+    return true;
+}
+
 function herikaActionCatalogRunScriptProxyProgram($program, $context)
 {
     if (!is_array($program) || count($program) === 0) {
@@ -3622,6 +3721,7 @@ function herikaActionCatalogExecuteScriptProxyAction($action)
     $context = herikaActionCatalogBuildScriptProxyContext($actionParts, $actionParts2);
     $executed = herikaActionCatalogRunScriptProxyProgram($row['script_proxy_program'], $context);
     if ($executed) {
+        herikaActionCatalogLogScriptProxyInfoAction($codeName, $context, $row);
         error_log("[ACTION CATALOG {$codeName}] Executed server-side via ScriptProxy");
     }
 
