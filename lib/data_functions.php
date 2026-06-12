@@ -236,25 +236,58 @@ function isItemBlacklisted($itemName) {
 }
 
 /**
- * Lookup description from the merged descriptions view using runtime, legacy, or stable keys.
- * Supports:
- * - exact runtime FormIDs (e.g. 020098A0)
- * - legacy wildcard keys (e.g. XX0098A0, FEXXX822)
- * - stable plugin-aware keys (e.g. Dawnguard.esm|000098A0)
- * 
- * @param string $formId The identifier to lookup
- * @return array|null Array with 'baseid', 'name', and 'description' keys, or null if not found
+ * Lookup a description by candidate base IDs while preserving override priority.
+ * Custom rows must win across all legacy/stable candidates before seeded defaults.
  */
-function lookupDescriptionByFormID(string $formId): ?array {
+function lookupDescriptionRecordByCandidates(array $candidateBaseIds, bool $requireDescription = false): ?array {
     global $db;
 
-    foreach (chimBuildDescriptionBaseIdCandidates($formId) as $candidateBaseId) {
-        $escapedBaseId = $db->escape($candidateBaseId);
-        $record = $db->fetchOne(
-            "SELECT baseid, name, description FROM combined_descriptions WHERE baseid = '{$escapedBaseId}' LIMIT 1"
-        );
+    $candidateRows = [];
+    foreach ($candidateBaseIds as $candidateBaseId) {
+        $candidateBaseId = trim((string) $candidateBaseId);
+        if ($candidateBaseId === '') {
+            continue;
+        }
 
-        if ($record && !empty($record['name'])) {
+        $plugin = '';
+        $baseid = $candidateBaseId;
+        if (strpos($candidateBaseId, '|') !== false) {
+            $parsedStable = chimParseStableFormReference($candidateBaseId);
+            if (!$parsedStable) {
+                continue;
+            }
+            $plugin = $parsedStable['plugin_name'];
+            $baseid = $parsedStable['local_formid'];
+        } else {
+            $baseid = strtoupper($baseid);
+        }
+
+        $key = $plugin . '|' . $baseid;
+        if (!isset($candidateRows[$key])) {
+            $candidateRows[$key] = ['plugin' => $plugin, 'baseid' => $baseid];
+        }
+    }
+
+    foreach (['descriptions_custom', 'descriptions'] as $tableName) {
+        foreach ($candidateRows as $candidateRow) {
+            $escapedPlugin = $db->escape($candidateRow['plugin']);
+            $escapedBaseId = $db->escape($candidateRow['baseid']);
+            $record = $db->fetchOne(
+                "SELECT plugin, baseid, name, description
+                   FROM public.{$tableName}
+                  WHERE plugin = '{$escapedPlugin}'
+                    AND baseid = '{$escapedBaseId}'
+                  LIMIT 1"
+            );
+
+            if (!$record) {
+                continue;
+            }
+
+            if ($requireDescription && empty($record['description'])) {
+                continue;
+            }
+
             return $record;
         }
     }
@@ -263,7 +296,21 @@ function lookupDescriptionByFormID(string $formId): ?array {
 }
 
 /**
- * Lookup description only by exact runtime FormID or stable plugin-aware key.
+ * Lookup description from the merged descriptions view using runtime, legacy, or stable keys.
+ * Supports:
+ * - exact runtime FormIDs (e.g. 020098A0)
+ * - legacy wildcard keys (e.g. XX0098A0, FEXXX822)
+ * - internal plugin-aware candidates generated from loaded plugin metadata
+ * 
+ * @param string $formId The identifier to lookup
+ * @return array|null Array with 'baseid', 'name', and 'description' keys, or null if not found
+ */
+function lookupDescriptionByFormID(string $formId): ?array {
+    return lookupDescriptionRecordByCandidates(chimBuildDescriptionBaseIdCandidates($formId));
+}
+
+/**
+ * Lookup description only by exact runtime FormID or internal plugin-aware candidate.
  * This deliberately skips legacy wildcard keys and name fallback to avoid
  * cross-matching unrelated item descriptions for spells.
  *
@@ -271,8 +318,6 @@ function lookupDescriptionByFormID(string $formId): ?array {
  * @return array|null Array with 'baseid', 'name', and 'description' keys, or null if not found
  */
 function lookupStrictDescriptionByFormID(string $formId): ?array {
-    global $db;
-
     $candidates = [];
     $pushCandidate = function ($candidate) use (&$candidates): void {
         $candidate = trim((string) $candidate);
@@ -326,18 +371,7 @@ function lookupStrictDescriptionByFormID(string $formId): ?array {
         }
     }
 
-    foreach ($candidates as $candidateBaseId) {
-        $escapedBaseId = $db->escape($candidateBaseId);
-        $record = $db->fetchOne(
-            "SELECT baseid, name, description FROM combined_descriptions WHERE baseid = '{$escapedBaseId}' LIMIT 1"
-        );
-
-        if ($record && !empty($record['description'])) {
-            return $record;
-        }
-    }
-
-    return null;
+    return lookupDescriptionRecordByCandidates($candidates, true);
 }
 
 /**

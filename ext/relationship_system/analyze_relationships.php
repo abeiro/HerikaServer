@@ -2,8 +2,8 @@
 /**
  * RELATIONSHIP SYSTEM - AI Analysis Endpoint
  *
- * AJAX endpoint that uses the Relationship Management LLM to analyze TEXT
- * relationships and generate proper affinity scores and types.
+ * AJAX endpoint that uses the Relationship Management LLM to analyze recent
+ * event history and generate proper affinity scores and types.
  *
  * Uses GLOBALS['RELLLM_CONNECTOR'] for the dedicated relationship LLM.
  * Falls back to first available connector if not configured.
@@ -14,7 +14,8 @@
  * POST parameters:
  *   - npc_id: NPC database ID (to get full context)
  *   - npc_name: Name of the NPC (fallback)
- *   - relationships_text: The TEXT relationships field content
+ *   - source: events
+ *   - event_limit: Max eventlog entries to analyze (default 200)
  */
 
 header('Content-Type: application/json');
@@ -36,17 +37,24 @@ require_once $enginePath . "lib/core/api_badge.class.php";
 require_once $enginePath . "lib/core/npc_master.class.php";
 require_once $enginePath . "lib/core/core_profiles.class.php";
 require_once $enginePath . "lib/logger.php";
+require_once __DIR__ . "/event_baseline.php";
 
 // Get POST data
 $npcId = intval($_POST['npc_id'] ?? 0);
 $npcName = $_POST['npc_name'] ?? '';
-$relationshipsText = $_POST['relationships_text'] ?? '';
+$eventLimit = intval($_POST['event_limit'] ?? 200);
 $userDirection = $_POST['direction'] ?? ''; // Optional user guidance for AI
 $customTypesJson = $_POST['custom_types'] ?? ''; // Custom relationship types from UI
 $customTypes = !empty($customTypesJson) ? json_decode($customTypesJson, true) : [];
 
-if (empty($relationshipsText)) {
-    echo json_encode(['ok' => false, 'error' => 'No relationships text provided']);
+if ($eventLimit < 25) {
+    $eventLimit = 25;
+} elseif ($eventLimit > 400) {
+    $eventLimit = 400;
+}
+
+if ($npcId <= 0 && trim($npcName) === '') {
+    echo json_encode(['ok' => false, 'error' => 'Missing npc_id or npc_name']);
     exit;
 }
 
@@ -62,23 +70,33 @@ try {
         }
     }
 
-    // Get player name from config or recent eventlog
-    $playerName = $GLOBALS['PLAYER_NAME'] ?? 'the Player';
-    if ($playerName === 'the Player') {
-        // Try to get from eventlog
-        $playerRow = $GLOBALS['db']->fetchOne("SELECT player_name FROM eventlog WHERE player_name IS NOT NULL AND player_name != '' ORDER BY id DESC LIMIT 1");
-        if ($playerRow && !empty($playerRow['player_name'])) {
-            $playerName = $playerRow['player_name'];
-        }
+    $npcName = chimRelBaselineNormalizeName($npcName);
+    if ($npcName === '') {
+        echo json_encode(['ok' => false, 'error' => 'Unable to resolve NPC name']);
+        exit;
     }
 
-    // Replace #PLAYER_NAME# placeholder
-    $relationshipsText = str_replace('#PLAYER_NAME#', $playerName, $relationshipsText);
+    $baseline = chimRelBuildEventBaseline($npcName, $eventLimit);
+    if (empty($baseline['ok'])) {
+        echo json_encode([
+            'ok' => false,
+            'error' => strval($baseline['error'] ?? 'No recent event history found for this NPC.')
+        ]);
+        exit;
+    }
+
+    $eventHistory = strval($baseline['history'] ?? '');
+    $eventCount = intval($baseline['event_count'] ?? 0);
+    $counterparts = is_array($baseline['counterparts'] ?? null) ? $baseline['counterparts'] : [];
+
+    // Get player name from config/bootstrap.
+    $playerName = $GLOBALS['PLAYER_NAME'] ?? 'the Player';
 
     // Get Relationship Management LLM connector
     // Priority: RELLLM_CONNECTOR global > first available connector
     $llmConnector = new LLMConnector();
     $connectorId = $GLOBALS['RELLLM_CONNECTOR'] ?? 0;
+    $connectorData = null;
 
     if ($connectorId > 0) {
         $connectorData = $llmConnector->readOne($connectorId);
@@ -134,7 +152,7 @@ try {
 
     // Build the prompt
     $systemPrompt = <<<PROMPT
-You are a relationship analyzer for a Skyrim RPG system. Given an NPC's context and relationship descriptions, analyze each relationship and assign:
+You are a relationship analyzer for a Skyrim RPG system. Given an NPC's context and recent event history, infer relationships and assign:
 
 1. **Affinity Score** (-100 to +100, bell curve - extremes are RARE):
    - +91 to +100: Bonded (soulmates, unbreakable)
@@ -158,10 +176,10 @@ You are a relationship analyzer for a Skyrim RPG system. Given an NPC's context 
    - enemy: Hostile opposition, war enemy, faction enemy (would kill on sight)
    - neutral: Acquaintance, stranger{$customTypesSection}
 
-3. **Optional Extended Fields** (only include if clearly evident from the text):
-   - relation: 1-2 word specific role (e.g. "son", "ex-wife", "employer", "apprentice")
-   - best: Notable positive memory/event (short phrase, e.g. "opened gate for Ulfric", "saved life")
-   - worst: Notable negative memory/event (short phrase, e.g. "killed brother", "betrayed trust")
+3. **Optional Extended Fields** (only include if clearly evident from the events):
+   - relation: Specific relationship detail or role (e.g. "son", "ex-wife", "employer", "apprentice")
+   - best: Notable positive memory/event (e.g. "opened gate for Ulfric", "saved life")
+   - worst: Notable negative memory/event (e.g. "killed brother", "betrayed trust")
 
 Consider the full context:
 - The NPC's background, personality, and occupation inform their relationships
@@ -170,7 +188,7 @@ Consider the full context:
 - Words like "enemy", "rival", "hates" imply rival/hostile
 - Faction allegiances affect relationships (Stormcloaks vs Imperials, etc.)
 - "{$playerName}" refers to the player character
-- Extract specific events mentioned as best/worst memories
+- Extract specific events from history as best/worst memories
 
 Respond ONLY with valid JSON in this exact format:
 {
@@ -181,17 +199,20 @@ Respond ONLY with valid JSON in this exact format:
   }
 }
 
-Note: Only include relation/best/worst fields when they are clearly stated or strongly implied in the text. Omit them if not evident.
+Note: Only include relation/best/worst fields when they are clearly stated or strongly implied in the events. Omit them if not evident.
 PROMPT;
 
     $userPrompt = "NPC: {$npcName}\n\n";
     if (!empty($npcContext)) {
         $userPrompt .= "NPC Context:\n{$npcContext}\n";
     }
+    if (!empty($counterparts)) {
+        $userPrompt .= "Observed Counterparts: " . implode(', ', $counterparts) . "\n\n";
+    }
     if (!empty($userDirection)) {
         $userPrompt .= "Special Direction: {$userDirection}\n\n";
     }
-    $userPrompt .= "Relationship Descriptions:\n{$relationshipsText}\n\nAnalyze these relationships and return the JSON scores.";
+    $userPrompt .= "Recent Event History (oldest to newest, {$eventCount} entries):\n{$eventHistory}\n\nAnalyze this history and return JSON relationships.";
 
     $contextData = [
         ['role' => 'system', 'content' => $systemPrompt],
@@ -200,7 +221,7 @@ PROMPT;
 
     // Log what we're doing
     $modelName = $connectorData['model'] ?? $connectorData['driver'] ?? 'unknown';
-    Logger::info("[REL-AI] Analyzing relationships for {$npcName} using connector #{$connectorData['id']} ({$modelName})");
+    Logger::info("[REL-AI] Analyzing relationships for {$npcName} using connector #{$connectorData['id']} ({$modelName}), events={$eventCount}");
 
     // Make the LLM request - uses connector's configured temperature
     $response = $driver->fast_request(
@@ -290,13 +311,13 @@ PROMPT;
 
         // Include optional extended fields if present
         if (!empty($data['relation'])) {
-            $relationships[$target]['relation'] = substr(trim($data['relation']), 0, 20);
+            $relationships[$target]['relation'] = trim($data['relation']);
         }
         if (!empty($data['best'])) {
-            $relationships[$target]['best'] = substr(trim($data['best']), 0, 50);
+            $relationships[$target]['best'] = trim($data['best']);
         }
         if (!empty($data['worst'])) {
-            $relationships[$target]['worst'] = substr(trim($data['worst']), 0, 50);
+            $relationships[$target]['worst'] = trim($data['worst']);
         }
 
         $logExtra = '';
@@ -311,7 +332,8 @@ PROMPT;
         'relationships' => $relationships,
         'count' => count($relationships),
         'model' => $modelName,
-        'player_name' => $playerName
+        'player_name' => $playerName,
+        'event_count' => $eventCount
     ]);
 
 } catch (Exception $e) {
