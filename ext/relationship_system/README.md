@@ -65,10 +65,10 @@ Lydia: +55 (Attached, Professional)
 
 ## RelationshipLLM Features
 
-### 1. Static Analysis (`analyzeNpc`)
-Parses TEXT relationships field and generates JSONB scores.
-- Called by "Build with AI" button in NPC modal
-- Called by "Build Relationships" bulk button on NPC Master page
+### 1. Static/Event Analysis
+Generates JSONB relationship scores from available source context.
+- "Build with AI" in the NPC modal analyzes recent event history involving that NPC
+- "Build Relationships" bulk button on NPC Master processes existing TEXT relationships
 - Infers faction biases from occupation (Imperial soldier -> Stormcloak=-50)
 
 ### 2. Dynamic Evaluation (`evaluateContext`)
