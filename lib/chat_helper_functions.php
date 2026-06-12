@@ -4685,6 +4685,12 @@ function logEvent($dataArray,$forcePeople='')
             $extraColumns = $dataArray[5];
         }
 
+        // Fixes. This should not be here.
+        if ($dataArray[0]=="funcret") {
+            $eventPeople=DataBeingsInCloseRange(true);
+        }
+
+
         $insertData = array(
             'ts' => $dataArray[1],
             'gamets' => $dataArray[2],

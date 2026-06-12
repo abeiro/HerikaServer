@@ -668,11 +668,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Add event listener to handle overlay display
+            try {
             document.getElementById('profileSelectorBtn').addEventListener('click', function(e) {
                 e.preventDefault();
                 document.getElementById('overlay').style.display = 'block';
                 document.body.classList.add('overlay-active');
             });
+            } catch (err) {
+                //console.error("Error attaching event listener to profile selector button:", err);
+            }
 
             // Close overlay when clicking outside content
             document.getElementById('overlay').addEventListener('click', function(e) {

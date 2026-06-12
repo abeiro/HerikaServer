@@ -415,7 +415,7 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
     error_log("[handleFindNPCAction] <{$targetNpc['refid']}> <{$targetNpc['name']}>, wanted location: $lastReportedLocation" . print_r($detectedLocation, true));
     if ($detectedLocation && $detectedLocation[3] == $lastReportedLocation) {
 
-        // Check if NPC to speak to is a vender/dtrader. We pusblish stock.
+        // Check if NPC to speak to is a vender/trader. We publish stock.
         $stockString = "";
         $npcMaster = new NpcMaster();
         $targetNpcData = $npcMaster->getByName($resolvedName);

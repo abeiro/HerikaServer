@@ -917,6 +917,7 @@ if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","infoit
         // infoplayer format: level:{},name:"{}",race:"{}",gender:"{}"
         // Player name detection is disabled - manage through Player Management
     }
+
     if (in_array($gameRequest[0],['backgroundaction','npc_reanimated'])) {
         
         require_once($GLOBALS["ENGINE_PATH"]."/processor/background_event.php");
@@ -1753,6 +1754,11 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
 
         if (in_array($gameRequest[0], $playerInputEventTypes, true)) {
             chimSetCurrentTurnPeopleSnapshot($eventPeople);
+        }
+
+         // Fixes. This should net be here.
+        if ($dataArray[0]=="funcret") {
+            $eventPeople=DataBeingsInCloseRange(true);
         }
 
         $eventlogInsert = array(

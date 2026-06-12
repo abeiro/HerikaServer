@@ -220,7 +220,10 @@
                 $fname=getFunctionCodeName($function["name"]);
 
                 if (!in_array($fname,$GLOBALS["ENABLED_FUNCTIONS"])) {
+                    error_log("[FUNCTIONS] Skipping disabled function: {$function["name"]} <$fname>");
                     continue;
+                } else {
+                    error_log("[FUNCTIONS] NOT Skipping function: {$function["name"]} <$fname>");
                 }
 
                 $actionDescription = function_exists('herikaGetPromptActionDescription')
@@ -273,7 +276,7 @@
                 }
             }
             
-            $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: Talk\n</available_actions_list>";
+            $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: Talk (default action, used when no other action is suitable)\n</available_actions_list>";
             $GLOBALS["FUNC_LIST"][]="Talk";
             shuffle($GLOBALS["FUNC_LIST"]);
         }
