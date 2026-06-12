@@ -118,6 +118,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
 /********************************************************************
  *  2) CSV UPLOAD (BATCH)
  ********************************************************************/
+function oghma_normalize_csv_header($value) {
+    $value = preg_replace('/^\xEF\xBB\xBF/', '', (string)$value);
+    $value = strtolower(trim($value));
+    $value = preg_replace('/[^a-z0-9]+/', '_', $value);
+    return trim($value, '_');
+}
+
+function oghma_csv_value($row, $headerMap, $name, $fallbackIndex = null) {
+    if (isset($headerMap[$name])) {
+        return $row[$headerMap[$name]] ?? '';
+    }
+    if ($fallbackIndex !== null) {
+        return $row[$fallbackIndex] ?? '';
+    }
+    return '';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
     if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] === UPLOAD_ERR_OK) {
         $fileTmpPath = $_FILES['csv_file']['tmp_name'];
@@ -128,18 +145,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
 
         if (in_array($fileExtension, $allowedfileExtensions)) {
             if (($handle = fopen($fileTmpPath, 'r')) !== false) {
-                // Skip header row
-                fgetcsv($handle, 1000, ',');
+                $header = fgetcsv($handle, 0, ',');
+                if ($header === false) {
+                    $message .= '<p>CSV file is empty.</p>';
+                    $header = [];
+                }
+
+                $headerMap = [];
+                foreach ($header as $index => $columnName) {
+                    $normalized = oghma_normalize_csv_header($columnName);
+                    if ($normalized !== '' && !isset($headerMap[$normalized])) {
+                        $headerMap[$normalized] = $index;
+                    }
+                }
+
+                $hasNamedColumns = isset($headerMap['topic']);
+                $requiredColumns = ['topic', 'topic_desc', 'knowledge_class', 'topic_desc_basic', 'knowledge_class_basic'];
+                $missingColumns = array_values(array_filter($requiredColumns, static function ($column) use ($headerMap) {
+                    return !isset($headerMap[$column]);
+                }));
+                if ($hasNamedColumns && !empty($missingColumns)) {
+                    $message .= '<p>CSV warning: Missing expected header(s): ' . htmlspecialchars(implode(', ', $missingColumns)) . '. Missing optional fields will import as blank.</p>';
+                }
 
                 $rowCount = 0;
-                while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                    $topic                = strtolower(trim($data[0] ?? ''));
-                    $topic_desc           = $data[1] ?? '';
-                    $knowledge_class      = $data[2] ?? '';
-                    $topic_desc_basic     = $data[3] ?? '';
-                    $knowledge_class_basic= $data[4] ?? '';
-                    $tags                 = $data[5] ?? '';
-                    $category             = $data[6] ?? '';
+                $skippedCount = 0;
+                while (($data = fgetcsv($handle, 0, ',')) !== false) {
+                    if (count(array_filter($data, static function ($value) { return trim((string)$value) !== ''; })) === 0) {
+                        continue;
+                    }
+
+                    $topic                = strtolower(trim(oghma_csv_value($data, $headerMap, 'topic', 0)));
+                    $topic_desc           = oghma_csv_value($data, $headerMap, 'topic_desc', 1);
+                    $knowledge_class      = oghma_csv_value($data, $headerMap, 'knowledge_class', 2);
+                    $topic_desc_basic     = oghma_csv_value($data, $headerMap, 'topic_desc_basic', 3);
+                    $knowledge_class_basic= oghma_csv_value($data, $headerMap, 'knowledge_class_basic', 4);
+                    $tags                 = oghma_csv_value($data, $headerMap, 'tags', 5);
+                    $category             = oghma_csv_value($data, $headerMap, 'category', 6);
 
                     if (!empty($topic) && !empty($topic_desc)) {
                         $query = "
@@ -188,12 +230,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $message .= "<p>Error processing row with topic '$topic': " . pg_last_error($conn) . "</p>";
                         }
                     } else {
-                        $message .= "<p>Skipping empty or invalid row (topic/topic_desc missing).</p>";
+                        $skippedCount++;
                     }
                 }
                 fclose($handle);
 
                 $message .= "<p>$rowCount records inserted/updated successfully from the CSV file.</p>";
+                if ($skippedCount > 0) {
+                    $message .= "<p>$skippedCount row(s) skipped because topic or topic_desc was missing.</p>";
+                }
             } else {
                 $message .= '<p>Error opening the CSV file.</p>';
             }
