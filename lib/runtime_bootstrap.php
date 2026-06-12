@@ -56,13 +56,14 @@ if (!function_exists('chimRuntimeNeedsDbUpdates')) {
             'core_stt_connector' => 20260502002,
             'core_itt_connector' => 20260502002,
             'descriptions_defaults' => 20260611005,
+            'prompts' => 20260611001,
         ];
 
         try {
             $versionRows = $db->fetchAll(
                 "SELECT tablename, version
                  FROM public.database_versioning
-                 WHERE tablename IN ('general_settings','core_stt_connector','core_itt_connector','descriptions_defaults')"
+                 WHERE tablename IN ('general_settings','core_stt_connector','core_itt_connector','descriptions_defaults','prompts')"
             );
         } catch (\Throwable $e) {
             $decision = true;

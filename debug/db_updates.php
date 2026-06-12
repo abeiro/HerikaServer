@@ -5779,6 +5779,78 @@ if ($checkVersion("prompts")<20260502004) {
     Logger::info("Applied patch prompts 20260502004 - Added managed rechat strict/relaxed prompts");
 }
 
+if ($checkVersion("prompts")<20260611001) {
+    Logger::debug("Applying prompts table 20260611001 - Adding player respeech prompts");
+
+    $playerRespeechRewritePrompt = $db->escape(
+        "Rewrite dialogue for {PLAYER_NAME}, using this text as source \"{PLAYER_NAME}:{SPEECH}\". Use comments between brackets only as guidance for tone, target, length, and verbosity. If the source includes brief narration or stage business before the spoken line, preserve it as one short third-person narration block in single asterisks before the dialogue. Do not repeat bracketed comments or speaker names in the output."
+    );
+    $playerRespeechOutputPrompt = $db->escape(
+        "Output only the rewritten line. If the source includes brief leading narration, keep at most one short leading narration block in single asterisks before the spoken dialogue. Keep spoken dialogue outside the asterisks. No speaker names. No bracketed comments."
+    );
+    $playerRespeechRewriteStripPrompt = $db->escape(
+        "Rewrite dialogue for {PLAYER_NAME}, using this text as source \"{PLAYER_NAME}:{SPEECH}\". Use comments between brackets only as guidance for tone, target, length, and verbosity. Do not repeat bracketed comments, stage directions, narration, asterisked narration, or speaker names in the output."
+    );
+    $playerRespeechOutputStripPrompt = $db->escape(
+        "Output only the final spoken dialogue line. No narration. No stage directions. No asterisked narration. No speaker names. No bracketed comments."
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'player_respeech_rewrite_prompt',
+            '$playerRespeechRewritePrompt',
+            'Main player respeech/auto-chat rewrite instruction. Supports placeholders: {PLAYER_NAME}, {SPEECH}. Used in: player_rewrite.php when player auto-chat narration removal is disabled.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'player_respeech_output_prompt',
+            '$playerRespeechOutputPrompt',
+            'Player respeech/auto-chat output formatting instruction. Supports placeholders: {PLAYER_NAME}, {SPEECH}. Used in: player_rewrite.php when player auto-chat narration removal is disabled.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'player_respeech_rewrite_strip_prompt',
+            '$playerRespeechRewriteStripPrompt',
+            'Main player respeech/auto-chat rewrite instruction for narration-stripping mode. Supports placeholders: {PLAYER_NAME}, {SPEECH}. Used in: player_rewrite.php when player auto-chat narration removal is enabled.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'player_respeech_output_strip_prompt',
+            '$playerRespeechOutputStripPrompt',
+            'Player respeech/auto-chat output formatting instruction for narration-stripping mode. Supports placeholders: {PLAYER_NAME}, {SPEECH}. Used in: player_rewrite.php when player auto-chat narration removal is enabled.'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $updateVersion("prompts", 20260611001);
+    Logger::info("Applied patch prompts 20260611001 - Added player respeech prompts");
+}
+
 //----------------------------------------------------
 
 if ($checkVersion("utterance_delivery") < 20260502001) {
