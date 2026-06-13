@@ -2711,9 +2711,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25),
                 inset 0 1px rgba(255, 255, 255, 0.05);
 }
-.npc-title { font-weight:800; color:#e9efff; font-size:18px; text-align:center; letter-spacing:0.3px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.npc-title-left { flex:1 1 auto; text-align:left; }
-.npc-title-actions { display:flex; align-items:center; gap:6px; flex:0 0 auto; }
+.npc-title { font-weight:800; color:#e9efff; font-size:18px; text-align:center; letter-spacing:0.3px; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; min-width:0; }
+.npc-title-left { flex:1 1 auto; min-width:0; text-align:left; display:flex; align-items:center; flex-wrap:wrap; column-gap:4px; }
+.npc-title-actions { display:flex; align-items:center; justify-content:flex-end; gap:6px; flex:0 1 auto; max-width:48%; min-width:0; flex-wrap:wrap; }
+.npc-name { display:-webkit-box; max-width:min(100%, 22ch); overflow:hidden; overflow-wrap:anywhere; white-space:normal; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; line-height:1.25; }
 .npc-gender-icon { margin-left:6px; opacity:0.9; }
 .npc-gender-icon.gender-female { color:#ff72d2; }
 .npc-gender-icon.gender-male { color:#72a0ff; }
@@ -2749,7 +2750,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .btn-trash { background:transparent; border:none; padding:6px; color:#e9efff; font-size:20px; line-height:1; text-decoration:none; transition: color .15s ease, text-shadow .15s ease; }
 .btn-trash:hover, .btn-trash:focus-visible { color:#ff6b6b; text-shadow: 0 0 6px rgba(255, 107, 107, 0.7), 0 0 12px rgba(255, 107, 107, 0.45); }
 .npc-tags-label { font-size:11px; color:#9fb1c9; margin-right:4px; }
-.npc-tags-top { font-size:11px; color:#9fb1c9; border:1px solid #4a4a4a; border-radius:999px; padding:2px 6px; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.npc-tags-top { display:inline-block; font-size:11px; color:#9fb1c9; border:1px solid #4a4a4a; border-radius:999px; padding:2px 6px; max-width:120px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .npc-row { display:flex; gap:10px; align-items:flex-start; }
 .npc-right { margin-left:auto; flex:0 0 auto; }
 .npc-race-art { width:200px; height:200px; max-width:200px; max-height:200px; object-fit:cover; display:block; }
