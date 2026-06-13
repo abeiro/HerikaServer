@@ -11,6 +11,7 @@ chimRuntimeBootstrap($enginePath, [
 
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "api_badge.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "llm_connector.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
 
@@ -26,6 +27,7 @@ if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
 $ttsConnector = new TTSConnector();
+$llmConnector = new LLMConnector();
 $player = new Player();
 
 $saveSuccess = false;
@@ -49,6 +51,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_player'])) {
         $player->set('bio_known_by_all', $bioKnownByAll);
         if (isset($_POST['speech_style'])) {
             $player->set('speech_style', $_POST['speech_style']);
+        }
+        if (isset($_POST['core_connector_player'])) {
+            chimSetGeneralSetting(
+                'CORE_CONNECTOR_PLAYER',
+                trim(strval($_POST['core_connector_player'])),
+                chimGetSchemaDescription('CORE_CONNECTOR_PLAYER')
+            );
         }
         $player->set('diary_enabled', isset($_POST['diary_enabled']) && $_POST['diary_enabled'] === '1' ? '1' : '0');
         $player->set('tts_connector_id', trim(strval($_POST['tts_connector_id'] ?? '')));
@@ -100,7 +109,9 @@ $playerTtsElevenSimilarityBoost = strval($allPlayerData['tts_elevenlabs_similari
 $playerTtsElevenStyle = strval($allPlayerData['tts_elevenlabs_style'] ?? '');
 $playerTtsElevenUseSpeakerBoost = strval($allPlayerData['tts_elevenlabs_use_speaker_boost'] ?? '');
 $playerTtsElevenV3AudioTags = strval($allPlayerData['tts_elevenlabs_v3_audio_tags'] ?? '');
+$playerRespeechConnectorId = trim(strval(chimGetGeneralSetting('CORE_CONNECTOR_PLAYER', strval($GLOBALS['CORE_CONNECTOR_PLAYER'] ?? ''))));
 $ttsConnectorRows = $ttsConnector->readAll();
+$llmConnectorRows = $llmConnector->readAll();
 $ttsConnectorMeta = [];
 foreach ($ttsConnectorRows as $row) {
     $ttsConnectorMeta[strval($row['id'] ?? '')] = [
@@ -1129,7 +1140,7 @@ if (!$isEmbed) {
 
             <div class="content-section player-tts-section">
                 <h2 class="section-title-with-status">
-                    <span class="section-title-text">Player TTS</span>
+                    <span class="section-title-text">Player Autochat and TTS</span>
                     <span
                         id="player_tts_status_indicator"
                         class="section-status-indicator <?php echo $playerTtsConnectorId !== '' ? 'status-enabled' : 'status-disabled'; ?>"
@@ -1197,6 +1208,26 @@ if (!$isEmbed) {
                         </div>
                     </div>
                 </div>
+
+                <label for="core_connector_player">Player Respeech Connector</label>
+                <select id="core_connector_player" name="core_connector_player">
+                    <option value="">Disabled</option>
+                    <?php foreach ($llmConnectorRows as $row): ?>
+                        <?php
+                            $rowId = strval($row['id'] ?? '');
+                            $label = trim(strval($row['label'] ?? ''));
+                            if ($label === '') {
+                                $model = trim(strval($row['model'] ?? ''));
+                                $driver = trim(strval($row['driver'] ?? ''));
+                                $label = $model !== '' ? $model : ($driver !== '' ? $driver : ('Connector #' . $rowId));
+                            }
+                        ?>
+                        <option value="<?php echo htmlspecialchars($rowId); ?>" <?php echo ($playerRespeechConnectorId === $rowId) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($label); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <span class="hint">LLM connector used to rewrite player autochat prompts.</span>
 
                 <label for="speech_style">Player Speech Style</label>
                 <textarea id="speech_style" name="speech_style" placeholder="Describe how your character speaks and communicates..."><?php echo htmlspecialchars($speechStyle); ?></textarea>
