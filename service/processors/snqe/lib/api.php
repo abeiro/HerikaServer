@@ -904,6 +904,12 @@ function CheckTopicToPlayer(
         return "done";
     }
 
+     // If not  delivered
+    if (!empty($topic["delivered"]) && $topic["delivered"] === "failed") {
+        error_log("[CheckTopicToPlayer]\t<$topic_ref> failed!");
+        return "done";   // Treat this as a terminal state for now; the current LLM-driven quest flow does not yet support conditional recovery or alternate branching after a topic delivery failure.
+    }
+
     // If not important, return success on first call
     if (empty($topic["important"])) {
         error_log("[CheckTopicToPlayer]\tTopic <$topic_ref> is not important, marking as done");
@@ -2207,7 +2213,7 @@ function WaitAtLocation(
 
     if (@strpos($GLOBALS["actors_present"], $quest_data["npcs"][$npc_ref]["name"]) === false) {
         error_log("[WaitAtLocation] Reference NPC <{$quest_data["npcs"][$npc_ref]["name"]}> not present  <$location>,{$GLOBALS["actors_present"]}");
-
+    
         if ($quest_data["location_wait"][$wait_key]["attempts"] % 25 == 0) { // Background command if NPC is not around
 
             if ($npc_ref && isset($quest_data["npcs"][$npc_ref])) {
@@ -2348,7 +2354,12 @@ function WaitAtLocation(
             $atLocation = false;
         }
 
+    }  else {
+        if ($location=="nearby") {
+            $atLocation = true; // NPC is nearby;
+        }   
     }
+
 
     if (isset($npc_ref) && $npcAtLocation) {
         error_log("[WaitAtLocation] Reference NPC <{$quest_data["npcs"][$npc_ref]["name"]}> is at location <$location>");

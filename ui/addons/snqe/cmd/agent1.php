@@ -81,6 +81,9 @@ $fquestTitle = $formInput["questTitle"];
 
 $prompt[] = ['role' => 'system', 'content' => $sysprompt_content];
 $prompt[] = ['role' => 'user', 'content' => $formInput["userprompt"]];
+$prompt[] = ['role' => 'user', 'content' => "Write XML to acomplish all the quest steps"];
+
+/*
 $prompt[] = [
     'role' => 'user',
     'content' => "Use ONLY active quest reference values from database:
@@ -90,6 +93,7 @@ Allowed item types: " . implode(', ', $allowedItemTypes) . "
 Allowed item locations: " . implode(', ', $allowedItemLocations) . "
 Any value not in these lists is forbidden."
 ];
+
 $prompt[] = [
     'role' => 'user',
     'content' => "Active NPC template pools (grouped by template key; one key per line):
@@ -100,6 +104,7 @@ Active custom NPC template pools (grouped by template key; one key per line):
 
 If database has duplicate rows for a template key, treat them as one combined key with all formids merged."
 ];
+*/
 $prompt[] = ['role' => 'user', 'content' => "Write XML to acomplish all the quest steps"];
 
 

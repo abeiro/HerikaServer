@@ -260,7 +260,7 @@ $SHOW_STATUS_NAV = in_array($currentPageName, ['conf_wizard.php','configuration_
 // Server version and dev-build detection
 // Read version from .version_number.txt
 $versionFile = dirname(__DIR__, 2) . '/.version_number.txt';
-$serverVersionRaw = '2.8.3'; // fallback
+$serverVersionRaw = '2.8.4'; // fallback
 if (file_exists($versionFile)) {
     $versionContent = trim(file_get_contents($versionFile));
     if ($versionContent !== '') {
@@ -668,11 +668,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Add event listener to handle overlay display
+            try {
             document.getElementById('profileSelectorBtn').addEventListener('click', function(e) {
                 e.preventDefault();
                 document.getElementById('overlay').style.display = 'block';
                 document.body.classList.add('overlay-active');
             });
+            } catch (err) {
+                //console.error("Error attaching event listener to profile selector button:", err);
+            }
 
             // Close overlay when clicking outside content
             document.getElementById('overlay').addEventListener('click', function(e) {

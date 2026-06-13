@@ -683,16 +683,33 @@ function handleDescriptionImport($csvData, $timestamp, $game_timestamp) {
             return false;
         }
         
-        // Skip header row
-        fgetcsv($handle, 1000, ',');
+        $header = fgetcsv($handle, 1000, ',');
+        $hasPluginColumn = is_array($header) && strtolower(trim($header[0] ?? '')) === 'plugin';
+        if (!$hasPluginColumn) {
+            Logger::error("Description Import: Invalid CSV header. Expected plugin, baseid, name, description");
+            fclose($handle);
+            unlink($tempFile);
+            herikaLogCsvImportAuditEvent(
+                'description_import',
+                "failed: invalid CSV header",
+                $timestamp,
+                $game_timestamp
+            );
+            return false;
+        }
         
-        // Process each data row (baseid, name, description)
+        // Process each data row: plugin, baseid, name, description.
         while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-            $baseid      = trim($data[0] ?? '');
-            $name        = $data[1] ?? '';
-            $description = $data[2] ?? '';
+            $plugin      = trim($data[0] ?? '');
+            $baseid      = trim($data[1] ?? '');
+            $name        = $data[2] ?? '';
+            $description = $data[3] ?? '';
             
             if (!empty($baseid)) {
+                if (preg_match('/^(XX[0-9A-Fa-f]{6}|FEXXX[0-9A-Fa-f]{3}|[0-9A-Fa-f]{8})$/', $baseid)) {
+                    $baseid = strtoupper($baseid);
+                }
+
                 // Truncate baseid to 128 characters
                 if (strlen($baseid) > 128) {
                     $baseid = substr($baseid, 0, 128);
@@ -703,11 +720,12 @@ function handleDescriptionImport($csvData, $timestamp, $game_timestamp) {
                     $db->upsertRowOnConflict(
                         'descriptions_custom',
                         array(
+                            'plugin' => $plugin,
                             'baseid' => $baseid,
                             'name' => $name,
                             'description' => $description
                         ),
-                        'baseid'
+                        'plugin, baseid'
                     );
                     $processedCount++;
                     Logger::debug("Description Import: Successfully processed: $baseid");
