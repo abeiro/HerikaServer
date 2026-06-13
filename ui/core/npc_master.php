@@ -4223,7 +4223,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     if (btn){ btn.addEventListener('click', function(e){ e.preventDefault(); openHistory(); }); }
   })();
   document.addEventListener('click', function(e){ if (e.target && e.target.id==='npc_modal_close') closeModal(); });
-  modal.addEventListener('click', function(e){ if (e.target===modal) closeModal(); });
   document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });
   // Tabs in modal
   (function(){
