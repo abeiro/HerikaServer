@@ -1350,14 +1350,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 <?php endif; ?>
 
-// Close modal when clicking outside
-window.onclick = function(event) {
-    const modal = document.getElementById('editModal');
-    if (event.target == modal) {
-        closeEditModal();
-    }
-}
-
 // Keyboard shortcuts
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {

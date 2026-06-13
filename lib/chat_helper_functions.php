@@ -818,6 +818,12 @@ function stripLeadingPlayerRespeechNarration($text) {
     $speechText = (string)$text;
     do {
         $previousText = $speechText;
+        if (preg_match('/^\s*\*\*\((.*)\)\*\*\s*$/s', $speechText, $matches)
+            || preg_match('/^\s*\*\*\((.*)\)\s*$/s', $speechText, $matches)) {
+            $speechText = $matches[1];
+        }
+        $speechText = preg_replace('/^\s*\*\*\([^)]*\)\*\*\s*/', '', $speechText);
+        $speechText = preg_replace('/^\s*\*\*\([^)]*\)\s*/', '', $speechText);
         $speechText = preg_replace('/^\s*(?:(?:\([^)]*\))|(?:\*[^*]+\*))\s*/', '', $speechText);
     } while ($speechText !== $previousText);
 

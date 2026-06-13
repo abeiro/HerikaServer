@@ -10,6 +10,7 @@ chimRuntimeBootstrap($enginePath, [
     'load_stt_connector' => false,
     'load_itt_connector' => false,
     'load_player_name' => true,
+    'load_narrator' => true,
 ]);
 require_once $enginePath . "lib/logger.php";
 require_once $enginePath . "lib/model_dynmodel.php";
@@ -79,12 +80,12 @@ $GLOBALS["gameRequest"][2] = $res[0]["gamets"] + 1;
 
 $GLOBALS["CHIM_NO_EXAMPLES"] = true; // When no assistant entry in history, will try ti provide a bogus example.
 
-if (! $_GET["speech"]) {
-    if ($argv[1]) {
+if (empty($_GET["speech"])) {
+    if (!empty($argv[1])) {
         $_GET["speech"] = $argv[1];
     }
 }
-$targetNpc = isset($argv[2]) && $argv[2] !== '' ? trim($argv[2]) : '';
+$targetNpc = !empty($argv[2]) ? trim($argv[2]) : '';
 
 if (! isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
     error_log("Choose a LLM model and connector. Used connector: '{$GLOBALS["CORE_CONNECTOR_DIRECTOR"]}'", S_LOG_CRITICAL);
@@ -159,9 +160,14 @@ if (! isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
         $instruction = "Write dialogue for {$GLOBALS["PLAYER_NAME"]}.";
         $outputInstruction = "Output only the final spoken dialogue line. No narration. No stage directions. No speaker names. No bracketed comments.";
     } else {
+        $sourceSpeech = $_GET["speech"];
+        if ($removePlayerAutochatAsterisks) {
+            $sourceSpeech = sanitizePlayerRespeechText($sourceSpeech, $GLOBALS["PLAYER_NAME"] ?? null);
+        }
+
         $promptReplacements = [
             '{PLAYER_NAME}' => $GLOBALS["PLAYER_NAME"],
-            '{SPEECH}' => $_GET["speech"],
+            '{SPEECH}' => $sourceSpeech,
         ];
 
         if ($removePlayerAutochatAsterisks) {
