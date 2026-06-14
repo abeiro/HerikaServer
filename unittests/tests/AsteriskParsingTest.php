@@ -213,6 +213,50 @@ final class AsteriskParsingTest extends TestCase
         );
     }
 
+    public function testSanitizePlayerRespeechTextUnwrapsEchoedAutochatMarker(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'Anna';
+        $GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'] = true;
+
+        $this->assertSame(
+            "Oh, yeah... I feel very relaxed!",
+            sanitizePlayerRespeechText(
+                "Anna:**(Oh, yeah... I feel very relaxed!)",
+                $GLOBALS['PLAYER_NAME']
+            )
+        );
+
+        $this->assertSame(
+            "Oh, yeah... I feel very relaxed!",
+            sanitizePlayerRespeechText(
+                "Anna: **(Oh, yeah... I feel very relaxed!)**",
+                $GLOBALS['PLAYER_NAME']
+            )
+        );
+
+        $this->assertSame(
+            "Oh (yeah)... I feel very relaxed!",
+            sanitizePlayerRespeechText(
+                "Anna: **(Oh (yeah)... I feel very relaxed!)**",
+                $GLOBALS['PLAYER_NAME']
+            )
+        );
+    }
+
+    public function testSanitizePlayerRespeechTextStripsLeadingDoubleStarNarration(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'Anna';
+        $GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'] = true;
+
+        $this->assertSame(
+            "Oh, yeah... I feel very relaxed!",
+            sanitizePlayerRespeechText(
+                "Anna: **(smiles softly)** Oh, yeah... I feel very relaxed!",
+                $GLOBALS['PLAYER_NAME']
+            )
+        );
+    }
+
     public function testSanitizePlayerRespeechTextConvertsLeadingNarrationToInlineAsterisksWhenEnabled(): void
     {
         $GLOBALS['PLAYER_NAME'] = 'Rangroo';
