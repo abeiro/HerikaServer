@@ -1756,10 +1756,10 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
             chimSetCurrentTurnPeopleSnapshot($eventPeople);
         }
 
-         // Fixes. This should net be here.
-        if ($dataArray[0]=="funcret") {
-            $eventPeople=DataBeingsInCloseRange(true);
-        }
+        // Fixes. This should net be here.
+        //if ($dataArray[0]=="funcret") {
+        //    $eventPeople=DataBeingsInCloseRange(true);
+        //}
 
         $eventlogInsert = array(
             'ts' => $gameRequest[1],

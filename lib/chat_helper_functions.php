@@ -3500,7 +3500,7 @@ function chimGetInFlightChatDeliveryStates()
     return ['pending', 'emitted'];
 }
 
-function chimBuildChatDeliveryStateSql($column = 'delivery_state', array $states = null, $legacyDefault = 'spoken')
+function chimBuildChatDeliveryStateSql($column = 'delivery_state', ?array $states = null, $legacyDefault = 'spoken')
 {
     $column = trim((string)$column);
     if ($column === '') {
@@ -4692,9 +4692,9 @@ function logEvent($dataArray,$forcePeople='')
         }
 
         // Fixes. This should not be here.
-        if ($dataArray[0]=="funcret") {
-            $eventPeople=DataBeingsInCloseRange(true);
-        }
+        //if ($dataArray[0]=="funcret") {
+        //    $eventPeople=DataBeingsInCloseRange(true);
+        //}
 
 
         $insertData = array(
