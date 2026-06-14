@@ -4127,6 +4127,29 @@ try {
     Logger::error("Error creating combined_descriptions view: " . $e->getMessage());
 }
 
+if ($checkVersion("item_images")<20260614001) {
+    Logger::debug("Applying item_images 20260614001");
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.item_images (
+            plugin text NOT NULL DEFAULT '',
+            baseid character varying(128) NOT NULL,
+            name text,
+            runtime_formid character varying(32),
+            form_type text,
+            image_path text NOT NULL,
+            source text NOT NULL DEFAULT 'chim_item_model_capture',
+            metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+            created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (plugin, baseid)
+        );
+    ");
+    $db->execQuery("CREATE INDEX IF NOT EXISTS idx_item_images_name ON public.item_images (LOWER(name));");
+    $db->execQuery("CREATE INDEX IF NOT EXISTS idx_item_images_runtime_formid ON public.item_images (runtime_formid);");
+    $updateVersion("item_images",20260614001);
+    Logger::info("Applied patch item_images 20260614001");
+}
+
 try {
     $db->execQuery("CREATE OR REPLACE VIEW \"public\".\"memory_v\" AS
  SELECT message,
