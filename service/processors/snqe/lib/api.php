@@ -2145,7 +2145,7 @@ function WaitAtLocation(
                         'sent' => 0,
                         'actor' => "rolemaster",
                         'text' => "",
-                        'action' => "rolecommand|Suggestion@{$quest_data["npcs"][$npc_ref]["name"]}@$suggestionText@$quest_id",
+                        'action' => "rolecommand|Instruction@{$quest_data["npcs"][$npc_ref]["name"]}@$suggestionText@$quest_id",
                         'tag' => "",
                     ]
                 );
