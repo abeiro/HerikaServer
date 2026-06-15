@@ -1675,10 +1675,10 @@ function returnLines($lines,$writeOutput=true)
             // Check line 1665 on main.php, probable some needed codepath is not being executed when request is a suggestion 
             // Probably other requests generating speech (not user inputs) are also affected.
 
-            if ($GLOBALS["gameRequest"][0]=="suggestion") {
+            if ($GLOBALS["gameRequest"][0]=="suggestion" || $GLOBALS["gameRequest"][0]=="instruction") {
                 
                 $forcedPeople=DataBeingsInCloseRange(true);
-                error_log("[WARNING] Suggestion detected, forcing people in range to be logged: $forcedPeople");
+                error_log("[WARNING] Suggestion/Instruction detected, forcing people in range to be logged: $forcedPeople");
             } else {
                 // error_log("[BUG] Suggestion not detected, {$GLOBALS["gameRequest"][0]}");
                 $forcedPeople='';
