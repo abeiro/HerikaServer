@@ -447,7 +447,7 @@ function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void {
             ]);
         }
 
-        chimQuestEngineSyncPlayerInventory($inventoryData);
+        chimQuestEngineSyncPlayerInventory($inventoryData, $data['gamets'] ?? null);
         
         $itemCount = count($items);
         Logger::debug("[gamedata.php] Updated inventory for player: {$actorName} ({$itemCount} items)");

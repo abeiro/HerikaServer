@@ -4218,10 +4218,13 @@ if ($checkTableExists("sneq_quests_saved") == -1) {
 } else
     Logger::info(__FILE__." sneq_quests_saved exists");
 
+$questEngineSchemaSql = file_get_contents(__DIR__."/../data/chim_quest_engine.sql");
 if ($checkTableExists("skyrim_quest_definitions") == -1 || $checkTableExists("chim_quest_definitions") != -1) {
-    $db->execQuery(file_get_contents(__DIR__."/../data/chim_quest_engine.sql"));
-} else
+    $db->execQuery($questEngineSchemaSql);
+} else {
     Logger::info(__FILE__." skyrim_quest_definitions exists");
+    $db->execQuery($questEngineSchemaSql);
+}
 
 if ($checkTableExists("skyrim_quest_definitions") != -1) {
     require_once(__DIR__ . "/../lib/chim_quest_engine.php");

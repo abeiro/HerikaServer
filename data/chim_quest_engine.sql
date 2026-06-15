@@ -207,6 +207,7 @@ CREATE TABLE IF NOT EXISTS public.skyrim_quest_instances (
     quest_editor_id text NOT NULL,
     run_state text NOT NULL DEFAULT 'inactive',
     current_stage integer,
+    last_gamets bigint,
     state_json jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamp with time zone NOT NULL DEFAULT now(),
     updated_at timestamp with time zone NOT NULL DEFAULT now()
@@ -241,6 +242,7 @@ CREATE TABLE IF NOT EXISTS public.skyrim_quest_action_outbox (
     quest_key text NOT NULL REFERENCES public.skyrim_quest_instances(quest_key) ON DELETE CASCADE,
     beat_id text,
     action_type text NOT NULL,
+    action_gamets bigint,
     payload_json jsonb NOT NULL DEFAULT '{}'::jsonb,
     status text NOT NULL DEFAULT 'pending',
     result_json jsonb NOT NULL DEFAULT '{}'::jsonb,
@@ -248,6 +250,12 @@ CREATE TABLE IF NOT EXISTS public.skyrim_quest_action_outbox (
     updated_at timestamp with time zone NOT NULL DEFAULT now(),
     applied_at timestamp with time zone
 );
+
+ALTER TABLE public.skyrim_quest_instances
+ADD COLUMN IF NOT EXISTS last_gamets bigint;
+
+ALTER TABLE public.skyrim_quest_action_outbox
+ADD COLUMN IF NOT EXISTS action_gamets bigint;
 
 CREATE OR REPLACE FUNCTION public.chim_touch_updated_at()
 RETURNS TRIGGER AS $$
@@ -316,5 +324,11 @@ ON public.skyrim_quest_events (event_type, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skyrim_quest_events_quest_created
 ON public.skyrim_quest_events (quest_key, created_at DESC);
 
+CREATE INDEX IF NOT EXISTS idx_skyrim_quest_events_gamets
+ON public.skyrim_quest_events (gamets DESC);
+
 CREATE INDEX IF NOT EXISTS idx_skyrim_quest_action_outbox_status_created
 ON public.skyrim_quest_action_outbox (status, created_at ASC);
+
+CREATE INDEX IF NOT EXISTS idx_skyrim_quest_action_outbox_gamets
+ON public.skyrim_quest_action_outbox (action_gamets DESC);

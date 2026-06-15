@@ -239,6 +239,22 @@ if (!function_exists('chimQuestEngineFormKey')) {
     }
 }
 
+if (!function_exists('chimQuestEngineNormalizeGamets')) {
+    function chimQuestEngineNormalizeGamets($value)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        $gamets = intval($value);
+        return ($gamets > 0) ? $gamets : null;
+    }
+}
+
 if (!function_exists('chimQuestEngineFindCaseInsensitiveKey')) {
     function chimQuestEngineFindCaseInsensitiveKey($array, $needle)
     {
@@ -344,8 +360,8 @@ if (!function_exists('chimQuestEngineEnsureInstanceRow')) {
         $stateJson = $GLOBALS["db"]->escape(chimQuestEngineJsonEncode(chimQuestEngineDefaultState()));
         $questKeyEscaped = $GLOBALS["db"]->escape($questKey);
         $GLOBALS["db"]->execQuery("
-            INSERT INTO public.skyrim_quest_instances (quest_key, quest_editor_id, run_state, current_stage, state_json)
-            VALUES ('{$questKeyEscaped}', '{$questEditorId}', 'inactive', NULL, '{$stateJson}'::jsonb)
+            INSERT INTO public.skyrim_quest_instances (quest_key, quest_editor_id, run_state, current_stage, last_gamets, state_json)
+            VALUES ('{$questKeyEscaped}', '{$questEditorId}', 'inactive', NULL, NULL, '{$stateJson}'::jsonb)
             ON CONFLICT (quest_key) DO NOTHING
         ");
 
@@ -500,7 +516,7 @@ if (!function_exists('chimQuestEngineGetInstance')) {
 
         $questKeyEscaped = $GLOBALS["db"]->escape($questKeyCn);
         $row = $GLOBALS["db"]->fetchOne("
-            SELECT quest_key, quest_editor_id, run_state, current_stage, state_json
+            SELECT quest_key, quest_editor_id, run_state, current_stage, last_gamets, state_json
             FROM public.skyrim_quest_instances
             WHERE quest_key = '{$questKeyEscaped}'
             LIMIT 1
@@ -511,6 +527,7 @@ if (!function_exists('chimQuestEngineGetInstance')) {
 
         $row['state_json'] = chimQuestEngineNormalizeState(chimQuestEngineJsonDecode($row['state_json'] ?? '{}', array()));
         $row['current_stage'] = ($row['current_stage'] === null || $row['current_stage'] === '') ? null : intval($row['current_stage']);
+        $row['last_gamets'] = ($row['last_gamets'] === null || $row['last_gamets'] === '') ? null : intval($row['last_gamets']);
         return $row;
     }
 }
@@ -530,16 +547,19 @@ if (!function_exists('chimQuestEnginePersistInstance')) {
         $questEditorId = $GLOBALS["db"]->escape((string)($instance['quest_editor_id'] ?? $definition['quest_editor_id'] ?? $questKey));
         $runState = $GLOBALS["db"]->escape((string)($instance['run_state'] ?? 'inactive'));
         $currentStageSql = ($instance['current_stage'] === null || $instance['current_stage'] === '') ? 'NULL' : intval($instance['current_stage']);
+        $lastGamets = chimQuestEngineNormalizeGamets($instance['last_gamets'] ?? null);
+        $lastGametsSql = ($lastGamets === null) ? 'NULL' : intval($lastGamets);
         $stateJson = $GLOBALS["db"]->escape(chimQuestEngineJsonEncode(chimQuestEngineNormalizeState($instance['state_json'] ?? array())));
         $questKeyEscaped = $GLOBALS["db"]->escape($questKey);
 
         $GLOBALS["db"]->execQuery("
-            INSERT INTO public.skyrim_quest_instances (quest_key, quest_editor_id, run_state, current_stage, state_json)
-            VALUES ('{$questKeyEscaped}', '{$questEditorId}', '{$runState}', {$currentStageSql}, '{$stateJson}'::jsonb)
+            INSERT INTO public.skyrim_quest_instances (quest_key, quest_editor_id, run_state, current_stage, last_gamets, state_json)
+            VALUES ('{$questKeyEscaped}', '{$questEditorId}', '{$runState}', {$currentStageSql}, {$lastGametsSql}, '{$stateJson}'::jsonb)
             ON CONFLICT (quest_key) DO UPDATE SET
                 quest_editor_id = EXCLUDED.quest_editor_id,
                 run_state = EXCLUDED.run_state,
                 current_stage = EXCLUDED.current_stage,
+                last_gamets = EXCLUDED.last_gamets,
                 state_json = EXCLUDED.state_json,
                 updated_at = now()
         ");
@@ -779,7 +799,7 @@ if (!function_exists('chimQuestEngineInsertEvent')) {
 }
 
 if (!function_exists('chimQuestEngineQueueAction')) {
-    function chimQuestEngineQueueAction($questKey, $beatId, $actionType, array $payload)
+    function chimQuestEngineQueueAction($questKey, $beatId, $actionType, array $payload, $gamets = null)
     {
         if (!chimQuestEngineReady()) {
             return false;
@@ -788,13 +808,15 @@ if (!function_exists('chimQuestEngineQueueAction')) {
         $questKeyEscaped = $GLOBALS["db"]->escape(chimQuestEngineNormalizeQuestKey($questKey));
         $beatIdSql = ($beatId === null || $beatId === '') ? 'NULL' : "'" . $GLOBALS["db"]->escape((string)$beatId) . "'";
         $actionTypeEscaped = $GLOBALS["db"]->escape((string)$actionType);
+        $actionGamets = chimQuestEngineNormalizeGamets($gamets ?? ($payload['gamets'] ?? null));
+        $actionGametsSql = ($actionGamets === null) ? 'NULL' : intval($actionGamets);
         $payloadJson = $GLOBALS["db"]->escape(chimQuestEngineJsonEncode($payload));
 
         $GLOBALS["db"]->execQuery("
             INSERT INTO public.skyrim_quest_action_outbox
-                (quest_key, beat_id, action_type, payload_json, status, result_json)
+                (quest_key, beat_id, action_type, action_gamets, payload_json, status, result_json)
             VALUES
-                ('{$questKeyEscaped}', {$beatIdSql}, '{$actionTypeEscaped}', '{$payloadJson}'::jsonb, 'pending', '{}'::jsonb)
+                ('{$questKeyEscaped}', {$beatIdSql}, '{$actionTypeEscaped}', {$actionGametsSql}, '{$payloadJson}'::jsonb, 'pending', '{}'::jsonb)
         ");
 
         return true;
@@ -1654,7 +1676,7 @@ if (!function_exists('chimQuestEngineMutateStateForAction')) {
 }
 
 if (!function_exists('chimQuestEngineQueueResolvedAction')) {
-    function chimQuestEngineQueueResolvedAction(array $definition, $questKey, $beatId, array $action, array &$state, $sourceActionType = '')
+    function chimQuestEngineQueueResolvedAction(array $definition, $questKey, $beatId, array $action, array &$state, $sourceActionType = '', $gamets = null)
     {
         $actionType = strtolower(trim((string)($action['type'] ?? '')));
         if ($actionType === '') {
@@ -1668,11 +1690,15 @@ if (!function_exists('chimQuestEngineQueueResolvedAction')) {
         $payload['quest_plugin'] = $payload['quest_plugin'] ?? ($definition['quest_plugin'] ?? '');
         $payload['quest_form_id'] = $payload['quest_form_id'] ?? ($definition['quest_form_id'] ?? '');
         $payload['beat_id'] = $beatId;
+        $actionGamets = chimQuestEngineNormalizeGamets($gamets);
+        if ($actionGamets !== null) {
+            $payload['gamets'] = $actionGamets;
+        }
         if ($sourceActionType !== '') {
             $payload['source_action_type'] = $sourceActionType;
         }
 
-        chimQuestEngineQueueAction($questKey, $beatId, $actionType, $payload);
+        chimQuestEngineQueueAction($questKey, $beatId, $actionType, $payload, $actionGamets);
     }
 }
 
@@ -1721,7 +1747,7 @@ if (!function_exists('chimQuestEngineFireBeat')) {
             if ($stage >= 0) {
                 $instance['current_stage'] = $stage;
                 $instance['state_json']['current_stage'] = $stage;
-                chimQuestEngineQueueResolvedAction($definition, $questKey, $beatId, $action, $instance['state_json']);
+                chimQuestEngineQueueResolvedAction($definition, $questKey, $beatId, $action, $instance['state_json'], '', $gamets);
             }
         } elseif ($actionType === 'set_stage_cascade') {
             $targetStage = intval($action['stage'] ?? -1);
@@ -1775,7 +1801,7 @@ if (!function_exists('chimQuestEngineFireBeat')) {
                     $instance['current_stage'] = $candidateStage;
                     $instance['state_json']['current_stage'] = $candidateStage;
                 }
-                chimQuestEngineQueueResolvedAction($definition, $questKey, $candidateId, $candidateAction, $instance['state_json'], 'set_stage_cascade_intermediate');
+                chimQuestEngineQueueResolvedAction($definition, $questKey, $candidateId, $candidateAction, $instance['state_json'], 'set_stage_cascade_intermediate', $gamets);
                 foreach ($candidateBeat['downstream'] ?? array() as $downstreamAction) {
                     if (!is_array($downstreamAction)) {
                         continue;
@@ -1783,7 +1809,7 @@ if (!function_exists('chimQuestEngineFireBeat')) {
                     if (!chimQuestEngineConditionsMet($downstreamAction['conditions'] ?? array(), $instance['state_json'], $definition)) {
                         continue;
                     }
-                    chimQuestEngineQueueResolvedAction($definition, $questKey, $candidateId, $downstreamAction, $instance['state_json']);
+                    chimQuestEngineQueueResolvedAction($definition, $questKey, $candidateId, $downstreamAction, $instance['state_json'], '', $gamets);
                 }
             }
 
@@ -1792,10 +1818,10 @@ if (!function_exists('chimQuestEngineFireBeat')) {
                 $instance['state_json']['current_stage'] = $targetStage;
                 $resolvedAction = $action;
                 $resolvedAction['type'] = 'set_stage';
-                chimQuestEngineQueueResolvedAction($definition, $questKey, $beatId, $resolvedAction, $instance['state_json'], 'set_stage_cascade');
+                chimQuestEngineQueueResolvedAction($definition, $questKey, $beatId, $resolvedAction, $instance['state_json'], 'set_stage_cascade', $gamets);
             }
         } elseif ($actionType !== '' && $actionType !== 'gate') {
-            chimQuestEngineQueueResolvedAction($definition, $questKey, $beatId, $action, $instance['state_json']);
+            chimQuestEngineQueueResolvedAction($definition, $questKey, $beatId, $action, $instance['state_json'], '', $gamets);
         }
 
         foreach ($beat['downstream'] ?? array() as $downstreamAction) {
@@ -1805,7 +1831,7 @@ if (!function_exists('chimQuestEngineFireBeat')) {
             if (!chimQuestEngineConditionsMet($downstreamAction['conditions'] ?? array(), $instance['state_json'], $definition)) {
                 continue;
             }
-            chimQuestEngineQueueResolvedAction($definition, $questKey, $beatId, $downstreamAction, $instance['state_json']);
+            chimQuestEngineQueueResolvedAction($definition, $questKey, $beatId, $downstreamAction, $instance['state_json'], '', $gamets);
         }
     }
 }
@@ -1881,6 +1907,197 @@ if (!function_exists('chimQuestEngineApplyEventToState')) {
     }
 }
 
+if (!function_exists('chimQuestEngineApplyBeatToStateOnly')) {
+    function chimQuestEngineApplyBeatToStateOnly(array $definition, array $beat, array &$state)
+    {
+        $action = $beat['action'] ?? array();
+        if (is_array($action)) {
+            $actionType = strtolower(trim((string)($action['type'] ?? '')));
+            if ($actionType === 'set_stage' || $actionType === 'set_stage_cascade') {
+                $stage = intval($action['stage'] ?? -1);
+                if ($stage >= 0) {
+                    $state['current_stage'] = $stage;
+                }
+            }
+        }
+    }
+}
+
+if (!function_exists('chimQuestEngineFetchMaxRuntimeGamets')) {
+    function chimQuestEngineFetchMaxRuntimeGamets()
+    {
+        if (!chimQuestEngineReady()) {
+            return null;
+        }
+
+        $row = $GLOBALS["db"]->fetchOne("
+            SELECT GREATEST(
+                COALESCE((SELECT MAX(last_gamets) FROM public.skyrim_quest_instances), 0),
+                COALESCE((SELECT MAX(fired_gamets) FROM public.skyrim_quest_beat_state), 0),
+                COALESCE((SELECT MAX(gamets) FROM public.skyrim_quest_events), 0),
+                COALESCE((SELECT MAX(action_gamets) FROM public.skyrim_quest_action_outbox), 0)
+            ) AS max_gamets
+        ");
+
+        $maxGamets = intval($row['max_gamets'] ?? 0);
+        return ($maxGamets > 0) ? $maxGamets : null;
+    }
+}
+
+if (!function_exists('chimQuestEngineRebuildInstanceStateAtGamets')) {
+    function chimQuestEngineRebuildInstanceStateAtGamets(array $definition, $targetGamets)
+    {
+        if (!chimQuestEngineReady()) {
+            return false;
+        }
+
+        chimQuestEngineEnsureInstanceRow($definition);
+
+        $questKey = chimQuestEngineNormalizeQuestKey($definition['quest_key'] ?? '');
+        if ($questKey === '') {
+            return false;
+        }
+
+        $questKeyEscaped = $GLOBALS["db"]->escape($questKey);
+        $state = chimQuestEngineDefaultState();
+        $lastGamets = null;
+
+        $events = $GLOBALS["db"]->fetchAll("
+            SELECT event_type, gamets, payload_json
+            FROM public.skyrim_quest_events
+            WHERE quest_key = '{$questKeyEscaped}'
+              AND gamets IS NOT NULL
+              AND gamets <= " . intval($targetGamets) . "
+            ORDER BY gamets ASC, id ASC
+        ");
+
+        foreach ($events as $event) {
+            $payload = chimQuestEngineJsonDecode($event['payload_json'] ?? '{}', array());
+            if (!isset($payload['gamets']) && $event['gamets'] !== null && $event['gamets'] !== '') {
+                $payload['gamets'] = intval($event['gamets']);
+            }
+            chimQuestEngineApplyEventToState($definition, $event['event_type'] ?? '', $payload, $state);
+            $eventGamets = chimQuestEngineNormalizeGamets($event['gamets'] ?? null);
+            if ($eventGamets !== null) {
+                $lastGamets = max($lastGamets ?? 0, $eventGamets);
+            }
+        }
+
+        $beatIndex = chimQuestEngineIndexBeatsById($definition);
+        $firedBeats = $GLOBALS["db"]->fetchAll("
+            SELECT beat_id, fired_gamets
+            FROM public.skyrim_quest_beat_state
+            WHERE quest_key = '{$questKeyEscaped}'
+              AND fired = true
+              AND fired_gamets IS NOT NULL
+              AND fired_gamets <= " . intval($targetGamets) . "
+            ORDER BY fired_order NULLS LAST, fired_gamets ASC, beat_id ASC
+        ");
+
+        foreach ($firedBeats as $firedBeat) {
+            $beatId = (string)($firedBeat['beat_id'] ?? '');
+            if ($beatId !== '' && isset($beatIndex[$beatId])) {
+                chimQuestEngineApplyBeatToStateOnly($definition, $beatIndex[$beatId], $state);
+            }
+            $beatGamets = chimQuestEngineNormalizeGamets($firedBeat['fired_gamets'] ?? null);
+            if ($beatGamets !== null) {
+                $lastGamets = max($lastGamets ?? 0, $beatGamets);
+            }
+        }
+
+        $actions = $GLOBALS["db"]->fetchAll("
+            SELECT action_type, action_gamets, payload_json
+            FROM public.skyrim_quest_action_outbox
+            WHERE quest_key = '{$questKeyEscaped}'
+              AND action_gamets IS NOT NULL
+              AND action_gamets <= " . intval($targetGamets) . "
+            ORDER BY action_gamets ASC, id ASC
+        ");
+
+        foreach ($actions as $actionRow) {
+            $actionPayload = chimQuestEngineJsonDecode($actionRow['payload_json'] ?? '{}', array());
+            if (!is_array($actionPayload)) {
+                $actionPayload = array();
+            }
+            if (empty($actionPayload['type'])) {
+                $actionPayload['type'] = $actionRow['action_type'] ?? '';
+            }
+
+            $actionType = strtolower(trim((string)($actionPayload['type'] ?? '')));
+            if ($actionType === 'set_stage' || $actionType === 'set_stage_cascade') {
+                $stage = intval($actionPayload['stage'] ?? -1);
+                if ($stage >= 0) {
+                    $state['current_stage'] = $stage;
+                }
+            }
+            chimQuestEngineMutateStateForAction($state, $actionPayload);
+
+            $actionGamets = chimQuestEngineNormalizeGamets($actionRow['action_gamets'] ?? null);
+            if ($actionGamets !== null) {
+                $lastGamets = max($lastGamets ?? 0, $actionGamets);
+            }
+        }
+
+        $runState = $state['run_state'] ?? null;
+        if (!is_string($runState) || trim($runState) === '') {
+            $runState = (!empty($firedBeats) || $state['current_stage'] !== null) ? 'running' : 'inactive';
+        }
+        unset($state['run_state']);
+
+        return chimQuestEnginePersistInstance($definition, array(
+            'quest_key' => $questKey,
+            'quest_editor_id' => $definition['quest_editor_id'] ?? $questKey,
+            'run_state' => $runState,
+            'current_stage' => $state['current_stage'],
+            'last_gamets' => $lastGamets,
+            'state_json' => $state,
+        ));
+    }
+}
+
+if (!function_exists('chimQuestEngineRollbackRuntimeToGamets')) {
+    function chimQuestEngineRollbackRuntimeToGamets($targetGamets)
+    {
+        if (!chimQuestEngineReady()) {
+            return array('rolled_back' => false, 'reason' => 'not_ready');
+        }
+
+        $targetGamets = chimQuestEngineNormalizeGamets($targetGamets);
+        if ($targetGamets === null) {
+            return array('rolled_back' => false, 'reason' => 'missing_gamets');
+        }
+
+        $currentMaxGamets = chimQuestEngineFetchMaxRuntimeGamets();
+        if ($currentMaxGamets === null || $targetGamets >= $currentMaxGamets) {
+            return array(
+                'rolled_back' => false,
+                'current_max_gamets' => $currentMaxGamets,
+                'target_gamets' => $targetGamets,
+            );
+        }
+
+        $GLOBALS["db"]->execQuery("DELETE FROM public.skyrim_quest_action_outbox WHERE action_gamets IS NULL OR action_gamets > {$targetGamets}");
+        $GLOBALS["db"]->execQuery("DELETE FROM public.skyrim_quest_beat_state WHERE fired_gamets IS NULL OR fired_gamets > {$targetGamets}");
+        $GLOBALS["db"]->execQuery("DELETE FROM public.skyrim_quest_events WHERE gamets IS NULL OR gamets > {$targetGamets}");
+
+        $rebuilt = 0;
+        foreach (chimQuestEngineFetchDefinitions(true) as $definition) {
+            if (chimQuestEngineRebuildInstanceStateAtGamets($definition, $targetGamets)) {
+                $rebuilt++;
+            }
+        }
+
+        chimQuestEngineLog('info', "Rolled back Skyrim quest runtime from gamets {$currentMaxGamets} to {$targetGamets}; rebuilt {$rebuilt} quest instance(s).");
+
+        return array(
+            'rolled_back' => true,
+            'from_gamets' => $currentMaxGamets,
+            'target_gamets' => $targetGamets,
+            'rebuilt_instances' => $rebuilt,
+        );
+    }
+}
+
 if (!function_exists('chimQuestEngineHandleEventForDefinition')) {
     function chimQuestEngineHandleEventForDefinition(array $definition, $eventType, array $payload)
     {
@@ -1895,6 +2112,10 @@ if (!function_exists('chimQuestEngineHandleEventForDefinition')) {
         $beatStateMap = chimQuestEngineLoadBeatStateMap($definition['quest_key']);
 
         chimQuestEngineApplyEventToState($definition, $eventType, $payload, $instance['state_json']);
+        $eventGamets = chimQuestEngineNormalizeGamets($payload['gamets'] ?? null);
+        if ($eventGamets !== null) {
+            $instance['last_gamets'] = max(intval($instance['last_gamets'] ?? 0), $eventGamets);
+        }
         if ($instance['state_json']['current_stage'] !== null) {
             $instance['current_stage'] = intval($instance['state_json']['current_stage']);
         }
@@ -1986,6 +2207,7 @@ if (!function_exists('chimQuestEngineHandleEvent')) {
         }
 
         chimQuestEngineMaybeBootstrapBundledDefinitions();
+        $rollback = chimQuestEngineRollbackRuntimeToGamets($payload['gamets'] ?? null);
         $definitions = chimQuestEngineFetchDefinitions(true);
         $results = array();
 
@@ -2001,6 +2223,7 @@ if (!function_exists('chimQuestEngineHandleEvent')) {
         return array(
             'ok' => true,
             'event_type' => $eventType,
+            'rollback' => $rollback,
             'results' => $results,
         );
     }
@@ -2072,15 +2295,20 @@ if (!function_exists('chimQuestEngineHandleLiveDialogueTurn')) {
 }
 
 if (!function_exists('chimQuestEngineSyncPlayerInventory')) {
-    function chimQuestEngineSyncPlayerInventory(array $items)
+    function chimQuestEngineSyncPlayerInventory(array $items, $gamets = null)
     {
         if (!chimQuestEngineFeatureEnabled()) {
             return array('ok' => true, 'disabled' => true);
         }
-        return chimQuestEngineHandleEvent('player_inventory_sync', array(
+        $payload = array(
             'event_source' => 'gamedata',
             'items' => $items,
-        ));
+        );
+        $eventGamets = chimQuestEngineNormalizeGamets($gamets);
+        if ($eventGamets !== null) {
+            $payload['gamets'] = $eventGamets;
+        }
+        return chimQuestEngineHandleEvent('player_inventory_sync', $payload);
     }
 }
 
@@ -2096,7 +2324,7 @@ if (!function_exists('chimQuestEngineFetchPendingActions')) {
 
         $limitCn = max(1, min(100, intval($limit)));
         $rows = $GLOBALS["db"]->fetchAll("
-            SELECT id, quest_key, beat_id, action_type, payload_json, status, created_at, applied_at
+            SELECT id, quest_key, beat_id, action_type, action_gamets, payload_json, status, created_at, applied_at
             FROM public.skyrim_quest_action_outbox
             WHERE status = 'pending'
             ORDER BY id ASC
@@ -2110,6 +2338,7 @@ if (!function_exists('chimQuestEngineFetchPendingActions')) {
                 'quest_key' => $row['quest_key'],
                 'beat_id' => $row['beat_id'],
                 'action_type' => $row['action_type'],
+                'action_gamets' => ($row['action_gamets'] === null || $row['action_gamets'] === '') ? null : intval($row['action_gamets']),
                 'payload' => chimQuestEngineJsonDecode($row['payload_json'] ?? '{}', array()),
                 'status' => $row['status'],
                 'created_at' => $row['created_at'],
@@ -2179,6 +2408,7 @@ if (!function_exists('chimQuestEngineResetRuntime')) {
             UPDATE public.skyrim_quest_instances
             SET run_state = 'inactive',
                 current_stage = NULL,
+                last_gamets = NULL,
                 state_json = '{$defaultState}'::jsonb,
                 updated_at = now()
         ");
@@ -2206,6 +2436,7 @@ if (!function_exists('chimQuestEngineStatus')) {
         $instances = $GLOBALS["db"]->fetchOne("SELECT COUNT(*) as n FROM public.skyrim_quest_instances");
         $pendingActions = $GLOBALS["db"]->fetchOne("SELECT COUNT(*) as n FROM public.skyrim_quest_action_outbox WHERE status = 'pending'");
         $events = $GLOBALS["db"]->fetchOne("SELECT COUNT(*) as n FROM public.skyrim_quest_events");
+        $maxGamets = chimQuestEngineFetchMaxRuntimeGamets();
 
         return array(
             'ready' => true,
@@ -2214,6 +2445,7 @@ if (!function_exists('chimQuestEngineStatus')) {
             'instance_count' => intval($instances['n'] ?? 0),
             'pending_action_count' => intval($pendingActions['n'] ?? 0),
             'event_count' => intval($events['n'] ?? 0),
+            'max_gamets' => $maxGamets,
         );
     }
 }
