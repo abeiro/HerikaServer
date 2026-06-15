@@ -57,7 +57,7 @@ if (!function_exists('chimRuntimeNeedsDbUpdates')) {
             'core_itt_connector' => 20260502002,
             'descriptions_defaults' => 20260611005,
             'item_images' => 20260614001,
-            'prompts' => 20260611001,
+            'prompts' => 20260614005,
         ];
 
         try {
