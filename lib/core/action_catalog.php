@@ -1033,6 +1033,7 @@ function herikaActionCatalogGetBuiltinCooldownSeconds($codeName)
         'StartRitualCeremony' => 60,
         'Follow' => 60,
         'FollowPlayer' => 60,
+        'ReturnBackHome' => 60,
     ];
 
     return $cooldowns[$codeName] ?? null;
