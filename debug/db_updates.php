@@ -4223,7 +4223,18 @@ if ($checkTableExists("skyrim_quest_definitions") == -1 || $checkTableExists("ch
 } else
     Logger::info(__FILE__." skyrim_quest_definitions exists");
 
-
+if ($checkTableExists("skyrim_quest_definitions") != -1) {
+    require_once(__DIR__ . "/../lib/chim_quest_engine.php");
+    try {
+        $questDefinitionCount = $db->fetchOne("SELECT COUNT(*) AS n FROM public.skyrim_quest_definitions");
+        if (intval($questDefinitionCount["n"] ?? 0) === 0) {
+            $questImportResults = chimQuestEngineImportBundledDefinitions();
+            Logger::info(__FILE__ . " imported bundled skyrim quest definitions: " . count($questImportResults));
+        }
+    } catch (Exception $e) {
+        Logger::warn(__FILE__ . " could not import bundled skyrim quest definitions: " . $e->getMessage());
+    }
+}
 
 // Some imported dump-style SQL files clear search_path; restore it before
 // running unqualified late-stage migrations.
