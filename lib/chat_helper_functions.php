@@ -4668,18 +4668,22 @@ function logEvent($dataArray,$forcePeople='')
 
         $eventType = strtolower((string)($dataArray[0] ?? ""));
         $defaultPeopleFallback = $GLOBALS["CACHE_PEOPLE_LIMITED"];
+        
         if (in_array($eventType, ["infoaction", "funcret"], true)) {
             $actionPeopleFallback = $GLOBALS["CACHE_PEOPLE"] ?? DataBeingsInCloseRange(false);
             if ($actionPeopleFallback !== "") {
                 $defaultPeopleFallback = $actionPeopleFallback;
             }
         }
+
         if ($eventType === "infoloc") {
             $defaultPeopleFallback = DataBeingsInRange();
             if ($defaultPeopleFallback === "") {
                 $defaultPeopleFallback = DataBeingsInCloseRange(false);
             }
         }
+
+
         if (isSpellcastEventType($dataArray[0] ?? "")) {
             $defaultPeopleFallback = DataBeingsInRange();
         }
@@ -4709,6 +4713,10 @@ function logEvent($dataArray,$forcePeople='')
         //if ($dataArray[0]=="funcret") {
         //    $eventPeople=DataBeingsInCloseRange(true);
         //}
+
+        if ($dataArray[0]=="death") {
+            $eventPeople=DataBeingsInCloseRange(false);
+        }
 
 
         $insertData = array(
