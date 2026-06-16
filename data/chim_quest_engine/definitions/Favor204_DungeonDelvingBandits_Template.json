@@ -1,0 +1,139 @@
+{
+  "quest_key": "favor204_dungeon_delving_bandits_template",
+  "skeleton_type": "radiant_template",
+  "quest_form_id": "0x0007105B",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "Favor204",
+  "title": "Dungeon Delving: {QuestItem} for {QuestGiver}",
+  "description": "{QuestGiver} asks the player to recover {QuestItem} from a bandit hideout.",
+  "radiant_template": {
+    "enabled": true,
+    "required_aliases": [
+      "QuestGiver",
+      "QuestItem"
+    ],
+    "instance_key_aliases": [
+      "QuestGiver",
+      "QuestItem"
+    ],
+    "alias_synonyms": {
+      "QuestGiver": [
+        "QuestGiver",
+        "Quest Giver",
+        "Giver"
+      ],
+      "QuestItem": [
+        "QuestItem",
+        "Quest Item",
+        "Item"
+      ],
+      "Dungeon": [
+        "Dungeon",
+        "Location"
+      ]
+    }
+  },
+  "natural_start": {
+    "enabled": false,
+    "beats": []
+  },
+  "npc_facts": {
+    "{QuestGiver}": {
+      "base_facts": [
+        "I asked the player to recover {QuestItem} from a bandit hideout.",
+        "The player should return {QuestItem} to me when they have it."
+      ],
+      "beat_facts": {
+        "QUEST_STARTED": [
+          "The player agreed to recover {QuestItem}."
+        ],
+        "ITEM_RECOVERED": [
+          "The player has recovered {QuestItem} and can return it to me."
+        ],
+        "ITEM_RETURNED": [
+          "The player returned {QuestItem}; the favor is complete."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "QUEST_STARTED",
+      "focus_npc": "{QuestGiver}",
+      "comment": "The radiant favor has started and aliases are resolved.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "Favor204",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": []
+    },
+    {
+      "id": "ITEM_RECOVERED",
+      "focus_npc": "",
+      "comment": "The player recovered the assigned item.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "item_acquired",
+          "plugin": "{QuestItem.plugin}",
+          "form_id": "{QuestItem.form_id}"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_STARTED"
+      ]
+    },
+    {
+      "id": "ITEM_RETURNED",
+      "focus_npc": "{QuestGiver}",
+      "comment": "The player clearly returns {QuestItem} to {QuestGiver}.",
+      "intent_summary": "Player is handing over or reporting the recovery of {QuestItem} to {QuestGiver}.",
+      "action": {
+        "type": "set_stage",
+        "quest_plugin": "Skyrim.esm",
+        "quest_form_id": "0x0007105B",
+        "stage": 20
+      },
+      "downstream": [],
+      "required_item": {
+        "name": "{QuestItem}",
+        "plugin": "{QuestItem.plugin}",
+        "form_id": "{QuestItem.form_id}"
+      },
+      "triggers": [
+        {
+          "type": "dialogue_intent",
+          "intent": "Player clearly returns or presents {QuestItem} to {QuestGiver}.",
+          "requires_explicit_delivery": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "I found {QuestItem}. Here it is.",
+            "I recovered {QuestItem} for you.",
+            "Here is {QuestItem}; I got it back."
+          ],
+          "examples_no": [
+            "I am still looking for {QuestItem}.",
+            "Where should I search for {QuestItem}?",
+            "Tell me about the item you lost."
+          ]
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ITEM_RECOVERED"
+      ]
+    }
+  ]
+}

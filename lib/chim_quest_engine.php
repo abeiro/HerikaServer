@@ -306,6 +306,7 @@ if (!function_exists('chimQuestEngineDefaultState')) {
             'dead_actors' => array(),
             'entered_locations' => array(),
             'current_stage' => null,
+            'radiant_aliases' => array(),
             'last_dialogue' => array(),
         );
     }
@@ -333,6 +334,9 @@ if (!function_exists('chimQuestEngineNormalizeState')) {
         }
         if (!is_array($normalized['entered_locations'])) {
             $normalized['entered_locations'] = array();
+        }
+        if (!is_array($normalized['radiant_aliases'])) {
+            $normalized['radiant_aliases'] = array();
         }
         if (!is_array($normalized['last_dialogue'])) {
             $normalized['last_dialogue'] = array();
@@ -520,10 +524,376 @@ if (!function_exists('chimQuestEngineFetchDefinitions')) {
             $definition['title'] = $row['title'];
             $definition['quest_plugin'] = $definition['quest_plugin'] ?? $row['source_plugin'];
             $definition['quest_form_id'] = $definition['quest_form_id'] ?? $row['source_form_id'];
+            $definition['source_path'] = $row['source_path'];
             $definitions[] = $definition;
         }
 
         return $definitions;
+    }
+}
+
+if (!function_exists('chimQuestEngineIsRadiantTemplate')) {
+    function chimQuestEngineIsRadiantTemplate(array $definition)
+    {
+        $type = strtolower(trim((string)($definition['skeleton_type'] ?? '')));
+        if ($type === 'radiant_template') {
+            return true;
+        }
+
+        return !empty($definition['radiant_template']) && is_array($definition['radiant_template']) && !empty($definition['radiant_template']['enabled']);
+    }
+}
+
+if (!function_exists('chimQuestEngineNormalizeAliasName')) {
+    function chimQuestEngineNormalizeAliasName($value)
+    {
+        $cn = strtolower(trim((string)$value));
+        $cn = preg_replace('/[^a-z0-9]+/', '', $cn);
+        return (string)$cn;
+    }
+}
+
+if (!function_exists('chimQuestEngineAliasDisplayName')) {
+    function chimQuestEngineAliasDisplayName(array $alias)
+    {
+        foreach (array('display_name', 'base_name', 'instance_text', 'name') as $key) {
+            $value = trim((string)($alias[$key] ?? ''));
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
+    }
+}
+
+if (!function_exists('chimQuestEngineAliasFieldValue')) {
+    function chimQuestEngineAliasFieldValue(array $alias, $field)
+    {
+        $fieldCn = strtolower(trim((string)$field));
+        if ($fieldCn === '' || $fieldCn === 'name' || $fieldCn === 'display_name') {
+            return chimQuestEngineAliasDisplayName($alias);
+        }
+        if ($fieldCn === 'plugin') {
+            return trim((string)($alias['base_plugin'] ?? ($alias['plugin'] ?? '')));
+        }
+        if ($fieldCn === 'form_id') {
+            return trim((string)($alias['base_form_id'] ?? ($alias['form_id'] ?? '')));
+        }
+
+        return trim((string)($alias[$fieldCn] ?? ''));
+    }
+}
+
+if (!function_exists('chimQuestEnginePayloadAliasMap')) {
+    function chimQuestEnginePayloadAliasMap(array $definition, array $payload)
+    {
+        $aliases = $payload['aliases'] ?? array();
+        if (!is_array($aliases) || empty($aliases)) {
+            return array();
+        }
+
+        $map = array();
+        foreach ($aliases as $alias) {
+            if (!is_array($alias)) {
+                continue;
+            }
+
+            $aliasName = trim((string)($alias['name'] ?? ''));
+            if ($aliasName === '') {
+                continue;
+            }
+
+            $normalized = chimQuestEngineNormalizeAliasName($aliasName);
+            if ($normalized !== '') {
+                $map[$normalized] = $alias;
+            }
+        }
+
+        $template = $definition['radiant_template'] ?? array();
+        $synonyms = is_array($template) ? ($template['alias_synonyms'] ?? array()) : array();
+        if (is_array($synonyms)) {
+            foreach ($synonyms as $canonical => $names) {
+                $canonicalCn = chimQuestEngineNormalizeAliasName($canonical);
+                if ($canonicalCn === '') {
+                    continue;
+                }
+                if (isset($map[$canonicalCn])) {
+                    continue;
+                }
+                foreach ((array)$names as $name) {
+                    $nameCn = chimQuestEngineNormalizeAliasName($name);
+                    if ($nameCn !== '' && isset($map[$nameCn])) {
+                        $map[$canonicalCn] = $map[$nameCn];
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!isset($map['questgiver'])) {
+            foreach ($aliases as $alias) {
+                if (!is_array($alias)) {
+                    continue;
+                }
+                $nameCn = chimQuestEngineNormalizeAliasName($alias['name'] ?? '');
+                if (strpos($nameCn, 'giver') !== false || !empty($alias['is_actor'])) {
+                    $map['questgiver'] = $alias;
+                    break;
+                }
+            }
+        }
+
+        if (!isset($map['questitem'])) {
+            foreach ($aliases as $alias) {
+                if (!is_array($alias)) {
+                    continue;
+                }
+                $nameCn = chimQuestEngineNormalizeAliasName($alias['name'] ?? '');
+                $hasItemIdentity = trim((string)($alias['base_form_id'] ?? ($alias['form_id'] ?? ''))) !== '';
+                if (strpos($nameCn, 'item') !== false || ($hasItemIdentity && empty($alias['is_actor']) && strtolower((string)($alias['type'] ?? '')) === 'reference')) {
+                    $map['questitem'] = $alias;
+                    break;
+                }
+            }
+        }
+
+        return $map;
+    }
+}
+
+if (!function_exists('chimQuestEngineRadiantAliasesSatisfyTemplate')) {
+    function chimQuestEngineRadiantAliasesSatisfyTemplate(array $definition, array $aliasMap)
+    {
+        $template = $definition['radiant_template'] ?? array();
+        $requiredAliases = is_array($template) ? ($template['required_aliases'] ?? array()) : array();
+        foreach ((array)$requiredAliases as $aliasName) {
+            $aliasNameCn = chimQuestEngineNormalizeAliasName($aliasName);
+            if ($aliasNameCn === '' || !isset($aliasMap[$aliasNameCn])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
+
+if (!function_exists('chimQuestEngineReplaceRadiantPlaceholders')) {
+    function chimQuestEngineReplaceRadiantPlaceholders($value, array $aliasMap)
+    {
+        if (is_array($value)) {
+            $resolved = array();
+            foreach ($value as $key => $childValue) {
+                $resolvedKey = is_string($key) ? chimQuestEngineReplaceRadiantPlaceholders($key, $aliasMap) : $key;
+                $resolved[$resolvedKey] = chimQuestEngineReplaceRadiantPlaceholders($childValue, $aliasMap);
+            }
+            return $resolved;
+        }
+
+        if (!is_string($value) || strpos($value, '{') === false) {
+            return $value;
+        }
+
+        return preg_replace_callback('/\{([A-Za-z0-9_ -]+)(?:\.([A-Za-z0-9_]+))?\}/', function ($matches) use ($aliasMap) {
+            $aliasName = chimQuestEngineNormalizeAliasName($matches[1] ?? '');
+            $field = $matches[2] ?? '';
+            if ($aliasName === '' || !isset($aliasMap[$aliasName])) {
+                return $matches[0];
+            }
+
+            $replacement = chimQuestEngineAliasFieldValue($aliasMap[$aliasName], $field);
+            return ($replacement !== '') ? $replacement : $matches[0];
+        }, $value);
+    }
+}
+
+if (!function_exists('chimQuestEngineSlugText')) {
+    function chimQuestEngineSlugText($value)
+    {
+        $cn = strtolower(trim((string)$value));
+        $cn = preg_replace('/[^a-z0-9]+/', '_', $cn);
+        $cn = trim((string)$cn, '_');
+        return ($cn !== '') ? $cn : 'unknown';
+    }
+}
+
+if (!function_exists('chimQuestEngineRadiantInstanceKey')) {
+    function chimQuestEngineRadiantInstanceKey(array $definition, array $aliasMap)
+    {
+        $templateKey = chimQuestEngineNormalizeQuestKey($definition['quest_key'] ?? $definition['quest_editor_id'] ?? 'radiant');
+        $template = $definition['radiant_template'] ?? array();
+        $keyAliases = is_array($template) ? ($template['instance_key_aliases'] ?? array()) : array();
+        if (empty($keyAliases)) {
+            $keyAliases = array_keys($aliasMap);
+        }
+
+        $parts = array($templateKey);
+        foreach ((array)$keyAliases as $aliasName) {
+            $aliasNameCn = chimQuestEngineNormalizeAliasName($aliasName);
+            if ($aliasNameCn === '' || !isset($aliasMap[$aliasNameCn])) {
+                continue;
+            }
+            $alias = $aliasMap[$aliasNameCn];
+            $identity = chimQuestEngineAliasFieldValue($alias, 'form_id');
+            if ($identity === '') {
+                $identity = chimQuestEngineAliasDisplayName($alias);
+            }
+            $parts[] = chimQuestEngineSlugText($identity);
+        }
+
+        return chimQuestEngineNormalizeQuestKey(implode('_', $parts));
+    }
+}
+
+if (!function_exists('chimQuestEngineUpsertDefinition')) {
+    function chimQuestEngineUpsertDefinition(array $definition, $sourcePath = '')
+    {
+        if (!chimQuestEngineReady()) {
+            return false;
+        }
+
+        $questKey = chimQuestEngineNormalizeQuestKey($definition['quest_key'] ?? $definition['quest_editor_id'] ?? '');
+        if ($questKey === '') {
+            return false;
+        }
+
+        $definition['quest_key'] = $questKey;
+        $questEditorId = $GLOBALS["db"]->escape((string)($definition['quest_editor_id'] ?? $questKey));
+        $title = $GLOBALS["db"]->escape((string)($definition['title'] ?? ($definition['quest_editor_id'] ?? $questKey)));
+        $sourcePlugin = $GLOBALS["db"]->escape((string)($definition['quest_plugin'] ?? ''));
+        $sourceFormId = $GLOBALS["db"]->escape((string)($definition['quest_form_id'] ?? ''));
+        $sourcePathEscaped = $GLOBALS["db"]->escape((string)$sourcePath);
+        $skeletonJson = $GLOBALS["db"]->escape(chimQuestEngineJsonEncode($definition));
+        $questKeyEscaped = $GLOBALS["db"]->escape($questKey);
+
+        $GLOBALS["db"]->execQuery("
+            INSERT INTO public.skyrim_quest_definitions
+                (quest_key, quest_editor_id, title, source_plugin, source_form_id, source_path, skeleton, active)
+            VALUES
+                ('{$questKeyEscaped}', '{$questEditorId}', '{$title}', '{$sourcePlugin}', '{$sourceFormId}', '{$sourcePathEscaped}', '{$skeletonJson}'::jsonb, true)
+            ON CONFLICT (quest_key) DO UPDATE SET
+                quest_editor_id = EXCLUDED.quest_editor_id,
+                title = EXCLUDED.title,
+                source_plugin = EXCLUDED.source_plugin,
+                source_form_id = EXCLUDED.source_form_id,
+                source_path = EXCLUDED.source_path,
+                skeleton = EXCLUDED.skeleton,
+                active = true,
+                updated_at = now()
+        ");
+
+        return true;
+    }
+}
+
+if (!function_exists('chimQuestEngineInstantiateRadiantDefinition')) {
+    function chimQuestEngineInstantiateRadiantDefinition(array $definition, $eventType, array $payload)
+    {
+        if (!chimQuestEngineIsRadiantTemplate($definition)) {
+            return null;
+        }
+
+        $eventTypeCn = strtolower(trim((string)$eventType));
+        if ($eventTypeCn !== 'quest_stage') {
+            return null;
+        }
+        if (!chimQuestEngineQuestMatchesPayload($definition, $payload)) {
+            return null;
+        }
+
+        $aliasMap = chimQuestEnginePayloadAliasMap($definition, $payload);
+        if (!chimQuestEngineRadiantAliasesSatisfyTemplate($definition, $aliasMap)) {
+            return null;
+        }
+
+        $concrete = chimQuestEngineReplaceRadiantPlaceholders($definition, $aliasMap);
+        $concrete['template_quest_key'] = $definition['quest_key'] ?? '';
+        $concrete['quest_key'] = chimQuestEngineRadiantInstanceKey($definition, $aliasMap);
+        $concrete['skeleton_type'] = 'quest';
+        $concrete['radiant_aliases'] = $aliasMap;
+        $concrete['radiant_instance'] = array(
+            'template_quest_key' => $definition['quest_key'] ?? '',
+            'created_from_event' => 'quest_stage',
+            'aliases' => $aliasMap,
+        );
+        unset($concrete['radiant_template']);
+
+        if (!chimQuestEngineUpsertDefinition($concrete, (string)($definition['source_path'] ?? ''))) {
+            return null;
+        }
+
+        chimQuestEngineEnsureInstanceRow($concrete);
+        $instance = chimQuestEngineGetInstance($concrete['quest_key']);
+        if ($instance) {
+            $instance['state_json'] = chimQuestEngineNormalizeState($instance['state_json'] ?? array());
+            $instance['state_json']['radiant_aliases'] = $aliasMap;
+            chimQuestEnginePersistInstance($concrete, $instance);
+        }
+
+        return $concrete;
+    }
+}
+
+if (!function_exists('chimQuestEngineExpandRadiantDefinitionsForEvent')) {
+    function chimQuestEngineExpandRadiantDefinitionsForEvent(array $definitions, $eventType, array $payload)
+    {
+        $expanded = array();
+        foreach ($definitions as $definition) {
+            if (!is_array($definition)) {
+                continue;
+            }
+
+            if (chimQuestEngineIsRadiantTemplate($definition)) {
+                $concrete = chimQuestEngineInstantiateRadiantDefinition($definition, $eventType, $payload);
+                if (is_array($concrete)) {
+                    $expanded[] = $concrete;
+                }
+                continue;
+            }
+
+            $expanded[] = $definition;
+        }
+
+        return $expanded;
+    }
+}
+
+if (!function_exists('chimQuestEngineRadiantConcreteMatchesPayload')) {
+    function chimQuestEngineRadiantConcreteMatchesPayload(array $definition, array $payload)
+    {
+        $definitionAliases = $definition['radiant_aliases'] ?? array();
+        if (!is_array($definitionAliases) || empty($definitionAliases) || empty($payload['aliases'])) {
+            return true;
+        }
+
+        $payloadAliases = chimQuestEnginePayloadAliasMap($definition, $payload);
+        if (empty($payloadAliases)) {
+            return true;
+        }
+
+        foreach ($definitionAliases as $aliasName => $definitionAlias) {
+            if (!is_array($definitionAlias)) {
+                continue;
+            }
+            $aliasNameCn = chimQuestEngineNormalizeAliasName($aliasName);
+            if ($aliasNameCn === '' || !isset($payloadAliases[$aliasNameCn])) {
+                continue;
+            }
+
+            $definitionKey = chimQuestEngineFormKey(
+                chimQuestEngineAliasFieldValue($definitionAlias, 'plugin'),
+                chimQuestEngineAliasFieldValue($definitionAlias, 'form_id')
+            );
+            $payloadKey = chimQuestEngineFormKey(
+                chimQuestEngineAliasFieldValue($payloadAliases[$aliasNameCn], 'plugin'),
+                chimQuestEngineAliasFieldValue($payloadAliases[$aliasNameCn], 'form_id')
+            );
+            if ($definitionKey !== '' && $payloadKey !== '' && $definitionKey !== $payloadKey) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
 
@@ -569,6 +939,9 @@ if (!function_exists('chimQuestEngineFilterDefinitionsForEvent')) {
         $filtered = array();
         foreach ($definitions as $definition) {
             if (!is_array($definition)) {
+                continue;
+            }
+            if (chimQuestEngineIsRadiantTemplate($definition)) {
                 continue;
             }
             if (chimQuestEngineDefinitionReferencesDialogueNpc($definition, $npcName)) {
@@ -1748,7 +2121,7 @@ if (!function_exists('chimQuestEngineQuestMatchesPayload')) {
         $payloadEditorId = strtolower(trim((string)($payload['quest_editor_id'] ?? '')));
         $definitionEditorId = strtolower(trim((string)($definition['quest_editor_id'] ?? '')));
         if ($payloadEditorId !== '' && $payloadEditorId === $definitionEditorId) {
-            return true;
+            return chimQuestEngineRadiantConcreteMatchesPayload($definition, $payload);
         }
 
         $payloadFormKey = chimQuestEngineFormKey(
@@ -1758,7 +2131,7 @@ if (!function_exists('chimQuestEngineQuestMatchesPayload')) {
         $definitionFormKey = chimQuestEngineFormKey($definition['quest_plugin'] ?? '', $definition['quest_form_id'] ?? '');
 
         if ($payloadFormKey !== '' && $definitionFormKey !== '' && $payloadFormKey === $definitionFormKey) {
-            return true;
+            return chimQuestEngineRadiantConcreteMatchesPayload($definition, $payload);
         }
 
         return false;
@@ -2180,6 +2553,9 @@ if (!function_exists('chimQuestEngineApplyEventToState')) {
             if ($stage >= 0) {
                 $state['current_stage'] = $stage;
             }
+            if (!empty($definition['radiant_aliases']) && is_array($definition['radiant_aliases'])) {
+                $state['radiant_aliases'] = $definition['radiant_aliases'];
+            }
             return;
         }
 
@@ -2371,6 +2747,9 @@ if (!function_exists('chimQuestEngineRollbackRuntimeToGamets')) {
 
         $rebuilt = 0;
         foreach (chimQuestEngineFetchDefinitions(true) as $definition) {
+            if (chimQuestEngineIsRadiantTemplate($definition)) {
+                continue;
+            }
             if (chimQuestEngineRebuildInstanceStateAtGamets($definition, $targetGamets)) {
                 $rebuilt++;
             }
@@ -2500,7 +2879,8 @@ if (!function_exists('chimQuestEngineHandleEvent')) {
 
         chimQuestEngineMaybeBootstrapBundledDefinitions();
         $rollback = chimQuestEngineRollbackRuntimeToGamets($payload['gamets'] ?? null);
-        $definitions = chimQuestEngineFilterDefinitionsForEvent(chimQuestEngineFetchDefinitions(true), $eventType, $payload);
+        $definitions = chimQuestEngineExpandRadiantDefinitionsForEvent(chimQuestEngineFetchDefinitions(true), $eventType, $payload);
+        $definitions = chimQuestEngineFilterDefinitionsForEvent($definitions, $eventType, $payload);
         $results = array();
 
         foreach ($definitions as $definition) {
@@ -2796,6 +3176,9 @@ if (!function_exists('chimQuestEngineBuildPromptContext')) {
         chimQuestEngineMaybeBootstrapBundledDefinitions();
         $blocks = array();
         foreach (chimQuestEngineFetchDefinitions(true) as $definition) {
+            if (chimQuestEngineIsRadiantTemplate($definition)) {
+                continue;
+            }
             $npcFactsMap = $definition['npc_facts'] ?? array();
             $npcFactsKey = chimQuestEngineFindCaseInsensitiveKey($npcFactsMap, $npcNameCn);
             if ($npcFactsKey === null) {
