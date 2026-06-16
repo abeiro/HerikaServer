@@ -5851,6 +5851,32 @@ if ($checkVersion("prompts")<20260611001) {
     Logger::info("Applied patch prompts 20260611001 - Added player respeech prompts");
 }
 
+if ($checkVersion("prompts")<20260615001) {
+    Logger::debug("Applying prompts table 20260615001 - Adding player diary prompt");
+
+    $playerDiaryPrompt = $db->escape(
+        "Write a concise first-person diary entry for {PLAYER_NAME} based on the recent context above. "
+        . "Summarize the most relevant recent dialogue, events, decisions, and observations as {PLAYER_NAME}'s private diary. "
+        . "Start with the current date and time. Do not write as The Narrator or as any NPC."
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'player_diary_prompt',
+            '$playerDiaryPrompt',
+            'Prompt for generating player diary entries. Supports placeholders: {PLAYER_NAME}, #PLAYER_NAME#. Used in: lib/dynamic_update_util.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $updateVersion("prompts", 20260615001);
+    Logger::info("Applied patch prompts 20260615001 - Added player_diary_prompt");
+}
+
 //----------------------------------------------------
 
 if ($checkVersion("utterance_delivery") < 20260502001) {
