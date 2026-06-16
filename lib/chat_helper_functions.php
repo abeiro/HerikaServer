@@ -1670,20 +1670,6 @@ function returnLines($lines,$writeOutput=true)
             );
             
             // CHAT LOGGING
-
-            // Patch. New 'people in range' code is not working properly when request is a suggestion.
-            // Check line 1665 on main.php, probable some needed codepath is not being executed when request is a suggestion 
-            // Probably other requests generating speech (not user inputs) are also affected.
-
-            if ($GLOBALS["gameRequest"][0]=="suggestion" || $GLOBALS["gameRequest"][0]=="instruction") {
-                
-                $forcedPeople=DataBeingsInCloseRange(true);
-                error_log("[WARNING] Suggestion/Instruction detected, forcing people in range to be logged: $forcedPeople");
-            } else {
-                // error_log("[BUG] Suggestion not detected, {$GLOBALS["gameRequest"][0]}");
-                $forcedPeople='';
-            }
-
             $originalRequest=$GLOBALS["gameRequest"];
             $originalRequest[0]="prechat";
             $originalRequest[1]++;
@@ -1704,7 +1690,7 @@ function returnLines($lines,$writeOutput=true)
                 $addonlistener="";
             }
             $originalRequest[3]="{$outBuffer["actor"]}: $responseForContext $addonlistener";
-            logEvent($originalRequest,$forcedPeople);
+            logEvent($originalRequest);
             
             // Log chat here, because  function return comes back out of sync.
             $originalRequest[0]="chat";
@@ -1729,7 +1715,7 @@ function returnLines($lines,$writeOutput=true)
                 'utterance_id' => $GLOBALS["SCRIPTLINE_UTTERANCE_ID"] ?? chimGenerateUtteranceId(),
                 'delivery_state' => 'emitted'
             ];
-            logEvent($originalRequest,$forcedPeople);
+            logEvent($originalRequest);
         }
         
     }
