@@ -39,12 +39,16 @@
       "intent_summary": "Player commits to recovering Amren's father's sword.",
       "action": {
         "type": "console_command",
-        "command": "startquest Favor204"
+        "command": "startquest 0007105B"
       },
       "downstream": [
         {
           "type": "console_command",
-          "command": "setstage Favor204 10"
+          "command": "setstage 0007105B 10"
+        },
+        {
+          "type": "console_command",
+          "command": "setobjectivedisplayed 0007105B 10 1"
         }
       ],
       "triggers": [
