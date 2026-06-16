@@ -1041,7 +1041,7 @@ function WaitToItemBeRecovered(
 
     // Query event log to see if player has the item (stub integration with Skyrim engine)
     $cn = $GLOBALS["db"]->escape($item["name"]);
-    $rows = $GLOBALS["db"]->fetchAll("select count(*) as n from eventlog where type='itemfound' and data like '%$cn%'");
+    $rows = $GLOBALS["db"]->fetchAll("select count(*) as n from eventlog where (type='itemfound' and data like '%$cn%') or (type='infoaction' and data like '%picks up $cn%')");
 
     $hasItem = false;
     if (is_array($rows) && isset($rows[0]) && $rows[0]["n"] > 0) {
@@ -2576,7 +2576,7 @@ function TravelTo(
                     'sent' => 0,
                     'actor' => "rolemaster",
                     'text' => "",
-                    'action' => "rolecommand|Suggestion@{$quest_data["npcs"][$npc_ref]["name"]}@$suggestionText@$quest_id",
+                    'action' => "rolecommand|Instruction@{$quest_data["npcs"][$npc_ref]["name"]}@$suggestionText@$quest_id",
                     'tag' => "",
                 ]
             );
